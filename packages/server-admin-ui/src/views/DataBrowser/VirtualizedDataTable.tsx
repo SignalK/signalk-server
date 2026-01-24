@@ -41,8 +41,18 @@ function VirtualizedDataTable({
 }: VirtualizedDataTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 50 })
-  const rowHeight = raw ? 80 : 40
-  const overscan = raw ? 10 : 15
+  const [isNarrowScreen, setIsNarrowScreen] = useState(
+    typeof window !== 'undefined' && window.innerWidth <= 768
+  )
+  const rowHeight = 40
+  const overscan = 15
+
+  // Track screen width for mobile layout detection
+  useEffect(() => {
+    const checkWidth = () => setIsNarrowScreen(window.innerWidth <= 768)
+    window.addEventListener('resize', checkWidth)
+    return () => window.removeEventListener('resize', checkWidth)
+  }, [])
 
   // Calculate visible range based on scroll position
   const updateVisibleRange = useCallback(() => {
@@ -85,7 +95,13 @@ function VirtualizedDataTable({
     })
   }, [path$SourceKeys.length, rowHeight, overscan])
 
+  // Disable virtualization when row heights are variable (RAW mode or narrow/mobile screens)
+  const disableVirtualization = raw || isNarrowScreen
+
+  // Set up scroll listener (only when virtualization is enabled)
   useEffect(() => {
+    if (disableVirtualization) return
+
     updateVisibleRange()
 
     let ticking = false
@@ -106,11 +122,12 @@ function VirtualizedDataTable({
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)
     }
-  }, [updateVisibleRange])
+  }, [updateVisibleRange, disableVirtualization])
 
   useEffect(() => {
+    if (disableVirtualization) return
     updateVisibleRange()
-  }, [path$SourceKeys, updateVisibleRange])
+  }, [path$SourceKeys, updateVisibleRange, disableVirtualization])
 
   // Cleanup subscriptions on unmount
   useEffect(() => {
@@ -126,13 +143,25 @@ function VirtualizedDataTable({
     }
   }, [isPaused])
 
-  const spacerBeforeHeight = visibleRange.start * rowHeight
-  const spacerAfterHeight = Math.max(
-    0,
-    (path$SourceKeys.length - visibleRange.end - 1) * rowHeight
-  )
+  // Calculate spacer heights for rows before/after visible range
+  // No spacers when virtualization is disabled (RAW mode or narrow screens)
+  const spacerBeforeHeight = disableVirtualization
+    ? 0
+    : visibleRange.start * rowHeight
+  const spacerAfterHeight = disableVirtualization
+    ? 0
+    : Math.max(0, (path$SourceKeys.length - visibleRange.end - 1) * rowHeight)
 
+  // Build visible items - memoized to prevent unnecessary re-renders
+  // Render all items when virtualization is disabled (variable row heights)
   const visibleItems: VisibleItem[] = useMemo(() => {
+    if (disableVirtualization) {
+      return path$SourceKeys.map((path$SourceKey, index) => ({
+        index,
+        path$SourceKey
+      }))
+    }
+    // Virtualized: only render visible range
     const end = Math.min(visibleRange.end + 1, path$SourceKeys.length)
     return path$SourceKeys
       .slice(visibleRange.start, end)
@@ -140,7 +169,12 @@ function VirtualizedDataTable({
         index: visibleRange.start + i,
         path$SourceKey
       }))
-  }, [visibleRange.start, visibleRange.end, path$SourceKeys])
+  }, [
+    disableVirtualization,
+    visibleRange.start,
+    visibleRange.end,
+    path$SourceKeys
+  ])
 
   // Report visible paths to granular subscription manager
   // Must be after visibleItems useMemo since it depends on it
@@ -237,10 +271,9 @@ function VirtualizedDataTable({
       </div>
 
       <div className="virtual-table-info">
-        Showing {visibleItems.length} of {path$SourceKeys.length} paths (rows{' '}
-        {visibleRange.start + 1}-
-        {Math.min(visibleRange.end + 1, path$SourceKeys.length)})
-        {raw && ' - RAW mode'}
+        {disableVirtualization
+          ? `Showing all ${path$SourceKeys.length} paths`
+          : `Showing ${visibleItems.length} of ${path$SourceKeys.length} paths (rows ${visibleRange.start + 1}-${Math.min(visibleRange.end + 1, path$SourceKeys.length)})`}
       </div>
     </div>
   )

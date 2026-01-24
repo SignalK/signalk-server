@@ -40,10 +40,18 @@ function DataRow({
         className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}
         data-raw-row={raw ? 'true' : undefined}
       >
-        <div className="virtual-table-cell path-cell" data-label="Path">Loading...</div>
+        <div className="virtual-table-cell path-cell" data-label="Path">
+          Loading...
+        </div>
         <div className="virtual-table-cell value-cell" data-label="Value"></div>
-        <div className="virtual-table-cell timestamp-cell" data-label="Time"></div>
-        <div className="virtual-table-cell source-cell" data-label="Source"></div>
+        <div
+          className="virtual-table-cell timestamp-cell"
+          data-label="Time"
+        ></div>
+        <div
+          className="virtual-table-cell source-cell"
+          data-label="Source"
+        ></div>
       </div>
     )
   }
@@ -89,8 +97,8 @@ function DataRow({
         <CopyToClipboardWithFade text={source}>
           {source} <span className="copy-icon" aria-hidden="true" />
         </CopyToClipboardWithFade>{' '}
-        {data.pgn || ''}
-        {data.sentence || ''}
+        {data.pgn && <span>&nbsp;{data.pgn}</span>}
+        {data.sentence && <span>&nbsp;{data.sentence}</span>}
       </div>
     </div>
   )
