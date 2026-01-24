@@ -376,6 +376,18 @@
     height: 28px;
   }
 
+  .title .title-home-icon {
+    display: none;
+  }
+
+  .embedded .title .title-logo {
+    display: none;
+  }
+
+  .embedded .title .title-home-icon {
+    display: inline;
+  }
+
   #tsd-search-trigger,
   #tsd-search-input {
     border-radius: 100px;
