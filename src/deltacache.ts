@@ -22,6 +22,7 @@ import _, { isUndefined } from 'lodash'
 import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
 import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
+import { SkPrincipal } from './security'
 
 interface StringKeyed {
   [key: string]: any
@@ -131,7 +132,7 @@ export default class DeltaCache {
     }
   }
 
-  buildFull(user: string, path: string[]) {
+  buildFull(principal: SkPrincipal | undefined, path: string[]) {
     const leaf = getLeafObject(
       this.cache,
       pathToProcessForFull(path),
@@ -145,7 +146,7 @@ export default class DeltaCache {
     }
 
     return this.buildFullFromDeltas(
-      user,
+      principal,
       deltas,
       path.length === 0 || path[0] === 'sources'
     )
@@ -161,7 +162,7 @@ export default class DeltaCache {
   }
 
   buildFullFromDeltas(
-    user: string,
+    principal: SkPrincipal | undefined,
     deltas: any[] | undefined,
     includeSources: boolean
   ) {
@@ -175,7 +176,8 @@ export default class DeltaCache {
 
     if (deltas && deltas.length) {
       const secFilter = this.app.securityStrategy.shouldFilterDeltas()
-        ? (delta: any) => this.app.securityStrategy.filterReadDelta(user, delta)
+        ? (delta: any) =>
+            this.app.securityStrategy.filterReadDelta(principal, delta)
         : () => true
       deltas.filter(secFilter).forEach(addDelta)
     }
@@ -183,7 +185,11 @@ export default class DeltaCache {
     return signalk.retrieve()
   }
 
-  getCachedDeltas(contextFilter: ContextMatcher, user?: string, key?: string) {
+  getCachedDeltas(
+    contextFilter: ContextMatcher,
+    principal?: SkPrincipal,
+    key?: string
+  ) {
     const contexts: Context[] = []
     _.keys(this.cache).forEach((type) => {
       _.keys(this.cache[type]).forEach((id) => {
@@ -224,7 +230,7 @@ export default class DeltaCache {
     })
 
     return deltas.map(toDelta).filter((delta) => {
-      return this.app.securityStrategy.filterReadDelta(user, delta)
+      return this.app.securityStrategy.filterReadDelta(principal, delta)
     })
   }
 }

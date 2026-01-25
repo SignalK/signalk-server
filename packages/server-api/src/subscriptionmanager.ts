@@ -1,6 +1,15 @@
 import { RelativePositionOrigin } from '.'
 import { Context, Delta, Path } from './deltas'
 
+/**
+ * Principal (user/device identity) for security filtering
+ * @category Server API
+ */
+export interface SkPrincipal {
+  identifier: string
+  permissions: 'admin' | 'readwrite' | 'readonly'
+}
+
 /** @category Server API  */
 export interface SubscriptionManager {
   subscribe(
@@ -8,7 +17,7 @@ export interface SubscriptionManager {
     unsubscribes: Unsubscribes,
     errorCallback: (err: unknown) => void,
     callback: SubscribeCallback,
-    user?: string
+    principal?: SkPrincipal
   ): void
 
   unsubscribe(msg: UnsubscribeMessage, unsubscribes: Unsubscribes): void

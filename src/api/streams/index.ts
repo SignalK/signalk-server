@@ -18,13 +18,11 @@ const debug = Debug('signalk:streams')
 
 /**
  * Extended security strategy with WebSocket authentication methods.
- * These methods are implemented by tokensecurity.js and dummysecurity.ts
- * but not declared in the base SecurityStrategy interface.
+ * Note: The base SecurityStrategy now has authorizeWS and shouldAllowWrite defined,
+ * but shouldAllowWrite has a different signature for delta writes vs stream auth.
+ * This interface uses method checking at runtime to handle both cases.
  */
-interface WebSocketSecurityStrategy extends SecurityStrategy {
-  shouldAllowWrite?: (request: IncomingMessage, requestType: string) => boolean
-  authorizeWS?: (request: IncomingMessage) => void
-}
+type WebSocketSecurityStrategy = SecurityStrategy
 
 /**
  * Application with HTTP server for WebSocket upgrades
@@ -111,22 +109,13 @@ export function initializeBinaryStreams(app: StreamApplication): void {
         const authRequest = request as AuthenticatedRequest
 
         // Check if security is enabled
-        if (
-          app.securityStrategy &&
-          typeof app.securityStrategy.shouldAllowWrite === 'function'
-        ) {
+        if (app.securityStrategy && !app.securityStrategy.isDummy()) {
           try {
-            // Security is enabled, perform authentication
-            if (app.securityStrategy.authorizeWS) {
-              app.securityStrategy.authorizeWS(request)
-              principal = authRequest.skPrincipal || { identifier: 'unknown' }
-            } else {
-              // Fallback: use shouldAllowWrite for basic auth check
-              if (!app.securityStrategy.shouldAllowWrite(request, 'streams')) {
-                throw new Error('Unauthorized')
-              }
-              principal = authRequest.skPrincipal || { identifier: 'unknown' }
-            }
+            // Security is enabled, perform authentication via WebSocket auth
+            app.securityStrategy.authorizeWS(
+              request as Parameters<typeof app.securityStrategy.authorizeWS>[0]
+            )
+            principal = authRequest.skPrincipal || { identifier: 'unknown' }
           } catch (error) {
             debug(`Authentication failed for stream ${streamId}: ${error}`)
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')

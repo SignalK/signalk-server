@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2017 Teppo Kurki <teppo.kurki@iki.fi>
  *
@@ -13,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { PartialOIDCConfig } from './oidc/types'
 import {
   chmodSync,
@@ -30,24 +29,82 @@ import _ from 'lodash'
 import path from 'path'
 import { generate } from 'selfsigned'
 import { Mode } from 'stat-mode'
+import { SkPrincipal as SkPrincipalBase } from '@signalk/server-api'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
 import dummysecurity from './dummysecurity'
 import { ICallback } from './types'
+import { Reply, Request as AccessRequestType } from './requestResponse'
 const debug = createDebug('signalk-server:security')
+
+// =============================================================================
+// Shared Types - Exported for use in other modules
+// =============================================================================
+
+/** Principal (authenticated user/device identity) - re-exported from server-api */
+export type SkPrincipal = SkPrincipalBase
+
+/** Delta message structure */
+export interface Delta {
+  context?: string
+  updates?: DeltaUpdate[]
+}
+
+export interface DeltaUpdate {
+  $source?: string
+  source?: unknown
+  timestamp?: string
+  values?: Array<{ path: string; value: unknown }>
+  meta?: Array<{ path: string; value: unknown }>
+}
+
+/** WebSocket authentication request */
+export interface WsAuthRequest {
+  token?: string
+  query?: { token?: string }
+  headers?: Record<string, string | string[] | undefined>
+  cookies?: Record<string, string>
+  skPrincipal?: SkPrincipal
+  skIsAuthenticated?: boolean
+  lastTokenVerify?: number
+}
+
+/** SignalK-enhanced Express request */
+export interface SignalKRequest extends Request {
+  skPrincipal?: SkPrincipal
+  skIsAuthenticated?: boolean
+  userLoggedIn?: boolean
+}
+
+/** Login response from authentication */
+export interface LoginResponse {
+  statusCode: number
+  token?: string
+  user?: string
+  message?: string
+}
+
+// =============================================================================
+// Security Configuration Types
+// =============================================================================
 
 export interface WithSecurityStrategy {
   securityStrategy: SecurityStrategy
 }
 
 export interface LoginStatusResponse {
-  status: string // 'loggedIn' 'notLoggedIn'
+  status: 'loggedIn' | 'notLoggedIn'
   readOnlyAccess?: boolean
   authenticationRequired?: boolean
   allowNewUserRegistration?: boolean
   allowDeviceAccessRequests?: boolean
-  userLevel?: any
+  userLevel?: string
   username?: string
+  noUsers?: boolean
+  oidcEnabled?: boolean
+  oidcAutoLogin?: boolean
+  oidcLoginUrl?: string
+  oidcProviderName?: string
 }
 
 export interface ACL {
@@ -72,15 +129,29 @@ export interface OIDCUserIdentifier {
   groups?: string[]
 }
 
+/** Internal user representation stored in config */
 export interface User {
   username: string
   type: string
   password?: string
   oidc?: OIDCUserIdentifier
 }
+
+/** User data passed to addUser - uses userId instead of username */
+export interface NewUserData {
+  userId: string
+  type: string
+  password?: string
+}
 export interface UserData {
   userId: string
   type: string
+  isOIDC?: boolean
+  oidc?: {
+    issuer?: string
+    email?: string
+    name?: string
+  }
 }
 export interface UserDataUpdate {
   type?: string
@@ -96,9 +167,9 @@ export interface UserWithPassword {
 export interface Device {
   clientId: string
   permissions: string
-  config: any
-  description: string
-  requestedPermissions: string
+  config?: unknown
+  description?: string
+  requestedPermissions?: boolean
 }
 
 export interface DeviceDataUpdate {
@@ -133,20 +204,75 @@ export interface SecurityConfig {
 
 export interface RequestStatusData {
   expiration: string
-  permissions: any
-  config: any
+  permissions: string
+  config: unknown
 }
 
 export interface SecurityStrategy {
+  // Core identification
   isDummy: () => boolean
-  allowReadOnly: () => boolean
-  shouldFilterDeltas: () => boolean
-  filterReadDelta: (user: any, delta: any) => any
-  configFromArguments: boolean
-  securityConfig: any
-  requestAccess: (config: any, request: any, ip: any, updateCb?: any) => any
-  getConfiguration: () => any
 
+  // Configuration
+  configFromArguments: boolean
+  securityConfig: SecurityConfig
+  getConfiguration: () => SecurityConfig
+  validateConfiguration: (config: SecurityConfig) => void
+  getConfig: (ss: SecurityConfig) => Omit<SecurityConfig, 'secretKey' | 'users'>
+  setConfig: (prev: SecurityConfig, next: SecurityConfig) => SecurityConfig
+
+  // Authentication
+  supportsLogin: () => boolean
+  login: (username: string, password: string) => Promise<LoginResponse>
+  getLoginStatus: (req: Request) => LoginStatusResponse
+  getAuthRequiredString: () => 'never' | 'forwrite' | 'always'
+  generateToken: (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    id: string,
+    expiration: string
+  ) => void
+
+  // Authorization
+  allowReadOnly: () => boolean
+  allowRestart: (req: Request) => boolean
+  allowConfigure: (req: Request) => boolean
+  shouldAllowPut: (
+    req: Request,
+    context: string,
+    source: string | null,
+    path: string
+  ) => boolean
+  shouldAllowWrite: (req: SignalKRequest, delta: Delta) => boolean
+
+  // WebSocket authentication
+  canAuthorizeWS: () => boolean
+  authorizeWS: (req: WsAuthRequest) => void
+  verifyWS: (req: WsAuthRequest) => void
+
+  // ACL system
+  checkACL: (
+    id: string,
+    context: string,
+    path: string,
+    source: string | null,
+    operation: 'read' | 'write' | 'put'
+  ) => boolean
+  anyACLs: () => boolean
+  shouldFilterDeltas: () => boolean
+  filterReadDelta: (
+    principal: SkPrincipal | undefined,
+    delta: Delta
+  ) => Delta | null
+
+  // Access requests
+  requestAccess: (
+    config: SecurityConfig,
+    request: { accessRequest?: unknown; requestId?: string },
+    ip: string | null | undefined,
+    updateCb?: (reply: Reply) => void
+  ) => Promise<Reply>
+  getAccessRequestsResponse: () => AccessRequestType[]
   setAccessRequestStatus: (
     theConfig: SecurityConfig,
     identifier: string,
@@ -154,41 +280,12 @@ export interface SecurityStrategy {
     body: RequestStatusData,
     cb: ICallback<SecurityConfig>
   ) => void
-  getAccessRequestsResponse: any
 
-  getLoginStatus: (req: Request) => LoginStatusResponse
-  allowRestart: (req: Request) => boolean
-  allowConfigure: (req: Request) => boolean
-
-  getConfig: (ss: SecurityConfig) => Omit<SecurityConfig, 'secretKey' | 'users'>
-  setConfig: (prev: SecurityConfig, next: SecurityConfig) => SecurityConfig
-
-  validateConfiguration: (config: any) => void
-  getDevices: (theConfig: SecurityConfig) => Device[]
-  updateDevice: (
-    theConfig: SecurityConfig,
-    clientId: string,
-    updates: DeviceDataUpdate,
-    cb: ICallback<SecurityConfig>
-  ) => void
-  deleteDevice: (
-    theConfig: SecurityConfig,
-    clientId: string,
-    cb: ICallback<SecurityConfig>
-  ) => void
-
-  generateToken: (
-    req: Request,
-    res: Response,
-    next: any,
-    id: string,
-    expiration: string
-  ) => void
-
+  // User management
   getUsers: (theConfig: SecurityConfig) => UserData[]
   addUser: (
     theConfig: SecurityConfig,
-    user: User,
+    user: NewUserData,
     cb: ICallback<SecurityConfig>
   ) => void
   updateUser: (
@@ -202,7 +299,6 @@ export interface SecurityStrategy {
     username: string,
     cb: ICallback<SecurityConfig>
   ) => void
-
   setPassword: (
     theConfig: SecurityConfig,
     username: string,
@@ -210,30 +306,40 @@ export interface SecurityStrategy {
     cb: ICallback<SecurityConfig>
   ) => void
 
-  shouldAllowPut: (
-    req: Request,
-    context: string,
-    source: any,
-    path: string
-  ) => boolean
+  // Device management
+  getDevices: (theConfig: SecurityConfig) => Device[]
+  updateDevice: (
+    theConfig: SecurityConfig,
+    clientId: string,
+    updates: DeviceDataUpdate,
+    cb: ICallback<SecurityConfig>
+  ) => void
+  deleteDevice: (
+    theConfig: SecurityConfig,
+    clientId: string,
+    cb: ICallback<SecurityConfig>
+  ) => void
 
+  // Middleware
   addAdminMiddleware: (path: string) => void
+  addAdminWriteMiddleware: (path: string) => void
+  addWriteMiddleware: (path: string) => void
 
   /** Update OIDC config in memory (optional - only available when token security is active) */
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
 }
 
 export class InvalidTokenError extends Error {
-  constructor(...args: any[]) {
-    super(...args)
+  constructor(message: string) {
+    super(message)
     Error.captureStackTrace(this, InvalidTokenError)
   }
 }
 
 export function startSecurity(
   app: WithSecurityStrategy & WithConfig,
-  securityConfig: any
-) {
+  securityConfig: SecurityConfig | null
+): void {
   let securityStrategyModuleName =
     process.env.SECURITYSTRATEGY ||
     _.get(app, 'config.settings.security.strategy')
@@ -266,50 +372,59 @@ export function startSecurity(
 export function getSecurityConfig(
   app: WithConfig & WithSecurityStrategy,
   forceRead = false
-) {
+): SecurityConfig {
   if (!forceRead && app.securityStrategy?.configFromArguments) {
     return app.securityStrategy.securityConfig
   } else {
     try {
       const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
-      return JSON.parse(optionsAsString)
-    } catch (e: any) {
+      return JSON.parse(optionsAsString) as SecurityConfig
+    } catch (e: unknown) {
+      const error = e as Error
       console.error('Could not parse security config')
-      console.error(e.message)
-      return {}
+      console.error(error.message)
+      return {} as SecurityConfig
     }
   }
 }
 
-export function pathForSecurityConfig(app: WithConfig) {
+export function pathForSecurityConfig(app: WithConfig): string {
   return path.join(app.config.configPath, 'security.json')
 }
 
 export function saveSecurityConfig(
   app: WithSecurityStrategy & WithConfig,
-  data: any,
-  callback: any
-) {
+  data: SecurityConfig,
+  callback?: ICallback<void>
+): void {
   if (app.securityStrategy.configFromArguments) {
     app.securityStrategy.securityConfig = data
     if (callback) {
-      callback(null)
+      callback(undefined)
     }
   } else {
-    //const config = JSON.parse(JSON.stringify(data))
     const configPath = pathForSecurityConfig(app)
     writeFile(configPath, JSON.stringify(data, null, 2), (err) => {
       if (!err) {
         chmodSync(configPath, '600')
       }
       if (callback) {
-        callback(err)
+        callback(err ?? undefined)
       }
     })
   }
 }
 
-export function getCertificateOptions(app: WithConfig, cb: any) {
+interface CertificateOptions {
+  key: Buffer | string
+  cert: Buffer | string
+  ca?: string[]
+}
+
+export function getCertificateOptions(
+  app: WithConfig,
+  cb: ICallback<CertificateOptions>
+): void {
   let certLocation
 
   if (!app.config.configPath || existsSync('./settings/ssl-cert.pem')) {
@@ -339,14 +454,14 @@ export function getCertificateOptions(app: WithConfig, cb: any) {
       )
       return
     }
-    let ca
+    let ca: string[] | undefined
     if (existsSync(chainFile)) {
       debug('Found ssl-chain.pem')
       ca = getCAChainArray(chainFile)
       debug(JSON.stringify(ca, null, 2))
     }
     debug(`Using certificate ssl-key.pem and ssl-cert.pem in ${certLocation}`)
-    cb(null, {
+    cb(undefined, {
       key: readFileSync(keyFile),
       cert: readFileSync(certFile),
       ca
@@ -356,7 +471,7 @@ export function getCertificateOptions(app: WithConfig, cb: any) {
   }
 }
 
-function hasStrictPermissions(stat: Stats) {
+function hasStrictPermissions(stat: Stats): boolean {
   if (process.platform === 'win32') {
     return true
   } else {
@@ -364,7 +479,7 @@ function hasStrictPermissions(stat: Stats) {
   }
 }
 
-export function getCAChainArray(filename: string) {
+export function getCAChainArray(filename: string): string[] {
   let chainCert = new Array<string>()
   return readFileSync(filename, 'utf8')
     .split('\n')
@@ -382,19 +497,23 @@ export function createCertificateOptions(
   app: WithConfig,
   certFile: string,
   keyFile: string,
-  cb: any
-) {
+  cb: ICallback<CertificateOptions>
+): void {
   const location = app.config.configPath ? app.config.configPath : './settings'
   debug(`Creating certificate files in ${location}`)
   generate(
     [{ name: 'commonName', value: 'localhost' }],
     { days: 3650 },
     function (err, pems) {
+      if (err) {
+        cb(err)
+        return
+      }
       writeFileSync(keyFile, pems.private)
       chmodSync(keyFile, '600')
       writeFileSync(certFile, pems.cert)
       chmodSync(certFile, '600')
-      cb(null, {
+      cb(undefined, {
         key: pems.private,
         cert: pems.cert
       })
@@ -404,20 +523,23 @@ export function createCertificateOptions(
 
 export function requestAccess(
   app: WithSecurityStrategy & WithConfig,
-  request: any,
-  ip: any,
-  updateCb: any
-) {
+  request: { accessRequest?: unknown; requestId?: string },
+  ip: string | null | undefined,
+  updateCb?: (reply: Reply) => void
+): Promise<Reply> {
   const config = getSecurityConfig(app)
   return app.securityStrategy.requestAccess(config, request, ip, updateCb)
 }
 
 export type SecurityConfigSaver = (
-  app: any,
-  securityConfig: any,
-  cb: (err: any) => void
+  app: WithSecurityStrategy & WithConfig,
+  securityConfig: SecurityConfig,
+  cb: ICallback<void>
 ) => void
-export type SecurityConfigGetter = (app: any) => any
+
+export type SecurityConfigGetter = (
+  app: WithConfig & WithSecurityStrategy
+) => SecurityConfig
 
 /**
  * When Express trust proxy is enabled:
@@ -425,7 +547,9 @@ export type SecurityConfigGetter = (app: any) => any
  *   validate the presence of x-forwarded-for.
  * - trustProxy: false prevents ERR_ERL_PERMISSIVE_TRUST_PROXY warnings
  */
-export function getRateLimitValidationOptions(app: WithConfig) {
+export function getRateLimitValidationOptions(
+  app: WithConfig
+): { xForwardedForHeader: boolean; trustProxy: boolean } | undefined {
   return app.config?.settings?.trustProxy &&
     app.config.settings.trustProxy !== 'false'
     ? { xForwardedForHeader: false, trustProxy: false }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2017 Scott Bender <scott@scottbender.net>
  *
@@ -15,23 +14,47 @@
  * limitations under the License.
  */
 
-import { SecurityStrategy } from './security'
+import { Request, Response, NextFunction } from 'express'
+import {
+  SecurityStrategy,
+  SecurityConfig,
+  SignalKRequest,
+  Delta,
+  SkPrincipal,
+  WsAuthRequest,
+  LoginStatusResponse,
+  UserData,
+  NewUserData,
+  Device,
+  UserDataUpdate,
+  DeviceDataUpdate,
+  RequestStatusData
+} from './security'
+import { ICallback } from './types'
+import {
+  Reply,
+  ClientRequest,
+  Request as RequestRecord
+} from './requestResponse'
 
-export default function () {
-  const dummyStrategy = {
+export default function (): SecurityStrategy {
+  const dummyStrategy: SecurityStrategy = {
     getConfiguration: () => {
-      return {}
+      return {} as SecurityConfig
     },
 
-    allowRestart: (_req: any) => {
+    allowRestart: (req: Request) => {
+      void req
       return false
     },
 
-    allowConfigure: (_req: any) => {
+    allowConfigure: (req: Request) => {
+      void req
       return false
     },
 
-    getLoginStatus: (_req: any) => {
+    getLoginStatus: (req: Request): LoginStatusResponse => {
+      void req
       return {
         status: 'notLoggedIn',
         readOnlyAccess: false,
@@ -39,106 +62,254 @@ export default function () {
       }
     },
 
-    getConfig: (_config: any) => {
-      return _config
+    getConfig: (config: SecurityConfig) => {
+      return config
     },
 
-    setConfig: (_config: any, _newConfig: any) => {},
+    setConfig: (
+      config: SecurityConfig,
+      newConfig: SecurityConfig
+    ): SecurityConfig => {
+      void config
+      return newConfig
+    },
 
-    getUsers: (_config: any) => {
+    getUsers: (config: SecurityConfig): UserData[] => {
+      void config
       return []
     },
 
     updateUser: (
-      _config: any,
-      _username: any,
-      _updates: any,
-      _callback: any
-    ) => {},
+      config: SecurityConfig,
+      username: string,
+      updates: UserDataUpdate,
+      callback: ICallback<SecurityConfig>
+    ) => {
+      void config
+      void username
+      void updates
+      void callback
+    },
 
-    addUser: (_config: any, _user: any, _callback: any) => {},
+    addUser: (
+      config: SecurityConfig,
+      user: NewUserData,
+      callback: ICallback<SecurityConfig>
+    ) => {
+      void config
+      void user
+      void callback
+    },
 
     setPassword: (
-      _config: any,
-      _username: any,
-      _password: any,
-      _callback: any
-    ) => {},
+      config: SecurityConfig,
+      username: string,
+      password: string,
+      callback: ICallback<SecurityConfig>
+    ) => {
+      void config
+      void username
+      void password
+      void callback
+    },
 
-    deleteUser: (_config: any, _username: any, _callback: any) => {},
+    deleteUser: (
+      config: SecurityConfig,
+      username: string,
+      callback: ICallback<SecurityConfig>
+    ) => {
+      void config
+      void username
+      void callback
+    },
 
-    shouldAllowWrite: function (_req: any, _delta: any) {
+    getDevices: (config: SecurityConfig): Device[] => {
+      void config
+      return []
+    },
+
+    deleteDevice: (
+      config: SecurityConfig,
+      clientId: string,
+      callback: ICallback<SecurityConfig>
+    ) => {
+      void config
+      void clientId
+      void callback
+    },
+
+    updateDevice: (
+      config: SecurityConfig,
+      clientId: string,
+      updates: DeviceDataUpdate,
+      callback: ICallback<SecurityConfig>
+    ) => {
+      void config
+      void clientId
+      void updates
+      void callback
+    },
+
+    shouldAllowWrite: function (req: SignalKRequest, delta: Delta): boolean {
+      void req
+      void delta
       return true
     },
 
     shouldAllowPut: function (
-      _req: any,
-      _context: any,
-      _source: any,
-      _path: any
-    ) {
+      req: Request,
+      context: string,
+      source: string | null,
+      path: string
+    ): boolean {
+      void req
+      void context
+      void source
+      void path
       return true
     },
 
-    filterReadDelta: (_user: any, delta: any) => {
+    filterReadDelta: (
+      principal: SkPrincipal | undefined,
+      delta: Delta
+    ): Delta | null => {
+      void principal
       return delta
     },
 
-    verifyWS: (_spark: any) => {},
+    verifyWS: (req: WsAuthRequest) => {
+      void req
+    },
 
-    authorizeWS: (_req: any) => {},
+    authorizeWS: (req: WsAuthRequest) => {
+      void req
+    },
 
-    anyACLs: () => {
+    anyACLs: (): boolean => {
       return false
     },
 
     checkACL: (
-      _id: any,
-      _context: any,
-      _path: any,
-      _source: any,
-      _operation: any
-    ) => {
+      id: string,
+      context: string,
+      path: string,
+      source: string | null,
+      operation: 'read' | 'write' | 'put'
+    ): boolean => {
+      void id
+      void context
+      void path
+      void source
+      void operation
       return true
     },
 
-    isDummy: () => {
+    isDummy: (): boolean => {
       return true
     },
 
-    canAuthorizeWS: () => {
+    canAuthorizeWS: (): boolean => {
       return false
     },
 
-    shouldFilterDeltas: () => {
+    shouldFilterDeltas: (): boolean => {
       return false
     },
 
-    addAdminMiddleware: () => {},
+    addAdminMiddleware: (path: string) => {
+      void path
+    },
 
-    addAdminWriteMiddleware: () => {},
+    addAdminWriteMiddleware: (path: string) => {
+      void path
+    },
 
-    addWriteMiddleware: () => {},
+    addWriteMiddleware: (path: string) => {
+      void path
+    },
 
-    allowReadOnly: () => {
+    allowReadOnly: (): boolean => {
       return true
     },
 
-    supportsLogin: () => false,
+    supportsLogin: (): boolean => {
+      return false
+    },
 
-    getAuthRequiredString: () => {
+    login: (username: string, password: string) => {
+      void username
+      void password
+      return Promise.resolve({
+        statusCode: 401,
+        message: 'Login not supported'
+      })
+    },
+
+    getAuthRequiredString: (): 'never' | 'forwrite' | 'always' => {
       return 'never'
     },
 
-    validateConfiguration: (_configuration: any) => {},
+    validateConfiguration: (configuration: SecurityConfig) => {
+      void configuration
+    },
+
+    generateToken: (
+      req: Request,
+      res: Response,
+      next: NextFunction,
+      id: string,
+      expiration: string
+    ) => {
+      void req
+      void res
+      void next
+      void id
+      void expiration
+    },
+
+    requestAccess: (
+      config: SecurityConfig,
+      request: ClientRequest,
+      ip: string | null | undefined,
+      updateCb?: (reply: Reply) => void
+    ): Promise<Reply> => {
+      void config
+      void request
+      void ip
+      void updateCb
+      return Promise.resolve({
+        state: 'COMPLETED',
+        requestId: '',
+        statusCode: 501,
+        message: 'Not implemented',
+        href: ''
+      })
+    },
+
+    getAccessRequestsResponse: (): RequestRecord[] => {
+      return []
+    },
+
+    setAccessRequestStatus: (
+      config: SecurityConfig,
+      identifier: string,
+      status: string,
+      body: RequestStatusData,
+      cb: ICallback<SecurityConfig>
+    ) => {
+      void config
+      void identifier
+      void status
+      void body
+      cb(new Error('Not implemented'))
+    },
 
     configFromArguments: false,
-    securityConfig: undefined,
-    requestAccess: () => undefined
+    securityConfig: {} as SecurityConfig,
+    updateOIDCConfig: (newOidcConfig: unknown) => {
+      void newOidcConfig
+    }
   }
-  //force cast via unknown so that we don't need to
-  //implement all dummy methods that are never called
-  //with dummy strategy in place. or if they are called
-  //the result will be an error.
-  return dummyStrategy as unknown as SecurityStrategy
+
+  return dummyStrategy
 }

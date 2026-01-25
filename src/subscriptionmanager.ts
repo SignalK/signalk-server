@@ -32,6 +32,7 @@ import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
+import { SkPrincipal } from './security'
 import { StreamBundle, toDelta } from './streambundle'
 import { ContextMatcher } from './types'
 const debug = createDebug('signalk-server:subscriptionmanager')
@@ -55,7 +56,7 @@ class SubscriptionManager implements ISubscriptionManager {
     unsubscribes: Unsubscribes,
     errorCallback: (err: unknown) => void,
     callback: SubscribeCallback,
-    user?: string
+    principal?: SkPrincipal
   ) {
     const contextFilter = contextMatcher(
       this.selfContext,
@@ -72,7 +73,7 @@ class SubscriptionManager implements ISubscriptionManager {
         contextFilter,
         callback,
         errorCallback,
-        user
+        principal
       )
       // listen to new keys and then use the same logic to check if we
       // want to subscribe, passing in a map with just that single bus
@@ -88,7 +89,7 @@ class SubscriptionManager implements ISubscriptionManager {
             contextFilter,
             callback,
             errorCallback,
-            user
+            principal
           )
         })
       )
@@ -103,7 +104,7 @@ class SubscriptionManager implements ISubscriptionManager {
       // 1. Announce ALL existing paths matching context (send cached deltas once)
       const existingDeltas = this.app.deltaCache.getCachedDeltas(
         contextFilter,
-        user
+        principal
       )
       if (existingDeltas) {
         existingDeltas.forEach((delta: any) => {
@@ -176,7 +177,7 @@ function handleSubscribeRows(
   filter: ContextMatcher,
   callback: SubscribeCallback,
   errorCallback: any,
-  user?: string
+  principal?: SkPrincipal
 ) {
   rows.reduce((acc, subscribeRow) => {
     if (subscribeRow.path !== undefined) {
@@ -188,7 +189,7 @@ function handleSubscribeRows(
         filter,
         callback,
         errorCallback,
-        user
+        principal
       )
     }
     return acc
@@ -207,7 +208,7 @@ function handleSubscribeRow(
   filter: ContextMatcher,
   callback: SubscribeCallback,
   errorCallback: any,
-  user?: string
+  principal?: SkPrincipal
 ) {
   const matcher = pathMatcher(subscribeRow.path)
   // iterate over all the buses, checking if we want to subscribe to its values
@@ -265,7 +266,7 @@ function handleSubscribeRow(
       }
       unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
 
-      const latest = app.deltaCache.getCachedDeltas(filter, user, key)
+      const latest = app.deltaCache.getCachedDeltas(filter, principal, key)
       if (latest) {
         latest.forEach(callback)
       }

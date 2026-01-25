@@ -716,7 +716,7 @@ module.exports = function (
               console.log(err)
               response.status(500)
               response.send('Unable to add user')
-            } else {
+            } else if (theConfig) {
               saveSecurityConfig(app, theConfig, (theError) => {
                 if (theError) {
                   console.log(theError)
