@@ -1,4 +1,11 @@
-import { useRef, useEffect, useState, useCallback, useMemo, ChangeEvent } from 'react'
+import {
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  ChangeEvent
+} from 'react'
 import DataRow from './DataRow'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import './VirtualTable.css'
