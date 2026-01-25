@@ -58,11 +58,9 @@ export interface ResourcesApi {
    */
   listResources(
     resType: SignalKResourceType,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    params: { [key: string]: any },
+    params: Record<string, unknown>,
     providerId?: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<{ [id: string]: any }>
+  ): Promise<Record<string, unknown>>
 
   /**
    * Retrieve the resource with the supplied SignalK resource_type and resource_id.
@@ -132,8 +130,7 @@ export interface ResourcesApi {
   setResource(
     resType: SignalKResourceType,
     resId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: { [key: string]: any },
+    data: Record<string, unknown>,
     providerId?: string
   ): Promise<void>
 
@@ -247,11 +244,9 @@ export interface ResourceProviderMethods {
    *
    * @param query - Object containing `key | value` pairs representing the parameters by which to filter the returned entries. _e.g. {region: 'fishing_zone'}_
    */
-  listResources(query: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }): Promise<{ [id: string]: any }>
+  listResources(
+    query: Record<string, unknown>
+  ): Promise<Record<string, unknown>>
 
   /**
    * This method is called when a request is made for a specific resource entry with the supplied `id`. If `property` is supplied then the value of the resource property is returned. If there is no resource associated with the id the call should return Promise.reject.
@@ -369,11 +364,7 @@ export interface ResourceProviderMethods {
    * ```
    *
    */
-  setResource(
-    id: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    value: { [key: string]: any }
-  ): Promise<void>
+  setResource(id: string, value: Record<string, unknown>): Promise<void>
 
   /**
    * This method is called when a request is made to remove the specific resource entry with the supplied resource id.

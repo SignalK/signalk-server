@@ -136,22 +136,27 @@ export interface WeatherProviders {
   }
 }
 
-/**@category  Weather API */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const isWeatherProvider = (obj: any) => {
-  const typedObj = obj
+/**
+ * Type guard to check if an object is a valid WeatherProvider.
+ * @category Weather API
+ */
+export const isWeatherProvider = (obj: unknown): obj is WeatherProvider => {
+  if (typeof obj !== 'object' || obj === null) {
+    return false
+  }
+  const typedObj = obj as Record<string, unknown>
+  const methods = typedObj['methods']
   return (
-    ((typedObj !== null && typeof typedObj === 'object') ||
-      typeof typedObj === 'function') &&
     typeof typedObj['name'] === 'string' &&
-    ((typedObj['methods'] !== null &&
-      typeof typedObj['methods'] === 'object') ||
-      typeof typedObj['methods'] === 'function') &&
-    (typeof typedObj['methods']['pluginId'] === 'undefined' ||
-      typeof typedObj['methods']['pluginId'] === 'string') &&
-    typeof typedObj['methods']['getObservations'] === 'function' &&
-    typeof typedObj['methods']['getForecasts'] === 'function' &&
-    typeof typedObj['methods']['getWarnings'] === 'function'
+    typeof methods === 'object' &&
+    methods !== null &&
+    (typeof (methods as Record<string, unknown>)['pluginId'] === 'undefined' ||
+      typeof (methods as Record<string, unknown>)['pluginId'] === 'string') &&
+    typeof (methods as Record<string, unknown>)['getObservations'] ===
+      'function' &&
+    typeof (methods as Record<string, unknown>)['getForecasts'] ===
+      'function' &&
+    typeof (methods as Record<string, unknown>)['getWarnings'] === 'function'
   )
 }
 

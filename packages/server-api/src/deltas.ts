@@ -9,7 +9,8 @@ export interface WithContext {
 type NormalizedBaseDelta = {
   context: Context
   $source: SourceRef
-  source: Source
+  /** @deprecated Use $source instead */
+  source?: Source
   path: Path
   timestamp: Timestamp
 }
@@ -65,6 +66,7 @@ export type MetaDelta = Delta
 /** @category Server API */
 export type Update = {
   timestamp?: Timestamp
+  /** @deprecated Use $source (SourceRef) instead for more practical string-based referencing */
   source?: Source
   $source?: SourceRef
 } & ({ values: PathValue[] } | { meta: Meta[] }) // require either values or meta or both
