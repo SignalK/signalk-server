@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Button,
@@ -14,6 +13,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
 import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
+import { useStore } from '../../store'
 
 import BasicProvider from './BasicProvider'
 import SourcePriorities from './SourcePriorities'
@@ -33,16 +33,12 @@ interface Provider {
   [key: string]: unknown
 }
 
-interface RootState {
-  discoveredProviders: Provider[]
-}
-
 const ProvidersConfiguration: React.FC = () => {
   const params = useParams<{ providerId?: string }>()
   const navigate = useNavigate()
-  const discoveredProviders = useSelector(
-    (state: RootState) => state.discoveredProviders
-  )
+  const discoveredProviders = useStore(
+    (state) => state.discoveredProviders
+  ) as Provider[]
 
   const [providers, setProviders] = useState<Provider[]>([])
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
@@ -52,7 +48,13 @@ const ProvidersConfiguration: React.FC = () => {
 
   const selectedProviderRef = useRef<HTMLDivElement>(null)
 
-  const fetchProviders = useCallback(async () => {
+  interface ProvidersData {
+    providers: Provider[]
+    selectedProvider: Provider | null
+    selectedIndex: number
+  }
+
+  const loadProviders = useCallback(async (): Promise<ProvidersData> => {
     const response = await fetch(`${window.serverRoutesPrefix}/providers`, {
       credentials: 'include'
     })
@@ -72,9 +74,11 @@ const ProvidersConfiguration: React.FC = () => {
       foundProvider.originalId = foundProvider.id
     }
 
-    setProviders(data)
-    setSelectedProvider(foundProvider ? structuredClone(foundProvider) : null)
-    setSelectedIndex(foundIndex ?? -1)
+    return {
+      providers: data,
+      selectedProvider: foundProvider ? structuredClone(foundProvider) : null,
+      selectedIndex: foundIndex ?? -1
+    }
   }, [params.providerId])
 
   const runDiscovery = useCallback(() => {
@@ -85,14 +89,15 @@ const ProvidersConfiguration: React.FC = () => {
   }, [])
 
   // Data fetching on mount - this is the standard React pattern for fetching data.
-  // The react-hooks/set-state-in-effect rule flags this, but data fetching in effects
-  // that call setState with fetched data is the recommended approach when not using
-  // a data fetching library like React Query. See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
+  // See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching pattern
-    fetchProviders()
+    loadProviders().then((data) => {
+      setProviders(data.providers)
+      setSelectedProvider(data.selectedProvider)
+      setSelectedIndex(data.selectedIndex)
+    })
     runDiscovery()
-  }, [fetchProviders, runDiscovery])
+  }, [loadProviders, runDiscovery])
 
   const handleProviderChange = useCallback(
     (
@@ -180,8 +185,8 @@ const ProvidersConfiguration: React.FC = () => {
       })
 
       if (wasDiscovered && discoveredProviders) {
-        // Note: discoveredProviders state is managed by Redux
-        // The parent component should handle this
+        // Note: discoveredProviders state is managed by Zustand store
+        // Updates arrive via WebSocket DISCOVERED_PROVIDER events
       }
 
       setSelectedProvider(null)

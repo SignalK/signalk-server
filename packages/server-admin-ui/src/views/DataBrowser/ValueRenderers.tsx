@@ -8,7 +8,7 @@ import { faBellSlash } from '@fortawesome/free-solid-svg-icons/faBellSlash'
 
 import '../../blinking-circle.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { MetaData } from './ValueEmittingStore'
+import type { MetaData } from '../../store'
 
 interface RendererProps {
   value: unknown

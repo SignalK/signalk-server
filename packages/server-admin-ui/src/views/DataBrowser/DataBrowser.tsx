@@ -3,11 +3,9 @@ import React, {
   useEffect,
   useCallback,
   useRef,
-  useMemo,
   useDeferredValue,
   useTransition
 } from 'react'
-import { useSelector } from 'react-redux'
 import { JSONTree } from 'react-json-tree'
 import Select from 'react-select'
 import {
@@ -22,16 +20,19 @@ import {
 } from 'reactstrap'
 import dayjs from 'dayjs'
 import VirtualizedMetaTable from './VirtualizedMetaTable'
-import store, { PathData } from './ValueEmittingStore'
-import type { MetaData } from './ValueEmittingStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
+import type { PathData, MetaData } from '../../store'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import { getPath$SourceKey } from './pathUtils'
+import {
+  useWebSocket,
+  useDeltaMessages,
+  getWebSocketService
+} from '../../hooks/useWebSocket'
+import { useStore, useShallow } from '../../store'
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
-
-const STRUCTURE_DEBOUNCE_MS = 200
 
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
@@ -40,15 +41,6 @@ const contextStorageKey = 'admin.v1.dataBrowser.context'
 const searchStorageKey = 'admin.v1.dataBrowser.search'
 const selectedSourcesStorageKey = 'admin.v1.dataBrowser.selectedSources'
 const sourceFilterActiveStorageKey = 'admin.v1.dataBrowser.sourceFilterActive'
-
-interface WebSocketWithSK extends WebSocket {
-  skSelf?: string
-  messageHandler?: ((msg: DeltaMessage) => void) | null
-}
-
-interface RootState {
-  webSocket: WebSocketWithSK | null
-}
 
 interface DeltaMessage {
   context?: string
@@ -89,7 +81,7 @@ interface Sources {
 }
 
 const DataBrowser: React.FC = () => {
-  const webSocket = useSelector((state: RootState) => state.webSocket)
+  const { ws: webSocket, isConnected } = useWebSocket()
 
   const [hasData, setHasData] = useState(false)
   const [pause, setPause] = useState(
@@ -122,14 +114,22 @@ const DataBrowser: React.FC = () => {
   const deferredSearch = useDeferredValue(search)
   const isSearchStale = search !== deferredSearch
   const [, startTransition] = useTransition()
-  const [contextVersion, setContextVersion] = useState(0)
+
+  // Subscribe to Zustand signalkData directly - React Compiler tracks this properly
+  // Using useShallow to only re-render when contexts change
+  const signalkData = useStore(useShallow((s) => s.signalkData))
+
+  // Get Zustand actions for writing data
+  const updatePath = useStore((s) => s.updatePath)
+  const updateMeta = useStore((s) => s.updateMeta)
+  const getPathData = useStore((s) => s.getPathData)
 
   const didSubscribeRef = useRef(false)
-  const webSocketRef = useRef<WebSocketWithSK | null>(null)
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const unsubscribeStoreRef = useRef<(() => void) | null>(null)
+  const webSocketRef = useRef<WebSocket | null>(null)
+  const isMountedRef = useRef(true)
 
-  const fetchSources = useCallback(async () => {
+  // Load sources data from the API and process NMEA2000 device names
+  const loadSources = useCallback(async (): Promise<Sources> => {
     const response = await fetch(`/signalk/v1/api/sources`, {
       credentials: 'include'
     })
@@ -148,7 +148,7 @@ const DataBrowser: React.FC = () => {
         })
       }
     })
-    setSources(sourcesData)
+    return sourcesData
   }, [])
 
   const handleMessage = useCallback(
@@ -157,12 +157,19 @@ const DataBrowser: React.FC = () => {
         return
       }
 
+      // Get skSelf directly from the service to avoid stale closure issues
+      // The service always has the current value from the hello message
+      const currentSkSelf = getWebSocketService().getSkSelf()
       const deltaMsg = msg as DeltaMessage
+
+      if (!currentSkSelf) {
+        return
+      }
+
       if (deltaMsg.context && deltaMsg.updates) {
+        // Use currentSkSelf to determine if this is the self context
         const key =
-          deltaMsg.context === webSocketRef.current?.skSelf
-            ? 'self'
-            : deltaMsg.context
+          deltaMsg.context === currentSkSelf ? 'self' : deltaMsg.context
 
         let isNew = false
 
@@ -191,8 +198,8 @@ const DataBrowser: React.FC = () => {
                     sentence: sentence || undefined,
                     timestamp: formattedTimestamp
                   }
-                  const wasNew = !store.getPathData(key, k)
-                  store.updatePath(key, k, pathData)
+                  const wasNew = !getPathData(key, k)
+                  updatePath(key, k, pathData)
                   if (wasNew) isNew = true
                 })
               } else {
@@ -208,15 +215,15 @@ const DataBrowser: React.FC = () => {
                   sentence: sentence || undefined,
                   timestamp: formattedTimestamp
                 }
-                const wasNew = !store.getPathData(key, path$SourceKey)
-                store.updatePath(key, path$SourceKey, pathData)
+                const wasNew = !getPathData(key, path$SourceKey)
+                updatePath(key, path$SourceKey, pathData)
                 if (wasNew) isNew = true
               }
             })
           }
           if (update.meta) {
             update.meta.forEach((vp) => {
-              store.updateMeta(key, vp.path, vp.value as Partial<MetaData>)
+              updateMeta(key, vp.path, vp.value as Partial<MetaData>)
             })
           }
         })
@@ -226,69 +233,85 @@ const DataBrowser: React.FC = () => {
         }
       }
     },
-    [pause, context, hasData]
+    [pause, context, hasData, updatePath, updateMeta, getPathData]
   )
 
+  // Subscribe to delta messages using the new hook pattern
+  useDeltaMessages(handleMessage)
+
   const subscribeToDataIfNeeded = useCallback(() => {
+    // Wait for WebSocket to be actually connected (readyState OPEN)
+    // before starting discovery, otherwise the subscription message is dropped
     if (
       !pause &&
       webSocket &&
+      isConnected &&
       (webSocket !== webSocketRef.current || didSubscribeRef.current === false)
     ) {
       granularSubscriptionManager.setWebSocket(
         webSocket as unknown as WebSocket
       )
-      granularSubscriptionManager.setMessageHandler(handleMessage)
       granularSubscriptionManager.startDiscovery()
 
       webSocketRef.current = webSocket
       didSubscribeRef.current = true
-      // The messageHandler property is an intentional extension of the WebSocket
-      // used by actions.ts to route delta messages to interested components.
-      // This mutation is safe because the webSocket object is designed to be extended.
-      // eslint-disable-next-line react-compiler/react-compiler, react-hooks/immutability
-      webSocket.messageHandler = handleMessage
     }
-  }, [pause, webSocket, handleMessage])
+  }, [pause, webSocket, isConnected])
 
-  const unsubscribeToData = useCallback(() => {
-    granularSubscriptionManager.unsubscribeAll()
-    didSubscribeRef.current = false
-    if (webSocketRef.current) {
-      webSocketRef.current.messageHandler = null
-    }
-  }, [])
-
+  // Initial setup effect - load sources on mount
   useEffect(() => {
-    fetchSources()
-    subscribeToDataIfNeeded()
+    isMountedRef.current = true
 
-    // Subscribe to store structure changes - contextVersion triggers useMemo recalculation
-    unsubscribeStoreRef.current = store.subscribeToStructure((version) => {
-      // Debounce rapid structure changes
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current)
+    loadSources().then((data) => {
+      if (isMountedRef.current) {
+        setSources(data)
       }
-      updateTimeoutRef.current = setTimeout(() => {
-        setContextVersion(version)
-      }, STRUCTURE_DEBOUNCE_MS)
     })
 
     return () => {
-      unsubscribeToData()
-      if (unsubscribeStoreRef.current) {
-        unsubscribeStoreRef.current()
-      }
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current)
-      }
-      granularSubscriptionManager.unsubscribeAll()
+      isMountedRef.current = false
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadSources])
 
+  // Compute context options from Zustand state directly
+  // React Compiler tracks signalkData as a dependency
+  const contextOptions: SelectOption[] = (() => {
+    const contexts = Object.keys(signalkData).sort()
+    const options: SelectOption[] = []
+
+    if (contexts.includes('self')) {
+      const contextData = signalkData['self']?.['name'] as
+        | { value?: string }
+        | undefined
+      const contextName = contextData?.value
+      options.push({ value: 'self', label: `${contextName || ''} self` })
+    }
+
+    contexts.forEach((key) => {
+      if (key !== 'self') {
+        const contextData = signalkData[key]?.['name'] as
+          | { value?: string }
+          | undefined
+        const contextName = contextData?.value
+        options.push({ value: key, label: `${contextName || ''} ${key}` })
+      }
+    })
+
+    return options
+  })()
+
+  // WebSocket subscription effect - separate from setup to avoid cleanup cycles
   useEffect(() => {
     subscribeToDataIfNeeded()
   }, [subscribeToDataIfNeeded])
+
+  // Cleanup WebSocket subscription only on unmount
+  useEffect(() => {
+    return () => {
+      granularSubscriptionManager.unsubscribeAll()
+      didSubscribeRef.current = false
+    }
+  }, [])
 
   const handleContextChange = useCallback(
     (selectedOption: SelectOption | null) => {
@@ -309,37 +332,9 @@ const DataBrowser: React.FC = () => {
     []
   )
 
-  const getContextLabel = useCallback((contextKey: string) => {
-    const contextData = store.getPathData(contextKey, 'name') as
-      | { value?: string }
-      | undefined
-    const contextName = contextData?.value
-    return `${contextName || ''} ${contextKey}`
-  }, [])
-
-  const contextOptions = useMemo((): SelectOption[] => {
-    void contextVersion
-    const contexts = store.getContexts().sort()
-    const options: SelectOption[] = []
-
-    if (contexts.includes('self')) {
-      const selfLabel = getContextLabel('self')
-      options.push({ value: 'self', label: selfLabel })
-    }
-
-    contexts.forEach((key) => {
-      if (key !== 'self') {
-        const contextLabel = getContextLabel(key)
-        options.push({ value: key, label: contextLabel })
-      }
-    })
-
-    return options
-  }, [contextVersion, getContextLabel])
-
-  const currentContext = useMemo((): SelectOption | null => {
-    return contextOptions.find((option) => option.value === context) || null
-  }, [context, contextOptions])
+  // Direct computation - React 19 Compiler handles memoization
+  const currentContext: SelectOption | null =
+    contextOptions.find((option) => option.value === context) || null
 
   const handleSearch = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -350,12 +345,10 @@ const DataBrowser: React.FC = () => {
     []
   )
 
-  // Compute filtered path keys - recalculates when filters or store structure changes
-  // Using useMemo avoids calling setState in effects
-  const filteredPath$SourceKeys = useMemo(() => {
-    // contextVersion dependency ensures recalculation when store structure changes
-    void contextVersion
-    const allKeys = store.getPath$SourceKeys(context)
+  // Compute filtered path keys from Zustand state directly
+  const filteredPathKeys: string[] = (() => {
+    const contextData = signalkData[context] || {}
+    const allKeys = Object.keys(contextData)
 
     const filtered = allKeys.filter((key) => {
       if (deferredSearch && deferredSearch.length > 0) {
@@ -365,7 +358,7 @@ const DataBrowser: React.FC = () => {
       }
 
       if (sourceFilterActive && selectedSources.size > 0) {
-        const data = store.getPathData(context, key) as PathData | undefined
+        const data = contextData[key] as PathData | undefined
         if (data && !selectedSources.has(data.$source || '')) {
           return false
         }
@@ -374,15 +367,8 @@ const DataBrowser: React.FC = () => {
       return true
     })
 
-    filtered.sort()
-    return filtered
-  }, [
-    context,
-    contextVersion,
-    deferredSearch,
-    sourceFilterActive,
-    selectedSources
-  ])
+    return filtered.sort()
+  })()
 
   const toggleMeta = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -406,14 +392,14 @@ const DataBrowser: React.FC = () => {
       setPause(newPause)
       localStorage.setItem(pauseStorageKey, String(newPause))
       if (newPause) {
-        unsubscribeToData()
         granularSubscriptionManager.unsubscribeAll()
+        didSubscribeRef.current = false
       } else {
-        fetchSources()
+        loadSources().then(setSources)
         subscribeToDataIfNeeded()
       }
     },
-    [fetchSources, subscribeToDataIfNeeded, unsubscribeToData]
+    [loadSources, subscribeToDataIfNeeded]
   )
 
   const toggleSourceSelection = useCallback(
@@ -471,7 +457,8 @@ const DataBrowser: React.FC = () => {
   )
 
   const getUniquePathsForMeta = useCallback(() => {
-    const allKeys = store.getPath$SourceKeys(context)
+    const contextData = signalkData[context] || {}
+    const allKeys = Object.keys(contextData)
 
     const filtered = allKeys.filter((key) => {
       if (!search || search.length === 0) {
@@ -481,12 +468,12 @@ const DataBrowser: React.FC = () => {
     })
 
     const paths = filtered.map((key) => {
-      const data = store.getPathData(context, key) as PathData | undefined
+      const data = contextData[key] as PathData | undefined
       return data?.path || key
     })
 
     return [...new Set(paths)].sort()
-  }, [context, search])
+  }, [context, search, signalkData])
 
   return (
     <div className="animated fadeIn">
@@ -603,7 +590,7 @@ const DataBrowser: React.FC = () => {
                 }}
               >
                 <VirtualizedDataTable
-                  path$SourceKeys={filteredPath$SourceKeys}
+                  path$SourceKeys={filteredPathKeys}
                   context={context}
                   raw={raw}
                   isPaused={pause}

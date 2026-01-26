@@ -480,10 +480,12 @@ function PluginConfigCard({
   const [showSaveSuccess, setShowSaveSuccess] = useState(false)
   const configCardRef = useRef<HTMLDivElement>(null)
 
-  const [optimisticData, setOptimisticData] = useOptimistic(
-    plugin.data,
-    (_currentData: PluginData, newData: PluginData) => newData
-  )
+  // useOptimistic with simple replacement - the updater ignores current state
+  // since each optimistic update contains the complete new state
+  const [optimisticData, setOptimisticData] = useOptimistic<
+    PluginData,
+    PluginData
+  >(plugin.data, (currentData, newData) => ({ ...currentData, ...newData }))
 
   const showSuccessMessage = useCallback(() => {
     setShowSaveSuccess(true)

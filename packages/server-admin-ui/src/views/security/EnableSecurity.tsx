@@ -16,8 +16,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
 import { faUser } from '@fortawesome/free-solid-svg-icons/faUser'
-import { useAppSelector, useAppDispatch } from '../../store'
-import { enableSecurity, fetchLoginStatus } from '../../actions'
+import { useZustandLoginStatus } from '../../store'
+import { enableSecurityZustand } from '../../actions'
 import Login from './Login'
 
 interface EnableSecurityState {
@@ -25,8 +25,7 @@ interface EnableSecurityState {
 }
 
 export default function EnableSecurity() {
-  const dispatch = useAppDispatch()
-  const loginStatus = useAppSelector((state) => state.loginStatus)
+  const loginStatus = useZustandLoginStatus()
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -35,13 +34,9 @@ export default function EnableSecurity() {
     EnableSecurityState,
     FormData
   >(
-    async (_prevState) => {
-      return new Promise<EnableSecurityState>((resolve) => {
-        enableSecurity(username, password, (error: string | null) => {
-          fetchLoginStatus(dispatch)
-          resolve({ error })
-        })
-      })
+    async () => {
+      const error = await enableSecurityZustand(username, password)
+      return { error }
     },
     { error: null }
   )

@@ -6,6 +6,23 @@ import { federation } from '@module-federation/vite'
 import '@signalk/server-admin-ui-dependencies'
 
 /**
+ * Custom Vite plugin to replace %ADDONSCRIPTS% placeholder in dev mode.
+ * In production, this is replaced server-side with actual addon script tags.
+ * In dev mode, we replace it with an empty comment since addons aren't available.
+ */
+function replaceAddonScripts() {
+  return {
+    name: 'replace-addon-scripts',
+    transformIndexHtml(html) {
+      return html.replace(
+        '%ADDONSCRIPTS%',
+        '<!-- addon scripts not available in dev mode -->'
+      )
+    }
+  }
+}
+
+/**
  * Custom Vite plugin to strip SVG font format from @font-face declarations in CSS.
  * SVG fonts are obsolete (only needed for IE9 and below) and add ~2.5MB to the bundle.
  * Modern browsers use WOFF2/WOFF which are smaller and universally supported.
@@ -62,7 +79,17 @@ function stripSvgFonts() {
 export default defineConfig({
   base: './',
   publicDir: 'public_src',
+  // Use ES2023 for both dev and build to support top-level await in Module Federation
+  esbuild: {
+    target: 'es2023'
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2023'
+    }
+  },
   plugins: [
+    replaceAddonScripts(),
     stripSvgFonts(),
     react({
       babel: {
@@ -74,6 +101,9 @@ export default defineConfig({
       name: 'adminUI',
       filename: 'remoteEntry.js',
       remotes: {},
+      // Disable TypeScript declaration generation to avoid WebSocket connection errors
+      // during dev mode (the dts plugin tries to connect on port 16322)
+      dts: false,
       shared: {
         react: {
           singleton: true,
@@ -100,10 +130,40 @@ export default defineConfig({
       }
     }
   },
+  server: {
+    port: 5173,
+    // Bind to localhost only by default for security
+    // Use `npm run dev -- --host 0.0.0.0` to expose to network
+    host: 'localhost',
+    proxy: {
+      // Proxy SignalK API and WebSocket to the running server
+      '/signalk': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true
+      },
+      // Proxy admin server routes
+      '/skServer': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true
+      },
+      // Proxy plugin public files
+      '/plugins': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      },
+      // Proxy webapp files
+      '/@signalk': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      }
+    }
+  },
   build: {
     outDir: 'public',
     sourcemap: true,
-    target: 'es2022',
+    target: 'es2023',
     assetsInlineLimit: 0, // Prevent inlining assets to allow server-side logo override
     cssCodeSplit: false // Generate single CSS file to ensure it's always loaded
   },

@@ -16,18 +16,19 @@ import { faCircleNotch } from '@fortawesome/free-solid-svg-icons/faCircleNotch'
 import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faBars } from '@fortawesome/free-solid-svg-icons/faBars'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
-import { useAppSelector, useAppDispatch } from '../../store'
-import { logout, restart } from '../../actions'
+import {
+  useZustandLoginStatus,
+  useRestarting,
+  useBackpressureWarning
+} from '../../store'
+import { logoutAction, restartAction } from '../../actions'
 
 export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const dispatch = useAppDispatch()
 
-  const loginStatus = useAppSelector((state) => state.loginStatus)
-  const restarting = useAppSelector((state) => state.restarting)
-  const backpressureWarning = useAppSelector(
-    (state) => state.backpressureWarning
-  )
+  const loginStatus = useZustandLoginStatus()
+  const restarting = useRestarting()
+  const backpressureWarning = useBackpressureWarning()
 
   const handleSidebarHide = useCallback(() => {
     document.body.classList.toggle('sidebar-hidden', true)
@@ -57,11 +58,11 @@ export default function Header() {
   }
 
   const handleLogout = () => {
-    dispatch(logout())
+    logoutAction()
   }
 
   const handleRestart = () => {
-    dispatch(restart())
+    restartAction()
   }
 
   return (

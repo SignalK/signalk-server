@@ -1,7 +1,7 @@
 import React, { useEffect, Component, ReactNode, ComponentType } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Container } from 'reactstrap'
-import { useAppSelector, useAppDispatch, AppState } from '../../store'
+import { useZustandLoginStatus, type LoginStatus } from '../../store'
 
 import Header from '../../components/Header/Header'
 import Sidebar from '../../components/Sidebar/Sidebar'
@@ -28,7 +28,7 @@ import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
-import { fetchAllData, openServerEventsConnection } from '../../actions'
+import { fetchAllDataZustand } from '../../actions'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -50,11 +50,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     return { hasError: true, error }
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('ErrorBoundary caught an error:', error, errorInfo)
   }
 
-  render(): ReactNode {
+  override render(): ReactNode {
     if (this.state.hasError) {
       return (
         <span>
@@ -79,7 +79,7 @@ interface ProtectedRouteProps {
 }
 
 function loginRequired(
-  loginStatus: AppState['loginStatus'],
+  loginStatus: LoginStatus,
   componentSupportsReadOnly: boolean
 ): boolean {
   // component works with read only access and
@@ -101,7 +101,7 @@ function ProtectedRoute({
   component: ComponentToRender,
   supportsReadOnly = false
 }: ProtectedRouteProps) {
-  const loginStatus = useAppSelector((state) => state.loginStatus)
+  const loginStatus = useZustandLoginStatus()
 
   if (loginRequired(loginStatus, supportsReadOnly)) {
     return <Login />
@@ -116,12 +116,10 @@ function ProtectedRoute({
 
 export default function Full() {
   const location = useLocation()
-  const dispatch = useAppDispatch()
 
   useEffect(() => {
-    fetchAllData(dispatch)
-    openServerEventsConnection(dispatch)
-  }, [dispatch])
+    fetchAllDataZustand()
+  }, [])
 
   const suppressPadding =
     location.pathname.indexOf('/e/') === 0 ? { padding: '0px' } : {}

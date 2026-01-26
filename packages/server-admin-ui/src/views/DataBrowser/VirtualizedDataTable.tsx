@@ -33,9 +33,6 @@ interface VirtualizedDataTableProps {
 // Virtualization requires measuring DOM and updating state in response to scroll events.
 // This is an inherent characteristic of virtual scrolling - we must read the container's
 // position from the DOM (via refs) and update which rows are rendered (via state).
-// The eslint rules for setState in effects don't account for DOM measurement patterns.
-/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
-/* eslint-disable react-hooks/set-state-in-effect */
 function VirtualizedDataTable({
   path$SourceKeys,
   context,
@@ -47,7 +44,8 @@ function VirtualizedDataTable({
   sourceFilterActive
 }: VirtualizedDataTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 50 })
+  // Track path$SourceKeys.length to reset range when data changes
+  const [keysLength, setKeysLength] = useState(path$SourceKeys.length)
   const [isNarrowScreen, setIsNarrowScreen] = useState(
     typeof window !== 'undefined' && window.innerWidth <= 768
   )
@@ -56,6 +54,21 @@ function VirtualizedDataTable({
   const rowHeight = isNarrowScreen ? 120 : 40
   const overscan = isNarrowScreen ? 5 : 15
 
+  // Compute initial visible range synchronously for first render
+  const computeInitialRange = useCallback(() => {
+    const visibleCount =
+      Math.ceil(window.innerHeight / rowHeight) + overscan * 2
+    return { start: 0, end: Math.min(path$SourceKeys.length - 1, visibleCount) }
+  }, [path$SourceKeys.length, rowHeight, overscan])
+
+  const [visibleRange, setVisibleRange] = useState(computeInitialRange)
+
+  // Reset visible range when path$SourceKeys length changes
+  if (path$SourceKeys.length !== keysLength) {
+    setKeysLength(path$SourceKeys.length)
+    setVisibleRange(computeInitialRange())
+  }
+
   // Track screen width for mobile layout detection
   useEffect(() => {
     const checkWidth = () => setIsNarrowScreen(window.innerWidth <= 768)
@@ -63,9 +76,9 @@ function VirtualizedDataTable({
     return () => window.removeEventListener('resize', checkWidth)
   }, [])
 
-  // Calculate visible range based on scroll position
-  const updateVisibleRange = useCallback(() => {
-    if (!containerRef.current) return
+  // Compute visible range from DOM measurements
+  const computeVisibleRange = useCallback(() => {
+    if (!containerRef.current) return null
 
     const rect = containerRef.current.getBoundingClientRect()
     const containerTop = rect.top
@@ -87,37 +100,42 @@ function VirtualizedDataTable({
       startIndex + visibleCount
     )
 
-    setVisibleRange((prev) => {
-      // Only update if range actually changed to avoid excessive re-renders
-      const atStart = startIndex === 0
-      const atEnd = endIndex >= path$SourceKeys.length - 1
-      const significantChange =
-        Math.abs(prev.start - startIndex) > 2 ||
-        Math.abs(prev.end - endIndex) > 2
-      const listGrew =
-        prev.end < endIndex && prev.end === prev.start + visibleCount - 1
-
-      if (atStart || atEnd || significantChange || listGrew) {
-        return { start: startIndex, end: endIndex }
-      }
-      return prev
-    })
+    return { start: startIndex, end: endIndex, visibleCount }
   }, [path$SourceKeys.length, rowHeight, overscan])
 
   // Set up scroll listener
   useEffect(() => {
-    updateVisibleRange()
-
     let ticking = false
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          updateVisibleRange()
+          const computed = computeVisibleRange()
+          if (computed) {
+            setVisibleRange((prev) => {
+              // Only update if range actually changed to avoid excessive re-renders
+              const atStart = computed.start === 0
+              const atEnd = computed.end >= path$SourceKeys.length - 1
+              const significantChange =
+                Math.abs(prev.start - computed.start) > 2 ||
+                Math.abs(prev.end - computed.end) > 2
+              const listGrew =
+                prev.end < computed.end &&
+                prev.end === prev.start + computed.visibleCount - 1
+
+              if (atStart || atEnd || significantChange || listGrew) {
+                return { start: computed.start, end: computed.end }
+              }
+              return prev
+            })
+          }
           ticking = false
         })
         ticking = true
       }
     }
+
+    // Trigger initial measurement
+    handleScroll()
 
     window.addEventListener('scroll', handleScroll, { passive: true })
     window.addEventListener('resize', handleScroll, { passive: true })
@@ -126,11 +144,7 @@ function VirtualizedDataTable({
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)
     }
-  }, [updateVisibleRange])
-
-  useEffect(() => {
-    updateVisibleRange()
-  }, [path$SourceKeys, updateVisibleRange])
+  }, [computeVisibleRange, path$SourceKeys.length])
 
   // Cleanup subscriptions on unmount
   useEffect(() => {

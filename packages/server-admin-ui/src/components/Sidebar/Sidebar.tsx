@@ -11,7 +11,11 @@ import { faShield } from '@fortawesome/free-solid-svg-icons/faShield'
 import { faBookOpen } from '@fortawesome/free-solid-svg-icons/faBookOpen'
 import { faBolt } from '@fortawesome/free-solid-svg-icons/faBolt'
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import { useAppSelector } from '../../store'
+import {
+  useZustandAppStore,
+  useAccessRequests,
+  useZustandLoginStatus
+} from '../../store'
 import classNames from 'classnames'
 
 // Map icon names to FA6 icons
@@ -59,9 +63,9 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ location }: SidebarProps) {
-  const appStore = useAppSelector((state) => state.appStore)
-  const accessRequests = useAppSelector((state) => state.accessRequests)
-  const loginStatus = useAppSelector((state) => state.loginStatus)
+  const appStore = useZustandAppStore()
+  const accessRequests = useAccessRequests()
+  const loginStatus = useZustandLoginStatus()
 
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length

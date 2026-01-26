@@ -1,4 +1,3 @@
-/* eslint-disable react-compiler/react-compiler */
 import {
   useState,
   useEffect,
@@ -27,8 +26,8 @@ import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
 import { faRightToBracket } from '@fortawesome/free-solid-svg-icons/faRightToBracket'
 import { faUser } from '@fortawesome/free-solid-svg-icons/faUser'
-import { useAppSelector, useAppDispatch } from '../../store'
-import { login } from '../../actions'
+import { useZustandLoginStatus } from '../../store'
+import { loginActionZustand } from '../../actions'
 import Dashboard from '../Dashboard/Dashboard'
 import EnableSecurity from './EnableSecurity'
 
@@ -49,8 +48,7 @@ interface LoginState {
 }
 
 export default function Login() {
-  const dispatch = useAppDispatch()
-  const loginStatus = useAppSelector((state) => state.loginStatus)
+  const loginStatus = useZustandLoginStatus()
 
   // Get initial OIDC error from URL
   const urlParams = getHashParams()
@@ -68,23 +66,15 @@ export default function Login() {
     LoginState,
     FormData
   >(
-    async (_prevState, _formData) => {
-      return new Promise<LoginState>((resolve) => {
-        login(
-          dispatch,
-          username,
-          password,
-          rememberMe,
-          (error: string | null) => {
-            resolve({ error })
-          }
-        )
-      })
+    async () => {
+      const error = await loginActionZustand(username, password, rememberMe)
+      return { error }
     },
     { error: initialOidcError }
   )
 
   const prevLoginStatusRef = useRef(loginStatus.status)
+  const isFirstRenderRef = useRef(true)
 
   const shouldSkipAutoLogin = useCallback((): boolean => {
     // Check URL params to prevent redirect loops and provide escape hatch
@@ -100,37 +90,27 @@ export default function Login() {
     return false
   }, [])
 
-  const tryAutoLogin = useCallback(() => {
-    if (
+  // Single effect handles both initial mount and subsequent loginStatus changes
+  useEffect(() => {
+    const shouldAutoLogin =
       loginStatus.status === 'notLoggedIn' &&
       loginStatus.oidcEnabled &&
       loginStatus.oidcAutoLogin &&
       !loginStatus.noUsers &&
       !shouldSkipAutoLogin()
-    ) {
+
+    // On first render, try auto-login if conditions are met
+    // On subsequent renders, only auto-login if status changed to 'notLoggedIn'
+    const statusChanged = prevLoginStatusRef.current !== loginStatus.status
+    const shouldRedirect =
+      shouldAutoLogin && (isFirstRenderRef.current || statusChanged)
+
+    if (shouldRedirect) {
       window.location.href = loginStatus.oidcLoginUrl as string
     }
-  }, [loginStatus, shouldSkipAutoLogin])
 
-  // Run auto-login on mount only - tryAutoLogin intentionally excluded from deps
-  // to prevent re-running when loginStatus changes (the second useEffect handles that)
-  useEffect(() => {
-    tryAutoLogin()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (
-      loginStatus.status === 'notLoggedIn' &&
-      loginStatus.oidcEnabled &&
-      loginStatus.oidcAutoLogin &&
-      !loginStatus.noUsers &&
-      prevLoginStatusRef.current !== loginStatus.status &&
-      !shouldSkipAutoLogin()
-    ) {
-      window.location.href = loginStatus.oidcLoginUrl as string
-    }
     prevLoginStatusRef.current = loginStatus.status
+    isFirstRenderRef.current = false
   }, [loginStatus, shouldSkipAutoLogin])
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {

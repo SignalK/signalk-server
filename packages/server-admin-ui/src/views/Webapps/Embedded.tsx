@@ -1,14 +1,14 @@
 import {
   useEffect,
-  useRef,
   useMemo,
+  useCallback,
   Suspense,
   createElement,
   ComponentType,
   Component,
   ReactNode
 } from 'react'
-import { useAppSelector } from '../../store'
+import { useZustandLoginStatus } from '../../store'
 import { useParams } from 'react-router-dom'
 import { toLazyDynamicComponent, APP_PANEL } from './dynamicutilities'
 import Login from '../../views/security/Login'
@@ -31,7 +31,7 @@ class WebappErrorBoundary extends Component<
   WebappErrorBoundaryProps,
   WebappErrorBoundaryState
 > {
-  state: WebappErrorBoundaryState = { hasError: false, error: null }
+  override state: WebappErrorBoundaryState = { hasError: false, error: null }
 
   static getDerivedStateFromError(error: Error): WebappErrorBoundaryState {
     return { hasError: true, error }
@@ -41,7 +41,7 @@ class WebappErrorBoundary extends Component<
     this.setState({ hasError: false, error: null })
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       const errorMessage = this.state.error?.message || ''
       // Check if this looks like a React version incompatibility error
@@ -91,6 +91,10 @@ class WebappErrorBoundary extends Component<
 
 const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws'
 
+// Module-level websocket tracking to avoid ref access during render
+// Each Embedded component instance gets its own array keyed by moduleId
+const moduleWebsockets = new Map<string, ReconnectingWebSocket[]>()
+
 interface WebSocketParams {
   subscribe?: string
   sendCachedValues?: boolean
@@ -119,39 +123,70 @@ interface EmbeddedComponentProps {
 }
 
 export default function Embedded() {
-  const loginStatus = useAppSelector((state) => state.loginStatus)
+  const loginStatus = useZustandLoginStatus()
   const params = useParams<{ moduleId: string }>()
-  const websocketsRef = useRef<ReconnectingWebSocket[]>([])
+  const moduleId = params.moduleId ?? ''
 
   // Create lazy component when moduleId changes - useMemo ensures stable reference
   const component = useMemo(
     () =>
-      params.moduleId
+      moduleId
         ? (toLazyDynamicComponent(
-            params.moduleId,
+            moduleId,
             APP_PANEL
           ) as ComponentType<EmbeddedComponentProps>)
         : null,
-    [params.moduleId]
+    [moduleId]
   )
 
   useEffect(() => {
-    // Capture the current websockets array for cleanup
-    const websockets = websocketsRef.current
-    return () => {
-      websockets.forEach((ws) => {
-        try {
-          ws.close()
-        } catch (e) {
-          console.error(e)
-        }
-      })
+    // Initialize websockets array for this module
+    if (!moduleWebsockets.has(moduleId)) {
+      moduleWebsockets.set(moduleId, [])
     }
-  }, [])
+    // Capture the module ID for cleanup
+    const cleanupModuleId = moduleId
+    return () => {
+      const websockets = moduleWebsockets.get(cleanupModuleId)
+      if (websockets) {
+        websockets.forEach((ws) => {
+          try {
+            ws.close()
+          } catch (e) {
+            console.error(e)
+          }
+        })
+        moduleWebsockets.delete(cleanupModuleId)
+      }
+    }
+  }, [moduleId])
+
+  // Callback for opening websockets - uses module-level map instead of ref
+  const openWebsocket = useCallback(
+    (wsParams: WebSocketParams) => {
+      const knownParams: (keyof WebSocketParams)[] = [
+        'subscribe',
+        'sendCachedValues',
+        'events'
+      ]
+      const queryParam = knownParams
+        .map((p, i) => [i, wsParams[p]] as [number, unknown])
+        .filter((x) => x[1] !== undefined)
+        .map(([i, v]) => `${knownParams[i]}=${v}`)
+        .join('&')
+      const ws = new ReconnectingWebSocket(
+        `${wsProto}://${window.location.host}/signalk/v1/stream?${queryParam}`
+      )
+      const websockets = moduleWebsockets.get(moduleId)
+      if (websockets) {
+        websockets.push(ws)
+      }
+      return ws
+    },
+    [moduleId]
+  )
 
   // Memoize adminUI API to ensure stable reference across renders.
-  // The websocketsRef access in openWebsocket is safe because it only happens
-  // when the callback is invoked (in event handlers), not during render.
   const adminUI: AdminUI = useMemo(
     () => ({
       hideSideBar: () => {
@@ -159,7 +194,7 @@ export default function Embedded() {
       },
       getApplicationUserData: (appDataVersion: string, path = '') =>
         fetch(
-          `/signalk/v1/applicationData/user/${params.moduleId}/${appDataVersion}${path}`,
+          `/signalk/v1/applicationData/user/${moduleId}/${appDataVersion}${path}`,
           { credentials: 'include' }
         )
           .then((r) => {
@@ -171,7 +206,7 @@ export default function Embedded() {
           .then((r) => r.json()),
       setApplicationUserData: (appDataVersion: string, data = {}, path = '') =>
         fetch(
-          `/signalk/v1/applicationData/user/${params.moduleId}/${appDataVersion}${path}`,
+          `/signalk/v1/applicationData/user/${moduleId}/${appDataVersion}${path}`,
           {
             method: 'POST',
             headers: {
@@ -186,23 +221,7 @@ export default function Embedded() {
           }
           return r
         }),
-      openWebsocket: (wsParams: WebSocketParams) => {
-        const knownParams: (keyof WebSocketParams)[] = [
-          'subscribe',
-          'sendCachedValues',
-          'events'
-        ]
-        const queryParam = knownParams
-          .map((p, i) => [i, wsParams[p]] as [number, unknown])
-          .filter((x) => x[1] !== undefined)
-          .map(([i, v]) => `${knownParams[i]}=${v}`)
-          .join('&')
-        const ws = new ReconnectingWebSocket(
-          `${wsProto}://${window.location.host}/signalk/v1/stream?${queryParam}`
-        )
-        websocketsRef.current.push(ws)
-        return ws
-      },
+      openWebsocket,
       get: ({ context, path }) => {
         const cParts = context.split('.')
         return fetch(
@@ -214,7 +233,7 @@ export default function Embedded() {
       },
       Login
     }),
-    [params.moduleId]
+    [moduleId, openWebsocket]
   )
 
   if (!component) {
@@ -225,14 +244,8 @@ export default function Embedded() {
     <div
       style={{ backgroundColor: 'aliceblue', height: 'calc(100vh - 105px)' }}
     >
-      <WebappErrorBoundary
-        key={params.moduleId}
-        webappName={params.moduleId || 'Unknown'}
-      >
+      <WebappErrorBoundary key={moduleId} webappName={moduleId || 'Unknown'}>
         <Suspense fallback="Loading...">
-          {/* adminUI callbacks capture refs but only access them when invoked by child components,
-              not during render. This is a false positive from the linter. */}
-          {/* eslint-disable-next-line react-hooks/refs */}
           {createElement(component, {
             loginStatus,
             adminUI

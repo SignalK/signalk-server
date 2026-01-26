@@ -1,4 +1,5 @@
-// Redux store types for Signal K Server Admin UI
+// SignalK Admin UI Store Types
+// Type definitions for Zustand store
 
 export interface LogEntry {
   i: number
@@ -153,27 +154,4 @@ export interface Webapp {
 export interface Addon {
   name: string
   [key: string]: unknown
-}
-
-// Root state type
-export interface RootState {
-  plugins: Plugin[]
-  webapps: Webapp[]
-  addons: Addon[]
-  appStore: AppStoreState
-  loginStatus: LoginStatus
-  serverSpecification: ServerSpecification
-  websocketStatus: 'initial' | 'connected' | 'open' | 'closed' | 'error'
-  webSocket: WebSocket | null
-  webSocketTimer?: ReturnType<typeof setInterval>
-  restarting: boolean
-  accessRequests: AccessRequest[]
-  discoveredProviders: DiscoveredProvider[]
-  log: LogState
-  restoreStatus: RestoreStatus
-  vesselInfo: VesselInfo
-  sourcePrioritiesData: SourcePrioritiesData
-  backpressureWarning: BackpressureWarning | null
-  serverStatistics?: ServerStatistics
-  providerStatus?: ProviderStatus[]
 }

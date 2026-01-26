@@ -1,5 +1,5 @@
 import { useMemo, Suspense, createElement, ComponentType } from 'react'
-import { useAppSelector } from '../../store'
+import { useWebapps, useAddons } from '../../store'
 import { Card, CardBody, CardHeader, Col } from 'reactstrap'
 import { ADDON_PANEL, toLazyDynamicComponent } from './dynamicutilities'
 import Webapp from './Webapp'
@@ -24,8 +24,8 @@ interface AddonPanelProps {
 }
 
 export default function Webapps() {
-  const webapps = useAppSelector((state) => state.webapps) as WebAppInfo[]
-  const addons = useAppSelector((state) => state.addons) as AddonModule[]
+  const webapps = useWebapps() as WebAppInfo[]
+  const addons = useAddons() as AddonModule[]
 
   // Create lazy components when addons change - useMemo ensures stable references
   // Keep addon name with component for stable keys

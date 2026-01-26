@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react'
-import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, CardHeader, CardBody } from 'reactstrap'
+import { useZustandAppStore } from '../../store'
 
 interface InstallingApp {
   name: string
@@ -17,13 +17,9 @@ interface AppStore {
   installing: InstallingApp[]
 }
 
-interface RootState {
-  appStore: AppStore
-}
-
 const ServerUpdate: React.FC = () => {
   const navigate = useNavigate()
-  const appStore = useSelector((state: RootState) => state.appStore)
+  const appStore = useZustandAppStore() as AppStore
 
   const handleUpdate = useCallback(() => {
     console.log('handleUpdate')
