@@ -118,8 +118,7 @@ export class DbStore {
   }
 
   // Set Alarm record
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async setAlarm(key: string, value: any) {
+  async setAlarm(key: string, value: Alarm) {
     await this.waitForInit()
     try {
       if (this.db && key) {
@@ -137,7 +136,7 @@ export class DbStore {
     }
   }
 
-  // Delete Alarm record
+  // Delete Alarm record(s)
   async deleteAlarm(key: string | string[]) {
     await this.waitForInit()
     try {
@@ -178,7 +177,7 @@ export class DbStore {
     }
   }
 
-  // List Notification Keys records
+  // List Notification Key records
   async listNotis(): Promise<Record<string, string>[]> {
     await this.waitForInit()
     try {
@@ -233,7 +232,7 @@ export class DbStore {
     }
   }
 
-  // Delete Notification Key record
+  // Delete Notification Key record(s)
   async deleteNoti(key: string | string[]) {
     await this.waitForInit()
     try {

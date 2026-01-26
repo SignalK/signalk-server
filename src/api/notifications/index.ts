@@ -12,7 +12,8 @@ import {
   Path,
   SKVersion,
   SourceRef,
-  Update
+  Update,
+  AlarmOptions
 } from '@signalk/server-api'
 import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
@@ -61,7 +62,7 @@ export class NotificationApi {
     })
   }
 
-  /** initialise identifiers from persisted state */
+  /** initialise notification identifiers from persisted state */
   private async loadFromStore() {
     try {
       const r = await this.db.listNotis()
@@ -81,116 +82,6 @@ export class NotificationApi {
     if (this.dbLoaded) {
       await this.dbLoaded
     }
-  }
-
-  private initNotificationRoutes() {
-    this.app.get(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
-      debug(`** ${req.method} ${req.path}`)
-      res.status(200).json(this.notificationManager.list)
-    })
-
-    this.app.get(
-      `${NOTI_API_PATH}/:id`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path}`)
-        const n = this.notificationManager.get(req.params.id)
-        if (n) {
-          res.status(200).json(n)
-        } else {
-          res.status(200).json(Responses.notFound)
-        }
-      }
-    )
-
-    // Silence
-    this.app.post(
-      `${NOTI_API_PATH}/:id/silence`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path}`)
-        try {
-          this.notificationManager.silence(req.params.id)
-          res.status(200).json(Responses.ok)
-        } catch (err) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: (err as Error).message
-          })
-        }
-      }
-    )
-
-    // Acknowledge
-    this.app.post(
-      `${NOTI_API_PATH}/:id/acknowledge`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path}`)
-        try {
-          this.notificationManager.acknowledge(req.params.id)
-          res.status(200).json(Responses.ok)
-        } catch (err) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: (err as Error).message
-          })
-        }
-      }
-    )
-
-    // Clear
-    this.app.delete(
-      `${NOTI_API_PATH}/:id`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path}`)
-        try {
-          this.notificationManager.clear(req.params.id)
-          res.status(200).json(Responses.ok)
-        } catch (err) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: (err as Error).message
-          })
-        }
-      }
-    )
-
-    // raise
-    this.app.post(
-      `${NOTI_API_PATH}/raise`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path} ${req.body}`)
-        try {
-          this.notificationManager.raise(req.body)
-          res.status(200).json(Responses.ok)
-        } catch (err) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: (err as Error).message
-          })
-        }
-      }
-    )
-
-    // MOB
-    this.app.post(
-      `${NOTI_API_PATH}/mob`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path} ${req.body}`)
-        try {
-          this.notificationManager.mob(req.body)
-          res.status(200).json(Responses.ok)
-        } catch (err) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: (err as Error).message
-          })
-        }
-      }
-    )
   }
 
   /**
@@ -231,6 +122,168 @@ export class NotificationApi {
       }
     })
     this.app.handleMessage('notificationApi', delta, deltaVersion)
+  }
+
+  /** Initialise API endpoints */
+  private initNotificationRoutes() {
+    // Return list of notifications
+    this.app.get(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
+      debug(`** ${req.method} ${req.path}`)
+      res.status(200).json(this.listNotifications())
+    })
+
+    // fetch
+    this.app.get(
+      `${NOTI_API_PATH}/:id`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        const n = this.getNotification(req.params.id)
+        if (n) {
+          res.status(200).json(n)
+        } else {
+          res.status(200).json(Responses.notFound)
+        }
+      }
+    )
+
+    // Silence
+    this.app.post(
+      `${NOTI_API_PATH}/:id/silence`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        try {
+          this.silenceNotification(req.params.id)
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+
+    // Acknowledge
+    this.app.post(
+      `${NOTI_API_PATH}/:id/acknowledge`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        try {
+          this.acknowledgeNotification(req.params.id)
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+
+    // Clear
+    this.app.delete(
+      `${NOTI_API_PATH}/:id`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        try {
+          this.clearNotification(req.params.id)
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+
+    // raise
+    this.app.post(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
+      debug(`** ${req.method} ${req.path} ${req.body}`)
+      try {
+        const id = this.notificationManager.raise(req.body)
+        res.status(200).json(Object.assign({}, Responses.ok, { id: id }))
+      } catch (err) {
+        res.status(400).json({
+          state: 'FAILED',
+          statusCode: 400,
+          message: (err as Error).message
+        })
+      }
+    })
+
+    // update
+    this.app.put(
+      `${NOTI_API_PATH}/:id`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path} ${req.body}`)
+        try {
+          this.updateNotification(req.params.id, req.body)
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+
+    // MOBnotification
+    this.app.post(
+      `${NOTI_API_PATH}/mob`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path} ${req.body}`)
+        try {
+          const id = this.notificationManager.mob(req.body)
+          res.status(200).json(Object.assign({}, Responses.ok, { id: id }))
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+  }
+
+  //** Plugin Interface Methods */
+
+  listNotifications() {
+    return this.notificationManager.list
+  }
+
+  getNotification(id: string) {
+    return this.notificationManager.get(id)
+  }
+
+  silenceNotification(id: string) {
+    this.notificationManager.silence(id)
+  }
+
+  acknowledgeNotification(id: string) {
+    this.notificationManager.acknowledge(id)
+  }
+
+  clearNotification(id: string) {
+    this.notificationManager.clear(id)
+  }
+
+  raiseNotification(options: AlarmOptions) {
+    return this.notificationManager.raise(options)
+  }
+
+  updateNotification(id: string, options: AlarmOptions) {
+    this.notificationManager.update(id, options)
+  }
+
+  mob(message: string) {
+    return this.notificationManager.mob({ message: message })
   }
 }
 
