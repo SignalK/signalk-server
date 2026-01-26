@@ -25,6 +25,7 @@ export interface WasmCapabilities {
   weatherProvider?: boolean // Can register as a weather provider
   radarProvider?: boolean // Can register as a radar provider
   rawSockets?: boolean // Can open UDP/TCP sockets for radar, NMEA, etc.
+  serverEvents?: boolean // Can receive and emit server events
 }
 
 /**
@@ -195,6 +196,9 @@ export interface WasmRawExports {
   // Delta handler
   delta_handler?: (ptr: number, len: number) => void
 
+  // Event handler
+  event_handler?: (ptr: number, len: number) => void
+
   // Index signature for dynamic handler access
   [key: string]: unknown
 }
@@ -256,6 +260,9 @@ export interface WasmPluginExports {
   // Optional: Delta handler - receives Signal K deltas as JSON strings
   // Enables plugins to react to navigation data changes, course updates, etc.
   delta_handler?: (deltaJson: string) => void
+  // Optional: Receives server events as JSON strings
+  // Enables plugins to react to server state changes (connections, statistics, etc.)
+  event_handler?: (eventJson: string) => void
 }
 
 /**
