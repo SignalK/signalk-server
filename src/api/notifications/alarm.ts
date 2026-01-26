@@ -153,7 +153,7 @@ export class Alarm {
     }
   }
 
-  /** Return external key */
+  /** Return external key ($source/context/path) of the alarm */
   get extKey(): string {
     return `${this.update.$source}/${this.context}/${this.path}`
   }

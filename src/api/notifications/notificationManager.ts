@@ -6,7 +6,8 @@ import {
   Timestamp,
   Update,
   Context,
-  Path
+  Path,
+  AlarmOptions
 } from '@signalk/server-api'
 
 import { NotificationApplication } from './index'
@@ -14,6 +15,8 @@ import { Alarm, AlarmProperties } from './alarm'
 import * as uuid from 'uuid'
 import * as _ from 'lodash'
 import { DbStore } from './dbstore'
+
+const CLEAN_INTERVAL = 60000
 
 /**
  * Class to manage the lifecycle of alarms
@@ -24,7 +27,8 @@ export class NotificationManager {
   private readonly deltaVersion = SKVersion.v1
   private db: DbStore
 
-  private timer?: NodeJS.Timeout
+  private cleanTimer?: NodeJS.Timeout
+  private forCleaning: string[] = []
 
   constructor(
     private server: NotificationApplication,
@@ -51,7 +55,7 @@ export class NotificationManager {
         })
       }
       // start cleanup timer
-      this.timer = setInterval(() => this.clean(), 60000)
+      this.cleanTimer = setInterval(() => this.clean(), CLEAN_INTERVAL)
     } catch {
       this.alarms = new Map()
     }
@@ -69,7 +73,7 @@ export class NotificationManager {
     )
   }
 
-  /** Return a list of Alarms keyd by their id */
+  /** Return a list of Alarms keyed by their id */
   get list(): Record<string, AlarmProperties> {
     const l: Record<string, AlarmProperties> = {}
     this.alarms.forEach((v: Alarm, k: string) => {
@@ -92,15 +96,7 @@ export class NotificationManager {
    * @param options Object to initialise the Alarm
    * @returns alarm id
    */
-  raise(options: {
-    state: ALARM_STATE
-    message: string
-    path?: Path
-    position?: boolean
-    createdAt?: boolean
-    appendId?: boolean
-    meta?: { [key: string]: object | number | string | null | boolean }
-  }): string {
+  raise(options: AlarmOptions): string {
     const id = uuid.v4()
     const alarm = new Alarm(id)
 
@@ -130,6 +126,33 @@ export class NotificationManager {
     this.db.setAlarm(id, alarm)
     this.emitNotification(alarm)
     return id
+  }
+
+  /**
+   * Update alarm properties
+   * @param id Alarm identifier
+   * @param options Key / values to update
+   */
+  update(id: string, options: AlarmOptions) {
+    const alarm = this.alarms.get(id)
+    if (!alarm) {
+      throw new Error('Notification not found!')
+    }
+
+    if (options.state) {
+      alarm.value.state = options.state
+      alarm.status.canSilence =
+        options.state === ALARM_STATE.emergency ? false : true
+    }
+    if (options.message) {
+      alarm.value.message = options.message
+    }
+    /*if (options.meta) {
+      (alarm.value as any).meta = options.meta
+    }*/
+    this.alarms.set(id, alarm)
+    this.db.setAlarm(id, alarm)
+    this.emitNotification(alarm)
   }
 
   /**
@@ -208,17 +231,25 @@ export class NotificationManager {
   }
 
   /**
-   * Clean out alarms that have returned to NORMAL state
+   * Clean out alarms that have returned to and remained in NORMAL state
+   * for the duration of CLEAN_INTERVAL
    */
   private clean() {
     const al: string[] = []
     const nk: string[] = []
+    const nextClean: string[] = []
     this.alarms.forEach((v: Alarm, k: string) => {
       if (v.value.state === 'normal') {
-        al.push(k)
-        nk.push(v.extKey)
+        if (this.forCleaning.includes(k)) {
+          al.push(k)
+          nk.push(v.extKey)
+        } else {
+          nextClean.push(k)
+        }
       }
     })
+    this.forCleaning = ([] as string[]).concat(nextClean)
+
     if (al.length) {
       al.forEach((id) => {
         this.alarms.delete(id)
