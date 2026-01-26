@@ -15,6 +15,7 @@
  */
 
 const _ = require('lodash')
+import { atomicWriteFile } from '../atomicWrite'
 import { createDebug } from '../debug'
 const debug = createDebug('signalk-server:interfaces:applicationData')
 const fs = require('fs')
@@ -150,7 +151,7 @@ module.exports = function (app) {
     res.json(data)
   }
 
-  function postApplicationData(req, res, isUser) {
+  async function postApplicationData(req, res, isUser) {
     const appid = validateAppId(req.params.appid)
     const version = validateVersion(req.params.version)
 
@@ -183,14 +184,13 @@ module.exports = function (app) {
       applicationData = req.body
     }
 
-    saveApplicationData(req, appid, version, isUser, applicationData, (err) => {
-      if (err) {
-        console.log(err)
-        res.status(500).send(err.message)
-      } else {
-        res.json('ApplicationData saved')
-      }
-    })
+    try {
+      await saveApplicationData(req, appid, version, isUser, applicationData)
+      res.json('ApplicationData saved')
+    } catch (err) {
+      console.log(err)
+      res.status(500).send(err.message)
+    }
   }
 
   function readApplicationData(req, appid, version, isUser) {
@@ -237,7 +237,7 @@ module.exports = function (app) {
     )
   }
 
-  function saveApplicationData(req, appid, version, isUser, data, callback) {
+  async function saveApplicationData(req, appid, version, isUser, data) {
     const applicationDataDir = path.join(
       app.config.configPath,
       'applicationData'
@@ -245,41 +245,35 @@ module.exports = function (app) {
     const usersDir = path.join(applicationDataDir, 'users')
     const globalDir = path.join(applicationDataDir, 'global')
 
-    try {
-      if (!fs.existsSync(applicationDataDir)) {
-        fs.mkdirSync(applicationDataDir)
-      }
-
-      if (isUser) {
-        if (!fs.existsSync(usersDir)) {
-          fs.mkdirSync(usersDir)
-        }
-        const userDir = path.join(usersDir, req.skPrincipal.identifier)
-        if (!fs.existsSync(userDir)) {
-          fs.mkdirSync(userDir)
-        }
-        const appDir = path.join(userDir, appid)
-        if (!fs.existsSync(appDir)) {
-          fs.mkdirSync(appDir)
-        }
-      } else {
-        if (!fs.existsSync(globalDir)) {
-          fs.mkdirSync(globalDir)
-        }
-        const appDir = path.join(globalDir, appid)
-        if (!fs.existsSync(appDir)) {
-          fs.mkdirSync(appDir)
-        }
-      }
-    } catch (err) {
-      callback(err)
-      return
+    if (!fs.existsSync(applicationDataDir)) {
+      fs.mkdirSync(applicationDataDir)
     }
 
-    fs.writeFile(
+    if (isUser) {
+      if (!fs.existsSync(usersDir)) {
+        fs.mkdirSync(usersDir)
+      }
+      const userDir = path.join(usersDir, req.skPrincipal.identifier)
+      if (!fs.existsSync(userDir)) {
+        fs.mkdirSync(userDir)
+      }
+      const appDir = path.join(userDir, appid)
+      if (!fs.existsSync(appDir)) {
+        fs.mkdirSync(appDir)
+      }
+    } else {
+      if (!fs.existsSync(globalDir)) {
+        fs.mkdirSync(globalDir)
+      }
+      const appDir = path.join(globalDir, appid)
+      if (!fs.existsSync(appDir)) {
+        fs.mkdirSync(appDir)
+      }
+    }
+
+    await atomicWriteFile(
       pathForApplicationData(req, appid, version, isUser),
-      JSON.stringify(data, null, 2),
-      callback
+      JSON.stringify(data, null, 2)
     )
   }
 }
