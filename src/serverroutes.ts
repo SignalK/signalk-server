@@ -299,8 +299,28 @@ module.exports = function (
   app.put(`${SERVERROUTESPREFIX}/restart`, (req: Request, res: Response) => {
     if (app.securityStrategy.allowRestart(req)) {
       res.json('Restarting...')
-      setTimeout(function () {
-        process.exit(0)
+      setTimeout(async function () {
+        const containerRuntime = process.env.CONTAINER_RUNTIME
+        const keeperUrl = process.env.KEEPER_URL
+        const useKeeper = containerRuntime === 'podman' && keeperUrl
+
+        if (useKeeper) {
+          // Keeper-managed Podman container: ask Keeper to restart via Podman API
+          // This works regardless of how the container was created (local build, registry, etc.)
+          try {
+            await fetch(`${keeperUrl}/api/containers/signalk-server/restart`, {
+              method: 'POST'
+            })
+            // Keeper will restart us, but exit anyway in case the request fails silently
+            setTimeout(() => process.exit(0), 5000)
+          } catch {
+            // Keeper unreachable, fall back to process exit
+            process.exit(0)
+          }
+        } else {
+          // Not Keeper-managed: exit and rely on container restart policy or systemd
+          process.exit(0)
+        }
       }, 2000)
     } else {
       res.status(401).json('Restart not allowed')
