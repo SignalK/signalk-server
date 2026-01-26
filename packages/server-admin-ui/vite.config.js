@@ -159,10 +159,12 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
         bypass: (req) => {
-          if (req.url.startsWith('/@vite') ||
-              req.url.startsWith('/@react-refresh') ||
-              req.url.startsWith('/@fs') ||
-              req.url.startsWith('/@id')) {
+          if (
+            req.url.startsWith('/@vite') ||
+            req.url.startsWith('/@react-refresh') ||
+            req.url.startsWith('/@fs') ||
+            req.url.startsWith('/@id')
+          ) {
             return req.url
           }
         }
