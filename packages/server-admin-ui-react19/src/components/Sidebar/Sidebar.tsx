@@ -14,7 +14,8 @@ import { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import {
   useZustandAppStore,
   useAccessRequests,
-  useZustandLoginStatus
+  useZustandLoginStatus,
+  useRuntimeConfig
 } from '../../store'
 import classNames from 'classnames'
 
@@ -66,6 +67,7 @@ export default function Sidebar({ location }: SidebarProps) {
   const appStore = useZustandAppStore()
   const accessRequests = useAccessRequests()
   const loginStatus = useZustandLoginStatus()
+  const { useKeeper } = useRuntimeConfig()
 
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
@@ -166,7 +168,19 @@ export default function Sidebar({ location }: SidebarProps) {
             {
               name: 'Backup/Restore',
               url: '/serverConfiguration/backuprestore'
-            }
+            },
+            ...(useKeeper
+              ? [
+                  {
+                    name: 'System Health',
+                    url: '/serverConfiguration/health'
+                  },
+                  {
+                    name: 'History',
+                    url: '/serverConfiguration/history'
+                  }
+                ]
+              : [])
           ]
         }
       )
@@ -228,7 +242,7 @@ export default function Sidebar({ location }: SidebarProps) {
     })
 
     return result
-  }, [appStore, accessRequests, loginStatus])
+  }, [appStore, accessRequests, loginStatus, useKeeper])
 
   const handleClick = useCallback((e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()

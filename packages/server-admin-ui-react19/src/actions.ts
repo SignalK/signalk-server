@@ -1,6 +1,7 @@
 import { isUndefined } from 'lodash'
 import { webSocketService } from './services/WebSocketService'
 import { useStore } from './store'
+import { serverApi } from './services/api'
 
 // Extend Window interface for serverRoutesPrefix
 declare global {
@@ -38,15 +39,20 @@ export async function logoutAction(): Promise<void> {
 
 /**
  * Restart action - directly updates store
+ * Uses Keeper API when running in Podman/Universal Installer environment,
+ * otherwise falls back to SignalK Server API.
  */
-export function restartAction(): void {
+export async function restartAction(): Promise<void> {
   if (confirm('Are you sure you want to restart?')) {
-    fetch(`${window.serverRoutesPrefix}/restart`, {
-      credentials: 'include',
-      method: 'PUT'
-    }).then(() => {
+    try {
+      await serverApi.restart()
       useStore.getState().setRestarting(true)
-    })
+    } catch (error) {
+      console.error('Failed to restart server:', error)
+      alert(
+        `Restart failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
   }
 }
 
