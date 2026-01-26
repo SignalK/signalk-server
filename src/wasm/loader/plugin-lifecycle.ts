@@ -9,12 +9,6 @@ import Debug from 'debug'
 import { WasmPlugin } from './types'
 import { SignalKApp } from '../types'
 import type { Delta as SignalKDelta } from '@signalk/server-api'
-
-interface ExpressRouterLayer {
-  route?: { path: string | string[] }
-  name?: string
-  regexp?: RegExp
-}
 import { wasmPlugins, restartTimers, setPluginStatus } from './plugin-registry'
 import { getWasmRuntime, resetWasmRuntime } from '../wasm-runtime'
 import { resetSubscriptionManager } from '../wasm-subscriptions'
@@ -23,6 +17,13 @@ import { updateResourceProviderInstance } from '../bindings/resource-provider'
 import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { updateRadarProviderInstance } from '../bindings/radar-provider'
 import { socketManager } from '../bindings/socket-manager'
+import { getEventManager, resetEventManager, ServerEvent } from '../wasm-events'
+
+interface ExpressRouterLayer {
+  route?: { path: string | string[] }
+  name?: string
+  regexp?: RegExp
+}
 
 const debug = Debug('signalk:wasm:loader')
 
@@ -31,6 +32,9 @@ const pollTimers: Map<string, NodeJS.Timeout> = new Map()
 
 // Track delta subscription unsubscribe functions for plugins
 const deltaUnsubscribers: Map<string, () => void> = new Map()
+
+// Track event subscription state for plugins
+const eventSubscriptionActive: Set<string> = new Set()
 
 // Mutex for serializing network-capable plugin starts
 // as-fetch uses global state that gets corrupted with parallel plugin starts
@@ -178,6 +182,67 @@ async function startWasmPluginInternal(
       }
     }
 
+    if (plugin.instance?.exports?.event_handler) {
+      debug(`Setting up event subscription for ${pluginId}`)
+
+      const eventManager = getEventManager()
+
+      const eventCallback = (event: ServerEvent) => {
+        try {
+          if (
+            plugin.status === 'running' &&
+            plugin.instance?.exports?.event_handler
+          ) {
+            const eventJson = JSON.stringify(event)
+            debug(
+              `[${pluginId}] Delivering event ${event.type} to event_handler`
+            )
+            plugin.instance.exports.event_handler(eventJson)
+          } else {
+            debug(
+              `[${pluginId}] Skipping event ${event.type}: running=${plugin.status === 'running'}, handler=${!!plugin.instance?.exports?.event_handler}`
+            )
+          }
+        } catch (eventError) {
+          debug(`[${pluginId}] event_handler error: ${eventError}`)
+        }
+      }
+
+      if (plugin.metadata?.capabilities?.serverEvents) {
+        // FFI registers with packageName, lifecycle uses pluginId - check both
+        let existingSubs = eventManager.getSubscriptions(pluginId)
+        let originalId = pluginId
+
+        if (existingSubs.length === 0 && plugin.packageName) {
+          existingSubs = eventManager.getSubscriptions(plugin.packageName)
+          originalId = plugin.packageName
+        }
+
+        if (existingSubs.length > 0) {
+          const eventTypes = existingSubs[0].eventTypes
+          eventManager.unregister(originalId)
+          eventManager.register(pluginId, eventTypes, eventCallback)
+          debug(
+            `Updated event subscription callback for ${pluginId} (was ${originalId})`
+          )
+        } else {
+          eventManager.register(pluginId, [], eventCallback)
+          debug(
+            `Registered new event subscription for ${pluginId} (all allowed events)`
+          )
+        }
+
+        eventManager.replayBuffered(pluginId, eventCallback)
+
+        eventSubscriptionActive.add(pluginId)
+        debug(`Event subscription active for ${pluginId}`)
+      } else {
+        debug(
+          `[${pluginId}] has event_handler but serverEvents capability not granted`
+        )
+      }
+    }
+
     debug(`Successfully started WASM plugin: ${pluginId}`)
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
@@ -221,6 +286,13 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
       deltaUnsubscriber()
       deltaUnsubscribers.delete(pluginId)
       debug(`Stopped delta subscription for ${pluginId}`)
+    }
+
+    if (eventSubscriptionActive.has(pluginId)) {
+      const eventManager = getEventManager()
+      eventManager.unregister(pluginId)
+      eventSubscriptionActive.delete(pluginId)
+      debug(`Stopped event subscription for ${pluginId}`)
     }
 
     if (plugin.instance) {
@@ -341,10 +413,20 @@ export async function reloadWasmPlugin(
   try {
     const wasRunning = plugin.status === 'running'
 
+    // Start buffering events during reload (if plugin has event subscription)
+    const eventManager = getEventManager()
+    const hadEventSubscription = eventSubscriptionActive.has(pluginId)
+    if (hadEventSubscription) {
+      eventManager.startBuffering(pluginId)
+      debug(`Started event buffering for ${pluginId} during reload`)
+    }
+
     // Stop the plugin
     if (wasRunning) {
       await stopWasmPlugin(pluginId)
     }
+
+    // Configuration is preserved in the plugin object through the reload
 
     // Reload WASM module
     const runtime = getWasmRuntime()
@@ -365,6 +447,12 @@ export async function reloadWasmPlugin(
     // Restart if it was running
     if (wasRunning) {
       await startWasmPlugin(app, pluginId)
+    }
+
+    // Stop event buffering (buffered events are replayed in startWasmPluginInternal)
+    if (hadEventSubscription) {
+      eventManager.stopBuffering(pluginId)
+      debug(`Stopped event buffering for ${pluginId}`)
     }
 
     plugin.statusMessage = 'Reloaded successfully'
@@ -470,6 +558,7 @@ export async function shutdownAllWasmPlugins(): Promise<void> {
   // Reset singletons
   resetWasmRuntime()
   resetSubscriptionManager()
+  resetEventManager()
 
   wasmPlugins.clear()
   debug('All WASM plugins shut down')
