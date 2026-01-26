@@ -78,5 +78,12 @@
   },
   "dependencies": {
     "zustand": "^5.0.10"
+  },
+  "//overrides": "reactstrap's react-popper hasn't declared React 19 support yet, but works fine - suppress peer dep warnings",
+  "overrides": {
+    "react-popper": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   }
 }
