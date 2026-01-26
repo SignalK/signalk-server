@@ -153,10 +153,19 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true
       },
-      // Proxy webapp files
-      '/@signalk': {
+      // Proxy webapp files (scoped packages like @signalk/*, @mxtommy/kip, etc.)
+      // Exclude Vite internals (/@vite, /@react-refresh, /@fs, /@id)
+      '/@': {
         target: 'http://localhost:3000',
-        changeOrigin: true
+        changeOrigin: true,
+        bypass: (req) => {
+          if (req.url.startsWith('/@vite') ||
+              req.url.startsWith('/@react-refresh') ||
+              req.url.startsWith('/@fs') ||
+              req.url.startsWith('/@id')) {
+            return req.url
+          }
+        }
       }
     }
   },
