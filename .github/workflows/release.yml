@@ -195,10 +195,10 @@ jobs:
           - os: 24.04
             node: 22.x
             tag: latest
-            suffix: -22.x
           - os: 24.04
             node: 24.x
             tag: latest
+            suffix: -24.x
     steps:
       - name: Checkout
         uses: actions/checkout@v4
