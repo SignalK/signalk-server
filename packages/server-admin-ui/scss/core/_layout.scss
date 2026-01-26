@@ -1,6 +1,3 @@
-@use 'sass:math';
-@use 'sass:color';
-
 // IE10&11 Flexbox fix
 @media all and (-ms-high-contrast: none) {
   html {
@@ -339,7 +336,7 @@ app-root {
     @include borders($navbar-brand-border);
 
     .navbar-toggler {
-      @if (color.channel($navbar-brand-bg, 'lightness', $space: hsl) > 40%) {
+      @if (lightness($navbar-brand-bg) > 40) {
         color: $navbar-color;
       } @else {
         color: #fff;
@@ -349,7 +346,7 @@ app-root {
     .navbar-brand {
       position: absolute;
       left: 50%;
-      margin-left: -(math.div($navbar-brand-width, 2));
+      margin-left: -($navbar-brand-width / 2);
     }
   }
 

@@ -1,38 +1,3 @@
-@use 'sass:color';
-@use 'sass:list';
-@use 'sass:map';
-
-// Bootstrap 5 compatibility: hover mixins were removed in BS5
-// Adding them back for backwards compatibility with CoreUI styles
-@mixin hover-focus {
-  &:hover,
-  &:focus {
-    @content;
-  }
-}
-
-@mixin hover {
-  &:hover {
-    @content;
-  }
-}
-
-@mixin plain-hover-focus {
-  &,
-  &:hover,
-  &:focus {
-    @content;
-  }
-}
-
-@mixin hover-focus-active {
-  &:hover,
-  &:focus,
-  &:active {
-    @content;
-  }
-}
-
 @mixin button-social-size(
   $padding-y,
   $padding-x,
@@ -89,31 +54,31 @@
 
 @mixin borders($borders) {
   @each $border in $borders {
-    $direction: list.nth($border, 1);
+    $direction: nth($border, 1);
     @if $direction == 'all' {
-      $size: map.get(map.get($borders, $direction), size);
-      $style: map.get(map.get($borders, $direction), style);
-      $color: map.get(map.get($borders, $direction), color);
+      $size: map-get(map-get($borders, $direction), size);
+      $style: map-get(map-get($borders, $direction), style);
+      $color: map-get(map-get($borders, $direction), color);
       border: $size $style $color;
     } @else if $direction == 'top' {
-      $size: map.get(map.get($borders, $direction), size);
-      $style: map.get(map.get($borders, $direction), style);
-      $color: map.get(map.get($borders, $direction), color);
+      $size: map-get(map-get($borders, $direction), size);
+      $style: map-get(map-get($borders, $direction), style);
+      $color: map-get(map-get($borders, $direction), color);
       border-top: $size $style $color;
     } @else if $direction == 'right' {
-      $size: map.get(map.get($borders, $direction), size);
-      $style: map.get(map.get($borders, $direction), style);
-      $color: map.get(map.get($borders, $direction), color);
+      $size: map-get(map-get($borders, $direction), size);
+      $style: map-get(map-get($borders, $direction), style);
+      $color: map-get(map-get($borders, $direction), color);
       border-right: $size $style $color;
     } @else if $direction == 'bottom' {
-      $size: map.get(map.get($borders, $direction), size);
-      $style: map.get(map.get($borders, $direction), style);
-      $color: map.get(map.get($borders, $direction), color);
+      $size: map-get(map-get($borders, $direction), size);
+      $style: map-get(map-get($borders, $direction), style);
+      $color: map-get(map-get($borders, $direction), color);
       border-bottom: $size $style $color;
     } @else if $direction == 'left' {
-      $size: map.get(map.get($borders, $direction), size);
-      $style: map.get(map.get($borders, $direction), style);
-      $color: map.get(map.get($borders, $direction), color);
+      $size: map-get(map-get($borders, $direction), size);
+      $style: map-get(map-get($borders, $direction), style);
+      $color: map-get(map-get($borders, $direction), color);
       border-left: $size $style $color;
     }
   }
@@ -123,15 +88,15 @@
   $sidebar-width: $width;
 
   @each $border in $borders {
-    $direction: list.nth($border, 1);
+    $direction: nth($border, 1);
     @if $direction == 'all' {
-      $size: map.get(map.get($borders, $direction), size);
+      $size: map-get(map-get($borders, $direction), size);
       $sidebar-width: ($sidebar-width - (2 * $size));
     } @else if $direction == 'right' {
-      $size: map.get(map.get($borders, $direction), size);
+      $size: map-get(map-get($borders, $direction), size);
       $sidebar-width: $sidebar-width - $size;
     } @else if $direction == 'left' {
-      $size: map.get(map.get($borders, $direction), size);
+      $size: map-get(map-get($borders, $direction), size);
       $sidebar-width: $sidebar-width - $size;
     }
     width: $sidebar-width;
@@ -149,7 +114,7 @@
   }
   a#{$parent} {
     @include hover-focus {
-      background-color: color.adjust($color, $lightness: -10%);
+      background-color: darken($color, 10%);
     }
   }
 }

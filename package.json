@@ -16,7 +16,8 @@
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
     "start": "node bin/signalk-server",
     "test-only": "NODE_ENV=test mocha 'test/**/*.[jt]s' 'dist/**/*.test.js'",
-    "test": "npm run build && npm run test-only && npm run ci-lint",
+    "test:admin-ui": "npm run test -w @signalk/server-admin-ui-react19",
+    "test": "npm run build && npm run test-only && npm run ci-lint && npm run test:admin-ui",
     "heroku-postbuild": "npm run build:all",
     "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
   },
@@ -63,6 +64,7 @@
   "workspaces": [
     "packages/server-admin-ui-dependencies",
     "packages/server-admin-ui",
+    "packages/server-admin-ui-react19",
     "packages/streams",
     "packages/server-api",
     "packages/resources-provider-plugin",
@@ -76,6 +78,7 @@
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/resources-provider": "^1.5.1",
     "@signalk/server-admin-ui": "2.21.x",
+    "@signalk/server-admin-ui-react19": "2.21.x",
     "@signalk/server-api": "^2.21.0",
     "@signalk/signalk-schema": "^1.7.1",
     "@signalk/streams": "5.1.x",

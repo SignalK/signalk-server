@@ -1,6 +1,4 @@
 // scss-lint:disable all
-@use 'sass:color';
-
 // Core Admin Variables
 
 $enable-sidebar-nav-rounded: false !default;
@@ -105,7 +103,7 @@ $sidebar-header-padding-x: 1rem !default;
 // Sidebar Form
 
 $sidebar-form-border: 0 !default;
-$sidebar-form-bg: color.adjust($sidebar-bg, $lightness: -10%) !default;
+$sidebar-form-bg: darken($sidebar-bg, 10%) !default;
 $sidebar-form-color: #fff !default;
 $sidebar-form-placeholder-color: rgba(255, 255, 255, 0.7) !default;
 
@@ -128,7 +126,7 @@ $sidebar-nav-link-hover-icon-color: #fff !default;
 $sidebar-nav-link-hover-borders: 0 !default;
 
 $sidebar-nav-link-active-color: #fff !default;
-$sidebar-nav-link-active-bg: color.adjust($sidebar-bg, $lightness: 5%) !default;
+$sidebar-nav-link-active-bg: lighten($sidebar-bg, 5%) !default;
 $sidebar-nav-link-active-icon-color: theme-color('primary') !default;
 $sidebar-nav-link-active-borders: 0 !default;
 

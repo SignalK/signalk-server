@@ -1,5 +1,3 @@
-@use 'sass:color';
-
 @mixin switch-size($width, $height, $font-size, $handle-margin) {
   width: $width;
   height: $height;
@@ -217,11 +215,11 @@
 @mixin switch-variant($color) {
   > .switch-input:checked ~ .switch-label {
     background: $color !important;
-    border-color: color.adjust($color, $lightness: -10%);
+    border-color: darken($color, 10%);
   }
 
   > .switch-input:checked ~ .switch-handle {
-    border-color: color.adjust($color, $lightness: -10%);
+    border-color: darken($color, 10%);
   }
 }
 

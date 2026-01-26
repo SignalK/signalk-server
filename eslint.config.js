@@ -22,7 +22,9 @@ module.exports = defineConfig([
     'examples/wasm-plugins/**/build/**',
     'examples/wasm-plugins/**/plugin.js',
     'examples/wasm-plugins/**/plugin.d.ts',
-    'packages/assemblyscript-plugin-sdk/build/**'
+    'packages/assemblyscript-plugin-sdk/build/**',
+    // Legacy admin UI - kept as fallback, not actively maintained
+    'packages/server-admin-ui/**'
   ]),
 
   // TypeScript options
@@ -61,14 +63,14 @@ module.exports = defineConfig([
     }
   },
 
-  // Server-admin UI specific options (React 19)
+  // Server-admin UI React 19 specific options
   {
     settings: {
       react: {
         version: 'detect'
       }
     },
-    files: ['packages/server-admin-ui/src/**/*.{js,jsx,ts,tsx}'],
+    files: ['packages/server-admin-ui-react19/src/**/*.{js,jsx,ts,tsx}'],
     extends: [
       common('@typescript-eslint/'),
       tseslint.configs.recommended,
@@ -85,7 +87,7 @@ module.exports = defineConfig([
         ecmaFeatures: {
           jsx: true
         },
-        project: './packages/server-admin-ui/tsconfig.json'
+        project: './packages/server-admin-ui-react19/tsconfig.json'
       },
       globals: {
         ...globals.browser
