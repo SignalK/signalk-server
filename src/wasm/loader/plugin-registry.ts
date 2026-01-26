@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * WASM Plugin Registration and Management
  *
@@ -12,6 +10,7 @@ import * as fs from 'fs'
 import Debug from 'debug'
 import express from 'express'
 import { WasmPlugin } from './types'
+import { SignalKApp, WebappMetadata } from '../types'
 import { getWasmRuntime, WasmCapabilities } from '../wasm-runtime'
 import {
   getPluginStoragePaths,
@@ -27,6 +26,34 @@ import { derivePluginId } from '../../pluginid'
 
 const debug = Debug('signalk:wasm:loader')
 
+/**
+ * Package.json structure for WASM plugins
+ */
+interface WasmPackageJson {
+  version?: string
+  description?: string
+  keywords?: string[]
+  wasmManifest?: string
+  wasmCapabilities?: {
+    network?: boolean
+    storage?: 'vfs-only' | 'none'
+    dataRead?: boolean
+    dataWrite?: boolean
+    serialPorts?: boolean
+    putHandlers?: boolean
+    httpEndpoints?: boolean
+    resourceProvider?: boolean
+    weatherProvider?: boolean
+    radarProvider?: boolean
+    rawSockets?: boolean
+  }
+  signalk?: Record<string, unknown>
+}
+
+interface PluginMetadata {
+  version?: string
+}
+
 // Global plugin registry
 export const wasmPlugins: Map<string, WasmPlugin> = new Map()
 
@@ -34,33 +61,30 @@ export const wasmPlugins: Map<string, WasmPlugin> = new Map()
 export const restartTimers: Map<string, NodeJS.Timeout> = new Map()
 
 // Forward declarations for circular dependency resolution
-let _startWasmPlugin: (app: any, pluginId: string) => Promise<void>
+let _startWasmPlugin: (app: SignalKApp, pluginId: string) => Promise<void>
 let _updateWasmPluginConfig: (
-  app: any,
+  app: SignalKApp,
   pluginId: string,
-  configuration: any,
+  configuration: unknown,
   configPath: string
 ) => Promise<void>
-let _unloadWasmPlugin: (app: any, pluginId: string) => Promise<void>
 let _stopWasmPlugin: (pluginId: string) => Promise<void>
 
 /**
  * Initialize lifecycle function references (called from index.ts to resolve circular dependencies)
  */
 export function initializeLifecycleFunctions(
-  startWasmPlugin: (app: any, pluginId: string) => Promise<void>,
+  startWasmPlugin: (app: SignalKApp, pluginId: string) => Promise<void>,
   updateWasmPluginConfig: (
-    app: any,
+    app: SignalKApp,
     pluginId: string,
-    configuration: any,
+    configuration: unknown,
     configPath: string
   ) => Promise<void>,
-  unloadWasmPlugin: (app: any, pluginId: string) => Promise<void>,
   stopWasmPlugin: (pluginId: string) => Promise<void>
 ) {
   _startWasmPlugin = startWasmPlugin
   _updateWasmPluginConfig = updateWasmPluginConfig
-  _unloadWasmPlugin = unloadWasmPlugin
   _stopWasmPlugin = stopWasmPlugin
 }
 
@@ -90,7 +114,7 @@ function addNodejsPluginCompat(plugin: WasmPlugin, pluginId: string): void {
   })
 
   // Add 'stop' method for Node.js plugin compatibility
-  ;(plugin as any).stop = async function () {
+  plugin.stop = async function () {
     if (_stopWasmPlugin) {
       await _stopWasmPlugin(pluginId)
     }
@@ -102,9 +126,9 @@ function addNodejsPluginCompat(plugin: WasmPlugin, pluginId: string): void {
  * that have the signalk-webapp keyword
  */
 function mountWasmWebapp(
-  app: any,
+  app: SignalKApp,
   packageName: string,
-  packageJson: any,
+  packageJson: WasmPackageJson,
   location: string
 ): void {
   const keywords = packageJson.keywords || []
@@ -123,7 +147,9 @@ function mountWasmWebapp(
 
   // Mount static files
   debug(`Mounting WASM webapp /${packageName}: ${webappPath}`)
-  app.use('/' + packageName, express.static(webappPath))
+  if (app.use) {
+    app.use('/' + packageName, express.static(webappPath))
+  }
 
   // Create webapp metadata for admin UI
   const webappMetadata = {
@@ -139,7 +165,7 @@ function mountWasmWebapp(
     app.webapps = []
   }
   // Avoid duplicates
-  if (!app.webapps.find((w: any) => w.name === packageName)) {
+  if (!app.webapps.find((w: WebappMetadata) => w.name === packageName)) {
     app.webapps.push(webappMetadata)
     debug(`Registered WASM webapp: ${packageName}`)
   }
@@ -149,7 +175,9 @@ function mountWasmWebapp(
     if (!app.embeddablewebapps) {
       app.embeddablewebapps = []
     }
-    if (!app.embeddablewebapps.find((w: any) => w.name === packageName)) {
+    if (
+      !app.embeddablewebapps.find((w: WebappMetadata) => w.name === packageName)
+    ) {
       app.embeddablewebapps.push(webappMetadata)
       debug(`Registered WASM embeddable webapp: ${packageName}`)
     }
@@ -160,9 +188,9 @@ function mountWasmWebapp(
  * Register a WASM plugin from package metadata
  */
 export async function registerWasmPlugin(
-  app: any,
+  app: SignalKApp,
   packageName: string,
-  metadata: any,
+  metadata: PluginMetadata,
   location: string,
   configPath: string
 ): Promise<WasmPlugin> {
@@ -170,8 +198,9 @@ export async function registerWasmPlugin(
 
   try {
     // Read package.json to get WASM metadata
-    const packageJson = require(
-      path.join(location, packageName, 'package.json')
+    const packageJsonPath = path.join(location, packageName, 'package.json')
+    const packageJson: WasmPackageJson = JSON.parse(
+      fs.readFileSync(packageJsonPath, 'utf-8')
     )
 
     if (!packageJson.wasmManifest) {
@@ -247,12 +276,13 @@ export async function registerWasmPlugin(
       // Config file will be created when user actually configures the plugin
 
       // Create a minimal plugin object without keeping WASM loaded
+      const pluginVersion = metadata.version || packageJson.version || '0.0.0'
       const plugin: WasmPlugin = {
         id: pluginId,
         name: pluginName,
         type: 'wasm',
         packageName,
-        version: metadata.version || packageJson.version,
+        version: pluginVersion,
         enabled: false,
         enableDebug: savedConfig.enableDebug || false,
         keywords: packageJson.keywords || [],
@@ -262,12 +292,12 @@ export async function registerWasmPlugin(
           id: pluginId,
           name: pluginName,
           packageName,
-          version: metadata.version || packageJson.version,
-          wasmManifest: packageJson.wasmManifest,
+          version: pluginVersion,
+          wasmManifest: packageJson.wasmManifest || '',
           capabilities,
           packageLocation: location
         },
-        instance: null as any, // Instance was destroyed
+        instance: undefined, // Instance was destroyed
         status: 'stopped',
         schema, // Schema extracted from temp load
         configuration: savedConfig.configuration, // Keep undefined/null for UI "Configure" button logic
@@ -302,7 +332,6 @@ export async function registerWasmPlugin(
         configPath,
         _updateWasmPluginConfig,
         _startWasmPlugin,
-        _unloadWasmPlugin,
         _stopWasmPlugin
       )
 
@@ -333,6 +362,7 @@ export async function registerWasmPlugin(
 
     // Use the instance we already loaded
     const instance = tempInstance
+    const pluginVersion = metadata.version || packageJson.version || '0.0.0'
 
     // Create plugin object
     const plugin: WasmPlugin = {
@@ -340,7 +370,7 @@ export async function registerWasmPlugin(
       name: pluginName,
       type: 'wasm',
       packageName,
-      version: metadata.version || packageJson.version,
+      version: pluginVersion,
       enabled: savedConfig.enabled || false,
       enableDebug: savedConfig.enableDebug || false,
       keywords: packageJson.keywords || [],
@@ -350,8 +380,8 @@ export async function registerWasmPlugin(
         id: pluginId,
         name: pluginName,
         packageName,
-        version: metadata.version || packageJson.version,
-        wasmManifest: packageJson.wasmManifest,
+        version: pluginVersion,
+        wasmManifest: packageJson.wasmManifest || '',
         capabilities,
         packageLocation: location
       },
@@ -389,7 +419,6 @@ export async function registerWasmPlugin(
       configPath,
       _updateWasmPluginConfig,
       _startWasmPlugin,
-      _unloadWasmPlugin,
       _stopWasmPlugin
     )
 

@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * WASM Plugin Lifecycle Operations
  *
@@ -10,6 +7,14 @@
 
 import Debug from 'debug'
 import { WasmPlugin } from './types'
+import { SignalKApp } from '../types'
+import type { Delta as SignalKDelta } from '@signalk/server-api'
+
+interface ExpressRouterLayer {
+  route?: { path: string | string[] }
+  name?: string
+  regexp?: RegExp
+}
 import { wasmPlugins, restartTimers, setPluginStatus } from './plugin-registry'
 import { getWasmRuntime, resetWasmRuntime } from '../wasm-runtime'
 import { resetSubscriptionManager } from '../wasm-subscriptions'
@@ -35,7 +40,7 @@ let networkPluginStartMutex: Promise<void> = Promise.resolve()
  * Start a WASM plugin
  */
 export async function startWasmPlugin(
-  app: any,
+  app: SignalKApp,
   pluginId: string
 ): Promise<void> {
   const plugin = wasmPlugins.get(pluginId)
@@ -70,7 +75,7 @@ export async function startWasmPlugin(
 }
 
 async function startWasmPluginInternal(
-  app: any,
+  app: SignalKApp,
   plugin: WasmPlugin,
   pluginId: string
 ): Promise<void> {
@@ -143,7 +148,7 @@ async function startWasmPluginInternal(
 
       // Subscribe to deltas from the server
       if (app.signalk && typeof app.signalk.on === 'function') {
-        const deltaHandler = (delta: any) => {
+        const deltaHandler = (delta: SignalKDelta) => {
           try {
             if (
               plugin.status === 'running' &&
@@ -245,7 +250,7 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
  * Unload a WASM plugin completely (remove from memory and unregister routes)
  */
 export async function unloadWasmPlugin(
-  app: any,
+  app: SignalKApp,
   pluginId: string
 ): Promise<void> {
   const plugin = wasmPlugins.get(pluginId)
@@ -271,23 +276,25 @@ export async function unloadWasmPlugin(
       // Remove all route handlers for this plugin
       paths.forEach((path) => {
         if (app._router && app._router.stack) {
-          app._router.stack = app._router.stack.filter((layer: any) => {
-            // Remove layers that match this plugin's path
-            if (layer.route) {
-              const routePath = layer.route.path
-              // Handle both string and array cases for route.path
-              if (typeof routePath === 'string') {
-                return !routePath.startsWith(path)
-              } else if (Array.isArray(routePath)) {
-                return !routePath.some((p) => p.startsWith(path))
+          app._router.stack = app._router.stack.filter(
+            (layer: ExpressRouterLayer) => {
+              // Remove layers that match this plugin's path
+              if (layer.route) {
+                const routePath = layer.route.path
+                // Handle both string and array cases for route.path
+                if (typeof routePath === 'string') {
+                  return !routePath.startsWith(path)
+                } else if (Array.isArray(routePath)) {
+                  return !routePath.some((p) => p.startsWith(path))
+                }
+                return true
+              }
+              if (layer.name === 'router' && layer.regexp) {
+                return !layer.regexp.test(path)
               }
               return true
             }
-            if (layer.name === 'router' && layer.regexp) {
-              return !layer.regexp.test(path)
-            }
-            return true
-          })
+          )
         }
       })
 
@@ -321,7 +328,7 @@ export async function unloadWasmPlugin(
  * Reload a WASM plugin (hot-reload without server restart)
  */
 export async function reloadWasmPlugin(
-  app: any,
+  app: SignalKApp,
   pluginId: string
 ): Promise<void> {
   const plugin = wasmPlugins.get(pluginId)
@@ -338,9 +345,6 @@ export async function reloadWasmPlugin(
     if (wasRunning) {
       await stopWasmPlugin(pluginId)
     }
-
-    // Save current configuration
-    const savedConfig = plugin.configuration
 
     // Reload WASM module
     const runtime = getWasmRuntime()
@@ -378,7 +382,7 @@ export async function reloadWasmPlugin(
  * Handle WASM plugin crash with automatic restart
  */
 export async function handleWasmPluginCrash(
-  app: any,
+  app: SignalKApp,
   pluginId: string,
   error: Error
 ): Promise<void> {
