@@ -1,5 +1,3 @@
-// Bootstrap 5: .badge-pill is replaced by .rounded-pill
-// Keeping for backwards compatibility
 .badge-pill {
-  border-radius: var(--bs-border-radius-pill, 50rem);
+  border-radius: $badge-pill-border-radius;
 }

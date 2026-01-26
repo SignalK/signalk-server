@@ -1,5 +1,3 @@
-@use 'sass:color';
-
 button {
   cursor: pointer;
 }
@@ -124,14 +122,14 @@ button {
   background: $color;
   &::before {
     content: '\f09a';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -142,14 +140,14 @@ button {
   background: $color;
   &::before {
     content: '\f099';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -160,14 +158,14 @@ button {
   background: $color;
   &::before {
     content: '\f0e1';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -178,14 +176,14 @@ button {
   background: $color;
   &::before {
     content: '\f16e';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -196,14 +194,14 @@ button {
   background: $color;
   &::before {
     content: '\f173';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -214,14 +212,14 @@ button {
   background: $color;
   &::before {
     content: '\f168';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -232,14 +230,14 @@ button {
   background: $color;
   &::before {
     content: '\f09b';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -250,14 +248,14 @@ button {
   background: $color;
   &::before {
     content: '\f13b';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -268,14 +266,14 @@ button {
   background: $color;
   &::before {
     content: '\f19b';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -286,14 +284,14 @@ button {
   background: $color;
   &::before {
     content: '\f16c';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -304,14 +302,14 @@ button {
   background: $color;
   &::before {
     content: '\f13c';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -322,14 +320,14 @@ button {
   background: $color;
   &::before {
     content: '\f167';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -340,14 +338,14 @@ button {
   background: $color;
   &::before {
     content: '\f17d';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -358,14 +356,14 @@ button {
   background: $color;
   &::before {
     content: '\f0d5';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -376,14 +374,14 @@ button {
   background: $color;
   &::before {
     content: '\f16d';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -394,14 +392,14 @@ button {
   background: $color;
   &::before {
     content: '\f0d2';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -412,14 +410,14 @@ button {
   background: $color;
   &::before {
     content: '\f189';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -430,14 +428,14 @@ button {
   background: $color;
   &::before {
     content: '\f19e';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -448,14 +446,14 @@ button {
   background: $color;
   &::before {
     content: '\f1b4';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -466,14 +464,14 @@ button {
   background: $color;
   &::before {
     content: '\f16b';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -484,14 +482,14 @@ button {
   background: $color;
   &::before {
     content: '\f1a1';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -502,14 +500,14 @@ button {
   background: $color;
   &::before {
     content: '\f1bc';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -520,14 +518,14 @@ button {
   background: $color;
   &::before {
     content: '\f1ca';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -538,14 +536,14 @@ button {
   background: $color;
   &::before {
     content: '\f180';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
@@ -556,14 +554,14 @@ button {
   background: $color;
   &::before {
     content: '\f194';
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
   }
 
   &:hover {
-    background: color.adjust($color, $lightness: -5%);
+    background: darken($color, 5%);
 
     &::before {
-      background: color.adjust($color, $lightness: -10%);
+      background: darken($color, 10%);
     }
   }
 }
