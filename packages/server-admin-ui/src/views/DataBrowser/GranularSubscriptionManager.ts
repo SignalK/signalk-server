@@ -67,9 +67,9 @@ class GranularSubscriptionManager {
    * The server will announce all existing paths (once) and any new paths as they appear
    */
   startDiscovery(): void {
-    if (!this.webSocket) return
-
-    log('Starting subscription with announceNewPaths')
+    if (!this.webSocket) {
+      return
+    }
 
     // Subscribe with announceNewPaths to discover all paths
     // Server will send cached values for ALL paths matching context (once each)
@@ -284,7 +284,7 @@ class GranularSubscriptionManager {
           context: '*',
           unsubscribe: [{ path: '*' }]
         })
-      } catch (_e) {
+      } catch {
         // WebSocket may already be closed
       }
     }
@@ -333,8 +333,8 @@ class GranularSubscriptionManager {
       // For WebSocket implementations without readyState check
       try {
         this.webSocket.send(JSON.stringify(msg))
-      } catch (_e) {
-        // WebSocket may be closed
+      } catch {
+        // WebSocket may not be ready
       }
     }
   }

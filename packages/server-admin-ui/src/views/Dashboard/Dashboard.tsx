@@ -12,7 +12,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSignIn } from '@fortawesome/free-solid-svg-icons/faSignIn'
 import { faSignOut } from '@fortawesome/free-solid-svg-icons/faSignOut'
-import { useAppSelector } from '../../store'
+import { useServerStats, useWsStatus, useStore } from '../../store'
 import type { ProviderStatistics } from '../../store/types'
 import '../../fa-pulse.css'
 
@@ -26,11 +26,10 @@ interface ProviderStatusItem {
 }
 
 export default function Dashboard() {
-  const serverStatistics = useAppSelector((state) => state.serverStatistics)
-  const websocketStatus = useAppSelector((state) => state.websocketStatus)
+  const serverStatistics = useServerStats()
+  const websocketStatus = useWsStatus()
   const providerStatus =
-    (useAppSelector((state) => state.providerStatus) as ProviderStatusItem[]) ||
-    []
+    (useStore((state) => state.providerStatus) as ProviderStatusItem[]) || []
   const navigate = useNavigate()
 
   const deltaRate = serverStatistics?.deltaRate ?? 0

@@ -25,13 +25,13 @@ class PluginErrorBoundary extends Component<
   PluginErrorBoundaryProps,
   PluginErrorBoundaryState
 > {
-  state: PluginErrorBoundaryState = { hasError: false, error: null }
+  override state: PluginErrorBoundaryState = { hasError: false, error: null }
 
   static getDerivedStateFromError(error: Error): PluginErrorBoundaryState {
     return { hasError: true, error }
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <div className="alert alert-warning">

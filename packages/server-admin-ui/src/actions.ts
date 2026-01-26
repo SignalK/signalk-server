@@ -1,23 +1,12 @@
 import { isUndefined } from 'lodash'
-import type { Dispatch } from 'redux'
+import { webSocketService } from './services/WebSocketService'
+import { useStore } from './store'
 
 // Extend Window interface for serverRoutesPrefix
 declare global {
   interface Window {
     serverRoutesPrefix: string
   }
-}
-
-// Action types
-interface Action<T = string, D = unknown> {
-  type: T
-  data?: D
-}
-
-// WebSocket with custom properties
-interface SignalKWebSocket extends WebSocket {
-  skSelf?: string
-  messageHandler?: (event: unknown) => void
 }
 
 const authFetch = (url: string, options?: RequestInit): Promise<Response> => {
@@ -27,48 +16,52 @@ const authFetch = (url: string, options?: RequestInit): Promise<Response> => {
   })
 }
 
-export function logout() {
-  return (dispatch: Dispatch<Action>) => {
-    dispatch({
-      type: 'LOGOUT_REQUESTED'
-    })
-    authFetch('/signalk/v1/auth/logout', {
+/**
+ * Logout action - directly updates store
+ */
+export async function logoutAction(): Promise<void> {
+  try {
+    const response = await authFetch('/signalk/v1/auth/logout', {
       method: 'PUT'
     })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(response.statusText)
-        }
-        return response
-      })
-      .then(() => {
-        dispatch({
-          type: 'LOGOUT_SUCCESS'
-        })
-      })
-      .catch((error) => {
-        dispatch({
-          type: 'LOGOUT_FAILED',
-          data: error
-        })
-      })
-      .then(() => {
-        fetchLoginStatus(dispatch)
-      })
+    if (!response.ok) {
+      throw new Error(response.statusText)
+    }
+    // Refetch login status after logout
+    await fetchLoginStatusZustand()
+  } catch (error) {
+    console.error('Logout failed:', error)
+    // Still try to fetch login status
+    await fetchLoginStatusZustand()
   }
 }
 
-export async function login(
-  dispatch: Dispatch<Action>,
+/**
+ * Restart action - directly updates store
+ */
+export function restartAction(): void {
+  if (confirm('Are you sure you want to restart?')) {
+    fetch(`${window.serverRoutesPrefix}/restart`, {
+      credentials: 'include',
+      method: 'PUT'
+    }).then(() => {
+      useStore.getState().setRestarting(true)
+    })
+  }
+}
+
+/**
+ * Login action
+ */
+export async function loginActionZustand(
   username: string,
   password: string,
-  rememberMe: boolean,
-  callback: (error: string | null) => void
-): Promise<void> {
+  rememberMe: boolean
+): Promise<string | null> {
   const payload = {
-    username: username,
-    password: password,
-    rememberMe: rememberMe
+    username,
+    password,
+    rememberMe
   }
   const request = await authFetch('/signalk/v1/auth/login', {
     method: 'POST',
@@ -80,165 +73,104 @@ export async function login(
 
   const response = await request.json()
   if (request.status !== 200) {
-    dispatch({
-      type: 'LOGIN_FAILURE',
-      data: response.message
-    })
-    callback(response.message)
-  } else if (response) {
-    fetchAllData(dispatch)
-    dispatch({
-      type: 'LOGIN_SUCCESS'
-    })
-    callback(null)
+    return response.message
   }
+  // Refetch all data after successful login
+  await fetchAllDataZustand()
+  return null
 }
 
-export function enableSecurity(
+/**
+ * Enable security action
+ */
+export async function enableSecurityZustand(
   userId: string,
-  password: string,
-  callback: (error: string | null) => void
-): void {
+  password: string
+): Promise<string | null> {
   const payload = {
-    userId: userId,
-    password: password,
+    userId,
+    password,
     type: 'admin'
   }
-  fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
+  const response = await fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(payload)
-  }).then((response) => {
-    if (response.status !== 200) {
-      response.text().then((text) => {
-        callback(text)
-      })
-    } else {
-      callback(null)
-    }
   })
+  if (response.status !== 200) {
+    const text = await response.text()
+    return text
+  }
+  // Refetch login status after enabling security
+  await fetchLoginStatusZustand()
+  return null
 }
 
-export function restart() {
-  return (dispatch: Dispatch<Action>) => {
-    if (confirm('Are you sure you want to restart?')) {
-      fetch(`${window.serverRoutesPrefix}/restart`, {
-        credentials: 'include',
-        method: 'PUT'
-      }).then(() => {
-        dispatch({ type: 'SERVER_RESTART' })
-      })
-    }
+/**
+ * Fetch login status directly to Zustand store
+ */
+export async function fetchLoginStatusZustand(): Promise<void> {
+  const response = await authFetch(`${window.serverRoutesPrefix}/loginStatus`)
+  if (response.status === 200) {
+    const data = await response.json()
+    useStore.getState().setLoginStatus(data)
   }
 }
 
-export const buildFetchAction =
-  (endpoint: string, type: string, prefix?: string) =>
-  async (dispatch: Dispatch<Action>): Promise<void> => {
-    const response = await authFetch(
-      `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
-    )
-
-    if (response.status === 200) {
-      const data = await response.json()
-      dispatch({
-        type,
-        data
-      })
+/**
+ * Fetch all data directly to Zustand store
+ */
+export async function fetchAllDataZustand(): Promise<void> {
+  const fetchAndSet = async <T>(
+    endpoint: string,
+    setter: (data: T) => void,
+    prefix?: string
+  ) => {
+    try {
+      const response = await authFetch(
+        `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
+      )
+      if (response.status === 200) {
+        const data = await response.json()
+        setter(data)
+      }
+    } catch (error) {
+      console.error(`Failed to fetch ${endpoint}:`, error)
     }
   }
 
-export const fetchLoginStatus = buildFetchAction(
-  '/loginStatus',
-  'RECEIVE_LOGIN_STATUS'
-)
-export const fetchPlugins = buildFetchAction('/plugins', 'RECEIVE_PLUGIN_LIST')
-export const fetchWebapps = buildFetchAction('/webapps', 'RECEIVE_WEBAPPS_LIST')
-export const fetchAddons = buildFetchAction('/addons', 'RECEIVE_ADDONS_LIST')
-export const fetchApps = buildFetchAction(
-  '/appstore/available',
-  'RECEIVE_APPSTORE_LIST'
-)
-export const fetchAccessRequests = buildFetchAction(
-  '/security/access/requests',
-  'ACCESS_REQUEST'
-)
-export const fetchServerSpecification = buildFetchAction(
-  '/signalk',
-  'RECEIVE_SERVER_SPEC',
-  ''
-)
+  const state = useStore.getState()
 
-export function fetchAllData(dispatch: Dispatch<Action>): void {
-  fetchPlugins(dispatch)
-  fetchWebapps(dispatch)
-  fetchAddons(dispatch)
-  fetchApps(dispatch)
-  fetchLoginStatus(dispatch)
-  fetchServerSpecification(dispatch)
-  fetchAccessRequests(dispatch)
+  await Promise.all([
+    fetchAndSet('/plugins', state.setPlugins),
+    fetchAndSet('/webapps', state.setWebapps),
+    fetchAndSet('/addons', state.setAddons),
+    fetchAndSet('/appstore/available', state.setAppStore),
+    fetchAndSet('/loginStatus', state.setLoginStatus),
+    fetchAndSet('/signalk', state.setServerSpecification, ''),
+    fetchAndSet('/security/access/requests', state.setAccessRequests)
+  ])
 }
 
-export function openServerEventsConnection(
-  dispatch: Dispatch<Action>,
-  isReconnect?: boolean
-): void {
-  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  const ws: SignalKWebSocket = new WebSocket(
-    proto +
-      '://' +
-      window.location.host +
-      `/signalk/v1/stream?serverevents=all&subscribe=none&sendMeta=all`
-  )
+/**
+ * Open WebSocket connection to SignalK server
+ */
+export function openServerEventsConnection(isReconnect?: boolean): void {
+  webSocketService.connect(isReconnect)
+}
 
-  ws.onmessage = function (event: MessageEvent) {
-    const serverEvent = JSON.parse(event.data)
+/**
+ * Close the WebSocket connection
+ */
+export function closeServerEventsConnection(skipReconnect = false): void {
+  webSocketService.close(skipReconnect)
+}
 
-    // Check for backpressure indicator on any delta
-    if (serverEvent.$backpressure) {
-      dispatch({
-        type: 'BACKPRESSURE_WARNING',
-        data: {
-          accumulated: serverEvent.$backpressure.accumulated,
-          duration: serverEvent.$backpressure.duration,
-          timestamp: Date.now()
-        }
-      })
-      // Auto-clear after 10 seconds
-      setTimeout(() => {
-        dispatch({ type: 'BACKPRESSURE_WARNING_CLEAR' })
-      }, 10000)
-    }
-
-    if (serverEvent.type) {
-      dispatch(serverEvent)
-    } else if (serverEvent.name) {
-      ws.skSelf = serverEvent.self
-    } else if (ws.messageHandler) {
-      ws.messageHandler(serverEvent)
-    }
-  }
-  ws.onclose = () => {
-    console.log('closed')
-    dispatch({
-      type: 'WEBSOCKET_CLOSE'
-    })
-  }
-  ws.onerror = () => {
-    dispatch({
-      type: 'WEBSOCKET_ERROR'
-    })
-  }
-  ws.onopen = () => {
-    console.log('connected')
-    dispatch({
-      type: 'WEBSOCKET_OPEN',
-      data: ws
-    })
-    if (isReconnect) {
-      window.location.reload()
-    }
-  }
+/**
+ * Get the WebSocket service for direct access
+ */
+export function getWebSocketService() {
+  return webSocketService
 }

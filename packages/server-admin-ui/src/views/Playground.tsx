@@ -1,5 +1,3 @@
-/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
-/* eslint-disable react-compiler/react-compiler */
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Button,
@@ -107,6 +105,8 @@ const Playground: React.FC = () => {
   const [putResults, setPutResults] = useState<unknown[]>([])
 
   const inputWaitTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // Track if initial auto-send has been scheduled
+  const initialSendScheduledRef = useRef(false)
 
   const send = useCallback(
     (sendToServer: boolean, sendToN2K = false) => {
@@ -274,14 +274,17 @@ const Playground: React.FC = () => {
     }
   }, [input])
 
-  // Auto-send on mount if there's saved input - standard data fetching pattern.
-  // See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
+  // Auto-send on mount if there's saved input
+  // The ref is only read when scheduling the initial send, never during render
   useEffect(() => {
-    if (input && input.length > 0) {
-      send(false)
+    if (input && input.length > 0 && !initialSendScheduledRef.current) {
+      initialSendScheduledRef.current = true
+      // Use setTimeout to schedule send as a callback, not synchronously
+      const timeoutId = setTimeout(() => send(false), 0)
+      return () => clearTimeout(timeoutId)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    return undefined
+  }, [input, send])
 
   const toggle = (tab: string) => {
     setActiveTab(tab)

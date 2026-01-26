@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import Meta from './Meta'
-import store from './ValueEmittingStore'
+import { useStore, useShallow } from '../../store'
 import './VirtualTable.css'
 
 interface VirtualizedMetaTableProps {
@@ -9,17 +9,37 @@ interface VirtualizedMetaTableProps {
 }
 
 // Virtualization requires measuring DOM and updating state in response to scroll events.
-// This is an inherent characteristic of virtual scrolling.
-/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
-/* eslint-disable react-hooks/set-state-in-effect */
+// This is an inherent characteristic of virtual scrolling - handlers update range state.
 function VirtualizedMetaTable({ paths, context }: VirtualizedMetaTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 })
+  // Get metadata for this context from Zustand
+  const contextMeta = useStore(useShallow((s) => s.signalkMeta[context] || {}))
   const rowHeight = 60 // Meta rows are taller due to form elements
   const overscan = 10
+  // Track paths.length to reset range when data changes
+  const [pathsLength, setPathsLength] = useState(paths.length)
 
-  const updateVisibleRange = useCallback(() => {
-    if (!containerRef.current) return
+  // Compute initial visible range synchronously for first render
+  const computeInitialRange = useCallback(() => {
+    const visibleCount =
+      Math.ceil(window.innerHeight / rowHeight) + overscan * 2
+    return { start: 0, end: Math.min(paths.length - 1, visibleCount) }
+  }, [paths.length, rowHeight, overscan])
+
+  const [visibleRange, setVisibleRange] = useState(computeInitialRange)
+
+  // Reset visible range when paths length changes
+  if (paths.length !== pathsLength) {
+    setPathsLength(paths.length)
+    setVisibleRange(computeInitialRange())
+  }
+
+  // Computes new visible range from DOM measurements
+  const computeVisibleRange = useCallback((): {
+    start: number
+    end: number
+  } | null => {
+    if (!containerRef.current) return null
 
     const rect = containerRef.current.getBoundingClientRect()
     const containerTop = rect.top
@@ -37,30 +57,36 @@ function VirtualizedMetaTable({ paths, context }: VirtualizedMetaTableProps) {
     const visibleCount = Math.ceil(viewportHeight / rowHeight) + overscan * 2
     const endIndex = Math.min(paths.length - 1, startIndex + visibleCount)
 
-    setVisibleRange((prev) => {
-      if (
-        Math.abs(prev.start - startIndex) > 2 ||
-        Math.abs(prev.end - endIndex) > 2
-      ) {
-        return { start: startIndex, end: endIndex }
-      }
-      return prev
-    })
+    return { start: startIndex, end: endIndex }
   }, [paths.length, rowHeight, overscan])
 
   useEffect(() => {
-    updateVisibleRange()
-
     let ticking = false
+
+    // Handler for scroll/resize events - updates state when range changes significantly
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          updateVisibleRange()
+          const newRange = computeVisibleRange()
+          if (newRange) {
+            setVisibleRange((prev) => {
+              if (
+                Math.abs(prev.start - newRange.start) > 2 ||
+                Math.abs(prev.end - newRange.end) > 2
+              ) {
+                return newRange
+              }
+              return prev
+            })
+          }
           ticking = false
         })
         ticking = true
       }
     }
+
+    // Trigger initial measurement after mount via scroll event simulation
+    handleScroll()
 
     window.addEventListener('scroll', handleScroll, { passive: true })
     window.addEventListener('resize', handleScroll, { passive: true })
@@ -69,11 +95,7 @@ function VirtualizedMetaTable({ paths, context }: VirtualizedMetaTableProps) {
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)
     }
-  }, [updateVisibleRange])
-
-  useEffect(() => {
-    updateVisibleRange()
-  }, [paths, updateVisibleRange])
+  }, [computeVisibleRange])
 
   const visibleItems = useMemo(() => {
     const end = Math.min(visibleRange.end + 1, paths.length)
@@ -113,7 +135,7 @@ function VirtualizedMetaTable({ paths, context }: VirtualizedMetaTableProps) {
         )}
 
         {visibleItems.map((item) => {
-          const meta = store.getMeta(context, item.path) || {}
+          const meta = contextMeta[item.path] || {}
           return (
             <div
               key={item.path}

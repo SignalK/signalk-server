@@ -7,7 +7,7 @@ import {
   FormEvent
 } from 'react'
 import parse from 'html-react-parser'
-import { useAppSelector } from '../../store'
+import { useZustandLogEntries } from '../../store'
 import {
   Card,
   CardBody,
@@ -23,6 +23,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import LogFiles from './Logging'
 import Creatable from 'react-select/creatable'
+import { useWebSocket } from '../../hooks/useWebSocket'
 
 interface LogEntry {
   i: number
@@ -41,8 +42,8 @@ interface SelectOption {
 }
 
 export default function ServerLogs() {
-  const log = useAppSelector((state) => state.log)
-  const webSocket = useAppSelector((state) => state.webSocket)
+  const log = useZustandLogEntries()
+  const { ws: webSocket } = useWebSocket()
 
   const [pause, setPause] = useState(false)
   const [debugKeys, setDebugKeys] = useState<string[]>([])

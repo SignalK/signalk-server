@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react'
-import { useAppSelector } from '../../store'
+import { useZustandLoginStatus } from '../../store'
 import {
   Button,
   Card,
@@ -31,7 +31,7 @@ interface SecurityConfig {
 }
 
 export default function Settings() {
-  const loginStatus = useAppSelector((state) => state.loginStatus)
+  const loginStatus = useZustandLoginStatus()
   const [config, setConfig] = useState<SecurityConfig>({
     hasData: false,
     allow_readonly: false,

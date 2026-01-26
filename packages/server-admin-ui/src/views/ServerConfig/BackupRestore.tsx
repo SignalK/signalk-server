@@ -1,6 +1,4 @@
 import React, { useState, useCallback } from 'react'
-import { useSelector } from 'react-redux'
-import { useAppDispatch } from '../../store'
 import {
   Button,
   Card,
@@ -18,8 +16,8 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleNotch } from '@fortawesome/free-solid-svg-icons/faCircleNotch'
 import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
-
-import { restart } from '../../actions'
+import { useStore, useRestarting } from '../../store'
+import { restartAction } from '../../actions'
 
 const RESTORE_NONE = 0
 const RESTORE_VALIDATING = 1
@@ -32,15 +30,11 @@ interface RestoreStatus {
   percentComplete?: number
 }
 
-interface RootState {
-  restoreStatus: RestoreStatus
-  restarting: boolean
-}
-
 const BackupRestore: React.FC = () => {
-  const dispatch = useAppDispatch()
-  const restoreStatus = useSelector((state: RootState) => state.restoreStatus)
-  const restarting = useSelector((state: RootState) => state.restarting)
+  const restoreStatus = useStore(
+    (state) => state.restoreStatus
+  ) as RestoreStatus
+  const restarting = useRestarting()
 
   const [restoreFile, setRestoreFile] = useState<File | null>(null)
   const [restoreState, setRestoreState] = useState(RESTORE_NONE)
@@ -95,10 +89,10 @@ const BackupRestore: React.FC = () => {
   }, [restoreContents])
 
   const handleRestart = useCallback(() => {
-    dispatch(restart())
+    restartAction()
     setRestoreState(RESTORE_NONE)
     window.location.href = '/admin/#/dashboard'
-  }, [dispatch])
+  }, [])
 
   const validate = useCallback(() => {
     if (!restoreFile) {

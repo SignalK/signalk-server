@@ -40,7 +40,7 @@ export default function Register() {
     RegisterState,
     FormData
   >(
-    async (_prevState) => {
+    async () => {
       if (fields.email.length === 0) {
         return { error: 'Please enter an email address', success: false }
       }

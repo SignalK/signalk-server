@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useSelector } from 'react-redux'
+import { useZustandLoginStatus } from '../../store'
 import {
   Alert,
   Button,
@@ -24,16 +24,6 @@ import { faPlug } from '@fortawesome/free-solid-svg-icons/faPlug'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import { faOpenid } from '@fortawesome/free-brands-svg-icons/faOpenid'
-
-interface LoginStatus {
-  authenticationRequired: boolean
-  status: string
-  userLevel: string
-}
-
-interface RootState {
-  loginStatus: LoginStatus
-}
 
 interface TestResult {
   success: boolean
@@ -70,7 +60,7 @@ interface OIDCConfig {
 }
 
 const OIDCSettings: React.FC = () => {
-  const loginStatus = useSelector((state: RootState) => state.loginStatus)
+  const loginStatus = useZustandLoginStatus()
 
   const [hasData, setHasData] = useState(false)
   const [isOpen, setIsOpen] = useState(false)

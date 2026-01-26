@@ -1,12 +1,13 @@
-import { useState, useRef, useSyncExternalStore, useCallback } from 'react'
-import store, { PathData, MetaData } from './ValueEmittingStore'
+import { useRef, useSyncExternalStore, useCallback } from 'react'
+import { useStore } from '../../store'
+import type { PathData, MetaData } from '../../store'
 
 // Throttle UI updates to max 5 per second per path
 // Data still flows in real-time over WebSocket, only UI re-renders are throttled
 const THROTTLE_MS = 200
 
 /**
- * Hook to subscribe to a specific path's data
+ * Hook to subscribe to a specific path's data from Zustand
  * Only re-renders when THIS path's data changes
  * Throttled to prevent CPU spikes from high-frequency updates
  */
@@ -14,91 +15,84 @@ export function usePathData(
   context: string,
   path$SourceKey: string
 ): PathData | null {
+  // Refs for throttling - these persist across renders
   const lastUpdateRef = useRef<number>(0)
-  const pendingDataRef = useRef<PathData | null>(null)
+  const cachedDataRef = useRef<PathData | null>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [throttledData, setThrottledData] = useState<PathData | null>(
-    () => store.getPathData(context, path$SourceKey) ?? null
-  )
+  const listenerRef = useRef<(() => void) | null>(null)
 
-  // Use useSyncExternalStore for the base subscription
+  // Subscribe to Zustand with throttled updates
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
-      const unsubscribe = store.subscribe(
-        context,
-        path$SourceKey,
-        (newData: PathData) => {
+      listenerRef.current = onStoreChange
+
+      // Subscribe to Zustand store changes for this specific path
+      const unsubscribe = useStore.subscribe(
+        (state) => state.signalkData[context]?.[path$SourceKey],
+        (newData) => {
           const now = Date.now()
           const elapsed = now - lastUpdateRef.current
 
           if (elapsed >= THROTTLE_MS) {
             // Enough time passed, update immediately
             lastUpdateRef.current = now
-            setThrottledData(newData)
+            cachedDataRef.current = newData ?? null
             onStoreChange()
           } else {
-            // Store pending data, schedule update for later
-            pendingDataRef.current = newData
+            // Schedule throttled update
             if (!timeoutRef.current) {
               timeoutRef.current = setTimeout(() => {
-                if (pendingDataRef.current) {
-                  lastUpdateRef.current = Date.now()
-                  setThrottledData(pendingDataRef.current)
-                  pendingDataRef.current = null
-                  onStoreChange()
-                }
+                lastUpdateRef.current = Date.now()
+                cachedDataRef.current =
+                  useStore.getState().signalkData[context]?.[path$SourceKey] ??
+                  null
                 timeoutRef.current = null
+                if (listenerRef.current) {
+                  listenerRef.current()
+                }
               }, THROTTLE_MS - elapsed)
             }
           }
-        }
+        },
+        { fireImmediately: true }
       )
 
       return () => {
         unsubscribe()
+        listenerRef.current = null
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
         }
       }
     },
     [context, path$SourceKey]
   )
 
-  const getSnapshot = useCallback(
-    () => store.getPathData(context, path$SourceKey) ?? null,
-    [context, path$SourceKey]
-  )
+  const getSnapshot = useCallback(() => {
+    // Initialize cachedDataRef if needed
+    if (cachedDataRef.current === null) {
+      cachedDataRef.current =
+        useStore.getState().signalkData[context]?.[path$SourceKey] ?? null
+    }
+    return cachedDataRef.current
+  }, [context, path$SourceKey])
 
-  // useSyncExternalStore ensures proper synchronization with external store
-  useSyncExternalStore(subscribe, getSnapshot)
-
-  return throttledData
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
 /**
- * Hook to get metadata for a path
- * Uses useSyncExternalStore for proper external store synchronization
+ * Hook to get metadata for a path from Zustand
  */
 export function useMetaData(
   context: string,
   path: string | undefined
 ): MetaData | null {
-  const subscribe = useCallback(
-    (onStoreChange: () => void) => {
-      if (!path) return () => {}
-      // Meta doesn't have a specific subscription, but we can use the structure subscription
-      // which fires when any meta changes
-      return store.subscribeToStructure(() => {
-        onStoreChange()
-      })
-    },
-    [path]
+  const metaData = useStore((s) =>
+    path ? s.signalkMeta[context]?.[path] : undefined
   )
-
-  const getSnapshot = useCallback(
-    () => (path ? (store.getMeta(context, path) ?? null) : null),
-    [context, path]
-  )
-
-  return useSyncExternalStore(subscribe, getSnapshot)
+  return metaData ?? null
 }
+
+// Re-export types for convenience
+export type { PathData, MetaData }

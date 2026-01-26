@@ -3,7 +3,7 @@ import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
 import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
-import { PathData, MetaData } from './ValueEmittingStore'
+import type { PathData, MetaData } from '../../store'
 
 interface DataRowProps {
   path$SourceKey: string
@@ -104,19 +104,21 @@ function DataRow({
   )
 }
 
-/* eslint-disable react-hooks/static-components */
 // ValueRenderer uses dynamic component selection for plugin extensibility.
 // getValueRenderer returns cached components from a module-level registry.
 // The first access per renderer type creates and caches the component,
 // subsequent accesses return the cached reference. This pattern is intentional
 // for supporting dynamically loaded renderers from plugins.
 function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
-  const CustomRenderer = useMemo(() => {
-    if (raw) return null
-    return getValueRenderer(data.path ?? '', meta)
+  // Get the renderer component - memoized to prevent recreating on every render
+  const rendererInfo = useMemo(() => {
+    if (raw) return { type: 'raw' as const }
+    const Renderer = getValueRenderer(data.path ?? '', meta)
+    if (Renderer) return { type: 'custom' as const, Renderer }
+    return { type: 'default' as const }
   }, [raw, data.path, meta])
 
-  if (raw) {
+  if (rendererInfo.type === 'raw') {
     return (
       <div>
         <div className="text-primary">
@@ -129,9 +131,10 @@ function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
     )
   }
 
-  if (CustomRenderer) {
+  if (rendererInfo.type === 'custom') {
+    const Renderer = rendererInfo.Renderer
     return (
-      <CustomRenderer
+      <Renderer
         value={data.value}
         units={units}
         {...(meta?.renderer?.options ?? {})}
@@ -141,6 +144,5 @@ function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
 
   return <DefaultValueRenderer value={data.value} units={units} />
 }
-/* eslint-enable react-hooks/static-components */
 
 export default DataRow

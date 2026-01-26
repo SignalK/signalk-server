@@ -5,18 +5,8 @@ import { faSquarePlus } from '@fortawesome/free-solid-svg-icons/faSquarePlus'
 import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState, type JSX } from 'react'
-import { useSelector } from 'react-redux'
+import { useZustandLoginStatus } from '../../store'
 import { Col, Form, FormGroup, Input, Label, Row } from 'reactstrap'
-
-interface LoginStatus {
-  authenticationRequired: boolean
-  status: string
-  userLevel: string
-}
-
-interface RootState {
-  loginStatus: LoginStatus
-}
 
 interface DisplayScaleValue {
   lower?: number
@@ -50,13 +40,19 @@ interface Zone {
   message: string
 }
 
+// Counter for generating unique zone IDs for stable React keys
+let zoneIdCounter = 0
+function generateZoneId(): string {
+  return `zone-${++zoneIdCounter}`
+}
+
 interface MetaProps {
   meta: MetaData
   path: string
 }
 
 interface MetaFormRowProps {
-  _key: string
+  fieldKey: string
   value: unknown
   disabled: boolean
   setValue: (value: unknown) => void
@@ -354,7 +350,7 @@ const saveMeta = (path: string, meta: MetaData) => {
 }
 
 const Meta: React.FC<MetaProps> = ({ meta, path }) => {
-  const loginStatus = useSelector((state: RootState) => state.loginStatus)
+  const loginStatus = useZustandLoginStatus()
   const [isEditing, setIsEditing] = useState(false)
   const [localMeta, setLocalMeta] = useState<MetaData>(meta)
 
@@ -411,7 +407,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path }) => {
             const renderer = METAFIELDRENDERERS[key]
             if (renderer) {
               const props: MetaFormRowProps = {
-                _key: key,
+                fieldKey: key,
                 value,
                 disabled: !isEditing,
                 setValue: (metaFieldValue) =>
@@ -467,9 +463,9 @@ const Meta: React.FC<MetaProps> = ({ meta, path }) => {
 }
 
 const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
-  const { _key, renderValue: V, disabled, setKey, deleteKey } = props
-  const fieldSelectId = `meta-field-${_key}`
-  const valueInputId = `meta-value-${_key}`
+  const { fieldKey, renderValue: V, disabled, setKey, deleteKey } = props
+  const fieldSelectId = `meta-field-${fieldKey}`
+  const valueInputId = `meta-value-${fieldKey}`
   return (
     <FormGroup row>
       <Col xs="3" md="2" className={'col-form-label'}>
@@ -480,7 +476,7 @@ const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
           id={fieldSelectId}
           disabled={disabled}
           type="select"
-          value={_key}
+          value={fieldKey}
           onChange={(e) => setKey(e.target.value)}
         >
           {METAFIELDS.filter((fieldName) => fieldName !== 'zones').map(
@@ -494,7 +490,7 @@ const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
       </Col>
       <Col xs="12" md="4">
         <Label htmlFor={valueInputId} className="visually-hidden">
-          {_key} value
+          {fieldKey} value
         </Label>
         <V {...props} inputId={valueInputId} />
       </Col>
@@ -646,59 +642,90 @@ interface ZonesProps {
   setZones: (zones: Zone[]) => void
 }
 
-const Zones: React.FC<ZonesProps> = ({ zones, isEditing, setZones }) => (
-  <Row>
-    <Col md="2">Zones</Col>
-    <Col md="10">
-      <Form
-        action=""
-        method="post"
-        encType="multipart/form-data"
-        className="form-horizontal"
-        onSubmit={(e) => {
-          e.preventDefault()
-        }}
-      >
-        {(zones === undefined || zones.length === 0) &&
-          !isEditing &&
-          'No zones defined'}
-        {/* Zone items don't have stable unique IDs - index key is intentional for this editable list */}
-        {zones.map((zone, i) => (
-          <ZoneRow
-            key={i} // eslint-disable-line @eslint-react/no-array-index-key
-            zone={zone}
-            isEditing={isEditing}
-            showHint={i === 0}
-            setZone={(newZone) => {
-              const newZones = [...zones]
-              newZones[i] = newZone
-              setZones(newZones)
-            }}
-            deleteZone={() => {
-              const newZones = zones.filter((_, index) => index !== i)
-              setZones(newZones)
-            }}
+// Zones component manages internal IDs for stable React keys while
+// passing clean Zone objects to the parent setZones callback
+function Zones({ zones, isEditing, setZones }: ZonesProps) {
+  // Generate stable IDs for zones - initialized once based on zones length
+  // Using lazy initialization to generate IDs only on first render
+  const [zoneIds, setZoneIds] = useState<string[]>(() =>
+    zones.map(() => generateZoneId())
+  )
+
+  // Sync IDs with zones length when zones change
+  // This runs after render, avoiding ref access during render
+  const expectedLength = zones.length
+  if (zoneIds.length !== expectedLength) {
+    if (expectedLength > zoneIds.length) {
+      // Add new IDs for added zones
+      const newIds = [...zoneIds]
+      while (newIds.length < expectedLength) {
+        newIds.push(generateZoneId())
+      }
+      setZoneIds(newIds)
+    } else {
+      // Trim IDs for removed zones
+      setZoneIds(zoneIds.slice(0, expectedLength))
+    }
+  }
+
+  return (
+    <Row>
+      <Col md="2">Zones</Col>
+      <Col md="10">
+        <Form
+          action=""
+          method="post"
+          encType="multipart/form-data"
+          className="form-horizontal"
+          onSubmit={(e) => {
+            e.preventDefault()
+          }}
+        >
+          {(zones === undefined || zones.length === 0) &&
+            !isEditing &&
+            'No zones defined'}
+          {zones.map((zone, i) => (
+            <ZoneRow
+              key={zoneIds[i] ?? `zone-fallback-${i}`}
+              zone={zone}
+              isEditing={isEditing}
+              showHint={i === 0}
+              setZone={(newZone) => {
+                const newZones = [...zones]
+                newZones[i] = newZone
+                setZones(newZones)
+              }}
+              deleteZone={() => {
+                // Remove the ID at this index too
+                setZoneIds((prev) => [
+                  ...prev.slice(0, i),
+                  ...prev.slice(i + 1)
+                ])
+                const newZones = zones.filter((_, index) => index !== i)
+                setZones(newZones)
+              }}
+            />
+          ))}
+        </Form>
+        {isEditing && (
+          <FontAwesomeIcon
+            icon={faPlusSquare}
+            onClick={() =>
+              setZones([
+                ...zones,
+                {
+                  upper: 1,
+                  lower: 0,
+                  state: STATES[0],
+                  message: ''
+                }
+              ])
+            }
           />
-        ))}
-      </Form>
-      {isEditing && (
-        <FontAwesomeIcon
-          icon={faPlusSquare}
-          onClick={() =>
-            setZones([
-              ...zones,
-              {
-                upper: 1,
-                lower: 0,
-                state: STATES[0],
-                message: ''
-              }
-            ])
-          }
-        />
-      )}
-    </Col>
-  </Row>
-)
+        )}
+      </Col>
+    </Row>
+  )
+}
 
 export default Meta

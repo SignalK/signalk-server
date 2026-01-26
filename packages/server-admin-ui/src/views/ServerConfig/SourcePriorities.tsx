@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import {
   Alert,
   Badge,
@@ -18,21 +17,8 @@ import { faArrowDown } from '@fortawesome/free-solid-svg-icons/faArrowDown'
 import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import Creatable from 'react-select/creatable'
-import remove from 'lodash.remove'
 import uniq from 'lodash.uniq'
-
-// Action types - exported for reducer
-export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
-export const SOURCEPRIOS_PRIO_DELETED = 'SOURCEPRIOS_PRIO_DELETED'
-export const SOURCEPRIOS_PRIO_MOVED = 'SOURCEPRIOS_PRIO_MOVED'
-
-export const SOURCEPRIOS_PATH_CHANGED = 'SOURCEPRIOS_PATH_CHANGED'
-export const SOURCEPRIOS_PATH_DELETED = 'SOURCEPRIOS_PATH_DELETED'
-
-export const SOURCEPRIOS_SAVING = 'SOURCEPRIOS_SAVING'
-export const SOURCEPRIOS_SAVED = 'SOURCEPRIOS_SAVED'
-export const SOURCEPRIOS_SAVE_FAILED = 'SOURCEPRIOS_SAVE_FAILED'
-export const SOURCEPRIOS_SAVE_FAILED_OVER = 'SOURCEPRIOS_SAVE_FAILED_OVER'
+import { useStore, useZustandSourcePriorities } from '../../store'
 
 // Types
 interface Priority {
@@ -45,164 +31,9 @@ interface PathPriority {
   priorities: Priority[]
 }
 
-interface SaveState {
-  dirty: boolean
-  isSaving: boolean
-  saveFailed: boolean
-  timeoutsOk: boolean
-}
-
-interface SourcePrioritiesData {
-  sourcePriorities: PathPriority[]
-  saveState: SaveState
-}
-
-interface SourcePriosAction {
-  type: string
-  data?: {
-    path?: string
-    index?: number
-    pathIndex?: number
-    sourceRef?: string
-    timeout?: string | number
-    change?: number
-  }
-}
-
-interface RootState {
-  sourcePrioritiesData: SourcePrioritiesData
-}
-
 interface SelectOption {
   label: string
   value: string
-}
-
-// Helper function
-function checkTimeouts(sourcePriorities: Priority[]): boolean {
-  return sourcePriorities.reduce<boolean>((acc, prio, i) => {
-    const { timeout } = prio
-    if (!acc) {
-      return acc
-    }
-
-    if (i === 0) {
-      return true
-    }
-
-    const thisOne = Number(timeout)
-    if (Number.isNaN(thisOne) || thisOne <= 0) {
-      return false
-    }
-    if (i === 1) {
-      return true
-    }
-    return thisOne > Number(sourcePriorities[i - 1].timeout)
-  }, true)
-}
-
-// Reducer - exported for use in root reducer
-export const reduceSourcePriorities = (
-  state: SourcePrioritiesData,
-  action: SourcePriosAction
-): SourcePrioritiesData => {
-  const sourcePriorities: PathPriority[] = JSON.parse(
-    JSON.stringify(state.sourcePriorities)
-  )
-  let saveState = { ...state.saveState }
-  const { path, index, pathIndex, sourceRef, timeout, change } =
-    action.data || {}
-  const prios =
-    pathIndex !== undefined
-      ? sourcePriorities[pathIndex]?.priorities
-      : undefined
-
-  switch (action.type) {
-    case SOURCEPRIOS_PATH_CHANGED:
-      if (index === sourcePriorities.length) {
-        sourcePriorities.push({ path: '', priorities: [] })
-      }
-      if (index !== undefined && path !== undefined) {
-        sourcePriorities[index].path = path
-      }
-      saveState.dirty = true
-      break
-
-    case SOURCEPRIOS_PATH_DELETED:
-      remove(sourcePriorities, (_, i) => i === index)
-      saveState.dirty = true
-      break
-
-    case SOURCEPRIOS_PRIO_CHANGED:
-      if (pathIndex === sourcePriorities.length) {
-        sourcePriorities.push({ path: '', priorities: [] })
-      }
-      if (prios && index !== undefined) {
-        if (index === prios.length) {
-          prios.push({ sourceRef: '', timeout: '' })
-        }
-        prios[index] = {
-          sourceRef: sourceRef || '',
-          timeout: timeout !== undefined ? timeout : ''
-        }
-      }
-      saveState.dirty = true
-      saveState.timeoutsOk = prios ? checkTimeouts(prios) : true
-      break
-
-    case SOURCEPRIOS_PRIO_DELETED:
-      if (prios) {
-        remove(prios, (_, i) => i === index)
-      }
-      saveState.dirty = true
-      break
-
-    case SOURCEPRIOS_PRIO_MOVED:
-      if (prios && index !== undefined && change !== undefined) {
-        const tmp = prios[index]
-        prios[index] = prios[index + change]
-        prios[index + change] = tmp
-      }
-      saveState.dirty = true
-      saveState.timeoutsOk = prios ? checkTimeouts(prios) : true
-      break
-
-    case SOURCEPRIOS_SAVING:
-      saveState = {
-        ...saveState,
-        isSaving: true,
-        saveFailed: false
-      }
-      break
-
-    case SOURCEPRIOS_SAVED:
-      saveState = {
-        ...saveState,
-        dirty: false,
-        isSaving: false,
-        saveFailed: false
-      }
-      break
-
-    case SOURCEPRIOS_SAVE_FAILED:
-      saveState = {
-        ...saveState,
-        isSaving: false,
-        saveFailed: true
-      }
-      break
-
-    case SOURCEPRIOS_SAVE_FAILED_OVER:
-      saveState = {
-        ...saveState,
-        saveFailed: false
-      }
-      break
-
-    default:
-      return state
-  }
-  return { sourcePriorities, saveState }
 }
 
 // Fetch source refs helper
@@ -235,7 +66,10 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
   pathIndex,
   isSaving
 }) => {
-  const dispatch = useDispatch()
+  const changePriority = useStore((s) => s.changePriority)
+  const deletePriority = useStore((s) => s.deletePriority)
+  const movePriority = useStore((s) => s.movePriority)
+
   const [isOpen, setIsOpen] = useState(false)
   const [sourceRefs, setSourceRefs] = useState<string[]>([])
 
@@ -282,15 +116,12 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                         options={options}
                         value={{ value: sourceRef, label: sourceRef }}
                         onChange={(e) => {
-                          dispatch({
-                            type: SOURCEPRIOS_PRIO_CHANGED,
-                            data: {
-                              pathIndex,
-                              sourceRef: e?.value || '',
-                              timeout,
-                              index
-                            }
-                          })
+                          changePriority(
+                            pathIndex,
+                            index,
+                            e?.value || '',
+                            timeout
+                          )
                         }}
                       />
                     </td>
@@ -300,15 +131,12 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                           type="number"
                           name="timeout"
                           onChange={(e) =>
-                            dispatch({
-                              type: SOURCEPRIOS_PRIO_CHANGED,
-                              data: {
-                                pathIndex,
-                                sourceRef,
-                                timeout: e.target.value,
-                                index
-                              }
-                            })
+                            changePriority(
+                              pathIndex,
+                              index,
+                              sourceRef,
+                              e.target.value
+                            )
                           }
                           value={timeout}
                         />
@@ -319,15 +147,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                         <button
                           type="button"
                           onClick={() =>
-                            !isSaving &&
-                            dispatch({
-                              type: SOURCEPRIOS_PRIO_MOVED,
-                              data: {
-                                pathIndex,
-                                index,
-                                change: -1
-                              }
-                            })
+                            !isSaving && movePriority(pathIndex, index, -1)
                           }
                         >
                           <FontAwesomeIcon icon={faArrowUp} />
@@ -337,15 +157,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                         <button
                           type="button"
                           onClick={() =>
-                            !isSaving &&
-                            dispatch({
-                              type: SOURCEPRIOS_PRIO_MOVED,
-                              data: {
-                                pathIndex,
-                                index,
-                                change: 1
-                              }
-                            })
+                            !isSaving && movePriority(pathIndex, index, 1)
                           }
                         >
                           <FontAwesomeIcon icon={faArrowDown} />
@@ -358,14 +170,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                           icon={faTrash}
                           style={{ cursor: 'pointer' }}
                           onClick={() =>
-                            !isSaving &&
-                            dispatch({
-                              type: SOURCEPRIOS_PRIO_DELETED,
-                              data: {
-                                pathIndex,
-                                index
-                              }
-                            })
+                            !isSaving && deletePriority(pathIndex, index)
                           }
                         />
                       )}
@@ -381,46 +186,6 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
   )
 }
 
-// Thunk action for saving
-const sourcePrioritySave =
-  (sourcePriorities: PathPriority[]) =>
-  (dispatch: (action: SourcePriosAction) => void) => {
-    dispatch({
-      type: SOURCEPRIOS_SAVING
-    })
-    fetch(`${window.serverRoutesPrefix}/sourcePriorities`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(
-        sourcePriorities.reduce<Record<string, Priority[]>>(
-          (acc, pathPriority) => {
-            acc[pathPriority.path] = pathPriority.priorities
-            return acc
-          },
-          {}
-        )
-      )
-    })
-      .then((response) => {
-        if (response.status === 200) {
-          dispatch({
-            type: SOURCEPRIOS_SAVED
-          })
-        } else {
-          throw new Error()
-        }
-      })
-      .catch(() => {
-        dispatch({
-          type: SOURCEPRIOS_SAVE_FAILED
-        })
-        setTimeout(() => dispatch({ type: SOURCEPRIOS_SAVE_FAILED_OVER }), 5000)
-      })
-  }
-
 // Fetch available paths helper
 function fetchAvailablePaths(cb: (paths: string[]) => void) {
   fetch(`${window.serverRoutesPrefix}/availablePaths`, {
@@ -432,13 +197,15 @@ function fetchAvailablePaths(cb: (paths: string[]) => void) {
 
 // Main SourcePriorities Component
 const SourcePriorities: React.FC = () => {
-  const dispatch = useDispatch()
-  const sourcePriorities = useSelector(
-    (state: RootState) => state.sourcePrioritiesData.sourcePriorities
-  )
-  const saveState = useSelector(
-    (state: RootState) => state.sourcePrioritiesData.saveState
-  )
+  const sourcePrioritiesData = useZustandSourcePriorities()
+  const changePath = useStore((s) => s.changePath)
+  const deletePath = useStore((s) => s.deletePath)
+  const setSaving = useStore((s) => s.setSaving)
+  const setSaved = useStore((s) => s.setSaved)
+  const setSaveFailed = useStore((s) => s.setSaveFailed)
+  const clearSaveFailed = useStore((s) => s.clearSaveFailed)
+
+  const { sourcePriorities, saveState } = sourcePrioritiesData
 
   const [availablePaths, setAvailablePaths] = useState<SelectOption[]>([])
 
@@ -456,13 +223,42 @@ const SourcePriorities: React.FC = () => {
   const handleSave = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
-      // @ts-expect-error thunk dispatch
-      dispatch(sourcePrioritySave(sourcePriorities))
+      setSaving()
+      fetch(`${window.serverRoutesPrefix}/sourcePriorities`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(
+          sourcePriorities.reduce<Record<string, Priority[]>>(
+            (acc, pathPriority) => {
+              acc[pathPriority.path] = pathPriority.priorities
+              return acc
+            },
+            {}
+          )
+        )
+      })
+        .then((response) => {
+          if (response.status === 200) {
+            setSaved()
+          } else {
+            throw new Error()
+          }
+        })
+        .catch(() => {
+          setSaveFailed()
+          setTimeout(() => clearSaveFailed(), 5000)
+        })
     },
-    [dispatch, sourcePriorities]
+    [sourcePriorities, setSaving, setSaved, setSaveFailed, clearSaveFailed]
   )
 
-  const priosWithEmpty = [...sourcePriorities, { path: '', priorities: [] }]
+  const priosWithEmpty: PathPriority[] = [
+    ...sourcePriorities,
+    { path: '', priorities: [] }
+  ]
 
   return (
     <Card>
@@ -514,10 +310,7 @@ const SourcePriorities: React.FC = () => {
                       options={availablePaths}
                       value={{ value: path, label: path }}
                       onChange={(e) => {
-                        dispatch({
-                          type: SOURCEPRIOS_PATH_CHANGED,
-                          data: { path: e?.value || '', index }
-                        })
+                        changePath(index, e?.value || '')
                       }}
                     />
                   </td>
@@ -527,7 +320,7 @@ const SourcePriorities: React.FC = () => {
                       path={path}
                       priorities={priorities}
                       pathIndex={index}
-                      isSaving={saveState.isSaving}
+                      isSaving={saveState.isSaving || false}
                     />
                   </td>
                   <td style={{ border: 'none' }}>
@@ -535,14 +328,7 @@ const SourcePriorities: React.FC = () => {
                       <FontAwesomeIcon
                         icon={faTrash}
                         style={{ cursor: 'pointer' }}
-                        onClick={() =>
-                          dispatch({
-                            type: SOURCEPRIOS_PATH_DELETED,
-                            data: {
-                              index
-                            }
-                          })
-                        }
+                        onClick={() => deletePath(index)}
                       />
                     )}
                   </td>

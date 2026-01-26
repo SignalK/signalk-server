@@ -289,14 +289,20 @@ const ArrayFieldTemplate = (props: ArrayFieldTemplateProps) => {
 
   // RJSF library requires 'any' type parameters for generic template resolution.
   // The library's TypeScript types are designed with 'any' as default generics.
-  /* eslint-disable @typescript-eslint/no-explicit-any */
+
   const ResolvedArrayFieldItemTemplate = getTemplate<
     'ArrayFieldItemTemplate',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RJSF formData type
     any,
     RJSFSchema,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RJSF uiSchema type
     any
-  >('ArrayFieldItemTemplate', registry as any, uiOptions)
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+  >(
+    'ArrayFieldItemTemplate',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RJSF registry type mismatch
+    registry as any,
+    uiOptions
+  )
   const {
     ButtonTemplates: { AddButton }
   } = registry.templates
@@ -317,7 +323,7 @@ const ArrayFieldTemplate = (props: ArrayFieldTemplateProps) => {
         </div>
       )}
       <div className={CSS_CLASSES.ARRAY_ITEM_LIST}>
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- RJSF item type */}
         {items?.map(({ key, ...restProps }: any) => (
           <ResolvedArrayFieldItemTemplate key={key} {...restProps} />
         ))}
@@ -341,7 +347,7 @@ const ArrayFieldTemplate = (props: ArrayFieldTemplateProps) => {
   )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- RJSF template types require any
 const customTemplates: any = {
   FieldTemplate,
   ObjectFieldTemplate,

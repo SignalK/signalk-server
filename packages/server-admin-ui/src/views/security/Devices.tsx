@@ -6,7 +6,7 @@ import {
   ChangeEvent,
   FormEvent
 } from 'react'
-import { useAppSelector } from '../../store'
+import { useZustandLoginStatus } from '../../store'
 import {
   Button,
   Card,
@@ -46,30 +46,37 @@ function convertPermissions(type: PermissionType | undefined): string {
 }
 
 export default function Devices() {
-  const loginStatus = useAppSelector((state) => state.loginStatus)
+  const loginStatus = useZustandLoginStatus()
   const [devices, setDevices] = useState<Device[]>([])
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
   const selectedDeviceRef = useRef<HTMLDivElement>(null)
 
-  const fetchSecurityDevices = useCallback(async () => {
+  const loadDevices = useCallback(async (): Promise<Device[]> => {
     const response = await fetch(
       `${window.serverRoutesPrefix}/security/devices`,
       {
         credentials: 'include'
       }
     )
-    const data = await response.json()
-    setDevices(data)
+    return response.json()
   }, [])
+
+  // Refresh devices - for use in event handlers after mutations
+  const refreshDevices = useCallback(() => {
+    loadDevices().then((data) => {
+      setDevices(data)
+    })
+  }, [loadDevices])
 
   // Fetch devices when authentication requirements change - standard data fetching pattern.
   // See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
   useEffect(() => {
     if (loginStatus.authenticationRequired) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching pattern
-      fetchSecurityDevices()
+      loadDevices().then((data) => {
+        setDevices(data)
+      })
     }
-  }, [loginStatus.authenticationRequired, fetchSecurityDevices])
+  }, [loginStatus.authenticationRequired, loadDevices])
 
   const handleDeviceChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value =
@@ -105,7 +112,7 @@ export default function Devices() {
     const text = await response.text()
     setSelectedDevice(null)
     alert(text)
-    fetchSecurityDevices()
+    refreshDevices()
   }
 
   const deleteDevice = async () => {
@@ -124,7 +131,7 @@ export default function Devices() {
     const text = await response.text()
     setSelectedDevice(null)
     alert(text)
-    fetchSecurityDevices()
+    refreshDevices()
   }
 
   const deviceClicked = (device: Device) => {

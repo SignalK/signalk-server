@@ -6,7 +6,6 @@ import {
   ChangeEvent,
   FormEvent
 } from 'react'
-import { useAppSelector } from '../../store'
 import {
   Badge,
   Button,
@@ -21,6 +20,7 @@ import {
   FormText,
   Table
 } from 'reactstrap'
+import { useZustandLoginStatus } from '../../store'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
@@ -53,30 +53,37 @@ function convertType(type: UserType | undefined): string {
 }
 
 export default function Users() {
-  const loginStatus = useAppSelector((state) => state.loginStatus)
+  const loginStatus = useZustandLoginStatus()
   const [users, setUsers] = useState<User[] | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const selectedUserRef = useRef<HTMLDivElement>(null)
 
-  const fetchSecurityUsers = useCallback(async () => {
+  const loadUsers = useCallback(async (): Promise<User[]> => {
     const response = await fetch(
       `${window.serverRoutesPrefix}/security/users`,
       {
         credentials: 'include'
       }
     )
-    const data = await response.json()
-    setUsers(data)
+    return response.json()
   }, [])
+
+  // Refresh users - for use in event handlers after mutations
+  const refreshUsers = useCallback(() => {
+    loadUsers().then((data) => {
+      setUsers(data)
+    })
+  }, [loadUsers])
 
   // Fetch users when authentication requirements change - standard data fetching pattern.
   // See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
   useEffect(() => {
     if (loginStatus.authenticationRequired) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching pattern
-      fetchSecurityUsers()
+      loadUsers().then((data) => {
+        setUsers(data)
+      })
     }
-  }, [loginStatus.authenticationRequired, fetchSecurityUsers])
+  }, [loginStatus.authenticationRequired, loadUsers])
 
   const handleUserChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value =
@@ -138,7 +145,7 @@ export default function Users() {
     const text = await response.text()
     setSelectedUser(null)
     alert(text)
-    fetchSecurityUsers()
+    refreshUsers()
   }
 
   const deleteUser = async () => {
@@ -157,7 +164,7 @@ export default function Users() {
     const text = await response.text()
     setSelectedUser(null)
     alert(text)
-    fetchSecurityUsers()
+    refreshUsers()
   }
 
   const userClicked = (user: User) => {
