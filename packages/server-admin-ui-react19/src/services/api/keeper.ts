@@ -169,7 +169,15 @@ export function createKeeperApi(baseUrl: string) {
         const response = await fetch(
           `${apiUrl}/api/container/logs?lines=${lines}&source=${source}`
         )
-        return handleResponse<string[]>(response)
+        // Keeper returns { lines: [{ timestamp, message, level }], count }
+        // Transform to string array for Admin UI
+        const data = await handleResponse<{
+          lines: Array<{ timestamp: string; message: string; level: string }>
+          count: number
+        }>(response)
+        return data.lines.map(
+          (l) => `${l.timestamp} [${l.level.toUpperCase()}] ${l.message}`
+        )
       },
 
       start: async (): Promise<void> => {
@@ -255,10 +263,15 @@ export function createKeeperApi(baseUrl: string) {
         type?: 'full' | 'config' | 'plugins'
         description?: string
       }): Promise<KeeperBackup> => {
+        // Keeper expects type to be 'manual' for user-initiated backups
+        // Don't send the UI's type field, just description
         const response = await fetch(`${apiUrl}/api/backups`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(options || {})
+          body: JSON.stringify({
+            description: options?.description,
+            type: 'manual'
+          })
         })
         return handleResponse<KeeperBackup>(response)
       },
@@ -628,7 +641,8 @@ export function createKeeperApi(baseUrl: string) {
       },
 
       credentials: async (): Promise<HistoryCredentials> => {
-        const response = await fetch(`${apiUrl}/api/history/credentials`)
+        // Use /credentials/full to get usernames and passwords
+        const response = await fetch(`${apiUrl}/api/history/credentials/full`)
         return handleResponse<HistoryCredentials>(response)
       },
 

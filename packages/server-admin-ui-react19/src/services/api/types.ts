@@ -209,7 +209,11 @@ export interface HistorySettings {
 
 export interface HistoryCredentials {
   influxUrl: string
+  influxUser?: string
+  influxPassword?: string
   grafanaUrl?: string
+  grafanaUser?: string
+  grafanaPassword?: string
   org: string
   bucket: string
 }

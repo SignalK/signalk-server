@@ -481,6 +481,20 @@ const History: React.FC = () => {
                 <p className="text-muted">
                   View historical data with pre-configured dashboards
                 </p>
+                {credentials.grafanaUser && (
+                  <Table size="sm" borderless className="mb-2">
+                    <tbody>
+                      <tr>
+                        <td className="text-muted">Username:</td>
+                        <td><code>{credentials.grafanaUser}</code></td>
+                      </tr>
+                      <tr>
+                        <td className="text-muted">Password:</td>
+                        <td><code>{credentials.grafanaPassword}</code></td>
+                      </tr>
+                    </tbody>
+                  </Table>
+                )}
                 <Button
                   color="primary"
                   tag="a"
@@ -499,6 +513,20 @@ const History: React.FC = () => {
                 <p className="text-muted">
                   Direct access to the database for advanced queries
                 </p>
+                {credentials.influxUser && (
+                  <Table size="sm" borderless className="mb-2">
+                    <tbody>
+                      <tr>
+                        <td className="text-muted">Username:</td>
+                        <td><code>{credentials.influxUser}</code></td>
+                      </tr>
+                      <tr>
+                        <td className="text-muted">Password:</td>
+                        <td><code>{credentials.influxPassword}</code></td>
+                      </tr>
+                    </tbody>
+                  </Table>
+                )}
                 <Button
                   color="secondary"
                   tag="a"
