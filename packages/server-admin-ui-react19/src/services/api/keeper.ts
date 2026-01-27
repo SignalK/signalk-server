@@ -66,7 +66,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export function createKeeperApi(baseUrl: string) {
   const apiUrl = baseUrl.replace(/\/$/, '')
-  console.log('[KeeperAPI] Created with baseUrl:', baseUrl, '-> apiUrl:', apiUrl)
 
   return {
     health: {

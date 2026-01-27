@@ -1,3 +1,4 @@
+/* eslint-disable @eslint-react/no-array-index-key -- log entries don't have unique IDs */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   Card,
@@ -119,35 +120,44 @@ export default function ContainerLogs() {
     return sources
   }, [historyStatus])
 
-  // Reset to signalk if current source becomes unavailable
-  useEffect(() => {
-    if (!availableSources.find((s) => s.id === logSource)) {
-      setLogSource('signalk')
-    }
+  // Effective log source - fallback to signalk if current becomes unavailable
+  const effectiveLogSource = useMemo(() => {
+    return availableSources.find((s) => s.id === logSource)
+      ? logSource
+      : 'signalk'
   }, [availableSources, logSource])
 
   // Fetch logs
-  const fetchLogs = useCallback(async () => {
-    if (!keeperApi) return
+  const fetchLogs = useCallback(
+    async (setLoadingState = false) => {
+      if (!keeperApi) return
 
-    try {
-      const data = await keeperApi.container.logs(lineCount, logSource)
-      setLogsData(data)
-      setError(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch logs')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [keeperApi, lineCount, logSource])
+      if (setLoadingState) {
+        setIsLoading(true)
+      }
+
+      try {
+        const data = await keeperApi.container.logs(
+          lineCount,
+          effectiveLogSource
+        )
+        setLogsData(data)
+        setError(null)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch logs')
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [keeperApi, lineCount, effectiveLogSource]
+  )
 
   // Initial fetch and auto-refresh
   useEffect(() => {
-    setIsLoading(true)
-    fetchLogs()
+    fetchLogs(true)
 
     if (isFollowing) {
-      const interval = setInterval(fetchLogs, 2000)
+      const interval = setInterval(() => fetchLogs(false), 2000)
       return () => clearInterval(interval)
     }
     return undefined
@@ -198,7 +208,8 @@ export default function ContainerLogs() {
     }
 
     document.addEventListener('selectionchange', handleSelectionChange)
-    return () => document.removeEventListener('selectionchange', handleSelectionChange)
+    return () =>
+      document.removeEventListener('selectionchange', handleSelectionChange)
   }, [getSelectedText])
 
   // Copy logs to clipboard
@@ -211,7 +222,10 @@ export default function ContainerLogs() {
     const text =
       selectedText ||
       logs
-        .map((line) => `${line.timestamp} [${line.level.toUpperCase()}] ${line.message}`)
+        .map(
+          (line) =>
+            `${line.timestamp} [${line.level.toUpperCase()}] ${line.message}`
+        )
         .join('\n')
 
     try {
@@ -246,7 +260,11 @@ export default function ContainerLogs() {
   const getCopyButtonContent = () => {
     switch (copyStatus) {
       case 'copying':
-        return { icon: <Spinner size="sm" />, text: 'Copying...', color: 'secondary' as const }
+        return {
+          icon: <Spinner size="sm" />,
+          text: 'Copying...',
+          color: 'secondary' as const
+        }
       case 'success':
         return {
           icon: <FontAwesomeIcon icon={faCheck} />,
@@ -300,7 +318,8 @@ export default function ContainerLogs() {
     }
   }
 
-  const currentSourceLabel = LOG_SOURCES.find((s) => s.id === logSource)?.label || 'Server'
+  const currentSourceLabel =
+    LOG_SOURCES.find((s) => s.id === effectiveLogSource)?.label || 'Server'
 
   if (isLoading && !logsData) {
     return (
@@ -356,8 +375,10 @@ export default function ContainerLogs() {
                 {availableSources.map((source) => (
                   <Button
                     key={source.id}
-                    color={logSource === source.id ? 'primary' : 'secondary'}
-                    outline={logSource !== source.id}
+                    color={
+                      effectiveLogSource === source.id ? 'primary' : 'secondary'
+                    }
+                    outline={effectiveLogSource !== source.id}
                     onClick={() => setLogSource(source.id)}
                     size="sm"
                   >
@@ -419,9 +440,16 @@ export default function ContainerLogs() {
                   color={isFollowing ? 'primary' : 'secondary'}
                   outline={!isFollowing}
                   onClick={() => setIsFollowing(!isFollowing)}
-                  title={isFollowing ? 'Stop auto-refresh' : 'Start auto-refresh (2s)'}
+                  title={
+                    isFollowing
+                      ? 'Stop auto-refresh'
+                      : 'Start auto-refresh (2s)'
+                  }
                 >
-                  <FontAwesomeIcon icon={isFollowing ? faPause : faPlay} className="me-1" />
+                  <FontAwesomeIcon
+                    icon={isFollowing ? faPause : faPlay}
+                    className="me-1"
+                  />
                   {isFollowing ? 'Pause' : 'Follow'}
                 </Button>
               </Col>
@@ -471,11 +499,16 @@ export default function ContainerLogs() {
           >
             {logs.length === 0 ? (
               <div className="text-center text-muted py-3">
-                {debouncedFilter ? 'No logs match the filter' : 'No logs available'}
+                {debouncedFilter
+                  ? 'No logs match the filter'
+                  : 'No logs available'}
               </div>
             ) : (
               logs.map((line, index) => (
-                <div key={index} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                <div
+                  key={`${line.timestamp}-${index}`}
+                  style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}
+                >
                   <span style={{ color: '#808080' }}>{line.timestamp}</span>{' '}
                   <span className={getLevelClass(line.level)}>
                     [{line.level.toUpperCase()}]
