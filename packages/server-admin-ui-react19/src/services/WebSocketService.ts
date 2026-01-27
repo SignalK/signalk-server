@@ -361,7 +361,9 @@ export class WebSocketService {
         // Use the setAppStore action to ensure URL transformation and API initialization
         // We need to import useStore dynamically to avoid circular dependency
         import('../store').then(({ useStore }) => {
-          useStore.getState().setAppStore(data as Parameters<SignalKStore['setAppStore']>[0])
+          useStore
+            .getState()
+            .setAppStore(data as Parameters<SignalKStore['setAppStore']>[0])
         })
         break
       default:

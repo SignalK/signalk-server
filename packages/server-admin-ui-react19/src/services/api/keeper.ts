@@ -66,6 +66,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export function createKeeperApi(baseUrl: string) {
   const apiUrl = baseUrl.replace(/\/$/, '')
+  console.log('[KeeperAPI] Created with baseUrl:', apiUrl)
 
   return {
     health: {
@@ -114,10 +115,17 @@ export function createKeeperApi(baseUrl: string) {
             containerPort: p.containerPort || 0,
             protocol: p.protocol || 'tcp'
           })),
-          health: rawContainer.health !== 'none' ? {
-            status: rawContainer.health as 'healthy' | 'unhealthy' | 'starting' | 'none',
-            failingStreak: 0
-          } : undefined
+          health:
+            rawContainer.health !== 'none'
+              ? {
+                  status: rawContainer.health as
+                    | 'healthy'
+                    | 'unhealthy'
+                    | 'starting'
+                    | 'none',
+                  failingStreak: 0
+                }
+              : undefined
         }
       },
 
@@ -206,7 +214,9 @@ export function createKeeperApi(baseUrl: string) {
         }>(response)
 
         // Transform each backup to expected format
-        const transformBackup = (b: (typeof rawBackups.backups)[0]): KeeperBackup => ({
+        const transformBackup = (
+          b: (typeof rawBackups.backups)[0]
+        ): KeeperBackup => ({
           id: b.id,
           type: 'manual', // Default type for UI
           created: b.createdAt,
@@ -296,10 +306,10 @@ export function createKeeperApi(baseUrl: string) {
           }>(response)
 
           // Find the earliest next backup time
-          const nextTimes = Object.values(rawScheduler.nextBackups || {}).filter(Boolean)
-          const nextRun = nextTimes.length > 0
-            ? nextTimes.sort()[0]
-            : undefined
+          const nextTimes = Object.values(
+            rawScheduler.nextBackups || {}
+          ).filter(Boolean)
+          const nextRun = nextTimes.length > 0 ? nextTimes.sort()[0] : undefined
 
           return {
             enabled: rawScheduler.enabled,
@@ -327,10 +337,10 @@ export function createKeeperApi(baseUrl: string) {
             }
           }>(response)
 
-          const nextTimes = Object.values(rawScheduler.nextBackups || {}).filter(Boolean)
-          const nextRun = nextTimes.length > 0
-            ? nextTimes.sort()[0]
-            : undefined
+          const nextTimes = Object.values(
+            rawScheduler.nextBackups || {}
+          ).filter(Boolean)
+          const nextRun = nextTimes.length > 0 ? nextTimes.sort()[0] : undefined
 
           return {
             enabled: rawScheduler.enabled,
@@ -579,7 +589,7 @@ export function createKeeperApi(baseUrl: string) {
           overall: rawDoctor.passed ? 'pass' : 'fail',
           checks: rawDoctor.checks.map((c) => ({
             name: c.name,
-            status: c.passed ? 'pass' : (c.blocking ? 'fail' : 'warn'),
+            status: c.passed ? 'pass' : c.blocking ? 'fail' : 'warn',
             message: c.message
           })),
           timestamp: new Date().toISOString()
@@ -605,8 +615,11 @@ export function createKeeperApi(baseUrl: string) {
 
     history: {
       status: async (): Promise<HistorySystemStatus> => {
+        console.log('[KeeperAPI] Fetching history status from:', `${apiUrl}/api/history/status`)
         const response = await fetch(`${apiUrl}/api/history/status`)
-        return handleResponse<HistorySystemStatus>(response)
+        const result = await handleResponse<HistorySystemStatus>(response)
+        console.log('[KeeperAPI] History status result:', result)
+        return result
       },
 
       settings: async (): Promise<HistorySettings> => {
