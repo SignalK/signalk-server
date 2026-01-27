@@ -83,7 +83,42 @@ export function createKeeperApi(baseUrl: string) {
     container: {
       status: async (): Promise<ContainerInfo> => {
         const response = await fetch(`${apiUrl}/api/container`)
-        return handleResponse<ContainerInfo>(response)
+        // Keeper returns slightly different structure, transform to expected format
+        const rawContainer = await handleResponse<{
+          id: string
+          name: string
+          status: string
+          health: string
+          created: string
+          started?: string
+          image: string
+          imageId: string
+          ports: Array<{
+            hostPort?: number
+            containerPort?: number
+            protocol?: string
+          }>
+        }>(response)
+
+        return {
+          id: rawContainer.id,
+          name: rawContainer.name,
+          state: rawContainer.status as ContainerInfo['state'],
+          status: rawContainer.status,
+          created: rawContainer.created,
+          startedAt: rawContainer.started,
+          image: rawContainer.image,
+          imageId: rawContainer.imageId,
+          ports: rawContainer.ports.map((p) => ({
+            hostPort: p.hostPort || 0,
+            containerPort: p.containerPort || 0,
+            protocol: p.protocol || 'tcp'
+          })),
+          health: rawContainer.health !== 'none' ? {
+            status: rawContainer.health as 'healthy' | 'unhealthy' | 'starting' | 'none',
+            failingStreak: 0
+          } : undefined
+        }
       },
 
       stats: async (): Promise<ContainerStats> => {
@@ -154,7 +189,56 @@ export function createKeeperApi(baseUrl: string) {
     backups: {
       list: async (): Promise<BackupListResponse> => {
         const response = await fetch(`${apiUrl}/api/backups`)
-        return handleResponse<BackupListResponse>(response)
+        // Keeper returns flat array, transform to expected grouped format
+        const rawBackups = await handleResponse<{
+          backups: Array<{
+            id: string
+            createdAt: string
+            version?: { tag: string }
+            type: string
+            size: number
+            description?: string
+          }>
+          storage?: {
+            totalSizeBytes?: number
+            availableBytes?: number
+          }
+        }>(response)
+
+        // Transform each backup to expected format
+        const transformBackup = (b: (typeof rawBackups.backups)[0]): KeeperBackup => ({
+          id: b.id,
+          type: 'manual', // Default type for UI
+          created: b.createdAt,
+          size: b.size,
+          version: b.version?.tag,
+          description: b.description
+        })
+
+        // Group backups - put scheduled backups in "full", manual in "manual"
+        const grouped: BackupListResponse['backups'] = {
+          full: [],
+          config: [],
+          plugins: [],
+          manual: []
+        }
+
+        for (const backup of rawBackups.backups) {
+          const transformed = transformBackup(backup)
+          // Map Keeper types to UI categories
+          if (backup.type === 'manual' || backup.type === 'uploaded') {
+            grouped.manual.push({ ...transformed, type: 'manual' })
+          } else {
+            // hourly, daily, weekly, upgrade -> treat as full backups
+            grouped.full.push({ ...transformed, type: 'full' })
+          }
+        }
+
+        return {
+          backups: grouped,
+          totalSize: rawBackups.storage?.totalSizeBytes || 0,
+          availableSpace: rawBackups.storage?.availableBytes || 0
+        }
       },
 
       create: async (options?: {
@@ -200,7 +284,28 @@ export function createKeeperApi(baseUrl: string) {
       scheduler: {
         status: async (): Promise<BackupSchedulerStatus> => {
           const response = await fetch(`${apiUrl}/api/backups/scheduler`)
-          return handleResponse<BackupSchedulerStatus>(response)
+          // Keeper returns different structure, transform to expected format
+          const rawScheduler = await handleResponse<{
+            enabled: boolean
+            lastBackup?: string
+            nextBackups?: {
+              hourly?: string
+              daily?: string
+              weekly?: string
+            }
+          }>(response)
+
+          // Find the earliest next backup time
+          const nextTimes = Object.values(rawScheduler.nextBackups || {}).filter(Boolean)
+          const nextRun = nextTimes.length > 0
+            ? nextTimes.sort()[0]
+            : undefined
+
+          return {
+            enabled: rawScheduler.enabled,
+            lastRun: rawScheduler.lastBackup,
+            nextRun
+          }
         },
 
         update: async (
@@ -211,7 +316,27 @@ export function createKeeperApi(baseUrl: string) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
           })
-          return handleResponse<BackupSchedulerStatus>(response)
+          // Keeper returns different structure, transform to expected format
+          const rawScheduler = await handleResponse<{
+            enabled: boolean
+            lastBackup?: string
+            nextBackups?: {
+              hourly?: string
+              daily?: string
+              weekly?: string
+            }
+          }>(response)
+
+          const nextTimes = Object.values(rawScheduler.nextBackups || {}).filter(Boolean)
+          const nextRun = nextTimes.length > 0
+            ? nextTimes.sort()[0]
+            : undefined
+
+          return {
+            enabled: rawScheduler.enabled,
+            lastRun: rawScheduler.lastBackup,
+            nextRun
+          }
         }
       },
 
@@ -232,7 +357,62 @@ export function createKeeperApi(baseUrl: string) {
     versions: {
       list: async (): Promise<VersionListResponse> => {
         const response = await fetch(`${apiUrl}/api/versions`)
-        return handleResponse<VersionListResponse>(response)
+        // Keeper returns different structure, transform to expected format
+        const rawVersions = await handleResponse<{
+          currentVersion: {
+            tag: string
+            fullRef?: string
+          }
+          availableVersions: Array<{
+            tag: string
+            digest?: string
+            publishedAt?: string
+            size?: number
+            isLocallyAvailable?: boolean
+            isCurrentlyRunning?: boolean
+          }>
+        }>(response)
+
+        // Also fetch local images to include in the response
+        const localResponse = await fetch(`${apiUrl}/api/versions/local`)
+        const rawLocal = await handleResponse<{
+          images: Array<{
+            id: string
+            tags: string[]
+            size: number
+            created: string
+          }>
+        }>(localResponse)
+
+        // Transform local images
+        const localImages: ImageVersion[] = rawLocal.images.map((img) => {
+          const tag = img.tags[0]?.split(':')[1] || 'unknown'
+          return {
+            tag,
+            digest: img.id,
+            created: img.created,
+            size: img.size,
+            isLocal: true,
+            isCurrent: rawVersions.currentVersion.tag === tag
+          }
+        })
+
+        return {
+          current: {
+            tag: rawVersions.currentVersion.tag,
+            digest: '',
+            created: ''
+          },
+          available: rawVersions.availableVersions.map((v) => ({
+            tag: v.tag,
+            digest: v.digest || '',
+            created: v.publishedAt || '',
+            size: v.size || 0,
+            isLocal: v.isLocallyAvailable || false,
+            isCurrent: v.isCurrentlyRunning || false
+          })),
+          local: localImages
+        }
       },
 
       local: async (): Promise<{
@@ -240,9 +420,29 @@ export function createKeeperApi(baseUrl: string) {
         totalSize: number
       }> => {
         const response = await fetch(`${apiUrl}/api/versions/local`)
-        return handleResponse<{ images: ImageVersion[]; totalSize: number }>(
-          response
-        )
+        // Keeper returns different structure, transform to expected format
+        const rawLocal = await handleResponse<{
+          images: Array<{
+            id: string
+            tags: string[]
+            size: number
+            created: string
+          }>
+          storage: {
+            totalSizeBytes: number
+          }
+        }>(response)
+
+        return {
+          images: rawLocal.images.map((img) => ({
+            tag: img.tags[0]?.split(':')[1] || 'unknown',
+            digest: img.id,
+            created: img.created,
+            size: img.size,
+            isLocal: true
+          })),
+          totalSize: rawLocal.storage.totalSizeBytes
+        }
       },
 
       pull: async (tag: string): Promise<void> => {
@@ -364,7 +564,26 @@ export function createKeeperApi(baseUrl: string) {
         const response = await fetch(`${apiUrl}/api/doctor/preflight`, {
           method: 'POST'
         })
-        return handleResponse<DoctorResult>(response)
+        // Keeper returns different structure, transform to expected format
+        const rawDoctor = await handleResponse<{
+          passed: boolean
+          checks: Array<{
+            name: string
+            passed: boolean
+            blocking: boolean
+            message: string
+          }>
+        }>(response)
+
+        return {
+          overall: rawDoctor.passed ? 'pass' : 'fail',
+          checks: rawDoctor.checks.map((c) => ({
+            name: c.name,
+            status: c.passed ? 'pass' : (c.blocking ? 'fail' : 'warn'),
+            message: c.message
+          })),
+          timestamp: new Date().toISOString()
+        }
       }
     },
 
