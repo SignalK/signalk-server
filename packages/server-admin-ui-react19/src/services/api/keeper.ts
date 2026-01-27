@@ -549,6 +549,7 @@ export function createKeeperApi(baseUrl: string) {
         const rawInfo = await handleResponse<{
           host: {
             platform: string
+            arch: string
             dbus: boolean
             bluetooth: boolean
             serialPorts: string[]
@@ -561,7 +562,7 @@ export function createKeeperApi(baseUrl: string) {
         }>(response)
         return {
           os: rawInfo.host.platform,
-          arch: 'unknown',
+          arch: rawInfo.host.arch || 'unknown',
           hostname: window.location.hostname,
           capabilities: {
             dbus: rawInfo.host.dbus,
@@ -628,7 +629,10 @@ export function createKeeperApi(baseUrl: string) {
 
     history: {
       status: async (): Promise<HistorySystemStatus> => {
-        console.log('[KeeperAPI] Fetching history status from:', `${apiUrl}/api/history/status`)
+        console.log(
+          '[KeeperAPI] Fetching history status from:',
+          `${apiUrl}/api/history/status`
+        )
         const response = await fetch(`${apiUrl}/api/history/status`)
         const result = await handleResponse<HistorySystemStatus>(response)
         console.log('[KeeperAPI] History status result:', result)

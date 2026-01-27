@@ -485,12 +485,34 @@ const History: React.FC = () => {
                   <Table size="sm" borderless className="mb-2">
                     <tbody>
                       <tr>
-                        <td className="text-muted">Username:</td>
-                        <td><code>{credentials.grafanaUser}</code></td>
+                        <td className="text-muted" style={{ width: '80px' }}>
+                          Username:
+                        </td>
+                        <td>
+                          <Input
+                            type="text"
+                            readOnly
+                            bsSize="sm"
+                            value={credentials.grafanaUser}
+                            onClick={(e) =>
+                              (e.target as HTMLInputElement).select()
+                            }
+                          />
+                        </td>
                       </tr>
                       <tr>
                         <td className="text-muted">Password:</td>
-                        <td><code>{credentials.grafanaPassword}</code></td>
+                        <td>
+                          <Input
+                            type="text"
+                            readOnly
+                            bsSize="sm"
+                            value={credentials.grafanaPassword || ''}
+                            onClick={(e) =>
+                              (e.target as HTMLInputElement).select()
+                            }
+                          />
+                        </td>
                       </tr>
                     </tbody>
                   </Table>
@@ -517,12 +539,34 @@ const History: React.FC = () => {
                   <Table size="sm" borderless className="mb-2">
                     <tbody>
                       <tr>
-                        <td className="text-muted">Username:</td>
-                        <td><code>{credentials.influxUser}</code></td>
+                        <td className="text-muted" style={{ width: '80px' }}>
+                          Username:
+                        </td>
+                        <td>
+                          <Input
+                            type="text"
+                            readOnly
+                            bsSize="sm"
+                            value={credentials.influxUser}
+                            onClick={(e) =>
+                              (e.target as HTMLInputElement).select()
+                            }
+                          />
+                        </td>
                       </tr>
                       <tr>
                         <td className="text-muted">Password:</td>
-                        <td><code>{credentials.influxPassword}</code></td>
+                        <td>
+                          <Input
+                            type="text"
+                            readOnly
+                            bsSize="sm"
+                            value={credentials.influxPassword || ''}
+                            onClick={(e) =>
+                              (e.target as HTMLInputElement).select()
+                            }
+                          />
+                        </td>
                       </tr>
                     </tbody>
                   </Table>

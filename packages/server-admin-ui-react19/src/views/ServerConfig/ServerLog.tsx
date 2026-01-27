@@ -54,6 +54,7 @@ export default function ServerLogs() {
     if (
       !pause &&
       webSocket &&
+      webSocket.readyState === WebSocket.OPEN &&
       (webSocket !== webSocketRef.current || !didSubscribeRef.current)
     ) {
       const sub = { context: 'vessels.self', subscribe: [{ path: 'log' }] }
@@ -64,7 +65,7 @@ export default function ServerLogs() {
   }, [pause, webSocket])
 
   const unsubscribeToLogs = useCallback(() => {
-    if (webSocket) {
+    if (webSocket && webSocket.readyState === WebSocket.OPEN) {
       const sub = { context: 'vessels.self', unsubscribe: [{ path: 'log' }] }
       webSocket.send(JSON.stringify(sub))
       didSubscribeRef.current = false
