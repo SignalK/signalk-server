@@ -27,13 +27,32 @@ let runtimeConfig: RuntimeConfig = {
 }
 
 /**
+ * Transform Keeper URL for remote browser access.
+ * Replaces localhost/127.0.0.1 with the browser's hostname.
+ */
+function transformKeeperUrl(url: string | null): string | null {
+  if (!url) return null
+
+  const browserHost = window.location.hostname
+  if (browserHost !== 'localhost' && browserHost !== '127.0.0.1') {
+    return url
+      .replace('localhost', browserHost)
+      .replace('127.0.0.1', browserHost)
+  }
+  return url
+}
+
+/**
  * Initialize the API layer with runtime configuration.
  * Call this once when the app store data is loaded.
  */
 export function initializeApi(config: Partial<RuntimeConfig>): void {
+  // Transform keeperUrl if browser is accessing remotely
+  const keeperUrl = transformKeeperUrl(config.keeperUrl ?? null)
+
   runtimeConfig = {
     containerRuntime: config.containerRuntime ?? null,
-    keeperUrl: config.keeperUrl ?? null,
+    keeperUrl,
     useKeeper: config.useKeeper ?? false
   }
 
