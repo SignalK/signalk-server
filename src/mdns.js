@@ -19,102 +19,111 @@
 const _ = require('lodash')
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:mdns')
-const { Bonjour } = require('bonjour-service')
+const dnssd = require('dnssd2')
 const ports = require('./ports')
 
 module.exports = function mdnsResponder(app) {
   const config = app.config
+
+  let mdns = dnssd
+
+  try {
+    mdns = require('mdns')
+    debug('using  mdns')
+  } catch (ex) {
+    debug(ex)
+    debug('mdns not found, using dnssd2')
+  }
 
   if (typeof config.settings.mdns !== 'undefined' && !config.settings.mdns) {
     debug('Mdns disabled by configuration')
     return
   }
 
-  // Create Bonjour instance
-  const bonjour = new Bonjour()
-
-  // Build TXT record, stripping null/empty values
   let txtRecord = {
     txtvers: '1',
     swname: config.name,
     swvers: config.version,
+    // hardcoded out of master/slave, main/aux
     roles: 'master, main',
     self: app.selfId,
     vname: config.vesselName,
     vmmsi: config.vesselMMSI,
     vuuid: config.vesselUUID
   }
+
+  // Strip all the null or empty props in txtRecord
   txtRecord = _.pickBy(txtRecord, _.identity)
 
-  // Configure hostname if different from OS hostname
-  const host = app.config.getExternalHostname()
-  const osHostname = require('os').hostname()
-  const hostOption = host !== osHostname ? host : undefined
+  const types = []
+  types.push({
+    type: app.config.settings.ssl ? mdns.tcp('https') : mdns.tcp('http'),
+    port: ports.getExternalPort(app)
+  })
 
-  const serviceName = config.vesselName || config.name || 'SignalK'
-  const publishedServices = []
-
-  // Primary HTTP/HTTPS service
-  const primaryType = app.config.settings.ssl ? 'signalk-https' : 'signalk-http'
-  const primaryPort = ports.getExternalPort(app)
-
-  debug(`Starting mDNS ad: _${primaryType}._tcp ${host}:${primaryPort}`)
-  publishedServices.push(
-    bonjour.publish({
-      name: serviceName,
-      type: primaryType,
-      port: primaryPort,
-      txt: txtRecord,
-      host: hostOption,
-      probe: false // Disable probing - we own this service name
-    })
-  )
-
-  // Additional services from interfaces
   for (const key in app.interfaces) {
     if (
       _.isObject(app.interfaces[key]) &&
       _.isObject(app.interfaces[key].mdns)
     ) {
-      const mdnsConfig = app.interfaces[key].mdns
+      const service = app.interfaces[key].mdns
 
-      if (mdnsConfig.type === 'tcp' && mdnsConfig.name.charAt(0) === '_') {
-        // Remove leading underscore - bonjour-service adds it automatically
-        const serviceType = mdnsConfig.name.substring(1)
-
-        debug(
-          `Starting mDNS ad: _${serviceType}._tcp ${host}:${mdnsConfig.port}`
-        )
-        publishedServices.push(
-          bonjour.publish({
-            name: serviceName,
-            type: serviceType,
-            port: mdnsConfig.port,
-            txt: txtRecord,
-            host: hostOption,
-            probe: false // Disable probing - we own this service name
-          })
-        )
+      if (
+        'tcp'.indexOf(service.type) !== -1 &&
+        service.name.charAt(0) === '_'
+      ) {
+        types.push({
+          type: mdns[service.type](service.name),
+          port: service.port
+        })
       } else {
         debug('Not advertising mDNS service for interface: ' + key)
         debug(
-          'mDNS service type should be TCP, and the name should start with "_".'
+          'mDNS service type should be TCP or HTTP, and the name should start with "_".'
         )
       }
     }
   }
 
-  debug(`Published ${publishedServices.length} mDNS services`)
+  const options = {
+    txtRecord,
+    txt: txtRecord
+  }
+
+  const host = app.config.getExternalHostname()
+
+  if (host !== require('os').hostname()) {
+    options.host = host
+  }
+
+  debug(options)
+
+  const ads = []
+
+  for (const i in types) {
+    const type = types[i]
+    debug(
+      'Starting mDNS ad: ' +
+        type.type +
+        ' ' +
+        app.config.getExternalHostname() +
+        ':' +
+        type.port
+    )
+    const ad = new mdns.Advertisement(type.type, type.port, options)
+    ad.on('error', (err) => {
+      console.log(type.type.name)
+      console.error(err)
+    })
+    ad.start()
+    ads.push(ad)
+  }
 
   return {
     stop: function () {
-      debug('Stopping mDNS advertisements...')
-      return new Promise((resolve) => {
-        bonjour.unpublishAll(() => {
-          bonjour.destroy()
-          debug('mDNS advertisements stopped')
-          resolve()
-        })
+      ads.forEach(function (ad) {
+        debug('Stopping mDNS advertisement...')
+        ad.stop()
       })
     }
   }
