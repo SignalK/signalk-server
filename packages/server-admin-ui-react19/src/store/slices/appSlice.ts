@@ -158,8 +158,13 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
       // Transform keeperUrl if it contains localhost/127.0.0.1 but browser is accessing remotely
       // This handles the case where KEEPER_URL env var uses loopback but user accesses via IP/hostname
       let keeperUrl = appStore.keeperUrl ?? null
+      const browserHost = window.location.hostname
+      console.log('[AppSlice] keeperUrl transformation:', {
+        original: appStore.keeperUrl,
+        browserHost,
+        isRemote: browserHost !== 'localhost' && browserHost !== '127.0.0.1'
+      })
       if (keeperUrl) {
-        const browserHost = window.location.hostname
         if (browserHost !== 'localhost' && browserHost !== '127.0.0.1') {
           // Replace any loopback address with the browser's hostname
           keeperUrl = keeperUrl
@@ -167,6 +172,7 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
             .replace('127.0.0.1', browserHost)
         }
       }
+      console.log('[AppSlice] transformed keeperUrl:', keeperUrl)
 
       initializeApi({
         containerRuntime: appStore.containerRuntime ?? null,
