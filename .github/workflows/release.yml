@@ -167,7 +167,7 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
       - name: Set TAG for build-args
         id: vars
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+        run: echo "tag=${GITHUB_REF#refs/*/v}" >> $GITHUB_OUTPUT
       - name: Modify Dockerfile_rel for build
         run: |
           sed -i \
