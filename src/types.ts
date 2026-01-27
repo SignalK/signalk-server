@@ -24,7 +24,7 @@ export interface SignalKServer extends ServerAPI {
 
 export class Interface {
   start?: () => void
-  stop?: () => void | Promise<void>
+  stop?: () => void
   mdns?: MdnsAdvertisement
 }
 
