@@ -155,9 +155,19 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
       appStore.containerRuntime !== undefined ||
       appStore.keeperUrl !== undefined
     ) {
+      // Transform keeperUrl if it contains localhost but browser is accessing remotely
+      // This handles the case where KEEPER_URL env var is localhost but user accesses via IP/hostname
+      let keeperUrl = appStore.keeperUrl ?? null
+      if (keeperUrl && keeperUrl.includes('localhost')) {
+        const browserHost = window.location.hostname
+        if (browserHost !== 'localhost' && browserHost !== '127.0.0.1') {
+          keeperUrl = keeperUrl.replace('localhost', browserHost)
+        }
+      }
+
       initializeApi({
         containerRuntime: appStore.containerRuntime ?? null,
-        keeperUrl: appStore.keeperUrl ?? null,
+        keeperUrl,
         useKeeper: appStore.useKeeper ?? false
       })
     }
