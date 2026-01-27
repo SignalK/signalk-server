@@ -88,7 +88,35 @@ export function createKeeperApi(baseUrl: string) {
 
       stats: async (): Promise<ContainerStats> => {
         const response = await fetch(`${apiUrl}/api/container/stats`)
-        return handleResponse<ContainerStats>(response)
+        // Keeper returns flat structure, transform to expected nested format
+        const rawStats = await handleResponse<{
+          cpuPercent: number
+          memoryUsage: number
+          memoryLimit: number
+          memoryPercent: number
+          networkRx: number
+          networkTx: number
+        }>(response)
+        return {
+          cpu: {
+            percentage: rawStats.cpuPercent,
+            system: 0,
+            user: 0
+          },
+          memory: {
+            usage: rawStats.memoryUsage,
+            limit: rawStats.memoryLimit,
+            percentage: rawStats.memoryPercent
+          },
+          network: {
+            rxBytes: rawStats.networkRx,
+            txBytes: rawStats.networkTx
+          },
+          blockIO: {
+            read: 0,
+            write: 0
+          }
+        }
       },
 
       logs: async (
@@ -293,8 +321,41 @@ export function createKeeperApi(baseUrl: string) {
 
     system: {
       info: async (): Promise<SystemInfo> => {
-        const response = await fetch(`${apiUrl}/api/system/info`)
-        return handleResponse<SystemInfo>(response)
+        const response = await fetch(`${apiUrl}/api/system`)
+        // Keeper returns different structure, transform to expected format
+        const rawInfo = await handleResponse<{
+          host: {
+            platform: string
+            dbus: boolean
+            bluetooth: boolean
+            serialPorts: string[]
+          }
+          storage: {
+            signalkDataMB: number
+            backupsMB: number
+            containerImagesMB: number
+          }
+        }>(response)
+        return {
+          os: rawInfo.host.platform,
+          arch: process.arch || 'unknown',
+          hostname: window.location.hostname,
+          capabilities: {
+            dbus: rawInfo.host.dbus,
+            bluetooth: rawInfo.host.bluetooth,
+            serialPorts: rawInfo.host.serialPorts || []
+          },
+          storage: {
+            total: 0,
+            used:
+              (rawInfo.storage.signalkDataMB +
+                rawInfo.storage.backupsMB +
+                rawInfo.storage.containerImagesMB) *
+              1024 *
+              1024,
+            available: 0
+          }
+        }
       }
     },
 
