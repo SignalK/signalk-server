@@ -338,7 +338,7 @@ export function createKeeperApi(baseUrl: string) {
         }>(response)
         return {
           os: rawInfo.host.platform,
-          arch: process.arch || 'unknown',
+          arch: 'unknown',
           hostname: window.location.hostname,
           capabilities: {
             dbus: rawInfo.host.dbus,
