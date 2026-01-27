@@ -2,8 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { federation } from '@module-federation/vite'
 
-// Validate peer dependencies for Module Federation compatibility
-import '@signalk/server-admin-ui-dependencies'
+// Note: Peer dependency validation skipped for legacy admin UI
+// The @signalk/server-admin-ui-dependencies package expects React 19
+// This legacy UI uses React 16 and is kept as a fallback
 
 export default defineConfig({
   base: './',
