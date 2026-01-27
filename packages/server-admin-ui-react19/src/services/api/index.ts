@@ -49,12 +49,6 @@ function transformKeeperUrl(url: string | null): string | null {
 export function initializeApi(config: Partial<RuntimeConfig>): void {
   // Transform keeperUrl if browser is accessing remotely
   const keeperUrl = transformKeeperUrl(config.keeperUrl ?? null)
-  console.log('[API] initializeApi called:', {
-    originalKeeperUrl: config.keeperUrl,
-    transformedKeeperUrl: keeperUrl,
-    browserHost: window.location.hostname,
-    useKeeper: config.useKeeper
-  })
 
   runtimeConfig = {
     containerRuntime: config.containerRuntime ?? null,

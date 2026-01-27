@@ -66,7 +66,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export function createKeeperApi(baseUrl: string) {
   const apiUrl = baseUrl.replace(/\/$/, '')
-  console.log('[KeeperAPI] Created with baseUrl:', apiUrl)
 
   return {
     health: {
@@ -165,19 +164,27 @@ export function createKeeperApi(baseUrl: string) {
       logs: async (
         lines: number = 500,
         source: string = 'signalk'
-      ): Promise<string[]> => {
+      ): Promise<{
+        lines: Array<{ timestamp: string; message: string; level: string }>
+        count: number
+      }> => {
         const response = await fetch(
           `${apiUrl}/api/container/logs?lines=${lines}&source=${source}`
         )
         // Keeper returns { lines: [{ timestamp, message, level }], count }
-        // Transform to string array for Admin UI
+        // Strip ANSI codes from messages
         const data = await handleResponse<{
           lines: Array<{ timestamp: string; message: string; level: string }>
           count: number
         }>(response)
-        return data.lines.map(
-          (l) => `${l.timestamp} [${l.level.toUpperCase()}] ${l.message}`
-        )
+        return {
+          ...data,
+          lines: data.lines.map((l) => ({
+            ...l,
+            // Strip ANSI escape codes
+            message: l.message.replace(/\x1b\[[0-9;]*m/g, '')
+          }))
+        }
       },
 
       start: async (): Promise<void> => {
@@ -558,6 +565,8 @@ export function createKeeperApi(baseUrl: string) {
             signalkDataMB: number
             backupsMB: number
             containerImagesMB: number
+            diskTotalMB: number
+            diskAvailableMB: number
           }
         }>(response)
         return {
@@ -570,14 +579,13 @@ export function createKeeperApi(baseUrl: string) {
             serialPorts: rawInfo.host.serialPorts || []
           },
           storage: {
-            total: 0,
+            total: (rawInfo.storage.diskTotalMB || 0) * 1024 * 1024,
             used:
-              (rawInfo.storage.signalkDataMB +
-                rawInfo.storage.backupsMB +
-                rawInfo.storage.containerImagesMB) *
+              ((rawInfo.storage.diskTotalMB || 0) -
+                (rawInfo.storage.diskAvailableMB || 0)) *
               1024 *
               1024,
-            available: 0
+            available: (rawInfo.storage.diskAvailableMB || 0) * 1024 * 1024
           }
         }
       }
@@ -629,14 +637,8 @@ export function createKeeperApi(baseUrl: string) {
 
     history: {
       status: async (): Promise<HistorySystemStatus> => {
-        console.log(
-          '[KeeperAPI] Fetching history status from:',
-          `${apiUrl}/api/history/status`
-        )
         const response = await fetch(`${apiUrl}/api/history/status`)
-        const result = await handleResponse<HistorySystemStatus>(response)
-        console.log('[KeeperAPI] History status result:', result)
-        return result
+        return handleResponse<HistorySystemStatus>(response)
       },
 
       settings: async (): Promise<HistorySettings> => {
@@ -647,7 +649,23 @@ export function createKeeperApi(baseUrl: string) {
       credentials: async (): Promise<HistoryCredentials> => {
         // Use /credentials/full to get usernames and passwords
         const response = await fetch(`${apiUrl}/api/history/credentials/full`)
-        return handleResponse<HistoryCredentials>(response)
+        const creds = await handleResponse<HistoryCredentials>(response)
+
+        // Transform localhost URLs for remote browser access
+        const browserHost = window.location.hostname
+        if (browserHost !== 'localhost' && browserHost !== '127.0.0.1') {
+          if (creds.influxUrl) {
+            creds.influxUrl = creds.influxUrl
+              .replace('localhost', browserHost)
+              .replace('127.0.0.1', browserHost)
+          }
+          if (creds.grafanaUrl) {
+            creds.grafanaUrl = creds.grafanaUrl
+              .replace('localhost', browserHost)
+              .replace('127.0.0.1', browserHost)
+          }
+        }
+        return creds
       },
 
       enable: async (

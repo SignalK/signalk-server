@@ -7,7 +7,7 @@ import {
   FormEvent
 } from 'react'
 import parse from 'html-react-parser'
-import { useZustandLogEntries } from '../../store'
+import { useZustandLogEntries, useRuntimeConfig } from '../../store'
 import {
   Card,
   CardBody,
@@ -24,6 +24,7 @@ import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify
 import LogFiles from './Logging'
 import Creatable from 'react-select/creatable'
 import { useWebSocket } from '../../hooks/useWebSocket'
+import ContainerLogs from './ContainerLogs'
 
 interface LogEntry {
   i: number
@@ -42,6 +43,17 @@ interface SelectOption {
 }
 
 export default function ServerLogs() {
+  const { useKeeper } = useRuntimeConfig()
+
+  // Use ContainerLogs component when running with Keeper
+  if (useKeeper) {
+    return <ContainerLogs />
+  }
+
+  return <WebSocketLogs />
+}
+
+function WebSocketLogs() {
   const log = useZustandLogEntries()
   const { ws: webSocket } = useWebSocket()
 
