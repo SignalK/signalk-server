@@ -36,6 +36,9 @@ const deltaUnsubscribers: Map<string, () => void> = new Map()
 // Track event subscription state for plugins
 const eventSubscriptionActive: Set<string> = new Set()
 
+// Track generic event unsubscribers for plugins
+const genericEventUnsubscribers: Map<string, (() => void)[]> = new Map()
+
 // Mutex for serializing network-capable plugin starts
 // as-fetch uses global state that gets corrupted with parallel plugin starts
 let networkPluginStartMutex: Promise<void> = Promise.resolve()
@@ -234,6 +237,50 @@ async function startWasmPluginInternal(
 
         eventManager.replayBuffered(pluginId, eventCallback)
 
+        // Generic events (NMEA, canboatjs) bypass serverevent wrapper
+        const genericEvents = eventManager.getAllowedGenericEvents()
+        const unsubscribers: (() => void)[] = []
+
+        for (const eventName of genericEvents) {
+          const genericHandler = (data: unknown) => {
+            try {
+              if (
+                plugin.status === 'running' &&
+                plugin.instance?.exports?.event_handler
+              ) {
+                const event: ServerEvent = {
+                  type: eventName,
+                  data,
+                  timestamp: Date.now()
+                }
+                const eventJson = JSON.stringify(event)
+                debug(
+                  `[${pluginId}] Delivering generic event ${eventName} to event_handler`
+                )
+                plugin.instance.exports.event_handler(eventJson)
+              }
+            } catch (eventError) {
+              debug(
+                `[${pluginId}] event_handler error for ${eventName}: ${eventError}`
+              )
+            }
+          }
+
+          if (app && typeof app.on === 'function') {
+            app.on(eventName, genericHandler)
+            unsubscribers.push(() => {
+              if (app.removeListener) {
+                app.removeListener(eventName, genericHandler)
+              }
+            })
+            debug(`[${pluginId}] Subscribed to generic event: ${eventName}`)
+          }
+        }
+
+        if (unsubscribers.length > 0) {
+          genericEventUnsubscribers.set(pluginId, unsubscribers)
+        }
+
         eventSubscriptionActive.add(pluginId)
         debug(`Event subscription active for ${pluginId}`)
       } else {
@@ -291,6 +338,16 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
     if (eventSubscriptionActive.has(pluginId)) {
       const eventManager = getEventManager()
       eventManager.unregister(pluginId)
+
+      const unsubscribers = genericEventUnsubscribers.get(pluginId)
+      if (unsubscribers) {
+        for (const unsubscribe of unsubscribers) {
+          unsubscribe()
+        }
+        genericEventUnsubscribers.delete(pluginId)
+        debug(`Unsubscribed from generic events for ${pluginId}`)
+      }
+
       eventSubscriptionActive.delete(pluginId)
       debug(`Stopped event subscription for ${pluginId}`)
     }

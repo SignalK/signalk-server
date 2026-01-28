@@ -23,13 +23,38 @@ export interface EventSubscription {
   callback: EventCallback
 }
 
-const WASM_ALLOWED_EVENT_TYPES = new Set([
+/**
+ * Server events (uppercase) - delivered via serverevent wrapper
+ */
+const WASM_ALLOWED_SERVER_EVENTS = new Set([
   'SERVERSTATISTICS',
   'VESSEL_INFO',
   'DEBUG_SETTINGS',
   'SERVERMESSAGE',
   'PROVIDERSTATUS',
   'SOURCEPRIORITIES'
+])
+
+/**
+ * Generic events (lowercase) - NMEA data streams and parser events
+ */
+const WASM_ALLOWED_GENERIC_EVENTS = new Set([
+  'nmea0183', // Raw NMEA 0183 sentences from hardware
+  'nmea0183out', // Derived NMEA 0183 from plugins
+  'nmea2000JsonOut', // NMEA 2000 JSON PGN data
+  'nmea2000out', // Raw NMEA 2000 data
+  'nmea2000OutAvailable', // Signal that N2K output is ready
+  'canboatjs:error', // Parser error events
+  'canboatjs:warning', // Parser warning events
+  'canboatjs:unparsed:data' // Unparsed data from canboatjs
+])
+
+/**
+ * Combined set of all allowed event types for WASM plugins
+ */
+const WASM_ALLOWED_EVENT_TYPES = new Set([
+  ...WASM_ALLOWED_SERVER_EVENTS,
+  ...WASM_ALLOWED_GENERIC_EVENTS
 ])
 
 export const PLUGIN_EVENT_PREFIX = 'PLUGIN_'
@@ -48,6 +73,22 @@ export class WasmEventManager {
 
   getAllowedEventTypes(): string[] {
     return Array.from(WASM_ALLOWED_EVENT_TYPES)
+  }
+
+  getAllowedServerEvents(): string[] {
+    return Array.from(WASM_ALLOWED_SERVER_EVENTS)
+  }
+
+  getAllowedGenericEvents(): string[] {
+    return Array.from(WASM_ALLOWED_GENERIC_EVENTS)
+  }
+
+  isServerEvent(eventType: string): boolean {
+    return WASM_ALLOWED_SERVER_EVENTS.has(eventType)
+  }
+
+  isGenericEvent(eventType: string): boolean {
+    return WASM_ALLOWED_GENERIC_EVENTS.has(eventType)
   }
 
   register(

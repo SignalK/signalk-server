@@ -1,6 +1,13 @@
-//! Event Handler WASM Plugin for Signal K
+//! NMEA Converter WASM Plugin for Signal K
 //!
-//! Monitors server statistics and emits alerts when thresholds are exceeded.
+//! Demonstrates the generic event mechanism by converting NMEA 0183 sentences
+//! to NMEA 2000 PGN JSON format. This showcases how WASM plugins can:
+//! - Subscribe to generic events (nmea0183, nmea0183out)
+//! - Emit generic events (nmea2000JsonOut) for interop with other plugins
+//!
+//! Supported conversions:
+//! - RMC (Recommended Minimum) -> PGN 129025 (Position), PGN 129026 (COG/SOG)
+//! - GGA (Fix Data) -> PGN 129025 (Position)
 
 use std::cell::RefCell;
 use serde::{Deserialize, Serialize};
@@ -37,6 +44,8 @@ fn subscribe_events(event_types: &[&str]) -> bool {
     unsafe { sk_subscribe_events(json.as_ptr(), json.len()) == 1 }
 }
 
+/// Emit an event to the server. For generic events like nmea2000JsonOut,
+/// the data is emitted directly without wrapping.
 fn emit_event(event_type: &str, data: &impl Serialize) -> bool {
     let data_json = serde_json::to_string(data).unwrap_or_else(|_| "{}".to_string());
     unsafe {
@@ -69,16 +78,16 @@ thread_local! {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct PluginConfig {
-    /// Delta rate threshold to trigger HIGH_DELTA_RATE alert (deltas/second)
-    #[serde(default = "default_delta_rate_threshold")]
-    delta_rate_threshold: f64,
-
     /// Enable debug logging of all received events
     #[serde(default)]
     enable_debug: bool,
+
+    /// Source ID for emitted PGNs (default: "wasm-nmea-converter")
+    #[serde(default = "default_source_id")]
+    source_id: String,
 }
 
-fn default_delta_rate_threshold() -> f64 { 100.0 }
+fn default_source_id() -> String { "wasm-nmea-converter".to_string() }
 
 #[derive(Debug, Default)]
 struct PluginState {
@@ -86,12 +95,9 @@ struct PluginState {
     is_running: bool,
 
     // Statistics tracking
-    events_received: u64,
-    last_delta_rate: f64,
-    high_rate_alert_active: bool,
-
-    ws_clients: u32,
-    uptime_seconds: f64,
+    nmea0183_received: u64,
+    pgns_emitted: u64,
+    parse_errors: u64,
 }
 
 #[no_mangle]
@@ -109,25 +115,23 @@ pub extern "C" fn deallocate(ptr: *mut u8, size: usize) {
     }
 }
 
-static PLUGIN_ID: &str = "event-handler-rust";
-static PLUGIN_NAME: &str = "Event Handler (Rust)";
+static PLUGIN_ID: &str = "nmea-converter-rust";
+static PLUGIN_NAME: &str = "NMEA Converter (Rust)";
 static PLUGIN_SCHEMA: &str = r#"{
     "type": "object",
-    "title": "Event Handler Configuration",
+    "title": "NMEA Converter Configuration",
     "properties": {
-        "deltaRateThreshold": {
-            "type": "number",
-            "title": "Delta Rate Threshold",
-            "description": "Emit PLUGIN_HIGH_DELTA_RATE alert when server exceeds this rate (deltas/second)",
-            "default": 100,
-            "minimum": 10,
-            "maximum": 10000
-        },
         "enableDebug": {
             "type": "boolean",
             "title": "Enable Debug Logging",
-            "description": "Log all received events (verbose)",
+            "description": "Log all received NMEA sentences and emitted PGNs",
             "default": false
+        },
+        "sourceId": {
+            "type": "string",
+            "title": "Source ID",
+            "description": "Source identifier for emitted PGNs",
+            "default": "wasm-nmea-converter"
         }
     }
 }"#;
@@ -166,23 +170,25 @@ pub extern "C" fn plugin_start(config_ptr: *const u8, config_len: usize) -> i32 
         let mut s = state.borrow_mut();
         s.config = parsed_config.clone();
         s.is_running = true;
-        s.events_received = 0;
-        s.high_rate_alert_active = false;
+        s.nmea0183_received = 0;
+        s.pgns_emitted = 0;
+        s.parse_errors = 0;
     });
 
     debug(&format!(
-        "Event Handler starting with threshold: {} deltas/sec",
-        parsed_config.delta_rate_threshold
+        "NMEA Converter starting with source: {}",
+        parsed_config.source_id
     ));
 
-    if subscribe_events(&["SERVERSTATISTICS", "VESSEL_INFO"]) {
-        debug("Subscribed to SERVERSTATISTICS and VESSEL_INFO events");
+    // Subscribe to NMEA 0183 events (both raw and derived)
+    if subscribe_events(&["nmea0183", "nmea0183out"]) {
+        debug("Subscribed to nmea0183 and nmea0183out events");
     } else {
-        set_error("Failed to subscribe to server events");
+        set_error("Failed to subscribe to NMEA events");
         return 1;
     }
 
-    set_status("Monitoring server events");
+    set_status("Converting NMEA 0183 to NMEA 2000");
     0
 }
 
@@ -193,8 +199,8 @@ pub extern "C" fn plugin_stop() -> i32 {
         s.is_running = false;
 
         debug(&format!(
-            "Event Handler stopping. Total events received: {}",
-            s.events_received
+            "NMEA Converter stopping. Received: {}, Emitted: {}, Errors: {}",
+            s.nmea0183_received, s.pgns_emitted, s.parse_errors
         ));
     });
 
@@ -219,27 +225,22 @@ pub extern "C" fn event_handler(event_ptr: *const u8, event_len: usize) {
 
     STATE.with(|state| {
         let mut s = state.borrow_mut();
-        s.events_received += 1;
-
-        if s.config.enable_debug {
-            debug(&format!(
-                "Event received: type={}, from={:?}",
-                event.event_type, event.from
-            ));
-        }
 
         match event.event_type.as_str() {
-            "SERVERSTATISTICS" => handle_server_statistics(&mut s, &event),
-            "VESSEL_INFO" => handle_vessel_info(&s, &event),
+            "nmea0183" | "nmea0183out" => {
+                s.nmea0183_received += 1;
+                handle_nmea0183(&mut s, &event);
+            }
             _ => {
                 if s.config.enable_debug {
-                    debug(&format!("Unhandled event type: {}", event.event_type));
+                    debug(&format!("Ignoring event type: {}", event.event_type));
                 }
             }
         }
     });
 }
 
+/// Server event structure
 #[derive(Debug, Deserialize)]
 struct ServerEvent {
     #[serde(rename = "type")]
@@ -251,109 +252,237 @@ struct ServerEvent {
     timestamp: u64,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ServerStatistics {
-    delta_rate: Option<f64>,
-    ws_clients: Option<u32>,
-    uptime: Option<f64>,
+/// PGN 129025 - Position, Rapid Update
+#[derive(Debug, Serialize)]
+struct Pgn129025 {
+    pgn: u32,
+    src: String,
+    dst: u8,
+    prio: u8,
+    fields: Pgn129025Fields,
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct HighDeltaRateAlert {
-    current_rate: f64,
-    threshold: f64,
-    ws_clients: u32,
-    uptime_seconds: f64,
-    message: String,
+struct Pgn129025Fields {
+    #[serde(rename = "Latitude")]
+    latitude: f64,
+    #[serde(rename = "Longitude")]
+    longitude: f64,
 }
 
-fn handle_server_statistics(state: &mut PluginState, event: &ServerEvent) {
-    let stats: ServerStatistics = match serde_json::from_value(event.data.clone()) {
-        Ok(s) => s,
-        Err(e) => {
-            debug(&format!("Failed to parse SERVERSTATISTICS: {}", e));
+/// PGN 129026 - COG & SOG, Rapid Update
+#[derive(Debug, Serialize)]
+struct Pgn129026 {
+    pgn: u32,
+    src: String,
+    dst: u8,
+    prio: u8,
+    fields: Pgn129026Fields,
+}
+
+#[derive(Debug, Serialize)]
+struct Pgn129026Fields {
+    #[serde(rename = "SID")]
+    sid: u8,
+    #[serde(rename = "COG Reference")]
+    cog_reference: String,
+    #[serde(rename = "COG")]
+    cog: f64,
+    #[serde(rename = "SOG")]
+    sog: f64,
+}
+
+/// Handle incoming NMEA 0183 sentence
+fn handle_nmea0183(state: &mut PluginState, event: &ServerEvent) {
+    // The data field contains the NMEA sentence as a string
+    let sentence = match event.data.as_str() {
+        Some(s) => s,
+        None => {
+            if state.config.enable_debug {
+                debug(&format!("NMEA data is not a string: {:?}", event.data));
+            }
+            state.parse_errors += 1;
             return;
         }
     };
 
-    // Update state with latest values
-    if let Some(rate) = stats.delta_rate {
-        state.last_delta_rate = rate;
-    }
-    if let Some(clients) = stats.ws_clients {
-        state.ws_clients = clients;
-    }
-    if let Some(uptime) = stats.uptime {
-        state.uptime_seconds = uptime;
+    if state.config.enable_debug {
+        debug(&format!("NMEA0183: {}", sentence));
     }
 
-    // Check if delta rate exceeds threshold
-    let rate = state.last_delta_rate;
-    let threshold = state.config.delta_rate_threshold;
+    // Parse the sentence type (after $ or ! and talker ID)
+    let sentence = sentence.trim();
+    if sentence.len() < 6 {
+        return;
+    }
 
-    if rate > threshold && !state.high_rate_alert_active {
-        // Delta rate crossed threshold - emit alert
-        state.high_rate_alert_active = true;
+    // Skip checksum for parsing (everything after *)
+    let sentence_body = sentence
+        .split('*')
+        .next()
+        .unwrap_or(sentence);
 
-        let alert = HighDeltaRateAlert {
-            current_rate: rate,
-            threshold,
-            ws_clients: state.ws_clients,
-            uptime_seconds: state.uptime_seconds,
-            message: format!(
-                "Delta rate ({:.1}/s) exceeded threshold ({:.1}/s)",
-                rate, threshold
-            ),
+    // Get the sentence type (characters 3-5 after $ or !)
+    let start = if sentence.starts_with('$') || sentence.starts_with('!') { 1 } else { 0 };
+    if sentence_body.len() < start + 5 {
+        return;
+    }
+
+    let sentence_type = &sentence_body[start + 2..start + 5];
+    let fields: Vec<&str> = sentence_body.split(',').collect();
+
+    match sentence_type {
+        "RMC" => parse_rmc(state, &fields),
+        "GGA" => parse_gga(state, &fields),
+        _ => {
+            // Ignore unsupported sentence types
+        }
+    }
+}
+
+/// Parse RMC (Recommended Minimum Navigation Information) sentence
+/// $GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
+/// Fields: Time, Status, Lat, N/S, Lon, E/W, Speed(kn), Course, Date, MagVar, E/W
+fn parse_rmc(state: &mut PluginState, fields: &[&str]) {
+    if fields.len() < 10 {
+        state.parse_errors += 1;
+        return;
+    }
+
+    let status = fields.get(2).unwrap_or(&"V");
+    if *status != "A" {
+        // Not a valid fix
+        return;
+    }
+
+    // Parse position
+    let lat = parse_coordinate(fields.get(3).unwrap_or(&""), fields.get(4).unwrap_or(&""));
+    let lon = parse_coordinate(fields.get(5).unwrap_or(&""), fields.get(6).unwrap_or(&""));
+
+    // Parse speed (knots to m/s: 1 knot = 0.514444 m/s)
+    let speed_kn: f64 = fields.get(7).unwrap_or(&"").parse().unwrap_or(0.0);
+    let speed_ms = speed_kn * 0.514444;
+
+    // Parse course (degrees)
+    let course: f64 = fields.get(8).unwrap_or(&"").parse().unwrap_or(0.0);
+    let course_rad = course * std::f64::consts::PI / 180.0;
+
+    if let (Some(latitude), Some(longitude)) = (lat, lon) {
+        // Emit PGN 129025 - Position, Rapid Update
+        let pgn_129025 = Pgn129025 {
+            pgn: 129025,
+            src: state.config.source_id.clone(),
+            dst: 255,
+            prio: 2,
+            fields: Pgn129025Fields {
+                latitude,
+                longitude,
+            },
         };
 
-        if emit_event("HIGH_DELTA_RATE", &alert) {
-            debug(&format!(
-                "Emitted PLUGIN_HIGH_DELTA_RATE alert: {:.1} > {:.1}",
-                rate, threshold
-            ));
-            set_status(&format!("Alert: High delta rate ({:.1}/s)", rate));
-        }
-    } else if rate <= threshold && state.high_rate_alert_active {
-        // Delta rate dropped below threshold - clear alert
-        state.high_rate_alert_active = false;
-
-        #[derive(Serialize)]
-        #[serde(rename_all = "camelCase")]
-        struct AlertCleared {
-            current_rate: f64,
-            threshold: f64,
-            message: String,
+        if emit_event("nmea2000JsonOut", &pgn_129025) {
+            state.pgns_emitted += 1;
+            if state.config.enable_debug {
+                debug(&format!("Emitted PGN 129025: lat={}, lon={}", latitude, longitude));
+            }
         }
 
-        let cleared = AlertCleared {
-            current_rate: rate,
-            threshold,
-            message: format!(
-                "Delta rate ({:.1}/s) returned to normal (threshold: {:.1}/s)",
-                rate, threshold
-            ),
+        // Emit PGN 129026 - COG & SOG, Rapid Update
+        let pgn_129026 = Pgn129026 {
+            pgn: 129026,
+            src: state.config.source_id.clone(),
+            dst: 255,
+            prio: 2,
+            fields: Pgn129026Fields {
+                sid: 0,
+                cog_reference: "True".to_string(),
+                cog: course_rad,
+                sog: speed_ms,
+            },
         };
 
-        if emit_event("HIGH_DELTA_RATE_CLEARED", &cleared) {
-            debug("Emitted PLUGIN_HIGH_DELTA_RATE_CLEARED");
-            set_status("Monitoring server events");
+        if emit_event("nmea2000JsonOut", &pgn_129026) {
+            state.pgns_emitted += 1;
+            if state.config.enable_debug {
+                debug(&format!("Emitted PGN 129026: cog={:.1}deg, sog={:.2}m/s", course, speed_ms));
+            }
         }
     }
 
-    if state.events_received % 12 == 0 {
+    // Update status periodically
+    if state.nmea0183_received % 60 == 0 {
         set_status(&format!(
-            "Delta rate: {:.1}/s, WS clients: {}, Uptime: {:.0}s",
-            rate, state.ws_clients, state.uptime_seconds
+            "Received: {}, Emitted: {}",
+            state.nmea0183_received, state.pgns_emitted
         ));
     }
 }
 
-fn handle_vessel_info(state: &PluginState, event: &ServerEvent) {
-    if state.config.enable_debug {
-        debug(&format!("Vessel info changed: {:?}", event.data));
+/// Parse GGA (Global Positioning System Fix Data) sentence
+/// $GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,47.0,M,,*47
+/// Fields: Time, Lat, N/S, Lon, E/W, Quality, NumSat, HDOP, Alt, M, GeoidSep, M, ...
+fn parse_gga(state: &mut PluginState, fields: &[&str]) {
+    if fields.len() < 10 {
+        state.parse_errors += 1;
+        return;
     }
+
+    let quality: u8 = fields.get(6).unwrap_or(&"0").parse().unwrap_or(0);
+    if quality == 0 {
+        // No fix
+        return;
+    }
+
+    // Parse position
+    let lat = parse_coordinate(fields.get(2).unwrap_or(&""), fields.get(3).unwrap_or(&""));
+    let lon = parse_coordinate(fields.get(4).unwrap_or(&""), fields.get(5).unwrap_or(&""));
+
+    if let (Some(latitude), Some(longitude)) = (lat, lon) {
+        // Emit PGN 129025 - Position, Rapid Update
+        let pgn_129025 = Pgn129025 {
+            pgn: 129025,
+            src: state.config.source_id.clone(),
+            dst: 255,
+            prio: 2,
+            fields: Pgn129025Fields {
+                latitude,
+                longitude,
+            },
+        };
+
+        if emit_event("nmea2000JsonOut", &pgn_129025) {
+            state.pgns_emitted += 1;
+            if state.config.enable_debug {
+                debug(&format!("Emitted PGN 129025 from GGA: lat={}, lon={}", latitude, longitude));
+            }
+        }
+    }
+}
+
+/// Parse NMEA coordinate (DDDMM.MMMM format) to decimal degrees
+fn parse_coordinate(coord: &str, hemisphere: &str) -> Option<f64> {
+    if coord.is_empty() {
+        return None;
+    }
+
+    // Find decimal point position
+    let dot_pos = coord.find('.')?;
+
+    // Degrees are everything before the last 2 digits before the decimal
+    let deg_end = if dot_pos >= 2 { dot_pos - 2 } else { return None };
+
+    let degrees: f64 = coord[..deg_end].parse().ok()?;
+    let minutes: f64 = coord[deg_end..].parse().ok()?;
+
+    let mut result = degrees + minutes / 60.0;
+
+    // Apply hemisphere
+    match hemisphere {
+        "S" | "W" => result = -result,
+        _ => {}
+    }
+
+    Some(result)
 }
 
 fn write_string(s: &str, ptr: *mut u8, max_len: usize) -> i32 {

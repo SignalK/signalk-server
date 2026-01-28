@@ -18,6 +18,7 @@ Declare required capabilities in `package.json`:
 | `network`       | HTTP requests (via as-fetch)             | Supported (AssemblyScript only) |
 | `putHandlers`   | Register PUT handlers for vessel control | Supported                       |
 | `rawSockets`    | UDP socket access for radar, NMEA, etc.  | Supported                       |
+| `serverEvents`  | Receive and emit server/NMEA events      | Supported                       |
 | `serialPorts`   | Serial port access                       | Planned                         |
 
 ## Network API (AssemblyScript)
@@ -411,4 +412,164 @@ fn emit_position_delta() {
 
     handle_message(&delta);
 }
+```
+
+## Server Events API
+
+The `serverEvents` capability enables plugins to receive and emit server events and NMEA data streams. This is essential for plugins that need to:
+
+- Process raw NMEA 0183 sentences
+- Emit NMEA 2000 PGN data
+- Monitor server status and provider events
+- Integrate with the Signal K data pipeline
+
+### Enabling Server Events Capability
+
+```json
+{
+  "name": "my-nmea-plugin",
+  "wasmManifest": "plugin.wasm",
+  "wasmCapabilities": {
+    "serverEvents": true,
+    "dataWrite": true
+  }
+}
+```
+
+### Available Event Types
+
+#### Server Events (uppercase)
+
+These are server status events delivered via the `serverevent` mechanism:
+
+| Event Type         | Description                     |
+| ------------------ | ------------------------------- |
+| `SERVERSTATISTICS` | Server performance statistics   |
+| `VESSEL_INFO`      | Vessel name, MMSI, UUID         |
+| `DEBUG_SETTINGS`   | Current debug configuration     |
+| `SERVERMESSAGE`    | Server log messages             |
+| `PROVIDERSTATUS`   | Data provider connection status |
+| `SOURCEPRIORITIES` | Source priority configuration   |
+
+#### Generic Events (lowercase)
+
+NMEA data stream and parser events:
+
+| Event Type                | Description                           |
+| ------------------------- | ------------------------------------- |
+| `nmea0183`                | Raw NMEA 0183 sentences from hardware |
+| `nmea0183out`             | Derived NMEA 0183 from plugins        |
+| `nmea2000JsonOut`         | NMEA 2000 PGN data in JSON format     |
+| `nmea2000out`             | Raw NMEA 2000 data                    |
+| `nmea2000OutAvailable`    | Signal that N2K output is ready       |
+| `canboatjs:error`         | Parser error events                   |
+| `canboatjs:warning`       | Parser warning events                 |
+| `canboatjs:unparsed:data` | Unparsed data from canboatjs          |
+
+### Implementing an Event Handler
+
+Export an `event_handler()` function to receive events:
+
+**Rust:**
+
+```rust
+#[link(wasm_import_module = "env")]
+extern "C" {
+    fn sk_debug(ptr: *const u8, len: usize);
+    fn sk_subscribe_events(event_types_ptr: *const u8, event_types_len: usize) -> i32;
+    fn sk_emit_event(
+        type_ptr: *const u8, type_len: usize,
+        data_ptr: *const u8, data_len: usize,
+    ) -> i32;
+}
+
+// Subscribe to specific event types during plugin_start()
+#[no_mangle]
+pub extern "C" fn plugin_start(config_ptr: *const u8, config_len: usize) -> i32 {
+    // Subscribe to NMEA 0183 events
+    let events = r#"["nmea0183", "nmea0183out"]"#;
+    unsafe {
+        if sk_subscribe_events(events.as_ptr(), events.len()) != 1 {
+            return 1; // Failed to subscribe
+        }
+    }
+    0
+}
+
+// Receive events via the event_handler export
+#[no_mangle]
+pub extern "C" fn event_handler(event_ptr: *const u8, event_len: usize) {
+    let event_json = unsafe {
+        let slice = std::slice::from_raw_parts(event_ptr, event_len);
+        String::from_utf8_lossy(slice).to_string()
+    };
+
+    // Event format: {"type": "nmea0183", "data": "$GPRMC,...", "timestamp": 1234567890}
+    // Parse and process the event...
+}
+```
+
+### Event JSON Format
+
+Events delivered to `event_handler()` have this structure:
+
+```json
+{
+  "type": "nmea0183",
+  "data": "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A",
+  "timestamp": 1706400000000
+}
+```
+
+- `type` - The event type (e.g., `nmea0183`, `SERVERSTATISTICS`)
+- `data` - Event payload (string for NMEA sentences, object for server events)
+- `timestamp` - Unix timestamp in milliseconds
+- `from` - (optional) Source plugin ID for plugin-emitted events
+
+### Emitting Events
+
+Use `sk_emit_event` to emit events:
+
+**Rust:**
+
+```rust
+fn emit_pgn(pgn_data: &str) -> bool {
+    let event_type = "nmea2000JsonOut";
+    unsafe {
+        sk_emit_event(
+            event_type.as_ptr(), event_type.len(),
+            pgn_data.as_ptr(), pgn_data.len(),
+        ) == 1
+    }
+}
+
+// Example: Emit a PGN 129025 (Position, Rapid Update)
+let pgn = r#"{
+    "pgn": 129025,
+    "src": "wasm-plugin",
+    "dst": 255,
+    "prio": 2,
+    "fields": {
+        "Latitude": 60.1699,
+        "Longitude": 24.9384
+    }
+}"#;
+emit_pgn(pgn);
+```
+
+### Event Emission Behavior
+
+- **Generic events** (`nmea0183`, `nmea2000JsonOut`, etc.) are emitted directly to the server event bus, allowing interop with other plugins and the Signal K data pipeline.
+- **Custom events** (any other name) are automatically prefixed with `PLUGIN_` to prevent plugins from impersonating server events.
+
+### Example: NMEA 0183 to NMEA 2000 Converter
+
+See the `example-event-handler-rust` plugin for a complete example that:
+
+1. Subscribes to `nmea0183` events
+2. Parses RMC and GGA sentences
+3. Emits `nmea2000JsonOut` events with PGN 129025 (Position) and PGN 129026 (COG/SOG)
+
+```
+[Hardware] --nmea0183--> [WASM Plugin] --nmea2000JsonOut--> [N2K Output]
 ```
