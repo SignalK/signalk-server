@@ -2,8 +2,6 @@ import { constants } from 'fs'
 import { access, mkdir } from 'fs/promises'
 import path from 'path'
 import { WithConfig } from '../../app'
-
-import { DatabaseSync } from 'node:sqlite'
 import { Alarm } from './alarm'
 
 const SERVERSTATE_DIR_NAME = 'serverState'
@@ -15,7 +13,8 @@ const NOTI_KEYS_TABLE = 'noti_keys'
 export class DbStore {
   private dbFilePath = ''
   private initPromise: Promise<void> | null = null
-  private db?: DatabaseSync
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private db: any
 
   constructor(server: WithConfig) {
     this.dbFilePath = path.join(server.config.configPath, SERVERSTATE_DIR_NAME)
@@ -54,10 +53,12 @@ export class DbStore {
   }
 
   // initialise database
-  private initDb() {
-    const dbFile = path.join(this.dbFilePath, `${DB_NAME}.sqlite`)
-    this.db = new DatabaseSync(dbFile)
+  private async initDb() {
     try {
+      const sqliteModule = await import('node:sqlite')
+      const { DatabaseSync } = sqliteModule
+      const dbFile = path.join(this.dbFilePath, `${DB_NAME}.sqlite`)
+      this.db = new DatabaseSync(dbFile)
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS ${ALARMS_TABLE} (
           key TEXT PRIMARY KEY,
@@ -84,7 +85,8 @@ export class DbStore {
           `SELECT key, json_extract(value, '$') AS value FROM ${ALARMS_TABLE}`
         )
         const r = q.all()
-        return r?.map((i) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return r?.map((i: any) => {
           return {
             id: i.key as string,
             value: JSON.parse(i.value as string) as Alarm
@@ -184,7 +186,8 @@ export class DbStore {
       if (this.db) {
         const q = this.db.prepare(`SELECT * FROM ${NOTI_KEYS_TABLE}`)
         const r = q.all()
-        return r?.map((i) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return r?.map((i: any) => {
           return { id: i.key as string, value: i.value as string }
         })
       } else {

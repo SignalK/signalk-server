@@ -8,7 +8,6 @@ import {
   Context,
   Delta,
   hasValues,
-  Notification,
   Path,
   SKVersion,
   SourceRef,
@@ -21,6 +20,7 @@ import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
 import { NotificationManager } from './notificationManager'
 import { DbStore } from './dbstore'
+import semver from 'semver'
 
 export interface NotificationApplication
   extends
@@ -41,11 +41,14 @@ export class NotificationApi {
   private notiKeys: Map<string, string> = new Map()
   private notificationManager: NotificationManager
   private dbLoaded: Promise<void> | null = null
-  public db: DbStore
+  public db?: DbStore
 
   constructor(private server: NotificationApplication) {
-    this.db = new DbStore(server)
-    this.dbLoaded = this.loadFromStore()
+    const v = process.version
+    if (semver.valid(v) && semver.satisfies(v, '>=22.0.0')) {
+      this.db = new DbStore(server)
+      this.dbLoaded = this.loadFromStore()
+    }
 
     this.app = server
     this.notificationManager = new NotificationManager(server, this.db)
@@ -65,7 +68,7 @@ export class NotificationApi {
   /** initialise notification identifiers from persisted state */
   private async loadFromStore() {
     try {
-      const r = await this.db.listNotis()
+      const r = await this.db?.listNotis()
       const n = r?.map((i) => {
         return [i.id, i.value]
       })
@@ -79,6 +82,8 @@ export class NotificationApi {
 
   /** ready to process notifications */
   private async isReady() {
+    if (!this.db) return
+
     if (this.dbLoaded) {
       await this.dbLoaded
     }
@@ -100,7 +105,6 @@ export class NotificationApi {
     await this.isReady()
     delta.updates?.forEach((u: Update) => {
       if (hasValues(u) && u.values.length) {
-        const value = u.values[0].value as Notification
         const path = u.values[0].path
         const src = u['$source'] as SourceRef
         const key = buildKey(src, delta.context as Context, path)
@@ -111,17 +115,15 @@ export class NotificationApi {
         } else {
           id = uuid.v4()
           this.notiKeys.set(key, id)
-          this.db.setNoti(key, id)
+          this.db?.setNoti(key, id)
           u.notificationId = id
         }
-        this.db.setNoti(key, id)
-        // manage ALARM_STATE
-        if (value.state) {
-          this.notificationManager.fromDelta(u, delta.context as Context)
-        }
+        this.db?.setNoti(key, id)
+        // register with manager
+        this.notificationManager.fromDelta(u, delta.context as Context)
       }
     })
-    this.app.handleMessage('notificationApi', delta, deltaVersion)
+    //this.app.handleMessage('notificationApi', delta, deltaVersion)
   }
 
   /** Initialise API endpoints */

@@ -131,9 +131,11 @@ export class Alarm {
       this.update.values = [
         {
           path: this.path,
-          value: !this.value.id
-            ? Object.assign(this.value, { id: this.update.notificationId })
-            : this.value
+          value: Object.assign(
+            this.value,
+            { id: this.update.notificationId },
+            { status: this.status }
+          )
         }
       ]
     }

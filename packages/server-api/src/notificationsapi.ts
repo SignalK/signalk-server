@@ -38,7 +38,7 @@ export interface NotificationsApi {
    */
 }
 
-/** @category  NotificationsAPI */
+/** @category  Notifications API */
 export interface WithNotificationsApi {
   notificationsApi: NotificationsApi
 }
