@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@signalk/server-api": "^2.5.0",
-    "geojson-validation": "^0.2.0",
+    "geojson-validation": "^1.0.2",
     "geolib": "^3.3.3",
     "ngeohash": "^0.6.3"
   },
