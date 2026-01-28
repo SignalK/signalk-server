@@ -400,11 +400,7 @@ const History: React.FC = () => {
             </p>
           </CardBody>
           <CardFooter>
-            <Button
-              color="primary"
-              tag={Link}
-              to="/serverConfiguration/health"
-            >
+            <Button color="primary" tag={Link} to="/serverConfiguration/health">
               <FontAwesomeIcon icon={faStethoscope} className="me-1" />
               Open System Doctor
             </Button>
@@ -637,10 +633,7 @@ const History: React.FC = () => {
               onClick={handleRefreshGrafana}
               disabled={isRefreshing}
             >
-              <FontAwesomeIcon
-                icon={faSync}
-                spin={isRefreshing}
-              />{' '}
+              <FontAwesomeIcon icon={faSync} spin={isRefreshing} />{' '}
               {isRefreshing ? 'Refreshing...' : 'Refresh Grafana Token'}
             </Button>
             <small className="text-muted ms-2">

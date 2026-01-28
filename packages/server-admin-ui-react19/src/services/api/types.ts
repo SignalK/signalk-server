@@ -223,6 +223,21 @@ export interface SystemInfo {
   }
 }
 
+export interface KeeperVersionStatus {
+  updateAvailable: boolean
+  currentVersion: string
+  latestVersion?: string
+  lastChecked: string
+}
+
+export interface KeeperUpgradeState {
+  step: 'idle' | 'downloading' | 'ready' | 'applying' | 'reconnecting'
+  targetVersion?: string
+  progress?: number
+  message?: string
+  error?: string
+}
+
 export type HistoryStatus =
   | 'disabled'
   | 'starting'

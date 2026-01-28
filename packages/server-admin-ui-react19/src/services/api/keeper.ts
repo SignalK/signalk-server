@@ -18,7 +18,6 @@ import type {
   HealthStatus,
   DoctorResult,
   DoctorIssue,
-  DoctorFix,
   FixResult,
   SystemInfo,
   HistorySystemStatus,
@@ -621,6 +620,67 @@ export function createKeeperApi(baseUrl: string) {
           keeper: rawInfo.keeper,
           cpu: rawInfo.cpu
         }
+      },
+
+      keeperVersion: async (): Promise<{
+        updateAvailable: boolean
+        currentVersion: string
+        latestVersion?: string
+        lastChecked: string
+      }> => {
+        const response = await fetch(`${apiUrl}/api/system/keeper/version`)
+        return handleResponse<{
+          updateAvailable: boolean
+          currentVersion: string
+          latestVersion?: string
+          lastChecked: string
+        }>(response)
+      },
+
+      keeperUpgradeState: async (): Promise<{
+        step: string
+        targetVersion?: string
+        progress?: number
+        message?: string
+        error?: string
+        quadletSupported: boolean
+      }> => {
+        const response = await fetch(`${apiUrl}/api/system/keeper/upgrade`)
+        return handleResponse<{
+          step: string
+          targetVersion?: string
+          progress?: number
+          message?: string
+          error?: string
+          quadletSupported: boolean
+        }>(response)
+      },
+
+      keeperUpgradePrepare: async (
+        version: string
+      ): Promise<{ success: boolean; error?: string }> => {
+        const response = await fetch(
+          `${apiUrl}/api/system/keeper/upgrade/prepare`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetVersion: version })
+          }
+        )
+        return handleResponse<{ success: boolean; error?: string }>(response)
+      },
+
+      keeperUpgradeApply: async (): Promise<{
+        success: boolean
+        error?: string
+      }> => {
+        const response = await fetch(
+          `${apiUrl}/api/system/keeper/upgrade/apply`,
+          {
+            method: 'POST'
+          }
+        )
+        return handleResponse<{ success: boolean; error?: string }>(response)
       }
     },
 

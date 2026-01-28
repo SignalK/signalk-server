@@ -302,7 +302,9 @@ const BackupRestore: React.FC = () => {
 
   const renderBackupTable = (backups: KeeperBackup[], showType = false) => {
     if (backups.length === 0) {
-      return <p className="text-muted text-center">No backups in this category</p>
+      return (
+        <p className="text-muted text-center">No backups in this category</p>
+      )
     }
     return (
       <Table size="sm" responsive>
@@ -321,7 +323,9 @@ const BackupRestore: React.FC = () => {
               <td>{formatDate(backup.created)}</td>
               {showType && (
                 <td>
-                  <Badge color={getBackupTypeColor(backup.type)}>{backup.type}</Badge>
+                  <Badge color={getBackupTypeColor(backup.type)}>
+                    {backup.type}
+                  </Badge>
                 </td>
               )}
               <td>{formatBytes(backup.size)}</td>
@@ -368,13 +372,17 @@ const BackupRestore: React.FC = () => {
       ...backupList.backups.full,
       ...backupList.backups.config,
       ...backupList.backups.plugins
-    ].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
+    ].sort(
+      (a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()
+    )
   }
 
   const getBackupCount = (type: string): number => {
     if (!backupList) return 0
     if (type === 'all') return getAllBackups().length
-    return backupList.backups[type as keyof typeof backupList.backups]?.length || 0
+    return (
+      backupList.backups[type as keyof typeof backupList.backups]?.length || 0
+    )
   }
 
   // Keeper mode UI
@@ -452,9 +460,7 @@ const BackupRestore: React.FC = () => {
                     <Label>Status</Label>
                     <div>
                       <Badge
-                        color={
-                          schedulerStatus.enabled ? 'success' : 'danger'
-                        }
+                        color={schedulerStatus.enabled ? 'success' : 'danger'}
                       >
                         {schedulerStatus.enabled ? 'Enabled' : 'Disabled'}
                       </Badge>
@@ -545,7 +551,11 @@ const BackupRestore: React.FC = () => {
                       >
                         {tab.label}
                         {getBackupCount(tab.id) > 0 && (
-                          <Badge color={getBackupTypeColor(tab.id)} pill className="ms-2">
+                          <Badge
+                            color={getBackupTypeColor(tab.id)}
+                            pill
+                            className="ms-2"
+                          >
                             {getBackupCount(tab.id)}
                           </Badge>
                         )}
@@ -558,7 +568,9 @@ const BackupRestore: React.FC = () => {
                     {getAllBackups().length > 0 ? (
                       renderBackupTable(getAllBackups(), true)
                     ) : (
-                      <p className="text-muted text-center">No backups available</p>
+                      <p className="text-muted text-center">
+                        No backups available
+                      </p>
                     )}
                   </TabPane>
                   <TabPane tabId="manual">

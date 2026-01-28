@@ -541,11 +541,13 @@ export default function ContainerLogs() {
                   <span className={getLevelClass(line.level)}>
                     [{line.level.toUpperCase()}]
                   </span>{' '}
+                  {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml */}
                   <span
                     dangerouslySetInnerHTML={{
                       __html: ansiConverter.toHtml(line.message)
                     }}
                   />
+                  {/* eslint-enable @eslint-react/dom/no-dangerously-set-innerhtml */}
                 </div>
               ))
             )}

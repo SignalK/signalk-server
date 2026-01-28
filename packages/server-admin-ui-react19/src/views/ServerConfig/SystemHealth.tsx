@@ -21,6 +21,8 @@ import { faExclamationTriangle } from '@fortawesome/free-solid-svg-icons/faExcla
 import { faXmark } from '@fortawesome/free-solid-svg-icons/faXmark'
 import { faServer } from '@fortawesome/free-solid-svg-icons/faServer'
 import { faSync } from '@fortawesome/free-solid-svg-icons/faSync'
+import { faDownload } from '@fortawesome/free-solid-svg-icons/faDownload'
+import { faRocket } from '@fortawesome/free-solid-svg-icons/faRocket'
 import { useRuntimeConfig } from '../../store'
 import {
   healthApi,
@@ -30,7 +32,9 @@ import {
   type DoctorResult,
   type SystemInfo,
   type ContainerInfo,
-  type ContainerStats
+  type ContainerStats,
+  type KeeperVersionStatus,
+  type KeeperUpgradeState
 } from '../../services/api'
 
 function formatBytes(bytes: number): string {
@@ -65,6 +69,12 @@ const SystemHealth: React.FC = () => {
   const [applyingFixId, setApplyingFixId] = useState<string | null>(null)
   const [fixSuccess, setFixSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [keeperVersion, setKeeperVersion] =
+    useState<KeeperVersionStatus | null>(null)
+  const [upgradeState, setUpgradeState] = useState<KeeperUpgradeState | null>(
+    null
+  )
+  const [isUpgrading, setIsUpgrading] = useState(false)
 
   useEffect(() => {
     if (!useKeeper || !shouldUseKeeper()) {
@@ -99,6 +109,13 @@ const SystemHealth: React.FC = () => {
       }
     }
 
+    const loadKeeperVersion = async () => {
+      const version = await healthApi.checkKeeperUpdate()
+      if (version) {
+        setKeeperVersion(version)
+      }
+    }
+
     const doLoadAllData = async () => {
       setIsLoading(true)
       setError(null)
@@ -107,7 +124,8 @@ const SystemHealth: React.FC = () => {
           loadHealthStatus(),
           loadSystemInfo(),
           loadContainerInfo(),
-          loadStats()
+          loadStats(),
+          loadKeeperVersion()
         ])
       } catch (err) {
         setError(
@@ -127,17 +145,24 @@ const SystemHealth: React.FC = () => {
     setIsLoading(true)
     setError(null)
     try {
-      const [healthResult, systemResult, containerResult, statsResult] =
-        await Promise.all([
-          healthApi.check(),
-          healthApi.systemInfo(),
-          serverApi.getStatus(),
-          serverApi.getStats()
-        ])
+      const [
+        healthResult,
+        systemResult,
+        containerResult,
+        statsResult,
+        versionResult
+      ] = await Promise.all([
+        healthApi.check(),
+        healthApi.systemInfo(),
+        serverApi.getStatus(),
+        serverApi.getStats(),
+        healthApi.checkKeeperUpdate()
+      ])
       if (healthResult) setHealthStatus(healthResult)
       if (systemResult) setSystemInfo(systemResult)
       if (containerResult) setContainerInfo(containerResult)
       if (statsResult) setContainerStats(statsResult)
+      if (versionResult) setKeeperVersion(versionResult)
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to load health data'
@@ -185,6 +210,75 @@ const SystemHealth: React.FC = () => {
     },
     [runDoctor]
   )
+
+  const startKeeperUpgrade = useCallback(async () => {
+    if (!keeperVersion?.latestVersion) return
+
+    setIsUpgrading(true)
+    setError(null)
+    setUpgradeState({ step: 'downloading' })
+
+    try {
+      // Phase 1: Download new version
+      const prepResult = await healthApi.prepareKeeperUpgrade(
+        keeperVersion.latestVersion
+      )
+      if (!prepResult?.success) {
+        throw new Error(prepResult?.error || 'Failed to download update')
+      }
+
+      setUpgradeState({
+        step: 'ready',
+        targetVersion: keeperVersion.latestVersion
+      })
+
+      // Phase 2: Apply update (this will restart Keeper)
+      setUpgradeState({
+        step: 'applying',
+        targetVersion: keeperVersion.latestVersion
+      })
+      const applyResult = await healthApi.applyKeeperUpgrade()
+      if (!applyResult?.success) {
+        throw new Error(applyResult?.error || 'Failed to apply update')
+      }
+
+      // Keeper is restarting - show reconnecting state
+      setUpgradeState({
+        step: 'reconnecting',
+        targetVersion: keeperVersion.latestVersion
+      })
+
+      // Poll for Keeper to come back online
+      let attempts = 0
+      const maxAttempts = 60 // 2 minutes max
+      const pollInterval = setInterval(async () => {
+        attempts++
+        try {
+          const newVersion = await healthApi.checkKeeperUpdate()
+          if (newVersion) {
+            clearInterval(pollInterval)
+            setKeeperVersion(newVersion)
+            setUpgradeState({ step: 'idle' })
+            setIsUpgrading(false)
+            // Reload all data
+            loadAllData()
+          }
+        } catch {
+          // Keeper still restarting
+          if (attempts >= maxAttempts) {
+            clearInterval(pollInterval)
+            setError('Keeper restart timed out. Please refresh the page.')
+            setUpgradeState({ step: 'idle' })
+            setIsUpgrading(false)
+          }
+        }
+      }, 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upgrade failed')
+      setUpgradeState({ step: 'idle' })
+      setIsUpgrading(false)
+    }
+  }, [keeperVersion])
 
   const getStatusBadge = (status: 'healthy' | 'degraded' | 'unhealthy') => {
     const colors = {
@@ -494,26 +588,85 @@ const SystemHealth: React.FC = () => {
             Container Status
             <span className="float-end">
               {/* Running container badges */}
-              <Badge color="primary" className="me-1">SignalK</Badge>
+              <Badge color="primary" className="me-1">
+                SignalK
+              </Badge>
               {systemInfo?.keeper && (
-                <Badge color="info" className="me-1">Keeper</Badge>
+                <Badge color="info" className="me-1">
+                  Keeper
+                </Badge>
               )}
-              {systemInfo?.memory?.influxdbMB && systemInfo.memory.influxdbMB > 0 && (
-                <Badge color="warning" className="me-1">InfluxDB</Badge>
-              )}
-              {systemInfo?.memory?.grafanaMB && systemInfo.memory.grafanaMB > 0 && (
-                <Badge color="success" className="me-1">Grafana</Badge>
+              {systemInfo?.memory?.influxdbMB &&
+                systemInfo.memory.influxdbMB > 0 && (
+                  <Badge color="warning" className="me-1">
+                    InfluxDB
+                  </Badge>
+                )}
+              {systemInfo?.memory?.grafanaMB &&
+                systemInfo.memory.grafanaMB > 0 && (
+                  <Badge color="success" className="me-1">
+                    Grafana
+                  </Badge>
+                )}
+              {keeperVersion?.updateAvailable && (
+                <Badge color="danger" className="ms-2">
+                  Update Available
+                </Badge>
               )}
             </span>
           </CardHeader>
           <CardBody>
+            {/* Keeper Upgrade Status */}
+            {isUpgrading && upgradeState && (
+              <Alert color="info" className="mb-3">
+                <FontAwesomeIcon icon={faCircleNotch} spin className="me-2" />
+                {upgradeState.step === 'downloading' &&
+                  'Downloading Keeper update...'}
+                {upgradeState.step === 'ready' &&
+                  `Update ${upgradeState.targetVersion} ready to apply`}
+                {upgradeState.step === 'applying' &&
+                  'Applying update and restarting Keeper...'}
+                {upgradeState.step === 'reconnecting' &&
+                  'Waiting for Keeper to restart...'}
+                {upgradeState.progress !== undefined &&
+                  upgradeState.progress > 0 && (
+                    <Progress value={upgradeState.progress} className="mt-2" />
+                  )}
+              </Alert>
+            )}
+
+            {/* Keeper Update Available */}
+            {keeperVersion?.updateAvailable && !isUpgrading && (
+              <Alert color="warning" className="mb-3">
+                <FontAwesomeIcon icon={faRocket} className="me-2" />
+                <strong>Keeper Update Available:</strong> Version{' '}
+                {keeperVersion.latestVersion}
+                <div className="mt-2">
+                  <small className="text-muted">
+                    Current: {keeperVersion.currentVersion} | Last checked:{' '}
+                    {new Date(keeperVersion.lastChecked).toLocaleString()}
+                  </small>
+                </div>
+                <Button
+                  color="success"
+                  size="sm"
+                  className="mt-2"
+                  onClick={startKeeperUpgrade}
+                >
+                  <FontAwesomeIcon icon={faDownload} className="me-1" />
+                  Upgrade to {keeperVersion.latestVersion}
+                </Button>
+              </Alert>
+            )}
             <Row>
               <Col md={6}>
                 <Table size="sm" borderless>
                   <tbody>
                     <tr>
                       <td>SignalK Container</td>
-                      <td className="text-end">{getContainerStateBadge(containerInfo.state)}</td>
+                      <td className="text-end">
+                        {getContainerStateBadge(containerInfo.state)}
+                      </td>
                     </tr>
                     <tr>
                       <td>Image</td>
@@ -543,7 +696,9 @@ const SystemHealth: React.FC = () => {
                     {systemInfo?.keeper && (
                       <tr>
                         <td>Keeper Version</td>
-                        <td className="text-end">{systemInfo.keeper.version}</td>
+                        <td className="text-end">
+                          {systemInfo.keeper.version}
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -556,7 +711,8 @@ const SystemHealth: React.FC = () => {
                     <h6>CPU Usage</h6>
                     <div className="mb-1">
                       <small>
-                        System: {systemInfo.cpu.systemPercent.toFixed(1)}% ({systemInfo.cpu.cpuCount} cores)
+                        System: {systemInfo.cpu.systemPercent.toFixed(1)}% (
+                        {systemInfo.cpu.cpuCount} cores)
                       </small>
                       <Progress
                         value={systemInfo.cpu.systemPercent}
@@ -586,46 +742,72 @@ const SystemHealth: React.FC = () => {
                         <Progress
                           bar
                           color="primary"
-                          value={(systemInfo.memory.signalkMB / systemInfo.memory.totalMB) * 100}
+                          value={
+                            (systemInfo.memory.signalkMB /
+                              systemInfo.memory.totalMB) *
+                            100
+                          }
                         />
                         {systemInfo.memory.keeperMB > 0 && (
                           <Progress
                             bar
                             color="info"
-                            value={(systemInfo.memory.keeperMB / systemInfo.memory.totalMB) * 100}
+                            value={
+                              (systemInfo.memory.keeperMB /
+                                systemInfo.memory.totalMB) *
+                              100
+                            }
                           />
                         )}
                         {systemInfo.memory.influxdbMB > 0 && (
                           <Progress
                             bar
                             color="warning"
-                            value={(systemInfo.memory.influxdbMB / systemInfo.memory.totalMB) * 100}
+                            value={
+                              (systemInfo.memory.influxdbMB /
+                                systemInfo.memory.totalMB) *
+                              100
+                            }
                           />
                         )}
                         {systemInfo.memory.grafanaMB > 0 && (
                           <Progress
                             bar
                             color="success"
-                            value={(systemInfo.memory.grafanaMB / systemInfo.memory.totalMB) * 100}
+                            value={
+                              (systemInfo.memory.grafanaMB /
+                                systemInfo.memory.totalMB) *
+                              100
+                            }
                           />
                         )}
                       </Progress>
                     </div>
                     <small className="text-muted">
-                      <Badge color="primary" className="me-1">SignalK: {systemInfo.memory.signalkMB} MB</Badge>
+                      <Badge color="primary" className="me-1">
+                        SignalK: {systemInfo.memory.signalkMB} MB
+                      </Badge>
                       {systemInfo.memory.keeperMB > 0 && (
-                        <Badge color="info" className="me-1">Keeper: {systemInfo.memory.keeperMB} MB</Badge>
+                        <Badge color="info" className="me-1">
+                          Keeper: {systemInfo.memory.keeperMB} MB
+                        </Badge>
                       )}
                       {systemInfo.memory.influxdbMB > 0 && (
-                        <Badge color="warning" className="me-1">InfluxDB: {systemInfo.memory.influxdbMB} MB</Badge>
+                        <Badge color="warning" className="me-1">
+                          InfluxDB: {systemInfo.memory.influxdbMB} MB
+                        </Badge>
                       )}
                       {systemInfo.memory.grafanaMB > 0 && (
-                        <Badge color="success" className="me-1">Grafana: {systemInfo.memory.grafanaMB} MB</Badge>
+                        <Badge color="success" className="me-1">
+                          Grafana: {systemInfo.memory.grafanaMB} MB
+                        </Badge>
                       )}
                     </small>
                     <div className="mt-2">
                       <small className="text-muted">
-                        Total: {systemInfo.memory.usedMB} MB / {systemInfo.memory.totalMB} MB ({systemInfo.memory.usedPercent}%)
+                        Total: {systemInfo.memory.usedMB} MB /{' '}
+                        {systemInfo.memory.totalMB} MB (
+                        {systemInfo.memory.usedPercent}%)
                       </small>
                     </div>
                   </>

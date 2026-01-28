@@ -396,6 +396,46 @@ export const healthApi = {
       return getKeeperApi().system.info()
     }
     return null
+  },
+
+  /**
+   * Check for Keeper updates
+   */
+  checkKeeperUpdate: async () => {
+    if (shouldUseKeeper()) {
+      return getKeeperApi().system.keeperVersion()
+    }
+    return null
+  },
+
+  /**
+   * Get Keeper upgrade state
+   */
+  getKeeperUpgradeState: async () => {
+    if (shouldUseKeeper()) {
+      return getKeeperApi().system.keeperUpgradeState()
+    }
+    return null
+  },
+
+  /**
+   * Prepare Keeper upgrade (download new version)
+   */
+  prepareKeeperUpgrade: async (version: string) => {
+    if (shouldUseKeeper()) {
+      return getKeeperApi().system.keeperUpgradePrepare(version)
+    }
+    return null
+  },
+
+  /**
+   * Apply Keeper upgrade (restart with new version)
+   */
+  applyKeeperUpgrade: async () => {
+    if (shouldUseKeeper()) {
+      return getKeeperApi().system.keeperUpgradeApply()
+    }
+    return null
   }
 }
 
