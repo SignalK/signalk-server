@@ -43,7 +43,7 @@ export class SignalKTheme extends DefaultTheme {
       }
     })
 
-    // link the css file
+    // link the css file and add iframe detection script
     renderer.hooks.on(
       'head.end',
       (event) => {
@@ -53,6 +53,11 @@ export class SignalKTheme extends DefaultTheme {
               rel="stylesheet"
               href={event.relativeURL('assets/theme.css')}
             />
+            <script>
+              <JSX.Raw
+                html={`if(window.self!==window.top){document.documentElement.classList.add('embedded')}`}
+              />
+            </script>
           </>
         )
       },

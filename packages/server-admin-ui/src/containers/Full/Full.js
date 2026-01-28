@@ -39,7 +39,8 @@ class Full extends Component {
 
   render() {
     const suppressPadding =
-      this.props.location.pathname.indexOf('/e/') === 0
+      this.props.location.pathname.indexOf('/e/') === 0 ||
+      this.props.location.pathname.indexOf('/documentation') === 0
         ? { padding: '0px' }
         : {}
     return (
