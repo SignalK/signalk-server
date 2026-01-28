@@ -25,14 +25,14 @@ export class NotificationManager {
   private app: NotificationApplication
   private alarms: Map<string, Alarm> = new Map()
   private readonly deltaVersion = SKVersion.v1
-  private db: DbStore
+  private db?: DbStore
 
   private cleanTimer?: NodeJS.Timeout
   private forCleaning: string[] = []
 
   constructor(
     private server: NotificationApplication,
-    private dbs: DbStore
+    private dbs?: DbStore
   ) {
     this.app = server
     this.db = dbs
@@ -41,6 +41,7 @@ export class NotificationManager {
 
   /** initialise alarms from persisted state */
   private async loadFromStore() {
+    if (!this.db) return
     try {
       const r = await this.db.listAlarms()
       if (r) {
@@ -48,10 +49,11 @@ export class NotificationManager {
           const alarm = new Alarm(i.id)
           alarm.init(i.value)
           this.alarms.set(i.id, alarm)
-          // emit notifications for loaded alarms
-          this.alarms.forEach((alarm: Alarm) => {
-            this.emitNotification(alarm)
-          })
+        })
+        this.clean(true)
+        // emit notifications for loaded alarms
+        this.alarms.forEach((alarm: Alarm) => {
+          this.emitNotification(alarm)
         })
       }
       // start cleanup timer
@@ -123,7 +125,7 @@ export class NotificationManager {
       (alarm.value as any).meta = options.meta
     }*/
     this.alarms.set(id, alarm)
-    this.db.setAlarm(id, alarm)
+    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
     return id
   }
@@ -151,7 +153,7 @@ export class NotificationManager {
       (alarm.value as any).meta = options.meta
     }*/
     this.alarms.set(id, alarm)
-    this.db.setAlarm(id, alarm)
+    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
   }
 
@@ -181,7 +183,7 @@ export class NotificationManager {
     }
     const alarm = this.alarms.get(id) as Alarm
     alarm?.silence()
-    this.db.setAlarm(id, alarm)
+    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
   }
 
@@ -195,7 +197,7 @@ export class NotificationManager {
     }
     const alarm = this.alarms.get(id) as Alarm
     alarm?.acknowledge()
-    this.db.setAlarm(id, alarm)
+    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
   }
 
@@ -209,7 +211,7 @@ export class NotificationManager {
     }
     const alarm = this.alarms.get(id) as Alarm
     alarm?.clear()
-    this.db.setAlarm(id, alarm)
+    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
   }
 
@@ -226,7 +228,8 @@ export class NotificationManager {
         alarm = new Alarm({ context: context, updates: [u] })
         this.alarms.set(id, alarm)
       }
-      this.db.setAlarm(id, alarm)
+      this.db?.setAlarm(id, alarm)
+      this.emitNotification(alarm)
     }
   }
 
@@ -234,13 +237,13 @@ export class NotificationManager {
    * Clean out alarms that have returned to and remained in NORMAL state
    * for the duration of CLEAN_INTERVAL
    */
-  private clean() {
+  private clean(force = false) {
     const al: string[] = []
     const nk: string[] = []
     const nextClean: string[] = []
     this.alarms.forEach((v: Alarm, k: string) => {
       if (v.value.state === 'normal') {
-        if (this.forCleaning.includes(k)) {
+        if (force || this.forCleaning.includes(k)) {
           al.push(k)
           nk.push(v.extKey)
         } else {
@@ -254,8 +257,8 @@ export class NotificationManager {
       al.forEach((id) => {
         this.alarms.delete(id)
       })
-      this.db.deleteAlarm(al)
-      this.db.deleteNoti(nk)
+      this.db?.deleteAlarm(al)
+      this.db?.deleteNoti(nk)
     }
   }
 }
