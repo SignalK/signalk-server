@@ -1101,15 +1101,19 @@ export function createEnvImports(
     /**
      * Emit a custom event from the plugin
      *
-     * @param typePtr - Pointer to event type string (will be prefixed with 'PLUGIN_' if not already)
+     * @param typePtr - Pointer to event type string
      * @param typeLen - Length of event type string
      * @param dataPtr - Pointer to event data JSON string
      * @param dataLen - Length of event data JSON string
      * @returns 1 on success, 0 on failure
      *
-     * Security: Event type will always be prefixed with 'PLUGIN_' to prevent
-     * plugins from impersonating server events. The 'from' field is automatically
-     * set to the plugin ID.
+     * Event types:
+     * - Generic events (nmea0183out, nmea2000JsonOut, etc.) are emitted directly
+     *   to the server bus for interop with other plugins
+     * - Custom events (anything else) are prefixed with 'PLUGIN_' to prevent
+     *   plugins from impersonating server events
+     *
+     * The 'from' field is automatically set to the plugin ID for routing.
      */
     sk_emit_event: (
       typePtr: number,
@@ -1134,26 +1138,45 @@ export function createEnvImports(
           return 0
         }
 
-        if (!eventType.startsWith(PLUGIN_EVENT_PREFIX)) {
+        const eventManager = getEventManager()
+
+        // Check if this is a standard generic event type (nmea2000JsonOut, etc.)
+        // Generic events are emitted directly to the server bus without prefixing
+        const isGenericEvent = eventManager.isGenericEvent(eventType)
+
+        if (!isGenericEvent && !eventType.startsWith(PLUGIN_EVENT_PREFIX)) {
+          // Custom plugin event - add prefix
           eventType = PLUGIN_EVENT_PREFIX + eventType
         }
 
-        debug(`[${pluginId}] Emitting event: ${eventType}`)
-
-        const event: ServerEvent = {
-          type: eventType,
-          from: pluginId,
-          data,
-          timestamp: Date.now()
-        }
+        debug(
+          `[${pluginId}] Emitting event: ${eventType} (generic=${isGenericEvent})`
+        )
 
         if (app && app.emit) {
-          app.emit(eventType, event)
-          debug(`[${pluginId}] Event emitted to server bus: ${eventType}`)
-        }
+          if (isGenericEvent) {
+            // Generic events: emit data directly (no wrapper)
+            app.emit(eventType, data)
+            debug(
+              `[${pluginId}] Generic event emitted to server bus: ${eventType}`
+            )
+          } else {
+            // Custom plugin events: wrap in ServerEvent structure
+            const event: ServerEvent = {
+              type: eventType,
+              from: pluginId,
+              data,
+              timestamp: Date.now()
+            }
+            app.emit(eventType, event)
+            debug(
+              `[${pluginId}] Plugin event emitted to server bus: ${eventType}`
+            )
 
-        const eventManager = getEventManager()
-        eventManager.routeEvent(event)
+            // Route custom events to other WASM plugins
+            eventManager.routeEvent(event)
+          }
+        }
 
         return 1
       } catch (error) {
