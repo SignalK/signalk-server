@@ -17,6 +17,9 @@ import type {
   UpdateStatus,
   HealthStatus,
   DoctorResult,
+  DoctorIssue,
+  DoctorFix,
+  FixResult,
   SystemInfo,
   HistorySystemStatus,
   HistorySettings,
@@ -341,12 +344,17 @@ export function createKeeperApi(baseUrl: string) {
         update: async (
           config: Partial<BackupSchedulerStatus>
         ): Promise<BackupSchedulerStatus> => {
-          const response = await fetch(`${apiUrl}/api/backups/scheduler`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(config)
-          })
-          // Keeper returns different structure, transform to expected format
+          // Keeper uses separate start/stop endpoints
+          if (config.enabled !== undefined) {
+            const endpoint = config.enabled
+              ? `${apiUrl}/api/backups/scheduler/start`
+              : `${apiUrl}/api/backups/scheduler/stop`
+            const response = await fetch(endpoint, { method: 'POST' })
+            await handleResponse<{ enabled: boolean }>(response)
+          }
+
+          // Fetch full status after start/stop (start/stop return minimal data)
+          const statusResponse = await fetch(`${apiUrl}/api/backups/scheduler`)
           const rawScheduler = await handleResponse<{
             enabled: boolean
             lastBackup?: string
@@ -355,7 +363,7 @@ export function createKeeperApi(baseUrl: string) {
               daily?: string
               weekly?: string
             }
-          }>(response)
+          }>(statusResponse)
 
           const nextTimes = Object.values(
             rawScheduler.nextBackups || {}
@@ -560,6 +568,7 @@ export function createKeeperApi(baseUrl: string) {
             dbus: boolean
             bluetooth: boolean
             serialPorts: string[]
+            canInterfaces: string[]
           }
           storage: {
             signalkDataMB: number
@@ -567,6 +576,26 @@ export function createKeeperApi(baseUrl: string) {
             containerImagesMB: number
             diskTotalMB: number
             diskAvailableMB: number
+          }
+          memory?: {
+            totalMB: number
+            usedMB: number
+            availableMB: number
+            usedPercent: number
+            signalkMB: number
+            keeperMB: number
+            influxdbMB: number
+            grafanaMB: number
+            otherMB: number
+          }
+          keeper?: {
+            version: string
+            uptime: string
+          }
+          cpu?: {
+            systemPercent: number
+            signalkPercent: number
+            cpuCount: number
           }
         }>(response)
         return {
@@ -576,7 +605,8 @@ export function createKeeperApi(baseUrl: string) {
           capabilities: {
             dbus: rawInfo.host.dbus,
             bluetooth: rawInfo.host.bluetooth,
-            serialPorts: rawInfo.host.serialPorts || []
+            serialPorts: rawInfo.host.serialPorts || [],
+            canInterfaces: rawInfo.host.canInterfaces || []
           },
           storage: {
             total: (rawInfo.storage.diskTotalMB || 0) * 1024 * 1024,
@@ -586,7 +616,10 @@ export function createKeeperApi(baseUrl: string) {
               1024 *
               1024,
             available: (rawInfo.storage.diskAvailableMB || 0) * 1024 * 1024
-          }
+          },
+          memory: rawInfo.memory,
+          keeper: rawInfo.keeper,
+          cpu: rawInfo.cpu
         }
       }
     },
@@ -616,6 +649,50 @@ export function createKeeperApi(baseUrl: string) {
           })),
           timestamp: new Date().toISOString()
         }
+      },
+
+      diagnose: async (): Promise<DoctorResult> => {
+        const response = await fetch(`${apiUrl}/api/doctor/diagnose`, {
+          method: 'POST'
+        })
+        const rawDiagnosis = await handleResponse<{
+          overallHealth: 'healthy' | 'degraded' | 'critical' | 'failed'
+          checks: Array<{
+            name: string
+            passed: boolean
+            message: string
+            details?: Record<string, unknown>
+          }>
+          issues: DoctorIssue[]
+          timestamp: string
+        }>(response)
+
+        // Map overallHealth to overall
+        const overallMap: Record<string, 'pass' | 'warn' | 'fail'> = {
+          healthy: 'pass',
+          degraded: 'warn',
+          critical: 'fail',
+          failed: 'fail'
+        }
+
+        return {
+          overall: overallMap[rawDiagnosis.overallHealth] || 'warn',
+          checks: rawDiagnosis.checks.map((c) => ({
+            name: c.name,
+            status: c.passed ? 'pass' : 'warn',
+            message: c.message,
+            details: c.details ? JSON.stringify(c.details) : undefined
+          })),
+          issues: rawDiagnosis.issues,
+          timestamp: rawDiagnosis.timestamp
+        }
+      },
+
+      applyFix: async (fixId: string): Promise<FixResult> => {
+        const response = await fetch(`${apiUrl}/api/doctor/fix/${fixId}`, {
+          method: 'POST'
+        })
+        return handleResponse<FixResult>(response)
       }
     },
 

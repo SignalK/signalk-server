@@ -23,6 +23,8 @@ import { faPlay } from '@fortawesome/free-solid-svg-icons/faPlay'
 import { faStop } from '@fortawesome/free-solid-svg-icons/faStop'
 import { faSync } from '@fortawesome/free-solid-svg-icons/faSync'
 import { faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons/faExternalLinkAlt'
+import { faStethoscope } from '@fortawesome/free-solid-svg-icons/faStethoscope'
+import { Link } from 'react-router-dom'
 import { useRuntimeConfig } from '../../store'
 import {
   historyApi,
@@ -51,6 +53,7 @@ const History: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isEnabling, setIsEnabling] = useState(false)
   const [isDisabling, setIsDisabling] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -161,11 +164,17 @@ const History: React.FC = () => {
 
   const handleRefreshGrafana = useCallback(async () => {
     setError(null)
+    setIsRefreshing(true)
     try {
       await historyApi.grafana.refresh()
       setSuccess('Grafana datasources refreshed')
+      // Reload credentials after refresh
+      const creds = await historyApi.credentials()
+      if (creds) setCredentials(creds)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh Grafana')
+    } finally {
+      setIsRefreshing(false)
     }
   }, [])
 
@@ -217,6 +226,7 @@ const History: React.FC = () => {
 
   const isRunning = status?.status === 'running'
   const isDisabled = status?.status === 'disabled'
+  const isError = status?.status === 'error'
   const grafanaPort = 3003 // Default Grafana port
   const influxPort = 3002 // Default InfluxDB port
 
@@ -368,7 +378,41 @@ const History: React.FC = () => {
         </CardFooter>
       </Card>
 
-      {/* Enable/Disable Card */}
+      {/* Error Recovery Card - Links to Doctor */}
+      {isError && (
+        <Card className="mb-4 border-danger">
+          <CardHeader className="text-danger">
+            <FontAwesomeIcon icon={faDatabase} className="me-2" />
+            History Error - Containers Not Running
+          </CardHeader>
+          <CardBody>
+            <Alert color="danger">
+              The history containers are in an error state. This can happen if:
+              <ul className="mb-0 mt-2">
+                <li>Containers were removed manually</li>
+                <li>The system was reinstalled</li>
+                <li>Container startup failed</li>
+              </ul>
+            </Alert>
+            <p>
+              Use the System Doctor to diagnose and repair this issue. The
+              Doctor can automatically re-enable the history containers.
+            </p>
+          </CardBody>
+          <CardFooter>
+            <Button
+              color="primary"
+              tag={Link}
+              to="/serverConfiguration/health"
+            >
+              <FontAwesomeIcon icon={faStethoscope} className="me-1" />
+              Open System Doctor
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+
+      {/* Enable Card */}
       {isDisabled && (
         <Card className="mb-4">
           <CardHeader>Enable History</CardHeader>
@@ -587,8 +631,17 @@ const History: React.FC = () => {
             </Row>
           </CardBody>
           <CardFooter>
-            <Button color="info" size="sm" onClick={handleRefreshGrafana}>
-              <FontAwesomeIcon icon={faSync} /> Refresh Grafana Token
+            <Button
+              color="info"
+              size="sm"
+              onClick={handleRefreshGrafana}
+              disabled={isRefreshing}
+            >
+              <FontAwesomeIcon
+                icon={faSync}
+                spin={isRefreshing}
+              />{' '}
+              {isRefreshing ? 'Refreshing...' : 'Refresh Grafana Token'}
             </Button>
             <small className="text-muted ms-2">
               Use this after changing SignalK security settings

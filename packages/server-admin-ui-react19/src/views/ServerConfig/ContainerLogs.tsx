@@ -1,5 +1,6 @@
 /* eslint-disable @eslint-react/no-array-index-key -- log entries don't have unique IDs */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import AnsiToHtml from 'ansi-to-html'
 import {
   Card,
   CardHeader,
@@ -55,6 +56,30 @@ const LOG_SOURCES: LogSourceInfo[] = [
 ]
 
 const LINE_OPTIONS = [100, 250, 500, 1000, 2500, 5000]
+
+// ANSI to HTML converter for colorized terminal output
+const ansiConverter = new AnsiToHtml({
+  fg: '#d4d4d4',
+  bg: '#1e1e1e',
+  colors: {
+    0: '#1e1e1e', // black
+    1: '#f44747', // red
+    2: '#6a9955', // green
+    3: '#dcdcaa', // yellow
+    4: '#569cd6', // blue
+    5: '#c586c0', // magenta
+    6: '#4ec9b0', // cyan
+    7: '#d4d4d4', // white
+    8: '#808080', // bright black
+    9: '#f44747', // bright red
+    10: '#6a9955', // bright green
+    11: '#dcdcaa', // bright yellow
+    12: '#569cd6', // bright blue
+    13: '#c586c0', // bright magenta
+    14: '#4ec9b0', // bright cyan
+    15: '#ffffff' // bright white
+  }
+})
 
 interface HistoryStatus {
   status: string
@@ -488,17 +513,20 @@ export default function ContainerLogs() {
             ref={logContainerRef}
             style={{
               overflowY: 'scroll',
-              maxHeight: '60vh',
-              border: '1px solid #ccc',
-              padding: '5px',
-              fontFamily: 'monospace',
-              fontSize: '12px',
+              height: 'calc(100vh - 350px)',
+              minHeight: '400px',
+              border: '1px solid #333',
+              borderRadius: '4px',
+              padding: '10px',
+              fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
+              fontSize: '13px',
+              lineHeight: '1.4',
               backgroundColor: '#1e1e1e',
               color: '#d4d4d4'
             }}
           >
             {logs.length === 0 ? (
-              <div className="text-center text-muted py-3">
+              <div className="text-center py-3" style={{ color: '#808080' }}>
                 {debouncedFilter
                   ? 'No logs match the filter'
                   : 'No logs available'}
@@ -509,11 +537,15 @@ export default function ContainerLogs() {
                   key={`${line.timestamp}-${index}`}
                   style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}
                 >
-                  <span style={{ color: '#808080' }}>{line.timestamp}</span>{' '}
+                  <span style={{ color: '#6a9955' }}>{line.timestamp}</span>{' '}
                   <span className={getLevelClass(line.level)}>
                     [{line.level.toUpperCase()}]
                   </span>{' '}
-                  <span>{line.message}</span>
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: ansiConverter.toHtml(line.message)
+                    }}
+                  />
                 </div>
               ))
             )}

@@ -369,11 +369,21 @@ export const healthApi = {
   },
 
   /**
-   * Run doctor/preflight checks
+   * Run doctor diagnosis (full check with issues and fixes)
    */
   runDoctor: async () => {
     if (shouldUseKeeper()) {
-      return getKeeperApi().doctor.preflight()
+      return getKeeperApi().doctor.diagnose()
+    }
+    return null
+  },
+
+  /**
+   * Apply a doctor fix
+   */
+  applyFix: async (fixId: string) => {
+    if (shouldUseKeeper()) {
+      return getKeeperApi().doctor.applyFix(fixId)
     }
     return null
   },

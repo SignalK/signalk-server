@@ -62,6 +62,8 @@ const SystemHealth: React.FC = () => {
   )
   const [isLoading, setIsLoading] = useState(false)
   const [isRunningDoctor, setIsRunningDoctor] = useState(false)
+  const [applyingFixId, setApplyingFixId] = useState<string | null>(null)
+  const [fixSuccess, setFixSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -148,6 +150,7 @@ const SystemHealth: React.FC = () => {
   const runDoctor = useCallback(async () => {
     setIsRunningDoctor(true)
     setError(null)
+    setFixSuccess(null)
     try {
       const result = await healthApi.runDoctor()
       if (result) {
@@ -159,6 +162,29 @@ const SystemHealth: React.FC = () => {
       setIsRunningDoctor(false)
     }
   }, [])
+
+  const applyFix = useCallback(
+    async (fixId: string, fixTitle: string) => {
+      setApplyingFixId(fixId)
+      setError(null)
+      setFixSuccess(null)
+      try {
+        const result = await healthApi.applyFix(fixId)
+        if (result?.success) {
+          setFixSuccess(`${fixTitle}: ${result.message}`)
+          // Re-run diagnosis to update the UI
+          await runDoctor()
+        } else {
+          setError(result?.message || 'Fix failed')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to apply fix')
+      } finally {
+        setApplyingFixId(null)
+      }
+    },
+    [runDoctor]
+  )
 
   const getStatusBadge = (status: 'healthy' | 'degraded' | 'unhealthy') => {
     const colors = {
@@ -316,6 +342,150 @@ const SystemHealth: React.FC = () => {
         </CardFooter>
       </Card>
 
+      {/* Doctor / Preflight Checks */}
+      <Card className="mb-4">
+        <CardHeader>
+          <FontAwesomeIcon icon={faStethoscope} className="me-2" />
+          System Doctor
+          {doctorResult && (
+            <span className="float-end">
+              <Badge
+                color={
+                  doctorResult.overall === 'pass'
+                    ? 'success'
+                    : doctorResult.overall === 'warn'
+                      ? 'warning'
+                      : 'danger'
+                }
+              >
+                {doctorResult.overall.toUpperCase()}
+              </Badge>
+            </span>
+          )}
+        </CardHeader>
+        <CardBody>
+          <p className="text-muted">
+            Run a comprehensive system check to identify potential issues with
+            your SignalK installation.
+          </p>
+          {doctorResult && (
+            <Table size="sm" className="mt-3">
+              <thead>
+                <tr>
+                  <th>Check</th>
+                  <th>Status</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {doctorResult.checks.map((check) => (
+                  <tr key={check.name}>
+                    <td>{check.name}</td>
+                    <td>{getCheckIcon(check.status)}</td>
+                    <td>
+                      {check.message}
+                      {check.details && (
+                        <small className="d-block text-muted">
+                          {check.details}
+                        </small>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+
+          {/* Issues with Fixes */}
+          {doctorResult?.issues && doctorResult.issues.length > 0 && (
+            <div className="mt-4">
+              <h6>
+                <FontAwesomeIcon
+                  icon={faExclamationTriangle}
+                  className="me-2 text-warning"
+                />
+                Issues Detected ({doctorResult.issues.length})
+              </h6>
+              {fixSuccess && (
+                <Alert color="success" className="mt-2">
+                  {fixSuccess}
+                </Alert>
+              )}
+              {doctorResult.issues.map((issue) => (
+                <Card
+                  key={issue.id}
+                  className={`mt-2 border-${issue.severity === 'critical' ? 'danger' : 'warning'}`}
+                >
+                  <CardBody className="py-2">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div>
+                        <strong
+                          className={
+                            issue.severity === 'critical'
+                              ? 'text-danger'
+                              : 'text-warning'
+                          }
+                        >
+                          {issue.title}
+                        </strong>
+                        <p className="mb-1 small text-muted">
+                          {issue.description}
+                        </p>
+                        <Badge color="secondary" className="me-1">
+                          {issue.category}
+                        </Badge>
+                        <Badge
+                          color={
+                            issue.severity === 'critical' ? 'danger' : 'warning'
+                          }
+                        >
+                          {issue.severity}
+                        </Badge>
+                      </div>
+                      {issue.autoFixable && issue.fixes.length > 0 && (
+                        <div>
+                          {issue.fixes.map((fix) => (
+                            <Button
+                              key={fix.id}
+                              color="success"
+                              size="sm"
+                              onClick={() => applyFix(fix.id, fix.title)}
+                              disabled={applyingFixId === fix.id}
+                              title={fix.description}
+                            >
+                              {applyingFixId === fix.id ? (
+                                <FontAwesomeIcon icon={faCircleNotch} spin />
+                              ) : (
+                                <FontAwesomeIcon icon={faSync} />
+                              )}{' '}
+                              {fix.title}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardBody>
+        <CardFooter>
+          <Button
+            color="primary"
+            onClick={runDoctor}
+            disabled={isRunningDoctor}
+          >
+            {isRunningDoctor ? (
+              <FontAwesomeIcon icon={faCircleNotch} spin />
+            ) : (
+              <FontAwesomeIcon icon={faStethoscope} />
+            )}{' '}
+            Run Doctor Check
+          </Button>
+        </CardFooter>
+      </Card>
+
       {/* Container Status */}
       {containerInfo && (
         <Card className="mb-4">
@@ -323,7 +493,17 @@ const SystemHealth: React.FC = () => {
             <FontAwesomeIcon icon={faServer} className="me-2" />
             Container Status
             <span className="float-end">
-              {getContainerStateBadge(containerInfo.state)}
+              {/* Running container badges */}
+              <Badge color="primary" className="me-1">SignalK</Badge>
+              {systemInfo?.keeper && (
+                <Badge color="info" className="me-1">Keeper</Badge>
+              )}
+              {systemInfo?.memory?.influxdbMB && systemInfo.memory.influxdbMB > 0 && (
+                <Badge color="warning" className="me-1">InfluxDB</Badge>
+              )}
+              {systemInfo?.memory?.grafanaMB && systemInfo.memory.grafanaMB > 0 && (
+                <Badge color="success" className="me-1">Grafana</Badge>
+              )}
             </span>
           </CardHeader>
           <CardBody>
@@ -332,8 +512,8 @@ const SystemHealth: React.FC = () => {
                 <Table size="sm" borderless>
                   <tbody>
                     <tr>
-                      <td>Name</td>
-                      <td className="text-end">{containerInfo.name}</td>
+                      <td>SignalK Container</td>
+                      <td className="text-end">{getContainerStateBadge(containerInfo.state)}</td>
                     </tr>
                     <tr>
                       <td>Image</td>
@@ -343,10 +523,6 @@ const SystemHealth: React.FC = () => {
                       >
                         {containerInfo.image}
                       </td>
-                    </tr>
-                    <tr>
-                      <td>Status</td>
-                      <td className="text-end">{containerInfo.status}</td>
                     </tr>
                     {containerInfo.health && (
                       <tr>
@@ -364,40 +540,128 @@ const SystemHealth: React.FC = () => {
                         </td>
                       </tr>
                     )}
+                    {systemInfo?.keeper && (
+                      <tr>
+                        <td>Keeper Version</td>
+                        <td className="text-end">{systemInfo.keeper.version}</td>
+                      </tr>
+                    )}
                   </tbody>
                 </Table>
               </Col>
-              {containerStats && (
-                <Col md={6}>
-                  <h6>Resource Usage</h6>
-                  <div className="mb-2">
-                    <small>
-                      CPU: {containerStats.cpu.percentage.toFixed(1)}%
-                    </small>
-                    <Progress
-                      value={containerStats.cpu.percentage}
-                      color="info"
-                      className="mb-2"
-                    />
+              <Col md={6}>
+                {/* CPU Usage */}
+                {systemInfo?.cpu && (
+                  <div className="mb-3">
+                    <h6>CPU Usage</h6>
+                    <div className="mb-1">
+                      <small>
+                        System: {systemInfo.cpu.systemPercent.toFixed(1)}% ({systemInfo.cpu.cpuCount} cores)
+                      </small>
+                      <Progress
+                        value={systemInfo.cpu.systemPercent}
+                        color="secondary"
+                        style={{ height: '10px' }}
+                      />
+                    </div>
+                    <div>
+                      <small>
+                        SignalK: {systemInfo.cpu.signalkPercent.toFixed(1)}%
+                      </small>
+                      <Progress
+                        value={systemInfo.cpu.signalkPercent}
+                        color="primary"
+                        style={{ height: '10px' }}
+                      />
+                    </div>
                   </div>
-                  <div className="mb-2">
-                    <small>
-                      Memory: {formatBytes(containerStats.memory.usage)} /{' '}
-                      {formatBytes(containerStats.memory.limit)}(
-                      {containerStats.memory.percentage.toFixed(1)}%)
+                )}
+
+                {/* Memory Usage */}
+                <h6>System Memory Usage</h6>
+                {systemInfo?.memory ? (
+                  <>
+                    <div className="mb-2">
+                      <Progress multi style={{ height: '20px' }}>
+                        <Progress
+                          bar
+                          color="primary"
+                          value={(systemInfo.memory.signalkMB / systemInfo.memory.totalMB) * 100}
+                        />
+                        {systemInfo.memory.keeperMB > 0 && (
+                          <Progress
+                            bar
+                            color="info"
+                            value={(systemInfo.memory.keeperMB / systemInfo.memory.totalMB) * 100}
+                          />
+                        )}
+                        {systemInfo.memory.influxdbMB > 0 && (
+                          <Progress
+                            bar
+                            color="warning"
+                            value={(systemInfo.memory.influxdbMB / systemInfo.memory.totalMB) * 100}
+                          />
+                        )}
+                        {systemInfo.memory.grafanaMB > 0 && (
+                          <Progress
+                            bar
+                            color="success"
+                            value={(systemInfo.memory.grafanaMB / systemInfo.memory.totalMB) * 100}
+                          />
+                        )}
+                      </Progress>
+                    </div>
+                    <small className="text-muted">
+                      <Badge color="primary" className="me-1">SignalK: {systemInfo.memory.signalkMB} MB</Badge>
+                      {systemInfo.memory.keeperMB > 0 && (
+                        <Badge color="info" className="me-1">Keeper: {systemInfo.memory.keeperMB} MB</Badge>
+                      )}
+                      {systemInfo.memory.influxdbMB > 0 && (
+                        <Badge color="warning" className="me-1">InfluxDB: {systemInfo.memory.influxdbMB} MB</Badge>
+                      )}
+                      {systemInfo.memory.grafanaMB > 0 && (
+                        <Badge color="success" className="me-1">Grafana: {systemInfo.memory.grafanaMB} MB</Badge>
+                      )}
                     </small>
-                    <Progress
-                      value={containerStats.memory.percentage}
-                      color="success"
-                      className="mb-2"
-                    />
-                  </div>
-                  <small className="text-muted">
+                    <div className="mt-2">
+                      <small className="text-muted">
+                        Total: {systemInfo.memory.usedMB} MB / {systemInfo.memory.totalMB} MB ({systemInfo.memory.usedPercent}%)
+                      </small>
+                    </div>
+                  </>
+                ) : containerStats ? (
+                  <>
+                    <div className="mb-2">
+                      <small>
+                        CPU: {containerStats.cpu.percentage.toFixed(1)}%
+                      </small>
+                      <Progress
+                        value={containerStats.cpu.percentage}
+                        color="info"
+                        className="mb-2"
+                      />
+                    </div>
+                    <div className="mb-2">
+                      <small>
+                        Memory: {formatBytes(containerStats.memory.usage)} /{' '}
+                        {formatBytes(containerStats.memory.limit)} (
+                        {containerStats.memory.percentage.toFixed(1)}%)
+                      </small>
+                      <Progress
+                        value={containerStats.memory.percentage}
+                        color="primary"
+                        className="mb-2"
+                      />
+                    </div>
+                  </>
+                ) : null}
+                {containerStats && (
+                  <small className="text-muted d-block mt-2">
                     Network: {formatBytes(containerStats.network.rxBytes)} rx /{' '}
                     {formatBytes(containerStats.network.txBytes)} tx
                   </small>
-                </Col>
-              )}
+                )}
+              </Col>
             </Row>
           </CardBody>
         </Card>
@@ -463,6 +727,18 @@ const SystemHealth: React.FC = () => {
                         )}
                       </td>
                     </tr>
+                    <tr>
+                      <td>CAN Interfaces (SocketCAN)</td>
+                      <td className="text-end">
+                        {systemInfo.capabilities.canInterfaces?.length > 0 ? (
+                          <Badge color="success">
+                            {systemInfo.capabilities.canInterfaces.length} found
+                          </Badge>
+                        ) : (
+                          <Badge color="secondary">None</Badge>
+                        )}
+                      </td>
+                    </tr>
                   </tbody>
                 </Table>
               </Col>
@@ -494,76 +770,6 @@ const SystemHealth: React.FC = () => {
           </CardBody>
         </Card>
       )}
-
-      {/* Doctor / Preflight Checks */}
-      <Card className="mb-4">
-        <CardHeader>
-          <FontAwesomeIcon icon={faStethoscope} className="me-2" />
-          System Doctor
-          {doctorResult && (
-            <span className="float-end">
-              <Badge
-                color={
-                  doctorResult.overall === 'pass'
-                    ? 'success'
-                    : doctorResult.overall === 'warn'
-                      ? 'warning'
-                      : 'danger'
-                }
-              >
-                {doctorResult.overall.toUpperCase()}
-              </Badge>
-            </span>
-          )}
-        </CardHeader>
-        <CardBody>
-          <p className="text-muted">
-            Run a comprehensive system check to identify potential issues with
-            your SignalK installation.
-          </p>
-          {doctorResult && (
-            <Table size="sm" className="mt-3">
-              <thead>
-                <tr>
-                  <th>Check</th>
-                  <th>Status</th>
-                  <th>Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {doctorResult.checks.map((check) => (
-                  <tr key={check.name}>
-                    <td>{check.name}</td>
-                    <td>{getCheckIcon(check.status)}</td>
-                    <td>
-                      {check.message}
-                      {check.details && (
-                        <small className="d-block text-muted">
-                          {check.details}
-                        </small>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </CardBody>
-        <CardFooter>
-          <Button
-            color="primary"
-            onClick={runDoctor}
-            disabled={isRunningDoctor}
-          >
-            {isRunningDoctor ? (
-              <FontAwesomeIcon icon={faCircleNotch} spin />
-            ) : (
-              <FontAwesomeIcon icon={faStethoscope} />
-            )}{' '}
-            Run Doctor Check
-          </Button>
-        </CardFooter>
-      </Card>
     </div>
   )
 }

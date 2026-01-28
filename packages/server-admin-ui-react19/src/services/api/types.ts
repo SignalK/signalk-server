@@ -146,10 +146,44 @@ export interface DoctorCheck {
   details?: string
 }
 
+export interface DoctorFix {
+  id: string
+  issueId: string
+  title: string
+  description: string
+  fixType: string
+  destructive: boolean
+  requiresBackup: boolean
+  offlineCapable: boolean
+  estimatedDuration: string
+  steps: string[]
+}
+
+export interface DoctorIssue {
+  id: string
+  severity: 'critical' | 'warning' | 'info'
+  category: string
+  title: string
+  description: string
+  detectedAt: string
+  autoFixable: boolean
+  fixes: DoctorFix[]
+}
+
 export interface DoctorResult {
   overall: 'pass' | 'warn' | 'fail'
   checks: DoctorCheck[]
+  issues?: DoctorIssue[]
   timestamp: string
+}
+
+export interface FixResult {
+  success: boolean
+  fixId: string
+  message: string
+  requiresRestart: boolean
+  backupCreated?: string
+  nextSteps?: string[]
 }
 
 export interface SystemInfo {
@@ -160,11 +194,32 @@ export interface SystemInfo {
     dbus: boolean
     bluetooth: boolean
     serialPorts: string[]
+    canInterfaces: string[]
   }
   storage: {
     total: number
     used: number
     available: number
+  }
+  memory?: {
+    totalMB: number
+    usedMB: number
+    availableMB: number
+    usedPercent: number
+    signalkMB: number
+    keeperMB: number
+    influxdbMB: number
+    grafanaMB: number
+    otherMB: number
+  }
+  keeper?: {
+    version: string
+    uptime: string
+  }
+  cpu?: {
+    systemPercent: number
+    signalkPercent: number
+    cpuCount: number
   }
 }
 
