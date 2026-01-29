@@ -54,25 +54,38 @@ export class Alarm {
     }
   }
 
-  /** Initialise Alarm from peristed state */
-  public init(v: Alarm) {
-    this.path = v.path
-    this.value = v.value
-    this.external = v.external
-    this.status = v.status
-    this.context = v.context
-    this.update = v.update
-    this.path = v.path
-    this.value = v.value
+  /**
+   * Initialise Alarm from peristed state
+   * @param a Alarm object
+   */
+  public init(a: Alarm) {
+    this.path = a.path
+    this.value = a.value
+    this.external = a.external
+    this.status = a.status
+    this.context = a.context
+    this.update = a.update
+    this.path = a.path
+    this.value = a.value ?? this.value
   }
 
-  /** Extract and populate attrributes from delta */
+  /**
+   * Extract and populate attrributes from delta
+   * @param delta update Delta message
+   */
   private parseDelta(delta: Delta) {
     this.context = delta.context as Context
     this.update = delta.updates[0]
     if (hasValues(this.update)) {
       this.path = this.update.values[0].path
-      this.value = this.update.values[0].value as Notification
+      // ensure value is not empty
+      if (this.update.values[0].value) {
+        this.value = this.update.values[0].value as Notification
+      } else {
+        this.value.message = ''
+        this.value.method = []
+        this.value.state = ALARM_STATE.normal
+      }
     }
   }
 
@@ -93,12 +106,15 @@ export class Alarm {
     }
   }
 
-  /** Update the timestamp to now() */
+  /** Update the timestamp to the current date / time */
   private timeStamp() {
     this.update.timestamp = new Date().toISOString() as Timestamp
   }
 
-  /** create / update alarm from delta */
+  /**
+   * Create / update alarm from incoming Delta message
+   * @param delta update Delta message
+   */
   public fromDelta(delta: Delta) {
     this.external = true
     this.status.canClear = false
@@ -133,12 +149,17 @@ export class Alarm {
     this.alignAlarmMethod()
   }
 
-  /** Returns true if Alarm is external */
+  /**
+   * Returns true if Alarm is external (generated from incoming Delta message)
+   */
   get isExternal(): boolean {
     return this.external
   }
 
-  /** Return delta to send */
+  /**
+   * Generates and returns the delta payload for use with `handleMessage()`
+   * @returns Delta message payload
+   */
   get delta(): Delta {
     if (hasValues(this.update)) {
       this.update.values = [
@@ -170,13 +191,16 @@ export class Alarm {
     }
   }
 
-  /** Return external key ($source/context/path) of the alarm */
+  /**
+   * Return the external key ($source/context/path) of an alarm generated from incoming Delta.
+   */
   get extKey(): string {
     return `${this.update.$source}/${this.context}/${this.path}`
   }
 
-  /** Sets the path associated with the alarm
-   * @param id If supplied the id will be appended to the notification path
+  /**
+   * Sets the path associated with the alarm.
+   * @param id If supplied, the identifier will be appended to the notification path.
    */
   public setPath(path: Path, id?: string) {
     if (path) {

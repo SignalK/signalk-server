@@ -50,7 +50,7 @@ export class NotificationManager {
           alarm.init(i.value)
           this.alarms.set(i.id, alarm)
         })
-        this.clean(true, true)
+        this.clean(true)
         // emit notifications for loaded alarms
         this.alarms.forEach((alarm: Alarm) => {
           this.emitNotification(alarm)
@@ -215,7 +215,11 @@ export class NotificationManager {
     this.emitNotification(alarm)
   }
 
-  /** Process alarm from notification delta */
+  /**
+   * Process alarm from notification delta
+   * @param u Update object of incoming Delta message
+   * @param context Incoming Delta message context value
+   */
   async fromDelta(u: Update, context: Context) {
     if (hasValues(u) && u.values.length) {
       const id = u.notificationId as string
@@ -236,20 +240,22 @@ export class NotificationManager {
   /**
    * Clean out alarms that have returned to and remained in NORMAL state
    * for the duration of CLEAN_INTERVAL
-   * @param [force=false] Does not queue alarms for cleaning, immediate deletion
-   * @param allExternal Clean all "external" alarm entries ignoring state.
+   * @param startUp Indicates that clean has been called during the startup process.
    */
-  private clean(force = false, allExternal?: boolean) {
+  private clean(startUp?: boolean) {
     const al: string[] = []
     const nk: string[] = []
     const nextClean: string[] = []
     this.alarms.forEach((v: Alarm, k: string) => {
-      if (allExternal && v.isExternal) {
-        al.push(k)
-        nk.push(v.extKey)
-      }
-      if (v.value?.state === 'normal') {
-        if (force || this.forCleaning.includes(k)) {
+      if (startUp) {
+        if (v.value?.state === ALARM_STATE.normal) {
+          al.push(k)
+        }
+      } else {
+        if (
+          this.forCleaning.includes(k) &&
+          v.value?.state === ALARM_STATE.normal
+        ) {
           al.push(k)
           nk.push(v.extKey)
         } else {
