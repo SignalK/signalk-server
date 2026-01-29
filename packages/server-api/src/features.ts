@@ -76,3 +76,4 @@ export type SignalKApiId =
   | 'radar'
   | 'historyplayback' //https://signalk.org/specification/1.7.0/doc/streaming_api.html#history-playback
   | 'historysnapshot' //https://signalk.org/specification/1.7.0/doc/rest_api.html#history-snapshot-retrieval
+  | 'notifications'

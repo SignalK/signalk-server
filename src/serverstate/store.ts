@@ -30,7 +30,7 @@ export class Store {
   }
 
   // Wait for initialization to complete before performing operations
-  private async waitForInit(): Promise<void> {
+  async waitForInit(): Promise<void> {
     if (this.initPromise) {
       await this.initPromise
     }
