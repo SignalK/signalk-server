@@ -50,7 +50,7 @@ export class NotificationManager {
           alarm.init(i.value)
           this.alarms.set(i.id, alarm)
         })
-        this.clean(true)
+        this.clean(true, true)
         // emit notifications for loaded alarms
         this.alarms.forEach((alarm: Alarm) => {
           this.emitNotification(alarm)
@@ -236,13 +236,19 @@ export class NotificationManager {
   /**
    * Clean out alarms that have returned to and remained in NORMAL state
    * for the duration of CLEAN_INTERVAL
+   * @param [force=false] Does not queue alarms for cleaning, immediate deletion
+   * @param allExternal Clean all "external" alarm entries ignoring state.
    */
-  private clean(force = false) {
+  private clean(force = false, allExternal?: boolean) {
     const al: string[] = []
     const nk: string[] = []
     const nextClean: string[] = []
     this.alarms.forEach((v: Alarm, k: string) => {
-      if (v.value.state === 'normal') {
+      if (allExternal && v.isExternal) {
+        al.push(k)
+        nk.push(v.extKey)
+      }
+      if (v.value?.state === 'normal') {
         if (force || this.forCleaning.includes(k)) {
           al.push(k)
           nk.push(v.extKey)

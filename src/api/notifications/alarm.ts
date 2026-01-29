@@ -105,24 +105,37 @@ export class Alarm {
 
     this.parseDelta(delta)
 
-    if (!this.status.acknowledged && 'acknowledgeStatus' in this.value) {
+    if (
+      !this.status.acknowledged &&
+      this.value &&
+      'acknowledgeStatus' in this.value
+    ) {
       this.status.acknowledged =
         this.value.acknowledgeStatus === 'Yes' ? true : false
     }
-    if (!this.status.silenced && 'temporarySilenceStatus' in this.value) {
+    if (
+      !this.status.silenced &&
+      this.value &&
+      'temporarySilenceStatus' in this.value
+    ) {
       this.status.silenced =
         this.value.temporarySilenceStatus === 'Yes' ? true : false
     }
 
-    if ('temporarySilenceSupport' in this.value) {
+    if (this.value && 'temporarySilenceSupport' in this.value) {
       this.status.canSilence =
         this.value.temporarySilenceSupport === 'Yes' ? true : false
     }
-    if ('acknowledgeSupport' in this.value) {
+    if (this.value && 'acknowledgeSupport' in this.value) {
       this.status.canAcknowledge =
         this.value.acknowledgeSupport === 'Yes' ? true : false
     }
     this.alignAlarmMethod()
+  }
+
+  /** Returns true if Alarm is external */
+  get isExternal(): boolean {
+    return this.external
   }
 
   /** Return delta to send */
@@ -131,11 +144,13 @@ export class Alarm {
       this.update.values = [
         {
           path: this.path,
-          value: Object.assign(
-            this.value,
-            { id: this.update.notificationId },
-            { status: this.status }
-          )
+          value: this.value
+            ? Object.assign(
+                this.value,
+                { id: this.update.notificationId },
+                { status: this.status }
+              )
+            : this.value
         }
       ]
     }
