@@ -16,6 +16,15 @@ They contain a `path` value that starts with the text `notifications` and a payl
 - How the event / condition should be indicated to the operator (`method`)
 - What actions can be / have been taken (`status`)
 
+<img src="../../img/notification_manager.svg" width="600px">
+
+The **Notifications API** introduces the following components into the Signal K server's
+delta processing chain:
+
+1. Notification Manager: Provides centralised management for all notifications including the emission of notification deltas
+2. Input Handler: Inspects all incoming deltas and routes notification messages _(i.e. path starts with `notifications`)_ to the Notification Manager.
+3. Notification API: REST endpoints for raising and actioning notifications and their associated alarm.
+
 ### Terminology
 
 > The Signal K specification uses the terms `notification` and `alarm` interchangably, whilst Signal K Server assigns notification deltas originating from NMEA2000 alarm PGNs with atrributes with the term `alert`.
