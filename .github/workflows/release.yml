@@ -245,7 +245,10 @@ jobs:
     permissions:
       packages: write
     steps:
-      - name: Remove Docker Image from GHCR
+      - name: Wait for GHCR indexing
+        run: sleep 60
+      - name: Remove Temporary & Untagged Docker Images from GHCR
+        continue-on-error: true
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
           packages: signalk-server
