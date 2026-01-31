@@ -109,7 +109,7 @@ export interface ServerAPI
     aPath: string,
     value: unknown,
     updateCb: () => void
-  ): Promise<unknown>
+  ): Promise<unknown> //see requestResponse.createReply
 
   /**
    * Call the PUT handler for a path with a specified context.
@@ -124,7 +124,7 @@ export interface ServerAPI
     value: number | string | object | boolean,
     updateCb: (err?: Error) => void,
     source: string
-  ): Promise<unknown>
+  ): Promise<unknown> //see requestResponse.createReply
 
   /**
    * @category Data Model
