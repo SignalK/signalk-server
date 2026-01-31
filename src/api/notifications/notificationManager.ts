@@ -50,7 +50,6 @@ export class NotificationManager {
           alarm.init(i.value)
           this.alarms.set(i.id, alarm)
         })
-        this.clean(true)
         // emit notifications for loaded alarms
         this.alarms.forEach((alarm: Alarm) => {
           this.emitNotification(alarm)
@@ -240,27 +239,20 @@ export class NotificationManager {
   /**
    * Clean out alarms that have returned to and remained in NORMAL state
    * for the duration of CLEAN_INTERVAL
-   * @param startUp Indicates that clean has been called during the startup process.
    */
-  private clean(startUp?: boolean) {
+  private clean() {
     const al: string[] = []
     const nk: string[] = []
     const nextClean: string[] = []
     this.alarms.forEach((v: Alarm, k: string) => {
-      if (startUp) {
-        if (v.value?.state === ALARM_STATE.normal) {
-          al.push(k)
-        }
+      if (
+        this.forCleaning.includes(k) &&
+        v.value?.state === ALARM_STATE.normal
+      ) {
+        al.push(k)
+        nk.push(v.extKey)
       } else {
-        if (
-          this.forCleaning.includes(k) &&
-          v.value?.state === ALARM_STATE.normal
-        ) {
-          al.push(k)
-          nk.push(v.extKey)
-        } else {
-          nextClean.push(k)
-        }
+        nextClean.push(k)
       }
     })
     this.forCleaning = ([] as string[]).concat(nextClean)

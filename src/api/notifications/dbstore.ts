@@ -71,6 +71,11 @@ export class DbStore {
           value TEXT NOT NULL
         )
       `)
+      // clean alarms
+      this.db.exec(`
+        DELETE from alarms where json_extract(value, '$.external') = true
+        OR json_extract(value, '$.value.state') = 'normal'
+      `)
     } catch (err) {
       console.error(err)
     }
