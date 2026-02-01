@@ -46,6 +46,10 @@ export interface ServerAPI
   /**
    * Returns the entry for the provided path starting from `vessels.self` in the full data model.
    *
+   * @remarks
+   * Returns `unknown` because the Signal K data model is dynamic and path-dependent.
+   * Callers should validate the returned type at runtime.
+   *
    * @example
    * ```ts
    * let uuid = app.getSelfPath('uuid');
@@ -57,11 +61,14 @@ export interface ServerAPI
    *
    * @category Data Model
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getSelfPath(path: string): any
+  getSelfPath(path: string): unknown
 
   /**
    * Returns the entry for the provided path starting from the `root` of the full data model.
+   *
+   * @remarks
+   * Returns `unknown` because the Signal K data model is dynamic and path-dependent.
+   * Callers should validate the returned type at runtime.
    *
    * @example
    * ```javascript
@@ -84,8 +91,7 @@ export interface ServerAPI
    *
    * @category Data Model
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getPath(path: string): any // TODO: return SignalK data model type
+  getPath(path: string): unknown
 
   /**
    * @category Data Model
@@ -93,12 +99,24 @@ export interface ServerAPI
   getMetadata(path: string): Metadata | undefined
 
   /**
+   * Call the PUT handler for a path on the vessel's own context.
+   * @param aPath - The path for the PUT request
+   * @param value - The value to send in the PUT request
+   * @param updateCb - Callback invoked when the update completes
    * @category Data Model
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  putSelfPath(aPath: string, value: any, updateCb: () => void): Promise<any>
+  putSelfPath(
+    aPath: string,
+    value: unknown,
+    updateCb: () => void
+  ): Promise<unknown> //see requestResponse.createReply
 
   /**
+   * Call the PUT handler for a path with a specified context.
+   * @param aPath - The path for the PUT request
+   * @param value - The value to send in the PUT request
+   * @param updateCb - Callback invoked when the update completes, with error if failed
+   * @param source - The source identifier for this update
    * @category Data Model
    */
   putPath(
@@ -106,8 +124,7 @@ export interface ServerAPI
     value: number | string | object | boolean,
     updateCb: (err?: Error) => void,
     source: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any>
+  ): Promise<unknown> //see requestResponse.createReply
 
   /**
    * @category Data Model
@@ -120,9 +137,12 @@ export interface ServerAPI
    */
   subscriptionmanager: SubscriptionManager
 
-  //TSTODO convert queryRequest to ts
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  queryRequest(requestId: string): Promise<any>
+  /**
+   * Query the status of an async request by its ID.
+   * @param requestId - The request ID to query
+   * @returns Promise resolving to the request status/result
+   */
+  queryRequest(requestId: string): Promise<unknown>
 
   /**
    * @category Status and Debugging
@@ -391,9 +411,8 @@ export interface ServerAPI
       cb: (deltas: object[]) => void
     ) => void
     streamHistory: (
-      // TSTODO propert type
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      spark: any,
+      /** Primus spark connection - typed as unknown due to dynamic Primus types */
+      spark: unknown,
       options: object,
       onDelta: (delta: object) => void
     ) => void
@@ -446,8 +465,8 @@ export interface Ports {
   byId: string[]
   byPath: string[]
   byOpenPlotter: string[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  serialports: any
+  /** Raw serial port info from serialport library - structure varies by platform */
+  serialports: unknown
 }
 
 /** @category Server API */
@@ -463,12 +482,18 @@ export interface Metadata {
   description?: string
 }
 
-/** @category Server API */
+/**
+ * Handler function for PUT/action requests.
+ * @param context - The context (e.g., 'vessels.self')
+ * @param path - The path specified in the PUT request
+ * @param value - The value being set (type depends on the path)
+ * @param callback - Callback for async completion
+ * @category Server API
+ */
 export type ActionHandler = (
   context: string,
   path: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: any,
+  value: unknown,
   callback: (result: ActionResult) => void
 ) => ActionResult
 
