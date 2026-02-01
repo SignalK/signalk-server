@@ -123,10 +123,14 @@ jobs:
       packages: write
 
     steps:
+      - name: Wait for GHCR indexing
+        run: sleep 60
       - name: Remove Docker Image from GHCR
+        continue-on-error: true
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
           packages: signalk-server-base
           delete-untagged: true
-          delete-tags: amd-*,arm-*
+          delete-tags: |
+            amd-*,arm-*
           token: ${{ secrets.GHCR_PAT }} # Need to have delete permission

@@ -1,7 +1,7 @@
 import { Delta, Path } from './deltas'
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const metaDelta: Delta = {
+// Type-check tests - verify Delta types compile correctly
+const _typeCheckMetaDelta: Delta = {
   updates: [
     {
       meta: [
@@ -15,9 +15,9 @@ const metaDelta: Delta = {
     }
   ]
 }
+void _typeCheckMetaDelta
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const valuesDelta: Delta = {
+const _typeCheckValuesDelta: Delta = {
   updates: [
     {
       values: [
@@ -31,9 +31,9 @@ const valuesDelta: Delta = {
     }
   ]
 }
+void _typeCheckValuesDelta
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const combinedDelta: Delta = {
+const _typeCheckCombinedDelta: Delta = {
   updates: [
     {
       meta: [
@@ -57,3 +57,4 @@ const combinedDelta: Delta = {
     }
   ]
 }
+void _typeCheckCombinedDelta

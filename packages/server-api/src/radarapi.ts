@@ -114,9 +114,11 @@ export interface ControlDefinitionV5 {
     description?: string
   }>
 
-  /** For type: "compound" - property definitions */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  properties?: Record<string, any>
+  /**
+   * For type: "compound" - property definitions.
+   * Structure varies by control type (radar-specific).
+   */
+  properties?: Record<string, unknown>
 
   /** Supported modes (auto/manual) */
   modes?: ('auto' | 'manual')[]
@@ -125,9 +127,11 @@ export interface ControlDefinitionV5 {
 
   /** Whether this control is read-only */
   readOnly?: boolean
-  /** Default value */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  default?: any
+  /**
+   * Default value for this control.
+   * Type depends on the control type (boolean, number, enum value, or compound object).
+   */
+  default?: boolean | number | string | Record<string, unknown>
 }
 
 /**
@@ -151,8 +155,8 @@ export interface ControlConstraint {
   effect: {
     disabled?: boolean
     readOnly?: boolean
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    allowedValues?: any[]
+    /** Restricted set of allowed values when constraint is active */
+    allowedValues?: (string | number | boolean)[]
     reason?: string
   }
 }
@@ -250,9 +254,11 @@ export interface RadarState {
   /** Current operational status */
   status: RadarStatus
 
-  /** Current control values keyed by control ID */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  controls: Record<string, any>
+  /**
+   * Current control values keyed by control ID.
+   * Value types depend on the control type defined in CapabilityManifest.
+   */
+  controls: Record<string, unknown>
 
   /** Controls that are currently disabled and why */
   disabledControls?: Array<{
@@ -637,23 +643,21 @@ export interface RadarProviderMethods {
    * Get a single control value.
    * @param radarId The radar ID
    * @param controlId The semantic control ID (e.g., "gain", "beamSharpening")
-   * @returns Control value or null if not found
+   * @returns Control value or null if not found. Type depends on control definition.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getControl?: (radarId: string, controlId: string) => Promise<any | null>
+  getControl?: (radarId: string, controlId: string) => Promise<unknown>
 
   /**
    * Set a single control value.
    * @param radarId The radar ID
    * @param controlId The semantic control ID (e.g., "gain", "beamSharpening")
-   * @param value The value to set
+   * @param value The value to set. Type depends on control definition.
    * @returns Result with success flag and optional error
    */
   setControl?: (
     radarId: string,
     controlId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    value: any
+    value: unknown
   ) => Promise<{ success: boolean; error?: string }>
 
   // ============================================
@@ -806,19 +810,19 @@ export interface RadarProviders {
  *
  * @category Radar API
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const isRadarProvider = (obj: any): obj is RadarProvider => {
-  const typedObj = obj
+export const isRadarProvider = (obj: unknown): obj is RadarProvider => {
+  if (typeof obj !== 'object' || obj === null) {
+    return false
+  }
+  const typedObj = obj as Record<string, unknown>
+  const methods = typedObj['methods']
   return (
-    ((typedObj !== null && typeof typedObj === 'object') ||
-      typeof typedObj === 'function') &&
     typeof typedObj['name'] === 'string' &&
-    ((typedObj['methods'] !== null &&
-      typeof typedObj['methods'] === 'object') ||
-      typeof typedObj['methods'] === 'function') &&
-    (typeof typedObj['methods']['pluginId'] === 'undefined' ||
-      typeof typedObj['methods']['pluginId'] === 'string') &&
-    typeof typedObj['methods']['getRadars'] === 'function' &&
-    typeof typedObj['methods']['getRadarInfo'] === 'function'
+    typeof methods === 'object' &&
+    methods !== null &&
+    (typeof (methods as Record<string, unknown>)['pluginId'] === 'undefined' ||
+      typeof (methods as Record<string, unknown>)['pluginId'] === 'string') &&
+    typeof (methods as Record<string, unknown>)['getRadars'] === 'function' &&
+    typeof (methods as Record<string, unknown>)['getRadarInfo'] === 'function'
   )
 }

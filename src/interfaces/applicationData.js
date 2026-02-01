@@ -218,7 +218,11 @@ module.exports = function (app) {
   }
 
   function validateAppId(appid) {
-    return appid.length < 30 && appid.indexOf('/') === -1 ? appid : null
+    return appid.length < 30 &&
+      appid.indexOf('/') === -1 &&
+      appid.indexOf('\\') === -1
+      ? appid
+      : null
   }
 
   function validateVersion(version) {
@@ -236,10 +240,17 @@ module.exports = function (app) {
   }
 
   function pathForApplicationData(req, appid, version, isUser) {
-    return path.join(
-      dirForApplicationData(req, appid, isUser),
-      `${version}.json`
+    const filePath = path.normalize(
+      path.join(dirForApplicationData(req, appid, isUser), `${version}.json`)
     )
+    const configPath = path.resolve(app.config.configPath)
+    const resolvedPath = path.resolve(filePath)
+
+    if (!resolvedPath.startsWith(configPath)) {
+      throw new Error('Invalid path: outside configuration directory')
+    }
+
+    return filePath
   }
 
   function saveApplicationData(req, appid, version, isUser, data, callback) {

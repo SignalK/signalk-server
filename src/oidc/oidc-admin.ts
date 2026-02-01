@@ -22,12 +22,12 @@ import { getDiscoveryDocument } from './discovery'
 const SERVERROUTESPREFIX = '/skServer'
 
 /**
- * Security configuration structure (subset needed for OIDC admin)
+ * Security configuration structure (subset needed for OIDC admin).
+ * Allows additional properties since the full security config has many fields.
  */
 export interface SecurityConfigForOIDC {
   oidc?: PartialOIDCConfig
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**

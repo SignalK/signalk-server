@@ -12,7 +12,7 @@ const setupTest = (done: () => void, startAt: number) => {
   ]
   const pv = new PropertyValues()
   let cbCount = 0
-  const cb = (values: PropertyValue[]) => {
+  const cb = (values: (PropertyValue | undefined)[]) => {
     expect(values).to.deep.equal([
       undefined,
       ...testValues.slice(0, startAt + cbCount++)
@@ -30,13 +30,13 @@ describe('PropertyValues', () => {
     const { pv, cb, testValues } = setupTest(done, 0)
     // subscribe, then emit
     pv.onPropertyValues('foo', cb)
-    pv.emitPropertyValue(testValues[0])
+    pv.emitPropertyValue(testValues[0]!)
   })
 
   it('late subscriptions work', (done) => {
     const { pv, cb, testValues } = setupTest(done, 1)
     // emit, then subscribe
-    pv.emitPropertyValue(testValues[0])
+    pv.emitPropertyValue(testValues[0]!)
     pv.onPropertyValues('foo', cb)
   })
 
@@ -51,8 +51,7 @@ describe('PropertyValues', () => {
   })
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const newPropertyValue = (value: any) => ({
+const newPropertyValue = (value: unknown): PropertyValue => ({
   timestamp: Date.now(),
   setter: 'foobar',
   name: 'aProperty',

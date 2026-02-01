@@ -360,8 +360,10 @@ module.exports = (server: ResourceProviderApp): Plugin => {
   }
 
   const getVesselPosition = () => {
-    const p = server.getSelfPath('navigation.position')
-    return p && p.value ? [p.value.longitude, p.value.latitude] : null
+    const p = server.getSelfPath('navigation.position') as
+      | { value?: { longitude: number; latitude: number } }
+      | undefined
+    return p?.value ? [p.value.longitude, p.value.latitude] : null
   }
 
   const registerProviders = (resTypes: string[]): string[] => {

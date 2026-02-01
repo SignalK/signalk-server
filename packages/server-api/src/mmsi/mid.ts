@@ -309,7 +309,7 @@ export const MID: Mid2FlagCountries = Object.entries({
   '765': ['SR', 'SUR', '', 'Suriname'],
   '770': ['UY', 'URY', '', 'Uruguay'],
   '775': ['VE', 'VEN', '', 'Venezuela']
-}).reduce<Mid2FlagCountries>((acc, [key, [alpha2, alpha3, _unused, name]]) => {
-  acc[key] = { alpha2, alpha3, name }
+}).reduce<Mid2FlagCountries>((acc, [key, [alpha2, alpha3, , name]]) => {
+  acc[key] = { alpha2, alpha3, name } as FlagCountry
   return acc
 }, {})

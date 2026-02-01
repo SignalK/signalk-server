@@ -24,7 +24,8 @@ import { OIDCError, OIDCUserInfo } from './types'
  */
 export function decodeIdToken(idToken: string): Record<string, unknown> {
   const parts = idToken.split('.')
-  if (parts.length !== 3) {
+  const payloadPart = parts[1]
+  if (parts.length !== 3 || !payloadPart) {
     throw new OIDCError(
       'Invalid ID token format - expected 3 parts',
       'INVALID_TOKEN'
@@ -32,7 +33,7 @@ export function decodeIdToken(idToken: string): Record<string, unknown> {
   }
 
   try {
-    const payload = Buffer.from(parts[1], 'base64url').toString('utf8')
+    const payload = Buffer.from(payloadPart, 'base64url').toString('utf8')
     return JSON.parse(payload)
   } catch (err) {
     throw new OIDCError(

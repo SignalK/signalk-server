@@ -37,10 +37,12 @@ import Bacon from 'baconjs'
  */
 export interface PropertyValuesEmitter {
   /**
+   * Emit a property value that can be received by listeners.
+   * @param name - The property name identifier
+   * @param value - The value to emit (can be any type including functions)
    * @category Property Values
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  emitPropertyValue(name: string, value: any): void
+  emitPropertyValue(name: string, value: unknown): void
 
   /**
    * @category Property Values
@@ -50,23 +52,30 @@ export interface PropertyValuesEmitter {
 
 /** @category Server API */
 export interface PropertyValue {
-  timestamp: number // millis
-  setter: string // plugin id, server
+  /** Timestamp in milliseconds */
+  timestamp: number
+  /** Source identifier (plugin id, server, provider id) */
+  setter: string
+  /** Property name */
   name: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: any
+  /** The property value (can be any type including functions) */
+  value: unknown
 }
 
-/** @category Server API */
+/**
+ * Callback function for property value subscriptions.
+ * The history array starts with `undefined` as the initial value.
+ * @category Server API
+ */
 export type PropertyValuesCallback = (
-  propValuesHistory: PropertyValue[]
+  propValuesHistory: (PropertyValue | undefined)[]
 ) => void
 
 /** @hidden */
 interface StreamTuple {
   bus: Bacon.Bus<unknown, PropertyValue | undefined>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  stream: any
+  /** Bacon.js stream - typed as unknown due to baconjs weak typing */
+  stream: Bacon.Property<unknown, (PropertyValue | undefined)[]>
 }
 
 /** @category Server API */

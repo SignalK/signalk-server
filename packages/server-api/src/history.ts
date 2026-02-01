@@ -15,8 +15,11 @@ export type ValueList = {
   method: AggregateMethod
 }[]
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataRow = [Timestamp, ...any[]]
+/**
+ * A row of historical data: first element is timestamp, followed by aggregated values.
+ * Values can be primitives, objects (like navigation.position), or null depending on the path.
+ */
+export type DataRow = [Timestamp, ...unknown[]]
 
 export interface ValuesResponse {
   context: Context
@@ -29,8 +32,8 @@ export interface ValuesResponse {
   data: DataRow[]
 }
 
-/** @ignore */
-const _example: ValuesResponse = {
+// Type-check test - verify ValuesResponse compiles correctly
+const _exampleValuesResponse: ValuesResponse = {
   context:
     'vessels.urn:mrn:signalk:uuid:2ffee4a6-52f6-4d4e-8179-0fc9aaf22c87' as Context,
   range: {
@@ -48,6 +51,7 @@ const _example: ValuesResponse = {
     ['2025-08-11T05:26:10.000Z' as Timestamp, 3.14]
   ]
 }
+void _exampleValuesResponse
 
 export type TimeRangeQueryParams =
   | {
