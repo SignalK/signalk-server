@@ -14,6 +14,7 @@
 import { expect } from 'chai'
 import fs from 'fs'
 import path from 'path'
+import { execSync } from 'child_process'
 import { freeport } from './ts-servertestutilities'
 import { startServerP, serverTestConfigDirectory } from './servertestutilities'
 
@@ -57,13 +58,31 @@ describe('WASM Plugins', function () {
   this.timeout(60000) // WASM compilation and loading can take time
 
   describe('Build verification', () => {
-    it('example-hello-assemblyscript WASM file exists', function () {
-      // Skip if WASM file doesn't exist - it needs to be pre-built
-      // The SDK is not published to npm, so we can't build in CI without workspace setup
-      if (!fs.existsSync(wasmPath)) {
-        this.skip()
-        return
+    it('builds example-hello-assemblyscript and produces plugin.wasm', function () {
+      // Clean any existing build artifacts
+      if (fs.existsSync(wasmPath)) {
+        fs.unlinkSync(wasmPath)
       }
+
+      // Install dependencies if needed
+      const nodeModulesPath = path.join(examplePluginDir, 'node_modules')
+      if (!fs.existsSync(nodeModulesPath)) {
+        console.log('Installing dependencies for example plugin...')
+        execSync('npm install', {
+          cwd: examplePluginDir,
+          stdio: 'inherit'
+        })
+      }
+
+      // Build the plugin
+      console.log('Building example WASM plugin...')
+      execSync('npm run build', {
+        cwd: examplePluginDir,
+        stdio: 'inherit'
+      })
+
+      // Assert that plugin.wasm was created
+      expect(fs.existsSync(wasmPath), 'plugin.wasm should exist').to.equal(true)
 
       const stats = fs.statSync(wasmPath)
       expect(stats.size).to.be.greaterThan(
@@ -71,16 +90,30 @@ describe('WASM Plugins', function () {
         'WASM file should be non-trivial size'
       )
     })
+
+    after(function () {
+      // Clean up transpiled files generated during build
+      const pluginJsPath = path.join(examplePluginDir, 'plugin.js')
+      const pluginDtsPath = path.join(examplePluginDir, 'plugin.d.ts')
+
+      if (fs.existsSync(pluginJsPath)) {
+        fs.unlinkSync(pluginJsPath)
+      }
+      if (fs.existsSync(pluginDtsPath)) {
+        fs.unlinkSync(pluginDtsPath)
+      }
+    })
   })
 
   describe('Plugin loading', () => {
     let server: ServerInstance | null = null
 
     before(async function () {
-      // Skip all loading tests if WASM file doesn't exist
+      // Ensure WASM file exists before running loading tests
       if (!fs.existsSync(wasmPath)) {
-        this.skip()
-        return
+        throw new Error(
+          'WASM file does not exist. Build verification test should have created it.'
+        )
       }
 
       // Create symlink to the example plugin in test config node_modules
@@ -128,11 +161,6 @@ describe('WASM Plugins', function () {
     })
 
     it('discovers and registers WASM plugin', async function () {
-      if (!fs.existsSync(wasmPath)) {
-        this.skip()
-        return
-      }
-
       const port = await freeport()
 
       server = await startServerP(port, false, {
@@ -168,13 +196,8 @@ describe('WASM Plugins', function () {
     })
 
     it('WASM plugin has correct metadata', async function () {
-      if (!fs.existsSync(wasmPath) || !server) {
-        this.skip()
-        return
-      }
-
       // Use the server from the previous test
-      const port = server.app.config.settings.port
+      const port = server!.app.config.settings.port
 
       const response = await fetch(`http://0.0.0.0:${port}/skServer/plugins`)
       const plugins: PluginInfo[] = await response.json()
@@ -191,12 +214,7 @@ describe('WASM Plugins', function () {
     })
 
     it('WASM plugin can be enabled and started', async function () {
-      if (!fs.existsSync(wasmPath) || !server) {
-        this.skip()
-        return
-      }
-
-      const port = server.app.config.settings.port
+      const port = server!.app.config.settings.port
       const pluginId = '_signalk_example-hello-assemblyscript'
 
       // Enable and start the plugin via config endpoint
