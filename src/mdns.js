@@ -25,16 +25,6 @@ const ports = require('./ports')
 module.exports = function mdnsResponder(app) {
   const config = app.config
 
-  let mdns = dnssd
-
-  try {
-    mdns = require('mdns')
-    debug('using  mdns')
-  } catch (ex) {
-    debug(ex)
-    debug('mdns not found, using dnssd2')
-  }
-
   if (typeof config.settings.mdns !== 'undefined' && !config.settings.mdns) {
     debug('Mdns disabled by configuration')
     return
@@ -57,7 +47,7 @@ module.exports = function mdnsResponder(app) {
 
   const types = []
   types.push({
-    type: app.config.settings.ssl ? mdns.tcp('https') : mdns.tcp('http'),
+    type: app.config.settings.ssl ? dnssd.tcp('https') : dnssd.tcp('http'),
     port: ports.getExternalPort(app)
   })
 
@@ -73,7 +63,7 @@ module.exports = function mdnsResponder(app) {
         service.name.charAt(0) === '_'
       ) {
         types.push({
-          type: mdns[service.type](service.name),
+          type: dnssd[service.type](service.name),
           port: service.port
         })
       } else {
@@ -110,7 +100,7 @@ module.exports = function mdnsResponder(app) {
         ':' +
         type.port
     )
-    const ad = new mdns.Advertisement(type.type, type.port, options)
+    const ad = new dnssd.Advertisement(type.type, type.port, options)
     ad.on('error', (err) => {
       console.log(type.type.name)
       console.error(err)
