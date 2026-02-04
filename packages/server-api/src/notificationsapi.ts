@@ -17,6 +17,14 @@ export interface NotificationsApi {
   silenceNotification(id: string): void
 
   /**
+   * Silences all notifications.
+   *
+   * @category Notifications API
+   *
+   */
+  silenceAll(): void
+
+  /**
    * Acknowledges the notification with the supplied identifier.
    * Note: Calling this method on a Notifications with a status of `canAcknowledge = false` will throw an Error
    *
@@ -26,6 +34,14 @@ export interface NotificationsApi {
    *
    */
   acknowledgeNotification(id: string): void
+
+  /**
+   * Acknowledges all notifications.
+   *
+   * @category Notifications API
+   *
+   */
+  acknowledgeAll(): void
 
   /**
    * Clears the notification with the supplied identifier.

@@ -14,7 +14,6 @@ import { NotificationApplication } from './index'
 import { Alarm, AlarmProperties } from './alarm'
 import * as uuid from 'uuid'
 import * as _ from 'lodash'
-import { DbStore } from './dbstore'
 
 const CLEAN_INTERVAL = 60000
 
@@ -25,41 +24,14 @@ export class NotificationManager {
   private app: NotificationApplication
   private alarms: Map<string, Alarm> = new Map()
   private readonly deltaVersion = SKVersion.v1
-  private db?: DbStore
 
   private cleanTimer?: NodeJS.Timeout
   private forCleaning: string[] = []
 
-  constructor(
-    private server: NotificationApplication,
-    private dbs?: DbStore
-  ) {
+  constructor(private server: NotificationApplication) {
     this.app = server
-    this.db = dbs
-    this.loadFromStore()
-  }
-
-  /** initialise alarms from persisted state */
-  private async loadFromStore() {
-    if (!this.db) return
-    try {
-      const r = await this.db.listAlarms()
-      if (r) {
-        r.forEach((i: { id: string; value: Alarm }) => {
-          const alarm = new Alarm(i.id)
-          alarm.init(i.value)
-          this.alarms.set(i.id, alarm)
-        })
-        // emit notifications for loaded alarms
-        this.alarms.forEach((alarm: Alarm) => {
-          this.emitNotification(alarm)
-        })
-      }
-      // start cleanup timer
-      this.cleanTimer = setInterval(() => this.clean(), CLEAN_INTERVAL)
-    } catch {
-      this.alarms = new Map()
-    }
+    // start cleanup timer
+    this.cleanTimer = setInterval(() => this.clean(), CLEAN_INTERVAL)
   }
 
   /**
@@ -124,7 +96,6 @@ export class NotificationManager {
       (alarm.value as any).meta = options.meta
     }*/
     this.alarms.set(id, alarm)
-    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
     return id
   }
@@ -152,7 +123,6 @@ export class NotificationManager {
       (alarm.value as any).meta = options.meta
     }*/
     this.alarms.set(id, alarm)
-    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
   }
 
@@ -173,6 +143,20 @@ export class NotificationManager {
   }
 
   /**
+   * Silence All alarms
+   */
+  silenceAll() {
+    this.alarms.forEach((alarm: Alarm) => {
+      try {
+        alarm?.silence()
+        this.emitNotification(alarm)
+      } catch {
+        // already silenced
+      }
+    })
+  }
+
+  /**
    * Silence alarm by removing the 'sound' method from the notification
    * @param id Notification identifier
    */
@@ -182,8 +166,17 @@ export class NotificationManager {
     }
     const alarm = this.alarms.get(id) as Alarm
     alarm?.silence()
-    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
+  }
+
+  /**
+   * Acknowledge All alarms
+   */
+  acknowledgeAll() {
+    this.alarms.forEach((alarm: Alarm) => {
+      alarm?.acknowledge()
+      this.emitNotification(alarm)
+    })
   }
 
   /**
@@ -196,7 +189,6 @@ export class NotificationManager {
     }
     const alarm = this.alarms.get(id) as Alarm
     alarm?.acknowledge()
-    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
   }
 
@@ -210,7 +202,6 @@ export class NotificationManager {
     }
     const alarm = this.alarms.get(id) as Alarm
     alarm?.clear()
-    this.db?.setAlarm(id, alarm)
     this.emitNotification(alarm)
   }
 
@@ -231,7 +222,6 @@ export class NotificationManager {
         alarm = new Alarm({ context: context, updates: [u] })
         this.alarms.set(id, alarm)
       }
-      this.db?.setAlarm(id, alarm)
       this.emitNotification(alarm)
     }
   }
@@ -261,8 +251,6 @@ export class NotificationManager {
       al.forEach((id) => {
         this.alarms.delete(id)
       })
-      this.db?.deleteAlarm(al)
-      this.db?.deleteNoti(nk)
     }
   }
 }

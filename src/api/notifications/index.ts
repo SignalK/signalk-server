@@ -19,8 +19,6 @@ import { ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
 import { NotificationManager } from './notificationManager'
-import { DbStore } from './dbstore'
-import semver from 'semver'
 
 export interface NotificationApplication
   extends
@@ -40,18 +38,10 @@ export class NotificationApi {
   private updateManager: NotificationUpdateHandler
   private notiKeys: Map<string, string> = new Map()
   private notificationManager: NotificationManager
-  private dbLoaded: Promise<void> | null = null
-  public db?: DbStore
 
   constructor(private server: NotificationApplication) {
-    const v = process.version
-    if (semver.valid(v) && semver.satisfies(v, '>=22.0.0')) {
-      this.db = new DbStore(server)
-      this.dbLoaded = this.loadFromStore()
-    }
-
     this.app = server
-    this.notificationManager = new NotificationManager(server, this.db)
+    this.notificationManager = new NotificationManager(server)
     this.updateManager = new NotificationUpdateHandler(server)
     this.updateManager.$notiUpdate.subscribe((d: Delta) =>
       this.handleNotiUpdate(d)
@@ -63,30 +53,6 @@ export class NotificationApi {
       this.initNotificationRoutes()
       resolve()
     })
-  }
-
-  /** initialise notification identifiers from persisted state */
-  private async loadFromStore() {
-    try {
-      const r = await this.db?.listNotis()
-      const n = r?.map((i) => {
-        return [i.id, i.value]
-      })
-      if (n) {
-        this.notiKeys = new Map(n as [string, string][])
-      }
-    } catch {
-      debug('No persisted notification ids found.')
-    }
-  }
-
-  /** ready to process notifications */
-  private async isReady() {
-    if (!this.db) return
-
-    if (this.dbLoaded) {
-      await this.dbLoaded
-    }
   }
 
   /**
@@ -102,7 +68,6 @@ export class NotificationApi {
       return `${source}/${context}/${path}`
     }
 
-    await this.isReady()
     delta.updates?.forEach((u: Update) => {
       if (hasValues(u) && u.values.length) {
         const path = u.values[0].path
@@ -115,10 +80,8 @@ export class NotificationApi {
         } else {
           id = uuid.v4()
           this.notiKeys.set(key, id)
-          this.db?.setNoti(key, id)
           u.notificationId = id
         }
-        this.db?.setNoti(key, id)
         // register with manager
         this.notificationManager.fromDelta(u, delta.context as Context)
       }
@@ -148,6 +111,24 @@ export class NotificationApi {
       }
     )
 
+    // Silence All
+    this.app.post(
+      `${NOTI_API_PATH}/silenceAll`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        try {
+          this.silenceAll()
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+
     // Silence
     this.app.post(
       `${NOTI_API_PATH}/:id/silence`,
@@ -155,6 +136,24 @@ export class NotificationApi {
         debug(`** ${req.method} ${req.path}`)
         try {
           this.silenceNotification(req.params.id)
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+
+    // Acknowledge All
+    this.app.post(
+      `${NOTI_API_PATH}/acknowledgeAll`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        try {
+          this.acknowledgeAll()
           res.status(200).json(Responses.ok)
         } catch (err) {
           res.status(400).json({
@@ -235,7 +234,7 @@ export class NotificationApi {
       }
     )
 
-    // MOBnotification
+    // MOB notification
     this.app.post(
       `${NOTI_API_PATH}/mob`,
       async (req: Request, res: Response) => {
@@ -268,8 +267,16 @@ export class NotificationApi {
     this.notificationManager.silence(id)
   }
 
+  silenceAll() {
+    this.notificationManager.silenceAll()
+  }
+
   acknowledgeNotification(id: string) {
     this.notificationManager.acknowledge(id)
+  }
+
+  acknowledgeAll() {
+    this.notificationManager.acknowledgeAll()
   }
 
   clearNotification(id: string) {
