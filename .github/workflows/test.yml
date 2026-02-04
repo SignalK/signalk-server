@@ -22,7 +22,7 @@ jobs:
       - uses: SocketDev/action@v1
         with:
           mode: firewall-free
-      - run: sfw npm install
+      - run: sfw npm ci
       - run: npm run build:all
 
       - name: server-api
