@@ -1,7 +1,7 @@
 {
   "name": "@signalk/typedoc-signalk-theme",
   "description": "A TypeDoc theme for SignalK",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
