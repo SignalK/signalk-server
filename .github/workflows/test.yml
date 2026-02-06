@@ -49,7 +49,7 @@ jobs:
       - name: Coverage (head)
         if: ${{ matrix.latest }}
         run: |
-          npx nyc --reporter=json-summary --reporter=text-summary npm run test-only
+          npx nyc --reporter=json-summary --reporter=text-summary --reporter=lcov npm run test-only
         env:
           CI: true
 
@@ -92,7 +92,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' && matrix.latest }}
         continue-on-error: true
         run: |
-          npx nyc --reporter=json-summary --reporter=text-summary npm run test-only
+          npx nyc --reporter=json-summary --reporter=text-summary --reporter=lcov npm run test-only
         env:
           CI: true
 
