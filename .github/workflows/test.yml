@@ -60,47 +60,5 @@ jobs:
           files: coverage/lcov.info
           fail_ci_if_error: false
 
-      - name: Capture coverage (head)
-        if: ${{ matrix.latest }}
-        id: coverage_head
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            node -e "const s=require('./coverage/coverage-summary.json').total;console.log('statements='+s.statements.pct);console.log('branches='+s.branches.pct);console.log('functions='+s.functions.pct);console.log('lines='+s.lines.pct)" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Lint
         run: npm run ci-lint
-
-      - name: Checkout base for coverage
-        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
-        continue-on-error: true
-        run: |
-          git fetch origin ${{ github.event.pull_request.base.sha }}
-          git checkout ${{ github.event.pull_request.base.sha }}
-
-      - name: Install dependencies (base)
-        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
-        continue-on-error: true
-        run: sfw npm ci
-
-      - name: Build (base)
-        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
-        continue-on-error: true
-        run: npm run build:all
-
-      - name: Coverage (base)
-        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
-        continue-on-error: true
-        run: |
-          npx nyc --reporter=json-summary --reporter=text-summary --reporter=lcov npm run test-only
-        env:
-          CI: true
-
-      - name: Capture coverage (base)
-        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
-        continue-on-error: true
-        id: coverage_base
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            node -e "const s=require('./coverage/coverage-summary.json').total;console.log('statements='+s.statements.pct);console.log('branches='+s.branches.pct);console.log('functions='+s.functions.pct);console.log('lines='+s.lines.pct)" >> "$GITHUB_OUTPUT"
-          fi
