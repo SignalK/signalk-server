@@ -5,6 +5,9 @@ on:
   push:
     branches: [master]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -49,6 +52,13 @@ jobs:
           npx nyc --reporter=json-summary --reporter=text-summary npm run test-only
         env:
           CI: true
+
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.latest }}
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false
 
       - name: Capture coverage (head)
         if: ${{ matrix.latest }}
@@ -95,16 +105,3 @@ jobs:
             node -e "const s=require('./coverage/coverage-summary.json').total;console.log('statements='+s.statements.pct);console.log('branches='+s.branches.pct);console.log('functions='+s.functions.pct);console.log('lines='+s.lines.pct)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Coverage summary
-        if: always()
-        env:
-          HEAD_STATEMENTS: ${{ steps.coverage_head.outputs.statements }}
-          HEAD_BRANCHES: ${{ steps.coverage_head.outputs.branches }}
-          HEAD_FUNCTIONS: ${{ steps.coverage_head.outputs.functions }}
-          HEAD_LINES: ${{ steps.coverage_head.outputs.lines }}
-          BASE_STATEMENTS: ${{ steps.coverage_base.outputs.statements }}
-          BASE_BRANCHES: ${{ steps.coverage_base.outputs.branches }}
-          BASE_FUNCTIONS: ${{ steps.coverage_base.outputs.functions }}
-          BASE_LINES: ${{ steps.coverage_base.outputs.lines }}
-        run: |
-          node -e "const fs=require('fs');const summary=process.env.GITHUB_STEP_SUMMARY;const metrics=['statements','branches','functions','lines'];const head={statements:process.env.HEAD_STATEMENTS||'',branches:process.env.HEAD_BRANCHES||'',functions:process.env.HEAD_FUNCTIONS||'',lines:process.env.HEAD_LINES||''};const base={statements:process.env.BASE_STATEMENTS||'',branches:process.env.BASE_BRANCHES||'',functions:process.env.BASE_FUNCTIONS||'',lines:process.env.BASE_LINES||''};const fmt=(v)=>v===''?'n/a':Number(v).toFixed(2)+'%';const delta=(h,b)=>h===''||b===''?'n/a':((Number(h)-Number(b))>=0?'+':'')+(Number(h)-Number(b)).toFixed(2)+'%';let out='## Coverage\n\n| Metric | Head | Base | Delta |\n| --- | --- | --- | --- |\n';for (const m of metrics){out+=`| ${m} | ${fmt(head[m])} | ${fmt(base[m])} | ${delta(head[m],base[m])} |\n`;}fs.appendFileSync(summary,out);"
