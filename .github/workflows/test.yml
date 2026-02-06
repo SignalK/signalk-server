@@ -11,7 +11,11 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22.x, 24.x]
+        include:
+          - node-version: 22.x
+            latest: false
+          - node-version: 24.x
+            latest: true
 
     steps:
       - uses: actions/checkout@v4
@@ -19,6 +23,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            packages/server-admin-ui-dependencies/package-lock.json
       - uses: SocketDev/action@v1
         with:
           mode: firewall-free
@@ -35,6 +43,68 @@ jobs:
         run: |
           npm run test
 
-      - run: npm test
+      - name: Coverage (head)
+        if: ${{ matrix.latest }}
+        run: |
+          npx nyc --reporter=json-summary --reporter=text-summary npm run test-only
         env:
           CI: true
+
+      - name: Capture coverage (head)
+        if: ${{ matrix.latest }}
+        id: coverage_head
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e "const s=require('./coverage/coverage-summary.json').total;console.log('statements='+s.statements.pct);console.log('branches='+s.branches.pct);console.log('functions='+s.functions.pct);console.log('lines='+s.lines.pct)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint
+        run: npm run ci-lint
+
+      - name: Checkout base for coverage
+        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
+        continue-on-error: true
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.sha }}
+          git checkout ${{ github.event.pull_request.base.sha }}
+
+      - name: Install dependencies (base)
+        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
+        continue-on-error: true
+        run: sfw npm ci
+
+      - name: Build (base)
+        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
+        continue-on-error: true
+        run: npm run build:all
+
+      - name: Coverage (base)
+        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
+        continue-on-error: true
+        run: |
+          npx nyc --reporter=json-summary --reporter=text-summary npm run test-only
+        env:
+          CI: true
+
+      - name: Capture coverage (base)
+        if: ${{ github.event_name == 'pull_request' && matrix.latest }}
+        continue-on-error: true
+        id: coverage_base
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e "const s=require('./coverage/coverage-summary.json').total;console.log('statements='+s.statements.pct);console.log('branches='+s.branches.pct);console.log('functions='+s.functions.pct);console.log('lines='+s.lines.pct)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Coverage summary
+        if: always()
+        env:
+          HEAD_STATEMENTS: ${{ steps.coverage_head.outputs.statements }}
+          HEAD_BRANCHES: ${{ steps.coverage_head.outputs.branches }}
+          HEAD_FUNCTIONS: ${{ steps.coverage_head.outputs.functions }}
+          HEAD_LINES: ${{ steps.coverage_head.outputs.lines }}
+          BASE_STATEMENTS: ${{ steps.coverage_base.outputs.statements }}
+          BASE_BRANCHES: ${{ steps.coverage_base.outputs.branches }}
+          BASE_FUNCTIONS: ${{ steps.coverage_base.outputs.functions }}
+          BASE_LINES: ${{ steps.coverage_base.outputs.lines }}
+        run: |
+          node -e "const fs=require('fs');const summary=process.env.GITHUB_STEP_SUMMARY;const metrics=['statements','branches','functions','lines'];const head={statements:process.env.HEAD_STATEMENTS||'',branches:process.env.HEAD_BRANCHES||'',functions:process.env.HEAD_FUNCTIONS||'',lines:process.env.HEAD_LINES||''};const base={statements:process.env.BASE_STATEMENTS||'',branches:process.env.BASE_BRANCHES||'',functions:process.env.BASE_FUNCTIONS||'',lines:process.env.BASE_LINES||''};const fmt=(v)=>v===''?'n/a':Number(v).toFixed(2)+'%';const delta=(h,b)=>h===''||b===''?'n/a':((Number(h)-Number(b))>=0?'+':'')+(Number(h)-Number(b)).toFixed(2)+'%';let out='## Coverage\n\n| Metric | Head | Base | Delta |\n| --- | --- | --- | --- |\n';for (const m of metrics){out+=`| ${m} | ${fmt(head[m])} | ${fmt(base[m])} | ${delta(head[m],base[m])} |\n`;}fs.appendFileSync(summary,out);"
