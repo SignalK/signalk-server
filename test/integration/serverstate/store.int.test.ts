@@ -39,11 +39,7 @@ describe('Store', () => {
   it('creates the serverState directory path', async () => {
     await store.write({ ok: true })
 
-    const directoryPath = path.join(
-      tempDir,
-      SERVERSTATEDIRNAME,
-      storePath
-    )
+    const directoryPath = path.join(tempDir, SERVERSTATEDIRNAME, storePath)
 
     const stats = await fs.stat(directoryPath)
     expect(stats.isDirectory()).to.equal(true)

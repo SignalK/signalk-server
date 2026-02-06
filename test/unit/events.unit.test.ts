@@ -2,10 +2,36 @@ import { expect } from 'chai'
 import { EventEmitter } from 'events'
 import { startEvents, startServerEvents, wrapEmitter } from '../../src/events'
 
-const makeSpark = () => ({
+type Spark = {
+  request: Record<string, unknown>
+  onDisconnects: Array<() => void>
+  writes: unknown[]
+  write: (payload: unknown) => void
+}
+
+type EventApp = EventEmitter & {
+  config?: {
+    vesselName?: string
+    vesselMMSI?: string
+    vesselUUID?: string
+    settings?: { sourcePriorities?: Record<string, number> }
+  }
+  lastServerEvents?: Record<string, { type: string }>
+  logging?: {
+    getDebugSettings: () => { debugEnabled: string; rememberDebug: boolean }
+  }
+  securityStrategy: {
+    isDummy?: () => boolean
+    hasAdminAccess?: () => boolean
+    canAuthorizeWS?: () => boolean
+    getLoginStatus?: () => unknown
+  }
+}
+
+const makeSpark = (): Spark => ({
   request: {},
-  onDisconnects: [] as Array<() => void>,
-  writes: [] as unknown[],
+  onDisconnects: [],
+  writes: [],
   write(payload: unknown) {
     this.writes.push(payload)
   }
@@ -13,7 +39,7 @@ const makeSpark = () => ({
 
 describe('events', () => {
   it('streams named events for allowed connections', () => {
-    const app = new EventEmitter() as any
+    const app = new EventEmitter() as EventApp
     app.securityStrategy = {
       isDummy: () => true
     }
@@ -37,7 +63,7 @@ describe('events', () => {
   })
 
   it('skips events when not admin and security is enabled', () => {
-    const app = new EventEmitter() as any
+    const app = new EventEmitter() as EventApp
     app.securityStrategy = {
       isDummy: () => false,
       hasAdminAccess: () => false
@@ -53,7 +79,7 @@ describe('events', () => {
   })
 
   it('sends server events and settings on connect', () => {
-    const app = new EventEmitter() as any
+    const app = new EventEmitter() as EventApp
     app.config = {
       vesselName: 'Vessel',
       vesselMMSI: '123',
@@ -64,7 +90,9 @@ describe('events', () => {
       a: { type: 'TEST_A' },
       b: { type: 'TEST_B' }
     }
-    app.logging = { getDebugSettings: () => ({ debugEnabled: 'x', rememberDebug: true }) }
+    app.logging = {
+      getDebugSettings: () => ({ debugEnabled: 'x', rememberDebug: true })
+    }
     app.securityStrategy = {
       hasAdminAccess: () => true,
       canAuthorizeWS: () => true,
@@ -78,7 +106,7 @@ describe('events', () => {
     expect(app.listenerCount('serverevent')).to.equal(1)
     expect(app.listenerCount('serverAdminEvent')).to.equal(1)
 
-    const types = spark.writes.map((entry: any) => entry.type)
+    const types = spark.writes.map((entry) => (entry as { type?: string }).type)
     expect(types).to.include('VESSEL_INFO')
     expect(types).to.include('DEBUG_SETTINGS')
     expect(types).to.include('RECEIVE_LOGIN_STATUS')
@@ -92,7 +120,7 @@ describe('events', () => {
     const wrapped = wrapEmitter(base)
 
     const listener = () => undefined
-    wrapped.addListener('alpha' as any, listener)
+    wrapped.addListener('alpha', listener)
 
     const emitted = wrapped.emit('alpha', { value: 1 })
     expect(emitted).to.equal(true)

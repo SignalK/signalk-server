@@ -3,10 +3,42 @@ import { createRequire } from 'module'
 
 const require = createRequire(import.meta.url)
 
-type Handler = (req: any, res: any) => void
+type RequestLike = {
+  params?: Record<string, string>
+}
+
+type ResponseLike = {
+  statusCode: number
+  payload: unknown
+  done?: (payload?: unknown) => void
+  status: (code: number) => ResponseLike
+  json: (payload: unknown) => ResponseLike
+}
+
+type Handler = (req: RequestLike, res: ResponseLike) => void
+
+type AppLike = {
+  config: {
+    version: string
+    name: string
+    description: string
+  }
+  plugins: unknown[]
+  webapps: unknown[]
+  addons: unknown[]
+  embeddablewebapps: unknown[]
+  providers: unknown[]
+  emit: () => void
+  post: (paths: string[] | string, handler: Handler) => void
+  get: (path: string, handler: Handler) => void
+}
+
+type ModuleOverrides = {
+  findModulesWithKeyword?: Record<string, unknown[]>
+}
 
 describe('appstore interface', () => {
-  let app: any
+  let app: AppLike
   let routes: Record<string, Handler>
   let originalModules: NodeJS.Module | undefined
   let originalCategories: NodeJS.Module | undefined
@@ -33,7 +65,7 @@ describe('appstore interface', () => {
     return res
   }
 
-  const loadAppStore = (overrides: Partial<Record<string, unknown>> = {}) => {
+  const loadAppStore = (overrides: ModuleOverrides = {}) => {
     const modulesPath = require.resolve('../../src/modules')
     const categoriesPath = require.resolve('../../src/categories')
     const constantsPath = require.resolve('../../src/constants')
@@ -47,20 +79,33 @@ describe('appstore interface', () => {
       filename: modulesPath,
       loaded: true,
       exports: {
-        installModule: (_config: unknown, _name: string, _version: string, _out: () => void, _err: () => void, done: (code: number) => void) => {
+        installModule: (
+          _config: unknown,
+          _name: string,
+          _version: string,
+          _out: () => void,
+          _err: () => void,
+          done: (code: number) => void
+        ) => {
           done(0)
         },
-        removeModule: (_config: unknown, _name: string, _out: () => void, _err: () => void, done: (code: number) => void) => {
+        removeModule: (
+          _config: unknown,
+          _name: string,
+          _out: () => void,
+          _err: () => void,
+          done: (code: number) => void
+        ) => {
           done(0)
         },
         isTheServerModule: () => false,
         findModulesWithKeyword: (keyword: string) => {
-          const all: Record<string, unknown[]> = overrides.findModulesWithKeyword as Record<string, unknown[]> || {}
+          const all = overrides.findModulesWithKeyword || {}
           return Promise.resolve(all[keyword] || [])
         },
         getLatestServerVersion: () => Promise.resolve('1.2.0'),
-        getAuthor: (pkg: any) => pkg.author || 'Author',
-        getKeywords: (pkg: any) => pkg.keywords || []
+        getAuthor: (pkg: { author?: string }) => pkg.author || 'Author',
+        getKeywords: (pkg: { keywords?: string[] }) => pkg.keywords || []
       }
     }
 
@@ -165,7 +210,9 @@ describe('appstore interface', () => {
       }
     }
 
-    app.plugins = [{ packageName: 'sk-plugin', version: '0.9.0', id: 'plugin-1' }]
+    app.plugins = [
+      { packageName: 'sk-plugin', version: '0.9.0', id: 'plugin-1' }
+    ]
     process.env.SIGNALK_SERVER_IS_UPDATABLE = 'true'
 
     const appstore = loadAppStore({

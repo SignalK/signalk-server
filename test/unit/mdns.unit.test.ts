@@ -218,7 +218,7 @@ describe('mdns', () => {
       }
 
       const responder = mdnsResponder(app)
-      expect(responder).to.exist
+      expect(responder).to.not.equal(undefined)
       expect(ads).to.have.length(2)
       expect(ads[0].started).to.equal(true)
       expect(ads[1].started).to.equal(true)

@@ -145,11 +145,11 @@ describe('discovery', () => {
       discovery.runDiscovery(app)
 
       const wlnSocket = sockets.find((socket) => socket.boundPort === 2000)
-      expect(wlnSocket).to.exist
+      expect(wlnSocket).to.not.equal(undefined)
       wlnSocket?.handlers.message(Buffer.from('$GPGGA,1234'))
 
       const discovered = events.find((event) => event.event === 'discovered')
-      expect(discovered).to.exist
+      expect(discovered).to.not.equal(undefined)
       expect((discovered?.payload as { id: string }).id).to.equal('WLN10')
     } finally {
       restore()
@@ -213,7 +213,7 @@ describe('discovery', () => {
       discovery.runDiscovery(app)
 
       const gofreeSocket = sockets.find((socket) => socket.boundPort === 2052)
-      expect(gofreeSocket).to.exist
+      expect(gofreeSocket).to.not.equal(undefined)
 
       const message = {
         SerialNumber: '12345',
@@ -230,8 +230,10 @@ describe('discovery', () => {
       gofreeSocket?.handlers.message(Buffer.from(JSON.stringify(message)))
 
       const discovered = events.find((event) => event.event === 'discovered')
-      expect(discovered).to.exist
-      expect((discovered?.payload as { id: string }).id).to.equal('GoFree (12345)')
+      expect(discovered).to.not.equal(undefined)
+      expect((discovered?.payload as { id: string }).id).to.equal(
+        'GoFree (12345)'
+      )
     } finally {
       restore()
     }
@@ -305,7 +307,7 @@ describe('discovery', () => {
       })
 
       const discovered = events.find((event) => event.event === 'discovered')
-      expect(discovered).to.exist
+      expect(discovered).to.not.equal(undefined)
       expect((discovered?.payload as { id: string }).id).to.equal(
         'ws-signalk.local:3000'
       )

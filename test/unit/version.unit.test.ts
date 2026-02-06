@@ -3,7 +3,9 @@ import { createRequire } from 'module'
 
 const require = createRequire(import.meta.url)
 
-const loadWithSatisfies = (satisfiesImpl: (version: string, range: string) => boolean) => {
+const loadWithSatisfies = (
+  satisfiesImpl: (version: string, range: string) => boolean
+) => {
   const semverPath = require.resolve('semver')
   const versionPath = require.resolve('../../src/version')
   const originalSemver = require.cache[semverPath]
@@ -63,7 +65,9 @@ describe('version', () => {
   })
 
   it('exits when the minimum node version is not satisfied', () => {
-    const { checkNodeVersion, restore } = loadWithSatisfies((_version, range) => range !== '>=18')
+    const { checkNodeVersion, restore } = loadWithSatisfies(
+      (_version, range) => range !== '>=18'
+    )
 
     let exitCode: number | undefined
     let errorMessage = ''
@@ -91,7 +95,9 @@ describe('version', () => {
   })
 
   it('warns when the recommended node version is not satisfied', () => {
-    const { checkNodeVersion, restore } = loadWithSatisfies((_version, range) => range !== '22')
+    const { checkNodeVersion, restore } = loadWithSatisfies(
+      (_version, range) => range !== '22'
+    )
 
     let warningMessage = ''
     const originalWarn = console.warn

@@ -35,7 +35,9 @@ describe('atomicWrite', () => {
     }
 
     try {
-      expect(() => atomicWriteFileSync(filePath, 'boom')).to.throw('rename failed')
+      expect(() => atomicWriteFileSync(filePath, 'boom')).to.throw(
+        'rename failed'
+      )
     } finally {
       fs.renameSync = originalRename
     }

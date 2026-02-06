@@ -272,7 +272,13 @@ describe('tokensecurity', () => {
 
       const strategy = tokensecurity(app, config)
       expect(
-        strategy.checkACL('any', 'vessels.self', 'navigation.speedOverGround', 'src', 'read')
+        strategy.checkACL(
+          'any',
+          'vessels.self',
+          'navigation.speedOverGround',
+          'src',
+          'read'
+        )
       ).to.equal(true)
     } finally {
       restore()

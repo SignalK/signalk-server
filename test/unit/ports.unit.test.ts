@@ -1,5 +1,11 @@
 import { expect } from 'chai'
-import { getExternalPort, getHttpPort, getPrimaryPort, getSecondaryPort, getSslPort } from '../../src/ports'
+import {
+  getExternalPort,
+  getHttpPort,
+  getPrimaryPort,
+  getSecondaryPort,
+  getSslPort
+} from '../../src/ports'
 import type { WithConfig } from '../../src/app'
 
 type TestApp = {
@@ -16,9 +22,10 @@ type TestApp = {
 describe('ports', () => {
   const envBackup = { ...process.env }
 
-  const makeApp = (settings: TestApp['config']['settings']): WithConfig => ({
-    config: { settings }
-  }) as WithConfig
+  const makeApp = (settings: TestApp['config']['settings']): WithConfig =>
+    ({
+      config: { settings }
+    }) as WithConfig
 
   afterEach(() => {
     process.env = { ...envBackup }
@@ -65,7 +72,12 @@ describe('ports', () => {
   })
 
   it('resolves external port with env and proxy overrides', () => {
-    const app = makeApp({ ssl: false, port: 3001, sslport: 3444, proxy_port: 7000 })
+    const app = makeApp({
+      ssl: false,
+      port: 3001,
+      sslport: 3444,
+      proxy_port: 7000
+    })
 
     expect(getExternalPort(app)).to.equal(7000)
 

@@ -4,10 +4,77 @@ import { EventEmitter } from 'events'
 
 const require = createRequire(import.meta.url)
 
+type Spark = EventEmitter & {
+  id: string
+  query: Record<string, string>
+  sentMetaData: Record<string, unknown>
+  request: {
+    socket: { bufferSize: number; on: () => void }
+    query: Record<string, string>
+    connection: { remoteAddress: string }
+    skPrincipal: { identifier: string }
+  }
+  writes: unknown[]
+  write: (payload: unknown) => void
+  end: () => void
+}
+
+type WsApi = {
+  start: () => void
+  numClients: () => number
+  canHandlePut: (path: string, source: string) => boolean
+  handlePut: (
+    requestId: string,
+    context: string,
+    path: string,
+    source: string,
+    value: number
+  ) => Promise<{ statusCode: number }>
+}
+
+type WsApp = {
+  server: unknown
+  intervals: NodeJS.Timeout[]
+  selfContext: string
+  config: {
+    settings: {
+      ssl: boolean
+      wsCompression: boolean
+      maxSendBufferSize: number
+    }
+  }
+  securityStrategy: {
+    canAuthorizeWS: () => boolean
+    filterReadDelta: (_user: unknown, delta: unknown) => unknown
+    shouldAllowWrite: () => boolean
+    shouldAllowPut: () => boolean
+    supportsLogin: () => boolean
+    verifyWS: () => void
+  }
+  signalk: EventEmitter
+  deltaCache: { getCachedDeltas: () => unknown[] }
+  subscriptionmanager: { subscribe: () => void; unsubscribe: () => void }
+  logging: { getLog: () => unknown[] }
+  getHello: () => unknown
+  handleMessage: () => void
+  setProviderError: () => void
+}
+
+type RequestResponseModule = {
+  createRequest: (
+    app: WsApp,
+    type: string,
+    data: { context: string; put: { path: string; value: number } },
+    userId: string,
+    remoteAddress: string
+  ) => Promise<{ requestId: string }>
+  resetRequests: () => void
+}
+
 class FakePrimus {
   static instances: FakePrimus[] = []
-  private connectionHandler?: (spark: any) => void
-  private connections: any[] = []
+  private connectionHandler?: (spark: Spark) => void
+  private connections: Spark[] = []
 
   constructor(_server: unknown, _options: unknown) {
     FakePrimus.instances.push(this)
@@ -17,17 +84,17 @@ class FakePrimus {
     return undefined
   }
 
-  on(event: string, handler: (spark: any) => void) {
+  on(event: string, handler: (spark: Spark) => void) {
     if (event === 'connection') {
       this.connectionHandler = handler
     }
   }
 
-  forEach(handler: (spark: any) => void) {
+  forEach(handler: (spark: Spark) => void) {
     this.connections.forEach(handler)
   }
 
-  connect(spark: any) {
+  connect(spark: Spark) {
     this.connections.push(spark)
     if (this.connectionHandler) {
       this.connectionHandler(spark)
@@ -36,9 +103,9 @@ class FakePrimus {
 }
 
 describe('ws interface', () => {
-  let app: any
-  let requestResponse: any
-  let wsFactory: any
+  let app: WsApp
+  let requestResponse: RequestResponseModule
+  let wsFactory: (app: WsApp) => WsApi
   let originalPrimus: NodeJS.Module | undefined
 
   const loadWs = () => {
@@ -57,13 +124,16 @@ describe('ws interface', () => {
 
   beforeEach(() => {
     FakePrimus.instances = []
-    requestResponse = require('../../src/requestResponse')
+    requestResponse =
+      require('../../src/requestResponse') as RequestResponseModule
 
     app = {
       server: {},
       intervals: [],
       selfContext: 'vessels.self',
-      config: { settings: { ssl: false, wsCompression: false, maxSendBufferSize: 0 } },
+      config: {
+        settings: { ssl: false, wsCompression: false, maxSendBufferSize: 0 }
+      },
       securityStrategy: {
         canAuthorizeWS: () => false,
         filterReadDelta: (_user: unknown, delta: unknown) => delta,
@@ -84,7 +154,7 @@ describe('ws interface', () => {
       setProviderError: () => undefined
     }
 
-    wsFactory = loadWs()
+    wsFactory = loadWs() as (app: WsApp) => WsApi
   })
 
   afterEach(() => {
@@ -99,8 +169,8 @@ describe('ws interface', () => {
     }
   })
 
-  const createSpark = () => {
-    const spark = new EventEmitter() as any
+  const createSpark = (): Spark => {
+    const spark = new EventEmitter() as Spark
     spark.id = 'spark-1'
     spark.query = {}
     spark.sentMetaData = {}
@@ -131,21 +201,31 @@ describe('ws interface', () => {
 
     expect(api.numClients()).to.equal(1)
 
-    spark.emit('data', Buffer.from(JSON.stringify({
-      updates: [
-        {
-          $source: 'src1',
-          values: [{ path: 'navigation.speedOverGround', value: 1 }]
-        }
-      ]
-    })))
+    spark.emit(
+      'data',
+      Buffer.from(
+        JSON.stringify({
+          updates: [
+            {
+              $source: 'src1',
+              values: [{ path: 'navigation.speedOverGround', value: 1 }]
+            }
+          ]
+        })
+      )
+    )
 
-    expect(Boolean(api.canHandlePut('navigation.speedOverGround', 'src1'))).to.equal(true)
+    expect(
+      Boolean(api.canHandlePut('navigation.speedOverGround', 'src1'))
+    ).to.equal(true)
 
     const request = await requestResponse.createRequest(
       app,
       'put',
-      { context: 'vessels.self', put: { path: 'navigation.speedOverGround', value: 2 } },
+      {
+        context: 'vessels.self',
+        put: { path: 'navigation.speedOverGround', value: 2 }
+      },
       'user',
       '127.0.0.1'
     )
@@ -160,14 +240,22 @@ describe('ws interface', () => {
 
     expect(reply.statusCode).to.equal(202)
     expect(spark.writes.length).to.be.greaterThan(1)
-    expect(spark.writes.some((write) => (write as { put?: unknown }).put)).to.equal(true)
+    expect(
+      spark.writes.some((write) => (write as { put?: unknown }).put)
+    ).to.equal(true)
   })
 
   it('rejects puts when no source is registered', async () => {
     const api = wsFactory(app)
 
     try {
-      await api.handlePut('id', 'vessels.self', 'navigation.speedOverGround', 'src1', 2)
+      await api.handlePut(
+        'id',
+        'vessels.self',
+        'navigation.speedOverGround',
+        'src1',
+        2
+      )
       throw new Error('Expected rejection')
     } catch (error) {
       expect((error as Error).message).to.equal('no source found')

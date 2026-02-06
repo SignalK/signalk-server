@@ -3,11 +3,46 @@ import { createRequire } from 'module'
 
 const require = createRequire(import.meta.url)
 
-type Handler = (req: any, res: any, next: () => void) => void
+type RequestLike = {
+  path?: string
+  query?: Record<string, string>
+  headers?: Record<string, string>
+}
+
+type ResponseLike = {
+  statusCode: number
+  payload: unknown
+  status: (code: number) => ResponseLike
+  send: (payload: unknown) => ResponseLike
+  json: (payload: unknown) => ResponseLike
+}
+
+type Handler = (req: RequestLike, res: ResponseLike, next: () => void) => void
+
+type RestApp = {
+  selfId: string
+  config: { settings: { ssl: boolean }; version: string }
+  interfaces: Record<string, unknown>
+  securityStrategy: { anyACLs: () => boolean }
+  signalk: { retrieve: () => unknown }
+  deltaCache: {
+    buildFull: () => unknown
+    buildFullFromDeltas: () => unknown
+  }
+  use: () => void
+  get: (path: string, handler: Handler) => void
+  historyProvider?: {
+    getHistory: (
+      date: Date,
+      path: string[],
+      cb: (deltas: unknown[]) => void
+    ) => void
+  }
+}
 
 describe('rest interface', () => {
   let routes: Record<string, Handler>
-  let app: any
+  let app: RestApp
   let getMetadataOriginal: unknown
 
   const makeRes = () => {
@@ -53,10 +88,18 @@ describe('rest interface', () => {
       config: { settings: { ssl: false }, version: '1.0.0' },
       interfaces: {},
       securityStrategy: { anyACLs: () => false },
-      signalk: { retrieve: () => ({ vessels: { self: { navigation: { speedOverGround: 2 } } } }) },
+      signalk: {
+        retrieve: () => ({
+          vessels: { self: { navigation: { speedOverGround: 2 } } }
+        })
+      },
       deltaCache: {
-        buildFull: () => ({ vessels: { self: { navigation: { speedOverGround: 1 } } } }),
-        buildFullFromDeltas: () => ({ vessels: { self: { navigation: { speedOverGround: 5 } } } })
+        buildFull: () => ({
+          vessels: { self: { navigation: { speedOverGround: 1 } } }
+        }),
+        buildFullFromDeltas: () => ({
+          vessels: { self: { navigation: { speedOverGround: 5 } } }
+        })
       },
       use: () => undefined,
       get: (path: string, handler: Handler) => {
@@ -100,7 +143,10 @@ describe('rest interface', () => {
 
     const resMeta = makeRes()
     routes['/signalk/v1/api/*'](
-      { path: '/signalk/v1/api/vessels/self/navigation/speedOverGround/meta', query: {} },
+      {
+        path: '/signalk/v1/api/vessels/self/navigation/speedOverGround/meta',
+        query: {}
+      },
       resMeta,
       () => undefined
     )
@@ -108,7 +154,10 @@ describe('rest interface', () => {
 
     const resValue = makeRes()
     routes['/signalk/v1/api/*'](
-      { path: '/signalk/v1/api/vessels/self/navigation/speedOverGround/meta/displayName', query: {} },
+      {
+        path: '/signalk/v1/api/vessels/self/navigation/speedOverGround/meta/displayName',
+        query: {}
+      },
       resValue,
       () => undefined
     )
@@ -121,7 +170,10 @@ describe('rest interface', () => {
 
     const resMissing = makeRes()
     routes['/signalk/v1/api/*'](
-      { path: '/signalk/v1/api/snapshot/vessels/self/navigation/speedOverGround', query: {} },
+      {
+        path: '/signalk/v1/api/snapshot/vessels/self/navigation/speedOverGround',
+        query: {}
+      },
       resMissing,
       () => undefined
     )
@@ -150,7 +202,11 @@ describe('rest interface', () => {
     expect(resNoHistory.statusCode).to.equal(501)
 
     app.historyProvider = {
-      getHistory: (_date: Date, _path: string[], cb: (deltas: unknown[]) => void) => {
+      getHistory: (
+        _date: Date,
+        _path: string[],
+        cb: (deltas: unknown[]) => void
+      ) => {
         cb([{}])
       }
     }
@@ -174,7 +230,10 @@ describe('rest interface', () => {
 
     const resPath = makeRes()
     routes['/signalk/v1/api/*'](
-      { path: '/signalk/v1/api/vessels/self/navigation/speedOverGround', query: {} },
+      {
+        path: '/signalk/v1/api/vessels/self/navigation/speedOverGround',
+        query: {}
+      },
       resPath,
       () => undefined
     )
@@ -186,8 +245,15 @@ describe('rest interface', () => {
       resRoot,
       () => undefined
     )
-    const endpoints = (resRoot.payload as any).endpoints.v1
-    expect(endpoints['signalk-http']).to.equal('http://localhost:3000/signalk/v1/api/')
-    expect(endpoints['signalk-ws']).to.equal('ws://localhost:3000/signalk/v1/stream')
+    const payload = resRoot.payload as {
+      endpoints: { v1: Record<string, string> }
+    }
+    const endpoints = payload.endpoints.v1
+    expect(endpoints['signalk-http']).to.equal(
+      'http://localhost:3000/signalk/v1/api/'
+    )
+    expect(endpoints['signalk-ws']).to.equal(
+      'ws://localhost:3000/signalk/v1/stream'
+    )
   })
 })

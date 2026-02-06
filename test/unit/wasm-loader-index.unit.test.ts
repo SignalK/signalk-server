@@ -102,9 +102,15 @@ describe('wasm loader index', () => {
       expect(loader.stopWasmPlugin).to.equal(lifecycle.stopWasmPlugin)
       expect(loader.unloadWasmPlugin).to.equal(lifecycle.unloadWasmPlugin)
       expect(loader.reloadWasmPlugin).to.equal(lifecycle.reloadWasmPlugin)
-      expect(loader.handleWasmPluginCrash).to.equal(lifecycle.handleWasmPluginCrash)
-      expect(loader.shutdownAllWasmPlugins).to.equal(lifecycle.shutdownAllWasmPlugins)
-      expect(loader.updateWasmPluginConfig).to.equal(config.updateWasmPluginConfig)
+      expect(loader.handleWasmPluginCrash).to.equal(
+        lifecycle.handleWasmPluginCrash
+      )
+      expect(loader.shutdownAllWasmPlugins).to.equal(
+        lifecycle.shutdownAllWasmPlugins
+      )
+      expect(loader.updateWasmPluginConfig).to.equal(
+        config.updateWasmPluginConfig
+      )
       expect(loader.setWasmPluginEnabled).to.equal(config.setWasmPluginEnabled)
       expect(loader.wasmPlugins).to.equal(registry.wasmPlugins)
       expect(loader.restartTimers).to.equal(registry.restartTimers)
@@ -113,9 +119,15 @@ describe('wasm loader index', () => {
       expect(loader.getAllWasmPlugins).to.equal(registry.getAllWasmPlugins)
       expect(loader.getWasmPlugin).to.equal(registry.getWasmPlugin)
       expect(loader.backwardsCompat).to.equal(routes.backwardsCompat)
-      expect(loader.handleLogViewerRequest).to.equal(routes.handleLogViewerRequest)
-      expect(loader.setupPluginSpecificRoutes).to.equal(routes.setupPluginSpecificRoutes)
-      expect(loader.setupWasmPluginRoutes).to.equal(routes.setupWasmPluginRoutes)
+      expect(loader.handleLogViewerRequest).to.equal(
+        routes.handleLogViewerRequest
+      )
+      expect(loader.setupPluginSpecificRoutes).to.equal(
+        routes.setupPluginSpecificRoutes
+      )
+      expect(loader.setupWasmPluginRoutes).to.equal(
+        routes.setupWasmPluginRoutes
+      )
     } finally {
       restore()
     }

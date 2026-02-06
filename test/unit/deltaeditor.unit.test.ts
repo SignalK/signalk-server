@@ -7,11 +7,24 @@ import path from 'path'
 const require = createRequire(import.meta.url)
 const DeltaEditor = require('../../src/deltaeditor')
 
+type DeltaEditorInstance = {
+  deltas: Array<{ updates: Array<{ values: unknown[] }> }>
+  setValue: (context: string, path: string, value: unknown) => void
+  getValue: (context: string, path: string) => unknown
+  removeValue: (context: string, path: string) => void
+  setMeta: (context: string, path: string, meta: unknown) => void
+  getMeta: (context: string, path: string) => unknown
+  removeMeta: (context: string, path: string) => void
+  load: (filePath: string) => void
+  saveSync: (filePath: string) => void
+  save: (filePath: string) => Promise<void>
+}
+
 describe('DeltaEditor', () => {
-  let editor: any
+  let editor: DeltaEditorInstance
 
   beforeEach(() => {
-    editor = new DeltaEditor()
+    editor = new DeltaEditor() as DeltaEditorInstance
   })
 
   it('merges top-level values and cleans up empty deltas', () => {
@@ -35,13 +48,19 @@ describe('DeltaEditor', () => {
     editor.setValue('vessels.self', 'navigation.speedOverGround', 5)
     editor.setValue('vessels.self', 'navigation.courseOverGroundTrue', 1.5)
 
-    expect(editor.getValue('vessels.self', 'navigation.speedOverGround')).to.equal(5)
-    expect(editor.getValue('vessels.self', 'navigation.courseOverGroundTrue')).to.equal(1.5)
+    expect(
+      editor.getValue('vessels.self', 'navigation.speedOverGround')
+    ).to.equal(5)
+    expect(
+      editor.getValue('vessels.self', 'navigation.courseOverGroundTrue')
+    ).to.equal(1.5)
     expect(editor.deltas).to.have.length(1)
     expect(editor.deltas[0].updates[0].values).to.have.length(2)
 
     editor.setValue('vessels.self', 'navigation.speedOverGround', undefined)
-    expect(editor.getValue('vessels.self', 'navigation.speedOverGround')).to.equal(undefined)
+    expect(
+      editor.getValue('vessels.self', 'navigation.speedOverGround')
+    ).to.equal(undefined)
     expect(editor.deltas[0].updates[0].values).to.have.length(1)
 
     editor.removeValue('vessels.self', 'navigation.courseOverGroundTrue')
@@ -52,15 +71,21 @@ describe('DeltaEditor', () => {
     const metaValue = { units: 'm/s', displayName: 'Speed Over Ground' }
     editor.setMeta('vessels.self', 'navigation.speedOverGround', metaValue)
 
-    expect(editor.getMeta('vessels.self', 'navigation.speedOverGround')).to.deep.equal(metaValue)
+    expect(
+      editor.getMeta('vessels.self', 'navigation.speedOverGround')
+    ).to.deep.equal(metaValue)
 
     editor.removeMeta('vessels.self', 'navigation.speedOverGround')
-    expect(editor.getMeta('vessels.self', 'navigation.speedOverGround')).to.equal(null)
+    expect(
+      editor.getMeta('vessels.self', 'navigation.speedOverGround')
+    ).to.equal(null)
     expect(editor.deltas).to.have.length(0)
   })
 
   it('loads and saves delta arrays', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'signalk-deltaeditor-'))
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'signalk-deltaeditor-')
+    )
     const inputPath = path.join(tempDir, 'input.json')
     const outputPath = path.join(tempDir, 'output.json')
     const asyncPath = path.join(tempDir, 'async.json')
@@ -99,13 +124,21 @@ describe('DeltaEditor', () => {
   })
 
   it('rejects non-array delta files on load', () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'signalk-deltaeditor-'))
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'signalk-deltaeditor-')
+    )
     const inputPath = path.join(tempDir, 'input.json')
 
-    fs.writeFileSync(inputPath, JSON.stringify({ context: 'vessels.self' }), 'utf8')
+    fs.writeFileSync(
+      inputPath,
+      JSON.stringify({ context: 'vessels.self' }),
+      'utf8'
+    )
 
     try {
-      expect(() => editor.load(inputPath)).to.throw('should contain an array of deltas')
+      expect(() => editor.load(inputPath)).to.throw(
+        'should contain an array of deltas'
+      )
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true })
     }

@@ -66,7 +66,8 @@ describe('requestResponse', () => {
       (reply: Record<string, unknown>) => updates.push(reply)
     )
 
-    const reply = await requestResponse.updateRequest(request.requestId,
+    const reply = await requestResponse.updateRequest(
+      request.requestId,
       'COMPLETED',
       {
         statusCode: 200,
@@ -106,9 +107,10 @@ describe('requestResponse', () => {
     expect(completedPut).to.have.length(1)
 
     const found = requestResponse.findRequest(
-      (request: { requestId: string }) => request.requestId === deleteRequest.requestId
+      (request: { requestId: string }) =>
+        request.requestId === deleteRequest.requestId
     )
-    expect(found).to.exist
+    expect(found).to.not.equal(undefined)
     expect(found.requestId).to.equal(deleteRequest.requestId)
   })
 

@@ -6,10 +6,36 @@ import path from 'path'
 
 const require = createRequire(import.meta.url)
 
-type Handler = (req: any, res: any) => void
+type RequestLike = {
+  params: Record<string, string>
+  body?: unknown
+  query?: Record<string, string>
+}
+
+type ResponseLike = {
+  statusCode: number
+  payload: unknown
+  status: (code: number) => ResponseLike
+  send: (payload?: unknown) => ResponseLike
+  sendStatus: (code: number) => ResponseLike
+  json: (payload: unknown) => ResponseLike
+}
+
+type Handler = (req: RequestLike, res: ResponseLike) => void
+
+type AppLike = {
+  config: { configPath: string }
+  securityStrategy: {
+    isDummy: () => boolean
+    addAdminWriteMiddleware: (path: string) => void
+    addWriteMiddleware: (path: string) => void
+  }
+  post: (paths: string[] | string, handler: Handler) => void
+  get: (paths: string[] | string, handler: Handler) => void
+}
 
 describe('applicationData interface', () => {
-  let app: any
+  let app: AppLike
   let getRoutes: Record<string, Handler>
   let postRoutes: Record<string, Handler>
   let tempDir: string

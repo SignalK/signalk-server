@@ -15,8 +15,14 @@ describe('logging', () => {
   let originalStdoutWrite: typeof process.stdout.write
   let originalStderrWrite: typeof process.stderr.write
   let debugEnv: string | undefined
-  let serverLogs: Array<{ type: string; data: { row: string; isError?: boolean } }>
-  let serverEvents: Array<{ type: string; data: { debugEnabled: string; rememberDebug: boolean } }>
+  let serverLogs: Array<{
+    type: string
+    data: { row: string; isError?: boolean }
+  }>
+  let serverEvents: Array<{
+    type: string
+    data: { debugEnabled: string; rememberDebug: boolean }
+  }>
 
   const makeApp = (configPath: string) => {
     const emitter = new EventEmitter() as EventEmitter & {
@@ -43,8 +49,10 @@ describe('logging', () => {
 
     originalStdoutWrite = process.stdout.write
     originalStderrWrite = process.stderr.write
-    process.stdout.write = ((chunk: string) => chunk.length > 0) as typeof process.stdout.write
-    process.stderr.write = ((chunk: string) => chunk.length > 0) as typeof process.stderr.write
+    process.stdout.write = ((chunk: string) =>
+      chunk.length > 0) as typeof process.stdout.write
+    process.stderr.write = ((chunk: string) =>
+      chunk.length > 0) as typeof process.stderr.write
   })
 
   afterEach(() => {

@@ -42,7 +42,11 @@ describe('put', () => {
 
     skConfig.writeBaseDeltasFile = () => Promise.resolve()
     skConfig.readDefaultsFile = () => ({})
-    skConfig.writeDefaultsFile = (_app: unknown, _data: unknown, cb: (err?: Error | null) => void) => cb(null)
+    skConfig.writeDefaultsFile = (
+      _app: unknown,
+      _data: unknown,
+      cb: (err?: Error | null) => void
+    ) => cb(null)
 
     handledMessages = []
     app = {
@@ -378,7 +382,11 @@ describe('put', () => {
       error.code = 'ENOENT'
       throw error
     }
-    skConfig.writeDefaultsFile = (_app: unknown, data: unknown, cb: (err?: Error | null) => void) => {
+    skConfig.writeDefaultsFile = (
+      _app: unknown,
+      data: unknown,
+      cb: (err?: Error | null) => void
+    ) => {
       written.push(data)
       cb(null)
     }
@@ -396,14 +404,20 @@ describe('put', () => {
     expect(reply.state).to.equal('PENDING')
     expect(written).to.have.length(1)
     expect(written[0]).to.deep.equal({
-      vessels: { self: { navigation: { speedOverGround: { meta: { units: 'm/s' } } } } }
+      vessels: {
+        self: { navigation: { speedOverGround: { meta: { units: 'm/s' } } } }
+      }
     })
     expect(updates.some((update) => update.statusCode === 200)).to.equal(true)
   })
 
   it('reports failure when defaults file read fails', async () => {
     app.config.hasOldDefaults = true
-    const updates: Array<{ state: string; statusCode: number | null; message?: string | null }> = []
+    const updates: Array<{
+      state: string
+      statusCode: number | null
+      message?: string | null
+    }> = []
     const errors: unknown[] = []
     const errorSpy = console.error
 
@@ -431,6 +445,10 @@ describe('put', () => {
 
     expect(errors).to.have.length(1)
     expect(updates.some((update) => update.statusCode === 502)).to.equal(true)
-    expect(updates.some((update) => update.message === 'Unable to read defaults file')).to.equal(true)
+    expect(
+      updates.some(
+        (update) => update.message === 'Unable to read defaults file'
+      )
+    ).to.equal(true)
   })
 })

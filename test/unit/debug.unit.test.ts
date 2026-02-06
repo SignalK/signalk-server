@@ -16,7 +16,9 @@ describe('debug', () => {
     createDebug('signalk-test:unique')
     createDebug('signalk-test:unique')
 
-    const list = listKnownDebugs().filter((name) => name === 'signalk-test:unique')
+    const list = listKnownDebugs().filter(
+      (name) => name === 'signalk-test:unique'
+    )
     expect(list).to.have.length(1)
   })
 })

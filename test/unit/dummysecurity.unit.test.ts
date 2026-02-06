@@ -4,7 +4,10 @@ import createDummySecurity from '../../src/dummysecurity'
 describe('dummysecurity', () => {
   it('returns a permissive security strategy with defaults', () => {
     const strategy = createDummySecurity()
-    const strategyAny = strategy as unknown as Record<string, (...args: unknown[]) => unknown>
+    const strategyAny = strategy as unknown as Record<
+      string,
+      (...args: unknown[]) => unknown
+    >
 
     expect(strategyAny.isDummy()).to.equal(true)
     expect(strategyAny.anyACLs()).to.equal(false)
@@ -33,7 +36,10 @@ describe('dummysecurity', () => {
 
   it('passes through config and deltas without filtering', () => {
     const strategy = createDummySecurity()
-    const strategyAny = strategy as unknown as Record<string, (...args: unknown[]) => unknown>
+    const strategyAny = strategy as unknown as Record<
+      string,
+      (...args: unknown[]) => unknown
+    >
     const config = { users: [] }
     const delta = { updates: [] }
 

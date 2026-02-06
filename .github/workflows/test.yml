@@ -104,4 +104,3 @@ jobs:
           if [ -f coverage/coverage-summary.json ]; then
             node -e "const s=require('./coverage/coverage-summary.json').total;console.log('statements='+s.statements.pct);console.log('branches='+s.branches.pct);console.log('functions='+s.functions.pct);console.log('lines='+s.lines.pct)" >> "$GITHUB_OUTPUT"
           fi
-
