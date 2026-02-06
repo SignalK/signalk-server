@@ -27,7 +27,7 @@ delta processing chain:
 
 ### Terminology
 
-> The Signal K specification uses the terms `notification` and `alarm` interchangably, whilst Signal K Server assigns notification deltas originating from NMEA2000 alarm PGNs with atrributes with the term `alert`.
+> The Signal K specification uses the terms `notification` and `alarm` interchangably, whilst Signal K Server assigns notification deltas originating from NMEA2000 alarm PGNs with attributes with the term `alert`.
 
 For consistency and clarity this document will use the the following terminology:
 
@@ -39,12 +39,12 @@ For consistency and clarity this document will use the the following terminology
 The initial release of the Notifications API implements core functionality to attribute Signal K notifications to allow them to be actioned and managed, regardless of their source.
 It does this by:
 
-- Placing notifications into their own update
+- Placing notifications into their own `update` in the delta message
 - Assigning them a unique identifier
-- Adding a `status` attribute to the payload
+- Adding a `status` property to the payload
 - Making available HTTP endpoints at `/signalk/v2/api/notifications` to perform actions.
 
-> **Note:** Actions are only available for notifications containing a payload containing `state` and `method` attributes.
+> **Note:** Actions are only available for notifications containing a payload containing `state` and `method` properties.
 
 ### Target State
 
@@ -74,7 +74,7 @@ _Example_
       "silenced": true,
       "acknowledged": false,
       "canSilence": true,
-      "canAcknow;edge": true,
+      "canAcknowledge": true,
       "canClear": true
    }
 }
@@ -101,7 +101,7 @@ To take action on the alarm associated with a notification, send an HTTP POST re
 
 ### Silencing an Alarm
 
-> Note: The silence action is only available for alarms associated with notifications having `status.canSilence` = `true`.
+> Note: The silence action is only available for alarms associated with notifications having `status.canSilence = true`.
 
 To silence the alarm send an HTTP POST request to `/signalk/v2/api/notifications/{notificationId}/silence`.
 

@@ -70,7 +70,7 @@ export class Alarm {
   }
 
   /**
-   * Extract and populate attrributes from delta
+   * Extract and populate attributes from delta
    * @param delta update Delta message
    */
   private parseDelta(delta: Delta) {
