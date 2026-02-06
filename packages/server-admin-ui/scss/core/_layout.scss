@@ -1,3 +1,5 @@
+@use 'sass:math';
+
 // IE10&11 Flexbox fix
 @media all and (-ms-high-contrast: none) {
   html {
@@ -346,7 +348,7 @@ app-root {
     .navbar-brand {
       position: absolute;
       left: 50%;
-      margin-left: -($navbar-brand-width / 2);
+      margin-left: math.div(-$navbar-brand-width, 2);
     }
   }
 
