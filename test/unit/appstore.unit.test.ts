@@ -35,6 +35,23 @@ type AppLike = {
 
 type ModuleOverrides = {
   findModulesWithKeyword?: Record<string, unknown[]>
+  installModule?: (
+    config: unknown,
+    name: string,
+    version: string,
+    out: (value: string) => void,
+    err: (value: string) => void,
+    done: (code: number) => void
+  ) => void
+  removeModule?: (
+    config: unknown,
+    name: string,
+    out: (value: string) => void,
+    err: (value: string) => void,
+    done: (code: number) => void
+  ) => void
+  isTheServerModule?: (name: string, config: unknown) => boolean
+  getLatestServerVersion?: (version: string) => Promise<string>
 }
 
 describe('appstore interface', () => {
@@ -66,6 +83,27 @@ describe('appstore interface', () => {
   }
 
   const loadAppStore = (overrides: ModuleOverrides = {}) => {
+    const defaultInstallModule = (
+      _config: unknown,
+      _name: string,
+      _version: string,
+      _out: () => void,
+      _err: () => void,
+      done: (code: number) => void
+    ) => {
+      done(0)
+    }
+
+    const defaultRemoveModule = (
+      _config: unknown,
+      _name: string,
+      _out: () => void,
+      _err: () => void,
+      done: (code: number) => void
+    ) => {
+      done(0)
+    }
+
     const modulesPath = require.resolve('../../src/modules')
     const categoriesPath = require.resolve('../../src/categories')
     const constantsPath = require.resolve('../../src/constants')
@@ -79,31 +117,15 @@ describe('appstore interface', () => {
       filename: modulesPath,
       loaded: true,
       exports: {
-        installModule: (
-          _config: unknown,
-          _name: string,
-          _version: string,
-          _out: () => void,
-          _err: () => void,
-          done: (code: number) => void
-        ) => {
-          done(0)
-        },
-        removeModule: (
-          _config: unknown,
-          _name: string,
-          _out: () => void,
-          _err: () => void,
-          done: (code: number) => void
-        ) => {
-          done(0)
-        },
-        isTheServerModule: () => false,
+        installModule: overrides.installModule || defaultInstallModule,
+        removeModule: overrides.removeModule || defaultRemoveModule,
+        isTheServerModule: overrides.isTheServerModule || (() => false),
         findModulesWithKeyword: (keyword: string) => {
           const all = overrides.findModulesWithKeyword || {}
           return Promise.resolve(all[keyword] || [])
         },
-        getLatestServerVersion: () => Promise.resolve('1.2.0'),
+        getLatestServerVersion:
+          overrides.getLatestServerVersion || (() => Promise.resolve('1.2.0')),
         getAuthor: (pkg: { author?: string }) => pkg.author || 'Author',
         getKeywords: (pkg: { keywords?: string[] }) => pkg.keywords || []
       }
@@ -234,5 +256,139 @@ describe('appstore interface', () => {
     expect(res.payload.installed).to.have.length(1)
     expect(res.payload.updates).to.have.length(1)
     expect(res.payload.categories).to.deep.equal(['misc'])
+  })
+
+  it('returns 404 when removing missing module', async () => {
+    const appstore = loadAppStore()
+    appstore(app).start()
+
+    const res = makeRes()
+    await new Promise<void>((resolve) => {
+      res.done = () => resolve()
+      routes['/skServer/appstore/remove/:name'](
+        { params: { name: 'unknown' } },
+        res
+      )
+    })
+
+    expect(res.statusCode).to.equal(404)
+    expect(res.payload).to.match(/No such webapp or plugin/i)
+  })
+
+  it('queues installs and reports waiting modules', async () => {
+    const pluginA = {
+      package: {
+        name: 'sk-plugin-a',
+        version: '1.0.0',
+        description: 'plugin-a',
+        date: '2020',
+        author: 'Author',
+        keywords: ['signalk-node-server-plugin']
+      }
+    }
+    const pluginB = {
+      package: {
+        name: 'sk-plugin-b',
+        version: '1.0.0',
+        description: 'plugin-b',
+        date: '2020',
+        author: 'Author',
+        keywords: ['signalk-node-server-plugin']
+      }
+    }
+
+    let pendingDone: ((code: number) => void) | undefined
+    const appstore = loadAppStore({
+      installModule: (_config, _name, _version, _out, _err, done) => {
+        pendingDone = done
+      },
+      findModulesWithKeyword: {
+        'signalk-node-server-plugin': [pluginA, pluginB],
+        'signalk-embeddable-webapp': [],
+        'signalk-webapp': []
+      }
+    })
+
+    appstore(app).start()
+
+    const resInstallA = makeRes()
+    await new Promise<void>((resolve) => {
+      resInstallA.done = () => resolve()
+      routes['/skServer/appstore/install/:name/:version'](
+        { params: { name: 'sk-plugin-a', version: '1.0.0' } },
+        resInstallA
+      )
+    })
+
+    const resInstallB = makeRes()
+    await new Promise<void>((resolve) => {
+      resInstallB.done = () => resolve()
+      routes['/skServer/appstore/install/:name/:version'](
+        { params: { name: 'sk-plugin-b', version: '1.0.0' } },
+        resInstallB
+      )
+    })
+
+    const resAvailable = makeRes()
+    await new Promise<void>((resolve) => {
+      resAvailable.done = () => resolve()
+      routes['/skServer/appstore/available/']({}, resAvailable)
+    })
+
+    const installing = resAvailable.payload as {
+      installing: Array<{
+        name: string
+        isInstalling?: boolean
+        isWaiting?: boolean
+      }>
+    }
+
+    expect(installing.installing).to.have.length(2)
+    expect(
+      installing.installing.find((item) => item.name === 'sk-plugin-a')
+        ?.isInstalling
+    ).to.equal(true)
+    expect(
+      installing.installing.find((item) => item.name === 'sk-plugin-b')
+        ?.isWaiting
+    ).to.equal(true)
+
+    pendingDone?.(0)
+  })
+
+  it('filters updates when updates are disabled by env', async () => {
+    process.env.PLUGINS_WITH_UPDATE_DISABLED = 'sk-plugin'
+    const plugin = {
+      package: {
+        name: 'sk-plugin',
+        version: '2.0.0',
+        description: 'plugin',
+        date: '2020',
+        author: 'Author',
+        keywords: ['signalk-node-server-plugin']
+      }
+    }
+
+    app.plugins = [
+      { packageName: 'sk-plugin', version: '1.0.0', id: 'plugin-1' }
+    ]
+
+    const appstore = loadAppStore({
+      findModulesWithKeyword: {
+        'signalk-node-server-plugin': [plugin],
+        'signalk-embeddable-webapp': [],
+        'signalk-webapp': []
+      }
+    })
+    appstore(app).start()
+
+    const res = makeRes()
+    await new Promise<void>((resolve) => {
+      res.done = () => resolve()
+      routes['/skServer/appstore/available/']({}, res)
+    })
+
+    expect(res.payload.installed).to.have.length(1)
+    expect(res.payload.updates).to.have.length(0)
   })
 })

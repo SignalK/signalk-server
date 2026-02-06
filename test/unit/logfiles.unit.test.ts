@@ -205,6 +205,12 @@ describe('logfiles', () => {
         expect(responseStatus).to.equal(400)
         expect(responseBody).to.equal('Invalid filename')
 
+        responseStatus = 0
+        responseBody = undefined
+        handler!({ params: { filename: '..' } }, res)
+        expect(responseStatus).to.equal(400)
+        expect(responseBody).to.equal('Invalid filename')
+
         handler!({ params: { filename: 'valid.log' } }, res)
         expect(sentFile).to.equal(path.resolve(path.join(tempDir, 'valid.log')))
       }
@@ -246,6 +252,49 @@ describe('logfiles', () => {
         expect(zipArgs!.files[0].name).to.match(
           /^sk-logs-Sea_Star-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}$/
         )
+      }
+    )
+  })
+
+  it('falls back to vessel MMSI when name is missing', () => {
+    const app = makeApp()
+    app.config.vesselMMSI = '123*456'
+
+    withMockedLogging(
+      tempDir,
+      (_app, cb) => cb(null, []),
+      (logfiles) => {
+        logfiles(app).start()
+
+        const handler = routes.get(`${SERVERROUTESPREFIX}/ziplogs`)
+        expect(handler).to.be.a('function')
+
+        let zipArgs: { filename: string } | undefined
+        const res = {
+          zip: (args: { filename: string }) => {
+            zipArgs = args
+          }
+        }
+
+        handler!({}, res)
+        expect(zipArgs?.filename).to.match(
+          /^sk-logs-123_456-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}\.zip$/
+        )
+      }
+    )
+  })
+
+  it('exposes a no-op stop handler', () => {
+    const app = makeApp()
+
+    withMockedLogging(
+      tempDir,
+      (_app, cb) => cb(null, []),
+      (logfiles) => {
+        const api = logfiles(app)
+        api.start()
+
+        expect(api.stop()).to.equal(undefined)
       }
     )
   })

@@ -82,6 +82,17 @@ describe('logging', () => {
     expect(serverLogs).to.have.length(2)
   })
 
+  it('uses DEBUG env when debug file is absent', () => {
+    process.env.DEBUG = 'signalk-env'
+
+    initLogger(tempDir)
+
+    expect(logger.getDebugSettings()).to.deep.equal({
+      debugEnabled: 'signalk-env',
+      rememberDebug: false
+    })
+  })
+
   it('loads and persists debug settings', () => {
     const debugPath = path.join(tempDir, 'debug')
     fs.writeFileSync(debugPath, 'signalk-test', 'utf8')
@@ -119,5 +130,38 @@ describe('logging', () => {
 
     logger.rememberDebug(false)
     expect(fs.existsSync(debugPath)).to.equal(false)
+  })
+
+  it('trims the log buffer to the configured size', () => {
+    initLogger(tempDir)
+
+    for (let index = 0; index < 101; index += 1) {
+      process.stdout.write(`line-${index}`)
+    }
+
+    const log = logger.getLog()
+    expect(log).to.have.length(100)
+    expect(log[0].row).to.equal('line-1')
+    expect(log[99].row).to.equal('line-100')
+  })
+
+  it('adds and removes debug namespaces', () => {
+    initLogger(tempDir)
+
+    logger.addDebug('alpha')
+    logger.addDebug('beta')
+    logger.addDebug('beta')
+    logger.removeDebug('alpha')
+
+    expect(logger.getDebugSettings().debugEnabled).to.equal('beta')
+  })
+
+  it('disables debug when enabled string is empty', () => {
+    initLogger(tempDir)
+
+    logger.enableDebug('alpha')
+    logger.enableDebug('')
+
+    expect(logger.getDebugSettings().debugEnabled).to.equal('')
   })
 })
