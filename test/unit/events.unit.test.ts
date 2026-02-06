@@ -1,6 +1,11 @@
 import { expect } from 'chai'
 import { EventEmitter } from 'events'
-import { startEvents, startServerEvents, wrapEmitter } from '../../src/events'
+import {
+  startEvents,
+  startServerEvents,
+  wrapEmitter,
+  type EventName
+} from '../../src/events'
 
 type Spark = {
   request: Record<string, unknown>
@@ -120,7 +125,8 @@ describe('events', () => {
     const wrapped = wrapEmitter(base)
 
     const listener = () => undefined
-    wrapped.addListener('alpha', listener)
+    const eventName = 'alpha' as EventName
+    wrapped.addListener(eventName, listener)
 
     const emitted = wrapped.emit('alpha', { value: 1 })
     expect(emitted).to.equal(true)
