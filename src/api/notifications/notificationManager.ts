@@ -9,7 +9,8 @@ import {
   Path,
   AlarmOptions,
   SourceRef,
-  NotificationId
+  NotificationId,
+  Brand
 } from '@signalk/server-api'
 
 import { NotificationApplication } from './index'
@@ -18,6 +19,8 @@ import * as uuid from 'uuid'
 import * as _ from 'lodash'
 
 const CLEAN_INTERVAL = 60000
+
+export type NotificationKey = Brand<string, 'notificationKey'>
 
 /**
  *
@@ -30,8 +33,8 @@ export const buildKey = (
   context: Context,
   path: Path,
   source: SourceRef
-): string => {
-  return `${context}/${path}/${source}`
+): NotificationKey => {
+  return `${context}/${path}/${source}` as NotificationKey
 }
 
 /**

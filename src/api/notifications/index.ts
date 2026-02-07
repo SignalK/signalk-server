@@ -17,7 +17,7 @@ import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
-import { buildKey, NotificationManager } from './notificationManager'
+import { buildKey, NotificationManager, NotificationKey } from './notificationManager'
 
 export interface NotificationApplication
   extends
@@ -34,7 +34,7 @@ export const deltaVersion: SKVersion = SKVersion.v1
 
 export class NotificationApi {
   private app: NotificationApplication
-  private notiKeys: Map<string, NotificationId> = new Map()
+  private notiKeys: Map<NotificationKey, NotificationId> = new Map()
   private notificationManager: NotificationManager
 
   constructor(private server: NotificationApplication) {
@@ -102,7 +102,7 @@ export class NotificationApi {
       if (hasValues(u) && u.values.length) {
         const path = u.values[0].path
         const src = u['$source'] as SourceRef
-        const key = buildKey(delta.context as Context, path, src)
+        const key: NotificationKey = buildKey(delta.context as Context, path, src)
         let id: NotificationId
         if (this.notiKeys.has(key)) {
           u.notificationId = this.notiKeys.get(key)
