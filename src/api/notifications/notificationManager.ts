@@ -262,10 +262,8 @@ export class NotificationManager {
     })
     this.forCleaning = nextClean
 
-    if (idsToDelete.length) {
-      idsToDelete.forEach((id) => {
-        this.alarms.delete(id)
-      })
-    }
+    idsToDelete.forEach((id) => {
+      this.alarms.delete(id)
+    })
   }
 }
