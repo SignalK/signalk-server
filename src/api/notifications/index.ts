@@ -57,7 +57,7 @@ export class NotificationApi {
   private filterNotifications(delta: Delta): Delta {
     const notiUpdates: Update[] = [] // notification updates
 
-    const dUpdates = delta.updates?.filter((update) => {
+    delta.updates = delta.updates?.filter((update) => {
       if (hasValues(update)) {
         // ignore messages from NotificationManager
         if ('notificationId' in update) {
@@ -81,13 +81,8 @@ export class NotificationApi {
         }
       }
       return true
-    })
+    }) ?? []
 
-    delta.updates = []
-    if (dUpdates?.length) {
-      // return filtered update array
-      delta.updates = ([] as Update[]).concat(dUpdates)
-    }
     if (notiUpdates.length) {
       this.handleNotiUpdate({
         context: delta.context,
