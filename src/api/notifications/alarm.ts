@@ -6,6 +6,7 @@ import {
   Delta,
   hasValues,
   Notification,
+  NotificationId,
   Path,
   SourceRef,
   Timestamp,
@@ -48,7 +49,7 @@ export class Alarm {
    * Alarm Object
    * @param notificationId Notification identifier
    */
-  constructor(notificationId?: string) {
+  constructor(notificationId?: NotificationId) {
     if (notificationId) {
       this.timeStamp()
       this.status.canClear = true

@@ -43,6 +43,8 @@ export type Path = Brand<string, 'path'>
 export type Timestamp = Brand<string, 'timestamp'>
 /** @category Server API */
 export type Context = Brand<string, 'context'>
+/** @category Server API */
+export type NotificationId = Brand<string, 'notificationId'>
 
 /** @category Server API */
 export type Value = object | number | string | null | Notification | boolean
@@ -70,7 +72,7 @@ export type Update = {
   /** @deprecated Use $source (SourceRef) instead for more practical string-based referencing */
   source?: Source
   $source?: SourceRef
-  notificationId?: string
+  notificationId?: NotificationId
 } & ({ values: PathValue[] } | { meta: Meta[] }) // require either values or meta or both
 
 /** @category Server API */

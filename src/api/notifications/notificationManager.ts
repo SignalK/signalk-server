@@ -8,7 +8,8 @@ import {
   Context,
   Path,
   AlarmOptions,
-  SourceRef
+  SourceRef,
+  NotificationId
 } from '@signalk/server-api'
 
 import { NotificationApplication } from './index'
@@ -38,11 +39,11 @@ export const buildKey = (
  */
 export class NotificationManager {
   private app: NotificationApplication
-  private alarms: Map<string, Alarm> = new Map()
+  private alarms: Map<NotificationId, Alarm> = new Map()
   private readonly deltaVersion = SKVersion.v1
 
   private cleanTimer?: NodeJS.Timeout
-  private forCleaning: string[] = []
+  private forCleaning: NotificationId[] = []
 
   constructor(private server: NotificationApplication) {
     this.app = server
@@ -76,7 +77,7 @@ export class NotificationManager {
    * @param id alarm identifier
    * @returns alarm properties
    */
-  get(id: string): AlarmProperties | undefined {
+  get(id: NotificationId): AlarmProperties | undefined {
     return this.alarms.get(id)?.properties
   }
 
@@ -85,8 +86,8 @@ export class NotificationManager {
    * @param options Object to initialise the Alarm
    * @returns alarm id
    */
-  raise(options: AlarmOptions): string {
-    const id = uuid.v4()
+  raise(options: AlarmOptions): NotificationId {
+    const id = uuid.v4() as NotificationId
     const alarm = new Alarm(id)
 
     alarm.value.state = options.state
@@ -121,7 +122,7 @@ export class NotificationManager {
    * @param id Alarm identifier
    * @param options Key / values to update
    */
-  update(id: string, options: AlarmOptions) {
+  update(id: NotificationId, options: AlarmOptions) {
     const alarm = this.alarms.get(id)
     if (!alarm) {
       throw new Error('Notification not found!')
@@ -147,7 +148,7 @@ export class NotificationManager {
    * @param options  Object to initialise the alarm. default= 'Person Overboard!'
    * @returns alarm id
    */
-  mob(options?: { message: string }): string {
+  mob(options?: { message: string }): NotificationId {
     return this.raise({
       state: ALARM_STATE.emergency,
       message: options?.message ?? 'Person Overboard!',
@@ -176,7 +177,7 @@ export class NotificationManager {
    * Silence alarm by removing the 'sound' method from the notification
    * @param id Notification identifier
    */
-  silence(id: string) {
+  silence(id: NotificationId) {
     if (!this.alarms.has(id)) {
       throw new Error('Alarm not found!')
     }
@@ -199,7 +200,7 @@ export class NotificationManager {
    * Acknowledge alarm by removing the 'sound' method from the notification
    * @param id Notification identifier
    */
-  acknowledge(id: string) {
+  acknowledge(id: NotificationId) {
     if (!this.alarms.has(id)) {
       throw new Error('Alarm not found!')
     }
@@ -212,7 +213,7 @@ export class NotificationManager {
    * Clear alarm by setting notification state to `normal`
    * @param id Notification identifier
    */
-  clear(id: string) {
+  clear(id: NotificationId) {
     if (!this.alarms.has(id)) {
       throw new Error('Alarm not found!')
     }
@@ -228,7 +229,7 @@ export class NotificationManager {
    */
   processNotificationUpdate(u: Update, context: Context) {
     if (hasValues(u) && u.values.length) {
-      const id = u.notificationId as string
+      const id = u.notificationId as NotificationId
       let alarm: Alarm
       if (this.alarms.has(id)) {
         alarm = this.alarms.get(id) as Alarm
@@ -248,9 +249,9 @@ export class NotificationManager {
    * for the duration of CLEAN_INTERVAL
    */
   private clean() {
-    const idsToDelete: string[] = []
-    const nextClean: string[] = []
-    this.alarms.forEach((v: Alarm, k: string) => {
+    const idsToDelete: NotificationId[] = []
+    const nextClean: NotificationId[] = []
+    this.alarms.forEach((v: Alarm, k: NotificationId) => {
       if (
         this.forCleaning.includes(k) &&
         v.value?.state === ALARM_STATE.normal

@@ -10,7 +10,8 @@ import {
   SKVersion,
   SourceRef,
   Update,
-  AlarmOptions
+  AlarmOptions,
+  NotificationId
 } from '@signalk/server-api'
 import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
@@ -33,7 +34,7 @@ export const deltaVersion: SKVersion = SKVersion.v1
 
 export class NotificationApi {
   private app: NotificationApplication
-  private notiKeys: Map<string, string> = new Map()
+  private notiKeys: Map<string, NotificationId> = new Map()
   private notificationManager: NotificationManager
 
   constructor(private server: NotificationApplication) {
@@ -102,12 +103,12 @@ export class NotificationApi {
         const path = u.values[0].path
         const src = u['$source'] as SourceRef
         const key = buildKey(delta.context as Context, path, src)
-        let id: string
+        let id: NotificationId
         if (this.notiKeys.has(key)) {
           u.notificationId = this.notiKeys.get(key)
-          id = u.notificationId as string
+          id = u.notificationId as NotificationId
         } else {
-          id = uuid.v4()
+          id = uuid.v4() as NotificationId
           this.notiKeys.set(key, id)
           u.notificationId = id
         }
@@ -288,11 +289,11 @@ export class NotificationApi {
   }
 
   getNotification(id: string) {
-    return this.notificationManager.get(id)
+    return this.notificationManager.get(id as NotificationId)
   }
 
   silenceNotification(id: string) {
-    this.notificationManager.silence(id)
+    this.notificationManager.silence(id as NotificationId)
   }
 
   silenceAll() {
@@ -300,7 +301,7 @@ export class NotificationApi {
   }
 
   acknowledgeNotification(id: string) {
-    this.notificationManager.acknowledge(id)
+    this.notificationManager.acknowledge(id as NotificationId)
   }
 
   acknowledgeAll() {
@@ -308,7 +309,7 @@ export class NotificationApi {
   }
 
   clearNotification(id: string) {
-    this.notificationManager.clear(id)
+    this.notificationManager.clear(id as NotificationId)
   }
 
   raiseNotification(options: AlarmOptions) {
@@ -316,7 +317,7 @@ export class NotificationApi {
   }
 
   updateNotification(id: string, options: AlarmOptions) {
-    this.notificationManager.update(id, options)
+    this.notificationManager.update(id as NotificationId, options)
   }
 
   mob(message: string) {
