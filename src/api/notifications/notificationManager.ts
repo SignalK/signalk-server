@@ -226,7 +226,7 @@ export class NotificationManager {
    * @param u Update object of incoming Delta message
    * @param context Incoming Delta message context value
    */
-  async fromDelta(u: Update, context: Context) {
+  processNotificationUpdate(u: Update, context: Context) {
     if (hasValues(u) && u.values.length) {
       const id = u.notificationId as string
       let alarm: Alarm

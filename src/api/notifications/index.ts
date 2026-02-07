@@ -112,7 +112,7 @@ export class NotificationApi {
           u.notificationId = id
         }
         // register with manager
-        this.notificationManager.fromDelta(u, delta.context as Context)
+        this.notificationManager.processNotificationUpdate(u, delta.context as Context)
       }
     })
   }
