@@ -99,15 +99,12 @@ export class NotificationApi {
     if (hasValues(update) && update.values.length) {
       const path = update.values[0].path
       const src = update['$source'] as SourceRef
-      const key: NotificationKey = buildKey(context, path, src)
-      let id: NotificationId
+      const key = buildKey(context, path, src)
       if (this.notiKeys.has(key)) {
         update.notificationId = this.notiKeys.get(key)
-        id = update.notificationId as NotificationId
       } else {
-        id = uuid.v4() as NotificationId
-        this.notiKeys.set(key, id)
-        update.notificationId = id
+        update.notificationId = uuid.v4() as NotificationId
+        this.notiKeys.set(key, update.notificationId)
       }
       // register with manager
       this.notificationManager.processNotificationUpdate(update, context)
