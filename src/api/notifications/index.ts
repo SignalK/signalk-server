@@ -17,7 +17,11 @@ import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
-import { buildKey, NotificationManager, NotificationKey } from './notificationManager'
+import {
+  buildKey,
+  NotificationManager,
+  NotificationKey
+} from './notificationManager'
 
 export interface NotificationApplication
   extends
@@ -58,31 +62,32 @@ export class NotificationApi {
   private filterNotifications(delta: Delta): Delta {
     const notiUpdates: Update[] = [] // notification updates
 
-    delta.updates = delta.updates?.filter((update) => {
-      if (hasValues(update)) {
-        // ignore messages from NotificationManager
-        if ('notificationId' in update) {
-          return true
-        }
-        // filter out values containing notification paths
-        const filteredValues = update.values.filter((u) => {
-          if (u.path.startsWith('notifications')) {
-            const nu = Object.assign({}, update, { values: [u] })
-            notiUpdates.push(nu)
-            return false
-          } else {
+    delta.updates =
+      delta.updates?.filter((update) => {
+        if (hasValues(update)) {
+          // ignore messages from NotificationManager
+          if ('notificationId' in update) {
             return true
           }
-        })
-        if (filteredValues.length) {
-          update.values = filteredValues
-          return true
-        } else {
-          return false
+          // filter out values containing notification paths
+          const filteredValues = update.values.filter((u) => {
+            if (u.path.startsWith('notifications')) {
+              const nu = Object.assign({}, update, { values: [u] })
+              notiUpdates.push(nu)
+              return false
+            } else {
+              return true
+            }
+          })
+          if (filteredValues.length) {
+            update.values = filteredValues
+            return true
+          } else {
+            return false
+          }
         }
-      }
-      return true
-    }) ?? []
+        return true
+      }) ?? []
 
     notiUpdates.forEach((update) => {
       this.handleNotificationUpdate(update, delta.context as Context)
