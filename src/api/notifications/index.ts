@@ -1,7 +1,6 @@
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:notification')
 
-import { EventEmitter } from 'events'
 import * as uuid from 'uuid'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import {
@@ -34,9 +33,6 @@ export const deltaVersion: SKVersion = SKVersion.v1
 
 export class NotificationApi {
   private app: NotificationApplication
-  private eventEmitter: EventEmitter = new EventEmitter()
-  public readonly events = this.eventEmitter
-
   private notiKeys: Map<string, string> = new Map()
   private notificationManager: NotificationManager
 
@@ -48,9 +44,6 @@ export class NotificationApi {
   async start() {
     return new Promise<void>(async (resolve) => {
       this.initNotificationRoutes()
-      this.eventEmitter.on('notiUpdate', (delta: Delta) =>
-        this.handleNotiUpdate(delta)
-      )
       this.app.registerDeltaInputHandler(
         (delta: Delta, next: (delta: Delta) => void) => {
           next(this.filterNotifications(delta))
@@ -96,7 +89,7 @@ export class NotificationApi {
       delta.updates = ([] as Update[]).concat(dUpdates)
     }
     if (notiUpdates.length) {
-      this.eventEmitter.emit('notiUpdate', {
+      this.handleNotiUpdate({
         context: delta.context,
         updates: notiUpdates
       })
