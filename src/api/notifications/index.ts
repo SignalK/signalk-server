@@ -84,38 +84,34 @@ export class NotificationApi {
       return true
     }) ?? []
 
-    if (notiUpdates.length) {
-      this.handleNotiUpdate({
-        context: delta.context,
-        updates: notiUpdates
-      })
-    }
+    notiUpdates.forEach((update) => {
+      this.handleNotificationUpdate(update, delta.context as Context)
+    })
     return delta
   }
 
   /**
-   * Handle incoming notification deltas and assign a notification identitier
-   * @param delta Incoming notification delta
+   * Handle incoming notification update and assign a notification identifier
+   * @param update Update object
+   * @param context Context value
    */
-  private async handleNotiUpdate(delta: Delta) {
-    delta.updates?.forEach((u: Update) => {
-      if (hasValues(u) && u.values.length) {
-        const path = u.values[0].path
-        const src = u['$source'] as SourceRef
-        const key: NotificationKey = buildKey(delta.context as Context, path, src)
-        let id: NotificationId
-        if (this.notiKeys.has(key)) {
-          u.notificationId = this.notiKeys.get(key)
-          id = u.notificationId as NotificationId
-        } else {
-          id = uuid.v4() as NotificationId
-          this.notiKeys.set(key, id)
-          u.notificationId = id
-        }
-        // register with manager
-        this.notificationManager.processNotificationUpdate(u, delta.context as Context)
+  private handleNotificationUpdate(update: Update, context: Context) {
+    if (hasValues(update) && update.values.length) {
+      const path = update.values[0].path
+      const src = update['$source'] as SourceRef
+      const key: NotificationKey = buildKey(context, path, src)
+      let id: NotificationId
+      if (this.notiKeys.has(key)) {
+        update.notificationId = this.notiKeys.get(key)
+        id = update.notificationId as NotificationId
+      } else {
+        id = uuid.v4() as NotificationId
+        this.notiKeys.set(key, id)
+        update.notificationId = id
       }
-    })
+      // register with manager
+      this.notificationManager.processNotificationUpdate(update, context)
+    }
   }
 
   /** Initialise API endpoints */
