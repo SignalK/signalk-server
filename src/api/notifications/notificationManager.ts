@@ -232,11 +232,11 @@ export class NotificationManager {
       let alarm: Alarm
       if (this.alarms.has(id)) {
         alarm = this.alarms.get(id) as Alarm
-        alarm.fromDelta({ context: context, updates: [u] })
+        alarm.syncFromNotificationUpdate(u, context)
         this.alarms.set(id, alarm)
       } else {
         alarm = new Alarm()
-        alarm.fromDelta({ context: context, updates: [u] })
+        alarm.syncFromNotificationUpdate(u, context)
         this.alarms.set(id, alarm)
       }
       this.emitNotification(alarm)

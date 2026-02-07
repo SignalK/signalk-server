@@ -58,12 +58,13 @@ export class Alarm {
   }
 
   /**
-   * Extract and populate attributes from delta
-   * @param delta update Delta message
+   * Extract and populate attributes from update and context
+   * @param update Update object
+   * @param context Context value
    */
-  private parseDelta(delta: Delta) {
-    this.context = delta.context as Context
-    this.update = delta.updates[0]
+  private parseDelta(update: Update, context: Context) {
+    this.context = context
+    this.update = update
     if (hasValues(this.update)) {
       this.path = this.update.values[0].path
       // ensure value is not empty
@@ -100,14 +101,15 @@ export class Alarm {
   }
 
   /**
-   * Create / update alarm from incoming Delta message
-   * @param delta update Delta message
+   * Create / update alarm from incoming update and context
+   * @param update Update object
+   * @param context Context value
    */
-  public fromDelta(delta: Delta) {
+  public syncFromNotificationUpdate(update: Update, context: Context) {
     this.external = true
     this.status.canClear = false
 
-    this.parseDelta(delta)
+    this.parseDelta(update, context)
 
     if (
       !this.status.acknowledged &&
