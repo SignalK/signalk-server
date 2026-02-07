@@ -248,24 +248,22 @@ export class NotificationManager {
    * for the duration of CLEAN_INTERVAL
    */
   private clean() {
-    const al: string[] = []
-    const nk: string[] = []
+    const idsToDelete: string[] = []
     const nextClean: string[] = []
     this.alarms.forEach((v: Alarm, k: string) => {
       if (
         this.forCleaning.includes(k) &&
         v.value?.state === ALARM_STATE.normal
       ) {
-        al.push(k)
-        nk.push(v.extKey)
+        idsToDelete.push(k)
       } else {
         nextClean.push(k)
       }
     })
     this.forCleaning = ([] as string[]).concat(nextClean)
 
-    if (al.length) {
-      al.forEach((id) => {
+    if (idsToDelete.length) {
+      idsToDelete.forEach((id) => {
         this.alarms.delete(id)
       })
     }
