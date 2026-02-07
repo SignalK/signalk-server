@@ -260,7 +260,7 @@ export class NotificationManager {
         nextClean.push(k)
       }
     })
-    this.forCleaning = ([] as string[]).concat(nextClean)
+    this.forCleaning = nextClean
 
     if (idsToDelete.length) {
       idsToDelete.forEach((id) => {
