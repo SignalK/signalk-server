@@ -1,7 +1,7 @@
 import {
   ALARM_METHOD,
   ALARM_STATE,
-  ALARM_STATUS,
+  AlarmStatus,
   Context,
   Delta,
   hasValues,
@@ -12,6 +12,7 @@ import {
   Update,
   Value
 } from '@signalk/server-api'
+import { buildKey } from './notificationManager'
 
 export interface AlarmProperties {
   context: Context
@@ -21,7 +22,7 @@ export interface AlarmProperties {
 
 export class Alarm {
   private external = false // true when alarm was created from delta
-  status: ALARM_STATUS = {
+  status: AlarmStatus = {
     silenced: false,
     acknowledged: false,
     canSilence: true,
@@ -43,30 +44,17 @@ export class Alarm {
     status: this.status
   }
 
-  constructor(value: string | Delta) {
-    if (typeof value === 'string') {
+  /**
+   * Alarm Object
+   * @param notificationId Notification identifier
+   */
+  constructor(notificationId?: string) {
+    if (notificationId) {
       this.timeStamp()
       this.status.canClear = true
-      this.update.notificationId = value
-      this.path = `notifications.${value}` as Path
-    } else {
-      this.fromDelta(value)
+      this.update.notificationId = notificationId
+      this.path = `notifications.${notificationId}` as Path
     }
-  }
-
-  /**
-   * Initialise Alarm from peristed state
-   * @param a Alarm object
-   */
-  public init(a: Alarm) {
-    this.path = a.path
-    this.value = a.value
-    this.external = a.external
-    this.status = a.status
-    this.context = a.context
-    this.update = a.update
-    this.path = a.path
-    this.value = a.value ?? this.value
   }
 
   /**
@@ -192,10 +180,10 @@ export class Alarm {
   }
 
   /**
-   * Return the external key ($source/context/path) of an alarm generated from incoming Delta.
+   * Return the external key (context/path/$source) of an alarm generated from incoming Delta.
    */
   get extKey(): string {
-    return `${this.update.$source}/${this.context}/${this.path}`
+    return buildKey(this.context, this.path, this.update.$source as SourceRef)
   }
 
   /**

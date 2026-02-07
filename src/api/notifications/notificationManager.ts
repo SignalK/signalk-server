@@ -7,7 +7,8 @@ import {
   Update,
   Context,
   Path,
-  AlarmOptions
+  AlarmOptions,
+  SourceRef
 } from '@signalk/server-api'
 
 import { NotificationApplication } from './index'
@@ -16,6 +17,21 @@ import * as uuid from 'uuid'
 import * as _ from 'lodash'
 
 const CLEAN_INTERVAL = 60000
+
+/**
+ *
+ * @param context Signal K Context
+ * @param path Signal K Path
+ * @param source Delta sourceRef
+ * @returns String representing a key associating notification deltas to their notificationId
+ */
+export const buildKey = (
+  context: Context,
+  path: Path,
+  source: SourceRef
+): string => {
+  return `${context}/${path}/${source}`
+}
 
 /**
  * Class to manage the lifecycle of alarms
@@ -219,7 +235,8 @@ export class NotificationManager {
         alarm.fromDelta({ context: context, updates: [u] })
         this.alarms.set(id, alarm)
       } else {
-        alarm = new Alarm({ context: context, updates: [u] })
+        alarm = new Alarm()
+        alarm.fromDelta({ context: context, updates: [u] })
         this.alarms.set(id, alarm)
       }
       this.emitNotification(alarm)

@@ -96,7 +96,7 @@ export interface Notification {
   state: ALARM_STATE
   method: ALARM_METHOD[]
   message: string
-  status?: ALARM_STATUS
+  status?: AlarmStatus
   position?: Position
   createdAt?: Timestamp
   id?: string
@@ -143,7 +143,7 @@ export enum ALARM_METHOD {
 }
 
 /** @category Server API */
-export interface ALARM_STATUS {
+export interface AlarmStatus {
   silenced: boolean
   acknowledged: boolean
   canSilence: boolean

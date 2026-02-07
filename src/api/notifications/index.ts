@@ -1,14 +1,13 @@
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:notification')
 
-import { Subject } from 'rxjs'
+import { EventEmitter } from 'events'
 import * as uuid from 'uuid'
-import { ServerApp, SignalKMessageHub, WithConfig } from '../../app'
+import { SignalKMessageHub, WithConfig } from '../../app'
 import {
   Context,
   Delta,
   hasValues,
-  Path,
   SKVersion,
   SourceRef,
   Update,
@@ -18,7 +17,7 @@ import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
-import { NotificationManager } from './notificationManager'
+import { buildKey, NotificationManager } from './notificationManager'
 
 export interface NotificationApplication
   extends
@@ -35,24 +34,74 @@ export const deltaVersion: SKVersion = SKVersion.v1
 
 export class NotificationApi {
   private app: NotificationApplication
-  private updateManager: NotificationUpdateHandler
+  private eventEmitter: EventEmitter = new EventEmitter()
+  public readonly events = this.eventEmitter
+
   private notiKeys: Map<string, string> = new Map()
   private notificationManager: NotificationManager
 
   constructor(private server: NotificationApplication) {
     this.app = server
     this.notificationManager = new NotificationManager(server)
-    this.updateManager = new NotificationUpdateHandler(server)
-    this.updateManager.$notiUpdate.subscribe((d: Delta) =>
-      this.handleNotiUpdate(d)
-    )
   }
 
   async start() {
     return new Promise<void>(async (resolve) => {
       this.initNotificationRoutes()
+      this.eventEmitter.on('notiUpdate', (delta: Delta) =>
+        this.handleNotiUpdate(delta)
+      )
+      this.app.registerDeltaInputHandler(
+        (delta: Delta, next: (delta: Delta) => void) => {
+          next(this.filterNotifications(delta))
+        }
+      )
       resolve()
     })
+  }
+
+  /** Filter out notifications.* paths and push onto notiUpdate */
+  private filterNotifications(delta: Delta): Delta {
+    const notiUpdates: Update[] = [] // notification updates
+
+    const dUpdates = delta.updates?.filter((update) => {
+      if (hasValues(update)) {
+        // ignore messages from NotificationManager
+        if ('notificationId' in update) {
+          return true
+        }
+        // filter out values containing notification paths
+        const filteredValues = update.values.filter((u) => {
+          if (u.path.startsWith('notifications')) {
+            const nu = Object.assign({}, update, { values: [u] })
+            notiUpdates.push(nu)
+            return false
+          } else {
+            return true
+          }
+        })
+        if (filteredValues.length) {
+          update.values = filteredValues
+          return true
+        } else {
+          return false
+        }
+      }
+      return true
+    })
+
+    delta.updates = []
+    if (dUpdates?.length) {
+      // return filtered update array
+      delta.updates = ([] as Update[]).concat(dUpdates)
+    }
+    if (notiUpdates.length) {
+      this.eventEmitter.emit('notiUpdate', {
+        context: delta.context,
+        updates: notiUpdates
+      })
+    }
+    return delta
   }
 
   /**
@@ -60,19 +109,11 @@ export class NotificationApi {
    * @param delta Incoming notification delta
    */
   private async handleNotiUpdate(delta: Delta) {
-    const buildKey = (
-      source: SourceRef,
-      context: Context,
-      path: Path
-    ): string => {
-      return `${source}/${context}/${path}`
-    }
-
     delta.updates?.forEach((u: Update) => {
       if (hasValues(u) && u.values.length) {
         const path = u.values[0].path
         const src = u['$source'] as SourceRef
-        const key = buildKey(src, delta.context as Context, path)
+        const key = buildKey(delta.context as Context, path, src)
         let id: string
         if (this.notiKeys.has(key)) {
           u.notificationId = this.notiKeys.get(key)
@@ -86,7 +127,6 @@ export class NotificationApi {
         this.notificationManager.fromDelta(u, delta.context as Context)
       }
     })
-    //this.app.handleMessage('notificationApi', delta, deltaVersion)
   }
 
   /** Initialise API endpoints */
@@ -293,65 +333,5 @@ export class NotificationApi {
 
   mob(message: string) {
     return this.notificationManager.mob({ message: message })
-  }
-}
-
-/**
- * Class to handle Notification Updates (path = notifications.*).
- * It filters out notifications from the delta and places them into
- * individual update messages which are placed onto the notiUpdates Subject
- * for processing and emitting.
- */
-export class NotificationUpdateHandler {
-  private notiUpdate: Subject<Delta> = new Subject()
-  public readonly $notiUpdate = this.notiUpdate.asObservable()
-
-  constructor(private server: ServerApp) {
-    server.registerDeltaInputHandler(
-      (delta: Delta, next: (delta: Delta) => void) => {
-        next(this.filterNotifications(delta))
-      }
-    )
-  }
-
-  /** Filter out notifications.* paths and push onto notiUpdate */
-  private filterNotifications(delta: Delta): Delta {
-    const notiUpdates: Update[] = [] // notification updates
-
-    const dUpdates = delta.updates?.filter((update) => {
-      if (hasValues(update)) {
-        // ignore messages from NotificationManager
-        if ('notificationId' in update) {
-          return true
-        }
-        // filter out values containing notification paths
-        const filteredValues = update.values.filter((u) => {
-          if (u.path.startsWith('notifications')) {
-            const nu = Object.assign({}, update, { values: [u] })
-            notiUpdates.push(nu)
-            return false
-          } else {
-            return true
-          }
-        })
-        if (filteredValues.length) {
-          update.values = filteredValues
-          return true
-        } else {
-          return false
-        }
-      }
-      return true
-    })
-
-    delta.updates = []
-    if (dUpdates?.length) {
-      // return filtered update array
-      delta.updates = ([] as Update[]).concat(dUpdates)
-    }
-    if (notiUpdates.length) {
-      this.notiUpdate.next({ context: delta.context, updates: notiUpdates })
-    }
-    return delta
   }
 }
