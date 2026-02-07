@@ -17,6 +17,7 @@ const defaultConfig = {
     }
   },
   settings: {
+    mdns: false,
     pipedProviders: [
       {
         id: 'deltaFromHttp',
@@ -28,7 +29,9 @@ const defaultConfig = {
       }
     ],
     interfaces: {
-      plugins: false
+      plugins: false,
+      tcp: false,
+      'nmea-tcp': false
     }
   }
 }

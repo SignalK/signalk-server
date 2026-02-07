@@ -18,7 +18,8 @@
     "test-only": "NODE_ENV=test mocha 'test/**/*.[jt]s' 'dist/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run ci-lint",
     "heroku-postbuild": "npm run build:all",
-    "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
+    "master-changed-files": "git diff --name-status $(git tag | tail -1)..master",
+    "coverage": "nyc npm run test-only"
   },
   "bin": {
     "signalk-server": "./bin/signalk-server",
@@ -102,16 +103,16 @@
     "express-rate-limit": "^8.2.1",
     "figlet": "^1.2.0",
     "file-timestamp-stream": "^2.1.2",
-    "fix": "^0.0.6",
+    "fix": "^0.0.3",
     "geolib": "3.2.2",
     "helmet": "^8.1.0",
-    "inquirer": "^7.0.0",
+    "inquirer": "^13.2.2",
     "jose": "^6.1.0",
     "json-patch": "^0.7.0",
     "jsonwebtoken": "^9.0.0",
     "listr": "^0.14.1",
     "lodash": "^4.17.21",
-    "mdns-js": "^1.0.3",
+    "mdns-js": "^0.2.9",
     "minimist": "^1.2.8",
     "moment": "^2.10.6",
     "morgan": "^1.5.0",
@@ -172,7 +173,8 @@
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.0.0",
     "lint-staged": "^10.0.3",
-    "mocha": "^11.7.5",
+    "mocha": "^11.3.0",
+    "nyc": "^15.1.0",
     "nock": "^13.5.0",
     "prettier": "^3.5.3",
     "rimraf": "^6.0.1",
@@ -181,6 +183,32 @@
     "typedoc-plugin-mdn-links": "^5.0.1",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.29.1"
+  },
+  "nyc": {
+    "all": true,
+    "extension": [
+      ".ts",
+      ".js"
+    ],
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.js"
+    ],
+    "exclude": [
+      "**/*.d.ts",
+      "**/*.test.ts",
+      "**/*.test.js",
+      "dist/**",
+      "packages/**",
+      "test/**"
+    ],
+    "reporter": [
+      "text-summary",
+      "text",
+      "lcov"
+    ],
+    "sourceMap": true,
+    "instrument": true
   },
   "funding": "https://opencollective.com/signalk"
 }

@@ -93,12 +93,12 @@ describe('Rate Limiting', () => {
   it('should limit login status checks', async function () {
     const requests = []
     for (let i = 0; i < 1000; i++) {
-      requests.push(fetch(`${url}/loginStatus`))
+      requests.push(fetch(`${url}/skServer/loginStatus`))
     }
 
     await Promise.all(requests)
 
-    const res = await fetch(`${url}/loginStatus`)
+    const res = await fetch(`${url}/skServer/loginStatus`)
     res.status.should.equal(429)
   })
 })
@@ -169,14 +169,14 @@ describe('Rate Limiting with trustProxy enabled', () => {
     // Make 2 requests from same actual client but with different X-Forwarded-For IPs
     // Both should succeed (not rate limited) because they appear to come from different IPs
 
-    const res1 = await fetch(`${url}/loginStatus`, {
+    const res1 = await fetch(`${url}/skServer/loginStatus`, {
       headers: {
         'X-Forwarded-For': '192.168.1.100'
       }
     })
     res1.status.should.be.oneOf([200, 401, 403])
 
-    const res2 = await fetch(`${url}/loginStatus`, {
+    const res2 = await fetch(`${url}/skServer/loginStatus`, {
       headers: {
         'X-Forwarded-For': '192.168.1.101'
       }
@@ -188,7 +188,7 @@ describe('Rate Limiting with trustProxy enabled', () => {
     const requests = []
     for (let i = 0; i < 1001; i++) {
       requests.push(
-        fetch(`${url}/loginStatus`, {
+        fetch(`${url}/skServer/loginStatus`, {
           headers: {
             'X-Forwarded-For': '192.168.1.200'
           }

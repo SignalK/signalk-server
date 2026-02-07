@@ -271,7 +271,11 @@ export function getSecurityConfig(
     return app.securityStrategy.securityConfig
   } else {
     try {
-      const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
+      const configPath = pathForSecurityConfig(app)
+      if (!existsSync(configPath)) {
+        return {}
+      }
+      const optionsAsString = readFileSync(configPath, 'utf8')
       return JSON.parse(optionsAsString)
     } catch (e: any) {
       console.error(
