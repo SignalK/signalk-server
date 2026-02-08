@@ -43,6 +43,7 @@ export interface Preset {
 // Config file structure
 export interface UnitPreferencesConfig {
   activePreset: string // e.g., "imperial-us" or "my-boat"
+  userPresets?: { [username: string]: string } // per-user preset overrides
   version?: string
 }
 

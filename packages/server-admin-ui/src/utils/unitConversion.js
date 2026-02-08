@@ -31,12 +31,14 @@ export function convertValue(
   presetDetails,
   unitDefinitions
 ) {
-  if (
-    typeof value !== 'number' ||
-    !category ||
-    !presetDetails ||
-    !unitDefinitions
-  ) {
+  if (typeof value !== 'number' || !category) {
+    return null
+  }
+  // "base" category means display in SI units without conversion
+  if (category === 'base' && siUnit) {
+    return { value, unit: siUnit }
+  }
+  if (!presetDetails || !unitDefinitions) {
     return null
   }
   const targetConfig = presetDetails.categories?.[category]

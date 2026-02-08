@@ -124,7 +124,13 @@ function DataRow({
     unitDefinitions &&
     presetDetails
   ) {
-    const converted = convertValue(data.value, units, category)
+    const converted = convertValue(
+      data.value,
+      units,
+      category,
+      presetDetails,
+      unitDefinitions
+    )
     if (converted && converted.unit !== units) {
       convertedValue = converted.value
       convertedUnit = converted.unit

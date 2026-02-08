@@ -25,7 +25,7 @@ const {
 } = require('../unitpreferences')
 
 // Enhance metadata response with displayUnits from unit preferences
-function enhanceMetadataResponse(metadata, signalkPath, app) {
+function enhanceMetadataResponse(metadata, signalkPath, _app) {
   if (!metadata) return metadata
 
   // Check if displayUnits.category exists in stored metadata
@@ -41,7 +41,7 @@ function enhanceMetadataResponse(metadata, signalkPath, app) {
 
   if (storedDisplayUnits?.category) {
     try {
-      const enhanced = resolveDisplayUnits(storedDisplayUnits)
+      const enhanced = resolveDisplayUnits(storedDisplayUnits, metadata.units)
       if (enhanced) {
         metadata.displayUnits = enhanced
       }

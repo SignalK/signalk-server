@@ -8,6 +8,7 @@ import {
 } from './types'
 
 const UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
+export const DEFAULT_PRESET = 'nautical'
 
 let categories: CategoryMap
 let customCategories: { [category: string]: string } = {}
@@ -52,7 +53,7 @@ export function loadAll(): void {
   if (fs.existsSync(configPath)) {
     config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
   } else {
-    config = { activePreset: 'metric' }
+    config = { activePreset: DEFAULT_PRESET }
   }
 
   // Load default categories
@@ -96,9 +97,12 @@ function loadActivePreset(): void {
     return
   }
 
-  // Default to metric
+  // Default to nautical
   activePreset = JSON.parse(
-    fs.readFileSync(path.join(UNITPREFS_DIR, 'presets/metric.json'), 'utf-8')
+    fs.readFileSync(
+      path.join(UNITPREFS_DIR, `presets/${DEFAULT_PRESET}.json`),
+      'utf-8'
+    )
   )
 }
 
@@ -191,4 +195,39 @@ export function getDefaultCategory(signalkPath: string): string | null {
   }
 
   return null
+}
+
+function loadPresetByName(presetName: string): Preset | null {
+  // Check custom presets first
+  const customPresetPath = path.join(
+    UNITPREFS_DIR,
+    'presets/custom',
+    `${presetName}.json`
+  )
+  if (fs.existsSync(customPresetPath)) {
+    return JSON.parse(fs.readFileSync(customPresetPath, 'utf-8'))
+  }
+
+  // Fall back to built-in presets
+  const builtInPath = path.join(UNITPREFS_DIR, 'presets', `${presetName}.json`)
+  if (fs.existsSync(builtInPath)) {
+    return JSON.parse(fs.readFileSync(builtInPath, 'utf-8'))
+  }
+
+  return null
+}
+
+export function getActivePresetForUser(username?: string): Preset {
+  // 1. User-specific preset
+  if (username && config.userPresets?.[username]) {
+    const preset = loadPresetByName(config.userPresets[username])
+    if (preset) return preset
+  }
+  // 2. Admin preset
+  if (config.activePreset) {
+    const preset = loadPresetByName(config.activePreset)
+    if (preset) return preset
+  }
+  // 3. Default
+  return loadPresetByName(DEFAULT_PRESET) || activePreset
 }

@@ -8,7 +8,9 @@ export {
   getCategories,
   getCustomCategories,
   getActivePreset,
-  getDefaultCategory
+  getActivePresetForUser,
+  getDefaultCategory,
+  DEFAULT_PRESET
 } from './loader'
 export { resolveDisplayUnits, validateCategoryAssignment } from './resolver'
 export * from './types'

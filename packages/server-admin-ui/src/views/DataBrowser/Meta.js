@@ -4,7 +4,6 @@ import {
   faPencil,
   faPlusSquare,
   faSave,
-  faSquarePlus,
   faTimes,
   faTrashCan
 } from '@fortawesome/free-solid-svg-icons'
@@ -210,10 +209,12 @@ const DEFAULT_CATEGORIES = [
   'boolean'
 ]
 
-const CategorySelect = ({ disabled, value, setValue, categories }) => {
+const CategorySelect = ({ disabled, value, setValue, categories, siUnit }) => {
   const category = value?.category || ''
+  // Use provided categories array directly (empty array = no categories available)
+  // Only fall back to DEFAULT_CATEGORIES if categories is undefined/null
   const categoryList =
-    categories && categories.length > 0 ? categories : DEFAULT_CATEGORIES
+    categories !== undefined ? categories : DEFAULT_CATEGORIES
   return (
     <Input
       disabled={disabled}
@@ -222,6 +223,7 @@ const CategorySelect = ({ disabled, value, setValue, categories }) => {
       onChange={(e) => setValue({ ...value, category: e.target.value })}
     >
       <option value="">-- No category --</option>
+      {siUnit && <option value="base">base ({siUnit})</option>}
       {categoryList.map((cat) => (
         <option key={cat} value={cat}>
           {cat}
@@ -260,7 +262,11 @@ const METAFIELDRENDERERS = {
     <MetaFormRow
       {...props}
       renderValue={(p) => (
-        <CategorySelect {...p} categories={props.categories} />
+        <CategorySelect
+          {...p}
+          categories={props.categories}
+          siUnit={props.siUnit}
+        />
       )}
       description="Category for unit conversion"
     ></MetaFormRow>
@@ -370,22 +376,20 @@ function Meta({
   path,
   loginStatus,
   currentValue,
-  activePreset,
   presetDetails,
   unitDefinitions
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [localMeta, setLocalMeta] = useState(meta)
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
+  const [categoryToBaseUnit, setCategoryToBaseUnit] = useState({})
 
   // Fetch categories from server
   useEffect(() => {
     fetch('/signalk/v1/unitpreferences/categories', { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
-        const cats = Object.keys(data.categoryToBaseUnit || data)
-        if (cats.length > 0) setCategories(cats.sort())
+        setCategoryToBaseUnit(data.categoryToBaseUnit || {})
       })
       .catch(() => {})
   }, [])
@@ -546,11 +550,39 @@ function Meta({
               .map(({ key, value }) => {
                 const renderer = METAFIELDRENDERERS[key]
                 if (renderer) {
+                  // Filter categories by SI unit for displayUnits field
+                  // Merge built-in categories with preset categories
+                  // If no SI unit is defined, no categories are available
+                  let filteredCategories = []
+                  if (siUnit) {
+                    // Built-in categories with matching baseUnit
+                    const builtIn = Object.entries(categoryToBaseUnit)
+                      .filter(([, unit]) => unit === siUnit)
+                      .map(([cat]) => cat)
+
+                    // Preset categories with matching baseUnit
+                    const presetCats = presetDetails?.categories
+                      ? Object.entries(presetDetails.categories)
+                          .filter(([, config]) => config.baseUnit === siUnit)
+                          .map(([cat]) => cat)
+                      : []
+
+                    // Merge and dedupe
+                    const merged = [...builtIn]
+                    presetCats.forEach((cat) => {
+                      if (!merged.includes(cat)) {
+                        merged.push(cat)
+                      }
+                    })
+                    filteredCategories = merged.sort()
+                  }
+
                   const props = {
                     _key: key,
                     value,
                     disabled: !isEditing,
-                    categories,
+                    categories: filteredCategories,
+                    siUnit,
                     setValue: (metaFieldValue) =>
                       setLocalMeta({
                         ...localMeta,
@@ -870,7 +902,5 @@ const Zones = ({ zones, isEditing, setZones }) => {
     </div>
   )
 }
-
-const clone = (o) => JSON.parse(JSON.stringify(o))
 
 export default connect(({ loginStatus }) => ({ loginStatus }))(Meta)

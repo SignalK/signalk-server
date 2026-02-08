@@ -17,7 +17,6 @@ function VirtualizedDataTable({
   onToggleSourceFilter,
   sourceFilterActive,
   convertValue,
-  activePreset,
   unitDefinitions,
   presetDetails
 }) {

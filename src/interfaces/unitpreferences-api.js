@@ -1,6 +1,7 @@
 const express = require('express')
 const fs = require('fs')
 const path = require('path')
+const busboy = require('busboy')
 const { compile } = require('mathjs')
 const { createDebug } = require('../debug')
 const debug = createDebug('signalk-server:unitpreferences-api')
@@ -45,6 +46,102 @@ function validateDefinitions(definitions) {
   }
   return null
 }
+
+/**
+ * Validate a preset JSON structure thoroughly
+ * @param {object} preset - The preset object to validate
+ * @param {object} definitions - Unit definitions for validation
+ * @returns {string|null} - Error message if invalid, null if valid
+ */
+function validatePreset(preset, definitions) {
+  const errors = []
+
+  if (!preset || typeof preset !== 'object' || Array.isArray(preset)) {
+    return 'Preset must be a JSON object'
+  }
+  if (!preset.version || typeof preset.version !== 'string') {
+    return 'Missing or invalid "version"'
+  }
+  if (!preset.name || typeof preset.name !== 'string') {
+    return 'Missing or invalid "name"'
+  }
+  if (
+    !preset.categories ||
+    typeof preset.categories !== 'object' ||
+    Array.isArray(preset.categories)
+  ) {
+    return 'Missing or invalid "categories"'
+  }
+  if (Object.keys(preset.categories).length === 0) {
+    return 'categories cannot be empty'
+  }
+
+  for (const [name, cat] of Object.entries(preset.categories)) {
+    if (!cat || typeof cat !== 'object') {
+      errors.push(`"${name}": must be an object`)
+      continue
+    }
+    if (!cat.baseUnit) {
+      errors.push(`"${name}": missing baseUnit`)
+      continue
+    }
+    if (!cat.targetUnit) {
+      errors.push(`"${name}": missing targetUnit`)
+      continue
+    }
+
+    // Skip datetime validation for now - datetime formats are handled differently
+    const datetimeBaseUnits = [
+      'RFC 3339 (UTC)',
+      'ISO-8601 (UTC)',
+      'Epoch Seconds'
+    ]
+    if (datetimeBaseUnits.includes(cat.baseUnit)) {
+      continue
+    }
+
+    const unitDef = definitions[cat.baseUnit]
+    if (!unitDef) {
+      errors.push(`"${name}": unknown baseUnit "${cat.baseUnit}"`)
+      continue
+    }
+    // targetUnit same as baseUnit means no conversion, which is valid
+    if (cat.targetUnit !== cat.baseUnit) {
+      if (!unitDef.conversions || !unitDef.conversions[cat.targetUnit]) {
+        const available = Object.keys(unitDef.conversions || {}).join(', ')
+        errors.push(
+          `"${name}": "${cat.targetUnit}" not in ${cat.baseUnit} conversions. Available: ${available}`
+        )
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return errors.join('\n')
+  }
+  return null
+}
+
+/**
+ * Check if a preset name already exists
+ * @param {string} presetName - The preset filename (without .json)
+ * @returns {object|null} - { type: 'builtin'|'custom' } if exists, null if not
+ */
+function checkPresetExists(presetName) {
+  const builtInPath = path.join(UNITPREFS_DIR, 'presets', `${presetName}.json`)
+  if (fs.existsSync(builtInPath)) {
+    return { type: 'builtin' }
+  }
+  const customPath = path.join(
+    UNITPREFS_DIR,
+    'presets/custom',
+    `${presetName}.json`
+  )
+  if (fs.existsSync(customPath)) {
+    return { type: 'custom' }
+  }
+  return null
+}
 const {
   getConfig,
   getCategories,
@@ -54,7 +151,8 @@ const {
   reloadPreset,
   reloadCustomDefinitions,
   reloadCustomCategories,
-  getDefaultCategory
+  getDefaultCategory,
+  DEFAULT_PRESET
 } = require('../unitpreferences')
 
 const UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
@@ -274,6 +372,14 @@ module.exports = function (app) {
         return
       }
 
+      // Validate preset structure
+      const definitions = getMergedDefinitions()
+      const validationError = validatePreset(req.body, definitions)
+      if (validationError) {
+        res.status(400).json({ error: validationError })
+        return
+      }
+
       const customDir = path.join(UNITPREFS_DIR, 'presets/custom')
       if (!fs.existsSync(customDir)) {
         fs.mkdirSync(customDir, { recursive: true })
@@ -352,8 +458,144 @@ module.exports = function (app) {
     }
   })
 
+  // POST /signalk/v1/unitpreferences/presets/custom/upload
+  // Upload a custom preset file (admin only)
+  const MAX_PRESET_SIZE = 100 * 1024 // 100KB
+
+  router.post('/presets/custom/upload', (req, res) => {
+    let responseSent = false
+
+    const sendResponse = (status, body) => {
+      if (responseSent) return
+      responseSent = true
+      res.status(status).json(body)
+    }
+
+    try {
+      const bb = busboy({
+        headers: req.headers,
+        limits: { fileSize: MAX_PRESET_SIZE }
+      })
+      let fileData = ''
+      let fileName = ''
+      let fileTruncated = false
+
+      bb.on('file', (fieldname, file, info) => {
+        fileName = info.filename || ''
+
+        if (!fileName.endsWith('.json')) {
+          sendResponse(400, { error: 'File must have .json extension' })
+          file.resume()
+          return
+        }
+
+        file.on('data', (data) => {
+          fileData += data.toString()
+        })
+
+        file.on('limit', () => {
+          fileTruncated = true
+        })
+      })
+
+      bb.on('finish', () => {
+        if (responseSent) return
+
+        if (fileTruncated) {
+          sendResponse(400, {
+            error: `File too large. Maximum size is ${MAX_PRESET_SIZE / 1024}KB`
+          })
+          return
+        }
+
+        if (!fileData) {
+          sendResponse(400, { error: 'No file uploaded' })
+          return
+        }
+
+        // Parse JSON
+        let preset
+        try {
+          preset = JSON.parse(fileData)
+        } catch (e) {
+          sendResponse(400, { error: `Invalid JSON: ${e.message}` })
+          return
+        }
+
+        // Validate preset structure
+        const definitions = getMergedDefinitions()
+        const validationError = validatePreset(preset, definitions)
+        if (validationError) {
+          sendResponse(400, { error: validationError })
+          return
+        }
+
+        // Derive preset name from filename or preset.name
+        let presetName = fileName.replace('.json', '')
+        if (!/^[a-zA-Z0-9_-]+$/.test(presetName)) {
+          // Fall back to sanitized preset.name
+          presetName = preset.name.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase()
+        }
+
+        // Check for existing preset with same name
+        const existing = checkPresetExists(presetName)
+        if (existing) {
+          if (existing.type === 'builtin') {
+            sendResponse(400, {
+              error: `Cannot overwrite built-in preset "${presetName}"`
+            })
+            return
+          } else {
+            sendResponse(409, {
+              error: `duplicate`,
+              existingName: presetName
+            })
+            return
+          }
+        }
+
+        // Ensure custom directory exists
+        const customDir = path.join(UNITPREFS_DIR, 'presets/custom')
+        if (!fs.existsSync(customDir)) {
+          fs.mkdirSync(customDir, { recursive: true })
+        }
+
+        // Save the preset
+        const presetPath = path.join(customDir, `${presetName}.json`)
+        fs.writeFileSync(presetPath, JSON.stringify(preset, null, 2))
+
+        debug(`Custom preset uploaded: ${presetName}`)
+        sendResponse(200, {
+          success: true,
+          name: presetName,
+          displayName: preset.name,
+          isCustom: true
+        })
+      })
+
+      bb.on('error', (err) => {
+        debug('Error uploading preset:', err)
+        sendResponse(500, { error: 'Upload failed' })
+      })
+
+      req.pipe(bb)
+    } catch (err) {
+      debug('Error in preset upload:', err)
+      sendResponse(500, { error: 'Failed to upload preset' })
+    }
+  })
+
   return {
     start: function () {
+      if (!app.securityStrategy.isDummy()) {
+        // Add admin-only middleware for custom preset endpoints
+        app.securityStrategy.addAdminWriteMiddleware(
+          '/signalk/v1/unitpreferences/presets/custom/upload'
+        )
+        app.securityStrategy.addAdminWriteMiddleware(
+          '/signalk/v1/unitpreferences/presets/custom/:name'
+        )
+      }
       app.use('/signalk/v1/unitpreferences', router)
       debug('Unit preferences API mounted at /signalk/v1/unitpreferences')
     }

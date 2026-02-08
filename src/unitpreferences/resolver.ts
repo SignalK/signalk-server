@@ -8,13 +8,27 @@ import { EnhancedDisplayUnits, DisplayUnitsMetadata } from './types'
  * @returns Full displayUnits with formula, or null if can't resolve
  */
 export function resolveDisplayUnits(
-  storedDisplayUnits: DisplayUnitsMetadata | undefined
+  storedDisplayUnits: DisplayUnitsMetadata | undefined,
+  pathSiUnit?: string
 ): EnhancedDisplayUnits | null {
   if (!storedDisplayUnits?.category) {
     return null
   }
 
   const category = storedDisplayUnits.category
+
+  // "base" category means display in SI units without conversion
+  if (category === 'base') {
+    return {
+      category: 'base',
+      targetUnit: pathSiUnit || 'base',
+      formula: 'value',
+      inverseFormula: 'value',
+      symbol: pathSiUnit || '',
+      displayFormat: undefined
+    }
+  }
+
   const categoriesData = getCategories()
   const definitions = getMergedDefinitions()
   const preset = getActivePreset()
@@ -71,8 +85,19 @@ export function validateCategoryAssignment(
   pathSiUnit: string | undefined,
   category: string
 ): string | null {
+  // "base" category is always valid - it means use SI units
+  if (category === 'base') {
+    return null
+  }
+
   const categoriesData = getCategories()
-  const categorySiUnit = categoriesData.categoryToBaseUnit[category]
+  const preset = getActivePreset()
+
+  // Check built-in categories first, then preset categories
+  let categorySiUnit = categoriesData.categoryToBaseUnit[category]
+  if (!categorySiUnit && preset.categories[category]?.baseUnit) {
+    categorySiUnit = preset.categories[category].baseUnit
+  }
 
   if (!categorySiUnit) {
     return `Unknown category: ${category}`
