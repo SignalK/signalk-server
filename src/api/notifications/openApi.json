@@ -15,25 +15,22 @@
   },
   "servers": [
     {
-      "url": "/signalk/v1/api/vessels/self/notifications"
+      "url": "/signalk/v2/api/notifications"
     }
   ],
   "tags": [
     {
-      "name": "notifications",
-      "description": "Root path"
-    },
-    {
-      "name": "special",
-      "description": "Special Alarms"
-    },
-    {
-      "name": "course",
-      "description": "Course notifications"
+      "name": "Alerts",
+      "description": "Alerts & Alarms"
     }
   ],
   "components": {
     "schemas": {
+      "SignalKUuid": {
+        "type": "string",
+        "pattern": "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+        "example": "ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+      },
       "AlarmState": {
         "type": "string",
         "description": "Value describing the current state of the alarm.",
@@ -52,6 +49,31 @@
           "enum": ["visual", "sound"]
         }
       },
+      "AlarmStatus": {
+        "type": "object",
+        "properties": {
+          "silenced": {
+            "type": "boolean",
+            "description": "Alarm is silenced"
+          },
+          "acknowledged": {
+            "type": "boolean",
+            "description": "Alarm is silenced"
+          },
+          "canSilence": {
+            "type": "boolean",
+            "description": "Alarm can be silenced"
+          },
+          "canAcknowledge": {
+            "type": "boolean",
+            "description": "Alarm can be acknowledged"
+          },
+          "canClear": {
+            "type": "boolean",
+            "description": "Alarm can be cleared"
+          }
+        }
+      },
       "Alarm": {
         "type": "object",
         "required": ["state", "method", "message"],
@@ -64,6 +86,9 @@
           },
           "message": {
             "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AlarmStatus"
           }
         }
       },
@@ -74,12 +99,6 @@
           "value": {
             "$ref": "#/components/schemas/Alarm"
           }
-        }
-      },
-      "Notifications": {
-        "type": "object",
-        "additionalProperties": {
-          "$ref": "#/components/schemas/Alarm"
         }
       }
     },
@@ -94,12 +113,34 @@
           }
         }
       },
-      "200Ok": {
+      "Notification": {
         "description": "OK",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Notification"
+            }
+          }
+        }
+      },
+      "200Ok": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "description": "200 OK response",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETE"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [200]
+                }
+              },
+              "required": ["state", "statusCode"]
             }
           }
         }
@@ -129,29 +170,30 @@
           }
         }
       }
+    },
+    "parameters": {
+      "id": {
+        "name": "id",
+        "in": "path",
+        "description": "Notification identifier",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/SignalKUuid"
+        }
+      }
     }
   },
   "paths": {
-    "/": {
-      "get": {
-        "tags": ["notifications"],
-        "summary": "Notifications endpoint.",
-        "description": "Root path for notifications.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/ListResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
+    "/{id}/silence": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/id"
         }
-      }
-    },
-    "/mob": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Man overboard alarm.",
-        "description": "Alarm indicating person(s) overboard.",
+      ],
+      "post": {
+        "tags": ["Alerts"],
+        "summary": "Silence alert notification.",
+        "description": "Removes `sound` from the ALARM METHOD of the notification and sets `status.silenced = true`.",
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"
@@ -162,161 +204,16 @@
         }
       }
     },
-    "/fire": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Fire onboard alarm.",
-        "description": "Alarm indicating there is a fire onboard.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
+    "/{id}/acknowledge": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/id"
         }
-      }
-    },
-    "/sinking": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Sinking vessel alarm.",
-        "description": "Alarm indicating vessel is sinking.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/flooding": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Floodingalarm.",
-        "description": "Alarm indicating that veseel is taking on water.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/collision": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Collision alarm.",
-        "description": "Alarm indicating vessel has been involved in a collision.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/grounding": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Grounding alarm.",
-        "description": "Alarm indicating vessel has run aground.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/listing": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Listing alarm.",
-        "description": "Alarm indicating vessel is listing beyond acceptable parameters.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/adrift": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Adrift alarm.",
-        "description": "Alarm indicating that the vessel is set adrift.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/piracy": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Piracy alarm.",
-        "description": "Alarm indicating pirates have been encountered / boarded.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/abandon": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Abandon alarm.",
-        "description": "Alarm indicating vessel has been abandoned.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/navigation/course/arrivalCircleEntered": {
-      "get": {
-        "tags": ["course"],
-        "summary": "Arrival circle entered.",
-        "description": "Set when arrival circle around destination point has been entered.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/navigation/course/perpendicularPassed": {
-      "get": {
-        "tags": ["course"],
-        "summary": "Perpendicular passed.",
-        "description": "Set when line perpendicular to destination point has been passed by the vessel.",
+      ],
+      "post": {
+        "tags": ["Alerts"],
+        "summary": "Acknowledge alert notification.",
+        "description": "Removes both `visual` and `sound` from the ALARM METHOD of the notification and sets `status.acknowledged = true`.",
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"

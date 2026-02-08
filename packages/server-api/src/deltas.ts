@@ -1,3 +1,4 @@
+import { Position } from '.'
 import { Brand } from './brand'
 
 /** @hidden */
@@ -42,6 +43,8 @@ export type Path = Brand<string, 'path'>
 export type Timestamp = Brand<string, 'timestamp'>
 /** @category Server API */
 export type Context = Brand<string, 'context'>
+/** @category Server API */
+export type NotificationId = Brand<string, 'notificationId'>
 
 /** @category Server API */
 export type Value = object | number | string | null | Notification | boolean
@@ -69,6 +72,7 @@ export type Update = {
   /** @deprecated Use $source (SourceRef) instead for more practical string-based referencing */
   source?: Source
   $source?: SourceRef
+  notificationId?: NotificationId
 } & ({ values: PathValue[] } | { meta: Meta[] }) // require either values or meta or both
 
 /** @category Server API */
@@ -94,6 +98,10 @@ export interface Notification {
   state: ALARM_STATE
   method: ALARM_METHOD[]
   message: string
+  status?: AlarmStatus
+  position?: Position
+  createdAt?: Timestamp
+  id?: string
 }
 
 // MetaMessage
@@ -134,6 +142,15 @@ export enum ALARM_STATE {
 export enum ALARM_METHOD {
   visual = 'visual',
   sound = 'sound'
+}
+
+/** @category Server API */
+export interface AlarmStatus {
+  silenced: boolean
+  acknowledged: boolean
+  canSilence: boolean
+  canAcknowledge: boolean
+  canClear: boolean
 }
 
 /** @category Server API */
