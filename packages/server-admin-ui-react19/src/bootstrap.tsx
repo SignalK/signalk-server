@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 
+import 'simple-line-icons/css/simple-line-icons.css'
 import '../scss/style.scss'
 import '../scss/core/_dropdown-menu-right.scss'
 

@@ -6,7 +6,7 @@ import {
   ChangeEvent,
   FormEvent
 } from 'react'
-import { useZustandLoginStatus } from '../../store'
+import { useLoginStatus } from '../../store'
 import {
   Button,
   Card,
@@ -46,7 +46,7 @@ function convertPermissions(type: PermissionType | undefined): string {
 }
 
 export default function Devices() {
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
   const [devices, setDevices] = useState<Device[]>([])
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
   const selectedDeviceRef = useRef<HTMLDivElement>(null)

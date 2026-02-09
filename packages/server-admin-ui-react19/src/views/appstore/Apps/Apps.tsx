@@ -1,7 +1,7 @@
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons/faMagnifyingGlass'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState, useCallback, useMemo, useDeferredValue } from 'react'
-import { useZustandAppStore } from '../../../store'
+import { useAppStore } from '../../../store'
 import {
   Button,
   Card,
@@ -72,7 +72,7 @@ const updateAvailable = (app: AppInfo, appStore: AppStore): boolean => {
 }
 
 const Apps: React.FC = () => {
-  const appStore = useZustandAppStore() as AppStore
+  const appStore = useAppStore() as AppStore
   const [view, setSelectedView] = useState('All')
   const [category, setSelectedCategory] = useState('All')
   const [search, setSearch] = useState('')

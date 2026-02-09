@@ -1,7 +1,3 @@
-/**
- * App Slice - Core application state (plugins, login, settings, etc.)
- */
-
 import type { StateCreator } from 'zustand'
 import escape from 'escape-html'
 import Convert from 'ansi-to-html'

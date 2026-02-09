@@ -2,7 +2,6 @@ import { isUndefined } from 'lodash'
 import { webSocketService } from './services/WebSocketService'
 import { useStore } from './store'
 
-// Extend Window interface for serverRoutesPrefix
 declare global {
   interface Window {
     serverRoutesPrefix: string
@@ -16,9 +15,6 @@ const authFetch = (url: string, options?: RequestInit): Promise<Response> => {
   })
 }
 
-/**
- * Logout action - directly updates store
- */
 export async function logoutAction(): Promise<void> {
   try {
     const response = await authFetch('/signalk/v1/auth/logout', {
@@ -27,18 +23,13 @@ export async function logoutAction(): Promise<void> {
     if (!response.ok) {
       throw new Error(response.statusText)
     }
-    // Refetch login status after logout
-    await fetchLoginStatusZustand()
+    await fetchLoginStatus()
   } catch (error) {
     console.error('Logout failed:', error)
-    // Still try to fetch login status
-    await fetchLoginStatusZustand()
+    await fetchLoginStatus()
   }
 }
 
-/**
- * Restart action - directly updates store
- */
 export function restartAction(): void {
   if (confirm('Are you sure you want to restart?')) {
     fetch(`${window.serverRoutesPrefix}/restart`, {
@@ -50,10 +41,7 @@ export function restartAction(): void {
   }
 }
 
-/**
- * Login action
- */
-export async function loginActionZustand(
+export async function loginAction(
   username: string,
   password: string,
   rememberMe: boolean
@@ -75,15 +63,11 @@ export async function loginActionZustand(
   if (request.status !== 200) {
     return response.message
   }
-  // Refetch all data after successful login
-  await fetchAllDataZustand()
+  await fetchAllData()
   return null
 }
 
-/**
- * Enable security action
- */
-export async function enableSecurityZustand(
+export async function enableSecurity(
   userId: string,
   password: string
 ): Promise<string | null> {
@@ -103,15 +87,11 @@ export async function enableSecurityZustand(
     const text = await response.text()
     return text
   }
-  // Refetch login status after enabling security
-  await fetchLoginStatusZustand()
+  await fetchLoginStatus()
   return null
 }
 
-/**
- * Fetch login status directly to Zustand store
- */
-export async function fetchLoginStatusZustand(): Promise<void> {
+export async function fetchLoginStatus(): Promise<void> {
   const response = await authFetch(`${window.serverRoutesPrefix}/loginStatus`)
   if (response.status === 200) {
     const data = await response.json()
@@ -119,10 +99,7 @@ export async function fetchLoginStatusZustand(): Promise<void> {
   }
 }
 
-/**
- * Fetch all data directly to Zustand store
- */
-export async function fetchAllDataZustand(): Promise<void> {
+export async function fetchAllData(): Promise<void> {
   const fetchAndSet = async <T>(
     endpoint: string,
     setter: (data: T) => void,
@@ -154,23 +131,14 @@ export async function fetchAllDataZustand(): Promise<void> {
   ])
 }
 
-/**
- * Open WebSocket connection to SignalK server
- */
 export function openServerEventsConnection(isReconnect?: boolean): void {
   webSocketService.connect(isReconnect)
 }
 
-/**
- * Close the WebSocket connection
- */
 export function closeServerEventsConnection(skipReconnect = false): void {
   webSocketService.close(skipReconnect)
 }
 
-/**
- * Get the WebSocket service for direct access
- */
 export function getWebSocketService() {
   return webSocketService
 }

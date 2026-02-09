@@ -1,10 +1,3 @@
-/**
- * Data Slice - Manages real-time SignalK data (paths, values, metadata)
- *
- * Provides granular subscriptions for high-frequency updates via
- * Zustand's subscribeWithSelector middleware.
- */
-
 import type { StateCreator } from 'zustand'
 
 export interface PathData {

@@ -5,7 +5,7 @@ import { faSquarePlus } from '@fortawesome/free-solid-svg-icons/faSquarePlus'
 import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState, type JSX } from 'react'
-import { useZustandLoginStatus } from '../../store'
+import { useLoginStatus } from '../../store'
 import { Col, Form, FormGroup, Input, Label, Row } from 'reactstrap'
 
 interface DisplayScaleValue {
@@ -350,7 +350,7 @@ const saveMeta = (path: string, meta: MetaData) => {
 }
 
 const Meta: React.FC<MetaProps> = ({ meta, path }) => {
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
   const [isEditing, setIsEditing] = useState(false)
   const [localMeta, setLocalMeta] = useState<MetaData>(meta)
 

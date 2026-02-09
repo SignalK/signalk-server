@@ -1,16 +1,12 @@
 /// <reference types="vitest" />
+import path from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { federation } from '@module-federation/vite'
 
-// Validate peer dependencies for Module Federation compatibility
 import '@signalk/server-admin-ui-dependencies'
 
-/**
- * Custom Vite plugin to replace %ADDONSCRIPTS% placeholder in dev mode.
- * In production, this is replaced server-side with actual addon script tags.
- * In dev mode, we replace it with an empty comment since addons aren't available.
- */
+// %ADDONSCRIPTS% is replaced server-side in production with actual addon script tags
 function replaceAddonScripts() {
   return {
     name: 'replace-addon-scripts',
@@ -23,16 +19,11 @@ function replaceAddonScripts() {
   }
 }
 
-/**
- * Custom Vite plugin to strip SVG font format from @font-face declarations in CSS.
- * SVG fonts are obsolete (only needed for IE9 and below) and add ~2.5MB to the bundle.
- * Modern browsers use WOFF2/WOFF which are smaller and universally supported.
- */
+// Strip obsolete SVG font references from @font-face declarations (~2.5MB savings)
 function stripSvgFonts() {
   return {
     name: 'strip-svg-fonts',
     enforce: 'post',
-    // Transform handles inline CSS in JS modules
     transform(code, id) {
       if (!id.includes('.css') && !id.includes('.scss')) {
         return null
@@ -47,11 +38,9 @@ function stripSvgFonts() {
       }
       return null
     },
-    // generateBundle handles the final CSS output
     generateBundle(options, bundle) {
       for (const fileName of Object.keys(bundle)) {
         const chunk = bundle[fileName]
-        // Process CSS files
         if (chunk.type === 'asset' && fileName.endsWith('.css')) {
           const svgFontRegex =
             /,?\s*url\(['"]?[^'"()]+\.svg[^'"()]*['"]?\)\s*format\(['"]svg['"]\)/gi
@@ -62,7 +51,6 @@ function stripSvgFonts() {
             chunk.source = chunk.source.replace(svgFontRegex, '')
           }
         }
-        // Remove SVG font files from bundle
         if (
           chunk.type === 'asset' &&
           fileName.endsWith('.svg') &&
@@ -80,7 +68,7 @@ function stripSvgFonts() {
 export default defineConfig({
   base: './',
   publicDir: 'public_src',
-  // Use ES2023 for both dev and build to support top-level await in Module Federation
+  // Module Federation requires top-level await (ES2023)
   esbuild: {
     target: 'es2023'
   },
@@ -102,19 +90,20 @@ export default defineConfig({
       name: 'adminUI',
       filename: 'remoteEntry.js',
       remotes: {},
-      // Disable TypeScript declaration generation to avoid WebSocket connection errors
-      // during dev mode (the dts plugin tries to connect on port 16322)
-      dts: false,
+      dts: false, // dts plugin tries to connect on port 16322 in dev mode
       shared: {
         react: {
           singleton: true,
-          // Allow any React version for backward compatibility with older webapps
-          requiredVersion: false
+          // Must specify React 19 explicitly — the monorepo root has React 16
+          // (from the old admin UI) which Module Federation picks up otherwise,
+          // causing "Cannot read properties of undefined (reading 'ReactCurrentOwner')"
+          requiredVersion: '^19.0.0',
+          version: '19.2.0'
         },
         'react-dom': {
           singleton: true,
-          // Allow any React version for backward compatibility with older webapps
-          requiredVersion: false
+          requiredVersion: '^19.0.0',
+          version: '19.2.0'
         }
       }
     })
@@ -122,40 +111,31 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        // Silence Sass deprecation warnings from dependencies in node_modules
         quietDeps: true,
-        // Silence @import deprecation warnings - migration to @use/@forward
-        // would require restructuring all SCSS files and Bootstrap 5 itself
-        // still uses @import internally. Will address when Dart Sass 3.0 is released.
+        // Bootstrap 5 still uses @import internally
         silenceDeprecations: ['import']
       }
     }
   },
   server: {
     port: 5173,
-    // Bind to localhost only by default for security
-    // Use `npm run dev -- --host 0.0.0.0` to expose to network
     host: 'localhost',
     proxy: {
-      // Proxy SignalK API and WebSocket to the running server
       '/signalk': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         ws: true
       },
-      // Proxy admin server routes
       '/skServer': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         ws: true
       },
-      // Proxy plugin public files
       '/plugins': {
         target: 'http://localhost:3000',
         changeOrigin: true
       },
-      // Proxy webapp files (scoped packages like @signalk/*, @mxtommy/kip, etc.)
-      // Exclude Vite internals (/@vite, /@react-refresh, /@fs, /@id)
+      // Proxy scoped webapp packages (@signalk/*, etc.) but not Vite internals
       '/@': {
         target: 'http://localhost:3000',
         changeOrigin: true,
@@ -181,8 +161,13 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Force all React imports to resolve to our local React 19 packages.
+      // Without this, dependencies (react-select/Emotion, etc.) resolve to the
+      // root workspace's React 16, causing "Cannot read properties of undefined
+      // (reading 'ReactCurrentOwner')" at runtime.
+      react: path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
       path: false,
-      // Polyfill Node.js modules for browser compatibility
       events: 'events',
       buffer: 'buffer'
     }

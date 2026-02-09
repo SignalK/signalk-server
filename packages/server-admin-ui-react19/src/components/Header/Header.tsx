@@ -17,7 +17,7 @@ import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faBars } from '@fortawesome/free-solid-svg-icons/faBars'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import {
-  useZustandLoginStatus,
+  useLoginStatus,
   useRestarting,
   useBackpressureWarning
 } from '../../store'
@@ -26,7 +26,7 @@ import { logoutAction, restartAction } from '../../actions'
 export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
   const restarting = useRestarting()
   const backpressureWarning = useBackpressureWarning()
 

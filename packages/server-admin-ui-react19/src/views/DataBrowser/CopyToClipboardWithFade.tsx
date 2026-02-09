@@ -1,15 +1,11 @@
 import { useState, useCallback, ReactNode } from 'react'
 
-/**
- * Copy text to clipboard with fallback for non-HTTPS contexts
- */
 function copyToClipboard(text: string): Promise<void> {
-  // Try modern Clipboard API first (requires HTTPS or localhost)
   if (navigator.clipboard && window.isSecureContext) {
     return navigator.clipboard.writeText(text)
   }
 
-  // Fallback for HTTP: use deprecated execCommand
+  // Fallback for HTTP (Clipboard API requires secure context)
   const textArea = document.createElement('textarea')
   textArea.value = text
   textArea.style.position = 'fixed'
@@ -35,9 +31,6 @@ interface CopyToClipboardWithFadeProps {
   children: ReactNode
 }
 
-/**
- * CopyToClipboardWithFade - Wrapper that provides visual feedback on copy
- */
 function CopyToClipboardWithFade({
   text,
   children

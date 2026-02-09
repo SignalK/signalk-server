@@ -8,15 +8,11 @@ interface VirtualizedMetaTableProps {
   context: string
 }
 
-// Virtualization requires measuring DOM and updating state in response to scroll events.
-// This is an inherent characteristic of virtual scrolling - handlers update range state.
 function VirtualizedMetaTable({ paths, context }: VirtualizedMetaTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  // Get metadata for this context from Zustand
   const contextMeta = useStore(useShallow((s) => s.signalkMeta[context] || {}))
-  const rowHeight = 60 // Meta rows are taller due to form elements
+  const rowHeight = 60
   const overscan = 10
-  // Track paths.length to reset range when data changes
   const [pathsLength, setPathsLength] = useState(paths.length)
 
   // Compute initial visible range synchronously for first render

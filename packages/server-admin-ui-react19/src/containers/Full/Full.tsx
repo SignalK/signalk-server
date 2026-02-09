@@ -1,7 +1,7 @@
 import React, { useEffect, Component, ReactNode, ComponentType } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Container } from 'reactstrap'
-import { useZustandLoginStatus, type LoginStatus } from '../../store'
+import { useLoginStatus, type LoginStatus } from '../../store'
 
 import Header from '../../components/Header/Header'
 import Sidebar from '../../components/Sidebar/Sidebar'
@@ -28,7 +28,7 @@ import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
-import { fetchAllDataZustand } from '../../actions'
+import { fetchAllData } from '../../actions'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -39,7 +39,7 @@ interface ErrorBoundaryState {
   error: Error | null
 }
 
-// Error boundary wrapper component (must be class component)
+// Must be a class component — React error boundaries don't support hooks
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props)
@@ -96,12 +96,11 @@ function loginRequired(
   )
 }
 
-// Protected route component using hooks
 function ProtectedRoute({
   component: ComponentToRender,
   supportsReadOnly = false
 }: ProtectedRouteProps) {
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
 
   if (loginRequired(loginStatus, supportsReadOnly)) {
     return <Login />
@@ -118,7 +117,7 @@ export default function Full() {
   const location = useLocation()
 
   useEffect(() => {
-    fetchAllDataZustand()
+    fetchAllData()
   }, [])
 
   const suppressPadding =

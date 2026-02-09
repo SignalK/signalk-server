@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, CardHeader, CardBody } from 'reactstrap'
-import { useZustandAppStore } from '../../store'
+import { useAppStore } from '../../store'
 
 interface InstallingApp {
   name: string
@@ -19,7 +19,7 @@ interface AppStore {
 
 const ServerUpdate: React.FC = () => {
   const navigate = useNavigate()
-  const appStore = useZustandAppStore() as AppStore
+  const appStore = useAppStore() as AppStore
 
   const handleUpdate = useCallback(() => {
     console.log('handleUpdate')

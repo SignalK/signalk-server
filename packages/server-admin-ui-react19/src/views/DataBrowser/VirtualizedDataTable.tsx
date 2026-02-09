@@ -26,13 +26,6 @@ interface VirtualizedDataTableProps {
   sourceFilterActive: boolean
 }
 
-/**
- * VirtualizedDataTable - Window-scroll virtualized table
- * Optimized for React 19 with dynamic row heights for RAW mode
- */
-// Virtualization requires measuring DOM and updating state in response to scroll events.
-// This is an inherent characteristic of virtual scrolling - we must read the container's
-// position from the DOM (via refs) and update which rows are rendered (via state).
 function VirtualizedDataTable({
   path$SourceKeys,
   context,

@@ -1,13 +1,3 @@
-/**
- * WebSocketService - Manages SignalK WebSocket connection
- *
- * This service handles:
- * - WebSocket connection lifecycle (connect, reconnect, close)
- * - Storing skSelf from the SignalK hello message
- * - Delta message routing to registered handlers
- * - Connection status tracking with useSyncExternalStore support
- */
-
 import type { SignalKStore } from '../store'
 
 export type WebSocketStatus =
@@ -47,28 +37,12 @@ export class WebSocketService {
   private reconnectAttempts = 0
   private maxReconnectAttempts = Infinity
   private reconnectInterval = 5000
-
-  // Buffer for delta messages received before hello message (skSelf)
-  // This prevents race condition where deltas arrive before we know which vessel is "self"
-  private earlyDeltaBuffer: unknown[] = []
-
-  // Buffer for delta messages received before any handlers are registered
-  // This prevents race condition where deltas are replayed but no components have subscribed yet
-  private pendingDeltaBuffer: unknown[] = []
-
-  // Zustand state setter, set by store initialization
   private zustandSetState: ZustandStateSetter | null = null
 
-  /**
-   * Set the Zustand state setter for direct state updates
-   */
   setZustandState(setState: ZustandStateSetter): void {
     this.zustandSetState = setState
   }
 
-  /**
-   * Connect to the SignalK WebSocket stream
-   */
   connect(isReconnect = false): void {
     if (this.state.ws?.readyState === WebSocket.OPEN) {
       return
@@ -92,7 +66,8 @@ export class WebSocketService {
       this.updateState({ status: 'open', ws })
 
       if (isReconnect) {
-        window.location.reload()
+        // Dynamic import avoids circular dependency with actions.ts
+        import('../actions').then(({ fetchAllData }) => fetchAllData())
       }
     }
 
@@ -114,49 +89,30 @@ export class WebSocketService {
     this.state.ws = ws
   }
 
-  /**
-   * Close the WebSocket connection
-   */
   close(skipReconnect = false): void {
     if (skipReconnect) {
       this.stopReconnectTimer()
-      // Prevent onclose from triggering reconnect
       if (this.state.ws) {
         this.state.ws.onclose = null
       }
     }
     this.state.ws?.close()
-    // Clear delta buffers on close
-    this.earlyDeltaBuffer = []
-    this.pendingDeltaBuffer = []
     this.updateState({ status: 'closed', ws: null })
   }
 
-  /**
-   * Reconnect the WebSocket (close and open new connection)
-   */
   reconnect(): void {
     this.close(true)
     this.connect()
   }
 
-  /**
-   * Get the current WebSocket instance
-   */
   getWebSocket(): WebSocket | null {
     return this.state.ws
   }
 
-  /**
-   * Get the skSelf value from the SignalK hello message
-   */
   getSkSelf(): string | null {
     return this.state.skSelf
   }
 
-  /**
-   * Get current connection status
-   */
   getStatus(): WebSocketStatus {
     return this.state.status
   }
@@ -177,37 +133,13 @@ export class WebSocketService {
     return this.state
   }
 
-  /**
-   * Register a delta message handler
-   * When the first handler is registered, replay any pending deltas
-   */
   addDeltaHandler(handler: DeltaMessageHandler): () => void {
-    const wasEmpty = this.deltaHandlers.size === 0
     this.deltaHandlers.add(handler)
-
-    // Replay pending deltas to the first handler that registers
-    if (wasEmpty && this.pendingDeltaBuffer.length > 0) {
-      const buffered = this.pendingDeltaBuffer
-      this.pendingDeltaBuffer = []
-      buffered.forEach((deltaMsg) => {
-        this.deltaHandlers.forEach((h) => {
-          try {
-            h(deltaMsg)
-          } catch (e) {
-            console.error('Delta handler error (pending replay):', e)
-          }
-        })
-      })
-    }
-
     return () => {
       this.deltaHandlers.delete(handler)
     }
   }
 
-  /**
-   * Register a status change handler
-   */
   addStatusHandler(handler: StatusChangeHandler): () => void {
     this.statusHandlers.add(handler)
     return () => {
@@ -218,7 +150,6 @@ export class WebSocketService {
   private handleMessage(message: unknown): void {
     const msg = message as Record<string, unknown>
 
-    // Check for backpressure indicator
     if (msg.$backpressure) {
       const bp = msg.$backpressure as {
         accumulated: number
@@ -242,49 +173,21 @@ export class WebSocketService {
       }
     }
 
-    // Server event (has type property) - dispatch to Zustand
     if (msg.type) {
       this.handleServerEvent(msg)
       return
     }
 
-    // Hello message (has name property) - extract skSelf
+    // Hello message — extract skSelf
     if (msg.name) {
       this.updateState({ skSelf: msg.self as string })
-
-      // Replay any buffered delta messages now that we know skSelf
-      if (this.earlyDeltaBuffer.length > 0) {
-        const buffered = this.earlyDeltaBuffer
-        this.earlyDeltaBuffer = []
-        buffered.forEach((deltaMsg) => {
-          this.dispatchDelta(deltaMsg)
-        })
-      }
-      return
-    }
-
-    // Delta message - route to handlers (or buffer if skSelf not yet known)
-    if (!this.state.skSelf) {
-      // Buffer delta messages until we receive the hello message with skSelf
-      // This prevents the race condition where deltas are dropped because
-      // DataBrowser can't determine which context is "self"
-      this.earlyDeltaBuffer.push(message)
       return
     }
 
     this.dispatchDelta(message)
   }
 
-  /**
-   * Dispatch a delta message to handlers, or buffer if no handlers registered
-   */
   private dispatchDelta(message: unknown): void {
-    // If no handlers are registered yet, buffer the delta
-    if (this.deltaHandlers.size === 0) {
-      this.pendingDeltaBuffer.push(message)
-      return
-    }
-
     this.deltaHandlers.forEach((handler) => {
       try {
         handler(message)
@@ -311,37 +214,25 @@ export class WebSocketService {
         break
       case 'DEBUG_SETTINGS':
         this.zustandSetState((state) => ({
-          log: { ...state.log, debugEnabled: String(data ?? '') }
-        }))
-        break
-      case 'REMEMBERME_SETTINGS':
-        this.zustandSetState((state) => ({
-          log: { ...state.log, rememberDebug: Boolean(data) }
-        }))
-        break
-      case 'DEBUG':
-        this.zustandSetState((state) => {
-          const entries = [...(state.log?.entries || []), msg.data as string]
-          // Keep last 500 entries
-          if (entries.length > 500) {
-            entries.splice(0, entries.length - 500)
+          log: {
+            ...state.log,
+            debugEnabled:
+              (data as { debugEnabled?: string })?.debugEnabled ?? '',
+            rememberDebug:
+              (data as { rememberDebug?: boolean })?.rememberDebug ?? false
           }
-          return { log: { ...state.log, entries } } as Partial<SignalKStore>
-        })
+        }))
         break
-      case 'SERVERLOGS':
-        this.zustandSetState(
-          (state) =>
-            ({
-              log: {
-                ...state.log,
-                entries: [
-                  ...(msg.data as string[]),
-                  ...(state.log?.entries || [])
-                ]
-              }
-            }) as Partial<SignalKStore>
-        )
+      case 'LOG':
+        // Dynamic import avoids circular dependency with store
+        import('../store').then(({ useStore }) => {
+          const logData = msg.data as {
+            isError?: boolean
+            ts: string
+            row: string
+          }
+          useStore.getState().addLogEntry(logData)
+        })
         break
       case 'ACCESS_REQUEST':
         this.zustandSetState({ accessRequests: data } as Partial<SignalKStore>)
@@ -358,10 +249,14 @@ export class WebSocketService {
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break
       case 'RECEIVE_APPSTORE_LIST':
-        this.zustandSetState({ appStore: data } as Partial<SignalKStore>)
+        // Dynamic import avoids circular dependency with store
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setAppStore(data as Parameters<SignalKStore['setAppStore']>[0])
+        })
         break
       default:
-        // Unknown event type, log for debugging
         console.debug('Unhandled server event:', eventType)
     }
   }
@@ -370,10 +265,8 @@ export class WebSocketService {
     const prevStatus = this.state.status
     this.state = { ...this.state, ...updates }
 
-    // Notify useSyncExternalStore listeners
     this.listeners.forEach((listener) => listener())
 
-    // Notify status handlers if status changed
     if (updates.status && updates.status !== prevStatus) {
       this.statusHandlers.forEach((handler) => {
         try {
@@ -384,7 +277,6 @@ export class WebSocketService {
       })
     }
 
-    // Sync to Zustand store
     if (this.zustandSetState) {
       const zustandUpdates: Record<string, unknown> = {}
       if (updates.status !== undefined) {
@@ -424,7 +316,6 @@ export class WebSocketService {
   }
 }
 
-// Singleton instance
 export const webSocketService = new WebSocketService()
 
 export default webSocketService

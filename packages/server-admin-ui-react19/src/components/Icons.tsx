@@ -1,7 +1,3 @@
-/**
- * Centralized FontAwesome 6 icon exports for the admin UI.
- * Using deep imports for tree-shaking optimization.
- */
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 // Solid icons

@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom'
 import {
-  useZustandLoginStatus,
-  useZustandAppStore,
+  useLoginStatus,
+  useAppStore,
   useVesselInfo,
   useServerSpecification
 } from '../../store'
 
 export default function Footer() {
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
   const serverSpecification = useServerSpecification()
-  const appStore = useZustandAppStore()
+  const appStore = useAppStore()
   const vesselInfo = useVesselInfo()
 
   const { name, mmsi, uuid } = vesselInfo

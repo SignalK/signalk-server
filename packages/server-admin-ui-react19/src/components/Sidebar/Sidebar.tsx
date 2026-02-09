@@ -1,34 +1,12 @@
 import React, { useMemo, useCallback, MouseEvent, ReactNode } from 'react'
 import { NavLink, Location } from 'react-router-dom'
 import { Badge, Nav, NavItem, NavLink as RsNavLink } from 'reactstrap'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGauge } from '@fortawesome/free-solid-svg-icons/faGauge'
-import { faTableCells } from '@fortawesome/free-solid-svg-icons/faTableCells'
-import { faFolder } from '@fortawesome/free-solid-svg-icons/faFolder'
-import { faBasketShopping } from '@fortawesome/free-solid-svg-icons/faBasketShopping'
-import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
-import { faShield } from '@fortawesome/free-solid-svg-icons/faShield'
-import { faBookOpen } from '@fortawesome/free-solid-svg-icons/faBookOpen'
-import { faBolt } from '@fortawesome/free-solid-svg-icons/faBolt'
-import { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import {
-  useZustandAppStore,
+  useAppStore,
   useAccessRequests,
-  useZustandLoginStatus
+  useLoginStatus
 } from '../../store'
 import classNames from 'classnames'
-
-// Map icon names to FA6 icons
-const iconMap: Record<string, IconDefinition> = {
-  'icon-speedometer': faGauge,
-  'icon-grid': faTableCells,
-  'icon-folder': faFolder,
-  'icon-basket': faBasketShopping,
-  'icon-settings': faGear,
-  'icon-shield': faShield,
-  'icon-book-open': faBookOpen,
-  'icon-energy': faBolt
-}
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
 import SidebarHeader from './../SidebarHeader/SidebarHeader'
@@ -63,9 +41,9 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ location }: SidebarProps) {
-  const appStore = useZustandAppStore()
+  const appStore = useAppStore()
   const accessRequests = useAccessRequests()
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
 
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
@@ -282,11 +260,7 @@ export default function Sidebar({ location }: SidebarProps) {
 
   const renderIcon = (iconClass?: string): ReactNode => {
     if (!iconClass) return null
-    const icon = iconMap[iconClass]
-    if (icon) {
-      return <FontAwesomeIcon icon={icon} className="nav-icon" />
-    }
-    return <i className={iconClass} />
+    return <i className={classNames(iconClass, 'nav-icon')} />
   }
 
   const navLink = (

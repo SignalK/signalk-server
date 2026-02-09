@@ -5,7 +5,7 @@ import {
   useCallback,
   ChangeEvent
 } from 'react'
-import { useZustandLoginStatus, useAccessRequests } from '../../store'
+import { useLoginStatus, useAccessRequests } from '../../store'
 import {
   Button,
   Card,
@@ -45,7 +45,7 @@ interface ProcessingState {
 
 export default function AccessRequests() {
   const accessRequests = useAccessRequests() as unknown as AccessRequestData[]
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
 
   const [selectedRequest, setSelectedRequest] =
     useState<AccessRequestData | null>(null)

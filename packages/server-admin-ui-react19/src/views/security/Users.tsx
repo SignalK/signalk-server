@@ -20,7 +20,7 @@ import {
   FormText,
   Table
 } from 'reactstrap'
-import { useZustandLoginStatus } from '../../store'
+import { useLoginStatus } from '../../store'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
@@ -53,7 +53,7 @@ function convertType(type: UserType | undefined): string {
 }
 
 export default function Users() {
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
   const [users, setUsers] = useState<User[] | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const selectedUserRef = useRef<HTMLDivElement>(null)

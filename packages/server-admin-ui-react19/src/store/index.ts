@@ -1,9 +1,3 @@
-/**
- * SignalK Admin UI Store
- *
- * Unified Zustand store for all application state management.
- */
-
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
@@ -16,7 +10,6 @@ import {
   type PrioritiesSlice
 } from './slices/prioritiesSlice'
 
-// Re-export slice types
 export type { AppSlice } from './slices/appSlice'
 export type {
   WsSlice,
@@ -26,10 +19,8 @@ export type {
 export type { DataSlice, PathData, MetaData } from './slices/dataSlice'
 export type { PrioritiesSlice } from './slices/prioritiesSlice'
 
-// Combined Zustand store type
 export type SignalKStore = AppSlice & WsSlice & DataSlice & PrioritiesSlice
 
-// Create the unified Zustand store
 export const useStore = create<SignalKStore>()(
   subscribeWithSelector((...args) => ({
     ...createAppSlice(...args),
@@ -39,10 +30,8 @@ export const useStore = create<SignalKStore>()(
   }))
 )
 
-// Re-export useShallow for convenient usage
 export { useShallow }
 
-// Convenience hooks for common state selections
 export function useWsStatus() {
   return useStore((s) => s.wsStatus)
 }
@@ -58,11 +47,11 @@ export function useWsConnection() {
   )
 }
 
-export function useZustandLoginStatus() {
+export function useLoginStatus() {
   return useStore((s) => s.loginStatus)
 }
 
-export function useZustandAppStore() {
+export function useAppStore() {
   return useStore((s) => s.appStore)
 }
 
@@ -70,15 +59,15 @@ export function useServerStats() {
   return useStore((s) => s.serverStatistics)
 }
 
-export function useZustandLogEntries() {
+export function useLogEntries() {
   return useStore((s) => s.log)
 }
 
-export function useZustandPathData(context: string, path$SourceKey: string) {
+export function usePathData(context: string, path$SourceKey: string) {
   return useStore((s) => s.signalkData[context]?.[path$SourceKey])
 }
 
-export function useZustandMetaData(context: string, path: string) {
+export function useMetaData(context: string, path: string) {
   return useStore((s) => s.signalkMeta[context]?.[path])
 }
 
@@ -86,7 +75,7 @@ export function useDataVersion() {
   return useStore((s) => s.dataVersion)
 }
 
-export function useZustandSourcePriorities() {
+export function useSourcePriorities() {
   return useStore((s) => s.sourcePrioritiesData)
 }
 
@@ -122,5 +111,4 @@ export function useBackpressureWarning() {
   return useStore((s) => s.backpressureWarning)
 }
 
-// Re-export types
 export * from './types'

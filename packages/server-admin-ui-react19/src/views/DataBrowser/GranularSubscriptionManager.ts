@@ -1,18 +1,8 @@
 import { getPathFromKey } from './pathUtils'
 
-/**
- * GranularSubscriptionManager - Manages visible-only WebSocket subscriptions
- *
- * Strategy:
- * 1. Subscribe to visible paths with announceNewPaths: true
- *    - Server announces ALL existing paths matching context (once each)
- *    - Server announces NEW paths as they appear (once each)
- * 2. Only receive continuous updates for explicitly subscribed (visible) paths
- * 3. Debounce subscription changes during scroll (350ms)
- * 4. Handle "unsubscribe all, resubscribe new set" atomically
- *
- * State machine: IDLE -> SUBSCRIBED <-> RESUBSCRIBING
- */
+// Only subscribes to visible paths for continuous updates, but uses
+// announceNewPaths: true so the server announces all existing/new paths once.
+// State machine: IDLE -> SUBSCRIBED <-> RESUBSCRIBING
 
 const STATE = {
   IDLE: 'idle',

@@ -16,8 +16,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
 import { faUser } from '@fortawesome/free-solid-svg-icons/faUser'
-import { useZustandLoginStatus } from '../../store'
-import { enableSecurityZustand } from '../../actions'
+import { useLoginStatus } from '../../store'
+import { enableSecurity } from '../../actions'
 import Login from './Login'
 
 interface EnableSecurityState {
@@ -25,7 +25,7 @@ interface EnableSecurityState {
 }
 
 export default function EnableSecurity() {
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -35,7 +35,7 @@ export default function EnableSecurity() {
     FormData
   >(
     async () => {
-      const error = await enableSecurityZustand(username, password)
+      const error = await enableSecurity(username, password)
       return { error }
     },
     { error: null }

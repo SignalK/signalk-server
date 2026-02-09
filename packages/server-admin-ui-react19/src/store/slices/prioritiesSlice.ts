@@ -1,7 +1,3 @@
-/**
- * Source Priorities Slice - Manages data source priority configuration
- */
-
 import type { StateCreator } from 'zustand'
 import remove from 'lodash.remove'
 import type {

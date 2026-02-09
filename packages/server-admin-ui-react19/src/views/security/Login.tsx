@@ -26,13 +26,12 @@ import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
 import { faRightToBracket } from '@fortawesome/free-solid-svg-icons/faRightToBracket'
 import { faUser } from '@fortawesome/free-solid-svg-icons/faUser'
-import { useZustandLoginStatus } from '../../store'
-import { loginActionZustand } from '../../actions'
+import { useLoginStatus } from '../../store'
+import { loginAction as performLogin } from '../../actions'
 import Dashboard from '../Dashboard/Dashboard'
 import EnableSecurity from './EnableSecurity'
 
-// Parse URL parameters from hash fragment (for HashRouter)
-// e.g., "#/login?oidcError=true" → URLSearchParams with oidcError=true
+// HashRouter puts query params in the hash fragment
 const getHashParams = (): URLSearchParams => {
   const hash = window.location.hash
   const queryIndex = hash.indexOf('?')
@@ -42,15 +41,13 @@ const getHashParams = (): URLSearchParams => {
   return new URLSearchParams(hash.substring(queryIndex + 1))
 }
 
-// Action state type for login form
 interface LoginState {
   error: string | null
 }
 
 export default function Login() {
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
 
-  // Get initial OIDC error from URL
   const urlParams = getHashParams()
   const initialOidcError = urlParams.has('oidcError')
     ? urlParams.get('message') || 'SSO login failed'
@@ -60,14 +57,12 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
 
-  // React 19: useActionState for form submission with automatic pending state
-  // Replaces manual loggingIn state + setLoggingIn(true/false) pattern
   const [loginState, loginAction, isLoggingIn] = useActionState<
     LoginState,
     FormData
   >(
     async () => {
-      const error = await loginActionZustand(username, password, rememberMe)
+      const error = await performLogin(username, password, rememberMe)
       return { error }
     },
     { error: initialOidcError }
@@ -90,7 +85,6 @@ export default function Login() {
     return false
   }, [])
 
-  // Single effect handles both initial mount and subsequent loginStatus changes
   useEffect(() => {
     const shouldAutoLogin =
       loginStatus.status === 'notLoggedIn' &&
@@ -99,8 +93,6 @@ export default function Login() {
       !loginStatus.noUsers &&
       !shouldSkipAutoLogin()
 
-    // On first render, try auto-login if conditions are met
-    // On subsequent renders, only auto-login if status changed to 'notLoggedIn'
     const statusChanged = prevLoginStatusRef.current !== loginStatus.status
     const shouldRedirect =
       shouldAutoLogin && (isFirstRenderRef.current || statusChanged)
@@ -123,7 +115,6 @@ export default function Login() {
 
   const handleInputKeyUp = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
-      // Submit form by creating and dispatching FormData
       const form = event.currentTarget.closest('form')
       if (form) {
         form.requestSubmit()

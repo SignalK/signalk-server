@@ -1,6 +1,3 @@
-// SignalK Admin UI Store Types
-// Type definitions for Zustand store
-
 export interface LogEntry {
   i: number
   d: string

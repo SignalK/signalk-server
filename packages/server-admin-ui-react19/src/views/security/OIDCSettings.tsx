@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useZustandLoginStatus } from '../../store'
+import { useLoginStatus } from '../../store'
 import {
   Alert,
   Button,
@@ -60,7 +60,7 @@ interface OIDCConfig {
 }
 
 const OIDCSettings: React.FC = () => {
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
 
   const [hasData, setHasData] = useState(false)
   const [isOpen, setIsOpen] = useState(false)

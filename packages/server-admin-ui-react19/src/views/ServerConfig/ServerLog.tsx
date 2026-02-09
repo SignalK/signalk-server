@@ -7,7 +7,7 @@ import {
   FormEvent
 } from 'react'
 import parse from 'html-react-parser'
-import { useZustandLogEntries } from '../../store'
+import { useLogEntries } from '../../store'
 import {
   Card,
   CardBody,
@@ -42,7 +42,7 @@ interface SelectOption {
 }
 
 export default function ServerLogs() {
-  const log = useZustandLogEntries()
+  const log = useLogEntries()
   const { ws: webSocket } = useWebSocket()
 
   const [pause, setPause] = useState(false)

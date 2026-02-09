@@ -8,7 +8,7 @@ import {
   Component,
   ReactNode
 } from 'react'
-import { useZustandLoginStatus } from '../../store'
+import { useLoginStatus } from '../../store'
 import { useParams } from 'react-router-dom'
 import { toLazyDynamicComponent, APP_PANEL } from './dynamicutilities'
 import Login from '../../views/security/Login'
@@ -123,7 +123,7 @@ interface EmbeddedComponentProps {
 }
 
 export default function Embedded() {
-  const loginStatus = useZustandLoginStatus()
+  const loginStatus = useLoginStatus()
   const params = useParams<{ moduleId: string }>()
   const moduleId = params.moduleId ?? ''
 

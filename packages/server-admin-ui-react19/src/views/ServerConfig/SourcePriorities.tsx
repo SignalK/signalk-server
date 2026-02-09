@@ -18,7 +18,7 @@ import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import Creatable from 'react-select/creatable'
 import uniq from 'lodash.uniq'
-import { useStore, useZustandSourcePriorities } from '../../store'
+import { useStore, useSourcePriorities } from '../../store'
 
 // Types
 interface Priority {
@@ -197,7 +197,7 @@ function fetchAvailablePaths(cb: (paths: string[]) => void) {
 
 // Main SourcePriorities Component
 const SourcePriorities: React.FC = () => {
-  const sourcePrioritiesData = useZustandSourcePriorities()
+  const sourcePrioritiesData = useSourcePriorities()
   const changePath = useStore((s) => s.changePath)
   const deletePath = useStore((s) => s.deletePath)
   const setSaving = useStore((s) => s.setSaving)

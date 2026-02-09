@@ -1,9 +1,3 @@
-/**
- * WebSocket Slice - Manages SignalK WebSocket connection lifecycle
- *
- * Handles connection, reconnection, and message routing.
- */
-
 import type { StateCreator } from 'zustand'
 
 export type WebSocketStatus =
