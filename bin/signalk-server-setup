@@ -224,7 +224,7 @@ function promptForVesselName(configDirectory, updateExisting) {
                 deltaEditor.removeSelfValue('uuid')
               }
               deltaEditor.setSelfValue('name', vesselName)
-              deltaEditor.save(defaultsLocation)
+              return deltaEditor.save(defaultsLocation)
             }
           },
           {
@@ -269,6 +269,9 @@ function promptForVesselName(configDirectory, updateExisting) {
                 settingsLocation,
                 configDirectory
               ].forEach((file) => {
+                if (!fs.existsSync(file)) {
+                  return
+                }
                 let stat = fs.statSync(file)
                 let mode =
                   file === startupLocation || stat.isDirectory() ? '755' : '644'
