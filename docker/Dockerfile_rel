@@ -16,11 +16,14 @@ RUN npm config rm proxy \
 ARG TAG
 
 # Install locally (not globally) to avoid permission issues
-# Copy @signalk packages to nested location where admin-ui expects them
+# Copy @signalk packages and @mxtommy/kip to nested location where webapp discovery expects them
 RUN npm install signalk-server@$TAG \
   && mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
   && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
-  && rm -rf node_modules/@signalk/;
+  && rm -rf node_modules/@signalk/ \
+  && mkdir -p node_modules/signalk-server/node_modules/@mxtommy/ \
+  && cp -rf node_modules/@mxtommy/kip node_modules/signalk-server/node_modules/@mxtommy/ \
+  && rm -rf node_modules/@mxtommy/;
 
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
