@@ -73,6 +73,7 @@
     "packages/assemblyscript-plugin-sdk"
   ],
   "dependencies": {
+    "@sinclair/typebox": "^0.34.30",
     "@assemblyscript/loader": "^0.28.9",
     "@signalk/course-provider": "^1.0.0",
     "@signalk/n2k-signalk": ">=4.1.0-beta",
