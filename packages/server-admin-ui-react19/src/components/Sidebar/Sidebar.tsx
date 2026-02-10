@@ -1,11 +1,7 @@
 import React, { useMemo, useCallback, MouseEvent, ReactNode } from 'react'
 import { NavLink, Location } from 'react-router-dom'
 import { Badge, Nav, NavItem, NavLink as RsNavLink } from 'reactstrap'
-import {
-  useAppStore,
-  useAccessRequests,
-  useLoginStatus
-} from '../../store'
+import { useAppStore, useAccessRequests, useLoginStatus } from '../../store'
 import classNames from 'classnames'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
