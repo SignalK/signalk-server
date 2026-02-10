@@ -311,17 +311,29 @@ const mapStateToProps = (state) => {
   result.items.push({
     name: 'Documentation',
     url: '/documentation',
-    icon: 'icon-book-open'
-  })
-
-  result.items.push({
-    name: 'OpenApi',
-    url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
-    icon: 'icon-energy',
-    props: {
-      target: '_blank',
-      rel: 'noopener noreferrer'
-    }
+    icon: 'icon-book-open',
+    children: [
+      {
+        name: 'Documentation',
+        url: '/documentation'
+      },
+      {
+        name: 'OpenAPI',
+        url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
+        props: {
+          target: '_blank',
+          rel: 'noopener noreferrer'
+        }
+      },
+      {
+        name: 'AsyncAPI',
+        url: `${window.location.protocol}//${window.location.host}/skServer/asyncapi/course/docs`,
+        props: {
+          target: '_blank',
+          rel: 'noopener noreferrer'
+        }
+      }
+    ]
   })
 
   return result

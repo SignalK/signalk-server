@@ -14,6 +14,7 @@ import { historyApiRecord } from './history/openApi'
 import { radarApiRecord } from './radar/openApi'
 import { PluginId, PluginManager } from '../interfaces/plugins'
 import { Brand } from '@signalk/server-api'
+import { courseAsyncApiDoc } from './course/asyncApi'
 
 export type OpenApiDescription = Brand<object, 'OpenApiDescription'>
 
@@ -105,4 +106,40 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
     apiDefinitionHandler
   )
   app.get(`${SERVERROUTESPREFIX}/openapi/:api`, apiDefinitionHandler)
+
+  // Serve AsyncAPI JSON document for Course API WebSocket delta channels
+  app.get(
+    `${SERVERROUTESPREFIX}/asyncapi/course`,
+    (_req: Request, res: Response) => {
+      res.json(courseAsyncApiDoc)
+    }
+  )
+
+  // Serve AsyncAPI HTML viewer (like Swagger UI but for AsyncAPI)
+  app.get(
+    `${SERVERROUTESPREFIX}/asyncapi/course/docs`,
+    (_req: Request, res: Response) => {
+      res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Signal K Course API - WebSocket Deltas</title>
+  <link rel="stylesheet" href="https://unpkg.com/@asyncapi/react-component@2/styles/default.min.css">
+  <style>
+    body { margin: 0; padding: 0; }
+    #asyncapi { padding: 20px; }
+  </style>
+</head>
+<body>
+  <div id="asyncapi"></div>
+  <script src="https://unpkg.com/@asyncapi/react-component@2/browser/standalone/index.js"></script>
+  <script>
+    AsyncApiStandalone.render({
+      schema: { url: '${SERVERROUTESPREFIX}/asyncapi/course' },
+      config: { show: { sidebar: true } }
+    }, document.getElementById('asyncapi'));
+  </script>
+</body>
+</html>`)
+    }
+  )
 }

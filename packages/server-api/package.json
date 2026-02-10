@@ -22,6 +22,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",
+    "@sinclair/typebox": "^0.34.30",
     "baconjs": "^1.0.1"
   },
   "devDependencies": {
