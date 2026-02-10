@@ -1,44 +1,48 @@
+import { type Static } from '@sinclair/typebox'
 import { Position } from '.'
 import { Brand } from './brand'
+import {
+  HrefDestinationSchema,
+  PositionDestinationSchema,
+  RouteDestinationSchema,
+  ActiveRouteSchema
+} from './course-schemas'
+
+// Re-export all schemas for downstream consumers
+export * from './course-schemas'
 
 /** @category Course API */
-export interface HrefDestination {
-  href: string
-}
+export type HrefDestination = Static<typeof HrefDestinationSchema>
 
 /** @category Course API */
-export interface PositionDestination {
-  position: Position
-}
+export type PositionDestination = Static<typeof PositionDestinationSchema>
 
 /** @category Course API */
 export type PointDestination = HrefDestination | PositionDestination
 
 /** @category Course API */
-export interface RouteDestination {
-  href: string
-  reverse?: boolean
-  pointIndex?: number
-  arrivalCircle?: number
-}
+export type RouteDestination = Static<typeof RouteDestinationSchema>
 
 /** @category Course API */
-export interface ActiveRoute {
-  href: string
-  pointIndex: number
-  pointTotal: number
-  reverse: boolean
-  name: string
-}
+export type ActiveRoute = Static<typeof ActiveRouteSchema>
 
-/** @category Course API */
+/**
+ * NextPreviousPoint uses the branded CoursePointType, so it stays as an
+ * interface. The TypeBox NextPreviousPointSchema validates the runtime shape;
+ * the Brand provides nominal typing at compile time.
+ * @category Course API
+ */
 export interface NextPreviousPoint {
   href?: string
   type: CoursePointType
   position: Position
 }
 
-/** @category Course API */
+/**
+ * CoursePointType is a branded string for nominal typing.
+ * Runtime validation uses CoursePointTypeSchema.
+ * @category Course API
+ */
 export type CoursePointType = Brand<string, 'coursepointtype'>
 
 /** @category  Course API */
@@ -48,7 +52,12 @@ export const COURSE_POINT_TYPES = {
   Location: 'Location' as CoursePointType
 }
 
-/** @category Course API */
+/**
+ * CourseInfo references NextPreviousPoint which has the branded CoursePointType,
+ * so it stays as an interface. The TypeBox CourseInfoSchema validates the
+ * runtime shape.
+ * @category Course API
+ */
 export interface CourseInfo {
   startTime: string | null
   targetArrivalTime: string | null
