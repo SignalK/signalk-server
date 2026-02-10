@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * WASM Plugin Delta Subscription Management
  *
@@ -15,17 +14,17 @@ const debug = Debug('signalk:wasm:subscriptions')
 export interface DeltaSubscription {
   pluginId: string
   pattern: string // Path pattern like "navigation.*" or "*"
-  callback: (delta: any) => void
+  callback: (delta: Delta) => void
 }
 
 export interface Delta {
   context: string
   updates: Array<{
-    source: any
+    source: Record<string, unknown>
     timestamp: string
     values: Array<{
       path: string
-      value: any
+      value: unknown
     }>
   }>
 }
@@ -46,7 +45,7 @@ export class WasmSubscriptionManager {
   register(
     pluginId: string,
     pattern: string,
-    callback: (delta: any) => void
+    callback: (delta: Delta) => void
   ): void {
     if (!this.subscriptions.has(pluginId)) {
       this.subscriptions.set(pluginId, [])
