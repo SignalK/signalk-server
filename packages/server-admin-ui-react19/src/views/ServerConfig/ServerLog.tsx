@@ -250,7 +250,6 @@ interface LogRowProps {
   log: string
 }
 
-// React Compiler auto-memoizes components
 function LogRow({ log }: LogRowProps) {
   return (
     <span>

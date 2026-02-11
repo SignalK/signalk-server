@@ -68,15 +68,12 @@ export default function Users() {
     return response.json()
   }, [])
 
-  // Refresh users - for use in event handlers after mutations
   const refreshUsers = useCallback(() => {
     loadUsers().then((data) => {
       setUsers(data)
     })
   }, [loadUsers])
 
-  // Fetch users when authentication requirements change - standard data fetching pattern.
-  // See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
   useEffect(() => {
     if (loginStatus.authenticationRequired) {
       loadUsers().then((data) => {

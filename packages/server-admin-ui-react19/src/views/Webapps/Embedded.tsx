@@ -127,7 +127,6 @@ export default function Embedded() {
   const params = useParams<{ moduleId: string }>()
   const moduleId = params.moduleId ?? ''
 
-  // Create lazy component when moduleId changes - useMemo ensures stable reference
   const component = useMemo(
     () =>
       moduleId
@@ -140,11 +139,9 @@ export default function Embedded() {
   )
 
   useEffect(() => {
-    // Initialize websockets array for this module
     if (!moduleWebsockets.has(moduleId)) {
       moduleWebsockets.set(moduleId, [])
     }
-    // Capture the module ID for cleanup
     const cleanupModuleId = moduleId
     return () => {
       const websockets = moduleWebsockets.get(cleanupModuleId)
@@ -161,7 +158,6 @@ export default function Embedded() {
     }
   }, [moduleId])
 
-  // Callback for opening websockets - uses module-level map instead of ref
   const openWebsocket = useCallback(
     (wsParams: WebSocketParams) => {
       const knownParams: (keyof WebSocketParams)[] = [
@@ -186,7 +182,6 @@ export default function Embedded() {
     [moduleId]
   )
 
-  // Memoize adminUI API to ensure stable reference across renders.
   const adminUI: AdminUI = useMemo(
     () => ({
       hideSideBar: () => {

@@ -10,7 +10,7 @@ As of Signalk V 2.17.0, you'll notice that the path appears in the Data Browser 
 
 <img width="751" height="236" alt="Screenshot 2025-12-15 at 1 56 08 PM" src="https://github.com/user-attachments/assets/2514d3f7-9b6a-4f50-a6cf-d5e8868199a4" />
 
-This is a Custom Renderer. The code for it is embedded in the DataBrowser package. See: [ValueRenderers.tsx](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/src/views/DataBrowser/ValueRenderers.tsx).
+This is a Custom Renderer. The code for it is embedded in the DataBrowser package. See: [ValueRenderers.tsx](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui-react19/src/views/DataBrowser/ValueRenderers.tsx).
 
 As of Signalk V 2.19.0, there are additional embedded Custom Renderers for Notifications, Attitude, Direction, Meters and Large Arrays.
 
@@ -58,7 +58,7 @@ plugins: [
 ]
 ```
 
-**Important:** Configure React as a singleton with `requiredVersion: false` to share the host's React 19 instance. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the Admin UI's configuration.
+**Important:** Configure React as a singleton with `requiredVersion: false` to share the host's React 19 instance. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui-react19/vite.config.js) for the Admin UI's configuration.
 
 - Build your plugin (`npm run build`)
 

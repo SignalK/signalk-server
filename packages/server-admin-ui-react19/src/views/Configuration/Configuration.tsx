@@ -143,12 +143,10 @@ export default function PluginConfigurationList() {
     const containerRect = tableContainerRef.current.getBoundingClientRect()
     const rowRect = selectedRow.getBoundingClientRect()
 
-    // Check if the row is outside the visible area
     if (
       rowRect.bottom > containerRect.bottom ||
       rowRect.top < containerRect.top
     ) {
-      // Calculate the scroll position to center the selected row
       const rowOffsetTop = selectedRow.offsetTop
       const containerHeight = tableContainerRef.current.clientHeight
       const rowHeight = selectedRow.clientHeight
@@ -165,7 +163,7 @@ export default function PluginConfigurationList() {
   const selectPlugin = useCallback((plugin: Plugin | null) => {
     const selectedPluginId = plugin ? plugin.id : null
 
-    // Update localStorage and state only - keep URL static for best performance
+    // Keep URL static for best performance
     if (selectedPluginId) {
       localStorage.setItem(openPluginStorageKey, selectedPluginId)
       setSelectedPlugin(plugin)
@@ -235,12 +233,11 @@ export default function PluginConfigurationList() {
         return newPlugins
       })
 
-      // Update selected plugin if it's the one being saved
       setSelectedPlugin((prev) =>
         prev && prev.id === id ? { ...prev, data } : prev
       )
 
-      return true // Success
+      return true
     },
     []
   )

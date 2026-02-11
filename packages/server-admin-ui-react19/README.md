@@ -1,4 +1,4 @@
-# @signalk/server-admin-ui
+# @signalk/server-admin-ui-react19
 
 Admin interface for the [Signal K](http://signalk.org) [Node Server](https://github.com/SignalK/signalk-server-node).
 
@@ -29,7 +29,7 @@ The dev server proxies API requests to the Signal K server on port 3000.
 npm run build
 npm link
 cd ../../
-npm link @signalk/server-admin-ui
+npm link @signalk/server-admin-ui-react19
 npm start
 ```
 

@@ -8,9 +8,9 @@ interface WarningBoxProps {
 
 export default function WarningBox({ children }: WarningBoxProps) {
   return (
-    <div className="message__container">
+    <div className="message__container" role="alert">
       <p className="message">
-        <span>
+        <span aria-hidden="true">
           <FontAwesomeIcon icon={faTriangleExclamation} />
         </span>
         {children}

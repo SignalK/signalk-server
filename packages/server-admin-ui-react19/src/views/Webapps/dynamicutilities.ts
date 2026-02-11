@@ -1,7 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 
-// Share scope types
 interface ShareScopeEntry {
   get: () => Promise<() => unknown>
   loaded: boolean
@@ -30,7 +29,6 @@ interface Container {
   get: (module: string) => Promise<() => { default: React.ComponentType }>
 }
 
-// Declare globals
 declare global {
   interface Window {
     [key: string]: Container | undefined
@@ -41,36 +39,28 @@ declare global {
   var __FEDERATION__: { __INSTANCES__?: FederationInstance[] } | undefined
 }
 
-// Shared scope cache to ensure consistency across loads
 let cachedShareScope: ShareScope | null = null
-
-// Track which containers have been initialized to avoid calling init() twice
 const initializedContainers = new Set<string>()
 
-// Get share scope from Vite's Module Federation runtime or Webpack
 const getShareScope = (): ShareScope => {
-  // Return cached scope if available
   if (cachedShareScope) {
     return cachedShareScope
   }
 
-  // First check for Webpack's share scope (for Webpack-built hosts)
+  // Webpack-built hosts expose share scopes via this global
   if (typeof __webpack_share_scopes__ !== 'undefined') {
     cachedShareScope = __webpack_share_scopes__.default
     return cachedShareScope
   }
 
-  // For Vite Module Federation, get share scope from the runtime instance
-  // The __FEDERATION__ global is set up by @module-federation/vite runtime
+  // __FEDERATION__ global is set up by @module-federation/vite runtime
   if (
     typeof __FEDERATION__ !== 'undefined' &&
     __FEDERATION__.__INSTANCES__ &&
     __FEDERATION__.__INSTANCES__.length > 0
   ) {
-    // Get the first (host) instance's share scope
     const hostInstance = __FEDERATION__.__INSTANCES__[0]
     if (hostInstance && hostInstance.shareScopeMap) {
-      // Ensure the default scope exists
       if (!hostInstance.shareScopeMap.default) {
         hostInstance.shareScopeMap.default = {}
       }
@@ -79,9 +69,7 @@ const getShareScope = (): ShareScope => {
     }
   }
 
-  // Fallback: create a share scope with react and react-dom for Webpack remotes
-  // This ensures external Webpack-built webapps can access shared dependencies
-  // Format matches Webpack's expected share scope structure
+  // Fallback for Webpack remotes — format matches Webpack's share scope structure
   cachedShareScope = {
     react: {
       [React.version]: {
@@ -111,22 +99,20 @@ const getShareScope = (): ShareScope => {
   return cachedShareScope
 }
 
-// Initialize container safely - handles async init and prevents double initialization
 const initializeContainer = async (
   container: Container,
   moduleName: string
 ): Promise<void> => {
   const containerId = toSafeModuleId(moduleName)
 
-  // Skip if already initialized - Webpack containers throw if init() is called twice
+  // Webpack containers throw if init() is called twice
   if (initializedContainers.has(containerId)) {
     return
   }
 
   const shareScope = getShareScope()
 
-  // container.init() may return a promise (especially in Vite Module Federation)
-  // We need to await it to ensure initialization completes before calling get()
+  // container.init() may return a promise in Vite Module Federation
   try {
     const initResult = container.init(shareScope)
     if (
@@ -149,7 +135,6 @@ const initializeContainer = async (
   }
 }
 
-// Helper to create an error component module
 const createErrorModule = (message?: string): { default: React.FC } => ({
   default: () =>
     React.createElement(
@@ -186,10 +171,9 @@ export const toLazyDynamicComponent = (
       }
 
       try {
-        // Initialize container with shared scope from the host's Module Federation runtime
         await initializeContainer(container, moduleName)
 
-        // container.get() returns a promise that resolves to a factory function
+        // container.get() resolves to a factory function
         const factory = await container.get(component)
         if (!factory) {
           console.error(
@@ -200,7 +184,6 @@ export const toLazyDynamicComponent = (
           )
         }
 
-        // Factory returns the actual module
         const Module = factory()
         return Module as { default: React.ComponentType }
       } catch (ex) {

@@ -330,7 +330,6 @@ class GranularSubscriptionManager {
   }
 }
 
-// Singleton instance
 const granularSubscriptionManager = new GranularSubscriptionManager()
 
 export default granularSubscriptionManager

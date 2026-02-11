@@ -168,7 +168,7 @@ The exposed modules need to `export default` a React component. Functional compo
 
 The Admin UI uses **React 19** with shared dependencies via Module Federation. Your embedded webapp should:
 
-1. **Share React as a singleton** - Configure Module Federation to use the host's React instance with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the current configuration.
+1. **Share React as a singleton** - Configure Module Federation to use the host's React instance with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui-react19/vite.config.js) for the current configuration.
 
 2. **Use functional components** - The Admin UI is built with functional components and React hooks. While class components still work, functional components are recommended for consistency.
 

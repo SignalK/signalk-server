@@ -88,8 +88,6 @@ const ProvidersConfiguration: React.FC = () => {
     })
   }, [])
 
-  // Data fetching on mount - this is the standard React pattern for fetching data.
-  // See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
   useEffect(() => {
     loadProviders().then((data) => {
       setProviders(data.providers)

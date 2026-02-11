@@ -49,7 +49,6 @@ export default function EnableSecurity() {
 
   const handleInputKeyUp = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
-      // Submit the form programmatically
       const form = event.currentTarget.form
       if (form) {
         form.requestSubmit()

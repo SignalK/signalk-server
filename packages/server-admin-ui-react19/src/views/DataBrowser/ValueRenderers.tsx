@@ -577,11 +577,8 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
   )
 }
 
-// Type for dynamic renderers cache
 type RendererComponent = ComponentType<RendererProps>
 
-// Factory function to create a Suspense wrapper component outside of render
-// This ensures the wrapper component is created once and cached
 function createLazySuspenseWrapper(
   LazyComponent: ComponentType<RendererProps>
 ): RendererComponent {
@@ -617,25 +614,18 @@ export const getValueRenderer = (
   meta: MetaData | null
 ): RendererComponent | null => {
   if (path.startsWith('notifications.')) {
-    return NotificationRenderer as RendererComponent // notification paths should always use NotificationRenderer
-    // better implementation would set up regex path -> renderer mapping in settings file
-    // even better implementation would be to have first class object types like Notification,
-    // Battery, Sensor, Engine, GPS etc. that encapsulate their paths and their renderer
-    // as well as other useful data/behavior.
+    return NotificationRenderer as RendererComponent
   }
   if (meta && meta.renderer && meta.renderer.module && meta.renderer.name) {
     const cacheKey = `${meta.renderer.module}.${meta.renderer.name}`
     if (Renderers[cacheKey]) {
       return Renderers[cacheKey]
     } else {
-      // Create and cache a lazy wrapper component outside of React render cycle
-      // This component is created once when first requested and reused thereafter
       const LazyRenderer = toLazyDynamicComponent(
         meta.renderer.module,
         meta.renderer.name
       ) as ComponentType<RendererProps>
 
-      // Use createLazySuspenseWrapper to create a stable component reference
       const comp = createLazySuspenseWrapper(LazyRenderer)
       Renderers[cacheKey] = comp
       return comp

@@ -25,7 +25,7 @@ The Admin UI has been upgraded from React 16 to **React 19**. This is a signific
 
 **If your webapp uses Module Federation to share React with the Admin UI:**
 
-1. **Singleton sharing is now required** - Your webapp must configure React and ReactDOM as singletons with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the current configuration.
+1. **Singleton sharing is now required** - Your webapp must configure React and ReactDOM as singletons with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui-react19/vite.config.js) for the current configuration.
 
 2. **React 19 compatibility** - If your webapp bundles its own React, it should be compatible with components rendered by the host. Most React 16/17/18 code works unchanged in React 19, but some deprecated APIs have been removed.
 

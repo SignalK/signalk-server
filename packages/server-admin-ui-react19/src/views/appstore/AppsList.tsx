@@ -55,11 +55,8 @@ interface AppListProps {
 
 export default function AppList({ apps: propsApps }: AppListProps) {
   const [displayCount, setDisplayCount] = useState(20)
-  // Track apps length to reset display count when data changes
   const [prevAppsLength, setPrevAppsLength] = useState(propsApps.length)
 
-  // Reset display count when apps prop changes - derived state pattern.
-  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   if (propsApps.length !== prevAppsLength) {
     setPrevAppsLength(propsApps.length)
     setDisplayCount(20)

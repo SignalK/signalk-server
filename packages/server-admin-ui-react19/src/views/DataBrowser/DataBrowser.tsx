@@ -273,8 +273,6 @@ const DataBrowser: React.FC = () => {
     }
   }, [loadSources])
 
-  // Compute context options from Zustand state directly
-  // React Compiler tracks signalkData as a dependency
   const contextOptions: SelectOption[] = (() => {
     const contexts = Object.keys(signalkData).sort()
     const options: SelectOption[] = []

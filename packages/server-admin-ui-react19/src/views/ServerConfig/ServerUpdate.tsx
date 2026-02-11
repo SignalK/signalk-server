@@ -22,8 +22,7 @@ const ServerUpdate: React.FC = () => {
   const appStore = useAppStore() as AppStore
 
   const handleUpdate = useCallback(() => {
-    console.log('handleUpdate')
-    if (confirm(`Are you sure you want to update the server?'`)) {
+    if (confirm('Are you sure you want to update the server?')) {
       navigate('/appstore/updates')
       fetch(
         `${window.serverRoutesPrefix}/appstore/install/signalk-server/${appStore.serverUpdate}`,
@@ -73,10 +72,10 @@ const ServerUpdate: React.FC = () => {
             <p>
               The server is running as a Docker container. You need to pull a
               new server version from Container registry to update.
-              <ul>
-                <code>docker pull cr.signalk.io/signalk/signalk-server</code>
-              </ul>
             </p>
+            <pre>
+              <code>docker pull cr.signalk.io/signalk/signalk-server</code>
+            </pre>
             <p>
               More info about running Signal K in Docker can be found at{' '}
               <a
@@ -144,14 +143,12 @@ const ServerUpdate: React.FC = () => {
             If you find Signal K valuable to you consider sponsoring our work on
             developing it further.
           </p>
-          <p>
-            Your support allows us to do things like
-            <ul>
-              <li>travel to meet in person and push things forward</li>
-              <li>purchase equipment to develop on</li>
-              <li>upgrade our cloud resources beyond the free tiers</li>
-            </ul>
-          </p>
+          <p>Your support allows us to do things like</p>
+          <ul>
+            <li>travel to meet in person and push things forward</li>
+            <li>purchase equipment to develop on</li>
+            <li>upgrade our cloud resources beyond the free tiers</li>
+          </ul>
           <p>
             See{' '}
             <a href="https://opencollective.com/signalk">

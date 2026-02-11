@@ -27,8 +27,6 @@ export default function Webapps() {
   const webapps = useWebapps() as WebAppInfo[]
   const addons = useAddons() as AddonModule[]
 
-  // Create lazy components when addons change - useMemo ensures stable references
-  // Keep addon name with component for stable keys
   const addonComponents = useMemo(
     () =>
       addons.map((md) => ({

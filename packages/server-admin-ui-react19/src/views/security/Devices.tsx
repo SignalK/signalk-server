@@ -61,15 +61,12 @@ export default function Devices() {
     return response.json()
   }, [])
 
-  // Refresh devices - for use in event handlers after mutations
   const refreshDevices = useCallback(() => {
     loadDevices().then((data) => {
       setDevices(data)
     })
   }, [loadDevices])
 
-  // Fetch devices when authentication requirements change - standard data fetching pattern.
-  // See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
   useEffect(() => {
     if (loginStatus.authenticationRequired) {
       loadDevices().then((data) => {

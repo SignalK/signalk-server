@@ -77,12 +77,10 @@ export default function ActionCellRenderer({
     setShowVersionsModal(true)
 
     try {
-      // Fetch versions from npm registry
       const response = await fetch(`https://registry.npmjs.org/${app.name}`)
       const packageData = await response.json()
 
       if (packageData.versions) {
-        // Get all versions and sort them by semver (newest first)
         const versionList = semver.rsort(Object.keys(packageData.versions))
         setVersions(versionList)
       }
@@ -108,9 +106,6 @@ export default function ActionCellRenderer({
   let progress: ReactNode | undefined
 
   if (app.installing) {
-    // Read the status of the progressing app
-    // If the app has progressed we show the status
-
     if (app.isInstalling || app.isRemoving || app.isWaiting) {
       status = app.isRemove
         ? 'Removing'

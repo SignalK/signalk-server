@@ -116,7 +116,7 @@ interface TypeComponentProps {
   hasAnalyzer?: boolean
 }
 
-// Stable component lookup - defined outside component to avoid recreation on render
+// Defined outside component to avoid recreation on render
 const TYPE_COMPONENTS: Record<
   string,
   React.ComponentType<TypeComponentProps>

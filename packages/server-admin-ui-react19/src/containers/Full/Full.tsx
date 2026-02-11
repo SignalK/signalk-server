@@ -82,14 +82,10 @@ function loginRequired(
   loginStatus: LoginStatus,
   componentSupportsReadOnly: boolean
 ): boolean {
-  // component works with read only access and
-  // server loginStatus allows read only access
   if (componentSupportsReadOnly && loginStatus.readOnlyAccess) {
     return false
   }
 
-  // require login when server requires authentication AND
-  // user is not logged
   return (
     loginStatus.authenticationRequired === true &&
     loginStatus.status === 'notLoggedIn'

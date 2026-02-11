@@ -36,7 +36,6 @@ interface SelectOption {
   value: string
 }
 
-// Fetch source refs helper
 function fetchSourceRefs(path: string, cb: (refs: string[]) => void) {
   fetch(`/signalk/v1/api/vessels/self/${path.replace(/\./g, '/')}`, {
     credentials: 'include'
@@ -52,7 +51,6 @@ function fetchSourceRefs(path: string, cb: (refs: string[]) => void) {
     .then(cb)
 }
 
-// Prefs Editor Component
 interface PrefsEditorProps {
   path: string
   priorities: Priority[]
@@ -186,7 +184,6 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
   )
 }
 
-// Fetch available paths helper
 function fetchAvailablePaths(cb: (paths: string[]) => void) {
   fetch(`${window.serverRoutesPrefix}/availablePaths`, {
     credentials: 'include'
@@ -195,7 +192,6 @@ function fetchAvailablePaths(cb: (paths: string[]) => void) {
     .then(cb)
 }
 
-// Main SourcePriorities Component
 const SourcePriorities: React.FC = () => {
   const sourcePrioritiesData = useSourcePriorities()
   const changePath = useStore((s) => s.changePath)

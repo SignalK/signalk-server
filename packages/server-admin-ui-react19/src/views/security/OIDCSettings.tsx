@@ -69,7 +69,6 @@ const OIDCSettings: React.FC = () => {
   const [testResult, setTestResult] = useState<TestResult | null>(null)
   const [saveResult, setSaveResult] = useState<SaveResult | null>(null)
 
-  // Form fields
   const [enabled, setEnabled] = useState(false)
   const [issuer, setIssuer] = useState('')
   const [clientId, setClientId] = useState('')
