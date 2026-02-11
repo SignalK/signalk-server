@@ -107,13 +107,18 @@ const Playground: React.FC = () => {
   const inputWaitTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   // Track if initial auto-send has been scheduled
   const initialSendScheduledRef = useRef(false)
+  const inputRef = useRef(input)
+  useEffect(() => {
+    inputRef.current = input
+  }, [input])
 
   const send = useCallback(
     (sendToServer: boolean, sendToN2K = false) => {
-      const start = input.trim().charAt(0)
+      const currentInput = inputRef.current
+      const start = currentInput.trim().charAt(0)
       if (start === '{' || start === '[') {
         try {
-          jsonlint.parse(input)
+          jsonlint.parse(currentInput)
           if (activeTab === LINT_ERROR_TAB_ID) {
             setActiveTab(DELTAS_TAB_ID)
           }
@@ -130,8 +135,8 @@ const Playground: React.FC = () => {
         }
       }
 
-      const body = { value: input, sendToServer, sendToN2K }
-      localStorage.setItem(inputStorageKey, input)
+      const body = { value: currentInput, sendToServer, sendToN2K }
+      localStorage.setItem(inputStorageKey, currentInput)
 
       if (sendToServer) {
         setSending(true)
@@ -225,7 +230,7 @@ const Playground: React.FC = () => {
           }
         })
     },
-    [input, activeTab]
+    [activeTab]
   )
 
   const handleInput = useCallback(
@@ -257,9 +262,10 @@ const Playground: React.FC = () => {
   }, [send])
 
   const beautify = useCallback(() => {
+    const currentInput = inputRef.current
     try {
-      jsonlint.parse(input)
-      const text = JSON.stringify(JSON.parse(input), null, 2)
+      jsonlint.parse(currentInput)
+      const text = JSON.stringify(JSON.parse(currentInput), null, 2)
       setInput(text)
       setJsonError(null)
     } catch (err) {
@@ -272,7 +278,7 @@ const Playground: React.FC = () => {
       setJsonError((err as Error).message)
       setActiveTab(LINT_ERROR_TAB_ID)
     }
-  }, [input])
+  }, [])
 
   // Auto-send on mount if there's saved input
   // The ref is only read when scheduling the initial send, never during render
