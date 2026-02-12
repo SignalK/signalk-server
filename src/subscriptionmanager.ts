@@ -274,7 +274,7 @@ function handleSubscribeRow(
 }
 
 function pathMatcher(path: string = '*') {
-  const pattern = path.replace('.', '\\.').replace('*', '.*')
+  const pattern = path.replace(/\./g, '\\.').replace(/\*/g, '.*')
   const matcher = new RegExp('^' + pattern + '$')
   return (aPath: string) => matcher.test(aPath)
 }
@@ -289,8 +289,8 @@ function contextMatcher(
   if (subscribeCommand.context) {
     if (isString(subscribeCommand.context)) {
       const pattern = subscribeCommand.context
-        .replace('.', '\\.')
-        .replace('*', '.*')
+        .replace(/\./g, '\\.')
+        .replace(/\*/g, '.*')
       const matcher = new RegExp('^' + pattern + '$')
       return (normalizedDeltaData: WithContext) =>
         matcher.test(normalizedDeltaData.context) ||
