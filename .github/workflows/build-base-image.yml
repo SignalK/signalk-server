@@ -7,9 +7,10 @@ on:
 
 jobs:
   build-images:
+    name: Ubuntu base image
     strategy:
       matrix:
-        os: [24.04]
+        os: [24.04, alpine]
         node: [22.x, 24.x]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
@@ -24,6 +25,18 @@ jobs:
             arch: arm
             node: 24.x
             platform: linux/arm64
+          - os: 24.04
+            node: 22.x
+            node_safe: 22.x
+          - os: 24.04
+            node: 24.x
+            node_safe: 24.x
+          - os: alpine
+            node: 22.x
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            node_safe: 24
     runs-on: ${{ matrix.vm }}
     steps:
       - uses: actions/checkout@v6
@@ -36,7 +49,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Build baseimages
+      - name: Build Ubuntu baseimages
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -44,32 +57,30 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}
+            ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node_safe }}
           build-args: |
-            NODE=${{ matrix.node }}
-
-      - name: Modify Dockerfile_rel for testing
-        run: |
-          sed -i \
-            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}|g" \
-            ./docker/Dockerfile_rel
-
-      - name: Build Signal K test docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./docker/Dockerfile_rel
-          platforms: ${{ matrix.platform }}
-          build-args: |
-            TAG=latest
+            NODE=${{ matrix.node_safe }}
 
   create-and-push-manifest:
     needs: [build-images]
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [24.04]
+        os: [24.04, alpine]
         node: [22.x, 24.x]
+        include:
+          - os: 24.04
+            node: 22.x
+            node_safe: 22.x
+          - os: 24.04
+            node: 24.x
+            node_safe: 24.x
+          - os: alpine
+            node: 22.x
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            node_safe: 24
 
     steps:
       - name: Login to ghcr.io
@@ -83,18 +94,31 @@ jobs:
         uses: int128/docker-manifest-create-action@v2
         with:
           tags: |
-            ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node }}
+            ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node_safe }}
           sources: |
-            ghcr.io/signalk/signalk-server-base:amd-${{ matrix.os }}-${{ matrix.node }}
-            ghcr.io/signalk/signalk-server-base:arm-${{ matrix.os }}-${{ matrix.node }}
+            ghcr.io/signalk/signalk-server-base:amd-${{ matrix.os }}-${{ matrix.node_safe }}
+            ghcr.io/signalk/signalk-server-base:arm-${{ matrix.os }}-${{ matrix.node_safe }}
 
-  copy-ubuntu-to-dockerhub:
+  copy-to-dockerhub:
     needs: create-and-push-manifest
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [24.04]
+        os: [24.04, alpine]
         node: [22.x, 24.x]
+        include:
+          - os: 24.04
+            node: 22.x
+            node_safe: 22.x
+          - os: 24.04
+            node: 24.x
+            node_safe: 24.x
+          - os: alpine
+            node: 22.x
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            node_safe: 24
 
     steps:
       - name: Install skopeo
@@ -113,11 +137,11 @@ jobs:
           skopeo copy --all \
             --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
             --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-            "docker://ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node }}" \
-            "docker://docker.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node }}"
+            "docker://ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node_safe }}" \
+            "docker://docker.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node_safe }}"
 
   housekeeping:
-    needs: copy-ubuntu-to-dockerhub
+    needs: [copy-to-dockerhub]
     runs-on: ubuntu-latest
     permissions:
       packages: write
