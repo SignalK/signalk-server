@@ -1,8 +1,8 @@
 import { OpenApiDescription } from '../swagger'
-import securityApiDoc from './openApi.json'
+import { securityOpenApiDoc } from './openApi.gen'
 
 export const securityApiRecord = {
   name: 'security',
   path: '/signalk/v1',
-  apiDoc: securityApiDoc as unknown as OpenApiDescription
+  apiDoc: securityOpenApiDoc as unknown as OpenApiDescription
 }
