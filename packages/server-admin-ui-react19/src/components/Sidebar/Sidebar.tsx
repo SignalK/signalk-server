@@ -189,17 +189,33 @@ export default function Sidebar({ location }: SidebarProps) {
     result.push({
       name: 'Documentation',
       url: '/documentation',
-      icon: 'icon-book-open'
-    })
-
-    result.push({
-      name: 'OpenApi',
-      url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
-      icon: 'icon-energy',
-      props: {
-        target: '_blank',
-        rel: 'noopener noreferrer'
-      }
+      icon: 'icon-book-open',
+      children: [
+        {
+          name: 'Documentation',
+          url: '/documentation'
+        },
+        {
+          name: 'OpenAPI',
+          url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
+          props: {
+            target: '_blank',
+            rel: 'noopener noreferrer'
+          }
+        },
+        {
+          name: 'AsyncAPI',
+          url: `${window.location.protocol}//${window.location.host}/skServer/asyncapi/docs`,
+          props: {
+            target: '_blank',
+            rel: 'noopener noreferrer'
+          }
+        },
+        {
+          name: 'Path Reference',
+          url: '/documentation/paths'
+        }
+      ]
     })
 
     return result
