@@ -61,7 +61,7 @@ jobs:
             os: alpine
             node: 24.x
             node_safe: 24
-            platform: linux/arm64,linux/arm/v7
+            platform: linux/arm64
     runs-on: ${{ matrix.vm }}
     steps:
       - uses: actions/checkout@v6
