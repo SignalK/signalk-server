@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ServerAPI, WithContext } from '@signalk/server-api'
-import { FullSignalK } from '@signalk/signalk-schema'
+import { FullSignalK, ServerAPI, WithContext } from '@signalk/server-api'
 import { SecurityStrategy } from './security'
 
 export interface HelloMessage {

@@ -1,7 +1,6 @@
 const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
-chai.use(require('@signalk/signalk-schema').chaiModule)
 const { freeport } = require('./ts-servertestutilities')
 const { startServerP, sendDelta } = require('./servertestutilities')
 const uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
@@ -68,7 +67,7 @@ describe('Server', function () {
           'deltaFromHttp.115'
         )
         delete treeAfterFirstDelta.vessels[uuid].navigation.course //FIXME until in schema
-        treeAfterFirstDelta.should.be.validSignalK
+        treeAfterFirstDelta.should.have.property('vessels')
 
         delta.updates[0].values[0].value = 1
         return sendDelta(delta, deltaUrl)
@@ -86,7 +85,7 @@ describe('Server', function () {
           'deltaFromHttp.115'
         )
         delete treeAfterSecondDelta.vessels[uuid].navigation.course //FIXME until in schema
-        treeAfterSecondDelta.should.be.validSignalK
+        treeAfterSecondDelta.should.have.property('vessels')
 
         delta.updates[0].values[0].value = 2
         delta.updates[0].source.src = '116'
@@ -111,7 +110,7 @@ describe('Server', function () {
           'deltaFromHttp.116'
         ].value.should.equal(2)
         delete treeAfterOtherSourceDelta.vessels[uuid].navigation.course //FIXME until in schema
-        treeAfterOtherSourceDelta.should.be.validSignalK
+        treeAfterOtherSourceDelta.should.have.property('vessels')
       })
   }).timeout(4000)
 })

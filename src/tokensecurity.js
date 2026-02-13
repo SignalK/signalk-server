@@ -20,7 +20,7 @@ const debug = createDebug('signalk-server:tokensecurity')
 const jwt = require('jsonwebtoken')
 const _ = require('lodash')
 const bcrypt = require('bcryptjs')
-const getSourceId = require('@signalk/signalk-schema').getSourceId
+const getSourceId = require('@signalk/server-api').getSourceId
 const {
   InvalidTokenError,
   getRateLimitValidationOptions
