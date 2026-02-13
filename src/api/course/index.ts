@@ -6,11 +6,10 @@ import { IRouter, Request, Response } from 'express'
 import _ from 'lodash'
 
 import { SignalKMessageHub, WithConfig } from '../../app'
-import { Context, Path } from '@signalk/server-api'
-import { WithSecurityStrategy } from '../../security'
-import { getSourceId } from '@signalk/signalk-schema'
-
 import {
+  Context,
+  Path,
+  getSourceId,
   GeoJsonPoint,
   PathValue,
   Position,
@@ -31,6 +30,7 @@ import {
   CoursePointType,
   Unsubscribes
 } from '@signalk/server-api'
+import { WithSecurityStrategy } from '../../security'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
 import { isValidCoordinate } from 'geolib'

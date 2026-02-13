@@ -1,7 +1,6 @@
 const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
-chai.use(require('@signalk/signalk-schema').chaiModule)
 const _ = require('lodash')
 import { startServer } from './ts-servertestutilities'
 
