@@ -343,4 +343,3 @@ jobs:
           delete-tags: |
             *-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
-          
