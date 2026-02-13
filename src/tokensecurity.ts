@@ -18,8 +18,8 @@ import { Request, Response, NextFunction, IRouter } from 'express'
 import jwt, { SignOptions } from 'jsonwebtoken'
 import _ from 'lodash'
 import bcrypt from 'bcryptjs'
-import { getSourceId } from '@signalk/signalk-schema'
 import {
+  getSourceId,
   Delta,
   Update,
   hasValues,

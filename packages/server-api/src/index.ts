@@ -26,6 +26,15 @@ export * from './subscriptionmanager'
 export * as history from './history'
 /** @category Notifications API */
 export * from './notificationsapi'
+export {
+  getMetadata,
+  metadataRegistry,
+  MetadataRegistry,
+  getAISShipTypeName
+} from './metadata'
+export type { PathMetadataEntry } from './metadata'
+export { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
+export { FullSignalK } from './fullsignalk'
 
 /** @category  Server API */
 export enum SKVersion {

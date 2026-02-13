@@ -52,7 +52,7 @@ import {
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
-import { getAISShipTypeName } from '@signalk/signalk-schema'
+import { getAISShipTypeName, metadataRegistry } from '@signalk/server-api'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
@@ -868,6 +868,10 @@ module.exports = function (
     }
 
     res.json(json)
+  })
+
+  app.get(`${SERVERROUTESPREFIX}/paths`, (_req: Request, res: Response) => {
+    res.json(metadataRegistry.getAllMetadata())
   })
 
   function writeOldDefaults(req: Request, res: Response) {

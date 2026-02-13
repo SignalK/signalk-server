@@ -17,11 +17,16 @@
 
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:deltacache')
-import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
+import {
+  Context,
+  FullSignalK,
+  getSourceId,
+  NormalizedDelta,
+  SourceRef
+} from '@signalk/server-api'
 import _, { isUndefined } from 'lodash'
 import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
-import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
 
 interface StringKeyed {
   [key: string]: any
