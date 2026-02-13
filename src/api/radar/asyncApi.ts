@@ -58,7 +58,7 @@ see the OpenAPI documentation at \`/admin/openapi/\`.
     }
   },
   channels: {
-    'radars/{radarId}': {
+    radarStream: {
       address: 'radars/{radarId}',
       description:
         'Binary radar spoke stream. High-frequency binary frames containing radar return data for each spoke (radial sweep line).',
@@ -84,7 +84,7 @@ see the OpenAPI documentation at \`/admin/openapi/\`.
   operations: {
     receiveSpokeData: {
       action: 'receive',
-      channel: { $ref: '#/channels/radars~1{radarId}' },
+      channel: { $ref: '#/channels/radarStream' },
       summary: 'Receive binary radar spoke data',
       description:
         'High-frequency binary frames streamed for each radar spoke. Connect to the stream endpoint to receive real-time radar data.'
