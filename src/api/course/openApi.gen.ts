@@ -1,11 +1,7 @@
 /**
- * Generated OpenAPI 3.0.0 Document for the Signal K Course API
+ * OpenAPI 3.1.0 Document for the Signal K Course API
  *
- * Built programmatically from TypeBox schemas defined in @signalk/server-api.
- * This replaces the hand-maintained openApi.json — schema changes in
- * course-schemas.ts automatically propagate to the OpenAPI document.
- *
- * Pattern adapted from signalk-universal-installer/keeper/src/api/openapi-registry.ts
+ * Built from TypeBox schemas defined in @signalk/server-api.
  */
 
 import {
@@ -26,58 +22,23 @@ import {
   ReverseBodySchema,
   HrefDestinationSchema,
   PositionDestinationSchema,
-  OkResponseSchema,
-  ErrorResponseSchema,
   CourseConfigSchema
 } from '@signalk/server-api'
-import { type TSchema } from '@sinclair/typebox'
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const serverVersion: string = require('../../../' + 'package.json').version
-
-/**
- * Recursively strip TypeBox internal metadata ($id, [Symbol.for('TypeBox.Kind')],
- * etc.) so nested schemas render fully expanded in Swagger UI instead of as
- * collapsed $id references.
- */
-function stripTypebox(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stripTypebox)
-  if (value !== null && typeof value === 'object') {
-    const out: Record<string, unknown> = {}
-    for (const key of Object.keys(value)) {
-      if (key === '$id') continue
-      out[key] = stripTypebox((value as Record<string, unknown>)[key])
-    }
-    return out
-  }
-  return value
-}
-
-function toOpenApiSchema(schema: TSchema): Record<string, unknown> {
-  return stripTypebox(schema) as Record<string, unknown>
-}
+import {
+  toOpenApiSchema,
+  okResponse,
+  errorResponse,
+  securitySchemes,
+  defaultSecurity,
+  signalKExternalDocs,
+  signalKTermsOfService,
+  signalKLicense,
+  serverVersion
+} from '../openapi-utils'
 
 // ---------------------------------------------------------------------------
-// Standard response definitions
+// Course-specific response definitions
 // ---------------------------------------------------------------------------
-
-const okResponse = {
-  description: 'OK',
-  content: {
-    'application/json': {
-      schema: toOpenApiSchema(OkResponseSchema)
-    }
-  }
-}
-
-const errorResponse = {
-  description: 'Failed operation',
-  content: {
-    'application/json': {
-      schema: toOpenApiSchema(ErrorResponseSchema)
-    }
-  }
-}
 
 const courseResponse = {
   description: 'Course details',
@@ -97,16 +58,10 @@ export const courseOpenApiDoc = {
   info: {
     version: serverVersion,
     title: 'Signal K Course API',
-    termsOfService: 'http://signalk.org/terms/',
-    license: {
-      name: 'Apache 2.0',
-      url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-    }
+    termsOfService: signalKTermsOfService,
+    license: signalKLicense
   },
-  externalDocs: {
-    url: 'http://signalk.org/specification/',
-    description: 'Signal K specification.'
-  },
+  externalDocs: signalKExternalDocs,
   servers: [
     {
       url: '/signalk/v2/api/vessels/self/navigation'
@@ -136,20 +91,9 @@ export const courseOpenApiDoc = {
       ErrorResponse: errorResponse,
       CourseResponse: courseResponse
     },
-    securitySchemes: {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT'
-      },
-      cookieAuth: {
-        type: 'apiKey',
-        in: 'cookie',
-        name: 'JAUTHENTICATION'
-      }
-    }
+    securitySchemes
   },
-  security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+  security: defaultSecurity,
   paths: {
     '/course': {
       get: {

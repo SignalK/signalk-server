@@ -1,62 +1,87 @@
-import { SignalKResourceType } from '@signalk/server-api'
-import { buildSchemaSync } from 'api-schema-builder'
-import { RESOURCES_API_PATH } from '.'
+import {
+  SignalKResourceType,
+  RouteSchema,
+  WaypointSchema,
+  RegionSchema,
+  NoteSchema,
+  ChartSchema
+} from '@signalk/server-api'
+import { Value } from '@sinclair/typebox/value'
+import { type TSchema, Type } from '@sinclair/typebox'
 import { createDebug } from '../../debug'
-import resourcesOpenApi from './openApi.json'
 const debug = createDebug('signalk-server:api:resources:validate')
 
 class ValidationError extends Error {}
 
-const API_SCHEMA = buildSchemaSync(resourcesOpenApi)
+// ---------------------------------------------------------------------------
+// Map resource types to their TypeBox schemas
+// ---------------------------------------------------------------------------
+
+const resourceSchemas: Record<string, TSchema> = {
+  routes: RouteSchema,
+  waypoints: WaypointSchema,
+  regions: RegionSchema,
+  notes: NoteSchema,
+  charts: ChartSchema
+}
+
+// ---------------------------------------------------------------------------
+// Query parameter schema (shared across all resource list endpoints)
+// ---------------------------------------------------------------------------
+
+const QueryParamsSchema = Type.Object({
+  provider: Type.Optional(Type.String()),
+  limit: Type.Optional(Type.Number({ minimum: 1 })),
+  distance: Type.Optional(Type.Number({ minimum: 100 })),
+  bbox: Type.Optional(Type.Array(Type.Number(), { minItems: 4, maxItems: 4 })),
+  position: Type.Optional(
+    Type.Array(Type.Number(), { minItems: 2, maxItems: 2 })
+  ),
+  zoom: Type.Optional(Type.Number({ minimum: 1 }))
+})
+
+// ---------------------------------------------------------------------------
+// Validation functions
+// ---------------------------------------------------------------------------
 
 export const validate = {
   resource: (
     type: SignalKResourceType,
-    id: string | undefined,
-    method: string,
+    _id: string | undefined,
+    _method: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any
   ): void => {
-    debug(`Validating ${type} ${method} ${JSON.stringify(value)}`)
-    const endpoint =
-      API_SCHEMA[`${RESOURCES_API_PATH}/${type as string}${id ? '/:id' : ''}`][
-        method.toLowerCase()
-      ]
-    if (!endpoint) {
-      throw new Error(`Validation: endpoint for ${type} ${method} not found`)
+    debug(`Validating ${type} ${_method} ${JSON.stringify(value)}`)
+    const schema = resourceSchemas[type]
+    if (!schema) {
+      throw new Error(`Validation: no schema for resource type ${type}`)
     }
-    const valid = endpoint.body.validate(value)
-    if (valid) {
+    if (Value.Check(schema, value)) {
       return
     } else {
-      debug(endpoint.body.errors)
-      throw new ValidationError(JSON.stringify(endpoint.body.errors))
+      const errors = [...Value.Errors(schema, value)]
+      debug(errors)
+      throw new ValidationError(JSON.stringify(errors))
     }
   },
 
   query: (
     type: SignalKResourceType,
-    id: string | undefined,
-    method: string,
+    _id: string | undefined,
+    _method: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any
   ): void => {
     debug(
-      `*** Validating query params for ${type} ${method} ${JSON.stringify(value)}`
+      `*** Validating query params for ${type} ${_method} ${JSON.stringify(value)}`
     )
-    const endpoint =
-      API_SCHEMA[`${RESOURCES_API_PATH}/${type as string}${id ? '/:id' : ''}`][
-        method.toLowerCase()
-      ]
-    if (!endpoint) {
-      throw new Error(`Validation: endpoint for ${type} ${method} not found`)
-    }
-    const valid = endpoint.parameters.validate({ query: value })
-    if (valid) {
+    if (Value.Check(QueryParamsSchema, value)) {
       return
     } else {
-      debug(endpoint.parameters.errors)
-      throw new ValidationError(JSON.stringify(endpoint.parameters.errors))
+      const errors = [...Value.Errors(QueryParamsSchema, value)]
+      debug(errors)
+      throw new ValidationError(JSON.stringify(errors))
     }
   },
 
