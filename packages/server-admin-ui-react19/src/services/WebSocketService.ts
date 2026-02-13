@@ -237,18 +237,23 @@ export class WebSocketService {
       case 'ACCESS_REQUEST':
         this.zustandSetState({ accessRequests: data } as Partial<SignalKStore>)
         break
-      case 'DISCOVERED_PROVIDER':
-        this.zustandSetState(
-          (state) =>
-            ({
-              discoveredProviders: [...(state.discoveredProviders || []), data]
-            }) as Partial<SignalKStore>
-        )
+      case 'DISCOVERY_CHANGED':
+        this.zustandSetState({
+          discoveredProviders: data
+        } as Partial<SignalKStore>)
         break
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break
+      case 'VESSEL_INFO':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setVesselInfo(data as Parameters<SignalKStore['setVesselInfo']>[0])
+        })
+        break
       case 'RECEIVE_APPSTORE_LIST':
+      case 'APP_STORE_CHANGED':
         // Dynamic import avoids circular dependency with store
         import('../store').then(({ useStore }) => {
           useStore

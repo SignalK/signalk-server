@@ -117,7 +117,10 @@ export default function Full() {
   }, [])
 
   const suppressPadding =
-    location.pathname.indexOf('/e/') === 0 ? { padding: '0px' } : {}
+    location.pathname.indexOf('/e/') === 0 ||
+    location.pathname.indexOf('/documentation') === 0
+      ? { padding: '0px' }
+      : {}
 
   return (
     <div className="app">
@@ -201,7 +204,7 @@ export default function Full() {
                 path="/security/access/requests"
                 element={<ProtectedRoute component={AccessRequests} />}
               />
-              <Route path="/documentation" element={<EmbeddedDocs />} />
+              <Route path="/documentation/*" element={<EmbeddedDocs />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
