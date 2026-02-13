@@ -57,18 +57,6 @@ jobs:
             arch: arm
             node: 24.x
             platform: linux/arm64
-          - os: 24.04
-            node: 22.x
-            node_safe: 22x
-          - os: 24.04
-            node: 24.x
-            node_safe: 24x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
-          - os: alpine
-            node: 24.x
-            node_safe: 24
           
     runs-on: ${{ matrix.vm }}
     steps:
@@ -93,7 +81,7 @@ jobs:
           file: ./docker/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
           build-args: |
             REGISTRY=ghcr.io
             BASE_IMAGE=${{ matrix.os }}-${{ matrix.node }}
@@ -151,8 +139,8 @@ jobs:
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
           sources: |
-            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
-            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
       - name: Save tag to file
         run: |
           mkdir -p /tmp/tags
