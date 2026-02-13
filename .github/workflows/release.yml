@@ -138,7 +138,7 @@ jobs:
     needs: build_and_publish
     strategy:
       matrix:
-        os: [24.04]
+        os: [24.04, alpine]
         node: [22.x, 24.x]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
@@ -152,7 +152,20 @@ jobs:
           - vm: ubuntu-24.04-arm
             arch: arm
             node: 24.x
-            platform: linux/arm64 #,linux/arm/v7 Nodejs 24.x is working correctly and therefore disabled for now
+            platform: linux/arm64
+          - os: 24.04
+            node: 22.x
+            node_safe: 22.x
+          - os: 24.04
+            node: 24.x
+            node_safe: 24.x
+          - os: alpine
+            node: 22.x
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            node_safe: 24
+
     runs-on: ${{ matrix.vm }}
     steps:
       - name: Checkout
@@ -168,11 +181,6 @@ jobs:
       - name: Set TAG for build-args
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/v}" >> $GITHUB_OUTPUT
-      - name: Modify Dockerfile_rel for build
-        run: |
-          sed -i \
-            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node }}|g" \
-            ./docker/Dockerfile_rel
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -180,25 +188,39 @@ jobs:
           file: ./docker/Dockerfile_rel
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
           build-args: |
             TAG=${{ steps.vars.outputs.tag }}
+            BASE_IMAGE=${{ matrix.os }}-${{ matrix.node_safe }}
 
   create-and-push-manifest:
     needs: docker_images
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [24.04]
+        os: [24.04, alpine]
         node: [22.x, 24.x]
         include:
           - os: 24.04
             node: 22.x
             tag: latest
+            node_safe: 22.x
           - os: 24.04
             node: 24.x
             tag: latest
             suffix: -24.x
+            node_safe: 24.x
+          - os: alpine
+            node: 22.x
+            tag: latest
+            suffix: -22-alpine
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            tag: latest
+            suffix: -24-alpine
+            node_safe: 24
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -236,8 +258,8 @@ jobs:
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
           sources: |
-            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
-            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
 
   housekeeping:
     needs: create-and-push-manifest
