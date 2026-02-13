@@ -327,7 +327,7 @@ const mapStateToProps = (state) => {
       },
       {
         name: 'AsyncAPI',
-        url: `${window.location.protocol}//${window.location.host}/skServer/asyncapi/course/docs`,
+        url: `${window.location.protocol}//${window.location.host}/skServer/asyncapi/docs`,
         props: {
           target: '_blank',
           rel: 'noopener noreferrer'

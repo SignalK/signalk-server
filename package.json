@@ -73,7 +73,6 @@
     "packages/assemblyscript-plugin-sdk"
   ],
   "dependencies": {
-    "@sinclair/typebox": "^0.34.30",
     "@assemblyscript/loader": "^0.28.9",
     "@signalk/course-provider": "^1.0.0",
     "@signalk/n2k-signalk": ">=4.1.0-beta",
@@ -84,7 +83,7 @@
     "@signalk/server-api": "^2.22.0",
     "@signalk/signalk-schema": "^1.7.1",
     "@signalk/streams": "5.1.x",
-    "api-schema-builder": "^2.0.11",
+    "@sinclair/typebox": "^0.34.30",
     "as-fetch": "^2.1.4",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",

@@ -1,8 +1,8 @@
 import { OpenApiDescription } from '../swagger'
-import radarApiDoc from './openApi.json'
+import { radarOpenApiDoc } from './openApi.gen'
 
 export const radarApiRecord = {
   name: 'radar',
   path: '/signalk/v2/api/vessels/self/radars',
-  apiDoc: radarApiDoc as unknown as OpenApiDescription
+  apiDoc: radarOpenApiDoc as unknown as OpenApiDescription
 }

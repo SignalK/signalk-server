@@ -1,52 +1,25 @@
 /**
  * TypeBox Schema Definitions for the Signal K Course API
- *
- * Single source of truth for Course API types, validation, and documentation.
- * Schemas are used to:
- *   1. Derive TypeScript types via Static<typeof Schema>
- *   2. Validate request bodies at runtime via Value.Check()
- *   3. Generate OpenAPI 3.0 component schemas (TypeBox produces JSON Schema)
- *   4. Generate AsyncAPI channel payloads for WebSocket delta documentation
- *
- * Each schema includes $id for OpenAPI component registration and reference
- * comments to the canonical Signal K specification definitions.
- *
- * @see typebox-schema-proposal-v3.md
- * @see https://github.com/sinclairzx81/typebox
  */
 
 import { Type, type Static } from '@sinclair/typebox'
+import {
+  PositionSchema,
+  IsoTimePattern,
+  IsoTimeSchema,
+  SignalKUuidPattern,
+  OkResponseSchema,
+  ErrorResponseSchema
+} from './shared-schemas'
+
+export { IsoTimeSchema, PositionSchema, OkResponseSchema, ErrorResponseSchema }
+export type { IsoTimeType } from './shared-schemas'
 
 // ---------------------------------------------------------------------------
-// Reusable patterns
+// Primitive schemas (Course-specific)
 // ---------------------------------------------------------------------------
 
-const SignalKUuidPattern =
-  '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}'
-
-const IsoTimePattern =
-  '^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}(?:\\.\\d*)?)((-(\\d{2}):(\\d{2})|Z)?)$'
-
-// ---------------------------------------------------------------------------
-// Primitive schemas
-// ---------------------------------------------------------------------------
-
-/**
- * ISO 8601 date-time string.
- * Aligned with openApi.json#/components/schemas/IsoTime
- */
-export const IsoTimeSchema = Type.String({
-  $id: 'IsoTime',
-  pattern: IsoTimePattern,
-  description: 'ISO 8601 date-time string',
-  examples: ['2022-04-22T05:02:56.484Z']
-})
-export type IsoTimeType = Static<typeof IsoTimeSchema>
-
-/**
- * Signal K route resource href (UUID v4 format).
- * Aligned with openApi.json#/components/schemas/SignalKHrefRoute
- */
+/** Signal K route resource href (UUID v4 format). */
 export const SignalKHrefRouteSchema = Type.String({
   $id: 'SignalKHrefRoute',
   pattern: `^/resources/routes/${SignalKUuidPattern}$`,
@@ -54,10 +27,7 @@ export const SignalKHrefRouteSchema = Type.String({
   examples: ['/resources/routes/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a']
 })
 
-/**
- * Signal K waypoint resource href (UUID v4 format).
- * Aligned with openApi.json#/components/schemas/HrefWaypointAttribute.href
- */
+/** Signal K waypoint resource href (UUID v4 format). */
 export const SignalKHrefWaypointSchema = Type.String({
   $id: 'SignalKHrefWaypoint',
   pattern: `^/resources/waypoints/${SignalKUuidPattern}$`,
@@ -65,10 +35,7 @@ export const SignalKHrefWaypointSchema = Type.String({
   examples: ['/resources/waypoints/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a']
 })
 
-/**
- * Arrival circle radius in meters (non-negative).
- * Aligned with openApi.json#/components/schemas/ArrivalCircle
- */
+/** Arrival circle radius in meters (non-negative). */
 export const ArrivalCircleSchema = Type.Number({
   $id: 'ArrivalCircle',
   minimum: 0,
@@ -77,53 +44,13 @@ export const ArrivalCircleSchema = Type.Number({
 })
 export type ArrivalCircleType = Static<typeof ArrivalCircleSchema>
 
-// ---------------------------------------------------------------------------
-// Position
-// Aligned with specification/schemas/definitions.json#/definitions/position
-// (the value shape: { latitude, longitude, altitude? })
-// ---------------------------------------------------------------------------
-
-/**
- * Geographic position with latitude, longitude, and optional altitude.
- * Aligned with specification/schemas/definitions.json#/definitions/position
- */
-export const PositionSchema = Type.Object(
-  {
-    latitude: Type.Number({
-      minimum: -90,
-      maximum: 90,
-      description: 'Latitude',
-      examples: [52.0987654]
-    }),
-    longitude: Type.Number({
-      minimum: -180,
-      maximum: 180,
-      description: 'Longitude',
-      examples: [4.98765245]
-    }),
-    altitude: Type.Optional(
-      Type.Number({
-        description: 'Altitude',
-        examples: [12.5]
-      })
-    )
-  },
-  {
-    $id: 'SignalKPosition',
-    description: 'The position in 3 dimensions'
-  }
-)
 export type PositionType = Static<typeof PositionSchema>
 
 // ---------------------------------------------------------------------------
 // Course point type
 // ---------------------------------------------------------------------------
 
-/**
- * Type of course point (enum of known values).
- * Used for runtime validation; the TypeScript type uses Brand<string> for
- * nominal typing at compile time.
- */
+/** Type of course point. */
 export const CoursePointTypeSchema = Type.Union(
   [
     Type.Literal('VesselPosition'),
@@ -140,10 +67,7 @@ export const CoursePointTypeSchema = Type.Union(
 // Destination request body schemas
 // ---------------------------------------------------------------------------
 
-/**
- * Destination by waypoint href.
- * Aligned with openApi.json#/components/schemas/HrefWaypointAttribute
- */
+/** Destination by waypoint href. */
 export const HrefDestinationSchema = Type.Object(
   {
     href: Type.String({
@@ -157,10 +81,7 @@ export const HrefDestinationSchema = Type.Object(
 )
 export type HrefDestinationType = Static<typeof HrefDestinationSchema>
 
-/**
- * Destination by position coordinates.
- * Aligned with openApi.json#/components/schemas/PositionAttribute
- */
+/** Destination by position coordinates. */
 export const PositionDestinationSchema = Type.Object(
   {
     position: PositionSchema
@@ -172,7 +93,6 @@ export type PositionDestinationType = Static<typeof PositionDestinationSchema>
 /**
  * PUT /course/destination request body.
  * Either a waypoint href or a position, optionally with an arrival circle.
- * Aligned with openApi.json PUT /course/destination requestBody
  */
 export const SetDestinationBodySchema = Type.Intersect(
   [
@@ -185,10 +105,7 @@ export const SetDestinationBodySchema = Type.Intersect(
 )
 export type SetDestinationBodyType = Static<typeof SetDestinationBodySchema>
 
-/**
- * PUT /course/activeRoute request body.
- * Aligned with openApi.json PUT /course/activeRoute requestBody
- */
+/** PUT /course/activeRoute request body. */
 export const RouteDestinationSchema = Type.Object(
   {
     href: SignalKHrefRouteSchema,
@@ -289,10 +206,7 @@ export type ReverseBodyType = Static<typeof ReverseBodySchema>
 // Response model schemas
 // ---------------------------------------------------------------------------
 
-/**
- * Active route state.
- * Aligned with openApi.json#/components/schemas/ActiveRouteModel
- */
+/** Active route state. */
 export const ActiveRouteSchema = Type.Object(
   {
     href: SignalKHrefRouteSchema,
@@ -317,40 +231,54 @@ export const ActiveRouteSchema = Type.Object(
 )
 export type ActiveRouteType = Static<typeof ActiveRouteSchema>
 
-/**
- * Navigation point (next or previous).
- * Aligned with openApi.json#/components/schemas/PointModel
- */
+/** Navigation point (next or previous). */
 export const NextPreviousPointSchema = Type.Object(
   {
     href: Type.Optional(
       Type.String({ description: 'Reference to a waypoint resource.' })
     ),
-    type: Type.String({ description: 'Type of point.' }),
+    type: Type.String({
+      description:
+        "Type of point. Known values: VesselPosition (vessel's current location), RoutePoint (a point on the active route), Location (an arbitrary geographic position).",
+      examples: ['RoutePoint', 'Location', 'VesselPosition']
+    }),
     position: PositionSchema
   },
   { $id: 'NextPreviousPoint' }
 )
 export type NextPreviousPointType = Static<typeof NextPreviousPointSchema>
 
-/**
- * Full course state response.
- * Aligned with openApi.json#/components/responses/CourseResponse
- */
+/** Full course state response. */
 export const CourseInfoSchema = Type.Object(
   {
-    startTime: Type.Union([
-      Type.String({ pattern: IsoTimePattern }),
-      Type.Null()
-    ]),
-    targetArrivalTime: Type.Union([
-      Type.String({ pattern: IsoTimePattern }),
-      Type.Null()
-    ]),
-    arrivalCircle: Type.Number({ minimum: 0 }),
-    activeRoute: Type.Union([ActiveRouteSchema, Type.Null()]),
-    nextPoint: Type.Union([NextPreviousPointSchema, Type.Null()]),
-    previousPoint: Type.Union([NextPreviousPointSchema, Type.Null()])
+    startTime: Type.Union(
+      [Type.String({ pattern: IsoTimePattern }), Type.Null()],
+      {
+        description:
+          'ISO 8601 timestamp when the course was set, or null when no course is active'
+      }
+    ),
+    targetArrivalTime: Type.Union(
+      [Type.String({ pattern: IsoTimePattern }), Type.Null()],
+      {
+        description: 'ISO 8601 target arrival time, or null when not set'
+      }
+    ),
+    arrivalCircle: Type.Number({
+      minimum: 0,
+      description: 'Radius of arrival zone in meters',
+      units: 'm'
+    }),
+    activeRoute: Type.Union([ActiveRouteSchema, Type.Null()], {
+      description: 'The active route, or null when navigating to a point'
+    }),
+    nextPoint: Type.Union([NextPreviousPointSchema, Type.Null()], {
+      description: 'The next navigation point, or null when no course is set'
+    }),
+    previousPoint: Type.Union([NextPreviousPointSchema, Type.Null()], {
+      description:
+        'The previous navigation point (departure point or last waypoint passed), or null when no course is set'
+    })
   },
   {
     $id: 'CourseInfo',
@@ -361,8 +289,6 @@ export type CourseInfoType = Static<typeof CourseInfoSchema>
 
 // ---------------------------------------------------------------------------
 // Course calculations
-// Aligned with openApi.json#/components/schemas/CourseCalculationsModel
-// and specification/schemas/groups/navigation.json#/definitions/course
 // ---------------------------------------------------------------------------
 
 /**
@@ -381,7 +307,8 @@ export const CourseCalculationsSchema = Type.Object(
     crossTrackError: Type.Optional(
       Type.Number({
         description:
-          "The distance in meters from the vessel's present position to the closest point on a line (track) between previousPoint and nextPoint. A negative number indicates that the vessel is currently to the left of this line (and thus must steer right to compensate), a positive number means the vessel is to the right of the line (steer left to compensate).",
+          "The distance from the vessel's present position to the closest point on a line (track) between previousPoint and nextPoint. A negative number indicates that the vessel is currently to the left of this line (and thus must steer right to compensate), a positive number means the vessel is to the right of the line (steer left to compensate).",
+        units: 'm',
         examples: [458.784]
       })
     ),
@@ -389,7 +316,8 @@ export const CourseCalculationsSchema = Type.Object(
       Type.Number({
         minimum: 0,
         description:
-          'The bearing of a line between previousPoint and nextPoint, relative to true north. (angle in radians)',
+          'The bearing of a line between previousPoint and nextPoint, relative to true north',
+        units: 'rad',
         examples: [4.58491]
       })
     ),
@@ -397,7 +325,8 @@ export const CourseCalculationsSchema = Type.Object(
       Type.Number({
         minimum: 0,
         description:
-          'The bearing of a line between previousPoint and nextPoint, relative to magnetic north. (angle in radians)',
+          'The bearing of a line between previousPoint and nextPoint, relative to magnetic north',
+        units: 'rad',
         examples: [4.51234]
       })
     ),
@@ -411,7 +340,8 @@ export const CourseCalculationsSchema = Type.Object(
       Type.Number({
         minimum: 0,
         description:
-          "The distance in meters between the vessel's present position and the nextPoint.",
+          "The distance between the vessel's present position and the nextPoint",
+        units: 'm',
         examples: [10157]
       })
     ),
@@ -419,7 +349,8 @@ export const CourseCalculationsSchema = Type.Object(
       Type.Number({
         minimum: 0,
         description:
-          "The bearing of a line between the vessel's current position and nextPoint, relative to true north. (angle in radians)",
+          "The bearing of a line between the vessel's current position and nextPoint, relative to true north",
+        units: 'rad',
         examples: [4.58491]
       })
     ),
@@ -427,14 +358,16 @@ export const CourseCalculationsSchema = Type.Object(
       Type.Number({
         minimum: 0,
         description:
-          "The bearing of a line between the vessel's current position and nextPoint, relative to magnetic north. (angle in radians)",
+          "The bearing of a line between the vessel's current position and nextPoint, relative to magnetic north",
+        units: 'rad',
         examples: [4.51234]
       })
     ),
     velocityMadeGood: Type.Optional(
       Type.Number({
         description:
-          'The velocity component of the vessel towards the nextPoint in m/s',
+          'The velocity component of the vessel towards the nextPoint',
+        units: 'm/s',
         examples: [7.2653]
       })
     ),
@@ -442,14 +375,16 @@ export const CourseCalculationsSchema = Type.Object(
       Type.Number({
         minimum: 0,
         description:
-          "Time in seconds to reach nextPoint's perpendicular with current speed & direction.",
+          "Time to reach nextPoint's perpendicular with current speed and direction",
+        units: 's',
         examples: [8491]
       })
     ),
     targetSpeed: Type.Optional(
       Type.Number({
         description:
-          'The average velocity required to reach the destination at the value of targetArrivalTime in m/s',
+          'The average velocity required to reach the destination at the targetArrivalTime',
+        units: 'm/s',
         examples: [2.2653]
       })
     ),
@@ -459,7 +394,8 @@ export const CourseCalculationsSchema = Type.Object(
           Type.Number({
             minimum: 0,
             description:
-              "The distance in meters between the vessel's present position and the start point.",
+              "The distance between the vessel's present position and the start point",
+            units: 'm',
             examples: [10157]
           })
         )
@@ -470,8 +406,8 @@ export const CourseCalculationsSchema = Type.Object(
         distance: Type.Optional(
           Type.Number({
             minimum: 0,
-            description:
-              'The distance in meters along the route to the last point.',
+            description: 'The distance along the route to the last point',
+            units: 'm',
             examples: [15936]
           })
         ),
@@ -479,7 +415,8 @@ export const CourseCalculationsSchema = Type.Object(
           Type.Number({
             minimum: 0,
             description:
-              'Time in seconds to reach perpendicular of last point in route with current speed & direction.',
+              'Time to reach perpendicular of last point in route with current speed and direction',
+            units: 's',
             examples: [10452]
           })
         ),
@@ -518,7 +455,11 @@ export const CourseDeltaV2Schema = Type.Object(
       Type.Null()
     ]),
     activeRoute: Type.Union([ActiveRouteSchema, Type.Null()]),
-    arrivalCircle: Type.Number({ minimum: 0 }),
+    arrivalCircle: Type.Number({
+      minimum: 0,
+      description: 'Radius of arrival zone in meters',
+      units: 'm'
+    }),
     previousPoint: Type.Union([NextPreviousPointSchema, Type.Null()]),
     nextPoint: Type.Union([NextPreviousPointSchema, Type.Null()])
   },
@@ -543,7 +484,11 @@ export const CourseDeltaV1Schema = Type.Object(
     'nextPoint.value.href': Type.Union([Type.String(), Type.Null()]),
     'nextPoint.value.type': Type.Union([Type.String(), Type.Null()]),
     'nextPoint.position': Type.Union([PositionSchema, Type.Null()]),
-    'nextPoint.arrivalCircle': Type.Number({ minimum: 0 }),
+    'nextPoint.arrivalCircle': Type.Number({
+      minimum: 0,
+      description: 'Radius of arrival zone in meters',
+      units: 'm'
+    }),
     'previousPoint.position': Type.Union([PositionSchema, Type.Null()]),
     'previousPoint.value.type': Type.Union([Type.String(), Type.Null()])
   },
@@ -555,32 +500,16 @@ export const CourseDeltaV1Schema = Type.Object(
 )
 
 // ---------------------------------------------------------------------------
-// API response schemas
+// Course-specific API response schemas
 // ---------------------------------------------------------------------------
-
-/** Standard success response */
-export const OkResponseSchema = Type.Object(
-  {
-    state: Type.Literal('COMPLETED'),
-    statusCode: Type.Literal(200)
-  },
-  { $id: 'OkResponse' }
-)
-
-/** Standard error response */
-export const ErrorResponseSchema = Type.Object(
-  {
-    state: Type.Literal('FAILED'),
-    statusCode: Type.Number(),
-    message: Type.String()
-  },
-  { $id: 'ErrorResponse', description: 'Request error response' }
-)
 
 /** API config response */
 export const CourseConfigSchema = Type.Object(
   {
-    apiOnly: Type.Boolean()
+    apiOnly: Type.Boolean({
+      description:
+        'When true, course data is only available via the API and not emitted as v1 deltas'
+    })
   },
-  { $id: 'CourseConfig' }
+  { $id: 'CourseConfig', description: 'Course API configuration' }
 )
