@@ -57,6 +57,18 @@ jobs:
             arch: arm
             node: 24.x
             platform: linux/arm64
+          - os: 24.04
+            node: 22.x
+            node_safe: 22.x
+          - os: 24.04
+            node: 24.x
+            node_safe: 24.x
+          - os: alpine
+            node: 22.x
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            node_safe: 24
           
     runs-on: ${{ matrix.vm }}
     steps:
@@ -81,10 +93,10 @@ jobs:
           file: ./docker/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
           build-args: |
             REGISTRY=ghcr.io
-            BASE_IMAGE=${{ matrix.os }}-${{ matrix.node }}
+            BASE_IMAGE=${{ matrix.os }}-${{ matrix.node_safe }}
 
   create-and-push-manifest:
     needs: docker_images
@@ -97,11 +109,11 @@ jobs:
           - os: 24.04
             node: 22.x
             suffix: -22.x
-            node_safe: 22x
+            node_safe: 22.x
           - os: 24.04
             node: 24.x
             suffix: -24.x
-            node_safe: 24x
+            node_safe: 24.x
           - os: alpine
             node: 22.x
             suffix: -22-alpine
@@ -139,12 +151,12 @@ jobs:
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
           sources: |
-            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
-            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
-      - name: Save tag to file
+            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
+      - name: Save tags to file
         run: |
           mkdir -p /tmp/tags
-          echo "${{ steps.docker_meta.outputs.version }}" > /tmp/tags/${{ matrix.node_safe }}.txt
+          echo "${{ steps.docker_meta.outputs.tags }}" > /tmp/tags/${{ matrix.node_safe }}.txt
       - name: Upload tag artifact
         uses: actions/upload-artifact@v6
         with:
@@ -162,10 +174,10 @@ jobs:
         include:
           - os: 24.04
             node: 22.x
-            node_safe: 22x
+            node_safe: 22.x
           - os: 24.04
             node: 24.x
-            node_safe: 24x
+            node_safe: 24.x
           - os: alpine
             node: 22.x
             node_safe: 22
@@ -178,12 +190,6 @@ jobs:
         with:
           name: ubuntu-tag-${{ matrix.node_safe }}
           path: /tmp/tags
-      - name: Read tag from file
-        id: read_tag
-        run: |
-          TAG=$(cat /tmp/tags/${{ matrix.node_safe }}.txt)
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Copying tag: $TAG"
       - name: Install skopeo
         run: |
           sudo apt-get update
@@ -195,15 +201,32 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
           DOCKER_HUB_USERNAME: signalkci
           DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          TAG: ${{ steps.read_tag.outputs.tag }}
         run: |
           set -euo pipefail
-          echo "Copying: ghcr.io/signalk/signalk-server:${TAG}"
-          skopeo copy --all \
-            --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
-            --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-            "docker://ghcr.io/signalk/signalk-server:${TAG}" \
-            "docker://docker.io/signalk/signalk-server:${TAG}"
+          TAGS_FILE="/tmp/tags/${{ matrix.node_safe }}.txt"
+          MANIFEST_DIGEST=""
+          while IFS= read -r FULL_TAG || [ -n "$FULL_TAG" ]; do
+            if [ -z "$FULL_TAG" ]; then
+              continue
+            fi
+            TAG="${FULL_TAG##*:}"
+            if [ -z "$MANIFEST_DIGEST" ]; then
+              skopeo copy --all \
+                --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
+                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+                "docker://${FULL_TAG}" \
+                "docker://docker.io/signalk/signalk-server:${TAG}"
+              MANIFEST_DIGEST=$(skopeo inspect \
+                --creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+                "docker://docker.io/signalk/signalk-server:${TAG}" | jq -r '.Digest')
+            else
+              skopeo copy \
+                --src-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+                "docker://docker.io/signalk/signalk-server@${MANIFEST_DIGEST}" \
+                "docker://docker.io/signalk/signalk-server:${TAG}"
+            fi
+          done < "$TAGS_FILE"
 
   housekeeping:
     needs: [copy-to-dockerhub]

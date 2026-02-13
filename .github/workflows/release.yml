@@ -231,7 +231,6 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            signalk/signalk-server
             ghcr.io/signalk/signalk-server
           tags: |
             type=semver,pattern={{raw}}
@@ -241,18 +240,13 @@ jobs:
           flavor: |
             suffix=${{ matrix.suffix }}
             latest=false
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: signalkci
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
-      - name: Create and push multi-arch manifest to GHCR and Docker Hub
+      - name: Create and push multi-arch manifest to GHCR
         uses: int128/docker-manifest-create-action@v2
         with:
           tags: |
@@ -260,9 +254,84 @@ jobs:
           sources: |
             ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
             ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
+      - name: Save tags to file
+        run: |
+          mkdir -p /tmp/tags
+          echo "${{ steps.docker_meta.outputs.tags }}" > /tmp/tags/${{ matrix.node_safe }}.txt
+      - name: Upload tag artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-tag-${{ matrix.node_safe }}
+          path: /tmp/tags/${{ matrix.node_safe }}.txt
+          retention-days: 1
+
+  copy-to-dockerhub:
+    needs: create-and-push-manifest
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [24.04, alpine]
+        node: [22.x, 24.x]
+        include:
+          - os: 24.04
+            node: 22.x
+            node_safe: 22.x
+          - os: 24.04
+            node: 24.x
+            node_safe: 24.x
+          - os: alpine
+            node: 22.x
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            node_safe: 24
+    steps:
+      - name: Download tag artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: release-tag-${{ matrix.node_safe }}
+          path: /tmp/tags
+      - name: Install skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+      - name: Copy images from GHCR to Docker Hub
+        shell: bash
+        env:
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          DOCKER_HUB_USERNAME: signalkci
+          DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAGS_FILE="/tmp/tags/${{ matrix.node_safe }}.txt"
+          cat "$TAGS_FILE"
+          MANIFEST_DIGEST=""
+          while IFS= read -r FULL_TAG || [ -n "$FULL_TAG" ]; do
+            if [ -z "$FULL_TAG" ]; then
+              continue
+            fi
+            TAG="${FULL_TAG##*:}"
+            if [ -z "$MANIFEST_DIGEST" ]; then
+              skopeo copy --all \
+                --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
+                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+                "docker://${FULL_TAG}" \
+                "docker://docker.io/signalk/signalk-server:${TAG}"
+              MANIFEST_DIGEST=$(skopeo inspect \
+                --creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+                "docker://docker.io/signalk/signalk-server:${TAG}" | jq -r '.Digest')              
+            else
+              skopeo copy \
+                --src-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+                "docker://docker.io/signalk/signalk-server@${MANIFEST_DIGEST}" \
+                "docker://docker.io/signalk/signalk-server:${TAG}"
+            fi
+          done < "$TAGS_FILE"
 
   housekeeping:
-    needs: create-and-push-manifest
+    needs: [copy-to-dockerhub]
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -281,7 +350,7 @@ jobs:
 
   deploy_fly:
     runs-on: ubuntu-latest
-    needs: create-and-push-manifest
+    needs: copy-to-dockerhub
     steps:
       - name: Checkout
         uses: actions/checkout@v6
