@@ -69,7 +69,7 @@ jobs:
           - os: alpine
             node: 24.x
             node_safe: 24
-          
+
     runs-on: ${{ matrix.vm }}
     steps:
       - name: Checkout
