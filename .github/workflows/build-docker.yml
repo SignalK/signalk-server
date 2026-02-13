@@ -38,11 +38,11 @@ jobs:
           path: |
             *.tgz
 
-  docker_images_ubuntu:
+  docker_images:
     needs: signalk-server_npm_files
     strategy:
       matrix:
-        os: [24.04]
+        os: [24.04, alpine]
         node: [22.x, 24.x]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
@@ -56,54 +56,20 @@ jobs:
           - vm: ubuntu-24.04-arm
             arch: arm
             node: 24.x
-            platform: linux/arm64 #,linux/arm/v7 Nodejs 24.x not working correctly on arm/v7 and therefore disabled for now
-    runs-on: ${{ matrix.vm }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to ghcr.io
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
-      - uses: actions/download-artifact@v6
-        with:
-          name: packed-modules
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./docker/Dockerfile
-          platforms: ${{ matrix.platform }}
-          push: true
-          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
-          build-args: |
-            REGISTRY=ghcr.io
-            BASE_IMAGE=${{ matrix.os }}-${{ matrix.node }}
-
-  docker_images_alpine:
-    needs: signalk-server_npm_files
-    strategy:
-      matrix:
-        os: [alpine]
-        node: [22, 24]
-        vm: [ubuntu-latest, ubuntu-24.04-arm]
-        include:
-          - vm: ubuntu-latest
-            arch: amd
-            platform: linux/amd64
-          - vm: ubuntu-24.04-arm
-            arch: arm
-            node: 22
-            platform: linux/arm64,linux/arm/v7
-          - vm: ubuntu-24.04-arm
-            arch: arm
-            node: 24
             platform: linux/arm64
+          - os: 24.04
+            node: 22.x
+            node_safe: 22x
+          - os: 24.04
+            node: 24.x
+            node_safe: 24x
+          - os: alpine
+            node: 22.x
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            node_safe: 24
+          
     runs-on: ${{ matrix.vm }}
     steps:
       - name: Checkout
@@ -127,17 +93,17 @@ jobs:
           file: ./docker/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
           build-args: |
             REGISTRY=ghcr.io
             BASE_IMAGE=${{ matrix.os }}-${{ matrix.node }}
 
-  create-and-push-manifest_ubuntu:
-    needs: docker_images_ubuntu
+  create-and-push-manifest:
+    needs: docker_images
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [24.04]
+        os: [24.04, alpine]
         node: [22.x, 24.x]
         include:
           - os: 24.04
@@ -146,7 +112,17 @@ jobs:
             node_safe: 22x
           - os: 24.04
             node: 24.x
+            suffix: -24.x
             node_safe: 24x
+          - os: alpine
+            node: 22.x
+            suffix: -22-alpine
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            suffix: -24-alpine
+            node_safe: 24
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -175,8 +151,8 @@ jobs:
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
           sources: |
-            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
-            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node_safe }}-${{ github.run_id }}
       - name: Save tag to file
         run: |
           mkdir -p /tmp/tags
@@ -188,72 +164,26 @@ jobs:
           path: /tmp/tags/${{ matrix.node_safe }}.txt
           retention-days: 1
 
-  create-and-push-manifest_alpine:
-    needs: docker_images_alpine
+  copy-to-dockerhub:
+    needs: create-and-push-manifest
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [alpine]
-        node: [22, 24]
-        include:
-          - os: alpine
-            node: 22
-            suffix: -22-alpine
-          - os: alpine
-            node: 24
-            suffix: -24-alpine
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Docker meta
-        id: docker_meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ghcr.io/signalk/signalk-server
-          tags: |
-            type=ref,event=branch
-            type=sha
-          flavor: |
-            suffix=${{ matrix.suffix }}
-      - name: Login to ghcr.io
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
-      - name: Create and push multi-arch manifest to GHCR
-        uses: int128/docker-manifest-create-action@v2
-        with:
-          tags: |
-            ${{ steps.docker_meta.outputs.tags }}
-          sources: |
-            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
-            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
-      - name: Save tag to file
-        run: |
-          mkdir -p /tmp/tags
-          echo "${{ steps.docker_meta.outputs.version }}" > /tmp/tags/${{ matrix.node }}.txt
-      - name: Upload tag artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: alpine-tag-${{ matrix.node }}
-          path: /tmp/tags/${{ matrix.node }}.txt
-          retention-days: 1
-
-  copy-ubuntu-to-dockerhub:
-    needs: create-and-push-manifest_ubuntu
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
+        os: [24.04, alpine]
         node: [22.x, 24.x]
         include:
-          - node: 22.x
+          - os: 24.04
+            node: 22.x
             node_safe: 22x
-          - node: 24.x
+          - os: 24.04
+            node: 24.x
             node_safe: 24x
+          - os: alpine
+            node: 22.x
+            node_safe: 22
+          - os: alpine
+            node: 24.x
+            node_safe: 24
     steps:
       - name: Download tag artifact
         uses: actions/download-artifact@v6
@@ -287,47 +217,8 @@ jobs:
             "docker://ghcr.io/signalk/signalk-server:${TAG}" \
             "docker://docker.io/signalk/signalk-server:${TAG}"
 
-  copy-alpine-to-dockerhub:
-    needs: create-and-push-manifest_alpine
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [22, 24]
-    steps:
-      - name: Download tag artifact
-        uses: actions/download-artifact@v6
-        with:
-          name: alpine-tag-${{ matrix.node }}
-          path: /tmp/tags
-      - name: Read tag from file
-        id: read_tag
-        run: |
-          TAG=$(cat /tmp/tags/${{ matrix.node }}.txt)
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Copying tag: $TAG"
-      - name: Install skopeo
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y skopeo
-      - name: Copy images from GHCR to Docker Hub
-        shell: bash
-        env:
-          GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
-          DOCKER_HUB_USERNAME: signalkci
-          DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          TAG: ${{ steps.read_tag.outputs.tag }}
-        run: |
-          set -euo pipefail
-          echo "Copying: ghcr.io/signalk/signalk-server:${TAG}"
-          skopeo copy --all \
-            --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
-            --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-            "docker://ghcr.io/signalk/signalk-server:${TAG}" \
-            "docker://docker.io/signalk/signalk-server:${TAG}"
-
   housekeeping:
-    needs: [copy-ubuntu-to-dockerhub, copy-alpine-to-dockerhub]
+    needs: [copy-to-dockerhub]
     runs-on: ubuntu-latest
     permissions:
       packages: write
