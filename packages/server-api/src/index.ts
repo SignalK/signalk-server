@@ -1,3 +1,11 @@
+export * from './shared-schemas'
+export * from './discovery-schemas'
+export * from './notifications-schemas'
+export * from './resources-schemas'
+export * from './weather-schemas'
+export * from './autopilot-schemas'
+export * from './history-schemas'
+export * from './radar-schemas'
 export * from './plugin'
 export * from './serverapi'
 export * from './deltas'
@@ -18,19 +26,6 @@ export * from './subscriptionmanager'
 export * as history from './history'
 /** @category Notifications API */
 export * from './notificationsapi'
-
-/** @category  Server API */
-export interface Position {
-  latitude: number
-  longitude: number
-  altitude?: number
-}
-
-/** @category  Server API */
-export interface RelativePositionOrigin {
-  radius: number
-  position: Position
-}
 
 /** @category  Server API */
 export enum SKVersion {

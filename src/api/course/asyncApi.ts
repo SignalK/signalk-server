@@ -1,16 +1,9 @@
 /**
  * AsyncAPI 3.0 Document for Signal K Course API WebSocket Deltas
  *
- * Documents the WebSocket delta channels emitted by the Course API.
- * TypeBox schemas are used directly as message payloads since they are
- * JSON Schema compliant.
- *
  * The Course API emits deltas on two protocol versions:
- * - v2: navigation.course.* (13 path values per full emission)
+ * - v2: navigation.course.*
  * - v1: navigation.courseGreatCircle.* and navigation.courseRhumbline.*
- *        (8 path values each, 16 total per full emission)
- *
- * Pattern adapted from signalk-universal-installer/keeper/src/api/asyncapi.ts
  */
 
 import {
