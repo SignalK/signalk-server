@@ -16,27 +16,52 @@ jobs:
         include:
           - vm: ubuntu-latest
             arch: amd
+            os: 24.04
+            node: 22.x
+            node_safe: 22.x
+            platform: linux/amd64
+          - vm: ubuntu-latest
+            arch: amd
+            os: 24.04
+            node: 24.x
+            node_safe: 24.x
+            platform: linux/amd64
+          - vm: ubuntu-latest
+            arch: amd
+            os: alpine
+            node: 22.x
+            node_safe: 22
+            platform: linux/amd64
+          - vm: ubuntu-latest
+            arch: amd
+            os: alpine
+            node: 24.x
+            node_safe: 24
             platform: linux/amd64
           - vm: ubuntu-24.04-arm
             arch: arm
+            os: 24.04
             node: 22.x
+            node_safe: 22.x
+            platform: linux/arm64
+          - vm: ubuntu-24.04-arm
+            arch: arm
+            os: 24.04
+            node: 24.x
+            node_safe: 24.x
+            platform: linux/arm64
+          - vm: ubuntu-24.04-arm
+            arch: arm
+            os: alpine
+            node: 22.x
+            node_safe: 22
             platform: linux/arm64,linux/arm/v7
           - vm: ubuntu-24.04-arm
             arch: arm
-            node: 24.x
-            platform: linux/arm64
-          - os: 24.04
-            node: 22.x
-            node_safe: 22.x
-          - os: 24.04
-            node: 24.x
-            node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
-          - os: alpine
+            os: alpine
             node: 24.x
             node_safe: 24
+            platform: linux/arm64,linux/arm/v7
     runs-on: ${{ matrix.vm }}
     steps:
       - uses: actions/checkout@v6
