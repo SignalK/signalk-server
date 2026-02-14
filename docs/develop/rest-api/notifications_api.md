@@ -150,7 +150,7 @@ _Notification: post `silence` request_
       "silenced": true,
       "acknowledged": false,
       "canSilence": true,
-      "canAcknow;edge": true,
+      "canAcknowledge": true,
       "canClear": true
    }
 }
@@ -183,7 +183,7 @@ _Example: Notification prior to `acknowledge` request._
       "silenced": true,
       "acknowledged": false,
       "canSilence": true,
-      "canAcknow;edge": true,
+      "canAcknowledge": true,
       "canClear": true
    }
 }
@@ -207,7 +207,7 @@ _Notification: post `acknowledge` request_
       "silenced": true,
       "acknowledged": true,
       "canSilence": true,
-      "canAcknow;edge": true,
+      "canAcknowledge": true,
       "canClear": true
    }
 }

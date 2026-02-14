@@ -23,15 +23,15 @@ The OpenAPI definitions can be found under _Documentation -> OpenAPI_ in the ser
 
 APIs are available via `/signalk/v2/api/<endpoint>`
 
-| API                                       | Description                                                                                                                                          | Endpoint                         |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| [`Autopilot`](./autopilot_api.md)         | Provide the ability to send common commands to an autopilot via a provider plugin.                                                                   | `vessels/self/autopilot`         |
-| [Course](./course_api.md)                 | Set a course, follow a route, advance to next point, etc.                                                                                            | `vessels/self/navigation/course` |
-| [History](./history_api.md)               | Query historical data.                                                                                                                               | `history`                        |
-| [Radar](./radar_api.md)                   | View and control marine radar equipment via a provider plugin. _(In development)_                                                                    | `vessels/self/radars`            |
-| [Resources](./resources_api.md)           | Create, view, update and delete waypoints, routes, etc.                                                                                              | `resources`                      |
-| [Weather](./weather_api.md)               | Query weather observations, forecasts, and warnings via a provider plugin.                                                                           | `weather`                        |
-| _[`Notifications`](notifications_api.md)_ | Provide the ability to raise, update and clear notifications from multiple sources. _[View PR](https://github.com/SignalK/signalk-server/pull/1560)_ | `notifications`                  |
+| API                                     | Description                                                                        | Endpoint                         |
+| --------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------- |
+| [`Autopilot`](./autopilot_api.md)       | Provide the ability to send common commands to an autopilot via a provider plugin. | `vessels/self/autopilot`         |
+| [Course](./course_api.md)               | Set a course, follow a route, advance to next point, etc.                          | `vessels/self/navigation/course` |
+| [History](./history_api.md)             | Query historical data.                                                             | `history`                        |
+| [Radar](./radar_api.md)                 | View and control marine radar equipment via a provider plugin. _(In development)_  | `vessels/self/radars`            |
+| [Resources](./resources_api.md)         | Create, view, update and delete waypoints, routes, etc.                            | `resources`                      |
+| [Weather](./weather_api.md)             | Query weather observations, forecasts, and warnings via a provider plugin.         | `weather`                        |
+| [Notifications](./notifications_api.md) | Centralised management, silencing and acknowledgement of notifications and alarms. | `notifications`                  |
 
 ### Interactive Documentation
 
