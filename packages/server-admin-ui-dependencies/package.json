@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin-ui-dependencies",
-  "version": "1.0.1",
+  "version": "2.22.0",
   "description": "UI dependencies of the admin UI exposed to plugins that expose federated components",
   "main": "index.js",
   "author": "teppo.kurki@iki.fi",
