@@ -2,7 +2,7 @@
   "name": "@signalk/server-admin-ui-react19",
   "version": "2.21.0",
   "description": "Signal K server admin webapp",
-  "author": "Scott Bender, Teppo Kurki",
+  "author": "Dirk Wahrheit, Scott Bender, Teppo Kurki",
   "contributors": [
     {
       "name": "Teppo Kurki"
