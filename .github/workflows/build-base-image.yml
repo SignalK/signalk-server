@@ -55,7 +55,7 @@ jobs:
             os: alpine
             node: 22.x
             node_safe: 22
-            platform: linux/arm64,linux/arm/v7
+            platform: linux/arm64
           - vm: ubuntu-24.04-arm
             arch: arm
             os: alpine
