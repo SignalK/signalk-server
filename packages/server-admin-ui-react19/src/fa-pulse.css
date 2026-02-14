@@ -1,0 +1,21 @@
+.fa-pulse {
+  display: inline-block;
+  animation: fa-pulse 2s infinite linear;
+}
+
+.fa-pulse-fast {
+  display: inline-block;
+  animation: fa-pulse 1s infinite linear;
+}
+
+@keyframes fa-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

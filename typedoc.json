@@ -51,6 +51,7 @@
     "packages/assemblyscript-plugin-sdk",
     "packages/resources-provider-plugin",
     "packages/server-admin-ui",
+    "packages/server-admin-ui-react19",
     "packages/server-admin-ui-dependencies",
     "packages/streams",
     "packages/typedoc-theme"

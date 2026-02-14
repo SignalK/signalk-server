@@ -226,49 +226,50 @@ module.exports = function (
     })
   }
 
+  // Determine which admin UI to use based on environment variable
+  const adminUiPackage =
+    process.env.SIGNALK_ADMIN_UI === 'react19'
+      ? '@signalk/server-admin-ui-react19'
+      : '@signalk/server-admin-ui'
+  const adminUiPath = path.join(
+    __dirname,
+    '/../node_modules/',
+    adminUiPackage,
+    '/public'
+  )
+
   app.get('/admin/', (req: Request, res: Response) => {
-    fs.readFile(
-      path.join(
-        __dirname,
-        '/../node_modules/@signalk/server-admin-ui/public/index.html'
-      ),
-      (err, indexContent) => {
-        if (err) {
-          console.error(err)
-          res.status(500)
-          res.type('text/plain')
-          res.send('Could not handle admin ui root request')
-        }
-        res.type('html')
-        const addonScripts = uniq(
-          ([] as ModuleInfo[])
-            .concat(app.addons)
-            .concat(app.pluginconfigurators)
-            .concat(app.embeddablewebapps)
-        )
-        setNoCache(res)
-        res.send(
-          indexContent.toString().replace(
-            /%ADDONSCRIPTS%/g,
-            addonScripts
-              .map(
-                (moduleInfo) =>
-                  `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
-              )
-              .join('\n')
-              .toString()
-          )
-        )
+    fs.readFile(path.join(adminUiPath, 'index.html'), (err, indexContent) => {
+      if (err) {
+        console.error(err)
+        res.status(500)
+        res.type('text/plain')
+        res.send('Could not handle admin ui root request')
       }
-    )
+      res.type('html')
+      const addonScripts = uniq(
+        ([] as ModuleInfo[])
+          .concat(app.addons)
+          .concat(app.pluginconfigurators)
+          .concat(app.embeddablewebapps)
+      )
+      setNoCache(res)
+      res.send(
+        indexContent.toString().replace(
+          /%ADDONSCRIPTS%/g,
+          addonScripts
+            .map(
+              (moduleInfo) =>
+                `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
+            )
+            .join('\n')
+            .toString()
+        )
+      )
+    })
   })
 
-  app.use(
-    '/admin',
-    express.static(
-      __dirname + '/../node_modules/@signalk/server-admin-ui/public'
-    )
-  )
+  app.use('/admin', express.static(adminUiPath))
 
   app.get('/', (req: Request, res: Response) => {
     let landingPage = '/admin/'
