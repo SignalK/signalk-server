@@ -30,6 +30,17 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 | [History](./history_api.md)               | Query historical data.                                                                                                                               | `history`                        |
 | [Radar](./radar_api.md)                   | View and control marine radar equipment via a provider plugin. _(In development)_                                                                    | `vessels/self/radars`            |
 | [Resources](./resources_api.md)           | Create, view, update and delete waypoints, routes, etc.                                                                                              | `resources`                      |
+| [Weather](./weather_api.md)               | Query weather observations, forecasts, and warnings via a provider plugin.                                                                           | `weather`                        |
 | _[`Notifications`](notifications_api.md)_ | Provide the ability to raise, update and clear notifications from multiple sources. _[View PR](https://github.com/SignalK/signalk-server/pull/1560)_ | `notifications`                  |
+
+### Interactive Documentation
+
+The server provides interactive API documentation accessible from the Admin UI sidebar under _Documentation_:
+
+- **OpenAPI** — interactive Swagger UI for all REST APIs (including plugin APIs) at `/doc/openapi`
+- **AsyncAPI** — WebSocket delta channel documentation at `/skServer/asyncapi/docs`
+- **Path Reference** — searchable metadata for all Signal K paths (units, descriptions) at `/documentation/paths`
+
+For the WebSocket streaming protocol (deltas, subscriptions, PUT requests), see the [WebSocket Protocol](../websocket-protocol.md) documentation.
 
 ---
