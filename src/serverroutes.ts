@@ -597,7 +597,14 @@ module.exports = function (
         })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .catch((err: any) => {
-          console.error(err.message)
+          if (
+            !(
+              err?.statusCode === 503 &&
+              err?.message === 'Too many pending access requests'
+            )
+          ) {
+            console.error(err.message)
+          }
           res.status(err.statusCode || 500).send(err.message)
         })
     }

@@ -5,13 +5,20 @@ on:
   push:
     branches: [master]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [22.x, 24.x]
+        include:
+          - node-version: 22.x
+            latest: false
+          - node-version: 24.x
+            latest: true
 
     steps:
       - uses: actions/checkout@v6
@@ -19,10 +26,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            packages/server-admin-ui-dependencies/package-lock.json
       - uses: SocketDev/action@v1
         with:
           mode: firewall-free
-      - run: sfw npm install
+      - run: sfw npm ci
       - run: npm run build:all
 
       - name: server-api
@@ -35,6 +46,19 @@ jobs:
         run: |
           npm run test
 
-      - run: npm test
+      - name: Coverage (head)
+        if: ${{ matrix.latest }}
+        run: |
+          npx nyc --reporter=json-summary --reporter=text-summary --reporter=lcov npm run test-only
         env:
           CI: true
+
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.latest }}
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false
+
+      - name: Lint
+        run: npm run ci-lint

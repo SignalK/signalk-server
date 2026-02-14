@@ -21,8 +21,12 @@ describe('Put Requests', () => {
       config: {
         settings: {
           port,
+          mdns: false,
+          pipedProviders: [],
           interfaces: {
-            plugins: false
+            plugins: false,
+            tcp: false,
+            'nmea-tcp': false
           }
         },
         defaults: {}

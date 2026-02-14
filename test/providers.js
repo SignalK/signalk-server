@@ -17,8 +17,11 @@ describe('Providers', (_) => {
       config: {
         settings: {
           port,
+          mdns: false,
           interfaces: {
-            plugins: false
+            plugins: false,
+            tcp: false,
+            'nmea-tcp': false
           },
           pipedProviders: [
             {

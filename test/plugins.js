@@ -23,7 +23,18 @@ describe('Demo plugin ', () => {
 
     const port = await freeport()
     const server = new Server({
-      config: { settings: { port } }
+      config: {
+        settings: {
+          port,
+          mdns: false,
+          pipedProviders: [],
+          interfaces: {
+            plugins: true,
+            tcp: false,
+            'nmea-tcp': false
+          }
+        }
+      }
     })
     await server.start()
     const plugins = await fetch(`http://0.0.0.0:${port}/skServer/plugins`).then(
@@ -101,7 +112,18 @@ describe('Demo plugin ', () => {
 
     const port = await freeport()
     const server = new Server({
-      config: { settings: { port } }
+      config: {
+        settings: {
+          port,
+          mdns: false,
+          pipedProviders: [],
+          interfaces: {
+            plugins: true,
+            tcp: false,
+            'nmea-tcp': false
+          }
+        }
+      }
     })
     await server.start()
 
