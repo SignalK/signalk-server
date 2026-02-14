@@ -3,6 +3,7 @@ title: Developing
 children:
   - ../whats_new.md
   - ../breaking_changes.md
+  - websocket-protocol.md
   - plugins/README.md
   - rest-api/README.md
 ---
@@ -37,7 +38,9 @@ The use of APIs to perform operations addresses these issues providing the follo
 
 ### Stream Interface
 
-Currently, when v2 REST APIs emit deltas that contain v2 paths and structure, but they do not end up in the full model. This means that these paths and values are only available via API GET requests.
+The v2 REST APIs emit deltas containing v2 paths and structure over the [WebSocket stream](./websocket-protocol.md). The WebSocket delta channels for each API are documented with [AsyncAPI](/skServer/asyncapi/docs) (available under _Documentation &rarr; AsyncAPI_ in the Admin UI sidebar).
+
+Currently, v2 deltas do not end up in the full model. This means that these paths and values are only available via API GET requests or by subscribing to the WebSocket stream.
 
 ## Offline Use
 

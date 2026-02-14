@@ -9,9 +9,9 @@ A plugin will generally want to:
 1. Subscribe to data published by the server _(i.e. received from a NMEA 2000 bus, etc)_
 1. Emit data.
 
-In both cases the plugin will use _deltas_ which the server uses to signal changes in the Signal K full data model. Delta messages contain the new value associated with a path (not the amount of change from the previous value.)\_
+In both cases the plugin will use _deltas_ which the server uses to signal changes in the Signal K full data model. Delta messages contain the new value associated with a path (not the amount of change from the previous value.)
 
-_See the [Signal K Delta Specification](http://signalk.org/specification/1.7.0/doc/data_model.html#delta-format) for details._
+> For the full delta message format, connection details, and subscription protocol, see the [WebSocket Protocol](../websocket-protocol.md) documentation.
 
 Using the server API, plugins can either:
 
@@ -170,6 +170,34 @@ app.handleMessage(
   'v1'
 )
 ```
+
+### v2 Deltas
+
+When sending deltas with v2-style paths (used by the v2 REST APIs like Course, Notifications, etc.), pass `'v2'` as the third argument:
+
+```javascript
+app.handleMessage(
+  plugin.id,
+  {
+    updates: [
+      {
+        values: [
+          {
+            path: 'navigation.course.nextPoint',
+            value: {
+              position: { latitude: 51.5, longitude: -0.1 },
+              type: 'Location'
+            }
+          }
+        ]
+      }
+    ]
+  },
+  'v2'
+)
+```
+
+v2 deltas are delivered to WebSocket subscribers but are not stored in the v1 full data model. The v2 delta channels for each API are documented in the [AsyncAPI viewer](/skServer/asyncapi/docs).
 
 ## Sending NMEA 2000 data from a plugin
 
