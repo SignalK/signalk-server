@@ -1,4 +1,17 @@
 export * from './shared-schemas'
+export {
+  DeltaSchema,
+  type DeltaType,
+  UpdateSchema,
+  type UpdateType,
+  SourceSchema,
+  PathValueSchema,
+  MetaSchema,
+  NotificationSchema,
+  AlarmStateSchema,
+  AlarmMethodSchema,
+  AlarmStatusSchema
+} from './protocol-schemas'
 export * from './discovery-schemas'
 export * from './notifications-schemas'
 export * from './resources-schemas'
@@ -30,9 +43,11 @@ export {
   getMetadata,
   metadataRegistry,
   MetadataRegistry,
-  getAISShipTypeName
+  getAISShipTypeName,
+  getAtonTypeName
 } from './metadata'
 export type { PathMetadataEntry } from './metadata'
+export { validateDelta, type ValidationResult } from './validation'
 export { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
 export { FullSignalK } from './fullsignalk'
 

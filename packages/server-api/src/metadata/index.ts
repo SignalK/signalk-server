@@ -24,6 +24,7 @@ import { notificationsMetadata } from './notifications'
 
 export type { PathMetadataEntry } from './types'
 export { getAISShipTypeName } from './ais-ship-types'
+export { getAtonTypeName } from './aton-types'
 
 // ---------------------------------------------------------------------------
 // Assemble all vessel-prefixed metadata
