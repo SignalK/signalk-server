@@ -24,6 +24,7 @@ interface VirtualizedDataTableProps {
   selectedSources: Set<string>
   onToggleSourceFilter: (event: ChangeEvent<HTMLInputElement>) => void
   sourceFilterActive: boolean
+  showContext: boolean
 }
 
 function VirtualizedDataTable({
@@ -34,7 +35,8 @@ function VirtualizedDataTable({
   onToggleSource,
   selectedSources,
   onToggleSourceFilter,
-  sourceFilterActive
+  sourceFilterActive,
+  showContext
 }: VirtualizedDataTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Track path$SourceKeys.length to reset range when data changes
@@ -201,10 +203,17 @@ function VirtualizedDataTable({
   }
 
   return (
-    <div className="virtual-table" ref={containerRef}>
+    <div
+      className="virtual-table"
+      ref={containerRef}
+      data-show-context={showContext ? 'true' : undefined}
+    >
       {/* Header */}
       <div className="virtual-table-header">
         <div className="virtual-table-header-cell">Path</div>
+        {showContext && (
+          <div className="virtual-table-header-cell">Context</div>
+        )}
         <div className="virtual-table-header-cell">Value</div>
         <div className="virtual-table-header-cell">Timestamp</div>
         <div className="virtual-table-header-cell">
@@ -256,6 +265,7 @@ function VirtualizedDataTable({
             isPaused={isPaused}
             onToggleSource={onToggleSource}
             selectedSources={selectedSources}
+            showContext={showContext}
           />
         ))}
 

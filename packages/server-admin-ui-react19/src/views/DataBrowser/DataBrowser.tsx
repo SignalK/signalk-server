@@ -275,7 +275,7 @@ const DataBrowser: React.FC = () => {
 
   const contextOptions: SelectOption[] = (() => {
     const contexts = Object.keys(signalkData).sort()
-    const options: SelectOption[] = []
+    const options: SelectOption[] = [{ value: 'all', label: 'All' }]
 
     if (contexts.includes('self')) {
       const contextData = signalkData['self']?.['name'] as
@@ -343,27 +343,34 @@ const DataBrowser: React.FC = () => {
     []
   )
 
+  const showContext = context === 'all'
+
   // Compute filtered path keys from Zustand state directly
+  // When context is 'all', keys are prefixed with context\0 for uniqueness
   const filteredPathKeys: string[] = (() => {
-    const contextData = signalkData[context] || {}
-    const allKeys = Object.keys(contextData)
+    const contexts = context === 'all' ? Object.keys(signalkData) : [context]
 
-    const filtered = allKeys.filter((key) => {
-      if (deferredSearch && deferredSearch.length > 0) {
-        if (key.toLowerCase().indexOf(deferredSearch.toLowerCase()) === -1) {
-          return false
+    const filtered: string[] = []
+
+    for (const ctx of contexts) {
+      const contextData = signalkData[ctx] || {}
+      for (const key of Object.keys(contextData)) {
+        if (deferredSearch && deferredSearch.length > 0) {
+          if (key.toLowerCase().indexOf(deferredSearch.toLowerCase()) === -1) {
+            continue
+          }
         }
-      }
 
-      if (sourceFilterActive && selectedSources.size > 0) {
-        const data = contextData[key] as PathData | undefined
-        if (data && !selectedSources.has(data.$source || '')) {
-          return false
+        if (sourceFilterActive && selectedSources.size > 0) {
+          const data = contextData[key] as PathData | undefined
+          if (data && !selectedSources.has(data.$source || '')) {
+            continue
+          }
         }
-      }
 
-      return true
-    })
+        filtered.push(context === 'all' ? `${ctx}\0${key}` : key)
+      }
+    }
 
     return filtered.sort()
   })()
@@ -455,20 +462,21 @@ const DataBrowser: React.FC = () => {
   )
 
   const getUniquePathsForMeta = useCallback(() => {
-    const contextData = signalkData[context] || {}
-    const allKeys = Object.keys(contextData)
+    const contexts = context === 'all' ? Object.keys(signalkData) : [context]
+    const paths: string[] = []
 
-    const filtered = allKeys.filter((key) => {
-      if (!search || search.length === 0) {
-        return true
+    for (const ctx of contexts) {
+      const contextData = signalkData[ctx] || {}
+      for (const key of Object.keys(contextData)) {
+        if (search && search.length > 0) {
+          if (key.toLowerCase().indexOf(search.toLowerCase()) === -1) {
+            continue
+          }
+        }
+        const data = contextData[key] as PathData | undefined
+        paths.push(data?.path || key)
       }
-      return key.toLowerCase().indexOf(search.toLowerCase()) !== -1
-    })
-
-    const paths = filtered.map((key) => {
-      const data = contextData[key] as PathData | undefined
-      return data?.path || key
-    })
+    }
 
     return [...new Set(paths)].sort()
   }, [context, search, signalkData])
@@ -596,6 +604,7 @@ const DataBrowser: React.FC = () => {
                   selectedSources={selectedSources}
                   onToggleSourceFilter={toggleSourceFilter}
                   sourceFilterActive={sourceFilterActive}
+                  showContext={showContext}
                 />
               </div>
             )}

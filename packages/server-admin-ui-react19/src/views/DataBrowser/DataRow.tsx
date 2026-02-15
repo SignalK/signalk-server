@@ -13,6 +13,7 @@ interface DataRowProps {
   isPaused: boolean
   onToggleSource: (source: string) => void
   selectedSources: Set<string>
+  showContext: boolean
 }
 
 interface ValueRendererProps {
@@ -29,10 +30,24 @@ function DataRow({
   raw,
   isPaused,
   onToggleSource,
-  selectedSources
+  selectedSources,
+  showContext
 }: DataRowProps) {
-  const data = usePathData(context, path$SourceKey)
-  const meta = useMetaData(context, data?.path)
+  // When showContext is true, path$SourceKey is a composite key: context\0realKey
+  const nullIdx = showContext ? path$SourceKey.indexOf('\0') : -1
+  const realContext = nullIdx >= 0 ? path$SourceKey.slice(0, nullIdx) : context
+  const realKey =
+    nullIdx >= 0 ? path$SourceKey.slice(nullIdx + 1) : path$SourceKey
+
+  const data = usePathData(realContext, realKey)
+  const meta = useMetaData(realContext, data?.path)
+
+  const contextNameData = usePathData(realContext, 'name')
+  const contextLabel = showContext
+    ? contextNameData?.value
+      ? String(contextNameData.value)
+      : realContext
+    : ''
 
   if (!data) {
     return (
@@ -43,6 +58,12 @@ function DataRow({
         <div className="virtual-table-cell path-cell" data-label="Path">
           Loading...
         </div>
+        {showContext && (
+          <div
+            className="virtual-table-cell context-cell"
+            data-label="Context"
+          ></div>
+        )}
         <div className="virtual-table-cell value-cell" data-label="Value"></div>
         <div
           className="virtual-table-cell timestamp-cell"
@@ -74,6 +95,12 @@ function DataRow({
           </span>
         </CopyToClipboardWithFade>
       </div>
+
+      {showContext && (
+        <div className="virtual-table-cell context-cell" data-label="Context">
+          {contextLabel}
+        </div>
+      )}
 
       <div className="virtual-table-cell value-cell" data-label="Value">
         <ValueRenderer data={data} meta={meta} units={units} raw={raw} />
