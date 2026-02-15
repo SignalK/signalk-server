@@ -37,8 +37,9 @@ ws://localhost:3000/signalk/v1/stream
 | ------------------ | --------------------- | -------- | --------------------------------------------- |
 | `subscribe`        | `none`, `self`, `all` | `self`   | Initial subscription scope                    |
 | `sendMeta`         | `all`                 | _(none)_ | Include metadata deltas for subscribed values |
-| `sendCachedValues` | `true`, `false`       | `true`   | Send cached values on connection              |
+| `sendCachedValues` | `true`, `false`       | `true`   | Send latest cached values on connection       |
 | `serverevents`     | `all`                 | _(none)_ | Subscribe to server lifecycle events          |
+| `events`           | comma-separated names | _(none)_ | Subscribe to specific app events (admin only) |
 | `token`            | JWT string            | _(none)_ | Authentication token                          |
 
 _Example: Connect with no initial subscriptions (then subscribe selectively):_
@@ -70,17 +71,13 @@ ws://localhost:3000/signalk/v1/playback?startTime=2024-06-15T08:00:00Z&playbackR
 
 ## Authentication
 
-The server checks for authentication credentials in the following order:
+Authentication works the same way for HTTP and WebSocket connections — see the [Security](../security.md) documentation for details on tokens, headers, cookies, access control, and ACLs.
 
-1. **Query parameter:** `?token=<jwt>`
-2. **HTTP header:** `Authorization: Bearer <jwt>` or `Authorization: JWT <jwt>`
-3. **Cookie:** `JAUTHENTICATION=<jwt>`
-
-If no valid token is provided and the server has `allow_readonly` enabled, the connection is granted read-only access.
+The WebSocket protocol additionally supports in-stream authentication: you can log in or send a token after the connection is established.
 
 ### Login via WebSocket
 
-You can also authenticate after connecting by sending a login message:
+Authenticate after connecting by sending a login message:
 
 ```json
 {
@@ -112,8 +109,6 @@ Use the returned token for subsequent connections or send it in-stream:
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
-
-For details on access control, permissions, and ACLs see the [Security](../security.md) documentation.
 
 ---
 
@@ -152,12 +147,6 @@ After the hello message, the server streams **delta messages** — incremental u
   "context": "vessels.urn:mrn:imo:mmsi:234567890",
   "updates": [
     {
-      "source": {
-        "label": "N2000-01",
-        "type": "NMEA2000",
-        "src": "115",
-        "pgn": 128267
-      },
       "$source": "N2000-01.115",
       "timestamp": "2024-06-15T08:00:01.507Z",
       "values": [
@@ -181,23 +170,11 @@ After the hello message, the server streams **delta messages** — incremental u
 | -------------------------- | --------------------------------------------------------------------------------------- |
 | `context`                  | The vessel or object this update applies to (e.g. `vessels.urn:mrn:imo:mmsi:234567890`) |
 | `updates[]`                | Array of update groups, each from a single source at a single timestamp                 |
-| `updates[].source`         | Structured source identifier (type, label, device address)                              |
-| `updates[].$source`        | Compact source identifier string                                                        |
+| `updates[].$source`        | Source identifier string                                                                |
 | `updates[].timestamp`      | ISO 8601 timestamp of the measurement                                                   |
 | `updates[].values[]`       | Array of path/value pairs                                                               |
 | `updates[].values[].path`  | Signal K path relative to the context (e.g. `navigation.speedOverGround`)               |
 | `updates[].values[].value` | The value — can be a number, string, boolean, object, or `null`                         |
-
-### Source Types
-
-The `source` object identifies where the data originated:
-
-| Source Type | Fields                                | Example                                                                         |
-| ----------- | ------------------------------------- | ------------------------------------------------------------------------------- |
-| NMEA2000    | `type`, `label`, `src`, `pgn`         | `{ "type": "NMEA2000", "label": "N2K", "src": "115", "pgn": 128267 }`           |
-| NMEA0183    | `type`, `label`, `talker`, `sentence` | `{ "type": "NMEA0183", "label": "serial1", "talker": "GP", "sentence": "RMC" }` |
-| SignalK     | `type`, `label`                       | `{ "type": "SignalK", "label": "courseApi" }`                                   |
-| Plugin      | `label`                               | `{ "label": "my-plugin-id" }`                                                   |
 
 ### Value Types
 
@@ -271,14 +248,7 @@ By default, connecting to `/signalk/v1/stream` subscribes you to all paths on `v
 
 ### Unsubscribe
 
-```json
-{
-  "context": "vessels.self",
-  "unsubscribe": [{ "path": "navigation.speedThroughWater" }]
-}
-```
-
-Unsubscribe from everything:
+Unsubscribe from all paths in a context:
 
 ```json
 {
@@ -307,7 +277,7 @@ To discover available paths without subscribing to continuous updates for all of
 When `announceNewPaths` is `true`:
 
 1. The server sends cached values for **all** existing paths matching the context (once each)
-2. When a new path appears later (e.g. new sensor comes online), the server announces it once
+2. When a new path appears later (e.g. new sensor comes online), the server sends its value once, announcing its existence
 3. Only the explicitly subscribed paths receive continuous updates
 
 ---
