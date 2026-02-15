@@ -379,47 +379,67 @@ export type PathValue = Static<typeof PathValueSchema>
 
 /**
  * An update within a delta message.
- * Contains either values[] or meta[] (or both), plus timestamp and source info.
+ * Must contain values[] or meta[] (or both), plus optional timestamp and source.
+ *
+ * Uses a Union to match the Signal K specification's oneOf constraint:
+ * an update with neither values nor meta is invalid.
+ * @see specification delta.json oneOf constraint
  */
-export const UpdateSchema = Type.Object(
-  {
-    timestamp: Type.Optional(
-      Type.String({
-        pattern: IsoTimePattern,
-        description:
-          'RFC 3339 (UTC only without local offset) string representing date and time.'
-      })
-    ),
-    source: Type.Optional(SourceSchema),
-    $source: Type.Optional(
-      Type.String({
-        pattern: '^[A-Za-z0-9-_.]*$',
-        description:
-          'Reference to the source under /sources. A dot separated path to the data, e.g. [type].[bus].[device]',
-        examples: ['NMEA0183.COM1.GP']
-      })
-    ),
-    notificationId: Type.Optional(
-      Type.String({ description: 'Notification identifier' })
-    ),
-    values: Type.Optional(
-      Type.Array(PathValueSchema, {
-        description: 'Array of path-value pairs'
-      })
-    ),
-    meta: Type.Optional(
-      Type.Array(MetaSchema, {
-        description: 'Array of path-metadata pairs'
-      })
-    )
-  },
+const UpdateBase = Type.Object({
+  timestamp: Type.Optional(
+    Type.String({
+      pattern: IsoTimePattern,
+      description:
+        'RFC 3339 (UTC only without local offset) string representing date and time.'
+    })
+  ),
+  source: Type.Optional(SourceSchema),
+  $source: Type.Optional(
+    Type.String({
+      pattern: '^[A-Za-z0-9-_.]*$',
+      description:
+        'Reference to the source under /sources. A dot separated path to the data, e.g. [type].[bus].[device]',
+      examples: ['NMEA0183.COM1.GP']
+    })
+  ),
+  notificationId: Type.Optional(
+    Type.String({ description: 'Notification identifier' })
+  )
+})
+
+const ValuesFields = Type.Object({
+  values: Type.Array(PathValueSchema, {
+    description: 'Array of path-value pairs'
+  }),
+  meta: Type.Optional(
+    Type.Array(MetaSchema, {
+      description: 'Array of path-metadata pairs'
+    })
+  )
+})
+
+const MetaFields = Type.Object({
+  meta: Type.Array(MetaSchema, {
+    description: 'Array of path-metadata pairs'
+  }),
+  values: Type.Optional(
+    Type.Array(PathValueSchema, {
+      description: 'Array of path-value pairs'
+    })
+  )
+})
+
+export const UpdateSchema = Type.Union(
+  [
+    Type.Intersect([UpdateBase, ValuesFields]),
+    Type.Intersect([UpdateBase, MetaFields])
+  ],
   {
     $id: 'Update',
     description:
       'A Signal K update containing path-value and/or path-meta pairs with timestamp and source'
   }
 )
-export type UpdateType = Static<typeof UpdateSchema>
 
 // ---------------------------------------------------------------------------
 // Delta
@@ -450,4 +470,3 @@ export const DeltaSchema = Type.Object(
       'A Signal K delta message — the fundamental unit of data exchange'
   }
 )
-export type DeltaType = Static<typeof DeltaSchema>

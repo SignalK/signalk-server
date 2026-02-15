@@ -40,6 +40,31 @@ describe('validateDelta', () => {
     expect(result.valid).to.be.true
   })
 
+  it('accepts a delta with both values and meta', () => {
+    const result = validateDelta({
+      updates: [
+        {
+          timestamp: '2024-06-15T08:00:00Z',
+          values: [{ path: 'navigation.speedOverGround', value: 3.85 }],
+          meta: [
+            {
+              path: 'navigation.speedOverGround',
+              value: { units: 'm/s', description: 'Speed over ground' }
+            }
+          ]
+        }
+      ]
+    })
+    expect(result.valid).to.be.true
+  })
+
+  it('rejects an update with neither values nor meta', () => {
+    const result = validateDelta({
+      updates: [{ timestamp: '2024-06-15T08:00:00Z' }]
+    })
+    expect(result.valid).to.be.false
+  })
+
   it('rejects a delta without updates', () => {
     const result = validateDelta({ context: 'vessels.self' })
     expect(result.valid).to.be.false
