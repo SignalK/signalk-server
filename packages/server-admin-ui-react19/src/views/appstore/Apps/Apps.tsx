@@ -29,6 +29,7 @@ interface AppInfo {
   installed?: boolean
   installing?: boolean
   newVersion?: string
+  prereleaseVersion?: string
   updated?: string
   categories: string[]
   [key: string]: unknown

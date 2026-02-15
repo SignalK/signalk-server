@@ -8,6 +8,7 @@ export interface AppData {
   version?: string
   installedVersion?: string
   newVersion?: string
+  prereleaseVersion?: string
   author?: string
   updated?: string
   description?: string
@@ -38,6 +39,11 @@ export function AppListItem(app: AppData) {
               {' '}
               {app.updated?.substring(0, 10)}
             </span>
+            {app.prereleaseVersion && (
+              <span className="badge text-bg-info ms-2">
+                pre-release: v{app.prereleaseVersion}
+              </span>
+            )}
           </div>
           <p className="text-pretty mb-0">{app.description}</p>
         </div>
