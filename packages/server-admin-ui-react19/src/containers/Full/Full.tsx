@@ -11,6 +11,8 @@ import Footer from '../../components/Footer/Footer'
 import Dashboard from '../../views/Dashboard/Dashboard'
 import Embedded from '../../views/Webapps/Embedded'
 import EmbeddedDocs from '../../views/Webapps/EmbeddedDocs'
+import EmbeddedOpenApi from '../../views/Webapps/EmbeddedOpenApi'
+import EmbeddedAsyncApi from '../../views/Webapps/EmbeddedAsyncApi'
 import Webapps from '../../views/Webapps/Webapps'
 import DataBrowser from '../../views/DataBrowser/DataBrowser'
 import Playground from '../../views/Playground'
@@ -120,7 +122,9 @@ export default function Full() {
   const suppressPadding =
     location.pathname.indexOf('/e/') === 0 ||
     (location.pathname.indexOf('/documentation') === 0 &&
-      location.pathname !== '/documentation/paths')
+      location.pathname !== '/documentation/paths') ||
+    location.pathname === '/openapi' ||
+    location.pathname === '/asyncapi'
       ? { padding: '0px' }
       : {}
 
@@ -206,6 +210,8 @@ export default function Full() {
                 path="/security/access/requests"
                 element={<ProtectedRoute component={AccessRequests} />}
               />
+              <Route path="/openapi" element={<EmbeddedOpenApi />} />
+              <Route path="/asyncapi" element={<EmbeddedAsyncApi />} />
               <Route
                 path="/documentation/paths"
                 element={
