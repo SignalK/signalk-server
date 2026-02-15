@@ -1,9 +1,7 @@
 export * from './shared-schemas'
 export {
   DeltaSchema,
-  type DeltaType,
   UpdateSchema,
-  type UpdateType,
   SourceSchema,
   PathValueSchema,
   MetaSchema,
