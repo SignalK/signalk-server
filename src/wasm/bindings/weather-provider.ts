@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * WASM Weather Provider Support
  *
@@ -7,7 +6,12 @@
  */
 
 import Debug from 'debug'
-import { WasmWeatherProvider, WasmPluginInstance } from '../types'
+import {
+  WasmWeatherProvider,
+  WasmPluginInstance,
+  WasmRawExports,
+  SignalKApp
+} from '../types'
 
 const debug = Debug('signalk:wasm:weather-provider')
 
@@ -28,12 +32,17 @@ export async function callWasmWeatherHandler(
 ): Promise<string | null> {
   try {
     const asLoader = pluginInstance.asLoader
-    const rawExports = pluginInstance.instance?.exports as any
+    const rawExports = pluginInstance.instance?.exports as
+      | (WasmRawExports & WebAssembly.Exports)
+      | undefined
 
     if (asLoader && typeof asLoader.exports[handlerName] === 'function') {
       // AssemblyScript: allocate string in WASM memory, pass pointer, get string pointer back
       // Need to handle Asyncify for handlers that call fetchSync
       const requestPtr = asLoader.exports.__newString(requestJson)
+
+      // Get the handler function with proper typing
+      const handlerFn = asLoader.exports[handlerName] as (ptr: number) => number
 
       // Set up Asyncify resume handling
       let resumePromiseResolve: ((result: string | null) => void) | null = null
@@ -42,12 +51,12 @@ export async function callWasmWeatherHandler(
       })
 
       // Store the result pointer from the handler call
-      let handlerResultPtr: any = null
+      let handlerResultPtr: number = 0
 
       if (pluginInstance.setAsyncifyResume) {
         pluginInstance.setAsyncifyResume(() => {
           debug(`Re-calling ${handlerName} to resume from rewind state`)
-          const resumeResultPtr = asLoader.exports[handlerName](requestPtr)
+          const resumeResultPtr = handlerFn(requestPtr)
           const result = asLoader.exports.__getString(resumeResultPtr)
           if (resumePromiseResolve) {
             resumePromiseResolve(result)
@@ -57,7 +66,7 @@ export async function callWasmWeatherHandler(
       }
 
       // Call the handler
-      handlerResultPtr = asLoader.exports[handlerName](requestPtr)
+      handlerResultPtr = handlerFn(requestPtr)
 
       // Check if we're in Asyncify unwind state
       if (typeof asLoader.exports.asyncify_get_state === 'function') {
@@ -156,7 +165,10 @@ export function updateWeatherProviderInstance(
  * @param pluginId The plugin ID
  * @param app The Signal K app (optional, if provided will also unregister from WeatherApi)
  */
-export function cleanupWeatherProviders(pluginId: string, app?: any): void {
+export function cleanupWeatherProviders(
+  pluginId: string,
+  app?: SignalKApp
+): void {
   if (wasmWeatherProviders.has(pluginId)) {
     debug(`Removing weather provider registration: ${pluginId}`)
     wasmWeatherProviders.delete(pluginId)
@@ -189,7 +201,7 @@ export function cleanupWeatherProviders(pluginId: string, app?: any): void {
 export function createWeatherProviderBinding(
   pluginId: string,
   capabilities: { weatherProvider?: boolean },
-  app: any,
+  app: SignalKApp,
   readUtf8String: (ptr: number, len: number) => string
 ): (namePtr: number, nameLen: number) => number {
   return (namePtr: number, nameLen: number): number => {
@@ -229,8 +241,8 @@ export function createWeatherProviderBinding(
            */
           getObservations: async (
             position: { latitude: number; longitude: number },
-            options?: any
-          ): Promise<any[]> => {
+            options?: Record<string, unknown>
+          ): Promise<unknown[]> => {
             const provider = wasmWeatherProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
               debug(`[${pluginId}] Weather provider instance not ready`)
@@ -266,8 +278,8 @@ export function createWeatherProviderBinding(
           getForecasts: async (
             position: { latitude: number; longitude: number },
             type: 'daily' | 'point',
-            options?: any
-          ): Promise<any[]> => {
+            options?: Record<string, unknown>
+          ): Promise<unknown[]> => {
             const provider = wasmWeatherProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
               debug(`[${pluginId}] Weather provider instance not ready`)
@@ -299,7 +311,7 @@ export function createWeatherProviderBinding(
           getWarnings: async (position: {
             latitude: number
             longitude: number
-          }): Promise<any[]> => {
+          }): Promise<unknown[]> => {
             const provider = wasmWeatherProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
               debug(`[${pluginId}] Weather provider instance not ready`)
