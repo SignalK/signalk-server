@@ -192,24 +192,16 @@ export default function Sidebar({ location }: SidebarProps) {
       icon: 'icon-book-open',
       children: [
         {
-          name: 'Documentation',
+          name: 'Guides',
           url: '/documentation'
         },
         {
-          name: 'OpenAPI',
-          url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
-          props: {
-            target: '_blank',
-            rel: 'noopener noreferrer'
-          }
+          name: 'HTTP API',
+          url: '/openapi'
         },
         {
-          name: 'AsyncAPI',
-          url: `${window.location.protocol}//${window.location.host}/skServer/asyncapi/docs`,
-          props: {
-            target: '_blank',
-            rel: 'noopener noreferrer'
-          }
+          name: 'WebSocket API',
+          url: '/asyncapi'
         },
         {
           name: 'Path Reference',

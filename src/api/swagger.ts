@@ -125,7 +125,7 @@ function asyncApiViewerHtml(specsJson: string): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Signal K AsyncAPI Documentation</title>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
+  <script src="/skServer/vendor/marked.umd.js"><\/script>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1e1e1e; color: #d4d4d4; }
