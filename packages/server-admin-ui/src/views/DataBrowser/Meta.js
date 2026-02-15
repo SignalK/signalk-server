@@ -1,10 +1,8 @@
-import {
-  faPencil,
-  faPlusSquare,
-  faSave,
-  faSquarePlus,
-  faTrashCan
-} from '@fortawesome/free-solid-svg-icons'
+import { faPencil } from '@fortawesome/free-solid-svg-icons/faPencil'
+import { faPlusSquare } from '@fortawesome/free-solid-svg-icons/faPlusSquare'
+import { faSave } from '@fortawesome/free-solid-svg-icons/faSave'
+import { faSquarePlus } from '@fortawesome/free-solid-svg-icons/faSquarePlus'
+import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
 import { connect } from 'react-redux'
