@@ -400,6 +400,84 @@ describe('Course Api', () => {
     stop()
   })
 
+  it('updates previousPoint when active route point is moved', async function () {
+    const {
+      createWsPromiser,
+      post,
+      put,
+      selfGetJson,
+      selfPut,
+      sendDelta,
+      stop
+    } = await startServer()
+    const vesselPosition = { latitude: -35.45, longitude: 138.0 }
+    sendDelta('navigation.position', vesselPosition)
+
+    const points = {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3.3452, 65.4567],
+            [3.3352, 65.5567],
+            [3.3261, 65.5777]
+          ]
+        }
+      }
+    }
+
+    const response = await post('/resources/routes', points)
+    response.status.should.equal(201)
+    const { id } = (await response.json()) as { id: string }
+    const href = `/resources/routes/${id}`
+
+    const wsPromiser = createWsPromiser()
+    await wsPromiser.nthMessage(1)
+
+    // activate route and advance to pointIndex 1
+    await selfPut('navigation/course/activeRoute', {
+      href
+    }).then((r) => r.status.should.equal(200))
+
+    await selfPut('navigation/course/activeRoute/nextPoint', {
+      value: 1
+    }).then((r) => r.status.should.equal(200))
+
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    expect(data.previousPoint?.type).to.equal('RoutePoint')
+    expect(data.previousPoint?.position?.latitude).to.equal(65.4567)
+    expect(data.previousPoint?.position?.longitude).to.equal(3.3452)
+
+    // move the previous route point (index 0) to new coordinates
+    const updatedPoints = {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [10.0, 60.0],
+            [3.3352, 65.5567],
+            [3.3261, 65.5777]
+          ]
+        }
+      }
+    }
+    await put(`/resources/routes/${id}`, updatedPoints).then((r) =>
+      r.status.should.equal(200)
+    )
+
+    // wait for subscription to process the route update (period: 500ms)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint?.position?.latitude).to.equal(60.0)
+    expect(data.previousPoint?.position?.longitude).to.equal(10.0)
+
+    stop()
+  })
+
   it('can set arrivalCircle', async function () {
     const { createWsPromiser, selfGetJson, selfPut, stop } = await startServer()
 

@@ -210,6 +210,20 @@ export class CourseApi {
                       !!this.courseInfo.activeRoute.reverse
                     )
                   }
+                  if (this.courseInfo.previousPoint?.type === RoutePoint) {
+                    const prevIndex =
+                      (this.courseInfo.activeRoute.pointIndex as number) - 1
+                    if (prevIndex >= 0) {
+                      this.courseInfo.previousPoint = {
+                        type: RoutePoint,
+                        position: this.getRoutePoint(
+                          rte,
+                          prevIndex,
+                          !!this.courseInfo.activeRoute.reverse
+                        )
+                      }
+                    }
+                  }
                   this.emitCourseInfo()
                 }
               }
