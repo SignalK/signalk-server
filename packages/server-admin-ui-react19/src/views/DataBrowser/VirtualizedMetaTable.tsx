@@ -6,11 +6,16 @@ import './VirtualTable.css'
 interface VirtualizedMetaTableProps {
   paths: string[]
   context: string
+  showContext?: boolean
 }
 
-function VirtualizedMetaTable({ paths, context }: VirtualizedMetaTableProps) {
+function VirtualizedMetaTable({
+  paths,
+  context,
+  showContext = false
+}: VirtualizedMetaTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const contextMeta = useStore(useShallow((s) => s.signalkMeta[context] || {}))
+  const allMeta = useStore(useShallow((s) => s.signalkMeta))
   const rowHeight = 60
   const overscan = 10
   const [pathsLength, setPathsLength] = useState(paths.length)
@@ -115,13 +120,20 @@ function VirtualizedMetaTable({ paths, context }: VirtualizedMetaTableProps) {
     )
   }
 
+  const gridColumns = showContext
+    ? 'minmax(200px, 1fr) minmax(100px, 0.5fr) minmax(300px, 2fr)'
+    : 'minmax(200px, 1fr) minmax(300px, 2fr)'
+
   return (
     <div className="virtual-table virtual-table-meta" ref={containerRef}>
       <div
         className="virtual-table-header"
-        style={{ gridTemplateColumns: 'minmax(200px, 1fr) minmax(300px, 2fr)' }}
+        style={{ gridTemplateColumns: gridColumns }}
       >
         <div className="virtual-table-header-cell">Path</div>
+        {showContext && (
+          <div className="virtual-table-header-cell">Context</div>
+        )}
         <div className="virtual-table-header-cell">Meta</div>
       </div>
 
@@ -131,20 +143,28 @@ function VirtualizedMetaTable({ paths, context }: VirtualizedMetaTableProps) {
         )}
 
         {visibleItems.map((item) => {
-          const meta = contextMeta[item.path] || {}
+          const separatorIndex = item.path.indexOf('\0')
+          const ctx =
+            separatorIndex !== -1 ? item.path.slice(0, separatorIndex) : context
+          const path =
+            separatorIndex !== -1
+              ? item.path.slice(separatorIndex + 1)
+              : item.path
+          const meta = (allMeta[ctx] || {})[path] || {}
           return (
             <div
               key={item.path}
               className={`virtual-table-row ${item.index % 2 ? 'striped' : ''}`}
               style={{
-                gridTemplateColumns: 'minmax(200px, 1fr) minmax(300px, 2fr)',
+                gridTemplateColumns: gridColumns,
                 minHeight: rowHeight
               }}
             >
-              <div className="virtual-table-cell">{item.path}</div>
+              <div className="virtual-table-cell">{path}</div>
+              {showContext && <div className="virtual-table-cell">{ctx}</div>}
               <div className="virtual-table-cell">
-                {!item.path.startsWith('notifications') && (
-                  <Meta meta={meta} path={item.path} />
+                {!path.startsWith('notifications') && (
+                  <Meta meta={meta} path={path} />
                 )}
               </div>
             </div>

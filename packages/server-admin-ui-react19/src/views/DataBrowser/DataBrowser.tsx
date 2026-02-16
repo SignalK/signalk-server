@@ -7,7 +7,11 @@ import React, {
   useTransition
 } from 'react'
 import { JSONTree } from 'react-json-tree'
-import Select from 'react-select'
+import Select, {
+  components,
+  type OptionProps,
+  type SingleValue
+} from 'react-select'
 import {
   Card,
   CardHeader,
@@ -65,6 +69,18 @@ interface DeltaMessage {
 interface SelectOption {
   label: string
   value: string
+  section?: 'all' | 'self' | 'ais'
+  isFirstAis?: boolean
+}
+
+const ContextOption = (props: OptionProps<SelectOption>) => {
+  const { data } = props
+  const needsBorder = data.value === 'self' || data.isFirstAis
+  return (
+    <div style={needsBorder ? { borderTop: '1px solid #ccc' } : undefined}>
+      <components.Option {...props} />
+    </div>
+  )
 }
 
 interface SourceDevice {
@@ -275,23 +291,36 @@ const DataBrowser: React.FC = () => {
 
   const contextOptions: SelectOption[] = (() => {
     const contexts = Object.keys(signalkData).sort()
-    const options: SelectOption[] = [{ value: 'all', label: 'All' }]
+    const options: SelectOption[] = [
+      { value: 'all', label: 'ALL', section: 'all' }
+    ]
 
     if (contexts.includes('self')) {
       const contextData = signalkData['self']?.['name'] as
         | { value?: string }
         | undefined
       const contextName = contextData?.value
-      options.push({ value: 'self', label: `${contextName || ''} self` })
+      options.push({
+        value: 'self',
+        label: `${contextName || ''} self`,
+        section: 'self'
+      })
     }
 
+    let isFirst = true
     contexts.forEach((key) => {
       if (key !== 'self') {
         const contextData = signalkData[key]?.['name'] as
           | { value?: string }
           | undefined
         const contextName = contextData?.value
-        options.push({ value: key, label: `${contextName || ''} ${key}` })
+        options.push({
+          value: key,
+          label: `${contextName || ''} ${key}`,
+          section: 'ais',
+          isFirstAis: isFirst
+        })
+        isFirst = false
       }
     })
 
@@ -312,7 +341,7 @@ const DataBrowser: React.FC = () => {
   }, [])
 
   const handleContextChange = useCallback(
-    (selectedOption: SelectOption | null) => {
+    (selectedOption: SingleValue<SelectOption>) => {
       const value = selectedOption ? selectedOption.value : 'none'
 
       localStorage.setItem(selectedSourcesStorageKey, JSON.stringify([]))
@@ -464,6 +493,7 @@ const DataBrowser: React.FC = () => {
   const getUniquePathsForMeta = useCallback(() => {
     const contexts = context === 'all' ? Object.keys(signalkData) : [context]
     const paths: string[] = []
+    const seen = new Set<string>()
 
     for (const ctx of contexts) {
       const contextData = signalkData[ctx] || {}
@@ -474,11 +504,17 @@ const DataBrowser: React.FC = () => {
           }
         }
         const data = contextData[key] as PathData | undefined
-        paths.push(data?.path || key)
+        const path = data?.path || key
+        if (context === 'all') {
+          paths.push(`${ctx}\0${path}`)
+        } else if (!seen.has(path)) {
+          seen.add(path)
+          paths.push(path)
+        }
       }
     }
 
-    return [...new Set(paths)].sort()
+    return paths.sort()
   }, [context, search, signalkData])
 
   return (
@@ -496,16 +532,27 @@ const DataBrowser: React.FC = () => {
           >
             <FormGroup row>
               <Col xs="12" md="4">
-                <Select
+                <Select<SelectOption, false>
                   value={currentContext}
                   onChange={handleContextChange}
                   options={contextOptions}
                   placeholder="Select a context"
                   isSearchable={true}
                   isClearable={true}
+                  maxMenuHeight={500}
                   noOptionsMessage={() => 'No contexts available'}
+                  components={{ Option: ContextOption }}
                   styles={{
-                    menu: (base) => ({ ...base, zIndex: 100 })
+                    menu: (base) => ({ ...base, zIndex: 100 }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isSelected
+                        ? base.backgroundColor
+                        : 'transparent',
+                      ':hover': {
+                        backgroundColor: '#deebff'
+                      }
+                    })
                   }}
                 />
               </Col>
@@ -613,6 +660,7 @@ const DataBrowser: React.FC = () => {
               <VirtualizedMetaTable
                 paths={getUniquePathsForMeta()}
                 context={context}
+                showContext={context === 'all'}
               />
             )}
           </Form>
