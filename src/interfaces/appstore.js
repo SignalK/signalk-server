@@ -126,19 +126,17 @@ module.exports = function (app) {
       )
 
       app.get(`${SERVERROUTESPREFIX}/appstore/available/`, (req, res) => {
-        findPluginsAndWebapps()
-          .then(([plugins, webapps]) => {
-            getLatestServerVersion(app.config.version)
-              .then((serverVersion) =>
-                getAllModuleInfo(plugins, webapps, serverVersion)
-              )
-              .catch(() =>
-                //could be that npmjs is down, so we can not get
-                //server version, but we have app store data
-                getAllModuleInfo(plugins, webapps, '0.0.0')
-              )
-              .then((result) => res.json(result))
-          })
+        const installedNames = getInstalledPackageNames()
+
+        Promise.all([
+          findPluginsAndWebapps(),
+          getLatestServerVersion(app.config.version).catch(() => '0.0.0'),
+          fetchDistTagsForPackages(installedNames).catch(() => ({}))
+        ])
+          .then(([[plugins, webapps], serverVersion, distTagsMap]) =>
+            getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap)
+          )
+          .then((result) => res.json(result))
           .catch((error) => {
             console.log(error.message)
             debug(error.stack)
@@ -163,6 +161,19 @@ module.exports = function (app) {
         })
       ]
     })
+  }
+
+  function getInstalledPackageNames() {
+    return [
+      ...new Set(
+        [
+          ...(app.plugins || []).map((p) => p.packageName),
+          ...(app.webapps || []).map((w) => w.name),
+          ...(app.addons || []).map((a) => a.name),
+          ...(app.embeddablewebapps || []).map((e) => e.name)
+        ].filter(Boolean)
+      )
+    ]
   }
 
   function getPlugin(id) {
@@ -190,7 +201,7 @@ module.exports = function (app) {
     }
   }
 
-  async function getAllModuleInfo(plugins, webapps, serverVersion) {
+  function getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap) {
     const all = emptyAppStoreInfo()
 
     if (
@@ -227,23 +238,6 @@ module.exports = function (app) {
       }
     } else {
       all.canUpdateServer = false
-    }
-
-    const installedNames = [
-      ...new Set(
-        [
-          ...(app.plugins || []).map((p) => p.packageName),
-          ...(app.webapps || []).map((w) => w.name),
-          ...(app.addons || []).map((a) => a.name),
-          ...(app.embeddablewebapps || []).map((e) => e.name)
-        ].filter(Boolean)
-      )
-    ]
-    let distTagsMap = {}
-    try {
-      distTagsMap = await fetchDistTagsForPackages(installedNames)
-    } catch (err) {
-      debug('failed to fetch dist-tags: %s', err.message)
     }
 
     getModulesInfo(plugins, getPlugin, all, distTagsMap)
