@@ -564,7 +564,7 @@ class IgnoredSentences extends Component {
       <TextInput
         title="Ignored Sentences"
         name="options.ignoredSentences"
-        helpText="NMEA0183 sentences to throw away from the input data. Requires a server restart to take effect. Example: RMC,ROT"
+        helpText="NMEA0183 sentences to throw away from the input data. Example: RMC,ROT"
         value={this.state.value}
         onChange={this.onChange}
       />
