@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { ListGroup, ListGroupItem } from 'reactstrap'
+import ListGroup from 'react-bootstrap/ListGroup'
 import ActionCellRenderer from './Grid/cell-renderers/ActionCellRenderer'
 
 export interface AppData {
@@ -17,7 +17,7 @@ export interface AppData {
 
 export function AppListItem(app: AppData) {
   return (
-    <ListGroupItem className="p-3">
+    <ListGroup.Item className="p-3">
       <div className="d-md-flex align-items-center flex-grow-1">
         <div className="flex-grow-1 me-3">
           <h5 className="text-dark mb-0">{app.name}</h5>
@@ -51,7 +51,7 @@ export function AppListItem(app: AppData) {
           <ActionCellRenderer data={app} />
         </div>
       </div>
-    </ListGroupItem>
+    </ListGroup.Item>
   )
 }
 
@@ -81,6 +81,7 @@ export default function AppList({ apps: propsApps }: AppListProps) {
         next={loadMore}
         hasMore={apps.length !== propsApps.length}
         loader={null}
+        style={{ overflow: 'visible' }}
       >
         {apps.map((app) => (
           <AppListItem key={app.name} {...app} />

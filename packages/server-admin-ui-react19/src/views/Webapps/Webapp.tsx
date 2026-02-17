@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { Card, CardBody } from 'reactstrap'
+import Card from 'react-bootstrap/Card'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTableCells } from '@fortawesome/free-solid-svg-icons/faTableCells'
 import classNames from 'classnames'
@@ -75,11 +75,11 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
   return (
     <a href={url}>
       <Card>
-        <CardBody className={card.style} {...attributes}>
+        <Card.Body className={card.style} {...attributes}>
           {blockIcon(webAppInfo?.signalk?.appIcon || null)}
           <div className={lead.classes}>{header}</div>
           <div className="text-muted font-xs">{webAppInfo.description}</div>
-        </CardBody>
+        </Card.Body>
       </Card>
     </a>
   )

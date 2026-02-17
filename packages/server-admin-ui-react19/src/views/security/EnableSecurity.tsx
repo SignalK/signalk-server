@@ -1,17 +1,12 @@
 import { useState, useActionState, ChangeEvent, KeyboardEvent } from 'react'
-import {
-  Form,
-  Container,
-  Row,
-  Col,
-  CardGroup,
-  Card,
-  CardBody,
-  Button,
-  Input,
-  InputGroup,
-  InputGroupText
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import CardGroup from 'react-bootstrap/CardGroup'
+import Col from 'react-bootstrap/Col'
+import Container from 'react-bootstrap/Container'
+import Form from 'react-bootstrap/Form'
+import InputGroup from 'react-bootstrap/InputGroup'
+import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
@@ -66,7 +61,7 @@ export default function EnableSecurity() {
             <Col md="8">
               <CardGroup>
                 <Card className="p-4">
-                  <CardBody>
+                  <Card.Body>
                     {loginStatus.securityWasEnabled &&
                       loginStatus.authenticationRequired === false && (
                         <p className="text-danger">
@@ -78,10 +73,10 @@ export default function EnableSecurity() {
                         <h1>Enable Security</h1>
                         <p className="text-muted">Create an admin account</p>
                         <InputGroup className="mb-3">
-                          <InputGroupText>
+                          <InputGroup.Text>
                             <FontAwesomeIcon icon={faUser} />
-                          </InputGroupText>
-                          <Input
+                          </InputGroup.Text>
+                          <Form.Control
                             type="text"
                             name="username"
                             placeholder="Username"
@@ -90,10 +85,10 @@ export default function EnableSecurity() {
                           />
                         </InputGroup>
                         <InputGroup className="mb-4">
-                          <InputGroupText>
+                          <InputGroup.Text>
                             <FontAwesomeIcon icon={faLock} />
-                          </InputGroupText>
-                          <Input
+                          </InputGroup.Text>
+                          <Form.Control
                             type="password"
                             name="password"
                             placeholder="Password"
@@ -105,7 +100,7 @@ export default function EnableSecurity() {
                           <Col xs="6">
                             <Button
                               type="submit"
-                              color="primary"
+                              variant="primary"
                               className="px-4"
                               disabled={isEnabling}
                             >
@@ -122,7 +117,7 @@ export default function EnableSecurity() {
                         </Row>
                       </Form>
                     )}
-                  </CardBody>
+                  </Card.Body>
                 </Card>
               </CardGroup>
             </Col>

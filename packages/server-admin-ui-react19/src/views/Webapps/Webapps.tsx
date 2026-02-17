@@ -1,6 +1,7 @@
 import { useMemo, Suspense, createElement, ComponentType } from 'react'
 import { useWebapps, useAddons } from '../../store'
-import { Card, CardBody, CardHeader, Col } from 'reactstrap'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
 import { ADDON_PANEL, toLazyDynamicComponent } from './dynamicutilities'
 import Webapp from './Webapp'
 
@@ -42,8 +43,8 @@ export default function Webapps() {
   return (
     <div className="animated fadeIn">
       <Card>
-        <CardHeader>Webapps</CardHeader>
-        <CardBody>
+        <Card.Header>Webapps</Card.Header>
+        <Card.Body>
           <div className="row">
             {webapps
               .filter(
@@ -57,18 +58,18 @@ export default function Webapps() {
                 )
               })}
           </div>
-        </CardBody>
+        </Card.Body>
       </Card>
 
       <Card>
-        <CardHeader>Addons</CardHeader>
-        <CardBody>
+        <Card.Header>Addons</Card.Header>
+        <Card.Body>
           {addonComponents.map(({ name, Component }) => (
             <Suspense key={name} fallback="Loading...">
               {createElement(Component, { webapps, addons })}
             </Suspense>
           ))}
-        </CardBody>
+        </Card.Body>
       </Card>
     </div>
   )

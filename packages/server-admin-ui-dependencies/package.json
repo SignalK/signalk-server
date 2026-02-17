@@ -14,8 +14,8 @@
     "font-awesome": "^4.7.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-bootstrap": "^2.10.10",
     "react-select": "^5.10.2",
-    "reactstrap": "^9.2.3",
     "simple-line-icons": "^2.5.5"
   }
 }

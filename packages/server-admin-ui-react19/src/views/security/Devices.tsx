@@ -7,18 +7,12 @@ import {
   FormEvent
 } from 'react'
 import { useLoginStatus } from '../../store'
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Input,
-  Col,
-  Label,
-  FormGroup,
-  Table
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
+import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
@@ -148,10 +142,10 @@ export default function Devices() {
       {loginStatus.authenticationRequired && (
         <div>
           <Card>
-            <CardHeader>
+            <Card.Header>
               <FontAwesomeIcon icon={faAlignJustify} /> Devices
-            </CardHeader>
-            <CardBody>
+            </Card.Header>
+            <Card.Body>
               <Table hover responsive bordered striped size="sm">
                 <thead>
                   <tr>
@@ -175,33 +169,33 @@ export default function Devices() {
                   })}
                 </tbody>
               </Table>
-            </CardBody>
-            <CardFooter></CardFooter>
+            </Card.Body>
+            <Card.Footer></Card.Footer>
           </Card>
 
           {selectedDevice && (
             <div ref={selectedDeviceRef}>
               <Card>
-                <CardHeader>
+                <Card.Header>
                   <FontAwesomeIcon icon={faAlignJustify} /> Device
-                </CardHeader>
-                <CardBody>
-                  <FormGroup row>
+                </Card.Header>
+                <Card.Body>
+                  <Form.Group as={Row}>
                     <Col md="2">
-                      <Label>Client ID</Label>
+                      <Form.Label>Client ID</Form.Label>
                     </Col>
                     <Col xs="12" md="9">
                       <span className="form-control-plaintext">
                         {selectedDevice.clientId}
                       </span>
                     </Col>
-                  </FormGroup>
-                  <FormGroup row>
+                  </Form.Group>
+                  <Form.Group as={Row}>
                     <Col md="2">
-                      <Label htmlFor="description">Description</Label>
+                      <Form.Label htmlFor="description">Description</Form.Label>
                     </Col>
                     <Col xs="12" md="9">
-                      <Input
+                      <Form.Control
                         size={60}
                         style={{ width: 'auto' }}
                         type="text"
@@ -212,14 +206,14 @@ export default function Devices() {
                         value={selectedDevice.description || ''}
                       />
                     </Col>
-                  </FormGroup>
-                  <FormGroup row>
+                  </Form.Group>
+                  <Form.Group as={Row}>
                     <Col md="2">
-                      <Label htmlFor="permissions">Permissions</Label>
+                      <Form.Label htmlFor="permissions">Permissions</Form.Label>
                     </Col>
                     <Col xs="12" md="2">
                       {!selectedDevice.requestedPermissions && (
-                        <Input
+                        <Form.Control
                           type="select"
                           id="permissions"
                           name="permissions"
@@ -229,7 +223,7 @@ export default function Devices() {
                           <option value="readonly">Read Only</option>
                           <option value="readwrite">Read/Write</option>
                           <option value="admin">Admin</option>
-                        </Input>
+                        </Form.Control>
                       )}
                       {selectedDevice.requestedPermissions && (
                         <span className="form-control-plaintext">
@@ -237,26 +231,30 @@ export default function Devices() {
                         </span>
                       )}
                     </Col>
-                  </FormGroup>
-                </CardBody>
-                <CardFooter>
+                  </Form.Group>
+                </Card.Body>
+                <Card.Footer>
                   <div className="d-flex flex-wrap gap-2">
-                    <Button size="sm" color="primary" onClick={handleApply}>
+                    <Button size="sm" variant="primary" onClick={handleApply}>
                       <FontAwesomeIcon icon={faFloppyDisk} /> Apply
                     </Button>
-                    <Button size="sm" color="secondary" onClick={handleCancel}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleCancel}
+                    >
                       <FontAwesomeIcon icon={faBan} /> Cancel
                     </Button>
                     <Button
                       size="sm"
-                      color="danger"
+                      variant="danger"
                       className="ms-auto"
                       onClick={deleteDevice}
                     >
                       <FontAwesomeIcon icon={faBan} /> Delete
                     </Button>
                   </div>
-                </CardFooter>
+                </Card.Footer>
               </Card>
             </div>
           )}

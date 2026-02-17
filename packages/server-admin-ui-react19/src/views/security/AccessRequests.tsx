@@ -6,21 +6,13 @@ import {
   ChangeEvent
 } from 'react'
 import { useLoginStatus, useAccessRequests } from '../../store'
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Input,
-  Col,
-  Label,
-  FormGroup,
-  FormText,
-  Table,
-  Row,
-  Badge
-} from 'reactstrap'
+import Badge from 'react-bootstrap/Badge'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
+import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
@@ -136,10 +128,10 @@ export default function AccessRequests() {
       {loginStatus.authenticationRequired && (
         <div>
           <Card>
-            <CardHeader>
+            <Card.Header>
               <FontAwesomeIcon icon={faAlignJustify} /> Access Requests
-            </CardHeader>
-            <CardBody>
+            </Card.Header>
+            <Card.Body>
               <Table hover responsive bordered striped size="sm">
                 <thead>
                   <tr>
@@ -158,11 +150,11 @@ export default function AccessRequests() {
                       >
                         <td>
                           {req.permissions === 'admin' ? (
-                            <Badge color="danger">Admin</Badge>
+                            <Badge bg="danger">Admin</Badge>
                           ) : req.permissions === 'readwrite' ? (
-                            <Badge color="warning">Read/Write</Badge>
+                            <Badge bg="warning">Read/Write</Badge>
                           ) : (
-                            <Badge color="secondary">Read Only</Badge>
+                            <Badge bg="secondary">Read Only</Badge>
                           )}
                         </td>
                         <td>{req.accessIdentifier}</td>
@@ -173,38 +165,44 @@ export default function AccessRequests() {
                   })}
                 </tbody>
               </Table>
-            </CardBody>
+            </Card.Body>
           </Card>
 
           {selectedRequest && (
             <div ref={selectedRequestRef}>
               <Card>
-                <CardHeader>
+                <Card.Header>
                   <FontAwesomeIcon icon={faAlignJustify} /> Request
-                </CardHeader>
-                <CardBody>
-                  <FormGroup row>
+                </Card.Header>
+                <Card.Body>
+                  <Form.Group as={Row}>
                     <Col md="4" lg="2">
-                      <Label>Identifier</Label>
+                      <Form.Label>Identifier</Form.Label>
                     </Col>
                     <Col xs="12" md="8">
-                      <Label>{selectedRequest.accessIdentifier}</Label>
+                      <Form.Label>
+                        {selectedRequest.accessIdentifier}
+                      </Form.Label>
                     </Col>
-                  </FormGroup>
-                  <FormGroup row>
+                  </Form.Group>
+                  <Form.Group as={Row}>
                     <Col md="4" lg="2">
-                      <Label>Description</Label>
+                      <Form.Label>Description</Form.Label>
                     </Col>
                     <Col xs="12" md="8">
-                      <Label>{selectedRequest.accessDescription}</Label>
+                      <Form.Label>
+                        {selectedRequest.accessDescription}
+                      </Form.Label>
                     </Col>
-                  </FormGroup>
-                  <FormGroup row>
+                  </Form.Group>
+                  <Form.Group as={Row}>
                     <Col md="4" lg="2">
-                      <Label htmlFor="expiration">Authentication Timeout</Label>
+                      <Form.Label htmlFor="expiration">
+                        Authentication Timeout
+                      </Form.Label>
                     </Col>
                     <Col xs="12" md="8" lg="3">
-                      <Input
+                      <Form.Control
                         type="text"
                         id="expiration"
                         name="expiration"
@@ -212,18 +210,18 @@ export default function AccessRequests() {
                         onChange={handleRequestChange}
                         value={selectedRequest.expiration || ''}
                       />
-                      <FormText color="muted">
+                      <Form.Text className="text-muted">
                         Examples: 60s, 1m, 1h, 1d, NEVER
-                      </FormText>
+                      </Form.Text>
                     </Col>
-                  </FormGroup>
-                  <FormGroup row>
+                  </Form.Group>
+                  <Form.Group as={Row}>
                     <Col md="4" lg="2">
-                      <Label htmlFor="permissions">Permissions</Label>
+                      <Form.Label htmlFor="permissions">Permissions</Form.Label>
                     </Col>
                     <Col xs="12" md="8" lg="3">
                       {!selectedRequest.requestedPermissions && (
-                        <Input
+                        <Form.Control
                           type="select"
                           id="permissions"
                           name="permissions"
@@ -233,35 +231,29 @@ export default function AccessRequests() {
                           <option value="readonly">Read Only</option>
                           <option value="readwrite">Read/Write</option>
                           <option value="admin">Admin</option>
-                        </Input>
+                        </Form.Control>
                       )}
                       {selectedRequest.requestedPermissions && (
-                        <Label>
+                        <Form.Label>
                           {selectedRequest.permissions === 'admin' ? (
-                            <Badge color="danger" style={{ fontSize: 'large' }}>
+                            <Badge bg="danger" style={{ fontSize: 'large' }}>
                               Admin
                             </Badge>
                           ) : selectedRequest.permissions === 'readwrite' ? (
-                            <Badge
-                              color="warning"
-                              style={{ fontSize: 'large' }}
-                            >
+                            <Badge bg="warning" style={{ fontSize: 'large' }}>
                               Read/Write
                             </Badge>
                           ) : (
-                            <Badge
-                              color="secondary"
-                              style={{ fontSize: 'large' }}
-                            >
+                            <Badge bg="secondary" style={{ fontSize: 'large' }}>
                               Read Only
                             </Badge>
                           )}
-                        </Label>
+                        </Form.Label>
                       )}
                     </Col>
-                  </FormGroup>
-                </CardBody>
-                <CardFooter>
+                  </Form.Group>
+                </Card.Body>
+                <Card.Footer>
                   <Row
                     className={
                       'ms-0 me-0 d-flex justify-content-between justify-content-sm-start'
@@ -270,7 +262,7 @@ export default function AccessRequests() {
                     <Col xs="4" md="4" lg="2" className={'ps-0 pe-0 pe-md-2'}>
                       <Button
                         size="md"
-                        color="success"
+                        variant="success"
                         onClick={() =>
                           handleAccessRequest(
                             selectedRequest.accessIdentifier,
@@ -309,7 +301,7 @@ export default function AccessRequests() {
                     >
                       <Button
                         size="md"
-                        color="danger"
+                        variant="danger"
                         className="float-end float-sm-start"
                         onClick={() =>
                           handleAccessRequest(
@@ -342,7 +334,7 @@ export default function AccessRequests() {
                       </Button>
                     </Col>
                   </Row>
-                </CardFooter>
+                </Card.Footer>
               </Card>
             </div>
           )}

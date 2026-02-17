@@ -6,7 +6,9 @@ import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState, type JSX } from 'react'
 import { useLoginStatus } from '../../store'
-import { Col, Form, FormGroup, Input, Label, Row } from 'reactstrap'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
 
 interface DisplayScaleValue {
   lower?: number
@@ -119,10 +121,9 @@ const UnitSelect: React.FC<ValueRenderProps> = ({
   setValue,
   inputId
 }) => (
-  <Input
+  <Form.Select
     id={inputId}
     disabled={disabled}
-    type="select"
     value={value as string}
     onChange={(e) => setValue(e.target.value)}
   >
@@ -131,7 +132,7 @@ const UnitSelect: React.FC<ValueRenderProps> = ({
         {unit}:{description}
       </option>
     ))}
-  </Input>
+  </Form.Select>
 )
 
 const Text: React.FC<ValueRenderProps> = ({
@@ -140,7 +141,7 @@ const Text: React.FC<ValueRenderProps> = ({
   value,
   inputId
 }) => (
-  <Input
+  <Form.Control
     id={inputId}
     disabled={disabled}
     type="text"
@@ -155,7 +156,7 @@ const NumberValue: React.FC<ValueRenderProps> = ({
   value,
   inputId
 }) => (
-  <Input
+  <Form.Control
     id={inputId}
     disabled={disabled}
     type="number"
@@ -178,12 +179,12 @@ const MethodSelect: React.FC<ValueRenderProps> = ({ setValue, value }) => {
   return (
     <>
       {['sound', 'visual'].map((method) => (
-        <Label
+        <label
           key={method}
           className="switch switch-text switch-primary"
           htmlFor={`meta-alertMethod-${method}`}
         >
-          <Input
+          <input
             type="checkbox"
             id={`meta-alertMethod-${method}`}
             className="switch-input"
@@ -202,7 +203,7 @@ const MethodSelect: React.FC<ValueRenderProps> = ({ setValue, value }) => {
           <span className="switch-label" data-on="Yes" data-off="No" />
           <span className="switch-handle" />
           {method}
-        </Label>
+        </label>
       ))}
     </>
   )
@@ -219,13 +220,12 @@ const DisplaySelect: React.FC<ValueRenderProps> = ({
   const baseId = inputId || 'display-scale'
   return (
     <>
-      <Label htmlFor={`${baseId}-type`} className="visually-hidden">
+      <label htmlFor={`${baseId}-type`} className="visually-hidden">
         Display type
-      </Label>
-      <Input
+      </label>
+      <Form.Select
         id={`${baseId}-type`}
         disabled={disabled}
-        type="select"
         value={type}
         onChange={(e) =>
           setValue({
@@ -239,12 +239,12 @@ const DisplaySelect: React.FC<ValueRenderProps> = ({
             {t}
           </option>
         ))}
-      </Input>
+      </Form.Select>
 
-      <Label htmlFor={`${baseId}-lower`} className="visually-hidden">
+      <label htmlFor={`${baseId}-lower`} className="visually-hidden">
         Lower bound
-      </Label>
-      <Input
+      </label>
+      <Form.Control
         id={`${baseId}-lower`}
         disabled={disabled}
         type="number"
@@ -264,10 +264,10 @@ const DisplaySelect: React.FC<ValueRenderProps> = ({
         value={lower}
       />
 
-      <Label htmlFor={`${baseId}-upper`} className="visually-hidden">
+      <label htmlFor={`${baseId}-upper`} className="visually-hidden">
         Upper bound
-      </Label>
-      <Input
+      </label>
+      <Form.Control
         id={`${baseId}-upper`}
         disabled={disabled}
         type="number"
@@ -286,10 +286,10 @@ const DisplaySelect: React.FC<ValueRenderProps> = ({
         }}
         value={upper}
       />
-      <Label htmlFor={`${baseId}-power`} className="visually-hidden">
+      <label htmlFor={`${baseId}-power`} className="visually-hidden">
         Power
-      </Label>
-      <Input
+      </label>
+      <Form.Control
         id={`${baseId}-power`}
         disabled={disabled || type !== 'power'}
         type="number"
@@ -467,15 +467,14 @@ const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
   const fieldSelectId = `meta-field-${fieldKey}`
   const valueInputId = `meta-value-${fieldKey}`
   return (
-    <FormGroup row>
+    <Form.Group as={Row}>
       <Col xs="3" md="2" className={'col-form-label'}>
-        <Label htmlFor={fieldSelectId} className="visually-hidden">
+        <label htmlFor={fieldSelectId} className="visually-hidden">
           Field name
-        </Label>
-        <Input
+        </label>
+        <Form.Select
           id={fieldSelectId}
           disabled={disabled}
-          type="select"
           value={fieldKey}
           onChange={(e) => setKey(e.target.value)}
         >
@@ -486,18 +485,18 @@ const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
               </option>
             )
           )}
-        </Input>
+        </Form.Select>
       </Col>
       <Col xs="12" md="4">
-        <Label htmlFor={valueInputId} className="visually-hidden">
+        <label htmlFor={valueInputId} className="visually-hidden">
           {fieldKey} value
-        </Label>
+        </label>
         <V {...props} inputId={valueInputId} />
       </Col>
       <Col>
         {!disabled && <FontAwesomeIcon icon={faTrashCan} onClick={deleteKey} />}
       </Col>
-    </FormGroup>
+    </Form.Group>
   )
 }
 
@@ -511,7 +510,7 @@ const UnknownMetaFormRow: React.FC<UnknownMetaFormRowProps> = ({
   value
 }) => {
   return (
-    <FormGroup row>
+    <Form.Group as={Row}>
       <Col xs="3" md="2" className={'col-form-label'}>
         {metaKey}
       </Col>
@@ -532,7 +531,7 @@ const UnknownMetaFormRow: React.FC<UnknownMetaFormRowProps> = ({
           {JSON.stringify(value, null, 2)}
         </pre>
       </Col>
-    </FormGroup>
+    </Form.Group>
   )
 }
 
@@ -555,15 +554,15 @@ const ZoneRow: React.FC<ZoneProps> = ({
   // Generate unique id based on zone values for accessibility
   const zoneId = `zone-${lower}-${upper}-${state}`.replace(/\s+/g, '-')
   return (
-    <FormGroup row>
+    <Form.Group as={Row}>
       <Col xs="2" md="2">
-        <Label
+        <label
           htmlFor={`${zoneId}-lower`}
           className={showHint ? 'text-muted small' : 'visually-hidden'}
         >
           Lower
-        </Label>
-        <Input
+        </label>
+        <Form.Control
           id={`${zoneId}-lower`}
           disabled={!isEditing}
           type="number"
@@ -572,13 +571,13 @@ const ZoneRow: React.FC<ZoneProps> = ({
         />
       </Col>
       <Col xs="2" md="2">
-        <Label
+        <label
           htmlFor={`${zoneId}-upper`}
           className={showHint ? 'text-muted small' : 'visually-hidden'}
         >
           Upper
-        </Label>
-        <Input
+        </label>
+        <Form.Control
           id={`${zoneId}-upper`}
           disabled={!isEditing}
           type="number"
@@ -587,16 +586,15 @@ const ZoneRow: React.FC<ZoneProps> = ({
         />
       </Col>
       <Col xs="12" md="2">
-        <Label
+        <label
           htmlFor={`${zoneId}-state`}
           className={showHint ? 'text-muted small' : 'visually-hidden'}
         >
           State
-        </Label>
-        <Input
+        </label>
+        <Form.Select
           id={`${zoneId}-state`}
           disabled={!isEditing}
-          type="select"
           value={state}
           onChange={(e) => setZone({ ...zone, state: e.target.value })}
         >
@@ -605,16 +603,16 @@ const ZoneRow: React.FC<ZoneProps> = ({
               {s}
             </option>
           ))}
-        </Input>
+        </Form.Select>
       </Col>
       <Col xs="3" md="3">
-        <Label
+        <label
           htmlFor={`${zoneId}-message`}
           className={showHint ? 'text-muted small' : 'visually-hidden'}
         >
           Message
-        </Label>
-        <Input
+        </label>
+        <Form.Control
           id={`${zoneId}-message`}
           disabled={!isEditing}
           type="text"
@@ -632,7 +630,7 @@ const ZoneRow: React.FC<ZoneProps> = ({
           </>
         )}
       </Col>
-    </FormGroup>
+    </Form.Group>
   )
 }
 

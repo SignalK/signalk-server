@@ -1,14 +1,10 @@
 import { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  Progress,
-  Row,
-  Col,
-  Table
-} from 'reactstrap'
+import Card from 'react-bootstrap/Card'
+import ProgressBar from 'react-bootstrap/ProgressBar'
+import Row from 'react-bootstrap/Row'
+import Col from 'react-bootstrap/Col'
+import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSignIn } from '@fortawesome/free-solid-svg-icons/faSignIn'
 import { faSignOut } from '@fortawesome/free-solid-svg-icons/faSignOut'
@@ -135,10 +131,10 @@ export default function Dashboard() {
           </span>
         )}
         <div className="bars">
-          <Progress
+          <ProgressBar
             className="progress-xs"
-            color="warning"
-            value={((providerStats.deltaRate || 0) / deltaRateNum) * 100}
+            variant="warning"
+            now={((providerStats.deltaRate || 0) / deltaRateNum) * 100}
           />
         </div>
       </li>
@@ -184,8 +180,8 @@ export default function Dashboard() {
       {websocketStatus === 'open' && (
         <div>
           <Card>
-            <CardHeader>Stats</CardHeader>
-            <CardBody>
+            <Card.Header>Stats</Card.Header>
+            <Card.Body>
               <Row>
                 <Col xs="12" md="6">
                   <div className="callout callout-primary">
@@ -259,14 +255,14 @@ export default function Dashboard() {
                   </ul>
                 </Col>
               </Row>
-            </CardBody>
+            </Card.Body>
           </Card>
 
           <Card>
-            <CardHeader>
+            <Card.Header>
               Connection & Plugin Status <p className="text-danger">{errors}</p>
-            </CardHeader>
-            <CardBody>
+            </Card.Header>
+            <Card.Body>
               <Row>
                 <Col xs="12" md="12">
                   <Table hover responsive bordered striped size="sm">
@@ -299,14 +295,14 @@ export default function Dashboard() {
                   </Table>
                 </Col>
               </Row>
-            </CardBody>
+            </Card.Body>
           </Card>
         </div>
       )}
 
       {websocketStatus === 'closed' && (
         <Card className="border-warning">
-          <CardHeader>Not connected to the server</CardHeader>
+          <Card.Header>Not connected to the server</Card.Header>
         </Card>
       )}
     </div>

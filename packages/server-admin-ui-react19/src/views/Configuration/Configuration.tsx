@@ -11,18 +11,11 @@ import {
 } from 'react'
 import { useParams } from 'react-router-dom'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  Row,
-  Col,
-  Input,
-  Label,
-  Form,
-  FormGroup,
-  Table
-} from 'reactstrap'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
+import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
@@ -307,11 +300,11 @@ export default function PluginConfigurationList() {
   return (
     <div>
       <Card>
-        <CardHeader>
+        <Card.Header>
           <FontAwesomeIcon icon={faAlignJustify} />{' '}
           <strong>Plugin Configuration</strong>
-        </CardHeader>
-        <CardBody>
+        </Card.Header>
+        <Card.Body>
           <Form
             action=""
             method="post"
@@ -321,12 +314,12 @@ export default function PluginConfigurationList() {
               e.preventDefault()
             }}
           >
-            <FormGroup row>
+            <Form.Group as={Row}>
               <Col xs="3" md="1" className={'col-form-label'}>
-                <Label htmlFor="search">Search</Label>
+                <Form.Label htmlFor="search">Search</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   name="search"
                   id="search"
@@ -336,11 +329,10 @@ export default function PluginConfigurationList() {
                 />
               </Col>
               <Col xs="3" md="2" className={'col-form-label'}>
-                <Label htmlFor="statusFilter">Filter by Status</Label>
+                <Form.Label htmlFor="statusFilter">Filter by Status</Form.Label>
               </Col>
               <Col xs="12" md="3">
-                <Input
-                  type="select"
+                <Form.Select
                   name="statusFilter"
                   id="statusFilter"
                   onChange={handleStatusFilter}
@@ -349,9 +341,9 @@ export default function PluginConfigurationList() {
                   <option value="all">All Plugins</option>
                   <option value="enabled">Enabled</option>
                   <option value="disabled">Disabled</option>
-                </Input>
+                </Form.Select>
               </Col>
-            </FormGroup>
+            </Form.Group>
           </Form>
 
           <div
@@ -438,7 +430,7 @@ export default function PluginConfigurationList() {
               </tbody>
             </Table>
           </div>
-        </CardBody>
+        </Card.Body>
       </Card>
 
       {selectedPlugin && (
@@ -533,8 +525,8 @@ function PluginConfigCard({
           </div>
         </div>
       )}
-      <Card className="mt-3 plugin-config-card" innerRef={configCardRef}>
-        <CardHeader id="plugin-config-header">
+      <Card className="mt-3 plugin-config-card" ref={configCardRef}>
+        <Card.Header id="plugin-config-header">
           <Row className="mb-2">
             <Col className={'align-self-center'}>
               <h5 className="mb-0">
@@ -550,11 +542,11 @@ function PluginConfigCard({
           {!configurationRequired && (
             <Row>
               <Col lg={4} className={'mt-2 mt-lg-0'}>
-                <Label
+                <Form.Label
                   style={labelStyle}
                   className="switch switch-text switch-primary"
                 >
-                  <Input
+                  <input
                     type="checkbox"
                     name="enabled"
                     className="switch-input"
@@ -563,15 +555,15 @@ function PluginConfigCard({
                   />
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
-                </Label>
+                </Form.Label>
                 <span className="ms-1">Enabled</span>
               </Col>
               <Col lg={4} className={'mt-2 mt-lg-0'}>
-                <Label
+                <Form.Label
                   style={labelStyle}
                   className="switch switch-text switch-primary"
                 >
-                  <Input
+                  <input
                     type="checkbox"
                     name="enableLogging"
                     className="switch-input"
@@ -580,15 +572,15 @@ function PluginConfigCard({
                   />
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
-                </Label>
+                </Form.Label>
                 <span className="ms-1">Data logging</span>
               </Col>
               <Col lg={4} className={'mt-2 mt-lg-0'}>
-                <Label
+                <Form.Label
                   style={labelStyle}
                   className="switch switch-text switch-primary"
                 >
-                  <Input
+                  <input
                     type="checkbox"
                     name="enableDebug"
                     className="switch-input"
@@ -597,13 +589,13 @@ function PluginConfigCard({
                   />
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
-                </Label>
+                </Form.Label>
                 <span className="ms-1">Enable debug log</span>
               </Col>
             </Row>
           )}
-        </CardHeader>
-        <CardBody>
+        </Card.Header>
+        <Card.Body>
           {!isConfigurator && (
             <div>
               <PluginConfigurationForm
@@ -661,7 +653,7 @@ function PluginConfigCard({
               saveData={saveData}
             />
           )}
-        </CardBody>
+        </Card.Body>
       </Card>
     </div>
   )

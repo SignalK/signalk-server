@@ -1,6 +1,6 @@
 import React, { useEffect, Component, ReactNode, ComponentType } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { Container } from 'reactstrap'
+import Container from 'react-bootstrap/Container'
 import { useLoginStatus, type LoginStatus } from '../../store'
 
 import Header from '../../components/Header/Header'

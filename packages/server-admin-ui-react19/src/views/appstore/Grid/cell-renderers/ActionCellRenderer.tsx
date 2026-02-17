@@ -1,17 +1,10 @@
 import { useState, ReactNode } from 'react'
-import {
-  Button,
-  Progress,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ListGroup,
-  ListGroupItem,
-  UncontrolledDropdown,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import ButtonGroup from 'react-bootstrap/ButtonGroup'
+import Dropdown from 'react-bootstrap/Dropdown'
+import ListGroup from 'react-bootstrap/ListGroup'
+import Modal from 'react-bootstrap/Modal'
+import ProgressBar from 'react-bootstrap/ProgressBar'
 import { NavLink } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
@@ -117,11 +110,11 @@ export default function ActionCellRenderer({
           ? 'Waiting..'
           : 'Installing'
       progress = (
-        <Progress
+        <ProgressBar
           className="progress-sm progress__bar"
           animated
-          color="success"
-          value="100"
+          variant="success"
+          now={100}
         />
       )
     } else if (app.installFailed) {
@@ -143,12 +136,12 @@ export default function ActionCellRenderer({
   } else {
     content = (
       <>
-        <UncontrolledDropdown group className="w-100">
+        <Dropdown as={ButtonGroup} className="w-100">
           {app.installed ? (
             app.newVersion ? (
               <Button
                 className="text-start"
-                color="success"
+                variant="success"
                 onClick={handleInstallClick}
               >
                 <FontAwesomeIcon
@@ -179,7 +172,7 @@ export default function ActionCellRenderer({
           ) : (
             <Button
               className="text-start"
-              color="light"
+              variant="light"
               onClick={handleInstallClick}
             >
               <FontAwesomeIcon className="me-2" icon={faCloudArrowDown} />
@@ -187,12 +180,12 @@ export default function ActionCellRenderer({
             </Button>
           )}
 
-          <DropdownToggle
-            caret
-            color={app.newVersion ? 'success' : 'light'}
+          <Dropdown.Toggle
+            split
+            variant={app.newVersion ? 'success' : 'light'}
             className="flex-grow-0"
           />
-          <DropdownMenu end container="body">
+          <Dropdown.Menu align="end">
             {app.installed && app.newVersion && (
               <NavLink
                 to={`/serverConfiguration/plugins/${app.id}`}
@@ -216,19 +209,22 @@ export default function ActionCellRenderer({
               </a>
             )}
 
-            <DropdownItem onClick={handleVersionsClick} className="text-start">
+            <Dropdown.Item onClick={handleVersionsClick} className="text-start">
               <FontAwesomeIcon className="me-2" icon={faCloudArrowDown} />
               Versions
-            </DropdownItem>
+            </Dropdown.Item>
 
             {app.installed && (
-              <DropdownItem onClick={handleRemoveClick} className="text-danger">
+              <Dropdown.Item
+                onClick={handleRemoveClick}
+                className="text-danger"
+              >
                 <FontAwesomeIcon className="me-2" icon={faTrashCan} />
                 Remove
-              </DropdownItem>
+              </Dropdown.Item>
             )}
-          </DropdownMenu>
-        </UncontrolledDropdown>
+          </Dropdown.Menu>
+        </Dropdown>
       </>
     )
   }
@@ -237,14 +233,14 @@ export default function ActionCellRenderer({
       <div>{content}</div>
       {/* Versions Modal */}
       <Modal
-        isOpen={showVersionsModal}
-        toggle={() => setShowVersionsModal(!showVersionsModal)}
-        size="md"
+        show={showVersionsModal}
+        onHide={() => setShowVersionsModal(false)}
+        size="lg"
       >
-        <ModalHeader toggle={() => setShowVersionsModal(!showVersionsModal)}>
-          Versions - {app.name}
-        </ModalHeader>
-        <ModalBody>
+        <Modal.Header closeButton>
+          <Modal.Title>Versions - {app.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
           {loadingVersions ? (
             <div className="text-center">
               <div className="spinner-border text-primary" role="status">
@@ -265,7 +261,7 @@ export default function ActionCellRenderer({
                   const isPrerelease = !!semver.prerelease(version)
 
                   return (
-                    <ListGroupItem
+                    <ListGroup.Item
                       key={version}
                       className="d-flex justify-content-between align-items-center"
                     >
@@ -290,7 +286,7 @@ export default function ActionCellRenderer({
                       {app.installedVersion !== version && (
                         <Button
                           size="sm"
-                          color="light"
+                          variant="light"
                           onClick={() => handleInstallVersionClick(version)}
                         >
                           <FontAwesomeIcon
@@ -300,7 +296,7 @@ export default function ActionCellRenderer({
                           Install
                         </Button>
                       )}
-                    </ListGroupItem>
+                    </ListGroup.Item>
                   )
                 })}
               </ListGroup>
@@ -310,7 +306,7 @@ export default function ActionCellRenderer({
               No older versions available or failed to load versions.
             </p>
           )}
-        </ModalBody>
+        </Modal.Body>
       </Modal>
     </div>
   )

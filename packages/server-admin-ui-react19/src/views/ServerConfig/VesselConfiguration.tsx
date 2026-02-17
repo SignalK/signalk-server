@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Input,
-  Form,
-  Col,
-  Label,
-  FormGroup,
-  FormText
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
@@ -82,23 +74,23 @@ const VesselConfiguration: React.FC = () => {
   return (
     <div className="animated fadeIn">
       <Card>
-        <CardHeader>
+        <Card.Header>
           <FontAwesomeIcon icon={faAlignJustify} />{' '}
           <strong>Vessel Base Data</strong>
-        </CardHeader>
-        <CardBody>
+        </Card.Header>
+        <Card.Body>
           <Form
             action=""
             method="post"
             encType="multipart/form-data"
             className="form-horizontal"
           >
-            <FormGroup row>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="name">Name</Label>
+                <Form.Label htmlFor="name">Name</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="name"
                   name="name"
@@ -106,15 +98,15 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.name || ''}
                 />
-                <FormText color="muted">The name of the vessel</FormText>
+                <Form.Text muted>The name of the vessel</Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="mmsi">MMSI</Label>
+                <Form.Label htmlFor="mmsi">MMSI</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="mmsi"
                   name="mmsi"
@@ -122,17 +114,15 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.mmsi || ''}
                 />
-                <FormText color="muted">
-                  Leave blank if there is no mmsi
-                </FormText>
+                <Form.Text muted>Leave blank if there is no mmsi</Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="callsignVhf">Call Sign</Label>
+                <Form.Label htmlFor="callsignVhf">Call Sign</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="callsignVhf"
                   name="callsignVhf"
@@ -140,17 +130,17 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.callsignVhf || ''}
                 />
-                <FormText color="muted">
+                <Form.Text muted>
                   Leave blank if there is no call sign
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="uuid">UUID</Label>
+                <Form.Label htmlFor="uuid">UUID</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="uuid"
                   name="uuid"
@@ -158,16 +148,15 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.uuid || ''}
                 />
-                <FormText color="muted">Ignored if MMSI is set</FormText>
+                <Form.Text muted>Ignored if MMSI is set</Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="aisShipType">Ship Type</Label>
+                <Form.Label htmlFor="aisShipType">Ship Type</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
-                  type="select"
+                <Form.Select
                   id="aisShipType"
                   name="aisShipType"
                   value={vesselData.aisShipType || ''}
@@ -235,15 +224,15 @@ const VesselConfiguration: React.FC = () => {
                   <option value="93">Other hazard cat C</option>
                   <option value="94">Other hazard cat D</option>
                   <option value="99">Other (no additional information)</option>
-                </Input>
+                </Form.Select>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="draft">Draft</Label>
+                <Form.Label htmlFor="draft">Draft</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="draft"
                   name="draft"
@@ -251,17 +240,17 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.draft || ''}
                 />
-                <FormText color="muted">
+                <Form.Text muted>
                   The maximum draft in meters of the vessel
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="length">Length</Label>
+                <Form.Label htmlFor="length">Length</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="length"
                   name="length"
@@ -269,17 +258,17 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.length || ''}
                 />
-                <FormText color="muted">
+                <Form.Text muted>
                   The overall length of the vessel in meters
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="beam">Beam</Label>
+                <Form.Label htmlFor="beam">Beam</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="beam"
                   name="beam"
@@ -287,17 +276,15 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.beam || ''}
                 />
-                <FormText color="muted">
-                  The beam of the vessel in meters
-                </FormText>
+                <Form.Text muted>The beam of the vessel in meters</Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="height">Height</Label>
+                <Form.Label htmlFor="height">Height</Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="height"
                   name="height"
@@ -305,17 +292,19 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.height || ''}
                 />
-                <FormText color="muted">
+                <Form.Text muted>
                   The total height of the vessel in meters{' '}
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="gpsFromBow">GPS Distance From Bow</Label>
+                <Form.Label htmlFor="gpsFromBow">
+                  GPS Distance From Bow
+                </Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="gpsFromBow"
                   name="gpsFromBow"
@@ -323,17 +312,19 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.gpsFromBow || ''}
                 />
-                <FormText color="muted">
+                <Form.Text muted>
                   The distance of the gps receiver from the bow in meters
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="gpsFromCenter">GPS Distance From Center</Label>
+                <Form.Label htmlFor="gpsFromCenter">
+                  GPS Distance From Center
+                </Form.Label>
               </Col>
               <Col xs="12" md="4">
-                <Input
+                <Form.Control
                   type="text"
                   id="gpsFromCenter"
                   name="gpsFromCenter"
@@ -341,19 +332,19 @@ const VesselConfiguration: React.FC = () => {
                   onChange={handleChange}
                   value={vesselData.gpsFromCenter || ''}
                 />
-                <FormText color="muted">
+                <Form.Text muted>
                   The distance from the center of vessel of the gps receiver in
                   meters
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
+            </Form.Group>
           </Form>
-        </CardBody>
-        <CardFooter>
-          <Button size="sm" color="primary" onClick={handleSaveVessel}>
+        </Card.Body>
+        <Card.Footer>
+          <Button size="sm" variant="primary" onClick={handleSaveVessel}>
             <FontAwesomeIcon icon={faFloppyDisk} /> Save
           </Button>
-        </CardFooter>
+        </Card.Footer>
       </Card>
     </div>
   )

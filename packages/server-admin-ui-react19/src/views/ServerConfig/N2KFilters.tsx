@@ -1,13 +1,8 @@
 import { ChangeEvent } from 'react'
-import {
-  Table,
-  Input,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Label
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Form from 'react-bootstrap/Form'
+import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
@@ -83,10 +78,10 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
   return (
     <div>
       <Card>
-        <CardHeader>Filters</CardHeader>
-        <CardBody>
-          <Label className="switch switch-text switch-primary">
-            <Input
+        <Card.Header>Filters</Card.Header>
+        <Card.Body>
+          <Form.Label className="switch switch-text switch-primary">
+            <input
               type="checkbox"
               name="filtersEnabled"
               className="switch-input"
@@ -95,7 +90,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
             />
             <span className="switch-label" data-on="Yes" data-off="No" />
             <span className="switch-handle" />
-          </Label>
+          </Form.Label>
           &nbsp; Enabled <br />
           <br />
           Filter out all messages from a specific {sourceName} by entering just
@@ -122,7 +117,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
                   return (
                     <tr key={filterKey}>
                       <td>
-                        <Input
+                        <Form.Control
                           type="text"
                           name="source"
                           value={filter.source}
@@ -136,7 +131,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
                         />
                       </td>
                       <td>
-                        <Input
+                        <Form.Control
                           type="text"
                           name="pgn"
                           value={filter.pgn}
@@ -151,7 +146,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
                       </td>
                       <td>
                         <Button
-                          color="link"
+                          variant="link"
                           className="text-danger"
                           onClick={() => deleteFilter(index)}
                         >
@@ -164,10 +159,10 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
               </tbody>
             </Table>
           )}
-          <Button size="sm" color="primary" onClick={() => handleAddFilter()}>
+          <Button size="sm" variant="primary" onClick={() => handleAddFilter()}>
             <FontAwesomeIcon icon={faCirclePlus} /> Add
           </Button>
-        </CardBody>
+        </Card.Body>
       </Card>
     </div>
   )

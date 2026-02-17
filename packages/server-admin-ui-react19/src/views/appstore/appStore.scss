@@ -123,6 +123,20 @@
 
     .cell-action {
       width: 160px;
+      min-width: 160px;
+
+      // Connect the main button and split-toggle into one visual unit
+      .btn-group {
+        > .btn:first-child {
+          border-top-right-radius: 0;
+          border-bottom-right-radius: 0;
+          flex: 1 1 auto;
+        }
+        > .dropdown-toggle-split {
+          border-top-left-radius: 0;
+          border-bottom-left-radius: 0;
+        }
+      }
 
       .proress__wrapper {
         display: flex;

@@ -1,14 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Input,
-  Table
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Form from 'react-bootstrap/Form'
+import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
@@ -243,8 +238,8 @@ const ProvidersConfiguration: React.FC = () => {
     <div className="animated fadeIn">
       {discoveredProviders && discoveredProviders.length > 0 && (
         <Card>
-          <CardHeader>Discovered Connections</CardHeader>
-          <CardBody>
+          <Card.Header>Discovered Connections</Card.Header>
+          <Card.Body>
             <Table hover responsive bordered striped size="sm">
               <thead>
                 <tr>
@@ -282,12 +277,12 @@ const ProvidersConfiguration: React.FC = () => {
                 })}
               </tbody>
             </Table>
-          </CardBody>
+          </Card.Body>
         </Card>
       )}
       <Card>
-        <CardHeader>Connections</CardHeader>
-        <CardBody>
+        <Card.Header>Connections</Card.Header>
+        <Card.Body>
           <Table hover responsive bordered striped size="sm">
             <thead>
               <tr>
@@ -325,18 +320,18 @@ const ProvidersConfiguration: React.FC = () => {
               })}
             </tbody>
           </Table>
-        </CardBody>
-        <CardFooter>
-          <Button size="sm" color="primary" onClick={handleAddProvider}>
+        </Card.Body>
+        <Card.Footer>
+          <Button size="sm" variant="primary" onClick={handleAddProvider}>
             <FontAwesomeIcon icon={faCirclePlus} /> Add
           </Button>
-        </CardFooter>
+        </Card.Footer>
       </Card>
 
       {selectedProvider && (
         <div ref={selectedProviderRef} style={{ scrollMarginTop: '54px' }}>
           <Card>
-            <CardBody>
+            <Card.Body>
               {selectedProvider.editable ? (
                 <BasicProvider
                   value={selectedProvider}
@@ -344,8 +339,8 @@ const ProvidersConfiguration: React.FC = () => {
                   onPropChange={handleProviderPropChange}
                 />
               ) : (
-                <Input
-                  type="textarea"
+                <Form.Control
+                  as="textarea"
                   name="json"
                   id="json"
                   rows={20}
@@ -353,19 +348,19 @@ const ProvidersConfiguration: React.FC = () => {
                   readOnly
                 />
               )}
-            </CardBody>
-            <CardFooter>
+            </Card.Body>
+            <Card.Footer>
               {selectedProvider.editable ? (
                 <div className="d-flex flex-wrap gap-2">
-                  <Button size="sm" color="primary" onClick={handleApply}>
+                  <Button size="sm" variant="primary" onClick={handleApply}>
                     <FontAwesomeIcon icon={faCircleDot} /> Apply
                   </Button>
-                  <Button size="sm" color="secondary" onClick={handleCancel}>
+                  <Button size="sm" variant="secondary" onClick={handleCancel}>
                     <FontAwesomeIcon icon={faBan} /> Cancel
                   </Button>
                   <Button
                     size="sm"
-                    color="danger"
+                    variant="danger"
                     className="ms-auto"
                     onClick={handleDelete}
                   >
@@ -374,12 +369,12 @@ const ProvidersConfiguration: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-end">
-                  <Button size="sm" color="danger" onClick={handleDelete}>
+                  <Button size="sm" variant="danger" onClick={handleDelete}>
                     <FontAwesomeIcon icon={faBan} /> Delete
                   </Button>
                 </div>
               )}
-            </CardFooter>
+            </Card.Footer>
           </Card>
         </div>
       )}
