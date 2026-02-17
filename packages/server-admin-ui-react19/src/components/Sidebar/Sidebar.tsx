@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, MouseEvent, ReactNode } from 'react'
 import { NavLink, Location } from 'react-router-dom'
-import { Badge, Nav, NavItem, NavLink as RsNavLink } from 'reactstrap'
+import Badge from 'react-bootstrap/Badge'
+import Nav from 'react-bootstrap/Nav'
 import { useAppStore, useAccessRequests, useLoginStatus } from '../../store'
 import classNames from 'classnames'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
@@ -222,7 +223,7 @@ export default function Sidebar({ location }: SidebarProps) {
     if (badgeData) {
       const classes = classNames(badgeData.class)
       return (
-        <Badge className={classes} color={badgeData.variant}>
+        <Badge className={classes} bg={badgeData.variant}>
           {badgeData.text}
         </Badge>
       )
@@ -270,17 +271,13 @@ export default function Sidebar({ location }: SidebarProps) {
       return link === 'http'
     }
     return (
-      <NavItem key={key} className={classes.item}>
+      <Nav.Item as="li" key={key} className={classes.item}>
         {isExternal(url) ? (
-          <RsNavLink
-            href={url}
-            className={classes.link}
-            {...(item.props || {})}
-          >
+          <Nav.Link href={url} className={classes.link} {...(item.props || {})}>
             {renderIcon(item.icon)}
             {item.name}
             {badge(item.badge)}
-          </RsNavLink>
+          </Nav.Link>
         ) : (
           <NavLink
             to={url}
@@ -294,7 +291,7 @@ export default function Sidebar({ location }: SidebarProps) {
             {badge(item.badge)}
           </NavLink>
         )}
-      </NavItem>
+      </Nav.Item>
     )
   }
 

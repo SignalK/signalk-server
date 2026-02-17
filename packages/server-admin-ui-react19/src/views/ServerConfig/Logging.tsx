@@ -1,15 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardFooter,
-  CardBody,
-  Col,
-  Row,
-  ListGroup,
-  ListGroupItem
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import ListGroup from 'react-bootstrap/ListGroup'
+import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 
@@ -61,7 +55,7 @@ const Logging: React.FC = () => {
 
     return Object.keys(datesWithHours).map((date) => {
       return (
-        <ListGroupItem key={date}>
+        <ListGroup.Item key={date}>
           {date}
           {datesWithHours[date].map((hour) => (
             <span key={`${date}-${hour}`}>
@@ -72,7 +66,7 @@ const Logging: React.FC = () => {
               </a>
             </span>
           ))}
-        </ListGroupItem>
+        </ListGroup.Item>
       )
     })
   }, [])
@@ -90,21 +84,21 @@ const Logging: React.FC = () => {
       <Row>
         <Col sm="12" xl="12">
           <Card>
-            <CardHeader>
+            <Card.Header>
               <FontAwesomeIcon icon={faAlignJustify} />{' '}
               <strong>Data Logfiles</strong>
-            </CardHeader>
-            <CardBody>
+            </Card.Header>
+            <Card.Body>
               <ListGroup>{logfilesToRows(logfileslist)}</ListGroup>
-            </CardBody>
-            <CardFooter>
+            </Card.Body>
+            <Card.Footer>
               <small className="text-muted">
                 Click button to download each logfile or
               </small>
               <a href={`${window.serverRoutesPrefix}/ziplogs`}>
                 <Button className="m-2">Get all logs in one ZIP file</Button>
               </a>
-            </CardFooter>
+            </Card.Footer>
           </Card>
         </Col>
       </Row>

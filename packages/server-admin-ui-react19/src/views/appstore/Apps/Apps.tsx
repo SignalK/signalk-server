@@ -2,14 +2,9 @@ import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons/faMagnifyin
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState, useCallback, useMemo, useDeferredValue } from 'react'
 import { useAppStore } from '../../../store'
-import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  Input
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Form from 'react-bootstrap/Form'
 import AppsList from '../AppsList'
 import WarningBox from './WarningBox'
 
@@ -167,24 +162,24 @@ const Apps: React.FC = () => {
       )}
 
       <Card>
-        <CardHeader className="appstore__header">
+        <Card.Header className="appstore__header">
           <div className="title__container">
-            <CardTitle>Apps & Plugins</CardTitle>
+            <Card.Title>Apps & Plugins</Card.Title>
             <div className="button-wrapper">
               <Button
-                color={view === 'All' ? 'secondary' : 'light'}
+                variant={view === 'All' ? 'secondary' : 'light'}
                 onClick={() => setSelectedView('All')}
               >
                 All
               </Button>
               <Button
-                color={view === 'Installed' ? 'secondary' : 'light'}
+                variant={view === 'Installed' ? 'secondary' : 'light'}
                 onClick={() => setSelectedView('Installed')}
               >
                 Installed
               </Button>
               <Button
-                color={view === 'Updates' ? 'secondary' : 'light'}
+                variant={view === 'Updates' ? 'secondary' : 'light'}
                 onClick={() => setSelectedView('Updates')}
               >
                 Updates
@@ -197,7 +192,7 @@ const Apps: React.FC = () => {
               {appStore.installing.length > 0 && (
                 <>
                   <Button
-                    color={view === 'Installing' ? 'secondary' : 'light'}
+                    variant={view === 'Installing' ? 'secondary' : 'light'}
                     onClick={() => setSelectedView('Installing')}
                   >
                     Installs & Removes
@@ -215,7 +210,7 @@ const Apps: React.FC = () => {
 
           <div className="action__container">
             {view === 'Updates' && appStore.updates.length > 0 ? (
-              <Button color="success" onClick={handleUpdateAll}>
+              <Button variant="success" onClick={handleUpdateAll}>
                 Update all
               </Button>
             ) : undefined}
@@ -228,7 +223,7 @@ const Apps: React.FC = () => {
                 className="search__icon"
                 icon={faMagnifyingGlass}
               />
-              <Input
+              <Form.Control
                 id="search-text-box"
                 className="search__input"
                 placeholder="Search ..."
@@ -240,16 +235,14 @@ const Apps: React.FC = () => {
               />
             </div>
           </div>
-        </CardHeader>
+        </Card.Header>
 
-        <CardBody>
+        <Card.Body>
           <section className="appstore__tags section">
             {appStore.categories?.map((item) => (
               <Button
                 key={item}
-                color="secondary"
-                className={category === item ? 'active' : undefined}
-                outline
+                variant={category === item ? 'secondary' : 'outline-secondary'}
                 onClick={() => setSelectedCategory(item)}
               >
                 {item}
@@ -267,7 +260,7 @@ const Apps: React.FC = () => {
               <AppsList apps={rowData} />
             </div>
           </section>
-        </CardBody>
+        </Card.Body>
       </Card>
     </div>
   )

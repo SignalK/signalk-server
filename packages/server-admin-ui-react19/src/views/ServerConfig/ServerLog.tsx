@@ -8,17 +8,10 @@ import {
 } from 'react'
 import parse from 'html-react-parser'
 import { useLogEntries } from '../../store'
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  Input,
-  Form,
-  Col,
-  Label,
-  FormGroup,
-  FormText
-} from 'reactstrap'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import LogFiles from './Logging'
@@ -132,11 +125,11 @@ export default function ServerLogs() {
   return (
     <div className="animated fadeIn">
       <Card>
-        <CardHeader>
+        <Card.Header>
           <FontAwesomeIcon icon={faAlignJustify} /> <strong>Server Log</strong>
-        </CardHeader>
+        </Card.Header>
 
-        <CardBody>
+        <Card.Body>
           <Form
             action=""
             method="post"
@@ -144,7 +137,7 @@ export default function ServerLogs() {
             className="form-horizontal"
             onSubmit={handleSubmit}
           >
-            <FormGroup row>
+            <Form.Group as={Row}>
               <Col>
                 <Creatable
                   isMulti
@@ -169,17 +162,20 @@ export default function ServerLogs() {
                     doHandleDebug(value)
                   }}
                 />
-                <FormText color="muted" style={{ marginBottom: '15px' }}>
+                <Form.Text
+                  className="text-muted"
+                  style={{ marginBottom: '15px' }}
+                >
                   Select the appropriate debug keys to activate debug logging
                   for various components on the server.
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col xs="6" md="6">
                 Persist debug settings over server restarts{' '}
-                <Label className="switch switch-text switch-primary">
-                  <Input
+                <Form.Label className="switch switch-text switch-primary">
+                  <Form.Control
                     type="checkbox"
                     id="Enabled"
                     name="debug"
@@ -189,12 +185,12 @@ export default function ServerLogs() {
                   />
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
-                </Label>
+                </Form.Label>
               </Col>
               <Col xs="6" md="6">
                 Pause the log window{' '}
-                <Label className="switch switch-text switch-primary">
-                  <Input
+                <Form.Label className="switch switch-text switch-primary">
+                  <Form.Control
                     type="checkbox"
                     id="Pause"
                     name="pause"
@@ -204,12 +200,12 @@ export default function ServerLogs() {
                   />
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
-                </Label>
+                </Form.Label>
               </Col>
-            </FormGroup>
+            </Form.Group>
             <LogList value={log} />
           </Form>
-        </CardBody>
+        </Card.Body>
       </Card>
       <LogFiles />
     </div>

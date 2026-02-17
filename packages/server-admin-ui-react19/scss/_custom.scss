@@ -138,6 +138,13 @@ form.rjsf {
   }
 }
 
+// react-bootstrap's Form.Group does not add margin like reactstrap's FormGroup did.
+// Reactstrap added mb-3 automatically; replicate that for horizontal form rows.
+.card-body form .row,
+.form-horizontal .row {
+  margin-bottom: 1rem;
+}
+
 @media (max-width: 767px) {
   .container-fluid,
   .row {

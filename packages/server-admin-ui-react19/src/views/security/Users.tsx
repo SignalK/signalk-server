@@ -6,20 +6,13 @@ import {
   ChangeEvent,
   FormEvent
 } from 'react'
-import {
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Input,
-  Col,
-  Label,
-  FormGroup,
-  FormText,
-  Table
-} from 'reactstrap'
+import Badge from 'react-bootstrap/Badge'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
+import Table from 'react-bootstrap/Table'
 import { useLoginStatus } from '../../store'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
@@ -181,10 +174,10 @@ export default function Users() {
       {users && loginStatus.authenticationRequired && (
         <div>
           <Card>
-            <CardHeader>
+            <Card.Header>
               <FontAwesomeIcon icon={faAlignJustify} /> Users
-            </CardHeader>
-            <CardBody>
+            </Card.Header>
+            <Card.Body>
               <Table hover responsive bordered striped size="sm">
                 <thead>
                   <tr>
@@ -208,11 +201,11 @@ export default function Users() {
                         <td>{convertType(user.type)}</td>
                         <td>
                           {user.isOIDC ? (
-                            <Badge color="info" title="Authenticated via SSO">
+                            <Badge bg="info" title="Authenticated via SSO">
                               SSO
                             </Badge>
                           ) : (
-                            <Badge color="secondary">Local</Badge>
+                            <Badge bg="secondary">Local</Badge>
                           )}
                         </td>
                       </tr>
@@ -220,33 +213,33 @@ export default function Users() {
                   })}
                 </tbody>
               </Table>
-            </CardBody>
-            <CardFooter>
-              <Button size="sm" color="primary" onClick={handleAddUser}>
+            </Card.Body>
+            <Card.Footer>
+              <Button size="sm" variant="primary" onClick={handleAddUser}>
                 <FontAwesomeIcon icon={faCirclePlus} /> Add
               </Button>
-            </CardFooter>
+            </Card.Footer>
           </Card>
 
           {selectedUser && (
             <div ref={selectedUserRef}>
               <Card>
-                <CardHeader>
+                <Card.Header>
                   <FontAwesomeIcon icon={faAlignJustify} /> User
                   {selectedUser.isOIDC && (
-                    <Badge color="info" className="ms-2">
+                    <Badge bg="info" className="ms-2">
                       SSO User
                     </Badge>
                   )}
-                </CardHeader>
-                <CardBody>
-                  <FormGroup row>
+                </Card.Header>
+                <Card.Body>
+                  <Form.Group as={Row}>
                     <Col md="2">
-                      <Label htmlFor="userId">User ID</Label>
+                      <Form.Label htmlFor="userId">User ID</Form.Label>
                     </Col>
                     <Col xs="12" md="9">
                       {selectedUser.isNew && (
-                        <Input
+                        <Form.Control
                           type="text"
                           id="userId"
                           name="userId"
@@ -256,38 +249,38 @@ export default function Users() {
                         />
                       )}
                       {!selectedUser.isNew && (
-                        <Label>{selectedUser.userId}</Label>
+                        <Form.Label>{selectedUser.userId}</Form.Label>
                       )}
                     </Col>
-                  </FormGroup>
+                  </Form.Group>
                   {selectedUser.email && (
-                    <FormGroup row>
+                    <Form.Group as={Row}>
                       <Col md="2">
-                        <Label>Email</Label>
+                        <Form.Label>Email</Form.Label>
                       </Col>
                       <Col xs="12" md="9">
-                        <Label>{selectedUser.email}</Label>
+                        <Form.Label>{selectedUser.email}</Form.Label>
                       </Col>
-                    </FormGroup>
+                    </Form.Group>
                   )}
                   {selectedUser.isOIDC ? (
-                    <FormGroup row>
+                    <Form.Group as={Row}>
                       <Col md="12">
-                        <FormText color="muted">
+                        <Form.Text muted>
                           <FontAwesomeIcon icon={faCircleInfo} /> This user
                           authenticates via Single Sign-On. Password cannot be
                           set for SSO users.
-                        </FormText>
+                        </Form.Text>
                       </Col>
-                    </FormGroup>
+                    </Form.Group>
                   ) : (
                     <>
-                      <FormGroup row>
+                      <Form.Group as={Row}>
                         <Col md="2">
-                          <Label htmlFor="password">Password</Label>
+                          <Form.Label htmlFor="password">Password</Form.Label>
                         </Col>
                         <Col xs="12" md="9">
-                          <Input
+                          <Form.Control
                             type="password"
                             id="password"
                             name="password"
@@ -296,15 +289,15 @@ export default function Users() {
                             onChange={handleUserChange}
                           />
                         </Col>
-                      </FormGroup>
-                      <FormGroup row>
+                      </Form.Group>
+                      <Form.Group as={Row}>
                         <Col md="2">
-                          <Label htmlFor="confirmPassword">
+                          <Form.Label htmlFor="confirmPassword">
                             Confirm Password
-                          </Label>
+                          </Form.Label>
                         </Col>
                         <Col xs="12" md="9">
-                          <Input
+                          <Form.Control
                             type="password"
                             id="confirmPassword"
                             name="confirmPassword"
@@ -313,16 +306,15 @@ export default function Users() {
                             onChange={handleUserChange}
                           />
                         </Col>
-                      </FormGroup>
+                      </Form.Group>
                     </>
                   )}
-                  <FormGroup row>
+                  <Form.Group as={Row}>
                     <Col md="2">
-                      <Label htmlFor="permissions">Permissions</Label>
+                      <Form.Label htmlFor="permissions">Permissions</Form.Label>
                     </Col>
                     <Col xs="12" md="2">
-                      <Input
-                        type="select"
+                      <Form.Select
                         id="permissions"
                         name="type"
                         value={selectedUser.type || 'readonly'}
@@ -331,28 +323,32 @@ export default function Users() {
                         <option value="readonly">Read Only</option>
                         <option value="readwrite">Read/Write</option>
                         <option value="admin">Admin</option>
-                      </Input>
+                      </Form.Select>
                     </Col>
-                  </FormGroup>
-                </CardBody>
-                <CardFooter>
+                  </Form.Group>
+                </Card.Body>
+                <Card.Footer>
                   <div className="d-flex flex-wrap gap-2">
-                    <Button size="sm" color="primary" onClick={handleApply}>
+                    <Button size="sm" variant="primary" onClick={handleApply}>
                       <FontAwesomeIcon icon={faFloppyDisk} /> Apply
                     </Button>
-                    <Button size="sm" color="secondary" onClick={handleCancel}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleCancel}
+                    >
                       <FontAwesomeIcon icon={faBan} /> Cancel
                     </Button>
                     <Button
                       size="sm"
-                      color="danger"
+                      variant="danger"
                       className="ms-auto"
                       onClick={deleteUser}
                     >
                       <FontAwesomeIcon icon={faBan} /> Delete
                     </Button>
                   </div>
-                </CardFooter>
+                </Card.Footer>
               </Card>
             </div>
           )}

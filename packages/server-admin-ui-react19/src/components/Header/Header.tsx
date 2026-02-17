@@ -1,16 +1,8 @@
 import { useState, useEffect, useCallback, MouseEvent } from 'react'
-import {
-  Nav,
-  NavItem,
-  NavLink,
-  NavbarToggler,
-  NavbarBrand,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-  Dropdown,
-  Alert
-} from 'reactstrap'
+import Alert from 'react-bootstrap/Alert'
+import Dropdown from 'react-bootstrap/Dropdown'
+import Nav from 'react-bootstrap/Nav'
+import Navbar from 'react-bootstrap/Navbar'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleNotch } from '@fortawesome/free-solid-svg-icons/faCircleNotch'
 import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
@@ -69,7 +61,7 @@ export default function Header() {
     <header className="app-header navbar">
       {backpressureWarning && (
         <Alert
-          color="warning"
+          variant="warning"
           className="backpressure-warning"
           style={{
             position: 'absolute',
@@ -87,70 +79,70 @@ export default function Header() {
           detected – some updates were skipped. Check your connection.
         </Alert>
       )}
-      <NavbarBrand href="#" />
-      <NavbarToggler className="me-auto" onClick={sidebarToggle}>
+      <Navbar.Brand href="#" />
+      <Navbar.Toggle className="me-auto" onClick={sidebarToggle}>
         <span className="navbar-toggler-icon" />
-      </NavbarToggler>
-      <Nav className="ms-auto" navbar>
+      </Navbar.Toggle>
+      <Nav className="ms-auto">
         {/* Desktop: show items directly */}
         {loginStatus.status === 'loggedIn' &&
           loginStatus.userLevel === 'admin' && (
-            <NavItem className="d-none d-sm-block px-3">
-              <NavLink href="#/" onClick={handleRestart}>
+            <Nav.Item className="d-none d-sm-block px-3">
+              <Nav.Link href="#/" onClick={handleRestart}>
                 <FontAwesomeIcon
                   icon={faCircleNotch}
                   spin={restarting}
                   className={restarting ? 'text-danger' : ''}
                 />{' '}
                 Restart
-              </NavLink>
-            </NavItem>
+              </Nav.Link>
+            </Nav.Item>
           )}
         {loginStatus.status === 'loggedIn' && (
-          <NavItem className="d-none d-sm-block px-3">
-            <NavLink href="#/" onClick={handleLogout}>
+          <Nav.Item className="d-none d-sm-block px-3">
+            <Nav.Link href="#/" onClick={handleLogout}>
               <FontAwesomeIcon icon={faLock} /> Logout
-            </NavLink>
-          </NavItem>
+            </Nav.Link>
+          </Nav.Item>
         )}
         {loginStatus.status !== 'loggedIn' &&
           loginStatus.authenticationRequired && (
-            <NavItem className="d-none d-sm-block px-3">
-              <NavLink href="#/login">
+            <Nav.Item className="d-none d-sm-block px-3">
+              <Nav.Link href="#/login">
                 <FontAwesomeIcon icon={faLock} /> Login
-              </NavLink>
-            </NavItem>
+              </Nav.Link>
+            </Nav.Item>
           )}
         {/* Mobile: show dropdown menu */}
         <div className="d-sm-none">
-          <Dropdown nav isOpen={dropdownOpen} toggle={toggleDropdown}>
-            <DropdownToggle nav>
+          <Dropdown as={Nav.Item} show={dropdownOpen} onToggle={toggleDropdown}>
+            <Dropdown.Toggle as={Nav.Link}>
               <FontAwesomeIcon icon={faBars} />
-            </DropdownToggle>
-            <DropdownMenu end>
+            </Dropdown.Toggle>
+            <Dropdown.Menu align="end">
               {loginStatus.status === 'loggedIn' &&
                 loginStatus.userLevel === 'admin' && (
-                  <DropdownItem onClick={handleRestart}>
+                  <Dropdown.Item onClick={handleRestart}>
                     <FontAwesomeIcon
                       icon={faCircleNotch}
                       spin={restarting}
                       className={restarting ? 'text-danger' : ''}
                     />{' '}
                     Restart
-                  </DropdownItem>
+                  </Dropdown.Item>
                 )}
               {loginStatus.status === 'loggedIn' && (
-                <DropdownItem onClick={handleLogout}>
+                <Dropdown.Item onClick={handleLogout}>
                   <FontAwesomeIcon icon={faLock} /> Logout
-                </DropdownItem>
+                </Dropdown.Item>
               )}
               {loginStatus.status !== 'loggedIn' &&
                 loginStatus.authenticationRequired && (
-                  <DropdownItem href="#/login">
+                  <Dropdown.Item href="#/login">
                     <FontAwesomeIcon icon={faLock} /> Login
-                  </DropdownItem>
+                  </Dropdown.Item>
                 )}
-            </DropdownMenu>
+            </Dropdown.Menu>
           </Dropdown>
         </div>
       </Nav>

@@ -1,17 +1,11 @@
 import { useState, useActionState, ChangeEvent } from 'react'
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  CardBody,
-  CardFooter,
-  Button,
-  Form,
-  Input,
-  InputGroup,
-  InputGroupText
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Container from 'react-bootstrap/Container'
+import Form from 'react-bootstrap/Form'
+import InputGroup from 'react-bootstrap/InputGroup'
+import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
 import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
@@ -115,7 +109,7 @@ export default function Register() {
         <Row className="justify-content-center">
           <Col md="6">
             <Card className="mx-4">
-              <CardBody className="p-4">
+              <Card.Body className="p-4">
                 <h1>Register</h1>
                 {submitState.success && (
                   <p className="text-muted">Your registration has been sent</p>
@@ -124,8 +118,8 @@ export default function Register() {
                   <Form id="register-form" action={submitAction}>
                     <p className="text-muted">Create your account</p>
                     <InputGroup className="mb-3">
-                      <InputGroupText>@</InputGroupText>
-                      <Input
+                      <InputGroup.Text>@</InputGroup.Text>
+                      <Form.Control
                         name="email"
                         type="text"
                         placeholder="Email"
@@ -134,10 +128,10 @@ export default function Register() {
                       />
                     </InputGroup>
                     <InputGroup className="mb-3">
-                      <InputGroupText>
+                      <InputGroup.Text>
                         <FontAwesomeIcon icon={faLock} />
-                      </InputGroupText>
-                      <Input
+                      </InputGroup.Text>
+                      <Form.Control
                         name="password"
                         type="password"
                         placeholder="Password"
@@ -146,10 +140,10 @@ export default function Register() {
                       />
                     </InputGroup>
                     <InputGroup className="mb-0">
-                      <InputGroupText>
+                      <InputGroup.Text>
                         <FontAwesomeIcon icon={faLock} />
-                      </InputGroupText>
-                      <Input
+                      </InputGroup.Text>
+                      <Form.Control
                         name="confirmPassword"
                         type="password"
                         placeholder="Repeat password"
@@ -162,16 +156,16 @@ export default function Register() {
                     )}
                   </Form>
                 )}
-              </CardBody>
+              </Card.Body>
               {!submitState.success && (
-                <CardFooter className="p-4">
+                <Card.Footer className="p-4">
                   <Row>
                     <Col xs="12" sm="12">
                       <Button
                         type="submit"
                         form="register-form"
-                        color="success"
-                        block
+                        variant="success"
+                        className="w-100"
                         disabled={isSubmitting || !!validationError}
                       >
                         {isSubmitting ? (
@@ -185,7 +179,7 @@ export default function Register() {
                       </Button>
                     </Col>
                   </Row>
-                </CardFooter>
+                </Card.Footer>
               )}
             </Card>
           </Col>

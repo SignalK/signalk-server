@@ -1,27 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Input,
-  Form,
-  Col,
-  FormGroup,
-  FormText,
-  Table,
-  Row,
-  TabContent,
-  TabPane,
-  Nav,
-  NavItem,
-  NavLink
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Nav from 'react-bootstrap/Nav'
+import Row from 'react-bootstrap/Row'
+import Tab from 'react-bootstrap/Tab'
+import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
-import classnames from 'classnames'
 import dayjs from 'dayjs'
 import jsonlint from 'jsonlint-mod'
 
@@ -71,7 +59,7 @@ function isJson(input: string): boolean {
 
 function N2kJsonPanel({ n2kData }: { n2kData: unknown[] }) {
   return (
-    <TabPane tabId={N2KJSON_TAB_ID}>
+    <Tab.Pane eventKey={N2KJSON_TAB_ID}>
       <div
         style={{
           overflowY: 'scroll',
@@ -82,7 +70,7 @@ function N2kJsonPanel({ n2kData }: { n2kData: unknown[] }) {
       >
         <pre>{JSON.stringify(n2kData, null, 2)}</pre>
       </div>
-    </TabPane>
+    </Tab.Pane>
   )
 }
 
@@ -234,7 +222,7 @@ const Playground: React.FC = () => {
   )
 
   const handleInput = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       const value = event.target.value
       setInput(value)
       setInputIsJson(isJson(value))
@@ -292,17 +280,13 @@ const Playground: React.FC = () => {
     return undefined
   }, [input, send])
 
-  const toggle = (tab: string) => {
-    setActiveTab(tab)
-  }
-
   return (
     <div className="animated fadeIn">
       <Row>
-        <Col xs="12" md="6">
+        <Col xs={12} md={6}>
           <Card>
-            <CardHeader>Input</CardHeader>
-            <CardBody>
+            <Card.Header>Input</Card.Header>
+            <Card.Body>
               <Form
                 action=""
                 method="post"
@@ -312,9 +296,9 @@ const Playground: React.FC = () => {
                   e.preventDefault()
                 }}
               >
-                <FormGroup row>
-                  <Col xs="12" md="12">
-                    <FormText color="muted">
+                <Form.Group as={Row}>
+                  <Col xs={12} md={12}>
+                    <Form.Text muted>
                       You can enter multi-line raw NMEA 2000, NMEA 0183 or
                       Signal K deltas (one delta or an array). For sending PGNs
                       out over the servers NMEA 2000 connection, use one of the
@@ -322,24 +306,24 @@ const Playground: React.FC = () => {
                       <a href="/documentation/develop/plugins/deltas.html?highlight=NMEA%202000%20json#sending-nmea-2000-data-from-a-plugin">
                         here
                       </a>
-                    </FormText>
-                    <Input
-                      type="textarea"
+                    </Form.Text>
+                    <Form.Control
+                      as="textarea"
                       name="input"
-                      rows="15"
+                      rows={15}
                       onChange={handleInput}
                       value={input}
                     />
                   </Col>
-                </FormGroup>
+                </Form.Group>
               </Form>
-            </CardBody>
-            <CardFooter>
+            </Card.Body>
+            <Card.Footer>
               <Row style={{ paddingBottom: '0.25rem' }}>
                 <Col>
                   <Button
                     size="sm"
-                    color="primary"
+                    variant="primary"
                     className="float-start"
                     disabled={!inputIsJson}
                     onClick={beautify}
@@ -351,7 +335,7 @@ const Playground: React.FC = () => {
                 <Col>
                   <Button
                     size="sm"
-                    color="primary"
+                    variant="primary"
                     onClick={handleExecute}
                     className="float-end"
                   >
@@ -367,7 +351,7 @@ const Playground: React.FC = () => {
                 <Col className="text-end">
                   <Button
                     size="sm"
-                    color="primary"
+                    variant="primary"
                     disabled={
                       !(n2kJson && n2kJson.length > 0 && n2kOutAvailable)
                     }
@@ -388,170 +372,146 @@ const Playground: React.FC = () => {
                   </span>
                 </Col>
               </Row>
-            </CardFooter>
+            </Card.Footer>
           </Card>
         </Col>
-        <Col xs="12" md="6">
+        <Col xs={12} md={6}>
           <Card>
-            <CardHeader>Output</CardHeader>
-            <CardBody>
-              <Nav tabs>
-                <NavItem>
-                  <NavLink
-                    className={classnames({
-                      active: activeTab === DELTAS_TAB_ID
-                    })}
-                    onClick={() => toggle(DELTAS_TAB_ID)}
-                  >
-                    Deltas
-                  </NavLink>
-                </NavItem>
-                {data.length > 0 && (
-                  <NavItem>
-                    <NavLink
-                      className={classnames({
-                        active: activeTab === PATHS_TAB_ID
-                      })}
-                      onClick={() => toggle(PATHS_TAB_ID)}
-                    >
-                      Paths
-                    </NavLink>
-                  </NavItem>
-                )}
-
-                {n2kJson && n2kJson.length > 0 && (
-                  <NavItem>
-                    <NavLink
-                      className={classnames({
-                        active: activeTab === N2KJSON_TAB_ID
-                      })}
-                      onClick={() => toggle(N2KJSON_TAB_ID)}
-                    >
-                      Decoded NMEA 2000
-                    </NavLink>
-                  </NavItem>
-                )}
-                {putResults && putResults.length > 0 && (
-                  <NavItem>
-                    <NavLink
-                      className={classnames({
-                        active: activeTab === PUTRESULTS_TAB_ID
-                      })}
-                      onClick={() => toggle(PUTRESULTS_TAB_ID)}
-                    >
-                      Put Results
-                    </NavLink>
-                  </NavItem>
-                )}
-                {jsonError && (
-                  <NavItem>
-                    <NavLink
-                      className={classnames({
-                        active: activeTab === LINT_ERROR_TAB_ID
-                      })}
-                      onClick={() => toggle(LINT_ERROR_TAB_ID)}
-                    >
-                      Json Lint Error
-                    </NavLink>
-                  </NavItem>
-                )}
-              </Nav>
-              <TabContent activeTab={activeTab}>
-                <TabPane tabId={DELTAS_TAB_ID}>
-                  {deltas.length > 0 && (
-                    <div
-                      style={{
-                        overflowY: 'scroll',
-                        maxHeight: '60vh',
-                        border: '1px solid',
-                        padding: '5px'
-                      }}
-                    >
-                      <pre>{JSON.stringify(deltas, null, 2)}</pre>
-                    </div>
+            <Card.Header>Output</Card.Header>
+            <Card.Body>
+              <Tab.Container
+                activeKey={activeTab}
+                onSelect={(k) => k && setActiveTab(k)}
+              >
+                <Nav variant="tabs">
+                  <Nav.Item>
+                    <Nav.Link eventKey={DELTAS_TAB_ID}>Deltas</Nav.Link>
+                  </Nav.Item>
+                  {data.length > 0 && (
+                    <Nav.Item>
+                      <Nav.Link eventKey={PATHS_TAB_ID}>Paths</Nav.Link>
+                    </Nav.Item>
                   )}
-                </TabPane>
 
-                {data.length > 0 && (
-                  <TabPane tabId={PATHS_TAB_ID}>
-                    <div style={{ overflowY: 'scroll', maxHeight: '60vh' }}>
-                      <Table responsive bordered striped size="sm">
-                        <thead>
-                          <tr>
-                            <th>Path</th>
-                            <th>Value</th>
-                            <th>Context</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.map((item) => {
-                            const formatted = JSON.stringify(
-                              item.value,
-                              null,
-                              typeof item.value === 'object' &&
-                                item.value !== null &&
-                                Object.keys(item.value).length > 1
-                                ? 2
-                                : 0
-                            )
-                            const key = `${item.path}${item.context}`
+                  {n2kJson && n2kJson.length > 0 && (
+                    <Nav.Item>
+                      <Nav.Link eventKey={N2KJSON_TAB_ID}>
+                        Decoded NMEA 2000
+                      </Nav.Link>
+                    </Nav.Item>
+                  )}
+                  {putResults && putResults.length > 0 && (
+                    <Nav.Item>
+                      <Nav.Link eventKey={PUTRESULTS_TAB_ID}>
+                        Put Results
+                      </Nav.Link>
+                    </Nav.Item>
+                  )}
+                  {jsonError && (
+                    <Nav.Item>
+                      <Nav.Link eventKey={LINT_ERROR_TAB_ID}>
+                        Json Lint Error
+                      </Nav.Link>
+                    </Nav.Item>
+                  )}
+                </Nav>
+                <Tab.Content>
+                  <Tab.Pane eventKey={DELTAS_TAB_ID}>
+                    {deltas.length > 0 && (
+                      <div
+                        style={{
+                          overflowY: 'scroll',
+                          maxHeight: '60vh',
+                          border: '1px solid',
+                          padding: '5px'
+                        }}
+                      >
+                        <pre>{JSON.stringify(deltas, null, 2)}</pre>
+                      </div>
+                    )}
+                  </Tab.Pane>
 
-                            return (
-                              <tr key={key}>
-                                <td>{item.path}</td>
-                                <td>
-                                  <pre
-                                    className="text-primary"
-                                    style={{ whiteSpace: 'pre-wrap' }}
-                                  >
-                                    {formatted}
-                                  </pre>
-                                </td>
-                                <td>{item.context}</td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </Table>
-                    </div>
-                  </TabPane>
-                )}
+                  {data.length > 0 && (
+                    <Tab.Pane eventKey={PATHS_TAB_ID}>
+                      <div style={{ overflowY: 'scroll', maxHeight: '60vh' }}>
+                        <Table responsive bordered striped size="sm">
+                          <thead>
+                            <tr>
+                              <th>Path</th>
+                              <th>Value</th>
+                              <th>Context</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.map((item) => {
+                              const formatted = JSON.stringify(
+                                item.value,
+                                null,
+                                typeof item.value === 'object' &&
+                                  item.value !== null &&
+                                  Object.keys(item.value).length > 1
+                                  ? 2
+                                  : 0
+                              )
+                              const key = `${item.path}${item.context}`
 
-                {n2kJson && n2kJson.length > 0 && (
-                  <N2kJsonPanel n2kData={n2kJson} />
-                )}
+                              return (
+                                <tr key={key}>
+                                  <td>{item.path}</td>
+                                  <td>
+                                    <pre
+                                      className="text-primary"
+                                      style={{ whiteSpace: 'pre-wrap' }}
+                                    >
+                                      {formatted}
+                                    </pre>
+                                  </td>
+                                  <td>{item.context}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </Table>
+                      </div>
+                    </Tab.Pane>
+                  )}
 
-                {putResults && putResults.length > 0 && (
-                  <TabPane tabId={PUTRESULTS_TAB_ID}>
-                    <div
-                      style={{
-                        overflowY: 'scroll',
-                        maxHeight: '60vh',
-                        border: '1px solid',
-                        padding: '5px'
-                      }}
-                    >
-                      <pre>{JSON.stringify(putResults, null, 2)}</pre>
-                    </div>
-                  </TabPane>
-                )}
+                  {n2kJson && n2kJson.length > 0 && (
+                    <N2kJsonPanel n2kData={n2kJson} />
+                  )}
 
-                {jsonError && (
-                  <TabPane tabId={LINT_ERROR_TAB_ID}>
-                    <div
-                      style={{
-                        overflowY: 'scroll',
-                        maxHeight: '60vh',
-                        border: '1px solid',
-                        padding: '5px'
-                      }}
-                    >
-                      <pre>{jsonError}</pre>
-                    </div>
-                  </TabPane>
-                )}
-              </TabContent>
-            </CardBody>
+                  {putResults && putResults.length > 0 && (
+                    <Tab.Pane eventKey={PUTRESULTS_TAB_ID}>
+                      <div
+                        style={{
+                          overflowY: 'scroll',
+                          maxHeight: '60vh',
+                          border: '1px solid',
+                          padding: '5px'
+                        }}
+                      >
+                        <pre>{JSON.stringify(putResults, null, 2)}</pre>
+                      </div>
+                    </Tab.Pane>
+                  )}
+
+                  {jsonError && (
+                    <Tab.Pane eventKey={LINT_ERROR_TAB_ID}>
+                      <div
+                        style={{
+                          overflowY: 'scroll',
+                          maxHeight: '60vh',
+                          border: '1px solid',
+                          padding: '5px'
+                        }}
+                      >
+                        <pre>{jsonError}</pre>
+                      </div>
+                    </Tab.Pane>
+                  )}
+                </Tab.Content>
+              </Tab.Container>
+            </Card.Body>
           </Card>
         </Col>
       </Row>

@@ -61,8 +61,8 @@
     "react-infinite-scroll-component": "^6.1.0",
     "react-json-tree": "^0.20.0",
     "react-router-dom": "^6.28.0",
+    "react-bootstrap": "^2.10.10",
     "react-select": "^5.10.2",
-    "reactstrap": "^9.2.3",
     "reconnecting-websocket": "^4.4.0",
     "rollup-plugin-visualizer": "^5.12.0",
     "sass": "^1.81.0",
@@ -87,12 +87,5 @@
   },
   "dependencies": {
     "zustand": "^5.0.10"
-  },
-  "//overrides": "reactstrap's react-popper hasn't declared React 19 support yet, but works fine - suppress peer dep warnings",
-  "overrides": {
-    "react-popper": {
-      "react": "$react",
-      "react-dom": "$react-dom"
-    }
   }
 }

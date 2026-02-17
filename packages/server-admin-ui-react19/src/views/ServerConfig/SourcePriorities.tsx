@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Collapse,
-  Input,
-  Table
-} from 'reactstrap'
+import Alert from 'react-bootstrap/Alert'
+import Badge from 'react-bootstrap/Badge'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Collapse from 'react-bootstrap/Collapse'
+import Form from 'react-bootstrap/Form'
+import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowUp } from '@fortawesome/free-solid-svg-icons/faArrowUp'
 import { faArrowDown } from '@fortawesome/free-solid-svg-icons/faArrowDown'
@@ -89,7 +84,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
   return (
     <div>
       {!isOpen && <div onClick={toggleEditor}>...</div>}
-      <Collapse isOpen={isOpen}>
+      <Collapse in={isOpen}>
         <Table>
           <thead onClick={toggleEditor}>
             <tr>
@@ -125,7 +120,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                     </td>
                     <td>
                       {index > 0 && (
-                        <Input
+                        <Form.Control
                           type="number"
                           name="timeout"
                           onChange={(e) =>
@@ -258,8 +253,8 @@ const SourcePriorities: React.FC = () => {
 
   return (
     <Card>
-      <CardHeader>Source Priorities Settings</CardHeader>
-      <CardBody>
+      <Card.Header>Source Priorities Settings</Card.Header>
+      <Card.Body>
         <Alert>
           <p>
             Use Source Priorities to filter incoming data so that data from
@@ -333,11 +328,11 @@ const SourcePriorities: React.FC = () => {
             })}
           </tbody>
         </Table>
-      </CardBody>
-      <CardFooter>
+      </Card.Body>
+      <Card.Footer>
         <Button
           size="sm"
-          color="primary"
+          variant="primary"
           disabled={
             !saveState.dirty || saveState.isSaving || !saveState.timeoutsOk
           }
@@ -348,13 +343,13 @@ const SourcePriorities: React.FC = () => {
         {saveState.saveFailed && 'Saving priorities settings failed!'}
         {!saveState.timeoutsOk && (
           <span style={{ paddingLeft: '10px' }}>
-            <Badge color="danger">Error</Badge>
+            <Badge bg="danger">Error</Badge>
             {
               'The timeout values need to be numbers in ascending order, please fix.'
             }
           </span>
         )}
-      </CardFooter>
+      </Card.Footer>
     </Card>
   )
 }

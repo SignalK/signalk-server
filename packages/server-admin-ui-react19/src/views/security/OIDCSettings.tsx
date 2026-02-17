@@ -1,22 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useLoginStatus } from '../../store'
-import {
-  Alert,
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Input,
-  Form,
-  Col,
-  Label,
-  FormGroup,
-  FormText,
-  Collapse,
-  Badge,
-  Row
-} from 'reactstrap'
+import Alert from 'react-bootstrap/Alert'
+import Badge from 'react-bootstrap/Badge'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Collapse from 'react-bootstrap/Collapse'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronUp } from '@fortawesome/free-solid-svg-icons/faChevronUp'
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons/faChevronDown'
@@ -247,7 +238,7 @@ const OIDCSettings: React.FC = () => {
       if (envOverrides[fieldName]) {
         return (
           <Badge
-            color="warning"
+            bg="warning"
             className="ms-2"
             title="Set via environment variable"
           >
@@ -266,396 +257,406 @@ const OIDCSettings: React.FC = () => {
 
   return (
     <Card>
-      <CardHeader onClick={toggle} style={{ cursor: 'pointer' }}>
+      <Card.Header onClick={toggle} style={{ cursor: 'pointer' }}>
         <FontAwesomeIcon icon={faOpenid} /> OIDC / SSO Authentication
         <span className="float-end">
           {enabled && (
-            <Badge color="success" className="me-2">
+            <Badge bg="success" className="me-2">
               Enabled
             </Badge>
           )}
           <FontAwesomeIcon icon={isOpen ? faChevronUp : faChevronDown} />
         </span>
-      </CardHeader>
-      <Collapse isOpen={isOpen}>
-        <CardBody>
-          <Form
-            action=""
-            method="post"
-            encType="multipart/form-data"
-            className="form-horizontal"
-          >
-            <FormGroup row>
-              <Col xs="0" md="3">
-                <span className="col-form-label">Enable OIDC</span>
-                {renderEnvBadge('enabled')}
-              </Col>
-              <Col md="9">
-                <div className="d-flex align-items-center">
-                  <Label
-                    style={{ marginRight: '15px', marginBottom: 0 }}
-                    className="switch switch-text switch-primary"
-                  >
-                    <Input
-                      type="checkbox"
-                      id="oidc-enabled"
-                      name="enabled"
-                      className="switch-input"
-                      onChange={(e) => setEnabled(e.target.checked)}
-                      checked={enabled}
-                      disabled={isFieldDisabled('enabled')}
-                    />
-                    <span
-                      className="switch-label"
-                      data-on="Yes"
-                      data-off="No"
-                    />
-                    <span className="switch-handle" />
-                  </Label>
-                </div>
-                <FormText color="muted">
-                  Enable OpenID Connect authentication
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <FormGroup row>
-              <Col md="3">
-                <Label htmlFor="issuer">Issuer URL</Label>
-                {renderEnvBadge('issuer')}
-              </Col>
-              <Col xs="12" md="9">
-                <Row>
-                  <Col md="8">
-                    <Input
-                      type="text"
-                      id="issuer"
-                      name="issuer"
-                      autoComplete="off"
-                      placeholder="https://auth.example.com"
-                      onChange={(e) => setIssuer(e.target.value)}
-                      value={issuer}
-                      disabled={isFieldDisabled('issuer')}
-                    />
-                  </Col>
-                  <Col md="4">
-                    <Button
-                      color="secondary"
-                      onClick={handleTestConnection}
-                      disabled={isTesting || !issuer}
-                    >
-                      <FontAwesomeIcon
-                        icon={isTesting ? faSpinner : faPlug}
-                        spin={isTesting}
-                      />{' '}
-                      Test Connection
-                    </Button>
-                  </Col>
-                </Row>
-                <FormText color="muted">
-                  The OIDC provider&apos;s issuer URL (e.g., Keycloak,
-                  Authentik)
-                </FormText>
-                {testResult && (
-                  <Alert
-                    color={testResult.success ? 'success' : 'danger'}
-                    className="mt-2"
-                  >
-                    {testResult.message}
-                  </Alert>
-                )}
-              </Col>
-            </FormGroup>
-
-            <FormGroup row>
-              <Col md="3">
-                <Label htmlFor="clientId">Client ID</Label>
-                {renderEnvBadge('clientId')}
-              </Col>
-              <Col xs="12" md="9">
-                <Input
-                  type="text"
-                  id="clientId"
-                  name="clientId"
-                  autoComplete="off"
-                  placeholder="signalk-server"
-                  onChange={(e) => setClientId(e.target.value)}
-                  value={clientId}
-                  disabled={isFieldDisabled('clientId')}
-                />
-                <FormText color="muted">
-                  Client ID from your OIDC provider
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <FormGroup row>
-              <Col md="3">
-                <Label htmlFor="clientSecret">Client Secret</Label>
-                {renderEnvBadge('clientSecret')}
-              </Col>
-              <Col xs="12" md="9">
-                <Input
-                  type="password"
-                  id="clientSecret"
-                  name="clientSecret"
-                  autoComplete="new-password"
-                  placeholder={
-                    clientSecretSet ? '••••••••••••••••' : 'Enter client secret'
-                  }
-                  onChange={(e) => setClientSecret(e.target.value)}
-                  value={clientSecret}
-                  disabled={isFieldDisabled('clientSecret')}
-                />
-                <FormText color="muted">
-                  {clientSecretSet
-                    ? 'Leave empty to keep existing secret'
-                    : 'Client secret from your OIDC provider'}
-                </FormText>
-                <FormText>
-                  <strong>Recommended:</strong> Set via environment variable{' '}
-                  <code>SIGNALK_OIDC_CLIENT_SECRET</code> instead of storing in
-                  configuration.
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <FormGroup row>
-              <Col md="3">
-                <Label htmlFor="providerName">Provider Display Name</Label>
-                {renderEnvBadge('providerName')}
-              </Col>
-              <Col xs="12" md="9">
-                <Input
-                  type="text"
-                  id="providerName"
-                  name="providerName"
-                  autoComplete="off"
-                  placeholder="SSO Login"
-                  onChange={(e) => setProviderName(e.target.value)}
-                  value={providerName}
-                  disabled={isFieldDisabled('providerName')}
-                />
-                <FormText color="muted">
-                  Text shown on the SSO login button
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <hr />
-            <h5>Permission Mapping</h5>
-
-            <FormGroup row>
-              <Col md="3">
-                <Label htmlFor="defaultPermission">Default Permission</Label>
-                {renderEnvBadge('defaultPermission')}
-              </Col>
-              <Col xs="12" md="4">
-                <Input
-                  type="select"
-                  id="defaultPermission"
-                  name="defaultPermission"
-                  value={defaultPermission}
-                  onChange={(e) => setDefaultPermission(e.target.value)}
-                  disabled={isFieldDisabled('defaultPermission')}
-                >
-                  <option value="readonly">Read Only</option>
-                  <option value="readwrite">Read/Write</option>
-                  <option value="admin">Admin</option>
-                </Input>
-                <FormText color="muted">
-                  Permission for users not matching any group mapping
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <FormGroup row>
-              <Col md="3">
-                <Label htmlFor="adminGroups">Admin Groups</Label>
-                {renderEnvBadge('adminGroups')}
-              </Col>
-              <Col xs="12" md="9">
-                <Input
-                  type="text"
-                  id="adminGroups"
-                  name="adminGroups"
-                  autoComplete="off"
-                  placeholder="admins, sk-admin"
-                  onChange={(e) => setAdminGroups(e.target.value)}
-                  value={adminGroups}
-                  disabled={isFieldDisabled('adminGroups')}
-                />
-                <FormText color="muted">
-                  Comma-separated list of groups that grant admin permission
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <FormGroup row>
-              <Col md="3">
-                <Label htmlFor="readwriteGroups">Read/Write Groups</Label>
-                {renderEnvBadge('readwriteGroups')}
-              </Col>
-              <Col xs="12" md="9">
-                <Input
-                  type="text"
-                  id="readwriteGroups"
-                  name="readwriteGroups"
-                  autoComplete="off"
-                  placeholder="users, operators"
-                  onChange={(e) => setReadwriteGroups(e.target.value)}
-                  value={readwriteGroups}
-                  disabled={isFieldDisabled('readwriteGroups')}
-                />
-                <FormText color="muted">
-                  Comma-separated list of groups that grant read/write
-                  permission
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <FormGroup row>
-              <Col md="3">
-                <Label htmlFor="groupsAttribute">Groups Attribute</Label>
-                {renderEnvBadge('groupsAttribute')}
-              </Col>
-              <Col xs="12" md="9">
-                <Input
-                  type="text"
-                  id="groupsAttribute"
-                  name="groupsAttribute"
-                  autoComplete="off"
-                  placeholder="groups"
-                  onChange={(e) => setGroupsAttribute(e.target.value)}
-                  value={groupsAttribute}
-                  disabled={isFieldDisabled('groupsAttribute')}
-                />
-                <FormText color="muted">
-                  ID token claim containing user groups (e.g., groups, roles,
-                  memberOf)
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <hr />
-            <h5>User Settings</h5>
-
-            <FormGroup row>
-              <Col xs="0" md="3">
-                <span className="col-form-label">Auto-Create Users</span>
-                {renderEnvBadge('autoCreateUsers')}
-              </Col>
-              <Col md="9">
-                <div className="d-flex align-items-center">
-                  <Label
-                    style={{ marginRight: '15px', marginBottom: 0 }}
-                    className="switch switch-text switch-primary"
-                  >
-                    <Input
-                      type="checkbox"
-                      id="oidc-autoCreateUsers"
-                      name="autoCreateUsers"
-                      className="switch-input"
-                      onChange={(e) => setAutoCreateUsers(e.target.checked)}
-                      checked={autoCreateUsers}
-                      disabled={isFieldDisabled('autoCreateUsers')}
-                    />
-                    <span
-                      className="switch-label"
-                      data-on="Yes"
-                      data-off="No"
-                    />
-                    <span className="switch-handle" />
-                  </Label>
-                </div>
-                <FormText color="muted">
-                  Automatically create local user on first OIDC login
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <FormGroup row>
-              <Col xs="0" md="3">
-                <span className="col-form-label">Auto-Login</span>
-                {renderEnvBadge('autoLogin')}
-              </Col>
-              <Col md="9">
-                <div className="d-flex align-items-center">
-                  <Label
-                    style={{ marginRight: '15px', marginBottom: 0 }}
-                    className="switch switch-text switch-primary"
-                  >
-                    <Input
-                      type="checkbox"
-                      id="oidc-autoLogin"
-                      name="autoLogin"
-                      className="switch-input"
-                      onChange={(e) => setAutoLogin(e.target.checked)}
-                      checked={autoLogin}
-                      disabled={isFieldDisabled('autoLogin')}
-                    />
-                    <span
-                      className="switch-label"
-                      data-on="Yes"
-                      data-off="No"
-                    />
-                    <span className="switch-handle" />
-                  </Label>
-                </div>
-                <FormText color="muted">
-                  Automatically redirect to OIDC login when not authenticated
-                </FormText>
-              </Col>
-            </FormGroup>
-
-            <hr />
-            <h5>Advanced</h5>
-
-            <FormGroup row>
-              <Col md="3">
-                <Label htmlFor="scope">Scope</Label>
-                {renderEnvBadge('scope')}
-              </Col>
-              <Col xs="12" md="9">
-                <Input
-                  type="text"
-                  id="scope"
-                  name="scope"
-                  autoComplete="off"
-                  placeholder="openid email profile"
-                  onChange={(e) => setScope(e.target.value)}
-                  value={scope}
-                  disabled={isFieldDisabled('scope')}
-                />
-                <FormText color="muted">
-                  Space-separated OAuth scopes (must include &apos;openid&apos;)
-                </FormText>
-              </Col>
-            </FormGroup>
-          </Form>
-        </CardBody>
-        <CardFooter>
-          {saveResult && (
-            <Alert
-              color={saveResult.success ? 'success' : 'danger'}
-              className="mb-2"
+      </Card.Header>
+      <Collapse in={isOpen}>
+        <div>
+          <Card.Body>
+            <Form
+              action=""
+              method="post"
+              encType="multipart/form-data"
+              className="form-horizontal"
             >
-              {saveResult.message}
-            </Alert>
-          )}
-          <Button
-            size="sm"
-            color="primary"
-            onClick={handleSaveConfig}
-            disabled={isSaving}
-          >
-            <FontAwesomeIcon
-              icon={isSaving ? faSpinner : faFloppyDisk}
-              spin={isSaving}
-            />{' '}
-            Save
-          </Button>
-        </CardFooter>
+              <Form.Group as={Row}>
+                <Col xs="0" md="3">
+                  <span className="col-form-label">Enable OIDC</span>
+                  {renderEnvBadge('enabled')}
+                </Col>
+                <Col md="9">
+                  <div className="d-flex align-items-center">
+                    <label
+                      style={{ marginRight: '15px', marginBottom: 0 }}
+                      className="switch switch-text switch-primary"
+                    >
+                      <input
+                        type="checkbox"
+                        id="oidc-enabled"
+                        name="enabled"
+                        className="switch-input"
+                        onChange={(e) => setEnabled(e.target.checked)}
+                        checked={enabled}
+                        disabled={isFieldDisabled('enabled')}
+                      />
+                      <span
+                        className="switch-label"
+                        data-on="Yes"
+                        data-off="No"
+                      />
+                      <span className="switch-handle" />
+                    </label>
+                  </div>
+                  <Form.Text muted>
+                    Enable OpenID Connect authentication
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="issuer">Issuer URL</Form.Label>
+                  {renderEnvBadge('issuer')}
+                </Col>
+                <Col xs="12" md="9">
+                  <Row>
+                    <Col md="8">
+                      <Form.Control
+                        type="text"
+                        id="issuer"
+                        name="issuer"
+                        autoComplete="off"
+                        placeholder="https://auth.example.com"
+                        onChange={(e) => setIssuer(e.target.value)}
+                        value={issuer}
+                        disabled={isFieldDisabled('issuer')}
+                      />
+                    </Col>
+                    <Col md="4">
+                      <Button
+                        variant="secondary"
+                        onClick={handleTestConnection}
+                        disabled={isTesting || !issuer}
+                      >
+                        <FontAwesomeIcon
+                          icon={isTesting ? faSpinner : faPlug}
+                          spin={isTesting}
+                        />{' '}
+                        Test Connection
+                      </Button>
+                    </Col>
+                  </Row>
+                  <Form.Text muted>
+                    The OIDC provider&apos;s issuer URL (e.g., Keycloak,
+                    Authentik)
+                  </Form.Text>
+                  {testResult && (
+                    <Alert
+                      variant={testResult.success ? 'success' : 'danger'}
+                      className="mt-2"
+                    >
+                      {testResult.message}
+                    </Alert>
+                  )}
+                </Col>
+              </Form.Group>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="clientId">Client ID</Form.Label>
+                  {renderEnvBadge('clientId')}
+                </Col>
+                <Col xs="12" md="9">
+                  <Form.Control
+                    type="text"
+                    id="clientId"
+                    name="clientId"
+                    autoComplete="off"
+                    placeholder="signalk-server"
+                    onChange={(e) => setClientId(e.target.value)}
+                    value={clientId}
+                    disabled={isFieldDisabled('clientId')}
+                  />
+                  <Form.Text muted>Client ID from your OIDC provider</Form.Text>
+                </Col>
+              </Form.Group>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="clientSecret">Client Secret</Form.Label>
+                  {renderEnvBadge('clientSecret')}
+                </Col>
+                <Col xs="12" md="9">
+                  <Form.Control
+                    type="password"
+                    id="clientSecret"
+                    name="clientSecret"
+                    autoComplete="new-password"
+                    placeholder={
+                      clientSecretSet
+                        ? '••••••••••••••••'
+                        : 'Enter client secret'
+                    }
+                    onChange={(e) => setClientSecret(e.target.value)}
+                    value={clientSecret}
+                    disabled={isFieldDisabled('clientSecret')}
+                  />
+                  <Form.Text muted>
+                    {clientSecretSet
+                      ? 'Leave empty to keep existing secret'
+                      : 'Client secret from your OIDC provider'}
+                  </Form.Text>
+                  <Form.Text>
+                    <strong>Recommended:</strong> Set via environment variable{' '}
+                    <code>SIGNALK_OIDC_CLIENT_SECRET</code> instead of storing
+                    in configuration.
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="providerName">
+                    Provider Display Name
+                  </Form.Label>
+                  {renderEnvBadge('providerName')}
+                </Col>
+                <Col xs="12" md="9">
+                  <Form.Control
+                    type="text"
+                    id="providerName"
+                    name="providerName"
+                    autoComplete="off"
+                    placeholder="SSO Login"
+                    onChange={(e) => setProviderName(e.target.value)}
+                    value={providerName}
+                    disabled={isFieldDisabled('providerName')}
+                  />
+                  <Form.Text muted>
+                    Text shown on the SSO login button
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <hr />
+              <h5>Permission Mapping</h5>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="defaultPermission">
+                    Default Permission
+                  </Form.Label>
+                  {renderEnvBadge('defaultPermission')}
+                </Col>
+                <Col xs="12" md="4">
+                  <Form.Select
+                    id="defaultPermission"
+                    name="defaultPermission"
+                    value={defaultPermission}
+                    onChange={(e) => setDefaultPermission(e.target.value)}
+                    disabled={isFieldDisabled('defaultPermission')}
+                  >
+                    <option value="readonly">Read Only</option>
+                    <option value="readwrite">Read/Write</option>
+                    <option value="admin">Admin</option>
+                  </Form.Select>
+                  <Form.Text muted>
+                    Permission for users not matching any group mapping
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="adminGroups">Admin Groups</Form.Label>
+                  {renderEnvBadge('adminGroups')}
+                </Col>
+                <Col xs="12" md="9">
+                  <Form.Control
+                    type="text"
+                    id="adminGroups"
+                    name="adminGroups"
+                    autoComplete="off"
+                    placeholder="admins, sk-admin"
+                    onChange={(e) => setAdminGroups(e.target.value)}
+                    value={adminGroups}
+                    disabled={isFieldDisabled('adminGroups')}
+                  />
+                  <Form.Text muted>
+                    Comma-separated list of groups that grant admin permission
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="readwriteGroups">
+                    Read/Write Groups
+                  </Form.Label>
+                  {renderEnvBadge('readwriteGroups')}
+                </Col>
+                <Col xs="12" md="9">
+                  <Form.Control
+                    type="text"
+                    id="readwriteGroups"
+                    name="readwriteGroups"
+                    autoComplete="off"
+                    placeholder="users, operators"
+                    onChange={(e) => setReadwriteGroups(e.target.value)}
+                    value={readwriteGroups}
+                    disabled={isFieldDisabled('readwriteGroups')}
+                  />
+                  <Form.Text muted>
+                    Comma-separated list of groups that grant read/write
+                    permission
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="groupsAttribute">
+                    Groups Attribute
+                  </Form.Label>
+                  {renderEnvBadge('groupsAttribute')}
+                </Col>
+                <Col xs="12" md="9">
+                  <Form.Control
+                    type="text"
+                    id="groupsAttribute"
+                    name="groupsAttribute"
+                    autoComplete="off"
+                    placeholder="groups"
+                    onChange={(e) => setGroupsAttribute(e.target.value)}
+                    value={groupsAttribute}
+                    disabled={isFieldDisabled('groupsAttribute')}
+                  />
+                  <Form.Text muted>
+                    ID token claim containing user groups (e.g., groups, roles,
+                    memberOf)
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <hr />
+              <h5>User Settings</h5>
+
+              <Form.Group as={Row}>
+                <Col xs="0" md="3">
+                  <span className="col-form-label">Auto-Create Users</span>
+                  {renderEnvBadge('autoCreateUsers')}
+                </Col>
+                <Col md="9">
+                  <div className="d-flex align-items-center">
+                    <label
+                      style={{ marginRight: '15px', marginBottom: 0 }}
+                      className="switch switch-text switch-primary"
+                    >
+                      <input
+                        type="checkbox"
+                        id="oidc-autoCreateUsers"
+                        name="autoCreateUsers"
+                        className="switch-input"
+                        onChange={(e) => setAutoCreateUsers(e.target.checked)}
+                        checked={autoCreateUsers}
+                        disabled={isFieldDisabled('autoCreateUsers')}
+                      />
+                      <span
+                        className="switch-label"
+                        data-on="Yes"
+                        data-off="No"
+                      />
+                      <span className="switch-handle" />
+                    </label>
+                  </div>
+                  <Form.Text muted>
+                    Automatically create local user on first OIDC login
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <Form.Group as={Row}>
+                <Col xs="0" md="3">
+                  <span className="col-form-label">Auto-Login</span>
+                  {renderEnvBadge('autoLogin')}
+                </Col>
+                <Col md="9">
+                  <div className="d-flex align-items-center">
+                    <label
+                      style={{ marginRight: '15px', marginBottom: 0 }}
+                      className="switch switch-text switch-primary"
+                    >
+                      <input
+                        type="checkbox"
+                        id="oidc-autoLogin"
+                        name="autoLogin"
+                        className="switch-input"
+                        onChange={(e) => setAutoLogin(e.target.checked)}
+                        checked={autoLogin}
+                        disabled={isFieldDisabled('autoLogin')}
+                      />
+                      <span
+                        className="switch-label"
+                        data-on="Yes"
+                        data-off="No"
+                      />
+                      <span className="switch-handle" />
+                    </label>
+                  </div>
+                  <Form.Text muted>
+                    Automatically redirect to OIDC login when not authenticated
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <hr />
+              <h5>Advanced</h5>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="scope">Scope</Form.Label>
+                  {renderEnvBadge('scope')}
+                </Col>
+                <Col xs="12" md="9">
+                  <Form.Control
+                    type="text"
+                    id="scope"
+                    name="scope"
+                    autoComplete="off"
+                    placeholder="openid email profile"
+                    onChange={(e) => setScope(e.target.value)}
+                    value={scope}
+                    disabled={isFieldDisabled('scope')}
+                  />
+                  <Form.Text muted>
+                    Space-separated OAuth scopes (must include
+                    &apos;openid&apos;)
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+            </Form>
+          </Card.Body>
+          <Card.Footer>
+            {saveResult && (
+              <Alert
+                variant={saveResult.success ? 'success' : 'danger'}
+                className="mb-2"
+              >
+                {saveResult.message}
+              </Alert>
+            )}
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={handleSaveConfig}
+              disabled={isSaving}
+            >
+              <FontAwesomeIcon
+                icon={isSaving ? faSpinner : faFloppyDisk}
+                spin={isSaving}
+              />{' '}
+              Save
+            </Button>
+          </Card.Footer>
+        </div>
       </Collapse>
     </Card>
   )

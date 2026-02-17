@@ -7,19 +7,14 @@ import {
   ChangeEvent,
   KeyboardEvent
 } from 'react'
-import {
-  Container,
-  Row,
-  Col,
-  CardGroup,
-  Card,
-  CardBody,
-  Button,
-  Input,
-  InputGroup,
-  InputGroupText,
-  Label
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import CardGroup from 'react-bootstrap/CardGroup'
+import Col from 'react-bootstrap/Col'
+import Container from 'react-bootstrap/Container'
+import Form from 'react-bootstrap/Form'
+import InputGroup from 'react-bootstrap/InputGroup'
+import Row from 'react-bootstrap/Row'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
@@ -134,15 +129,15 @@ export default function Login() {
             <Col md="8">
               <CardGroup>
                 <Card className="p-4">
-                  <CardBody>
+                  <Card.Body>
                     <form action={loginAction}>
                       <h1>Login</h1>
                       <p className="text-muted">Sign In to your account</p>
                       <InputGroup className="mb-3">
-                        <InputGroupText>
+                        <InputGroup.Text>
                           <FontAwesomeIcon icon={faUser} />
-                        </InputGroupText>
-                        <Input
+                        </InputGroup.Text>
+                        <Form.Control
                           type="text"
                           name="username"
                           placeholder="Username"
@@ -152,10 +147,10 @@ export default function Login() {
                         />
                       </InputGroup>
                       <InputGroup className="mb-4">
-                        <InputGroupText>
+                        <InputGroup.Text>
                           <FontAwesomeIcon icon={faLock} />
-                        </InputGroupText>
-                        <Input
+                        </InputGroup.Text>
+                        <Form.Control
                           type="password"
                           name="password"
                           placeholder="Password"
@@ -167,8 +162,8 @@ export default function Login() {
                       <Row>
                         <Col xs="8">
                           <InputGroup className="mb-4">
-                            <Label className="switch switch-text switch-primary">
-                              <Input
+                            <Form.Label className="switch switch-text switch-primary">
+                              <input
                                 type="checkbox"
                                 name="rememberMe"
                                 className="switch-input"
@@ -181,7 +176,7 @@ export default function Login() {
                                 data-off="No"
                               />
                               <span className="switch-handle" />
-                            </Label>
+                            </Form.Label>
                             &nbsp; Remember Me
                           </InputGroup>
                         </Col>
@@ -190,7 +185,7 @@ export default function Login() {
                         <Col xs="6">
                           <Button
                             type="submit"
-                            color="primary"
+                            variant="primary"
                             className="px-4"
                             disabled={isLoggingIn}
                           >
@@ -209,7 +204,7 @@ export default function Login() {
                             loginStatus.allowNewUserRegistration && (
                               <div>
                                 <Link to="/register">
-                                  <Button color="link" className="px-0">
+                                  <Button variant="link" className="px-0">
                                     Sign up
                                   </Button>
                                 </Link>
@@ -234,7 +229,7 @@ export default function Login() {
                                 window.location.href =
                                   loginStatus.oidcLoginUrl as string
                               }}
-                              color="secondary"
+                              variant="secondary"
                               className="px-4"
                             >
                               <FontAwesomeIcon icon={faRightToBracket} />{' '}
@@ -245,7 +240,7 @@ export default function Login() {
                         </Row>
                       </>
                     )}
-                  </CardBody>
+                  </Card.Body>
                 </Card>
               </CardGroup>
             </Col>

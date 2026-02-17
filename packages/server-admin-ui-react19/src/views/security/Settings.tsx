@@ -1,18 +1,10 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react'
 import { useLoginStatus } from '../../store'
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Input,
-  Form,
-  Col,
-  Label,
-  FormGroup,
-  FormText
-} from 'reactstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
@@ -95,17 +87,17 @@ export default function Settings() {
       {config.hasData && loginStatus.authenticationRequired && (
         <div>
           <Card>
-            <CardHeader>
+            <Card.Header>
               <FontAwesomeIcon icon={faAlignJustify} /> Settings
-            </CardHeader>
-            <CardBody>
+            </Card.Header>
+            <Card.Body>
               <Form
                 action=""
                 method="post"
                 encType="multipart/form-data"
                 className="form-horizontal"
               >
-                <FormGroup row>
+                <Form.Group as={Row}>
                   <Col xs="0" md="3">
                     <span className="col-form-label">
                       Allow Readonly Access
@@ -113,11 +105,11 @@ export default function Settings() {
                   </Col>
                   <Col md="9">
                     <div className="d-flex align-items-center">
-                      <Label
+                      <label
                         style={{ marginRight: '15px', marginBottom: 0 }}
                         className="switch switch-text switch-primary"
                       >
-                        <Input
+                        <input
                           type="checkbox"
                           id="security-allow_readonly"
                           name="allow_readonly"
@@ -131,11 +123,11 @@ export default function Settings() {
                           data-off="No"
                         />
                         <span className="switch-handle" />
-                      </Label>
+                      </label>
                     </div>
                   </Col>
-                </FormGroup>
-                <FormGroup row>
+                </Form.Group>
+                <Form.Group as={Row}>
                   <Col xs="0" md="3">
                     <span className="col-form-label">
                       Allow New User Registration
@@ -143,11 +135,11 @@ export default function Settings() {
                   </Col>
                   <Col md="9">
                     <div className="d-flex align-items-center">
-                      <Label
+                      <label
                         style={{ marginRight: '15px', marginBottom: 0 }}
                         className="switch switch-text switch-primary"
                       >
-                        <Input
+                        <input
                           type="checkbox"
                           id="security-allowNewUserRegistration"
                           name="allowNewUserRegistration"
@@ -161,11 +153,11 @@ export default function Settings() {
                           data-off="No"
                         />
                         <span className="switch-handle" />
-                      </Label>
+                      </label>
                     </div>
                   </Col>
-                </FormGroup>
-                <FormGroup row>
+                </Form.Group>
+                <Form.Group as={Row}>
                   <Col xs="0" md="3">
                     <span className="col-form-label">
                       Allow New Device Registration
@@ -173,11 +165,11 @@ export default function Settings() {
                   </Col>
                   <Col md="9">
                     <div className="d-flex align-items-center">
-                      <Label
+                      <label
                         style={{ marginRight: '15px', marginBottom: 0 }}
                         className="switch switch-text switch-primary"
                       >
-                        <Input
+                        <input
                           type="checkbox"
                           id="security-allowDeviceAccessRequests"
                           name="allowDeviceAccessRequests"
@@ -191,16 +183,18 @@ export default function Settings() {
                           data-off="No"
                         />
                         <span className="switch-handle" />
-                      </Label>
+                      </label>
                     </div>
                   </Col>
-                </FormGroup>
-                <FormGroup row>
+                </Form.Group>
+                <Form.Group as={Row}>
                   <Col md="3">
-                    <Label htmlFor="expiration">Remember Me timeout</Label>
+                    <Form.Label htmlFor="expiration">
+                      Remember Me timeout
+                    </Form.Label>
                   </Col>
                   <Col xs="12" md="3">
-                    <Input
+                    <Form.Control
                       type="text"
                       id="expiration"
                       name="expiration"
@@ -208,18 +202,18 @@ export default function Settings() {
                       onChange={handleChange}
                       value={config.expiration || ''}
                     />
-                    <FormText color="muted">Examples: 60s, 1m, 1h, 1d</FormText>
+                    <Form.Text muted>Examples: 60s, 1m, 1h, 1d</Form.Text>
                   </Col>
                   <Col md="6">
-                    <FormText color="muted">
+                    <Form.Text muted>
                       How long server keeps you logged when Remember Me is
                       checked in login.
-                    </FormText>
+                    </Form.Text>
                   </Col>
-                </FormGroup>
-                <FormGroup row>
+                </Form.Group>
+                <Form.Group as={Row}>
                   <Col md="12">
-                    <FormText color="muted">
+                    <Form.Text muted>
                       With no configuration all CORS origins are accepted, but
                       client requests with credentials:include do not work. Add
                       a single * origin to allow all origins with credentials.
@@ -228,17 +222,17 @@ export default function Settings() {
                       added to the allowed origins so that requests from the UI
                       work. Changes to the Allowed CORS origins requires a
                       server restart.
-                    </FormText>
+                    </Form.Text>
                   </Col>
-                </FormGroup>
-                <FormGroup row>
+                </Form.Group>
+                <Form.Group as={Row}>
                   <Col md="3">
-                    <Label htmlFor="allowedCorsOrigins">
+                    <Form.Label htmlFor="allowedCorsOrigins">
                       Allowed CORS origins
-                    </Label>
+                    </Form.Label>
                   </Col>
                   <Col xs="12" md="9">
-                    <Input
+                    <Form.Control
                       type="text"
                       id="allowedCorsOrigins"
                       name="allowedCorsOrigins"
@@ -246,20 +240,20 @@ export default function Settings() {
                       onChange={handleChange}
                       value={config.allowedCorsOrigins || ''}
                     />
-                    <FormText color="muted">
+                    <Form.Text muted>
                       Use either * or a comma delimited list of origins,
                       example:
                       http://host1.name.com:3000,http://host2.name.com:3000
-                    </FormText>
+                    </Form.Text>
                   </Col>
-                </FormGroup>
+                </Form.Group>
               </Form>
-            </CardBody>
-            <CardFooter>
-              <Button size="sm" color="primary" onClick={handleSaveConfig}>
+            </Card.Body>
+            <Card.Footer>
+              <Button size="sm" variant="primary" onClick={handleSaveConfig}>
                 <FontAwesomeIcon icon={faFloppyDisk} /> Save
               </Button>
-            </CardFooter>
+            </Card.Footer>
           </Card>
           <OIDCSettings />
         </div>

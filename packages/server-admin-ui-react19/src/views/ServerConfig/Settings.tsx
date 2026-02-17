@@ -1,18 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import {
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Input,
-  Form,
-  Col,
-  Label,
-  FormGroup,
-  FormText
-} from 'reactstrap'
+import Badge from 'react-bootstrap/Badge'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
@@ -149,11 +141,11 @@ const ServerSettings: React.FC = () => {
   return (
     <div className="animated fadeIn">
       <Card>
-        <CardHeader>
+        <Card.Header>
           <FontAwesomeIcon icon={faAlignJustify} />{' '}
           <strong>Server Settings</strong>
-        </CardHeader>
-        <CardBody>
+        </Card.Header>
+        <Card.Body>
           <Form
             action=""
             method="post"
@@ -161,12 +153,12 @@ const ServerSettings: React.FC = () => {
             className="form-horizontal"
           >
             {!settings.runFromSystemd && (
-              <FormGroup row>
+              <Form.Group as={Row}>
                 <Col md="2">
-                  <Label htmlFor="port">HTTP Port</Label>
+                  <Form.Label htmlFor="port">HTTP Port</Form.Label>
                 </Col>
                 <Col xs="12" md={fieldColWidthMd}>
-                  <Input
+                  <Form.Control
                     size={5}
                     style={{ width: 'auto' }}
                     type="text"
@@ -176,30 +168,30 @@ const ServerSettings: React.FC = () => {
                     onChange={handleChange}
                     value={settings.port || ''}
                   />
-                  <FormText color="muted">
+                  <Form.Text muted>
                     Saving a new value here will not have effect if overridden
                     by environment variable PORT
-                  </FormText>
+                  </Form.Text>
                 </Col>
-              </FormGroup>
+              </Form.Group>
             )}
             {settings.runFromSystemd && (
-              <FormGroup row>
+              <Form.Group as={Row}>
                 <Col xs="12" md={fieldColWidthMd}>
-                  <FormText>
+                  <Form.Text>
                     The server was started by systemd, run signalk-server-setup
                     to change ports and ssl configuration.
-                  </FormText>
+                  </Form.Text>
                 </Col>
-              </FormGroup>
+              </Form.Group>
             )}
             {settings.options?.ssl && !settings.runFromSystemd && (
-              <FormGroup row>
+              <Form.Group as={Row}>
                 <Col md="2">
-                  <Label htmlFor="sslport">SSL Port</Label>
+                  <Form.Label htmlFor="sslport">SSL Port</Form.Label>
                 </Col>
                 <Col xs="12" md={fieldColWidthMd}>
-                  <Input
+                  <Form.Control
                     size={5}
                     style={{ width: 'auto' }}
                     type="text"
@@ -209,14 +201,14 @@ const ServerSettings: React.FC = () => {
                     onChange={handleChange}
                     value={settings.sslport || ''}
                   />
-                  <FormText color="muted">
+                  <Form.Text muted>
                     Saving a new value here will not have effect if overridden
                     by environment variable SSLPORT
-                  </FormText>
+                  </Form.Text>
                 </Col>
-              </FormGroup>
+              </Form.Group>
             )}
-            <FormGroup row>
+            <Form.Group as={Row}>
               <Col md="2">
                 <span className="col-form-label">Options</span>
               </Col>
@@ -228,11 +220,11 @@ const ServerSettings: React.FC = () => {
                         key={name}
                         className="d-flex align-items-center mb-2"
                       >
-                        <Label
+                        <Form.Label
                           style={{ marginRight: '15px', marginBottom: 0 }}
                           className="switch switch-text switch-primary"
                         >
-                          <Input
+                          <input
                             type="checkbox"
                             id={`option-${name}`}
                             name={name}
@@ -246,15 +238,15 @@ const ServerSettings: React.FC = () => {
                             data-off="Off"
                           />
                           <span className="switch-handle" />
-                        </Label>
+                        </Form.Label>
                         <span>{name}</span>
                       </div>
                     )
                   })}
               </Col>
-            </FormGroup>
+            </Form.Group>
 
-            <FormGroup row>
+            <Form.Group as={Row}>
               <Col md="2">
                 <span className="col-form-label">Interfaces</span>
               </Col>
@@ -262,11 +254,11 @@ const ServerSettings: React.FC = () => {
                 {Object.keys(SettableInterfaces).map((name) => {
                   return (
                     <div key={name} className="d-flex align-items-center mb-2">
-                      <Label
+                      <Form.Label
                         style={{ marginRight: '15px', marginBottom: 0 }}
                         className="switch switch-text switch-primary"
                       >
-                        <Input
+                        <input
                           type="checkbox"
                           id={`interface-${name}`}
                           name={name}
@@ -280,21 +272,21 @@ const ServerSettings: React.FC = () => {
                           data-off="Off"
                         />
                         <span className="switch-handle" />
-                      </Label>
+                      </Form.Label>
                       <span>{SettableInterfaces[name]}</span>
                     </div>
                   )
                 })}
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="pruneContextsMinutes">
+                <Form.Label htmlFor="pruneContextsMinutes">
                   Maximum age of inactive vessels&apos; data
-                </Label>
+                </Form.Label>
               </Col>
               <Col xs="12" md={fieldColWidthMd}>
-                <Input
+                <Form.Control
                   type="text"
                   id="pruneContextsMinutes"
                   name="pruneContextsMinutes"
@@ -302,18 +294,20 @@ const ServerSettings: React.FC = () => {
                   onChange={handleChange}
                   value={settings.pruneContextsMinutes || ''}
                 />
-                <FormText color="muted">
+                <Form.Text muted>
                   Vessels that have not been updated after this many minutes
                   will be removed
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="loggingDirectory">Data Logging Directory</Label>
+                <Form.Label htmlFor="loggingDirectory">
+                  Data Logging Directory
+                </Form.Label>
               </Col>
               <Col xs="12" md={fieldColWidthMd}>
-                <Input
+                <Form.Control
                   type="text"
                   id="loggingDirectory"
                   name="loggingDirectory"
@@ -321,25 +315,25 @@ const ServerSettings: React.FC = () => {
                   onChange={handleChange}
                   value={settings.loggingDirectory || ''}
                 />
-                <FormText color="muted">
+                <Form.Text muted>
                   Connections that have logging enabled create hourly log files
                   in Multiplexed format in this directory
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="keepMostRecentLogsOnly">
+                <Form.Label htmlFor="keepMostRecentLogsOnly">
                   Keep only most recent data log files
-                </Label>
+                </Form.Label>
               </Col>
               <Col xs="12" md={fieldColWidthMd}>
                 <div className="d-flex align-items-center">
-                  <Label
+                  <Form.Label
                     style={{ marginRight: '15px', marginBottom: 0 }}
                     className="switch switch-text switch-primary"
                   >
-                    <Input
+                    <input
                       type="checkbox"
                       name="keepMostRecentLogsOnly"
                       id="keepMostRecentLogsOnly"
@@ -353,12 +347,15 @@ const ServerSettings: React.FC = () => {
                       data-off="Off"
                     />
                     <span className="switch-handle" />
-                  </Label>
+                  </Form.Label>
                   <div>
-                    <Label htmlFor="logCountToKeep" className="visually-hidden">
+                    <Form.Label
+                      htmlFor="logCountToKeep"
+                      className="visually-hidden"
+                    >
                       Number of log files to keep
-                    </Label>
-                    <Input
+                    </Form.Label>
+                    <Form.Control
                       type="text"
                       id="logCountToKeep"
                       name="logCountToKeep"
@@ -367,28 +364,26 @@ const ServerSettings: React.FC = () => {
                       value={settings.logCountToKeep || ''}
                       style={{ width: '80px' }}
                     />
-                    <FormText color="muted">
-                      How many hourly files to keep
-                    </FormText>
+                    <Form.Text muted>How many hourly files to keep</Form.Text>
                   </div>
                 </div>
               </Col>
-            </FormGroup>
-            <FormGroup row>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Col md="2">
-                <Label htmlFor="apiOnly">
+                <Form.Label htmlFor="apiOnly">
                   API Only Mode
                   <br />
                   <i>(Course API)</i>
-                </Label>
+                </Form.Label>
               </Col>
               <Col xs="12" md={fieldColWidthMd}>
                 <div className="d-flex align-items-center mb-2">
-                  <Label
+                  <Form.Label
                     style={{ marginRight: '15px', marginBottom: 0 }}
                     className="switch switch-text switch-primary"
                   >
-                    <Input
+                    <input
                       type="checkbox"
                       name="apiOnly"
                       id="apiOnly"
@@ -402,24 +397,24 @@ const ServerSettings: React.FC = () => {
                       data-off="Off"
                     />
                     <span className="switch-handle" />
-                  </Label>
+                  </Form.Label>
                 </div>
-                <FormText color="muted">
+                <Form.Text muted>
                   Accept course operations only via HTTP requests. Destination
                   data from NMEA sources is not used.
-                </FormText>
+                </Form.Text>
               </Col>
-            </FormGroup>
+            </Form.Group>
           </Form>
-        </CardBody>
-        <CardFooter>
-          <Button size="sm" color="primary" onClick={handleSaveSettings}>
+        </Card.Body>
+        <Card.Footer>
+          <Button size="sm" variant="primary" onClick={handleSaveSettings}>
             <FontAwesomeIcon icon={faFloppyDisk} /> Save
           </Button>{' '}
-          <Badge color="danger" className="float-end">
+          <Badge bg="danger" className="float-end">
             Restart Required
           </Badge>
-        </CardFooter>
+        </Card.Footer>
       </Card>
     </div>
   )

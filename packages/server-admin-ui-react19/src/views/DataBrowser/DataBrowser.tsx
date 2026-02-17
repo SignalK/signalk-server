@@ -12,16 +12,10 @@ import Select, {
   type OptionProps,
   type SingleValue
 } from 'react-select'
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  Input,
-  Form,
-  Col,
-  Label,
-  FormGroup
-} from 'reactstrap'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
 import dayjs from 'dayjs'
 import VirtualizedMetaTable from './VirtualizedMetaTable'
 import VirtualizedDataTable from './VirtualizedDataTable'
@@ -520,7 +514,7 @@ const DataBrowser: React.FC = () => {
   return (
     <div className="animated fadeIn">
       <Card>
-        <CardBody>
+        <Card.Body>
           <Form
             action=""
             method="post"
@@ -530,7 +524,7 @@ const DataBrowser: React.FC = () => {
               e.preventDefault()
             }}
           >
-            <FormGroup row>
+            <Form.Group as={Row}>
               <Col xs="12" md="4">
                 <Select<SelectOption, false>
                   value={currentContext}
@@ -557,8 +551,8 @@ const DataBrowser: React.FC = () => {
                 />
               </Col>
               <Col xs="6" md="2">
-                <Label className="switch switch-text switch-primary">
-                  <Input
+                <label className="switch switch-text switch-primary">
+                  <input
                     type="checkbox"
                     id="databrowser-meta"
                     name="meta"
@@ -568,17 +562,17 @@ const DataBrowser: React.FC = () => {
                   />
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
-                </Label>{' '}
-                <Label
+                </label>{' '}
+                <label
                   htmlFor="databrowser-meta"
                   style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
                 >
                   Meta data
-                </Label>
+                </label>
               </Col>
               <Col xs="6" md="2">
-                <Label className="switch switch-text switch-primary">
-                  <Input
+                <label className="switch switch-text switch-primary">
+                  <input
                     type="checkbox"
                     id="databrowser-pause"
                     name="pause"
@@ -588,17 +582,17 @@ const DataBrowser: React.FC = () => {
                   />
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
-                </Label>{' '}
-                <Label
+                </label>{' '}
+                <label
                   htmlFor="databrowser-pause"
                   style={{ cursor: 'pointer' }}
                 >
                   Pause
-                </Label>
+                </label>
               </Col>
               <Col xs="6" md="2">
-                <Label className="switch switch-text switch-primary">
-                  <Input
+                <label className="switch switch-text switch-primary">
+                  <input
                     type="checkbox"
                     id="databrowser-raw"
                     name="raw"
@@ -608,22 +602,22 @@ const DataBrowser: React.FC = () => {
                   />
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
-                </Label>{' '}
-                <Label
+                </label>{' '}
+                <label
                   htmlFor="databrowser-raw"
                   style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
                 >
                   Raw Values
-                </Label>
+                </label>
               </Col>
-            </FormGroup>
+            </Form.Group>
             {context && context !== 'none' && (
-              <FormGroup row>
+              <Form.Group as={Row}>
                 <Col xs="3" md="2">
-                  <Label htmlFor="databrowser-search">Search</Label>
+                  <label htmlFor="databrowser-search">Search</label>
                 </Col>
                 <Col xs="12" md="12">
-                  <Input
+                  <Form.Control
                     type="text"
                     id="databrowser-search"
                     name="search"
@@ -632,7 +626,7 @@ const DataBrowser: React.FC = () => {
                     value={search}
                   />
                 </Col>
-              </FormGroup>
+              </Form.Group>
             )}
 
             {!includeMeta && context && context !== 'none' && (
@@ -664,19 +658,19 @@ const DataBrowser: React.FC = () => {
               />
             )}
           </Form>
-        </CardBody>
+        </Card.Body>
       </Card>
 
       {sources && (
         <Card>
-          <CardHeader
+          <Card.Header
             style={{ cursor: 'pointer', userSelect: 'none' }}
             onClick={() => setSourcesExpanded((prev) => !prev)}
           >
             Sources {sourcesExpanded ? '[-]' : '[+]'}
-          </CardHeader>
+          </Card.Header>
           {sourcesExpanded && (
-            <CardBody>
+            <Card.Body>
               <JSONTree
                 data={sources}
                 theme="default"
@@ -684,7 +678,7 @@ const DataBrowser: React.FC = () => {
                 sortObjectKeys
                 hideRoot
               />
-            </CardBody>
+            </Card.Body>
           )}
         </Card>
       )}
