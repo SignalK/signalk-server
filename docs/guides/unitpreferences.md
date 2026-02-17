@@ -67,21 +67,26 @@ You can configure your unit preferences in the Signal K Server Admin UI.
 ### Available Settings
 
 #### Active Preset
+
 The simplest way to configure units is to select a **Preset**. A preset is a collection of unit preferences for all standard categories.
 
 Common presets include:
+
 - **Nautical**: Knots for speed, feet or meters for depth, depending on common maritime usage.
 - **Metric**: Meters/sec, meters, Celsius.
 - **Imperial**: MPH, feet, Fahrenheit.
 
 #### Per-User Settings
+
 Preferences are stored **per user**. If you log in with your user account, your unit settings will follow you across different devices. If no user is logged in (or for anonymous users), the server's global default preset (configured by the administrator) is used.
 
 #### Custom Presets
+
 Advanced users can upload **Custom Presets** to define specific combinations of units that aren't covered by the built-in options.
 
 ### Overriding Specific Paths
-In addition to category-wide settings (e.g., "All speeds in Knots"), you can override units for specific data paths. For example, you might want *Boat Speed* in Knots but *Wind Speed* in Meters/Second.
+
+In addition to category-wide settings (e.g., "All speeds in Knots"), you can override units for specific data paths. For example, you might want _Boat Speed_ in Knots but _Wind Speed_ in Meters/Second.
 
 These overrides are typically managed by editing the server configuration. When a specific path has an override, it takes precedence over the general category setting in your active preset.
 
@@ -98,7 +103,7 @@ Unit categories are the mechanism that allows the server to apply unit preferenc
 3.  **Target Unit**: Your active Preset defines a **Target Unit** for each category. For example, your preset might map the `speed` category to `kn` (knots).
 4.  **Conversion**: When data is requested, the server looks up the path's category, finds the target unit from your preset, and provides the conversion formula.
 
-This system means that if you set your `speed` preference to Knots, it applies to *Boat Speeds*, *Wind Speeds* and any other path assigned to the `speed` category.
+This system means that if you set your `speed` preference to Knots, it applies to _Boat Speeds_, _Wind Speeds_ and any other path assigned to the `speed` category.
 
 ### Standard Categories
 
@@ -116,11 +121,11 @@ The following categories are available by default:
 - **volumeRate**: Flow rates (Base: m³/s). Examples: `propulsion.*.fuel.rate`.
 - **mass**: Weight/Mass (Base: kg).
 - **electrical**:
-    - **voltage** (Base: V). Examples: `electrical.batteries.*.voltage`.
-    - **current** (Base: A). Examples: `electrical.batteries.*.current`.
-    - **charge** (Base: C). Examples: `electrical.batteries.*.capacity.stateOfCharge`.
-    - **power** (Base: W).
-    - **energy** (Base: J).
+  - **voltage** (Base: V). Examples: `electrical.batteries.*.voltage`.
+  - **current** (Base: A). Examples: `electrical.batteries.*.current`.
+  - **charge** (Base: C). Examples: `electrical.batteries.*.capacity.stateOfCharge`.
+  - **power** (Base: W).
+  - **energy** (Base: J).
 - **frequency**: (Base: Hz). Examples: `propulsion.*.revolutions`.
 - **time**: Durations (Base: s).
 - **percentage**: Ratios and levels (Base: ratio 0-1). Examples: `tanks.*.currentLevel`, `electrical.batteries.*.capacity.stateOfCharge`.
