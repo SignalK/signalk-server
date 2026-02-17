@@ -151,8 +151,7 @@ const {
   reloadPreset,
   reloadCustomDefinitions,
   reloadCustomCategories,
-  getDefaultCategory,
-  DEFAULT_PRESET
+  getDefaultCategory
 } = require('../unitpreferences')
 
 const UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
