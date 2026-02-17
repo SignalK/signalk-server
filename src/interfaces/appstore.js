@@ -201,7 +201,7 @@ module.exports = function (app) {
     }
   }
 
-  function getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap) {
+  function getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap = {}) {
     const all = emptyAppStoreInfo()
 
     if (
