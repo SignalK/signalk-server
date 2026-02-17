@@ -31,7 +31,7 @@ interface ModuleData {
   location: string
 }
 
-interface NpmDistTags {
+export interface NpmDistTags {
   latest: string
   [prerelease: string]: string
 }
@@ -320,6 +320,46 @@ async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
   return moduleData
 }
 
+let distTagsCache: { time: number; data: Record<string, NpmDistTags> } = {
+  time: 0,
+  data: {}
+}
+
+async function fetchDistTagsForPackages(
+  packageNames: string[]
+): Promise<Record<string, NpmDistTags>> {
+  if (Date.now() - distTagsCache.time < 60 * 1000) {
+    return distTagsCache.data
+  }
+
+  const result: Record<string, NpmDistTags> = {}
+  const CONCURRENCY = 10
+  let i = 0
+
+  while (i < packageNames.length) {
+    const batch = packageNames.slice(i, i + CONCURRENCY)
+    const settled = await Promise.allSettled(
+      batch.map(async (name) => {
+        const res = await fetch(
+          `https://registry.npmjs.org/-/package/${name}/dist-tags`
+        )
+        if (!res.ok) return null
+        const tags = (await res.json()) as NpmDistTags
+        return { name, tags }
+      })
+    )
+    for (const entry of settled) {
+      if (entry.status === 'fulfilled' && entry.value) {
+        result[entry.value.name] = entry.value.tags
+      }
+    }
+    i += CONCURRENCY
+  }
+
+  distTagsCache = { time: Date.now(), data: result }
+  return result
+}
+
 function doFetchDistTags() {
   return fetch('https://registry.npmjs.org/-/package/signalk-server/dist-tags')
 }
@@ -424,6 +464,7 @@ module.exports = {
   removeModule,
   isTheServerModule,
   findModulesWithKeyword,
+  fetchDistTagsForPackages,
   getLatestServerVersion,
   checkForNewServerVersion,
   getAuthor,

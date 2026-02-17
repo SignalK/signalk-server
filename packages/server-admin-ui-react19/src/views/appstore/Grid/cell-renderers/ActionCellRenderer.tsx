@@ -49,6 +49,7 @@ export default function ActionCellRenderer({
 }: ActionCellRendererProps) {
   const [showVersionsModal, setShowVersionsModal] = useState(false)
   const [versions, setVersions] = useState<string[]>([])
+  const [distTags, setDistTags] = useState<Record<string, string>>({})
   const [loadingVersions, setLoadingVersions] = useState(false)
 
   const handleInstallClick = () => {
@@ -83,6 +84,9 @@ export default function ActionCellRenderer({
       if (packageData.versions) {
         const versionList = semver.rsort(Object.keys(packageData.versions))
         setVersions(versionList)
+      }
+      if (packageData['dist-tags']) {
+        setDistTags(packageData['dist-tags'])
       }
     } catch (error) {
       console.error('Failed to fetch versions:', error)
@@ -257,34 +261,48 @@ export default function ActionCellRenderer({
               }}
             >
               <ListGroup>
-                {versions.map((version) => (
-                  <ListGroupItem
-                    key={version}
-                    className="d-flex justify-content-between align-items-center"
-                  >
-                    <span>
-                      <strong>{version}</strong>
-                      {app.installedVersion === version && (
-                        <span className="badge text-bg-success ms-2">
-                          Installed
-                        </span>
+                {versions.map((version) => {
+                  const isPrerelease = !!semver.prerelease(version)
+
+                  return (
+                    <ListGroupItem
+                      key={version}
+                      className="d-flex justify-content-between align-items-center"
+                    >
+                      <span>
+                        <strong>{version}</strong>
+                        {app.installedVersion === version && (
+                          <span className="badge text-bg-success ms-2">
+                            Installed
+                          </span>
+                        )}
+                        {distTags.latest === version && (
+                          <span className="badge text-bg-primary ms-2">
+                            latest
+                          </span>
+                        )}
+                        {isPrerelease && (
+                          <span className="badge text-bg-warning ms-2">
+                            pre-release
+                          </span>
+                        )}
+                      </span>
+                      {app.installedVersion !== version && (
+                        <Button
+                          size="sm"
+                          color="light"
+                          onClick={() => handleInstallVersionClick(version)}
+                        >
+                          <FontAwesomeIcon
+                            className="icon__update me-2"
+                            icon={faCloudArrowDown}
+                          />
+                          Install
+                        </Button>
                       )}
-                    </span>
-                    {app.installedVersion !== version && (
-                      <Button
-                        size="sm"
-                        color="light"
-                        onClick={() => handleInstallVersionClick(version)}
-                      >
-                        <FontAwesomeIcon
-                          className="icon__update me-2"
-                          icon={faCloudArrowDown}
-                        />
-                        Install
-                      </Button>
-                    )}
-                  </ListGroupItem>
-                ))}
+                    </ListGroupItem>
+                  )
+                })}
               </ListGroup>
             </div>
           ) : (

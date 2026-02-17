@@ -17,11 +17,13 @@
 import { createDebug } from '../debug'
 const debug = createDebug('signalk-server:interfaces:appstore')
 const _ = require('lodash')
-const { gt } = require('semver')
+const semver = require('semver')
+const { gt } = semver
 const { installModule, removeModule } = require('../modules')
 const {
   isTheServerModule,
   findModulesWithKeyword,
+  fetchDistTagsForPackages,
   getLatestServerVersion,
   getAuthor,
   getKeywords
@@ -124,20 +126,17 @@ module.exports = function (app) {
       )
 
       app.get(`${SERVERROUTESPREFIX}/appstore/available/`, (req, res) => {
-        findPluginsAndWebapps()
-          .then(([plugins, webapps]) => {
-            getLatestServerVersion(app.config.version)
-              .then((serverVersion) => {
-                const result = getAllModuleInfo(plugins, webapps, serverVersion)
-                res.json(result)
-              })
-              .catch(() => {
-                //could be that npmjs is down, so we can not get
-                //server version, but we have app store data
-                const result = getAllModuleInfo(plugins, webapps, '0.0.0')
-                res.json(result)
-              })
-          })
+        const installedNames = getInstalledPackageNames()
+
+        Promise.all([
+          findPluginsAndWebapps(),
+          getLatestServerVersion(app.config.version).catch(() => '0.0.0'),
+          fetchDistTagsForPackages(installedNames).catch(() => ({}))
+        ])
+          .then(([[plugins, webapps], serverVersion, distTagsMap]) =>
+            getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap)
+          )
+          .then((result) => res.json(result))
           .catch((error) => {
             console.log(error.message)
             debug(error.stack)
@@ -162,6 +161,19 @@ module.exports = function (app) {
         })
       ]
     })
+  }
+
+  function getInstalledPackageNames() {
+    return [
+      ...new Set(
+        [
+          ...(app.plugins || []).map((p) => p.packageName),
+          ...(app.webapps || []).map((w) => w.name),
+          ...(app.addons || []).map((a) => a.name),
+          ...(app.embeddablewebapps || []).map((e) => e.name)
+        ].filter(Boolean)
+      )
+    ]
   }
 
   function getPlugin(id) {
@@ -189,7 +201,7 @@ module.exports = function (app) {
     }
   }
 
-  function getAllModuleInfo(plugins, webapps, serverVersion) {
+  function getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap) {
     const all = emptyAppStoreInfo()
 
     if (
@@ -228,8 +240,8 @@ module.exports = function (app) {
       all.canUpdateServer = false
     }
 
-    getModulesInfo(plugins, getPlugin, all)
-    getModulesInfo(webapps, getWebApp, all)
+    getModulesInfo(plugins, getPlugin, all, distTagsMap)
+    getModulesInfo(webapps, getWebApp, all, distTagsMap)
 
     if (process.env.PLUGINS_WITH_UPDATE_DISABLED) {
       let disabled = process.env.PLUGINS_WITH_UPDATE_DISABLED.split(',')
@@ -239,7 +251,7 @@ module.exports = function (app) {
     return all
   }
 
-  function getModulesInfo(modules, existing, result) {
+  function getModulesInfo(modules, existing, result, distTagsMap) {
     modules.forEach((plugin) => {
       const name = plugin.package.name
       const version = plugin.package.version
@@ -260,6 +272,30 @@ module.exports = function (app) {
         isEmbeddableWebapp: plugin.package.keywords.some(
           (v) => v === 'signalk-embeddable-webapp'
         )
+      }
+
+      const tags = distTagsMap[name]
+      if (tags) {
+        let highest = null
+        for (const [tag, tagVersion] of Object.entries(tags)) {
+          if (tag === 'latest') continue
+          const parsed = semver.parse(tagVersion)
+          if (
+            parsed &&
+            parsed.prerelease.length > 0 &&
+            semver.gt(
+              `${parsed.major}.${parsed.minor}.${parsed.patch}`,
+              version
+            )
+          ) {
+            if (!highest || semver.gt(tagVersion, highest)) {
+              highest = tagVersion
+            }
+          }
+        }
+        if (highest) {
+          pluginInfo.prereleaseVersion = highest
+        }
       }
 
       const installedModule = existing(name)
@@ -310,14 +346,17 @@ module.exports = function (app) {
 
   function sendAppStoreChangedEvent() {
     findPluginsAndWebapps().then(([plugins, webapps]) => {
-      getLatestServerVersion(app.config.version).then((serverVersion) => {
-        const result = getAllModuleInfo(plugins, webapps, serverVersion)
-        app.emit('serverevent', {
-          type: 'APP_STORE_CHANGED',
-          from: 'signalk-server',
-          data: result
+      getLatestServerVersion(app.config.version)
+        .then((serverVersion) =>
+          getAllModuleInfo(plugins, webapps, serverVersion)
+        )
+        .then((result) => {
+          app.emit('serverevent', {
+            type: 'APP_STORE_CHANGED',
+            from: 'signalk-server',
+            data: result
+          })
         })
-      })
     })
   }
 
