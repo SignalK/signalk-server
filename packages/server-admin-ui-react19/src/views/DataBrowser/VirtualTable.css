@@ -32,6 +32,18 @@
   border-right: none;
 }
 
+/* 5-column layout when context column is shown */
+.virtual-table[data-show-context='true'] .virtual-table-header,
+.virtual-table[data-show-context='true'] .virtual-table-row {
+  grid-template-columns:
+    minmax(150px, 1.5fr) minmax(80px, 1fr) minmax(120px, 2fr)
+    minmax(80px, 0.8fr) minmax(120px, 1.2fr);
+}
+
+.virtual-table-cell.context-cell {
+  min-width: 80px;
+}
+
 .virtual-table-body {
   position: relative;
 }
@@ -151,6 +163,13 @@
     grid-template-columns:
       minmax(120px, 1.5fr) minmax(100px, 2fr) minmax(70px, 0.8fr)
       minmax(100px, 1.2fr);
+  }
+
+  .virtual-table[data-show-context='true'] .virtual-table-header,
+  .virtual-table[data-show-context='true'] .virtual-table-row {
+    grid-template-columns:
+      minmax(120px, 1.5fr) minmax(70px, 1fr) minmax(100px, 2fr)
+      minmax(70px, 0.8fr) minmax(100px, 1.2fr);
   }
 }
 
