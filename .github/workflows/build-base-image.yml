@@ -63,6 +63,9 @@ jobs:
             node_safe: 24
             platform: linux/arm64
     runs-on: ${{ matrix.vm }}
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3
@@ -72,7 +75,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Ubuntu baseimages
         uses: docker/build-push-action@v6
@@ -89,6 +92,8 @@ jobs:
   create-and-push-manifest:
     needs: [build-images]
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     strategy:
       matrix:
         os: [24.04, alpine]
@@ -113,7 +118,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create and push multi-arch manifest to GHCR
         uses: int128/docker-manifest-create-action@v2
@@ -154,7 +159,7 @@ jobs:
         shell: bash
         env:
           GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_HUB_USERNAME: signalkci
           DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
@@ -182,4 +187,4 @@ jobs:
           delete-untagged: true
           delete-tags: |
             amd-*,arm-*
-          token: ${{ secrets.GHCR_PAT }} # Need to have delete permission
+          token: ${{ secrets.GITHUB_TOKEN }}

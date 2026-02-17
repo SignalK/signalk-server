@@ -167,6 +167,9 @@ jobs:
             node_safe: 24
 
     runs-on: ${{ matrix.vm }}
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -177,7 +180,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set TAG for build-args
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/v}" >> $GITHUB_OUTPUT
@@ -196,6 +199,9 @@ jobs:
   create-and-push-manifest:
     needs: docker_images
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         os: [24.04, alpine]
@@ -245,7 +251,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Create and push multi-arch manifest to GHCR
         uses: int128/docker-manifest-create-action@v2
         with:
@@ -299,7 +305,7 @@ jobs:
         shell: bash
         env:
           GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_HUB_USERNAME: signalkci
           DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
@@ -346,7 +352,7 @@ jobs:
           delete-untagged: true
           delete-tags: |
             *-${{ github.run_id }}
-          token: ${{ secrets.GHCR_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   deploy_fly:
     runs-on: ubuntu-latest
