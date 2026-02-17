@@ -39,17 +39,13 @@ function VirtualizedDataTable({
   showContext
 }: VirtualizedDataTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  // Track path$SourceKeys.length to reset range when data changes
-  const [keysLength, setKeysLength] = useState(path$SourceKeys.length)
   const [isNarrowScreen, setIsNarrowScreen] = useState(
     typeof window !== 'undefined' && window.innerWidth <= 768
   )
 
-  // Row height estimates: stacked mobile layout is taller than grid layout
-  const rowHeight = isNarrowScreen ? 120 : 40
-  const overscan = isNarrowScreen ? 5 : 15
+  const rowHeight = raw ? 150 : isNarrowScreen ? 120 : 40
+  const overscan = raw ? 5 : isNarrowScreen ? 5 : 15
 
-  // Compute initial visible range synchronously for first render
   const computeInitialRange = useCallback(() => {
     const visibleCount =
       Math.ceil(window.innerHeight / rowHeight) + overscan * 2
@@ -58,20 +54,12 @@ function VirtualizedDataTable({
 
   const [visibleRange, setVisibleRange] = useState(computeInitialRange)
 
-  // Reset visible range when path$SourceKeys length changes
-  if (path$SourceKeys.length !== keysLength) {
-    setKeysLength(path$SourceKeys.length)
-    setVisibleRange(computeInitialRange())
-  }
-
-  // Track screen width for mobile layout detection
   useEffect(() => {
     const checkWidth = () => setIsNarrowScreen(window.innerWidth <= 768)
     window.addEventListener('resize', checkWidth)
     return () => window.removeEventListener('resize', checkWidth)
   }, [])
 
-  // Compute visible range from DOM measurements
   const computeVisibleRange = useCallback(() => {
     if (!containerRef.current) return null
 
@@ -79,7 +67,6 @@ function VirtualizedDataTable({
     const containerTop = rect.top
     const viewportHeight = window.innerHeight
 
-    // Calculate which rows are visible
     let startOffset = 0
     if (containerTop < 0) {
       startOffset = Math.abs(containerTop)
@@ -98,7 +85,6 @@ function VirtualizedDataTable({
     return { start: startIndex, end: endIndex, visibleCount }
   }, [path$SourceKeys.length, rowHeight, overscan])
 
-  // Set up scroll listener
   useEffect(() => {
     let ticking = false
     const handleScroll = () => {
@@ -107,7 +93,6 @@ function VirtualizedDataTable({
           const computed = computeVisibleRange()
           if (computed) {
             setVisibleRange((prev) => {
-              // Only update if range actually changed to avoid excessive re-renders
               const atStart = computed.start === 0
               const atEnd = computed.end >= path$SourceKeys.length - 1
               const significantChange =
@@ -129,7 +114,6 @@ function VirtualizedDataTable({
       }
     }
 
-    // Trigger initial measurement
     handleScroll()
 
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -141,27 +125,19 @@ function VirtualizedDataTable({
     }
   }, [computeVisibleRange, path$SourceKeys.length])
 
-  // Cleanup subscriptions on unmount
-  useEffect(() => {
-    return () => {
-      granularSubscriptionManager.unsubscribeAll()
-    }
-  }, [])
+  const spacerBeforeHeight = raw ? 0 : visibleRange.start * rowHeight
+  const spacerAfterHeight = raw
+    ? 0
+    : Math.max(0, (path$SourceKeys.length - visibleRange.end - 1) * rowHeight)
 
-  // Handle pause/unpause
-  useEffect(() => {
-    if (isPaused) {
-      granularSubscriptionManager.unsubscribeAll()
-    }
-  }, [isPaused])
-
-  const spacerBeforeHeight = visibleRange.start * rowHeight
-  const spacerAfterHeight = Math.max(
-    0,
-    (path$SourceKeys.length - visibleRange.end - 1) * rowHeight
-  )
-
+  // Raw mode: render all rows, content-visibility handles off-screen skipping.
   const visibleItems: VisibleItem[] = useMemo(() => {
+    if (raw) {
+      return path$SourceKeys.map((path$SourceKey, i) => ({
+        index: i,
+        path$SourceKey
+      }))
+    }
     const end = Math.min(visibleRange.end + 1, path$SourceKeys.length)
     return path$SourceKeys
       .slice(visibleRange.start, end)
@@ -169,10 +145,8 @@ function VirtualizedDataTable({
         index: visibleRange.start + i,
         path$SourceKey
       }))
-  }, [visibleRange.start, visibleRange.end, path$SourceKeys])
+  }, [raw, visibleRange.start, visibleRange.end, path$SourceKeys])
 
-  // Report visible paths to granular subscription manager
-  // Must be after visibleItems useMemo since it depends on it
   useEffect(() => {
     if (isPaused) return
     if (visibleItems.length === 0) return
@@ -208,7 +182,6 @@ function VirtualizedDataTable({
       ref={containerRef}
       data-show-context={showContext ? 'true' : undefined}
     >
-      {/* Header */}
       <div className="virtual-table-header">
         <div className="virtual-table-header-cell">Path</div>
         {showContext && (
@@ -247,14 +220,11 @@ function VirtualizedDataTable({
         </div>
       </div>
 
-      {/* Virtualized Body - using spacers instead of absolute positioning */}
       <div className="virtual-table-body">
-        {/* Spacer for rows above visible range */}
         {spacerBeforeHeight > 0 && (
           <div style={{ height: spacerBeforeHeight }} />
         )}
 
-        {/* Visible rows - rendered in normal flow for variable heights */}
         {visibleItems.map((item) => (
           <DataRow
             key={item.path$SourceKey}
@@ -269,14 +239,19 @@ function VirtualizedDataTable({
           />
         ))}
 
-        {/* Spacer for rows below visible range */}
         {spacerAfterHeight > 0 && <div style={{ height: spacerAfterHeight }} />}
       </div>
 
       <div className="virtual-table-info">
-        Showing {visibleItems.length} of {path$SourceKeys.length} paths (rows{' '}
-        {visibleRange.start + 1}-
-        {Math.min(visibleRange.end + 1, path$SourceKeys.length)})
+        {raw ? (
+          <>Showing {path$SourceKeys.length} paths</>
+        ) : (
+          <>
+            Showing {visibleItems.length} of {path$SourceKeys.length} paths
+            (rows {visibleRange.start + 1}-
+            {Math.min(visibleRange.end + 1, path$SourceKeys.length)})
+          </>
+        )}
       </div>
     </div>
   )

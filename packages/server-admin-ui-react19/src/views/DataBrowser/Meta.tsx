@@ -51,6 +51,7 @@ function generateZoneId(): string {
 interface MetaProps {
   meta: MetaData
   path: string
+  context?: string
 }
 
 interface MetaFormRowProps {
@@ -61,6 +62,7 @@ interface MetaFormRowProps {
   setKey: (key: string) => void
   deleteKey: () => void
   renderValue: React.FC<ValueRenderProps>
+  idPrefix: string
 }
 
 interface ValueRenderProps {
@@ -171,22 +173,27 @@ const NumberValue: React.FC<ValueRenderProps> = ({
   />
 )
 
-const MethodSelect: React.FC<ValueRenderProps> = ({ setValue, value }) => {
+const MethodSelect: React.FC<ValueRenderProps> = ({
+  setValue,
+  value,
+  inputId
+}) => {
   if (!Array.isArray(value)) {
     setValue([])
     return null
   }
+  const baseId = inputId || 'meta-method'
   return (
     <>
       {['sound', 'visual'].map((method) => (
         <label
           key={method}
           className="switch switch-text switch-primary"
-          htmlFor={`meta-alertMethod-${method}`}
+          htmlFor={`${baseId}-${method}`}
         >
           <input
             type="checkbox"
-            id={`meta-alertMethod-${method}`}
+            id={`${baseId}-${method}`}
             className="switch-input"
             onChange={() => {
               const arr = value as string[]
@@ -349,14 +356,39 @@ const saveMeta = (path: string, meta: MetaData) => {
   })
 }
 
-const Meta: React.FC<MetaProps> = ({ meta, path }) => {
+const Meta: React.FC<MetaProps> = ({ meta, path, context }) => {
   const loginStatus = useLoginStatus()
+  const [isExpanded, setIsExpanded] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [localMeta, setLocalMeta] = useState<MetaData>(meta)
+
+  const ctxPrefix = context ? context.replace(/[.:]/g, '-') + '-' : ''
+  const idPrefix = `meta-${ctxPrefix}${path.replace(/\./g, '-')}`
 
   const canEditMetadata =
     !loginStatus.authenticationRequired ||
     (loginStatus.status === 'loggedIn' && loginStatus.userLevel === 'admin')
+
+  const summaryParts: string[] = []
+  if (meta.units) summaryParts.push(meta.units)
+  if (meta.description) summaryParts.push(meta.description)
+  if (meta.displayName) summaryParts.push(`"${meta.displayName}"`)
+  const fieldCount = Object.keys(meta).length
+  if (fieldCount > summaryParts.length) {
+    summaryParts.push(`+${fieldCount - summaryParts.length} more`)
+  }
+
+  if (!isExpanded) {
+    return (
+      <span
+        onClick={() => setIsExpanded(true)}
+        style={{ cursor: 'pointer' }}
+        title="Click to expand"
+      >
+        {summaryParts.length > 0 ? summaryParts.join(' | ') : '(no meta)'}
+      </span>
+    )
+  }
 
   const metaValues: Array<{ key: string; value: unknown }> = METAFIELDS.reduce(
     (acc: Array<{ key: string; value: unknown }>, key) => {
@@ -380,6 +412,15 @@ const Meta: React.FC<MetaProps> = ({ meta, path }) => {
 
   return (
     <>
+      <span
+        onClick={() => {
+          if (!isEditing) setIsExpanded(false)
+        }}
+        style={{ cursor: isEditing ? 'default' : 'pointer' }}
+        title={isEditing ? undefined : 'Click to collapse'}
+      >
+        [-]
+      </span>{' '}
       {!isEditing && canEditMetadata && (
         <FontAwesomeIcon icon={faPencil} onClick={() => setIsEditing(true)} />
       )}
@@ -423,7 +464,8 @@ const Meta: React.FC<MetaProps> = ({ meta, path }) => {
                   delete copy[key]
                   setLocalMeta(copy)
                 },
-                renderValue: () => <></>
+                renderValue: () => <></>,
+                idPrefix
               }
 
               return (
@@ -456,6 +498,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path }) => {
           setZones={(newZones) =>
             setLocalMeta({ ...localMeta, zones: newZones })
           }
+          idPrefix={idPrefix}
         />
       </Form>
     </>
@@ -463,9 +506,16 @@ const Meta: React.FC<MetaProps> = ({ meta, path }) => {
 }
 
 const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
-  const { fieldKey, renderValue: V, disabled, setKey, deleteKey } = props
-  const fieldSelectId = `meta-field-${fieldKey}`
-  const valueInputId = `meta-value-${fieldKey}`
+  const {
+    fieldKey,
+    renderValue: V,
+    disabled,
+    setKey,
+    deleteKey,
+    idPrefix
+  } = props
+  const fieldSelectId = `${idPrefix}-field-${fieldKey}`
+  const valueInputId = `${idPrefix}-value-${fieldKey}`
   return (
     <Form.Group as={Row}>
       <Col xs="3" md="2" className={'col-form-label'}>
@@ -541,6 +591,8 @@ interface ZoneProps {
   showHint: boolean
   setZone: (zone: Zone) => void
   deleteZone: () => void
+  idPrefix: string
+  index: number
 }
 
 const ZoneRow: React.FC<ZoneProps> = ({
@@ -548,11 +600,12 @@ const ZoneRow: React.FC<ZoneProps> = ({
   isEditing,
   showHint,
   setZone,
-  deleteZone
+  deleteZone,
+  idPrefix,
+  index
 }) => {
   const { state, lower, upper, message } = zone
-  // Generate unique id based on zone values for accessibility
-  const zoneId = `zone-${lower}-${upper}-${state}`.replace(/\s+/g, '-')
+  const zoneId = `${idPrefix}-zone-${index}`
   return (
     <Form.Group as={Row}>
       <Col xs="2" md="2">
@@ -638,11 +691,12 @@ interface ZonesProps {
   zones: Zone[]
   isEditing: boolean
   setZones: (zones: Zone[]) => void
+  idPrefix: string
 }
 
 // Zones component manages internal IDs for stable React keys while
 // passing clean Zone objects to the parent setZones callback
-function Zones({ zones, isEditing, setZones }: ZonesProps) {
+function Zones({ zones, isEditing, setZones, idPrefix }: ZonesProps) {
   // Generate stable IDs for zones - initialized once based on zones length
   // Using lazy initialization to generate IDs only on first render
   const [zoneIds, setZoneIds] = useState<string[]>(() =>
@@ -702,6 +756,8 @@ function Zones({ zones, isEditing, setZones }: ZonesProps) {
                 const newZones = zones.filter((_, index) => index !== i)
                 setZones(newZones)
               }}
+              idPrefix={idPrefix}
+              index={i}
             />
           ))}
         </Form>

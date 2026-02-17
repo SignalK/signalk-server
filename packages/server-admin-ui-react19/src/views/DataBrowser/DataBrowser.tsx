@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
   useDeferredValue,
   useTransition
 } from 'react'
@@ -28,6 +29,9 @@ import {
   getWebSocketService
 } from '../../hooks/useWebSocket'
 import { useStore, useShallow } from '../../store'
+
+// Imperative accessor — avoids subscribing the component to every value change.
+const getSignalkData = () => useStore.getState().signalkData
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
@@ -91,7 +95,7 @@ interface Sources {
 }
 
 const DataBrowser: React.FC = () => {
-  const { ws: webSocket, isConnected } = useWebSocket()
+  const { ws: webSocket, isConnected, skSelf } = useWebSocket()
 
   const [hasData, setHasData] = useState(false)
   const [pause, setPause] = useState(
@@ -125,11 +129,14 @@ const DataBrowser: React.FC = () => {
   const isSearchStale = search !== deferredSearch
   const [, startTransition] = useTransition()
 
-  // Subscribe to Zustand signalkData directly - React Compiler tracks this properly
-  // Using useShallow to only re-render when contexts change
-  const signalkData = useStore(useShallow((s) => s.signalkData))
+  // dataVersion only increments when new paths appear, not on every value update.
+  const dataVersion = useStore((s) => s.dataVersion)
 
-  // Get Zustand actions for writing data
+  // Only re-renders when the set of contexts changes (new vessel appears / disappears).
+  const contextKeys = useStore(
+    useShallow((s) => Object.keys(s.signalkData).sort())
+  )
+
   const updatePath = useStore((s) => s.updatePath)
   const updateMeta = useStore((s) => s.updateMeta)
   const getPathData = useStore((s) => s.getPathData)
@@ -138,7 +145,6 @@ const DataBrowser: React.FC = () => {
   const webSocketRef = useRef<WebSocket | null>(null)
   const isMountedRef = useRef(true)
 
-  // Load sources data from the API and process NMEA2000 device names
   const loadSources = useCallback(async (): Promise<Sources> => {
     const response = await fetch(`/signalk/v1/api/sources`, {
       credentials: 'include'
@@ -167,8 +173,7 @@ const DataBrowser: React.FC = () => {
         return
       }
 
-      // Get skSelf directly from the service to avoid stale closure issues
-      // The service always has the current value from the hello message
+      // Read from service directly to avoid stale closure
       const currentSkSelf = getWebSocketService().getSkSelf()
       const deltaMsg = msg as DeltaMessage
 
@@ -177,7 +182,6 @@ const DataBrowser: React.FC = () => {
       }
 
       if (deltaMsg.context && deltaMsg.updates) {
-        // Use currentSkSelf to determine if this is the self context
         const key =
           deltaMsg.context === currentSkSelf ? 'self' : deltaMsg.context
 
@@ -246,16 +250,16 @@ const DataBrowser: React.FC = () => {
     [pause, context, hasData, updatePath, updateMeta, getPathData]
   )
 
-  // Subscribe to delta messages using the new hook pattern
   useDeltaMessages(handleMessage)
 
   const subscribeToDataIfNeeded = useCallback(() => {
-    // Wait for WebSocket to be actually connected (readyState OPEN)
-    // before starting discovery, otherwise the subscription message is dropped
+    // Wait for hello message (skSelf) before discovery — handleMessage needs
+    // the vessel's self identity to map contexts correctly.
     if (
       !pause &&
       webSocket &&
       isConnected &&
+      skSelf &&
       (webSocket !== webSocketRef.current || didSubscribeRef.current === false)
     ) {
       granularSubscriptionManager.setWebSocket(
@@ -266,9 +270,8 @@ const DataBrowser: React.FC = () => {
       webSocketRef.current = webSocket
       didSubscribeRef.current = true
     }
-  }, [pause, webSocket, isConnected])
+  }, [pause, webSocket, isConnected, skSelf])
 
-  // Initial setup effect - load sources on mount
   useEffect(() => {
     isMountedRef.current = true
 
@@ -283,14 +286,14 @@ const DataBrowser: React.FC = () => {
     }
   }, [loadSources])
 
-  const contextOptions: SelectOption[] = (() => {
-    const contexts = Object.keys(signalkData).sort()
+  const contextOptions: SelectOption[] = useMemo(() => {
+    const currentData = getSignalkData()
     const options: SelectOption[] = [
       { value: 'all', label: 'ALL', section: 'all' }
     ]
 
-    if (contexts.includes('self')) {
-      const contextData = signalkData['self']?.['name'] as
+    if (contextKeys.includes('self')) {
+      const contextData = currentData['self']?.['name'] as
         | { value?: string }
         | undefined
       const contextName = contextData?.value
@@ -302,9 +305,9 @@ const DataBrowser: React.FC = () => {
     }
 
     let isFirst = true
-    contexts.forEach((key) => {
+    contextKeys.forEach((key) => {
       if (key !== 'self') {
-        const contextData = signalkData[key]?.['name'] as
+        const contextData = currentData[key]?.['name'] as
           | { value?: string }
           | undefined
         const contextName = contextData?.value
@@ -319,14 +322,26 @@ const DataBrowser: React.FC = () => {
     })
 
     return options
-  })()
+  }, [contextKeys])
 
-  // WebSocket subscription effect - separate from setup to avoid cleanup cycles
   useEffect(() => {
     subscribeToDataIfNeeded()
   }, [subscribeToDataIfNeeded])
 
-  // Cleanup WebSocket subscription only on unmount
+  // Re-subscribe when switching back from meta view — the subscription manager
+  // may have gone idle while the data table was unmounted.
+  const prevIncludeMetaRef = useRef(includeMeta)
+  useEffect(() => {
+    if (prevIncludeMetaRef.current && !includeMeta) {
+      const state = granularSubscriptionManager.getState()
+      if (state.state === 'idle') {
+        didSubscribeRef.current = false
+        subscribeToDataIfNeeded()
+      }
+    }
+    prevIncludeMetaRef.current = includeMeta
+  }, [includeMeta, subscribeToDataIfNeeded])
+
   useEffect(() => {
     return () => {
       granularSubscriptionManager.unsubscribeAll()
@@ -353,7 +368,6 @@ const DataBrowser: React.FC = () => {
     []
   )
 
-  // Direct computation - React 19 Compiler handles memoization
   const currentContext: SelectOption | null =
     contextOptions.find((option) => option.value === context) || null
 
@@ -368,15 +382,14 @@ const DataBrowser: React.FC = () => {
 
   const showContext = context === 'all'
 
-  // Compute filtered path keys from Zustand state directly
-  // When context is 'all', keys are prefixed with context\0 for uniqueness
-  const filteredPathKeys: string[] = (() => {
-    const contexts = context === 'all' ? Object.keys(signalkData) : [context]
+  const filteredPathKeys: string[] = useMemo(() => {
+    const currentData = dataVersion >= 0 ? getSignalkData() : {}
+    const contexts = context === 'all' ? Object.keys(currentData) : [context]
 
     const filtered: string[] = []
 
     for (const ctx of contexts) {
-      const contextData = signalkData[ctx] || {}
+      const contextData = currentData[ctx] || {}
       for (const key of Object.keys(contextData)) {
         if (deferredSearch && deferredSearch.length > 0) {
           if (key.toLowerCase().indexOf(deferredSearch.toLowerCase()) === -1) {
@@ -396,7 +409,13 @@ const DataBrowser: React.FC = () => {
     }
 
     return filtered.sort()
-  })()
+  }, [
+    context,
+    deferredSearch,
+    sourceFilterActive,
+    selectedSources,
+    dataVersion
+  ])
 
   const toggleMeta = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -484,13 +503,14 @@ const DataBrowser: React.FC = () => {
     []
   )
 
-  const getUniquePathsForMeta = useCallback(() => {
-    const contexts = context === 'all' ? Object.keys(signalkData) : [context]
+  const uniquePathsForMeta = useMemo(() => {
+    const currentData = dataVersion >= 0 ? getSignalkData() : {}
+    const contexts = context === 'all' ? Object.keys(currentData) : [context]
     const paths: string[] = []
     const seen = new Set<string>()
 
     for (const ctx of contexts) {
-      const contextData = signalkData[ctx] || {}
+      const contextData = currentData[ctx] || {}
       for (const key of Object.keys(contextData)) {
         if (search && search.length > 0) {
           if (key.toLowerCase().indexOf(search.toLowerCase()) === -1) {
@@ -499,17 +519,16 @@ const DataBrowser: React.FC = () => {
         }
         const data = contextData[key] as PathData | undefined
         const path = data?.path || key
-        if (context === 'all') {
-          paths.push(`${ctx}\0${path}`)
-        } else if (!seen.has(path)) {
-          seen.add(path)
-          paths.push(path)
+        const dedupKey = context === 'all' ? `${ctx}\0${path}` : path
+        if (!seen.has(dedupKey)) {
+          seen.add(dedupKey)
+          paths.push(dedupKey)
         }
       }
     }
 
     return paths.sort()
-  }, [context, search, signalkData])
+  }, [context, search, dataVersion])
 
   return (
     <div className="animated fadeIn">
@@ -652,7 +671,7 @@ const DataBrowser: React.FC = () => {
 
             {includeMeta && context && context !== 'none' && (
               <VirtualizedMetaTable
-                paths={getUniquePathsForMeta()}
+                paths={uniquePathsForMeta}
                 context={context}
                 showContext={context === 'all'}
               />
