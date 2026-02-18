@@ -1,8 +1,8 @@
 {
   "version": "1.0.0",
   "date": "2025-01-15",
-  "name": "Nautical non-us",
-  "description": "Nautical units (knots, nautical miles, meters, Celsius)",
+  "name": "Nautical Imperial (US)",
+  "description": "Nautical speed/distance (knots, nautical miles) with US imperial units (feet, Fahrenheit)",
   "categories": {
     "distance": {
       "baseUnit": "m",
@@ -16,22 +16,22 @@
     },
     "temperature": {
       "baseUnit": "K",
-      "targetUnit": "C",
+      "targetUnit": "F",
       "displayFormat": "0.0"
     },
     "pressure": {
       "baseUnit": "Pa",
-      "targetUnit": "mbar",
-      "displayFormat": "0"
+      "targetUnit": "inHg",
+      "displayFormat": "0.00"
     },
     "depth": {
       "baseUnit": "m",
-      "targetUnit": "m",
+      "targetUnit": "foot",
       "displayFormat": "0.0"
     },
     "volume": {
       "baseUnit": "m3",
-      "targetUnit": "liter",
+      "targetUnit": "gallon",
       "displayFormat": "0.0"
     },
     "angle": {
@@ -41,7 +41,7 @@
     },
     "length": {
       "baseUnit": "m",
-      "targetUnit": "m",
+      "targetUnit": "foot",
       "displayFormat": "0.0"
     },
     "angularVelocity": {
@@ -62,7 +62,7 @@
     "power": {
       "baseUnit": "W",
       "targetUnit": "W",
-      "displayFormat": "0.000"
+      "displayFormat": "0.00"
     },
     "percentage": {
       "baseUnit": "ratio",
@@ -81,8 +81,8 @@
     },
     "dateTime": {
       "baseUnit": "RFC 3339 (UTC)",
-      "targetUnit": "short-date",
-      "displayFormat": "short-date"
+      "targetUnit": "time-am/pm-local",
+      "displayFormat": "time-am/pm"
     },
     "charge": {
       "baseUnit": "C",
@@ -91,22 +91,22 @@
     },
     "volumeRate": {
       "baseUnit": "m3/s",
-      "targetUnit": "L/h",
+      "targetUnit": "gal/h",
       "displayFormat": "0.0"
     },
     "energy": {
       "baseUnit": "J",
-      "targetUnit": "J",
-      "displayFormat": "0.0"
+      "targetUnit": "btu",
+      "displayFormat": "0.00"
     },
     "mass": {
       "baseUnit": "kg",
-      "targetUnit": "kg",
+      "targetUnit": "pound",
       "displayFormat": "0.0"
     },
     "area": {
       "baseUnit": "m2",
-      "targetUnit": "m2",
+      "targetUnit": "sqft",
       "displayFormat": "0.0"
     },
     "angleDegrees": {

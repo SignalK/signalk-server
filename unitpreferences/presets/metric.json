@@ -62,7 +62,7 @@
     "power": {
       "baseUnit": "W",
       "targetUnit": "W",
-      "displayFormat": "0.000"
+      "displayFormat": "0.00"
     },
     "percentage": {
       "baseUnit": "ratio",

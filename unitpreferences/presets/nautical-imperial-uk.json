@@ -1,17 +1,17 @@
 {
   "version": "1.0.0",
-  "date": "2025-10-03",
-  "name": "Imperial (UK)",
-  "description": "UK units (mph, miles, feet, Celsius)",
+  "date": "2025-01-15",
+  "name": "Nautical Imperial (UK)",
+  "description": "Nautical speed/distance (knots, nautical miles) with UK imperial units (feet, Celsius)",
   "categories": {
     "distance": {
       "baseUnit": "m",
-      "targetUnit": "mile",
+      "targetUnit": "naut-mile",
       "displayFormat": "0.0"
     },
     "speed": {
       "baseUnit": "m/s",
-      "targetUnit": "mph",
+      "targetUnit": "kn",
       "displayFormat": "0.0"
     },
     "temperature": {

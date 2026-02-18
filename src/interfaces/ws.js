@@ -24,6 +24,10 @@ const {
   queryRequest
 } = require('../requestResponse')
 const { putPath, deletePath } = require('../put')
+const {
+  resolveDisplayUnits,
+  getDefaultCategory
+} = require('../unitpreferences')
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -637,6 +641,21 @@ function handleValuesMeta(kp) {
         this.spark.sentMetaData[partialContextPathKey] = true
         let meta = getMetadata(partialContextPathKey)
         if (meta) {
+          // Clone and enhance metadata with displayUnits formulas
+          meta = JSON.parse(JSON.stringify(meta))
+          let storedDisplayUnits = meta.displayUnits
+          if (!storedDisplayUnits?.category && path) {
+            const defaultCategory = getDefaultCategory(path)
+            if (defaultCategory) {
+              storedDisplayUnits = { category: defaultCategory }
+            }
+          }
+          if (storedDisplayUnits?.category) {
+            const enhanced = resolveDisplayUnits(storedDisplayUnits, meta.units)
+            if (enhanced) {
+              meta.displayUnits = enhanced
+            }
+          }
           this.spark.write({
             context: this.context,
             updates: [

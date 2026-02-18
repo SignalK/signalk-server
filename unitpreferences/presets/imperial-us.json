@@ -2,16 +2,16 @@
   "version": "1.0.0",
   "date": "2025-10-03",
   "name": "Imperial (US)",
-  "description": "US customary units (feet, Fahrenheit, knots, etc.)",
+  "description": "US customary units (mph, miles, feet, Fahrenheit)",
   "categories": {
     "distance": {
       "baseUnit": "m",
-      "targetUnit": "naut-mile",
+      "targetUnit": "mile",
       "displayFormat": "0.0"
     },
     "speed": {
       "baseUnit": "m/s",
-      "targetUnit": "kn",
+      "targetUnit": "mph",
       "displayFormat": "0.0"
     },
     "temperature": {
@@ -76,7 +76,7 @@
     },
     "time": {
       "baseUnit": "s",
-      "targetUnit": "second",
+      "targetUnit": "hour",
       "displayFormat": "0.0"
     },
     "dateTime": {

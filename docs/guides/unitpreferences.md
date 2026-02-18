@@ -10,9 +10,9 @@ The Unit Preferences system simplifies client development by managing unit prefe
 
 When you fetch metadata for a path (e.g., `vessels.self.navigation.speedOverGround`), the server checks the active unit preferences and includes a `displayUnits` object in the meta data.
 
-### API Usage
+### REST API Usage
 
-Simply request the metadata for any path as you normally would:
+Request the metadata for any path:
 
 `GET /signalk/v1/api/vessels/self/navigation/speedOverGround/meta`
 
@@ -29,26 +29,96 @@ Simply request the metadata for any path as you normally would:
     "formula": "value * 1.94384",
     "inverseFormula": "value / 1.94384",
     "symbol": "kn",
-    "displayFormat": "%.1f"
+    "displayFormat": "0.0"
   }
 }
 ```
 
 The `displayUnits` object provides everything you need to display the value:
 
+- **category**: The unit category this path belongs to (e.g., "speed", "depth", "temperature").
 - **targetUnit**: The unit the user wants to see (e.g., "kn" for knots).
-- **formula**: A math expression to convert the raw SI value (m/s) to the target unit.
+- **formula**: A [Math.js](https://mathjs.org/) expression to convert the raw SI value to the target unit. The variable `value` represents the input.
+- **inverseFormula**: A Math.js expression to convert back from the display unit to SI (useful for user input).
 - **symbol**: The symbol to display next to the value.
-- **displayFormat**: (Optional) A printf-style format string for consistency.
+- **displayFormat**: (Optional) A format pattern for consistency (e.g., "0.0" for one decimal place).
+
+### WebSocket Stream
+
+When subscribing to the WebSocket stream, add `sendMeta=all` to receive metadata with every delta message:
+
+```javascript
+const ws = new WebSocket('ws://localhost:3000/signalk/v1/stream?subscribe=none')
+
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    context: 'vessels.self',
+    subscribe: [{
+      path: 'navigation.speedOverGround',
+      policy: 'instant',
+      sendMeta: 'all'
+    }]
+  }))
+}
+```
+
+**Delta with Metadata:**
+
+```json
+{
+  "context": "vessels.urn:mrn:signalk:uuid:...",
+  "updates": [{
+    "values": [{
+      "path": "navigation.speedOverGround",
+      "value": 5.14,
+      "meta": {
+        "units": "m/s",
+        "description": "Speed over ground",
+        "displayUnits": {
+          "category": "speed",
+          "targetUnit": "kn",
+          "formula": "value * 1.94384",
+          "inverseFormula": "value / 1.94384",
+          "symbol": "kn",
+          "displayFormat": "0.0"
+        }
+      }
+    }]
+  }]
+}
+```
+
+Using `sendMeta=all` eliminates the need for separate REST calls to fetch metadata.
 
 ### Consuming Data
 
-1.  Listen to the stream or poll the API implementation for the raw value (always in SI units).
-2.  Fetch the metadata for the path.
-3.  If `displayUnits` is present, use the `formula` to convert the value.
-4.  Display the converted value with the provided `symbol` and `displayFormat`.
+1.  **Get the value and metadata** - Either subscribe to the WebSocket stream with `sendMeta=all` (recommended), or poll the REST API and fetch metadata separately.
+2.  **Check for `displayUnits`** - If present, the user has unit preferences configured.
+3.  **Convert the value** - Evaluate the `formula` expression with the SI value as `value`.
+4.  **Display the result** - Show the converted value with the provided `symbol` and `displayFormat`.
 
 This ensures that if the user changes their preferences (e.g., from "Knots" to "m/s" or "km/h") on the server, your application automatically reflects those changes without any code updates.
+
+### API Endpoints
+
+The unit preferences system exposes the following REST API endpoints:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/signalk/v1/unitpreferences/config` | Get the current configuration |
+| PUT | `/signalk/v1/unitpreferences/config` | Update the configuration |
+| GET | `/signalk/v1/unitpreferences/categories` | Get all unit categories (merged standard + custom) |
+| GET | `/signalk/v1/unitpreferences/definitions` | Get all unit definitions (merged standard + custom) |
+| GET | `/signalk/v1/unitpreferences/custom-definitions` | Get custom unit definitions only |
+| PUT | `/signalk/v1/unitpreferences/custom-definitions` | Update custom unit definitions |
+| GET | `/signalk/v1/unitpreferences/custom-categories` | Get custom category mappings only |
+| PUT | `/signalk/v1/unitpreferences/custom-categories` | Update custom category mappings |
+| GET | `/signalk/v1/unitpreferences/presets` | List all available presets (built-in and custom) |
+| GET | `/signalk/v1/unitpreferences/presets/:name` | Get a specific preset by name |
+| PUT | `/signalk/v1/unitpreferences/presets/custom/:name` | Create or update a custom preset |
+| DELETE | `/signalk/v1/unitpreferences/presets/custom/:name` | Delete a custom preset |
+| GET | `/signalk/v1/unitpreferences/active` | Get the currently active preset |
+| GET | `/signalk/v1/unitpreferences/default-categories` | Get the default category mappings |
 
 ---
 
@@ -70,11 +140,14 @@ You can configure your unit preferences in the Signal K Server Admin UI.
 
 The simplest way to configure units is to select a **Preset**. A preset is a collection of unit preferences for all standard categories.
 
-Common presets include:
+Available presets:
 
-- **Nautical**: Knots for speed, feet or meters for depth, depending on common maritime usage.
-- **Metric**: Meters/sec, meters, Celsius.
-- **Imperial**: MPH, feet, Fahrenheit.
+- **Metric**: km/h, kilometers, meters, Celsius, liters.
+- **Imperial (US)**: mph, miles, feet, Fahrenheit, US gallons.
+- **Imperial (UK)**: mph, miles, feet, Celsius, UK gallons.
+- **Nautical (Metric)**: knots, nautical miles, meters, Celsius, liters.
+- **Nautical Imperial (US)**: knots, nautical miles, feet, Fahrenheit, US gallons.
+- **Nautical Imperial (UK)**: knots, nautical miles, feet, Celsius, UK gallons.
 
 #### Per-User Settings
 

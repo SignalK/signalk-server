@@ -1,17 +1,17 @@
 {
   "version": "1.0.0",
-  "date": "2025-10-03",
-  "name": "Imperial (UK)",
-  "description": "UK units (mph, miles, feet, Celsius)",
+  "date": "2025-01-15",
+  "name": "Nautical (Metric)",
+  "description": "Nautical speed/distance (knots, nautical miles) with metric units (meters, Celsius)",
   "categories": {
     "distance": {
       "baseUnit": "m",
-      "targetUnit": "mile",
+      "targetUnit": "naut-mile",
       "displayFormat": "0.0"
     },
     "speed": {
       "baseUnit": "m/s",
-      "targetUnit": "mph",
+      "targetUnit": "kn",
       "displayFormat": "0.0"
     },
     "temperature": {
@@ -26,12 +26,12 @@
     },
     "depth": {
       "baseUnit": "m",
-      "targetUnit": "foot",
+      "targetUnit": "m",
       "displayFormat": "0.0"
     },
     "volume": {
       "baseUnit": "m3",
-      "targetUnit": "gallon-imp",
+      "targetUnit": "liter",
       "displayFormat": "0.0"
     },
     "angle": {
@@ -41,7 +41,7 @@
     },
     "length": {
       "baseUnit": "m",
-      "targetUnit": "foot",
+      "targetUnit": "m",
       "displayFormat": "0.0"
     },
     "angularVelocity": {
@@ -61,7 +61,7 @@
     },
     "power": {
       "baseUnit": "W",
-      "targetUnit": "horsepower",
+      "targetUnit": "W",
       "displayFormat": "0.00"
     },
     "percentage": {
@@ -81,8 +81,8 @@
     },
     "dateTime": {
       "baseUnit": "RFC 3339 (UTC)",
-      "targetUnit": "dd/mm/yyyy",
-      "displayFormat": "dd/mm/yyyy"
+      "targetUnit": "short-date",
+      "displayFormat": "short-date"
     },
     "charge": {
       "baseUnit": "C",
@@ -91,22 +91,22 @@
     },
     "volumeRate": {
       "baseUnit": "m3/s",
-      "targetUnit": "gal-imp/h",
+      "targetUnit": "L/h",
       "displayFormat": "0.0"
     },
     "energy": {
       "baseUnit": "J",
-      "targetUnit": "btu",
-      "displayFormat": "0.00"
+      "targetUnit": "J",
+      "displayFormat": "0.0"
     },
     "mass": {
       "baseUnit": "kg",
-      "targetUnit": "pound",
+      "targetUnit": "kg",
       "displayFormat": "0.0"
     },
     "area": {
       "baseUnit": "m2",
-      "targetUnit": "sqft",
+      "targetUnit": "m2",
       "displayFormat": "0.0"
     },
     "angleDegrees": {
