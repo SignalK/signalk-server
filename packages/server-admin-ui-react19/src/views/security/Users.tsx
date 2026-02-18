@@ -58,20 +58,26 @@ export default function Users() {
         credentials: 'include'
       }
     )
+    if (response.status === 401) {
+      throw new Error('Not authenticated — please log in')
+    }
+    if (!response.ok) {
+      throw new Error(`Failed to load users: ${response.statusText}`)
+    }
     return response.json()
   }, [])
 
   const refreshUsers = useCallback(() => {
-    loadUsers().then((data) => {
-      setUsers(data)
-    })
+    loadUsers()
+      .then((data) => setUsers(data))
+      .catch((err) => alert(err.message))
   }, [loadUsers])
 
   useEffect(() => {
     if (loginStatus.authenticationRequired) {
-      loadUsers().then((data) => {
-        setUsers(data)
-      })
+      loadUsers()
+        .then((data) => setUsers(data))
+        .catch((err) => alert(err.message))
     }
   }, [loginStatus.authenticationRequired, loadUsers])
 
@@ -133,6 +139,12 @@ export default function Users() {
       }
     )
     const text = await response.text()
+    if (!response.ok) {
+      alert(
+        response.status === 401 ? 'Not authenticated — please log in' : text
+      )
+      return
+    }
     setSelectedUser(null)
     alert(text)
     refreshUsers()
@@ -152,6 +164,12 @@ export default function Users() {
       }
     )
     const text = await response.text()
+    if (!response.ok) {
+      alert(
+        response.status === 401 ? 'Not authenticated — please log in' : text
+      )
+      return
+    }
     setSelectedUser(null)
     alert(text)
     refreshUsers()
@@ -233,7 +251,7 @@ export default function Users() {
                   )}
                 </Card.Header>
                 <Card.Body>
-                  <Form.Group as={Row}>
+                  <Form.Group as={Row} className="mb-3">
                     <Col md="2">
                       <Form.Label htmlFor="userId">User ID</Form.Label>
                     </Col>
@@ -254,7 +272,7 @@ export default function Users() {
                     </Col>
                   </Form.Group>
                   {selectedUser.email && (
-                    <Form.Group as={Row}>
+                    <Form.Group as={Row} className="mb-3">
                       <Col md="2">
                         <Form.Label>Email</Form.Label>
                       </Col>
@@ -264,7 +282,7 @@ export default function Users() {
                     </Form.Group>
                   )}
                   {selectedUser.isOIDC ? (
-                    <Form.Group as={Row}>
+                    <Form.Group as={Row} className="mb-3">
                       <Col md="12">
                         <Form.Text muted>
                           <FontAwesomeIcon icon={faCircleInfo} /> This user
@@ -275,7 +293,7 @@ export default function Users() {
                     </Form.Group>
                   ) : (
                     <>
-                      <Form.Group as={Row}>
+                      <Form.Group as={Row} className="mb-3">
                         <Col md="2">
                           <Form.Label htmlFor="password">Password</Form.Label>
                         </Col>
@@ -290,7 +308,7 @@ export default function Users() {
                           />
                         </Col>
                       </Form.Group>
-                      <Form.Group as={Row}>
+                      <Form.Group as={Row} className="mb-3">
                         <Col md="2">
                           <Form.Label htmlFor="confirmPassword">
                             Confirm Password
@@ -309,7 +327,7 @@ export default function Users() {
                       </Form.Group>
                     </>
                   )}
-                  <Form.Group as={Row}>
+                  <Form.Group as={Row} className="mb-3">
                     <Col md="2">
                       <Form.Label htmlFor="permissions">Permissions</Form.Label>
                     </Col>

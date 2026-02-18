@@ -481,11 +481,23 @@ module.exports = function (
         const config = getSecurityConfig(app)
         const user = req.body
         user.userId = req.params.id
-        app.securityStrategy.addUser(
-          config,
-          user,
-          getConfigSavingCallback('User added', 'Unable to add user', res)
-        )
+        app.securityStrategy.addUser(config, user, (err, savedConfig) => {
+          if (err) {
+            const status = err.message === 'User already exists' ? 400 : 500
+            res.status(status).type('text/plain').send(err.message)
+          } else if (savedConfig) {
+            saveSecurityConfig(app, savedConfig, (saveErr) => {
+              if (saveErr) {
+                console.log(saveErr)
+                res.status(500).send('Unable to save configuration change')
+                return
+              }
+              res.type('text/plain').send('User added')
+            })
+          } else {
+            res.status(500).type('text/plain').send('Unable to add user')
+          }
+        })
       }
     }
   )
