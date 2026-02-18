@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, MouseEvent } from 'react'
+import { useState, useEffect, useCallback, type MouseEvent } from 'react'
 import Alert from 'react-bootstrap/Alert'
 import Dropdown from 'react-bootstrap/Dropdown'
 import Nav from 'react-bootstrap/Nav'
@@ -44,7 +44,12 @@ export default function Header() {
     setDropdownOpen(!dropdownOpen)
   }
 
-  const sidebarToggle = (e: MouseEvent) => {
+  const mobileSidebarToggle = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    document.body.classList.toggle('sidebar-mobile-show')
+  }
+
+  const sidebarToggle = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     document.body.classList.toggle('sidebar-hidden')
   }
@@ -79,10 +84,23 @@ export default function Header() {
           detected – some updates were skipped. Check your connection.
         </Alert>
       )}
-      <Navbar.Brand href="#" />
-      <Navbar.Toggle className="me-auto" onClick={sidebarToggle}>
+      <button
+        type="button"
+        className="navbar-toggler d-lg-none"
+        onClick={mobileSidebarToggle}
+        aria-label="Toggle sidebar"
+      >
         <span className="navbar-toggler-icon" />
-      </Navbar.Toggle>
+      </button>
+      <Navbar.Brand href="#" />
+      <button
+        type="button"
+        className="navbar-toggler d-none d-lg-block me-auto"
+        onClick={sidebarToggle}
+        aria-label="Toggle sidebar"
+      >
+        <span className="navbar-toggler-icon" />
+      </button>
       <Nav className="ms-auto">
         {/* Desktop: show items directly */}
         {loginStatus.status === 'loggedIn' &&
