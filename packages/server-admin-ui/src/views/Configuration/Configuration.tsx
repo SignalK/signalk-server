@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
   useOptimistic,
   useTransition,
   ChangeEvent,
@@ -10,6 +11,8 @@ import {
   FormEvent
 } from 'react'
 import { useParams } from 'react-router-dom'
+import { useAppStore } from '../../store'
+import Badge from 'react-bootstrap/Badge'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -70,6 +73,17 @@ export default function PluginConfigurationList() {
   const [wasmEnabled, setWasmEnabled] = useState(true)
 
   const [isFiltering, startFilterTransition] = useTransition()
+
+  const appStore = useAppStore()
+  const deprecatedMap = useMemo(() => {
+    const map = new Map<string, string>()
+    ;(appStore.deprecated || []).forEach((app) => {
+      if (app.deprecatedMessage) {
+        map.set(app.name, app.deprecatedMessage)
+      }
+    })
+    return map
+  }, [appStore.deprecated])
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const configCardRef = useRef<HTMLDivElement>(null)
@@ -421,6 +435,15 @@ export default function PluginConfigurationList() {
                             </strong>
                           ) : (
                             plugin.name
+                          )}
+                          {deprecatedMap.has(plugin.packageName) && (
+                            <Badge
+                              bg="danger"
+                              className="ms-2"
+                              title={deprecatedMap.get(plugin.packageName)}
+                            >
+                              Deprecated
+                            </Badge>
                           )}
                         </td>
                         <td>

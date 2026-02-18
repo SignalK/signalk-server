@@ -95,7 +95,8 @@ const initialAppState: AppSliceState = {
     updates: [],
     installed: [],
     available: [],
-    installing: []
+    installing: [],
+    deprecated: []
   },
   loginStatus: {},
   serverSpecification: {},
@@ -139,7 +140,8 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
       installing: [...appStore.installing].sort(nameCollator),
       available: [...appStore.available].sort(nameCollator),
       installed: [...appStore.installed].sort(nameCollator),
-      updates: [...appStore.updates].sort(nameCollator)
+      updates: [...appStore.updates].sort(nameCollator),
+      deprecated: [...(appStore.deprecated || [])].sort(nameCollator)
     }
     set({ appStore: sorted })
   },
