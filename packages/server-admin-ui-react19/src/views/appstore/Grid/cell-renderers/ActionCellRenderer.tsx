@@ -30,6 +30,7 @@ interface AppData {
   isPlugin?: boolean
   id?: string
   npmUrl?: string
+  deprecatedMessage?: string
   [key: string]: unknown
 }
 
@@ -131,6 +132,22 @@ export default function ActionCellRenderer({
       <div className="progress__wrapper">
         <div className="progress__status p-1">{status}</div>
         {progress}
+      </div>
+    )
+  } else if (app.deprecatedMessage && app.installed) {
+    content = (
+      <div className="d-flex flex-column align-items-end">
+        <span className="badge text-bg-danger mb-2">Deprecated</span>
+        <Button variant="danger" size="sm" onClick={handleRemoveClick}>
+          <FontAwesomeIcon className="me-2" icon={faTrashCan} />
+          Remove
+        </Button>
+        <small
+          className="text-muted mt-1 text-end"
+          style={{ maxWidth: 200, fontSize: '0.75rem' }}
+        >
+          {app.deprecatedMessage}
+        </small>
       </div>
     )
   } else {
