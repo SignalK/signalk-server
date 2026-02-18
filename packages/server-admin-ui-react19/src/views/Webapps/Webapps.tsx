@@ -1,5 +1,5 @@
 import { useMemo, Suspense, createElement, ComponentType } from 'react'
-import { useWebapps, useAddons } from '../../store'
+import { useWebapps, useAddons, useAppStore } from '../../store'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
 import { ADDON_PANEL, toLazyDynamicComponent } from './dynamicutilities'
@@ -27,6 +27,17 @@ interface AddonPanelProps {
 export default function Webapps() {
   const webapps = useWebapps() as WebAppInfo[]
   const addons = useAddons() as AddonModule[]
+  const appStore = useAppStore()
+
+  const deprecatedMap = useMemo(() => {
+    const map = new Map<string, string>()
+    ;(appStore.deprecated || []).forEach((app) => {
+      if (app.deprecatedMessage) {
+        map.set(app.name, app.deprecatedMessage)
+      }
+    })
+    return map
+  }, [appStore.deprecated])
 
   const addonComponents = useMemo(
     () =>
@@ -53,7 +64,11 @@ export default function Webapps() {
               .map((webAppInfo) => {
                 return (
                   <Col xs="12" md="12" lg="6" xl="4" key={webAppInfo.name}>
-                    <Webapp key={webAppInfo.name} webAppInfo={webAppInfo} />
+                    <Webapp
+                      key={webAppInfo.name}
+                      webAppInfo={webAppInfo}
+                      deprecatedMessage={deprecatedMap.get(webAppInfo.name)}
+                    />
                   </Col>
                 )
               })}
