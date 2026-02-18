@@ -4,6 +4,7 @@
 .app-header .navbar-toggler {
   border: none;
   outline: none;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
 
   &:focus {
     box-shadow: none;

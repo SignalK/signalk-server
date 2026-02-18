@@ -16,6 +16,7 @@ app-root {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .app-header {
@@ -79,6 +80,7 @@ app-root {
     z-index: $zindex-sticky - 1;
     width: $sidebar-width;
     height: calc(100vh - #{$navbar-height});
+    height: calc(100dvh - #{$navbar-height});
     // margin-top: - $navbar-height;
 
     // .sidebar-nav {
@@ -104,6 +106,7 @@ app-root {
     position: fixed;
     z-index: $zindex-sticky - 1;
     height: calc(100vh - #{$navbar-height});
+    height: calc(100dvh - #{$navbar-height});
   }
 }
 
@@ -189,6 +192,10 @@ app-root {
         100vh - #{$aside-menu-nav-padding-y * 2 + $font-size-base} -
           #{$navbar-height}
       );
+      height: calc(
+        100dvh - #{$aside-menu-nav-padding-y * 2 + $font-size-base} -
+          #{$navbar-height}
+      );
     }
   }
 
@@ -215,6 +222,10 @@ app-root {
     .tab-content {
       height: calc(
         100vh - #{$aside-menu-nav-padding-y * 2 + $font-size-base} -
+          #{$navbar-height}
+      );
+      height: calc(
+        100dvh - #{$aside-menu-nav-padding-y * 2 + $font-size-base} -
           #{$navbar-height}
       );
     }
@@ -370,12 +381,14 @@ app-root {
     z-index: $zindex-sticky - 1;
     width: $mobile-sidebar-width;
     height: calc(100vh - #{$navbar-height});
+    height: calc(100dvh - #{$navbar-height});
     margin-left: -$mobile-sidebar-width;
 
     .sidebar-nav,
     .nav {
       width: $mobile-sidebar-width;
       min-height: calc(100vh - #{$navbar-height});
+      min-height: calc(100dvh - #{$navbar-height});
     }
 
     .sidebar-minimizer {
