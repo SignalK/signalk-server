@@ -15,9 +15,10 @@
     "ci-lint": "eslint && prettier --check .",
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
     "start": "node bin/signalk-server",
-    "test-only": "NODE_ENV=test mocha 'test/**/*.[jt]s' 'dist/**/*.test.js'",
+    "test-only": "NODE_ENV=test mocha 'test/**/*.[jt]s'",
     "test:admin-ui": "npm run test -w @signalk/server-admin-ui-react19",
-    "test": "npm run build && npm run test-only && npm run ci-lint && npm run test:admin-ui",
+    "test:server-api": "npm run test -w @signalk/server-api",
+    "test": "npm run build && npm run test-only && npm run ci-lint && npm run test:admin-ui && npm run test:server-api",
     "heroku-postbuild": "npm run build:all",
     "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
   },

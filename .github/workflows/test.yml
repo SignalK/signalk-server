@@ -25,11 +25,6 @@ jobs:
       - run: sfw npm install
       - run: npm run build:all
 
-      - name: server-api
-        working-directory: ./packages/server-api
-        run: |
-          npm run test
-
       - name: resources-provider-plugin
         working-directory: ./packages/resources-provider-plugin
         run: |
