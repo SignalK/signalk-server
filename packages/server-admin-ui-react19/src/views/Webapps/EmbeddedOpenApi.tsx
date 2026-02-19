@@ -11,7 +11,7 @@ export default function EmbeddedOpenApi() {
       }}
       title="Signal K HTTP API"
       // eslint-disable-next-line @eslint-react/dom/no-unsafe-iframe-sandbox -- trusted same-origin Swagger UI
-      sandbox="allow-scripts allow-same-origin"
+      sandbox="allow-scripts allow-same-origin allow-popups"
     />
   )
 }

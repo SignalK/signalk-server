@@ -1,15 +1,9 @@
 import { useState, useEffect, useMemo, useDeferredValue } from 'react'
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  Input,
-  FormGroup,
-  Label,
-  Col,
-  Row,
-  Badge
-} from 'reactstrap'
+import Badge from 'react-bootstrap/Badge'
+import Card from 'react-bootstrap/Card'
+import Col from 'react-bootstrap/Col'
+import Form from 'react-bootstrap/Form'
+import Row from 'react-bootstrap/Row'
 
 interface PathMetadataEntry {
   description: string
@@ -111,14 +105,14 @@ export default function PathReference() {
   if (error) {
     return (
       <Card>
-        <CardHeader>
+        <Card.Header>
           <i className="icon-list" /> Path Reference
-        </CardHeader>
-        <CardBody>
+        </Card.Header>
+        <Card.Body>
           <p style={{ color: '#e74c3c' }}>
             Failed to load path metadata: {error}
           </p>
-        </CardBody>
+        </Card.Body>
       </Card>
     )
   }
@@ -126,42 +120,41 @@ export default function PathReference() {
   if (!allMeta) {
     return (
       <Card>
-        <CardHeader>
+        <Card.Header>
           <i className="icon-list" /> Path Reference
-        </CardHeader>
-        <CardBody>Loading path metadata...</CardBody>
+        </Card.Header>
+        <Card.Body>Loading path metadata...</Card.Body>
       </Card>
     )
   }
 
   return (
     <Card>
-      <CardHeader>
+      <Card.Header>
         <i className="icon-list" /> Path Reference
-        <Badge color="secondary" className="ms-2">
+        <Badge bg="secondary" className="ms-2">
           {filtered.length} / {vesselPaths.length} paths
         </Badge>
-      </CardHeader>
-      <CardBody>
+      </Card.Header>
+      <Card.Body>
         <Row className="mb-3">
           <Col md={8}>
-            <FormGroup>
-              <Label for="pathSearch">Search</Label>
-              <Input
+            <Form.Group>
+              <Form.Label htmlFor="pathSearch">Search</Form.Label>
+              <Form.Control
                 id="pathSearch"
                 type="text"
                 placeholder="Search paths, descriptions, or units..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </FormGroup>
+            </Form.Group>
           </Col>
           <Col md={4}>
-            <FormGroup>
-              <Label for="groupFilter">Group</Label>
-              <Input
+            <Form.Group>
+              <Form.Label htmlFor="groupFilter">Group</Form.Label>
+              <Form.Select
                 id="groupFilter"
-                type="select"
                 value={groupFilter}
                 onChange={(e) => setGroupFilter(e.target.value)}
               >
@@ -171,8 +164,8 @@ export default function PathReference() {
                     {GROUP_LABELS[g] || g}
                   </option>
                 ))}
-              </Input>
-            </FormGroup>
+              </Form.Select>
+            </Form.Group>
           </Col>
         </Row>
 
@@ -246,7 +239,7 @@ export default function PathReference() {
                                     <span> — {prop.description}</span>
                                   )}
                                   {prop.units && (
-                                    <Badge color="info" className="ms-1">
+                                    <Badge bg="info" className="ms-1">
                                       {prop.units}
                                     </Badge>
                                   )}
@@ -258,7 +251,7 @@ export default function PathReference() {
                       )}
                     </td>
                     <td>
-                      {meta.units && <Badge color="info">{meta.units}</Badge>}
+                      {meta.units && <Badge bg="info">{meta.units}</Badge>}
                     </td>
                   </tr>
                 )
@@ -273,7 +266,7 @@ export default function PathReference() {
             </tbody>
           </table>
         </div>
-      </CardBody>
+      </Card.Body>
     </Card>
   )
 }

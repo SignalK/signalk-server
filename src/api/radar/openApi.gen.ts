@@ -82,7 +82,7 @@ export const radarOpenApiDoc = {
     schemas: {
       RadarInfo: toOpenApiSchema(RadarInfoSchema),
       RadarControls: toOpenApiSchema(RadarControlsSchema),
-      ControlValue: toOpenApiSchema(RadarControlValueSchema),
+      RadarControlValue: toOpenApiSchema(RadarControlValueSchema),
       RadarStatus: toOpenApiSchema(RadarStatusSchema)
     }
   },
