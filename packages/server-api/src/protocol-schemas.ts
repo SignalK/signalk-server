@@ -149,6 +149,75 @@ export const AlarmStatusSchema = Type.Object(
 export type AlarmStatus = Static<typeof AlarmStatusSchema>
 
 // ---------------------------------------------------------------------------
+// DisplayUnits
+// Wire format for SI unit conversion metadata sent to clients.
+// ---------------------------------------------------------------------------
+
+/**
+ * Stored display-units metadata — the minimal form persisted in path metadata.
+ * The server resolves this into EnhancedDisplayUnits before sending to clients.
+ */
+export const DisplayUnitsMetadataSchema = Type.Object(
+  {
+    category: Type.String({
+      description: 'Unit category (e.g. "speed", "temperature", "distance")'
+    }),
+    targetUnit: Type.Optional(
+      Type.String({
+        description: 'Per-path target unit override (e.g. "kn", "°C")'
+      })
+    ),
+    displayFormat: Type.Optional(
+      Type.String({
+        description: 'Display format string (e.g. "0.0", "0.00")'
+      })
+    )
+  },
+  {
+    $id: 'DisplayUnitsMetadata',
+    description: 'Stored display-units metadata for a Signal K path'
+  }
+)
+export type DisplayUnitsMetadata = Static<typeof DisplayUnitsMetadataSchema>
+
+/**
+ * Enhanced display-units metadata — the resolved form returned to clients,
+ * containing the Math.js conversion formulas needed to convert from SI.
+ */
+export const EnhancedDisplayUnitsSchema = Type.Object(
+  {
+    category: Type.String({
+      description: 'Unit category (e.g. "speed", "temperature")'
+    }),
+    targetUnit: Type.String({
+      description: 'Target display unit (e.g. "kn", "°C")'
+    }),
+    formula: Type.String({
+      description:
+        'Math.js formula to convert from SI to target unit (e.g. "value * 1.94384")'
+    }),
+    inverseFormula: Type.String({
+      description:
+        'Math.js formula to convert from target unit back to SI (e.g. "value * 0.514444")'
+    }),
+    symbol: Type.String({
+      description: 'Unit symbol for display (e.g. "kn", "°C")'
+    }),
+    displayFormat: Type.Optional(
+      Type.String({
+        description: 'Display format string (e.g. "0.0")'
+      })
+    )
+  },
+  {
+    $id: 'EnhancedDisplayUnits',
+    description:
+      'Resolved display-units metadata with conversion formulas, as returned to clients'
+  }
+)
+export type EnhancedDisplayUnits = Static<typeof EnhancedDisplayUnitsSchema>
+
+// ---------------------------------------------------------------------------
 // MetaValue & Meta
 // @see specification/schemas/definitions.json commonValueFields
 // ---------------------------------------------------------------------------
@@ -198,6 +267,12 @@ export const MetaValueSchema = Type.Object(
     supportsPut: Type.Optional(
       Type.Boolean({
         description: 'Whether this path supports PUT operations'
+      })
+    ),
+    displayUnits: Type.Optional(
+      Type.Union([DisplayUnitsMetadataSchema, EnhancedDisplayUnitsSchema], {
+        description:
+          'Display unit preferences — either stored metadata or resolved with conversion formulas'
       })
     )
   },

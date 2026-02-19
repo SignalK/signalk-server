@@ -65,6 +65,57 @@ describe('validateDelta', () => {
     expect(result.valid).to.be.false
   })
 
+  it('accepts meta with stored displayUnits metadata', () => {
+    const result = validateDelta({
+      updates: [
+        {
+          timestamp: '2024-06-15T08:00:00Z',
+          meta: [
+            {
+              path: 'navigation.speedOverGround',
+              value: {
+                units: 'm/s',
+                displayUnits: {
+                  category: 'speed',
+                  targetUnit: 'kn',
+                  displayFormat: '0.0'
+                }
+              }
+            }
+          ]
+        }
+      ]
+    })
+    expect(result.valid).to.be.true
+  })
+
+  it('accepts meta with enhanced displayUnits (resolved formulas)', () => {
+    const result = validateDelta({
+      updates: [
+        {
+          timestamp: '2024-06-15T08:00:00Z',
+          meta: [
+            {
+              path: 'navigation.speedOverGround',
+              value: {
+                units: 'm/s',
+                displayUnits: {
+                  category: 'speed',
+                  targetUnit: 'kn',
+                  formula: 'value * 1.94384',
+                  inverseFormula: 'value * 0.514444',
+                  symbol: 'kn',
+                  displayFormat: '0.0'
+                }
+              }
+            }
+          ]
+        }
+      ]
+    })
+    expect(result.valid).to.be.true
+  })
+
   it('rejects a delta without updates', () => {
     const result = validateDelta({ context: 'vessels.self' })
     expect(result.valid).to.be.false

@@ -5,10 +5,16 @@ export {
   SourceSchema,
   PathValueSchema,
   MetaSchema,
+  MetaValueSchema,
   NotificationSchema,
   AlarmStateSchema,
   AlarmMethodSchema,
-  AlarmStatusSchema
+  AlarmStatusSchema,
+  DisplayUnitsMetadataSchema,
+  EnhancedDisplayUnitsSchema,
+  type MetaValue,
+  type DisplayUnitsMetadata,
+  type EnhancedDisplayUnits
 } from './protocol-schemas'
 export * from './discovery-schemas'
 export * from './notifications-schemas'
