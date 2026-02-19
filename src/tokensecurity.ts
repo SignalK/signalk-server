@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
-import { Application, Request, Response, NextFunction, IRouter } from 'express'
+import { Request, Response, NextFunction, IRouter } from 'express'
 import jwt, { SignOptions } from 'jsonwebtoken'
 import _ from 'lodash'
 import bcrypt from 'bcryptjs'
 import { getSourceId } from '@signalk/signalk-schema'
-import { Delta, Update, hasValues, hasMeta } from '@signalk/server-api'
+import {
+  Delta,
+  Update,
+  hasValues,
+  hasMeta,
+  Context,
+  Path
+} from '@signalk/server-api'
 import ms, { StringValue } from 'ms'
 import rateLimit from 'express-rate-limit'
 import bodyParser from 'body-parser'
@@ -64,7 +71,7 @@ import {
 } from './oidc'
 import { SERVERROUTESPREFIX } from './constants'
 import { ICallback } from './types'
-import { WithConfig } from './app'
+import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 
 const debug = createDebug('signalk-server:tokensecurity')
 
@@ -168,18 +175,8 @@ interface AccessRequest {
  * Signal K app interface for token security.
  * Includes Express routing methods needed for middleware registration.
  */
-interface TokenSecurityApp extends WithConfig {
-  selfContext: string
-  selfId: string
-  handleMessage: (id: string, message: unknown) => void
-  emit: (event: string, data: unknown) => boolean
-  intervals: NodeJS.Timeout[]
-  // Express routing methods
-  use: Application['use']
-  get: Application['get']
-  put: Application['put']
-  post: Application['post']
-}
+interface TokenSecurityApp
+  extends ServerApp, WithConfig, IRouter, SignalKMessageHub {}
 
 /**
  * Extended security strategy with token-specific methods
@@ -686,7 +683,7 @@ function tokenSecurityFactory(
     )
 
     // Register OIDC authentication routes
-    registerOIDCRoutes(app as unknown as IRouter, {
+    registerOIDCRoutes(app, {
       getOIDCConfig,
       setSessionCookie,
       clearSessionCookie,
@@ -696,7 +693,7 @@ function tokenSecurityFactory(
     })
 
     // Register OIDC admin routes (GET/PUT /security/oidc, POST /security/oidc/test)
-    registerOIDCAdminRoutes(app as unknown as IRouter, {
+    registerOIDCAdminRoutes(app, {
       allowConfigure: (req: Request) => strategy.allowConfigure(req),
       getSecurityConfig: () => options,
       saveSecurityConfig: (securityConfig, callback) =>
@@ -1595,12 +1592,12 @@ function tokenSecurityFactory(
       : 'any'
 
     app.handleMessage(CONFIG_PLUGINID, {
-      context: 'vessels.' + app.selfId,
+      context: ('vessels.' + app.selfId) as Context,
       updates: [
         {
           values: [
             {
-              path: `notifications.security.accessRequest.${permissionPart}.${identifier}`,
+              path: `notifications.security.accessRequest.${permissionPart}.${identifier}` as Path,
               value: {
                 state: 'normal',
                 method: [],
@@ -1811,12 +1808,12 @@ function tokenSecurityFactory(
             : 'any'
           sendAccessRequestsUpdate()
           app.handleMessage(CONFIG_PLUGINID, {
-            context: 'vessels.' + app.selfId,
+            context: ('vessels.' + app.selfId) as Context,
             updates: [
               {
                 values: [
                   {
-                    path: `notifications.security.accessRequest.${permissionPart}.${request.accessIdentifier}`,
+                    path: `notifications.security.accessRequest.${permissionPart}.${request.accessIdentifier}` as Path,
                     value: {
                       state: 'alert',
                       method: ['visual', 'sound'],
