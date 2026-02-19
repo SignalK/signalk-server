@@ -102,7 +102,7 @@ export default function Header() {
         <span className="navbar-toggler-icon" />
       </button>
       <span className="text-warning flex-grow-1 text-center fw-semibold">
-        React 19 UI showcase — do not use for production yet
+        Admin UI React 19 version for testing
       </span>
       <Nav className="ms-auto">
         {/* Desktop: show items directly */}
