@@ -26,7 +26,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Run Trivy vulnerability scanner for Docker Image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: 'ghcr.io/signalk/signalk-server:${{ matrix.image-tag }}'
           format: 'sarif'
