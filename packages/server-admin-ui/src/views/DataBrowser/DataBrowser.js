@@ -51,12 +51,12 @@ async function fetchActivePreset() {
     })
     if (response.ok) {
       const config = await response.json()
-      return config.activePreset || 'nautical'
+      return config.activePreset || 'nautical-metric'
     }
   } catch (e) {
     console.error('Failed to fetch unit preferences:', e)
   }
-  return 'nautical'
+  return 'nautical-metric'
 }
 
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
@@ -111,9 +111,9 @@ class DataBrowser extends Component {
       // For forcing re-renders when store updates
       storeVersion: 0,
       path$SourceKeys: [],
-      activePreset: 'nautical', // Will be fetched from server in componentDidMount
-      unitDefinitions: null, // Loaded from server for conversion formulas
-      presetDetails: null // Details of active preset with target units
+      activePreset: 'nautical-metric',
+      unitDefinitions: null,
+      presetDetails: null
     }
 
     this.fetchSources = fetchSources.bind(this)

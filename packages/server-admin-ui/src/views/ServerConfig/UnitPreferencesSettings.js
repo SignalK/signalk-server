@@ -76,12 +76,12 @@ async function fetchActivePreset() {
     })
     if (response.ok) {
       const config = await response.json()
-      return config.activePreset || 'nautical'
+      return config.activePreset || 'nautical-metric'
     }
   } catch (e) {
     console.error('Failed to fetch unit preferences:', e)
   }
-  return 'nautical'
+  return 'nautical-metric'
 }
 
 async function setActivePreset(preset) {
@@ -102,7 +102,7 @@ class UnitPreferencesSettings extends Component {
     super(props)
     this.state = {
       presets: DEFAULT_PRESETS,
-      activePreset: 'nautical',
+      activePreset: 'nautical-metric',
       hasData: false,
       uploadStatus: null,
       uploadError: null,
