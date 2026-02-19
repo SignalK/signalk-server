@@ -69,9 +69,7 @@ function actionEndpoint(
       summary,
       description,
       responses: {
-        '200ActionResponse': {
-          $ref: '#/components/responses/200ActionResponse'
-        },
+        '200': { $ref: '#/components/responses/200ActionResponse' },
         default: { $ref: '#/components/responses/ErrorResponse' }
       }
     }
@@ -142,7 +140,7 @@ export const autopilotOpenApiDoc = {
         summary: 'Retrieve autopilot details.',
         description: 'Retrieves current data values and valid options.',
         responses: {
-          default: {
+          '200': {
             description: 'Autopilot data',
             content: {
               'application/json': {
@@ -150,7 +148,7 @@ export const autopilotOpenApiDoc = {
               }
             }
           },
-          error: { $ref: '#/components/responses/ErrorResponse' }
+          default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }
     },
@@ -161,7 +159,7 @@ export const autopilotOpenApiDoc = {
         summary: 'Retrieve autopilot state.',
         description: 'Returns the current state of the autopilot device.',
         responses: {
-          default: {
+          '200': {
             description: 'Autopilot state value',
             content: {
               'application/json': {
@@ -179,7 +177,7 @@ export const autopilotOpenApiDoc = {
               }
             }
           },
-          error: { $ref: '#/components/responses/ErrorResponse' }
+          default: { $ref: '#/components/responses/ErrorResponse' }
         }
       },
       put: {
@@ -195,9 +193,7 @@ export const autopilotOpenApiDoc = {
           }
         },
         responses: {
-          '200ActionResponse': {
-            $ref: '#/components/responses/200ActionResponse'
-          },
+          '200': { $ref: '#/components/responses/200ActionResponse' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }
@@ -208,7 +204,7 @@ export const autopilotOpenApiDoc = {
         tags: ['autopilot'],
         summary: 'Retrieve autopilot mode.',
         responses: {
-          default: {
+          '200': {
             description: 'Autopilot mode value',
             content: {
               'application/json': {
@@ -226,7 +222,7 @@ export const autopilotOpenApiDoc = {
               }
             }
           },
-          error: { $ref: '#/components/responses/ErrorResponse' }
+          default: { $ref: '#/components/responses/ErrorResponse' }
         }
       },
       put: {
@@ -242,9 +238,7 @@ export const autopilotOpenApiDoc = {
           }
         },
         responses: {
-          '200ActionResponse': {
-            $ref: '#/components/responses/200ActionResponse'
-          },
+          '200': { $ref: '#/components/responses/200ActionResponse' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }
@@ -256,7 +250,7 @@ export const autopilotOpenApiDoc = {
         summary: 'Retrieve the current target value.',
         description: 'The current target value in radians.',
         responses: {
-          default: {
+          '200': {
             description: 'Autopilot value response',
             content: {
               'application/json': {
@@ -274,7 +268,7 @@ export const autopilotOpenApiDoc = {
               }
             }
           },
-          error: { $ref: '#/components/responses/ErrorResponse' }
+          default: { $ref: '#/components/responses/ErrorResponse' }
         }
       },
       put: {
@@ -292,9 +286,7 @@ export const autopilotOpenApiDoc = {
           }
         },
         responses: {
-          '200ActionResponse': {
-            $ref: '#/components/responses/200ActionResponse'
-          },
+          '200': { $ref: '#/components/responses/200ActionResponse' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }
@@ -316,9 +308,7 @@ export const autopilotOpenApiDoc = {
           }
         },
         responses: {
-          '200ActionResponse': {
-            $ref: '#/components/responses/200ActionResponse'
-          },
+          '200': { $ref: '#/components/responses/200ActionResponse' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }
@@ -351,9 +341,7 @@ export const autopilotOpenApiDoc = {
         summary: 'Turn on dodge mode.',
         description: 'Enter dodge mode at the current course setting.',
         responses: {
-          '200ActionResponse': {
-            $ref: '#/components/responses/200ActionResponse'
-          },
+          '200': { $ref: '#/components/responses/200ActionResponse' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       },
@@ -362,9 +350,7 @@ export const autopilotOpenApiDoc = {
         summary: 'Turn off dodge mode.',
         description: 'Resume steering original course.',
         responses: {
-          '200ActionResponse': {
-            $ref: '#/components/responses/200ActionResponse'
-          },
+          '200': { $ref: '#/components/responses/200ActionResponse' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       },
@@ -383,9 +369,7 @@ export const autopilotOpenApiDoc = {
           }
         },
         responses: {
-          '200ActionResponse': {
-            $ref: '#/components/responses/200ActionResponse'
-          },
+          '200': { $ref: '#/components/responses/200ActionResponse' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }

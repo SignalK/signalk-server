@@ -20,10 +20,18 @@ export const serverVersion: string = require('../../' + 'package.json').version
 export function stripTypebox(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stripTypebox)
   if (value !== null && typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    // Rewrite bare TypeBox $ref to OpenAPI component $ref
+    if (
+      typeof obj['$ref'] === 'string' &&
+      !String(obj['$ref']).startsWith('#')
+    ) {
+      return { $ref: `#/components/schemas/${obj['$ref']}` }
+    }
     const out: Record<string, unknown> = {}
-    for (const key of Object.keys(value)) {
+    for (const key of Object.keys(obj)) {
       if (key === '$id') continue
-      out[key] = stripTypebox((value as Record<string, unknown>)[key])
+      out[key] = stripTypebox(obj[key])
     }
     return out
   }
