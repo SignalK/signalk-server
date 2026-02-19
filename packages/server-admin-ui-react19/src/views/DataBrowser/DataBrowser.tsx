@@ -28,7 +28,7 @@ import {
   useDeltaMessages,
   getWebSocketService
 } from '../../hooks/useWebSocket'
-import { useStore, useShallow } from '../../store'
+import { useStore, useShallow, useUnitPrefsLoaded } from '../../store'
 
 // Imperative accessor — avoids subscribing the component to every value change.
 const getSignalkData = () => useStore.getState().signalkData
@@ -140,6 +140,9 @@ const DataBrowser: React.FC = () => {
   const updatePath = useStore((s) => s.updatePath)
   const updateMeta = useStore((s) => s.updateMeta)
   const getPathData = useStore((s) => s.getPathData)
+
+  const unitPrefsLoaded = useUnitPrefsLoaded()
+  const fetchUnitPreferences = useStore((s) => s.fetchUnitPreferences)
 
   const didSubscribeRef = useRef(false)
   const webSocketRef = useRef<WebSocket | null>(null)
@@ -281,10 +284,14 @@ const DataBrowser: React.FC = () => {
       }
     })
 
+    if (!unitPrefsLoaded) {
+      fetchUnitPreferences()
+    }
+
     return () => {
       isMountedRef.current = false
     }
-  }, [loadSources])
+  }, [loadSources, unitPrefsLoaded, fetchUnitPreferences])
 
   const contextOptions: SelectOption[] = useMemo(() => {
     const currentData = getSignalkData()
