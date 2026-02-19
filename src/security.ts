@@ -72,6 +72,17 @@ export interface OIDCUserIdentifier {
   groups?: string[]
 }
 
+export function isOIDCUserIdentifier(
+  value: unknown
+): value is OIDCUserIdentifier {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as OIDCUserIdentifier).sub === 'string' &&
+    typeof (value as OIDCUserIdentifier).issuer === 'string'
+  )
+}
+
 export interface User {
   username: string
   type: string

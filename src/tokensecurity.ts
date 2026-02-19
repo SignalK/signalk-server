@@ -47,7 +47,8 @@ import {
   RequestStatusData,
   getRateLimitValidationOptions,
   ACL,
-  SecurityStrategy
+  SecurityStrategy,
+  isOIDCUserIdentifier
 } from './security'
 // requestResponse is still CommonJS
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -298,8 +299,8 @@ function tokenSecurityFactory(
         type: externalUser.type
       }
 
-      if (externalUser.providerData) {
-        newUser.oidc = externalUser.providerData as unknown as User['oidc']
+      if (isOIDCUserIdentifier(externalUser.providerData?.oidc)) {
+        newUser.oidc = externalUser.providerData.oidc
       }
 
       options.users.push(newUser)
@@ -332,8 +333,8 @@ function tokenSecurityFactory(
         user.type = updates.type
       }
 
-      if (updates.providerData) {
-        user.oidc = updates.providerData as unknown as User['oidc']
+      if (isOIDCUserIdentifier(updates.providerData?.oidc)) {
+        user.oidc = updates.providerData.oidc
       }
 
       return new Promise((resolve, reject) => {
