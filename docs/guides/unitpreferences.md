@@ -51,14 +51,18 @@ When subscribing to the WebSocket stream, add `sendMeta=all` to receive metadata
 const ws = new WebSocket('ws://localhost:3000/signalk/v1/stream?subscribe=none')
 
 ws.onopen = () => {
-  ws.send(JSON.stringify({
-    context: 'vessels.self',
-    subscribe: [{
-      path: 'navigation.speedOverGround',
-      policy: 'instant',
-      sendMeta: 'all'
-    }]
-  }))
+  ws.send(
+    JSON.stringify({
+      context: 'vessels.self',
+      subscribe: [
+        {
+          path: 'navigation.speedOverGround',
+          policy: 'instant',
+          sendMeta: 'all'
+        }
+      ]
+    })
+  )
 }
 ```
 
@@ -67,24 +71,28 @@ ws.onopen = () => {
 ```json
 {
   "context": "vessels.urn:mrn:signalk:uuid:...",
-  "updates": [{
-    "values": [{
-      "path": "navigation.speedOverGround",
-      "value": 5.14,
-      "meta": {
-        "units": "m/s",
-        "description": "Speed over ground",
-        "displayUnits": {
-          "category": "speed",
-          "targetUnit": "kn",
-          "formula": "value * 1.94384",
-          "inverseFormula": "value / 1.94384",
-          "symbol": "kn",
-          "displayFormat": "0.0"
+  "updates": [
+    {
+      "values": [
+        {
+          "path": "navigation.speedOverGround",
+          "value": 5.14,
+          "meta": {
+            "units": "m/s",
+            "description": "Speed over ground",
+            "displayUnits": {
+              "category": "speed",
+              "targetUnit": "kn",
+              "formula": "value * 1.94384",
+              "inverseFormula": "value / 1.94384",
+              "symbol": "kn",
+              "displayFormat": "0.0"
+            }
+          }
         }
-      }
-    }]
-  }]
+      ]
+    }
+  ]
 }
 ```
 
@@ -103,22 +111,22 @@ This ensures that if the user changes their preferences (e.g., from "Knots" to "
 
 The unit preferences system exposes the following REST API endpoints:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/signalk/v1/unitpreferences/config` | Get the current configuration |
-| PUT | `/signalk/v1/unitpreferences/config` | Update the configuration |
-| GET | `/signalk/v1/unitpreferences/categories` | Get all unit categories (merged standard + custom) |
-| GET | `/signalk/v1/unitpreferences/definitions` | Get all unit definitions (merged standard + custom) |
-| GET | `/signalk/v1/unitpreferences/custom-definitions` | Get custom unit definitions only |
-| PUT | `/signalk/v1/unitpreferences/custom-definitions` | Update custom unit definitions |
-| GET | `/signalk/v1/unitpreferences/custom-categories` | Get custom category mappings only |
-| PUT | `/signalk/v1/unitpreferences/custom-categories` | Update custom category mappings |
-| GET | `/signalk/v1/unitpreferences/presets` | List all available presets (built-in and custom) |
-| GET | `/signalk/v1/unitpreferences/presets/:name` | Get a specific preset by name |
-| PUT | `/signalk/v1/unitpreferences/presets/custom/:name` | Create or update a custom preset |
-| DELETE | `/signalk/v1/unitpreferences/presets/custom/:name` | Delete a custom preset |
-| GET | `/signalk/v1/unitpreferences/active` | Get the currently active preset |
-| GET | `/signalk/v1/unitpreferences/default-categories` | Get the default category mappings |
+| Method | Endpoint                                           | Description                                         |
+| ------ | -------------------------------------------------- | --------------------------------------------------- |
+| GET    | `/signalk/v1/unitpreferences/config`               | Get the current configuration                       |
+| PUT    | `/signalk/v1/unitpreferences/config`               | Update the configuration                            |
+| GET    | `/signalk/v1/unitpreferences/categories`           | Get all unit categories (merged standard + custom)  |
+| GET    | `/signalk/v1/unitpreferences/definitions`          | Get all unit definitions (merged standard + custom) |
+| GET    | `/signalk/v1/unitpreferences/custom-definitions`   | Get custom unit definitions only                    |
+| PUT    | `/signalk/v1/unitpreferences/custom-definitions`   | Update custom unit definitions                      |
+| GET    | `/signalk/v1/unitpreferences/custom-categories`    | Get custom category mappings only                   |
+| PUT    | `/signalk/v1/unitpreferences/custom-categories`    | Update custom category mappings                     |
+| GET    | `/signalk/v1/unitpreferences/presets`              | List all available presets (built-in and custom)    |
+| GET    | `/signalk/v1/unitpreferences/presets/:name`        | Get a specific preset by name                       |
+| PUT    | `/signalk/v1/unitpreferences/presets/custom/:name` | Create or update a custom preset                    |
+| DELETE | `/signalk/v1/unitpreferences/presets/custom/:name` | Delete a custom preset                              |
+| GET    | `/signalk/v1/unitpreferences/active`               | Get the currently active preset                     |
+| GET    | `/signalk/v1/unitpreferences/default-categories`   | Get the default category mappings                   |
 
 ---
 

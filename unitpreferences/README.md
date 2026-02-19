@@ -104,24 +104,24 @@ Each preset defines target units for all categories:
 
 ## REST API Endpoints
 
-| Endpoint                                              | Method | Description                           |
-| ----------------------------------------------------- | ------ | ------------------------------------- |
-| `/signalk/v1/unitpreferences/config`                  | GET    | Get active preset config              |
-| `/signalk/v1/unitpreferences/config`                  | PUT    | Set active preset                     |
-| `/signalk/v1/unitpreferences/categories`              | GET    | Get category → SI unit mapping        |
-| `/signalk/v1/unitpreferences/definitions`             | GET    | Get merged unit definitions           |
-| `/signalk/v1/unitpreferences/custom-definitions`      | GET    | Get custom unit definitions           |
-| `/signalk/v1/unitpreferences/custom-definitions`      | PUT    | Save custom unit definitions          |
-| `/signalk/v1/unitpreferences/custom-categories`       | GET    | Get custom categories                 |
-| `/signalk/v1/unitpreferences/custom-categories`       | PUT    | Save custom categories                |
-| `/signalk/v1/unitpreferences/presets`                 | GET    | List all presets (built-in + custom)  |
-| `/signalk/v1/unitpreferences/presets/:name`           | GET    | Get preset details                    |
-| `/signalk/v1/unitpreferences/presets/custom/:name`    | PUT    | Create/update custom preset           |
-| `/signalk/v1/unitpreferences/presets/custom/:name`    | DELETE | Delete custom preset                  |
-| `/signalk/v1/unitpreferences/presets/custom/upload`   | POST   | Upload custom preset file (admin)     |
-| `/signalk/v1/unitpreferences/active`                  | GET    | Get fully resolved active preset      |
-| `/signalk/v1/unitpreferences/default-categories`      | GET    | Get default category mappings         |
-| `/signalk/v1/unitpreferences/default-category/:path`  | GET    | Get default category for a path       |
+| Endpoint                                             | Method | Description                          |
+| ---------------------------------------------------- | ------ | ------------------------------------ |
+| `/signalk/v1/unitpreferences/config`                 | GET    | Get active preset config             |
+| `/signalk/v1/unitpreferences/config`                 | PUT    | Set active preset                    |
+| `/signalk/v1/unitpreferences/categories`             | GET    | Get category → SI unit mapping       |
+| `/signalk/v1/unitpreferences/definitions`            | GET    | Get merged unit definitions          |
+| `/signalk/v1/unitpreferences/custom-definitions`     | GET    | Get custom unit definitions          |
+| `/signalk/v1/unitpreferences/custom-definitions`     | PUT    | Save custom unit definitions         |
+| `/signalk/v1/unitpreferences/custom-categories`      | GET    | Get custom categories                |
+| `/signalk/v1/unitpreferences/custom-categories`      | PUT    | Save custom categories               |
+| `/signalk/v1/unitpreferences/presets`                | GET    | List all presets (built-in + custom) |
+| `/signalk/v1/unitpreferences/presets/:name`          | GET    | Get preset details                   |
+| `/signalk/v1/unitpreferences/presets/custom/:name`   | PUT    | Create/update custom preset          |
+| `/signalk/v1/unitpreferences/presets/custom/:name`   | DELETE | Delete custom preset                 |
+| `/signalk/v1/unitpreferences/presets/custom/upload`  | POST   | Upload custom preset file (admin)    |
+| `/signalk/v1/unitpreferences/active`                 | GET    | Get fully resolved active preset     |
+| `/signalk/v1/unitpreferences/default-categories`     | GET    | Get default category mappings        |
+| `/signalk/v1/unitpreferences/default-category/:path` | GET    | Get default category for a path      |
 
 ## WebSocket Stream
 
@@ -145,24 +145,28 @@ Metadata response includes enhanced `displayUnits`:
 ```json
 {
   "context": "vessels.urn:mrn:imo:mmsi:123456789",
-  "updates": [{
-    "timestamp": "2024-01-15T12:00:00.000Z",
-    "meta": [{
-      "path": "environment.wind.speedApparent",
-      "value": {
-        "units": "m/s",
-        "description": "Apparent wind speed",
-        "displayUnits": {
-          "category": "speed",
-          "targetUnit": "kn",
-          "formula": "value * 1.94384",
-          "inverseFormula": "value * 0.514444",
-          "symbol": "kn",
-          "displayFormat": "0.0"
+  "updates": [
+    {
+      "timestamp": "2024-01-15T12:00:00.000Z",
+      "meta": [
+        {
+          "path": "environment.wind.speedApparent",
+          "value": {
+            "units": "m/s",
+            "description": "Apparent wind speed",
+            "displayUnits": {
+              "category": "speed",
+              "targetUnit": "kn",
+              "formula": "value * 1.94384",
+              "inverseFormula": "value * 0.514444",
+              "symbol": "kn",
+              "displayFormat": "0.0"
+            }
+          }
         }
-      }
-    }]
-  }]
+      ]
+    }
+  ]
 }
 ```
 
