@@ -44,7 +44,7 @@ export function resolveDisplayUnits(
   let targetUnit: string
   if (storedDisplayUnits.targetUnit) {
     targetUnit = storedDisplayUnits.targetUnit
-  } else if (preset.categories[category]?.targetUnit) {
+  } else if (preset?.categories?.[category]?.targetUnit) {
     targetUnit = preset.categories[category].targetUnit
   } else {
     return null // No target unit defined
@@ -70,7 +70,7 @@ export function resolveDisplayUnits(
     symbol: conversion.symbol,
     displayFormat:
       storedDisplayUnits.displayFormat ||
-      preset.categories[category]?.displayFormat
+      preset?.categories?.[category]?.displayFormat
   }
 }
 
@@ -95,7 +95,7 @@ export function validateCategoryAssignment(
 
   // Check built-in categories first, then preset categories
   let categorySiUnit = categoriesData.categoryToBaseUnit[category]
-  if (!categorySiUnit && preset.categories[category]?.baseUnit) {
+  if (!categorySiUnit && preset?.categories?.[category]?.baseUnit) {
     categorySiUnit = preset.categories[category].baseUnit
   }
 

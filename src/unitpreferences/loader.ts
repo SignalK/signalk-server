@@ -8,7 +8,7 @@ import {
 } from './types'
 
 const UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
-export const DEFAULT_PRESET = 'nautical'
+export const DEFAULT_PRESET = 'nautical-metric'
 
 let categories: CategoryMap
 let customCategories: { [category: string]: string } = {}
