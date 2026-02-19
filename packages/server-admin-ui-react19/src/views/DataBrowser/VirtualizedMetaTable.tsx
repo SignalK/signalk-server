@@ -1,7 +1,39 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
+import { memo } from 'react'
 import Meta from './Meta'
-import { useStore, useShallow } from '../../store'
+import { useMetaData } from './usePathData'
 import './VirtualTable.css'
+
+interface MetaRowProps {
+  path: string
+  ctx: string
+  index: number
+  gridColumns: string
+  showContext: boolean
+}
+
+const MetaRow = memo(function MetaRow({
+  path,
+  ctx,
+  index,
+  gridColumns,
+  showContext
+}: MetaRowProps) {
+  const meta = useMetaData(ctx, path)
+  return (
+    <div
+      className={`virtual-table-row virtual-table-meta-row ${index % 2 ? 'striped' : ''}`}
+      style={{ gridTemplateColumns: gridColumns }}
+    >
+      <div className="virtual-table-cell">{path}</div>
+      {showContext && <div className="virtual-table-cell">{ctx}</div>}
+      <div className="virtual-table-cell">
+        {!path.startsWith('notifications') && (
+          <Meta meta={meta || {}} path={path} context={ctx} />
+        )}
+      </div>
+    </div>
+  )
+})
 
 interface VirtualizedMetaTableProps {
   paths: string[]
@@ -9,109 +41,13 @@ interface VirtualizedMetaTableProps {
   showContext?: boolean
 }
 
+// Renders all rows; content-visibility: auto (in CSS) handles off-screen skipping.
+// Variable row heights make spacer-based virtualization impractical here.
 function VirtualizedMetaTable({
   paths,
   context,
   showContext = false
 }: VirtualizedMetaTableProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const allMeta = useStore(useShallow((s) => s.signalkMeta))
-  const rowHeight = 60
-  const overscan = 10
-  const [pathsLength, setPathsLength] = useState(paths.length)
-
-  // Compute initial visible range synchronously for first render
-  const computeInitialRange = useCallback(() => {
-    const visibleCount =
-      Math.ceil(window.innerHeight / rowHeight) + overscan * 2
-    return { start: 0, end: Math.min(paths.length - 1, visibleCount) }
-  }, [paths.length, rowHeight, overscan])
-
-  const [visibleRange, setVisibleRange] = useState(computeInitialRange)
-
-  // Reset visible range when paths length changes
-  if (paths.length !== pathsLength) {
-    setPathsLength(paths.length)
-    setVisibleRange(computeInitialRange())
-  }
-
-  // Computes new visible range from DOM measurements
-  const computeVisibleRange = useCallback((): {
-    start: number
-    end: number
-  } | null => {
-    if (!containerRef.current) return null
-
-    const rect = containerRef.current.getBoundingClientRect()
-    const containerTop = rect.top
-    const viewportHeight = window.innerHeight
-
-    let startOffset = 0
-    if (containerTop < 0) {
-      startOffset = Math.abs(containerTop)
-    }
-
-    const startIndex = Math.max(
-      0,
-      Math.floor(startOffset / rowHeight) - overscan
-    )
-    const visibleCount = Math.ceil(viewportHeight / rowHeight) + overscan * 2
-    const endIndex = Math.min(paths.length - 1, startIndex + visibleCount)
-
-    return { start: startIndex, end: endIndex }
-  }, [paths.length, rowHeight, overscan])
-
-  useEffect(() => {
-    let ticking = false
-
-    // Handler for scroll/resize events - updates state when range changes significantly
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const newRange = computeVisibleRange()
-          if (newRange) {
-            setVisibleRange((prev) => {
-              if (
-                Math.abs(prev.start - newRange.start) > 2 ||
-                Math.abs(prev.end - newRange.end) > 2
-              ) {
-                return newRange
-              }
-              return prev
-            })
-          }
-          ticking = false
-        })
-        ticking = true
-      }
-    }
-
-    // Trigger initial measurement after mount via scroll event simulation
-    handleScroll()
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', handleScroll, { passive: true })
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-    }
-  }, [computeVisibleRange])
-
-  const visibleItems = useMemo(() => {
-    const end = Math.min(visibleRange.end + 1, paths.length)
-    return paths.slice(visibleRange.start, end).map((path, i) => ({
-      index: visibleRange.start + i,
-      path
-    }))
-  }, [visibleRange.start, visibleRange.end, paths])
-
-  const spacerBeforeHeight = visibleRange.start * rowHeight
-  const spacerAfterHeight = Math.max(
-    0,
-    (paths.length - visibleRange.end - 1) * rowHeight
-  )
-
   if (paths.length === 0) {
     return (
       <div className="virtual-table">
@@ -125,7 +61,7 @@ function VirtualizedMetaTable({
     : 'minmax(200px, 1fr) minmax(300px, 2fr)'
 
   return (
-    <div className="virtual-table virtual-table-meta" ref={containerRef}>
+    <div className="virtual-table virtual-table-meta">
       <div
         className="virtual-table-header"
         style={{ gridTemplateColumns: gridColumns }}
@@ -138,45 +74,26 @@ function VirtualizedMetaTable({
       </div>
 
       <div className="virtual-table-body">
-        {spacerBeforeHeight > 0 && (
-          <div style={{ height: spacerBeforeHeight }} />
-        )}
-
-        {visibleItems.map((item) => {
-          const separatorIndex = item.path.indexOf('\0')
+        {paths.map((item, i) => {
+          const separatorIndex = item.indexOf('\0')
           const ctx =
-            separatorIndex !== -1 ? item.path.slice(0, separatorIndex) : context
+            separatorIndex !== -1 ? item.slice(0, separatorIndex) : context
           const path =
-            separatorIndex !== -1
-              ? item.path.slice(separatorIndex + 1)
-              : item.path
-          const meta = (allMeta[ctx] || {})[path] || {}
+            separatorIndex !== -1 ? item.slice(separatorIndex + 1) : item
           return (
-            <div
-              key={item.path}
-              className={`virtual-table-row ${item.index % 2 ? 'striped' : ''}`}
-              style={{
-                gridTemplateColumns: gridColumns,
-                minHeight: rowHeight
-              }}
-            >
-              <div className="virtual-table-cell">{path}</div>
-              {showContext && <div className="virtual-table-cell">{ctx}</div>}
-              <div className="virtual-table-cell">
-                {!path.startsWith('notifications') && (
-                  <Meta meta={meta} path={path} />
-                )}
-              </div>
-            </div>
+            <MetaRow
+              key={item}
+              path={path}
+              ctx={ctx}
+              index={i}
+              gridColumns={gridColumns}
+              showContext={showContext}
+            />
           )
         })}
-
-        {spacerAfterHeight > 0 && <div style={{ height: spacerAfterHeight }} />}
       </div>
 
-      <div className="virtual-table-info">
-        Showing {visibleItems.length} of {paths.length} paths
-      </div>
+      <div className="virtual-table-info">Showing {paths.length} paths</div>
     </div>
   )
 }

@@ -60,11 +60,7 @@
 
 .virtual-table-row[data-raw-row='true'] {
   content-visibility: auto;
-  contain-intrinsic-block-size: 80px;
-}
-
-.virtual-table-row[data-raw-row='true']:nth-child(-n + 20) {
-  content-visibility: visible;
+  contain-intrinsic-block-size: 150px;
 }
 
 .virtual-table-row:hover {
@@ -122,7 +118,7 @@
   bottom: 0;
   width: 3px;
   background-color: var(--bs-success, #00cd79);
-  animation: highlightFade 15s ease-out;
+  animation: highlightFade 15s ease-out forwards;
 }
 
 @keyframes highlightFade {
@@ -317,7 +313,7 @@
   opacity: 1;
 }
 
-/* Meta table specific styles */
-.virtual-table-meta .virtual-table-row {
-  min-height: 60px;
+.virtual-table-meta-row {
+  content-visibility: auto;
+  contain-intrinsic-block-size: 200px;
 }

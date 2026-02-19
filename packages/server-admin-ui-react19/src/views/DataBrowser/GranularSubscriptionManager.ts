@@ -238,11 +238,14 @@ class GranularSubscriptionManager {
   /**
    * Extract unique paths from path$SourceKeys
    * path$SourceKey format: "navigation.position$sourceId" -> extract "navigation.position"
+   * When context is "all", keys are prefixed: "context\0path$source" -> strip context prefix first
    */
   private _extractUniquePaths(path$SourceKeys: Set<string>): string[] {
     const paths = new Set<string>()
     for (const pk of path$SourceKeys) {
-      const path = getPathFromKey(pk)
+      const nullIdx = pk.indexOf('\0')
+      const key = nullIdx >= 0 ? pk.slice(nullIdx + 1) : pk
+      const path = getPathFromKey(key)
       if (path) {
         paths.add(path)
       }
