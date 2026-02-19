@@ -12,7 +12,7 @@
     "prettier": "prettier --write .",
     "lint": "eslint --fix",
     "format": "npm run prettier && npm run lint",
-    "test": "mocha src/**/*.test.ts"
+    "test": "mocha 'src/**/*.test.ts' 'src/*.test.ts'"
   },
   "repository": {
     "type": "git",
