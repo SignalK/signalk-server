@@ -45,7 +45,7 @@ The `displayUnits` object provides everything you need to display the value:
 
 ### WebSocket Stream
 
-When subscribing to the WebSocket stream, add `sendMeta=all` to receive metadata with every delta message:
+When subscribing to the WebSocket stream, add `sendMeta=all` to receive metadata once for each path (sent with the first delta for that path, and again only if it changes):
 
 ```javascript
 const ws = new WebSocket('ws://localhost:3000/signalk/v1/stream?subscribe=none')
