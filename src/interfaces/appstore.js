@@ -26,7 +26,8 @@ const {
   fetchDistTagsForPackages,
   getLatestServerVersion,
   getAuthor,
-  getKeywords
+  getKeywords,
+  checkDeprecations
 } = require('../modules')
 const { SERVERROUTESPREFIX } = require('../constants')
 const { getCategories, getAvailableCategories } = require('../categories')
@@ -102,7 +103,9 @@ module.exports = function (app) {
             .then(([plugins, webapps]) => {
               if (
                 !plugins.find(packageNameIs(name)) &&
-                !webapps.find(packageNameIs(name))
+                !webapps.find(packageNameIs(name)) &&
+                !getPlugin(name) &&
+                !getWebApp(name)
               ) {
                 res.status(404)
                 res.json('No such webapp or plugin available:' + name)
@@ -125,23 +128,28 @@ module.exports = function (app) {
         }
       )
 
-      app.get(`${SERVERROUTESPREFIX}/appstore/available/`, (req, res) => {
-        const installedNames = getInstalledPackageNames()
-
-        Promise.all([
-          findPluginsAndWebapps(),
-          getLatestServerVersion(app.config.version).catch(() => '0.0.0'),
-          fetchDistTagsForPackages(installedNames).catch(() => ({}))
-        ])
-          .then(([[plugins, webapps], serverVersion, distTagsMap]) =>
-            getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap)
+      app.get(`${SERVERROUTESPREFIX}/appstore/available/`, async (req, res) => {
+        try {
+          const installedNames = getInstalledPackageNames()
+          const [plugins, webapps] = await findPluginsAndWebapps()
+          const serverVersion = await getLatestServerVersion(
+            app.config.version
+          ).catch(() => '0.0.0')
+          const distTagsMap = await fetchDistTagsForPackages(
+            installedNames
+          ).catch(() => ({}))
+          const result = await getAllModuleInfo(
+            plugins,
+            webapps,
+            serverVersion,
+            distTagsMap
           )
-          .then((result) => res.json(result))
-          .catch((error) => {
-            console.log(error.message)
-            debug(error.stack)
-            res.json(emptyAppStoreInfo(false))
-          })
+          res.json(result)
+        } catch (error) {
+          console.log(error.message)
+          debug(error.stack)
+          res.json(emptyAppStoreInfo(false))
+        }
       })
     },
     stop: () => undefined
@@ -195,13 +203,19 @@ module.exports = function (app) {
       installed: [],
       updates: [],
       installing: [],
+      deprecated: [],
       categories: getAvailableCategories(),
       storeAvailable: storeAvailable,
       isInDocker: process.env.IS_IN_DOCKER === 'true'
     }
   }
 
-  function getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap = {}) {
+  async function getAllModuleInfo(
+    plugins,
+    webapps,
+    serverVersion,
+    distTagsMap = {}
+  ) {
     const all = emptyAppStoreInfo()
 
     if (
@@ -243,12 +257,105 @@ module.exports = function (app) {
     getModulesInfo(plugins, getPlugin, all, distTagsMap)
     getModulesInfo(webapps, getWebApp, all, distTagsMap)
 
+    // Add locally installed plugins not in npm search results (orphans)
+    if (app.plugins) {
+      const installedPluginNames = new Set(all.installed.map((p) => p.name))
+      app.plugins.forEach((plugin) => {
+        if (!installedPluginNames.has(plugin.packageName)) {
+          const orphanInfo = {
+            name: plugin.packageName,
+            version: plugin.version,
+            description: plugin.description || '',
+            author: '',
+            categories: [],
+            keywords: ['signalk-node-server-plugin'],
+            npmUrl: null,
+            isPlugin: true,
+            isWebapp: false,
+            isEmbeddableWebapp: false,
+            id: plugin.id,
+            installedVersion: plugin.version,
+            isOrphan: true
+          }
+          addOrphanInstallState(orphanInfo, all)
+        }
+      })
+    }
+
+    // Add locally installed webapps not in npm search results (orphans)
+    const addOrphanWebapps = (webappList, isEmbeddable = false) => {
+      if (!webappList) return
+      const installedNames = new Set(all.installed.map((p) => p.name))
+      webappList.forEach((webapp) => {
+        if (!installedNames.has(webapp.name)) {
+          const orphanInfo = {
+            name: webapp.name,
+            version: webapp.version,
+            description: webapp.description || '',
+            author: '',
+            categories: [],
+            keywords: isEmbeddable
+              ? ['signalk-embeddable-webapp']
+              : ['signalk-webapp'],
+            npmUrl: null,
+            isPlugin: false,
+            isWebapp: !isEmbeddable,
+            isEmbeddableWebapp: isEmbeddable,
+            installedVersion: webapp.version,
+            isOrphan: true
+          }
+          addOrphanInstallState(orphanInfo, all)
+        }
+      })
+    }
+    addOrphanWebapps(app.webapps, false)
+    addOrphanWebapps(app.addons, false)
+    addOrphanWebapps(app.embeddablewebapps, true)
+
     if (process.env.PLUGINS_WITH_UPDATE_DISABLED) {
       let disabled = process.env.PLUGINS_WITH_UPDATE_DISABLED.split(',')
       all.updates = all.updates.filter((info) => !disabled.includes(info.name))
     }
 
+    // Check npm deprecation status for all installed packages
+    if (all.installed.length > 0) {
+      try {
+        const installedNames = all.installed.map((p) => p.name)
+        const deprecationStatus = await checkDeprecations(installedNames)
+        all.installed.forEach((plugin) => {
+          const deprecatedMsg = deprecationStatus[plugin.name]
+          if (deprecatedMsg) {
+            plugin.deprecatedMessage = deprecatedMsg
+            all.deprecated.push(plugin)
+          }
+        })
+      } catch (err) {
+        debug('Failed to check deprecation status:', err)
+      }
+    }
+
     return all
+  }
+
+  function addOrphanInstallState(orphanInfo, result) {
+    const name = orphanInfo.name
+    if (moduleInstallQueue.find((p) => p.name === name)) {
+      orphanInfo.isWaiting = true
+      addIfNotDuplicate(result.installing, orphanInfo)
+    } else if (modulesInstalledSinceStartup[name]) {
+      if (moduleInstalling && moduleInstalling.name === name) {
+        if (moduleInstalling.isRemove) {
+          orphanInfo.isRemoving = true
+        } else {
+          orphanInfo.isInstalling = true
+        }
+      } else if (modulesInstalledSinceStartup[name].code !== 0) {
+        orphanInfo.installFailed = true
+      }
+      orphanInfo.isRemove = modulesInstalledSinceStartup[name].isRemove
+      addIfNotDuplicate(result.installing, orphanInfo)
+    }
+    addIfNotDuplicate(result.installed, orphanInfo)
   }
 
   function getModulesInfo(modules, existing, result, distTagsMap) {
@@ -344,20 +451,21 @@ module.exports = function (app) {
     return npm || null
   }
 
-  function sendAppStoreChangedEvent() {
-    findPluginsAndWebapps().then(([plugins, webapps]) => {
-      getLatestServerVersion(app.config.version)
-        .then((serverVersion) =>
-          getAllModuleInfo(plugins, webapps, serverVersion)
-        )
-        .then((result) => {
-          app.emit('serverevent', {
-            type: 'APP_STORE_CHANGED',
-            from: 'signalk-server',
-            data: result
-          })
-        })
-    })
+  async function sendAppStoreChangedEvent() {
+    try {
+      const [plugins, webapps] = await findPluginsAndWebapps()
+      const serverVersion = await getLatestServerVersion(
+        app.config.version
+      ).catch(() => '0.0.0')
+      const result = await getAllModuleInfo(plugins, webapps, serverVersion)
+      app.emit('serverevent', {
+        type: 'APP_STORE_CHANGED',
+        from: 'signalk-server',
+        data: result
+      })
+    } catch (err) {
+      debug('Failed to send app store changed event:', err)
+    }
   }
 
   function installSKModule(module, version) {
