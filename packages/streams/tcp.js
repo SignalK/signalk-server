@@ -77,7 +77,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
     )
   }
 
-  require('reconnect-core')(function () {
+  this.reconnector = require('reconnect-core')(function () {
     return net.connect.apply(null, arguments)
   })({ maxDelay: 5 * 1000 }, (tcpStream) => {
     if (!isNaN(this.noDataReceivedTimeout)) {
@@ -129,6 +129,12 @@ TcpStream.prototype.pipe = function (pipeTo) {
     .connect(this.options)
 
   Transform.prototype.pipe.call(this, pipeTo)
+}
+
+TcpStream.prototype.end = function () {
+  if (this.reconnector) {
+    this.reconnector.disconnect()
+  }
 }
 
 TcpStream.prototype._transform = function (data, encoding, callback) {

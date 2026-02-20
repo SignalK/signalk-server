@@ -188,7 +188,13 @@ SerialStream.prototype.start = function () {
 }
 
 SerialStream.prototype.end = function () {
-  this.serial.close()
+  this.reconnect = false
+  if (this.reconnectTimeout) {
+    clearTimeout(this.reconnectTimeout)
+  }
+  if (this.serial) {
+    this.serial.close()
+  }
 }
 
 SerialStream.prototype._transform = function (chunk, encoding, done) {
@@ -203,7 +209,7 @@ SerialStream.prototype.scheduleReconnect = function () {
   ).toFixed(0)} s)`
   this.debug(msg)
   this.options.app.setProviderStatus(this.options.providerId, msg)
-  setTimeout(this.start.bind(this), this.reconnectDelay)
+  this.reconnectTimeout = setTimeout(this.start.bind(this), this.reconnectDelay)
 }
 
 module.exports = SerialStream
