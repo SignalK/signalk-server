@@ -57,3 +57,36 @@ export function convertValue(
     return null
   }
 }
+
+export function convertFromSI(siValue, siUnit, targetUnit, unitDefinitions) {
+  if (!unitDefinitions || targetUnit === siUnit) return siValue
+  const formula = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.formula
+  if (!formula) return null
+  try {
+    return getCompiledFormula(formula).evaluate({ value: siValue })
+  } catch {
+    return null
+  }
+}
+
+export function convertToSI(displayValue, siUnit, targetUnit, unitDefinitions) {
+  if (!unitDefinitions || targetUnit === siUnit) return displayValue
+  const inverseFormula =
+    unitDefinitions[siUnit]?.conversions?.[targetUnit]?.inverseFormula
+  if (!inverseFormula) return null
+  try {
+    return getCompiledFormula(inverseFormula).evaluate({ value: displayValue })
+  } catch {
+    return null
+  }
+}
+
+export function getAvailableUnits(siUnit, unitDefinitions) {
+  if (!unitDefinitions || !siUnit) return []
+  const conversions = unitDefinitions[siUnit]?.conversions
+  if (!conversions) return []
+  return Object.entries(conversions).map(([unit, conv]) => ({
+    unit,
+    symbol: conv.symbol || unit
+  }))
+}

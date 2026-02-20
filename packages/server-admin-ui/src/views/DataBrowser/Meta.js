@@ -25,7 +25,12 @@ import {
   Label,
   Row
 } from 'reactstrap'
-import { convertValue } from '../../utils/unitConversion'
+import {
+  convertFromSI,
+  convertToSI,
+  convertValue,
+  getAvailableUnits
+} from '../../utils/unitConversion'
 
 const UnitSelect = ({ disabled, value, setValue }) => (
   <Input
@@ -633,6 +638,10 @@ function Meta({
               zones={zones !== undefined && zones !== null ? zones : []}
               isEditing={isEditing}
               setZones={(zones) => setLocalMeta({ ...localMeta, zones })}
+              siUnit={siUnit}
+              category={category}
+              presetDetails={presetDetails}
+              unitDefinitions={unitDefinitions}
             />
           </Form>
         </CardBody>
@@ -707,6 +716,11 @@ const STATE_COLORS = {
   emergency: '#6f42c1'
 }
 
+const formatZoneValue = (v) => {
+  if (v === null || v === undefined) return ''
+  return Number.isInteger(v) ? String(v) : v.toFixed(2)
+}
+
 const Zone = ({
   zone,
   isEditing,
@@ -716,9 +730,41 @@ const Zone = ({
   moveUp,
   moveDown,
   canMoveUp,
-  canMoveDown
+  canMoveDown,
+  displayUnit,
+  siUnit,
+  unitDefinitions
 }) => {
   const { state, lower, upper, message } = zone
+
+  const hasConversion = displayUnit && displayUnit !== siUnit
+  const displayLower = hasConversion
+    ? convertFromSI(lower, siUnit, displayUnit, unitDefinitions)
+    : lower
+  const displayUpper = hasConversion
+    ? convertFromSI(upper, siUnit, displayUnit, unitDefinitions)
+    : upper
+
+  const onLowerChange = (e) => {
+    const val = Number(e.target.value)
+    if (hasConversion) {
+      const si = convertToSI(val, siUnit, displayUnit, unitDefinitions)
+      if (si !== null) setZone({ ...zone, lower: si })
+    } else {
+      setZone({ ...zone, lower: val })
+    }
+  }
+
+  const onUpperChange = (e) => {
+    const val = Number(e.target.value)
+    if (hasConversion) {
+      const si = convertToSI(val, siUnit, displayUnit, unitDefinitions)
+      if (si !== null) setZone({ ...zone, upper: si })
+    } else {
+      setZone({ ...zone, upper: val })
+    }
+  }
+
   return (
     <div
       style={{
@@ -740,10 +786,12 @@ const Zone = ({
             disabled={!isEditing}
             type="number"
             bsSize="sm"
-            onChange={(e) =>
-              setZone({ ...zone, lower: Number(e.target.value) })
+            onChange={onLowerChange}
+            value={
+              isEditing
+                ? (displayLower ?? lower)
+                : formatZoneValue(displayLower ?? lower)
             }
-            value={lower}
           />
         </Col>
         <Col xs="2" md="2">
@@ -756,10 +804,12 @@ const Zone = ({
             disabled={!isEditing}
             type="number"
             bsSize="sm"
-            onChange={(e) =>
-              setZone({ ...zone, upper: Number(e.target.value) })
+            onChange={onUpperChange}
+            value={
+              isEditing
+                ? (displayUpper ?? upper)
+                : formatZoneValue(displayUpper ?? upper)
             }
-            value={upper}
           />
         </Col>
         <Col xs="2" md="2">
@@ -830,7 +880,34 @@ const Zone = ({
     </div>
   )
 }
-const Zones = ({ zones, isEditing, setZones }) => {
+const Zones = ({
+  zones,
+  isEditing,
+  setZones,
+  siUnit,
+  category,
+  presetDetails,
+  unitDefinitions
+}) => {
+  const availableUnits = getAvailableUnits(siUnit, unitDefinitions)
+
+  const presetTargetUnit = category
+    ? (presetDetails?.categories?.[category]?.targetUnit ?? '')
+    : ''
+  const defaultUnit =
+    presetTargetUnit && availableUnits.some((u) => u.unit === presetTargetUnit)
+      ? presetTargetUnit
+      : siUnit
+
+  const [displayUnit, setDisplayUnit] = useState(defaultUnit)
+
+  useEffect(() => {
+    setDisplayUnit(defaultUnit)
+  }, [defaultUnit])
+
+  const displaySymbol =
+    availableUnits.find((u) => u.unit === displayUnit)?.symbol || displayUnit
+
   const moveZone = (fromIndex, toIndex) => {
     const newZones = [...zones]
     const [moved] = newZones.splice(fromIndex, 1)
@@ -854,6 +931,33 @@ const Zones = ({ zones, isEditing, setZones }) => {
           </FormText>
         </Col>
         <Col md="10">
+          {availableUnits.length > 1 && (
+            <div
+              style={{
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <FormText color="muted" style={{ fontSize: '0.75rem' }}>
+                Unit:
+              </FormText>
+              <Input
+                type="select"
+                bsSize="sm"
+                style={{ width: 'auto', display: 'inline-block' }}
+                value={displayUnit}
+                onChange={(e) => setDisplayUnit(e.target.value)}
+              >
+                {availableUnits.map((u) => (
+                  <option key={u.unit} value={u.unit}>
+                    {u.symbol}
+                  </option>
+                ))}
+              </Input>
+            </div>
+          )}
           {(zones === undefined || zones.length === 0) && !isEditing && (
             <span style={{ color: '#6c757d', fontStyle: 'italic' }}>
               No zones defined
@@ -879,6 +983,9 @@ const Zones = ({ zones, isEditing, setZones }) => {
               moveDown={() => moveZone(i, i + 1)}
               canMoveUp={i > 0}
               canMoveDown={i < zones.length - 1}
+              displayUnit={displayUnit}
+              siUnit={siUnit}
+              unitDefinitions={unitDefinitions}
             />
           ))}
           {isEditing && (
@@ -887,14 +994,32 @@ const Zones = ({ zones, isEditing, setZones }) => {
               size="sm"
               outline
               style={{ marginTop: '10px' }}
-              onClick={() =>
+              onClick={() => {
+                const defaultLowerSI = convertToSI(
+                  0,
+                  siUnit,
+                  displayUnit,
+                  unitDefinitions
+                )
+                const defaultUpperSI = convertToSI(
+                  100,
+                  siUnit,
+                  displayUnit,
+                  unitDefinitions
+                )
                 setZones([
                   ...zones,
-                  { upper: 1, lower: 0, state: STATES[0], message: '' }
+                  {
+                    upper: defaultUpperSI ?? 1,
+                    lower: defaultLowerSI ?? 0,
+                    state: STATES[0],
+                    message: ''
+                  }
                 ])
-              }
+              }}
             >
-              <FontAwesomeIcon icon={faPlusSquare} /> Add Zone
+              <FontAwesomeIcon icon={faPlusSquare} /> Add Zone{' '}
+              {displaySymbol && `(${displaySymbol})`}
             </Button>
           )}
         </Col>

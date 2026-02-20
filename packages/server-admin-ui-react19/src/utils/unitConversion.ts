@@ -30,7 +30,9 @@ export interface PresetDetails {
 
 export interface UnitConversion {
   formula?: string
+  inverseFormula?: string
   symbol?: string
+  longName?: string
 }
 
 export interface UnitDefinition {
@@ -71,4 +73,55 @@ export function convertValue(
   } catch {
     return null
   }
+}
+
+export function convertFromSI(
+  siValue: number,
+  siUnit: string,
+  targetUnit: string,
+  unitDefinitions: UnitDefinitions | null
+): number | null {
+  if (!unitDefinitions || targetUnit === siUnit) return siValue
+  const formula = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.formula
+  if (!formula) return null
+  try {
+    return getCompiledFormula(formula).evaluate({ value: siValue })
+  } catch {
+    return null
+  }
+}
+
+export function convertToSI(
+  displayValue: number,
+  siUnit: string,
+  targetUnit: string,
+  unitDefinitions: UnitDefinitions | null
+): number | null {
+  if (!unitDefinitions || targetUnit === siUnit) return displayValue
+  const inverseFormula =
+    unitDefinitions[siUnit]?.conversions?.[targetUnit]?.inverseFormula
+  if (!inverseFormula) return null
+  try {
+    return getCompiledFormula(inverseFormula).evaluate({ value: displayValue })
+  } catch {
+    return null
+  }
+}
+
+export interface AvailableUnit {
+  unit: string
+  symbol: string
+}
+
+export function getAvailableUnits(
+  siUnit: string,
+  unitDefinitions: UnitDefinitions | null
+): AvailableUnit[] {
+  if (!unitDefinitions || !siUnit) return []
+  const conversions = unitDefinitions[siUnit]?.conversions
+  if (!conversions) return []
+  return Object.entries(conversions).map(([unit, conv]) => ({
+    unit,
+    symbol: conv.symbol || unit
+  }))
 }

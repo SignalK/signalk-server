@@ -6,7 +6,7 @@ import { faSave } from '@fortawesome/free-solid-svg-icons/faSave'
 import { faTimes } from '@fortawesome/free-solid-svg-icons/faTimes'
 import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import React, { useState, useEffect, type JSX } from 'react'
+import React, { useState, useEffect, useRef, type JSX } from 'react'
 import Badge from 'react-bootstrap/Badge'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
@@ -17,7 +17,13 @@ import {
   useUnitDefinitions,
   useStore
 } from '../../store'
-import { convertValue } from '../../utils/unitConversion'
+import {
+  convertFromSI,
+  convertToSI,
+  convertValue,
+  getAvailableUnits
+} from '../../utils/unitConversion'
+import type { UnitDefinitions } from '../../utils/unitConversion'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
@@ -819,6 +825,10 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context }) => {
                 setLocalMeta({ ...localMeta, zones: newZones })
               }
               idPrefix={idPrefix}
+              siUnit={siUnit}
+              category={category}
+              presetDetails={presetDetails}
+              unitDefinitions={unitDefinitions}
             />
           </Form>
         </Card.Body>
@@ -934,6 +944,14 @@ interface ZoneProps {
   canMoveDown: boolean
   idPrefix: string
   index: number
+  displayUnit: string
+  siUnit: string
+  unitDefinitions: UnitDefinitions | null
+}
+
+const formatZoneValue = (v: number | null | undefined): string => {
+  if (v === null || v === undefined) return ''
+  return Number.isInteger(v) ? String(v) : v.toFixed(2)
 }
 
 const ZoneRow: React.FC<ZoneProps> = ({
@@ -947,10 +965,42 @@ const ZoneRow: React.FC<ZoneProps> = ({
   canMoveUp,
   canMoveDown,
   idPrefix,
-  index
+  index,
+  displayUnit,
+  siUnit,
+  unitDefinitions
 }) => {
   const { state, lower, upper, message } = zone
   const zoneId = `${idPrefix}-zone-${index}`
+
+  const hasConversion = displayUnit && displayUnit !== siUnit
+  const displayLower = hasConversion
+    ? convertFromSI(lower, siUnit, displayUnit, unitDefinitions)
+    : lower
+  const displayUpper = hasConversion
+    ? convertFromSI(upper, siUnit, displayUnit, unitDefinitions)
+    : upper
+
+  const onLowerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Number(e.target.value)
+    if (hasConversion) {
+      const si = convertToSI(val, siUnit, displayUnit, unitDefinitions)
+      if (si !== null) setZone({ ...zone, lower: si })
+    } else {
+      setZone({ ...zone, lower: val })
+    }
+  }
+
+  const onUpperChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Number(e.target.value)
+    if (hasConversion) {
+      const si = convertToSI(val, siUnit, displayUnit, unitDefinitions)
+      if (si !== null) setZone({ ...zone, upper: si })
+    } else {
+      setZone({ ...zone, upper: val })
+    }
+  }
+
   return (
     <div
       style={{
@@ -973,10 +1023,12 @@ const ZoneRow: React.FC<ZoneProps> = ({
             disabled={!isEditing}
             type="number"
             size="sm"
-            onChange={(e) =>
-              setZone({ ...zone, lower: Number(e.target.value) })
+            onChange={onLowerChange}
+            value={
+              isEditing
+                ? (displayLower ?? lower)
+                : formatZoneValue(displayLower ?? lower)
             }
-            value={lower}
           />
         </Col>
         <Col xs="2" md="2">
@@ -990,10 +1042,12 @@ const ZoneRow: React.FC<ZoneProps> = ({
             disabled={!isEditing}
             type="number"
             size="sm"
-            onChange={(e) =>
-              setZone({ ...zone, upper: Number(e.target.value) })
+            onChange={onUpperChange}
+            value={
+              isEditing
+                ? (displayUpper ?? upper)
+                : formatZoneValue(displayUpper ?? upper)
             }
-            value={upper}
           />
         </Col>
         <Col xs="2" md="2">
@@ -1071,9 +1125,43 @@ interface ZonesProps {
   isEditing: boolean
   setZones: (zones: Zone[]) => void
   idPrefix: string
+  siUnit: string
+  category: string | undefined
+  presetDetails: ReturnType<typeof usePresetDetails>
+  unitDefinitions: UnitDefinitions | null
 }
 
-function Zones({ zones, isEditing, setZones, idPrefix }: ZonesProps) {
+function Zones({
+  zones,
+  isEditing,
+  setZones,
+  idPrefix,
+  siUnit,
+  category,
+  presetDetails,
+  unitDefinitions
+}: ZonesProps) {
+  const availableUnits = getAvailableUnits(siUnit, unitDefinitions)
+
+  // Default display unit: preset's target unit for the category, or SI unit
+  const presetTargetUnit = category
+    ? (presetDetails?.categories?.[category]?.targetUnit ?? '')
+    : ''
+  const defaultUnit =
+    presetTargetUnit && availableUnits.some((u) => u.unit === presetTargetUnit)
+      ? presetTargetUnit
+      : siUnit
+
+  const [displayUnit, setDisplayUnit] = useState(defaultUnit)
+  const prevDefaultUnit = useRef(defaultUnit)
+  if (prevDefaultUnit.current !== defaultUnit) {
+    prevDefaultUnit.current = defaultUnit
+    setDisplayUnit(defaultUnit)
+  }
+
+  const displaySymbol =
+    availableUnits.find((u) => u.unit === displayUnit)?.symbol || displayUnit
+
   const [zoneIds, setZoneIds] = useState<string[]>(() =>
     zones.map(() => generateZoneId())
   )
@@ -1118,6 +1206,32 @@ function Zones({ zones, isEditing, setZones, idPrefix }: ZonesProps) {
           </Form.Text>
         </Col>
         <Col md="10">
+          {availableUnits.length > 1 && (
+            <div
+              style={{
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Form.Text muted style={{ fontSize: '0.75rem' }}>
+                Unit:
+              </Form.Text>
+              <Form.Select
+                size="sm"
+                style={{ width: 'auto', display: 'inline-block' }}
+                value={displayUnit}
+                onChange={(e) => setDisplayUnit(e.target.value)}
+              >
+                {availableUnits.map((u) => (
+                  <option key={u.unit} value={u.unit}>
+                    {u.symbol}
+                  </option>
+                ))}
+              </Form.Select>
+            </div>
+          )}
           {(zones === undefined || zones.length === 0) && !isEditing && (
             <span style={{ color: '#6c757d', fontStyle: 'italic' }}>
               No zones defined
@@ -1148,6 +1262,9 @@ function Zones({ zones, isEditing, setZones, idPrefix }: ZonesProps) {
               canMoveDown={i < zones.length - 1}
               idPrefix={idPrefix}
               index={i}
+              displayUnit={displayUnit}
+              siUnit={siUnit}
+              unitDefinitions={unitDefinitions}
             />
           ))}
           {isEditing && (
@@ -1155,14 +1272,32 @@ function Zones({ zones, isEditing, setZones, idPrefix }: ZonesProps) {
               variant="outline-info"
               size="sm"
               style={{ marginTop: '10px' }}
-              onClick={() =>
+              onClick={() => {
+                const defaultLowerSI = convertToSI(
+                  0,
+                  siUnit,
+                  displayUnit,
+                  unitDefinitions
+                )
+                const defaultUpperSI = convertToSI(
+                  100,
+                  siUnit,
+                  displayUnit,
+                  unitDefinitions
+                )
                 setZones([
                   ...zones,
-                  { upper: 1, lower: 0, state: STATES[0], message: '' }
+                  {
+                    upper: defaultUpperSI ?? 1,
+                    lower: defaultLowerSI ?? 0,
+                    state: STATES[0],
+                    message: ''
+                  }
                 ])
-              }
+              }}
             >
-              <FontAwesomeIcon icon={faPlusSquare} /> Add Zone
+              <FontAwesomeIcon icon={faPlusSquare} /> Add Zone{' '}
+              {displaySymbol && `(${displaySymbol})`}
             </Button>
           )}
         </Col>
