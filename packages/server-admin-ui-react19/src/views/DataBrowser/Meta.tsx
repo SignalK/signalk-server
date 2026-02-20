@@ -1085,12 +1085,12 @@ const ZoneRow: React.FC<ZoneProps> = ({
             value={message}
           />
         </Col>
-        <Col xs="2" md="2">
-          {showHint && (
-            <Form.Text muted style={{ fontSize: '0.7rem' }}>
-              Actions
-            </Form.Text>
-          )}
+        <Col
+          xs="2"
+          md="2"
+          className="d-flex align-items-end"
+          style={showHint ? { paddingBottom: '1px' } : undefined}
+        >
           {isEditing && (
             <ButtonGroup size="sm">
               <Button

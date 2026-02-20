@@ -846,12 +846,12 @@ const Zone = ({
             value={message}
           />
         </Col>
-        <Col xs="2" md="2">
-          {showHint && (
-            <FormText color="muted" style={{ fontSize: '0.7rem' }}>
-              Actions
-            </FormText>
-          )}
+        <Col
+          xs="2"
+          md="2"
+          className="d-flex align-items-end"
+          style={showHint ? { paddingBottom: '1px' } : undefined}
+        >
           {isEditing && (
             <ButtonGroup size="sm">
               <Button
