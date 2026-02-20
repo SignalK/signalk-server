@@ -25,7 +25,7 @@ const {
 } = require('../unitpreferences')
 
 // Enhance metadata response with displayUnits from unit preferences
-function enhanceMetadataResponse(metadata, signalkPath, _app) {
+function enhanceMetadataResponse(metadata, signalkPath, username) {
   if (!metadata) return metadata
 
   // Check if displayUnits.category exists in stored metadata
@@ -41,7 +41,11 @@ function enhanceMetadataResponse(metadata, signalkPath, _app) {
 
   if (storedDisplayUnits?.category) {
     try {
-      const enhanced = resolveDisplayUnits(storedDisplayUnits, metadata.units)
+      const enhanced = resolveDisplayUnits(
+        storedDisplayUnits,
+        metadata.units,
+        username
+      )
       if (enhanced) {
         metadata.displayUnits = enhanced
       }
@@ -91,7 +95,8 @@ module.exports = function (app) {
           if (meta) {
             // Extract signalk path (remove vessels.self prefix)
             const signalkPath = metaPath.replace(/^vessels\.[^.]+\./, '')
-            res.json(enhanceMetadataResponse(meta, signalkPath, app))
+            const username = req.skPrincipal?.identifier
+            res.json(enhanceMetadataResponse(meta, signalkPath, username))
             return
           }
         }

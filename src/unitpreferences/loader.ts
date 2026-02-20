@@ -17,6 +17,11 @@ let customDefinitions: UnitDefinitions
 let activePreset: Preset
 let config: UnitPreferencesConfig
 let defaultCategories: { [path: string]: string } = {}
+let applicationDataPath: string = ''
+
+export function setApplicationDataPath(configPath: string): void {
+  applicationDataPath = path.join(configPath, 'applicationData')
+}
 
 export function loadAll(): void {
   // Load categories
@@ -218,16 +223,37 @@ function loadPresetByName(presetName: string): Preset | null {
 }
 
 export function getActivePresetForUser(username?: string): Preset {
-  // 1. User-specific preset
+  // 1. Check applicationData for user's preset preference
+  if (username && applicationDataPath) {
+    try {
+      const userPrefPath = path.join(
+        applicationDataPath,
+        'users',
+        username,
+        'unitpreferences',
+        '1.0.json'
+      )
+      if (fs.existsSync(userPrefPath)) {
+        const userPref = JSON.parse(fs.readFileSync(userPrefPath, 'utf-8'))
+        if (userPref?.activePreset) {
+          const preset = loadPresetByName(userPref.activePreset)
+          if (preset) return preset
+        }
+      }
+    } catch {
+      // Fall through to other options
+    }
+  }
+  // 2. User-specific preset from config (legacy)
   if (username && config.userPresets?.[username]) {
     const preset = loadPresetByName(config.userPresets[username])
     if (preset) return preset
   }
-  // 2. Admin preset
+  // 3. Admin preset
   if (config.activePreset) {
     const preset = loadPresetByName(config.activePreset)
     if (preset) return preset
   }
-  // 3. Default
+  // 4. Default
   return loadPresetByName(DEFAULT_PRESET) || activePreset
 }

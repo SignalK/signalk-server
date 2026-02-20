@@ -29,7 +29,10 @@ import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
 import { atomicWriteFile } from '../atomicWrite'
-import { loadAll as loadUnitPreferences } from '../unitpreferences'
+import {
+  loadAll as loadUnitPreferences,
+  setApplicationDataPath
+} from '../unitpreferences'
 const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
@@ -156,6 +159,7 @@ export function load(app: ConfigApp) {
   // Load unit preferences
   try {
     loadUnitPreferences()
+    setApplicationDataPath(app.config.configPath)
     debug('Unit preferences loaded')
   } catch (err) {
     console.error('Failed to load unit preferences:', err)

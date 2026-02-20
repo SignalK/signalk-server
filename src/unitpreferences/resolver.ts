@@ -1,15 +1,23 @@
-import { getCategories, getMergedDefinitions, getActivePreset } from './loader'
+import {
+  getCategories,
+  getMergedDefinitions,
+  getActivePreset,
+  getActivePresetForUser
+} from './loader'
 import { EnhancedDisplayUnits, DisplayUnitsMetadata } from './types'
 
 /**
  * Given stored displayUnits metadata, resolve the full conversion info
  *
  * @param storedDisplayUnits - What's in baseDeltas.json (category, optional targetUnit)
+ * @param pathSiUnit - The SI unit for this path (optional)
+ * @param username - Username for per-user preset resolution (optional)
  * @returns Full displayUnits with formula, or null if can't resolve
  */
 export function resolveDisplayUnits(
   storedDisplayUnits: DisplayUnitsMetadata | undefined,
-  pathSiUnit?: string
+  pathSiUnit?: string,
+  username?: string
 ): EnhancedDisplayUnits | null {
   if (!storedDisplayUnits?.category) {
     return null
@@ -31,7 +39,7 @@ export function resolveDisplayUnits(
 
   const categoriesData = getCategories()
   const definitions = getMergedDefinitions()
-  const preset = getActivePreset()
+  const preset = username ? getActivePresetForUser(username) : getActivePreset()
 
   // Step 1: Get SI unit for this category
   const siUnit = categoriesData.categoryToBaseUnit[category]

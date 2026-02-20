@@ -176,6 +176,7 @@ module.exports = function (app) {
       const configPath = path.join(UNITPREFS_DIR, 'config.json')
       fs.writeFileSync(configPath, JSON.stringify(req.body, null, 2))
       reloadPreset()
+      app.emit('unitpreferencesChanged', { type: 'global' })
       res.json({ success: true })
     } catch (err) {
       debug('Error saving config:', err)
@@ -240,6 +241,7 @@ module.exports = function (app) {
       )
       fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
       reloadCustomDefinitions()
+      app.emit('unitpreferencesChanged', { type: 'global' })
       res.json({ success: true })
     } catch (err) {
       debug('Error saving custom definitions:', err)
@@ -264,6 +266,7 @@ module.exports = function (app) {
       const customPath = path.join(UNITPREFS_DIR, 'custom-categories.json')
       fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
       reloadCustomCategories()
+      app.emit('unitpreferencesChanged', { type: 'global' })
       res.json({ success: true })
     } catch (err) {
       debug('Error saving custom categories:', err)

@@ -10,6 +10,7 @@ export {
   getActivePreset,
   getActivePresetForUser,
   getDefaultCategory,
+  setApplicationDataPath,
   DEFAULT_PRESET
 } from './loader'
 export { resolveDisplayUnits, validateCategoryAssignment } from './resolver'
