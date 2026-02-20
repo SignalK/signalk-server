@@ -79,6 +79,7 @@ function start(command, that) {
     const msg = `|${command}| exited with ${code}`
     // that.options.app.setProviderError(that.options.providerId, msg)
     console.error(msg)
+    if (that.stopped) return
     if (
       typeof that.options.restartOnClose === 'undefined' ||
       that.options.restartOnClose
@@ -129,7 +130,8 @@ Execute.prototype.pipe = function (pipeTo) {
 }
 
 Execute.prototype.end = function () {
-  this.debug('end, killing child  process')
+  this.debug('end, killing child process')
+  this.stopped = true
   this.childProcess.kill()
   this.pipeTo.end()
 }

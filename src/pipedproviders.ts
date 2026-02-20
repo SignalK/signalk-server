@@ -65,6 +65,8 @@ export function pipedProviders(
     WithWrappedEmitter & {
       propertyValues: PropertyValues
       setProviderError: (providerId: string, msg: string) => void
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      providers: any[]
     }
 ) {
   function createPipedProvider(providerConfig: PipedProviderConfig) {
@@ -176,8 +178,40 @@ export function pipedProviders(
     }
   }
 
+  function stopProvider(id: string) {
+    const idx = app.providers.findIndex((p: { id: string }) => p.id === id)
+    if (idx !== -1) {
+      app.providers[idx].pipeElements[0].end()
+      app.providers.splice(idx, 1)
+    }
+    app.wrappedEmitter.removeAllListenersById(
+      `connection:${id}` as EventsActorId
+    )
+  }
+
+  function restartProvider(id: string) {
+    stopProvider(id)
+    const providerConfig = (
+      app.config.settings.pipedProviders as PipedProviderConfig[]
+    )?.find((p) => p.id === id)
+    if (
+      providerConfig &&
+      (typeof providerConfig.enabled === 'undefined' || providerConfig.enabled)
+    ) {
+      try {
+        app.providers.push(createPipedProvider(providerConfig))
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e)
+        app.setProviderError(id, message)
+        console.error(e)
+      }
+    }
+  }
+
   return {
     start: startProviders,
-    createPipedProvider: createPipedProvider
+    createPipedProvider,
+    stopProvider,
+    restartProvider
   }
 }

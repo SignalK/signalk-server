@@ -87,6 +87,12 @@ function Gpsd(options) {
 
 require('util').inherits(Gpsd, Transform)
 
+Gpsd.prototype.end = function () {
+  if (this.listener) {
+    this.listener.disconnect()
+  }
+}
+
 Gpsd.prototype._transform = function (chunk, encoding, done) {
   done()
 }

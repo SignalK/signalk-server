@@ -28,7 +28,10 @@ function Replacer(options) {
 }
 
 Replacer.prototype._transform = function (chunk, encoding, done) {
-  this.doPush(chunk.toString().replace(this.regexp, this.template))
+  const result = chunk.toString().replace(this.regexp, this.template)
+  if (result.length > 0) {
+    this.doPush(result)
+  }
   done()
 }
 

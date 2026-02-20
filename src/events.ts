@@ -126,6 +126,8 @@ export interface WrappedEmitter {
     ) => void
     on: (eventName: EventName, listener: (...args: any[]) => void) => void
   }
+
+  removeAllListenersById: (actorId: EventsActorId) => void
 }
 
 export interface WithWrappedEmitter {
@@ -134,6 +136,14 @@ export interface WithWrappedEmitter {
 
 export function wrapEmitter(targetEmitter: EventEmitter): WrappedEmitter {
   const targetAddListener = targetEmitter.addListener.bind(targetEmitter)
+  const targetRemoveListener = targetEmitter.removeListener.bind(targetEmitter)
+
+  const listenersByActorId: {
+    [actorId: string]: {
+      eventName: string
+      listener: (...args: any[]) => void
+    }[]
+  } = {}
 
   const eventDebugs: { [key: string]: Debugger } = {}
   const eventsData: {
@@ -240,7 +250,21 @@ export function wrapEmitter(targetEmitter: EventEmitter): WrappedEmitter {
     if (!listenersForEvent[listenerId]) {
       listenersForEvent[listenerId] = true
     }
+    if (!listenersByActorId[listenerId]) {
+      listenersByActorId[listenerId] = []
+    }
+    listenersByActorId[listenerId].push({ eventName, listener })
     return targetAddListener(eventName, listener)
+  }
+
+  function removeAllListenersById(actorId: EventsActorId) {
+    const tracked = listenersByActorId[actorId]
+    if (tracked) {
+      tracked.forEach(({ eventName, listener }) => {
+        targetRemoveListener(eventName, listener)
+      })
+      delete listenersByActorId[actorId]
+    }
   }
 
   return {
@@ -274,6 +298,8 @@ export function wrapEmitter(targetEmitter: EventEmitter): WrappedEmitter {
         addListener,
         on: addListener
       }
-    }
+    },
+
+    removeAllListenersById
   }
 }
