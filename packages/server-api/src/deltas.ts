@@ -1,5 +1,47 @@
-import { Position } from '.'
 import { Brand } from './brand'
+
+export {
+  ALARM_STATE,
+  ALARM_METHOD,
+  MetaValueSchema,
+  ZoneSchema,
+  type Zone,
+  type AlarmStatus,
+  type MetaValue,
+  type Notification
+} from './protocol-schemas'
+
+import type { MetaValue, Notification } from './protocol-schemas'
+
+// ---------------------------------------------------------------------------
+// Branded types
+// ---------------------------------------------------------------------------
+
+/** @category Server API */
+export type SourceRef = Brand<string, 'sourceRef'>
+/** @category Server API */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Source = any
+
+/** @category Server API */
+export type Path = Brand<string, 'path'>
+/** @category Server API */
+export type Timestamp = Brand<string, 'timestamp'>
+/** @category Server API */
+export type Context = Brand<string, 'context'>
+/** @category Server API */
+export type NotificationId = Brand<string, 'notificationId'>
+
+// ---------------------------------------------------------------------------
+// Value — the union of possible delta values
+// ---------------------------------------------------------------------------
+
+/** @category Server API */
+export type Value = object | number | string | null | Notification | boolean
+
+// ---------------------------------------------------------------------------
+// Delta & Update — use branded types for internal server code
+// ---------------------------------------------------------------------------
 
 /** @hidden */
 export interface WithContext {
@@ -32,36 +74,18 @@ export type NormalizedValueDelta = NormalizedBaseDelta & {
 export type NormalizedDelta = NormalizedValueDelta | NormalizedMetaDelta
 
 /** @category Server API */
-export type SourceRef = Brand<string, 'sourceRef'>
-/** @category Server API */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Source = any
-
-/** @category Server API */
-export type Path = Brand<string, 'path'>
-/** @category Server API */
-export type Timestamp = Brand<string, 'timestamp'>
-/** @category Server API */
-export type Context = Brand<string, 'context'>
-/** @category Server API */
-export type NotificationId = Brand<string, 'notificationId'>
-
-/** @category Server API */
-export type Value = object | number | string | null | Notification | boolean
-
-/** @category Server API */
 export interface Delta {
   context?: Context
   updates: Update[]
 }
 
 /**
- * @deprecated earlier mistake assumed ValuesDelta and MetaDelta were separate
+ * @deprecated Use Delta instead
  * @hidden
  */
 export type ValuesDelta = Delta
 /**
- * @deprecated earlier mistake assumed ValuesDelta and MetaDelta were separate
+ * @deprecated Use Delta instead
  * @hidden
  */
 export type MetaDelta = Delta
@@ -92,71 +116,9 @@ export interface PathValue {
   value: Value
 }
 
-// Notification payload
-/** @category Server API */
-export interface Notification {
-  state: ALARM_STATE
-  method: ALARM_METHOD[]
-  message: string
-  status?: AlarmStatus
-  position?: Position
-  createdAt?: Timestamp
-  id?: string
-}
-
 // MetaMessage
 /** @category Server API */
 export interface Meta {
   path: Path
   value: MetaValue
-}
-
-// Meta payload
-/** @category Server API */
-export interface MetaValue {
-  description?: string
-  units?: string
-  example?: string
-  timeout?: number
-  displayName?: string
-  displayScale?: {
-    lower: number
-    upper: number
-  }
-  zones?: Zone[]
-  supportsPut?: boolean
-}
-
-// Notification attribute types
-/** @category Server API */
-export enum ALARM_STATE {
-  nominal = 'nominal',
-  normal = 'normal',
-  alert = 'alert',
-  warn = 'warn',
-  alarm = 'alarm',
-  emergency = 'emergency'
-}
-
-/** @category Server API */
-export enum ALARM_METHOD {
-  visual = 'visual',
-  sound = 'sound'
-}
-
-/** @category Server API */
-export interface AlarmStatus {
-  silenced: boolean
-  acknowledged: boolean
-  canSilence: boolean
-  canAcknowledge: boolean
-  canClear: boolean
-}
-
-/** @category Server API */
-export interface Zone {
-  lower: number | undefined
-  upper: number | undefined
-  state: ALARM_STATE
-  message: string
 }

@@ -1,35 +1,29 @@
-import { Position } from '.'
+import { type Static } from '@sinclair/typebox'
+import { type Position } from './shared-schemas'
 import { Brand } from './brand'
+import {
+  HrefDestinationSchema,
+  PositionDestinationSchema,
+  RouteDestinationSchema,
+  ActiveRouteSchema
+} from './course-schemas'
+
+export * from './course-schemas'
 
 /** @category Course API */
-export interface HrefDestination {
-  href: string
-}
+export type HrefDestination = Static<typeof HrefDestinationSchema>
 
 /** @category Course API */
-export interface PositionDestination {
-  position: Position
-}
+export type PositionDestination = Static<typeof PositionDestinationSchema>
 
 /** @category Course API */
 export type PointDestination = HrefDestination | PositionDestination
 
 /** @category Course API */
-export interface RouteDestination {
-  href: string
-  reverse?: boolean
-  pointIndex?: number
-  arrivalCircle?: number
-}
+export type RouteDestination = Static<typeof RouteDestinationSchema>
 
 /** @category Course API */
-export interface ActiveRoute {
-  href: string
-  pointIndex: number
-  pointTotal: number
-  reverse: boolean
-  name: string
-}
+export type ActiveRoute = Static<typeof ActiveRouteSchema>
 
 /** @category Course API */
 export interface NextPreviousPoint {

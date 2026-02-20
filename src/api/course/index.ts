@@ -6,11 +6,10 @@ import { IRouter, Request, Response } from 'express'
 import _ from 'lodash'
 
 import { SignalKMessageHub, WithConfig } from '../../app'
-import { Context, Path } from '@signalk/server-api'
-import { WithSecurityStrategy } from '../../security'
-import { getSourceId } from '@signalk/signalk-schema'
-
 import {
+  Context,
+  Path,
+  getSourceId,
   GeoJsonPoint,
   PathValue,
   Position,
@@ -31,18 +30,21 @@ import {
   CoursePointType,
   Unsubscribes
 } from '@signalk/server-api'
+import { WithSecurityStrategy } from '../../security'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
 import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
 
-import { buildSchemaSync } from 'api-schema-builder'
-import courseOpenApi from './openApi.json'
+import { Value } from '@sinclair/typebox/value'
+import {
+  PositionSchema,
+  IsoTimeSchema,
+  SetDestinationBodySchema
+} from '@signalk/server-api'
 import { ResourcesApi } from '../resources'
 import { ConfigApp, writeSettingsFile } from '../../config/config'
-
-const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
@@ -314,16 +316,9 @@ export class CourseApi {
     })
   }
 
-  /** Test for valid Signal K position */
+  /** Test for valid Signal K position using TypeBox PositionSchema */
   private isValidPosition(position: Position): boolean {
-    return (
-      typeof position?.latitude === 'number' &&
-      typeof position?.latitude === 'number' &&
-      position?.latitude >= -90 &&
-      position?.latitude <= 90 &&
-      position?.longitude >= -180 &&
-      position?.longitude <= 180
-    )
+    return Value.Check(PositionSchema, position)
   }
 
   /** Process stream value and take action
@@ -664,9 +659,9 @@ export class CourseApi {
           return
         }
 
-        const endpoint = COURSE_API_SCHEMA[`${COURSE_API_PATH}/destination`].put
-        if (!endpoint.body.validate(req.body)) {
-          res.status(400).json(endpoint.body.errors)
+        if (!Value.Check(SetDestinationBodySchema, req.body)) {
+          const errors = [...Value.Errors(SetDestinationBodySchema, req.body)]
+          res.status(400).json(errors)
           return
         }
 
@@ -1010,11 +1005,7 @@ export class CourseApi {
   }
 
   private isValidIsoTime(value: string | undefined): boolean {
-    return !value
-      ? false
-      : /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z))$/.test(
-          value
-        )
+    return !value ? false : Value.Check(IsoTimeSchema, value)
   }
 
   private parsePointIndex(index: number, rte: any): number {

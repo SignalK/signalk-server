@@ -17,22 +17,23 @@
 */
 import {
   Brand,
+  Delta,
+  getMetadata,
+  Path,
+  Plugin,
+  PluginConstructor,
   PointDestination,
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
   AutopilotProvider,
-  ServerAPI,
   RouteDestination,
-  WeatherProvider,
-  WeatherApi,
-  Value,
+  ServerAPI,
   SignalKApiId,
   SourceRef,
-  PluginConstructor,
-  Plugin,
-  Path,
-  Delta
+  Value,
+  WeatherApi,
+  WeatherProvider
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -60,7 +61,7 @@ const put = require('../put')
 const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 const queryRequest = require('../requestResponse').queryRequest
-import { getMetadata } from '@signalk/signalk-schema'
+
 import { HistoryApi } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
