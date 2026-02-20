@@ -18,7 +18,7 @@ import { createDebug } from './debug'
 const debug = createDebug('signalk-server:discovery')
 const canboatjs = require('@canboat/canboatjs')
 const dgram = require('dgram')
-const mdns = require('mdns-js')
+const dnssd = require('dnssd2')
 const { networkInterfaces } = require('os')
 
 module.exports.runDiscovery = function (app) {
@@ -196,28 +196,23 @@ module.exports.runDiscovery = function (app) {
 
   function discoverSignalkWs(wsType) {
     try {
-      mdns.excludeInterface('0.0.0.0')
-      var browser = mdns.createBrowser(mdns.tcp('signalk-' + wsType))
+      const browser = new dnssd.Browser(dnssd.tcp('signalk-' + wsType))
 
-      browser.on('ready', function onReady() {
-        try {
-          debug('looking for SignalK ' + wsType)
-          browser.discover()
-        } catch (err) {
-          debug('discoverSignalkWs:', err)
-        }
-      })
-
-      browser.on('update', function onUpdate(data) {
+      browser.on('serviceUp', (service) => {
         try {
           if (
-            !isLocalIP(data.addresses[0]) &&
-            Array.isArray(data.type) &&
-            data.type[0].name === 'signalk-' + wsType &&
-            !findWSProvider(data.addresses[0], wsType, data.host, data.port)
+            service.addresses &&
+            service.addresses.length > 0 &&
+            !isLocalIP(service.addresses[0]) &&
+            !findWSProvider(
+              service.addresses[0],
+              wsType,
+              service.host,
+              service.port
+            )
           ) {
-            debug('discoverSignalkWs found data[' + wsType + ']:', data)
-            const providerId = wsType + '-' + data.host + ':' + data.port
+            debug('discoverSignalkWs found service[' + wsType + ']:', service)
+            const providerId = wsType + '-' + service.host + ':' + service.port
             app.emit('discovered', {
               id: providerId,
               enabled: false,
@@ -228,8 +223,8 @@ module.exports.runDiscovery = function (app) {
                     type: 'SignalK',
                     subOptions: {
                       type: wsType,
-                      host: data.host,
-                      port: data.port,
+                      host: service.host,
+                      port: service.port,
                       providerId: providerId
                     },
                     providerId: providerId
@@ -242,6 +237,13 @@ module.exports.runDiscovery = function (app) {
           debug('discoverSignalkWs:', err)
         }
       })
+
+      browser.on('error', (err) => {
+        debug('discoverSignalkWs browser error:', err)
+      })
+
+      debug('looking for SignalK ' + wsType)
+      browser.start()
 
       setTimeout(() => {
         try {
