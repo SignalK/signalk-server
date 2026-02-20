@@ -372,68 +372,6 @@ module.exports = function (app) {
 
       return primus
     })
-
-    // Listen for unit preferences changes and emit meta deltas
-    app.on('unitpreferencesChanged', (event) => {
-      debugConnection(
-        'Unit preferences changed, emitting meta deltas',
-        event || {}
-      )
-
-      // Get all actual paths that have data
-      const allPaths = app.streambundle.getAvailablePaths()
-
-      primuses.forEach((primus) =>
-        primus.forEach((spark) => {
-          // Skip if not sending meta deltas
-          if (!spark.sendMetaDeltas) return
-
-          // Skip if user-specific change and this isn't that user
-          if (
-            event?.username &&
-            spark.request.skPrincipal?.identifier !== event.username
-          ) {
-            return
-          }
-
-          const username = spark.request.skPrincipal?.identifier
-
-          // Emit meta delta for each path that has a category
-          allPaths.forEach((path) => {
-            const category = getDefaultCategory(path)
-            if (!category) return // No category = no displayUnits
-
-            const fullPath = 'vessels.self.' + path
-            const meta = getMetadata(fullPath) || {}
-            const displayUnits = resolveDisplayUnits(
-              { category },
-              meta.units,
-              username
-            )
-
-            if (displayUnits) {
-              spark.write({
-                context: 'vessels.' + app.selfId,
-                updates: [
-                  {
-                    timestamp: new Date().toISOString(),
-                    meta: [
-                      {
-                        path: path,
-                        value: { ...meta, displayUnits }
-                      }
-                    ]
-                  }
-                ]
-              })
-            }
-          })
-
-          // Clear sentMetaData so future value deltas will re-send metadata
-          spark.sentMetaData = {}
-        })
-      )
-    })
   }
 
   api.stop = function () {
@@ -897,6 +835,44 @@ function handleRealtimeConnection(app, spark, onChange) {
   spark.onDisconnects.push(() => {
     app.signalk.removeListener('delta', onChange)
   })
+
+  if (spark.sendMetaDeltas) {
+    const onUnitPrefsChanged = (event) => {
+      const username = spark.request.skPrincipal?.identifier
+      if (event?.username && event.username !== username) return
+
+      const allPaths = app.streambundle.getAvailablePaths()
+      const timestamp = new Date().toISOString()
+      const metaEntries = []
+
+      allPaths.forEach((path) => {
+        const category = getDefaultCategory(path)
+        if (!category) return
+        const fullPath = 'vessels.self.' + path
+        const meta = getMetadata(fullPath) || {}
+        const displayUnits = resolveDisplayUnits(
+          { category },
+          meta.units,
+          username
+        )
+        if (displayUnits) {
+          metaEntries.push({ path, value: { ...meta, displayUnits } })
+        }
+      })
+
+      if (metaEntries.length > 0) {
+        spark.write({
+          context: 'vessels.' + app.selfId,
+          updates: [{ timestamp, meta: metaEntries }]
+        })
+      }
+    }
+
+    app.on('unitpreferencesChanged', onUnitPrefsChanged)
+    spark.onDisconnects.push(() => {
+      app.removeListener('unitpreferencesChanged', onUnitPrefsChanged)
+    })
+  }
 
   if (!(spark.request.query.sendCachedValues === 'false')) {
     sendLatestDeltas(app, app.deltaCache, app.selfContext, spark)
