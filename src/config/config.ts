@@ -29,6 +29,10 @@ import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
 import { atomicWriteFile } from '../atomicWrite'
+import {
+  loadAll as loadUnitPreferences,
+  setApplicationDataPath
+} from '../unitpreferences'
 const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
@@ -151,6 +155,16 @@ export function load(app: ConfigApp) {
     }
   }
   setSelfSettings(app)
+
+  // Load unit preferences
+  try {
+    loadUnitPreferences()
+    setApplicationDataPath(app.config.configPath)
+    debug('Unit preferences loaded')
+  } catch (err) {
+    console.error('Failed to load unit preferences:', err)
+    // Non-fatal - server can run without unit preferences
+  }
 
   if (app.argv['sample-nmea0183-data']) {
     const sample = path.join(app.config.appPath, 'samples/plaka.log')

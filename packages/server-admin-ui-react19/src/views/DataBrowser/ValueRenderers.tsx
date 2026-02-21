@@ -13,6 +13,8 @@ import type { MetaData } from '../../store'
 interface RendererProps {
   value: unknown
   units?: string
+  convertedValue?: number | null
+  convertedUnit?: string | null
   [key: string]: unknown
 }
 
@@ -646,15 +648,33 @@ export const getValueRenderer = (
   return null
 }
 
-export const DefaultValueRenderer = ({ value, units }: RendererProps) => {
+export const DefaultValueRenderer = ({
+  value,
+  units,
+  convertedValue,
+  convertedUnit
+}: RendererProps) => {
   let formattedValue = JSON.stringify(
     value,
     null,
     typeof value === 'object' && Object.keys(value || {}).length > 1 ? 2 : 0
   )
 
-  if (typeof value === 'number' && units) {
-    formattedValue = `${value} `
+  if (typeof value === 'number') {
+    formattedValue = Number.isInteger(value)
+      ? value.toString()
+      : value.toFixed(2)
+  }
+
+  let formattedConverted: string | null = null
+  if (
+    convertedValue !== null &&
+    convertedValue !== undefined &&
+    typeof convertedValue === 'number'
+  ) {
+    formattedConverted = Number.isInteger(convertedValue)
+      ? convertedValue.toString()
+      : convertedValue.toFixed(2)
   }
 
   return (
@@ -664,7 +684,12 @@ export const DefaultValueRenderer = ({ value, units }: RendererProps) => {
       ) : (
         <span className="text-primary">
           {formattedValue}
-          {typeof value === 'number' && units && <strong>{units}</strong>}
+          {typeof value === 'number' && units && <strong> {units}</strong>}
+          {formattedConverted && convertedUnit && (
+            <span style={{ color: '#28a745', marginLeft: '8px' }}>
+              ({formattedConverted} <strong>{convertedUnit}</strong>)
+            </span>
+          )}
         </span>
       )}
     </>

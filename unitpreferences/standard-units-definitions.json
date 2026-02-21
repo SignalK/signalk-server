@@ -1,0 +1,889 @@
+{
+  "m/s": {
+    "longName": "meters per second",
+    "conversions": {
+      "m/s": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "m/s",
+        "longName": "meters per second"
+      },
+      "kn": {
+        "formula": "value * 1.94384",
+        "inverseFormula": "value * 0.514444",
+        "symbol": "kn",
+        "longName": "knots"
+      },
+      "km/h": {
+        "formula": "value * 3.6",
+        "inverseFormula": "value * 0.277778",
+        "symbol": "km/h",
+        "longName": "kilometers per hour"
+      },
+      "mph": {
+        "formula": "value * 2.2369362920544025",
+        "inverseFormula": "value / 2.2369362920544025",
+        "symbol": "mph",
+        "longName": "miles per hour"
+      },
+      "Bf": {
+        "formula": "(value / 0.836)^(2/3)",
+        "inverseFormula": "0.836 * value^1.5",
+        "symbol": "Bf",
+        "longName": "Beaufort"
+      },
+      "fps": {
+        "formula": "value * 3.280839895013124",
+        "inverseFormula": "value / 3.280839895013124",
+        "symbol": "fps"
+      },
+      "knot": {
+        "formula": "value * 1.943844494119952",
+        "inverseFormula": "value / 1.943844494119952",
+        "symbol": "knot"
+      },
+      "kph": {
+        "formula": "value * 3.5999999971200007",
+        "inverseFormula": "value / 3.5999999971200007",
+        "symbol": "kph"
+      }
+    }
+  },
+  "K": {
+    "longName": "kelvin",
+    "conversions": {
+      "K": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "K",
+        "longName": "kelvin"
+      },
+      "C": {
+        "formula": "value - 273.15",
+        "inverseFormula": "value + 273.15",
+        "symbol": "°C",
+        "longName": "celsius",
+        "key": "C"
+      },
+      "F": {
+        "formula": "(value - 273.15) * 9/5 + 32",
+        "inverseFormula": "(value - 32) * 5/9 + 273.15",
+        "symbol": "°F",
+        "longName": "fahrenheit",
+        "key": "F"
+      }
+    }
+  },
+  "Pa": {
+    "longName": "pascal",
+    "conversions": {
+      "Pa": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "Pa",
+        "longName": "pascal"
+      },
+      "hPa": {
+        "formula": "value * 0.01",
+        "inverseFormula": "value * 100",
+        "symbol": "hPa",
+        "longName": "hectopascal"
+      },
+      "mbar": {
+        "formula": "value * 0.01",
+        "inverseFormula": "value * 100",
+        "symbol": "mbar",
+        "longName": "millibar"
+      },
+      "bar": {
+        "formula": "value * 0.00001",
+        "inverseFormula": "value * 100000",
+        "symbol": "bar",
+        "longName": "bar"
+      },
+      "psi": {
+        "formula": "value * 0.0001450376807894691",
+        "inverseFormula": "value / 0.0001450376807894691",
+        "symbol": "psi",
+        "longName": "pounds per square inch"
+      },
+      "inHg": {
+        "formula": "value * 0.00029529987601298443",
+        "inverseFormula": "value / 0.00029529987601298443",
+        "symbol": "inHg",
+        "longName": "inches of mercury"
+      },
+      "mmHg": {
+        "formula": "value * 0.0075006168507298",
+        "inverseFormula": "value / 0.0075006168507298",
+        "symbol": "mmHg",
+        "longName": "millimeters of mercury"
+      },
+      "atm": {
+        "formula": "value * 0.000009869232667160129",
+        "inverseFormula": "value / 0.000009869232667160129",
+        "symbol": "atm"
+      },
+      "cmh2o": {
+        "formula": "value * 0.0101974428892211",
+        "inverseFormula": "value / 0.0101974428892211",
+        "symbol": "cmh2o"
+      },
+      "inh2o": {
+        "formula": "value * 0.004014741294968937",
+        "inverseFormula": "value / 0.004014741294968937",
+        "symbol": "inh2o"
+      },
+      "torr": {
+        "formula": "value * 0.0075006168507298",
+        "inverseFormula": "value / 0.0075006168507298",
+        "symbol": "torr"
+      }
+    }
+  },
+  "m": {
+    "longName": "meter",
+    "conversions": {
+      "mm": {
+        "formula": "value * 1000",
+        "inverseFormula": "value / 1000",
+        "symbol": "mm",
+        "longName": "millimeter"
+      },
+      "cm": {
+        "formula": "value * 100",
+        "inverseFormula": "value / 100",
+        "symbol": "cm",
+        "longName": "centimeter"
+      },
+      "fathom": {
+        "formula": "value * 0.5467468562055768",
+        "inverseFormula": "value / 0.5467468562055768",
+        "symbol": "fathom",
+        "longName": "fathom"
+      },
+      "angstrom": {
+        "formula": "value * 10000000000",
+        "inverseFormula": "value / 10000000000",
+        "symbol": "angstrom"
+      },
+      "AU": {
+        "formula": "value * 6.684585813036146e-12",
+        "inverseFormula": "value / 6.684585813036146e-12",
+        "symbol": "AU"
+      },
+      "datamile": {
+        "formula": "value * 0.0005468066491688539",
+        "inverseFormula": "value / 0.0005468066491688539",
+        "symbol": "datamile"
+      },
+      "foot": {
+        "formula": "value * 3.280839895013124",
+        "inverseFormula": "value / 3.280839895013124",
+        "symbol": "foot"
+      },
+      "furlong": {
+        "formula": "value * 0.004970178926441352",
+        "inverseFormula": "value / 0.004970178926441352",
+        "symbol": "furlong"
+      },
+      "inch": {
+        "formula": "value * 39.37007874015748",
+        "inverseFormula": "value / 39.37007874015748",
+        "symbol": "inch"
+      },
+      "league": {
+        "formula": "value * 0.0002071251035625518",
+        "inverseFormula": "value / 0.0002071251035625518",
+        "symbol": "league"
+      },
+      "light-minute": {
+        "formula": "value * 5.5594008077809377e-11",
+        "inverseFormula": "value / 5.5594008077809377e-11",
+        "symbol": "light-minute"
+      },
+      "light-second": {
+        "formula": "value * 3.3356404846685622e-9",
+        "inverseFormula": "value / 3.3356404846685622e-9",
+        "symbol": "light-second"
+      },
+      "light-year": {
+        "formula": "value * 1.0570234557732929e-16",
+        "inverseFormula": "value / 1.0570234557732929e-16",
+        "symbol": "light-year"
+      },
+      "meter": {
+        "formula": "value * 1",
+        "inverseFormula": "value / 1",
+        "symbol": "meter"
+      },
+      "kilometer": {
+        "formula": "value * 0.001",
+        "inverseFormula": "value / 0.001",
+        "symbol": "km"
+      },
+      "mile": {
+        "formula": "value * 0.000621371192237334",
+        "inverseFormula": "value / 0.000621371192237334",
+        "symbol": "mile"
+      },
+      "naut-mile": {
+        "formula": "value * 0.0005399568034557236",
+        "inverseFormula": "value / 0.0005399568034557236",
+        "symbol": "nmi"
+      },
+      "parsec": {
+        "formula": "value * 3.2407788498994385e-17",
+        "inverseFormula": "value / 3.2407788498994385e-17",
+        "symbol": "parsec"
+      },
+      "pica": {
+        "formula": "value * 236.22047262694525",
+        "inverseFormula": "value / 236.22047262694525",
+        "symbol": "pica"
+      },
+      "point": {
+        "formula": "value * 2834.645667505735",
+        "inverseFormula": "value / 2834.645667505735",
+        "symbol": "point"
+      },
+      "redshift": {
+        "formula": "value * 7.67593433391696e-27",
+        "inverseFormula": "value / 7.67593433391696e-27",
+        "symbol": "redshift"
+      },
+      "rod": {
+        "formula": "value * 0.1988466892026248",
+        "inverseFormula": "value / 0.1988466892026248",
+        "symbol": "rod"
+      },
+      "yard": {
+        "formula": "value * 1.0936132983377078",
+        "inverseFormula": "value / 1.0936132983377078",
+        "symbol": "yard"
+      }
+    }
+  },
+  "rad": {
+    "longName": "radian",
+    "conversions": {
+      "arcminute": {
+        "formula": "value * 3437.746770784939",
+        "inverseFormula": "value / 3437.746770784939",
+        "symbol": "arcminute"
+      },
+      "arcsecond": {
+        "formula": "value * 206264.8062470964",
+        "inverseFormula": "value / 206264.8062470964",
+        "symbol": "arcsecond"
+      },
+      "degree": {
+        "formula": "value * 57.29577951308231",
+        "inverseFormula": "value / 57.29577951308231",
+        "symbol": "°"
+      },
+      "gradian": {
+        "formula": "value * 63.66197723675812",
+        "inverseFormula": "value / 63.66197723675812",
+        "symbol": "gradian"
+      },
+      "radian": {
+        "formula": "value * 1",
+        "inverseFormula": "value / 1",
+        "symbol": "radian"
+      },
+      "rotation": {
+        "formula": "value * 0.1591549430918954",
+        "inverseFormula": "value / 0.1591549430918954",
+        "symbol": "rotation"
+      }
+    }
+  },
+  "rad/s": {
+    "longName": "radians per second",
+    "conversions": {
+      "rad/s": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "rad/s",
+        "longName": "radians per second"
+      },
+      "deg/s": {
+        "formula": "value * 57.2958",
+        "inverseFormula": "value * 0.0174533",
+        "symbol": "°/s",
+        "longName": "degrees per second",
+        "key": "deg/s"
+      },
+      "rpm": {
+        "formula": "value * 9.549296585513723",
+        "inverseFormula": "value / 9.549296585513723",
+        "symbol": "rpm",
+        "longName": "revolutions per minute"
+      }
+    }
+  },
+  "m3": {
+    "longName": "cubic meter",
+    "conversions": {
+      "beerbarrel": {
+        "formula": "value * 8.521679072308338",
+        "inverseFormula": "value / 8.521679072308338",
+        "symbol": "beerbarrel"
+      },
+      "beerbarrel-imp": {
+        "formula": "value * 6.110256897196883",
+        "inverseFormula": "value / 6.110256897196883",
+        "symbol": "beerbarrel-imp"
+      },
+      "bushel": {
+        "formula": "value * 28.37759178221265",
+        "inverseFormula": "value / 28.37759178221265",
+        "symbol": "bushel"
+      },
+      "cup": {
+        "formula": "value * 4226.752810932216",
+        "inverseFormula": "value / 4226.752810932216",
+        "symbol": "cup"
+      },
+      "fluid-ounce": {
+        "formula": "value * 33814.02254462713",
+        "inverseFormula": "value / 33814.02254462713",
+        "symbol": "fluid-ounce"
+      },
+      "fluid-ounce-imp": {
+        "formula": "value * 35195.07972785405",
+        "inverseFormula": "value / 35195.07972785405",
+        "symbol": "fluid-ounce-imp"
+      },
+      "gallon": {
+        "formula": "value * 264.1720512415585",
+        "inverseFormula": "value / 264.1720512415585",
+        "symbol": "gallon"
+      },
+      "gallon-imp": {
+        "formula": "value * 219.9692482990878",
+        "inverseFormula": "value / 219.9692482990878",
+        "symbol": "gallon-imp"
+      },
+      "liter": {
+        "formula": "value * 1000",
+        "inverseFormula": "value / 1000",
+        "symbol": "liter"
+      },
+      "oilbarrel": {
+        "formula": "value * 6.289810770432104",
+        "inverseFormula": "value / 6.289810770432104",
+        "symbol": "oilbarrel"
+      },
+      "pint-imp": {
+        "formula": "value * 1759.7539863927022",
+        "inverseFormula": "value / 1759.7539863927022",
+        "symbol": "pint-imp"
+      },
+      "quart": {
+        "formula": "value * 1056.688204966234",
+        "inverseFormula": "value / 1056.688204966234",
+        "symbol": "quart"
+      },
+      "tablespoon": {
+        "formula": "value * 67628.04531793189",
+        "inverseFormula": "value / 67628.04531793189",
+        "symbol": "tablespoon"
+      },
+      "teaspoon": {
+        "formula": "value * 202884.1355421759",
+        "inverseFormula": "value / 202884.1355421759",
+        "symbol": "teaspoon"
+      },
+      "m3": {
+        "formula": "value",
+        "inverseFormula": "value",
+        "symbol": "m3",
+        "longName": "m3"
+      }
+    }
+  },
+  "V": {
+    "longName": "volt",
+    "conversions": {
+      "V": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "V",
+        "longName": "volt"
+      }
+    }
+  },
+  "A": {
+    "longName": "ampere",
+    "conversions": {
+      "A": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "A",
+        "longName": "ampere"
+      }
+    }
+  },
+  "W": {
+    "longName": "watt",
+    "conversions": {
+      "kW": {
+        "formula": "value * 0.001",
+        "inverseFormula": "value * 1000",
+        "symbol": "kW",
+        "longName": "kilowatt"
+      },
+      "horsepower": {
+        "formula": "value * 0.0013410220888438076",
+        "inverseFormula": "value / 0.0013410220888438076",
+        "symbol": "horsepower"
+      },
+      "watt": {
+        "formula": "value * 1",
+        "inverseFormula": "value / 1",
+        "symbol": "watt"
+      }
+    }
+  },
+  "ratio": {
+    "longName": "ratio",
+    "conversions": {
+      "ratio": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "",
+        "longName": "ratio"
+      },
+      "percent": {
+        "formula": "value * 100",
+        "inverseFormula": "value * 0.01",
+        "symbol": "%",
+        "longName": "percent"
+      }
+    }
+  },
+  "Hz": {
+    "longName": "hertz",
+    "conversions": {
+      "rpm": {
+        "formula": "value * 60",
+        "inverseFormula": "value * 0.0166667",
+        "symbol": "rpm",
+        "longName": "revolutions per minute"
+      },
+      "hertz": {
+        "formula": "value * 1",
+        "inverseFormula": "value / 1",
+        "symbol": "hertz"
+      }
+    }
+  },
+  "s": {
+    "longName": "second",
+    "conversions": {
+      "DD:HH:MM:SS": {
+        "formula": "formatDurationDHMS(value)",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "Days:Hours:Minutes:Seconds",
+        "key": "DD:HH:MM:SS"
+      },
+      "HH:MM:SS": {
+        "formula": "formatDurationHMS(value)",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "Hours:Minutes:Seconds",
+        "key": "HH:MM:SS"
+      },
+      "HH:MM:SS.mmm": {
+        "formula": "formatDurationHMSMillis(value)",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "Hours:Minutes:Seconds.Milliseconds",
+        "key": "HH:MM:SS.mmm"
+      },
+      "MM:SS": {
+        "formula": "formatDurationMS(value)",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "Minutes:Seconds",
+        "key": "MM:SS"
+      },
+      "MM:SS.mmm": {
+        "formula": "formatDurationMSMillis(value)",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "Minutes:Seconds.Milliseconds",
+        "key": "MM:SS.mmm"
+      },
+      "MM.xx": {
+        "formula": "value / 60",
+        "inverseFormula": "value * 60",
+        "symbol": "min",
+        "longName": "Decimal minutes"
+      },
+      "HH.xx": {
+        "formula": "value / 3600",
+        "inverseFormula": "value * 3600",
+        "symbol": "hr",
+        "longName": "Decimal hours"
+      },
+      "DD.xx": {
+        "formula": "value / 86400",
+        "inverseFormula": "value * 86400",
+        "symbol": "days",
+        "longName": "Decimal days"
+      },
+      "duration-verbose": {
+        "formula": "formatDurationVerbose(value)",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "Verbose (2 hours 30 minutes 45 seconds)",
+        "key": "duration-verbose"
+      },
+      "duration-compact": {
+        "formula": "formatDurationCompact(value)",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "Compact (2h 30m)",
+        "key": "duration-compact"
+      },
+      "century": {
+        "formula": "value * 3.168876461541279e-10",
+        "inverseFormula": "value / 3.168876461541279e-10",
+        "symbol": "century"
+      },
+      "day": {
+        "formula": "value * 0.000011574074074074073",
+        "inverseFormula": "value / 0.000011574074074074073",
+        "symbol": "day"
+      },
+      "decade": {
+        "formula": "value * 3.1688764615412793e-9",
+        "inverseFormula": "value / 3.1688764615412793e-9",
+        "symbol": "decade"
+      },
+      "fortnight": {
+        "formula": "value * 8.26719576719577e-7",
+        "inverseFormula": "value / 8.26719576719577e-7",
+        "symbol": "fortnight"
+      },
+      "hour": {
+        "formula": "value * 0.0002777777777777778",
+        "inverseFormula": "value / 0.0002777777777777778",
+        "symbol": "hour"
+      },
+      "minute": {
+        "formula": "value * 0.016666666666666666",
+        "inverseFormula": "value / 0.016666666666666666",
+        "symbol": "minute"
+      },
+      "second": {
+        "formula": "value * 1",
+        "inverseFormula": "value / 1",
+        "symbol": "second"
+      },
+      "week": {
+        "formula": "value * 0.000001653439153439154",
+        "inverseFormula": "value / 0.000001653439153439154",
+        "symbol": "week"
+      },
+      "year": {
+        "formula": "value * 3.168876461541279e-8",
+        "inverseFormula": "value / 3.168876461541279e-8",
+        "symbol": "year"
+      }
+    }
+  },
+  "C": {
+    "longName": "coulomb",
+    "conversions": {
+      "C": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "C",
+        "longName": "coulomb"
+      },
+      "Ah": {
+        "formula": "value * 0.0002777777777777778",
+        "inverseFormula": "value / 0.0002777777777777778",
+        "symbol": "Ah",
+        "longName": "ampere-hour"
+      },
+      "mAh": {
+        "formula": "value * 0.277778",
+        "inverseFormula": "value * 3.6",
+        "symbol": "mAh",
+        "longName": "milliampere-hour"
+      }
+    }
+  },
+  "m3/s": {
+    "longName": "cubic meters per second",
+    "conversions": {
+      "L/h": {
+        "formula": "value * 3600000",
+        "inverseFormula": "value * 0.000000277778",
+        "symbol": "L/h",
+        "longName": "liters per hour"
+      },
+      "L/min": {
+        "formula": "value * 60000",
+        "inverseFormula": "value * 0.0000166667",
+        "symbol": "L/min",
+        "longName": "liters per minute"
+      },
+      "gal/h": {
+        "formula": "value * 264.17205236",
+        "inverseFormula": "value / 264.17205236",
+        "symbol": "gal/h",
+        "longName": "gallons per hour"
+      },
+      "m3/s": {
+        "formula": "value",
+        "inverseFormula": "value",
+        "symbol": "m3/s"
+      },
+      "gal-imp/h": {
+        "formula": "value * 219.9692483",
+        "inverseFormula": "value / 219.9692483",
+        "symbol": "gal-imp/h"
+      }
+    }
+  },
+  "tr": {
+    "longName": "tabula rasa",
+    "conversions": {
+      "tr": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "tr",
+        "longName": "tabula rasa"
+      }
+    }
+  },
+  "RFC 3339 (UTC)": {
+    "longName": "RFC 3339 UTC format",
+    "conversions": {
+      "RFC 3339 (UTC)": {
+        "formula": "value",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "RFC 3339 UTC format"
+      }
+    }
+  },
+  "Epoch Seconds": {
+    "longName": "Unix epoch seconds",
+    "conversions": {
+      "Epoch Seconds": {
+        "formula": "value",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "Unix epoch seconds"
+      }
+    }
+  },
+  "J": {
+    "longName": "Joule",
+    "conversions": {
+      "btu": {
+        "formula": "value * 0.0009478169879134378",
+        "inverseFormula": "value / 0.0009478169879134378",
+        "symbol": "btu"
+      },
+      "calorie": {
+        "formula": "value * 0.2390057361376673",
+        "inverseFormula": "value / 0.2390057361376673",
+        "symbol": "calorie",
+        "longName": "physics unit"
+      },
+      "Calorie": {
+        "formula": "value * 0.00023900573613766727",
+        "inverseFormula": "value / 0.00023900573613766727",
+        "symbol": "Calorie",
+        "longName": "food energy"
+      },
+      "electronvolt": {
+        "formula": "value * 6241509074460763000",
+        "inverseFormula": "value / 6241509074460763000",
+        "symbol": "electronvolt"
+      },
+      "erg": {
+        "formula": "value * 10000000",
+        "inverseFormula": "value / 10000000",
+        "symbol": "erg"
+      },
+      "therm-US": {
+        "formula": "value * 9.480434279733487e-9",
+        "inverseFormula": "value / 9.480434279733487e-9",
+        "symbol": "therm-US"
+      },
+      "Wh": {
+        "formula": "value * 0.0002777777777777778",
+        "inverseFormula": "value / 0.0002777777777777778",
+        "symbol": "Wh"
+      },
+      "J": {
+        "formula": "value * 1",
+        "inverseFormula": "value / 1",
+        "symbol": "joule"
+      }
+    }
+  },
+  "kg": {
+    "longName": "Kilogram",
+    "conversions": {
+      "AMU": {
+        "formula": "value * 6.0221412901167415e+26",
+        "inverseFormula": "value / 6.0221412901167415e+26",
+        "symbol": "AMU"
+      },
+      "carat": {
+        "formula": "value * 5000",
+        "inverseFormula": "value / 5000",
+        "symbol": "carat"
+      },
+      "dalton": {
+        "formula": "value * 6.0221412901167415e+26",
+        "inverseFormula": "value / 6.0221412901167415e+26",
+        "symbol": "dalton"
+      },
+      "dram": {
+        "formula": "value * 564.3833897001838",
+        "inverseFormula": "value / 564.3833897001838",
+        "symbol": "dram"
+      },
+      "grain": {
+        "formula": "value * 15432.358352941434",
+        "inverseFormula": "value / 15432.358352941434",
+        "symbol": "grain"
+      },
+      "gram": {
+        "formula": "value * 1000",
+        "inverseFormula": "value / 1000",
+        "symbol": "gram"
+      },
+      "kilogram": {
+        "formula": "value * 1",
+        "inverseFormula": "value / 1",
+        "symbol": "kilogram"
+      },
+      "metric-ton": {
+        "formula": "value * 0.001",
+        "inverseFormula": "value / 0.001",
+        "symbol": "metric-ton"
+      },
+      "ounce": {
+        "formula": "value * 35.27396198068672",
+        "inverseFormula": "value / 35.27396198068672",
+        "symbol": "ounce"
+      },
+      "pound": {
+        "formula": "value * 2.2046226218487757",
+        "inverseFormula": "value / 2.2046226218487757",
+        "symbol": "pound"
+      },
+      "short-ton": {
+        "formula": "value * 0.001102311310924388",
+        "inverseFormula": "value / 0.001102311310924388",
+        "symbol": "short-ton"
+      },
+      "slug": {
+        "formula": "value * 0.0685217660314843",
+        "inverseFormula": "value / 0.0685217660314843",
+        "symbol": "slug"
+      },
+      "stone": {
+        "formula": "value * 0.15747304441776971",
+        "inverseFormula": "value / 0.15747304441776971",
+        "symbol": "stone"
+      }
+    }
+  },
+  "m2": {
+    "longName": "Square meter",
+    "conversions": {
+      "acre": {
+        "formula": "value * 0.0002471053816137119",
+        "inverseFormula": "value / 0.0002471053816137119",
+        "symbol": "acre"
+      },
+      "hectare": {
+        "formula": "value * 0.0001",
+        "inverseFormula": "value / 0.0001",
+        "symbol": "hectare"
+      },
+      "m2": {
+        "formula": "value",
+        "inverseFormula": "value",
+        "symbol": "m2"
+      },
+      "sqft": {
+        "formula": "value * 10.7639",
+        "inverseFormula": "value / 10.7639",
+        "symbol": "sqft",
+        "longName": "square feet"
+      }
+    }
+  },
+  "deg": {
+    "longName": "Degree",
+    "conversions": {
+      "arcminute": {
+        "formula": "value * 60.00000000000001",
+        "inverseFormula": "value / 60.00000000000001",
+        "symbol": "arcminute"
+      },
+      "arcsecond": {
+        "formula": "value * 3600.000000000001",
+        "inverseFormula": "value / 3600.000000000001",
+        "symbol": "arcsecond"
+      },
+      "degree": {
+        "formula": "value * 1",
+        "inverseFormula": "value / 1",
+        "symbol": "°"
+      },
+      "gradian": {
+        "formula": "value * 1.111111111111111",
+        "inverseFormula": "value / 1.111111111111111",
+        "symbol": "gradian"
+      },
+      "radian": {
+        "formula": "value * 0.0174532925199433",
+        "inverseFormula": "value / 0.0174532925199433",
+        "symbol": "radian"
+      },
+      "rotation": {
+        "formula": "value * 0.0027777777777777783",
+        "inverseFormula": "value / 0.0027777777777777783",
+        "symbol": "rotation"
+      }
+    }
+  },
+  "bool": {
+    "longName": "Boolean",
+    "conversions": {
+      "bool": {
+        "formula": "value",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "Boolean"
+      }
+    }
+  },
+  "ISO-8601 (UTC)": {
+    "longName": "Timestamp",
+    "conversions": {
+      "ISO-8601 (UTC)": {
+        "formula": "value",
+        "inverseFormula": "value",
+        "symbol": "",
+        "longName": "ISO-8601 (UTC) format"
+      }
+    }
+  }
+}

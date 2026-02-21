@@ -17,6 +17,7 @@ import {
 
 import VesselConfiguration from './VesselConfiguration'
 import LogFiles from './Logging'
+import UnitPreferencesSettings from './UnitPreferencesSettings'
 
 function fetchSettings() {
   fetch(`${window.serverRoutesPrefix}/settings`, {
@@ -382,6 +383,7 @@ class Settings extends Component {
     return (
       <div>
         <VesselConfiguration />
+        <UnitPreferencesSettings />
         <ReduxedSettings />
         <LogFiles />
       </div>

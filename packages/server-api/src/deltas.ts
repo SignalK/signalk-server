@@ -125,6 +125,14 @@ export interface MetaValue {
   }
   zones?: Zone[]
   supportsPut?: boolean
+  displayUnits?: {
+    category: string
+    targetUnit: string
+    displayFormat?: string
+    formula: string
+    inverseFormula: string
+    symbol: string
+  }
 }
 
 // Notification attribute types

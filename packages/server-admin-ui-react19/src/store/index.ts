@@ -9,6 +9,10 @@ import {
   createPrioritiesSlice,
   type PrioritiesSlice
 } from './slices/prioritiesSlice'
+import {
+  createUnitPreferencesSlice,
+  type UnitPreferencesSlice
+} from './slices/unitPreferencesSlice'
 
 export type { AppSlice } from './slices/appSlice'
 export type {
@@ -18,15 +22,21 @@ export type {
 } from './slices/wsSlice'
 export type { DataSlice, PathData, MetaData } from './slices/dataSlice'
 export type { PrioritiesSlice } from './slices/prioritiesSlice'
+export type { UnitPreferencesSlice } from './slices/unitPreferencesSlice'
 
-export type SignalKStore = AppSlice & WsSlice & DataSlice & PrioritiesSlice
+export type SignalKStore = AppSlice &
+  WsSlice &
+  DataSlice &
+  PrioritiesSlice &
+  UnitPreferencesSlice
 
 export const useStore = create<SignalKStore>()(
   subscribeWithSelector((...args) => ({
     ...createAppSlice(...args),
     ...createWsSlice(...args),
     ...createDataSlice(...args),
-    ...createPrioritiesSlice(...args)
+    ...createPrioritiesSlice(...args),
+    ...createUnitPreferencesSlice(...args)
   }))
 )
 
@@ -109,6 +119,34 @@ export function useRestarting() {
 
 export function useBackpressureWarning() {
   return useStore((s) => s.backpressureWarning)
+}
+
+export function useActivePreset() {
+  return useStore((s) => s.activePreset)
+}
+
+export function usePresets() {
+  return useStore((s) => s.presets)
+}
+
+export function usePresetDetails() {
+  return useStore((s) => s.presetDetails)
+}
+
+export function useUnitDefinitions() {
+  return useStore((s) => s.unitDefinitions)
+}
+
+export function useDefaultCategories() {
+  return useStore((s) => s.defaultCategories)
+}
+
+export function useUnitPrefsLoaded() {
+  return useStore((s) => s.unitPrefsLoaded)
+}
+
+export function useUnitCategories() {
+  return useStore((s) => s.categories)
 }
 
 export * from './types'

@@ -152,3 +152,42 @@ export interface Addon {
   name: string
   [key: string]: unknown
 }
+
+export interface PresetInfo {
+  name: string
+  label: string
+  isCustom?: boolean
+  isBuiltIn?: boolean
+}
+
+export interface PresetCategoryConfig {
+  targetUnit?: string
+  symbol?: string
+}
+
+export interface PresetDetails {
+  name?: string
+  label?: string
+  categories?: Record<string, PresetCategoryConfig>
+}
+
+export interface UnitConversion {
+  formula?: string
+  symbol?: string
+}
+
+export interface UnitDefinition {
+  conversions?: Record<string, UnitConversion>
+}
+
+export type UnitDefinitions = Record<string, UnitDefinition>
+
+export interface DefaultCategory {
+  pattern: string
+  category: string
+}
+
+export interface CategoryInfo {
+  baseUnit?: string
+  [key: string]: unknown
+}
