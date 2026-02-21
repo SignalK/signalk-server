@@ -506,6 +506,7 @@ describe('Security', () => {
     json.accessRequest.should.have.property('permission')
     json.accessRequest.permission.should.equal('APPROVED')
     json.accessRequest.should.have.property('token')
+    const deviceToken = json.accessRequest.token
 
     result = await fetch(`${url}/skServer/security/devices`, {
       headers: {
@@ -519,6 +520,31 @@ describe('Security', () => {
     json[0].clientId.should.equal('1235-45653-343453')
     json[0].permissions.should.equal('readwrite')
     json[0].description.should.equal('My Awesome Sensor')
+
+    await new Promise((resolve, reject) => {
+      const ws = new WebSocket(
+        `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none&token=${deviceToken}`
+      )
+      ws.on('message', () => {
+        ws.close()
+      })
+      ws.on('close', resolve)
+      ws.on('error', reject)
+    })
+
+    result = await fetch(`${url}/signalk/v1/api/sources`, {
+      headers: {
+        Cookie: `JAUTHENTICATION=${adminToken}`
+      }
+    })
+    result.status.should.equal(200)
+    json = await result.json()
+    json.should.have.property('ws')
+    json.ws.should.have.property('1235-45653-343453')
+    json.ws['1235-45653-343453'].should.have.property('n2k')
+    json.ws['1235-45653-343453'].n2k.description.should.equal(
+      'My Awesome Sensor'
+    )
   })
 
   it('Device access request and denial works', async function () {

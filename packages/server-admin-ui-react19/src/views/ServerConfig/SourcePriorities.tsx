@@ -14,6 +14,8 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import Creatable from 'react-select/creatable'
 import uniq from 'lodash.uniq'
 import { useStore, useSourcePriorities } from '../../store'
+import { useSources } from '../../hooks/useSources'
+import { getSourceDisplayLabel } from '../../hooks/sourceLabelUtils'
 
 // Types
 interface Priority {
@@ -51,13 +53,15 @@ interface PrefsEditorProps {
   priorities: Priority[]
   pathIndex: number
   isSaving: boolean
+  sources: Record<string, unknown>
 }
 
 const PrefsEditor: React.FC<PrefsEditorProps> = ({
   path,
   priorities,
   pathIndex,
-  isSaving
+  isSaving,
+  sources
 }) => {
   const changePriority = useStore((s) => s.changePriority)
   const deletePriority = useStore((s) => s.deletePriority)
@@ -76,8 +80,11 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
 
   const toggleEditor = () => setIsOpen((prev) => !prev)
 
+  const resolveSourceLabel = (ref: string): string =>
+    getSourceDisplayLabel(ref, sources)
+
   const options: SelectOption[] = sourceRefs.map((ref) => ({
-    label: ref,
+    label: resolveSourceLabel(ref),
     value: ref
   }))
 
@@ -107,7 +114,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       <Creatable
                         menuPortalTarget={document.body}
                         options={options}
-                        value={{ value: sourceRef, label: sourceRef }}
+                        value={{ value: sourceRef, label: resolveSourceLabel(sourceRef) }}
                         onChange={(e) => {
                           changePriority(
                             pathIndex,
@@ -199,6 +206,7 @@ const SourcePriorities: React.FC = () => {
   const { sourcePriorities, saveState } = sourcePrioritiesData
 
   const [availablePaths, setAvailablePaths] = useState<SelectOption[]>([])
+  const sources = useSources()
 
   useEffect(() => {
     fetchAvailablePaths((pathsArray) => {
@@ -312,6 +320,7 @@ const SourcePriorities: React.FC = () => {
                       priorities={priorities}
                       pathIndex={index}
                       isSaving={saveState.isSaving || false}
+                      sources={sources}
                     />
                   </td>
                   <td style={{ border: 'none' }}>
