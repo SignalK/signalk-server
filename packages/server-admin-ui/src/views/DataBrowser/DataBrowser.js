@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { JSONTree } from 'react-json-tree'
 import Select from 'react-select'
+import { fetchSourcesData } from '../../utils/useSources'
 import {
   Card,
   CardHeader,
@@ -32,28 +33,24 @@ const selectedSourcesStorageKey = 'admin.v1.dataBrowser.selectedSources'
 const sourceFilterActiveStorageKey = 'admin.v1.dataBrowser.sourceFilterActive'
 
 function fetchSources() {
-  fetch(`/signalk/v1/api/sources`, {
-    credentials: 'include'
-  })
-    .then((response) => response.json())
-    .then((sources) => {
-      Object.values(sources).forEach((source) => {
-        if (source.type === 'NMEA2000') {
-          Object.keys(source).forEach((key) => {
-            let device = source[key]
-            if (device.n2k && device.n2k.modelId) {
-              source[
-                `${device.n2k.manufacturerCode || ''} ${
-                  device.n2k.modelId
-                } (${key})`
-              ] = device
-              delete source[key]
-            }
-          })
-        }
-      })
-      this.setState({ ...this.state, sources: sources })
+  fetchSourcesData().then((sources) => {
+    Object.values(sources).forEach((source) => {
+      if (source.type === 'NMEA2000') {
+        Object.keys(source).forEach((key) => {
+          let device = source[key]
+          if (device.n2k && device.n2k.modelId) {
+            source[
+              `${device.n2k.manufacturerCode || ''} ${
+                device.n2k.modelId
+              } (${key})`
+            ] = device
+            delete source[key]
+          }
+        })
+      }
     })
+    this.setState({ ...this.state, sources: sources })
+  })
 }
 
 class DataBrowser extends Component {

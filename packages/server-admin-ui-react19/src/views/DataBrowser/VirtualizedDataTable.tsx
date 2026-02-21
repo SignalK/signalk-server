@@ -8,6 +8,7 @@ import {
 } from 'react'
 import DataRow from './DataRow'
 import granularSubscriptionManager from './GranularSubscriptionManager'
+import { useSources } from '../../hooks/useSources'
 import './VirtualTable.css'
 
 interface VisibleItem {
@@ -38,6 +39,7 @@ function VirtualizedDataTable({
   sourceFilterActive,
   showContext
 }: VirtualizedDataTableProps) {
+  const sources = useSources()
   const containerRef = useRef<HTMLDivElement>(null)
   const [isNarrowScreen, setIsNarrowScreen] = useState(
     typeof window !== 'undefined' && window.innerWidth <= 768
@@ -236,6 +238,7 @@ function VirtualizedDataTable({
             onToggleSource={onToggleSource}
             selectedSources={selectedSources}
             showContext={showContext}
+            sources={sources}
           />
         ))}
 

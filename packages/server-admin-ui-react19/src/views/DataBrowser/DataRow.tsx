@@ -3,6 +3,7 @@ import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
 import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
+import { getSourceDisplayLabel } from '../../hooks/sourceLabelUtils'
 import type { PathData, MetaData } from '../../store'
 
 interface DataRowProps {
@@ -14,6 +15,7 @@ interface DataRowProps {
   onToggleSource: (source: string) => void
   selectedSources: Set<string>
   showContext: boolean
+  sources: Record<string, unknown>
 }
 
 interface ValueRendererProps {
@@ -31,7 +33,8 @@ function DataRow({
   isPaused,
   onToggleSource,
   selectedSources,
-  showContext
+  showContext,
+  sources
 }: DataRowProps) {
   // When showContext is true, path$SourceKey is a composite key: context\0realKey
   const nullIdx = showContext ? path$SourceKey.indexOf('\0') : -1
@@ -122,7 +125,8 @@ function DataRow({
           />
         </label>
         <CopyToClipboardWithFade text={source}>
-          {source} <span className="copy-icon" aria-hidden="true" />
+          {getSourceDisplayLabel(source, sources)}{' '}
+          <span className="copy-icon" aria-hidden="true" />
         </CopyToClipboardWithFade>{' '}
         {data.pgn && <span>&nbsp;{data.pgn}</span>}
         {data.sentence && <span>&nbsp;{data.sentence}</span>}

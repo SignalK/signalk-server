@@ -10,6 +10,8 @@ import { faSignIn } from '@fortawesome/free-solid-svg-icons/faSignIn'
 import { faSignOut } from '@fortawesome/free-solid-svg-icons/faSignOut'
 import { useServerStats, useWsStatus, useStore } from '../../store'
 import type { ProviderStatistics } from '../../store/types'
+import { useSources } from '../../hooks/useSources'
+import { getSourceDisplayLabel } from '../../hooks/sourceLabelUtils'
 import '../../fa-pulse.css'
 
 interface ProviderStatusItem {
@@ -27,6 +29,7 @@ export default function Dashboard() {
   const providerStatus =
     (useStore((state) => state.providerStatus) as ProviderStatusItem[]) || []
   const navigate = useNavigate()
+  const sources = useSources()
 
   const deltaRate = serverStatistics?.deltaRate ?? 0
   const numberOfAvailablePaths = serverStatistics?.numberOfAvailablePaths ?? 0
@@ -74,6 +77,7 @@ export default function Dashboard() {
     providerStats: ProviderStatistics,
     linkType: string
   ): ReactNode => {
+    const label = getSourceDisplayLabel(providerId, sources)
     const iconStyle = {
       fontSize: '18px',
       marginLeft: '5px',
@@ -100,7 +104,7 @@ export default function Dashboard() {
         <span className="title">
           {linkType === 'plugin'
             ? pluginNameLink(providerId)
-            : providerIdLink(providerId)}
+            : providerIdLink(providerId, label)}
         </span>
         {(providerStats.writeRate || 0) > 0 && (
           <span className="value" style={{ fontWeight: 'normal' }}>
@@ -160,7 +164,10 @@ export default function Dashboard() {
         <td>
           {status.statusType === 'plugin'
             ? pluginNameLink(status.id)
-            : providerIdLink(status.id)}
+            : providerIdLink(
+                status.id,
+                getSourceDisplayLabel(status.id, sources)
+              )}
         </td>
         <td>
           <p className="text-danger">{lastError}</p>
@@ -313,11 +320,11 @@ function pluginNameLink(id: string): ReactNode {
   return <a href={'#/serverConfiguration/plugins/' + id}>{id}</a>
 }
 
-function providerIdLink(id: string): ReactNode {
+function providerIdLink(id: string, label?: string): ReactNode {
   if (id === 'defaults') {
     return <a href={'#/serverConfiguration/settings'}>{id}</a>
   } else if (id.startsWith('ws.')) {
-    return <a href={'#/security/devices'}>{id}</a>
+    return <a href={'#/security/devices'}>{label || id}</a>
   } else {
     return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
   }
