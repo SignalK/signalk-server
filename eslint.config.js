@@ -108,6 +108,14 @@ module.exports = defineConfig([
     }
   },
 
+  // Streams package - uses synchronous require() for lazy/dynamic imports
+  {
+    files: ['packages/streams/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off'
+    }
+  },
+
   // Disable rules that prettier handles
   prettier
 ])
