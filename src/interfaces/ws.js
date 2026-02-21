@@ -842,28 +842,28 @@ function handleRealtimeConnection(app, spark, onChange) {
       if (event?.username && event.username !== username) return
 
       const allPaths = app.streambundle.getAvailablePaths()
-      const timestamp = new Date().toISOString()
-      const metaEntries = []
-
-      allPaths.forEach((path) => {
+      const meta = allPaths.reduce((acc, path) => {
         const category = getDefaultCategory(path)
-        if (!category) return
-        const fullPath = 'vessels.self.' + path
-        const meta = getMetadata(fullPath) || {}
-        const displayUnits = resolveDisplayUnits(
-          { category },
-          meta.units,
-          username
-        )
-        if (displayUnits) {
-          metaEntries.push({ path, value: { ...meta, displayUnits } })
+        if (category) {
+          const fullPath = 'vessels.self.' + path
+          const meta = getMetadata(fullPath) || {}
+          const displayUnits = resolveDisplayUnits(
+            { category },
+            meta.units,
+            username
+          )
+          if (displayUnits) {
+            acc.push({ path, value: { ...meta, displayUnits } })
+          }
         }
-      })
+        return acc
+      }, [])
 
-      if (metaEntries.length > 0) {
+      if (meta.length > 0) {
+        const timestamp = new Date().toISOString()
         spark.write({
           context: 'vessels.' + app.selfId,
-          updates: [{ timestamp, meta: metaEntries }]
+          updates: [{ timestamp, meta }]
         })
       }
     }
