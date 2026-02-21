@@ -146,7 +146,9 @@ export function pipedProviders(
       ? elementConfig.type.replace('providers/', '@signalk/streams/')
       : elementConfig.type
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return new (require(efectiveElementType))({
+    const mod = require(efectiveElementType)
+    const Ctor = mod.default ?? mod
+    return new Ctor({
       ...elementConfig.options,
       createDebug
     })
