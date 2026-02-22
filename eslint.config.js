@@ -12,6 +12,7 @@ const chai = require('eslint-plugin-chai-friendly')
 module.exports = defineConfig([
   globalIgnores([
     '**/public',
+    '**/public_src',
     '**/dist',
     '**/.__mf__temp',
     // WASM plugin examples - AssemblyScript has different semantics

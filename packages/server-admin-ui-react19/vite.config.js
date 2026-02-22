@@ -6,15 +6,21 @@ import { federation } from '@module-federation/vite'
 
 import '@signalk/server-admin-ui-dependencies'
 
-// %ADDONSCRIPTS% is replaced server-side in production with actual addon script tags
+// %ADDONSCRIPTS% is replaced server-side at request time with actual addon script tags.
 function replaceAddonScripts() {
   return {
     name: 'replace-addon-scripts',
-    transformIndexHtml(html) {
-      return html.replace(
-        '%ADDONSCRIPTS%',
-        '<!-- addon scripts not available in dev mode -->'
-      )
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        if (process.env.NODE_ENV !== 'production') {
+          return html.replace(
+            '%ADDONSCRIPTS%',
+            '<!-- addon scripts not available in dev mode -->'
+          )
+        }
+        return html
+      }
     }
   }
 }
