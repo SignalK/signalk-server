@@ -12,7 +12,6 @@ export interface DeltaCache {
 }
 
 export interface StreamsApp extends EventEmitter {
-  selfId: string
   selfContext: string
   config: {
     configPath: string
@@ -30,17 +29,7 @@ export interface StreamsApp extends EventEmitter {
   setProviderError(providerId: string, message: string): void
   handleMessage(id: string, delta: object): void
   emitPropertyValue(name: string, value: unknown): void
-  streambundle: {
-    getSelfBus(path: string): unknown
-    getSelfStream(path: string): unknown
-    getBus(path: string): unknown
-    getAvailablePaths(): string[]
-    keys: {
-      onValue(callback: (key: string) => void): () => void
-    }
-  }
   signalk: EventEmitter
-  savePluginOptions(options: object): void
 }
 
 export interface BaseProviderOptions {

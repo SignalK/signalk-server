@@ -24,7 +24,7 @@ interface N2kFilter {
   pgn?: string
 }
 
-interface ToSignalKOptions {
+interface N2kToSignalKOptions {
   app: StreamsApp
   providerId: string
   filters?: N2kFilter[]
@@ -73,18 +73,18 @@ interface NotificationEntry {
   interval: ReturnType<typeof setInterval>
 }
 
-export default class ToSignalK extends Transform {
+export default class N2kToSignalK extends Transform {
   private readonly sourceMeta: Record<number, SourceMeta> = {}
   private readonly notifications: Record<
     string,
     Record<number, NotificationEntry>
   > = {}
-  private readonly options: ToSignalKOptions
+  private readonly options: N2kToSignalKOptions
   private readonly app: StreamsApp
   private readonly filters?: N2kFilter[]
   private readonly n2kMapper: N2kMapper & EventEmitter
 
-  constructor(options: ToSignalKOptions) {
+  constructor(options: N2kToSignalKOptions) {
     super({ objectMode: true })
     this.options = options
     this.app = options.app
