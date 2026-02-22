@@ -649,6 +649,7 @@ function PluginConfigCard({
           )}
           {isConfigurator && (
             <EmbeddedPluginConfigurationForm
+              key={plugin.packageName}
               plugin={plugin}
               saveData={saveData}
             />

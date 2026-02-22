@@ -170,8 +170,48 @@ const createErrorModule = (message?: string): { default: React.FC } => ({
     )
 })
 
-const containerUsesLegacyReact = (moduleName: string): boolean =>
-  legacyReactContainers.has(toSafeModuleId(moduleName))
+/**
+ * Check whether a container uses a legacy (non-host) React version.
+ *
+ * Primary detection happens in initializeContainer() by observing new
+ * React versions added to the share scope. However, when multiple
+ * containers use the same legacy React version (e.g. React 16.14.0),
+ * only the first one actually registers it — subsequent containers
+ * reuse the existing entry silently. For those, we fall back to
+ * fetching the container's remoteEntry.js source (served from browser
+ * cache) and checking for React version declarations in the webpack
+ * share scope initialization code.
+ */
+const containerUsesLegacyReact = async (
+  moduleName: string
+): Promise<boolean> => {
+  if (legacyReactContainers.has(toSafeModuleId(moduleName))) {
+    return true
+  }
+
+  // Fallback: fetch the remoteEntry.js source and check for legacy
+  // React version patterns in the webpack init code
+  const hostMajor = parseInt(React.version.split('.')[0], 10)
+  try {
+    const resp = await fetch(`/${moduleName}/remoteEntry.js`)
+    if (resp.ok) {
+      const source = await resp.text()
+      // Webpack MF init registers shared deps with: ("react","16.14.0")
+      const pattern = /\("react","(\d+)\.\d+\.\d+"\)/g
+      let match
+      while ((match = pattern.exec(source)) !== null) {
+        const major = parseInt(match[1], 10)
+        if (major !== hostMajor) {
+          legacyReactContainers.add(toSafeModuleId(moduleName))
+          return true
+        }
+      }
+    }
+  } catch {
+    // If fetch fails, fall through — component will render directly
+  }
+  return false
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let legacyReactDOM: any = null
@@ -365,7 +405,7 @@ export const toLazyDynamicComponent = (
 
         // Bridge with legacy ReactDOM to avoid hook / element errors
         // from dual React runtimes
-        if (containerUsesLegacyReact(moduleName)) {
+        if (await containerUsesLegacyReact(moduleName)) {
           const legacy = await getLegacyReactDOM()
           if (legacy) {
             console.log(
