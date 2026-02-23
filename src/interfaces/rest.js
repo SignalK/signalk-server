@@ -93,8 +93,8 @@ module.exports = function (app) {
           const meta = getMetadata(metaPath)
 
           if (meta) {
-            // Clone to avoid mutating the cached metadata object
-            const metaCopy = { ...meta }
+            // Deep clone to avoid mutating the cached metadata object
+            const metaCopy = JSON.parse(JSON.stringify(meta))
             // Extract signalk path (remove vessels.self prefix)
             const signalkPath = metaPath.replace(/^vessels\.[^.]+\./, '')
             const username = req.skPrincipal?.identifier
