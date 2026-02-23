@@ -203,6 +203,10 @@ export function getDefaultCategory(signalkPath: string): string | null {
 }
 
 function loadPresetByName(presetName: string): Preset | null {
+  if (!/^[a-zA-Z0-9_-]+$/.test(presetName)) {
+    return null
+  }
+
   // Check custom presets first
   const customPresetPath = path.join(
     UNITPREFS_DIR,

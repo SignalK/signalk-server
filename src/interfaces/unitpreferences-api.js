@@ -20,6 +20,8 @@ function validateFormula(formula) {
   }
 }
 
+const VALID_PRESET_NAME = /^[a-zA-Z0-9_-]+$/
+
 /**
  * Validate all formulas in a unit definitions object
  * @param {object} definitions - The unit definitions to validate
@@ -325,6 +327,11 @@ module.exports = function (app) {
     try {
       const presetName = req.params.name
 
+      if (!VALID_PRESET_NAME.test(presetName)) {
+        res.status(400).json({ error: 'Invalid preset name' })
+        return
+      }
+
       // Check custom first
       const customPath = path.join(
         UNITPREFS_DIR,
@@ -361,8 +368,7 @@ module.exports = function (app) {
     try {
       const presetName = req.params.name
 
-      // Validate preset name
-      if (!/^[a-zA-Z0-9_-]+$/.test(presetName)) {
+      if (!VALID_PRESET_NAME.test(presetName)) {
         res.status(400).json({ error: 'Invalid preset name' })
         return
       }
@@ -400,6 +406,12 @@ module.exports = function (app) {
   router.delete('/presets/custom/:name', (req, res) => {
     try {
       const presetName = req.params.name
+
+      if (!VALID_PRESET_NAME.test(presetName)) {
+        res.status(400).json({ error: 'Invalid preset name' })
+        return
+      }
+
       const presetPath = path.join(
         UNITPREFS_DIR,
         'presets/custom',
@@ -590,11 +602,20 @@ module.exports = function (app) {
   return {
     start: function () {
       if (!app.securityStrategy.isDummy()) {
-        // Add admin-only middleware for custom preset endpoints
+        app.securityStrategy.addAdminWriteMiddleware(
+          '/signalk/v1/unitpreferences/config'
+        )
+        app.securityStrategy.addAdminWriteMiddleware(
+          '/signalk/v1/unitpreferences/custom-definitions'
+        )
+        app.securityStrategy.addAdminWriteMiddleware(
+          '/signalk/v1/unitpreferences/custom-categories'
+        )
         app.securityStrategy.addAdminWriteMiddleware(
           '/signalk/v1/unitpreferences/presets/custom/upload'
         )
-        app.securityStrategy.addAdminWriteMiddleware(
+        // addAdminMiddleware protects all methods (including DELETE)
+        app.securityStrategy.addAdminMiddleware(
           '/signalk/v1/unitpreferences/presets/custom/:name'
         )
       }
