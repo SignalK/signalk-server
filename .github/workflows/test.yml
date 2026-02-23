@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
       - uses: SocketDev/action@v1
@@ -24,11 +24,6 @@ jobs:
           mode: firewall-free
       - run: sfw npm install
       - run: npm run build:all
-
-      - name: server-api
-        working-directory: ./packages/server-api
-        run: |
-          npm run test
 
       - name: resources-provider-plugin
         working-directory: ./packages/resources-provider-plugin

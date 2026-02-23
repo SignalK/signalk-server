@@ -146,7 +146,7 @@ module.exports = {
         strategy: './tokensecurity'
       }
       props.securityConfig = {
-        ...defaultSecurityConfig,
+        ...JSON.parse(JSON.stringify(defaultSecurityConfig)),
         ...(securityConfig || {})
       }
     }

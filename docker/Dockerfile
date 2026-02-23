@@ -1,7 +1,7 @@
 ARG REGISTRY="cr.signalk.io"
-ARG UBUNTU_VERSION="24.04-22.x"
+ARG BASE_IMAGE="24.04-22.x"
 
-FROM ${REGISTRY}/signalk/signalk-server-base:latest-${UBUNTU_VERSION} AS base
+FROM ${REGISTRY}/signalk/signalk-server-base:latest-${BASE_IMAGE} AS base
 
 USER node
 RUN mkdir -p /home/node/.signalk/ \

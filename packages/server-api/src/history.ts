@@ -1,6 +1,19 @@
 import { Context, Path, Timestamp } from '.'
 import { Temporal } from '@js-temporal/polyfill'
 
+/**
+ * Method for aggregating historical data points within a time bucket.
+ *
+ * - `average`: Mean of all values in the bucket
+ * - `min`: Minimum value
+ * - `max`: Maximum value
+ * - `first`: First value chronologically
+ * - `last`: Last value chronologically
+ * - `mid`: Midpoint between min and max: (min + max) / 2
+ * - `middle_index`: Value at the middle index position
+ * - `sma`: Simple Moving Average with number of samples specified in the parameter array (e.g., sma:5 for 5-sample SMA)
+ * - `ema`: Exponential Moving Average with alpha specified in the parameter array (e.g., ema:0.2 for alpha=0.2 EMA)
+ */
 export type AggregateMethod =
   | 'average'
   | 'min'
@@ -9,6 +22,8 @@ export type AggregateMethod =
   | 'last'
   | 'mid'
   | 'middle_index'
+  | 'sma'
+  | 'ema'
 
 export type ValueList = {
   path: Path
@@ -116,6 +131,9 @@ export interface HistoryApi {
   /**
    * Retrieves historical values for the specified query parameters.
    *
+   * For aggregation methods that require parameters (sma, ema), implementations should use sensible defaults
+   * if the parameter array is empty in the PathSpec. For example: sma could default to 5 samples, ema could default to 0.2 alpha.
+   *
    * @param query - The {@link ValuesRequest} containing context, time range, resolution, and path specifications.
    * @returns A promise that resolves to a {@link ValuesResponse} containing the requested historical data.
    */
@@ -196,6 +214,7 @@ export type TimeRangeParams =
 export interface PathSpec {
   path: Path
   aggregate: AggregateMethod
+  parameter: string[]
 }
 
 export type ValuesRequest = TimeRangeParams & {

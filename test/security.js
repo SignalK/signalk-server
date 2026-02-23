@@ -71,7 +71,7 @@ describe('Security', () => {
   let previousHttpRateLimits
 
   before(async function () {
-    this.timeout(5000)
+    this.timeout(20000)
     previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
     process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000,login=1000'
 
@@ -653,6 +653,23 @@ describe('Security', () => {
     loginResult.status.should.equal(200)
     const loginJson = await loginResult.json()
     loginJson.should.have.property('token')
+  })
+
+  it('Admin adding duplicate user fails', async function () {
+    const result = await fetch(
+      `${url}/skServer/security/users/${WRITE_USER_NAME}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `JAUTHENTICATION=${adminToken}`
+        },
+        body: JSON.stringify({ password: 'test', type: 'readwrite' })
+      }
+    )
+    result.status.should.equal(400)
+    const text = await result.text()
+    text.should.equal('User already exists')
   })
 
   it('User registration fails for existing user', async function () {

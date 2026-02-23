@@ -1,4 +1,7 @@
-FROM cr.signalk.io/signalk/signalk-server-base:latest
+ARG REGISTRY="cr.signalk.io"
+ARG BASE_IMAGE="24.04-22.x"
+
+FROM ${REGISTRY}/signalk/signalk-server-base:latest-${BASE_IMAGE}
 
 USER node
 RUN mkdir -p /home/node/.signalk/ \

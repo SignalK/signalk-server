@@ -1,0 +1,20 @@
+.blinking-circle {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  background-color: red;
+  animation: blinking-circle 0.65s infinite ease-in-out;
+}
+
+@keyframes blinking-circle {
+  0% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.15;
+  }
+}

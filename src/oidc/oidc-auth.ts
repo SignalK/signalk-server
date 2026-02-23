@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Request, Response, Application } from 'express'
+import { Request, Response, IRouter } from 'express'
 import { createDebug } from '../debug'
 import {
   OIDCError,
@@ -260,7 +260,7 @@ export async function findOrCreateOIDCUser(
  * This function adds the OIDC login, callback, and status endpoints to the Express app.
  */
 export function registerOIDCRoutes(
-  app: Application,
+  app: IRouter,
   deps: OIDCAuthDependencies
 ): void {
   // OIDC login route - initiates the OIDC flow

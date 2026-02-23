@@ -1,0 +1,156 @@
+.appstore {
+  &__warning {
+    margin-bottom: 20px;
+
+    .message__container {
+      padding: 10px;
+      color: var(--bs-warning-text-emphasis, #9d8641);
+      border: 1px solid var(--bs-warning-border-subtle, #9d8641);
+      background-color: var(--bs-warning-bg-subtle, #fff2cd);
+      p {
+        span {
+          margin-right: 5px;
+        }
+        margin: 0;
+      }
+      i {
+        margin-right: 5px;
+      }
+    }
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+
+      .title__container {
+        width: 100%;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      .action__container {
+        width: 100%;
+        flex-direction: row-reverse;
+
+        .search {
+          min-width: none;
+          justify-self: flex-start;
+        }
+      }
+    }
+
+    .title__container {
+      display: flex;
+      align-items: center;
+
+      .card-title {
+        margin: 0 10px 0 0;
+        font-size: 1.25rem;
+        font-weight: 500;
+      }
+
+      .button-wrapper {
+        button {
+          margin: 0 2px;
+        }
+
+        span.badge__update {
+          color: #fff !important;
+          font-size: 10px;
+          border-radius: 3px;
+          background-color: #00cd79 !important;
+          margin-left: 5px;
+          padding: 3px;
+          vertical-align: middle;
+        }
+      }
+    }
+
+    .action__container {
+      display: flex;
+      align-items: center;
+
+      button {
+        margin: 0 5px;
+      }
+
+      .search {
+        height: 100%;
+        position: relative;
+        margin: 0 5px;
+
+        &__icon {
+          position: absolute;
+          left: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: grey;
+        }
+        &__input {
+          padding: 0.375rem 0.75rem;
+          padding-left: 2.5rem;
+          width: 100%;
+          height: calc(1.5em + 0.75rem + 2px);
+        }
+      }
+    }
+  }
+
+  &__tags {
+    button {
+      margin: 5px 5px;
+      border-radius: 30px;
+    }
+    margin-bottom: 20px;
+  }
+
+  &__grid {
+    flex: 1 1 auto;
+    background-color: white;
+    max-height: 80%;
+    font-size: 14px;
+
+    .grid__action {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .cell-action {
+      width: 160px;
+      min-width: 160px;
+
+      // Connect the main button and split-toggle into one visual unit
+      .btn-group {
+        > .btn:first-child {
+          border-top-right-radius: 0;
+          border-bottom-right-radius: 0;
+          flex: 1 1 auto;
+        }
+        > .dropdown-toggle-split {
+          border-top-left-radius: 0;
+          border-bottom-left-radius: 0;
+        }
+      }
+
+      .proress__wrapper {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .progress__status {
+        text-align: center;
+        width: 100%;
+      }
+
+      .progress__bar {
+        width: 100%;
+      }
+    }
+  }
+}

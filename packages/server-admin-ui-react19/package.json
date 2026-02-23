@@ -1,0 +1,91 @@
+{
+  "name": "@signalk/server-admin-ui-react19",
+  "version": "2.21.0",
+  "description": "Signal K server admin webapp",
+  "author": "Dirk Wahrheit, Scott Bender, Teppo Kurki",
+  "contributors": [
+    {
+      "name": "Teppo Kurki"
+    },
+    {
+      "name": "Scott Bender"
+    }
+  ],
+  "license": "MIT",
+  "keywords": [
+    "signalk-webapp"
+  ],
+  "signalk": {
+    "appIcon": "./img/signal-k-logo-image.svg",
+    "displayName": "Admin UI (React 19)"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.11.6",
+    "@babel/preset-react": "^7.10.4",
+    "@fortawesome/fontawesome-svg-core": "^6.5.1",
+    "@fortawesome/free-brands-svg-icons": "^6.5.1",
+    "@fortawesome/free-regular-svg-icons": "^6.5.1",
+    "@fortawesome/free-solid-svg-icons": "^6.5.1",
+    "@fortawesome/react-fontawesome": "^3.1.1",
+    "@module-federation/vite": "^1.9.4",
+    "@rjsf/core": "^5.24.13",
+    "@rjsf/utils": "^5.24.13",
+    "@rjsf/validator-ajv8": "^5.24.13",
+    "@signalk/server-admin-ui-dependencies": "2.22.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/escape-html": "^1.0.4",
+    "@types/lodash.remove": "^4.7.9",
+    "@types/lodash.set": "^4.3.9",
+    "@types/lodash.uniq": "^4.5.9",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.1.2",
+    "@vitest/coverage-v8": "^4.0.18",
+    "ansi-to-html": "^0.6.14",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "bootstrap": "^5.3.3",
+    "buffer": "^6.0.3",
+    "dayjs": "^1.11.13",
+    "escape-html": "^1.0.3",
+    "html-react-parser": "^5.2.5",
+    "jsdom": "^27.4.0",
+    "jsonlint-mod": "^1.7.6",
+    "lodash.remove": "^4.7.0",
+    "lodash.set": "^4.3.2",
+    "lodash.uniq": "^4.5.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-infinite-scroll-component": "^6.1.0",
+    "react-json-tree": "^0.20.0",
+    "react-router-dom": "^6.28.0",
+    "react-bootstrap": "^2.10.10",
+    "react-select": "^5.10.2",
+    "reconnecting-websocket": "^4.4.0",
+    "rollup-plugin-visualizer": "^5.12.0",
+    "sass": "^1.81.0",
+    "simple-line-icons": "^2.5.5",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^4.0.18"
+  },
+  "scripts": {
+    "prepublishOnly": "npm run build",
+    "dev": "vite",
+    "watch": "vite build --watch",
+    "build": "vite build",
+    "preview": "vite preview",
+    "format": "prettier --write src/",
+    "lint": "eslint --fix",
+    "clean": "rimraf ./public",
+    "bundle-analyzer": "vite-bundle-visualizer",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "zustand": "^5.0.10"
+  }
+}

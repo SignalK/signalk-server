@@ -29,12 +29,12 @@
       "TimeRangeDuration": {
         "name": "duration",
         "in": "query",
-        "description": "Duration of the time range in milliseconds (integer) or as an ISO8601 Duration string. Can be specified with either 'from' or 'to'. If they are both omitted is relative to 'now'. See https://datatracker.ietf.org/doc/html/rfc3339#appendix-A",
+        "description": "Duration of the time range in seconds (integer) or as an ISO8601 Duration string. Can be specified with either 'from' or 'to'. If they are both omitted is relative to 'now'. See https://datatracker.ietf.org/doc/html/rfc3339#appendix-A",
         "schema": {
           "oneOf": [
             {
               "type": "integer",
-              "description": "Duration in milliseconds"
+              "description": "Duration in seconds"
             },
             {
               "type": "string",
@@ -75,8 +75,8 @@
           {
             "name": "paths",
             "in": "query",
-            "description": "Comma separated ist of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index'",
-            "example": "navigation.speedOverGround,navigation.speedThroughWater:max",
+            "description": "Comma separated list of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index' | 'sma' | 'ema'. The 'sma' (simple moving average) and 'ema' (exponential moving average) methods accept an optional numeric parameter separated by colon: for sma it is the number of samples, for ema it is the alpha value (0-1). If not provided, implementations should use sensible defaults.",
+            "example": "navigation.speedOverGround:sma:5,navigation.speedThroughWater:max",
             "schema": {
               "type": "string"
             },
@@ -94,7 +94,7 @@
           {
             "name": "resolution",
             "in": "query",
-            "description": "Length of data sample time window in milliseconds or as a time expression ('1s', '1m', '1h', '1d'). If resolution is not specified the server should provide data in a reasonable time resolution, depending on the time range in the request.",
+            "description": "Length of data sample time window in seconds or as a time expression ('1s', '1m', '1h', '1d'). If resolution is not specified the server should provide data in a reasonable time resolution, depending on the time range in the request.",
             "schema": {
               "type": "number",
               "format": "integer"

@@ -1,0 +1,39 @@
+ARG NODE
+FROM node:${NODE}-alpine
+
+COPY docker/avahi/avahi-dbus.conf docker/bluez/bluezuser.conf /etc/dbus-1/system.d/
+
+RUN deluser node 2>/dev/null || true && \
+    delgroup node 2>/dev/null || true
+
+RUN apk add --no-cache \
+    sudo git bash \
+    python3 py3-virtualenv py3-pip build-base \
+    avahi avahi-compat-libdns_sd \
+    procps-ng nano curl libcap-setcap dbus bluez \
+ && addgroup -g 991 -S docker \
+ && addgroup -g 990 -S i2c \
+ && addgroup -g 989 -S spi \
+ && mkdir -p /var/run/dbus /var/run/avahi-daemon \
+ && chmod 777 /var/run/dbus /var/run/avahi-daemon \
+ && chown -R avahi:avahi /var/run/avahi-daemon
+
+RUN npm config rm proxy \
+ && npm config rm https-proxy \
+ && npm config set fetch-retries 5 \
+ && npm config set fetch-retry-mintimeout 60000 \
+ && npm config set fetch-retry-maxtimeout 120000 \
+ && npm cache clean -f \
+ && rm -rf /tmp/* /var/tmp/*
+
+RUN addgroup -g 1000 node \
+ && adduser -u 1000 -G node -s /bin/sh -D node \
+ && addgroup node dialout \
+ && addgroup node i2c \
+ && addgroup node spi \
+ && addgroup node netdev \
+ && addgroup node docker \
+ && echo 'node ALL=(ALL) NOPASSWD:/bin/date' >> /etc/sudoers
+
+WORKDIR /home/node
+USER node

@@ -64,7 +64,7 @@ export class HistoryApiHttpRegistry {
   }
 
   start() {
-    this.app.get('/signalk/v2/history/values', (req, res) =>
+    this.app.get('/signalk/v2/api/history/values', (req, res) =>
       respondWith(
         this.provider,
         () => {
@@ -75,7 +75,7 @@ export class HistoryApiHttpRegistry {
       )
     )
 
-    this.app.get('/signalk/v2/history/contexts', (req, res) =>
+    this.app.get('/signalk/v2/api/history/contexts', (req, res) =>
       respondWith(
         this.provider,
         () => {
@@ -91,7 +91,7 @@ export class HistoryApiHttpRegistry {
       )
     )
 
-    this.app.get('/signalk/v2/history/paths', (req, res) =>
+    this.app.get('/signalk/v2/api/history/paths', (req, res) =>
       respondWith(
         this.provider,
         () => {
@@ -169,10 +169,17 @@ const splitPathExpression = (pathExpression: string): PathSpec => {
   if (parts[0] === 'navigation.position') {
     aggregateMethod = 'first' as AggregateMethod
   }
-  return {
+
+  // Extract all parameters from parts[2] onwards
+  const parameters: string[] = parts.slice(2).filter((p) => p.length > 0)
+
+  const pathSpec: PathSpec = {
     path: parts[0] as Path,
-    aggregate: aggregateMethod
+    aggregate: aggregateMethod,
+    parameter: parameters
   }
+
+  return pathSpec
 }
 
 const parseTimeRangeParams = (query: Record<string, unknown>) => {

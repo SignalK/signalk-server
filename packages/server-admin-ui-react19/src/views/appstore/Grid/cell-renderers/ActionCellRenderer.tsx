@@ -1,0 +1,313 @@
+import { useState, ReactNode } from 'react'
+import Button from 'react-bootstrap/Button'
+import ButtonGroup from 'react-bootstrap/ButtonGroup'
+import Dropdown from 'react-bootstrap/Dropdown'
+import ListGroup from 'react-bootstrap/ListGroup'
+import Modal from 'react-bootstrap/Modal'
+import ProgressBar from 'react-bootstrap/ProgressBar'
+import { NavLink } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
+import { faCloudArrowDown } from '@fortawesome/free-solid-svg-icons/faCloudArrowDown'
+import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
+import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons/faArrowUpRightFromSquare'
+import { faLink } from '@fortawesome/free-solid-svg-icons/faLink'
+import { urlToWebapp } from '../../../Webapps/Webapp'
+import semver from 'semver'
+
+interface AppData {
+  name: string
+  version?: string
+  installedVersion?: string
+  newVersion?: string
+  installed?: boolean
+  installing?: boolean
+  isInstalling?: boolean
+  isRemoving?: boolean
+  isWaiting?: boolean
+  isRemove?: boolean
+  installFailed?: boolean
+  isPlugin?: boolean
+  id?: string
+  npmUrl?: string
+  [key: string]: unknown
+}
+
+interface ActionCellRendererProps {
+  data: AppData
+}
+
+export default function ActionCellRenderer({
+  data: app
+}: ActionCellRendererProps) {
+  const [showVersionsModal, setShowVersionsModal] = useState(false)
+  const [versions, setVersions] = useState<string[]>([])
+  const [distTags, setDistTags] = useState<Record<string, string>>({})
+  const [loadingVersions, setLoadingVersions] = useState(false)
+
+  const handleInstallClick = () => {
+    fetch(
+      `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
+      {
+        method: 'POST',
+        credentials: 'include'
+      }
+    )
+  }
+
+  const handleInstallVersionClick = (version: string) => {
+    fetch(
+      `${window.serverRoutesPrefix}/appstore/install/${app.name}/${version}`,
+      {
+        method: 'POST',
+        credentials: 'include'
+      }
+    )
+    setShowVersionsModal(false)
+  }
+
+  const handleVersionsClick = async () => {
+    setLoadingVersions(true)
+    setShowVersionsModal(true)
+
+    try {
+      const response = await fetch(`https://registry.npmjs.org/${app.name}`)
+      const packageData = await response.json()
+
+      if (packageData.versions) {
+        const versionList = semver.rsort(Object.keys(packageData.versions))
+        setVersions(versionList)
+      }
+      if (packageData['dist-tags']) {
+        setDistTags(packageData['dist-tags'])
+      }
+    } catch (error) {
+      console.error('Failed to fetch versions:', error)
+      setVersions([])
+    } finally {
+      setLoadingVersions(false)
+    }
+  }
+
+  const handleRemoveClick = () => {
+    if (confirm(`Are you sure you want to uninstall ${app.name}?`)) {
+      fetch(`${window.serverRoutesPrefix}/appstore/remove/${app.name}`, {
+        method: 'POST',
+        credentials: 'include'
+      })
+    }
+  }
+
+  let content: ReactNode
+  let status: string | undefined
+  let progress: ReactNode | undefined
+
+  if (app.installing) {
+    if (app.isInstalling || app.isRemoving || app.isWaiting) {
+      status = app.isRemove
+        ? 'Removing'
+        : app.isWaiting
+          ? 'Waiting..'
+          : 'Installing'
+      progress = (
+        <ProgressBar
+          className="progress-sm progress__bar"
+          animated
+          variant="success"
+          now={100}
+        />
+      )
+    } else if (app.installFailed) {
+      status = 'Failed'
+    } else if (app.isRemove) {
+      status = 'Removed'
+    } else if (app.installedVersion) {
+      status = 'Updated'
+    } else {
+      status = 'Installed'
+    }
+
+    content = (
+      <div className="progress__wrapper">
+        <div className="progress__status p-1">{status}</div>
+        {progress}
+      </div>
+    )
+  } else {
+    content = (
+      <>
+        <Dropdown as={ButtonGroup} className="w-100">
+          {app.installed ? (
+            app.newVersion ? (
+              <Button
+                className="text-start"
+                variant="success"
+                onClick={handleInstallClick}
+              >
+                <FontAwesomeIcon
+                  className="icon__update me-2"
+                  icon={faCloudArrowDown}
+                />
+                Update
+              </Button>
+            ) : app.isPlugin ? (
+              <NavLink
+                to={`/serverConfiguration/plugins/${app.id}`}
+                role="button"
+                className="btn btn-light text-start"
+              >
+                <FontAwesomeIcon className="me-2" icon={faGear} />
+                Configure
+              </NavLink>
+            ) : (
+              <a
+                href={urlToWebapp(app)}
+                role="button"
+                className="btn btn-light text-start"
+              >
+                <FontAwesomeIcon className="me-2" icon={faLink} />
+                Open
+              </a>
+            )
+          ) : (
+            <Button
+              className="text-start"
+              variant="light"
+              onClick={handleInstallClick}
+            >
+              <FontAwesomeIcon className="me-2" icon={faCloudArrowDown} />
+              Install
+            </Button>
+          )}
+
+          <Dropdown.Toggle
+            split
+            variant={app.newVersion ? 'success' : 'light'}
+            className="flex-grow-0"
+          />
+          <Dropdown.Menu align="end">
+            {app.installed && app.newVersion && (
+              <NavLink
+                to={`/serverConfiguration/plugins/${app.id}`}
+                className="dropdown-item"
+              >
+                <FontAwesomeIcon className="me-2" icon={faGear} /> Configure
+              </NavLink>
+            )}
+            {app.npmUrl && (
+              <a
+                href={app.npmUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="dropdown-item"
+              >
+                <FontAwesomeIcon
+                  icon={faArrowUpRightFromSquare}
+                  className="me-2"
+                />
+                View on NPM
+              </a>
+            )}
+
+            <Dropdown.Item onClick={handleVersionsClick} className="text-start">
+              <FontAwesomeIcon className="me-2" icon={faCloudArrowDown} />
+              Versions
+            </Dropdown.Item>
+
+            {app.installed && (
+              <Dropdown.Item
+                onClick={handleRemoveClick}
+                className="text-danger"
+              >
+                <FontAwesomeIcon className="me-2" icon={faTrashCan} />
+                Remove
+              </Dropdown.Item>
+            )}
+          </Dropdown.Menu>
+        </Dropdown>
+      </>
+    )
+  }
+  return (
+    <div className="cell__renderer cell-action">
+      <div>{content}</div>
+      {/* Versions Modal */}
+      <Modal
+        show={showVersionsModal}
+        onHide={() => setShowVersionsModal(false)}
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Versions - {app.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {loadingVersions ? (
+            <div className="text-center">
+              <div className="spinner-border text-primary" role="status">
+                <span className="sr-only">Loading...</span>
+              </div>
+              <p className="mt-2">Loading versions...</p>
+            </div>
+          ) : versions.length > 0 ? (
+            <div
+              style={{
+                maxHeight: '450px',
+                overflowY: 'auto',
+                border: '1px solid #ccc'
+              }}
+            >
+              <ListGroup>
+                {versions.map((version) => {
+                  const isPrerelease = !!semver.prerelease(version)
+
+                  return (
+                    <ListGroup.Item
+                      key={version}
+                      className="d-flex justify-content-between align-items-center"
+                    >
+                      <span>
+                        <strong>{version}</strong>
+                        {app.installedVersion === version && (
+                          <span className="badge text-bg-success ms-2">
+                            Installed
+                          </span>
+                        )}
+                        {distTags.latest === version && (
+                          <span className="badge text-bg-primary ms-2">
+                            latest
+                          </span>
+                        )}
+                        {isPrerelease && (
+                          <span className="badge text-bg-warning ms-2">
+                            pre-release
+                          </span>
+                        )}
+                      </span>
+                      {app.installedVersion !== version && (
+                        <Button
+                          size="sm"
+                          variant="light"
+                          onClick={() => handleInstallVersionClick(version)}
+                        >
+                          <FontAwesomeIcon
+                            className="icon__update me-2"
+                            icon={faCloudArrowDown}
+                          />
+                          Install
+                        </Button>
+                      )}
+                    </ListGroup.Item>
+                  )
+                })}
+              </ListGroup>
+            </div>
+          ) : (
+            <p className="text-muted">
+              No older versions available or failed to load versions.
+            </p>
+          )}
+        </Modal.Body>
+      </Modal>
+    </div>
+  )
+}

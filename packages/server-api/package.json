@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-api",
-  "version": "2.21.0",
+  "version": "2.22.0",
   "description": "signalk-server Typescript API for plugins etc with relevant implementation classes",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
     "prettier": "prettier --write .",
     "lint": "eslint --fix",
     "format": "npm run prettier && npm run lint",
-    "test": "mocha src/**/*.test.ts"
+    "test": "mocha 'src/**/*.test.ts' 'src/*.test.ts'"
   },
   "repository": {
     "type": "git",
