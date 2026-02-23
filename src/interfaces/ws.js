@@ -843,17 +843,19 @@ function handleRealtimeConnection(app, spark, onChange) {
 
       const allPaths = app.streambundle.getAvailablePaths()
       const meta = allPaths.reduce((acc, path) => {
-        const category = getDefaultCategory(path)
+        const fullPath = 'vessels.self.' + path
+        const pathMeta = getMetadata(fullPath) || {}
+        // Check stored category first, then fall back to default
+        const category =
+          pathMeta.displayUnits?.category || getDefaultCategory(path)
         if (category) {
-          const fullPath = 'vessels.self.' + path
-          const meta = getMetadata(fullPath) || {}
           const displayUnits = resolveDisplayUnits(
             { category },
-            meta.units,
+            pathMeta.units,
             username
           )
           if (displayUnits) {
-            acc.push({ path, value: { ...meta, displayUnits } })
+            acc.push({ path, value: { ...pathMeta, displayUnits } })
           }
         }
         return acc

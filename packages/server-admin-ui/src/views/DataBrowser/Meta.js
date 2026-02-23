@@ -225,7 +225,7 @@ const CategorySelect = ({ disabled, value, setValue, categories, siUnit }) => {
       disabled={disabled}
       type="select"
       value={category}
-      onChange={(e) => setValue({ ...value, category: e.target.value })}
+      onChange={(e) => setValue({ category: e.target.value })}
     >
       <option value="">-- No category --</option>
       {siUnit && <option value="base">base ({siUnit})</option>}
