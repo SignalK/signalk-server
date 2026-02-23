@@ -56,7 +56,7 @@ async function fetchActivePreset() {
   // Try user-specific preference first (via applicationData API)
   try {
     const userResponse = await fetch(
-      '/signalk/v1/applicationData/user/unitpreferences/1.0',
+      '/signalk/v1/applicationData/user/unitpreferences/1.0.0',
       { credentials: 'include' }
     )
     if (userResponse.ok) {
@@ -86,7 +86,7 @@ async function fetchActivePreset() {
 
 async function setActivePreset(preset) {
   try {
-    await fetch('/signalk/v1/applicationData/user/unitpreferences/1.0', {
+    await fetch('/signalk/v1/applicationData/user/unitpreferences/1.0.0', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
