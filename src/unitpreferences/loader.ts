@@ -231,7 +231,7 @@ export function getActivePresetForUser(username?: string): Preset {
         'users',
         username,
         'unitpreferences',
-        '1.0.json'
+        '1.0.0.json'
       )
       if (fs.existsSync(userPrefPath)) {
         const userPref = JSON.parse(fs.readFileSync(userPrefPath, 'utf-8'))

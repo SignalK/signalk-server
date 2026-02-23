@@ -90,13 +90,15 @@ module.exports = function (app) {
 
         if (path.length > 4 && path[path.length - 1] === 'meta') {
           const metaPath = path.slice(0, path.length - 1).join('.')
-          let meta = getMetadata(metaPath)
+          const meta = getMetadata(metaPath)
 
           if (meta) {
+            // Clone to avoid mutating the cached metadata object
+            const metaCopy = { ...meta }
             // Extract signalk path (remove vessels.self prefix)
             const signalkPath = metaPath.replace(/^vessels\.[^.]+\./, '')
             const username = req.skPrincipal?.identifier
-            res.json(enhanceMetadataResponse(meta, signalkPath, username))
+            res.json(enhanceMetadataResponse(metaCopy, signalkPath, username))
             return
           }
         }
