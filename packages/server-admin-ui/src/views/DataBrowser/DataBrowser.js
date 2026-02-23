@@ -31,7 +31,7 @@ async function fetchActivePreset() {
   // Try user-specific preference first
   try {
     const userResponse = await fetch(
-      '/signalk/v1/applicationData/user/unitpreferences/1.0',
+      '/signalk/v1/applicationData/user/unitpreferences/1.0.0',
       { credentials: 'include' }
     )
     if (userResponse.ok) {
