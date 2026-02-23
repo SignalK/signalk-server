@@ -223,7 +223,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
       disabled={disabled}
       value={category}
       size="sm"
-      onChange={(e) => setValue({ ...displayUnits, category: e.target.value })}
+      onChange={(e) => setValue({ category: e.target.value })}
     >
       <option value="">-- No category --</option>
       {siUnit && <option value="base">base ({siUnit})</option>}
