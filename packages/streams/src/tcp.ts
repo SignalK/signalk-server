@@ -21,9 +21,10 @@ export default class TcpStream extends Transform {
   private readonly debugData: DebugLogger
   private readonly noDataReceivedTimeout: number
   private tcpStream: net.Socket | undefined
+  private reconnector: { disconnect(): void } | null = null
 
   constructor(options: TcpOptions) {
-    super({ objectMode: true })
+    super()
     this.options = options
     this.noDataReceivedTimeout =
       Number.parseInt((this.options.noDataReceivedTimeout + '').trim()) * 1000
@@ -61,11 +62,9 @@ export default class TcpStream extends Transform {
       }
     }
 
-    const reconnector = reconnect((opts: object) => {
+    this.reconnector = reconnect((opts: object) => {
       return net.connect(opts as { host: string; port: number })
-    })
-
-    reconnector({ maxDelay: 5 * 1000 }, (tcpStream: net.Socket) => {
+    })({ maxDelay: 5 * 1000 }, (tcpStream: net.Socket) => {
       if (!isNaN(this.noDataReceivedTimeout)) {
         tcpStream.setTimeout(this.noDataReceivedTimeout)
         this.debug(
@@ -116,6 +115,13 @@ export default class TcpStream extends Transform {
 
     super.pipe(pipeTo)
     return pipeTo
+  }
+
+  end(): this {
+    if (this.reconnector) {
+      this.reconnector.disconnect()
+    }
+    return this
   }
 
   _transform(

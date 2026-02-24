@@ -22,9 +22,10 @@ export default class SerialStream extends Transform {
   private reconnectDelay = 1000
   private isFirstError = true
   private readonly maxPendingWrites: number
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 
   constructor(options: SerialStreamOptions) {
-    super({ objectMode: true })
+    super()
 
     this.options = options
     this.reconnectEnabled = options.reconnect ?? true
@@ -133,7 +134,13 @@ export default class SerialStream extends Transform {
   }
 
   end(): this {
-    this.serial?.close()
+    this.reconnectEnabled = false
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+    }
+    if (this.serial) {
+      this.serial.close()
+    }
     return this
   }
 
@@ -153,6 +160,6 @@ export default class SerialStream extends Transform {
     ).toFixed(0)} s)`
     this.debug(msg)
     this.options.app.setProviderStatus(this.options.providerId, msg)
-    setTimeout(() => this.start(), this.reconnectDelay)
+    this.reconnectTimeout = setTimeout(() => this.start(), this.reconnectDelay)
   }
 }

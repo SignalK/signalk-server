@@ -22,6 +22,7 @@ export default class Execute extends Transform {
   childProcess!: ChildProcess
   private pipeTo: Writable | null = null
   private lastStartupTime = 0
+  private stopped = false
 
   constructor(options: ExecuteOptions) {
     super({})
@@ -70,6 +71,7 @@ export default class Execute extends Transform {
 
   end(): this {
     this.debug('end, killing child process')
+    this.stopped = true
     this.childProcess.kill()
     if (this.pipeTo) {
       this.pipeTo.end()
@@ -103,6 +105,7 @@ export default class Execute extends Transform {
     this.childProcess.on('close', (code: number | null) => {
       const msg = `|${command}| exited with ${code}`
       console.error(msg)
+      if (this.stopped) return
       if (
         this.options.restartOnClose === undefined ||
         this.options.restartOnClose

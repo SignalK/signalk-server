@@ -20,7 +20,10 @@ export default class Replacer extends Transform {
     encoding: BufferEncoding,
     done: TransformCallback
   ): void {
-    this.push(chunk.toString().replace(this.regexp, this.template))
+    const result = chunk.toString().replace(this.regexp, this.template)
+    if (result.length > 0) {
+      this.push(result)
+    }
     done()
   }
 }

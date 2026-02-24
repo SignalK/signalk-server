@@ -51,8 +51,8 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
   }
 
   newFilename(): string {
-    if (this.prevFilename !== this.currentPath) {
-      this.prevFilename = this.currentPath
+    if (this.prevFilename !== this.currentFilename) {
+      this.prevFilename = this.currentFilename
       this.deleteOldFiles()
     }
     return super.newFilename()

@@ -65,6 +65,11 @@ export default class Gpsd extends Transform {
     this.listener.connect()
   }
 
+  end(): this {
+    this.listener.disconnect()
+    return this
+  }
+
   _transform(
     chunk: Buffer,
     encoding: BufferEncoding,

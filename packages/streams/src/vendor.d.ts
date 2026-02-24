@@ -26,7 +26,7 @@ declare module 'file-timestamp-stream' {
   }
   class FileTimestampStream extends Writable {
     constructor(options: FileTimestampStreamOptions)
-    currentPath: string
+    currentFilename: string
     newFilename(): string
   }
   export = FileTimestampStream
