@@ -18,7 +18,8 @@
     "test-only": "NODE_ENV=test mocha 'test/**/*.[jt]s'",
     "test:admin-ui": "npm run test -w @signalk/server-admin-ui-react19",
     "test:server-api": "npm run test -w @signalk/server-api",
-    "test": "npm run build && npm run test-only && npm run ci-lint && npm run test:admin-ui && npm run test:server-api",
+    "test:streams": "npm run test -w @signalk/streams",
+    "test": "npm run build && npm run test-only && npm run ci-lint && npm run test:admin-ui && npm run test:server-api && npm run test:streams",
     "heroku-postbuild": "npm run build:all",
     "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
   },

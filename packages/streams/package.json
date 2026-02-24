@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc -b",
     "watch": "tsc --watch",
+    "test": "mocha 'src/**/*.test.ts'",
     "ci": "prettier --check src/",
     "format": "prettier --write src/"
   },

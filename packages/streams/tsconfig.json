@@ -8,5 +8,12 @@
     "noUnusedLocals": true,
     "allowJs": false
   },
-  "include": ["./src/**/*"]
+  "include": ["./src/**/*"],
+  "ts-node": {
+    "files": true,
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node"
+    }
+  }
 }
