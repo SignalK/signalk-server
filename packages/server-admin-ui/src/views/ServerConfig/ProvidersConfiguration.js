@@ -134,38 +134,35 @@ class ProvidersConfiguration extends Component {
       },
       body: JSON.stringify(this.state.selectedProvider),
       credentials: 'include'
-    })
-      .then((response) => {
-        if (response.ok) {
-          var provider = JSON.parse(JSON.stringify(this.state.selectedProvider))
-          delete provider.isNew
-          delete provider.wasDiscovered
-          delete this.state.selectedProvider.isNew
-          if (isNew) {
-            this.state.providers.push(provider)
-          } else {
-            this.state.providers[this.state.selectedIndex] = provider
-          }
-          if (wasDiscovered) {
-            this.props.discoveredProviders.splice(this.state.selectedIndex, 1)
-          }
-          this.setState(
-            {
-              providers: this.state.providers,
-              //discoveredProviders: this.state.discoveredProviders,
-              selectedProvider: null,
-              selectedIndex: -1
-            },
-            () => {
-              this.props.history.push('/serverConfiguration/connections/-')
-            }
-          )
+    }).then((response) => {
+      if (response.ok) {
+        var provider = JSON.parse(JSON.stringify(this.state.selectedProvider))
+        delete provider.isNew
+        delete provider.wasDiscovered
+        delete this.state.selectedProvider.isNew
+        if (isNew) {
+          this.state.providers.push(provider)
+        } else {
+          this.state.providers[this.state.selectedIndex] = provider
         }
-        return response.text()
-      })
-      .then((text) => {
-        alert(text)
-      })
+        if (wasDiscovered) {
+          this.props.discoveredProviders.splice(this.state.selectedIndex, 1)
+        }
+        this.setState(
+          {
+            providers: this.state.providers,
+            //discoveredProviders: this.state.discoveredProviders,
+            selectedProvider: null,
+            selectedIndex: -1
+          },
+          () => {
+            this.props.history.push('/serverConfiguration/connections/-')
+          }
+        )
+      } else {
+        response.text().then((text) => alert(text))
+      }
+    })
   }
 
   handleCancel() {
@@ -182,17 +179,18 @@ class ProvidersConfiguration extends Component {
         },
         credentials: 'include'
       }
-    )
-      .then((response) => response.text())
-      .then((response) => {
+    ).then((response) => {
+      if (response.ok) {
         this.state.providers.splice(this.state.selectedIndex, 1)
         this.setState({
           providers: this.state.providers,
           selectedProvider: null,
           selectedIndex: -1
         })
-        alert(response)
-      })
+      } else {
+        response.text().then((text) => alert(text))
+      }
+    })
   }
 
   providerClicked(provider, index) {
