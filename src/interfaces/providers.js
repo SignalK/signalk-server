@@ -91,6 +91,7 @@ module.exports = function (app) {
         console.error(err)
         res.status(500).send('Unable to save to settings file')
       } else {
+        app.pipedProviders.stopProvider(req.params.id)
         res.type('text/plain')
         res.send('Connection deleted')
       }
@@ -169,6 +170,10 @@ module.exports = function (app) {
           console.error(err)
           res.status(500).send('Unable to save to settings file')
         } else {
+          if (!isNew && idToUpdate !== provider.id) {
+            app.pipedProviders.stopProvider(idToUpdate)
+          }
+          app.pipedProviders.restartProvider(provider.id)
           res.type('text/plain')
           res.send('Connection ' + (isNew ? 'added' : 'updated'))
         }

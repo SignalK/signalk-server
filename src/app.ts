@@ -11,6 +11,12 @@ export interface ServerApp extends ServerAPI {
   interfaces: { [key: string]: any }
   intervals: NodeJS.Timeout[]
   providers: any[]
+  pipedProviders: {
+    start: () => any[]
+    createPipedProvider: (config: any) => any
+    stopProvider: (id: string) => void
+    restartProvider: (id: string) => void
+  }
   server: any
   redirectServer?: any
   deltaCache: DeltaCache

@@ -52,7 +52,7 @@ Udp.prototype.pipe = function (pipeTo) {
   this.pipeTo = pipeTo
   Udp.super_.prototype.pipe.call(this, pipeTo)
 
-  const socket = require('dgram').createSocket('udp4')
+  const socket = (this.socket = require('dgram').createSocket('udp4'))
   const self = this
 
   if (this.options.outEvent && this.options.port !== undefined) {
@@ -88,8 +88,12 @@ Udp.prototype._transform = function (chunk, encoding, done) {
 }
 
 Udp.prototype.end = function () {
-  this.socket.close()
-  this.pipeTo.end()
+  if (this.socket) {
+    this.socket.close()
+  }
+  if (this.pipeTo) {
+    this.pipeTo.end()
+  }
 }
 
 module.exports = Udp

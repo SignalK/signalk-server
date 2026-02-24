@@ -494,7 +494,8 @@ class Server {
         app.apis = await startApis(app)
         await startInterfaces(app)
         startMdns(app)
-        app.providers = pipedProviders(app as any).start()
+        app.pipedProviders = pipedProviders(app as any)
+        app.providers = app.pipedProviders.start()
 
         const primaryPort = getPrimaryPort(app)
         debug(`primary port:${primaryPort}`)
