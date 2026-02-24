@@ -1,12 +1,19 @@
 import { execSync } from 'child_process'
 import { Transform, TransformCallback } from 'stream'
 import shellescape from 'any-shell-escape'
-import type { CreateDebug, DebugLogger, StreamsApp } from './types'
+import type { CreateDebug, DebugLogger } from './types'
 
 interface SerialStreamOptions {
   device: string
   baudrate: number
-  app: StreamsApp & { emitPropertyValue(key: string, value: object): void }
+  app: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    on(event: string, cb: (...args: any[]) => void): void
+    emit(event: string, ...args: unknown[]): void
+    emitPropertyValue(name: string, value: unknown): void
+    setProviderStatus(id: string, msg: string): void
+    setProviderError(id: string, msg: string): void
+  }
   providerId: string
   toStdout?: string | string[]
   maxPendingWrites?: number

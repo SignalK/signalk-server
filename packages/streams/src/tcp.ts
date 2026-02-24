@@ -1,12 +1,18 @@
 import net from 'net'
 import { Transform, TransformCallback } from 'stream'
 import reconnect from 'reconnect-core'
-import type { CreateDebug, DebugLogger, StreamsApp } from './types'
+import type { CreateDebug, DebugLogger } from './types'
 
 interface TcpOptions {
   host: string
   port: number
-  app: StreamsApp
+  app: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    on(event: string, cb: (...args: any[]) => void): void
+    emit(event: string, ...args: unknown[]): void
+    setProviderStatus(id: string, msg: string): void
+    setProviderError(id: string, msg: string): void
+  }
   providerId: string
   noDataReceivedTimeout?: string | number
   outEvent?: string

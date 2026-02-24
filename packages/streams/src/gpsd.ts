@@ -1,13 +1,16 @@
 import { Transform, TransformCallback } from 'stream'
 import GpsdClient from 'node-gpsd-client'
-import type { CreateDebug, StreamsApp } from './types'
+import type { CreateDebug } from './types'
 
 interface GpsdOptions {
   port?: number
   hostname?: string
   host?: string
   noDataReceivedTimeout?: number
-  app: StreamsApp
+  app: {
+    setProviderStatus(id: string, msg: string): void
+    setProviderError(id: string, msg: string): void
+  }
   providerId: string
   createDebug?: CreateDebug
   [key: string]: unknown

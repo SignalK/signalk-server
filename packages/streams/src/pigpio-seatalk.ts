@@ -22,7 +22,7 @@
  */
 
 import Execute from './execute'
-import { CreateDebug, StreamsApp } from './types'
+import type { CreateDebug } from './types'
 
 const pythonScript = `
 import pigpio, time, signal, sys
@@ -84,7 +84,13 @@ if __name__ == "__main__":
 `
 
 interface PigpioSeatalkOptions {
-  app: StreamsApp
+  app: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    on(event: string, cb: (...args: any[]) => void): void
+    emit(event: string, ...args: unknown[]): void
+    setProviderStatus(id: string, msg: string): void
+    setProviderError(id: string, msg: string): void
+  }
   providerId: string
   createDebug?: CreateDebug
   gpio?: string

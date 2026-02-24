@@ -1,8 +1,6 @@
 import { createReadStream, existsSync, ReadStream } from 'fs'
 import { isAbsolute, join } from 'path'
 import { PassThrough, Writable } from 'stream'
-import type { StreamsApp } from './types'
-
 class EndIgnoringPassThrough extends PassThrough {
   end(): this {
     return this
@@ -11,7 +9,9 @@ class EndIgnoringPassThrough extends PassThrough {
 
 interface FileStreamOptions {
   filename: string
-  app: StreamsApp
+  app: {
+    config: { configPath: string }
+  }
   keepRunning?: boolean
   [key: string]: unknown
 }

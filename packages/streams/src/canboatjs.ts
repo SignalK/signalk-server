@@ -1,9 +1,11 @@
 import { Transform, TransformCallback } from 'stream'
 import { FromPgn } from '@canboat/canboatjs'
-import type { CreateDebug, StreamsApp } from './types'
+import type { CreateDebug } from './types'
 
 interface CanboatJsOptions {
-  app: StreamsApp
+  app: {
+    emit(event: string, ...args: unknown[]): void
+  }
   analyzerOutEvent?: string
   useCamelCompat?: boolean
   createDebug?: CreateDebug
@@ -18,7 +20,7 @@ interface FileChunk {
 
 export default class CanboatJs extends Transform {
   private readonly fromPgn: InstanceType<typeof FromPgn>
-  private readonly app: StreamsApp
+  private readonly app: CanboatJsOptions['app']
   private readonly analyzerOutEvent: string
 
   constructor(options: CanboatJsOptions) {

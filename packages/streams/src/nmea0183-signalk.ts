@@ -19,10 +19,13 @@ import Parser from '@signalk/nmea0183-signalk'
 import { appendChecksum } from '@signalk/nmea0183-utilities'
 import { toDelta as n2kToDelta } from '@signalk/n2k-signalk'
 import { FromPgn } from '@canboat/canboatjs'
-import { CreateDebug, StreamsApp } from './types'
+import type { CreateDebug } from './types'
 
 interface Nmea0183ToSignalKOptions {
-  app: StreamsApp
+  app: {
+    emit(event: string, ...args: unknown[]): void
+    signalk: { emit(event: string, ...args: unknown[]): void }
+  }
   providerId: string
   createDebug?: CreateDebug
   suppress0183event?: boolean
@@ -50,7 +53,7 @@ export default class Nmea0183ToSignalK extends Transform {
   private readonly parser: InstanceType<typeof Parser>
   private readonly n2kParser: InstanceType<typeof FromPgn>
   private readonly n2kState: Record<string, unknown> = {}
-  private readonly app: StreamsApp
+  private readonly app: Nmea0183ToSignalKOptions['app']
   private readonly sentenceEvents: string[]
   private readonly appendChecksumFlag: boolean
 

@@ -1,8 +1,10 @@
 import { Transform, TransformCallback } from 'stream'
-import type { StreamsApp } from './types'
 
 interface TcpServerOptions {
-  app: StreamsApp
+  app: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    on(event: string, cb: (...args: any[]) => void): void
+  }
 }
 
 export default class TcpServer extends Transform {

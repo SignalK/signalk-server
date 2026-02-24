@@ -1,11 +1,15 @@
 import { createSocket, Socket } from 'dgram'
 import { Transform, TransformCallback, Writable } from 'stream'
-import type { CreateDebug, DebugLogger, StreamsApp } from './types'
+import type { CreateDebug, DebugLogger } from './types'
 
 interface UdpOptions {
   port: number
   host?: string
-  app: StreamsApp
+  app: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    on(event: string, cb: (...args: any[]) => void): void
+    setProviderError(id: string, msg: string): void
+  }
   providerId: string
   outEvent?: string
   createDebug?: CreateDebug

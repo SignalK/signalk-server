@@ -20,7 +20,7 @@ import N2KJsonToSignalK from './n2k-signalk'
 import ActisenseSerialToJSON from './n2kAnalyzer'
 import CanboatJs from './canboatjs'
 import Nmea0183ToSignalK from './nmea0183-signalk'
-import { StreamsApp } from './types'
+import type { DeltaCache } from './types'
 
 /*
 
@@ -44,7 +44,16 @@ A => actisense-serial format N2K data
 */
 
 interface AutodetectOptions {
-  app: StreamsApp
+  app: {
+    selfContext: string
+    isNmea2000OutAvailable: boolean
+    deltaCache: DeltaCache
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    on(event: string, cb: (...args: any[]) => void): void
+    emit(event: string, ...args: unknown[]): void
+    handleMessage(id: string, delta: object): void
+    signalk: { emit(event: string, ...args: unknown[]): void }
+  }
   providerId: string
   noThrottle?: boolean
   useCanboatjs?: boolean

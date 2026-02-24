@@ -20,7 +20,7 @@ import { iKonvert, Ydwg02, W2k01 } from '@canboat/canboatjs'
 import Gpsd from './gpsd'
 import PigpioSeatalk from './pigpio-seatalk'
 import GpiodSeatalk from './gpiod-seatalk'
-import { CreateDebug, StreamsApp } from './types'
+import type { CreateDebug, DeltaCache } from './types'
 
 // canboat exports are old-style constructor functions, not classes.
 // They lack construct signatures in their type declarations, so we
@@ -32,8 +32,32 @@ const W2k01Ctor = W2k01 as unknown as CanboatCtor
 const Ydwg02Ctor = Ydwg02 as unknown as CanboatCtor
 const iKonvertCtor = iKonvert as unknown as CanboatCtor
 
+interface SimpleApp {
+  selfContext: string
+  isNmea2000OutAvailable: boolean
+  deltaCache: DeltaCache
+  config: {
+    configPath: string
+    settings: {
+      loggingDirectory?: string
+      keepMostRecentLogsOnly?: boolean
+      logCountToKeep?: number
+    }
+    getExternalHostname(): string
+    getExternalPort(): number
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  on(event: string, cb: (...args: any[]) => void): void
+  emit(event: string, ...args: unknown[]): void
+  emitPropertyValue(name: string, value: unknown): void
+  setProviderStatus(id: string, msg: string): void
+  setProviderError(id: string, msg: string): void
+  handleMessage(id: string, delta: object): void
+  signalk: { emit(event: string, ...args: unknown[]): void }
+}
+
 interface SubOptions {
-  app: StreamsApp
+  app: SimpleApp
   providerId: string
   emitPropertyValue?: (name: string, value: unknown) => void
   onPropertyValues?: (name: string, callback: (value: unknown) => void) => void
@@ -65,7 +89,7 @@ interface SubOptions {
 }
 
 interface SimpleOptions {
-  app: StreamsApp
+  app: SimpleApp
   providerId: string
   type: string
   logging?: boolean
@@ -110,7 +134,7 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     new Nmea0183ToSignalK({
       ...options.subOptions,
       validateChecksum: false
-    } as SubOptions & { app: StreamsApp; providerId: string })
+    } as SubOptions & { app: SimpleApp; providerId: string })
   ],
   NMEA0183: (options) => {
     const result: PipeElement[] = [new Nmea0183ToSignalK(options.subOptions)]
@@ -423,7 +447,7 @@ const pipeStartByType: Record<string, PipeStartFactory> = {
 }
 
 function getLoggerPipeline(
-  app: StreamsApp,
+  app: SimpleApp,
   logging: boolean | undefined,
   discriminator: string | undefined
 ): PipeElement[] {

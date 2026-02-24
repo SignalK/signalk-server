@@ -1,9 +1,9 @@
 import { Transform, TransformCallback } from 'stream'
 import { getLogger } from './logging'
-import type { StreamsApp } from './types'
+import type { LoggingApp } from './logging'
 
 interface LogOptions {
-  app: StreamsApp
+  app: LoggingApp
   discriminator?: string
   logdir?: string
   [key: string]: unknown

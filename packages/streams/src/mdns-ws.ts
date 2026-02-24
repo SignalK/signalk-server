@@ -16,10 +16,17 @@
 
 import { Transform, TransformCallback } from 'stream'
 import { Client } from '@signalk/client'
-import { CreateDebug, DebugLogger, StreamsApp } from './types'
+import { CreateDebug, DebugLogger } from './types'
 
 interface MdnsWsOptions {
-  app: StreamsApp
+  app: {
+    config: {
+      getExternalHostname(): string
+      getExternalPort(): number
+    }
+    setProviderStatus(id: string, msg: string): void
+    setProviderError(id: string, msg: string): void
+  }
   providerId: string
   createDebug?: CreateDebug
   host?: string

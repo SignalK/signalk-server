@@ -1,10 +1,10 @@
 import { ChildProcess, spawn } from 'child_process'
 import { createInterface } from 'readline'
 import { Transform, TransformCallback, Writable } from 'stream'
-import type { StreamsApp } from './types'
-
 interface N2kAnalyzerOptions {
-  app: StreamsApp
+  app: {
+    emit(event: string, ...args: unknown[]): void
+  }
   analyzerOutEvent?: string
   [key: string]: unknown
 }

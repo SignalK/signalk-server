@@ -17,7 +17,18 @@
 import FileTimestampStream from 'file-timestamp-stream'
 import path from 'path'
 import fs from 'fs'
-import { CreateDebug, StreamsApp } from './types'
+import type { CreateDebug } from './types'
+
+export interface LoggingApp {
+  config: {
+    configPath: string
+    settings: {
+      loggingDirectory?: string
+      keepMostRecentLogsOnly?: boolean
+      logCountToKeep?: number
+    }
+  }
+}
 
 let debug: (...args: unknown[]) => void = require('debug')(
   'signalk:streams:logging'
@@ -31,13 +42,13 @@ interface LogMessage {
 }
 
 class FileTimestampStreamWithDelete extends FileTimestampStream {
-  private readonly app: StreamsApp
+  private readonly app: LoggingApp
   private readonly filesToKeep: number | undefined
   private readonly fullLogDir: string
   private prevFilename: string | undefined
 
   constructor(
-    app: StreamsApp,
+    app: LoggingApp,
     fullLogDir: string,
     filesToKeep: number | undefined,
     options: { path: string; createDebug?: CreateDebug }
@@ -88,7 +99,7 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
 }
 
 export function getLogger(
-  app: StreamsApp,
+  app: LoggingApp,
   discriminator = '',
   logdir?: string
 ): (msg: unknown) => void {
@@ -139,14 +150,14 @@ export function getLogger(
   }
 }
 
-export function getFullLogDir(app: StreamsApp, logdir?: string): string {
+export function getFullLogDir(app: LoggingApp, logdir?: string): string {
   const dir =
     logdir || app.config.settings.loggingDirectory || app.config.configPath
   return path.isAbsolute(dir) ? dir : path.join(app.config.configPath, dir)
 }
 
 export function listLogFiles(
-  app: StreamsApp,
+  app: LoggingApp,
   cb: (err: NodeJS.ErrnoException | undefined, files?: string[]) => void
 ): void {
   fs.readdir(getFullLogDir(app), (err, files) => {

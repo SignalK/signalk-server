@@ -17,7 +17,7 @@
 import { EventEmitter } from 'events'
 import { Transform, TransformCallback } from 'stream'
 import { N2kMapper } from '@signalk/n2k-signalk'
-import { StreamsApp } from './types'
+import type { DeltaCache } from './types'
 
 interface N2kFilter {
   source?: string
@@ -25,7 +25,15 @@ interface N2kFilter {
 }
 
 interface N2kToSignalKOptions {
-  app: StreamsApp
+  app: {
+    selfContext: string
+    isNmea2000OutAvailable: boolean
+    deltaCache: DeltaCache
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    on(event: string, cb: (...args: any[]) => void): void
+    emit(event: string, ...args: unknown[]): void
+    handleMessage(id: string, delta: object): void
+  }
   providerId: string
   filters?: N2kFilter[]
   filtersEnabled?: boolean
@@ -80,7 +88,7 @@ export default class N2kToSignalK extends Transform {
     Record<number, NotificationEntry>
   > = {}
   private readonly options: N2kToSignalKOptions
-  private readonly app: StreamsApp
+  private readonly app: N2kToSignalKOptions['app']
   private readonly filters?: N2kFilter[]
   private readonly n2kMapper: N2kMapper & EventEmitter
 
