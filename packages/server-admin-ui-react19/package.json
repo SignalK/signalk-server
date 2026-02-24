@@ -12,6 +12,7 @@
     }
   ],
   "license": "MIT",
+  "type": "module",
   "keywords": [
     "signalk-webapp"
   ],

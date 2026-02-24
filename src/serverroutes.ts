@@ -238,13 +238,14 @@ module.exports = function (
     '/public'
   )
 
-  app.get('/admin/', (req: Request, res: Response) => {
-    fs.readFile(path.join(adminUiPath, 'index.html'), (err, indexContent) => {
+  function serveIndexWithAddonScripts(indexPath: string, res: Response) {
+    fs.readFile(indexPath, (err, indexContent) => {
       if (err) {
         console.error(err)
         res.status(500)
         res.type('text/plain')
         res.send('Could not handle admin ui root request')
+        return
       }
       res.type('html')
       const addonScripts = uniq(
@@ -267,9 +268,26 @@ module.exports = function (
         )
       )
     })
+  }
+
+  app.get('/admin/', (req: Request, res: Response) => {
+    serveIndexWithAddonScripts(path.join(adminUiPath, 'index.html'), res)
   })
 
   app.use('/admin', express.static(adminUiPath))
+
+  // Serve the React 19 admin UI with addon script injection when accessed
+  // via its webapp route (not just when it's the primary /admin/ UI)
+  const react19UiPath = path.join(
+    __dirname,
+    '/../node_modules/@signalk/server-admin-ui-react19/public'
+  )
+  app.get(
+    '/@signalk/server-admin-ui-react19/',
+    (req: Request, res: Response) => {
+      serveIndexWithAddonScripts(path.join(react19UiPath, 'index.html'), res)
+    }
+  )
 
   app.get('/', (req: Request, res: Response) => {
     let landingPage = '/admin/'
