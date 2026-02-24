@@ -10,8 +10,12 @@ import {
   Table
 } from 'reactstrap'
 import '../../fa-pulse.css'
+import { getSourceDisplayLabel } from '../../utils/sourceLabelUtils'
+import { useSources } from '../../utils/useSources'
 
 const Dashboard = (props) => {
+  const sources = useSources()
+
   const {
     deltaRate,
     numberOfAvailablePaths,
@@ -66,6 +70,7 @@ const Dashboard = (props) => {
   }
 
   const renderActivity = (providerId, providerStats, linkType) => {
+    const label = getSourceDisplayLabel(providerId, sources)
     return (
       <li key={providerId} onClick={() => props.history.push(`/dashboard`)}>
         <i
@@ -84,7 +89,7 @@ const Dashboard = (props) => {
         <span className="title">
           {linkType === 'plugin'
             ? pluginNameLink(providerId)
-            : providerIdLink(providerId)}
+            : providerIdLink(providerId, label)}
         </span>
         {providerStats.writeRate > 0 && (
           <span className="value">
@@ -136,7 +141,10 @@ const Dashboard = (props) => {
         <td>
           {status.statusType === 'plugin'
             ? pluginNameLink(status.id)
-            : providerIdLink(status.id)}
+            : providerIdLink(
+                status.id,
+                getSourceDisplayLabel(status.id, sources)
+              )}
         </td>
         <td>
           <p className="text-danger">{lastError}</p>
@@ -286,11 +294,11 @@ function pluginNameLink(id) {
   return <a href={'#/serverConfiguration/plugins/' + id}>{id}</a>
 }
 
-function providerIdLink(id) {
+function providerIdLink(id, label) {
   if (id === 'defaults') {
     return <a href={'#/serverConfiguration/settings'}>{id}</a>
   } else if (id.startsWith('ws.')) {
-    return <a href={'#/security/devices'}>{id}</a>
+    return <a href={'#/security/devices'}>{label || id}</a>
   } else {
     return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
   }
