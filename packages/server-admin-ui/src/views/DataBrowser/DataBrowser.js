@@ -14,6 +14,7 @@ import {
   Table
 } from 'reactstrap'
 import moment from 'moment'
+import { getCompiledFormula } from '../../utils/unitConversion'
 import Meta from './Meta'
 import store from './ValueEmittingStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
@@ -24,6 +25,40 @@ const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
 
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
+
+// Fetch active preset from server (user-specific via applicationData, then global fallback)
+async function fetchActivePreset() {
+  // Try user-specific preference first
+  try {
+    const userResponse = await fetch(
+      '/signalk/v1/applicationData/user/unitpreferences/1.0.0',
+      { credentials: 'include' }
+    )
+    if (userResponse.ok) {
+      const userConfig = await userResponse.json()
+      if (userConfig.activePreset) {
+        return userConfig.activePreset
+      }
+    }
+  } catch (e) {
+    // User preference not found, fall back to global
+  }
+
+  // Fall back to global config
+  try {
+    const response = await fetch('/signalk/v1/unitpreferences/config', {
+      credentials: 'include'
+    })
+    if (response.ok) {
+      const config = await response.json()
+      return config.activePreset || 'nautical-metric'
+    }
+  } catch (e) {
+    console.error('Failed to fetch unit preferences:', e)
+  }
+  return 'nautical-metric'
+}
+
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
 const rawStorageKey = 'admin.v1.dataBrowser.v1.raw'
 const contextStorageKey = 'admin.v1.dataBrowser.context'
@@ -75,7 +110,10 @@ class DataBrowser extends Component {
         localStorage.getItem(sourceFilterActiveStorageKey) === 'true',
       // For forcing re-renders when store updates
       storeVersion: 0,
-      path$SourceKeys: []
+      path$SourceKeys: [],
+      activePreset: 'nautical-metric',
+      unitDefinitions: null,
+      presetDetails: null
     }
 
     this.fetchSources = fetchSources.bind(this)
@@ -88,6 +126,54 @@ class DataBrowser extends Component {
     this.toggleSourceSelection = this.toggleSourceSelection.bind(this)
     this.toggleSourceFilter = this.toggleSourceFilter.bind(this)
     this.updatePath$SourceKeys = this.updatePath$SourceKeys.bind(this)
+    this.convertValue = this.convertValue.bind(this)
+  }
+
+  // Convert a value from SI unit to display unit based on category and active preset
+  convertValue(value, siUnit, category) {
+    const { unitDefinitions, presetDetails } = this.state
+
+    // Need numeric value + category + definitions + preset
+    if (
+      typeof value !== 'number' ||
+      !category ||
+      !unitDefinitions ||
+      !presetDetails
+    ) {
+      return { value, unit: siUnit }
+    }
+
+    // Get target unit for this category from preset
+    const targetConfig = presetDetails.categories?.[category]
+    if (!targetConfig?.targetUnit) {
+      return { value, unit: siUnit }
+    }
+
+    const targetUnit = targetConfig.targetUnit
+
+    // If target is same as SI unit, no conversion needed
+    if (targetUnit === siUnit) {
+      return { value, unit: siUnit }
+    }
+
+    // Get conversion formula from definitions
+    const formula = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.formula
+    const symbol =
+      unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
+
+    if (!formula) {
+      return { value, unit: siUnit }
+    }
+
+    // Evaluate formula using cached compiled expression
+    try {
+      const compiled = getCompiledFormula(formula)
+      const converted = compiled.evaluate({ value })
+      return { value: converted, unit: symbol }
+    } catch (e) {
+      console.error('Formula evaluation failed:', e)
+      return { value, unit: siUnit }
+    }
   }
 
   handleMessage(msg) {
@@ -221,7 +307,7 @@ class DataBrowser extends Component {
     }
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     this.fetchSources()
     this.subscribeToDataIfNeeded()
 
@@ -235,6 +321,38 @@ class DataBrowser extends Component {
         this.updatePath$SourceKeys()
       }, 50)
     })
+
+    // Fetch active preset
+    const activePreset = await fetchActivePreset()
+
+    // Fetch unit definitions for conversion formulas
+    let unitDefinitions = null
+    try {
+      const res = await fetch('/signalk/v1/unitpreferences/definitions', {
+        credentials: 'include'
+      })
+      if (res.ok) {
+        unitDefinitions = await res.json()
+      }
+    } catch (e) {
+      console.error('Failed to fetch unit definitions:', e)
+    }
+
+    // Fetch details of active preset
+    let presetDetails = null
+    try {
+      const res = await fetch(
+        `/signalk/v1/unitpreferences/presets/${activePreset}`,
+        { credentials: 'include' }
+      )
+      if (res.ok) {
+        presetDetails = await res.json()
+      }
+    } catch (e) {
+      console.error('Failed to fetch preset details:', e)
+    }
+
+    this.setState({ activePreset, unitDefinitions, presetDetails })
   }
 
   componentDidUpdate() {
@@ -509,6 +627,9 @@ class DataBrowser extends Component {
                     selectedSources={this.state.selectedSources}
                     onToggleSourceFilter={this.toggleSourceFilter}
                     sourceFilterActive={this.state.sourceFilterActive}
+                    convertValue={this.convertValue}
+                    unitDefinitions={this.state.unitDefinitions}
+                    presetDetails={this.state.presetDetails}
                   />
                 )}
 
@@ -516,27 +637,56 @@ class DataBrowser extends Component {
               {this.state.includeMeta &&
                 this.state.context &&
                 this.state.context !== 'none' && (
-                  <Table responsive bordered striped size="sm">
+                  <Table
+                    responsive
+                    size="sm"
+                    style={{
+                      borderCollapse: 'separate',
+                      borderSpacing: '0 10px'
+                    }}
+                  >
                     <thead>
                       <tr>
-                        <th>Path</th>
-                        <th>Meta</th>
+                        <th colSpan="3">Path Metadata</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {this.getUniquePathsForMeta().map((path) => {
-                        const meta = store.getMeta(this.state.context, path)
-                        return (
-                          <tr key={path}>
-                            <td>{path}</td>
-                            <td>
-                              {!path.startsWith('notifications') && (
-                                <Meta meta={meta || {}} path={path} />
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
+                      {this.getUniquePathsForMeta()
+                        .filter((path, index, array) => {
+                          return array.indexOf(path) === index
+                        })
+                        .sort()
+                        .map((path) => {
+                          const meta = store.getMeta(this.state.context, path)
+                          // Find a current value for this path
+                          const dataKeys = Object.keys(
+                            this.state.data?.[this.state.context] || {}
+                          )
+                          const matchingKey = dataKeys.find(
+                            (k) =>
+                              this.state.data[this.state.context][k].path ===
+                              path
+                          )
+                          const currentValue = matchingKey
+                            ? this.state.data[this.state.context][matchingKey]
+                                .value
+                            : undefined
+                          return (
+                            <tr key={path}>
+                              <td colSpan="3">
+                                {!path.startsWith('notifications') && (
+                                  <Meta
+                                    meta={meta || {}}
+                                    path={path}
+                                    currentValue={currentValue}
+                                    presetDetails={this.state.presetDetails}
+                                    unitDefinitions={this.state.unitDefinitions}
+                                  />
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
                     </tbody>
                   </Table>
                 )}

@@ -1,0 +1,239 @@
+{
+  "description": "Default category assignments based on SignalK specification path units",
+  "version": "1.0.0",
+  "categories": {
+    "speed": {
+      "siUnit": "m/s",
+      "paths": [
+        "environment.wind.speedApparent",
+        "environment.wind.speedTrue",
+        "environment.wind.speedOverGround",
+        "environment.wind.speedThroughWater",
+        "navigation.speedOverGround",
+        "navigation.speedThroughWater",
+        "navigation.speedThroughWaterTransverse",
+        "navigation.speedThroughWaterLongitudinal",
+        "navigation.leewayAngle",
+        "propulsion.*.driveSpeed"
+      ]
+    },
+    "temperature": {
+      "siUnit": "K",
+      "paths": [
+        "environment.outside.temperature",
+        "environment.outside.dewPointTemperature",
+        "environment.outside.apparentWindChillTemperature",
+        "environment.outside.theoreticalWindChillTemperature",
+        "environment.outside.heatIndexTemperature",
+        "environment.water.temperature",
+        "environment.inside.temperature",
+        "environment.inside.engineRoom.temperature",
+        "environment.inside.refrigerator.temperature",
+        "environment.inside.freezer.temperature",
+        "environment.inside.heating.temperature",
+        "environment.inside.mainCabin.temperature",
+        "propulsion.*.temperature",
+        "propulsion.*.oilTemperature",
+        "propulsion.*.coolantTemperature",
+        "propulsion.*.exhaustTemperature",
+        "propulsion.*.alternator.temperature",
+        "electrical.batteries.*.temperature",
+        "electrical.chargers.*.temperature",
+        "electrical.inverters.*.temperature",
+        "tanks.*.temperature"
+      ]
+    },
+    "pressure": {
+      "siUnit": "Pa",
+      "paths": [
+        "environment.outside.pressure",
+        "propulsion.*.oilPressure",
+        "propulsion.*.fuelPressure",
+        "propulsion.*.coolantPressure",
+        "propulsion.*.boostPressure",
+        "propulsion.*.intakeManifoldTemperature",
+        "propulsion.*.engineLoad"
+      ]
+    },
+    "depth": {
+      "siUnit": "m",
+      "paths": [
+        "environment.depth.belowKeel",
+        "environment.depth.belowTransducer",
+        "environment.depth.belowSurface",
+        "environment.depth.transducerToKeel",
+        "environment.depth.surfaceToTransducer"
+      ]
+    },
+    "distance": {
+      "siUnit": "m",
+      "paths": [
+        "navigation.trip.log",
+        "navigation.log",
+        "navigation.courseRhumbline.nextPoint.distance",
+        "navigation.courseGreatCircle.nextPoint.distance",
+        "navigation.racing.distanceStartline",
+        "navigation.racing.distanceLayline",
+        "navigation.closestApproach.distance",
+        "navigation.anchor.maxRadius",
+        "navigation.anchor.currentRadius"
+      ]
+    },
+    "length": {
+      "siUnit": "m",
+      "paths": [
+        "design.length.overall",
+        "design.length.hull",
+        "design.length.waterline",
+        "design.beam",
+        "design.draft.minimum",
+        "design.draft.maximum",
+        "design.draft.canoe",
+        "design.airHeight",
+        "design.rigging.mast.height",
+        "environment.heave"
+      ]
+    },
+    "angle": {
+      "siUnit": "rad",
+      "paths": [
+        "environment.wind.angleApparent",
+        "environment.wind.angleTrueGround",
+        "environment.wind.angleTrueWater",
+        "environment.wind.directionTrue",
+        "environment.wind.directionMagnetic",
+        "navigation.courseOverGroundTrue",
+        "navigation.courseOverGroundMagnetic",
+        "navigation.headingTrue",
+        "navigation.headingMagnetic",
+        "navigation.magneticVariation",
+        "navigation.magneticDeviation",
+        "navigation.attitude.roll",
+        "navigation.attitude.pitch",
+        "navigation.attitude.yaw",
+        "navigation.courseRhumbline.bearingTrackTrue",
+        "navigation.courseRhumbline.bearingTrackMagnetic",
+        "navigation.courseGreatCircle.bearingTrackTrue",
+        "navigation.courseGreatCircle.bearingTrackMagnetic",
+        "navigation.racing.laylineDistance",
+        "steering.rudderAngle",
+        "steering.rudderAngleTarget",
+        "steering.autopilot.targetHeadingTrue",
+        "steering.autopilot.targetHeadingMagnetic",
+        "sails.*.reefState"
+      ]
+    },
+    "angularVelocity": {
+      "siUnit": "rad/s",
+      "paths": [
+        "navigation.rateOfTurn",
+        "navigation.attitude.roll.rate",
+        "navigation.attitude.pitch.rate",
+        "navigation.attitude.yaw.rate"
+      ]
+    },
+    "voltage": {
+      "siUnit": "V",
+      "paths": [
+        "electrical.batteries.*.voltage",
+        "electrical.chargers.*.voltage",
+        "electrical.inverters.*.dc.voltage",
+        "electrical.inverters.*.ac.voltage",
+        "electrical.alternators.*.voltage",
+        "electrical.solar.*.voltage",
+        "propulsion.*.alternator.voltage"
+      ]
+    },
+    "current": {
+      "siUnit": "A",
+      "paths": [
+        "electrical.batteries.*.current",
+        "electrical.chargers.*.current",
+        "electrical.inverters.*.dc.current",
+        "electrical.inverters.*.ac.current",
+        "electrical.alternators.*.current",
+        "electrical.solar.*.current",
+        "propulsion.*.alternator.current"
+      ]
+    },
+    "power": {
+      "siUnit": "W",
+      "paths": [
+        "electrical.batteries.*.power",
+        "electrical.chargers.*.power",
+        "electrical.inverters.*.dc.power",
+        "electrical.inverters.*.ac.power",
+        "electrical.alternators.*.power",
+        "electrical.solar.*.power",
+        "propulsion.*.power"
+      ]
+    },
+    "frequency": {
+      "siUnit": "Hz",
+      "paths": [
+        "propulsion.*.revolutions",
+        "electrical.inverters.*.ac.frequency"
+      ]
+    },
+    "volume": {
+      "siUnit": "m3",
+      "paths": [
+        "tanks.*.capacity",
+        "tanks.*.currentVolume",
+        "tanks.fuel.*.capacity",
+        "tanks.fuel.*.currentVolume",
+        "tanks.freshWater.*.capacity",
+        "tanks.freshWater.*.currentVolume",
+        "tanks.wasteWater.*.capacity",
+        "tanks.wasteWater.*.currentVolume",
+        "tanks.blackWater.*.capacity",
+        "tanks.blackWater.*.currentVolume",
+        "tanks.liveWell.*.capacity",
+        "tanks.liveWell.*.currentVolume",
+        "tanks.lubrication.*.capacity",
+        "tanks.lubrication.*.currentVolume"
+      ]
+    },
+    "volumeRate": {
+      "siUnit": "m3/s",
+      "paths": ["propulsion.*.fuel.rate", "propulsion.*.exhaustTemperature"]
+    },
+    "mass": {
+      "siUnit": "kg",
+      "paths": ["design.displacement"]
+    },
+    "percentage": {
+      "siUnit": "ratio",
+      "paths": [
+        "environment.outside.relativeHumidity",
+        "environment.inside.relativeHumidity",
+        "environment.inside.engineRoom.relativeHumidity",
+        "electrical.batteries.*.capacity.stateOfCharge",
+        "electrical.batteries.*.capacity.stateOfHealth",
+        "tanks.*.currentLevel",
+        "propulsion.*.fuel.used",
+        "propulsion.*.engineLoad",
+        "steering.autopilot.gain"
+      ]
+    },
+    "charge": {
+      "siUnit": "C",
+      "paths": [
+        "electrical.batteries.*.capacity.remaining",
+        "electrical.batteries.*.capacity.nominal"
+      ]
+    },
+    "time": {
+      "siUnit": "s",
+      "paths": [
+        "electrical.batteries.*.capacity.timeRemaining",
+        "navigation.courseRhumbline.nextPoint.timeToGo",
+        "navigation.courseGreatCircle.nextPoint.timeToGo",
+        "navigation.racing.timeToStart",
+        "navigation.racing.timePortDown",
+        "navigation.racing.timeStbdDown",
+        "navigation.closestApproach.timeTo"
+      ]
+    }
+  }
+}

@@ -186,6 +186,13 @@ module.exports = function (app) {
 
     try {
       await saveApplicationData(req, appid, version, isUser, applicationData)
+      // Emit event when user's unit preferences change
+      if (isUser && appid === 'unitpreferences') {
+        app.emit('unitpreferencesChanged', {
+          type: 'user',
+          username: req.skPrincipal.identifier
+        })
+      }
       res.json('ApplicationData saved')
     } catch (err) {
       console.log(err)

@@ -24,6 +24,10 @@ const {
   queryRequest
 } = require('../requestResponse')
 const { putPath, deletePath } = require('../put')
+const {
+  resolveDisplayUnits,
+  getDefaultCategory
+} = require('../unitpreferences')
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -637,6 +641,26 @@ function handleValuesMeta(kp) {
         this.spark.sentMetaData[partialContextPathKey] = true
         let meta = getMetadata(partialContextPathKey)
         if (meta) {
+          // Clone and enhance metadata with displayUnits formulas
+          meta = JSON.parse(JSON.stringify(meta))
+          let storedDisplayUnits = meta.displayUnits
+          if (!storedDisplayUnits?.category && path) {
+            const defaultCategory = getDefaultCategory(path)
+            if (defaultCategory) {
+              storedDisplayUnits = { category: defaultCategory }
+            }
+          }
+          if (storedDisplayUnits?.category) {
+            const username = this.spark.request.skPrincipal?.identifier
+            const enhanced = resolveDisplayUnits(
+              storedDisplayUnits,
+              meta.units,
+              username
+            )
+            if (enhanced) {
+              meta.displayUnits = enhanced
+            }
+          }
           this.spark.write({
             context: this.context,
             updates: [
@@ -811,6 +835,46 @@ function handleRealtimeConnection(app, spark, onChange) {
   spark.onDisconnects.push(() => {
     app.signalk.removeListener('delta', onChange)
   })
+
+  if (spark.sendMetaDeltas) {
+    const onUnitPrefsChanged = (event) => {
+      const username = spark.request.skPrincipal?.identifier
+      if (event?.username && event.username !== username) return
+
+      const allPaths = app.streambundle.getAvailablePaths()
+      const meta = allPaths.reduce((acc, path) => {
+        const fullPath = 'vessels.self.' + path
+        const pathMeta = getMetadata(fullPath) || {}
+        // Check stored category first, then fall back to default
+        const category =
+          pathMeta.displayUnits?.category || getDefaultCategory(path)
+        if (category) {
+          const displayUnits = resolveDisplayUnits(
+            { category },
+            pathMeta.units,
+            username
+          )
+          if (displayUnits) {
+            acc.push({ path, value: { ...pathMeta, displayUnits } })
+          }
+        }
+        return acc
+      }, [])
+
+      if (meta.length > 0) {
+        const timestamp = new Date().toISOString()
+        spark.write({
+          context: 'vessels.' + app.selfId,
+          updates: [{ timestamp, meta }]
+        })
+      }
+    }
+
+    app.on('unitpreferencesChanged', onUnitPrefsChanged)
+    spark.onDisconnects.push(() => {
+      app.removeListener('unitpreferencesChanged', onUnitPrefsChanged)
+    })
+  }
 
   if (!(spark.request.query.sendCachedValues === 'false')) {
     sendLatestDeltas(app, app.deltaCache, app.selfContext, spark)

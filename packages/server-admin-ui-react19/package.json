@@ -57,6 +57,7 @@
     "lodash.remove": "^4.7.0",
     "lodash.set": "^4.3.2",
     "lodash.uniq": "^4.5.0",
+    "mathjs": "^12.4.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-infinite-scroll-component": "^6.1.0",

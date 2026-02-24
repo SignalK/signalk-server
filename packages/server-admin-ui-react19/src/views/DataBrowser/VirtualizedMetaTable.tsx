@@ -7,7 +7,6 @@ interface MetaRowProps {
   path: string
   ctx: string
   index: number
-  gridColumns: string
   showContext: boolean
 }
 
@@ -15,22 +14,20 @@ const MetaRow = memo(function MetaRow({
   path,
   ctx,
   index,
-  gridColumns,
   showContext
 }: MetaRowProps) {
   const meta = useMetaData(ctx, path)
+  if (path.startsWith('notifications')) return null
   return (
     <div
-      className={`virtual-table-row virtual-table-meta-row ${index % 2 ? 'striped' : ''}`}
-      style={{ gridTemplateColumns: gridColumns }}
+      className={`virtual-table-meta-row ${index % 2 ? 'striped' : ''}`}
+      style={{ padding: '0 2px' }}
     >
-      <div className="virtual-table-cell">{path}</div>
-      {showContext && <div className="virtual-table-cell">{ctx}</div>}
-      <div className="virtual-table-cell">
-        {!path.startsWith('notifications') && (
-          <Meta meta={meta || {}} path={path} context={ctx} />
-        )}
-      </div>
+      <Meta
+        meta={meta || {}}
+        path={showContext ? `${ctx}: ${path}` : path}
+        context={ctx}
+      />
     </div>
   )
 })
@@ -56,44 +53,26 @@ function VirtualizedMetaTable({
     )
   }
 
-  const gridColumns = showContext
-    ? 'minmax(200px, 1fr) minmax(100px, 0.5fr) minmax(300px, 2fr)'
-    : 'minmax(200px, 1fr) minmax(300px, 2fr)'
-
   return (
-    <div className="virtual-table virtual-table-meta">
-      <div
-        className="virtual-table-header"
-        style={{ gridTemplateColumns: gridColumns }}
-      >
-        <div className="virtual-table-header-cell">Path</div>
-        {showContext && (
-          <div className="virtual-table-header-cell">Context</div>
-        )}
-        <div className="virtual-table-header-cell">Meta</div>
-      </div>
-
-      <div className="virtual-table-body">
-        {paths.map((item, i) => {
-          const separatorIndex = item.indexOf('\0')
-          const ctx =
-            separatorIndex !== -1 ? item.slice(0, separatorIndex) : context
-          const path =
-            separatorIndex !== -1 ? item.slice(separatorIndex + 1) : item
-          return (
-            <MetaRow
-              key={item}
-              path={path}
-              ctx={ctx}
-              index={i}
-              gridColumns={gridColumns}
-              showContext={showContext}
-            />
-          )
-        })}
-      </div>
-
-      <div className="virtual-table-info">Showing {paths.length} paths</div>
+    <div style={{ marginTop: '10px' }}>
+      <h6 className="text-muted mb-2">Path Metadata</h6>
+      {paths.map((item, i) => {
+        const separatorIndex = item.indexOf('\0')
+        const ctx =
+          separatorIndex !== -1 ? item.slice(0, separatorIndex) : context
+        const path =
+          separatorIndex !== -1 ? item.slice(separatorIndex + 1) : item
+        return (
+          <MetaRow
+            key={item}
+            path={path}
+            ctx={ctx}
+            index={i}
+            showContext={showContext}
+          />
+        )
+      })}
+      <div className="text-muted small mt-2">Showing {paths.length} paths</div>
     </div>
   )
 }

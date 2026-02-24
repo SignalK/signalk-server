@@ -525,15 +525,31 @@ export const getValueRenderer = (path, meta) => {
   return null
 }
 
-export const DefaultValueRenderer = ({ value, units }) => {
+export const DefaultValueRenderer = ({
+  value,
+  units,
+  convertedValue,
+  convertedUnit
+}) => {
   let formattedValue = JSON.stringify(
     value,
     null,
     typeof value === 'object' && Object.keys(value || {}).length > 1 ? 2 : 0
   )
 
-  if (typeof value === 'number' && units) {
-    formattedValue = `${value} `
+  if (typeof value === 'number') {
+    // Format numbers nicely: integers stay as-is, decimals get 2 decimal places
+    formattedValue = Number.isInteger(value)
+      ? value.toString()
+      : value.toFixed(2)
+  }
+
+  // Format converted value
+  let formattedConverted = null
+  if (convertedValue !== null && convertedValue !== undefined) {
+    formattedConverted = Number.isInteger(convertedValue)
+      ? convertedValue.toString()
+      : convertedValue.toFixed(2)
   }
 
   return (
@@ -543,7 +559,12 @@ export const DefaultValueRenderer = ({ value, units }) => {
       ) : (
         <span className="text-primary">
           {formattedValue}
-          {typeof value === 'number' && units && <strong>{units}</strong>}
+          {typeof value === 'number' && units && <strong> {units}</strong>}
+          {formattedConverted && convertedUnit && (
+            <span style={{ color: '#28a745', marginLeft: '8px' }}>
+              ({formattedConverted} <strong>{convertedUnit}</strong>)
+            </span>
+          )}
         </span>
       )}
     </>

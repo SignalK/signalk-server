@@ -19,6 +19,43 @@ const debug = createDebug('signalk-server:interfaces:rest')
 const express = require('express')
 const { getMetadata } = require('@signalk/signalk-schema')
 const ports = require('../ports')
+const {
+  resolveDisplayUnits,
+  getDefaultCategory
+} = require('../unitpreferences')
+
+// Enhance metadata response with displayUnits from unit preferences
+function enhanceMetadataResponse(metadata, signalkPath, username) {
+  if (!metadata) return metadata
+
+  // Check if displayUnits.category exists in stored metadata
+  let storedDisplayUnits = metadata.displayUnits
+
+  // If no category set, try to get default category for this path
+  if (!storedDisplayUnits?.category && signalkPath) {
+    const defaultCategory = getDefaultCategory(signalkPath)
+    if (defaultCategory) {
+      storedDisplayUnits = { category: defaultCategory }
+    }
+  }
+
+  if (storedDisplayUnits?.category) {
+    try {
+      const enhanced = resolveDisplayUnits(
+        storedDisplayUnits,
+        metadata.units,
+        username
+      )
+      if (enhanced) {
+        metadata.displayUnits = enhanced
+      }
+    } catch (err) {
+      debug('Error enhancing metadata with displayUnits:', err)
+    }
+  }
+
+  return metadata
+}
 
 const iso8601rexexp =
   /^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?Z$/
@@ -52,10 +89,16 @@ module.exports = function (app) {
         }
 
         if (path.length > 4 && path[path.length - 1] === 'meta') {
-          let meta = getMetadata(path.slice(0, path.length - 1).join('.'))
+          const metaPath = path.slice(0, path.length - 1).join('.')
+          const meta = getMetadata(metaPath)
 
           if (meta) {
-            res.json(meta)
+            // Deep clone to avoid mutating the cached metadata object
+            const metaCopy = JSON.parse(JSON.stringify(meta))
+            // Extract signalk path (remove vessels.self prefix)
+            const signalkPath = metaPath.replace(/^vessels\.[^.]+\./, '')
+            const username = req.skPrincipal?.identifier
+            res.json(enhanceMetadataResponse(metaCopy, signalkPath, username))
             return
           }
         }
