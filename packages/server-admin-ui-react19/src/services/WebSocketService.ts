@@ -237,6 +237,9 @@ export class WebSocketService {
       case 'ACCESS_REQUEST':
         this.zustandSetState({ accessRequests: data } as Partial<SignalKStore>)
         break
+      case 'RECEIVE_LOGIN_STATUS':
+        this.zustandSetState({ loginStatus: data } as Partial<SignalKStore>)
+        break
       case 'DISCOVERY_CHANGED':
         this.zustandSetState({
           discoveredProviders: data
