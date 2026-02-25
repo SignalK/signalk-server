@@ -10,6 +10,7 @@ import type {
   ServerSpecification,
   ProviderStatus,
   AccessRequest,
+  DeviceInfo,
   DiscoveredProvider,
   RestoreStatus,
   VesselInfo,
@@ -53,6 +54,7 @@ export interface AppSliceState {
   serverSpecification: ServerSpecification
   restarting: boolean
   accessRequests: AccessRequest[]
+  devices: DeviceInfo[]
   discoveredProviders: DiscoveredProvider[]
   log: LogState
   restoreStatus: RestoreStatus
@@ -73,6 +75,7 @@ export interface AppSliceActions {
   setProviderStatus: (status: ProviderStatus[]) => void
   setRestarting: (restarting: boolean) => void
   setAccessRequests: (requests: AccessRequest[]) => void
+  setDevices: (devices: DeviceInfo[]) => void
   setDiscoveredProviders: (providers: DiscoveredProvider[]) => void
   setRestoreStatus: (status: RestoreStatus) => void
   setVesselInfo: (info: VesselInfo) => void
@@ -106,6 +109,7 @@ const initialAppState: AppSliceState = {
   serverSpecification: {},
   restarting: false,
   accessRequests: [],
+  devices: [],
   discoveredProviders: [],
   log: {
     entries: createInitialLogEntries(),
@@ -170,6 +174,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setAccessRequests: (accessRequests) => {
     set({ accessRequests })
+  },
+
+  setDevices: (devices) => {
+    set({ devices })
   },
 
   setDiscoveredProviders: (discoveredProviders) => {

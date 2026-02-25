@@ -72,6 +72,14 @@ export interface AccessRequest {
   [key: string]: unknown
 }
 
+export interface DeviceInfo {
+  clientId: string
+  permissions?: string
+  description?: string
+  requestedPermissions?: string
+  tokenExpiry?: number
+}
+
 export interface DiscoveredProvider {
   id: string
   [key: string]: unknown
