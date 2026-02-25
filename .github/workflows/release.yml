@@ -291,10 +291,12 @@ jobs:
         with:
           name: release-tag-${{ matrix.node_safe }}
           path: /tmp/tags
+  
       - name: Install skopeo
         run: |
           sudo apt-get update
           sudo apt-get install -y skopeo
+  
       - name: Copy images from GHCR to Docker Hub
         shell: bash
         env:
@@ -305,29 +307,14 @@ jobs:
         run: |
           set -euo pipefail
           TAGS_FILE="/tmp/tags/${{ matrix.node_safe }}.txt"
-          cat "$TAGS_FILE"
-          MANIFEST_DIGEST=""
-          while IFS= read -r FULL_TAG || [ -n "$FULL_TAG" ]; do
-            if [ -z "$FULL_TAG" ]; then
-              continue
-            fi
+          while IFS= read -r FULL_TAG || [ -n "${FULL_TAG:-}" ]; do
+            [ -z "${FULL_TAG:-}" ] && continue
             TAG="${FULL_TAG##*:}"
-            if [ -z "$MANIFEST_DIGEST" ]; then
-              skopeo copy --all \
-                --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
-                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                "docker://${FULL_TAG}" \
-                "docker://docker.io/signalk/signalk-server:${TAG}"
-              MANIFEST_DIGEST=$(skopeo inspect \
-                --creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                "docker://docker.io/signalk/signalk-server:${TAG}" | jq -r '.Digest')              
-            else
-              skopeo copy \
-                --src-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                "docker://docker.io/signalk/signalk-server@${MANIFEST_DIGEST}" \
-                "docker://docker.io/signalk/signalk-server:${TAG}"
-            fi
+            skopeo copy --all \
+              --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
+              --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+              "docker://${FULL_TAG}" \
+              "docker://docker.io/signalk/signalk-server:${TAG}"
           done < "$TAGS_FILE"
 
   housekeeping:
