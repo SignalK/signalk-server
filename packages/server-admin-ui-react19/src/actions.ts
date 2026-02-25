@@ -23,11 +23,12 @@ export async function logoutAction(): Promise<void> {
     if (!response.ok) {
       throw new Error(response.statusText)
     }
-    await fetchLoginStatus()
   } catch (error) {
     console.error('Logout failed:', error)
-    await fetchLoginStatus()
   }
+  // Reconnect WebSocket so admin event subscriptions are dropped
+  webSocketService.reconnect()
+  await fetchLoginStatus()
 }
 
 export function restartAction(): void {
@@ -63,6 +64,9 @@ export async function loginAction(
   if (request.status !== 200) {
     return response.message
   }
+  // Reconnect WebSocket so the server subscribes the new authenticated
+  // connection to admin events (ACCESS_REQUEST, etc.)
+  webSocketService.reconnect()
   await fetchAllData()
   return null
 }
