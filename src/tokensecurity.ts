@@ -1622,6 +1622,7 @@ function tokenSecurityFactory(
           jwtOptions.expiresIn = expiresIn as StringValue
         }
         const token = jwt.sign(payload, theConfig.secretKey, jwtOptions)
+        const decoded = jwt.decode(token) as JWTPayload
 
         if (!theConfig.devices) {
           theConfig.devices = []
@@ -1640,7 +1641,8 @@ function tokenSecurityFactory(
           description: request.accessDescription,
           requestedPermissions: request.clientRequest.requestedPermissions
             ? 'true'
-            : ''
+            : '',
+          tokenExpiry: decoded?.exp
         })
         request.token = token
       } else {
