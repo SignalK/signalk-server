@@ -68,7 +68,7 @@ export default function AccessRequests() {
       const payload = {
         permissions: selectedRequest?.permissions || 'readonly',
         config: selectedRequest?.config,
-        expiration: selectedRequest?.expiration || '1y'
+        expiration: selectedRequest?.expiration || 'NEVER'
       }
 
       try {
@@ -208,7 +208,7 @@ export default function AccessRequests() {
                         name="expiration"
                         autoComplete="off"
                         onChange={handleRequestChange}
-                        value={selectedRequest.expiration || ''}
+                        value={selectedRequest.expiration || 'NEVER'}
                       />
                       <Form.Text className="text-muted">
                         Examples: 60s, 1m, 1h, 1d, NEVER
@@ -221,8 +221,7 @@ export default function AccessRequests() {
                     </Col>
                     <Col xs="12" md="8" lg="3">
                       {!selectedRequest.requestedPermissions && (
-                        <Form.Control
-                          type="select"
+                        <Form.Select
                           id="permissions"
                           name="permissions"
                           value={selectedRequest.permissions || 'readonly'}
@@ -231,7 +230,7 @@ export default function AccessRequests() {
                           <option value="readonly">Read Only</option>
                           <option value="readwrite">Read/Write</option>
                           <option value="admin">Admin</option>
-                        </Form.Control>
+                        </Form.Select>
                       )}
                       {selectedRequest.requestedPermissions && (
                         <Form.Label>
