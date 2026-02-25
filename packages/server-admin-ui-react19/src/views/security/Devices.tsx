@@ -213,8 +213,7 @@ export default function Devices() {
                     </Col>
                     <Col xs="12" md="2">
                       {!selectedDevice.requestedPermissions && (
-                        <Form.Control
-                          type="select"
+                        <Form.Select
                           id="permissions"
                           name="permissions"
                           value={selectedDevice.permissions || 'readonly'}
@@ -223,7 +222,7 @@ export default function Devices() {
                           <option value="readonly">Read Only</option>
                           <option value="readwrite">Read/Write</option>
                           <option value="admin">Admin</option>
-                        </Form.Control>
+                        </Form.Select>
                       )}
                       {selectedDevice.requestedPermissions && (
                         <span className="form-control-plaintext">

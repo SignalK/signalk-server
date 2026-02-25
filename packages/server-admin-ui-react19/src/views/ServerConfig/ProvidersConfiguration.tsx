@@ -218,15 +218,17 @@ const ProvidersConfiguration: React.FC = () => {
       })
       setSelectedProvider(null)
       setSelectedIndex(-1)
+      runDiscovery()
     } else {
       const text = await response.text()
       alert(text)
     }
-  }, [selectedProvider, selectedIndex])
+  }, [selectedProvider, selectedIndex, runDiscovery])
 
   const providerClicked = useCallback((provider: Provider, index: number) => {
     setSelectedProvider({
       ...structuredClone(provider),
+      enabled: true,
       originalId: provider.id
     })
     setSelectedIndex(index)
