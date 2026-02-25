@@ -1067,7 +1067,13 @@ function wrapWithVerifyWS(
           }
         )
       }
-      console.error(error)
+      const identifier =
+        spark.request.skPrincipal?.identifier ||
+        spark.request.connection.remoteAddress ||
+        'unknown'
+      console.error(
+        `WebSocket security error for ${identifier}: ${(error as Error).message}`
+      )
       return
     }
   }
