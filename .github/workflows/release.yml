@@ -291,12 +291,12 @@ jobs:
         with:
           name: release-tag-${{ matrix.node_safe }}
           path: /tmp/tags
-  
+
       - name: Install skopeo
         run: |
           sudo apt-get update
           sudo apt-get install -y skopeo
-  
+
       - name: Copy images from GHCR to Docker Hub
         shell: bash
         env:
