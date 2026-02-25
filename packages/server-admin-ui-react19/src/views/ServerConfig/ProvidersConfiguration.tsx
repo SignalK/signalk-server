@@ -185,10 +185,10 @@ const ProvidersConfiguration: React.FC = () => {
       setSelectedProvider(null)
       setSelectedIndex(-1)
       navigate('/serverConfiguration/connections/-')
+    } else {
+      const text = await response.text()
+      alert(text)
     }
-
-    const text = await response.text()
-    alert(text)
   }, [selectedProvider, selectedIndex, discoveredProviders, navigate])
 
   const handleCancel = useCallback(() => {
@@ -208,18 +208,20 @@ const ProvidersConfiguration: React.FC = () => {
         credentials: 'include'
       }
     )
-    const text = await response.text()
-
-    setProviders((prev) => {
-      const newProviders = [...prev]
-      if (selectedIndex >= 0) {
-        newProviders.splice(selectedIndex, 1)
-      }
-      return newProviders
-    })
-    setSelectedProvider(null)
-    setSelectedIndex(-1)
-    alert(text)
+    if (response.ok) {
+      setProviders((prev) => {
+        const newProviders = [...prev]
+        if (selectedIndex >= 0) {
+          newProviders.splice(selectedIndex, 1)
+        }
+        return newProviders
+      })
+      setSelectedProvider(null)
+      setSelectedIndex(-1)
+    } else {
+      const text = await response.text()
+      alert(text)
+    }
   }, [selectedProvider, selectedIndex])
 
   const providerClicked = useCallback((provider: Provider, index: number) => {
