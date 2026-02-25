@@ -38,7 +38,7 @@ class AccessRequests extends Component {
     var payload = {
       permissions: this.state.selectedRequest.permissions || 'readonly',
       config: this.state.selectedRequest.config,
-      expiration: this.state.selectedRequest.expiration || '1y'
+      expiration: this.state.selectedRequest.expiration || 'NEVER'
     }
 
     fetch(
