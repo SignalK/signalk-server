@@ -310,6 +310,7 @@ jobs:
           while IFS= read -r FULL_TAG || [ -n "${FULL_TAG:-}" ]; do
             [ -z "${FULL_TAG:-}" ] && continue
             TAG="${FULL_TAG##*:}"
+            echo "Copying: ${FULL_TAG} -> signalk/signalk-server:${TAG}"
             skopeo copy --all \
               --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
               --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
