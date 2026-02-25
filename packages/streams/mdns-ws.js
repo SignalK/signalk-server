@@ -15,6 +15,8 @@
  */
 
 const Transform = require('stream').Transform
+const http = require('http')
+const https = require('https')
 
 const SignalK = require('@signalk/client')
 
@@ -79,6 +81,41 @@ function MdnsWs(options) {
 
 require('util').inherits(MdnsWs, Transform)
 
+function verifyRemoteToken(options) {
+  const protocol = options.type === 'wss' ? https : http
+  return new Promise((resolve, reject) => {
+    const reqOptions = {
+      hostname: options.host,
+      port: options.port,
+      path: '/skServer/loginStatus',
+      method: 'GET',
+      headers: {
+        Authorization: `JWT ${options.token}`
+      },
+      rejectUnauthorized: !(options.selfsignedcert === true)
+    }
+    const req = protocol.request(reqOptions, (response) => {
+      let data = ''
+      response.on('data', (chunk) => {
+        data += chunk
+      })
+      response.on('end', () => {
+        try {
+          const loginStatus = JSON.parse(data)
+          resolve(loginStatus.status === 'loggedIn')
+        } catch (_e) {
+          resolve(false)
+        }
+      })
+    })
+    req.on('error', (err) => reject(err))
+    req.setTimeout(10000, () => {
+      req.destroy(new Error('Token verification timed out'))
+    })
+    req.end()
+  })
+}
+
 function setProviderStatus(that, providerId, message, isError) {
   if (!isError) {
     that.options.app.setProviderStatus(providerId, message)
@@ -100,7 +137,31 @@ MdnsWs.prototype.connect = function (client) {
         that.options.providerId,
         `ws connection connected to ${client.options.hostname}:${client.options.port}`
       )
-      if (this.options.selfHandling === 'useRemoteSelf') {
+      if (that.options.token) {
+        client.connection.send(JSON.stringify({ token: that.options.token }))
+        client.connection.setAuthenticated(that.options.token, 'JWT')
+        that.debug('Sent authentication token to remote server')
+
+        verifyRemoteToken(that.options)
+          .then((isValid) => {
+            if (!isValid) {
+              setProviderStatus(
+                that,
+                that.options.providerId,
+                `Authentication failed for ${client.options.hostname}:${client.options.port} — token may be invalid or revoked`,
+                true
+              )
+              client.connection.disconnect()
+            }
+          })
+          .catch((err) => {
+            that.debug('Token verification error: ' + err.message)
+          })
+      }
+      if (
+        this.options.selfHandling !== 'manualSelf' &&
+        this.options.selfHandling !== 'noSelf'
+      ) {
         client
           .API()
           .then((api) => api.get('/self'))
@@ -159,6 +220,27 @@ MdnsWs.prototype.connect = function (client) {
     }
 
     that.push(data)
+  })
+
+  client.on('disconnect', () => {
+    const hint = that.options.token
+      ? ' — check that the token is valid on the remote server'
+      : ' — the remote server may require authentication'
+    setProviderStatus(
+      that,
+      that.options.providerId,
+      `Disconnected from ${client.options.hostname}:${client.options.port}${hint}`,
+      true
+    )
+  })
+
+  client.on('error', (err) => {
+    setProviderStatus(
+      that,
+      that.options.providerId,
+      `Connection error: ${err.message}`,
+      true
+    )
   })
 }
 
