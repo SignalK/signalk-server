@@ -1343,14 +1343,18 @@ function tokenSecurityFactory(
       }
     }
 
-    if (!token || error) {
+    if (error) {
+      // Token was provided but is invalid — always reject
+      debug(error.message)
+      throw error
+    }
+
+    if (!token) {
       if (configuration.allow_readonly) {
         req.skPrincipal = { identifier: 'AUTO', permissions: 'readonly' }
         return
       } else {
-        if (!error) {
-          error = new Error('Missing access token')
-        }
+        error = new Error('Missing access token')
         debug(error.message)
         throw error
       }
@@ -1526,15 +1530,12 @@ function tokenSecurityFactory(
               }
             } else {
               debug(`bad token: ${err.message} ${req.path}`)
-              res.clearCookie('JAUTHENTICATION')
             }
 
-            if (configuration.allow_readonly) {
-              skReq.skIsAuthenticated = false
-              next()
-            } else {
-              res.status(401).send('bad auth token')
-            }
+            // Token was provided but is invalid/revoked — always reject.
+            // allow_readonly only applies when no token is provided at all.
+            res.clearCookie('JAUTHENTICATION')
+            res.status(401).send('bad auth token')
           }
         )
       } else {
