@@ -25,7 +25,7 @@ interface WebappProps {
 export function urlToWebapp(webAppInfo: WebAppInfo): string {
   return webAppInfo.keywords?.includes('signalk-embeddable-webapp')
     ? `/admin/#/e/${toSafeModuleId(webAppInfo.name)}`
-    : `/${webAppInfo.name}`
+    : `/${webAppInfo.name}/`
 }
 
 export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {

@@ -19,7 +19,7 @@ const propTypes = {
 export function urlToWebapp(webAppInfo) {
   return webAppInfo.keywords.includes('signalk-embeddable-webapp')
     ? `/admin/#/e/${toSafeModuleId(webAppInfo.name)}`
-    : `/${webAppInfo.name}`
+    : `/${webAppInfo.name}/`
 }
 
 class Webapp extends Component {

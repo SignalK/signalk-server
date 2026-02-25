@@ -271,6 +271,10 @@ module.exports = function (
   }
 
   app.get('/admin/', (req: Request, res: Response) => {
+    if (!req.originalUrl.endsWith('/')) {
+      res.redirect(301, req.originalUrl + '/')
+      return
+    }
     serveIndexWithAddonScripts(path.join(adminUiPath, 'index.html'), res)
   })
 
@@ -285,6 +289,10 @@ module.exports = function (
   app.get(
     '/@signalk/server-admin-ui-react19/',
     (req: Request, res: Response) => {
+      if (!req.originalUrl.endsWith('/')) {
+        res.redirect(301, req.originalUrl + '/')
+        return
+      }
       serveIndexWithAddonScripts(path.join(react19UiPath, 'index.html'), res)
     }
   )
@@ -1114,7 +1122,7 @@ module.exports = function (
           name: webapp.name,
           version: webapp.version,
           description: webapp.description,
-          location: `/${webapp.name}`,
+          location: `/${webapp.name}/`,
           license: webapp.license,
           author: getAuthor(webapp)
         }
