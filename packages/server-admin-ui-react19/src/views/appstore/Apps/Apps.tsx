@@ -27,6 +27,7 @@ interface AppInfo {
   prereleaseVersion?: string
   updated?: string
   categories: string[]
+  deprecatedMessage?: string
   [key: string]: unknown
 }
 
@@ -36,6 +37,7 @@ interface AppStore {
   installed: AppInfo[]
   installing: InstallingApp[]
   updates: AppInfo[]
+  deprecated: AppInfo[]
   categories?: string[]
 }
 
@@ -55,6 +57,8 @@ const selectedViewToFilter = (
     return (app) => updateAvailable(app, appStore)
   } else if (selectedView === 'Installing') {
     return (app) => !!app.installing
+  } else if (selectedView === 'Deprecated') {
+    return (app) => !!app.deprecatedMessage
   }
   return () => true
 }
@@ -189,6 +193,17 @@ const Apps: React.FC = () => {
                   </span>
                 )}
               </Button>
+              {appStore.deprecated?.length > 0 && (
+                <Button
+                  variant={view === 'Deprecated' ? 'secondary' : 'light'}
+                  onClick={() => setSelectedView('Deprecated')}
+                >
+                  Deprecated
+                  <span className="badge__deprecated">
+                    {appStore.deprecated.length}
+                  </span>
+                </Button>
+              )}
               {appStore.installing.length > 0 && (
                 <>
                   <Button

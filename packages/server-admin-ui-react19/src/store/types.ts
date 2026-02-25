@@ -14,6 +14,7 @@ export interface AppStoreState {
   installed: AppInfo[]
   available: AppInfo[]
   installing: InstallingApp[]
+  deprecated: AppInfo[]
   storeAvailable?: boolean
   canUpdateServer?: boolean
   serverUpdate?: string
@@ -25,6 +26,8 @@ export interface AppInfo {
   version?: string
   description?: string
   author?: string
+  deprecatedMessage?: string
+  isOrphan?: boolean
   [key: string]: unknown
 }
 
