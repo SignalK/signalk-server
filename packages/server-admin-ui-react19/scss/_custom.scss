@@ -232,6 +232,11 @@ form.rjsf {
   .nav-dropdown-items .nav-link {
     padding-left: calc(1rem + 20px + 0.5rem);
   }
+
+  // Hide parent badges when dropdown is expanded — children show their own
+  .nav-dropdown.open > .nav-dropdown-toggle .badge {
+    display: none;
+  }
 }
 
 // Ensure btn-success has white text (Bootstrap 5 may calculate dark text for some greens)
