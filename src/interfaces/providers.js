@@ -188,6 +188,21 @@ function applyProviderSettings(target, source, res) {
     return false
   }
 
+  const sourceRequiredTypes = ['NMEA2000', 'NMEA0183', 'SignalK', 'Seatalk']
+  if (
+    sourceRequiredTypes.includes(source.type) &&
+    (!source.options?.type || source.options.type === 'none')
+  ) {
+    res.status(400).send('Please select a source type')
+    return false
+  }
+
+  const missing = getMissingField(source.type, source.options)
+  if (missing) {
+    res.status(400).send(`${missing} is required`)
+    return false
+  }
+
   const options = target.pipeElements[0].options
 
   target.id = source.id
@@ -202,4 +217,57 @@ function applyProviderSettings(target, source, res) {
   _.assign(options.subOptions, source.options)
 
   return true
+}
+
+function getMissingField(type, options) {
+  const requiredFields = {
+    NMEA2000: {
+      'ngt-1-canboatjs': ['device'],
+      'ngt-1': ['device'],
+      'ikonvert-canboatjs': ['device'],
+      'ydwg02-usb-canboatjs': ['device'],
+      'ydwg02-canboatjs': ['host', 'port'],
+      'ydwg02-udp-canboatjs': ['host', 'port'],
+      'navlink2-tcp-canboatjs': ['host', 'port'],
+      'w2k-1-n2k-ascii-canboatjs': ['host', 'port'],
+      'w2k-1-n2k-actisense-canboatjs': ['host', 'port'],
+      'canbus-canboatjs': ['interface'],
+      canbus: ['interface']
+    },
+    NMEA0183: {
+      tcp: ['host', 'port'],
+      udp: ['port'],
+      serial: ['device'],
+      gpsd: ['host', 'port']
+    },
+    SignalK: {
+      ws: ['host', 'port'],
+      wss: ['host', 'port'],
+      tcp: ['host', 'port'],
+      udp: ['port'],
+      serial: ['device']
+    },
+    FileStream: {
+      _any: ['dataType', 'filename']
+    }
+  }
+  const fieldLabels = {
+    device: 'Device',
+    host: 'Host',
+    port: 'Port',
+    interface: 'Interface',
+    filename: 'File Name',
+    dataType: 'Data Type'
+  }
+  const typeRules = requiredFields[type]
+  if (!typeRules) return null
+  const fields = typeRules[options.type] || typeRules._any
+  if (!fields) return null
+  for (const field of fields) {
+    const val = options[field]
+    if (val === undefined || val === null || val.toString().trim() === '') {
+      return fieldLabels[field] || field
+    }
+  }
+  return null
 }
