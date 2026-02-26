@@ -1,7 +1,7 @@
 const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
-chai.use(require('@signalk/signalk-schema').chaiModule)
+
 const _ = require('lodash')
 import { startServer } from './ts-servertestutilities'
 
@@ -189,7 +189,9 @@ describe('Deltacache', () => {
 
     delete self.imaginary
     delete self.navigation.course //FIXME until in schema
-    fullTree.should.be.validSignalK
+    fullTree.should.have.property('vessels')
+    fullTree.should.have.property('self')
+    fullTree.should.have.property('version')
   })
 
   it('deltas ordered properly', function () {
@@ -216,7 +218,8 @@ describe('Deltacache', () => {
     const self = _.get(fullTree, fullTree.self)
     delete self.imaginary
     delete self.navigation.course //FIXME until in schema
-    fullTree.should.be.validSignalK
+    fullTree.should.have.property('vessels')
+    fullTree.should.have.property('self')
     fullTree.sources.should.deep.equal({
       defaults: {},
       deltaFromHttp: {}

@@ -47,6 +47,16 @@ Security configuration is stored in file called `security.json` which will be lo
 
 In case the administrator user credentials are lost, removing the `security.json` file and restarting the server will restore access to the Admin UI.
 
+## Authentication Order
+
+For both HTTP and WebSocket connections, the server checks for credentials in this order:
+
+1. **Query parameter:** `?token=<jwt>`
+2. **HTTP header:** `Authorization: Bearer <jwt>` or `Authorization: JWT <jwt>`
+3. **Cookie:** `JAUTHENTICATION=<jwt>`
+
+If no valid token is found and the server has `allow_readonly` enabled, the connection is granted read-only access.
+
 ## Access Control
 
 Access control lists _(acls)_ allow for fine grained access to specific data in Signal K. They specify the permissions assigned to users for resources within specifc contexts and are defined within the `security.json` file.

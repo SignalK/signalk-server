@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Delta, ServerAPI, SKVersion } from '@signalk/server-api'
-import { FullSignalK } from '@signalk/signalk-schema'
+import { Delta, FullSignalK, ServerAPI, SKVersion } from '@signalk/server-api'
 import { EventEmitter } from 'node:events'
 
 import { Config } from './config/config'

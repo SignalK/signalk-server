@@ -1,8 +1,8 @@
 import { OpenApiDescription } from '../swagger'
-import appsApiDoc from './openApi.json'
+import { appsOpenApiDoc } from './openApi.gen'
 
 export const appsApiRecord = {
   name: 'apps',
   path: '/',
-  apiDoc: appsApiDoc as unknown as OpenApiDescription
+  apiDoc: appsOpenApiDoc as unknown as OpenApiDescription
 }

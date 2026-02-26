@@ -26,6 +26,8 @@ import {
   Context,
   Delta,
   DeltaInputHandler,
+  FullSignalK,
+  getSourceId,
   Path,
   PropertyValues,
   SKVersion,
@@ -35,7 +37,6 @@ import {
   Update,
   WithFeatures
 } from '@signalk/server-api'
-import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'

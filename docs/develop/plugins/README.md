@@ -4,6 +4,7 @@ children:
   - ../webapps.md
   - wasm/README.md
   - deltas.md
+  - permissions.md
   - configuration.md
   - backpressure.md
   - autopilot_provider_plugins.md
@@ -34,7 +35,11 @@ Signal K supports two types of plugins:
 
 Plugins can:
 
-- Expose _[REST APIs](../rest-api/README.md)_ to provide consumers/clients a way to perform operations offered by your plugin. The APIs will be published under `http://{skserver}:3000/plugins/{pluginId}`.
+- Expose _[REST APIs](../rest-api/README.md)_ to provide consumers/clients a way to perform operations offered by your plugin. The APIs will be published under `http://{skserver}:3000/plugins/{pluginId}`. Note: these endpoints require admin permission — see [Permissions & PUT Handlers](./permissions.md) for alternatives.
+
+- Handle PUT requests on Signal K paths via `registerPutHandler()`, allowing users with write permission to control devices. See [Permissions & PUT Handlers](./permissions.md).
+
+- Emit delta messages into the data model, documented in the [AsyncAPI viewer](/skServer/asyncapi/docs). See [Processing Data](./deltas.md) and the [WebSocket Protocol](../websocket-protocol.md).
 
 - Provide a webapp by placing the relevant files in a folder named `/public/` which the server will mount under `http://{skserver}:3000/{pluginId}`.
 
@@ -46,7 +51,7 @@ Or if you are looking to perform course calculations or integrate with an autopi
 
 **OpenApi description for your plugin's API**
 
-If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification. _See [Add OpenAPI definition](#add-an-openapi-definition)_ below.
+If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification. Plugin OpenAPI definitions appear alongside the server's built-in API docs in the unified Swagger UI at _Documentation &rarr; OpenAPI_ in the Admin UI sidebar. _See [Add OpenAPI definition](#add-an-openapi-definition)_ below.
 
 ---
 

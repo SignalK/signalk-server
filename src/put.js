@@ -3,7 +3,7 @@ import { createDebug } from './debug'
 const debug = createDebug('signalk-server:put')
 const { createRequest, updateRequest } = require('./requestResponse')
 const skConfig = require('./config/config')
-const { getMetadata } = require('@signalk/signalk-schema')
+const { getMetadata } = require('@signalk/server-api')
 const { validateCategoryAssignment } = require('./unitpreferences')
 
 const pathPrefix = '/signalk'

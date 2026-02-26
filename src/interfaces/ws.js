@@ -16,7 +16,7 @@
 const _ = require('lodash')
 const ports = require('../ports')
 const cookie = require('cookie')
-const { getSourceId, getMetadata } = require('@signalk/signalk-schema')
+const { getSourceId, getMetadata } = require('@signalk/server-api')
 const { requestAccess, InvalidTokenError } = require('../security')
 const {
   findRequest,

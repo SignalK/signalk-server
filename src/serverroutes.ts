@@ -52,7 +52,7 @@ import {
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
-import { getAISShipTypeName } from '@signalk/signalk-schema'
+import { getAISShipTypeName, metadataRegistry } from '@signalk/server-api'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
@@ -211,6 +211,17 @@ module.exports = function (
 
   // mount before the main /admin
   mountSwaggerUi(app, '/doc/openapi')
+
+  // serve marked.js locally so the AsyncAPI viewer works offline
+  app.get('/skServer/vendor/marked.umd.js', (_req: Request, res: Response) => {
+    res.sendFile(
+      path.join(
+        path.dirname(require.resolve('marked/package.json')),
+        'lib',
+        'marked.umd.js'
+      )
+    )
+  })
 
   // mount server-guide
   app.use('/documentation', express.static(__dirname + '/../docs/dist'))
@@ -868,6 +879,10 @@ module.exports = function (
     }
 
     res.json(json)
+  })
+
+  app.get(`${SERVERROUTESPREFIX}/paths`, (_req: Request, res: Response) => {
+    res.json(metadataRegistry.getAllMetadata())
   })
 
   function writeOldDefaults(req: Request, res: Response) {
