@@ -21,6 +21,7 @@ import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify
 import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
 import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
+import { useStore } from '../../store'
 
 interface PluginSchema {
   properties?: Record<string, unknown>
@@ -244,6 +245,7 @@ export default function PluginConfigurationList() {
         if (pluginIndex !== -1) {
           newPlugins[pluginIndex] = { ...newPlugins[pluginIndex], data }
         }
+        useStore.getState().setPlugins(newPlugins)
         return newPlugins
       })
 
@@ -297,6 +299,7 @@ export default function PluginConfigurationList() {
         }
 
         setPlugins(fetchedPlugins)
+        useStore.getState().setPlugins(fetchedPlugins)
         setSelectedPlugin(initialSelectedPlugin)
         setWasmEnabled(wasmInterfaceEnabled)
 
