@@ -726,13 +726,17 @@ module.exports = function (
               console.log(err)
               res.status(500).send('Unable to save to settings file')
             } else {
-              const config = {}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const config: any = {}
               // eslint-disable-next-line @typescript-eslint/no-require-imports
               const securityStrategy = require(defaultSecurityStrategy)(
                 app,
                 config,
                 saveSecurityConfig
               )
+              if (req.body.allow_readonly === true) {
+                config.allow_readonly = true
+              }
               addUser(req, res, securityStrategy, config)
             }
           })
