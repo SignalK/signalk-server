@@ -59,7 +59,7 @@ When security is first enabled on a new installation, `allow_readonly` now defau
 
 ### Mitigation
 
-To restore anonymous read access on a new installation, go to **Security > Settings** and enable **"Allow Readonly Access"**.
+During initial security setup, the Enable Security dialog offers an **"Allow Readonly Access"** checkbox to opt in. Alternatively, you can enable it at any time in **Security > Settings**.
 
 ---
 
