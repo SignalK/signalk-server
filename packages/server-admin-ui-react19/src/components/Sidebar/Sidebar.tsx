@@ -2,7 +2,13 @@ import React, { useMemo, useCallback, MouseEvent, ReactNode } from 'react'
 import { NavLink, Location } from 'react-router-dom'
 import Badge from 'react-bootstrap/Badge'
 import Nav from 'react-bootstrap/Nav'
-import { useAppStore, useAccessRequests, useLoginStatus } from '../../store'
+import {
+  useAppStore,
+  useAccessRequests,
+  useLoginStatus,
+  usePlugins,
+  type Plugin
+} from '../../store'
 import classNames from 'classnames'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
@@ -42,6 +48,7 @@ export default function Sidebar({ location }: SidebarProps) {
   const appStore = useAppStore()
   const accessRequests = useAccessRequests()
   const loginStatus = useLoginStatus()
+  const plugins = usePlugins()
 
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
@@ -80,6 +87,33 @@ export default function Sidebar({ location }: SidebarProps) {
       }
     }
 
+    const unconfiguredCount = plugins.filter((plugin: Plugin) => {
+      const bundled = (plugin as Record<string, unknown>).bundled as
+        | boolean
+        | undefined
+      const schema = (plugin as Record<string, unknown>).schema as
+        | { properties?: Record<string, unknown> }
+        | undefined
+      const data = (plugin as Record<string, unknown>).data as
+        | { configuration?: unknown }
+        | undefined
+      return (
+        !bundled &&
+        schema?.properties &&
+        Object.keys(schema.properties).length > 0 &&
+        (data?.configuration === null || data?.configuration === undefined)
+      )
+    }).length
+
+    let unconfiguredBadge: BadgeData | null = null
+    if (unconfiguredCount > 0) {
+      unconfiguredBadge = {
+        variant: 'warning',
+        text: `${unconfiguredCount}`,
+        color: 'warning'
+      }
+    }
+
     const result: NavItemData[] = [
       {
         name: 'Dashboard',
@@ -107,7 +141,7 @@ export default function Sidebar({ location }: SidebarProps) {
           name: 'Apps & Plugins',
           url: '/plugins',
           icon: 'icon-puzzle',
-          badges: [updatesBadge],
+          badges: [updatesBadge, unconfiguredBadge],
           children: [
             {
               name: 'Appstore',
@@ -116,7 +150,8 @@ export default function Sidebar({ location }: SidebarProps) {
             },
             {
               name: 'Plugin Config',
-              url: '/serverConfiguration/plugins/-'
+              url: '/serverConfiguration/plugins/-',
+              badge: unconfiguredBadge
             }
           ]
         },
@@ -211,7 +246,7 @@ export default function Sidebar({ location }: SidebarProps) {
     })
 
     return result
-  }, [appStore, accessRequests, loginStatus])
+  }, [appStore, accessRequests, loginStatus, plugins])
 
   const handleClick = useCallback((e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
