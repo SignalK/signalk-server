@@ -1,4 +1,12 @@
-import { useState, useEffect, ChangeEvent, ReactNode } from 'react'
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ChangeEvent,
+  ReactNode
+} from 'react'
+import Button from 'react-bootstrap/Button'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
@@ -21,6 +29,7 @@ interface ProviderOptions {
   selfHandling?: string
   subscription?: string
   selfsignedcert?: boolean
+  token?: string
   useDiscovery?: boolean
   toStdout?: string | string[]
   ignoredSentences?: string | string[]
@@ -151,7 +160,7 @@ export default function BasicProvider({
 
   return (
     <div>
-      <Form.Group as={Row}>
+      <Form.Group as={Row} className="mb-3">
         <Col xs="3" md="3">
           <Form.Label htmlFor="select">Data Type</Form.Label>
         </Col>
@@ -173,7 +182,7 @@ export default function BasicProvider({
           )}
         </Col>
       </Form.Group>
-      <Form.Group as={Row}>
+      <Form.Group as={Row} className="mb-3">
         <Col xs="3" md="3">
           <Form.Label htmlFor="provider-enabled">Enabled</Form.Label>
         </Col>
@@ -195,7 +204,7 @@ export default function BasicProvider({
       {value.type !== 'FileStream' && (
         <LoggingInput value={value} onChange={onChange} />
       )}
-      <Form.Group as={Row}>
+      <Form.Group as={Row} className="mb-3">
         <Col md="3">
           <Form.Label htmlFor="id">ID</Form.Label>
         </Col>
@@ -239,7 +248,7 @@ export default function BasicProvider({
 
 function TextInput({ name, title, value, helpText, onChange }: TextInputProps) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col md="3">
         <Form.Label htmlFor={name}>{title}</Form.Label>
       </Col>
@@ -265,7 +274,7 @@ function TextAreaInput({
   onChange
 }: TextAreaInputProps) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col md="3">
         <Form.Label htmlFor={name}>{title}</Form.Label>
       </Col>
@@ -280,6 +289,289 @@ function TextAreaInput({
         {helpText && <Form.Text muted>{helpText}</Form.Text>}
       </Col>
     </Form.Group>
+  )
+}
+
+interface TestConnectionResult {
+  success: boolean
+  authenticated?: boolean
+  connected?: boolean
+  self?: string
+  server?: { id: string; version: string }
+  error?: string
+}
+
+interface AccessRequestState {
+  requestId?: string
+  state: 'idle' | 'requesting' | 'pending' | 'polling' | 'completed' | 'error'
+  error?: string
+}
+
+function TokenInput({
+  value,
+  onChange
+}: {
+  value: ProviderValue
+  onChange: OnChangeHandler
+}) {
+  const [testResult, setTestResult] = useState<TestConnectionResult | null>(
+    null
+  )
+  const [testing, setTesting] = useState(false)
+  const [accessRequest, setAccessRequest] = useState<AccessRequestState>({
+    state: 'idle'
+  })
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current)
+      }
+    }
+  }, [])
+
+  const remoteParams = useCallback(
+    () => ({
+      host: value.options.host,
+      port: value.options.port,
+      useTLS: value.options.type === 'wss',
+      selfsignedcert: value.options.selfsignedcert
+    }),
+    [
+      value.options.host,
+      value.options.port,
+      value.options.type,
+      value.options.selfsignedcert
+    ]
+  )
+
+  const testConnection = useCallback(() => {
+    setTesting(true)
+    setTestResult(null)
+    fetch(`${window.serverRoutesPrefix}/testConnection`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        ...remoteParams(),
+        token: value.options.token
+      })
+    })
+      .then((response) => response.json())
+      .then((result: TestConnectionResult) => setTestResult(result))
+      .catch((err: Error) =>
+        setTestResult({ success: false, error: err.message })
+      )
+      .finally(() => setTesting(false))
+  }, [remoteParams, value.options.token])
+
+  const pollAccessRequestRef = useRef<(requestId: string) => void>(() => {})
+
+  const pollAccessRequest = useCallback(
+    (requestId: string) => {
+      fetch(`${window.serverRoutesPrefix}/checkAccessRequest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ...remoteParams(), requestId })
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.state === 'COMPLETED') {
+            const token = data.accessRequest?.token
+            if (token) {
+              onChange({
+                target: { name: 'options.token', value: token }
+              })
+              setAccessRequest({ state: 'completed' })
+            } else if (data.accessRequest?.permission === 'DENIED') {
+              setAccessRequest({ state: 'error', error: 'Access denied' })
+            }
+          } else if (data.state === 'PENDING') {
+            setAccessRequest({
+              state: 'pending',
+              requestId
+            })
+            pollTimerRef.current = setTimeout(
+              () => pollAccessRequestRef.current(requestId),
+              5000
+            )
+          } else {
+            setAccessRequest({
+              state: 'error',
+              error: data.error || `Unexpected state: ${data.state}`
+            })
+          }
+        })
+        .catch((err: Error) => {
+          setAccessRequest({ state: 'error', error: err.message })
+        })
+    },
+    [remoteParams, onChange]
+  )
+
+  useEffect(() => {
+    pollAccessRequestRef.current = pollAccessRequest
+  }, [pollAccessRequest])
+
+  const requestAccess = useCallback(() => {
+    // If we have a previous requestId from a cancelled request, resume polling
+    if (accessRequest.requestId) {
+      setAccessRequest({ state: 'pending', requestId: accessRequest.requestId })
+      pollTimerRef.current = setTimeout(
+        () => pollAccessRequestRef.current(accessRequest.requestId!),
+        1000
+      )
+      return
+    }
+
+    setAccessRequest({ state: 'requesting' })
+    const clientId = `${value.id || 'signalk-server'}-${Date.now()}`
+    fetch(`${window.serverRoutesPrefix}/requestAccess`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        ...remoteParams(),
+        clientId,
+        description: `Signal K Server connection: ${value.id || 'unknown'}`
+      })
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.state === 'PENDING' && data.requestId) {
+          setAccessRequest({ state: 'pending', requestId: data.requestId })
+          pollTimerRef.current = setTimeout(
+            () => pollAccessRequestRef.current(data.requestId),
+            5000
+          )
+        } else {
+          setAccessRequest({
+            state: 'error',
+            error:
+              data.message ||
+              data.error ||
+              `Unexpected response: ${JSON.stringify(data)}`
+          })
+        }
+      })
+      .catch((err: Error) => {
+        setAccessRequest({ state: 'error', error: err.message })
+      })
+  }, [remoteParams, value.id, accessRequest.requestId])
+
+  const cancelPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+    setAccessRequest((prev) => ({
+      state: 'idle',
+      requestId: prev.requestId
+    }))
+  }, [])
+
+  return (
+    <>
+      <Form.Group as={Row} className="mb-3">
+        <Col md="3">
+          <Form.Label htmlFor="options.token">Authentication Token</Form.Label>
+        </Col>
+        <Col xs="12" md="3">
+          <Form.Control
+            type="text"
+            name="options.token"
+            value={value.options.token ?? ''}
+            onChange={(event) => onChange(event)}
+          />
+          <Form.Text muted>
+            Use &quot;Request Access&quot; to request a token from the remote
+            server. An admin on the remote server must approve the request.
+          </Form.Text>
+        </Col>
+      </Form.Group>
+      <Form.Group as={Row} className="mb-3">
+        <Col md="3" />
+        <Col xs="12" md="3">
+          <div className="d-flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline-primary"
+              onClick={requestAccess}
+              disabled={
+                !value.options.host ||
+                !value.options.port ||
+                accessRequest.state === 'requesting' ||
+                accessRequest.state === 'pending'
+              }
+            >
+              {accessRequest.state === 'requesting'
+                ? 'Requesting...'
+                : 'Request Access'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-primary"
+              onClick={testConnection}
+              disabled={testing || !value.options.host || !value.options.port}
+            >
+              {testing ? 'Testing...' : 'Test Connection'}
+            </Button>
+          </div>
+          {accessRequest.state === 'pending' && (
+            <div className="mt-2">
+              <span className="text-warning">
+                Waiting for approval on the remote server...
+              </span>
+              <Button
+                size="sm"
+                variant="link"
+                className="p-0 ms-2"
+                onClick={cancelPolling}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+          {accessRequest.state === 'completed' && (
+            <div className="mt-2">
+              <span className="text-success">
+                Access approved. Token has been filled in automatically.
+              </span>
+            </div>
+          )}
+          {accessRequest.state === 'error' && (
+            <div className="mt-2">
+              <span className="text-danger">{accessRequest.error}</span>
+            </div>
+          )}
+          {testResult && (
+            <div className="mt-2">
+              {testResult.success && testResult.authenticated ? (
+                <span className="text-success">
+                  Connected and authenticated
+                  {testResult.server &&
+                    ` \u2014 ${testResult.server.id} v${testResult.server.version}`}
+                </span>
+              ) : testResult.success && !testResult.authenticated ? (
+                <span className="text-warning">
+                  Connected but not authenticated — use Request Access or enter
+                  a token
+                  {testResult.server &&
+                    ` \u2014 ${testResult.server.id} v${testResult.server.version}`}
+                </span>
+              ) : (
+                <span className="text-danger">
+                  {testResult.connected ? 'Connected but ' : ''}
+                  {testResult.error}
+                </span>
+              )}
+            </div>
+          )}
+        </Col>
+      </Form.Group>
+    </>
   )
 }
 
@@ -307,7 +599,7 @@ function DeviceInput({ value, onChange }: DeviceInputProps) {
     : ''
 
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col md="3">
         <Form.Label htmlFor="serialportselect">Serial port</Form.Label>
       </Col>
@@ -372,7 +664,7 @@ const serialportListOptions = (
 
 function LoggingInput({ value, onChange }: LoggingInputProps) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-logging">Data Logging</Form.Label>
       </Col>
@@ -419,7 +711,7 @@ function ValidateChecksumInput({
   }
 
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-validateChecksum">
           Validate Checksum
@@ -445,7 +737,7 @@ function ValidateChecksumInput({
 
 function OverrideTimestamps({ value, onChange }: OverrideTimestampsProps) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-overrideTimestamp">
           Override timestamps
@@ -477,7 +769,7 @@ function RemoveNullsInput({
   onChange: OnChangeHandler
 }) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-removeNulls">
           Remove NULL characters
@@ -512,7 +804,7 @@ function AppendChecksum({
   const isValidateChecksumEnabled = value.validateChecksum ?? true
 
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-appendChecksum">
           Append Checksum
@@ -572,7 +864,7 @@ function DataTypeInput({
   hasAnalyzer?: boolean
 }) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col md="3">
         <Form.Label htmlFor="dataType">Data Type</Form.Label>
       </Col>
@@ -791,7 +1083,7 @@ function Suppress0183Checkbox({
   onChange: OnChangeHandler
 }) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-suppress0183event">
           Suppress nmea0183 event
@@ -828,7 +1120,7 @@ function UseCanNameInput({
   onChange: OnChangeHandler
 }) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-useCanName">
           Use Can NAME in source data
@@ -860,7 +1152,7 @@ function CamelCaseCompatInput({
   onChange: OnChangeHandler
 }) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-useCamelCompat">
           CamcelCase Compat (for legacy N2K plugins)
@@ -894,7 +1186,7 @@ function CollectNetworkStatsInput({
   onChange: OnChangeHandler
 }) {
   return (
-    <Form.Group as={Row}>
+    <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-sendNetworkStats">
           Collect Network Statistics
@@ -921,7 +1213,7 @@ function CollectNetworkStatsInput({
 function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
   return (
     <div>
-      <Form.Group as={Row}>
+      <Form.Group as={Row} className="mb-3">
         <Col md="3">
           <Form.Label htmlFor="options.type">NMEA 2000 Source</Form.Label>
         </Col>
@@ -1049,7 +1341,7 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
 function NMEA0183({ value, onChange }: TypeComponentProps) {
   return (
     <div>
-      <Form.Group as={Row}>
+      <Form.Group as={Row} className="mb-3">
         <Col md="3">
           <Form.Label htmlFor="options.type">NMEA 0183 Source</Form.Label>
         </Col>
@@ -1111,7 +1403,7 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
 function SignalK({ value, onChange }: TypeComponentProps) {
   return (
     <div>
-      <Form.Group as={Row}>
+      <Form.Group as={Row} className="mb-3">
         <Col md="3">
           <Form.Label htmlFor="options.type">SignalK Source</Form.Label>
         </Col>
@@ -1145,7 +1437,7 @@ function SignalK({ value, onChange }: TypeComponentProps) {
             <HostInput value={value.options} onChange={onChange} />
             <PortInput value={value.options} onChange={onChange} />
             {value.options.type === 'wss' && (
-              <Form.Group as={Row}>
+              <Form.Group as={Row} className="mb-3">
                 <Col xs="0" md="3">
                   <Form.Label htmlFor="provider-selfsignedcert">
                     Allow self signed certificates
@@ -1184,6 +1476,7 @@ function SignalK({ value, onChange }: TypeComponentProps) {
                   onChange={(event) => onChange(event, 'jsonstring')}
                   helpText="Defaults to all. This can be an array of subscriptions."
                 />
+                <TokenInput value={value} onChange={onChange} />
               </div>
             )}
           </div>
@@ -1193,7 +1486,7 @@ function SignalK({ value, onChange }: TypeComponentProps) {
       )}
       {serialParams({ value, onChange })}
       {!value.options.useDiscovery && (
-        <Form.Group as={Row}>
+        <Form.Group as={Row} className="mb-3">
           <Col md="3">
             <Form.Label htmlFor="options.type">
               &apos;self&apos; handling
@@ -1201,7 +1494,7 @@ function SignalK({ value, onChange }: TypeComponentProps) {
           </Col>
           <Col xs="12" md="3">
             <Form.Select
-              value={value.options.selfHandling || 'noSelf'}
+              value={value.options.selfHandling || 'useRemoteSelf'}
               name="options.selfHandling"
               onChange={(event) => onChange(event)}
             >
@@ -1229,7 +1522,7 @@ const gpios = [
 function Seatalk({ value, onChange }: TypeComponentProps) {
   return (
     <span>
-      <Form.Group as={Row}>
+      <Form.Group as={Row} className="mb-3">
         <Col md="3">
           <Form.Label htmlFor="options.type">GPIO Library</Form.Label>
         </Col>
@@ -1245,7 +1538,7 @@ function Seatalk({ value, onChange }: TypeComponentProps) {
           </Form.Select>
         </Col>
       </Form.Group>
-      <Form.Group as={Row}>
+      <Form.Group as={Row} className="mb-3">
         <Col md="3">
           <Form.Label htmlFor="gpio">GPIO Pin</Form.Label>
         </Col>
@@ -1262,7 +1555,7 @@ function Seatalk({ value, onChange }: TypeComponentProps) {
           </Form.Select>
         </Col>
       </Form.Group>
-      <Form.Group as={Row}>
+      <Form.Group as={Row} className="mb-3">
         <Col md="3">
           <Form.Label htmlFor="gpioInvert">Invert signal</Form.Label>
         </Col>

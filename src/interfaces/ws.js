@@ -789,7 +789,14 @@ function wrapWithverifyWS(securityStrategy, spark, theFunction) {
           }
         )
       }
-      console.error(error)
+      const identifier = _.get(
+        spark,
+        'request.skPrincipal.identifier',
+        spark.request.connection.remoteAddress || 'unknown'
+      )
+      console.error(
+        `WebSocket security error for ${identifier}: ${error.message}`
+      )
       return
     }
   }
