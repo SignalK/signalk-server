@@ -46,6 +46,7 @@ interface Plugin {
   uiSchema?: Record<string, unknown>
   statusMessage?: string
   data: PluginData
+  bundled?: boolean
   [key: string]: unknown
 }
 
@@ -104,11 +105,15 @@ export default function PluginConfigurationList() {
           (plugin.data.configuration === null ||
             plugin.data.configuration === undefined)
 
+        const isUnconfigured = !plugin.bundled && configurationRequired
+
         switch (filter) {
           case 'enabled':
-            return !configurationRequired && plugin.data.enabled
+            return !isUnconfigured && plugin.data.enabled
           case 'disabled':
-            return configurationRequired || !plugin.data.enabled
+            return !isUnconfigured && !plugin.data.enabled
+          case 'unconfigured':
+            return isUnconfigured
           default:
             return true
         }
@@ -352,6 +357,7 @@ export default function PluginConfigurationList() {
                   <option value="all">All Plugins</option>
                   <option value="enabled">Enabled</option>
                   <option value="disabled">Disabled</option>
+                  <option value="unconfigured">Unconfigured</option>
                 </Form.Select>
               </Form.Group>
             </Form>
@@ -400,6 +406,9 @@ export default function PluginConfigurationList() {
                     if (wasmDisabledForPlugin) {
                       badgeClass = 'text-bg-danger'
                       badgeText = 'WASM disabled'
+                    } else if (!plugin.bundled && configurationRequired) {
+                      badgeClass = 'text-bg-warning'
+                      badgeText = 'Unconfigured'
                     } else if (plugin.data.enabled && !configurationRequired) {
                       badgeClass = 'text-bg-success'
                       badgeText = 'Enabled'

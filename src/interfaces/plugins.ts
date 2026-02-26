@@ -109,6 +109,7 @@ function backwardsCompat(url: string) {
 
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
+  const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
   return {
     async start() {
       ensureExists(path.join(theApp.config.configPath, PLUGIN_CONFIG_DATA_DIR))
@@ -168,6 +169,10 @@ module.exports = (theApp: any) => {
         })
       }
     })
+  }
+
+  function isBundledPlugin(plugin: PluginInfo) {
+    return plugin.packageLocation === appNodeModules
   }
 
   function getPluginResponseInfo(plugin: PluginInfo, providerStatus: any) {
@@ -234,7 +239,8 @@ module.exports = (theApp: any) => {
             uiSchema,
             state: plugin.state,
             data,
-            type: plugin.type // Include type to identify WASM plugins in Admin UI
+            type: plugin.type, // Include type to identify WASM plugins in Admin UI
+            bundled: isBundledPlugin(plugin)
           })
         })
         .catch((err) => {
