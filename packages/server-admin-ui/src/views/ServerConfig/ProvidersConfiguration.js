@@ -120,12 +120,19 @@ class ProvidersConfiguration extends Component {
   }
 
   handleApply() {
-    var isNew = this.state.selectedProvider.isNew
-    var wasDiscovered = this.state.selectedProvider.wasDiscovered
+    var provider = this.state.selectedProvider
+    var validationError = validateProvider(provider)
+    if (validationError) {
+      alert(validationError)
+      return
+    }
 
-    delete this.state.selectedProvider.json
+    var isNew = provider.isNew
+    var wasDiscovered = provider.wasDiscovered
 
-    var id = this.state.selectedProvider.originalId
+    delete provider.json
+
+    var id = provider.originalId
 
     fetch(`${window.serverRoutesPrefix}/providers/${id && !isNew ? id : ''}`, {
       method: isNew ? 'POST' : 'PUT',
@@ -406,6 +413,70 @@ const ProviderType = (props) => (
       : ''}
   </div>
 )
+const requiredProviderFields = {
+  NMEA2000: {
+    'ngt-1-canboatjs': ['device'],
+    'ngt-1': ['device'],
+    'ikonvert-canboatjs': ['device'],
+    'ydwg02-usb-canboatjs': ['device'],
+    'ydwg02-canboatjs': ['host', 'port'],
+    'ydwg02-udp-canboatjs': ['host', 'port'],
+    'navlink2-tcp-canboatjs': ['host', 'port'],
+    'w2k-1-n2k-ascii-canboatjs': ['host', 'port'],
+    'w2k-1-n2k-actisense-canboatjs': ['host', 'port'],
+    'canbus-canboatjs': ['interface'],
+    canbus: ['interface']
+  },
+  NMEA0183: {
+    tcp: ['host', 'port'],
+    udp: ['port'],
+    serial: ['device'],
+    gpsd: ['host', 'port']
+  },
+  SignalK: {
+    ws: ['host', 'port'],
+    wss: ['host', 'port'],
+    tcp: ['host', 'port'],
+    udp: ['port'],
+    serial: ['device']
+  },
+  FileStream: {
+    _any: ['dataType', 'filename']
+  }
+}
+
+const fieldLabels = {
+  device: 'Device',
+  host: 'Host',
+  port: 'Port',
+  interface: 'Interface',
+  filename: 'File Name',
+  dataType: 'Data Type'
+}
+
+function validateProvider(provider) {
+  const sourceRequiredTypes = ['NMEA2000', 'NMEA0183', 'SignalK', 'Seatalk']
+  if (
+    sourceRequiredTypes.includes(provider.type) &&
+    (!provider.options?.type || provider.options.type === 'none')
+  ) {
+    return 'Please select a source type'
+  }
+  const typeRules = requiredProviderFields[provider.type]
+  if (typeRules) {
+    const fields = typeRules[provider.options.type] || typeRules._any
+    if (fields) {
+      for (const field of fields) {
+        const val = provider.options[field]
+        if (val === undefined || val === null || val.toString().trim() === '') {
+          return `${fieldLabels[field] || field} is required`
+        }
+      }
+    }
+  }
+  return null
+}
+
 const mapStateToProps = ({ discoveredProviders }) => ({ discoveredProviders })
 
 export default connect(mapStateToProps)(ProvidersConfiguration)
