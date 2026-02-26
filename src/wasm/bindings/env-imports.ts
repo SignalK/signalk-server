@@ -12,6 +12,11 @@ import { WasmCapabilities } from '../types'
 import { createResourceProviderBinding } from './resource-provider'
 import { createWeatherProviderBinding } from './weather-provider'
 import {
+  getEventManager,
+  PLUGIN_EVENT_PREFIX,
+  ServerEvent
+} from '../wasm-events'
+import {
   createRadarProviderBinding,
   createRadarEmitSpokesBinding
 } from './radar-provider'
@@ -1036,6 +1041,180 @@ export function createEnvImports(
     sk_tcp_close: (socketId: number): void => {
       if (!capabilities.rawSockets) return
       tcpSocketManager.close(socketId)
+    },
+
+    // ==========================================================================
+    // Server Events API
+    // Allows WASM plugins to receive server events and emit custom events
+    // Requires serverEvents capability
+    // ==========================================================================
+
+    /**
+     * Subscribe to server events
+     *
+     * @param eventTypesPtr - Pointer to JSON array of event types (e.g., '["SERVERSTATISTICS", "VESSEL_INFO"]')
+     *                        Empty array '[]' subscribes to all allowed events
+     * @param eventTypesLen - Length of event types JSON string
+     * @returns 1 on success, 0 on failure (capability not granted or invalid JSON)
+     *
+     * Note: The actual event delivery happens via the event_handler export.
+     * Plugin must export: event_handler(eventJson: string) -> void
+     */
+    sk_subscribe_events: (
+      eventTypesPtr: number,
+      eventTypesLen: number
+    ): number => {
+      if (!capabilities.serverEvents) {
+        debug(`[${pluginId}] serverEvents capability not granted`)
+        return 0
+      }
+
+      try {
+        const eventTypesJson = readUtf8String(eventTypesPtr, eventTypesLen)
+        const eventTypes: string[] = JSON.parse(eventTypesJson)
+
+        if (!Array.isArray(eventTypes)) {
+          debug(
+            `[${pluginId}] sk_subscribe_events: expected array, got ${typeof eventTypes}`
+          )
+          return 0
+        }
+
+        debug(
+          `[${pluginId}] Subscribing to events: ${eventTypes.length === 0 ? 'all allowed' : eventTypes.join(', ')}`
+        )
+
+        const eventManager = getEventManager()
+        eventManager.register(pluginId, eventTypes, (event: ServerEvent) => {
+          debug(
+            `[${pluginId}] Event received but handler not yet configured: ${event.type}`
+          )
+        })
+
+        return 1
+      } catch (error) {
+        debug(`[${pluginId}] sk_subscribe_events error: ${error}`)
+        return 0
+      }
+    },
+
+    /**
+     * Emit a custom event from the plugin
+     *
+     * @param typePtr - Pointer to event type string
+     * @param typeLen - Length of event type string
+     * @param dataPtr - Pointer to event data JSON string
+     * @param dataLen - Length of event data JSON string
+     * @returns 1 on success, 0 on failure
+     *
+     * Event types:
+     * - Generic events (nmea0183out, nmea2000JsonOut, etc.) are emitted directly
+     *   to the server bus for interop with other plugins
+     * - Custom events (anything else) are prefixed with 'PLUGIN_' to prevent
+     *   plugins from impersonating server events
+     *
+     * The 'from' field is automatically set to the plugin ID for routing.
+     */
+    sk_emit_event: (
+      typePtr: number,
+      typeLen: number,
+      dataPtr: number,
+      dataLen: number
+    ): number => {
+      if (!capabilities.serverEvents) {
+        debug(`[${pluginId}] serverEvents capability not granted`)
+        return 0
+      }
+
+      try {
+        let eventType = readUtf8String(typePtr, typeLen)
+        const dataJson = readUtf8String(dataPtr, dataLen)
+
+        let data: unknown
+        try {
+          data = JSON.parse(dataJson)
+        } catch {
+          debug(`[${pluginId}] sk_emit_event: invalid JSON data`)
+          return 0
+        }
+
+        const eventManager = getEventManager()
+
+        // Check if this is a standard generic event type (nmea2000JsonOut, etc.)
+        // Generic events are emitted directly to the server bus without prefixing
+        const isGenericEvent = eventManager.isGenericEvent(eventType)
+
+        if (!isGenericEvent && !eventType.startsWith(PLUGIN_EVENT_PREFIX)) {
+          // Custom plugin event - add prefix
+          eventType = PLUGIN_EVENT_PREFIX + eventType
+        }
+
+        debug(
+          `[${pluginId}] Emitting event: ${eventType} (generic=${isGenericEvent})`
+        )
+
+        if (app && app.emit) {
+          if (isGenericEvent) {
+            // Generic events: emit data directly (no wrapper)
+            app.emit(eventType, data)
+            debug(
+              `[${pluginId}] Generic event emitted to server bus: ${eventType}`
+            )
+          } else {
+            // Custom plugin events: wrap in ServerEvent structure
+            const event: ServerEvent = {
+              type: eventType,
+              from: pluginId,
+              data,
+              timestamp: Date.now()
+            }
+            app.emit(eventType, event)
+            debug(
+              `[${pluginId}] Plugin event emitted to server bus: ${eventType}`
+            )
+
+            // Route custom events to other WASM plugins
+            eventManager.routeEvent(event)
+          }
+        }
+
+        return 1
+      } catch (error) {
+        debug(`[${pluginId}] sk_emit_event error: ${error}`)
+        return 0
+      }
+    },
+
+    /**
+     * Get list of allowed event types that WASM plugins can subscribe to
+     *
+     * @param bufPtr - Buffer to write JSON array of allowed event types
+     * @param bufMaxLen - Maximum buffer size
+     * @returns Number of bytes written, or 0 if buffer too small / error
+     */
+    sk_get_allowed_event_types: (bufPtr: number, bufMaxLen: number): number => {
+      try {
+        const eventManager = getEventManager()
+        const allowedTypes = eventManager.getAllowedEventTypes()
+        const jsonStr = JSON.stringify(allowedTypes)
+        const jsonBytes = Buffer.from(jsonStr, 'utf8')
+
+        if (jsonBytes.length > bufMaxLen) {
+          debug(`[${pluginId}] sk_get_allowed_event_types: buffer too small`)
+          return 0
+        }
+
+        if (memoryRef.current) {
+          const memView = new Uint8Array(memoryRef.current.buffer)
+          memView.set(jsonBytes, bufPtr)
+          return jsonBytes.length
+        }
+
+        return 0
+      } catch (error) {
+        debug(`[${pluginId}] sk_get_allowed_event_types error: ${error}`)
+        return 0
+      }
     }
   }
 
