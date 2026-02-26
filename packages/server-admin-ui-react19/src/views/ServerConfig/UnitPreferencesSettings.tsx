@@ -285,37 +285,43 @@ const UnitPreferencesSettings: React.FC = () => {
                   </optgroup>
                 )}
               </Form.Select>
-              {isAdmin && (
-                <>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadStatus === 'uploading'}
-                  >
-                    <FontAwesomeIcon icon={faUpload} />{' '}
-                    {uploadStatus === 'uploading' ? 'Uploading...' : 'Upload'}
-                  </Button>
-                  {activeCustomPreset && (
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      onClick={() => handleDeletePreset(activePreset)}
-                      title={`Delete ${activeCustomPreset.label}`}
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                    </Button>
-                  )}
-                </>
+              {isAdmin && activeCustomPreset && (
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={() => handleDeletePreset(activePreset)}
+                  title={`Delete ${activeCustomPreset.label}`}
+                >
+                  <FontAwesomeIcon icon={faTrash} />
+                </Button>
               )}
             </div>
+            {isAdmin && (
+              <div style={{ marginTop: '10px' }}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }}
+                />
+                <Form.Text
+                  className="text-muted"
+                  style={{ marginRight: '8px' }}
+                >
+                  Add custom preset
+                </Form.Text>
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadStatus === 'uploading'}
+                >
+                  <FontAwesomeIcon icon={faUpload} />{' '}
+                  {uploadStatus === 'uploading' ? 'Uploading...' : 'Upload'}
+                </Button>
+              </div>
+            )}
             {uploadStatus === 'success' && (
               <Alert
                 variant="success"
