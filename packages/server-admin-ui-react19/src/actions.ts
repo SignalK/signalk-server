@@ -69,12 +69,16 @@ export async function loginAction(
 
 export async function enableSecurity(
   userId: string,
-  password: string
+  password: string,
+  allowReadonly?: boolean
 ): Promise<string | null> {
-  const payload = {
+  const payload: Record<string, unknown> = {
     userId,
     password,
     type: 'admin'
+  }
+  if (allowReadonly) {
+    payload.allow_readonly = true
   }
   const response = await fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
     method: 'POST',
