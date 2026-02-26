@@ -8,6 +8,31 @@ This document lists breaking changes and deprecations in Signal K Server.
 
 ---
 
+## Node.js: Default Version Updated to 24
+
+Signal K Server now defaults to **Node.js 24** and requires **Node.js 22 or later**.
+
+### What Changed
+
+| Setting          | Before | After |
+| ---------------- | ------ | ----- |
+| Recommended      | 22     | 24    |
+| Minimum required | 20     | 22    |
+
+### Dropped Platform Support
+
+Node.js 24 drops support for the following platforms:
+
+- **armv7** (32-bit ARM) — Affects older Raspberry Pi models (Pi 2, Pi Zero/Zero W). Use a 64-bit OS on Pi 3/4/5 or stay on an older Signal K Server version.
+- **Windows x86** (32-bit Windows) — Use 64-bit Windows instead.
+
+### Action Required
+
+- Update your Node.js installation to version 22 or later (version 24 recommended)
+- If running on armv7 or Windows x86, you must migrate to a supported platform or remain on the previous Signal K Server version
+
+---
+
 ## Admin UI: React 19 Migration
 
 The Admin UI has been upgraded from React 16 to **React 19**. This is a significant update that may affect embedded webapps and plugin configuration panels.

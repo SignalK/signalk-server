@@ -1,7 +1,7 @@
 import { satisfies } from 'semver'
 
-const minimumVersion = '>=18'
-const recommendedVersion = '22'
+const minimumVersion = '>=22'
+const recommendedVersion = '24'
 
 export default function checkNodeVersion() {
   if ('SKIP_NODE_VERSION_CHECK' in process.env) return
