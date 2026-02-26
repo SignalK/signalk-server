@@ -410,7 +410,7 @@ function nmea0183input(subOptions) {
     }
     return pipePart
   } else {
-    throw new Error(`Unknown networking tyoe: ${subOptions.networking}`)
+    throw new Error(`Unknown NMEA0183 type: ${subOptions.type}`)
   }
 }
 
