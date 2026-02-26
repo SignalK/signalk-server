@@ -1,6 +1,7 @@
 import React, { Component, Suspense } from 'react'
 import { connect } from 'react-redux'
 import { Card, CardBody, CardHeader, Col } from 'reactstrap'
+import { fetchWebapps } from '../../actions'
 import { ADDON_PANEL, toLazyDynamicComponent } from './dynamicutilities'
 
 import Webapp from './Webapp'
@@ -22,6 +23,7 @@ class Webapps extends Component {
   }
 
   componentDidMount() {
+    fetchWebapps(this.props.dispatch)
     this.setAddonComponents()
   }
 
