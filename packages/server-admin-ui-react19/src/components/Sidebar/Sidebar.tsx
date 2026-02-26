@@ -21,6 +21,7 @@ interface NavItemData {
   url?: string
   icon?: string
   badge?: BadgeData | null
+  badges?: (BadgeData | null)[]
   class?: string
   variant?: string
   title?: boolean
@@ -103,10 +104,21 @@ export default function Sidebar({ location }: SidebarProps) {
     ) {
       result.push(
         {
-          name: 'Appstore',
-          url: '/appstore',
-          icon: 'icon-basket',
-          badge: updatesBadge
+          name: 'Apps & Plugins',
+          url: '/plugins',
+          icon: 'icon-puzzle',
+          badges: [updatesBadge],
+          children: [
+            {
+              name: 'Appstore',
+              url: '/appstore',
+              badge: updatesBadge
+            },
+            {
+              name: 'Plugin Config',
+              url: '/serverConfiguration/plugins/-'
+            }
+          ]
         },
         {
           name: 'Server',
@@ -120,10 +132,6 @@ export default function Sidebar({ location }: SidebarProps) {
             {
               name: 'Data Connections',
               url: '/serverConfiguration/connections/-'
-            },
-            {
-              name: 'Plugin Config',
-              url: '/serverConfiguration/plugins/-'
             },
             {
               name: 'Server Logs',
@@ -211,15 +219,18 @@ export default function Sidebar({ location }: SidebarProps) {
   }, [])
 
   const activeRoute = useCallback(
-    (routeName: string) => {
-      return location.pathname.indexOf(routeName) > -1
-        ? 'nav-item nav-dropdown open'
-        : 'nav-item nav-dropdown'
+    (routeName: string, children?: NavItemData[]) => {
+      const isActive = children?.length
+        ? children.some(
+            (child) => child.url && location.pathname.indexOf(child.url) > -1
+          )
+        : location.pathname.indexOf(routeName) > -1
+      return isActive ? 'nav-item nav-dropdown open' : 'nav-item nav-dropdown'
     },
     [location.pathname]
   )
 
-  const badge = (badgeData?: BadgeData | null): ReactNode => {
+  const renderBadge = (badgeData?: BadgeData | null): ReactNode => {
     if (badgeData) {
       const classes = classNames(badgeData.class)
       return (
@@ -229,6 +240,24 @@ export default function Sidebar({ location }: SidebarProps) {
       )
     }
     return null
+  }
+
+  const renderBadges = (item: NavItemData): ReactNode => {
+    if (item.badges) {
+      return (
+        <>
+          {item.badges.map(
+            (b) =>
+              b && (
+                <React.Fragment key={`${b.variant}-${b.text}`}>
+                  {renderBadge(b)}
+                </React.Fragment>
+              )
+          )}
+        </>
+      )
+    }
+    return renderBadge(item.badge)
   }
 
   const wrapper = (item: NavItemData): ReactNode => {
@@ -276,7 +305,7 @@ export default function Sidebar({ location }: SidebarProps) {
           <Nav.Link href={url} className={classes.link} {...(item.props || {})}>
             {renderIcon(item.icon)}
             {item.name}
-            {badge(item.badge)}
+            {renderBadges(item)}
           </Nav.Link>
         ) : (
           <NavLink
@@ -288,7 +317,7 @@ export default function Sidebar({ location }: SidebarProps) {
           >
             {renderIcon(item.icon)}
             {item.name}
-            {badge(item.badge)}
+            {renderBadges(item)}
           </NavLink>
         )}
       </Nav.Item>
@@ -309,7 +338,7 @@ export default function Sidebar({ location }: SidebarProps) {
 
   const navDropdown = (item: NavItemData, key: number): ReactNode => {
     return (
-      <li key={key} className={activeRoute(item.url || '')}>
+      <li key={key} className={activeRoute(item.url || '', item.children)}>
         <a
           className="nav-link nav-dropdown-toggle"
           href="#"
@@ -317,7 +346,7 @@ export default function Sidebar({ location }: SidebarProps) {
         >
           {renderIcon(item.icon)}
           {item.name}
-          {badge(item.badge)}
+          {renderBadges(item)}
         </a>
         <ul className="nav-dropdown-items">{navList(item.children || [])}</ul>
       </li>
