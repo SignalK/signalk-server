@@ -19,7 +19,7 @@ jobs:
       - name: Node setup
         uses: actions/setup-node@v6
         with:
-          node-version: '24.x'
+          node-version: '22.x'
       - name: Build npm files locally and upload artifacts
         run: |
           npm cache clean -f
