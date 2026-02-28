@@ -4,10 +4,8 @@ import React, {
   useCallback,
   useRef,
   useMemo,
-  useDeferredValue,
-  useTransition
+  useDeferredValue
 } from 'react'
-import { JSONTree } from 'react-json-tree'
 import Select, {
   components,
   type OptionProps,
@@ -18,9 +16,10 @@ import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import dayjs from 'dayjs'
-import VirtualizedMetaTable from './VirtualizedMetaTable'
 import VirtualizedDataTable from './VirtualizedDataTable'
+import SourceView from './SourceView'
 import type { PathData, MetaData } from '../../store'
+import type { SourcesData } from '../../utils/sourceLabels'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import { getPath$SourceKey } from './pathUtils'
 import {
@@ -28,7 +27,12 @@ import {
   useDeltaMessages,
   getWebSocketService
 } from '../../hooks/useWebSocket'
-import { useStore, useShallow, useUnitPrefsLoaded } from '../../store'
+import {
+  useStore,
+  useShallow,
+  useUnitPrefsLoaded,
+  useConfiguredPriorityPaths
+} from '../../store'
 
 // Imperative accessor — avoids subscribing the component to every value change.
 const getSignalkData = () => useStore.getState().signalkData
@@ -36,13 +40,12 @@ const getSignalkData = () => useStore.getState().signalkData
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
 
-const metaStorageKey = 'admin.v1.dataBrowser.meta'
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
 const rawStorageKey = 'admin.v1.dataBrowser.v1.raw'
 const contextStorageKey = 'admin.v1.dataBrowser.context'
 const searchStorageKey = 'admin.v1.dataBrowser.search'
-const selectedSourcesStorageKey = 'admin.v1.dataBrowser.selectedSources'
-const sourceFilterActiveStorageKey = 'admin.v1.dataBrowser.sourceFilterActive'
+const viewBySourceStorageKey = 'admin.v1.dataBrowser.viewBySource'
+const sourceFilterStorageKey = 'admin.v1.dataBrowser.sourceFilter'
 
 interface DeltaMessage {
   context?: string
@@ -81,28 +84,12 @@ const ContextOption = (props: OptionProps<SelectOption>) => {
   )
 }
 
-interface SourceDevice {
-  n2k?: {
-    manufacturerCode?: string
-    modelId?: string
-  }
-  type?: string
-  [key: string]: unknown
-}
-
-interface Sources {
-  [key: string]: SourceDevice
-}
-
 const DataBrowser: React.FC = () => {
   const { ws: webSocket, isConnected, skSelf } = useWebSocket()
 
   const [hasData, setHasData] = useState(false)
   const [pause, setPause] = useState(
     () => localStorage.getItem(pauseStorageKey) === 'true'
-  )
-  const [includeMeta, setIncludeMeta] = useState(
-    () => localStorage.getItem(metaStorageKey) === 'true'
   )
   const [raw, setRaw] = useState(
     () => localStorage.getItem(rawStorageKey) === 'true'
@@ -113,21 +100,16 @@ const DataBrowser: React.FC = () => {
   const [search, setSearch] = useState(
     () => localStorage.getItem(searchStorageKey) || ''
   )
-  const [selectedSources, setSelectedSources] = useState<Set<string>>(
-    () =>
-      new Set(
-        JSON.parse(localStorage.getItem(selectedSourcesStorageKey) || '[]')
-      )
+  const [viewBySource, setViewBySource] = useState(
+    () => localStorage.getItem(viewBySourceStorageKey) === 'true'
   )
-  const [sourceFilterActive, setSourceFilterActive] = useState(
-    () => localStorage.getItem(sourceFilterActiveStorageKey) === 'true'
+  const [sourceFilter, setSourceFilter] = useState(
+    () => localStorage.getItem(sourceFilterStorageKey) !== 'false'
   )
-  const [sources, setSources] = useState<Sources | null>(null)
-  const [sourcesExpanded, setSourcesExpanded] = useState(false)
+  const [rawSourcesData, setRawSourcesData] = useState<SourcesData | null>(null)
 
   const deferredSearch = useDeferredValue(search)
   const isSearchStale = search !== deferredSearch
-  const [, startTransition] = useTransition()
 
   // dataVersion only increments when new paths appear, not on every value update.
   const dataVersion = useStore((s) => s.dataVersion)
@@ -143,31 +125,17 @@ const DataBrowser: React.FC = () => {
 
   const unitPrefsLoaded = useUnitPrefsLoaded()
   const fetchUnitPreferences = useStore((s) => s.fetchUnitPreferences)
+  const configuredPriorityPaths = useConfiguredPriorityPaths()
 
   const didSubscribeRef = useRef(false)
   const webSocketRef = useRef<WebSocket | null>(null)
   const isMountedRef = useRef(true)
 
-  const loadSources = useCallback(async (): Promise<Sources> => {
+  const loadSources = useCallback(async (): Promise<SourcesData> => {
     const response = await fetch(`/signalk/v1/api/sources`, {
       credentials: 'include'
     })
-    const sourcesData: Sources = await response.json()
-
-    Object.values(sourcesData).forEach((source) => {
-      if (source.type === 'NMEA2000') {
-        Object.keys(source).forEach((key) => {
-          const device = source[key] as SourceDevice
-          if (device && device.n2k && device.n2k.modelId) {
-            sourcesData[
-              `${device.n2k.manufacturerCode || ''} ${device.n2k.modelId} (${key})`
-            ] = device
-            delete sourcesData[key]
-          }
-        })
-      }
-    })
-    return sourcesData
+    return (await response.json()) as SourcesData
   }, [])
 
   const handleMessage = useCallback(
@@ -268,19 +236,22 @@ const DataBrowser: React.FC = () => {
       granularSubscriptionManager.setWebSocket(
         webSocket as unknown as WebSocket
       )
+      granularSubscriptionManager.setSourcePolicy(
+        sourceFilter ? 'preferred' : 'all'
+      )
       granularSubscriptionManager.startDiscovery()
 
       webSocketRef.current = webSocket
       didSubscribeRef.current = true
     }
-  }, [pause, webSocket, isConnected, skSelf])
+  }, [pause, webSocket, isConnected, skSelf, sourceFilter])
 
   useEffect(() => {
     isMountedRef.current = true
 
-    loadSources().then((data) => {
+    loadSources().then((raw) => {
       if (isMountedRef.current) {
-        setSources(data)
+        setRawSourcesData(raw)
       }
     })
 
@@ -335,20 +306,6 @@ const DataBrowser: React.FC = () => {
     subscribeToDataIfNeeded()
   }, [subscribeToDataIfNeeded])
 
-  // Re-subscribe when switching back from meta view — the subscription manager
-  // may have gone idle while the data table was unmounted.
-  const prevIncludeMetaRef = useRef(includeMeta)
-  useEffect(() => {
-    if (prevIncludeMetaRef.current && !includeMeta) {
-      const state = granularSubscriptionManager.getState()
-      if (state.state === 'idle') {
-        didSubscribeRef.current = false
-        subscribeToDataIfNeeded()
-      }
-    }
-    prevIncludeMetaRef.current = includeMeta
-  }, [includeMeta, subscribeToDataIfNeeded])
-
   useEffect(() => {
     return () => {
       granularSubscriptionManager.unsubscribeAll()
@@ -360,16 +317,10 @@ const DataBrowser: React.FC = () => {
     (selectedOption: SingleValue<SelectOption>) => {
       const value = selectedOption ? selectedOption.value : 'none'
 
-      localStorage.setItem(selectedSourcesStorageKey, JSON.stringify([]))
-      localStorage.setItem(sourceFilterActiveStorageKey, 'false')
-
       granularSubscriptionManager.cancelPending()
       granularSubscriptionManager.startDiscovery()
 
       setContext(value)
-      setSelectedSources(new Set())
-      setSourceFilterActive(false)
-
       localStorage.setItem(contextStorageKey, value)
     },
     []
@@ -404,33 +355,12 @@ const DataBrowser: React.FC = () => {
           }
         }
 
-        if (sourceFilterActive && selectedSources.size > 0) {
-          const data = contextData[key] as PathData | undefined
-          if (data && !selectedSources.has(data.$source || '')) {
-            continue
-          }
-        }
-
         filtered.push(context === 'all' ? `${ctx}\0${key}` : key)
       }
     }
 
-    return filtered.sort()
-  }, [
-    context,
-    deferredSearch,
-    sourceFilterActive,
-    selectedSources,
-    dataVersion
-  ])
-
-  const toggleMeta = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setIncludeMeta(event.target.checked)
-      localStorage.setItem(metaStorageKey, String(event.target.checked))
-    },
-    []
-  )
+    return filtered.sort((a, b) => a.localeCompare(b))
+  }, [context, deferredSearch, dataVersion])
 
   const toggleRaw = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -449,93 +379,36 @@ const DataBrowser: React.FC = () => {
         granularSubscriptionManager.unsubscribeAll()
         didSubscribeRef.current = false
       } else {
-        loadSources().then(setSources)
+        loadSources().then((raw) => {
+          setRawSourcesData(raw)
+        })
         subscribeToDataIfNeeded()
       }
     },
     [loadSources, subscribeToDataIfNeeded]
   )
 
-  const toggleSourceSelection = useCallback(
-    (source: string) => {
-      setSelectedSources((prev) => {
-        const newSelectedSources = new Set(prev)
-        const wasEmpty = newSelectedSources.size === 0
-
-        if (newSelectedSources.has(source)) {
-          newSelectedSources.delete(source)
-        } else {
-          newSelectedSources.add(source)
-        }
-
-        const newSize = newSelectedSources.size
-        const shouldActivateFilter = wasEmpty && newSize === 1
-        const shouldDeactivateFilter = newSelectedSources.size === 0
-
-        startTransition(() => {
-          localStorage.setItem(
-            selectedSourcesStorageKey,
-            JSON.stringify([...newSelectedSources])
-          )
-
-          if (shouldActivateFilter) {
-            localStorage.setItem(sourceFilterActiveStorageKey, 'true')
-          } else if (shouldDeactivateFilter) {
-            localStorage.setItem(sourceFilterActiveStorageKey, 'false')
-          }
-        })
-
-        if (shouldActivateFilter) {
-          setSourceFilterActive(true)
-        } else if (shouldDeactivateFilter) {
-          setSourceFilterActive(false)
-        }
-
-        return newSelectedSources
-      })
-    },
-    [startTransition]
-  )
-
-  const toggleSourceFilter = useCallback(
+  const toggleViewBySource = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newSourceFilterActive = event.target.checked
-      localStorage.setItem(
-        sourceFilterActiveStorageKey,
-        String(newSourceFilterActive)
-      )
-
-      setSourceFilterActive(newSourceFilterActive)
+      const newValue = event.target.checked
+      setViewBySource(newValue)
+      localStorage.setItem(viewBySourceStorageKey, String(newValue))
     },
     []
   )
 
-  const uniquePathsForMeta = useMemo(() => {
-    const currentData = dataVersion >= 0 ? getSignalkData() : {}
-    const contexts = context === 'all' ? Object.keys(currentData) : [context]
-    const paths: string[] = []
-    const seen = new Set<string>()
-
-    for (const ctx of contexts) {
-      const contextData = currentData[ctx] || {}
-      for (const key of Object.keys(contextData)) {
-        if (search && search.length > 0) {
-          if (key.toLowerCase().indexOf(search.toLowerCase()) === -1) {
-            continue
-          }
-        }
-        const data = contextData[key] as PathData | undefined
-        const path = data?.path || key
-        const dedupKey = context === 'all' ? `${ctx}\0${path}` : path
-        if (!seen.has(dedupKey)) {
-          seen.add(dedupKey)
-          paths.push(dedupKey)
-        }
-      }
-    }
-
-    return paths.sort()
-  }, [context, search, dataVersion])
+  const toggleSourceFilter = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = event.target.checked
+      setSourceFilter(newValue)
+      localStorage.setItem(sourceFilterStorageKey, String(newValue))
+      // Clear stale rows from previous mode and resubscribe
+      useStore.getState().clearData()
+      granularSubscriptionManager.unsubscribeAll()
+      didSubscribeRef.current = false
+    },
+    []
+  )
 
   return (
     <div className="animated fadeIn">
@@ -558,7 +431,6 @@ const DataBrowser: React.FC = () => {
                   options={contextOptions}
                   placeholder="Select a context"
                   isSearchable={true}
-                  isClearable={true}
                   maxMenuHeight={500}
                   noOptionsMessage={() => 'No contexts available'}
                   components={{ Option: ContextOption }}
@@ -575,26 +447,6 @@ const DataBrowser: React.FC = () => {
                     })
                   }}
                 />
-              </Col>
-              <Col xs="6" md="2">
-                <label className="switch switch-text switch-primary">
-                  <input
-                    type="checkbox"
-                    id="databrowser-meta"
-                    name="meta"
-                    className="switch-input"
-                    onChange={toggleMeta}
-                    checked={includeMeta}
-                  />
-                  <span className="switch-label" data-on="Yes" data-off="No" />
-                  <span className="switch-handle" />
-                </label>{' '}
-                <label
-                  htmlFor="databrowser-meta"
-                  style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
-                >
-                  Meta data
-                </label>
               </Col>
               <Col xs="6" md="2">
                 <label className="switch switch-text switch-primary">
@@ -636,6 +488,46 @@ const DataBrowser: React.FC = () => {
                   Raw Values
                 </label>
               </Col>
+              <Col xs="6" md="2">
+                <label className="switch switch-text switch-primary">
+                  <input
+                    type="checkbox"
+                    id="databrowser-by-source"
+                    name="bySource"
+                    className="switch-input"
+                    onChange={toggleViewBySource}
+                    checked={viewBySource}
+                  />
+                  <span className="switch-label" data-on="Yes" data-off="No" />
+                  <span className="switch-handle" />
+                </label>{' '}
+                <label
+                  htmlFor="databrowser-by-source"
+                  style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
+                >
+                  By Source
+                </label>
+              </Col>
+              <Col xs="6" md="2">
+                <label className="switch switch-text switch-primary">
+                  <input
+                    type="checkbox"
+                    id="databrowser-source-filter"
+                    name="sourceFilter"
+                    className="switch-input"
+                    onChange={toggleSourceFilter}
+                    checked={sourceFilter}
+                  />
+                  <span className="switch-label" data-on="Yes" data-off="No" />
+                  <span className="switch-handle" />
+                </label>{' '}
+                <label
+                  htmlFor="databrowser-source-filter"
+                  style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
+                >
+                  Source Priority
+                </label>
+              </Col>
             </Form.Group>
             {context && context !== 'none' && (
               <Form.Group as={Row}>
@@ -655,7 +547,7 @@ const DataBrowser: React.FC = () => {
               </Form.Group>
             )}
 
-            {!includeMeta && context && context !== 'none' && (
+            {!viewBySource && context && context !== 'none' && (
               <div
                 style={{
                   opacity: isSearchStale ? 0.7 : 1,
@@ -667,47 +559,23 @@ const DataBrowser: React.FC = () => {
                   context={context}
                   raw={raw}
                   isPaused={pause}
-                  onToggleSource={toggleSourceSelection}
-                  selectedSources={selectedSources}
-                  onToggleSourceFilter={toggleSourceFilter}
-                  sourceFilterActive={sourceFilterActive}
                   showContext={showContext}
+                  sourcesData={rawSourcesData}
+                  configuredPriorityPaths={configuredPriorityPaths}
                 />
               </div>
             )}
 
-            {includeMeta && context && context !== 'none' && (
-              <VirtualizedMetaTable
-                paths={uniquePathsForMeta}
+            {viewBySource && context && context !== 'none' && (
+              <SourceView
                 context={context}
-                showContext={context === 'all'}
+                search={deferredSearch}
+                sourcesData={rawSourcesData}
               />
             )}
           </Form>
         </Card.Body>
       </Card>
-
-      {sources && (
-        <Card>
-          <Card.Header
-            style={{ cursor: 'pointer', userSelect: 'none' }}
-            onClick={() => setSourcesExpanded((prev) => !prev)}
-          >
-            Sources {sourcesExpanded ? '[-]' : '[+]'}
-          </Card.Header>
-          {sourcesExpanded && (
-            <Card.Body>
-              <JSONTree
-                data={sources}
-                theme="default"
-                invertTheme={true}
-                sortObjectKeys
-                hideRoot
-              />
-            </Card.Body>
-          )}
-        </Card>
-      )}
     </div>
   )
 }
