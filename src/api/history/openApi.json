@@ -54,6 +54,59 @@
           "format": "date-time",
           "example": "2018-03-20T09:13:28Z"
         }
+      },
+      "ProviderIdParam": {
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "description": "Plugin id of the history provider.",
+        "schema": {
+          "type": "string",
+          "example": "signalk-to-influxdb2"
+        }
+      },
+      "ProviderIdQuery": {
+        "in": "query",
+        "name": "provider",
+        "description": "Plugin id of the history provider the request will be directed to.",
+        "schema": {
+          "type": "string",
+          "example": "signalk-to-influxdb2"
+        }
+      }
+    },
+    "responses": {
+      "200OKResponse": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["state", "statusCode", "message"],
+              "properties": {
+                "state": { "type": "string", "enum": ["COMPLETED"] },
+                "statusCode": { "type": "number", "enum": [200] },
+                "message": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "description": "Failed operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["state", "statusCode", "message"],
+              "properties": {
+                "state": { "type": "string", "enum": ["FAILED"] },
+                "statusCode": { "type": "number" },
+                "message": { "type": "string" }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -99,6 +152,9 @@
               "type": "number",
               "format": "integer"
             }
+          },
+          {
+            "$ref": "#/components/parameters/ProviderIdQuery"
           }
         ],
         "responses": {
@@ -198,6 +254,9 @@
           },
           {
             "$ref": "#/components/parameters/TimeRangeTo"
+          },
+          {
+            "$ref": "#/components/parameters/ProviderIdQuery"
           }
         ],
         "responses": {
@@ -232,6 +291,9 @@
           },
           {
             "$ref": "#/components/parameters/TimeRangeTo"
+          },
+          {
+            "$ref": "#/components/parameters/ProviderIdQuery"
           }
         ],
         "responses": {
@@ -249,6 +311,86 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/_providers": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "Retrieve list of registered history providers.",
+        "responses": {
+          "default": {
+            "description": "Return information about the registered history providers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "description": "Provider status",
+                    "required": ["isDefault"],
+                    "properties": {
+                      "isDefault": {
+                        "type": "boolean",
+                        "description": "`true` if this provider is set as the default."
+                      }
+                    },
+                    "example": {
+                      "isDefault": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_providers/_default": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "Get the default history provider id.",
+        "responses": {
+          "default": {
+            "description": "Returns the id of the provider that is the target of requests (if provider is not specified).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["id"],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Provider identifier."
+                    }
+                  },
+                  "example": {
+                    "id": "signalk-to-influxdb2"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_providers/_default/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderIdParam"
+        }
+      ],
+      "post": {
+        "tags": ["Provider"],
+        "summary": "Sets the default history provider.",
+        "description": "Sets the provider with the supplied `id` as the default.",
+        "responses": {
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "200": {
+            "$ref": "#/components/responses/200OKResponse"
           }
         }
       }

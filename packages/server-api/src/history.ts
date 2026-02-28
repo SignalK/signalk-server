@@ -111,6 +111,7 @@ export type PathsResponse = Path[]
 export type ContextsRequestQueryParams = TimeRangeQueryParams
 export type ContextsResponse = Context[]
 
+/** @category  History API */
 export type HistoryApiRegistry = {
   registerHistoryApiProvider(provider: HistoryApi): void
   unregisterHistoryApiProvider(): void
@@ -165,6 +166,16 @@ export function isHistoryApi(obj: unknown): obj is HistoryApi {
     typeof (obj as HistoryApi).getContexts === 'function' &&
     typeof (obj as HistoryApi).getPaths === 'function'
   )
+}
+
+/**
+ * @hidden visible through ServerAPI
+ * @category History API
+ */
+export interface HistoryProviders {
+  [pluginId: string]: {
+    isDefault: boolean
+  }
 }
 
 /**

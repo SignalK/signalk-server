@@ -3,6 +3,7 @@ import {
   ContextsRequest,
   ContextsResponse,
   HistoryApi,
+  HistoryProviders,
   isHistoryApi,
   PathSpec,
   PathsRequest,
@@ -17,27 +18,36 @@ import { Temporal } from '@js-temporal/polyfill'
 import { Context, Path } from '@signalk/server-api'
 import { createDebug } from '../../debug'
 import { Request, Response } from 'express'
+import { WithSecurityStrategy } from '../../security'
+
+import { Responses } from '../'
+
 const debug = createDebug('signalk-server:api:history')
 
+const HISTORY_API_PATH = `/signalk/v2/api/history`
+
+interface HistoryApplication extends WithSecurityStrategy, IRouter {}
+
 export class HistoryApiHttpRegistry {
-  private provider?: HistoryApi
-  private providerPluginId?: string
+  private historyProviders: Map<string, HistoryApi> = new Map()
+  private defaultProviderId?: string
   proxy: HistoryApi
 
-  constructor(private app: IRouter & WithHistoryApi) {
+  constructor(private app: HistoryApplication & WithHistoryApi) {
     this.proxy = {
       getValues: (query: ValuesRequest): Promise<ValuesResponse> => {
-        return this.provider!.getValues(query)
+        return this.defaultProvider().getValues(query)
       },
       getContexts: (query: ContextsRequest): Promise<ContextsResponse> => {
-        return this.provider!.getContexts(query)
+        return this.defaultProvider().getContexts(query)
       },
       getPaths: (query: PathsRequest): Promise<PathsResponse> => {
-        return this.provider!.getPaths(query)
+        return this.defaultProvider().getPaths(query)
       }
     }
     app.getHistoryApi = () => {
-      return this.provider
+      return this.defaultProviderId &&
+        this.historyProviders.has(this.defaultProviderId)
         ? Promise.resolve(this.proxy)
         : Promise.reject('No history api provider configured')
     }
@@ -47,79 +57,195 @@ export class HistoryApiHttpRegistry {
     if (!isHistoryApi(provider)) {
       throw new Error('Invalid history api provider')
     }
-    debug(`Registering history api provider ${pluginId}`)
-    this.providerPluginId = pluginId
-    this.provider = provider
+    if (!this.historyProviders.has(pluginId)) {
+      this.historyProviders.set(pluginId, provider)
+    }
+    if (this.historyProviders.size === 1) {
+      this.defaultProviderId = pluginId
+    }
+    debug(
+      `Registered history api provider ${pluginId},`,
+      `total=${this.historyProviders.size},`,
+      `default=${this.defaultProviderId}`
+    )
   }
 
   unregisterHistoryApiProvider(pluginId: string): void {
-    if (this.providerPluginId !== pluginId) {
-      throw new Error(
-        'No history api provider registered for pluginId ' + pluginId
-      )
+    if (!pluginId || !this.historyProviders.has(pluginId)) {
+      return
     }
-    debug(`Unregistering history api provider ${pluginId}`)
-    this.provider = undefined
-    this.providerPluginId = undefined
+    this.historyProviders.delete(pluginId)
+    if (pluginId === this.defaultProviderId) {
+      this.defaultProviderId = this.historyProviders.keys().next().value
+    }
+    debug(
+      `Unregistered history api provider ${pluginId},`,
+      `total=${this.historyProviders.size},`,
+      `default=${this.defaultProviderId}`
+    )
   }
 
   start() {
-    this.app.get('/signalk/v2/api/history/values', (req, res) =>
+    // return list of history providers
+    this.app.get(
+      `${HISTORY_API_PATH}/_providers`,
+      async (req: Request, res: Response) => {
+        debug(`**route = ${req.method} ${req.path}`)
+        try {
+          const r: HistoryProviders = {}
+          this.historyProviders.forEach((_v: HistoryApi, k: string) => {
+            r[k] = {
+              isDefault: k === this.defaultProviderId
+            }
+          })
+          res.status(200).json(r)
+        } catch (err: unknown) {
+          res.status(400).json({
+            statusCode: 400,
+            state: 'FAILED',
+            message: err instanceof Error ? err.message : 'Unknown error'
+          })
+        }
+      }
+    )
+
+    // return default history provider identifier
+    this.app.get(
+      `${HISTORY_API_PATH}/_providers/_default`,
+      async (req: Request, res: Response) => {
+        debug(`**route = ${req.method} ${req.path}`)
+        try {
+          res.status(200).json({
+            id: this.defaultProviderId
+          })
+        } catch (err: unknown) {
+          res.status(400).json({
+            statusCode: 400,
+            state: 'FAILED',
+            message: err instanceof Error ? err.message : 'Unknown error'
+          })
+        }
+      }
+    )
+
+    // change default history provider
+    this.app.post(
+      `${HISTORY_API_PATH}/_providers/_default/:id`,
+      async (req: Request, res: Response) => {
+        debug(`**route = ${req.method} ${req.path}`)
+        try {
+          if (
+            !this.app.securityStrategy.shouldAllowPut(
+              req,
+              'vessels.self',
+              null,
+              'history'
+            )
+          ) {
+            res.status(403).json(Responses.unauthorised)
+            return
+          }
+          if (!req.params.id) {
+            throw new Error('Provider id not supplied!')
+          }
+          if (this.historyProviders.has(req.params.id)) {
+            this.defaultProviderId = req.params.id
+            res.status(200).json({
+              statusCode: 200,
+              state: 'COMPLETED',
+              message: `Default provider set to ${req.params.id}.`
+            })
+          } else {
+            throw new Error(`Provider ${req.params.id} not found!`)
+          }
+        } catch (err: unknown) {
+          res.status(400).json({
+            statusCode: 400,
+            state: 'FAILED',
+            message: err instanceof Error ? err.message : 'Unknown error'
+          })
+        }
+      }
+    )
+
+    this.app.get(`${HISTORY_API_PATH}/values`, (req, res) =>
       respondWith(
-        this.provider,
-        () => {
-          return this.provider?.getValues(parseValuesQuery(req.query))
+        () => this.useProvider(req),
+        (provider) => {
+          return provider.getValues(parseValuesQuery(req.query))
         },
-        req,
         res
       )
     )
 
-    this.app.get('/signalk/v2/api/history/contexts', (req, res) =>
+    this.app.get(`${HISTORY_API_PATH}/contexts`, (req, res) =>
       respondWith(
-        this.provider,
-        () => {
+        () => this.useProvider(req),
+        (provider) => {
           const { timeRangeParams, errors } = parseTimeRangeParams(req.query)
           if (errors.length > 0) {
             throw new Error(`Validation errors: ${errors.join(', ')}`)
           }
           debug(JSON.stringify(timeRangeParams, null, 2))
-          return this.provider?.getContexts(timeRangeParams)
+          return provider.getContexts(timeRangeParams)
         },
-        req,
         res
       )
     )
 
-    this.app.get('/signalk/v2/api/history/paths', (req, res) =>
+    this.app.get(`${HISTORY_API_PATH}/paths`, (req, res) =>
       respondWith(
-        this.provider,
-        () => {
+        () => this.useProvider(req),
+        (provider) => {
           const { timeRangeParams, errors } = parseTimeRangeParams(req.query)
           if (errors.length > 0) {
             throw new Error(`Validation errors: ${errors.join(', ')}`)
           }
           debug(JSON.stringify(timeRangeParams, null, 2))
-          return this.provider?.getPaths(timeRangeParams)
+          return provider.getPaths(timeRangeParams)
         },
-        req,
         res
       )
     )
+  }
+
+  private defaultProvider(): HistoryApi {
+    if (
+      this.defaultProviderId &&
+      this.historyProviders.has(this.defaultProviderId)
+    ) {
+      return this.historyProviders.get(this.defaultProviderId)!
+    }
+    throw new Error('No history api provider configured')
+  }
+
+  private useProvider(req: Request): HistoryApi | undefined {
+    if (req.query.provider) {
+      const provider = this.historyProviders.get(req.query.provider as string)
+      if (!provider) {
+        throw new Error(`Requested provider not found! (${req.query.provider})`)
+      }
+      return provider
+    }
+    return this.defaultProviderId
+      ? this.historyProviders.get(this.defaultProviderId)
+      : undefined
   }
 }
 
 async function respondWith<T>(
-  provider: HistoryApi | undefined,
-  handler: () => Promise<T> | undefined,
-  req: Request,
+  getProvider: () => HistoryApi | undefined,
+  handler: (provider: HistoryApi) => Promise<T> | undefined,
   res: Response
 ) {
-  if (!provider) {
-    return res.status(501).json({ error: 'No history api provider configured' })
-  }
   try {
-    res.json(await handler())
+    const provider = getProvider()
+    if (!provider) {
+      return res
+        .status(501)
+        .json({ error: 'No history api provider configured' })
+    }
+    res.json(await handler(provider))
   } catch (error) {
     res.status(400).json({
       error: error instanceof Error ? error.message : 'Invalid request'
