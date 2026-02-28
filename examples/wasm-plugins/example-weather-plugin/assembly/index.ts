@@ -348,10 +348,7 @@ class WeatherPlugin extends Plugin {
     emit(tempDelta)
 
     // Emit test humidity (65%)
-    const humDelta = createSimpleDelta(
-      'environment.outside.humidity',
-      '0.65'
-    )
+    const humDelta = createSimpleDelta('environment.outside.humidity', '0.65')
     emit(humDelta)
 
     // Emit test pressure (101300 Pa)

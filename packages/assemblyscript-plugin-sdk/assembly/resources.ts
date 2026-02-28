@@ -13,7 +13,10 @@ import { JSON } from 'assemblyscript-json/assembly'
  * Register this plugin as a resource provider for a given type
  */
 @external("env", "sk_register_resource_provider")
-declare function sk_register_resource_provider_ffi(typePtr: usize, typeLen: usize): i32
+declare function sk_register_resource_provider_ffi(
+  typePtr: usize,
+  typeLen: usize
+): i32
 
 // ===== Public API Functions =====
 
@@ -112,7 +115,7 @@ export class ResourceGetRequest {
  */
 export class ResourceSetRequest {
   id: string = ''
-  value: string = '{}'  // JSON string of the value
+  value: string = '{}' // JSON string of the value
 
   static parse(jsonStr: string): ResourceSetRequest {
     const req = new ResourceSetRequest()
