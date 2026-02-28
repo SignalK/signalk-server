@@ -27,7 +27,7 @@ import {
   SubscribeCallback,
   RelativePositionOrigin
 } from '@signalk/server-api'
-import Bacon from 'baconjs'
+import * as Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 import { createDebug } from './debug'
@@ -37,7 +37,7 @@ import { ContextMatcher } from './types'
 const debug = createDebug('signalk-server:subscriptionmanager')
 
 interface BusesMap {
-  [path: Path]: Bacon.Bus<unknown, NormalizedDelta>
+  [path: Path]: Bacon.Bus<NormalizedDelta>
 }
 
 class SubscriptionManager implements ISubscriptionManager {
@@ -214,7 +214,7 @@ function handleSubscribeRow(
   forOwn(buses, (bus, key) => {
     if (matcher(key)) {
       debug('Subscribing to key ' + key)
-      let filteredBus = bus.filter(filter)
+      let filteredBus: Bacon.EventStream<NormalizedDelta> = bus.filter(filter)
       if (subscribeRow.minPeriod) {
         if (subscribeRow.policy && subscribeRow.policy !== 'instant') {
           errorCallback(
