@@ -13,6 +13,15 @@ const HEADING_PGN = {
   id: 'vesselHeading'
 }
 
+/**
+ * Pre-seed sourceMeta for a src so that deltas pass through without waiting
+ * for CAN Name resolution (which requires PGN 60928 address claim traffic).
+ */
+function markCanNameUnknown(stream: N2kToSignalK, src: number): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(stream as any).sourceMeta[src] = { unknowCanName: true }
+}
+
 describe('N2kToSignalK', () => {
   it('converts N2K PGN to Signal K delta', async () => {
     const app = createMockApp()
@@ -20,6 +29,7 @@ describe('N2kToSignalK', () => {
       app,
       providerId: 'test-n2k'
     })
+    markCanNameUnknown(stream, 204)
 
     const outputPromise = collectStreamOutput(stream)
 
@@ -66,6 +76,7 @@ describe('N2kToSignalK', () => {
       filtersEnabled: true,
       filters: [{ pgn: '999999', source: '' }]
     })
+    markCanNameUnknown(stream, 204)
 
     const outputPromise = collectStreamOutput(stream)
 
@@ -84,6 +95,7 @@ describe('N2kToSignalK', () => {
       filtersEnabled: false,
       filters: [{ pgn: '127250', source: '204' }]
     })
+    markCanNameUnknown(stream, 204)
 
     const outputPromise = collectStreamOutput(stream)
 
