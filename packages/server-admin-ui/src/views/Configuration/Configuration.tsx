@@ -199,7 +199,11 @@ export default function PluginConfigurationList() {
       if (plugin) {
         const currentlySelected =
           selectedPlugin && selectedPlugin.id === plugin.id
-        selectPlugin(currentlySelected ? null : plugin)
+        if (currentlySelected) {
+          selectPlugin(null)
+        } else {
+          selectPlugin(plugin)
+        }
       }
     },
     [plugins, selectedPlugin, selectPlugin]
@@ -301,6 +305,24 @@ export default function PluginConfigurationList() {
 
     fetchData()
   }, [params.pluginid, scrollToSelectedPlugin])
+
+  useEffect(() => {
+    const unsubscribe = useStore.subscribe(
+      (state) => state.plugins,
+      (storePlugins) => {
+        if (storePlugins.length > 0) {
+          setPlugins(storePlugins as Plugin[])
+          setSelectedPlugin((prev) => {
+            if (!prev) return null
+            return (
+              (storePlugins.find((p) => p.id === prev.id) as Plugin) || null
+            )
+          })
+        }
+      }
+    )
+    return unsubscribe
+  }, [])
 
   const pluginList = getFilteredPlugins()
   const selectedPluginId = selectedPlugin ? selectedPlugin.id : null
