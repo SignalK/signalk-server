@@ -2,11 +2,11 @@ import type { Delta, Notification, Path, Zone } from '@signalk/server-api'
 import { ALARM_METHOD, ALARM_STATE, hasValues } from '@signalk/server-api'
 import { expect } from 'chai'
 import { getMethod, Zones } from '../dist/zones.js'
-import Bacon from 'baconjs'
+import * as Bacon from 'baconjs'
 
 interface MockStreambundle {
-  getSelfMetaBus: () => Bacon.Bus<unknown, unknown>
-  getSelfStream: (_path: Path) => Bacon.Bus<unknown, unknown>
+  getSelfMetaBus: () => Bacon.Bus<unknown>
+  getSelfStream: (_path: Path) => Bacon.Bus<unknown>
 }
 
 // Helper to assert value is a Notification
