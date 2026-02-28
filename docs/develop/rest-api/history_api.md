@@ -38,6 +38,7 @@ HTTP GET 'http://hostname:3000/signalk/v2/api/history/values?paths=navigation.sp
 | `from`       | Start of the time range                                                                                                                                                                                                                                                                                                     | No       |
 | `to`         | End of the time range                                                                                                                                                                                                                                                                                                       | No       |
 | `duration`   | Duration of the time range                                                                                                                                                                                                                                                                                                  | No       |
+| `provider`   | Plugin id of the history provider to direct the request to. If not specified, the default provider is used. See [Providers](#providers).                                                                                                                                                                                    | No       |
 
 ### Response Format
 
@@ -101,4 +102,75 @@ Returns an array of path strings.
   "navigation.speedOverGround",
   "navigation.courseOverGroundTrue"
 ]
+```
+
+---
+
+## Providers
+
+The History API supports the registration of multiple history provider plugins.
+
+The first plugin registered is set as the _default_ provider and all requests will be directed to it.
+
+Requests can be directed to a specific provider by using the `provider` parameter in the request with the _id_ of the provider plugin.
+
+_Example:_
+
+```javascript
+GET "/signalk/v2/api/history/values?paths=navigation.speedOverGround&duration=PT1H&provider=signalk-to-influxdb2"
+```
+
+> [!NOTE] Any installed history provider can be set as the default. _See [Setting the Default Provider](#setting-the-default-provider)_
+
+### Listing Available Providers
+
+To retrieve a list of installed history provider plugins, submit an HTTP `GET` request to `/signalk/v2/api/history/_providers`.
+
+The response will be an object containing all the registered history providers, keyed by their plugin id, indicating whether each is assigned as the _default_.
+
+_Example:_
+
+```typescript
+HTTP GET "/signalk/v2/api/history/_providers"
+```
+
+_Response:_
+
+```JSON
+{
+  "signalk-to-influxdb2": {
+    "isDefault": true
+  },
+  "signalk-parquet": {
+    "isDefault": false
+  }
+}
+```
+
+### Getting the Default Provider
+
+To get the id of the _default_ provider, submit an HTTP `GET` request to `/signalk/v2/api/history/_providers/_default`.
+
+_Example:_
+
+```typescript
+HTTP GET "/signalk/v2/api/history/_providers/_default"
+```
+
+_Response:_
+
+```JSON
+{
+  "id": "signalk-to-influxdb2"
+}
+```
+
+### Setting the Default Provider
+
+To set / change the history provider that requests will be directed to, submit an HTTP `POST` request to `/signalk/v2/api/history/_providers/_default/{id}` where `{id}` is the identifier of the history provider to use as the _default_.
+
+_Example:_
+
+```typescript
+HTTP POST "/signalk/v2/api/history/_providers/_default/signalk-parquet"
 ```
