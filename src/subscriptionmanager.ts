@@ -55,7 +55,8 @@ class SubscriptionManager implements ISubscriptionManager {
     unsubscribes: Unsubscribes,
     errorCallback: (err: unknown) => void,
     callback: SubscribeCallback,
-    user?: string
+    user?: string,
+    sourcePolicy?: 'preferred' | 'all'
   ) {
     const contextFilter = contextMatcher(
       this.selfContext,
@@ -63,32 +64,40 @@ class SubscriptionManager implements ISubscriptionManager {
       command,
       errorCallback
     )
+    const useUnfiltered = sourcePolicy === 'all'
+    const buses = useUnfiltered
+      ? this.streambundle.unfilteredBuses
+      : this.streambundle.buses
     if (Array.isArray(command.subscribe)) {
       handleSubscribeRows(
         this.app,
         command.subscribe,
         unsubscribes,
-        this.streambundle.buses,
+        buses,
         contextFilter,
         callback,
         errorCallback,
-        user
+        user,
+        sourcePolicy
       )
       // listen to new keys and then use the same logic to check if we
       // want to subscribe, passing in a map with just that single bus
       unsubscribes.push(
         this.streambundle.keys.onValue((path) => {
-          const buses: BusesMap = {}
-          buses[path] = this.streambundle.getBus(path)
+          const newBuses: BusesMap = {}
+          newBuses[path] = useUnfiltered
+            ? this.streambundle.getUnfilteredBus(path)
+            : this.streambundle.getBus(path)
           handleSubscribeRows(
             this.app,
             command.subscribe,
             unsubscribes,
-            buses,
+            newBuses,
             contextFilter,
             callback,
             errorCallback,
-            user
+            user,
+            sourcePolicy
           )
         })
       )
@@ -103,7 +112,9 @@ class SubscriptionManager implements ISubscriptionManager {
       // 1. Announce ALL existing paths matching context (send cached deltas once)
       const existingDeltas = this.app.deltaCache.getCachedDeltas(
         contextFilter,
-        user
+        user,
+        undefined,
+        sourcePolicy
       )
       if (existingDeltas) {
         existingDeltas.forEach((delta: any) => {
@@ -130,7 +141,9 @@ class SubscriptionManager implements ISubscriptionManager {
           // Subscribe to the bus to get the first value for this new path
           // We can't rely on deltaCache here because it might not have
           // received the value yet (race condition with keys.onValue)
-          const bus = this.streambundle.getBus(path as Path)
+          const bus = useUnfiltered
+            ? this.streambundle.getUnfilteredBus(path as Path)
+            : this.streambundle.getBus(path as Path)
           const unsubscribeBus = bus
             .filter(contextFilter)
             .take(1) // Only take the first value
@@ -176,7 +189,8 @@ function handleSubscribeRows(
   filter: ContextMatcher,
   callback: SubscribeCallback,
   errorCallback: any,
-  user?: string
+  user?: string,
+  sourcePolicy?: 'preferred' | 'all'
 ) {
   rows.reduce((acc, subscribeRow) => {
     if (subscribeRow.path !== undefined) {
@@ -188,7 +202,8 @@ function handleSubscribeRows(
         filter,
         callback,
         errorCallback,
-        user
+        user,
+        sourcePolicy
       )
     }
     return acc
@@ -207,7 +222,8 @@ function handleSubscribeRow(
   filter: ContextMatcher,
   callback: SubscribeCallback,
   errorCallback: any,
-  user?: string
+  user?: string,
+  sourcePolicy?: 'preferred' | 'all'
 ) {
   const matcher = pathMatcher(subscribeRow.path)
   // iterate over all the buses, checking if we want to subscribe to its values
@@ -265,7 +281,12 @@ function handleSubscribeRow(
       }
       unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
 
-      const latest = app.deltaCache.getCachedDeltas(filter, user, key)
+      const latest = app.deltaCache.getCachedDeltas(
+        filter,
+        user,
+        key,
+        sourcePolicy
+      )
       if (latest) {
         latest.forEach(callback)
       }
