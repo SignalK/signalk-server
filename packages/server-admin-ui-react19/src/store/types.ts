@@ -112,6 +112,16 @@ export interface SourcePrioritiesData {
   saveState: SaveState
 }
 
+export interface SourceRankingEntry {
+  sourceRef: string
+  timeout: string | number
+}
+
+export interface SourceRankingData {
+  ranking: SourceRankingEntry[]
+  saveState: SaveState
+}
+
 export interface BackpressureWarning {
   accumulated: number
   duration: number
