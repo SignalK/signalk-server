@@ -261,6 +261,13 @@ export class WebSocketService {
             .setAppStore(data as Parameters<SignalKStore['setAppStore']>[0])
         })
         break
+      case 'PLUGINS_CHANGED':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setPlugins(data as Parameters<SignalKStore['setPlugins']>[0])
+        })
+        break
       default:
         console.debug('Unhandled server event:', eventType)
     }

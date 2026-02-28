@@ -131,6 +131,18 @@ export async function fetchAllData(): Promise<void> {
   ])
 }
 
+export async function fetchWebapps(): Promise<void> {
+  try {
+    const response = await authFetch(`${window.serverRoutesPrefix}/webapps`)
+    if (response.status === 200) {
+      const data = await response.json()
+      useStore.getState().setWebapps(data)
+    }
+  } catch (error) {
+    console.error('Failed to fetch /webapps:', error)
+  }
+}
+
 export function openServerEventsConnection(isReconnect?: boolean): void {
   webSocketService.connect(isReconnect)
 }
