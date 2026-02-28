@@ -141,7 +141,7 @@ const FieldTemplate = (props) => {
           {required && <span className="required">*</span>}
         </label>
       )}
-      {description && !isObject && (
+      {description && !isObject && !isCheckbox && (
         <p id={`${id}__description`} className={CSS_CLASSES.FIELD_DESCRIPTION}>
           {description}
         </p>
