@@ -161,13 +161,14 @@ const expectedOrder = [
 ]
 
 describe('Deltacache', () => {
-  let doStop, theServer
+  let doStop, theServer, doSendADelta
 
   before(() =>
     startServer().then((s) => {
       const { sendADelta, stop, server } = s
       doStop = stop
       theServer = server
+      doSendADelta = sendADelta
       return sendADelta(testDelta)
     })
   )
@@ -221,5 +222,101 @@ describe('Deltacache', () => {
       defaults: {},
       deltaFromHttp: {}
     })
+  })
+
+  it('ingestDelta stores all sources in cache', function () {
+    return doSendADelta({
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: 'gps.primary',
+          timestamp: '2024-01-15T10:30:00.000Z',
+          values: [
+            {
+              path: 'navigation.magneticVariation',
+              value: 0.12
+            }
+          ]
+        }
+      ]
+    })
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'gps.backup',
+              timestamp: '2024-01-15T10:30:01.000Z',
+              values: [
+                {
+                  path: 'navigation.magneticVariation',
+                  value: 0.13
+                }
+              ]
+            }
+          ]
+        })
+      )
+      .then(() => {
+        // Both sources should be in the cache (ingestDelta stores all)
+        const selfId = theServer.app.selfId
+        const leaf = _.get(theServer.app.deltaCache.cache, [
+          'vessels',
+          selfId,
+          'navigation',
+          'magneticVariation'
+        ])
+        leaf.should.have.property('gps.primary')
+        leaf.should.have.property('gps.backup')
+        leaf['gps.primary'].value.should.equal(0.12)
+        leaf['gps.backup'].value.should.equal(0.13)
+      })
+  })
+
+  it('getCachedDeltas returns only preferred source per path', function () {
+    // getCachedDeltas should return one delta per path (the preferred source)
+    const selfContext = 'vessels.' + theServer.app.selfId
+    const cachedDeltas = theServer.app.deltaCache.getCachedDeltas(
+      (d) => d.context === selfContext,
+      null
+    )
+    const magVarDeltas = cachedDeltas.filter(
+      (d) =>
+        d.updates[0].values &&
+        d.updates[0].values[0].path === 'navigation.magneticVariation'
+    )
+    // Should return exactly one delta for this path (the preferred source)
+    magVarDeltas.length.should.equal(1)
+  })
+
+  it('buildFull includes all sources in values object', function () {
+    const fullTree = theServer.app.deltaCache.buildFull(null, [])
+    const self = _.get(fullTree, fullTree.self)
+    const magVar = self.navigation.magneticVariation
+    // Top-level value should exist
+    magVar.should.have.property('value')
+    // Both sources should appear in .values
+    magVar.should.have.property('values')
+    magVar.values.should.have.property('gps.primary')
+    magVar.values.should.have.property('gps.backup')
+  })
+
+  it('getCachedDeltas with sourcePolicy=all returns all sources per path', function () {
+    const selfContext = 'vessels.' + theServer.app.selfId
+    const allDeltas = theServer.app.deltaCache.getCachedDeltas(
+      (d) => d.context === selfContext,
+      null,
+      undefined,
+      'all'
+    )
+    const magVarDeltas = allDeltas.filter(
+      (d) =>
+        d.updates[0].values &&
+        d.updates[0].values[0].path === 'navigation.magneticVariation'
+    )
+    // Should return deltas from both sources
+    magVarDeltas.length.should.equal(2)
+    const sources = magVarDeltas.map((d) => d.updates[0].$source).sort()
+    sources.should.deep.equal(['gps.backup', 'gps.primary'])
   })
 })

@@ -12,6 +12,11 @@ export interface SourcePrioritiesData {
   [path: string]: SourcePriority[]
 }
 
+export interface SourceRankingEntry {
+  sourceRef: SourceRef
+  timeout: number
+}
+
 interface PathValue {
   path: string
   value: any
@@ -51,6 +56,17 @@ const toPrecedences = (sourcePrioritiesMap: {
     new Map<Path, PathPrecedences>()
   )
 
+const toRankingPrecedences = (
+  ranking: SourceRankingEntry[]
+): Map<SourceRef, SourcePrecedenceData> =>
+  ranking.reduce<Map<SourceRef, SourcePrecedenceData>>(
+    (acc, { sourceRef, timeout }, i) => {
+      acc.set(sourceRef, { precedence: i, timeout })
+      return acc
+    },
+    new Map<SourceRef, SourcePrecedenceData>()
+  )
+
 export type ToPreferredDelta = (
   delta: any,
   now: Date,
@@ -59,13 +75,20 @@ export type ToPreferredDelta = (
 
 export const getToPreferredDelta = (
   sourcePrioritiesData: SourcePrioritiesData,
-  unknownSourceTimeout = 10000
+  sourceRanking?: SourceRankingEntry[],
+  unknownSourceTimeout = 120000
 ): ToPreferredDelta => {
-  if (!sourcePrioritiesData) {
-    debug('No priorities data')
+  if (!sourcePrioritiesData && (!sourceRanking || sourceRanking.length === 0)) {
+    debug('No priorities data and no source ranking')
     return (delta: any, _now: Date, _selfContext: string) => delta
   }
-  const precedences = toPrecedences(sourcePrioritiesData)
+  const precedences = sourcePrioritiesData
+    ? toPrecedences(sourcePrioritiesData)
+    : new Map<Path, PathPrecedences>()
+  const rankingPrecedences =
+    sourceRanking && sourceRanking.length > 0
+      ? toRankingPrecedences(sourceRanking)
+      : null
 
   const contextPathTimestamps = new Map<Context, PathLatestTimestamps>()
 
@@ -111,22 +134,48 @@ export const getToPreferredDelta = (
     timeout: unknownSourceTimeout
   }
 
+  const getPrecedence = (
+    path: Path,
+    sourceRef: SourceRef,
+    isLatest: boolean
+  ): SourcePrecedenceData => {
+    // Path-level config takes priority
+    const pathPrecedences = precedences.get(path)
+    if (pathPrecedences) {
+      const p = pathPrecedences.get(sourceRef)
+      if (p) return p
+      return isLatest ? HIGHESTPRECEDENCE : LOWESTPRECEDENCE
+    }
+    // Fall back to source-level ranking
+    if (rankingPrecedences) {
+      const p = rankingPrecedences.get(sourceRef)
+      if (p) return p
+      return isLatest ? HIGHESTPRECEDENCE : LOWESTPRECEDENCE
+    }
+    // No config at all — accept everything
+    return HIGHESTPRECEDENCE
+  }
+
   const isPreferredValue = (
     path: Path,
     latest: TimestampedSource,
     sourceRef: SourceRef,
     millis: number
   ) => {
-    const pathPrecedences: PathPrecedences | undefined = precedences.get(path)
+    const pathPrecedences = precedences.get(path)
 
-    if (!pathPrecedences) {
+    // No path-level config AND no source ranking → accept all
+    if (!pathPrecedences && !rankingPrecedences) {
       return true
     }
 
-    const latestPrecedence =
-      pathPrecedences.get(latest.sourceRef) || HIGHESTPRECEDENCE
-    const incomingPrecedence =
-      pathPrecedences.get(sourceRef) || LOWESTPRECEDENCE
+    const latestPrecedence = getPrecedence(path, latest.sourceRef, true)
+    const incomingPrecedence = getPrecedence(path, sourceRef, false)
+
+    // Negative timeout means the source is disabled — always reject
+    if (incomingPrecedence.timeout < 0) {
+      return false
+    }
 
     const latestIsFromHigherPrecedence =
       latestPrecedence.precedence < incomingPrecedence.precedence

@@ -37,6 +37,8 @@ export class StreamBundle implements IStreamBundle {
   availableSelfPaths: { [key: Path]: true }
   metaBus: Bacon.Bus<unknown, NormalizedMetaDelta>
   selfMetaBus: Bacon.Bus<unknown, NormalizedMetaDelta>
+  unfilteredBuses: { [key: Path]: Bacon.Bus<unknown, NormalizedDelta> }
+  unfilteredAllPathsBus: Bacon.Bus<unknown, NormalizedDelta>
 
   constructor(selfId: string) {
     this.selfContext = 'vessels.' + selfId
@@ -50,6 +52,8 @@ export class StreamBundle implements IStreamBundle {
     this.availableSelfPaths = {}
     this.metaBus = new Bacon.Bus()
     this.selfMetaBus = new Bacon.Bus()
+    this.unfilteredBuses = {}
+    this.unfilteredAllPathsBus = new Bacon.Bus()
   }
 
   pushDelta(delta: Delta) {
@@ -157,6 +161,49 @@ export class StreamBundle implements IStreamBundle {
       return result
     } else {
       return this.selfAllPathsBus
+    }
+  }
+
+  pushUnfilteredDelta(delta: Delta) {
+    try {
+      if (delta.updates) {
+        delta.updates.forEach((update) => {
+          const base = {
+            context: delta.context!,
+            source: update.source,
+            $source: update.$source!,
+            timestamp: update.timestamp!
+          }
+
+          if ('values' in update && update.values) {
+            update.values.forEach((pathValue) => {
+              const normalizedDelta: NormalizedDelta = {
+                ...base,
+                path: pathValue.path,
+                value: pathValue.value,
+                isMeta: false
+              }
+              this.getUnfilteredBus().push(normalizedDelta)
+              this.getUnfilteredBus(pathValue.path).push(normalizedDelta)
+            })
+          }
+        })
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  getUnfilteredBus(path?: Path) {
+    if (path !== undefined) {
+      let result = this.unfilteredBuses[path]
+      if (!result) {
+        result = this.unfilteredBuses[path] = new Bacon.Bus()
+        this.keys.push(path)
+      }
+      return result
+    } else {
+      return this.unfilteredAllPathsBus
     }
   }
 
