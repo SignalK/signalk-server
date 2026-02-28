@@ -3,6 +3,8 @@ title: Configuration
 children:
   - seatalk/README.md
   - nmea.md
+  - n2k-device-management.md
+  - source-priority.md
 ---
 
 # Configuring Signal K Server
@@ -49,6 +51,8 @@ The options presented will vary based on the data type chosen.
 
 Please refer to the [Canboat PGN database](https://canboat.github.io/canboat/canboat.html) to see what PGNs are supported.
 
+Once your NMEA 2000 devices are connected, you can view and manage them from _Data -> Source Discovery_ in the Admin UI. See [NMEA 2000 Device Management](./n2k-device-management.md) for details on device discovery, instance editing, and conflict detection.
+
 **_NMEA0183_**: The processing of NMEA0183 sentences is done by [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
 
 ### NMEA 0183 Options
@@ -86,6 +90,24 @@ To get the path for the sample file, data type NMEA 0183, use below command.
 ```
 sudo find / -name "plaka.log"
 ```
+
+## Exploring and Managing Data
+
+The _Data_ menu provides tools for viewing, inspecting, and managing your Signal K data:
+
+- **Data Browser** — Browse all Signal K data paths in real time with values, sources, and timestamps.
+
+- **Meta Data** — View and edit Signal K metadata (units, descriptions, display names, zones) for any path.
+
+- **Source Discovery** — View all data sources connected to the server. For NMEA 2000, this shows a detailed table of every device on the bus with manufacturer, model, and instance information. Includes instance conflict detection. See [NMEA 2000 Device Management](./n2k-device-management.md) for details.
+
+- **Source Priority** _(admin only)_ — Configure which source the server prefers when multiple sources provide the same data path. Includes global Source Ranking and per-path overrides. See [Source Priority](./source-priority.md) for details.
+
+- **Unit Preferences** — Configure automatic unit conversions (e.g. Kelvin to Celsius, m/s to knots) for the admin UI and WebSocket subscribers.
+
+- **Data Fiddler** _(admin only)_ — Manually set Signal K path values for testing.
+
+- **Data Connections** _(admin only)_ — Configure data connections (NMEA 2000, NMEA 0183, etc.). See the [Set up data connections](#set-up-data-connections) section above.
 
 ## Install Plugins and Webapps
 

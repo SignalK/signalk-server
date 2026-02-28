@@ -142,6 +142,32 @@ This is useful for:
 
 The announced deltas are regular delta messages - there's no special flag. Your client should track which paths it has seen and can then subscribe to specific ones as needed.
 
+### Source Policy: `sourcePolicy`
+
+When the server has [Source Priority](../../setup/source-priority.md) configured, subscriptions receive only the preferred source's data by default. You can override this with the `sourcePolicy` option:
+
+```javascript
+let localSubscription = {
+  context: '*',
+  sourcePolicy: 'all', // Receive data from ALL sources, not just preferred
+  subscribe: [
+    {
+      path: 'navigation.position',
+      period: 1000
+    }
+  ]
+}
+```
+
+| Value         | Behaviour                                                            |
+| ------------- | -------------------------------------------------------------------- |
+| `'preferred'` | Only deliver values from the preferred source (default)              |
+| `'all'`       | Deliver values from all sources regardless of priority configuration |
+
+Use `sourcePolicy: 'all'` when your plugin needs to see data from every source — for example, a display that compares readings from multiple sensors, or a data logger that records all sources.
+
+WebSocket clients can also set this via the connection URL query parameter: `?sourcePolicy=all` or `?sourcePolicy=preferred`.
+
 ## Sending Deltas
 
 A SignalK plugin can not only read deltas, but can also send them. This is done using the `handleMessage()` API method and supplying:
