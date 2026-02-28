@@ -19,9 +19,13 @@ import { createDebug } from './debug'
 const debug = createDebug('signalk-server:deltacache')
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import _, { isUndefined } from 'lodash'
+import { readFileSync, writeFile } from 'fs'
+import { join } from 'path'
 import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
 import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
+
+const SOURCES_CACHE_FILE = 'sources-cache.json'
 
 interface StringKeyed {
   [key: string]: any
@@ -38,12 +42,19 @@ export default class DeltaCache {
       [path: string]: string[]
     }
   } = {}
+  private sourcesCachePath: string | null = null
+  private saveTimer: ReturnType<typeof setTimeout> | null = null
+  private preferredSources: Map<string, SourceRef> = new Map()
+  private multiSourceTimer: ReturnType<typeof setTimeout> | null = null
+  private lastEmittedMultiSourceCount = 0
 
   constructor(app: SignalKServer, streambundle: StreamBundle) {
     this.app = app
     streambundle.keys.onValue((key) => {
       streambundle.getBus(key).onValue(this.onValue.bind(this))
     })
+
+    this.loadSourcesCache()
 
     // String.split() is heavy enough and called frequently enough
     // to warrant caching the result. Has a noticeable effect
@@ -96,6 +107,7 @@ export default class DeltaCache {
 
     if (msg.path.length !== 0) {
       leaf[sourceRef] = msg
+      this.preferredSources.set(msg.context + '\0' + msg.path, sourceRef)
     } else if (msg.value) {
       _.keys(msg.value).forEach((key) => {
         if (!leaf[key]) {
@@ -107,9 +119,167 @@ export default class DeltaCache {
     this.lastModifieds[msg.context] = Date.now()
   }
 
+  private scheduleMultiSourceEmit() {
+    if (this.multiSourceTimer) return
+    this.multiSourceTimer = setTimeout(() => {
+      this.multiSourceTimer = null
+      this.emitMultiSourcePaths()
+    }, 2000)
+  }
+
+  private emitMultiSourcePaths() {
+    const paths = this.getMultiSourcePaths()
+    const count = Object.keys(paths).length
+    const countChanged = count !== this.lastEmittedMultiSourceCount
+    this.lastEmittedMultiSourceCount = count
+    ;(this.app as any).emit('serverevent', {
+      type: 'MULTISOURCEPATHS',
+      data: paths
+    })
+    if (countChanged) {
+      this.scheduleMultiSourceEmit()
+    }
+  }
+
+  /**
+   * Remove all cached deltas for a given sourceRef and re-emit
+   * MULTISOURCEPATHS so the UI reflects the change.
+   */
+  removeSource(sourceRef: SourceRef) {
+    const removeFromNode = (node: any): void => {
+      for (const key of Object.keys(node)) {
+        if (key === 'meta') continue
+        const child = node[key]
+        if (!child || typeof child !== 'object') continue
+        if (child.path !== undefined && child.value !== undefined) {
+          if (key === sourceRef) delete node[key]
+        } else {
+          removeFromNode(child)
+        }
+      }
+    }
+    removeFromNode(this.cache)
+    for (const [key, ref] of this.preferredSources) {
+      if (ref === sourceRef) this.preferredSources.delete(key)
+    }
+    this.emitMultiSourcePaths()
+  }
+
+  ingestDelta(delta: any) {
+    if (!delta.updates) return
+    for (const update of delta.updates) {
+      if (!('values' in update) || !update.values) continue
+      const sourceRef: SourceRef = update.$source
+      for (const pathValue of update.values) {
+        if (pathValue.path.length === 0) continue
+        const msg = {
+          context: delta.context,
+          source: update.source,
+          $source: sourceRef,
+          timestamp: update.timestamp,
+          path: pathValue.path,
+          value: pathValue.value,
+          isMeta: false
+        } as NormalizedDelta
+        const leaf = getLeafObject(
+          this.cache,
+          this.getContextAndPathParts(msg),
+          true
+        )
+        const isNewSource = !leaf[sourceRef]
+        leaf[sourceRef] = msg
+
+        if (isNewSource) {
+          const sourceCount = Object.keys(leaf).filter((k) => {
+            const v = leaf[k]
+            return (
+              v &&
+              typeof v === 'object' &&
+              v.path !== undefined &&
+              v.value !== undefined
+            )
+          }).length
+          if (sourceCount >= 2) {
+            this.scheduleMultiSourceEmit()
+          }
+        }
+      }
+    }
+    if (delta.context) {
+      this.lastModifieds[delta.context] = Date.now()
+    }
+  }
+
   setSourceDelta(key: string, delta: any) {
     this.sourceDeltas[key] = delta
     this.app.signalk.addDelta(delta)
+    this.scheduleSaveSourcesCache()
+  }
+
+  private getSourcesCachePath(): string | null {
+    if (this.sourcesCachePath === null) {
+      const configPath = (this.app.config as any).configPath as
+        | string
+        | undefined
+      if (configPath) {
+        this.sourcesCachePath = join(configPath, SOURCES_CACHE_FILE)
+      }
+    }
+    return this.sourcesCachePath
+  }
+
+  private loadSourcesCache() {
+    const cachePath = this.getSourcesCachePath()
+    if (!cachePath) {
+      return
+    }
+    try {
+      const data = readFileSync(cachePath, 'utf-8')
+      const cached = JSON.parse(data)
+      if (cached && typeof cached === 'object') {
+        this.sourceDeltas = cached
+        const addDelta = this.app.signalk.addDelta.bind(this.app.signalk)
+        _.values(this.sourceDeltas).forEach(addDelta)
+        debug(
+          'Loaded %d cached sources from %s',
+          Object.keys(cached).length,
+          cachePath
+        )
+      }
+    } catch (e: any) {
+      if (e.code !== 'ENOENT') {
+        debug('Failed to load sources cache: %s', e.message)
+      }
+    }
+  }
+
+  private scheduleSaveSourcesCache() {
+    if (this.saveTimer) {
+      return
+    }
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null
+      this.saveSourcesCache()
+    }, 5000)
+  }
+
+  private saveSourcesCache() {
+    const cachePath = this.getSourcesCachePath()
+    if (!cachePath) {
+      return
+    }
+    const data = JSON.stringify(this.sourceDeltas, null, 2)
+    writeFile(cachePath, data, (err) => {
+      if (err) {
+        debug('Failed to save sources cache: %s', err.message)
+      } else {
+        debug(
+          'Saved %d sources to %s',
+          Object.keys(this.sourceDeltas).length,
+          cachePath
+        )
+      }
+    })
   }
 
   deleteContext(contextKey: string) {
@@ -151,6 +321,49 @@ export default class DeltaCache {
     )
   }
 
+  /**
+   * Return paths on the self vessel that have more than one source.
+   * Result: { path: sourceRef[] } for each multi-source path.
+   */
+  getMultiSourcePaths(): Record<string, string[]> {
+    const selfParts = this.app.selfContext.split('.')
+    let selfBranch = this.cache
+    for (const part of selfParts) {
+      if (!selfBranch || !selfBranch[part]) return {}
+      selfBranch = selfBranch[part]
+    }
+
+    const result: Record<string, string[]> = {}
+    const walk = (node: any, pathParts: string[]) => {
+      for (const key of Object.keys(node)) {
+        if (key === 'meta') continue
+        const child = node[key]
+        if (!child || typeof child !== 'object') continue
+        // Check if child is a leaf (NormalizedDelta) by looking for path+value
+        if (child.path !== undefined && child.value !== undefined) {
+          // This is a delta value at the parent level — parent is a leaf node
+          // Collect all sourceRef keys from the parent
+          const sources = Object.keys(node).filter((k) => {
+            const v = node[k]
+            return (
+              v &&
+              typeof v === 'object' &&
+              v.path !== undefined &&
+              v.value !== undefined
+            )
+          })
+          if (sources.length > 1) {
+            result[pathParts.join('.')] = sources
+          }
+          return // Don't recurse into delta objects
+        }
+        walk(child, [...pathParts, key])
+      }
+    }
+    walk(selfBranch, [])
+    return result
+  }
+
   getSources() {
     const signalk = new FullSignalK(this.app.selfId, this.app.selfType)
 
@@ -183,7 +396,33 @@ export default class DeltaCache {
     return signalk.retrieve()
   }
 
-  getCachedDeltas(contextFilter: ContextMatcher, user?: string, key?: string) {
+  private filterDeltasToPreferred(
+    deltas: NormalizedDelta[]
+  ): NormalizedDelta[] {
+    const byPath = new Map<string, NormalizedDelta>()
+    const result: NormalizedDelta[] = []
+    for (const d of deltas) {
+      if (d.path.length === 0) {
+        result.push(d)
+        continue
+      }
+      const key = d.context + '\0' + d.path
+      const preferred = this.preferredSources.get(key)
+      if (preferred === d.$source) {
+        byPath.set(key, d)
+      } else if (!byPath.has(key)) {
+        byPath.set(key, d)
+      }
+    }
+    return result.concat(Array.from(byPath.values()))
+  }
+
+  getCachedDeltas(
+    contextFilter: ContextMatcher,
+    user?: string,
+    key?: string,
+    sourcePolicy?: 'preferred' | 'all'
+  ) {
     const contexts: Context[] = []
     _.keys(this.cache).forEach((type) => {
       _.keys(this.cache[type]).forEach((id) => {
@@ -217,13 +456,16 @@ export default class DeltaCache {
       []
     )
 
-    deltas.sort((left, right) => {
+    const preferred =
+      sourcePolicy === 'all' ? deltas : this.filterDeltasToPreferred(deltas)
+
+    preferred.sort((left, right) => {
       return (
         new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
       )
     })
 
-    return deltas.map(toDelta).filter((delta) => {
+    return preferred.map(toDelta).filter((delta) => {
       return this.app.securityStrategy.filterReadDelta(user, delta)
     })
   }
