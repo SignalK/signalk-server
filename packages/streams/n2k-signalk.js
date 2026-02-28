@@ -97,7 +97,7 @@ ToSignalK.prototype.isFiltered = function (source) {
   return (
     this.filters &&
     this.filters.find((filter) => {
-      const sFilter = this.options.useCanName ? source.canName : source.src
+      const sFilter = source.canName || source.src
       return (
         (!filter.source ||
           filter.source.length === 0 ||
@@ -124,17 +124,9 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
       delta.updates[0].values.length > 0 &&
       !this.isFiltered(delta.updates[0].source)
     ) {
-      if (!this.options.useCanName) {
-        delete delta.updates[0].source.canName
-      }
-
       const canName = delta.updates[0].source.canName
 
-      if (
-        this.options.useCanName &&
-        !canName &&
-        !this.sourceMeta[src].unknowCanName
-      ) {
+      if (!canName && !this.sourceMeta[src].unknowCanName) {
         done()
         return
       }
