@@ -658,37 +658,12 @@ class Suppress0183Checkbox extends Component {
   }
 }
 
-class UseCanNameInput extends Component {
-  render() {
-    return (
-      <FormGroup row>
-        <Col xs="3" md="3">
-          <Label>Use Can NAME in source data</Label>
-        </Col>
-        <Col xs="2" md="3">
-          <Label className="switch switch-text switch-primary">
-            <Input
-              type="checkbox"
-              name="options.useCanName"
-              className="switch-input"
-              onChange={(event) => this.props.onChange(event)}
-              checked={this.props.value.useCanName}
-            />
-            <span className="switch-label" data-on="Yes" data-off="No" />
-            <span className="switch-handle" />
-          </Label>
-        </Col>
-      </FormGroup>
-    )
-  }
-}
-
 class CamelCaseCompatInput extends Component {
   render() {
     return (
       <FormGroup row>
         <Col xs="3" md="3">
-          <Label>CamcelCase Compat (for legacy N2K plugins)</Label>
+          <Label>CamelCase Compat (for legacy N2K plugins)</Label>
         </Col>
         <Col xs="2" md="3">
           <Label className="switch switch-text switch-primary">
@@ -867,7 +842,6 @@ const NMEA2000 = (props) => {
           />
         </div>
       )}
-      <UseCanNameInput value={props.value.options} onChange={props.onChange} />
       {props.value.options.type !== undefined &&
         props.value.options.type.indexOf('canboatjs') !== -1 && (
           <CamelCaseCompatInput
