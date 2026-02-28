@@ -56,7 +56,7 @@ export interface StreamBundle {
    *
    * @param path - If it is not provided the returned stream produces values for all paths.
    */
-  getBus(path?: Path): Bacon.Bus<unknown, NormalizedDelta>
+  getBus(path?: Path): Bacon.Bus<NormalizedDelta>
 
   /**
    * Get a [Bacon JS](https://baconjs.github.io/) stream for path from the `vessels.self` context.
@@ -99,7 +99,7 @@ export interface StreamBundle {
    *
    * @param path - If it is not provided the returned stream produces values for all paths.
    */
-  getSelfBus(path: Path): Bacon.Bus<unknown, NormalizedDelta>
+  getSelfBus(path: Path): Bacon.Bus<NormalizedDelta>
 
   /**
    * Get a [Bacon JS](https://baconjs.github.io/) stream for a path in the `vessels.self` context.
@@ -122,7 +122,7 @@ export interface StreamBundle {
    *
    * @param path - If it is not provided the returned stream produces values for all paths.
    */
-  getSelfStream(path?: Path): Bacon.Bus<unknown, Value>
+  getSelfStream(path?: Path): Bacon.Bus<Value>
 
   /**
    * Get a list of available full data model paths maintained by the server.

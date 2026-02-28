@@ -22,7 +22,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",
-    "baconjs": "^1.0.1"
+    "baconjs": "^3.0.0"
   },
   "devDependencies": {
     "ts-auto-guard": "^5.0.1"
