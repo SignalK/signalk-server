@@ -150,6 +150,20 @@ module.exports = (theApp: any) => {
     )
   }
 
+  function emitPluginsChanged() {
+    getPluginResponseInfos()
+      .then((plugins) => {
+        theApp.emit('serverevent', {
+          type: 'PLUGINS_CHANGED',
+          from: 'signalk-server',
+          data: plugins
+        })
+      })
+      .catch((err) => {
+        console.error('Failed to emit PLUGINS_CHANGED:', err)
+      })
+  }
+
   function getPluginsList(enabled?: boolean) {
     return getPluginResponseInfos().then((pa) => {
       const res = pa.map((p: any) => {
@@ -791,9 +805,8 @@ module.exports = (theApp: any) => {
           console.error(err)
         } else {
           stopPlugin(plugin).then(() => {
-            return Promise.resolve(
-              doPluginStart(app, plugin, location, newConfiguration, restart)
-            )
+            doPluginStart(app, plugin, location, newConfiguration, restart)
+            emitPluginsChanged()
           })
         }
       })
@@ -865,6 +878,7 @@ module.exports = (theApp: any) => {
           if (options.enabled) {
             doPluginStart(app, plugin, location, options.configuration, restart)
           }
+          emitPluginsChanged()
         })
       })
     })
