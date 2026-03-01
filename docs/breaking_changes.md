@@ -8,6 +8,46 @@ This document lists breaking changes and deprecations in Signal K Server.
 
 ---
 
+## NMEA 2000 Source Identification: CAN Name
+
+NMEA 2000 sources are now identified by their **CAN Name** instead of the N2K source address. The CAN Name is a stable, globally unique identifier derived from the device's ISO Address Claim (PGN 60928).
+
+### What Changed
+
+| Before                                                | After                                         |
+| ----------------------------------------------------- | --------------------------------------------- |
+| `$source = "can0.22"`                                 | `$source = "can0.Furuno_SCX-20"`              |
+| Source address changes when devices are added/removed | CAN Name is stable regardless of bus topology |
+
+### Impact
+
+- **Source Priority configuration** — Existing `sourcePriorities` entries in `settings.json` that reference old-style source addresses (e.g. `can0.22`) will no longer match. You will need to reconfigure source priorities using the new CAN Name identifiers via _Data -> Source Priority_ in the Admin UI.
+
+- **Security ACLs** — If you have ACL rules that filter by `$source` (e.g. `"sources": ["can0.22"]`), these need to be updated to use the CAN Name format.
+
+- **Plugins** — Plugins that compare or store `$source` values for N2K devices should be aware that the format has changed. Plugin-originated sources (using `app.handleMessage(plugin.id, ...)`) are not affected.
+
+- **WebSocket clients** — Clients that parse or filter by `$source` will see the new format for N2K sources.
+
+### Migration
+
+Open _Data -> Source Priority_ in the Admin UI to reconfigure priorities with the new identifiers. The Source Ranking and Path-Level Override dropdowns show the device manufacturer and model name alongside the CAN Name, making it easy to identify devices.
+
+---
+
+## Source Priority: All Source Data Preserved
+
+Previously, the source priority engine discarded data from non-preferred sources entirely — it never reached the delta cache, data model, or WebSocket subscribers. Lower-priority sensors were invisible to the server and all clients.
+
+Now, **all source data is preserved** in the server's data model. The priority engine filters at the subscription level rather than at ingest time. This means:
+
+- All sources are stored in the delta cache and available via the REST API at `/signalk/v1/api/`
+- WebSocket subscribers receive preferred-source data by default, but can opt in to all sources with `sourcePolicy=all`
+
+This is a behavioral change — plugins and clients that previously only saw the preferred source's data may now see additional sources when querying the data model directly. WebSocket subscriptions are not affected unless `sourcePolicy=all` is explicitly requested.
+
+---
+
 ## Admin UI: React 19 Migration
 
 The Admin UI has been upgraded from React 16 to **React 19**. This is a significant update that may affect embedded webapps and plugin configuration panels.

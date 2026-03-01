@@ -19,6 +19,7 @@ import type {
   LogState,
   LogEntry
 } from '../types'
+import type { SourcesData } from '../../utils/sourceLabels'
 
 const convert = new Convert()
 let logEntryCount = 0
@@ -60,6 +61,9 @@ export interface AppSliceState {
   backpressureWarning: BackpressureWarning | null
   serverStatistics: ServerStatistics | null
   providerStatus: ProviderStatus[]
+  sourcesData: SourcesData | null
+  sourceAliases: Record<string, string>
+  multiSourcePaths: Record<string, string[]>
 }
 
 export interface AppSliceActions {
@@ -77,6 +81,9 @@ export interface AppSliceActions {
   setRestoreStatus: (status: RestoreStatus) => void
   setVesselInfo: (info: VesselInfo) => void
   setBackpressureWarning: (warning: BackpressureWarning | null) => void
+  setSourcesData: (data: SourcesData) => void
+  setSourceAliases: (aliases: Record<string, string>) => void
+  setMultiSourcePaths: (paths: Record<string, string[]>) => void
   setDebugSettings: (settings: {
     debugEnabled?: string
     rememberDebug?: boolean
@@ -116,7 +123,10 @@ const initialAppState: AppSliceState = {
   vesselInfo: {},
   backpressureWarning: null,
   serverStatistics: null,
-  providerStatus: []
+  providerStatus: [],
+  sourcesData: null,
+  sourceAliases: {},
+  multiSourcePaths: {}
 }
 
 export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
@@ -189,6 +199,18 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setBackpressureWarning: (backpressureWarning) => {
     set({ backpressureWarning })
+  },
+
+  setSourcesData: (sourcesData) => {
+    set({ sourcesData })
+  },
+
+  setSourceAliases: (sourceAliases) => {
+    set({ sourceAliases })
+  },
+
+  setMultiSourcePaths: (multiSourcePaths) => {
+    set({ multiSourcePaths })
   },
 
   setDebugSettings: (settings) => {

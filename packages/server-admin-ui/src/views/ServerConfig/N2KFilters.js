@@ -41,9 +41,7 @@ class N2KFilters extends Component {
   }
 
   render() {
-    const sourceName = this.props.value.options.useCanName
-      ? 'Can NAME'
-      : 'Address'
+    const sourceName = 'Can NAME'
     return (
       <div>
         <Card>

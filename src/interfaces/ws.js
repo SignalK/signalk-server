@@ -199,6 +199,7 @@ module.exports = function (app) {
         )
 
         spark.sendMetaDeltas = spark.query.sendMeta === 'all'
+        spark.sourcePolicy = spark.query.sourcePolicy || 'preferred'
         spark.sentMetaData = {}
 
         // Initialize backpressure state for graceful degradation on slow connections
@@ -741,7 +742,8 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
 
         assertBufferSize(spark)
       },
-      spark.request.skPrincipal
+      spark.request.skPrincipal,
+      msg.sourcePolicy || spark.sourcePolicy
     )
   }
 }
@@ -831,9 +833,10 @@ function handlePlaybackConnection(app, spark, onChange) {
 function handleRealtimeConnection(app, spark, onChange) {
   sendHello(app, {}, spark)
 
-  app.signalk.on('delta', onChange)
+  const deltaEvent = spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
+  app.signalk.on(deltaEvent, onChange)
   spark.onDisconnects.push(() => {
-    app.signalk.removeListener('delta', onChange)
+    app.signalk.removeListener(deltaEvent, onChange)
   })
 
   if (spark.sendMetaDeltas) {
@@ -908,7 +911,12 @@ function sendLatestDeltas(app, deltaCache, selfContext, spark) {
   }
 
   deltaCache
-    .getCachedDeltas(deltaFilter, spark.request.skPrincipal)
+    .getCachedDeltas(
+      deltaFilter,
+      spark.request.skPrincipal,
+      undefined,
+      spark.sourcePolicy
+    )
     .forEach((delta) => {
       sendMetaData(app, spark, delta)
       spark.write(delta)

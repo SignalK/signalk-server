@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
+import SourceLabel from './SourceLabel'
 import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
 import {
   usePresetDetails,
@@ -11,6 +12,7 @@ import {
 import type { PathData, MetaData } from '../../store'
 import { convertValue } from '../../utils/unitConversion'
 import type { DefaultCategories } from '../../store/slices/unitPreferencesSlice'
+import type { SourcesData } from '../../utils/sourceLabels'
 
 interface DataRowProps {
   path$SourceKey: string
@@ -18,9 +20,10 @@ interface DataRowProps {
   index: number
   raw: boolean
   isPaused: boolean
-  onToggleSource: (source: string) => void
-  selectedSources: Set<string>
   showContext: boolean
+  sourceCountsByPath: Map<string, number>
+  sourcesData: SourcesData | null
+  configuredPriorityPaths: Set<string>
 }
 
 interface ValueRendererProps {
@@ -62,9 +65,10 @@ function DataRow({
   index,
   raw,
   isPaused,
-  onToggleSource,
-  selectedSources,
-  showContext
+  showContext,
+  sourceCountsByPath,
+  sourcesData,
+  configuredPriorityPaths
 }: DataRowProps) {
   // When showContext is true, path$SourceKey is a composite key: context\0realKey
   const nullIdx = showContext ? path$SourceKey.indexOf('\0') : -1
@@ -149,6 +153,7 @@ function DataRow({
   const path = data.path ?? ''
   const source = data.$source ?? ''
   const timestamp = data.timestamp ?? ''
+  const sourceCount = path ? sourceCountsByPath.get(path) || 1 : 1
 
   return (
     <div
@@ -183,23 +188,27 @@ function DataRow({
       <TimestampCell timestamp={timestamp} isPaused={isPaused} />
 
       <div className="virtual-table-cell source-cell" data-label="Source">
-        <label style={{ display: 'inline', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            onChange={() => onToggleSource(source)}
-            checked={selectedSources.has(source)}
-            aria-label={`Select source ${source}`}
-            style={{
-              marginRight: '5px',
-              verticalAlign: 'middle'
-            }}
-          />
-        </label>
         <CopyToClipboardWithFade text={source}>
-          {source} <span className="copy-icon" aria-hidden="true" />
+          <SourceLabel sourceRef={source} sourcesData={sourcesData} />{' '}
+          <span className="copy-icon" aria-hidden="true" />
         </CopyToClipboardWithFade>{' '}
         {data.pgn && <span>&nbsp;{data.pgn}</span>}
         {data.sentence && <span>&nbsp;{data.sentence}</span>}
+        {sourceCount > 1 && !configuredPriorityPaths.has(path) && (
+          <a
+            href={`#/data/priorities?path=${encodeURIComponent(path)}`}
+            style={{
+              marginLeft: '4px',
+              fontSize: '0.7em',
+              color: 'var(--bs-danger, #d9534f)',
+              fontWeight: 600,
+              textDecoration: 'none'
+            }}
+            title={`${sourceCount} sources — no priority configured. Click to configure.`}
+          >
+            &#9888; 1/{sourceCount}
+          </a>
+        )}
       </div>
     </div>
   )

@@ -55,11 +55,11 @@
     minmax(120px, 1.2fr);
   border-bottom: 1px solid var(--bs-border-color, #c2cfd6);
   font-size: 0.875rem;
-  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-block-size: 40px;
 }
 
 .virtual-table-row[data-raw-row='true'] {
-  content-visibility: auto;
   contain-intrinsic-block-size: 150px;
 }
 

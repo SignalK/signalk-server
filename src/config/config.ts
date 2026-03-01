@@ -82,6 +82,10 @@ export interface Config {
     enablePluginLogging?: boolean
     loggingDirectory?: string
     sourcePriorities?: any
+    sourceRanking?: any
+
+    sourceAliases?: Record<string, any>
+    ignoredInstanceConflicts?: Record<string, string>
     trustProxy?: boolean | string | number
     courseApi?: {
       apiOnly?: boolean

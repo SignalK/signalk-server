@@ -43,3 +43,5 @@ candump can0
 You should see NMEA 2000 data scrolling off the screen. Press `Ctrl-c` to exit candump.
 
 After confirming you have NMEA data, you can [set up data connections the Signal K server](./configuration.md#set-up-data-connections) to read the data.
+
+Once your data connection is configured, see [NMEA 2000 Device Management](./n2k-device-management.md) for discovering devices, managing instance numbers, and resolving instance conflicts.

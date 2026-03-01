@@ -287,6 +287,16 @@ module.exports = function (
     '/../node_modules/@signalk/server-admin-ui-react19/public'
   )
   app.get(
+    '/@signalk/server-admin-ui-react19',
+    (req: Request, res: Response) => {
+      if (!req.path.endsWith('/')) {
+        res.redirect(req.path + '/')
+        return
+      }
+      serveIndexWithAddonScripts(path.join(react19UiPath, 'index.html'), res)
+    }
+  )
+  app.get(
     '/@signalk/server-admin-ui-react19/',
     (req: Request, res: Response) => {
       if (!req.originalUrl.endsWith('/')) {
@@ -1042,6 +1052,13 @@ module.exports = function (
     }
   )
 
+  app.get(
+    `${SERVERROUTESPREFIX}/multiSourcePaths`,
+    (req: Request, res: Response) => {
+      res.json(app.deltaCache.getMultiSourcePaths())
+    }
+  )
+
   app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/eventsRoutingData`
   )
@@ -1088,6 +1105,79 @@ module.exports = function (
           res
             .status(500)
             .send('Unable to save to sourcePrefences in settings file')
+        } else {
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/sourceRanking`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.sourceRanking || [])
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/sourceRanking`,
+    (req: Request, res: Response) => {
+      app.config.settings.sourceRanking = req.body
+      app.activateSourcePriorities()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, app.config.settings, (err: any) => {
+        if (err) {
+          res.status(500).send('Unable to save sourceRanking in settings file')
+        } else {
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/sourceAliases`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.sourceAliases || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/sourceAliases`,
+    (req: Request, res: Response) => {
+      app.config.settings.sourceAliases = req.body
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, app.config.settings, (err: any) => {
+        if (err) {
+          res.status(500).send('Unable to save sourceAliases in settings file')
+        } else {
+          app.emit('serverAdminEvent', {
+            type: 'SOURCEALIASES',
+            data: req.body
+          })
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.ignoredInstanceConflicts || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`,
+    (req: Request, res: Response) => {
+      app.config.settings.ignoredInstanceConflicts = req.body
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, app.config.settings, (err: any) => {
+        if (err) {
+          res
+            .status(500)
+            .send('Unable to save ignoredInstanceConflicts in settings file')
         } else {
           res.json({ result: 'ok' })
         }

@@ -11,7 +11,6 @@ import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
 import { useStore } from '../../store'
 
 import BasicProvider from './BasicProvider'
-import SourcePriorities from './SourcePriorities'
 import set from 'lodash.set'
 
 interface Provider {
@@ -184,7 +183,7 @@ const ProvidersConfiguration: React.FC = () => {
 
       setSelectedProvider(null)
       setSelectedIndex(-1)
-      navigate('/serverConfiguration/connections/-')
+      navigate('/data/connections/-')
     } else {
       const text = await response.text()
       alert(text)
@@ -380,8 +379,6 @@ const ProvidersConfiguration: React.FC = () => {
           </Card>
         </div>
       )}
-
-      <SourcePriorities />
     </div>
   )
 }
