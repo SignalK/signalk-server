@@ -259,7 +259,7 @@ jobs:
           mkdir -p /tmp/tags
           echo "${{ steps.docker_meta.outputs.tags }}" > /tmp/tags/${{ matrix.node_safe }}.txt
       - name: Upload tag artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-tag-${{ matrix.node_safe }}
           path: /tmp/tags/${{ matrix.node_safe }}.txt
