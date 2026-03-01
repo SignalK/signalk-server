@@ -188,17 +188,21 @@ export function start(app: PutApp): void {
     }
 
     // Validate displayUnits.category if present
-    if ((metaValue as any).displayUnits?.category) {
+    const displayUnits = metaValue.displayUnits as
+      | { category?: string }
+      | undefined
+    if (displayUnits?.category) {
       const schemaMeta = getMetadata('vessels.self.' + metaPath) as Record<
         string,
         unknown
       > | null
       // Allow override: use PUT's units if provided, otherwise use schema's units
       const pathSiUnit =
-        (metaValue as any).units || (schemaMeta as any)?.units
+        (metaValue.units as string | undefined) ||
+        (schemaMeta?.units as string | undefined)
       const validationError = validateCategoryAssignment(
         pathSiUnit,
-        (metaValue as any).displayUnits.category
+        displayUnits.category
       )
       if (validationError) {
         return {
