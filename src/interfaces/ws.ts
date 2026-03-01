@@ -39,6 +39,7 @@ import {
   buildFlushDeltas
 } from '../LatestValuesAccumulator'
 import { getExternalPort } from '../ports'
+import { resolveDisplayUnits, getDefaultCategory } from '../unitpreferences'
 
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
@@ -215,10 +216,14 @@ interface WsApp {
   server: unknown
   config: WsAppConfig
   selfContext: string
+  selfId: string
   securityStrategy: SecurityStrategy
   subscriptionmanager: SubscriptionManager
   historyProvider?: HistoryProvider
   deltaCache: DeltaCache
+  streambundle: {
+    getAvailablePaths: () => string[]
+  }
   signalk: {
     on: (event: string, handler: (delta: Delta) => void) => void
     removeListener: (event: string, handler: (delta: Delta) => void) => void
@@ -885,8 +890,28 @@ function handleValuesMeta(
         break
       } else {
         this.spark.sentMetaData[partialContextPathKey] = true
-        const meta = getMetadata(partialContextPathKey)
+        let meta = getMetadata(partialContextPathKey)
         if (meta) {
+          // Clone and enhance metadata with displayUnits formulas
+          meta = JSON.parse(JSON.stringify(meta))
+          let storedDisplayUnits = meta.displayUnits
+          if (!storedDisplayUnits?.category && path) {
+            const defaultCategory = getDefaultCategory(path)
+            if (defaultCategory) {
+              storedDisplayUnits = { category: defaultCategory }
+            }
+          }
+          if (storedDisplayUnits?.category) {
+            const username = this.spark.request.skPrincipal?.identifier
+            const enhanced = resolveDisplayUnits(
+              storedDisplayUnits,
+              meta.units,
+              username
+            )
+            if (enhanced) {
+              meta.displayUnits = enhanced
+            }
+          }
           this.spark.write({
             context: this.context,
             updates: [
@@ -1099,6 +1124,52 @@ function handleRealtimeConnection(
   spark.onDisconnects.push(() => {
     app.signalk.removeListener('delta', onChange)
   })
+
+  if (spark.sendMetaDeltas) {
+    const onUnitPrefsChanged = (event: unknown) => {
+      const username = spark.request.skPrincipal?.identifier
+      const evt = event as { username?: string } | undefined
+      if (evt?.username && evt.username !== username) return
+
+      const allPaths = app.streambundle.getAvailablePaths()
+      const meta = allPaths.reduce(
+        (
+          acc: Array<{ path: string; value: Record<string, unknown> }>,
+          path: string
+        ) => {
+          const fullPath = 'vessels.self.' + path
+          const pathMeta = getMetadata(fullPath) || {}
+          const category =
+            pathMeta.displayUnits?.category || getDefaultCategory(path)
+          if (category) {
+            const displayUnits = resolveDisplayUnits(
+              { category },
+              pathMeta.units,
+              username
+            )
+            if (displayUnits) {
+              acc.push({ path, value: { ...pathMeta, displayUnits } })
+            }
+          }
+          return acc
+        },
+        []
+      )
+
+      if (meta.length > 0) {
+        const timestamp = new Date().toISOString()
+        spark.write({
+          context: 'vessels.' + app.selfId,
+          updates: [{ timestamp, meta }]
+        })
+      }
+    }
+
+    app.on('unitpreferencesChanged', onUnitPrefsChanged)
+    spark.onDisconnects.push(() => {
+      app.removeListener('unitpreferencesChanged', onUnitPrefsChanged)
+    })
+  }
 
   if (spark.request.query?.sendCachedValues !== 'false') {
     sendLatestDeltas(app, app.deltaCache, app.selfContext, spark)
