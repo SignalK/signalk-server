@@ -20,7 +20,8 @@ declare module 'primus' {
       event: 'connection' | 'disconnection',
       handler: (spark: unknown) => void
     ): void
-    forEach(fn: (spark: unknown) => boolean): void
+    once(event: string, handler: (...args: unknown[]) => void): void
+    forEach(fn: (spark: unknown) => void): void
     destroy(
       options: { close: boolean; timeout: number; reconnect?: boolean },
       fn?: () => void
