@@ -16,6 +16,7 @@ export interface DefaultCategories {
 
 export interface UnitPreferencesSliceState {
   activePreset: string
+  serverDefaultPreset: string
   presets: PresetInfo[]
   presetDetails: PresetDetails | null
   unitDefinitions: UnitDefinitions | null
@@ -28,6 +29,7 @@ export interface UnitPreferencesSliceActions {
   fetchUnitPreferences: () => Promise<void>
   fetchPresetDetails: (presetName: string) => Promise<void>
   setActivePresetAndSave: (preset: string) => Promise<void>
+  setServerDefaultPreset: (preset: string) => Promise<void>
   setPresets: (presets: PresetInfo[]) => void
   setActivePreset: (preset: string) => void
   setUnitDefinitions: (defs: UnitDefinitions) => void
@@ -108,8 +110,24 @@ async function fetchActivePresetFromServer(): Promise<string> {
   return 'nautical-metric'
 }
 
+async function fetchServerDefaultPresetFromServer(): Promise<string> {
+  try {
+    const response = await fetch('/signalk/v1/unitpreferences/config', {
+      credentials: 'include'
+    })
+    if (response.ok) {
+      const config = await response.json()
+      return config.activePreset || 'nautical-metric'
+    }
+  } catch (e) {
+    console.error('Failed to fetch server default preset:', e)
+  }
+  return 'nautical-metric'
+}
+
 const initialState: UnitPreferencesSliceState = {
   activePreset: 'nautical-metric',
+  serverDefaultPreset: 'nautical-metric',
   presets: DEFAULT_PRESETS,
   presetDetails: null,
   unitDefinitions: null,
@@ -127,9 +145,10 @@ export const createUnitPreferencesSlice: StateCreator<
   ...initialState,
 
   fetchUnitPreferences: async () => {
-    const [presets, activePreset] = await Promise.all([
+    const [presets, activePreset, serverDefaultPreset] = await Promise.all([
       fetchPresetsFromServer(),
-      fetchActivePresetFromServer()
+      fetchActivePresetFromServer(),
+      fetchServerDefaultPresetFromServer()
     ])
 
     const [definitions, defaultCategories, categories] = await Promise.all([
@@ -154,6 +173,7 @@ export const createUnitPreferencesSlice: StateCreator<
     set({
       presets,
       activePreset,
+      serverDefaultPreset,
       unitDefinitions: definitions,
       defaultCategories,
       categories,
@@ -191,6 +211,20 @@ export const createUnitPreferencesSlice: StateCreator<
       console.error('Failed to set unit preferences:', e)
     }
     await get().fetchPresetDetails(preset)
+  },
+
+  setServerDefaultPreset: async (preset: string) => {
+    try {
+      await fetch('/signalk/v1/unitpreferences/config', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activePreset: preset })
+      })
+      set({ serverDefaultPreset: preset })
+    } catch (e) {
+      console.error('Failed to set server default preset:', e)
+    }
   },
 
   setPresets: (presets) => {
