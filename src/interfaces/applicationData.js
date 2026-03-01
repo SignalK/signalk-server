@@ -25,6 +25,24 @@ const semver = require('semver')
 
 const prefix = '/signalk/v1/applicationData'
 
+// Per-file write lock to prevent concurrent read-modify-write races
+const writeLocks = new Map()
+function withFileLock(filePath, fn) {
+  const previous = writeLocks.get(filePath) || Promise.resolve()
+  const done = previous.then(fn, fn)
+  const cleanup = done.then(
+    () => {},
+    () => {}
+  )
+  writeLocks.set(filePath, cleanup)
+  cleanup.then(() => {
+    if (writeLocks.get(filePath) === cleanup) {
+      writeLocks.delete(filePath)
+    }
+  })
+  return done
+}
+
 const DANGEROUS_PATH_SEGMENTS = ['__proto__', 'constructor', 'prototype']
 
 function isPrototypePollutionPath(pathString) {
@@ -165,35 +183,39 @@ module.exports = function (app) {
       return
     }
 
-    let applicationData = readApplicationData(req, appid, version, isUser)
-
-    if (req.params[0] && req.params[0].length !== 0) {
-      const dataPath = req.params[0].replace(/\//g, '.')
-      if (isPrototypePollutionPath(dataPath)) {
-        res.status(400).send('invalid path')
-        return
-      }
-      _.set(applicationData, dataPath, req.body)
-    } else if (_.isArray(req.body)) {
-      if (hasPrototypePollutionPatch(req.body)) {
-        res.status(400).send('invalid patch path')
-        return
-      }
-      jsonpatch.apply(applicationData, req.body)
-    } else {
-      applicationData = req.body
-    }
+    const filePath = pathForApplicationData(req, appid, version, isUser)
 
     try {
-      await saveApplicationData(req, appid, version, isUser, applicationData)
-      // Emit event when user's unit preferences change
-      if (isUser && appid === 'unitpreferences') {
-        app.emit('unitpreferencesChanged', {
-          type: 'user',
-          username: req.skPrincipal.identifier
-        })
-      }
-      res.json('ApplicationData saved')
+      await withFileLock(filePath, async () => {
+        let applicationData = readApplicationData(req, appid, version, isUser)
+
+        if (req.params[0] && req.params[0].length !== 0) {
+          const dataPath = req.params[0].replace(/\//g, '.')
+          if (isPrototypePollutionPath(dataPath)) {
+            res.status(400).send('invalid path')
+            return
+          }
+          _.set(applicationData, dataPath, req.body)
+        } else if (_.isArray(req.body)) {
+          if (hasPrototypePollutionPatch(req.body)) {
+            res.status(400).send('invalid patch path')
+            return
+          }
+          jsonpatch.apply(applicationData, req.body)
+        } else {
+          applicationData = req.body
+        }
+
+        await saveApplicationData(req, appid, version, isUser, applicationData)
+        // Emit event when user's unit preferences change
+        if (isUser && appid === 'unitpreferences') {
+          app.emit('unitpreferencesChanged', {
+            type: 'user',
+            username: req.skPrincipal.identifier
+          })
+        }
+        res.json('ApplicationData saved')
+      })
     } catch (err) {
       console.log(err)
       res.status(500).send(err.message)
