@@ -232,7 +232,7 @@ function tokenSecurityFactory(
   } = config
 
   const {
-    allow_readonly = true,
+    allow_readonly = false,
     secretKey = process.env.SECRETKEY || randomBytes(256).toString('hex'),
     devices = [],
     acls = []

@@ -48,6 +48,21 @@ Plugin configuration panels using `./PluginConfigurationPanel` export continue t
 
 ---
 
+## Security: Anonymous Read Access Disabled by Default
+
+When security is first enabled on a new installation, `allow_readonly` now defaults to `false`. Previously it defaulted to `true`, meaning anyone could read all Signal K data without authentication.
+
+### Impact
+
+- **New installations** will require authentication for all access, including read-only. Devices like chart plotters and instrument displays that previously worked without a token will need to be configured with access credentials.
+- **Existing installations** are **not affected** — the `allow_readonly` value is already written explicitly in `security.json` and will be preserved.
+
+### Mitigation
+
+During initial security setup, the Enable Security dialog offers an **"Allow Readonly Access"** checkbox to opt in. Alternatively, you can enable it at any time in **Security > Settings**.
+
+---
+
 ## REST API Changes
 
 The following changes have been implemented with the introduction of **Resources API** and apply to applications using the `./signalk/v2/resources` endpoint.
