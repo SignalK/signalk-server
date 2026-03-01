@@ -35,11 +35,13 @@ import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
 import {
+  AccumulatedItem,
   accumulateLatestValue,
   buildFlushDeltas
 } from '../LatestValuesAccumulator'
 import { getExternalPort } from '../ports'
 import { resolveDisplayUnits, getDefaultCategory } from '../unitpreferences'
+import { Delta, hasValues } from '@signalk/server-api'
 
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
@@ -50,14 +52,6 @@ const BACKPRESSURE_ENTER_THRESHOLD = process.env.BACKPRESSURE_ENTER
 const BACKPRESSURE_EXIT_THRESHOLD = process.env.BACKPRESSURE_EXIT
   ? parseInt(process.env.BACKPRESSURE_EXIT, 10)
   : 1024
-
-interface AccumulatedItem {
-  context: string
-  path: string
-  value: unknown
-  $source: string | undefined
-  timestamp: string | undefined
-}
 
 interface BackpressureState {
   active: boolean
@@ -105,21 +99,6 @@ interface Spark {
   end: (message?: unknown, options?: { reconnect?: boolean }) => void
   on: (event: string, handler: (data: unknown) => void) => void
   removeListener: (event: string, handler: (data: unknown) => void) => void
-}
-
-interface Delta {
-  context?: string
-  updates?: Array<{
-    $source?: string
-    source?: unknown
-    timestamp?: string
-    values?: Array<{ path: string; value: unknown }>
-    meta?: Array<{ path: string; value: unknown }>
-  }>
-}
-
-interface DeltaWithContext extends Delta {
-  context: string
 }
 
 interface WsMessage {
@@ -447,7 +426,7 @@ function wsInterface(app: WsApp): WsApi {
               spark.request.skPrincipal,
               delta
             )
-            if (!filtered) return
+            if (filtered === null) return
 
             const bufferSize = spark.request.socket.bufferSize
 
@@ -461,10 +440,7 @@ function wsInterface(app: WsApp): WsApi {
                   bufferSize
                 )
               }
-              accumulateLatestValue(
-                spark.backpressure.accumulator,
-                filtered as DeltaWithContext
-              )
+              accumulateLatestValue(spark.backpressure.accumulator, filtered)
             } else {
               sendMetaData(app, spark, filtered)
               spark.write(filtered)
@@ -816,7 +792,7 @@ function processUpdates(
   app.handleMessage(spark.request.source || 'ws', msg)
 
   msg.updates?.forEach((update) => {
-    if (update.values) {
+    if (hasValues(update)) {
       let source = update.$source
       if (!source && update.source) {
         source = getSourceId(update.source)
@@ -936,7 +912,7 @@ function handleUpdatesMeta(
   this: MetaHandlerContext,
   update: NonNullable<Delta['updates']>[number]
 ): void {
-  if (update.values) {
+  if (hasValues(update)) {
     this.timestamp = update.timestamp
     update.values.forEach(handleValuesMeta, this)
   }
@@ -991,10 +967,7 @@ function processSubscribe(
               bufferSize
             )
           }
-          accumulateLatestValue(
-            spark.backpressure.accumulator,
-            filtered as DeltaWithContext
-          )
+          accumulateLatestValue(spark.backpressure.accumulator, filtered)
         } else {
           sendMetaData(app, spark, filtered)
           spark.write(filtered)
