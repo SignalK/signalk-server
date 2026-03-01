@@ -123,7 +123,8 @@ export class Notification {
     let methodStr = '['
     for (let i = 0; i < this.method.length; i++) {
       if (i > 0) methodStr += ','
-      methodStr += this.method[i] == NotificationMethod.visual ? '"visual"' : '"sound"'
+      methodStr +=
+        this.method[i] == NotificationMethod.visual ? '"visual"' : '"sound"'
     }
     methodStr += ']'
 
