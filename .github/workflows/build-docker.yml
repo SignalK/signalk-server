@@ -228,8 +228,56 @@ jobs:
             fi
           done < "$TAGS_FILE"
 
+  record-image-sizes:
+    needs: create-and-push-manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout metrics branch
+        uses: actions/checkout@v6
+        with:
+          ref: metrics
+      - name: Record image sizes
+        env:
+          GHCR_CREDS: "${{ github.actor }}:${{ secrets.GHCR_PAT }}"
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          COMMIT="${{ github.sha }}"
+          CSV="master-container_sizes.csv"
+
+          if [ ! -f "$CSV" ]; then
+            echo "timestamp,commit,tag,size_bytes" > "$CSV"
+          fi
+
+          REGISTRY="ghcr.io/signalk/signalk-server"
+          RUN_ID="${{ github.run_id }}"
+
+          for TAG in \
+            "amd-24.04-22.x-${RUN_ID}" \
+            "arm-24.04-22.x-${RUN_ID}" \
+            "amd-24.04-24.x-${RUN_ID}" \
+            "arm-24.04-24.x-${RUN_ID}" \
+            "amd-alpine-22-${RUN_ID}" \
+            "arm-alpine-22-${RUN_ID}" \
+            "amd-alpine-24-${RUN_ID}" \
+            "arm-alpine-24-${RUN_ID}"; do
+
+            SIZE=$(skopeo inspect --raw --creds "${GHCR_CREDS}" \
+              "docker://${REGISTRY}:${TAG}" | \
+              jq '[.layers[].size] | add')
+
+            echo "${TIMESTAMP},${COMMIT},${TAG},${SIZE}" >> "$CSV"
+          done
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add master-container_sizes.csv
+          git commit -m "chore: record container sizes for ${GITHUB_SHA::7}"
+          git push
+
   housekeeping:
-    needs: [copy-to-dockerhub]
+    needs: [copy-to-dockerhub, record-image-sizes]
     runs-on: ubuntu-latest
     permissions:
       packages: write
