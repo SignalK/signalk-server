@@ -97,12 +97,42 @@ async function setActivePreset(preset) {
   }
 }
 
+async function fetchServerDefaultPreset() {
+  try {
+    const response = await fetch('/signalk/v1/unitpreferences/config', {
+      credentials: 'include'
+    })
+    if (response.ok) {
+      const config = await response.json()
+      return config.activePreset || 'nautical-metric'
+    }
+  } catch (e) {
+    console.error('Failed to fetch server default preset:', e)
+  }
+  return 'nautical-metric'
+}
+
+async function setServerDefaultPreset(preset) {
+  try {
+    await fetch('/signalk/v1/unitpreferences/config', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activePreset: preset })
+    })
+  } catch (e) {
+    console.error('Failed to set server default preset:', e)
+  }
+}
+
 class UnitPreferencesSettings extends Component {
   constructor(props) {
     super(props)
     this.state = {
       presets: DEFAULT_PRESETS,
       activePreset: 'nautical-metric',
+      serverDefaultPreset: 'nautical-metric',
+      updateServerDefault: false,
       hasData: false,
       uploadStatus: null,
       uploadError: null,
@@ -114,17 +144,33 @@ class UnitPreferencesSettings extends Component {
     this.handleDeletePreset = this.handleDeletePreset.bind(this)
     this.handleReplacePreset = this.handleReplacePreset.bind(this)
     this.dismissError = this.dismissError.bind(this)
+    this.handleUpdateServerDefaultChange =
+      this.handleUpdateServerDefaultChange.bind(this)
     this.fileInputRef = React.createRef()
   }
 
   async componentDidMount() {
     const presets = await fetchPresets()
     const activePreset = await fetchActivePreset()
-    this.setState({ presets, activePreset, hasData: true })
+    const serverDefaultPreset = await fetchServerDefaultPreset()
+    this.setState({ presets, activePreset, serverDefaultPreset, hasData: true })
+  }
+
+  async handleUpdateServerDefaultChange(e) {
+    const checked = e.target.checked
+    this.setState({ updateServerDefault: checked })
+    if (checked) {
+      await setServerDefaultPreset(this.state.activePreset)
+      this.setState({ serverDefaultPreset: this.state.activePreset })
+    }
   }
 
   async handlePresetChange(preset) {
     await setActivePreset(preset)
+    if (this.state.updateServerDefault) {
+      await setServerDefaultPreset(preset)
+      this.setState({ serverDefaultPreset: preset })
+    }
     this.setState({ activePreset: preset })
   }
 
@@ -417,6 +463,32 @@ class UnitPreferencesSettings extends Component {
               })}
             </Col>
           </FormGroup>
+
+          {isAdmin && (
+            <FormGroup row>
+              <Col md="2"></Col>
+              <Col md="10">
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    id="updateServerDefault"
+                    checked={this.state.updateServerDefault}
+                    onChange={this.handleUpdateServerDefaultChange}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <label
+                    htmlFor="updateServerDefault"
+                    style={{ margin: 0, cursor: 'pointer' }}
+                  >
+                    Also set as server default (for new users)
+                  </label>
+                </div>
+                <small style={{ color: '#6c757d' }}>
+                  Current server default: {this.state.serverDefaultPreset}
+                </small>
+              </Col>
+            </FormGroup>
+          )}
 
           {isAdmin && (
             <FormGroup row>

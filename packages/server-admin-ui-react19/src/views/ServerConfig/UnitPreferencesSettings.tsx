@@ -13,6 +13,7 @@ import { faSliders } from '@fortawesome/free-solid-svg-icons/faSliders'
 import {
   useLoginStatus,
   useActivePreset,
+  useServerDefaultPreset,
   usePresets,
   useStore
 } from '../../store'
@@ -22,10 +23,12 @@ type UploadStatus = 'uploading' | 'success' | 'duplicate' | 'error' | null
 const UnitPreferencesSettings: React.FC = () => {
   const loginStatus = useLoginStatus()
   const activePreset = useActivePreset()
+  const serverDefaultPreset = useServerDefaultPreset()
   const presets = usePresets()
   const unitPrefsLoaded = useStore((s) => s.unitPrefsLoaded)
   const fetchUnitPreferences = useStore((s) => s.fetchUnitPreferences)
   const setActivePresetAndSave = useStore((s) => s.setActivePresetAndSave)
+  const setServerDefaultPreset = useStore((s) => s.setServerDefaultPreset)
   const setPresets = useStore((s) => s.setPresets)
 
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>(null)
@@ -34,13 +37,14 @@ const UnitPreferencesSettings: React.FC = () => {
     null
   )
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [updateServerDefault, setUpdateServerDefault] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!unitPrefsLoaded) {
+    if (loginStatus.status === 'loggedIn') {
       fetchUnitPreferences()
     }
-  }, [unitPrefsLoaded, fetchUnitPreferences])
+  }, [fetchUnitPreferences, loginStatus.status, loginStatus.username])
 
   const isAdmin =
     !loginStatus.authenticationRequired ||
@@ -50,8 +54,11 @@ const UnitPreferencesSettings: React.FC = () => {
   const handlePresetChange = useCallback(
     async (preset: string) => {
       await setActivePresetAndSave(preset)
+      if (updateServerDefault) {
+        await setServerDefaultPreset(preset)
+      }
     },
-    [setActivePresetAndSave]
+    [setActivePresetAndSave, setServerDefaultPreset, updateServerDefault]
   )
 
   const refreshPresets = useCallback(async () => {
@@ -296,6 +303,26 @@ const UnitPreferencesSettings: React.FC = () => {
                 </Button>
               )}
             </div>
+            {isAdmin && (
+              <div style={{ marginTop: '10px' }}>
+                <Form.Check
+                  type="checkbox"
+                  id="updateServerDefault"
+                  checked={updateServerDefault}
+                  onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
+                    const checked = e.target.checked
+                    setUpdateServerDefault(checked)
+                    if (checked) {
+                      await setServerDefaultPreset(activePreset)
+                    }
+                  }}
+                  label="Also set as server default (for new users)"
+                />
+                <Form.Text className="text-muted">
+                  Current server default: {serverDefaultPreset}
+                </Form.Text>
+              </div>
+            )}
             {isAdmin && (
               <div style={{ marginTop: '10px' }}>
                 <input

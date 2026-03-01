@@ -125,6 +125,10 @@ export function useActivePreset() {
   return useStore((s) => s.activePreset)
 }
 
+export function useServerDefaultPreset() {
+  return useStore((s) => s.serverDefaultPreset)
+}
+
 export function usePresets() {
   return useStore((s) => s.presets)
 }
