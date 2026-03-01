@@ -154,7 +154,7 @@
     "@types/baconjs": "^0.7.34",
     "@types/bcryptjs": "^2.4.6",
     "@types/busboy": "^1.5.0",
-    "@types/chai": "^4.2.15",
+    "@types/chai": "^5.2.2",
     "@types/command-exists": "^1.2.0",
     "@types/cookie": "^0.6.0",
     "@types/cookie-parser": "^1.4.10",
