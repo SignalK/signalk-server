@@ -19,15 +19,6 @@ import {
 
 type UploadStatus = 'uploading' | 'success' | 'duplicate' | 'error' | null
 
-const PILL_COLORS = [
-  '#28a745',
-  '#007bff',
-  '#6f42c1',
-  '#fd7e14',
-  '#20c997',
-  '#e83e8c'
-]
-
 const UnitPreferencesSettings: React.FC = () => {
   const loginStatus = useLoginStatus()
   const activePreset = useActivePreset()
@@ -254,185 +245,152 @@ const UnitPreferencesSettings: React.FC = () => {
     return null
   }
 
+  const builtInPresets = presets.filter((p) => !p.isCustom)
+  const customPresets = presets.filter((p) => p.isCustom)
+  const activeCustomPreset = customPresets.find((p) => p.name === activePreset)
+
   return (
     <Card>
       <Card.Header>
         <FontAwesomeIcon icon={faSliders} /> <strong>Unit Preferences</strong>
       </Card.Header>
       <Card.Body>
-        <Form.Group as={Row}>
-          <Col md={2}>Display Units</Col>
-          <Col
-            md={10}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              flexWrap: 'wrap'
-            }}
-          >
-            {presets.map((preset, index) => {
-              const isActive = activePreset === preset.name
-              const baseColor = preset.isCustom
-                ? '#6c757d'
-                : PILL_COLORS[index % PILL_COLORS.length]
-              return (
-                <span
-                  key={preset.name}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.85rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s',
-                    backgroundColor: isActive ? baseColor : 'transparent',
-                    color: isActive ? 'white' : baseColor,
-                    border: `2px solid ${baseColor}`,
-                    opacity: isActive ? 1 : 0.7
-                  }}
-                  title={preset.isCustom ? 'Custom preset' : 'Built-in preset'}
+        <Form.Group as={Row} className="mb-3">
+          <Col md={2}>
+            <Form.Label>Display Units</Form.Label>
+          </Col>
+          <Col xs="12" md={10}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Form.Select
+                value={activePreset}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                  handlePresetChange(e.target.value)
+                }
+                style={{ maxWidth: '300px' }}
+              >
+                <optgroup label="Built-in">
+                  {builtInPresets.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.label}
+                    </option>
+                  ))}
+                </optgroup>
+                {customPresets.length > 0 && (
+                  <optgroup label="Custom">
+                    {customPresets.map((p) => (
+                      <option key={p.name} value={p.name}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </Form.Select>
+              {isAdmin && activeCustomPreset && (
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={() => handleDeletePreset(activePreset)}
+                  title={`Delete ${activeCustomPreset.label}`}
                 >
-                  {preset.isCustom && (
-                    <span
-                      style={{
-                        fontSize: '0.65rem',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        backgroundColor: isActive
-                          ? 'rgba(255,255,255,0.3)'
-                          : baseColor,
-                        color: 'white'
-                      }}
-                    >
-                      custom
-                    </span>
-                  )}
-                  <span
-                    onClick={() => handlePresetChange(preset.name)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {preset.label}
+                  <FontAwesomeIcon icon={faTrash} />
+                </Button>
+              )}
+            </div>
+            {isAdmin && (
+              <div style={{ marginTop: '10px' }}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }}
+                />
+                <Form.Text
+                  className="text-muted"
+                  style={{ marginRight: '8px' }}
+                >
+                  Add custom preset
+                </Form.Text>
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadStatus === 'uploading'}
+                >
+                  <FontAwesomeIcon icon={faUpload} />{' '}
+                  {uploadStatus === 'uploading' ? 'Uploading...' : 'Upload'}
+                </Button>
+              </div>
+            )}
+            {uploadStatus === 'success' && (
+              <Alert
+                variant="success"
+                style={{ marginTop: '10px', marginBottom: 0 }}
+              >
+                Preset uploaded successfully!
+              </Alert>
+            )}
+            {uploadStatus === 'duplicate' && (
+              <Alert
+                variant="warning"
+                style={{ marginTop: '10px', marginBottom: 0 }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <span>
+                    A preset named &quot;{duplicatePresetName}&quot; already
+                    exists.
                   </span>
-                  {preset.isCustom && isAdmin && (
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeletePreset(preset.name)
-                      }}
-                      style={{
-                        cursor: 'pointer',
-                        marginLeft: '4px',
-                        opacity: 0.7
-                      }}
-                      title={`Delete ${preset.label}`}
+                  <span>
+                    <Button
+                      variant="warning"
+                      size="sm"
+                      onClick={handleReplacePreset}
+                      style={{ marginRight: '8px' }}
                     >
-                      <FontAwesomeIcon icon={faTrash} size="xs" />
-                    </span>
-                  )}
-                </span>
-              )
-            })}
+                      Replace
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={dismissError}
+                    >
+                      Cancel
+                    </Button>
+                  </span>
+                </div>
+              </Alert>
+            )}
+            {uploadStatus === 'error' && (
+              <Alert
+                variant="danger"
+                style={{ marginTop: '10px', marginBottom: 0 }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start'
+                  }}
+                >
+                  <span style={{ whiteSpace: 'pre-wrap' }}>{uploadError}</span>
+                  <span
+                    onClick={dismissError}
+                    style={{ cursor: 'pointer', marginLeft: '10px' }}
+                    title="Dismiss"
+                  >
+                    <FontAwesomeIcon icon={faTimes} />
+                  </span>
+                </div>
+              </Alert>
+            )}
           </Col>
         </Form.Group>
-
-        {isAdmin && (
-          <Form.Group as={Row}>
-            <Col md={2}>Upload Preset</Col>
-            <Col md={10}>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleFileUpload}
-                style={{ display: 'none' }}
-                id="preset-upload"
-              />
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadStatus === 'uploading'}
-              >
-                <FontAwesomeIcon icon={faUpload} />{' '}
-                {uploadStatus === 'uploading'
-                  ? 'Uploading...'
-                  : 'Upload Custom Preset'}
-              </Button>
-              {uploadStatus === 'success' && (
-                <Alert
-                  variant="success"
-                  style={{ marginTop: '10px', marginBottom: 0 }}
-                >
-                  Preset uploaded successfully!
-                </Alert>
-              )}
-              {uploadStatus === 'duplicate' && (
-                <Alert
-                  variant="warning"
-                  style={{ marginTop: '10px', marginBottom: 0 }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <span>
-                      A preset named &quot;{duplicatePresetName}&quot; already
-                      exists.
-                    </span>
-                    <span>
-                      <Button
-                        variant="warning"
-                        size="sm"
-                        onClick={handleReplacePreset}
-                        style={{ marginRight: '8px' }}
-                      >
-                        Replace
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={dismissError}
-                      >
-                        Cancel
-                      </Button>
-                    </span>
-                  </div>
-                </Alert>
-              )}
-              {uploadStatus === 'error' && (
-                <Alert
-                  variant="danger"
-                  style={{ marginTop: '10px', marginBottom: 0 }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start'
-                    }}
-                  >
-                    <span style={{ whiteSpace: 'pre-wrap' }}>
-                      {uploadError}
-                    </span>
-                    <span
-                      onClick={dismissError}
-                      style={{ cursor: 'pointer', marginLeft: '10px' }}
-                      title="Dismiss"
-                    >
-                      <FontAwesomeIcon icon={faTimes} />
-                    </span>
-                  </div>
-                </Alert>
-              )}
-            </Col>
-          </Form.Group>
-        )}
       </Card.Body>
     </Card>
   )
