@@ -59,7 +59,7 @@ import { importOrRequire, modulesWithKeyword, NpmPackageData } from '../modules'
 const put = require('../put')
 const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
-const queryRequest = require('../requestResponse').queryRequest
+import { queryRequest } from '../requestResponse'
 import { getMetadata } from '@signalk/signalk-schema'
 import { HistoryApi } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'

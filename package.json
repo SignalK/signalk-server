@@ -155,6 +155,7 @@
     "@types/busboy": "^1.5.0",
     "@types/chai": "^4.2.15",
     "@types/command-exists": "^1.2.0",
+    "@types/cookie": "^0.6.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.12",
     "@types/debug": "^4.1.5",
