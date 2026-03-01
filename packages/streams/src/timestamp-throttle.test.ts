@@ -28,15 +28,15 @@ describe('TimestampThrottle', () => {
 
     const now = Date.now()
     throttle.write({ timestamp: String(now) })
-    throttle.write({ timestamp: String(now + 500) })
+    throttle.write({ timestamp: String(now + 50) })
 
     setTimeout(() => {
       expect(results).to.have.length(1)
-    }, 100)
+    }, 20)
 
     setTimeout(() => {
       expect(results).to.have.length(2)
       done()
-    }, 700)
+    }, 100)
   })
 })

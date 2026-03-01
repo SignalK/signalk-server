@@ -4,6 +4,10 @@
   "description": "Utilities for handling streams of Signal K data",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "!dist/**/*.test.*"
+  ],
   "scripts": {
     "build": "tsc -b",
     "watch": "tsc --watch",
