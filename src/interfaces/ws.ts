@@ -17,6 +17,7 @@ import cookie from 'cookie'
 import { Server } from 'http'
 import { Socket } from 'net'
 import Primus from 'primus'
+import WebSocket from 'ws'
 import { getSourceId, getMetadata } from '@signalk/signalk-schema'
 import {
   requestAccess,
@@ -95,6 +96,8 @@ interface Spark {
   onDisconnects: Array<() => void>
   hasServerEvents?: boolean
   isHistory?: boolean
+  wsAlive?: boolean
+  socket: WebSocket
   write: (data: unknown) => void
   end: (message?: unknown, options?: { reconnect?: boolean }) => void
   on: (event: string, handler: (data: unknown) => void) => void
@@ -185,6 +188,7 @@ interface WsAppConfig {
   settings: {
     ssl?: boolean
     wsCompression?: boolean
+    wsPingInterval?: number | false
     trustProxy?: boolean | string
   }
   maxSendBufferSize?: number
@@ -349,6 +353,8 @@ function wsInterface(app: WsApp): WsApi {
     start: function () {
       debug('Starting Primus/WS interface')
 
+      const wsPingInterval = app.config.settings.wsPingInterval ?? 30000
+
       let baseOptions: Record<string, unknown> = {
         transformer: 'websockets',
         pingInterval: false
@@ -380,6 +386,23 @@ function wsInterface(app: WsApp): WsApi {
 
       primuses = allWsOptions.map((primusOptions) => {
         const primus = new Primus(app.server as Server, primusOptions)
+
+        if (wsPingInterval) {
+          const interval = setInterval(() => {
+            primus.forEach((primusSpark: unknown) => {
+              const spark = primusSpark as Spark
+              if (spark.wsAlive === false) {
+                debug('heartbeat timeout for spark %s, closing', spark.id)
+                return spark.end(undefined, { reconnect: true })
+              }
+              spark.wsAlive = false
+              if (spark.socket && spark.socket.readyState === WebSocket.OPEN) {
+                spark.socket.ping()
+              }
+            })
+          }, wsPingInterval)
+          primus.once('close', () => clearInterval(interval))
+        }
 
         if (app.securityStrategy.canAuthorizeWS()) {
           primus.authorize(
@@ -420,6 +443,13 @@ function wsInterface(app: WsApp): WsApi {
               }
             }
           })
+
+          if (wsPingInterval) {
+            spark.wsAlive = true
+            spark.socket.on('pong', () => {
+              spark.wsAlive = true
+            })
+          }
 
           let onChange = (delta: Delta) => {
             const filtered = app.securityStrategy.filterReadDelta(
@@ -866,11 +896,15 @@ function handleValuesMeta(
         break
       } else {
         this.spark.sentMetaData[partialContextPathKey] = true
-        let meta = getMetadata(partialContextPathKey)
+        let meta = getMetadata(partialContextPathKey) as Record<
+          string,
+          unknown
+        > | null
         if (meta) {
           // Clone and enhance metadata with displayUnits formulas
           meta = JSON.parse(JSON.stringify(meta))
-          let storedDisplayUnits = meta.displayUnits
+          let storedDisplayUnits = (meta as Record<string, unknown>)
+            .displayUnits as { category?: string } | undefined
           if (!storedDisplayUnits?.category && path) {
             const defaultCategory = getDefaultCategory(path)
             if (defaultCategory) {
@@ -880,12 +914,12 @@ function handleValuesMeta(
           if (storedDisplayUnits?.category) {
             const username = this.spark.request.skPrincipal?.identifier
             const enhanced = resolveDisplayUnits(
-              storedDisplayUnits,
-              meta.units,
+              { category: storedDisplayUnits.category },
+              (meta as Record<string, unknown>).units as string | undefined,
               username
             )
             if (enhanced) {
-              meta.displayUnits = enhanced
+              ;(meta as Record<string, unknown>).displayUnits = enhanced
             }
           }
           this.spark.write({
@@ -1101,8 +1135,8 @@ function handleRealtimeConnection(
   if (spark.sendMetaDeltas) {
     const onUnitPrefsChanged = (event: unknown) => {
       const username = spark.request.skPrincipal?.identifier
-      const evt = event as { username?: string } | undefined
-      if (evt?.username && evt.username !== username) return
+      const ev = event as { username?: string } | null
+      if (ev?.username && ev.username !== username) return
 
       const allPaths = app.streambundle.getAvailablePaths()
       const meta = allPaths.reduce(
@@ -1111,13 +1145,15 @@ function handleRealtimeConnection(
           path: string
         ) => {
           const fullPath = 'vessels.self.' + path
-          const pathMeta = getMetadata(fullPath) || {}
+          const pathMeta =
+            (getMetadata(fullPath) as Record<string, unknown>) || {}
           const category =
-            pathMeta.displayUnits?.category || getDefaultCategory(path)
+            (pathMeta.displayUnits as { category?: string } | undefined)
+              ?.category || getDefaultCategory(path)
           if (category) {
             const displayUnits = resolveDisplayUnits(
               { category },
-              pathMeta.units,
+              pathMeta.units as string | undefined,
               username
             )
             if (displayUnits) {
@@ -1138,9 +1174,12 @@ function handleRealtimeConnection(
       }
     }
 
-    app.on('unitpreferencesChanged', onUnitPrefsChanged)
+    app.on('unitpreferencesChanged', onUnitPrefsChanged as () => void)
     spark.onDisconnects.push(() => {
-      app.removeListener('unitpreferencesChanged', onUnitPrefsChanged)
+      app.removeListener(
+        'unitpreferencesChanged',
+        onUnitPrefsChanged as () => void
+      )
     })
   }
 

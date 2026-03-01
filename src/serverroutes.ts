@@ -667,6 +667,7 @@ module.exports = function (
       options: {
         mdns: app.config.settings.mdns || false,
         wsCompression: app.config.settings.wsCompression || false,
+        wsPingInterval: app.config.settings.wsPingInterval ?? 30000,
         accessLogging:
           isUndefined(app.config.settings.accessLogging) ||
           app.config.settings.accessLogging,
@@ -790,6 +791,10 @@ module.exports = function (
 
     if (!isUndefined(settings.options.wsCompression)) {
       app.config.settings.wsCompression = settings.options.wsCompression
+    }
+
+    if (!isUndefined(settings.options.wsPingInterval)) {
+      app.config.settings.wsPingInterval = settings.options.wsPingInterval
     }
 
     if (!isUndefined(settings.options.accessLogging)) {

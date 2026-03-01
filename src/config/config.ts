@@ -68,6 +68,7 @@ export interface Config {
     security?: any
     ssl?: boolean
     wsCompression?: boolean
+    wsPingInterval?: number | false
     accessLogging?: boolean
     landingPage?: string
     proxy_host?: string
