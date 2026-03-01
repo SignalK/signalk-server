@@ -1530,6 +1530,10 @@ function tokenSecurityFactory(
             }
 
             if (configuration.allow_readonly) {
+              skReq.skPrincipal = {
+                identifier: 'AUTO',
+                permissions: 'readonly'
+              }
               skReq.skIsAuthenticated = false
               next()
             } else {
