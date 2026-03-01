@@ -18,8 +18,9 @@ export function startEvents(
   }
   const events = eventsFromQuery.split(',')
   events.forEach((event) => {
-    app.on(event, (data: any) => onEvent({ event, data }))
-    spark.onDisconnects.push(() => app.removeListener(event, onEvent))
+    const listener = (data: any) => onEvent({ event, data })
+    app.on(event, listener)
+    spark.onDisconnects.push(() => app.removeListener(event, listener))
   })
 }
 
