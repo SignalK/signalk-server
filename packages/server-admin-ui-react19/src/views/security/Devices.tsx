@@ -7,6 +7,7 @@ import {
   FormEvent
 } from 'react'
 import { useLoginStatus } from '../../store'
+import Badge from 'react-bootstrap/Badge'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -26,6 +27,7 @@ interface Device {
   description?: string
   permissions?: PermissionType
   requestedPermissions?: string
+  tokenExpiry?: number
 }
 
 function convertPermissions(type: PermissionType | undefined): string {
@@ -37,6 +39,32 @@ function convertPermissions(type: PermissionType | undefined): string {
     return 'Admin'
   }
   return ''
+}
+
+function isExpired(device: Device): boolean {
+  return !!device.tokenExpiry && device.tokenExpiry * 1000 < Date.now()
+}
+
+function formatExpiry(device: Device): string {
+  if (!device.tokenExpiry) {
+    return 'NEVER'
+  }
+  const expiryMs = device.tokenExpiry * 1000
+  const nowMs = Date.now()
+  if (expiryMs < nowMs) {
+    return 'Expired'
+  }
+  const diffMs = expiryMs - nowMs
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  if (days > 0) {
+    return `${days}d ${hours}h remaining`
+  }
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+  if (hours > 0) {
+    return `${hours}h ${minutes}m remaining`
+  }
+  return `${minutes}m remaining`
 }
 
 export default function Devices() {
@@ -152,6 +180,7 @@ export default function Devices() {
                     <th>Client ID</th>
                     <th>Description</th>
                     <th>Type</th>
+                    <th>Token Expiry</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -164,6 +193,13 @@ export default function Devices() {
                         <td>{device.clientId}</td>
                         <td>{device.description}</td>
                         <td>{convertPermissions(device.permissions)}</td>
+                        <td>
+                          {isExpired(device) ? (
+                            <Badge bg="danger">Expired</Badge>
+                          ) : (
+                            formatExpiry(device)
+                          )}
+                        </td>
                       </tr>
                     )
                   })}
@@ -213,8 +249,7 @@ export default function Devices() {
                     </Col>
                     <Col xs="12" md="2">
                       {!selectedDevice.requestedPermissions && (
-                        <Form.Control
-                          type="select"
+                        <Form.Select
                           id="permissions"
                           name="permissions"
                           value={selectedDevice.permissions || 'readonly'}
@@ -223,13 +258,27 @@ export default function Devices() {
                           <option value="readonly">Read Only</option>
                           <option value="readwrite">Read/Write</option>
                           <option value="admin">Admin</option>
-                        </Form.Control>
+                        </Form.Select>
                       )}
                       {selectedDevice.requestedPermissions && (
                         <span className="form-control-plaintext">
                           {convertPermissions(selectedDevice.permissions)}
                         </span>
                       )}
+                    </Col>
+                  </Form.Group>
+                  <Form.Group as={Row}>
+                    <Col md="2">
+                      <Form.Label>Token Expiry</Form.Label>
+                    </Col>
+                    <Col xs="12" md="9">
+                      <span className="form-control-plaintext">
+                        {isExpired(selectedDevice) ? (
+                          <Badge bg="danger">Expired</Badge>
+                        ) : (
+                          formatExpiry(selectedDevice)
+                        )}
+                      </span>
                     </Col>
                   </Form.Group>
                 </Card.Body>

@@ -127,7 +127,8 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/appstore/available', state.setAppStore),
     fetchAndSet('/loginStatus', state.setLoginStatus),
     fetchAndSet('/signalk', state.setServerSpecification, ''),
-    fetchAndSet('/security/access/requests', state.setAccessRequests)
+    fetchAndSet('/security/access/requests', state.setAccessRequests),
+    fetchAndSet('/security/devices', state.setDevices)
   ])
 }
 

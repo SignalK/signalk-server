@@ -105,6 +105,10 @@ export function useAccessRequests() {
   return useStore((s) => s.accessRequests)
 }
 
+export function useDevices() {
+  return useStore((s) => s.devices)
+}
+
 export function useVesselInfo() {
   return useStore((s) => s.vesselInfo)
 }
