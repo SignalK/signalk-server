@@ -4,9 +4,15 @@ import { createDebug } from './debug'
 import { Debugger } from 'debug'
 import { Brand } from '@signalk/server-api'
 
+interface EventsSpark {
+  request: unknown
+  onDisconnects: Array<() => void>
+  write: (data: unknown) => void
+}
+
 export function startEvents(
   app: any,
-  spark: any,
+  spark: EventsSpark,
   onEvent: (data: any) => void,
   eventsFromQuery = ''
 ) {
@@ -24,7 +30,11 @@ export function startEvents(
   })
 }
 
-export function startServerEvents(app: any, spark: any, onServerEvent: any) {
+export function startServerEvents(
+  app: any,
+  spark: EventsSpark,
+  onServerEvent: any
+) {
   app.on('serverevent', onServerEvent)
   spark.onDisconnects.push(() => {
     app.removeListener('serverevent', onServerEvent)
