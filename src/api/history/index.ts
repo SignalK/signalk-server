@@ -45,11 +45,19 @@ export class HistoryApiHttpRegistry {
         return this.defaultProvider().getPaths(query)
       }
     }
-    app.getHistoryApi = () => {
+    app.getHistoryApi = (providerId?: string) => {
+      if (providerId !== undefined) {
+        const provider = this.historyProviders.get(providerId)
+        return provider
+          ? Promise.resolve(provider)
+          : Promise.reject(
+              new Error(`History api provider '${providerId}' not found`)
+            )
+      }
       return this.defaultProviderId &&
         this.historyProviders.has(this.defaultProviderId)
         ? Promise.resolve(this.proxy)
-        : Promise.reject('No history api provider configured')
+        : Promise.reject(new Error('No history api provider configured'))
     }
   }
 

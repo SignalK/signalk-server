@@ -119,12 +119,16 @@ export type HistoryApiRegistry = {
 /** @category  History API */
 export type WithHistoryApi = {
   /**
-   * Returns a promise for the active History API implementation, or rejects if unavailable.
+   * Returns a promise for a History API implementation, or rejects if unavailable.
    * The property is optional to support explicitly older servers that do not have a history api provider.
    *
+   * When called without arguments, returns a proxy to the default provider.
+   * When called with a provider id, returns that specific provider's HistoryApi instance.
+   *
+   * @param providerId - Optional id of a specific history provider plugin. If omitted, returns the default provider.
    * @returns Promise that resolves to a {@link HistoryApi} instance if available, or rejects with an error if not.
    */
-  getHistoryApi?: () => Promise<HistoryApi>
+  getHistoryApi?: (providerId?: string) => Promise<HistoryApi>
 }
 
 /** @category  History API */
