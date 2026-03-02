@@ -5,6 +5,9 @@
 import { ValuesResponseSchema } from '@signalk/server-api'
 import {
   toOpenApiSchema,
+  okResponse,
+  errorResponse,
+  defaultSecurity,
   signalKExternalDocs,
   signalKTermsOfService,
   signalKLicense,
@@ -61,6 +64,28 @@ const timeRangeParams = [
   timeRangeToParam
 ]
 
+const providerQueryParam = {
+  name: 'provider',
+  in: 'query' as const,
+  description:
+    'Plugin id of the history provider the request will be directed to. If omitted, the default provider is used.',
+  schema: {
+    type: 'string',
+    example: 'signalk-to-influxdb2'
+  }
+}
+
+const providerIdParam = {
+  name: 'id',
+  in: 'path' as const,
+  required: true,
+  description: 'Plugin id of the history provider.',
+  schema: {
+    type: 'string',
+    example: 'signalk-to-influxdb2'
+  }
+}
+
 // ---------------------------------------------------------------------------
 // OpenAPI Document
 // ---------------------------------------------------------------------------
@@ -77,7 +102,10 @@ export const historyOpenApiDoc = {
   },
   externalDocs: signalKExternalDocs,
   servers: [{ url: '/signalk/v2/api/history' }],
-  tags: [{ name: 'History', description: 'Historical data queries' }],
+  tags: [
+    { name: 'History', description: 'Historical data queries' },
+    { name: 'Provider', description: 'History provider management' }
+  ],
   components: {
     schemas: {
       ValuesResponse: toOpenApiSchema(ValuesResponseSchema)
@@ -116,7 +144,8 @@ export const historyOpenApiDoc = {
             description:
               "Length of data sample time window in milliseconds or as a time expression ('1s', '1m', '1h', '1d'). If resolution is not specified the server should provide data in a reasonable time resolution, depending on the time range in the request.",
             schema: { type: 'number', format: 'integer' }
-          }
+          },
+          providerQueryParam
         ],
         responses: {
           '200': {
@@ -136,7 +165,7 @@ export const historyOpenApiDoc = {
         summary: 'Get contexts that have some historical data',
         description:
           'Returns an array of contexts that have some historical data to query with /values for the specified time range',
-        parameters: timeRangeParams,
+        parameters: [...timeRangeParams, providerQueryParam],
         responses: {
           '200': {
             description: 'Array of contexts',
@@ -162,7 +191,7 @@ export const historyOpenApiDoc = {
         summary: 'Get paths that have some historical data',
         description:
           'Returns an array of paths that have some historical data to query with /values for the specified time range',
-        parameters: timeRangeParams,
+        parameters: [...timeRangeParams, providerQueryParam],
         responses: {
           '200': {
             description: 'Array of paths',
@@ -179,6 +208,75 @@ export const historyOpenApiDoc = {
               }
             }
           }
+        }
+      }
+    },
+    '/_providers': {
+      get: {
+        tags: ['Provider'],
+        summary: 'Retrieve list of registered history providers.',
+        responses: {
+          default: {
+            description:
+              'Return information about the registered history providers.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  additionalProperties: {
+                    type: 'object',
+                    required: ['isDefault'],
+                    properties: {
+                      isDefault: {
+                        type: 'boolean',
+                        description:
+                          '`true` if this provider is set as the default.'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/_providers/_default': {
+      get: {
+        tags: ['Provider'],
+        summary: 'Get the default history provider id.',
+        responses: {
+          default: {
+            description:
+              'Returns the id of the provider that is the target of requests (if provider is not specified).',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['id'],
+                  properties: {
+                    id: {
+                      type: 'string',
+                      description: 'Provider identifier.'
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/_providers/_default/{id}': {
+      parameters: [providerIdParam],
+      post: {
+        tags: ['Provider'],
+        summary: 'Sets the default history provider.',
+        description: 'Sets the provider with the supplied `id` as the default.',
+        security: defaultSecurity,
+        responses: {
+          '200': okResponse,
+          default: errorResponse
         }
       }
     }
