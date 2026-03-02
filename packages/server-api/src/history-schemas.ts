@@ -80,3 +80,52 @@ export const ValuesResponseSchema = Type.Object(
   }
 )
 export type ValuesResponseSchemaType = Static<typeof ValuesResponseSchema>
+
+// ---------------------------------------------------------------------------
+// PathSpec schema
+// ---------------------------------------------------------------------------
+
+export const PathSpecSchema = Type.Object(
+  {
+    path: Type.String({ description: 'Signal K path' }),
+    aggregate: AggregateMethodSchema,
+    parameter: Type.Array(Type.String(), {
+      description:
+        'Additional parameters for the aggregation method (e.g., sample count for sma, alpha for ema)'
+    })
+  },
+  {
+    $id: 'PathSpec',
+    description:
+      'Specification for a path to query, including the aggregation method and optional parameters'
+  }
+)
+export type PathSpecSchemaType = Static<typeof PathSpecSchema>
+
+// ---------------------------------------------------------------------------
+// Provider schemas
+// ---------------------------------------------------------------------------
+
+export const HistoryProviderInfoSchema = Type.Object(
+  {
+    isDefault: Type.Boolean({
+      description: '`true` if this provider is set as the default.'
+    })
+  },
+  { $id: 'HistoryProviderInfo' }
+)
+export type HistoryProviderInfoSchemaType = Static<
+  typeof HistoryProviderInfoSchema
+>
+
+export const HistoryProvidersResponseSchema = Type.Record(
+  Type.String({ description: 'Plugin id of the history provider' }),
+  HistoryProviderInfoSchema,
+  {
+    $id: 'HistoryProvidersResponse',
+    description: 'Map of registered history providers keyed by plugin id'
+  }
+)
+export type HistoryProvidersResponseSchemaType = Static<
+  typeof HistoryProvidersResponseSchema
+>
