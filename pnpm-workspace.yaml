@@ -1,0 +1,9 @@
+packages:
+  - packages/server-admin-ui-dependencies
+  - packages/server-admin-ui
+  - packages/server-admin-ui-react19
+  - packages/streams
+  - packages/server-api
+  - packages/resources-provider-plugin
+  - packages/typedoc-theme
+  - packages/assemblyscript-plugin-sdk

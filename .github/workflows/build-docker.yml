@@ -20,16 +20,15 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22.x'
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
       - name: Build npm files locally and upload artifacts
         run: |
-          npm cache clean -f
-          npm install npm@latest -g
-          npm install --package-lock-only
-          npm ci && npm cache clean --force
-          npm run build:all
-          npm pack --workspaces
+          pnpm install
+          pnpm run build:all
+          pnpm pack --filter './packages/*'
           rm signalk-typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
-          npm pack
+          pnpm pack
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
         with:

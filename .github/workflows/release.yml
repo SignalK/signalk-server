@@ -16,13 +16,13 @@ jobs:
           node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Install and build all
         run: |
-          npm cache clean -f
-          npm install npm@latest -g
-          npm install --package-lock-only
-          npm ci && npm cache clean --force
-          npm run build:all
+          pnpm install
+          pnpm run build:all
 
       - name: Publish server-admin-ui-dependencies
         run: |

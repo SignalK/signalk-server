@@ -19,17 +19,16 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-      - uses: SocketDev/action@v1
-        with:
-          mode: firewall-free
-      - run: sfw npm install
-      - run: npm run build:all
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - run: pnpm install
+      - run: pnpm run build:all
 
       - name: resources-provider-plugin
         working-directory: ./packages/resources-provider-plugin
         run: |
-          npm run test
+          pnpm run test
 
-      - run: npm test
+      - run: pnpm test
         env:
           CI: true

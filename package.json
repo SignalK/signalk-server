@@ -5,22 +5,22 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc --build",
-    "build:all": "npm run build:workspaces && npm run build && npm run build:docs",
+    "build:all": "pnpm run build:workspaces && pnpm run build && pnpm run build:docs",
     "build:docs": "typedoc",
-    "build:workspaces": "npm run build --workspaces --if-present",
+    "build:workspaces": "pnpm -r --if-present run build",
     "watch": "tsc --build -w",
     "prettier": "prettier --write .",
     "lint": "eslint --fix",
-    "format": "npm run prettier && npm run lint",
+    "format": "pnpm run prettier && pnpm run lint",
     "ci-lint": "eslint && prettier --check .",
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
     "start": "node bin/signalk-server",
     "test-only": "NODE_ENV=test mocha 'test/**/*.[jt]s'",
-    "test:admin-ui": "npm run test -w @signalk/server-admin-ui-react19",
-    "test:server-api": "npm run test -w @signalk/server-api",
-    "test:streams": "npm run test -w @signalk/streams",
-    "test": "npm run build && npm run test-only && npm run ci-lint && npm run test:admin-ui && npm run test:server-api && npm run test:streams",
-    "heroku-postbuild": "npm run build:all",
+    "test:admin-ui": "pnpm --filter @signalk/server-admin-ui-react19 run test",
+    "test:server-api": "pnpm --filter @signalk/server-api run test",
+    "test:streams": "pnpm --filter @signalk/streams run test",
+    "test": "pnpm run build && pnpm run test-only && pnpm run ci-lint && pnpm run test:admin-ui && pnpm run test:server-api && pnpm run test:streams",
+    "heroku-postbuild": "pnpm run build:all",
     "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
   },
   "bin": {
@@ -63,6 +63,7 @@
   "engines": {
     "node": ">=20"
   },
+  "packageManager": "pnpm@10.28.2",
   "workspaces": [
     "packages/server-admin-ui-dependencies",
     "packages/server-admin-ui",
@@ -149,7 +150,7 @@
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^1.53.1",
     "@eslint/js": "^9.24.0",
-    "@signalk/typedoc-signalk-theme": "^0.3.0",
+    "@signalk/typedoc-signalk-theme": "^0.4.0",
     "@tsconfig/node22": "^22.0.5",
     "@types/baconjs": "^0.7.34",
     "@types/bcryptjs": "^2.4.6",
