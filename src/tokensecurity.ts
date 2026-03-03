@@ -177,7 +177,10 @@ interface AccessRequest {
  * Includes Express routing methods needed for middleware registration.
  */
 interface TokenSecurityApp
-  extends ServerApp, WithConfig, IRouter, SignalKMessageHub {}
+  extends ServerApp,
+    WithConfig,
+    IRouter,
+    SignalKMessageHub {}
 
 /**
  * Extended security strategy with token-specific methods
