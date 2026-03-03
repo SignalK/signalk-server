@@ -165,6 +165,44 @@ export default class DeltaCache {
     this.emitMultiSourcePaths()
   }
 
+  /**
+   * Remove a source delta entry by key, purge all cached data for the
+   * corresponding sourceRefs (numeric address and CAN Name forms), and
+   * persist the updated sources cache to disk.
+   */
+  removeSourceDelta(key: string) {
+    const delta = this.sourceDeltas[key] as any
+    const refsToRemove: string[] = [key]
+    const dotIdx = key.indexOf('.')
+    const conn = dotIdx !== -1 ? key.slice(0, dotIdx) : ''
+    const addr = dotIdx !== -1 ? key.slice(dotIdx + 1) : ''
+    if (delta?.updates?.[0]?.source) {
+      const src = delta.updates[0].source
+      if (src.canName) refsToRemove.push(`${conn}.${src.canName}`)
+      if (src.src !== undefined) refsToRemove.push(`${conn}.${src.src}`)
+    }
+    delete this.sourceDeltas[key]
+    for (const ref of new Set(refsToRemove)) {
+      this.removeSource(ref as SourceRef)
+    }
+
+    // Also remove from the FullSignalK sources tree so the REST API
+    // (which may serve app.signalk.retrieve() directly) reflects the change
+    const sources = this.app.signalk.retrieve().sources
+    if (sources && conn && sources[conn]) {
+      delete sources[conn][addr]
+      // If the connection has no more devices, remove it too
+      const remaining = Object.keys(sources[conn]).filter(
+        (k) => k !== 'type' && k !== 'label'
+      )
+      if (remaining.length === 0) {
+        delete sources[conn]
+      }
+    }
+
+    this.scheduleSaveSourcesCache()
+  }
+
   ingestDelta(delta: any) {
     if (!delta.updates) return
     for (const update of delta.updates) {
@@ -211,6 +249,25 @@ export default class DeltaCache {
   }
 
   setSourceDelta(key: string, delta: any) {
+    // Deduplicate by canName: if a different key already exists for the
+    // same canName (e.g. a device moved from address 254 to its final
+    // address), remove the old entry to prevent duplicates.
+    const canName = delta?.updates?.[0]?.source?.canName
+    if (canName) {
+      const dotIdx = key.indexOf('.')
+      const conn = dotIdx !== -1 ? key.slice(0, dotIdx) : ''
+      for (const [existingKey, existingDelta] of Object.entries(
+        this.sourceDeltas
+      )) {
+        if (existingKey === key) continue
+        if (!existingKey.startsWith(conn + '.')) continue
+        const existingCanName = (existingDelta as any)?.updates?.[0]?.source
+          ?.canName
+        if (existingCanName === canName) {
+          this.removeSourceDelta(existingKey)
+        }
+      }
+    }
     this.sourceDeltas[key] = delta
     this.app.signalk.addDelta(delta)
     this.scheduleSaveSourcesCache()
@@ -237,6 +294,33 @@ export default class DeltaCache {
       const data = readFileSync(cachePath, 'utf-8')
       const cached = JSON.parse(data)
       if (cached && typeof cached === 'object') {
+        // Deduplicate by canName: when the same device appears under
+        // multiple addresses (e.g. from address 254 claim cycling),
+        // keep only the entry with the lower non-254 address.
+        const byCanName = new Map<string, string>()
+        for (const [key, delta] of Object.entries(cached)) {
+          const cn = (delta as any)?.updates?.[0]?.source?.canName
+          if (!cn) continue
+          const dotIdx = key.indexOf('.')
+          const conn = dotIdx !== -1 ? key.slice(0, dotIdx) : ''
+          const fullCn = conn + '.' + cn
+          const existing = byCanName.get(fullCn)
+          if (existing) {
+            const existingAddr = Number(
+              existing.slice(existing.indexOf('.') + 1)
+            )
+            const thisAddr = Number(key.slice(dotIdx + 1))
+            // Prefer non-254; if both non-254, prefer lower address
+            const keepExisting =
+              thisAddr === 254 ||
+              (existingAddr !== 254 && existingAddr < thisAddr)
+            const toRemove = keepExisting ? key : existing
+            delete cached[toRemove]
+            if (!keepExisting) byCanName.set(fullCn, key)
+          } else {
+            byCanName.set(fullCn, key)
+          }
+        }
         this.sourceDeltas = cached
         const addDelta = this.app.signalk.addDelta.bind(this.app.signalk)
         _.values(this.sourceDeltas).forEach(addDelta)

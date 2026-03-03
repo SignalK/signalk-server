@@ -14,6 +14,7 @@ import { Request, Response } from 'express'
 import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { SERVERROUTESPREFIX } from '../constants'
+import { writeSettingsFile } from '../config/config'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
@@ -29,7 +30,16 @@ interface N2kDiscoveryApp extends SignalKServer {
   get(path: string, handler: (req: Request, res: Response) => void): void
   post(path: string, handler: (req: Request, res: Response) => void): void
   put(path: string, handler: (req: Request, res: Response) => void): void
-  config: { defaults: unknown; configPath: string }
+  delete(path: string, handler: (req: Request, res: Response) => void): void
+  config: {
+    defaults: unknown
+    configPath: string
+    settings: { sourceAliases?: Record<string, string> }
+  }
+  deltaCache: {
+    sourceDeltas: Record<string, unknown>
+    removeSourceDelta(key: string): void
+  }
 }
 
 interface N2kPGN {
@@ -151,13 +161,19 @@ function sendISORequest(
 function requestProductInfo(
   app: N2kDiscoveryApp,
   knownAddresses: Set<number>,
-  pendingTimers: Set<ReturnType<typeof setTimeout>>
+  pendingTimers: Set<ReturnType<typeof setTimeout>>,
+  discoveredAddresses?: Set<number>
 ): number {
   // Cancel any in-flight requests from a previous sweep
   for (const timer of pendingTimers) {
     clearTimeout(timer)
   }
   pendingTimers.clear()
+
+  // Reset discovery tracking so only fresh responses are counted
+  if (discoveredAddresses) {
+    discoveredAddresses.clear()
+  }
 
   const addrs = Array.from(knownAddresses)
   debug(
@@ -192,6 +208,7 @@ function requestProductInfo(
 module.exports = (app: N2kDiscoveryApp) => {
   let n2kOutAvailable = false
   const knownAddresses = new Set<number>()
+  const discoveredAddresses = new Set<number>()
   const pendingTimers = new Set<ReturnType<typeof setTimeout>>()
   const api = new Interface()
 
@@ -199,6 +216,10 @@ module.exports = (app: N2kDiscoveryApp) => {
     const n2k = pgn as N2kPGN
     if (typeof n2k.src === 'number' && n2k.src > 0 && n2k.src < 254) {
       knownAddresses.add(n2k.src)
+      // Track discovery responses (Address Claim + Product Info)
+      if (n2k.pgn === 60928 || n2k.pgn === 126996) {
+        discoveredAddresses.add(n2k.src)
+      }
     }
   }
 
@@ -209,7 +230,12 @@ module.exports = (app: N2kDiscoveryApp) => {
     const timer = setTimeout(() => {
       pendingTimers.delete(timer)
       debug('Auto-requesting product info from all N2K devices')
-      requestProductInfo(app, knownAddresses, pendingTimers)
+      requestProductInfo(
+        app,
+        knownAddresses,
+        pendingTimers,
+        discoveredAddresses
+      )
     }, 5000)
     pendingTimers.add(timer)
   }
@@ -236,13 +262,25 @@ module.exports = (app: N2kDiscoveryApp) => {
         const deviceCount = requestProductInfo(
           app,
           knownAddresses,
-          pendingTimers
+          pendingTimers,
+          discoveredAddresses
         )
         const estimatedMs = deviceCount * REQUEST_INTERVAL_MS * 2
         res.json({
           state: 'COMPLETED',
           statusCode: 200,
           message: `Discovery request sent to ${deviceCount} devices (~${Math.ceil(estimatedMs / 1000)}s)`
+        })
+      }
+    )
+
+    app.get(
+      `${SERVERROUTESPREFIX}/n2kDeviceStatus`,
+      (_req: Request, res: Response) => {
+        res.json({
+          knownAddresses: Array.from(knownAddresses),
+          discoveredAddresses: Array.from(discoveredAddresses),
+          n2kOutAvailable
         })
       }
     )
@@ -432,6 +470,136 @@ module.exports = (app: N2kDiscoveryApp) => {
         saveLabels(app, labels)
         debug('Channel label %s = %s', key, label || '(deleted)')
         res.json({ state: 'COMPLETED', statusCode: 200 })
+      }
+    )
+
+    app.securityStrategy.addAdminMiddleware(
+      `${SERVERROUTESPREFIX}/n2kRemoveSource`
+    )
+
+    app.delete(
+      `${SERVERROUTESPREFIX}/n2kRemoveSource`,
+      (req: Request, res: Response) => {
+        const sourceRef = req.query.sourceRef as string | undefined
+        if (!sourceRef) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: 'sourceRef query parameter required'
+          })
+          return
+        }
+
+        const dotIdx = sourceRef.indexOf('.')
+        if (dotIdx === -1) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: 'Invalid sourceRef format'
+          })
+          return
+        }
+        const connection = sourceRef.slice(0, dotIdx)
+        const srcPart = sourceRef.slice(dotIdx + 1)
+
+        // Find matching sourceDeltas entries — the key uses numeric address
+        // (e.g. "can0.44") but the UI sourceRef may use canName
+        // (e.g. "can0.c1789101e7e0b32b"). Collect all ref variants for
+        // alias/label cleanup before deleting.
+        const keysToRemove: string[] = []
+        const addressesToRemove: number[] = []
+        const allRefs = new Set<string>([sourceRef])
+        for (const [key, delta] of Object.entries(
+          app.deltaCache.sourceDeltas
+        )) {
+          if (!key.startsWith(connection + '.')) continue
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const d = delta as any
+          const src = d?.updates?.[0]?.source
+          if (!src) continue
+          const addr = String(src.src ?? '')
+          const canName = src.canName ?? ''
+          if (
+            key === sourceRef ||
+            srcPart === addr ||
+            srcPart === canName ||
+            key.slice(dotIdx + 1) === srcPart
+          ) {
+            keysToRemove.push(key)
+            allRefs.add(key)
+            if (canName) allRefs.add(`${connection}.${canName}`)
+            if (addr) allRefs.add(`${connection}.${addr}`)
+            if (typeof src.src === 'number') {
+              addressesToRemove.push(src.src)
+            } else if (!isNaN(Number(addr))) {
+              addressesToRemove.push(Number(addr))
+            }
+          }
+        }
+
+        if (keysToRemove.length === 0) {
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `Source ${sourceRef} not found`
+          })
+          return
+        }
+
+        for (const key of keysToRemove) {
+          app.deltaCache.removeSourceDelta(key)
+        }
+
+        // Remove from knownAddresses and discoveredAddresses
+        for (const addr of addressesToRemove) {
+          knownAddresses.delete(addr)
+          discoveredAddresses.delete(addr)
+        }
+
+        // Clean up source aliases
+        const aliases = app.config.settings.sourceAliases
+        if (aliases) {
+          let aliasChanged = false
+          for (const ref of allRefs) {
+            if (ref in aliases) {
+              delete aliases[ref]
+              aliasChanged = true
+            }
+          }
+          if (aliasChanged) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            writeSettingsFile(app as any, app.config.settings, (err: Error) => {
+              if (err) {
+                debug('Failed to save settings after alias cleanup: %s', err)
+              }
+            })
+            app.emit('serverAdminEvent', {
+              type: 'SOURCEALIASES',
+              data: aliases
+            })
+          }
+        }
+
+        // Clean up channel labels
+        const labels = loadLabels(app)
+        const labelPrefixes = Array.from(allRefs).map((r) => r + ':')
+        let labelsChanged = false
+        for (const key of Object.keys(labels)) {
+          if (labelPrefixes.some((p) => key.startsWith(p))) {
+            delete labels[key]
+            labelsChanged = true
+          }
+        }
+        if (labelsChanged) {
+          saveLabels(app, labels)
+        }
+
+        debug('Removed source %s (%d entries)', sourceRef, keysToRemove.length)
+        res.json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: `Removed source ${sourceRef}`
+        })
       }
     )
 

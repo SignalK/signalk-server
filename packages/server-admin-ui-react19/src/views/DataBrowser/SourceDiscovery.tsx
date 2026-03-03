@@ -12,6 +12,7 @@ import { faSortDown } from '@fortawesome/free-solid-svg-icons/faSortDown'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import { faEyeSlash } from '@fortawesome/free-solid-svg-icons/faEyeSlash'
 import { faEye } from '@fortawesome/free-solid-svg-icons/faEye'
+import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import {
   type SourcesData,
   type N2kDeviceEntry,
@@ -69,6 +70,8 @@ const SourceDiscovery: React.FC = () => {
   const [ignoredConflicts, setIgnoredConflicts] = useState<
     Record<string, string>
   >({})
+  const [discoveredAddresses, setDiscoveredAddresses] =
+    useState<Set<number> | null>(null)
 
   useEffect(() => {
     fetch(`${window.serverRoutesPrefix}/ignoredInstanceConflicts`, {
@@ -76,6 +79,16 @@ const SourceDiscovery: React.FC = () => {
     })
       .then((res) => res.json())
       .then((data) => setIgnoredConflicts(data || {}))
+      .catch(() => {})
+    fetch(`${window.serverRoutesPrefix}/n2kDeviceStatus`, {
+      credentials: 'include'
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.discoveredAddresses) {
+          setDiscoveredAddresses(new Set(data.discoveredAddresses))
+        }
+      })
       .catch(() => {})
   }, [])
 
@@ -204,6 +217,19 @@ const SourceDiscovery: React.FC = () => {
     [sourcesData]
   )
 
+  const loadDeviceStatus = useCallback(() => {
+    return fetch(`${window.serverRoutesPrefix}/n2kDeviceStatus`, {
+      credentials: 'include'
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.discoveredAddresses) {
+          setDiscoveredAddresses(new Set(data.discoveredAddresses))
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   const handleDiscover = useCallback(() => {
     setIsDiscovering(true)
     fetch(`${window.serverRoutesPrefix}/n2kDiscoverDevices`, {
@@ -219,10 +245,32 @@ const SourceDiscovery: React.FC = () => {
       .catch(() => 5000)
       .then((delayMs) => {
         setTimeout(() => {
-          loadSources().finally(() => setIsDiscovering(false))
+          Promise.all([loadSources(), loadDeviceStatus()]).finally(() =>
+            setIsDiscovering(false)
+          )
         }, delayMs)
       })
-  }, [loadSources])
+  }, [loadSources, loadDeviceStatus])
+
+  const handleRemoveDevice = useCallback(
+    async (sourceRef: string) => {
+      try {
+        const res = await fetch(
+          `${window.serverRoutesPrefix}/n2kRemoveSource?sourceRef=${encodeURIComponent(sourceRef)}`,
+          { method: 'DELETE', credentials: 'include' }
+        )
+        if (res.ok) {
+          // Small delay to let the server finish persisting
+          await new Promise((r) => setTimeout(r, 500))
+          await loadSources()
+          await loadDeviceStatus()
+        }
+      } catch {
+        // ignore
+      }
+    },
+    [loadSources, loadDeviceStatus]
+  )
 
   const toggleSort = useCallback((key: SortKey) => {
     setSort((prev) => {
@@ -266,6 +314,24 @@ const SourceDiscovery: React.FC = () => {
         >
           <span style={{ fontWeight: 500 }}>N2K Devices</span>
           <Badge bg="secondary">{devices.length}</Badge>
+          {discoveredAddresses && devices.length > 0 && (
+            <>
+              <Badge bg="success" style={{ fontSize: '0.75em' }}>
+                {
+                  devices.filter((d) => discoveredAddresses.has(Number(d.src)))
+                    .length
+                }{' '}
+                online
+              </Badge>
+              <Badge bg="secondary" style={{ fontSize: '0.75em' }}>
+                {
+                  devices.filter((d) => !discoveredAddresses.has(Number(d.src)))
+                    .length
+                }{' '}
+                offline
+              </Badge>
+            </>
+          )}
           <Button
             size="sm"
             variant="primary"
@@ -417,6 +483,12 @@ const SourceDiscovery: React.FC = () => {
                       sourcesData={sourcesData}
                       hasConflict={conflictSourceRefs.has(device.sourceRef)}
                       conflictPGNs={conflictPGNsByDevice.get(device.sourceRef)}
+                      isOnline={
+                        discoveredAddresses
+                          ? discoveredAddresses.has(Number(device.src))
+                          : null
+                      }
+                      onRemove={handleRemoveDevice}
                     />
                   )
                 })}
@@ -537,6 +609,8 @@ interface DeviceRowsProps {
   sourcesData: SourcesData | null
   hasConflict: boolean
   conflictPGNs?: Set<string>
+  isOnline: boolean | null
+  onRemove: (sourceRef: string) => void
 }
 
 const DeviceRows: React.FC<DeviceRowsProps> = ({
@@ -545,7 +619,9 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
   onToggle,
   sourcesData,
   hasConflict,
-  conflictPGNs
+  conflictPGNs,
+  isOnline,
+  onRemove
 }) => {
   const allPgnKeys = device.pgns
     ? Object.keys(device.pgns).sort((a, b) => Number(a) - Number(b))
@@ -573,6 +649,22 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
         </td>
         <td>
           <SourceLabel sourceRef={device.sourceRef} sourcesData={sourcesData} />
+          {isOnline === true && (
+            <Badge
+              bg="success"
+              style={{ marginLeft: '6px', fontSize: '0.7em' }}
+            >
+              Online
+            </Badge>
+          )}
+          {isOnline === false && (
+            <Badge
+              bg="secondary"
+              style={{ marginLeft: '6px', fontSize: '0.7em' }}
+            >
+              Offline
+            </Badge>
+          )}
         </td>
         <td>{device.manufacturerCode || ''}</td>
         <td>{device.modelId || ''}</td>
@@ -702,6 +794,24 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
                   </span>
                 </div>
               )}
+              <div style={{ gridColumn: '1 / -1', marginTop: '4px' }}>
+                <Button
+                  size="sm"
+                  variant="outline-danger"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (
+                      window.confirm(
+                        `Remove ${device.sourceRef} from the device list? This removes cached source data and aliases.`
+                      )
+                    ) {
+                      onRemove(device.sourceRef)
+                    }
+                  }}
+                >
+                  <FontAwesomeIcon icon={faTrash} /> Remove Device
+                </Button>
+              </div>
             </div>
           </td>
         </tr>
