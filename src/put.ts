@@ -1,5 +1,5 @@
 import { Request, Response, Application } from 'express'
-import { Context, Path, SourceRef } from '@signalk/server-api'
+import { Context, Path, SourceRef, getMetadata } from '@signalk/server-api'
 import { get as _get, set as _set } from 'lodash'
 import { createDebug } from './debug'
 import {
@@ -10,7 +10,6 @@ import {
 } from './requestResponse'
 import * as skConfig from './config/config'
 import { ConfigApp } from './config/config'
-import { getMetadata } from '@signalk/signalk-schema'
 import { validateCategoryAssignment } from './unitpreferences'
 import { WithSecurityStrategy } from './security'
 

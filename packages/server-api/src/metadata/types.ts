@@ -21,4 +21,7 @@ export interface PathMetadataEntry {
       items?: Record<string, any>
     }
   >
+  /** Runtime metadata (zones, displayUnits, etc.) added via meta deltas or PUT. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any
 }
