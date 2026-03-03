@@ -11,26 +11,14 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
           - vm: ubuntu-latest
             arch: amd
             os: 24.04
-            node: 22.x
-            node_safe: 22.x
-            platform: linux/amd64
-          - vm: ubuntu-latest
-            arch: amd
-            os: 24.04
             node: 24.x
             node_safe: 24.x
-            platform: linux/amd64
-          - vm: ubuntu-latest
-            arch: amd
-            os: alpine
-            node: 22.x
-            node_safe: 22
             platform: linux/amd64
           - vm: ubuntu-latest
             arch: amd
@@ -41,20 +29,8 @@ jobs:
           - vm: ubuntu-24.04-arm
             arch: arm
             os: 24.04
-            node: 22.x
-            node_safe: 22.x
-            platform: linux/arm64
-          - vm: ubuntu-24.04-arm
-            arch: arm
-            os: 24.04
             node: 24.x
             node_safe: 24.x
-            platform: linux/arm64
-          - vm: ubuntu-24.04-arm
-            arch: arm
-            os: alpine
-            node: 22.x
-            node_safe: 22
             platform: linux/arm64
           - vm: ubuntu-24.04-arm
             arch: arm
@@ -92,17 +68,11 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         include:
-          - os: 24.04
-            node: 22.x
-            node_safe: 22.x
           - os: 24.04
             node: 24.x
             node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
           - os: alpine
             node: 24.x
             node_safe: 24
@@ -130,17 +100,11 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         include:
-          - os: 24.04
-            node: 22.x
-            node_safe: 22.x
           - os: 24.04
             node: 24.x
             node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
           - os: alpine
             node: 24.x
             node_safe: 24

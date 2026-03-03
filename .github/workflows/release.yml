@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '22.x'
+          node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install and build all
@@ -139,7 +139,7 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
           - vm: ubuntu-latest
@@ -147,21 +147,11 @@ jobs:
             platform: linux/amd64
           - vm: ubuntu-24.04-arm
             arch: arm
-            node: 22.x
-            platform: linux/arm64
-          - vm: ubuntu-24.04-arm
-            arch: arm
             node: 24.x
             platform: linux/arm64
-          - os: 24.04
-            node: 22.x
-            node_safe: 22.x
           - os: 24.04
             node: 24.x
             node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
           - os: alpine
             node: 24.x
             node_safe: 24
@@ -199,26 +189,16 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         include:
           - os: 24.04
-            node: 22.x
-            tag: latest
-            node_safe: 22.x
-          - os: 24.04
             node: 24.x
             tag: latest
-            suffix: -24.x
             node_safe: 24.x
           - os: alpine
-            node: 22.x
-            tag: latest
-            suffix: -22-alpine
-            node_safe: 22
-          - os: alpine
             node: 24.x
             tag: latest
-            suffix: -24-alpine
+            suffix: -alpine
             node_safe: 24
 
     steps:
@@ -271,17 +251,11 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         include:
-          - os: 24.04
-            node: 22.x
-            node_safe: 22.x
           - os: 24.04
             node: 24.x
             node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
           - os: alpine
             node: 24.x
             node_safe: 24
