@@ -27,7 +27,7 @@ import Register from '../../views/security/Register'
 import AccessRequests from '../../views/security/AccessRequests'
 import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
 import Settings from '../../views/ServerConfig/Settings'
-import UnitPreferencesSettings from '../../views/ServerConfig/UnitPreferencesSettings'
+import PreferencesPage from '../../views/ServerConfig/PreferencesPage'
 import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
@@ -179,8 +179,8 @@ export default function Full() {
                 element={<ProtectedRoute component={SourcePriorityPage} />}
               />
               <Route
-                path="/data/units"
-                element={<ProtectedRoute component={UnitPreferencesSettings} />}
+                path="/data/preferences"
+                element={<ProtectedRoute component={PreferencesPage} />}
               />
               <Route
                 path="/data/fiddler"
@@ -196,6 +196,10 @@ export default function Full() {
               <Route
                 path="/databrowser"
                 element={<Navigate to="/data/browser" replace />}
+              />
+              <Route
+                path="/data/units"
+                element={<Navigate to="/data/preferences" replace />}
               />
               <Route
                 path="/serverConfiguration/datafiddler"

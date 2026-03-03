@@ -201,3 +201,15 @@ export interface CategoryInfo {
   baseUnit?: string
   [key: string]: unknown
 }
+
+export interface GpsSensorConfig {
+  sensorId: string
+  sourceRef: string
+  fromBow: number | null
+  fromCenter: number | null
+}
+
+export interface GpsSensorsData {
+  sensors: GpsSensorConfig[]
+  saveState: SaveState
+}

@@ -9,7 +9,9 @@ import {
   useSourcesData,
   useMultiSourcePaths,
   useSourcePriorities,
-  useSourceRanking
+  useSourceRanking,
+  useGpsSensorsData,
+  usePositionSources
 } from '../../store'
 import {
   extractN2kDevices,
@@ -92,6 +94,20 @@ export default function Sidebar({ location }: SidebarProps) {
     return count
   }, [multiSourcePaths, sourcePrioritiesData, sourceRankingData])
 
+  const gpsSensorsData = useGpsSensorsData()
+  const positionSources = usePositionSources()
+
+  const unconfiguredGpsCount = useMemo(() => {
+    const configuredRefs = new Set(
+      gpsSensorsData.sensors
+        .filter(
+          (s) => s.sourceRef && s.fromBow !== null && s.fromCenter !== null
+        )
+        .map((s) => s.sourceRef)
+    )
+    return positionSources.filter((ref) => !configuredRefs.has(ref)).length
+  }, [positionSources, gpsSensorsData])
+
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
     let updatesBadge: BadgeData | null = null
@@ -157,7 +173,14 @@ export default function Sidebar({ location }: SidebarProps) {
                 }
               : null
         },
-        { name: 'Unit Preferences', url: '/data/units' },
+        {
+          name: 'Preferences',
+          url: '/data/preferences',
+          badge:
+            unconfiguredGpsCount > 0
+              ? { variant: 'warning', text: `${unconfiguredGpsCount}` }
+              : null
+        },
         { name: 'Data Fiddler', url: '/data/fiddler' },
         { name: 'Data Connections', url: '/data/connections/-' }
       )
@@ -179,10 +202,10 @@ export default function Sidebar({ location }: SidebarProps) {
         url: '/data',
         icon: 'icon-folder',
         badge:
-          unconfiguredPriorityCount + conflictCount > 0
+          unconfiguredPriorityCount + conflictCount + unconfiguredGpsCount > 0
             ? {
                 variant: 'warning',
-                text: `${unconfiguredPriorityCount + conflictCount}`
+                text: `${unconfiguredPriorityCount + conflictCount + unconfiguredGpsCount}`
               }
             : null,
         children: dataChildren
@@ -289,7 +312,8 @@ export default function Sidebar({ location }: SidebarProps) {
     accessRequests,
     loginStatus,
     conflictCount,
-    unconfiguredPriorityCount
+    unconfiguredPriorityCount,
+    unconfiguredGpsCount
   ])
 
   const handleClick = useCallback((e: MouseEvent<HTMLAnchorElement>) => {

@@ -47,6 +47,7 @@ export default class DeltaCache {
   private preferredSources: Map<string, SourceRef> = new Map()
   private multiSourceTimer: ReturnType<typeof setTimeout> | null = null
   private lastEmittedMultiSourceCount = 0
+  private lastEmittedPositionSources: string[] = []
 
   constructor(app: SignalKServer, streambundle: StreamBundle) {
     this.app = app
@@ -106,8 +107,12 @@ export default class DeltaCache {
     )
 
     if (msg.path.length !== 0) {
+      const isNewSource = !leaf[sourceRef]
       leaf[sourceRef] = msg
       this.preferredSources.set(msg.context + '\0' + msg.path, sourceRef)
+      if (isNewSource && msg.path === 'navigation.position') {
+        this.scheduleMultiSourceEmit()
+      }
     } else if (msg.value) {
       _.keys(msg.value).forEach((key) => {
         if (!leaf[key]) {
@@ -138,6 +143,22 @@ export default class DeltaCache {
     })
     if (countChanged) {
       this.scheduleMultiSourceEmit()
+    }
+    this.emitPositionSources()
+  }
+
+  private emitPositionSources() {
+    const sources = this.getSourcesForPath('navigation.position')
+    const sorted = sources.slice().sort()
+    const changed =
+      sorted.length !== this.lastEmittedPositionSources.length ||
+      sorted.some((s, i) => s !== this.lastEmittedPositionSources[i])
+    if (changed) {
+      this.lastEmittedPositionSources = sorted
+      ;(this.app as any).emit('serverevent', {
+        type: 'POSITION_SOURCES',
+        data: sources
+      })
     }
   }
 
@@ -228,17 +249,21 @@ export default class DeltaCache {
         leaf[sourceRef] = msg
 
         if (isNewSource) {
-          const sourceCount = Object.keys(leaf).filter((k) => {
-            const v = leaf[k]
-            return (
-              v &&
-              typeof v === 'object' &&
-              v.path !== undefined &&
-              v.value !== undefined
-            )
-          }).length
-          if (sourceCount >= 2) {
+          if (pathValue.path === 'navigation.position') {
             this.scheduleMultiSourceEmit()
+          } else {
+            const sourceCount = Object.keys(leaf).filter((k) => {
+              const v = leaf[k]
+              return (
+                v &&
+                typeof v === 'object' &&
+                v.path !== undefined &&
+                v.value !== undefined
+              )
+            }).length
+            if (sourceCount >= 2) {
+              this.scheduleMultiSourceEmit()
+            }
           }
         }
       }
@@ -446,6 +471,31 @@ export default class DeltaCache {
     }
     walk(selfBranch, [])
     return result
+  }
+
+  /**
+   * Unlike getMultiSourcePaths, includes single-source paths too.
+   */
+  getSourcesForPath(path: string): string[] {
+    const selfParts = this.app.selfContext.split('.')
+    const pathParts = path.split('.')
+    const parts = [...selfParts, ...pathParts]
+
+    let node = this.cache
+    for (const part of parts) {
+      if (!node || !node[part]) return []
+      node = node[part]
+    }
+
+    return Object.keys(node).filter((k) => {
+      const v = node[k]
+      return (
+        v &&
+        typeof v === 'object' &&
+        v.path !== undefined &&
+        v.value !== undefined
+      )
+    })
   }
 
   getSources() {
