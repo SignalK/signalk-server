@@ -13,9 +13,7 @@ import { radar } from '@signalk/server-api'
 const RADAR_API_PATH = `/signalk/v2/api/vessels/self/radars`
 
 interface RadarApplication
-  extends WithSecurityStrategy,
-    SignalKMessageHub,
-    IRouter {}
+  extends WithSecurityStrategy, SignalKMessageHub, IRouter {}
 
 export class RadarApi {
   private radarProviders: Map<string, radar.RadarProvider> = new Map()

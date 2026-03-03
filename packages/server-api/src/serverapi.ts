@@ -31,7 +31,8 @@ import { SubscriptionManager } from './subscriptionmanager'
  * @category Server API
  */
 export interface ServerAPI
-  extends PropertyValuesEmitter,
+  extends
+    PropertyValuesEmitter,
     ResourceProviderRegistry,
     WithResourcesApi,
     AutopilotProviderRegistry,

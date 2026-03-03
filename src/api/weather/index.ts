@@ -22,9 +22,7 @@ import {
 const WEATHER_API_PATH = `/signalk/v2/api/weather`
 
 interface WeatherApplication
-  extends WithSecurityStrategy,
-    SignalKMessageHub,
-    IRouter {}
+  extends WithSecurityStrategy, SignalKMessageHub, IRouter {}
 
 export class WeatherApi {
   private weatherProviders: Map<string, WeatherProvider> = new Map()
