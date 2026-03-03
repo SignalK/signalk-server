@@ -136,7 +136,7 @@
     "ws": "^8.17.0"
   },
   "optionalDependencies": {
-    "@mxtommy/kip": "^4.0.0",
+    "@mxtommy/kip": "4.4.0",
     "@signalk/freeboard-sk": "^2.0.0-beta.3",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.5.0",
