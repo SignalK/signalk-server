@@ -120,7 +120,7 @@ export default class MdnsWs extends Transform {
       const reqOptions = {
         hostname: this.options.host,
         port: this.options.port,
-        path: '/skServer/loginStatus',
+        path: '/signalk/v1/api/self',
         method: 'GET',
         headers: {
           Authorization: `JWT ${this.options.token}`
@@ -128,18 +128,8 @@ export default class MdnsWs extends Transform {
         rejectUnauthorized: !(this.options.selfsignedcert === true)
       }
       const req = protocol.request(reqOptions, (response) => {
-        let data = ''
-        response.on('data', (chunk: string) => {
-          data += chunk
-        })
-        response.on('end', () => {
-          try {
-            const loginStatus = JSON.parse(data)
-            resolve(loginStatus.status === 'loggedIn')
-          } catch (_e) {
-            resolve(false)
-          }
-        })
+        response.resume()
+        resolve(response.statusCode === 200)
       })
       req.on('error', (err) => reject(err))
       req.setTimeout(10000, () => {
