@@ -26,6 +26,7 @@ import {
   RouteDestination,
   WeatherProvider,
   WeatherApi,
+  DatabaseProvider,
   Value,
   SignalKApiId,
   SourceRef,
@@ -42,6 +43,7 @@ import _ from 'lodash'
 import path from 'path'
 import { AutopilotApi } from '../api/autopilot'
 import { CourseApi } from '../api/course'
+import { DatabaseApiHttpRegistry } from '../api/database'
 import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
@@ -628,6 +630,17 @@ module.exports = (theApp: any) => {
         historyApiRegistry.unregisterHistoryApiProvider(plugin.id)
       })
     }
+
+    const databaseApiRegistry: DatabaseApiHttpRegistry =
+      app.databaseApiHttpRegistry
+    delete (appCopy as any).databaseApiHttpRegistry
+    appCopy.registerDatabaseProvider = (provider: DatabaseProvider) => {
+      databaseApiRegistry.registerDatabaseProvider(plugin.id, provider)
+      onStopHandlers[plugin.id].push(() => {
+        databaseApiRegistry.unregisterDatabaseProvider(plugin.id)
+      })
+    }
+    appCopy.getDatabaseApi = () => databaseApiRegistry.getDatabaseApi()
 
     const resourcesApi: ResourcesApi = app.resourcesApi
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {

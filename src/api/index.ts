@@ -8,6 +8,7 @@ import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
 import { RadarApi } from './radar'
 import { HistoryApiHttpRegistry } from './history'
+import { DatabaseApiHttpRegistry } from './database'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 import { NotificationApi, NotificationApplication } from './notifications'
 import { binaryStreamManager, initializeBinaryStreams } from './streams'
@@ -96,6 +97,11 @@ export const startApis = (
   ;(app as any).historyApiHttpRegistry = historyApiHttpRegistry
   apiList.push('history')
 
+  const databaseApiHttpRegistry = new DatabaseApiHttpRegistry(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).databaseApiHttpRegistry = databaseApiHttpRegistry
+  apiList.push('database')
+
   const notificationApi = new NotificationApi(app as NotificationApplication)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).notificationApi = notificationApi
@@ -109,6 +115,7 @@ export const startApis = (
     autopilotApi.start(),
     radarApi.start(),
     historyApiHttpRegistry.start(),
+    databaseApiHttpRegistry.start(),
     notificationApi.start()
   ])
   return apiList
