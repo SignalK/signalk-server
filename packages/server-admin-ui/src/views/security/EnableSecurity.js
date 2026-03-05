@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import {
+  Alert,
   Form,
   Container,
   Row,
@@ -11,7 +12,8 @@ import {
   Input,
   InputGroup,
   InputGroupAddon,
-  InputGroupText
+  InputGroupText,
+  Label
 } from 'reactstrap'
 import { connect } from 'react-redux'
 import { enableSecurity, fetchLoginStatus } from '../../actions'
@@ -22,7 +24,8 @@ class EnableSecurity extends Component {
     super(props)
     this.state = {
       enabling: false,
-      errorMessage: null
+      errorMessage: null,
+      allowReadonly: false
     }
     this.handleInputChange = this.handleInputChange.bind(this)
     this.handleInputKeyUp = this.handleInputKeyUp.bind(this)
@@ -36,6 +39,7 @@ class EnableSecurity extends Component {
       dispatch,
       this.state.username,
       this.state.password,
+      this.state.allowReadonly,
       (error) => {
         fetchLoginStatus(dispatch)
         this.setState({
@@ -107,6 +111,37 @@ class EnableSecurity extends Component {
                               onKeyUp={this.handleInputKeyUp}
                             />
                           </InputGroup>
+                          <Alert color="warning" className="mb-4">
+                            <div className="custom-control custom-checkbox mb-2">
+                              <Input
+                                type="checkbox"
+                                className="custom-control-input"
+                                id="allow-readonly"
+                                checked={this.state.allowReadonly}
+                                onChange={(e) =>
+                                  this.setState({
+                                    allowReadonly: e.target.checked
+                                  })
+                                }
+                              />
+                              <Label
+                                className="custom-control-label"
+                                htmlFor="allow-readonly"
+                              >
+                                Allow Readonly Access
+                              </Label>
+                            </div>
+                            <small className="d-block text-muted">
+                              When enabled, unauthenticated users can read
+                              Signal K data and use webapps without logging in.
+                              This exposes your data on the local network and
+                              potentially on the public internet.
+                            </small>
+                            <small className="d-block text-muted mt-1">
+                              You can change this anytime in Security &gt;
+                              Settings.
+                            </small>
+                          </Alert>
                           <Row>
                             <Col xs="6">
                               <Button

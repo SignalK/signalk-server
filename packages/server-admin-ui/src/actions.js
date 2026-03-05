@@ -74,11 +74,20 @@ export async function login(
   }
 }
 
-export function enableSecurity(dispatch, userId, password, callback) {
+export function enableSecurity(
+  dispatch,
+  userId,
+  password,
+  allowReadonly,
+  callback
+) {
   var payload = {
     userId: userId,
     password: password,
     type: 'admin'
+  }
+  if (allowReadonly) {
+    payload.allow_readonly = true
   }
   fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
     method: 'POST',
