@@ -4,7 +4,7 @@ title: Raspberry Pi
 
 # Installing on Raspberry Pi
 
-Installation of Signal K server can consists of the following steps:
+Installation of Signal K server consists of the following steps:
 
 1. Install the tools and libraries required to run the Signal K server (the dependencies)
 1. Install a Signal K Server to process the Signal K data
@@ -14,9 +14,9 @@ _**Important:** If you are updating a Signal K server installation, especially i
 
 ## Prerequisites:
 
-Raspberry Pi OS is installed on the device.
+**64-bit** Raspberry Pi OS is installed on the device (Pi 3, 4 or 5 required). Node.js 24 does not support 32-bit ARM (armv7).
 
-For instructions on how to install the operating system [can be found here.](https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi).
+For instructions on how to install the operating system see [Raspberry Pi Getting Started](https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi).
 
 _Note: It is also possible to perform a "headless install" using `Raspberry Pi OS Lite` since the GUI for Signal K is browser based._
 
@@ -34,7 +34,7 @@ Once the OS installation has been completed, you are ready to commence.
    sudo apt update
    ```
 
-1. Install NodeJS 20 and npm.
+1. Install NodeJS 24 and npm.
 
    Follow [instructions for Ubuntu and Debian based distributions like Raspberry Pi OS at NodeSource Distributions](https://github.com/nodesource/distributions#installation-instructions).
 
@@ -50,7 +50,7 @@ Once the OS installation has been completed, you are ready to commence.
    node -v && npm -v
    ```
 
-   Ensure the reported versions are equal to or greater than `v18.15.0, 9.5.0` respectively.
+   Ensure the reported versions are equal to or greater than `v24.0.0, 11.0.0` respectively.
 
 1. Install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server.
    ```
@@ -110,7 +110,7 @@ sudo signalk-server-setup
 
 You can re-run this command at any time in the future to change the settings.
 
-_Note: The setup script will enable security which will require you to `Login`` from the Admin UI.
+_Note: The setup script will enable security which will require you to `Login` from the Admin UI.
 Clicking `Login` for the first time will prompt you to create a user and password._
 
 Signal K server will now be started automatically when your RPi boots up.
