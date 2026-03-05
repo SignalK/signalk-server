@@ -10,7 +10,6 @@ import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 
 import VesselConfiguration from './VesselConfiguration'
-import UnitPreferencesSettings from './UnitPreferencesSettings'
 import Logging from './Logging'
 
 interface ServerSettingsData {
@@ -425,7 +424,6 @@ const Settings: React.FC = () => {
   return (
     <div>
       <VesselConfiguration />
-      <UnitPreferencesSettings />
       <ServerSettings />
       <Logging />
     </div>

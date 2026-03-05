@@ -18,8 +18,6 @@ interface VesselData {
   length?: string
   beam?: string
   height?: string
-  gpsFromBow?: string
-  gpsFromCenter?: string
 }
 
 const VesselConfiguration: React.FC = () => {
@@ -294,47 +292,6 @@ const VesselConfiguration: React.FC = () => {
                 />
                 <Form.Text muted>
                   The total height of the vessel in meters{' '}
-                </Form.Text>
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row}>
-              <Col md="2">
-                <Form.Label htmlFor="gpsFromBow">
-                  GPS Distance From Bow
-                </Form.Label>
-              </Col>
-              <Col xs="12" md="4">
-                <Form.Control
-                  type="text"
-                  id="gpsFromBow"
-                  name="gpsFromBow"
-                  autoComplete="off"
-                  onChange={handleChange}
-                  value={vesselData.gpsFromBow || ''}
-                />
-                <Form.Text muted>
-                  The distance of the gps receiver from the bow in meters
-                </Form.Text>
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row}>
-              <Col md="2">
-                <Form.Label htmlFor="gpsFromCenter">
-                  GPS Distance From Center
-                </Form.Label>
-              </Col>
-              <Col xs="12" md="4">
-                <Form.Control
-                  type="text"
-                  id="gpsFromCenter"
-                  name="gpsFromCenter"
-                  autoComplete="off"
-                  onChange={handleChange}
-                  value={vesselData.gpsFromCenter || ''}
-                />
-                <Form.Text muted>
-                  The distance from the center of vessel of the gps receiver in
-                  meters
                 </Form.Text>
               </Col>
             </Form.Group>

@@ -287,6 +287,16 @@ module.exports = function (
     '/../node_modules/@signalk/server-admin-ui-react19/public'
   )
   app.get(
+    '/@signalk/server-admin-ui-react19',
+    (req: Request, res: Response) => {
+      if (!req.path.endsWith('/')) {
+        res.redirect(req.path + '/')
+        return
+      }
+      serveIndexWithAddonScripts(path.join(react19UiPath, 'index.html'), res)
+    }
+  )
+  app.get(
     '/@signalk/server-admin-ui-react19/',
     (req: Request, res: Response) => {
       if (!req.originalUrl.endsWith('/')) {
@@ -866,8 +876,12 @@ module.exports = function (
       length: length && length.overall,
       beam: de.getSelfValue('design.beam'),
       height: de.getSelfValue('design.airHeight'),
-      gpsFromBow: de.getSelfValue('sensors.gps.fromBow'),
-      gpsFromCenter: de.getSelfValue('sensors.gps.fromCenter'),
+      gpsFromBow:
+        app.config.settings.gpsSensors?.[0]?.fromBow ??
+        de.getSelfValue('sensors.gps.fromBow'),
+      gpsFromCenter:
+        app.config.settings.gpsSensors?.[0]?.fromCenter ??
+        de.getSelfValue('sensors.gps.fromCenter'),
       aisShipType: type && type.id,
       callsignVhf: communication && communication.callsignVhf
     }
@@ -1047,6 +1061,13 @@ module.exports = function (
     }
   )
 
+  app.get(
+    `${SERVERROUTESPREFIX}/multiSourcePaths`,
+    (req: Request, res: Response) => {
+      res.json(app.deltaCache.getMultiSourcePaths())
+    }
+  )
+
   app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/eventsRoutingData`
   )
@@ -1099,6 +1120,173 @@ module.exports = function (
       })
     }
   )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/sourceRanking`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.sourceRanking || [])
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/sourceRanking`,
+    (req: Request, res: Response) => {
+      app.config.settings.sourceRanking = req.body
+      app.activateSourcePriorities()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, app.config.settings, (err: any) => {
+        if (err) {
+          res.status(500).send('Unable to save sourceRanking in settings file')
+        } else {
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/sourceAliases`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.sourceAliases || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/sourceAliases`,
+    (req: Request, res: Response) => {
+      app.config.settings.sourceAliases = req.body
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, app.config.settings, (err: any) => {
+        if (err) {
+          res.status(500).send('Unable to save sourceAliases in settings file')
+        } else {
+          app.emit('serverAdminEvent', {
+            type: 'SOURCEALIASES',
+            data: req.body
+          })
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.ignoredInstanceConflicts || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`,
+    (req: Request, res: Response) => {
+      app.config.settings.ignoredInstanceConflicts = req.body
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, app.config.settings, (err: any) => {
+        if (err) {
+          res
+            .status(500)
+            .send('Unable to save ignoredInstanceConflicts in settings file')
+        } else {
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/positionSources`,
+    (req: Request, res: Response) => {
+      res.json(app.deltaCache.getSourcesForPath('navigation.position'))
+    }
+  )
+
+  app.get(`${SERVERROUTESPREFIX}/gpsSensors`, (req: Request, res: Response) => {
+    if (
+      !app.config.settings.gpsSensors &&
+      (app.config.baseDeltaEditor.getSelfValue('sensors.gps.fromBow') !==
+        null ||
+        app.config.baseDeltaEditor.getSelfValue('sensors.gps.fromCenter') !==
+          null)
+    ) {
+      // Migrate legacy single-GPS config to multi-GPS format
+      app.config.settings.gpsSensors = [
+        {
+          sensorId: 'gps1',
+          sourceRef: '',
+          fromBow:
+            app.config.baseDeltaEditor.getSelfValue('sensors.gps.fromBow') ??
+            null,
+          fromCenter:
+            app.config.baseDeltaEditor.getSelfValue('sensors.gps.fromCenter') ??
+            null
+        }
+      ]
+    }
+
+    // One-time migration: flip fromCenter sign to match SK spec
+    // (SK spec: positive = port, negative = starboard)
+    if (
+      !app.config.settings.gpsSensorsSignFixed &&
+      app.config.settings.gpsSensors?.length
+    ) {
+      for (const sensor of app.config.settings.gpsSensors) {
+        if (sensor.fromCenter !== null) {
+          sensor.fromCenter = -sensor.fromCenter
+        }
+      }
+      app.config.settings.gpsSensorsSignFixed = true
+      const de = app.config.baseDeltaEditor
+      for (const sensor of app.config.settings.gpsSensors) {
+        if (sensor.sensorId) {
+          de.setSelfValue(
+            `sensors.gps.${sensor.sensorId}.fromCenter`,
+            sensor.fromCenter !== null ? Number(sensor.fromCenter) : undefined
+          )
+        }
+      }
+      sendBaseDeltas(app)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, app.config.settings, (err: any) => {
+        if (!err) {
+          writeBaseDeltasFile(app)
+        }
+      })
+    }
+
+    res.json(app.config.settings.gpsSensors || [])
+  })
+
+  app.put(`${SERVERROUTESPREFIX}/gpsSensors`, (req: Request, res: Response) => {
+    app.config.settings.gpsSensors = req.body
+    const de = app.config.baseDeltaEditor
+    for (const sensor of req.body) {
+      if (sensor.sensorId) {
+        de.setSelfValue(
+          `sensors.gps.${sensor.sensorId}.fromBow`,
+          sensor.fromBow !== null ? Number(sensor.fromBow) : undefined
+        )
+        de.setSelfValue(
+          `sensors.gps.${sensor.sensorId}.fromCenter`,
+          sensor.fromCenter !== null ? Number(sensor.fromCenter) : undefined
+        )
+      }
+    }
+    sendBaseDeltas(app)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    writeSettingsFile(app, app.config.settings, (err: any) => {
+      if (err) {
+        res.status(500).send('Unable to save gpsSensors in settings file')
+      } else {
+        writeBaseDeltasFile(app)
+        app.emit('serverevent', {
+          type: 'GPS_SENSORS',
+          data: req.body
+        })
+        res.json({ result: 'ok' })
+      }
+    })
+  })
 
   app.post(`${SERVERROUTESPREFIX}/debug`, (req: Request, res: Response) => {
     if (!app.logging.enableDebug(req.body.value)) {

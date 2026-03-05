@@ -112,6 +112,16 @@ export interface SourcePrioritiesData {
   saveState: SaveState
 }
 
+export interface SourceRankingEntry {
+  sourceRef: string
+  timeout: string | number
+}
+
+export interface SourceRankingData {
+  ranking: SourceRankingEntry[]
+  saveState: SaveState
+}
+
 export interface BackpressureWarning {
   accumulated: number
   duration: number
@@ -190,4 +200,16 @@ export interface DefaultCategory {
 export interface CategoryInfo {
   baseUnit?: string
   [key: string]: unknown
+}
+
+export interface GpsSensorConfig {
+  sensorId: string
+  sourceRef: string
+  fromBow: number | null
+  fromCenter: number | null
+}
+
+export interface GpsSensorsData {
+  sensors: GpsSensorConfig[]
+  saveState: SaveState
 }

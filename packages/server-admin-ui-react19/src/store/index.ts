@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
@@ -13,6 +14,10 @@ import {
   createUnitPreferencesSlice,
   type UnitPreferencesSlice
 } from './slices/unitPreferencesSlice'
+import {
+  createGpsPositionSlice,
+  type GpsPositionSlice
+} from './slices/gpsPositionSlice'
 
 export type { AppSlice } from './slices/appSlice'
 export type {
@@ -23,12 +28,14 @@ export type {
 export type { DataSlice, PathData, MetaData } from './slices/dataSlice'
 export type { PrioritiesSlice } from './slices/prioritiesSlice'
 export type { UnitPreferencesSlice } from './slices/unitPreferencesSlice'
+export type { GpsPositionSlice } from './slices/gpsPositionSlice'
 
 export type SignalKStore = AppSlice &
   WsSlice &
   DataSlice &
   PrioritiesSlice &
-  UnitPreferencesSlice
+  UnitPreferencesSlice &
+  GpsPositionSlice
 
 export const useStore = create<SignalKStore>()(
   subscribeWithSelector((...args) => ({
@@ -36,7 +43,8 @@ export const useStore = create<SignalKStore>()(
     ...createWsSlice(...args),
     ...createDataSlice(...args),
     ...createPrioritiesSlice(...args),
-    ...createUnitPreferencesSlice(...args)
+    ...createUnitPreferencesSlice(...args),
+    ...createGpsPositionSlice(...args)
   }))
 )
 
@@ -87,6 +95,10 @@ export function useDataVersion() {
 
 export function useSourcePriorities() {
   return useStore((s) => s.sourcePrioritiesData)
+}
+
+export function useSourceRanking() {
+  return useStore((s) => s.sourceRankingData)
 }
 
 export function useWebapps() {
@@ -151,6 +163,65 @@ export function useUnitPrefsLoaded() {
 
 export function useUnitCategories() {
   return useStore((s) => s.categories)
+}
+
+export function useSourcesData() {
+  return useStore((s) => s.sourcesData)
+}
+
+export function useSourceAliasesData() {
+  return useStore((s) => s.sourceAliases)
+}
+
+export function useMultiSourcePaths() {
+  return useStore((s) => s.multiSourcePaths)
+}
+
+export function useConfiguredPriorityPaths(): Set<string> {
+  // Select a primitive string so zustand can compare by ===.
+  // useShallow doesn't work with Set (Object.keys returns [] for Sets).
+  const joined = useStore((s) => {
+    const result: string[] = []
+    for (const pp of s.sourcePrioritiesData.sourcePriorities) {
+      if (pp.path) result.push(pp.path)
+    }
+    return result.sort().join('\0')
+  })
+  return useMemo(() => new Set(joined ? joined.split('\0') : []), [joined])
+}
+
+/**
+ * Returns a Map from path → Set of configured sourceRefs for that path.
+ * Includes both Path-Level Overrides and global Ranking sources.
+ */
+export function useConfiguredSourcesByPath(): Map<string, Set<string>> {
+  const serialized = useStore((s) => {
+    const entries: string[] = []
+    for (const pp of s.sourcePrioritiesData.sourcePriorities) {
+      if (pp.path) {
+        const refs = pp.priorities.map((p) => p.sourceRef).join(',')
+        entries.push(`${pp.path}\t${refs}`)
+      }
+    }
+    return entries.sort().join('\0')
+  })
+  return useMemo(() => {
+    const map = new Map<string, Set<string>>()
+    if (!serialized) return map
+    for (const entry of serialized.split('\0')) {
+      const [path, refs] = entry.split('\t')
+      map.set(path, new Set(refs ? refs.split(',').filter(Boolean) : []))
+    }
+    return map
+  }, [serialized])
+}
+
+export function useGpsSensorsData() {
+  return useStore((s) => s.gpsSensorsData)
+}
+
+export function usePositionSources() {
+  return useStore((s) => s.positionSources)
 }
 
 export * from './types'

@@ -245,6 +245,53 @@ export class WebSocketService {
           discoveredProviders: data
         } as Partial<SignalKStore>)
         break
+      case 'SOURCEPRIORITIES':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setSourcePrioritiesFromServer(
+              data as Record<
+                string,
+                { sourceRef: string; timeout: string | number }[]
+              >
+            )
+        })
+        break
+      case 'SOURCERANKING':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setSourceRanking(
+              data as { sourceRef: string; timeout: string | number }[]
+            )
+        })
+        break
+      case 'SOURCEALIASES':
+        import('../store').then(({ useStore }) => {
+          useStore.getState().setSourceAliases(data as Record<string, string>)
+        })
+        break
+      case 'MULTISOURCEPATHS':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setMultiSourcePaths(data as Record<string, string[]>)
+        })
+        break
+      case 'POSITION_SOURCES':
+        import('../store').then(({ useStore }) => {
+          useStore.getState().setPositionSources(data as unknown as string[])
+        })
+        break
+      case 'GPS_SENSORS':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setGpsSensors(
+              data as unknown as Parameters<SignalKStore['setGpsSensors']>[0]
+            )
+        })
+        break
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break

@@ -131,7 +131,13 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/appstore/available', state.setAppStore),
     fetchAndSet('/loginStatus', state.setLoginStatus),
     fetchAndSet('/signalk', state.setServerSpecification, ''),
-    fetchAndSet('/security/access/requests', state.setAccessRequests)
+    fetchAndSet('/security/access/requests', state.setAccessRequests),
+    fetchAndSet('/signalk/v1/api/sources', state.setSourcesData, ''),
+    fetchAndSet('/sourcePriorities', state.setSourcePrioritiesFromServer),
+    fetchAndSet('/sourceRanking', state.setSourceRanking),
+    fetchAndSet('/sourceAliases', state.setSourceAliases),
+    fetchAndSet('/gpsSensors', state.setGpsSensors),
+    fetchAndSet('/positionSources', state.setPositionSources)
   ])
 }
 
