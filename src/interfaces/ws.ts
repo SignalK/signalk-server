@@ -18,7 +18,7 @@ import { Server } from 'http'
 import { Socket } from 'net'
 import Primus from 'primus'
 import WebSocket from 'ws'
-import { getSourceId, getMetadata } from '@signalk/signalk-schema'
+import { getSourceId, getMetadata } from '@signalk/server-api'
 import {
   requestAccess,
   InvalidTokenError,

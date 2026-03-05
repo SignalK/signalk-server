@@ -11,6 +11,8 @@ import Footer from '../../components/Footer/Footer'
 import Dashboard from '../../views/Dashboard/Dashboard'
 import Embedded from '../../views/Webapps/Embedded'
 import EmbeddedDocs from '../../views/Webapps/EmbeddedDocs'
+import EmbeddedOpenApi from '../../views/Webapps/EmbeddedOpenApi'
+import EmbeddedAsyncApi from '../../views/Webapps/EmbeddedAsyncApi'
 import Webapps from '../../views/Webapps/Webapps'
 import DataBrowser from '../../views/DataBrowser/DataBrowser'
 import Playground from '../../views/Playground'
@@ -27,6 +29,7 @@ import Settings from '../../views/ServerConfig/Settings'
 import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
+import PathReference from '../../views/PathReference/PathReference'
 
 import { fetchAllData } from '../../actions'
 
@@ -118,7 +121,10 @@ export default function Full() {
 
   const suppressPadding =
     location.pathname.indexOf('/e/') === 0 ||
-    location.pathname.indexOf('/documentation') === 0
+    (location.pathname.indexOf('/documentation') === 0 &&
+      location.pathname !== '/documentation/paths') ||
+    location.pathname === '/openapi' ||
+    location.pathname === '/asyncapi'
       ? { padding: '0px' }
       : {}
 
@@ -203,6 +209,14 @@ export default function Full() {
               <Route
                 path="/security/access/requests"
                 element={<ProtectedRoute component={AccessRequests} />}
+              />
+              <Route path="/openapi" element={<EmbeddedOpenApi />} />
+              <Route path="/asyncapi" element={<EmbeddedAsyncApi />} />
+              <Route
+                path="/documentation/paths"
+                element={
+                  <ProtectedRoute component={PathReference} supportsReadOnly />
+                }
               />
               <Route path="/documentation/*" element={<EmbeddedDocs />} />
               <Route path="/login" element={<Login />} />

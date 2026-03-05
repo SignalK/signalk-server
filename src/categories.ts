@@ -270,7 +270,6 @@ const DEFAULT_MODULE_CAT_KEYWORDS: {
   'signalk-to-arcgis': ['signalk-category-utility'],
 
   '@signalk/freeboard-sk': ['signalk-category-chart-plotters'],
-  '@mxtommy/kip': ['signalk-category-web-instruments'],
   'signalk-stripcharts': ['signalk-category-web-instruments'],
   '@signalk/sailgauge': ['signalk-category-web-instruments'],
   '@signalk/simplegauges': ['signalk-category-web-instruments'],
