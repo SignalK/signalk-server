@@ -83,13 +83,13 @@ export default function ActionCellRenderer({
           (v) => !packageData.versions[v].deprecated
         )
 
-        // Default view: last 5 stable releases + all pre-releases above/between them
+        // Default view: last 5 stable releases + only pre-releases newer than latest stable
         const filtered: string[] = []
         let stableCount = 0
         for (const v of nonDeprecated) {
           if (semver.prerelease(v)) {
-            if (stableCount < 5) {
-              filtered.push(v)
+            if (stableCount === 0) {
+              filtered.push(v) // only pre-releases above latest stable
             }
           } else {
             if (stableCount < 5) {
