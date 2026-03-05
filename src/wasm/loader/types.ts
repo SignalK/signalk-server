@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * WASM Plugin Type Definitions
  *
@@ -45,12 +44,13 @@ export interface WasmPlugin {
   status: 'stopped' | 'starting' | 'running' | 'error' | 'crashed'
   statusMessage?: string
   errorMessage?: string
-  schema?: any
-  configuration?: any
+  schema?: Record<string, unknown>
+  configuration?: Record<string, unknown>
   crashCount: number
   lastCrash?: Date
   restartBackoff: number // milliseconds
   description?: string
   state?: string
   format?: WasmFormat // Binary format: wasi-p1 or component-model
+  stop?: () => Promise<void>
 }
