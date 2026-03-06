@@ -256,10 +256,12 @@ jobs:
           const fs = require('fs');
           const path = require('path');
 
+          const informational = [
+            { pattern: /\bregisterHistoryProvider\s*\(/g, message: 'registerHistoryProvider() is the v1 history API (playback/snapshots). For time-series history, see registerHistoryApiProvider() (v2 History API)' },
+          ];
           const deprecated = [
             { pattern: /\bsetProviderStatus\s*\(/g, message: 'setProviderStatus() is deprecated — use setPluginStatus()' },
             { pattern: /\bsetProviderError\s*\(/g, message: 'setProviderError() is deprecated — use setPluginError()' },
-            { pattern: /\bregisterHistoryProvider\s*\(/g, message: 'registerHistoryProvider() is deprecated — use registerHistoryApiProvider()' },
           ];
           const misuse = [
             { pattern: /\bapp\.server\b/g, message: 'app.server is internal — not part of the plugin API' },
@@ -295,7 +297,7 @@ jobs:
           }
           collectFiles('.');
 
-          const warnings = [], errors = [];
+          const notices = [], warnings = [], errors = [];
           for (const file of srcFiles) {
             const lines = fs.readFileSync(file, 'utf8').split('\n');
             const rel = path.relative('.', file);
@@ -309,6 +311,7 @@ jobs:
                 }
               }
             }
+            scan(informational, notices);
             scan(deprecated, warnings);
             scan(misuse, errors);
             scan(routeAnti, warnings);
@@ -356,7 +359,8 @@ jobs:
             }
           }
 
-          if (warnings.length === 0 && errors.length === 0) console.log('No deprecated or misused API patterns found');
+          if (notices.length === 0 && warnings.length === 0 && errors.length === 0) console.log('No deprecated or misused API patterns found');
+          notices.forEach(n => console.log('::notice::' + n));
           warnings.forEach(w => console.log('::warning::' + w));
           errors.forEach(e => console.log('::error::' + e));
           if (errors.length > 0) {
