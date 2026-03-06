@@ -52,7 +52,7 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **API usage** — Scans source files for:
 
-- Deprecated APIs (`setProviderStatus` → `setPluginStatus`, `registerHistoryProvider` → `registerHistoryApiProvider`)
+- Deprecated APIs (`setProviderStatus` → `setPluginStatus`, `setProviderError` → `setPluginError`)
 - Internal server properties (`app.server`, `app.deltaCache`, `app.pluginsMap`)
 - Route registration anti-patterns (direct `app.get()` instead of `registerWithRouter()`)
 - File storage anti-patterns (writing to `__dirname` or `process.cwd()` instead of `app.getDataDirPath()`)
