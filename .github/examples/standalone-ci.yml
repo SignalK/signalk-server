@@ -1,0 +1,531 @@
+# ─────────────────────────────────────────────────────────────
+# SignalK Plugin CI — Standalone Version
+#
+# Self-contained workflow for plugin developers who prefer not
+# to depend on the shared reusable workflow.
+#
+# Drop this into your plugin repo at:
+#   .github/workflows/ci.yml
+#
+# Covers:
+#   ✓ Linux x64    — Node 22, 24
+#   ✓ macOS        — Node 22, 24
+#   ✓ Windows      — Node 22, 24
+#   ✓ armv7/armhf  — Node 22 only (Cerbo GX, RPi 32-bit)
+# ─────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ── Desktop platforms ─────────────────────────────────────
+  test:
+    name: >-
+      ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
+          matrix.os == 'macos-latest' && 'macOS' ||
+          matrix.os == 'windows-latest' && 'Windows' ||
+          matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Validate plugin package.json
+        shell: bash
+        run: |
+          cat << 'VALIDATE' > /tmp/validate-pkg.js
+          const pkg = require(process.cwd() + '/package.json');
+          const fs = require('fs');
+          const path = require('path');
+          let errors = [];
+          let warnings = [];
+
+          if (!pkg.keywords || !pkg.keywords.includes('signalk-node-server-plugin')) {
+            errors.push('Missing required keyword: signalk-node-server-plugin');
+          }
+          if (!pkg.main && !pkg.exports) {
+            errors.push('Missing main or exports field');
+          }
+
+          // Scan for hardcoded home directory paths
+          const srcFiles = [];
+          function collectFiles(dir, exts) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.name === 'node_modules' || entry.name === '.git') continue;
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) { collectFiles(full, exts); continue; }
+              if (exts.some(e => entry.name.endsWith(e))) srcFiles.push(full);
+            }
+          }
+          collectFiles('.', ['.js', '.ts', '.mjs', '.cjs', '.sh']);
+          const hardcodedPathRe = /["'`]\/home\/[a-zA-Z][a-zA-Z0-9_-]*\//g;
+          for (const file of srcFiles) {
+            const content = fs.readFileSync(file, 'utf8');
+            const matches = content.match(hardcodedPathRe);
+            if (matches) {
+              errors.push(path.relative('.', file) + ' contains hardcoded home directory path: ' + matches[0]);
+            }
+          }
+
+          // Warn about install scripts (won't run in App Store)
+          const riskyScripts = ['preinstall', 'postinstall', 'install', 'prepare'];
+          for (const s of riskyScripts) {
+            if (pkg.scripts && pkg.scripts[s]) {
+              warnings.push('package.json has a "' + s + '" script — SignalK App Store uses --ignore-scripts, so it will NOT run');
+            }
+          }
+
+          // engines.node
+          if (!pkg.engines || !pkg.engines.node) {
+            warnings.push('No "engines.node" field — plugins should declare their minimum Node.js version');
+          }
+
+          // ESM-only plugins can't be loaded by the server's require() call
+          if (pkg.type === 'module') {
+            warnings.push('"type": "module" — SignalK server loads plugins with require(). ESM-only plugins may fail.');
+          }
+
+          warnings.forEach(w => console.log('::warning::' + w));
+          if (errors.length > 0) {
+            errors.forEach(e => console.log('::error::' + e));
+            process.exit(1);
+          }
+          console.log('Plugin package.json validation passed');
+          VALIDATE
+          node /tmp/validate-pkg.js
+
+      - run: npm ci
+      - run: npm run build --if-present
+
+      - name: Validate plugin entry point
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'ENTRYPOINT' > /tmp/validate-entry.js
+          const path = require('path');
+          const pkg = require(process.cwd() + '/package.json');
+          const entry = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null) || 'index.js';
+          try {
+            const mod = require(path.resolve(entry));
+            const ctor = mod.default || mod;
+            if (typeof ctor !== 'function') {
+              console.log('::error::Plugin entry point does not export a function');
+              process.exit(1);
+            }
+            console.log('Plugin exports a valid constructor function');
+          } catch (e) {
+            console.log('::error::Failed to load plugin entry point: ' + e.message);
+            process.exit(1);
+          }
+          process.exit(0);
+          ENTRYPOINT
+          node /tmp/validate-entry.js
+
+      - name: Validate plugin.schema() if defined
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'SCHEMACHECK' > /tmp/check-schema.js
+          const path = require('path');
+          const pkg = require(process.cwd() + '/package.json');
+          const entry = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null) || 'index.js';
+          let mod;
+          try { mod = require(path.resolve(entry)); } catch (e) { process.exit(0); }
+          const ctor = mod.default || mod;
+          if (typeof ctor !== 'function') process.exit(0);
+          const mockApp = { config: { configPath: '/tmp' }, getPath: () => '', debug: () => {}, error: () => {} };
+          let plugin;
+          try { plugin = ctor(mockApp); } catch (e) { process.exit(0); }
+          if (!plugin || typeof plugin.schema !== 'function') {
+            console.log('Plugin does not define schema() — nothing to check');
+            process.exit(0);
+          }
+          let schema;
+          try { schema = plugin.schema(); } catch (e) {
+            console.log('::error::plugin.schema() threw: ' + e.message);
+            process.exit(1);
+          }
+          if (schema && typeof schema === 'object') {
+            try { JSON.stringify(schema); } catch (e) {
+              console.log('::error::plugin.schema() is not JSON-serializable: ' + e.message);
+              process.exit(1);
+            }
+          }
+          console.log('plugin.schema() is valid');
+          process.exit(0);
+          SCHEMACHECK
+          node /tmp/check-schema.js
+
+      - name: Test plugin stop()/start() lifecycle + delta validation
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'LIFECYCLE' > /tmp/check-lifecycle.js
+          const path = require('path');
+          const pkg = require(process.cwd() + '/package.json');
+          const entry = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null) || 'index.js';
+          let mod;
+          try { mod = require(path.resolve(entry)); } catch (e) { process.exit(0); }
+          const ctor = mod.default || mod;
+          if (typeof ctor !== 'function') process.exit(0);
+
+          // Delta validation
+          const dWarn = [], dErr = [];
+          const pathRe = /^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)*$/;
+          function validateDelta(id, data) {
+            if (!data || typeof data !== 'object') { dErr.push('handleMessage() called with non-object: ' + typeof data); return; }
+            if (!data.updates) { dErr.push('handleMessage() called without updates field'); return; }
+            if (!Array.isArray(data.updates)) { dErr.push('updates is ' + typeof data.updates + ' — must be array'); return; }
+            for (const u of data.updates) {
+              if (!u || typeof u !== 'object') { dErr.push('updates[] contains non-object'); continue; }
+              if (!('values' in u) && !('meta' in u)) dErr.push('update has neither values nor meta — silently discarded');
+              if ('values' in u && !Array.isArray(u.values)) dErr.push('update.values is ' + typeof u.values + ' — must be array');
+              if ('meta' in u && !Array.isArray(u.meta)) dErr.push('update.meta is ' + typeof u.meta + ' — must be array');
+              for (const item of [...(Array.isArray(u.values) ? u.values : []), ...(Array.isArray(u.meta) ? u.meta : [])]) {
+                if (!item || typeof item !== 'object') continue;
+                if (typeof item.path !== 'string') dErr.push('path is ' + typeof item.path + ' — must be string');
+                else if (item.path !== '' && !pathRe.test(item.path)) dWarn.push('path "' + item.path + '" has unusual format');
+              }
+            }
+          }
+
+          const mockApp = {
+            config: { configPath: '/tmp', version: '0.0.0' },
+            getPath: (p) => '', getSelfPath: (p) => undefined,
+            handleMessage: (id, data) => validateDelta(id, data),
+            reportError: () => {},
+            setPluginStatus: () => {}, setPluginError: () => {},
+            debug: () => {}, error: () => {},
+            on: () => ({ unsubscribe: () => {} }),
+            registerPutHandler: () => {},
+            registerDeltaInputHandler: (handler) => {
+              let nextCalled = false;
+              try { handler({ updates: [{ values: [{ path: 'test.ci', value: 0 }] }] }, () => { nextCalled = true; }); }
+              catch (e) { nextCalled = true; }
+              if (!nextCalled) dWarn.push('registerDeltaInputHandler: handler did not call next() — silently drops all deltas');
+              return () => {};
+            },
+            subscriptionmanager: { subscribe: () => ({ unsubscribe: () => {} }) },
+            streambundle: { getSelfBus: () => ({ onValue: () => ({ unsubscribe: () => {} }) }) },
+            signalk: { self: 'vessels.urn:mrn:signalk:uuid:test', retrieve: () => ({}) }
+          };
+          let plugin;
+          try { plugin = ctor(mockApp); } catch (e) { process.exit(0); }
+          if (!plugin || typeof plugin.start !== 'function' || typeof plugin.stop !== 'function') process.exit(0);
+          try { plugin.start({}); } catch (e) { process.exit(0); }
+          try { plugin.stop(); } catch (e) {
+            console.log('::error::plugin.stop() threw: ' + e.message);
+            process.exit(1);
+          }
+          try { plugin.start({}); } catch (e) {
+            console.log('::error::plugin.start() threw on restart: ' + e.message);
+            process.exit(1);
+          }
+          try { plugin.stop(); } catch (e) { /* ignore */ }
+          dWarn.forEach(w => console.log('::warning::Delta: ' + w));
+          dErr.forEach(e => console.log('::error::Delta: ' + e));
+          if (dErr.length > 0) {
+            console.log('Malformed deltas are silently discarded by the server.');
+            process.exit(1);
+          }
+          console.log('Plugin lifecycle (start/stop/restart) is clean');
+          process.exit(0);
+          LIFECYCLE
+          node /tmp/check-lifecycle.js
+
+      - name: Scan for deprecated and misused SignalK APIs
+        shell: bash
+        run: |
+          cat << 'APISCAN' > /tmp/check-api-usage.js
+          const fs = require('fs');
+          const path = require('path');
+
+          const informational = [
+            { pattern: /\bregisterHistoryProvider\s*\(/g, message: 'registerHistoryProvider() is the v1 history API (playback/snapshots). For time-series history, see registerHistoryApiProvider() (v2 History API)' },
+          ];
+          const deprecated = [
+            { pattern: /\bsetProviderStatus\s*\(/g, message: 'setProviderStatus() is deprecated — use setPluginStatus()' },
+            { pattern: /\bsetProviderError\s*\(/g, message: 'setProviderError() is deprecated — use setPluginError()' },
+          ];
+          const misuse = [
+            { pattern: /\bapp\.server\b/g, message: 'app.server is internal — not part of the plugin API' },
+            { pattern: /\bapp\.deltaCache\b/g, message: 'app.deltaCache is internal — use app.getPath() instead' },
+            { pattern: /\bapp\.pluginsMap\b/g, message: 'app.pluginsMap is internal — not part of the plugin API' },
+            { pattern: /\bhistoryApiHttpRegistry\b/g, message: 'historyApiHttpRegistry is internal — use app.registerHistoryApiProvider()' },
+          ];
+          const routeAnti = [
+            { pattern: /\bapp\.(get|post|put|delete|patch|use)\s*\(\s*['"`\/]/g, message: 'Direct Express route on app — use registerWithRouter(router) instead' },
+          ];
+          const fileAnti = [
+            { pattern: /\b(writeFileSync|writeFile|mkdirSync|mkdir|appendFileSync|createWriteStream)\b[^)]*\b__dirname\b/g, message: 'Writing to __dirname (node_modules) — use app.getDataDirPath()' },
+            { pattern: /\b(writeFileSync|writeFile|mkdirSync|mkdir|appendFileSync|createWriteStream)\b[^)]*\bprocess\.cwd\(\)/g, message: 'Writing to process.cwd() (server dir) — use app.getDataDirPath()' },
+            { pattern: /\bapp\.config\.configPath\b/g, message: 'Direct app.config.configPath access — use app.getDataDirPath() or app.savePluginOptions()' },
+          ];
+          const securityAnti = [
+            { pattern: /\bapp\.securityStrategy\b/g, message: 'Direct app.securityStrategy access — plugin routes via registerWithRouter() are already admin-protected' },
+            { pattern: /\bisDummy\s*\(\)/g, message: 'isDummy() check — plugins should not branch behavior based on security mode' },
+            { pattern: /\breq\.skPrincipal\b/g, message: 'Manual req.skPrincipal inspection — plugin routes are already admin-protected. Use req.skPrincipal.identifier for user identity only' },
+            { pattern: /\baddAdminWriteMiddleware\b/g, message: 'addAdminWriteMiddleware is a server internal — registerWithRouter() routes are already admin-protected' },
+            { pattern: /\baddWriteMiddleware\b/g, message: 'addWriteMiddleware is a server internal — use registerPutHandler() for write operations' },
+          ];
+
+          const srcFiles = [];
+          function collectFiles(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') continue;
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) { collectFiles(full); continue; }
+              if (/\.(js|ts|mjs|cjs)$/.test(entry.name)) srcFiles.push(full);
+            }
+          }
+          collectFiles('.');
+
+          const notices = [], warnings = [], errors = [];
+          for (const file of srcFiles) {
+            const lines = fs.readFileSync(file, 'utf8').split('\n');
+            const rel = path.relative('.', file);
+            function scan(patterns, target) {
+              for (const pat of patterns) {
+                for (let i = 0; i < lines.length; i++) {
+                  const t = lines[i].trim();
+                  if (t.startsWith('//') || t.startsWith('*')) continue;
+                  if (pat.pattern.test(lines[i])) target.push(rel + ':' + (i+1) + ' — ' + pat.message);
+                  pat.pattern.lastIndex = 0;
+                }
+              }
+            }
+            scan(informational, notices);
+            scan(deprecated, warnings);
+            scan(misuse, errors);
+            scan(routeAnti, warnings);
+            scan(fileAnti, warnings);
+            scan(securityAnti, warnings);
+          }
+
+          // Node built-in module version checks
+          const pkg = require(path.resolve('package.json'));
+          const enginesNode = pkg.engines && pkg.engines.node;
+          function parseMinNodeVersion(range) {
+            if (!range) return null;
+            const m = range.match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+            return m ? [parseInt(m[1],10), parseInt(m[2]||'0',10), parseInt(m[3]||'0',10)] : null;
+          }
+          function versionLt(a, b) {
+            for (let i = 0; i < 3; i++) { if (a[i] < b[i]) return true; if (a[i] > b[i]) return false; }
+            return false;
+          }
+          const nodeBuiltinReqs = [
+            { pattern: /\brequire\s*\(\s*['"]node:sqlite['"]\s*\)|from\s+['"]node:sqlite['"]/g, module: 'node:sqlite', minVersion: [22, 5, 0] },
+            { pattern: /\brequire\s*\(\s*['"]node:test['"]\s*\)|from\s+['"]node:test['"]/g, module: 'node:test', minVersion: [18, 0, 0], testOnly: true },
+          ];
+          for (const file of srcFiles) {
+            const content = fs.readFileSync(file, 'utf8');
+            const rel = path.relative('.', file);
+            for (const check of nodeBuiltinReqs) {
+              check.pattern.lastIndex = 0;
+              if (!check.pattern.test(content)) { check.pattern.lastIndex = 0; continue; }
+              check.pattern.lastIndex = 0;
+              if (check.testOnly && /\b(test|spec|__tests__)\b/i.test(rel)) continue;
+              const hasTryCatch = /try\s*\{[\s\S]*?\brequire\s*\(\s*['"]node:(sqlite|test)['"]\s*\)[\s\S]*?\}\s*catch/g.test(content) ||
+                /import\s*\(\s*['"]node:(sqlite|test)['"]\s*\)/.test(content);
+              const minVerStr = check.minVersion.join('.');
+              if (!enginesNode) {
+                errors.push(rel + ' — uses ' + check.module + ' (requires Node >= ' + minVerStr + ') but no engines.node field. Add engines.node to declare the minimum version.');
+              } else {
+                const min = parseMinNodeVersion(enginesNode);
+                if (min && versionLt(min, check.minVersion)) {
+                  const target = hasTryCatch ? warnings : errors;
+                  const suffix = hasTryCatch ? ' (dynamic import with fallback detected)' : '';
+                  target.push(rel + ' — uses ' + check.module + ' (requires Node >= ' + minVerStr + ') but engines.node "' + enginesNode + '" allows Node ' + min.join('.') + suffix);
+                }
+              }
+            }
+          }
+
+          if (notices.length === 0 && warnings.length === 0 && errors.length === 0) console.log('No deprecated or misused API patterns found');
+          notices.forEach(n => console.log('::notice::' + n));
+          warnings.forEach(w => console.log('::warning::' + w));
+          errors.forEach(e => console.log('::error::' + e));
+          if (errors.length > 0) {
+            console.log('Found ' + errors.length + ' API misuse(s) — accessing internal server properties.');
+            process.exit(1);
+          }
+          process.exit(0);
+          APISCAN
+          node /tmp/check-api-usage.js
+
+      - name: Verify npm pack includes all required files
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'PACKCHECK' > /tmp/check-pack.js
+          const { execSync } = require('child_process');
+          const pkg = require(process.cwd() + '/package.json');
+          // --ignore-scripts: don't re-run prepack (we already built in a prior step)
+          // stdio pipe suppresses stderr cross-platform (2>/dev/null breaks on Windows)
+          let packOutput;
+          try {
+            packOutput = execSync('npm pack --dry-run --json --ignore-scripts', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+          } catch (e) {
+            packOutput = e.stdout || '';
+          }
+          let files;
+          try {
+            files = JSON.parse(packOutput)[0].files.map(f => f.path);
+          } catch (e) {
+            let raw;
+            try {
+              raw = execSync('npm pack --dry-run --ignore-scripts', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+            } catch (e2) {
+              raw = e2.stdout || '';
+            }
+            files = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('npm') && !l.startsWith('Tarball'));
+          }
+          const errors = [];
+          const main = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null);
+          if (main && !files.includes(main) && !files.includes(main.replace(/^\.\//, ''))) {
+            errors.push('"main" points to ' + main + ' but it is NOT in the npm package. Add it to "files" in package.json.');
+          }
+          if (main && (main.startsWith('dist/') || main.startsWith('lib/'))) {
+            const dir = main.split('/')[0];
+            if (!files.some(f => f.startsWith(dir + '/'))) {
+              errors.push('"main" references ' + dir + '/ but no files from it are in the package.');
+            }
+          }
+          if (errors.length > 0) {
+            errors.forEach(e => console.log('::error::' + e));
+            process.exit(1);
+          }
+          console.log('All entry points are included in the npm package');
+          process.exit(0);
+          PACKCHECK
+          node /tmp/check-pack.js
+
+      - name: Simulate App Store install (--ignore-scripts)
+        shell: bash
+        env:
+          APPSTORE_DIR: ${{ runner.temp }}/appstore-test
+        run: |
+          echo "Simulating SignalK App Store install..."
+          PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP")
+          mkdir -p "$APPSTORE_DIR"
+          cd "$APPSTORE_DIR"
+          npm init -y > /dev/null 2>&1
+          npm install --ignore-scripts "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")" 2>&1
+          cat << 'CHECKSCRIPT' > "$RUNNER_TEMP/check-native.js"
+          const fs = require('fs');
+          const path = require('path');
+          const nmDir = path.join(process.env.APPSTORE_DIR, 'node_modules');
+          const nativeModules = [];
+          function findNativeModules(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir)) {
+              if (entry === '.package-lock.json') continue;
+              const full = path.join(dir, entry);
+              if (entry.startsWith('@')) { findNativeModules(full); continue; }
+              if (fs.existsSync(path.join(full, 'binding.gyp'))) nativeModules.push(entry);
+              const nested = path.join(full, 'node_modules');
+              if (fs.existsSync(nested)) findNativeModules(nested);
+            }
+          }
+          findNativeModules(nmDir);
+          if (nativeModules.length === 0) {
+            console.log('No native addons found — App Store install is safe');
+            process.exit(0);
+          }
+          console.log('::error::Plugin depends on native addons: ' + nativeModules.join(', '));
+          console.log('::error::SignalK App Store uses --ignore-scripts — native addons will NOT be compiled.');
+          process.exit(1);
+          CHECKSCRIPT
+          node "$RUNNER_TEMP/check-native.js"
+
+      - name: Run tests
+        shell: bash
+        run: |
+          HAS_TESTS=$(node -e "
+            const pkg = require('./package.json');
+            const test = pkg.scripts && pkg.scripts.test;
+            if (!test || test.includes('no test specified')) process.exit(1);
+          " && echo "yes" || echo "no")
+          if [ "$HAS_TESTS" = "yes" ]; then
+            npm test
+          else
+            echo "::notice::No test script defined — skipping tests"
+          fi
+
+  # ── armv7 / Cerbo GX ─────────────────────────────────────
+  test-armv7:
+    name: armv7 (Cerbo GX) / Node 22
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm/v7
+
+      - name: Test on armv7
+        run: |
+          docker run --rm --platform linux/arm/v7 \
+            -v "${{ github.workspace }}:/plugin" \
+            -w /plugin \
+            node:20-bookworm-slim \
+            bash -c '
+              set -e
+              echo "── arch: $(uname -m) ── node: $(node -v) ──"
+              echo "── Installing build tools (python3, make, g++) ──"
+              apt-get update -qq && apt-get install -y -qq python3 make g++ > /dev/null 2>&1
+              npm ci --ignore-scripts
+              npm rebuild
+              npm run build --if-present
+
+              echo "── Checking for native addons ──"
+              node -e "
+                const fs = require(\"fs\"), path = require(\"path\");
+                const nm = [];
+                function scan(dir) {
+                  if (!fs.existsSync(dir)) return;
+                  for (const e of fs.readdirSync(dir)) {
+                    if (e === \".package-lock.json\") continue;
+                    const f = path.join(dir, e);
+                    if (e.startsWith(\"@\")) { scan(f); continue; }
+                    if (fs.existsSync(path.join(f, \"binding.gyp\"))) nm.push(e);
+                    const n = path.join(f, \"node_modules\");
+                    if (fs.existsSync(n)) scan(n);
+                  }
+                }
+                scan(\"./node_modules\");
+                if (nm.length === 0) { console.log(\"No native addons\"); process.exit(0); }
+                console.log(\"Native addons compiled for armv7: \" + nm.join(\", \"));
+              "
+
+              HAS_TESTS=$(node -e "
+                const pkg = require(\"./package.json\");
+                const test = pkg.scripts && pkg.scripts.test;
+                if (!test || test.includes(\"no test specified\")) process.exit(1);
+              " && echo "yes" || echo "no")
+              if [ "$HAS_TESTS" = "yes" ]; then
+                npm test
+              else
+                echo "::notice::No test script defined — skipping tests"
+              fi
+            '
