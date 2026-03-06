@@ -44,6 +44,17 @@ const searchStorageKey = 'admin.v1.dataBrowser.search'
 const selectedSourcesStorageKey = 'admin.v1.dataBrowser.selectedSources'
 const sourceFilterActiveStorageKey = 'admin.v1.dataBrowser.sourceFilterActive'
 
+function matchesSearch(key: string, search: string): boolean {
+  if (!search || search.length === 0) return true
+  const lowerKey = key.toLowerCase()
+  const terms = search
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t.length > 0)
+  if (terms.length === 0) return true
+  return terms.some((term) => lowerKey.includes(term))
+}
+
 interface DeltaMessage {
   context?: string
   updates?: Array<{
@@ -398,10 +409,8 @@ const DataBrowser: React.FC = () => {
     for (const ctx of contexts) {
       const contextData = currentData[ctx] || {}
       for (const key of Object.keys(contextData)) {
-        if (deferredSearch && deferredSearch.length > 0) {
-          if (key.toLowerCase().indexOf(deferredSearch.toLowerCase()) === -1) {
-            continue
-          }
+        if (!matchesSearch(key, deferredSearch)) {
+          continue
         }
 
         if (sourceFilterActive && selectedSources.size > 0) {
@@ -519,10 +528,8 @@ const DataBrowser: React.FC = () => {
     for (const ctx of contexts) {
       const contextData = currentData[ctx] || {}
       for (const key of Object.keys(contextData)) {
-        if (search && search.length > 0) {
-          if (key.toLowerCase().indexOf(search.toLowerCase()) === -1) {
-            continue
-          }
+        if (!matchesSearch(key, search)) {
+          continue
         }
         const data = contextData[key] as PathData | undefined
         const path = data?.path || key
@@ -648,6 +655,7 @@ const DataBrowser: React.FC = () => {
                     id="databrowser-search"
                     name="search"
                     autoComplete="off"
+                    placeholder="e.g. pos wind (space = OR)"
                     onChange={handleSearch}
                     value={search}
                   />
