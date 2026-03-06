@@ -458,9 +458,14 @@ jobs:
               pattern: /\bsetProviderError\s*\(/g,
               message: 'setProviderError() is deprecated — use setPluginError() instead',
             },
+          ];
+
+          // ── Informational notices ────────────────────────────────
+          // Not errors or warnings — just pointers to newer alternatives
+          const informational = [
             {
               pattern: /\bregisterHistoryProvider\s*\(/g,
-              message: 'registerHistoryProvider() is deprecated — use registerHistoryApiProvider() instead (see PR #2381)',
+              message: 'registerHistoryProvider() is the v1 history API (playback/snapshots). For time-series history, see registerHistoryApiProvider() (v2 History API)',
             },
           ];
 
@@ -552,6 +557,7 @@ jobs:
           }
           collectFiles('.');
 
+          const notices = [];
           const warnings = [];
           const errors = [];
 
@@ -574,6 +580,7 @@ jobs:
               }
             }
 
+            scanPatterns(informational, notices);
             scanPatterns(deprecated, warnings);
             scanPatterns(misuse, errors);
             scanPatterns(routeAntiPatterns, warnings);
@@ -646,9 +653,10 @@ jobs:
             }
           }
 
-          if (warnings.length === 0 && errors.length === 0) {
+          if (notices.length === 0 && warnings.length === 0 && errors.length === 0) {
             console.log('No deprecated or misused API patterns found');
           }
+          notices.forEach(n => console.log('::notice::' + n));
           warnings.forEach(w => console.log('::warning::' + w));
           errors.forEach(e => console.log('::error::' + e));
 
