@@ -119,7 +119,7 @@ Enable `enable-signalk-integration: true` to have the workflow:
 2. Build your plugin and pack it with `npm pack`
 3. Install the packed tarball into the server
 4. Auto-configure the plugin to start (creates `plugin-config-data/<id>.json`)
-5. Start the server with sample NMEA data
+5. Start the server with sample NMEA 0183 and NMEA 2000 data (navigation, wind, depth, temperature, battery, etc.)
 6. Verify the plugin appears in `/skServer/plugins`
 7. Run `npm run test:integration` if defined in your `package.json`
 

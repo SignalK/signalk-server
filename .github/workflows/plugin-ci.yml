@@ -1118,8 +1118,10 @@ jobs:
           cd /tmp/sk-test
           export SIGNALK_NODE_CONFIG_DIR=/tmp/sk-test
 
-          # Start server in background (security is off by default in fresh installs)
-          npx signalk-server --sample-nmea0183-data -p 3000 &
+          # Start server with both NMEA 0183 and N2K sample data so plugins
+          # have a rich data environment (navigation, wind, depth, temperature, etc.)
+          # --override-timestamps keeps N2K data current instead of stale
+          npx signalk-server --sample-nmea0183-data --sample-n2k-data --override-timestamps -p 3000 &
           SK_PID=$!
 
           # Wait for server to be ready (max 90 seconds)
