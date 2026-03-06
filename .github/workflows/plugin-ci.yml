@@ -1,0 +1,1257 @@
+# SignalK Plugin CI - Reusable Workflow
+#
+# This workflow lives in the SignalK/signalk-server repository.
+# Plugin developers reference it with a single line in their own workflow.
+#
+# Platforms tested:
+#   - Linux x64    (Node 22, 24)
+#   - Linux arm64  (Node 22, 24) — Raspberry Pi 4/5
+#   - macOS        (Node 22, 24)
+#   - Windows      (Node 22, 24)
+#   - armv7/armhf  (Node 20 — matches Venus OS 3.70 on Cerbo GX)
+#                    Runs under QEMU emulation with python3, make, g++
+#
+# Usage in your plugin repo:
+#   See examples/plugin-caller-example.yml
+
+name: SignalK Plugin CI
+
+on:
+  workflow_call:
+    inputs:
+      # ── Test configuration ──────────────────────────────────
+      test-command:
+        description: 'Command to run tests (default: npm test)'
+        type: string
+        default: 'npm test'
+      build-command:
+        description: 'Command to build the plugin (default: npm run build --if-present)'
+        type: string
+        default: 'npm run build --if-present'
+      node-versions:
+        description: 'JSON array of Node versions for desktop platforms (default: ["22", "24"])'
+        type: string
+        default: '["22", "24"]'
+
+      # ── armv7 / Cerbo GX options ────────────────────────────
+      enable-armv7:
+        description: 'Run armv7 (Cerbo GX) tests via QEMU emulation'
+        type: boolean
+        default: true
+
+      # ── SignalK integration test ────────────────────────────
+      enable-signalk-integration:
+        description: 'Start a SignalK server and install the plugin for integration testing'
+        type: boolean
+        default: false
+      signalk-server-version:
+        description: 'SignalK server version to test against'
+        type: string
+        default: 'latest'
+
+jobs:
+  # ════════════════════════════════════════════════════════════
+  #  Desktop platforms matrix: Linux x64, Linux arm64, macOS, Windows
+  # ════════════════════════════════════════════════════════════
+  desktop:
+    name: >-
+      ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
+          matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
+          matrix.os == 'macos-latest' && 'macOS' ||
+          matrix.os == 'windows-latest' && 'Windows' ||
+          matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        node: ${{ fromJson(inputs.node-versions) }}
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Validate plugin package.json
+        id: validate-pkg
+        shell: bash
+        run: |
+          cat << 'VALIDATE' > /tmp/validate-pkg.js
+          const pkg = require(process.cwd() + '/package.json');
+          const fs = require('fs');
+          const path = require('path');
+          let errors = [];
+          let warnings = [];
+
+          // Required: signalk-node-server-plugin keyword
+          if (!pkg.keywords || !pkg.keywords.includes('signalk-node-server-plugin')) {
+            errors.push('Missing required keyword: signalk-node-server-plugin');
+          }
+
+          // Required: main or exports field
+          if (!pkg.main && !pkg.exports) {
+            errors.push('Missing main or exports field');
+          }
+
+          // Scan source files for hardcoded home directory paths
+          const srcFiles = [];
+          function collectFiles(dir, exts) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.name === 'node_modules' || entry.name === '.git') continue;
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) { collectFiles(full, exts); continue; }
+              if (exts.some(e => entry.name.endsWith(e))) srcFiles.push(full);
+            }
+          }
+          collectFiles('.', ['.js', '.ts', '.mjs', '.cjs', '.sh']);
+
+          const hardcodedPathRe = /["'`]\/home\/[a-zA-Z][a-zA-Z0-9_-]*\//g;
+          for (const file of srcFiles) {
+            const content = fs.readFileSync(file, 'utf8');
+            const matches = content.match(hardcodedPathRe);
+            if (matches) {
+              const relFile = path.relative('.', file);
+              errors.push(relFile + ' contains hardcoded home directory path: ' + matches[0]);
+            }
+          }
+
+          // Warn about preinstall/postinstall/install scripts (risky with server files)
+          const riskyScripts = ['preinstall', 'postinstall', 'install', 'prepare'];
+          for (const s of riskyScripts) {
+            if (pkg.scripts && pkg.scripts[s]) {
+              warnings.push('package.json has a "' + s + '" script: ' + pkg.scripts[s]);
+              warnings.push('Note: SignalK App Store uses --ignore-scripts, so "' + s + '" will NOT run on install');
+            }
+          }
+
+          // engines.node
+          if (!pkg.engines || !pkg.engines.node) {
+            warnings.push('No "engines.node" field in package.json — plugins should declare their minimum Node.js version');
+          }
+
+          // ESM-only plugins can't be loaded by the server's require() call
+          if (pkg.type === 'module') {
+            warnings.push('package.json has "type": "module" — SignalK server loads plugins with require(). ESM-only plugins may fail to load.');
+          }
+
+          warnings.forEach(w => console.log('::warning::' + w));
+          if (errors.length > 0) {
+            errors.forEach(e => console.log('::error::' + e));
+            process.exit(1);
+          }
+          console.log('Plugin package.json validation passed');
+          VALIDATE
+          node /tmp/validate-pkg.js
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "No package-lock.json found — using npm install instead of npm ci"
+            npm install
+          fi
+        shell: bash
+
+      - name: Build
+        run: ${{ inputs.build-command }}
+
+      - name: Validate plugin entry point
+        id: validate-entry
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'ENTRYPOINT' > /tmp/validate-entry.js
+          const path = require('path');
+          const pkg = require(process.cwd() + '/package.json');
+          const entry = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null) || 'index.js';
+          try {
+            const mod = require(path.resolve(entry));
+            const pluginConstructor = mod.default || mod;
+            if (typeof pluginConstructor !== 'function') {
+              console.log('::error::Plugin entry point does not export a function (got ' + typeof pluginConstructor + ')');
+              process.exit(1);
+            }
+            console.log('Plugin exports a valid constructor function (' + entry + ')');
+          } catch (e) {
+            console.log('::error::Failed to load plugin entry point (' + entry + '): ' + e.message);
+            process.exit(1);
+          }
+          process.exit(0);
+          ENTRYPOINT
+          node /tmp/validate-entry.js
+
+      - name: Validate plugin.schema() if defined
+        id: validate-schema
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'SCHEMACHECK' > /tmp/check-schema.js
+          const path = require('path');
+          const pkg = require(process.cwd() + '/package.json');
+          const entry = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null) || 'index.js';
+
+          let mod;
+          try {
+            mod = require(path.resolve(entry));
+          } catch (e) {
+            // Entry point already validated in previous step — skip schema check
+            console.log('Could not load plugin — skipping schema check');
+            process.exit(0);
+          }
+
+          const ctor = mod.default || mod;
+          if (typeof ctor !== 'function') {
+            process.exit(0);
+          }
+
+          // Create a minimal mock app object that schema() might need
+          const mockApp = {
+            config: { configPath: '/tmp' },
+            getPath: () => '',
+            debug: () => {},
+            error: () => {}
+          };
+
+          let plugin;
+          try {
+            plugin = ctor(mockApp);
+          } catch (e) {
+            // Constructor needs a real app — we test lifecycle separately
+            console.log('Plugin constructor needs server context — skipping schema check');
+            process.exit(0);
+          }
+
+          if (!plugin || typeof plugin.schema !== 'function') {
+            console.log('Plugin does not define schema() — nothing to check');
+            process.exit(0);
+          }
+
+          // A throwing schema() crashes the server's plugin config UI
+          let schema;
+          try {
+            schema = plugin.schema();
+          } catch (e) {
+            console.log('::error::plugin.schema() threw an error: ' + e.message);
+            console.log('::error::This will crash the SignalK server when it tries to render the plugin config UI.');
+            process.exit(1);
+          }
+
+          // Validate it returned something useful
+          if (schema === null || schema === undefined) {
+            console.log('::warning::plugin.schema() returned ' + schema + ' — consider returning a valid JSON Schema object');
+            process.exit(0);
+          }
+
+          if (typeof schema !== 'object') {
+            console.log('::error::plugin.schema() returned ' + typeof schema + ' instead of a JSON Schema object');
+            process.exit(1);
+          }
+
+          // Basic JSON Schema structure check (rjsf compatibility)
+          if (!schema.type && !schema.properties && !schema.oneOf && !schema.anyOf) {
+            console.log('::warning::plugin.schema() returned an object but it has no type, properties, oneOf, or anyOf — is this a valid JSON Schema?');
+          }
+
+          // Check it's JSON-serializable (no circular refs, no functions)
+          try {
+            JSON.stringify(schema);
+          } catch (e) {
+            console.log('::error::plugin.schema() result is not JSON-serializable: ' + e.message);
+            console.log('::error::The server stores this as JSON — non-serializable schemas will cause errors.');
+            process.exit(1);
+          }
+
+          console.log('plugin.schema() returns a valid JSON Schema object');
+          process.exit(0);
+          SCHEMACHECK
+          node /tmp/check-schema.js
+
+      - name: Test plugin stop()/start() lifecycle
+        id: lifecycle-check
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'LIFECYCLE' > /tmp/check-lifecycle.js
+          const path = require('path');
+          const pkg = require(process.cwd() + '/package.json');
+          const entry = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null) || 'index.js';
+
+          let mod;
+          try {
+            mod = require(path.resolve(entry));
+          } catch (e) {
+            console.log('Could not load plugin — skipping lifecycle check');
+            process.exit(0);
+          }
+
+          const ctor = mod.default || mod;
+          if (typeof ctor !== 'function') {
+            process.exit(0);
+          }
+
+          // ── Delta validation helpers ──────────────────────────
+          const deltaWarnings = [];
+          const deltaErrors = [];
+          const pathRe = /^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)*$/;
+
+          function validateDelta(id, data) {
+            if (!data || typeof data !== 'object') {
+              deltaErrors.push('handleMessage() called with non-object data: ' + typeof data);
+              return;
+            }
+            if (!data.updates) {
+              deltaErrors.push('handleMessage() called without updates field');
+              return;
+            }
+            if (!Array.isArray(data.updates)) {
+              deltaErrors.push('handleMessage() updates is ' + typeof data.updates + ' — must be an array');
+              return;
+            }
+            if (data.updates.length === 0) {
+              deltaWarnings.push('handleMessage() called with empty updates array');
+              return;
+            }
+            for (const update of data.updates) {
+              if (!update || typeof update !== 'object') {
+                deltaErrors.push('updates[] contains non-object: ' + typeof update);
+                continue;
+              }
+              const hasValues = 'values' in update;
+              const hasMeta = 'meta' in update;
+              if (!hasValues && !hasMeta) {
+                deltaErrors.push('update has neither values nor meta — server will silently discard it');
+              }
+              if (hasValues && !Array.isArray(update.values)) {
+                deltaErrors.push('update.values is ' + typeof update.values + ' — must be an array (server silently discards non-arrays)');
+              }
+              if (hasMeta && !Array.isArray(update.meta)) {
+                deltaErrors.push('update.meta is ' + typeof update.meta + ' — must be an array');
+              }
+              const items = [
+                ...(Array.isArray(update.values) ? update.values : []),
+                ...(Array.isArray(update.meta) ? update.meta : [])
+              ];
+              for (const item of items) {
+                if (!item || typeof item !== 'object') continue;
+                if (typeof item.path !== 'string') {
+                  deltaErrors.push('path is ' + typeof item.path + ' — must be a string');
+                } else if (item.path !== '' && !pathRe.test(item.path)) {
+                  deltaWarnings.push('path "' + item.path + '" has unusual format — expected dotted alphanumeric (e.g. navigation.position)');
+                }
+              }
+            }
+          }
+
+          // ── Mock app with delta capture ─────────────────────────
+          const mockApp = {
+            config: { configPath: '/tmp', version: '0.0.0' },
+            getPath: (p) => '',
+            getSelfPath: (p) => undefined,
+            handleMessage: (id, data) => validateDelta(id, data),
+            reportError: () => {},
+            setPluginStatus: (msg) => console.log('  status: ' + msg),
+            setPluginError: (msg) => console.log('  error: ' + msg),
+            debug: () => {},
+            error: () => {},
+            on: () => ({ unsubscribe: () => {} }),
+            registerPutHandler: () => {},
+            registerDeltaInputHandler: (handler) => {
+              // Check the handler calls next() with a simple test
+              let nextCalled = false;
+              try {
+                handler({ updates: [{ values: [{ path: 'test.ci.probe', value: 0 }] }] }, (d) => { nextCalled = true; });
+              } catch (e) { /* handler may need real delta — skip check */ nextCalled = true; }
+              if (!nextCalled) {
+                deltaWarnings.push('registerDeltaInputHandler: handler did not call next() — this will silently drop deltas from all other plugins/sources');
+              }
+              return () => {};
+            },
+            subscriptionmanager: { subscribe: () => ({ unsubscribe: () => {} }) },
+            streambundle: { getSelfBus: () => ({ onValue: () => ({ unsubscribe: () => {} }) }) },
+            signalk: { self: 'vessels.urn:mrn:signalk:uuid:test', retrieve: () => ({}) }
+          };
+
+          let plugin;
+          try {
+            plugin = ctor(mockApp);
+          } catch (e) {
+            console.log('Plugin constructor requires server context — skipping lifecycle check');
+            process.exit(0);
+          }
+
+          if (!plugin || typeof plugin.start !== 'function' || typeof plugin.stop !== 'function') {
+            console.log('Plugin does not have start()/stop() — skipping lifecycle check');
+            process.exit(0);
+          }
+
+          try {
+            plugin.start({});
+            console.log('start({}) — ok');
+          } catch (e) {
+            console.log('::warning::plugin.start({}) threw: ' + e.message);
+            console.log('::warning::Plugins should handle empty/default configuration gracefully.');
+            process.exit(0);
+          }
+
+          try {
+            plugin.stop();
+            console.log('stop() — ok');
+          } catch (e) {
+            console.log('::error::plugin.stop() threw: ' + e.message);
+            console.log('::error::This causes the server to leak resources when the plugin is disabled or restarted.');
+            process.exit(1);
+          }
+
+          // Restart: the server calls stop() then start() when config changes
+          try {
+            plugin.start({});
+            console.log('start({}) again — ok (restart works)');
+          } catch (e) {
+            console.log('::error::plugin.start({}) threw on second call: ' + e.message);
+            console.log('::error::Plugins must support restart (stop then start). This fails when users toggle the plugin in the server UI.');
+            process.exit(1);
+          }
+
+          try { plugin.stop(); } catch (e) { /* ignore */ }
+
+          // ── Report delta validation results ─────────────────────
+          if (deltaWarnings.length > 0 || deltaErrors.length > 0) {
+            console.log('');
+            console.log('Delta validation (from deltas emitted during start):');
+          }
+          deltaWarnings.forEach(w => console.log('::warning::Delta: ' + w));
+          deltaErrors.forEach(e => console.log('::error::Delta: ' + e));
+          if (deltaErrors.length > 0) {
+            console.log('');
+            console.log('Malformed deltas are silently discarded by the server —');
+            console.log('the plugin appears to work but data never reaches consumers.');
+            process.exit(1);
+          }
+
+          console.log('Plugin lifecycle (start/stop/restart) is clean');
+          process.exit(0);
+          LIFECYCLE
+          node /tmp/check-lifecycle.js
+
+      - name: Scan for deprecated and misused SignalK APIs
+        id: deprecated-api
+        shell: bash
+        run: |
+          cat << 'APISCAN' > /tmp/check-api-usage.js
+          const fs = require('fs');
+          const path = require('path');
+
+          // ── Deprecated APIs (warnings) ──────────────────────────
+          const deprecated = [
+            {
+              pattern: /\bsetProviderStatus\s*\(/g,
+              message: 'setProviderStatus() is deprecated — use setPluginStatus() instead',
+            },
+            {
+              pattern: /\bsetProviderError\s*\(/g,
+              message: 'setProviderError() is deprecated — use setPluginError() instead',
+            },
+            {
+              pattern: /\bregisterHistoryProvider\s*\(/g,
+              message: 'registerHistoryProvider() is deprecated — use registerHistoryApiProvider() instead (see PR #2381)',
+            },
+          ];
+
+          // ── API misuse (errors) ─────────────────────────────────
+          // These access internal server properties not exposed to plugins
+          const misuse = [
+            {
+              pattern: /\bapp\.server\b/g,
+              message: 'app.server is an internal property — not part of the plugin API',
+            },
+            {
+              pattern: /\bapp\.deltaCache\b/g,
+              message: 'app.deltaCache is internal — use app.getPath() instead',
+            },
+            {
+              pattern: /\bapp\.pluginsMap\b/g,
+              message: 'app.pluginsMap is internal — not part of the plugin API',
+            },
+            {
+              pattern: /\bhistoryApiHttpRegistry\b/g,
+              message: 'historyApiHttpRegistry is internal (explicitly hidden from plugins) — use app.registerHistoryApiProvider()',
+            },
+          ];
+
+          // ── Route registration anti-pattern (warnings) ──────────
+          // Plugins should use registerWithRouter(router) not direct app.get/post
+          const routeAntiPatterns = [
+            {
+              pattern: /\bapp\.(get|post|put|delete|patch|use)\s*\(\s*['"`\/]/g,
+              message: 'Direct Express route on app object — use registerWithRouter(router) or signalKApiRoutes(router) instead',
+            },
+          ];
+
+          // ── File storage anti-patterns (warnings) ───────────────
+          // Plugins should use app.getDataDirPath() for data files,
+          // not write to __dirname (node_modules), process.cwd() (server dir),
+          // or access app.config.configPath directly
+          const fileStorageAntiPatterns = [
+            {
+              pattern: /\b(writeFileSync|writeFile|mkdirSync|mkdir|appendFileSync|createWriteStream)\b[^)]*\b__dirname\b/g,
+              message: 'Writing files relative to __dirname — this writes into node_modules. Use app.getDataDirPath() instead',
+            },
+            {
+              pattern: /\b(writeFileSync|writeFile|mkdirSync|mkdir|appendFileSync|createWriteStream)\b[^)]*\bprocess\.cwd\(\)/g,
+              message: 'Writing files relative to process.cwd() — this writes into the server directory. Use app.getDataDirPath() instead',
+            },
+            {
+              pattern: /\bapp\.config\.configPath\b/g,
+              message: 'Direct access to app.config.configPath — use app.getDataDirPath() for plugin data or app.savePluginOptions() for config',
+            },
+          ];
+
+          // ── Security anti-patterns (warnings) ─────────────────────
+          // Plugin routes via registerWithRouter() are automatically admin-protected.
+          // PUT handlers via registerPutHandler() have built-in permission checks.
+          // Plugins should NOT implement their own auth logic or access security internals.
+          const securityAntiPatterns = [
+            {
+              pattern: /\bapp\.securityStrategy\b/g,
+              message: 'Direct access to app.securityStrategy — this is a server internal. Plugin routes via registerWithRouter() are already admin-protected; PUT handlers via registerPutHandler() have built-in permission checks',
+            },
+            {
+              pattern: /\bisDummy\s*\(\)/g,
+              message: 'Checking isDummy() to branch security logic — plugins should not change behavior based on security mode. Use the built-in route protection instead',
+            },
+            {
+              pattern: /\breq\.skPrincipal\b/g,
+              message: 'Manual req.skPrincipal inspection — plugin routes under /plugins/* are already admin-only. If you need user identity, use req.skPrincipal.identifier but do not implement your own permission checks',
+            },
+            {
+              pattern: /\baddAdminWriteMiddleware\b/g,
+              message: 'addAdminWriteMiddleware is a server internal — plugin routes via registerWithRouter() are already admin-protected',
+            },
+            {
+              pattern: /\baddWriteMiddleware\b/g,
+              message: 'addWriteMiddleware is a server internal — use registerPutHandler() for write operations with built-in permission checks',
+            },
+          ];
+
+          const srcFiles = [];
+          function collectFiles(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') continue;
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) { collectFiles(full); continue; }
+              if (/\.(js|ts|mjs|cjs)$/.test(entry.name)) srcFiles.push(full);
+            }
+          }
+          collectFiles('.');
+
+          const warnings = [];
+          const errors = [];
+
+          for (const file of srcFiles) {
+            const content = fs.readFileSync(file, 'utf8');
+            const lines = content.split('\n');
+            const relFile = path.relative('.', file);
+
+            function scanPatterns(patterns, target) {
+              for (const pat of patterns) {
+                for (let i = 0; i < lines.length; i++) {
+                  // Skip comments
+                  const trimmed = lines[i].trim();
+                  if (trimmed.startsWith('//') || trimmed.startsWith('*')) continue;
+                  if (pat.pattern.test(lines[i])) {
+                    target.push(relFile + ':' + (i + 1) + ' — ' + pat.message);
+                  }
+                  pat.pattern.lastIndex = 0;
+                }
+              }
+            }
+
+            scanPatterns(deprecated, warnings);
+            scanPatterns(misuse, errors);
+            scanPatterns(routeAntiPatterns, warnings);
+            scanPatterns(fileStorageAntiPatterns, warnings);
+            scanPatterns(securityAntiPatterns, warnings);
+          }
+
+          // ── Node built-in module version checks ────────────────
+          // Some node: built-in modules require specific Node versions.
+          // If a plugin uses them but engines.node allows older versions, it will crash.
+          const pkg = require(path.resolve('package.json'));
+          const enginesNode = pkg.engines && pkg.engines.node;
+
+          // Extract minimum Node version from engines.node (e.g. ">=18", ">=18.0.0", "^20", "18.x")
+          function parseMinNodeVersion(range) {
+            if (!range) return null;
+            const m = range.match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+            if (!m) return null;
+            return [parseInt(m[1], 10), parseInt(m[2] || '0', 10), parseInt(m[3] || '0', 10)];
+          }
+
+          function versionLt(a, b) {
+            // a, b are [major, minor, patch] arrays
+            for (let i = 0; i < 3; i++) {
+              if (a[i] < b[i]) return true;
+              if (a[i] > b[i]) return false;
+            }
+            return false;
+          }
+
+          const nodeBuiltinVersionReqs = [
+            { pattern: /\brequire\s*\(\s*['"]node:sqlite['"]\s*\)|from\s+['"]node:sqlite['"]/g, module: 'node:sqlite', minVersion: [22, 5, 0] },
+            { pattern: /\brequire\s*\(\s*['"]node:test['"]\s*\)|from\s+['"]node:test['"]/g, module: 'node:test', minVersion: [18, 0, 0], testOnly: true },
+          ];
+
+          for (const file of srcFiles) {
+            const content = fs.readFileSync(file, 'utf8');
+            const relFile = path.relative('.', file);
+            for (const check of nodeBuiltinVersionReqs) {
+              check.pattern.lastIndex = 0;
+              if (!check.pattern.test(content)) { check.pattern.lastIndex = 0; continue; }
+              check.pattern.lastIndex = 0;
+
+              // Skip test-only modules in test files
+              if (check.testOnly && /\b(test|spec|__tests__)\b/i.test(relFile)) continue;
+
+              // If the file has try/catch or .catch() around the import, it handles
+              // the module being unavailable gracefully (e.g. dynamic import with fallback).
+              // Downgrade to warning instead of error.
+              const hasTryCatch = /try\s*\{[\s\S]*?\brequire\s*\(\s*['"]node:(sqlite|test)['"]\s*\)[\s\S]*?\}\s*catch/g.test(content) ||
+                /import\s*\(\s*['"]node:(sqlite|test)['"]\s*\)/.test(content);
+
+              const minVerStr = check.minVersion.join('.');
+
+              if (!enginesNode) {
+                // No engines.node at all — always an error. The plugin MUST declare
+                // its minimum Node version so servers and users know the requirement.
+                errors.push(relFile + ' — uses ' + check.module + ' (requires Node >= ' + minVerStr + ') but package.json has no engines.node field. Add engines.node to declare the minimum version.');
+              } else {
+                const minDeclared = parseMinNodeVersion(enginesNode);
+                if (minDeclared && versionLt(minDeclared, check.minVersion)) {
+                  // engines.node is set but allows older versions. If the plugin handles
+                  // the module being unavailable (dynamic import with fallback), downgrade
+                  // to warning — the plugin works in degraded mode on older Node.
+                  const target = hasTryCatch ? warnings : errors;
+                  const suffix = hasTryCatch ? ' (dynamic import with fallback detected — verify graceful degradation)' : '';
+                  target.push(relFile + ' — uses ' + check.module + ' (requires Node >= ' + minVerStr + ') but engines.node "' + enginesNode + '" allows Node ' + minDeclared.join('.') + suffix);
+                }
+              }
+            }
+          }
+
+          if (warnings.length === 0 && errors.length === 0) {
+            console.log('No deprecated or misused API patterns found');
+          }
+          warnings.forEach(w => console.log('::warning::' + w));
+          errors.forEach(e => console.log('::error::' + e));
+
+          if (errors.length > 0) {
+            console.log('');
+            console.log('Found ' + errors.length + ' API misuse(s). These access internal server');
+            console.log('properties that are not part of the plugin API and may break');
+            console.log('without notice in future server updates.');
+            console.log('');
+            console.log('See: https://signalk.org/signalk-server/develop/plugins/server_api.html');
+            process.exit(1);
+          }
+          process.exit(0);
+          APISCAN
+          node /tmp/check-api-usage.js
+
+      - name: Verify npm pack includes all required files
+        id: pack-check
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'PACKCHECK' > /tmp/check-pack.js
+          const { execSync } = require('child_process');
+          const pkg = require(process.cwd() + '/package.json');
+          const path = require('path');
+
+          // Get list of files that npm pack would include
+          // --ignore-scripts: don't re-run prepack (we already built in a prior step)
+          // stdio pipe suppresses stderr cross-platform (2>/dev/null breaks on Windows)
+          let packOutput;
+          try {
+            packOutput = execSync('npm pack --dry-run --json --ignore-scripts', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+          } catch (e) {
+            packOutput = e.stdout || '';
+          }
+          let files;
+          try {
+            const parsed = JSON.parse(packOutput);
+            files = parsed[0].files.map(f => f.path);
+          } catch (e) {
+            // Fallback: parse non-JSON dry-run output
+            let raw;
+            try {
+              raw = execSync('npm pack --dry-run --ignore-scripts', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+            } catch (e2) {
+              raw = e2.stdout || '';
+            }
+            files = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('npm') && !l.startsWith('Tarball'));
+          }
+
+          const errors = [];
+          const warnings = [];
+
+          // Check main entry point is included
+          const main = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null);
+          if (main && !files.includes(main) && !files.includes(main.replace(/^\.\//, ''))) {
+            errors.push('"main" field points to ' + main + ' but this file is NOT in the npm package.');
+            errors.push('The plugin will be broken when installed from npm. Add it to "files" in package.json or remove it from .npmignore.');
+          }
+
+          // Check exports map entries
+          if (pkg.exports && typeof pkg.exports === 'object') {
+            function checkExports(obj, prefix) {
+              for (const [key, val] of Object.entries(obj)) {
+                if (typeof val === 'string') {
+                  const clean = val.replace(/^\.\//, '');
+                  if (!files.includes(clean) && !files.includes(val)) {
+                    errors.push('"exports" entry ' + prefix + key + ' points to ' + val + ' but it is NOT in the npm package.');
+                  }
+                } else if (typeof val === 'object') {
+                  checkExports(val, prefix + key + '.');
+                }
+              }
+            }
+            checkExports(pkg.exports, '');
+          }
+
+          // Check for schema.json if plugin defines schema()
+          if (files.some(f => /schema\.json/i.test(f))) {
+            console.log('schema.json found in package — good');
+          }
+
+          // Warn if dist/ or lib/ referenced but not included
+          if (main && (main.startsWith('dist/') || main.startsWith('lib/'))) {
+            const dir = main.split('/')[0];
+            if (!files.some(f => f.startsWith(dir + '/'))) {
+              errors.push('"main" references ' + dir + '/ directory but no files from it are in the package. Did you forget to build, or need to add "' + dir + '" to the "files" array in package.json?');
+            }
+          }
+
+          warnings.forEach(w => console.log('::warning::' + w));
+          if (errors.length > 0) {
+            errors.forEach(e => console.log('::error::' + e));
+            process.exit(1);
+          }
+          console.log('All entry points are included in the npm package');
+          process.exit(0);
+          PACKCHECK
+          node /tmp/check-pack.js
+
+      - name: Simulate App Store install (--ignore-scripts)
+        id: appstore-check
+        shell: bash
+        env:
+          APPSTORE_DIR: ${{ runner.temp }}/appstore-test
+        run: |
+          # SignalK server installs plugins with --ignore-scripts (src/modules.ts:223)
+          # This means native addons (better-sqlite3, serialport, etc.) are NOT compiled.
+          # This test catches plugins that will break when installed via the App Store.
+          echo "Simulating SignalK App Store install (npm install --ignore-scripts)..."
+          PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP")
+
+          mkdir -p "$APPSTORE_DIR"
+          cd "$APPSTORE_DIR"
+          npm init -y > /dev/null 2>&1
+          npm install --ignore-scripts "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")" 2>&1
+
+          # Scan for native addon dependencies (binding.gyp = needs compilation)
+          # Uses Node.js for cross-platform compatibility (works on Linux, macOS, Windows)
+          cat << 'CHECKSCRIPT' > "$RUNNER_TEMP/check-native.js"
+          const fs = require('fs');
+          const path = require('path');
+          const nmDir = path.join(process.env.APPSTORE_DIR, 'node_modules');
+          const nativeModules = [];
+
+          function findNativeModules(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir)) {
+              if (entry === '.package-lock.json') continue;
+              const full = path.join(dir, entry);
+              if (entry.startsWith('@')) {
+                findNativeModules(full);
+                continue;
+              }
+              if (fs.existsSync(path.join(full, 'binding.gyp'))) {
+                nativeModules.push(entry);
+              }
+              const nested = path.join(full, 'node_modules');
+              if (fs.existsSync(nested)) findNativeModules(nested);
+            }
+          }
+
+          findNativeModules(nmDir);
+
+          if (nativeModules.length === 0) {
+            console.log('No native addons found — App Store install is safe');
+            process.exit(0);
+          }
+
+          console.log('');
+          console.log('::error::Plugin depends on native addons: ' + nativeModules.join(', '));
+          console.log('::error::SignalK App Store uses --ignore-scripts — native addons will NOT be compiled.');
+          console.log('::error::The plugin will install but CRASH at runtime.');
+          console.log('');
+          console.log('Use alternatives that do not require native compilation, e.g.:');
+          console.log('  - node:sqlite (built into Node >= 22) instead of better-sqlite3');
+          console.log('  - Pure JavaScript packages instead of native addons');
+          process.exit(1);
+          CHECKSCRIPT
+          node "$RUNNER_TEMP/check-native.js"
+
+      - name: Lint (if available)
+        run: npm run lint --if-present
+        continue-on-error: true
+
+      - name: Run tests
+        id: tests
+        shell: bash
+        run: |
+          # Detect if the plugin has a real test script
+          HAS_TESTS=$(node -e "
+            const pkg = require('./package.json');
+            const test = pkg.scripts && pkg.scripts.test;
+            // npm init sets test to 'echo \"Error: no test specified\" && exit 1'
+            if (!test || test.includes('no test specified')) {
+              process.exit(1);
+            }
+          " && echo "yes" || echo "no")
+
+          if [ "$HAS_TESTS" = "yes" ]; then
+            ${{ inputs.test-command }}
+          else
+            echo "::notice::No test script defined — skipping tests"
+          fi
+
+      - name: Check for untracked files after build/test
+        id: stray-files
+        shell: bash
+        run: |
+          # Plugins should not leave stray files in the repo after install/build/test.
+          UNTRACKED=$(git ls-files --others --exclude-standard -- ':!node_modules' ':!.npm')
+          if [ -n "$UNTRACKED" ]; then
+            echo "::warning::Build/test left untracked files in the repository:"
+            echo "$UNTRACKED" | while read -r f; do echo "  $f"; done
+            echo ""
+            echo "These files would pollute the signalk-server git directory when"
+            echo "the plugin is installed. Add them to .gitignore or fix the build"
+            echo "to write output into node_modules or a temp directory."
+          fi
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        env:
+          VALIDATE_PKG: ${{ steps.validate-pkg.outcome }}
+          VALIDATE_ENTRY: ${{ steps.validate-entry.outcome }}
+          VALIDATE_SCHEMA: ${{ steps.validate-schema.outcome }}
+          LIFECYCLE_CHECK: ${{ steps.lifecycle-check.outcome }}
+          DEPRECATED_API: ${{ steps.deprecated-api.outcome }}
+          PACK_CHECK: ${{ steps.pack-check.outcome }}
+          APPSTORE_CHECK: ${{ steps.appstore-check.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          STRAY_FILES: ${{ steps.stray-files.outcome }}
+          OS_NAME: >-
+            ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
+                matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
+                matrix.os == 'macos-latest' && 'macOS' ||
+                matrix.os == 'windows-latest' && 'Windows' ||
+                matrix.os }}
+          NODE_VER: ${{ matrix.node }}
+        run: |
+          icon() {
+            case "$1" in
+              success)  echo "pass" ;;
+              failure)  echo "FAIL" ;;
+              skipped)  echo "skip" ;;
+              *)        echo "—" ;;
+            esac
+          }
+
+          PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
+          PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
+
+          {
+            echo "### $OS_NAME / Node $NODE_VER — $PLUGIN_NAME@$PLUGIN_VER"
+            echo ""
+            echo "| Check | Result |"
+            echo "|-------|--------|"
+            echo "| package.json valid | $(icon "$VALIDATE_PKG") |"
+            echo "| Entry point exports function | $(icon "$VALIDATE_ENTRY") |"
+            echo "| plugin.schema() valid | $(icon "$VALIDATE_SCHEMA") |"
+            echo "| start/stop/restart lifecycle | $(icon "$LIFECYCLE_CHECK") |"
+            echo "| API usage (no deprecated/internal) | $(icon "$DEPRECATED_API") |"
+            echo "| npm pack includes all files | $(icon "$PACK_CHECK") |"
+            echo "| App Store compatible (no native addons) | $(icon "$APPSTORE_CHECK") |"
+            echo "| Tests | $(icon "$TESTS") |"
+            echo "| No stray files after build | $(icon "$STRAY_FILES") |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-node${{ matrix.node }}
+          path: |
+            test-results/
+            coverage/
+            junit*.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ════════════════════════════════════════════════════════════
+  #  armv7 — Cerbo GX / Raspberry Pi (32-bit ARM via QEMU)
+  # ════════════════════════════════════════════════════════════
+  armv7:
+    name: armv7 (Cerbo GX) / Node 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ inputs.enable-armv7 }}
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU for ARM emulation
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm/v7
+
+      - name: Cache npm for armv7
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.npm-armv7-cache
+          key: armv7-npm-${{ hashFiles('**/package-lock.json', '**/package.json') }}
+          restore-keys: |
+            armv7-npm-
+
+      - name: Test on armv7 via QEMU
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+          TEST_CMD: ${{ inputs.test-command }}
+        run: |
+          docker run --rm --platform linux/arm/v7 \
+            -v "${{ github.workspace }}:/plugin" \
+            -v "/tmp/.npm-armv7-cache:/root/.npm" \
+            -w /plugin \
+            -e BUILD_CMD \
+            -e TEST_CMD \
+            node:20-bookworm-slim \
+            bash -c '
+              set -e
+              echo "── System info ──"
+              echo "arch: $(uname -m)  node: $(node -v)  npm: $(npm -v)"
+              echo "── Installing build tools (python3, make, g++) ──"
+              apt-get update -qq && apt-get install -y -qq python3 make g++ > /dev/null 2>&1
+              echo "── Installing dependencies ──"
+              if [ -f package-lock.json ]; then
+                npm ci --ignore-scripts
+              else
+                npm install --ignore-scripts
+              fi
+              npm rebuild
+              echo "── Building ──"
+              eval "$BUILD_CMD"
+
+              echo "── Checking for native addons ──"
+              node -e "
+                const fs = require(\"fs\"), path = require(\"path\");
+                const nm = [];
+                function scan(dir) {
+                  if (!fs.existsSync(dir)) return;
+                  for (const e of fs.readdirSync(dir)) {
+                    if (e === \".package-lock.json\") continue;
+                    const f = path.join(dir, e);
+                    if (e.startsWith(\"@\")) { scan(f); continue; }
+                    if (fs.existsSync(path.join(f, \"binding.gyp\"))) nm.push(e);
+                    const n = path.join(f, \"node_modules\");
+                    if (fs.existsSync(n)) scan(n);
+                  }
+                }
+                scan(\"./node_modules\");
+                if (nm.length === 0) { console.log(\"No native addons\"); process.exit(0); }
+                console.log(\"Native addons compiled for armv7: \" + nm.join(\", \"));
+              "
+
+              echo "── Running tests ──"
+              HAS_TESTS=$(node -e "
+                const pkg = require(\"./package.json\");
+                const test = pkg.scripts && pkg.scripts.test;
+                if (!test || test.includes(\"no test specified\")) process.exit(1);
+              " && echo "yes" || echo "no")
+              if [ "$HAS_TESTS" = "yes" ]; then
+                eval "$TEST_CMD"
+              else
+                echo "::notice::No test script defined — skipping tests"
+              fi
+            '
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        run: |
+          PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
+          PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
+          RESULT="${{ job.status }}"
+
+          {
+            echo "### armv7 (Cerbo GX) / Node 20 — ${PLUGIN_NAME}@${PLUGIN_VER}"
+            echo ""
+            echo "**Environment**: Venus OS 3.70 emulation (QEMU armv7, Debian Bookworm, python3, make, g++)"
+            echo ""
+            if [[ "$RESULT" == "success" ]]; then
+              echo "Install, build, and tests completed successfully under armv7 emulation."
+            else
+              echo "The armv7 job **failed**. Your plugin may not work on 32-bit ARM devices (Cerbo GX, Raspberry Pi OS 32-bit)."
+            fi
+            echo ""
+            echo "> This test is **advisory and non-blocking** — armv7 failures do not fail the overall CI."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ════════════════════════════════════════════════════════════
+  #  Optional: SignalK server integration test
+  # ════════════════════════════════════════════════════════════
+  signalk-integration:
+    name: Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ inputs.enable-signalk-integration }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ${{ fromJson(inputs.node-versions) }}
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Install SignalK server
+        run: |
+          mkdir -p /tmp/sk-test
+          cd /tmp/sk-test
+          npm init -y
+          npm install signalk-server@${{ inputs.signalk-server-version }}
+
+      - name: Build plugin
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+        run: |
+          npm ci
+          eval "$BUILD_CMD"
+
+      - name: Install plugin into SignalK
+        run: |
+          # Pack the plugin and install it into the test server
+          PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination /tmp)
+          cd /tmp/sk-test
+          npm install "/tmp/$PLUGIN_TGZ"
+
+      - name: Configure plugin to auto-start
+        run: |
+          cd /tmp/sk-test
+          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/package.json').name)")
+
+          # Derive plugin ID the same way signalk-server does (src/pluginid.ts)
+          PLUGIN_ID=$(node -e "
+            const name = process.argv[1];
+            console.log(name.replace(/@/g, '_').replace(/\//g, '_'));
+          " "$PLUGIN_PKG_NAME")
+
+          echo "Plugin package: $PLUGIN_PKG_NAME"
+          echo "Plugin ID:      $PLUGIN_ID"
+
+          mkdir -p plugin-config-data
+          echo '{"enabled": true, "configuration": {}}' > "plugin-config-data/${PLUGIN_ID}.json"
+
+      - name: Start SignalK server and verify plugin
+        env:
+          SIGNALK_URL: 'http://localhost:3000'
+        run: |
+          cd /tmp/sk-test
+          export SIGNALK_NODE_CONFIG_DIR=/tmp/sk-test
+
+          # Start server in background (security is off by default in fresh installs)
+          npx signalk-server --sample-nmea0183-data -p 3000 &
+          SK_PID=$!
+
+          # Wait for server to be ready (max 90 seconds)
+          echo "Waiting for SignalK server..."
+          READY=false
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:3000/signalk/v1/api/ > /dev/null 2>&1; then
+              READY=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$READY" != "true" ]; then
+            echo "::error::SignalK server failed to start within 90 seconds"
+            kill $SK_PID 2>/dev/null || true
+            exit 1
+          fi
+          echo "SignalK server is ready (PID $SK_PID)"
+
+          # Verify plugin is loaded
+          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/package.json').name)")
+          PLUGINS_JSON=$(curl -sf http://localhost:3000/skServer/plugins)
+
+          echo "Loaded plugins:"
+          echo "$PLUGINS_JSON" | jq -r '.[] | "  - \(.packageName // .id) (\(.state // "unknown"))"'
+
+          # Assert our plugin is in the list
+          if ! echo "$PLUGINS_JSON" | jq -e ".[] | select(.packageName == \"$PLUGIN_PKG_NAME\")" > /dev/null 2>&1; then
+            echo "::error::Plugin '$PLUGIN_PKG_NAME' not found in loaded plugins"
+            echo "$PLUGINS_JSON" | jq .
+            kill $SK_PID 2>/dev/null || true
+            exit 1
+          fi
+          echo "Plugin '$PLUGIN_PKG_NAME' is loaded"
+
+          # Run integration tests from the plugin repo if they exist
+          cd "${{ github.workspace }}"
+          HAS_INTEGRATION=$(node -e "
+            const pkg = require('./package.json');
+            if (pkg.scripts && pkg.scripts['test:integration']) process.exit(0);
+            process.exit(1);
+          " && echo "yes" || echo "no")
+
+          if [ "$HAS_INTEGRATION" = "yes" ]; then
+            echo "Running integration tests..."
+            SIGNALK_URL=http://localhost:3000 npm run test:integration
+          else
+            echo "::notice::No test:integration script found — skipping"
+          fi
+
+          # Cleanup
+          kill $SK_PID 2>/dev/null || true
+
+  # ════════════════════════════════════════════════════════════
+  #  Summary — collect all results
+  # ════════════════════════════════════════════════════════════
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs: [desktop, armv7, signalk-integration]
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: package.json
+
+      - name: Write CI summary report
+        env:
+          DESKTOP_RESULT: ${{ needs.desktop.result }}
+          ARMV7_RESULT: ${{ needs.armv7.result }}
+          INTEGRATION_RESULT: ${{ needs.signalk-integration.result }}
+        shell: bash
+        run: |
+          icon() {
+            case "$1" in
+              success)  echo "pass" ;;
+              failure)  echo "FAIL" ;;
+              skipped)  echo "skip" ;;
+              cancelled) echo "cancel" ;;
+              *)        echo "—" ;;
+            esac
+          }
+
+          PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
+          PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
+
+          OVERALL="pass"
+          if [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
+            OVERALL="FAIL"
+          fi
+
+          {
+            echo "## SignalK Plugin CI Report"
+            echo ""
+            echo "**Plugin**: \`$PLUGIN_NAME@$PLUGIN_VER\`"
+            echo "**Result**: $OVERALL"
+            echo ""
+            echo "### Platform results"
+            echo ""
+            echo "| Job | Result | Notes |"
+            echo "|-----|--------|-------|"
+            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24 |"
+            echo "| armv7 — Cerbo GX (QEMU) | $(icon "$ARMV7_RESULT") | Node 20 (Venus OS 3.70) — advisory, non-blocking |"
+            if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
+              echo "| SignalK integration | $(icon "$INTEGRATION_RESULT") | Server install + plugin load |"
+            fi
+            echo ""
+            echo "### What was checked"
+            echo ""
+            echo "Every desktop job validates:"
+            echo "- **package.json** — \`signalk-node-server-plugin\` keyword, \`main\`/\`exports\` field, \`engines.node\`"
+            echo "- **Entry point** — Plugin exports a constructor function"
+            echo "- **plugin.schema()** — Returns valid JSON Schema without crashing"
+            echo "- **Lifecycle** — start()/stop()/restart cycle works without errors"
+            echo "- **API usage** — No deprecated (\`setProviderStatus\`), internal (\`app.server\`), file storage, or security anti-patterns"
+            echo "- **Node built-in modules** — \`node:sqlite\` requires \`engines.node >= 22.5.0\` declared in package.json"
+            echo "- **npm pack** — All files referenced by \`main\`/\`exports\` are included in the package"
+            echo "- **App Store install** — No native addons that break with \`--ignore-scripts\`"
+            echo "- **Hardcoded paths** — No \`/home/user/...\` literals in source files"
+            echo "- **Stray files** — Build/test does not leave untracked files in the repo"
+            echo ""
+            echo "See the individual job summaries above for per-platform details."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$INTEGRATION_RESULT" == "skipped" ]]; then
+            {
+              echo ""
+              echo "> **Tip**: You can also test your plugin against a running Signal K server."
+              echo "> Add \`enable-signalk-integration: true\` to your workflow. [Learn more](https://signalk.org/signalk-server/develop/plugins/ci.html#integration-tests)"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [[ "$ARMV7_RESULT" == "failure" ]]; then
+            {
+              echo ""
+              echo "> **Note**: armv7 (Cerbo GX) failed but this is non-blocking."
+              echo "> Your plugin may not work on 32-bit ARM devices (Cerbo GX, Raspberry Pi OS 32-bit)."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # --- Exit code logic (same as before) ---
+          echo ""
+          echo "Desktop:              $DESKTOP_RESULT"
+          echo "armv7 (Cerbo GX):     $ARMV7_RESULT"
+          echo "SignalK integration:  $INTEGRATION_RESULT"
+
+          # Desktop is mandatory
+          if [[ "$DESKTOP_RESULT" == "failure" ]]; then
+            echo "::error::Desktop tests failed"
+            exit 1
+          fi
+
+          # armv7 is advisory (non-blocking)
+          case "$ARMV7_RESULT" in
+            failure) echo "::warning::armv7 (Cerbo GX) tests failed — plugin may not work on 32-bit ARM devices" ;;
+            skipped) echo "armv7 tests were skipped" ;;
+          esac
+
+          # Integration is mandatory if enabled
+          if [[ "$INTEGRATION_RESULT" == "failure" ]]; then
+            echo "::error::SignalK integration tests failed"
+            exit 1
+          fi
+
+          echo "All checks passed!"
