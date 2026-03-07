@@ -110,6 +110,7 @@ export interface Device {
   config: any
   description: string
   requestedPermissions: string
+  tokenExpiry?: number
 }
 
 export interface DeviceDataUpdate {

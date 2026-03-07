@@ -2,7 +2,12 @@ import React, { useMemo, useCallback, MouseEvent, ReactNode } from 'react'
 import { NavLink, Location } from 'react-router-dom'
 import Badge from 'react-bootstrap/Badge'
 import Nav from 'react-bootstrap/Nav'
-import { useAppStore, useAccessRequests, useLoginStatus } from '../../store'
+import {
+  useAppStore,
+  useAccessRequests,
+  useDevices,
+  useLoginStatus
+} from '../../store'
 import classNames from 'classnames'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
@@ -21,6 +26,7 @@ interface NavItemData {
   url?: string
   icon?: string
   badge?: BadgeData | null
+  badges?: BadgeData[]
   class?: string
   variant?: string
   title?: boolean
@@ -40,13 +46,20 @@ interface SidebarProps {
 export default function Sidebar({ location }: SidebarProps) {
   const appStore = useAppStore()
   const accessRequests = useAccessRequests()
+  const devices = useDevices()
   const loginStatus = useLoginStatus()
+
+  const nowMs = Date.now() // eslint-disable-line react-hooks/purity -- expired status is stable
+  const expiredDeviceCount = devices.filter(
+    (d) => d.tokenExpiry && d.tokenExpiry * 1000 < nowMs
+  ).length
 
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
     let updatesBadge: BadgeData | null = null
     let serverUpdateBadge: BadgeData | null = null
     let accessRequestsBadge: BadgeData | null = null
+    let expiredDevicesBadge: BadgeData | null = null
 
     if (appUpdates > 0) {
       updatesBadge = {
@@ -58,8 +71,16 @@ export default function Sidebar({ location }: SidebarProps) {
 
     if (accessRequests.length > 0) {
       accessRequestsBadge = {
-        variant: 'danger',
+        variant: 'success',
         text: `${accessRequests.length}`,
+        color: 'success'
+      }
+    }
+
+    if (expiredDeviceCount > 0) {
+      expiredDevicesBadge = {
+        variant: 'danger',
+        text: `${expiredDeviceCount}`,
         color: 'danger'
       }
     }
@@ -151,11 +172,15 @@ export default function Sidebar({ location }: SidebarProps) {
       loginStatus.authenticationRequired === false ||
       loginStatus.userLevel === 'admin'
     ) {
+      const securityBadges: BadgeData[] = []
+      if (accessRequestsBadge) securityBadges.push(accessRequestsBadge)
+      if (expiredDevicesBadge) securityBadges.push(expiredDevicesBadge)
+
       const security: NavItemData = {
         name: 'Security',
         url: '/security',
         icon: 'icon-shield',
-        badge: accessRequestsBadge,
+        badges: securityBadges,
         children: [
           {
             name: 'Settings',
@@ -170,7 +195,8 @@ export default function Sidebar({ location }: SidebarProps) {
       if (loginStatus.allowDeviceAccessRequests) {
         security.children!.push({
           name: 'Devices',
-          url: '/security/devices'
+          url: '/security/devices',
+          badge: expiredDevicesBadge
         })
       }
       if (
@@ -203,7 +229,7 @@ export default function Sidebar({ location }: SidebarProps) {
     })
 
     return result
-  }, [appStore, accessRequests, loginStatus])
+  }, [appStore, accessRequests, expiredDeviceCount, loginStatus])
 
   const handleClick = useCallback((e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
@@ -219,14 +245,21 @@ export default function Sidebar({ location }: SidebarProps) {
     [location.pathname]
   )
 
-  const badge = (badgeData?: BadgeData | null): ReactNode => {
-    if (badgeData) {
-      const classes = classNames(badgeData.class)
-      return (
-        <Badge className={classes} bg={badgeData.variant}>
-          {badgeData.text}
-        </Badge>
-      )
+  const renderBadge = (badgeData: BadgeData, key?: number): ReactNode => {
+    const classes = classNames(badgeData.class)
+    return (
+      <Badge key={key} className={classes} bg={badgeData.variant}>
+        {badgeData.text}
+      </Badge>
+    )
+  }
+
+  const badges = (item: NavItemData): ReactNode => {
+    if (item.badges && item.badges.length > 0) {
+      return <>{item.badges.map((b, i) => renderBadge(b, i))}</>
+    }
+    if (item.badge) {
+      return renderBadge(item.badge)
     }
     return null
   }
@@ -276,7 +309,7 @@ export default function Sidebar({ location }: SidebarProps) {
           <Nav.Link href={url} className={classes.link} {...(item.props || {})}>
             {renderIcon(item.icon)}
             {item.name}
-            {badge(item.badge)}
+            {badges(item)}
           </Nav.Link>
         ) : (
           <NavLink
@@ -288,7 +321,7 @@ export default function Sidebar({ location }: SidebarProps) {
           >
             {renderIcon(item.icon)}
             {item.name}
-            {badge(item.badge)}
+            {badges(item)}
           </NavLink>
         )}
       </Nav.Item>
@@ -317,7 +350,7 @@ export default function Sidebar({ location }: SidebarProps) {
         >
           {renderIcon(item.icon)}
           {item.name}
-          {badge(item.badge)}
+          {badges(item)}
         </a>
         <ul className="nav-dropdown-items">{navList(item.children || [])}</ul>
       </li>
