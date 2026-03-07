@@ -42,8 +42,10 @@ export default function ActionCellRenderer({
 }: ActionCellRendererProps) {
   const [showVersionsModal, setShowVersionsModal] = useState(false)
   const [versions, setVersions] = useState<string[]>([])
+  const [allVersions, setAllVersions] = useState<string[]>([])
   const [distTags, setDistTags] = useState<Record<string, string>>({})
   const [loadingVersions, setLoadingVersions] = useState(false)
+  const [showAllVersions, setShowAllVersions] = useState(false)
 
   const handleInstallClick = () => {
     fetch(
@@ -69,14 +71,36 @@ export default function ActionCellRenderer({
   const handleVersionsClick = async () => {
     setLoadingVersions(true)
     setShowVersionsModal(true)
+    setShowAllVersions(false)
 
     try {
       const response = await fetch(`https://registry.npmjs.org/${app.name}`)
       const packageData = await response.json()
 
       if (packageData.versions) {
-        const versionList = semver.rsort(Object.keys(packageData.versions))
-        setVersions(versionList)
+        const sorted = semver.rsort(Object.keys(packageData.versions))
+        const nonDeprecated = sorted.filter(
+          (v) => !packageData.versions[v].deprecated
+        )
+
+        // Default view: last 5 stable releases + only pre-releases newer than latest stable
+        const filtered: string[] = []
+        let stableCount = 0
+        for (const v of nonDeprecated) {
+          if (semver.prerelease(v)) {
+            if (stableCount === 0) {
+              filtered.push(v) // only pre-releases above latest stable
+            }
+          } else {
+            if (stableCount < 5) {
+              filtered.push(v)
+              stableCount++
+            }
+          }
+        }
+
+        setVersions(filtered)
+        setAllVersions(nonDeprecated)
       }
       if (packageData['dist-tags']) {
         setDistTags(packageData['dist-tags'])
@@ -84,6 +108,7 @@ export default function ActionCellRenderer({
     } catch (error) {
       console.error('Failed to fetch versions:', error)
       setVersions([])
+      setAllVersions([])
     } finally {
       setLoadingVersions(false)
     }
@@ -249,58 +274,73 @@ export default function ActionCellRenderer({
               <p className="mt-2">Loading versions...</p>
             </div>
           ) : versions.length > 0 ? (
-            <div
-              style={{
-                maxHeight: '450px',
-                overflowY: 'auto',
-                border: '1px solid #ccc'
-              }}
-            >
-              <ListGroup>
-                {versions.map((version) => {
-                  const isPrerelease = !!semver.prerelease(version)
+            <>
+              <div
+                style={{
+                  maxHeight: '450px',
+                  overflowY: 'auto',
+                  border: '1px solid #ccc'
+                }}
+              >
+                <ListGroup>
+                  {(showAllVersions ? allVersions : versions).map((version) => {
+                    const isPrerelease = !!semver.prerelease(version)
 
-                  return (
-                    <ListGroup.Item
-                      key={version}
-                      className="d-flex justify-content-between align-items-center"
-                    >
-                      <span>
-                        <strong>{version}</strong>
-                        {app.installedVersion === version && (
-                          <span className="badge text-bg-success ms-2">
-                            Installed
-                          </span>
+                    return (
+                      <ListGroup.Item
+                        key={version}
+                        className="d-flex justify-content-between align-items-center"
+                      >
+                        <span>
+                          <strong>{version}</strong>
+                          {app.installedVersion === version && (
+                            <span className="badge text-bg-success ms-2">
+                              Installed
+                            </span>
+                          )}
+                          {distTags.latest === version && (
+                            <span className="badge text-bg-primary ms-2">
+                              latest
+                            </span>
+                          )}
+                          {isPrerelease && (
+                            <span className="badge text-bg-warning ms-2">
+                              pre-release
+                            </span>
+                          )}
+                        </span>
+                        {app.installedVersion !== version && (
+                          <Button
+                            size="sm"
+                            variant="light"
+                            onClick={() => handleInstallVersionClick(version)}
+                          >
+                            <FontAwesomeIcon
+                              className="icon__update me-2"
+                              icon={faCloudArrowDown}
+                            />
+                            Install
+                          </Button>
                         )}
-                        {distTags.latest === version && (
-                          <span className="badge text-bg-primary ms-2">
-                            latest
-                          </span>
-                        )}
-                        {isPrerelease && (
-                          <span className="badge text-bg-warning ms-2">
-                            pre-release
-                          </span>
-                        )}
-                      </span>
-                      {app.installedVersion !== version && (
-                        <Button
-                          size="sm"
-                          variant="light"
-                          onClick={() => handleInstallVersionClick(version)}
-                        >
-                          <FontAwesomeIcon
-                            className="icon__update me-2"
-                            icon={faCloudArrowDown}
-                          />
-                          Install
-                        </Button>
-                      )}
-                    </ListGroup.Item>
-                  )
-                })}
-              </ListGroup>
-            </div>
+                      </ListGroup.Item>
+                    )
+                  })}
+                </ListGroup>
+              </div>
+              {allVersions.length > versions.length && (
+                <div className="text-center mt-2">
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setShowAllVersions(!showAllVersions)}
+                  >
+                    {showAllVersions
+                      ? 'Show recent versions'
+                      : `Show all ${allVersions.length} versions`}
+                  </Button>
+                </div>
+              )}
+            </>
           ) : (
             <p className="text-muted">
               No older versions available or failed to load versions.
