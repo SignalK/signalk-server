@@ -328,7 +328,7 @@ const SourceDiscovery: React.FC = () => {
   return (
     <div className="animated fadeIn">
       {allWsProxied && (
-        <Alert variant="info" style={{ fontSize: '0.9rem' }}>
+        <Alert variant="info" style={{ fontSize: '0.9rem', marginBottom: '16px' }}>
           <FontAwesomeIcon icon={faInfoCircle} /> All N2K devices are received
           through a remote SignalK server connection. Device configuration
           (instance changes, installation descriptions) requires a direct CAN
@@ -396,7 +396,7 @@ const SourceDiscovery: React.FC = () => {
         {activeConflicts.length > 0 && (
           <Alert
             variant="warning"
-            style={{ margin: '8px 12px 0', fontSize: '0.9rem' }}
+            style={{ margin: '8px 12px', fontSize: '0.9rem' }}
           >
             <FontAwesomeIcon icon={faTriangleExclamation} />{' '}
             <strong>
