@@ -269,7 +269,7 @@ jobs:
               "docker://${REGISTRY}@${DIGEST}" | \
               jq '[.layers[].size] | add')
 
-            echo "${TIMESTAMP},${COMMIT},${TAG},${SIZE}" >> "$CSV"
+            echo "${TIMESTAMP},${COMMIT},${TAG%-${RUN_ID}},${SIZE}" >> "$CSV"
           done
       - name: Commit and push
         run: |
