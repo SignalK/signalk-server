@@ -1045,7 +1045,7 @@ const SignalK = (props) => {
           <Col xs="12" md="3">
             <Input
               type="select"
-              value={props.value.options.selfHandling || 'noSelf'}
+              value={props.value.options.selfHandling || 'useRemoteSelf'}
               name="options.selfHandling"
               onChange={(event) => props.onChange(event)}
             >
