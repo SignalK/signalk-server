@@ -197,16 +197,14 @@ describe('prioritiesSlice', () => {
       ).toBe(true)
     })
 
-    it('should fail timeout validation when third is not greater than second', () => {
-      // Note: The checkTimeouts function only validates that timeouts are increasing
-      // starting from the 3rd element (index 2). First two just need to be valid numbers.
+    it('should allow non-ascending timeout values', () => {
       useStore.getState().changePriority(0, 0, 'nmea0183.0', 5000)
       useStore.getState().changePriority(0, 1, 'n2k.1', 10000)
-      useStore.getState().changePriority(0, 2, 'ais', 8000) // Less than second
+      useStore.getState().changePriority(0, 2, 'ais', 8000) // Less than second — valid
 
       expect(
         useStore.getState().sourcePrioritiesData.saveState.timeoutsOk
-      ).toBe(false)
+      ).toBe(true)
     })
 
     it('should fail timeout validation for invalid timeout values', () => {
@@ -307,10 +305,10 @@ describe('prioritiesSlice', () => {
       // Move third item to second position - now timeouts are 5000, 15000, 10000
       useStore.getState().movePriority(0, 2, -1)
 
-      // After swap: index 1 has 15000, index 2 has 10000 - invalid (not increasing)
+      // After swap: index 1 has 15000, index 2 has 10000 - still valid (order doesn't matter)
       expect(
         useStore.getState().sourcePrioritiesData.saveState.timeoutsOk
-      ).toBe(false)
+      ).toBe(true)
     })
   })
 
@@ -353,6 +351,153 @@ describe('prioritiesSlice', () => {
       expect(
         useStore.getState().sourcePrioritiesData.saveState.saveFailed
       ).toBe(false)
+    })
+  })
+})
+
+describe('source ranking', () => {
+  beforeEach(() => {
+    useStore.setState({
+      sourceRankingData: {
+        ranking: [],
+        saveState: {
+          dirty: false,
+          timeoutsOk: true
+        }
+      }
+    })
+  })
+
+  describe('setSourceRanking', () => {
+    it('should set ranking and reset save state', () => {
+      const ranking = [
+        { sourceRef: 'can0.8', timeout: 60000 },
+        { sourceRef: 'can0.7', timeout: 60000 }
+      ]
+      useStore.getState().setSourceRanking(ranking)
+
+      const data = useStore.getState().sourceRankingData
+      expect(data.ranking).toEqual(ranking)
+      expect(data.saveState.dirty).toBe(false)
+      expect(data.saveState.timeoutsOk).toBe(true)
+    })
+  })
+
+  describe('addRankedSource', () => {
+    it('should append to ranking and mark dirty', () => {
+      useStore.getState().addRankedSource('can0.8', 60000)
+
+      const data = useStore.getState().sourceRankingData
+      expect(data.ranking).toHaveLength(1)
+      expect(data.ranking[0]).toEqual({ sourceRef: 'can0.8', timeout: 60000 })
+      expect(data.saveState.dirty).toBe(true)
+    })
+  })
+
+  describe('removeRankedSource', () => {
+    it('should remove by index', () => {
+      useStore.getState().addRankedSource('can0.8', 60000)
+      useStore.getState().addRankedSource('can0.7', 60000)
+      useStore.getState().addRankedSource('can0.44', 60000)
+
+      useStore.getState().removeRankedSource(1)
+
+      const ranking = useStore.getState().sourceRankingData.ranking
+      expect(ranking).toHaveLength(2)
+      expect(ranking[0].sourceRef).toBe('can0.8')
+      expect(ranking[1].sourceRef).toBe('can0.44')
+    })
+  })
+
+  describe('moveRankedSource', () => {
+    it('should swap entries', () => {
+      useStore.getState().addRankedSource('can0.8', 60000)
+      useStore.getState().addRankedSource('can0.7', 60000)
+      useStore.getState().addRankedSource('can0.44', 60000)
+
+      useStore.getState().moveRankedSource(2, -1)
+
+      const ranking = useStore.getState().sourceRankingData.ranking
+      expect(ranking[0].sourceRef).toBe('can0.8')
+      expect(ranking[1].sourceRef).toBe('can0.44')
+      expect(ranking[2].sourceRef).toBe('can0.7')
+    })
+  })
+
+  describe('changeRankedTimeout', () => {
+    it('should update timeout and validate', () => {
+      useStore.getState().addRankedSource('can0.8', 60000)
+      useStore.getState().addRankedSource('can0.7', 60000)
+
+      useStore.getState().changeRankedTimeout(1, 5000)
+
+      const data = useStore.getState().sourceRankingData
+      expect(data.ranking[1].timeout).toBe(5000)
+      expect(data.saveState.timeoutsOk).toBe(true)
+    })
+
+    it('should accept timeout=-1 (disabled) for non-first entries', () => {
+      useStore.getState().addRankedSource('can0.8', 60000)
+      useStore.getState().addRankedSource('can0.7', 60000)
+
+      useStore.getState().changeRankedTimeout(1, -1)
+
+      const data = useStore.getState().sourceRankingData
+      expect(data.ranking[1].timeout).toBe(-1)
+      expect(data.saveState.timeoutsOk).toBe(true)
+    })
+
+    it('should fail validation for timeout=0 on non-first entries', () => {
+      useStore.getState().addRankedSource('can0.8', 60000)
+      useStore.getState().addRankedSource('can0.7', 60000)
+
+      useStore.getState().changeRankedTimeout(1, 0)
+
+      expect(useStore.getState().sourceRankingData.saveState.timeoutsOk).toBe(
+        false
+      )
+    })
+  })
+
+  describe('ranking save state management', () => {
+    it('setRankingSaving should set isSaving and clear saveFailed', () => {
+      useStore.getState().setRankingSaving()
+
+      const saveState = useStore.getState().sourceRankingData.saveState
+      expect(saveState.isSaving).toBe(true)
+      expect(saveState.saveFailed).toBe(false)
+    })
+
+    it('setRankingSaved should clear dirty, isSaving, and saveFailed', () => {
+      useStore.getState().addRankedSource('can0.8', 60000)
+      useStore.getState().setRankingSaving()
+
+      useStore.getState().setRankingSaved()
+
+      const saveState = useStore.getState().sourceRankingData.saveState
+      expect(saveState.dirty).toBe(false)
+      expect(saveState.isSaving).toBe(false)
+      expect(saveState.saveFailed).toBe(false)
+    })
+
+    it('setRankingSaveFailed should set saveFailed and clear isSaving', () => {
+      useStore.getState().setRankingSaving()
+
+      useStore.getState().setRankingSaveFailed()
+
+      const saveState = useStore.getState().sourceRankingData.saveState
+      expect(saveState.isSaving).toBe(false)
+      expect(saveState.saveFailed).toBe(true)
+    })
+
+    it('clearRankingSaveFailed should clear saveFailed', () => {
+      useStore.getState().setRankingSaveFailed()
+
+      useStore.getState().clearRankingSaveFailed()
+
+      expect(useStore.getState().sourceRankingData.saveState.saveFailed).toBe(
+        false
+      )
     })
   })
 })

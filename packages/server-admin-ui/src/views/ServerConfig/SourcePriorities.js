@@ -380,7 +380,7 @@ class SourcePriorities extends Component {
                 is not older than the timeout
               </b>{' '}
               specified for the source of the incoming data. Timeout for data
-              from unlisted sources is 10 seconds.
+              from unlisted sources is 120 seconds.
             </p>
             <p>
               You can debug the settings by saving them and activating debug key{' '}
@@ -467,9 +467,7 @@ class SourcePriorities extends Component {
           {!this.props.saveState.timeoutsOk && (
             <span style={{ paddingLeft: '10px' }}>
               <Badge color="danger">Error</Badge>
-              {
-                'The timeout values need to be numbers in ascending order, please fix.'
-              }
+              {'Timeout values must be positive numbers (milliseconds).'}
             </span>
           )}
         </CardFooter>

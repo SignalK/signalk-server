@@ -47,6 +47,7 @@ export interface DataSliceActions {
   getMeta: (context: string, path: string) => MetaData | undefined
   getPath$SourceKeys: (context: string) => string[]
   getContexts: () => string[]
+  removePath: (context: string, path$SourceKey: string) => void
   clearData: () => void
 }
 
@@ -126,6 +127,18 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
   getContexts: () => {
     const state = get()
     return Object.keys(state.signalkData)
+  },
+
+  removePath: (context, path$SourceKey) => {
+    set((state) => {
+      const contextData = state.signalkData[context]
+      if (!contextData || !contextData[path$SourceKey]) return state
+      const { [path$SourceKey]: _, ...rest } = contextData
+      return {
+        signalkData: { ...state.signalkData, [context]: rest },
+        dataVersion: state.dataVersion + 1
+      }
+    })
   },
 
   clearData: () => {
