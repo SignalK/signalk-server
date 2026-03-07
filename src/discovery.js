@@ -217,9 +217,9 @@ module.exports.runDiscovery = function (app) {
             !findWSProvider(data.addresses[0], wsType, data.host, data.port)
           ) {
             debug('discoverSignalkWs found data[' + wsType + ']:', data)
-            const id = providerId = `${wsType}-${data.host}:${data.port} (${data.addresses[0]})`
+            const providerId = `${wsType}-${data.host}:${data.port} (${data.addresses[0]})`
             app.emit('discovered', {
-              id,
+              id: providerId,
               enabled: false,
               pipeElements: [
                 {
