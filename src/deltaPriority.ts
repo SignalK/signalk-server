@@ -30,26 +30,38 @@ interface SourcePrecedenceData {
 type PathLatestTimestamps = Map<Path, TimestampedSource>
 
 type PathPrecedences = Map<SourceRef, SourcePrecedenceData>
+
+interface PrecedenceMaps {
+  precedences: Map<Path, PathPrecedences>
+  highestPrecedenceSources: Map<Path, SourceRef>
+}
+
 const toPrecedences = (sourcePrioritiesMap: {
   [path: string]: SourcePriority[]
-}) =>
-  Object.keys(sourcePrioritiesMap).reduce<Map<Path, PathPrecedences>>(
-    (acc, path: string) => {
-      const priorityIndices = sourcePrioritiesMap[path].reduce<PathPrecedences>(
-        (acc2, { sourceRef, timeout }, i: number) => {
-          acc2.set(sourceRef, {
-            precedence: i,
-            timeout
-          })
-          return acc2
-        },
-        new Map<SourceRef, SourcePrecedenceData>()
-      )
-      acc.set(path as Path, priorityIndices)
-      return acc
-    },
-    new Map<Path, PathPrecedences>()
-  )
+}): PrecedenceMaps => {
+  const precedences = new Map<Path, PathPrecedences>()
+  const highestPrecedenceSources = new Map<Path, SourceRef>()
+
+  Object.keys(sourcePrioritiesMap).forEach((path: string) => {
+    const priorities = sourcePrioritiesMap[path]
+    if (priorities.length > 0) {
+      highestPrecedenceSources.set(path as Path, priorities[0].sourceRef)
+    }
+    const priorityIndices = priorities.reduce<PathPrecedences>(
+      (acc, { sourceRef, timeout }, i: number) => {
+        acc.set(sourceRef, {
+          precedence: i,
+          timeout
+        })
+        return acc
+      },
+      new Map<SourceRef, SourcePrecedenceData>()
+    )
+    precedences.set(path as Path, priorityIndices)
+  })
+
+  return { precedences, highestPrecedenceSources }
+}
 
 export type ToPreferredDelta = (
   delta: any,
@@ -65,7 +77,8 @@ export const getToPreferredDelta = (
     debug('No priorities data')
     return (delta: any, _now: Date, _selfContext: string) => delta
   }
-  const precedences = toPrecedences(sourcePrioritiesData)
+  const { precedences, highestPrecedenceSources } =
+    toPrecedences(sourcePrioritiesData)
 
   const contextPathTimestamps = new Map<Context, PathLatestTimestamps>()
 
@@ -75,24 +88,33 @@ export const getToPreferredDelta = (
     sourceRef: SourceRef,
     millis: number
   ) => {
+    contextPathTimestamps
+      .get(context)!
+      .set(path, { sourceRef, timestamp: millis })
+  }
+
+  const getLatest = (
+    context: Context,
+    path: Path,
+    millis: number
+  ): TimestampedSource => {
     let pathLatestTimestamps = contextPathTimestamps.get(context)
     if (!pathLatestTimestamps) {
       pathLatestTimestamps = new Map<Path, TimestampedSource>()
       contextPathTimestamps.set(context, pathLatestTimestamps)
     }
-    pathLatestTimestamps.set(path, { sourceRef, timestamp: millis })
-  }
 
-  const getLatest = (context: Context, path: Path): TimestampedSource => {
-    const pathLatestTimestamps = contextPathTimestamps.get(context)
-    if (!pathLatestTimestamps) {
-      return {
-        sourceRef: '' as SourceRef,
-        timestamp: 0
-      }
-    }
-    const latestTimestamp = pathLatestTimestamps.get(path)
+    let latestTimestamp = pathLatestTimestamps.get(path)
     if (!latestTimestamp) {
+      const highestPrecedenceSource = highestPrecedenceSources.get(path)
+      if (highestPrecedenceSource) {
+        latestTimestamp = {
+          sourceRef: highestPrecedenceSource,
+          timestamp: millis
+        }
+        pathLatestTimestamps.set(path, latestTimestamp)
+        return latestTimestamp
+      }
       return {
         sourceRef: '' as SourceRef,
         timestamp: 0
@@ -150,7 +172,8 @@ export const getToPreferredDelta = (
               (acc: any, pathValue: PathValue) => {
                 const latest = getLatest(
                   delta.context as Context,
-                  pathValue.path as Path
+                  pathValue.path as Path,
+                  millis
                 )
                 const isPreferred = isPreferredValue(
                   pathValue.path as Path,
