@@ -406,31 +406,6 @@ const DataBrowser: React.FC = () => {
     []
   )
 
-  const uniquePathsForMeta = useMemo(() => {
-    const currentData = dataVersion >= 0 ? getSignalkData() : {}
-    const contexts = context === 'all' ? Object.keys(currentData) : [context]
-    const paths: string[] = []
-    const seen = new Set<string>()
-
-    for (const ctx of contexts) {
-      const contextData = currentData[ctx] || {}
-      for (const key of Object.keys(contextData)) {
-        if (!matchesSearch(key, search)) {
-          continue
-        }
-        const data = contextData[key] as PathData | undefined
-        const path = data?.path || key
-        const dedupKey = context === 'all' ? `${ctx}\0${path}` : path
-        if (!seen.has(dedupKey)) {
-          seen.add(dedupKey)
-          paths.push(dedupKey)
-        }
-      }
-    }
-
-    return paths.sort()
-  }, [context, search, dataVersion])
-
   const toggleSourceFilter = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = event.target.checked

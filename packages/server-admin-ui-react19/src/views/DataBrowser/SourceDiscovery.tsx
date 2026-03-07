@@ -13,6 +13,7 @@ import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTrian
 import { faEyeSlash } from '@fortawesome/free-solid-svg-icons/faEyeSlash'
 import { faEye } from '@fortawesome/free-solid-svg-icons/faEye'
 import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
+import { faInfoCircle } from '@fortawesome/free-solid-svg-icons/faInfoCircle'
 import {
   type SourcesData,
   type N2kDeviceEntry,
@@ -62,6 +63,9 @@ interface SortState {
 const SourceDiscovery: React.FC = () => {
   const sourcesData = useSourcesData()
   const [isDiscovering, setIsDiscovering] = useState(false)
+  const [wsConnectionIds, setWsConnectionIds] = useState<Set<string>>(
+    () => new Set()
+  )
   const [expandedDevices, setExpandedDevices] = useState<Set<string>>(
     () => new Set()
   )
@@ -72,6 +76,23 @@ const SourceDiscovery: React.FC = () => {
   >({})
   const [discoveredAddresses, setDiscoveredAddresses] =
     useState<Set<number> | null>(null)
+
+  useEffect(() => {
+    fetch(`${window.serverRoutesPrefix}/providers`, {
+      credentials: 'include'
+    })
+      .then((res) => res.json())
+      .then((providers: { id: string; type: string }[]) => {
+        const wsIds = new Set<string>()
+        for (const p of providers) {
+          if (p.type === 'SignalK') {
+            wsIds.add(p.id)
+          }
+        }
+        setWsConnectionIds(wsIds)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetch(`${window.serverRoutesPrefix}/ignoredInstanceConflicts`, {
@@ -301,8 +322,19 @@ const SourceDiscovery: React.FC = () => {
     setExpandedDevices(new Set())
   }
 
+  const hasDirectN2k = devices.some((d) => !wsConnectionIds.has(d.connection))
+  const allWsProxied = devices.length > 0 && !hasDirectN2k
+
   return (
     <div className="animated fadeIn">
+      {allWsProxied && (
+        <Alert variant="info" style={{ fontSize: '0.9rem' }}>
+          <FontAwesomeIcon icon={faInfoCircle} /> All N2K devices are received
+          through a remote SignalK server connection. Device configuration
+          (instance changes, installation descriptions) requires a direct CAN
+          bus connection. Configure these devices on the remote server.
+        </Alert>
+      )}
       <Card>
         <Card.Header
           style={{
@@ -314,7 +346,7 @@ const SourceDiscovery: React.FC = () => {
         >
           <span style={{ fontWeight: 500 }}>N2K Devices</span>
           <Badge bg="secondary">{devices.length}</Badge>
-          {discoveredAddresses && devices.length > 0 && (
+          {discoveredAddresses && devices.length > 0 && !allWsProxied && (
             <>
               <Badge bg="success" style={{ fontSize: '0.75em' }}>
                 {
@@ -336,7 +368,12 @@ const SourceDiscovery: React.FC = () => {
             size="sm"
             variant="primary"
             onClick={handleDiscover}
-            disabled={isDiscovering}
+            disabled={isDiscovering || allWsProxied}
+            title={
+              allWsProxied
+                ? 'Discovery requires a direct CAN bus connection'
+                : undefined
+            }
           >
             {isDiscovering ? (
               <>
@@ -484,11 +521,14 @@ const SourceDiscovery: React.FC = () => {
                       hasConflict={conflictSourceRefs.has(device.sourceRef)}
                       conflictPGNs={conflictPGNsByDevice.get(device.sourceRef)}
                       isOnline={
-                        discoveredAddresses
-                          ? discoveredAddresses.has(Number(device.src))
-                          : null
+                        wsConnectionIds.has(device.connection)
+                          ? null
+                          : discoveredAddresses
+                            ? discoveredAddresses.has(Number(device.src))
+                            : null
                       }
                       onRemove={handleRemoveDevice}
+                      readOnly={wsConnectionIds.has(device.connection)}
                     />
                   )
                 })}
@@ -611,6 +651,7 @@ interface DeviceRowsProps {
   conflictPGNs?: Set<string>
   isOnline: boolean | null
   onRemove: (sourceRef: string) => void
+  readOnly: boolean
 }
 
 const DeviceRows: React.FC<DeviceRowsProps> = ({
@@ -621,7 +662,8 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
   hasConflict,
   conflictPGNs,
   isOnline,
-  onRemove
+  onRemove,
+  readOnly
 }) => {
   const allPgnKeys = device.pgns
     ? Object.keys(device.pgns).sort((a, b) => Number(a) - Number(b))
@@ -676,12 +718,14 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
           field="deviceInstance"
           max={253}
           hasConflict={hasConflict}
+          readOnly={readOnly}
         />
         <InlineInstanceCell
           device={device}
           field="deviceInstanceLower"
           max={7}
           hasConflict={false}
+          readOnly={readOnly}
         />
         <td>{device.installationDescription1 || ''}</td>
         <td>{device.src || ''}</td>
@@ -731,11 +775,13 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
                 device={device}
                 field="installationDescription1"
                 label="Installation Desc. 1"
+                readOnly={readOnly}
               />
               <InlineTextField
                 device={device}
                 field="installationDescription2"
                 label="Installation Desc. 2"
+                readOnly={readOnly}
               />
               {hasBatteryPGN && (
                 <PgnInstanceField
@@ -744,6 +790,7 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
                   label="Battery Instance (PGN 127508)"
                   max={252}
                   signalkPaths={['electrical/batteries']}
+                  readOnly={readOnly}
                 />
               )}
               {hasDcPGN && (
@@ -753,10 +800,11 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
                   label="DC Instance (PGN 127506)"
                   max={252}
                   signalkPaths={['electrical/dc']}
+                  readOnly={readOnly}
                 />
               )}
               {hasDataInstancePGN && isExpanded && (
-                <DataInstanceSection device={device} />
+                <DataInstanceSection device={device} readOnly={readOnly} />
               )}
               {allPgnKeys.length > 0 && (
                 <div style={{ gridColumn: '1 / -1' }}>
@@ -794,6 +842,7 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
                   </span>
                 </div>
               )}
+
               <div style={{ gridColumn: '1 / -1', marginTop: '4px' }}>
                 <Button
                   size="sm"
@@ -828,7 +877,8 @@ const InlineInstanceCell: React.FC<{
   field: 'deviceInstance' | 'deviceInstanceLower'
   max: number
   hasConflict: boolean
-}> = ({ device, field, max, hasConflict }) => {
+  readOnly?: boolean
+}> = ({ device, field, max, hasConflict, readOnly }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -849,6 +899,24 @@ const InlineInstanceCell: React.FC<{
   }, [saveResult])
 
   const currentValue = device[field]
+
+  if (readOnly) {
+    return (
+      <td>
+        {currentValue ?? ''}
+        {hasConflict && (
+          <FontAwesomeIcon
+            icon={faTriangleExclamation}
+            style={{
+              color: 'var(--bs-warning, #f0ad4e)',
+              marginLeft: '4px'
+            }}
+            title="Instance conflict"
+          />
+        )}
+      </td>
+    )
+  }
 
   const handleStartEdit = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -1037,13 +1105,15 @@ const InstanceRow: React.FC<{
   currentValue: number | null
   signalkPaths: string[]
   onInstancesChanged: () => void
+  readOnly?: boolean
 }> = ({
   device,
   field,
   max,
   currentValue,
   signalkPaths,
-  onInstancesChanged
+  onInstancesChanged,
+  readOnly
 }) => {
   const [editValue, setEditValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -1054,6 +1124,18 @@ const InstanceRow: React.FC<{
     const t = setTimeout(() => setSaveResult(null), 3000)
     return () => clearTimeout(t)
   }, [saveResult])
+
+  if (readOnly) {
+    return (
+      <span
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+      >
+        {currentValue !== null && (
+          <span style={{ fontFamily: 'monospace' }}>{currentValue}</span>
+        )}
+      </span>
+    )
+  }
 
   const handleSave = () => {
     if (editValue === '') return
@@ -1216,7 +1298,8 @@ const PgnInstanceField: React.FC<{
   label: string
   max: number
   signalkPaths: string[]
-}> = ({ device, field, label, max, signalkPaths }) => {
+  readOnly?: boolean
+}> = ({ device, field, label, max, signalkPaths, readOnly }) => {
   const [currentInstances, setCurrentInstances] = useState<number[]>([])
   const [loaded, setLoaded] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
@@ -1305,6 +1388,7 @@ const PgnInstanceField: React.FC<{
           currentValue={null}
           signalkPaths={signalkPaths}
           onInstancesChanged={() => setReloadKey((k) => k + 1)}
+          readOnly={readOnly}
         />
       </div>
     )
@@ -1322,6 +1406,7 @@ const PgnInstanceField: React.FC<{
             currentValue={inst}
             signalkPaths={signalkPaths}
             onInstancesChanged={() => setReloadKey((k) => k + 1)}
+            readOnly={readOnly}
           />
         </div>
       ))}
@@ -1395,7 +1480,8 @@ function fieldForPgn(pgn: number): string {
  */
 const DataInstanceSection: React.FC<{
   device: N2kDeviceEntry
-}> = ({ device }) => {
+  readOnly?: boolean
+}> = ({ device, readOnly }) => {
   const [instances, setInstances] = useState<DataInstance[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1561,6 +1647,7 @@ const DataInstanceSection: React.FC<{
               key={`${inst.pgn}-${inst.instance}`}
               device={device}
               inst={inst}
+              readOnly={readOnly}
             />
           ))}
         </div>
@@ -1576,7 +1663,8 @@ const DataInstanceSection: React.FC<{
 const DataInstanceRow: React.FC<{
   device: N2kDeviceEntry
   inst: DataInstance
-}> = ({ device, inst }) => {
+  readOnly?: boolean
+}> = ({ device, inst, readOnly }) => {
   const [editInstance, setEditInstance] = useState('')
   const initialSource =
     inst.sourceEnum !== undefined ? String(inst.sourceEnum) : ''
@@ -1599,6 +1687,32 @@ const DataInstanceRow: React.FC<{
   const sourceLabels = isTemperaturePGN
     ? TEMPERATURE_SOURCE_LABELS
     : HUMIDITY_SOURCE_LABELS
+
+  if (readOnly) {
+    return (
+      <div
+        style={{
+          marginLeft: '12px',
+          marginTop: '2px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}
+      >
+        <span style={{ fontFamily: 'monospace', minWidth: '30px' }}>
+          {inst.instance}
+        </span>
+        <span style={{ color: '#555' }}>{inst.sourceLabel}</span>
+        {inst.label && (
+          <span
+            style={{ marginLeft: '8px', color: '#333', fontStyle: 'italic' }}
+          >
+            {inst.label}
+          </span>
+        )}
+      </div>
+    )
+  }
 
   const handleSaveInstance = () => {
     const num = Number(editInstance)
@@ -1799,8 +1913,10 @@ const InlineTextField: React.FC<{
   device: N2kDeviceEntry
   field: 'installationDescription1' | 'installationDescription2'
   label: string
-}> = ({ device, field, label }) => {
+  readOnly?: boolean
+}> = ({ device, field, label, readOnly }) => {
   const currentValue = device[field] || ''
+
   const [editState, setEditState] = useState({
     value: currentValue,
     syncedFrom: currentValue
@@ -1895,6 +2011,15 @@ const InlineTextField: React.FC<{
   const labelStyle = {
     fontWeight: 500 as const,
     color: 'var(--bs-secondary-color, #6c757d)'
+  }
+
+  if (readOnly) {
+    return (
+      <div style={{ gridColumn: '1 / -1' }}>
+        <span style={labelStyle}>{label}:</span>{' '}
+        {currentValue || <span style={{ color: '#999' }}>{'—'}</span>}
+      </div>
+    )
   }
 
   return (

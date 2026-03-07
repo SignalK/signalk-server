@@ -53,7 +53,15 @@ const MetaDataPage: React.FC = () => {
       const contextData = currentData[ctx] || {}
       for (const key of Object.keys(contextData)) {
         if (search && search.length > 0) {
-          if (key.toLowerCase().indexOf(search.toLowerCase()) === -1) {
+          const lowerKey = key.toLowerCase()
+          const terms = search
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((t) => t.length > 0)
+          if (
+            terms.length > 0 &&
+            !terms.some((term) => lowerKey.includes(term))
+          ) {
             continue
           }
         }
