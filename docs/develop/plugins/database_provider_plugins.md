@@ -17,11 +17,14 @@ For a plugin to be a database provider it must implement the {@link @signalk/ser
 ```typescript
 export interface DatabaseProvider {
   getPluginDb(pluginId: string): Promise<PluginDb>
+  getServerDb?(): Promise<PluginDb>
   close(): Promise<void>
 }
 ```
 
-The provider must return a {@link @signalk/server-api!PluginDb | `PluginDb`} handle that implements:
+`getServerDb()` is optional. When implemented, the server uses it for its own internal storage (`skserver.sqlite`). If omitted, the server falls back to a built-in SQLite provider for internal storage. Both methods return the same {@link @signalk/server-api!PluginDb | `PluginDb`} handle.
+
+The provider must return a `PluginDb` handle that implements:
 
 - `migrate(migrations)` — Apply schema migrations, tracking applied versions
 - `query(sql, params)` — Execute a SELECT and return rows
