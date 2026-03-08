@@ -73,6 +73,10 @@ export function useLogEntries() {
   return useStore((s) => s.log)
 }
 
+export function useClearLogEntries() {
+  return useStore((s) => s.clearLogEntries)
+}
+
 export function usePathData(context: string, path$SourceKey: string) {
   return useStore((s) => s.signalkData[context]?.[path$SourceKey])
 }

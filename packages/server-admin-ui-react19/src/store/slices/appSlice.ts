@@ -17,23 +17,11 @@ import type {
   BackpressureWarning,
   ServerStatistics,
   PathPriority,
-  LogState,
-  LogEntry
+  LogState
 } from '../types'
 
 const convert = new Convert()
 let logEntryCount = 0
-
-function createInitialLogEntries(): LogEntry[] {
-  const entries: LogEntry[] = []
-  for (let i = 0; i < 100; i++) {
-    entries[i] = {
-      i: logEntryCount++,
-      d: ''
-    }
-  }
-  return entries
-}
 
 function nameCollator<T extends { name: string }>(left: T, right: T): number {
   if (left.name < right.name) {
@@ -85,6 +73,7 @@ export interface AppSliceActions {
     rememberDebug?: boolean
   }) => void
   addLogEntry: (entry: { isError?: boolean; ts: string; row: string }) => void
+  clearLogEntries: () => void
   setSourcePrioritiesFromServer: (
     priorities: Record<
       string,
@@ -112,7 +101,7 @@ const initialAppState: AppSliceState = {
   devices: [],
   discoveredProviders: [],
   log: {
-    entries: createInitialLogEntries(),
+    entries: [],
     debugEnabled: '',
     rememberDebug: false
   },
@@ -203,6 +192,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
     set((state) => ({
       log: { ...state.log, ...settings }
     }))
+  },
+
+  clearLogEntries: () => {
+    set((state) => ({ log: { ...state.log, entries: [] } }))
   },
 
   addLogEntry: (entry) => {
