@@ -1,4 +1,3 @@
-import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
 import {
@@ -8,12 +7,30 @@ import {
   Migration
 } from '@signalk/server-api'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BetterSqlite3Database = any
+
+let Database: (new (path: string) => BetterSqlite3Database) | undefined
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Database = require('better-sqlite3')
+} catch {
+  // better-sqlite3 not available
+}
+
+export function isBetterSqliteAvailable(): boolean {
+  return Database !== undefined
+}
+
 export class SqliteProvider implements DatabaseProvider {
-  private databases: Map<string, Database.Database> = new Map()
+  private databases: Map<string, BetterSqlite3Database> = new Map()
   private pluginDbs: Map<string, PluginDb> = new Map()
   private dbDir: string
 
   constructor(configPath: string) {
+    if (!Database) {
+      throw new Error('better-sqlite3 is not available')
+    }
     this.dbDir = path.join(configPath, 'plugin-db')
     fs.mkdirSync(this.dbDir, { recursive: true })
   }
@@ -25,7 +42,7 @@ export class SqliteProvider implements DatabaseProvider {
     }
 
     const dbPath = path.join(this.dbDir, `${pluginId}.db`)
-    const db = new Database(dbPath)
+    const db = new Database!(dbPath)
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
     this.databases.set(pluginId, db)
@@ -50,7 +67,7 @@ export class SqliteProvider implements DatabaseProvider {
 }
 
 function queryAll<T>(
-  db: Database.Database,
+  db: BetterSqlite3Database,
   sql: string,
   params?: unknown[]
 ): T[] {
@@ -58,7 +75,7 @@ function queryAll<T>(
 }
 
 function runStmt(
-  db: Database.Database,
+  db: BetterSqlite3Database,
   sql: string,
   params?: unknown[]
 ): RunResult {
@@ -69,7 +86,7 @@ function runStmt(
   }
 }
 
-function createPluginDb(db: Database.Database): PluginDb {
+function createPluginDb(db: BetterSqlite3Database): PluginDb {
   const pluginDb: PluginDb = {
     async migrate(migrations: Migration[]): Promise<void> {
       const applied = new Set(
