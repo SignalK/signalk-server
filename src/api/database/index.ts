@@ -11,7 +11,7 @@ import { Request, Response } from 'express'
 import { createDebug } from '../../debug'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '../'
-import { SqliteProvider } from './sqliteprovider'
+import { isBetterSqliteAvailable, SqliteProvider } from './sqliteprovider'
 import { isNodeSqliteAvailable, NodeSqliteProvider } from './nodesqliteprovider'
 
 const debug = createDebug('signalk-server:api:database')
@@ -50,7 +50,11 @@ export class DatabaseApiHttpRegistry {
     if (!this.providers.has(pluginId)) {
       this.providers.set(pluginId, provider)
     }
-    if (!this.defaultProviderId || this.defaultProviderId === BUILTIN_ID) {
+    if (
+      !this.defaultProviderId ||
+      this.defaultProviderId === BUILTIN_ID ||
+      this.defaultProviderId === BUILTIN_NODESQLITE_ID
+    ) {
       this.defaultProviderId = pluginId
     }
     debug(
@@ -85,18 +89,33 @@ export class DatabaseApiHttpRegistry {
   start() {
     const configPath = this.app.config.configPath
 
-    const builtinProvider = new SqliteProvider(configPath)
-    this.providers.set(BUILTIN_ID, builtinProvider)
-    this.defaultProviderId = BUILTIN_ID
-    debug('Registered built-in better-sqlite3 provider')
-
+    // Prefer node:sqlite (>=22.5.0, zero dependencies) over better-sqlite3
     if (isNodeSqliteAvailable()) {
       try {
         const nodeSqliteProvider = new NodeSqliteProvider(configPath)
         this.providers.set(BUILTIN_NODESQLITE_ID, nodeSqliteProvider)
-        debug('Registered built-in node:sqlite provider')
+        this.defaultProviderId = BUILTIN_NODESQLITE_ID
+        debug('Registered built-in node:sqlite provider (default)')
       } catch (err) {
         debug('node:sqlite provider not available:', err)
+      }
+    }
+
+    if (isBetterSqliteAvailable()) {
+      try {
+        const builtinProvider = new SqliteProvider(configPath)
+        this.providers.set(BUILTIN_ID, builtinProvider)
+        if (!this.defaultProviderId) {
+          this.defaultProviderId = BUILTIN_ID
+        }
+        debug(
+          `Registered built-in better-sqlite3 provider` +
+            (this.defaultProviderId === BUILTIN_ID
+              ? ' (default)'
+              : ' (fallback)')
+        )
+      } catch (err) {
+        debug('better-sqlite3 provider not available:', err)
       }
     }
 
