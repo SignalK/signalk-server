@@ -25,12 +25,16 @@ export function isBetterSqliteAvailable(): boolean {
 export class SqliteProvider implements DatabaseProvider {
   private databases: Map<string, BetterSqlite3Database> = new Map()
   private pluginDbs: Map<string, PluginDb> = new Map()
+  private configPath: string
   private dbDir: string
+  private serverDbRaw?: BetterSqlite3Database
+  private serverDbHandle?: PluginDb
 
   constructor(configPath: string) {
     if (!Database) {
       throw new Error('better-sqlite3 is not available')
     }
+    this.configPath = configPath
     this.dbDir = path.join(configPath, 'plugin-db')
     fs.mkdirSync(this.dbDir, { recursive: true })
   }
@@ -57,12 +61,37 @@ export class SqliteProvider implements DatabaseProvider {
     return pluginDb
   }
 
+  async getServerDb(): Promise<PluginDb> {
+    if (this.serverDbHandle) {
+      return this.serverDbHandle
+    }
+
+    const dbPath = path.join(this.configPath, 'skserver.sqlite')
+    const db = new Database!(dbPath)
+    db.pragma('journal_mode = WAL')
+    db.pragma('foreign_keys = ON')
+
+    db.exec(`CREATE TABLE IF NOT EXISTS _migrations (
+      version INTEGER PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    )`)
+
+    this.serverDbRaw = db
+    this.serverDbHandle = createPluginDb(db)
+    return this.serverDbHandle
+  }
+
   async close(): Promise<void> {
     for (const db of this.databases.values()) {
       db.close()
     }
     this.databases.clear()
     this.pluginDbs.clear()
+    if (this.serverDbRaw) {
+      this.serverDbRaw.close()
+      this.serverDbRaw = undefined
+      this.serverDbHandle = undefined
+    }
   }
 }
 

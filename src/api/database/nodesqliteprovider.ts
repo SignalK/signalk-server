@@ -26,12 +26,16 @@ export function isNodeSqliteAvailable(): boolean {
 export class NodeSqliteProvider implements DatabaseProvider {
   private databases: Map<string, DatabaseSync> = new Map()
   private pluginDbs: Map<string, PluginDb> = new Map()
+  private configPath: string
   private dbDir: string
+  private serverDbRaw?: DatabaseSync
+  private serverDbHandle?: PluginDb
 
   constructor(configPath: string) {
     if (!SqliteDatabase) {
       throw new Error('node:sqlite is not available in this Node.js version')
     }
+    this.configPath = configPath
     this.dbDir = path.join(configPath, 'plugin-db')
     fs.mkdirSync(this.dbDir, { recursive: true })
   }
@@ -58,12 +62,37 @@ export class NodeSqliteProvider implements DatabaseProvider {
     return pluginDb
   }
 
+  async getServerDb(): Promise<PluginDb> {
+    if (this.serverDbHandle) {
+      return this.serverDbHandle
+    }
+
+    const dbPath = path.join(this.configPath, 'skserver.sqlite')
+    const db = new SqliteDatabase!(dbPath)
+    db.exec('PRAGMA journal_mode = WAL')
+    db.exec('PRAGMA foreign_keys = ON')
+
+    db.exec(`CREATE TABLE IF NOT EXISTS _migrations (
+      version INTEGER PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    )`)
+
+    this.serverDbRaw = db
+    this.serverDbHandle = createPluginDb(db)
+    return this.serverDbHandle
+  }
+
   async close(): Promise<void> {
     for (const db of this.databases.values()) {
       db.close()
     }
     this.databases.clear()
     this.pluginDbs.clear()
+    if (this.serverDbRaw) {
+      this.serverDbRaw.close()
+      this.serverDbRaw = undefined
+      this.serverDbHandle = undefined
+    }
   }
 }
 

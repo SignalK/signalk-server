@@ -157,6 +157,16 @@ export interface DatabaseProvider {
   getPluginDb(pluginId: string): Promise<PluginDb>
 
   /**
+   * Returns a database handle for server-internal storage.
+   * Used by the server for operational data (e.g. token activity,
+   * access request audit trail) — not exposed to plugins.
+   *
+   * Optional. If not implemented, the server falls back to a
+   * built-in provider for server-internal storage.
+   */
+  getServerDb?(): Promise<PluginDb>
+
+  /**
    * Close all database connections managed by this provider.
    * Called by the server during shutdown.
    */

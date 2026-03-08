@@ -187,6 +187,21 @@ export class DatabaseApiHttpRegistry {
     this.providers.clear()
   }
 
+  async getServerDb(): Promise<PluginDb> {
+    const provider = this.defaultProvider()
+    if (provider.getServerDb) {
+      return provider.getServerDb()
+    }
+    // Default provider doesn't support getServerDb() — fall back to a built-in
+    for (const id of [BUILTIN_NODESQLITE_ID, BUILTIN_ID]) {
+      const builtin = this.providers.get(id)
+      if (builtin?.getServerDb) {
+        return builtin.getServerDb()
+      }
+    }
+    throw new Error('No database provider supports server-internal storage')
+  }
+
   private defaultProvider(): DatabaseProvider {
     if (this.defaultProviderId && this.providers.has(this.defaultProviderId)) {
       return this.providers.get(this.defaultProviderId)!
