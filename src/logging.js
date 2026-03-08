@@ -101,7 +101,7 @@ module.exports = function (app) {
       if (debugPath) {
         if (enabled) {
           fs.writeFileSync(debugPath, debugEnabled)
-        } else {
+        } else if (fs.existsSync(debugPath)) {
           fs.unlinkSync(debugPath)
         }
       }
