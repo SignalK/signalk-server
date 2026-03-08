@@ -18,6 +18,7 @@ settings/ssl-cert.pem
 *.tgz
 work/
 data/
+plugin-config-data/
 unitpreferences/custom-units-definitions.json
 unitpreferences/custom/
 unitpreferences/presets/custom/
