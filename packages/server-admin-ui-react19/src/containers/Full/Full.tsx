@@ -182,7 +182,9 @@ export default function Full() {
               />
               <Route
                 path="/serverConfiguration/log"
-                element={<ProtectedRoute component={ServerLog} />}
+                element={
+                  <ProtectedRoute component={ServerLog} supportsReadOnly />
+                }
               />
               <Route
                 path="/serverConfiguration/update"

@@ -7,7 +7,7 @@ import {
   FormEvent
 } from 'react'
 import parse from 'html-react-parser'
-import { useLogEntries } from '../../store'
+import { useLogEntries, useClearLogEntries } from '../../store'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
@@ -36,17 +36,20 @@ interface SelectOption {
 
 export default function ServerLogs() {
   const log = useLogEntries()
-  const { ws: webSocket } = useWebSocket()
+  const clearLogEntries = useClearLogEntries()
+  const { ws: webSocket, isConnected } = useWebSocket()
 
   const [pause, setPause] = useState(false)
   const [debugKeys, setDebugKeys] = useState<string[]>([])
   const didSubscribeRef = useRef(false)
   const webSocketRef = useRef<WebSocket | null>(null)
+  const unsubscribeRef = useRef<() => void>(() => {})
 
   const subscribeToLogsIfNeeded = useCallback(() => {
     if (
       !pause &&
       webSocket &&
+      isConnected &&
       (webSocket !== webSocketRef.current || !didSubscribeRef.current)
     ) {
       const sub = { context: 'vessels.self', subscribe: [{ path: 'log' }] }
@@ -54,15 +57,19 @@ export default function ServerLogs() {
       webSocketRef.current = webSocket
       didSubscribeRef.current = true
     }
-  }, [pause, webSocket])
+  }, [pause, webSocket, isConnected])
 
   const unsubscribeToLogs = useCallback(() => {
-    if (webSocket) {
+    if (webSocket && webSocket.readyState === WebSocket.OPEN) {
       const sub = { context: 'vessels.self', unsubscribe: [{ path: 'log' }] }
       webSocket.send(JSON.stringify(sub))
       didSubscribeRef.current = false
     }
   }, [webSocket])
+
+  useEffect(() => {
+    unsubscribeRef.current = unsubscribeToLogs
+  })
 
   const fetchDebugKeys = useCallback(() => {
     fetch(`${window.serverRoutesPrefix}/debugKeys`, {
@@ -72,15 +79,16 @@ export default function ServerLogs() {
       .then((keys) => {
         setDebugKeys(keys.sort())
       })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
-    subscribeToLogsIfNeeded()
     fetchDebugKeys()
     return () => {
-      unsubscribeToLogs()
+      unsubscribeRef.current()
+      clearLogEntries()
     }
-  }, [subscribeToLogsIfNeeded, fetchDebugKeys, unsubscribeToLogs])
+  }, [fetchDebugKeys, clearLogEntries])
 
   useEffect(() => {
     subscribeToLogsIfNeeded()
@@ -217,27 +225,35 @@ interface LogListProps {
 }
 
 function LogList({ value }: LogListProps) {
-  const endRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    endRef.current?.scrollIntoView()
-  }, [])
+    const el = containerRef.current
+    if (el) {
+      el.scrollTop = el.scrollHeight
+    }
+  }, [value.entries])
 
   return (
     <div
+      ref={containerRef}
       style={{
         overflowY: 'scroll',
-        maxHeight: '60vh',
+        height: '60vh',
         border: '1px solid',
         padding: '5px',
         fontFamily: 'monospace'
       }}
     >
-      {value.entries &&
+      {value.entries.length === 0 ? (
+        <span style={{ color: 'grey', fontStyle: 'italic' }}>
+          Waiting for log entries...
+        </span>
+      ) : (
         value.entries.map((logEntry) => (
           <LogRow key={logEntry.i} log={logEntry.d} />
-        ))}
-      <div ref={endRef}>&nbsp;</div>
+        ))
+      )}
     </div>
   )
 }
