@@ -12,7 +12,7 @@ import {
 import { RadarProviderRegistry, WithRadarApi } from './radarapi'
 import { CourseApi } from './course'
 import { HistoryApiRegistry, WithHistoryApi } from './history'
-import { DatabaseApiRegistry, WithDatabaseApi } from './databaseapi'
+import { DatabaseProviderRegistry, WithDatabaseApi } from './databaseapi'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
 
@@ -43,7 +43,7 @@ export interface ServerAPI
     WithHistoryApi,
     HistoryApiRegistry,
     WithDatabaseApi,
-    DatabaseApiRegistry,
+    DatabaseProviderRegistry,
     WithFeatures,
     CourseApi,
     WithNotificationsApi,

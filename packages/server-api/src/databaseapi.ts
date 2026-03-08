@@ -146,7 +146,7 @@ export interface Migration {
  * Interface that a database provider plugin must implement.
  * Providers supply the actual database backend (e.g. SQLite, PostgreSQL).
  *
- * @see {@link DatabaseApiRegistry.registerDatabaseProvider} for how to register a provider.
+ * @see {@link DatabaseProviderRegistry.registerDatabaseProvider} for how to register a provider.
  * @category Database API
  */
 export interface DatabaseProvider {
@@ -169,7 +169,7 @@ export interface DatabaseProvider {
  * to register and unregister themselves.
  * @category Database API
  */
-export interface DatabaseApiRegistry {
+export interface DatabaseProviderRegistry {
   /**
    * Register a custom database provider. The provider becomes available
    * immediately and is set as the default if no external provider is
