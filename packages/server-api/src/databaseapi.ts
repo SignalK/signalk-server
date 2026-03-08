@@ -4,8 +4,8 @@
  * — a plugin cannot access another plugin's data.
  *
  * The server ships two built-in providers:
- * - `_builtin` — SQLite via better-sqlite3 (always available, default)
- * - `_builtin_nodesqlite` — SQLite via node:sqlite (when available)
+ * - `_builtin_nodesqlite` — SQLite via node:sqlite (default on Node >=22.5.0)
+ * - `_builtin` — SQLite via better-sqlite3 (fallback, default on Node <22.5.0)
  *
  * Community plugins can register alternative providers (e.g. PostgreSQL).
  *
