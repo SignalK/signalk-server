@@ -8,6 +8,7 @@ on:
 
 jobs:
   build_and_publish:
+    if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
