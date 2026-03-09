@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   security-scan:
+    if: github.repository == 'SignalK/signalk-server'
     name: Security Scan
     runs-on: ubuntu-24.04
     strategy:
