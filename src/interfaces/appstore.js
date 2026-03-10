@@ -31,6 +31,11 @@ const {
 const { SERVERROUTESPREFIX } = require('../constants')
 const { getCategories, getAvailableCategories } = require('../categories')
 
+const bundledAdminUIs = [
+  '@signalk/server-admin-ui',
+  '@signalk/server-admin-ui-react19'
+]
+
 const npmServerInstallLocations = [
   '/usr/bin/signalk-server',
   '/usr/lib/node_modules/signalk-server/bin/signalk-server',
@@ -153,7 +158,10 @@ module.exports = function (app) {
       findModulesWithKeyword('signalk-embeddable-webapp'),
       findModulesWithKeyword('signalk-webapp')
     ]).then(([plugins, embeddableWebapps, webapps]) => {
-      const allWebapps = [].concat(embeddableWebapps).concat(webapps)
+      const allWebapps = []
+        .concat(embeddableWebapps)
+        .concat(webapps)
+        .filter((m) => !bundledAdminUIs.includes(m.package.name))
       return [
         plugins,
         _.uniqBy(allWebapps, (plugin) => {
