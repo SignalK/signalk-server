@@ -1535,6 +1535,10 @@ function tokenSecurityFactory(
             // Token was provided but is invalid/revoked — always reject.
             // allow_readonly only applies when no token is provided at all.
             res.clearCookie('JAUTHENTICATION')
+            if (forLoginStatus) {
+              skReq.skIsAuthenticated = false
+              return next()
+            }
             res.status(401).send('bad auth token')
           }
         )
