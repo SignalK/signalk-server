@@ -9,8 +9,6 @@ const WebSocket = require('ws')
 const _ = require('lodash')
 // const { WsPromiser } = require('./servertestutilities')
 
-const sleep = (ms) => new Promise((res) => setTimeout(res, ms))
-
 describe('Put Requests', () => {
   let server, url, port
 
@@ -117,13 +115,14 @@ describe('Put Requests', () => {
     response.statusCode.should.equal(202)
     response.should.have.property('href')
 
-    await sleep(200)
-
-    result = await fetch(`${url}${response.href}`)
+    // Poll action endpoint until handler completes
+    do {
+      result = await fetch(`${url}${response.href}`)
+      response = await result.json()
+    } while (response.state === 'PENDING')
 
     result.status.should.equal(200)
 
-    response = await result.json()
     response.should.have.property('state')
     response.state.should.equal('COMPLETED')
   })
@@ -149,7 +148,11 @@ describe('Put Requests', () => {
     json.state.should.equal('PENDING')
     json.should.have.property('href')
 
-    await sleep(200)
+    // Poll action endpoint until handler completes
+    do {
+      result = await fetch(`${url}${json.href}`)
+      json = await result.json()
+    } while (json.state === 'PENDING')
 
     result = await fetch(`${url}${json.href}`)
 
@@ -370,9 +373,7 @@ WsPromiser.prototype.onMessage = function (message) {
 }
 
 WsPromiser.prototype.send = function (message) {
-  const that = this
   return new Promise((resolve) => {
-    that.ws.send(JSON.stringify(message))
-    setTimeout(() => resolve('wait over'), 100)
+    this.ws.send(JSON.stringify(message), () => resolve('sent'))
   })
 }
