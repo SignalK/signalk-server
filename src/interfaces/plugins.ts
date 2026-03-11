@@ -506,6 +506,9 @@ module.exports = (theApp: any) => {
     result.then(() => {
       theApp.setPluginStatus(plugin.id, 'Stopped')
       debug('Stopped plugin ' + plugin.name)
+      if (theApp.deltaCache) {
+        theApp.deltaCache.removeSource(plugin.id)
+      }
     })
     return result
   }

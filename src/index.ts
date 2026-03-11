@@ -60,6 +60,7 @@ import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
 import { WithProviderStatistics } from './deltastats'
+import { buildProviderTalkerLookups } from './nmea0183TalkerGroups'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
@@ -67,7 +68,18 @@ import checkNodeVersion from './version'
 import helmet from 'helmet'
 const debug = createDebug('signalk-server')
 
+import { migrateSourceRef } from './sourceref-migration'
 import { StreamBundle } from './streambundle'
+
+function cloneDelta(delta: any): any {
+  return {
+    ...delta,
+    updates: delta.updates?.map((update: any) => ({
+      ...update,
+      values: update.values ? [...update.values] : update.values
+    }))
+  }
+}
 
 class Server {
   app: ServerApp &
@@ -287,13 +299,30 @@ class Server {
     app.activateSourcePriorities = () => {
       try {
         toPreferredDelta = getToPreferredDelta(
-          app.config.settings.sourcePriorities
+          app.config.settings.sourcePriorities,
+          app.config.settings.sourceRanking
         )
       } catch (e) {
         console.error(`getToPreferredDelta failed: ${(e as any).message}`)
       }
     }
     app.activateSourcePriorities()
+
+    app.on(
+      'sourceRefChanged',
+      ({ oldRef, newRef }: { oldRef: string; newRef: string }) => {
+        migrateSourceRef(app, oldRef, newRef)
+      }
+    )
+
+    let providerTalkerLookups = buildProviderTalkerLookups(
+      app.config.settings.pipedProviders
+    )
+    app.on('pipedProvidersStarted', () => {
+      providerTalkerLookups = buildProviderTalkerLookups(
+        app.config.settings.pipedProviders
+      )
+    })
 
     app.handleMessage = (
       providerId: string,
@@ -316,6 +345,16 @@ class Server {
               update.source.label = providerId
               if (!update.$source) {
                 update.$source = getSourceId(update.source)
+              }
+              if (update.source.type === 'NMEA0183' && update.source.talker) {
+                const lookup = providerTalkerLookups.get(providerId)
+                if (lookup) {
+                  const groupName = lookup.get(update.source.talker)
+                  if (groupName) {
+                    update.$source = (providerId + '.' + groupName) as SourceRef
+                    update.source.talker = groupName
+                  }
+                }
               }
             } else {
               if (typeof update.$source === 'undefined') {
@@ -347,6 +386,12 @@ class Server {
 
         try {
           let delta = filterStaticSelfData(data, app.selfContext)
+          if (app.deltaCache) {
+            app.deltaCache.ingestDelta(delta)
+          }
+          if (app.signalk.listenerCount('unfilteredDelta') > 0) {
+            app.signalk.emit('unfilteredDelta', cloneDelta(delta))
+          }
           delta = toPreferredDelta(delta, now, app.selfContext)
 
           if (skVersion === SKVersion.v1) {
@@ -367,6 +412,10 @@ class Server {
       )
     )
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
+    app.signalk.on(
+      'unfilteredDelta',
+      app.streambundle.pushUnfilteredDelta.bind(app.streambundle)
+    )
     app.subscriptionmanager = new SubscriptionManager(app)
     app.deltaCache = new DeltaCache(app, app.streambundle)
 
