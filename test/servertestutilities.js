@@ -86,10 +86,8 @@ WsPromiser.prototype.onMessage = function (message) {
 }
 
 WsPromiser.prototype.send = function (message) {
-  const that = this
   return new Promise((resolve) => {
-    that.ws.send(JSON.stringify(message))
-    setTimeout(() => resolve('wait over'), 100)
+    this.ws.send(JSON.stringify(message), () => resolve('sent'))
   })
 }
 

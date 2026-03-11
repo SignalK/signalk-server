@@ -29,7 +29,7 @@ const dummyHistoryProvider = (app) => {
       setTimeout(() => {
         testDelta.context = `vessels.${app.selfId}`
         onDelta(testDelta)
-      }, 100)
+      }, 10)
       return () => {}
     },
     getHistory: (date, path, cb) => {

@@ -105,7 +105,7 @@ describe('Unit Preferences', function () {
   describe('REST meta enrichment', function () {
     it('enriches speed path meta with displayUnits from default category', async function () {
       await sendDelta('environment.wind.speedTrue', 10)
-      await sleep(200)
+      await sleep(50)
 
       const res = await fetch(
         `${host}/signalk/v1/api/vessels/self/environment/wind/speedTrue/meta`
@@ -123,7 +123,7 @@ describe('Unit Preferences', function () {
 
     it('enriches temperature path meta with offset conversion', async function () {
       await sendDelta('environment.outside.temperature', 293.15)
-      await sleep(200)
+      await sleep(50)
 
       const res = await fetch(
         `${host}/signalk/v1/api/vessels/self/environment/outside/temperature/meta`
@@ -139,7 +139,7 @@ describe('Unit Preferences', function () {
 
     it('returns no displayUnits for paths without default category', async function () {
       await sendDelta('some.custom.path', 42)
-      await sleep(200)
+      await sleep(50)
 
       const res = await fetch(
         `${host}/signalk/v1/api/vessels/self/some/custom/path/meta`
@@ -157,7 +157,7 @@ describe('Unit Preferences', function () {
   describe('PUT meta displayUnits', function () {
     it('path-level targetUnit override takes precedence over preset', async function () {
       await sendDelta('navigation.speedOverGround', 5)
-      await sleep(200)
+      await sleep(50)
 
       // Set path-specific override to km/h
       const putRes = await fetch(
@@ -171,7 +171,7 @@ describe('Unit Preferences', function () {
         }
       )
       expect(putRes.status).to.equal(202)
-      await sleep(300)
+      await sleep(100)
 
       // Verify override is used
       const getRes = await fetch(
@@ -236,7 +236,7 @@ describe('Unit Preferences', function () {
 
       // Send a speed delta — server should send meta delta with displayUnits
       await sendDelta('environment.wind.speedApparent', 8)
-      await sleep(500)
+      await sleep(100)
 
       // Collect messages — look for meta delta
       const messages: string[] = ws.messages.slice(1) // skip hello
@@ -278,7 +278,7 @@ describe('Unit Preferences', function () {
     it('pushes meta deltas when preset changes', async function () {
       // First send a delta so the server has available paths
       await sendDelta('environment.wind.speedTrue', 10)
-      await sleep(200)
+      await sleep(50)
 
       const ws = new WsPromiser(
         `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=self&sendMeta=all`,
@@ -286,7 +286,7 @@ describe('Unit Preferences', function () {
       )
 
       // Consume initial messages (hello + cached data + meta)
-      await sleep(1000)
+      await sleep(200)
       const initialCount = ws.messages.length
 
       // Switch preset to imperial-us
@@ -298,7 +298,7 @@ describe('Unit Preferences', function () {
       expect(putRes.status).to.equal(200)
 
       // Wait for meta deltas to arrive
-      await sleep(1000)
+      await sleep(200)
 
       // Look for meta delta with imperial-us speed unit (mph)
       const newMessages = ws.messages.slice(initialCount)

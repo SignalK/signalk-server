@@ -207,8 +207,8 @@ describe('Subscriptions', (_) => {
     await sendDelta(getDelta({ context: self }), deltaUrl)
     await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
-    //wait 250 ms so that we've received everything over ws
-    await new Promise((resolve) => setTimeout(resolve, 250))
+    //wait for ws messages to arrive
+    await new Promise((resolve) => setTimeout(resolve, 30))
 
     //retrieve all deltas thus far
     const messages = wsPromiser.parsedMessages().slice(1)
@@ -251,8 +251,8 @@ describe('Subscriptions', (_) => {
     await sendDelta(getDelta({ context: self }), deltaUrl)
     await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
-    //wait so that we've received everything over ws
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    //wait for ws messages to arrive
+    await new Promise((resolve) => setTimeout(resolve, 30))
     const deltas = wsPromiser.parsedMessages().slice(1)
     const deltasWeSent = deltas.filter(
       (d) => d.updates[0].source && d.updates[0].source.pgn === 128275
@@ -613,7 +613,7 @@ describe('Subscriptions', (_) => {
     await sendDelta(getDelta({ context: self }), deltaUrl)
 
     // Wait for delta to be cached
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 30))
 
     // Subscribe with announceNewPaths - should receive cached paths once
     await wsPromiser.send({
@@ -623,7 +623,7 @@ describe('Subscriptions', (_) => {
     })
 
     // Wait for announcements
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 50))
 
     // Get all messages after hello
     const messages = wsPromiser.parsedMessages().slice(1)
@@ -673,7 +673,7 @@ describe('Subscriptions', (_) => {
     await sendDelta(newPathDelta, deltaUrl)
 
     // Wait for the new path announcement
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 50))
 
     const allMessages = wsPromiser.parsedMessages().slice(1)
     const allPaths = new Set()
