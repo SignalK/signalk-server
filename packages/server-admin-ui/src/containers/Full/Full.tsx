@@ -13,6 +13,9 @@ import Embedded from '../../views/Webapps/Embedded'
 import EmbeddedDocs from '../../views/Webapps/EmbeddedDocs'
 import Webapps from '../../views/Webapps/Webapps'
 import DataBrowser from '../../views/DataBrowser/DataBrowser'
+import MetaDataPage from '../../views/DataBrowser/MetaDataPage'
+import SourceDiscovery from '../../views/DataBrowser/SourceDiscovery'
+import SourcePriorityPage from '../../views/DataBrowser/SourcePriorityPage'
 import Playground from '../../views/Playground'
 import Apps from '../../views/appstore/Apps/Apps'
 import Configuration from '../../views/Configuration/Configuration'
@@ -24,6 +27,7 @@ import Register from '../../views/security/Register'
 import AccessRequests from '../../views/security/AccessRequests'
 import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
 import Settings from '../../views/ServerConfig/Settings'
+import UnitPreferencesSettings from '../../views/ServerConfig/UnitPreferencesSettings'
 import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
@@ -148,17 +152,54 @@ export default function Full() {
                   <ProtectedRoute component={Embedded} supportsReadOnly />
                 }
               />
+              {/* Data menu routes */}
               <Route
-                path="/databrowser"
+                path="/data/browser"
                 element={
                   <ProtectedRoute component={DataBrowser} supportsReadOnly />
                 }
               />
               <Route
-                path="/serverConfiguration/datafiddler"
+                path="/data/meta"
+                element={
+                  <ProtectedRoute component={MetaDataPage} supportsReadOnly />
+                }
+              />
+              <Route
+                path="/data/sources"
+                element={
+                  <ProtectedRoute
+                    component={SourceDiscovery}
+                    supportsReadOnly
+                  />
+                }
+              />
+              <Route
+                path="/data/priorities"
+                element={<ProtectedRoute component={SourcePriorityPage} />}
+              />
+              <Route
+                path="/data/units"
+                element={<ProtectedRoute component={UnitPreferencesSettings} />}
+              />
+              <Route
+                path="/data/fiddler"
                 element={
                   <ProtectedRoute component={Playground} supportsReadOnly />
                 }
+              />
+              <Route
+                path="/data/connections/:providerId"
+                element={<ProtectedRoute component={ProvidersConfiguration} />}
+              />
+              {/* Backward-compatible redirects */}
+              <Route
+                path="/databrowser"
+                element={<Navigate to="/data/browser" replace />}
+              />
+              <Route
+                path="/serverConfiguration/datafiddler"
+                element={<Navigate to="/data/fiddler" replace />}
               />
               <Route
                 path="/appstore/*"
