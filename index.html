@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Container sizes</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+    }
+    header {
+      padding: 12px 20px 8px;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 1rem; font-weight: 600; }
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 20px;
+      border-bottom: 1px solid #30363d;
+      align-items: center;
+    }
+    #controls label { font-size: 0.8rem; color: #8b949e; margin-right: 2px; }
+    .tag-btn {
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid #30363d;
+      background: #161b22;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .tag-btn.active { color: #e6edf3; border-color: #58a6ff; }
+    .tag-btn .swatch {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    #select-all, #select-none {
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1px solid #30363d;
+      background: #21262d;
+      color: #cdd9e5;
+      cursor: pointer;
+      font-size: 0.78rem;
+    }
+    #select-all:hover, #select-none:hover { background: #30363d; }
+    #unit-toggle {
+      margin-left: auto;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    #unit-toggle select {
+      background: #161b22;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.78rem;
+    }
+    #chart-wrap {
+      flex: 1;
+      min-height: 0;
+      padding: 16px 20px;
+    }
+    #chart-wrap canvas { width: 100% !important; height: 100% !important; cursor: crosshair; }
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: #388bfd;
+      color: #fff;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Signal K — container image sizes</h1>
+</header>
+<div id="controls">
+  <button id="select-all">All</button>
+  <button id="select-none">None</button>
+  <span id="tag-buttons"></span>
+  <span id="unit-toggle">
+    <label for="range">Range</label>
+    <select id="range">
+      <option value="30" selected>Last 30 days</option>
+      <option value="90">Last 90 days</option>
+      <option value="all">All</option>
+    </select>
+    <label for="unit">Unit</label>
+    <select id="unit">
+      <option value="mb">MB</option>
+      <option value="gb">GB</option>
+      <option value="bytes">bytes</option>
+    </select>
+  </span>
+</div>
+<div id="chart-wrap">
+  <canvas id="chart"></canvas>
+</div>
+<div id="toast"></div>
+
+<script>
+// ── palette (distinct colours for up to 12 series) ──────────────────────────
+const PALETTE = [
+  '#58a6ff','#3fb950','#f78166','#d2a8ff','#ffa657','#79c0ff',
+  '#56d364','#ff7b72','#bc8cff','#e3b341','#39d353','#f0883e'
+]
+
+// ── state ────────────────────────────────────────────────────────────────────
+let allRows = []      // [{ts, commit, tag, bytes}]
+let activeTagSet = new Set()
+let chart = null
+
+// ── CSV parsing ──────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const rows = []
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    // skip header if present
+    if (trimmed.startsWith('timestamp')) continue
+    const parts = trimmed.split(',')
+    if (parts.length < 4) continue
+    const [ts, commit, tag, sizeStr] = parts
+    const bytes = parseInt(sizeStr, 10)
+    if (isNaN(bytes)) continue
+    rows.push({ ts, commit, tag, bytes })
+  }
+  return rows
+}
+
+// ── unit conversion ──────────────────────────────────────────────────────────
+function convert(bytes) {
+  const unit = document.getElementById('unit').value
+  if (unit === 'gb') return +(bytes / 1e9).toFixed(3)
+  if (unit === 'mb') return +(bytes / 1e6).toFixed(1)
+  return bytes
+}
+function unitLabel() {
+  const u = document.getElementById('unit').value
+  return u === 'gb' ? 'GB' : u === 'mb' ? 'MB' : 'bytes'
+}
+
+// ── toast ────────────────────────────────────────────────────────────────────
+let toastTimer = null
+function showToast(msg) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('show')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000)
+}
+
+// ── build / update chart ─────────────────────────────────────────────────────
+function buildChart() {
+  const rangeVal = document.getElementById('range').value
+  const now = new Date()
+  const cutoff = rangeVal === 'all' ? null
+    : new Date(now - parseInt(rangeVal, 10) * 86400_000).toISOString()
+  const xMin = cutoff ?? undefined
+  const xMax = rangeVal === 'all' ? undefined : now.toISOString()
+
+  const visibleRows = cutoff ? allRows.filter(r => r.ts >= cutoff) : allRows
+
+  const tags = [...new Set(allRows.map(r => r.tag))].sort()
+  const colorMap = Object.fromEntries(tags.map((t, i) => [t, PALETTE[i % PALETTE.length]]))
+
+  // group rows by tag
+  const byTag = {}
+  for (const r of visibleRows) {
+    ;(byTag[r.tag] = byTag[r.tag] || []).push(r)
+  }
+
+  const datasets = tags
+    .filter(t => activeTagSet.has(t))
+    .map(tag => ({
+      label: tag,
+      data: (byTag[tag] || [])
+        .sort((a, b) => a.ts.localeCompare(b.ts))
+        .map(r => ({ x: r.ts, y: convert(r.bytes), commit: r.commit })),
+      borderColor: colorMap[tag],
+      backgroundColor: colorMap[tag] + '30',
+      borderWidth: 2,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.2,
+    }))
+
+  if (chart) {
+    chart.data.datasets = datasets
+    chart.options.scales.y.title.text = unitLabel()
+    chart.options.scales.x.min = xMin
+    chart.options.scales.x.max = xMax
+    chart.update()
+    return
+  }
+
+  chart = new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: '#8b949e', font: { size: 11 } }
+        },
+        tooltip: {
+          callbacks: {
+            title(items) {
+              if (!items.length) return []
+              const ts = items[0].raw.x
+              const commit = items[0].raw.commit
+              return [ts, `commit: ${commit}`]
+            },
+            label(item) {
+              return `  ${item.dataset.label}: ${item.formattedValue} ${unitLabel()}`
+            },
+            footer() {
+              return 'click to copy commit hash'
+            }
+          },
+          footerFont: { style: 'italic' },
+          footerColor: '#8b949e'
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          min: xMin,
+          max: xMax,
+          time: { tooltipFormat: 'yyyy-MM-dd HH:mm', displayFormats: { day: 'MMM d', hour: 'MMM d HH:mm' } },
+          ticks: { color: '#8b949e', maxRotation: 30 },
+          grid: { color: '#21262d' }
+        },
+        y: {
+          title: { display: true, text: unitLabel(), color: '#8b949e' },
+          ticks: { color: '#8b949e' },
+          grid: { color: '#21262d' }
+        }
+      },
+      onClick(e) {
+        const points = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, false)
+        if (!points.length) return
+        const raw = chart.data.datasets[points[0].datasetIndex].data[points[0].index]
+        if (!raw?.commit) return
+        navigator.clipboard.writeText(raw.commit)
+          .then(() => showToast(`Copied ${raw.commit.slice(0, 7)}`)
+          ).catch(() => showToast('Copy failed'))
+      }
+    }
+  })
+}
+
+// ── tag toggle buttons ───────────────────────────────────────────────────────
+function rebuildTagButtons() {
+  const tags = [...new Set(allRows.map(r => r.tag))].sort()
+  const colorMap = Object.fromEntries(tags.map((t, i) => [t, PALETTE[i % PALETTE.length]]))
+  const container = document.getElementById('tag-buttons')
+  container.innerHTML = ''
+  for (const tag of tags) {
+    const btn = document.createElement('button')
+    btn.className = 'tag-btn' + (activeTagSet.has(tag) ? ' active' : '')
+    btn.dataset.tag = tag
+    btn.innerHTML = `<span class="swatch" style="background:${colorMap[tag]}"></span>${tag}`
+    btn.addEventListener('click', () => {
+      if (activeTagSet.has(tag)) activeTagSet.delete(tag)
+      else activeTagSet.add(tag)
+      btn.classList.toggle('active', activeTagSet.has(tag))
+      buildChart()
+    })
+    container.appendChild(btn)
+  }
+}
+
+function setAll(state) {
+  const tags = [...new Set(allRows.map(r => r.tag))]
+  if (state) tags.forEach(t => activeTagSet.add(t))
+  else activeTagSet.clear()
+  rebuildTagButtons()
+  buildChart()
+}
+
+document.getElementById('select-all').addEventListener('click', () => setAll(true))
+document.getElementById('select-none').addEventListener('click', () => setAll(false))
+document.getElementById('unit').addEventListener('change', () => buildChart())
+document.getElementById('range').addEventListener('change', () => buildChart())
+
+// ── load CSV ─────────────────────────────────────────────────────────────────
+function loadCSV(text) {
+  allRows = parseCSV(text)
+  if (!allRows.length) return
+  activeTagSet = new Set(allRows.map(r => r.tag))
+  rebuildTagButtons()
+  if (chart) { chart.destroy(); chart = null }
+  buildChart()
+}
+
+// ── auto-fetch same-origin CSV ───────────────────────────────────────────────
+fetch('master-container_sizes.csv')
+  .then(r => r.ok ? r.text() : Promise.reject(r.status))
+  .then(text => loadCSV(text))
+  .catch(() => console.warn('Could not load master-container_sizes.csv'))
+</script>
+</body>
+</html>
