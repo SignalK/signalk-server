@@ -353,7 +353,7 @@ describe('Security', () => {
         } else {
           resolve()
         }
-      }, 250)
+      }, 100)
     })
     return result
   })
