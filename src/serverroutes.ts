@@ -678,6 +678,8 @@ module.exports = function (
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
+      anonymousApplicationDataAccess:
+        app.config.settings.anonymousApplicationDataAccess || 'none',
       keepMostRecentLogsOnly:
         isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
         app.config.settings.keepMostRecentLogsOnly,
@@ -826,6 +828,11 @@ module.exports = function (
       app.config.settings.pruneContextsMinutes = Number(
         settings.pruneContextsMinutes
       )
+    }
+
+    if (!isUndefined(settings.anonymousApplicationDataAccess)) {
+      app.config.settings.anonymousApplicationDataAccess =
+        settings.anonymousApplicationDataAccess
     }
 
     if (!isUndefined(settings.keepMostRecentLogsOnly)) {

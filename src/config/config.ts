@@ -84,6 +84,7 @@ export interface Config {
     loggingDirectory?: string
     sourcePriorities?: any
     trustProxy?: boolean | string | number
+    anonymousApplicationDataAccess?: 'none' | 'readonly' | 'readwrite'
     courseApi?: {
       apiOnly?: boolean
     }

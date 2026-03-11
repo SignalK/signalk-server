@@ -230,3 +230,294 @@ describe('Application Data', () => {
     }
   })
 })
+
+describe('Application Data with allow_readonly and anonymousApplicationDataAccess: none', () => {
+  let url: string
+  let port: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let server: any
+  let adminToken: string
+  let adminHeaders: Record<string, string>
+
+  before(async function () {
+    port = await freeport()
+    url = `http://0.0.0.0:${port}`
+
+    server = await startServerP(port, true, {}, { allow_readonly: true })
+    adminToken = await getAdminToken(server)
+    adminHeaders = { Cookie: `JAUTHENTICATION=${adminToken}` }
+  })
+
+  beforeEach(async () => {
+    await rimraf(
+      path.join(
+        process.env.SIGNALK_NODE_CONFIG_DIR as string,
+        'applicationData'
+      )
+    )
+  })
+
+  after(async () => {
+    await server.stop()
+  })
+
+  it('anonymous GET on global applicationData is blocked', async function () {
+    // Write data as admin first
+    let result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: {
+          ...adminHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hello: 'world' })
+      }
+    )
+    result.status.should.equal(200)
+
+    // Anonymous GET should be blocked
+    result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`
+    )
+    result.status.should.equal(401)
+  })
+
+  it('anonymous version listing is blocked', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}`
+    )
+    result.status.should.equal(401)
+  })
+
+  it('admin GET on global applicationData works', async function () {
+    let result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: {
+          ...adminHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hello: 'world' })
+      }
+    )
+    result.status.should.equal(200)
+
+    result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      { headers: adminHeaders }
+    )
+    result.status.should.equal(200)
+    const data = await result.json()
+    data.should.jsonEqual({ hello: 'world' })
+  })
+})
+
+describe('Application Data with anonymousApplicationDataAccess: readonly', () => {
+  let url: string
+  let port: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let server: any
+  let adminToken: string
+  let adminHeaders: Record<string, string>
+
+  before(async function () {
+    port = await freeport()
+    url = `http://0.0.0.0:${port}`
+
+    server = await startServerP(port, true, {
+      settings: {
+        anonymousApplicationDataAccess: 'readonly'
+      }
+    })
+    adminToken = await getAdminToken(server)
+    adminHeaders = { Cookie: `JAUTHENTICATION=${adminToken}` }
+  })
+
+  beforeEach(async () => {
+    await rimraf(
+      path.join(
+        process.env.SIGNALK_NODE_CONFIG_DIR as string,
+        'applicationData'
+      )
+    )
+  })
+
+  after(async () => {
+    await server.stop()
+  })
+
+  it('anonymous GET on global applicationData works', async function () {
+    // First write data as admin
+    let result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: {
+          ...adminHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hello: 'world' })
+      }
+    )
+    result.status.should.equal(200)
+
+    // Anonymous GET should succeed
+    result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`
+    )
+    result.status.should.equal(200)
+    const data = await result.json()
+    data.should.jsonEqual({ hello: 'world' })
+  })
+
+  it('anonymous POST on global applicationData fails', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hello: 'world' })
+      }
+    )
+    result.status.should.equal(401)
+  })
+
+  it('admin POST on global applicationData works', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: {
+          ...adminHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hello: 'world' })
+      }
+    )
+    result.status.should.equal(200)
+  })
+
+  it('anonymous user applicationData still requires auth', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/user/${APP_ID}/${APP_VERSION}`
+    )
+    result.status.should.equal(401)
+  })
+})
+
+describe('Application Data without security (default no anonymous access)', () => {
+  let url: string
+  let port: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let server: any
+
+  before(async function () {
+    port = await freeport()
+    url = `http://0.0.0.0:${port}`
+
+    server = await startServerP(port, false)
+  })
+
+  after(async () => {
+    await server.stop()
+  })
+
+  it('GET on global applicationData is blocked', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`
+    )
+    result.status.should.equal(403)
+  })
+
+  it('version listing is blocked', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}`
+    )
+    result.status.should.equal(403)
+  })
+
+  it('POST on global applicationData is blocked', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hello: 'world' })
+      }
+    )
+    result.status.should.equal(405)
+  })
+})
+
+describe('Application Data with anonymousApplicationDataAccess: readwrite', () => {
+  let url: string
+  let port: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let server: any
+
+  before(async function () {
+    port = await freeport()
+    url = `http://0.0.0.0:${port}`
+
+    server = await startServerP(port, true, {
+      settings: {
+        anonymousApplicationDataAccess: 'readwrite'
+      }
+    })
+  })
+
+  beforeEach(async () => {
+    await rimraf(
+      path.join(
+        process.env.SIGNALK_NODE_CONFIG_DIR as string,
+        'applicationData'
+      )
+    )
+  })
+
+  after(async () => {
+    await server.stop()
+  })
+
+  it('anonymous POST on global applicationData works', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hello: 'world' })
+      }
+    )
+    result.status.should.equal(200)
+  })
+
+  it('anonymous GET on global applicationData works', async function () {
+    // First write data anonymously
+    let result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ foo: 'bar' })
+      }
+    )
+    result.status.should.equal(200)
+
+    // Anonymous GET should succeed
+    result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`
+    )
+    result.status.should.equal(200)
+    const data = await result.json()
+    data.should.jsonEqual({ foo: 'bar' })
+  })
+
+  it('anonymous user applicationData still requires auth', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/user/${APP_ID}/${APP_VERSION}`
+    )
+    result.status.should.equal(401)
+  })
+})

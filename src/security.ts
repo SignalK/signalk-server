@@ -40,12 +40,15 @@ export interface WithSecurityStrategy {
   securityStrategy: SecurityStrategy
 }
 
+export type AnonymousApplicationDataAccess = 'none' | 'readonly' | 'readwrite'
+
 export interface LoginStatusResponse {
   status: string // 'loggedIn' 'notLoggedIn'
   readOnlyAccess?: boolean
   authenticationRequired?: boolean
   allowNewUserRegistration?: boolean
   allowDeviceAccessRequests?: boolean
+  anonymousApplicationDataAccess?: AnonymousApplicationDataAccess
   userLevel?: any
   username?: string
 }

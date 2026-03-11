@@ -872,7 +872,9 @@ function tokenSecurityFactory(
       readOnlyAccess: configuration.allow_readonly,
       authenticationRequired: true,
       allowNewUserRegistration: configuration.allowNewUserRegistration,
-      allowDeviceAccessRequests: configuration.allowDeviceAccessRequests
+      allowDeviceAccessRequests: configuration.allowDeviceAccessRequests,
+      anonymousApplicationDataAccess:
+        app.config.settings.anonymousApplicationDataAccess || 'none'
     }
     if (skReq.skIsAuthenticated && skReq.skPrincipal) {
       result.userLevel = skReq.skPrincipal.permissions
