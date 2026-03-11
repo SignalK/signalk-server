@@ -29,9 +29,9 @@ describe('Udp', () => {
     const writable = createCollectingWritable()
     udp.pipe(writable)
 
-    setTimeout(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const socket = (udp as any).socket as dgram.Socket
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const socket = (udp as any).socket as dgram.Socket
+    socket.once('listening', () => {
       const addr = socket.address()
       const port = addr.port
 
@@ -45,7 +45,7 @@ describe('Udp', () => {
         expect(writable.chunks.join('')).to.include('hello udp')
         udp.end()
         done()
-      }, 500)
-    }, 500)
+      }, 50)
+    })
   })
 })

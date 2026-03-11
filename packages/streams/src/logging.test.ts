@@ -112,7 +112,8 @@ describe('logging', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     })
 
-    it('returns a function that writes log messages', (done) => {
+    it('returns a function that writes log messages', function (done) {
+      this.timeout(2000)
       const app = createLoggingApp({
         configPath: tmpDir,
         settings: { keepMostRecentLogsOnly: false }
@@ -121,18 +122,21 @@ describe('logging', () => {
 
       logger('hello log message')
 
-      setTimeout(() => {
+      const check = setInterval(() => {
         const files = fs.readdirSync(tmpDir).filter((f) => f.endsWith('.log'))
-        expect(files.length).to.be.greaterThan(0)
-
-        const content = fs.readFileSync(path.join(tmpDir, files[0]!), 'utf8')
-        expect(content).to.include('test')
-        expect(content).to.include('hello log message')
-        done()
-      }, 500)
+        if (files.length > 0) {
+          const content = fs.readFileSync(path.join(tmpDir, files[0]!), 'utf8')
+          if (content.includes('hello log message')) {
+            clearInterval(check)
+            expect(content).to.include('test')
+            done()
+          }
+        }
+      }, 10)
     })
 
-    it('writes JSON for messages with updates property', (done) => {
+    it('writes JSON for messages with updates property', function (done) {
+      this.timeout(2000)
       const app = createLoggingApp({
         configPath: tmpDir,
         settings: { keepMostRecentLogsOnly: false }
@@ -142,15 +146,17 @@ describe('logging', () => {
       const delta = { updates: [{ values: [{ path: 'a', value: 1 }] }] }
       logger(delta)
 
-      setTimeout(() => {
+      const check = setInterval(() => {
         const files = fs.readdirSync(tmpDir).filter((f) => f.endsWith('.log'))
-        expect(files.length).to.be.greaterThan(0)
-
-        const content = fs.readFileSync(path.join(tmpDir, files[0]!), 'utf8')
-        expect(content).to.include('"updates"')
-        expect(content).to.include('delta')
-        done()
-      }, 500)
+        if (files.length > 0) {
+          const content = fs.readFileSync(path.join(tmpDir, files[0]!), 'utf8')
+          if (content.includes('"updates"')) {
+            clearInterval(check)
+            expect(content).to.include('delta')
+            done()
+          }
+        }
+      }, 10)
     })
   })
 })

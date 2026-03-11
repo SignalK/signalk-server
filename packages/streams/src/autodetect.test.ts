@@ -38,20 +38,16 @@ describe('DeMultiplexer (autodetect)', () => {
       noThrottle: true
     })
 
-    const results: unknown[] = []
-    demux.on('data', (d: unknown) => results.push(d))
-
-    demux.write(MUX_DELTA)
-
-    setTimeout(() => {
-      expect(results.length).to.be.greaterThan(0)
-      const delta = results[0] as {
+    demux.once('data', (d: unknown) => {
+      const delta = d as {
         updates: Array<{ values: Array<{ path: string }> }>
       }
       expect(delta.updates[0]!.values[0]!.path).to.equal(
         'navigation.speedOverGround'
       )
       done()
-    }, 1000)
+    })
+
+    demux.write(MUX_DELTA)
   })
 })

@@ -6,16 +6,13 @@ describe('TimestampThrottle', () => {
     const throttle = new TimestampThrottle({
       getMilliseconds: (msg) => Number(msg.timestamp)
     })
-    const results: unknown[] = []
-    throttle.on('data', (d: unknown) => results.push(d))
+
+    throttle.once('data', () => {
+      done()
+    })
 
     const now = Date.now()
     throttle.write({ timestamp: String(now - 1000) })
-
-    setTimeout(() => {
-      expect(results).to.have.length(1)
-      done()
-    }, 50)
   })
 
   it('delays messages with future timestamps', function (done) {
@@ -23,20 +20,22 @@ describe('TimestampThrottle', () => {
     const throttle = new TimestampThrottle({
       getMilliseconds: (msg) => Number(msg.timestamp)
     })
-    const results: unknown[] = []
-    throttle.on('data', (d: unknown) => results.push(d))
+    let count = 0
+    throttle.on('data', () => {
+      count++
+      if (count === 1) {
+        // first message (current time) should arrive immediately
+        // second message (50ms future) should not be here yet
+        setImmediate(() => {
+          expect(count).to.equal(1)
+        })
+      } else if (count === 2) {
+        done()
+      }
+    })
 
     const now = Date.now()
     throttle.write({ timestamp: String(now) })
     throttle.write({ timestamp: String(now + 50) })
-
-    setTimeout(() => {
-      expect(results).to.have.length(1)
-    }, 20)
-
-    setTimeout(() => {
-      expect(results).to.have.length(2)
-      done()
-    }, 100)
   })
 })

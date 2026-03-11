@@ -8,6 +8,7 @@ function createCollectingWritable(): Writable & { chunks: string[] } {
   const writable = new Writable({
     write(chunk: Buffer, _encoding: BufferEncoding, callback: () => void) {
       chunks.push(chunk.toString())
+      writable.emit('chunk', chunk.toString())
       callback()
     }
   })
@@ -27,21 +28,30 @@ describe('Execute', () => {
     })
 
     const writable = createCollectingWritable()
+    writable.on('chunk', () => {
+      if (writable.chunks.join('').includes('hello')) {
+        expect(app.providerStatuses.some((s) => s.msg === 'Started')).to.equal(
+          true
+        )
+        exec.end()
+        done()
+      }
+    })
     exec.pipe(writable)
-
-    setTimeout(() => {
-      expect(writable.chunks.join('')).to.include('hello')
-      expect(app.providerStatuses.some((s) => s.msg === 'Started')).to.equal(
-        true
-      )
-      exec.end()
-      done()
-    }, 1000)
   })
 
   it('reports stderr on app provider error', function (done) {
     this.timeout(5000)
     const app = createMockApp()
+    const origSetError = app.setProviderError.bind(app)
+    app.setProviderError = (id: string, msg: string) => {
+      origSetError(id, msg)
+      if (msg.includes('error')) {
+        exec.end()
+        done()
+      }
+    }
+
     const exec = new Execute({
       command: 'echo error >&2',
       app,
@@ -52,19 +62,19 @@ describe('Execute', () => {
 
     const writable = createCollectingWritable()
     exec.pipe(writable)
-
-    setTimeout(() => {
-      expect(app.providerErrors.some((e) => e.msg.includes('error'))).to.equal(
-        true
-      )
-      exec.end()
-      done()
-    }, 1000)
   })
 
   it('writes to child process stdin via app event', function (done) {
     this.timeout(5000)
     const app = createMockApp()
+    const origSetStatus = app.setProviderStatus.bind(app)
+    app.setProviderStatus = (id: string, msg: string) => {
+      origSetStatus(id, msg)
+      if (msg === 'Started') {
+        setImmediate(() => app.emit('testInput', 'hello from event'))
+      }
+    }
+
     const exec = new Execute({
       command: 'cat',
       app,
@@ -75,15 +85,12 @@ describe('Execute', () => {
     })
 
     const writable = createCollectingWritable()
-    exec.pipe(writable)
-
-    setTimeout(() => {
-      app.emit('testInput', 'hello from event')
-      setTimeout(() => {
-        expect(writable.chunks.join('')).to.include('hello from event')
+    writable.on('chunk', () => {
+      if (writable.chunks.join('').includes('hello from event')) {
         exec.end()
         done()
-      }, 500)
-    }, 500)
+      }
+    })
+    exec.pipe(writable)
   })
 })
