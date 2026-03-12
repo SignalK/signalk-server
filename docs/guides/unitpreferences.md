@@ -1,6 +1,93 @@
+---
+title: Unit Preferences
+---
+
 # Unit Preferences
 
 This guide describes the unit preferences mechanism in Signal K Server.
+
+## For End Users
+
+Signal K Server allows you to define your preferred units for different categories of data (e.g., Speed, Depth, Temperature) centrally. These settings are applied across all compatible apps and dashboards.
+
+### Changing Unit Settings
+
+You can configure your unit preferences in the Signal K Server Admin UI.
+
+1.  Open the **Server Admin** interface.
+2.  Navigate to **Server > Configuration > Settings**.
+3.  Scroll down to the **Unit Preferences** section.
+
+### Available Settings
+
+#### Active Preset
+
+The simplest way to configure units is to select a **Preset**. A preset is a collection of unit preferences for all standard categories.
+
+Available presets:
+
+- **Metric**: km/h, kilometers, meters, Celsius, liters.
+- **Imperial (US)**: mph, miles, feet, Fahrenheit, US gallons.
+- **Imperial (UK)**: mph, miles, feet, Celsius, UK gallons.
+- **Nautical (Metric)**: knots, nautical miles, meters, Celsius, liters.
+- **Nautical Imperial (US)**: knots, nautical miles, feet, Fahrenheit, US gallons.
+- **Nautical Imperial (UK)**: knots, nautical miles, feet, Celsius, UK gallons.
+
+#### Per-User Settings
+
+Preferences are stored **per user**. If you log in with your user account, your unit settings will follow you across different devices. If no user is logged in (or for anonymous users), the server's global default preset (configured by the administrator) is used.
+
+#### Custom Presets
+
+Advanced users can upload **Custom Presets** to define specific combinations of units that aren't covered by the built-in options.
+
+### Overriding Specific Paths
+
+In addition to category-wide settings (e.g., "All speeds in Knots"), you can override units for specific data paths. For example, you might want _Boat Speed_ in Knots but _Wind Speed_ in Meters/Second.
+
+These overrides are typically managed by editing the server configuration. When a specific path has an override, it takes precedence over the general category setting in your active preset.
+
+---
+
+## Unit Categories
+
+Unit categories are the mechanism that allows the server to apply unit preferences to a wide range of data paths without needing configuration for every single path.
+
+### How Categories Work
+
+1.  **Categorization**: Every numeric Signal K path is assigned to a **Category** (e.g., `speed`, `temperature`, `depth`). This assignment is defined in the server's default configuration but can be customized.
+2.  **Base Unit**: The category defines the **Base Unit** (usually the SI unit) that the raw data is expected to be in. For example, the `speed` category expects `m/s`.
+3.  **Target Unit**: Your active Preset defines a **Target Unit** for each category. For example, your preset might map the `speed` category to `kn` (knots).
+4.  **Conversion**: When data is requested, the server looks up the path's category, finds the target unit from your preset, and provides the conversion formula.
+
+This system means that if you set your `speed` preference to Knots, it applies to _Boat Speeds_, _Wind Speeds_ and any other path assigned to the `speed` category.
+
+### Standard Categories
+
+The following categories are available by default:
+
+- **speed**: Speed measurements (Base: m/s). Examples: `navigation.speedOverGround`, `environment.wind.speedTrue`.
+- **distance**: Longer distances (Base: m). Examples: `navigation.log`, `navigation.courseRhumbline.nextPoint.distance`.
+- **depth**: Vertical distances/depths (Base: m). Examples: `environment.depth.belowTransducer`, `environment.depth.belowKeel`.
+- **length**: Dimensions of the vessel or objects (Base: m). Examples: `design.length.overall`, `design.airHeight`.
+- **temperature**: Temperature readings (Base: K). Examples: `environment.outside.temperature`, `propulsion.*.temperature`.
+- **pressure**: Pressure readings (Base: Pa). Examples: `environment.outside.pressure`, `propulsion.*.oilPressure`.
+- **angle**: Angles (Base: rad). Examples: `environment.wind.angleApparent`, `navigation.headingMagnetic`.
+- **angularVelocity**: Rate of turn (Base: rad/s). Examples: `navigation.rateOfTurn`.
+- **volume**: Liquid volumes (Base: m³). Examples: `tanks.*.currentLevel`.
+- **volumeRate**: Flow rates (Base: m³/s). Examples: `propulsion.*.fuel.rate`.
+- **mass**: Weight/Mass (Base: kg).
+- **electrical**:
+  - **voltage** (Base: V). Examples: `electrical.batteries.*.voltage`.
+  - **current** (Base: A). Examples: `electrical.batteries.*.current`.
+  - **charge** (Base: C). Examples: `electrical.batteries.*.capacity.stateOfCharge`.
+  - **power** (Base: W).
+  - **energy** (Base: J).
+- **frequency**: (Base: Hz). Examples: `propulsion.*.revolutions`.
+- **time**: Durations (Base: s).
+- **percentage**: Ratios and levels (Base: ratio 0-1). Examples: `tanks.*.currentLevel`, `electrical.batteries.*.capacity.stateOfCharge`.
+
+Additional categories include `dateTime`, `epoch` for time representations, and `unitless`/`boolean` for data that doesn't require conversion.
 
 ## For Client Application Developers
 
@@ -129,86 +216,3 @@ The unit preferences system exposes the following REST API endpoints:
 | GET    | `/signalk/v1/unitpreferences/default-categories`   | Get the default category mappings                   |
 
 ---
-
-## For End Users
-
-Signal K Server allows you to define your preferred units for different categories of data (e.g., Speed, Depth, Temperature) centrally. These settings are applied across all compatible apps and dashboards.
-
-### Changing Unit Settings
-
-You can configure your unit preferences in the Signal K Server Admin UI.
-
-1.  Open the **Server Admin** interface.
-2.  Navigate to **Server > Configuration > Settings**.
-3.  Scroll down to the **Unit Preferences** section.
-
-### Available Settings
-
-#### Active Preset
-
-The simplest way to configure units is to select a **Preset**. A preset is a collection of unit preferences for all standard categories.
-
-Available presets:
-
-- **Metric**: km/h, kilometers, meters, Celsius, liters.
-- **Imperial (US)**: mph, miles, feet, Fahrenheit, US gallons.
-- **Imperial (UK)**: mph, miles, feet, Celsius, UK gallons.
-- **Nautical (Metric)**: knots, nautical miles, meters, Celsius, liters.
-- **Nautical Imperial (US)**: knots, nautical miles, feet, Fahrenheit, US gallons.
-- **Nautical Imperial (UK)**: knots, nautical miles, feet, Celsius, UK gallons.
-
-#### Per-User Settings
-
-Preferences are stored **per user**. If you log in with your user account, your unit settings will follow you across different devices. If no user is logged in (or for anonymous users), the server's global default preset (configured by the administrator) is used.
-
-#### Custom Presets
-
-Advanced users can upload **Custom Presets** to define specific combinations of units that aren't covered by the built-in options.
-
-### Overriding Specific Paths
-
-In addition to category-wide settings (e.g., "All speeds in Knots"), you can override units for specific data paths. For example, you might want _Boat Speed_ in Knots but _Wind Speed_ in Meters/Second.
-
-These overrides are typically managed by editing the server configuration. When a specific path has an override, it takes precedence over the general category setting in your active preset.
-
----
-
-## Unit Categories
-
-Unit categories are the mechanism that allows the server to apply unit preferences to a wide range of data paths without needing configuration for every single path.
-
-### How Categories Work
-
-1.  **Categorization**: Every numeric Signal K path is assigned to a **Category** (e.g., `speed`, `temperature`, `depth`). This assignment is defined in the server's default configuration but can be customized.
-2.  **Base Unit**: The category defines the **Base Unit** (usually the SI unit) that the raw data is expected to be in. For example, the `speed` category expects `m/s`.
-3.  **Target Unit**: Your active Preset defines a **Target Unit** for each category. For example, your preset might map the `speed` category to `kn` (knots).
-4.  **Conversion**: When data is requested, the server looks up the path's category, finds the target unit from your preset, and provides the conversion formula.
-
-This system means that if you set your `speed` preference to Knots, it applies to _Boat Speeds_, _Wind Speeds_ and any other path assigned to the `speed` category.
-
-### Standard Categories
-
-The following categories are available by default:
-
-- **speed**: Speed measurements (Base: m/s). Examples: `navigation.speedOverGround`, `environment.wind.speedTrue`.
-- **distance**: Longer distances (Base: m). Examples: `navigation.log`, `navigation.courseRhumbline.nextPoint.distance`.
-- **depth**: Vertical distances/depths (Base: m). Examples: `environment.depth.belowTransducer`, `environment.depth.belowKeel`.
-- **length**: Dimensions of the vessel or objects (Base: m). Examples: `design.length.overall`, `design.airHeight`.
-- **temperature**: Temperature readings (Base: K). Examples: `environment.outside.temperature`, `propulsion.*.temperature`.
-- **pressure**: Pressure readings (Base: Pa). Examples: `environment.outside.pressure`, `propulsion.*.oilPressure`.
-- **angle**: Angles (Base: rad). Examples: `environment.wind.angleApparent`, `navigation.headingMagnetic`.
-- **angularVelocity**: Rate of turn (Base: rad/s). Examples: `navigation.rateOfTurn`.
-- **volume**: Liquid volumes (Base: m³). Examples: `tanks.*.currentLevel`.
-- **volumeRate**: Flow rates (Base: m³/s). Examples: `propulsion.*.fuel.rate`.
-- **mass**: Weight/Mass (Base: kg).
-- **electrical**:
-  - **voltage** (Base: V). Examples: `electrical.batteries.*.voltage`.
-  - **current** (Base: A). Examples: `electrical.batteries.*.current`.
-  - **charge** (Base: C). Examples: `electrical.batteries.*.capacity.stateOfCharge`.
-  - **power** (Base: W).
-  - **energy** (Base: J).
-- **frequency**: (Base: Hz). Examples: `propulsion.*.revolutions`.
-- **time**: Durations (Base: s).
-- **percentage**: Ratios and levels (Base: ratio 0-1). Examples: `tanks.*.currentLevel`, `electrical.batteries.*.capacity.stateOfCharge`.
-
-Additional categories include `dateTime`, `epoch` for time representations, and `unitless`/`boolean` for data that doesn't require conversion.
