@@ -5,9 +5,6 @@ import ProgressBar from 'react-bootstrap/ProgressBar'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Table from 'react-bootstrap/Table'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSignIn } from '@fortawesome/free-solid-svg-icons/faSignIn'
-import { faSignOut } from '@fortawesome/free-solid-svg-icons/faSignOut'
 import { useServerStats, useWsStatus, useStore } from '../../store'
 import type { ProviderStatistics } from '../../store/types'
 import '../../fa-pulse.css'
@@ -74,26 +71,18 @@ export default function Dashboard() {
     providerStats: ProviderStatistics,
     linkType: string
   ): ReactNode => {
-    const iconStyle = {
-      fontSize: '18px',
-      marginLeft: '5px',
-      marginRight: '8px'
-    }
     return (
       <li key={providerId} onClick={() => navigate(`/dashboard`)}>
-        <FontAwesomeIcon
-          icon={faSignIn}
-          className={getInputPulseClass(providerStats)}
+        <i
+          className={`icon-login ${getInputPulseClass(providerStats)}`}
           style={{
-            ...iconStyle,
             color: providerStats.deltaCount ? '#039' : 'lightblue'
           }}
         />
-        <FontAwesomeIcon
-          icon={faSignOut}
-          className={getOutputPulseClass(providerStats)}
+        <i
+          className={`icon-logout ${getOutputPulseClass(providerStats)}`}
           style={{
-            ...iconStyle,
+            transform: 'scaleX(-1)',
             color: providerStats.writeCount ? '#039' : 'lightblue'
           }}
         />
