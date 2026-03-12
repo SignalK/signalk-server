@@ -435,7 +435,24 @@ module.exports = function (app) {
   router.get('/active', (req, res) => {
     try {
       const preset = getActivePreset()
-      res.json(preset)
+      const definitions = getMergedDefinitions()
+      const result = {
+        ...preset,
+        categories: { ...preset.categories }
+      }
+      for (const [category, catDef] of Object.entries(result.categories)) {
+        const unitDef = definitions[catDef.baseUnit]
+        const conversion = unitDef?.conversions?.[catDef.targetUnit]
+        if (conversion) {
+          result.categories[category] = {
+            ...catDef,
+            formula: conversion.formula,
+            inverseFormula: conversion.inverseFormula,
+            symbol: conversion.symbol
+          }
+        }
+      }
+      res.json(result)
     } catch (err) {
       debug('Error getting active preset:', err)
       res.status(500).json({ error: 'Failed to get active preset' })

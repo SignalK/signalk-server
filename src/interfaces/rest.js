@@ -57,6 +57,41 @@ function enhanceMetadataResponse(metadata, signalkPath, username) {
   return metadata
 }
 
+const SKIP_KEYS = new Set([
+  'value',
+  'meta',
+  '$source',
+  'timestamp',
+  'pgn',
+  'sentence',
+  'values'
+])
+
+function enhanceTreeMetadata(node, pathParts, username) {
+  if (node === null || typeof node !== 'object') return
+  if (node.meta) {
+    const signalkPath = pathParts.join('.')
+    enhanceMetadataResponse(node.meta, signalkPath, username)
+  }
+  for (const key in node) {
+    if (!SKIP_KEYS.has(key)) {
+      enhanceTreeMetadata(node[key], pathParts.concat(key), username)
+    }
+  }
+}
+
+function collectMeta(node, pathParts, result) {
+  if (node === null || typeof node !== 'object') return
+  if (node.meta) {
+    result[pathParts.join('.')] = node.meta
+  }
+  for (const key in node) {
+    if (!SKIP_KEYS.has(key)) {
+      collectMeta(node[key], pathParts.concat(key), result)
+    }
+  }
+}
+
 const iso8601rexexp =
   /^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?Z$/
 
@@ -88,6 +123,31 @@ module.exports = function (app) {
           return
         }
 
+        // GET /vessels/<id>/meta — return all metadata for a vessel
+        if (path.length === 3 && path[0] === 'vessels' && path[2] === 'meta') {
+          const vesselId = path[1] === 'self' ? app.selfId : path[1]
+          const vesselPath = ['vessels', vesselId]
+          let full
+          if (app.securityStrategy.anyACLs()) {
+            full = app.deltaCache.buildFull(req.skPrincipal, vesselPath)
+          } else {
+            full = app.signalk.retrieve()
+          }
+          const vessel = full?.vessels?.[vesselId]
+          if (vessel) {
+            const result = {}
+            const username = req.skPrincipal?.identifier
+            collectMeta(vessel, [], result)
+            for (const [skPath, meta] of Object.entries(result)) {
+              enhanceMetadataResponse(meta, skPath, username)
+            }
+            res.json(result)
+          } else {
+            next()
+          }
+          return
+        }
+
         if (path.length > 4 && path[path.length - 1] === 'meta') {
           const metaPath = path.slice(0, path.length - 1).join('.')
           const meta = getMetadata(metaPath)
@@ -115,15 +175,33 @@ module.exports = function (app) {
 
         function sendResult(last, aPath) {
           if (last) {
+            const traversedPath = []
             for (const i in aPath) {
               const p = aPath[i]
 
               if (typeof last[p] !== 'undefined') {
+                traversedPath.push(p)
                 last = last[p]
               } else {
                 next()
                 return
               }
+            }
+
+            // Inject displayUnits into meta objects throughout the tree.
+            // Strip the vessels.<id> prefix to get signalk-relative paths.
+            if (
+              traversedPath[0] === 'vessels' ||
+              aPath[0] === 'vessels' ||
+              aPath.length === 0
+            ) {
+              const username = req.skPrincipal?.identifier
+              let baseParts = traversedPath.slice()
+              // Remove vessels.<id> prefix if present
+              if (baseParts[0] === 'vessels' && baseParts.length >= 2) {
+                baseParts = baseParts.slice(2)
+              }
+              enhanceTreeMetadata(last, baseParts, username)
             }
           } else {
             next()
