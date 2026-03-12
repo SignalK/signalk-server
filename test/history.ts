@@ -1,8 +1,5 @@
 import { expect } from 'chai'
-import {
-  parseValuesQuery,
-  splitPathExpression
-} from '../src/api/history/index'
+import { parseValuesQuery, splitPathExpression } from '../src/api/history/index'
 
 describe('History API parsing', () => {
   describe('splitPathExpression', () => {
@@ -11,21 +8,21 @@ describe('History API parsing', () => {
       expect(result.path).to.equal('navigation.speedOverGround')
       expect(result.aggregate).to.equal('average')
       expect(result.parameter).to.deep.equal([])
-      expect(result.smoothing).to.be.undefined
+      expect(result.smoothing).to.equal(undefined)
     })
 
     it('parses 2-segment path:aggregate', () => {
       const result = splitPathExpression('navigation.speedOverGround:max')
       expect(result.aggregate).to.equal('max')
       expect(result.parameter).to.deep.equal([])
-      expect(result.smoothing).to.be.undefined
+      expect(result.smoothing).to.equal(undefined)
     })
 
     it('parses 3-segment path:aggregate:param (non-smoothing)', () => {
       const result = splitPathExpression('navigation.speedOverGround:sma:5')
       expect(result.aggregate).to.equal('sma')
       expect(result.parameter).to.deep.equal(['5'])
-      expect(result.smoothing).to.be.undefined
+      expect(result.smoothing).to.equal(undefined)
     })
 
     it('parses 4-segment path:aggregate:sma:param as post-aggregation smoothing', () => {
@@ -72,7 +69,7 @@ describe('History API parsing', () => {
         east: -79,
         north: 26
       })
-      expect(result.radius).to.be.undefined
+      expect(result.radius).to.equal(undefined)
     })
 
     it('parses radius parameter', () => {
@@ -85,7 +82,7 @@ describe('History API parsing', () => {
         latitude: 25.5,
         distance: 5000
       })
-      expect(result.bbox).to.be.undefined
+      expect(result.bbox).to.equal(undefined)
     })
 
     it('parses distance + position (JSON array)', () => {
@@ -99,7 +96,7 @@ describe('History API parsing', () => {
         latitude: 25.5,
         distance: 5000
       })
-      expect(result.bbox).to.be.undefined
+      expect(result.bbox).to.equal(undefined)
     })
 
     it('parses distance + position (comma-separated)', () => {
@@ -187,8 +184,8 @@ describe('History API parsing', () => {
 
     it('omits bbox and radius when not provided', () => {
       const result = parseValuesQuery(baseQuery)
-      expect(result.bbox).to.be.undefined
-      expect(result.radius).to.be.undefined
+      expect(result.bbox).to.equal(undefined)
+      expect(result.radius).to.equal(undefined)
     })
 
     it('parses 4-segment path expressions in paths param', () => {

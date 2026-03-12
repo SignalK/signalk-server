@@ -261,7 +261,9 @@ async function respondWith<T>(
   }
 }
 
-export const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
+export const parseValuesQuery = (
+  query: Record<string, unknown>
+): ValuesRequest => {
   const { timeRangeParams, errors } = parseTimeRangeParams(query)
 
   const context = query.context as Context | undefined
@@ -300,7 +302,12 @@ export const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest 
         'bbox must be four comma-separated numbers: west,south,east,north'
       )
     } else {
-      bbox = { west: parts[0], south: parts[1], east: parts[2], north: parts[3] }
+      bbox = {
+        west: parts[0],
+        south: parts[1],
+        east: parts[2],
+        north: parts[3]
+      }
     }
   }
 
