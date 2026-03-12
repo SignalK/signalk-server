@@ -103,6 +103,10 @@ export type TimeRangeQueryParams =
 export type ValuesRequestQueryParams = TimeRangeQueryParams & {
   context?: string
   resolution?: number
+  bbox?: string
+  radius?: string
+  distance?: string
+  position?: string
 }
 
 export type PathsRequestQueryParams = TimeRangeQueryParams
@@ -230,12 +234,18 @@ export interface PathSpec {
   path: Path
   aggregate: AggregateMethod
   parameter: string[]
+  smoothing?: {
+    method: 'sma' | 'ema'
+    parameter: string
+  }
 }
 
 export type ValuesRequest = TimeRangeParams & {
   context?: Context
   resolution?: number
   pathSpecs: PathSpec[]
+  bbox?: { west: number; south: number; east: number; north: number }
+  radius?: { longitude: number; latitude: number; distance: number }
 }
 
 export type PathsRequest = TimeRangeParams

@@ -128,8 +128,8 @@
           {
             "name": "paths",
             "in": "query",
-            "description": "Comma separated list of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index' | 'sma' | 'ema'. The 'sma' (simple moving average) and 'ema' (exponential moving average) methods accept an optional numeric parameter separated by colon: for sma it is the number of samples, for ema it is the alpha value (0-1). If not provided, implementations should use sensible defaults.",
-            "example": "navigation.speedOverGround:sma:5,navigation.speedThroughWater:max",
+            "description": "Comma separated list of Signal K paths whose data should be retrieved, with optional aggregation and smoothing as colon-separated segments. Format: `path[:aggregate[:smoothing:param]]`. Aggregation methods: 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index' | 'sma' | 'ema'. The 'sma' and 'ema' methods accept an optional numeric parameter: for sma it is the number of samples, for ema it is the alpha value (0-1). A 4-segment form `path:aggregate:smoothing:param` applies post-aggregation smoothing, where smoothing is 'sma' or 'ema' and param is the smoothing parameter. Example: `navigation.speedOverGround:average:sma:5` returns bucket averages smoothed with a 5-sample SMA.",
+            "example": "navigation.speedOverGround:average:sma:5,navigation.speedThroughWater:max",
             "schema": {
               "type": "string"
             },
@@ -151,6 +151,42 @@
             "schema": {
               "type": "number",
               "format": "integer"
+            }
+          },
+          {
+            "name": "bbox",
+            "in": "query",
+            "description": "Bounding box for spatial filtering as four comma-separated numbers: west,south,east,north (decimal degrees). Only returns data from positions within the box. Mutually exclusive with radius.",
+            "example": "-80,25,-79,26",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "description": "Radius-based spatial filter as three comma-separated numbers: longitude,latitude,meters. Only returns data from positions within the specified distance of the center point. Mutually exclusive with bbox and distance/position.",
+            "example": "-79.5,25.5,5000",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "distance",
+            "in": "query",
+            "description": "Distance in meters for radius-based spatial filtering (resources API compatible). Use with `position` to specify the center point. If `position` is omitted, the provider may default to the vessel's current position. Mutually exclusive with `radius` and `bbox`.",
+            "example": "5000",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "position",
+            "in": "query",
+            "description": "Center point for distance-based spatial filtering as a JSON array `[longitude,latitude]` or comma-separated `longitude,latitude` (resources API compatible). Used with `distance`.",
+            "example": "[-79.5,25.5]",
+            "schema": {
+              "type": "string"
             }
           },
           {

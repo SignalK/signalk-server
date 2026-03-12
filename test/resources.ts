@@ -71,6 +71,36 @@ describe('Resources Api', () => {
     returnedIds[0].should.equal(resourceIds[1])
   })
 
+  it('radius search works for waypoints', async function () {
+    const { get, post } = await startServer()
+
+    const resourceIds = await Promise.all(
+      [
+        [60.151672, 24.891637],
+        [60.251672, 24.891637],
+        [60.151672, 24.991637]
+      ].map(async ([latitude, longitude]) => {
+        const r = await post(`/resources/waypoints/`, {
+          feature: {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [longitude, latitude]
+            }
+          }
+        })
+        const { id } = (await r.json()) as { id: string }
+        return id
+      })
+    )
+    const r = (await (
+      await get('/resources/waypoints?radius=24.891637,60.251672,5000')
+    ).json()) as object
+    const returnedIds = Object.keys(r)
+    returnedIds.length.should.equal(1)
+    returnedIds[0].should.equal(resourceIds[1])
+  })
+
   it('Create route with route point metadata', async function () {
     const { post, stop } = await startServer()
 

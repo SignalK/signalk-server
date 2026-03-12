@@ -795,6 +795,14 @@
           "example": [135.5, -25.2]
         }
       },
+      "RadiusParam": {
+        "in": "query",
+        "name": "radius",
+        "description": "Radius-based spatial filter as three comma-separated numbers: longitude,latitude,meters. Only returns data from positions within the specified distance of the center point. Alternative to distance+position. Mutually exclusive with bbox.",
+        "schema": {
+          "type": "string"
+        }
+      },
       "ZoomParam": {
         "in": "query",
         "name": "zoom",
@@ -883,6 +891,9 @@
           },
           {
             "$ref": "#/components/parameters/PositionParam"
+          },
+          {
+            "$ref": "#/components/parameters/RadiusParam"
           },
           {
             "$ref": "#/components/parameters/ZoomParam"
@@ -1018,6 +1029,9 @@
             "$ref": "#/components/parameters/PositionParam"
           },
           {
+            "$ref": "#/components/parameters/RadiusParam"
+          },
+          {
             "$ref": "#/components/parameters/ZoomParam"
           }
         ],
@@ -1151,6 +1165,9 @@
             "$ref": "#/components/parameters/PositionParam"
           },
           {
+            "$ref": "#/components/parameters/RadiusParam"
+          },
+          {
             "$ref": "#/components/parameters/ZoomParam"
           }
         ],
@@ -1282,6 +1299,9 @@
           },
           {
             "$ref": "#/components/parameters/PositionParam"
+          },
+          {
+            "$ref": "#/components/parameters/RadiusParam"
           },
           {
             "$ref": "#/components/parameters/ZoomParam"

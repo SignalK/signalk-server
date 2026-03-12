@@ -32,13 +32,67 @@ HTTP GET 'http://hostname:3000/signalk/v2/api/history/values?paths=navigation.sp
 
 | Parameter    | Description                                                                                                                                                                                                                                                                                                                 | Required |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `paths`      | Comma separated list of Signal K paths whose data should be retrieved. Optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' \| 'min' \| 'max' \| 'first' \| 'last' \| 'mid' \| 'middle_index'. Example: `navigation.speedOverGround,navigation.speedThroughWater:max` | Yes      |
+| `paths`      | Comma separated list of path expressions. See [Path Expressions](#path-expressions) below.                                                                                                                                                                                                                                  | Yes      |
 | `context`    | Signal K context that the data is about, defaults to 'vessels.self'. Example: `vessels.urn:mrn:imo:mmsi:123456789`                                                                                                                                                                                                          | No       |
 | `resolution` | Length of data sample time window in milliseconds or as a time expression ('1s', '1m', '1h', '1d'). If resolution is not specified the server should provide data in a reasonable time resolution, depending on the time range in the request.                                                                              | No       |
+| `bbox`       | Bounding box for spatial filtering: `west,south,east,north` in decimal degrees. Only returns data from positions within the box. Mutually exclusive with `radius` and `distance`/`position`.                                                                                                                                | No       |
+| `radius`     | Radius-based spatial filter: `longitude,latitude,meters`. Only returns data from positions within the specified distance of the center point. Mutually exclusive with `bbox` and `distance`/`position`.                                                                                                                     | No       |
+| `distance`   | Distance in meters for radius-based spatial filtering (resources API compatible). Use with `position` to specify the center point; if `position` is omitted the provider may default to the vessel's current position. Mutually exclusive with `radius` and `bbox`.                                                         | No       |
+| `position`   | Center point for distance-based spatial filtering as `[longitude,latitude]` (JSON array) or `longitude,latitude`. Used with `distance`. Resources API compatible.                                                                                                                                                           | No       |
 | `from`       | Start of the time range                                                                                                                                                                                                                                                                                                     | No       |
 | `to`         | End of the time range                                                                                                                                                                                                                                                                                                       | No       |
 | `duration`   | Duration of the time range                                                                                                                                                                                                                                                                                                  | No       |
 | `provider`   | Plugin id of the history provider to direct the request to. If not specified, the default provider is used. See [Providers](#providers).                                                                                                                                                                                    | No       |
+
+### Path Expressions
+
+Each path expression uses colon-separated segments:
+
+| Format | Description |
+| ------ | ----------- |
+| `path` | Path with default `average` aggregation |
+| `path:aggregate` | Path with specified aggregation method |
+| `path:aggregate:param` | Path with aggregation method and parameter (e.g. `sma:5` for 5-sample SMA) |
+| `path:aggregate:smoothing:param` | Path with aggregation and post-aggregation smoothing |
+
+**Aggregation methods:** `average`, `min`, `max`, `first`, `last`, `mid`, `middle_index`, `sma`, `ema`
+
+The 3-segment form uses the smoothing method (`sma`/`ema`) as the primary aggregation. The 4-segment form applies aggregation first, then smooths the result — for example, `navigation.speedOverGround:average:sma:5` computes bucket averages then applies a 5-sample Simple Moving Average.
+
+**Smoothing methods** (4-segment only):
+- `sma` — Simple Moving Average, parameter is the number of samples (e.g. `sma:5`)
+- `ema` — Exponential Moving Average, parameter is the alpha value 0–1 (e.g. `ema:0.3`)
+
+_Examples:_
+
+```
+paths=navigation.speedOverGround:average
+paths=navigation.speedOverGround:sma:5
+paths=navigation.speedOverGround:average:sma:5
+paths=navigation.speedOverGround:average:sma:5,navigation.speedThroughWater:max
+```
+
+### Spatial Filtering
+
+Use `bbox` or `radius` to limit results to data recorded within a geographic area. These are mutually exclusive — the server returns HTTP 400 if conflicting params are specified.
+
+There are two styles for radius queries:
+
+- **History API style:** `radius=longitude,latitude,meters`
+- **Resources API style:** `distance=meters&position=[longitude,latitude]` (or `position=longitude,latitude`)
+
+Both produce identical results. The `distance`/`position` style matches the [resources API](../resources_api.md) convention. If `distance` is provided without `position`, the provider may default to the vessel's current position.
+
+_Examples:_
+
+```
+bbox=-80,25,-79,26
+radius=-79.5,25.5,5000
+distance=5000&position=[-79.5,25.5]
+distance=5000&position=-79.5,25.5
+```
+
+> [!NOTE] Spatial filtering requires provider support. The server parses and validates these parameters then passes them to the provider.
 
 ### Response Format
 
