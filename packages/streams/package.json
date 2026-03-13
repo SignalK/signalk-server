@@ -47,7 +47,8 @@
     "./tcpserver": "./dist/tcpserver.js",
     "./throttle": "./dist/throttle.js",
     "./timestamp-throttle": "./dist/timestamp-throttle.js",
-    "./udp": "./dist/udp.js"
+    "./udp": "./dist/udp.js",
+    "./validation": "./dist/validation.js"
   },
   "repository": {
     "type": "git",
@@ -64,12 +65,12 @@
   },
   "homepage": "https://github.com/SignalK/signalk-server-node#readme",
   "dependencies": {
+    "@sinclair/typebox": "^0.34.30",
     "@canboat/canboatjs": "^3.3.0",
     "@signalk/client": "^2.3.0",
     "@signalk/n2k-signalk": "^4.1.0",
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/nmea0183-utilities": "^0.8.0",
-    "@signalk/signalk-schema": "^1.5.0",
     "any-shell-escape": "^0.1.1",
     "file-timestamp-stream": "^2.1.2",
     "lodash": "^4.17.4",
