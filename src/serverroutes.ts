@@ -56,6 +56,11 @@ import { getAISShipTypeName } from '@signalk/signalk-schema'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
+import { execSync } from 'child_process'
+import {
+  minimumVersion as minimumNodeVersion,
+  recommendedVersion as recommendedNodeVersion
+} from './version'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
@@ -1086,6 +1091,23 @@ module.exports = function (
 
   app.get(`${SERVERROUTESPREFIX}/debugKeys`, (req: Request, res: Response) => {
     res.json(listKnownDebugs())
+  })
+
+  const npmVersion = (() => {
+    try {
+      return execSync('npm --version', { encoding: 'utf8' }).trim()
+    } catch {
+      return 'unknown'
+    }
+  })()
+
+  app.get(`${SERVERROUTESPREFIX}/nodeInfo`, (_req: Request, res: Response) => {
+    res.json({
+      nodeVersion: process.version,
+      npmVersion,
+      recommendedNodeVersion,
+      minimumNodeVersion
+    })
   })
 
   app.post(
