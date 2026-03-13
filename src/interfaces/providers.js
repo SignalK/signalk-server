@@ -16,6 +16,7 @@
 const _ = require('lodash')
 const config = require('../config/config')
 const { runDiscovery } = require('../discovery')
+const { validateProviderConfig } = require('@signalk/streams/validation')
 import { SERVERROUTESPREFIX } from '../constants'
 
 module.exports = function (app) {
@@ -185,6 +186,15 @@ module.exports = function (app) {
 function applyProviderSettings(target, source, res) {
   if (source.type === 'Unknown') {
     res.status(401).send('Can not update an Unknown type')
+    return false
+  }
+
+  const { valid, message } = validateProviderConfig(
+    source.type,
+    source.options || {}
+  )
+  if (!valid) {
+    res.status(400).send(message)
     return false
   }
 

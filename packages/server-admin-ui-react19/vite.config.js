@@ -173,6 +173,10 @@ export default defineConfig({
       // (reading 'ReactCurrentOwner')" at runtime.
       react: path.resolve(__dirname, 'node_modules/react'),
       'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+      '@signalk/streams/validation': path.resolve(
+        __dirname,
+        '../streams/src/validation.ts'
+      ),
       path: false,
       events: 'events',
       buffer: 'buffer'

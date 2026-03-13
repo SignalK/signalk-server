@@ -12,6 +12,7 @@ import { useStore } from '../../store'
 
 import BasicProvider from './BasicProvider'
 import SourcePriorities from './SourcePriorities'
+import { validateProviderConfig } from '@signalk/streams/validation'
 import set from 'lodash.set'
 
 interface Provider {
@@ -142,6 +143,15 @@ const ProvidersConfiguration: React.FC = () => {
 
   const handleApply = useCallback(async () => {
     if (!selectedProvider) return
+
+    const { valid, message } = validateProviderConfig(
+      selectedProvider.type,
+      selectedProvider.options ?? {}
+    )
+    if (!valid) {
+      alert(message)
+      return
+    }
 
     const isNew = selectedProvider.isNew
     const wasDiscovered = selectedProvider.wasDiscovered
