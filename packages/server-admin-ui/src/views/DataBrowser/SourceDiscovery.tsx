@@ -167,6 +167,11 @@ const SourceDiscovery: React.FC = () => {
       if (typeof aVal === 'number' && typeof bVal === 'number') {
         return aVal - bVal
       }
+      const aNum = Number(aVal)
+      const bNum = Number(bVal)
+      if (!isNaN(aNum) && !isNaN(bNum) && aVal !== '' && bVal !== '') {
+        return aNum - bNum
+      }
       const cmp = String(aVal).localeCompare(String(bVal))
       return cmp
     })
