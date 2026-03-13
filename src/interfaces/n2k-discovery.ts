@@ -15,6 +15,11 @@ import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { SERVERROUTESPREFIX } from '../constants'
 import { writeSettingsFile } from '../config/config'
+import {
+  getAllPGNs,
+  getEnumerationName,
+  getEnumerationValue
+} from '@canboat/ts-pgns'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
@@ -48,80 +53,28 @@ interface N2kPGN {
   fields?: Record<string, unknown>
 }
 
-// PGNs that carry per-channel data instances.
-// PGN 127501 (Switch Bank) is excluded — its bank instance is the same as
-// the device instance (deviceInstanceLower) already shown in the table.
-// The individual indicators (channels) within a bank are not configurable.
-const DATA_INSTANCE_PGNS = new Set([
-  130312, // Temperature
-  130313, // Humidity
-  130316, // Temperature Extended Range
-  130823 // Maretron proprietary temperature
-])
+// Derive PGN sets from canboat.json metadata at module load time.
+// DATA_INSTANCE_PGNS: temp/humidity PGNs where the unique key is instance+source
+// INSTANCE_FIELD_PGNS: all PGNs with a data-instance field (PartOfPrimaryKey)
+const DATA_INSTANCE_PGNS = new Set<number>()
+const INSTANCE_FIELD_PGNS = new Set<number>()
 
-// All PGNs with a data-instance field (PartOfPrimaryKey in canboat.json).
-// Used for passive tracking of which instances each device sends.
-const INSTANCE_FIELD_PGNS = new Set([
-  127245, // Rudder
-  127488, // Engine Parameters, Rapid Update
-  127489, // Engine Parameters, Dynamic
-  127493, // Transmission Parameters, Dynamic
-  127497, // Trip Parameters, Engine
-  127498, // Engine Parameters, Static
-  127501, // Binary Switch Bank Status
-  127502, // Switch Bank Control
-  127503, // AC Input Status
-  127504, // AC Output Status
-  127505, // Fluid Level
-  127506, // DC Detailed Status
-  127507, // Charger Status
-  127508, // Battery Status
-  127509, // Inverter Status
-  127510, // Charger Configuration Status
-  127511, // Inverter Configuration Status
-  127512, // AGS Configuration Status
-  127513, // Battery Configuration Status
-  127514, // AGS Status
-  130312, // Temperature
-  130313, // Humidity
-  130314, // Actual Pressure
-  130315, // Set Pressure
-  130316, // Temperature Extended Range
-  130823 // Maretron: Temperature High Range
-])
+for (const def of getAllPGNs()) {
+  const hasInstanceKey = def.Fields.some(
+    (f) => f.Id === 'instance' && f.PartOfPrimaryKey
+  )
+  if (!hasInstanceKey) continue
+  INSTANCE_FIELD_PGNS.add(def.PGN)
 
-// NMEA 2000 TEMPERATURE_SOURCE enum labels
-const TEMPERATURE_SOURCE: Record<number, string> = {
-  0: 'Sea Temperature',
-  1: 'Outside Temperature',
-  2: 'Inside Temperature',
-  3: 'Engine Room Temperature',
-  4: 'Main Cabin Temperature',
-  5: 'Live Well Temperature',
-  6: 'Bait Well Temperature',
-  7: 'Refrigeration Temperature',
-  8: 'Heating System Temperature',
-  9: 'Dew Point Temperature',
-  10: 'Apparent Wind Chill Temperature',
-  11: 'Theoretical Wind Chill Temperature',
-  12: 'Heat Index Temperature',
-  13: 'Freezer Temperature',
-  14: 'Exhaust Gas Temperature',
-  15: 'Shaft Seal Temperature'
+  const hasSourceKey = def.Fields.some(
+    (f) =>
+      f.Id === 'source' &&
+      f.PartOfPrimaryKey &&
+      (f.LookupEnumeration === 'TEMPERATURE_SOURCE' ||
+        f.LookupEnumeration === 'HUMIDITY_SOURCE')
+  )
+  if (hasSourceKey) DATA_INSTANCE_PGNS.add(def.PGN)
 }
-
-const HUMIDITY_SOURCE: Record<number, string> = {
-  0: 'Inside',
-  1: 'Outside'
-}
-
-// Reverse lookups: string label → enum number
-const TEMPERATURE_SOURCE_BY_NAME = new Map<string, number>(
-  Object.entries(TEMPERATURE_SOURCE).map(([k, v]) => [v, Number(k)])
-)
-const HUMIDITY_SOURCE_BY_NAME = new Map<string, number>(
-  Object.entries(HUMIDITY_SOURCE).map(([k, v]) => [v, Number(k)])
-)
 
 interface DataInstance {
   pgn: number
@@ -461,22 +414,24 @@ module.exports = (app: N2kDiscoveryApp) => {
             const srcField = n2k.fields.source ?? n2k.fields.Source
             if (typeof srcField === 'string') {
               sourceLabel = srcField
-              sourceEnum = HUMIDITY_SOURCE_BY_NAME.get(srcField)
+              sourceEnum = getEnumerationValue('HUMIDITY_SOURCE', srcField)
             } else if (typeof srcField === 'number') {
               sourceEnum = srcField
               sourceLabel =
-                HUMIDITY_SOURCE[srcField] || `Humidity Source ${srcField}`
+                getEnumerationName('HUMIDITY_SOURCE', srcField) ||
+                `Humidity Source ${srcField}`
             }
           } else {
-            // Temperature PGNs (130312, 130316, 130823)
+            // Temperature PGNs (130312, 130316, 130823, etc.)
             const srcField = n2k.fields.source ?? n2k.fields.Source
             if (typeof srcField === 'string') {
               sourceLabel = srcField
-              sourceEnum = TEMPERATURE_SOURCE_BY_NAME.get(srcField)
+              sourceEnum = getEnumerationValue('TEMPERATURE_SOURCE', srcField)
             } else if (typeof srcField === 'number') {
               sourceEnum = srcField
               sourceLabel =
-                TEMPERATURE_SOURCE[srcField] || `Temperature Source ${srcField}`
+                getEnumerationName('TEMPERATURE_SOURCE', srcField) ||
+                `Temperature Source ${srcField}`
             }
           }
 
@@ -1002,7 +957,7 @@ module.exports = (app: N2kDiscoveryApp) => {
             pgn,
             currentValue,
             sourceType,
-            TEMPERATURE_SOURCE[sourceType] || 'unknown'
+            getEnumerationName('TEMPERATURE_SOURCE', sourceType) || 'unknown'
           )
           app.emit('nmea2000JsonOut', {
             pgn: 126208,
@@ -1082,7 +1037,7 @@ module.exports = (app: N2kDiscoveryApp) => {
             dst,
             currentValue,
             sourceType,
-            HUMIDITY_SOURCE[sourceType] || 'unknown'
+            getEnumerationName('HUMIDITY_SOURCE', sourceType) || 'unknown'
           )
           app.emit('nmea2000JsonOut', {
             pgn: 126208,
