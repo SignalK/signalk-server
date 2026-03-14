@@ -88,6 +88,7 @@ const skAuthPrefix = `${skPrefix}/auth`
 const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
+const VALID_PERMISSIONS = new Set(['readonly', 'readwrite', 'admin'])
 
 // Dummy hash for timing attack prevention - pre-generated bcrypt hash
 const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
@@ -1618,6 +1619,13 @@ function tokenSecurityFactory(
 
     let approved: boolean
     if (status === 'approved') {
+      if (
+        !request.clientRequest.requestedPermissions &&
+        !VALID_PERMISSIONS.has(body.permissions)
+      ) {
+        cb(new Error('Invalid permissions value'), theConfig)
+        return
+      }
       if (request.clientRequest.accessRequest.clientId) {
         const payload: JWTPayload = { device: identifier }
         const jwtOptions: SignOptions = {}
@@ -1734,6 +1742,16 @@ function tokenSecurityFactory(
         .then((request: AccessRequest) => {
           const accessRequest = clientRequest.accessRequest
           if (!validateAccessRequest(accessRequest)) {
+            updateRequest(request.requestId, 'COMPLETED', { statusCode: 400 })
+              .then(resolve)
+              .catch(reject)
+            return
+          }
+
+          if (
+            accessRequest.permissions !== undefined &&
+            !VALID_PERMISSIONS.has(accessRequest.permissions)
+          ) {
             updateRequest(request.requestId, 'COMPLETED', { statusCode: 400 })
               .then(resolve)
               .catch(reject)

@@ -620,10 +620,10 @@ module.exports = function (
       }
       const config = getSecurityConfig(app)
       const ip = req.ip
-      if (!app.securityStrategy.requestAccess) {
+      if (app.securityStrategy.isDummy()) {
         res.status(404).json({
           message:
-            'Access requests not available. Server security may not be enabled.'
+            'Access requests not available. Server security is not enabled.'
         })
         return
       }
