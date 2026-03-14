@@ -48,9 +48,7 @@ export default function Webapps() {
           <div className="row">
             {webapps
               .filter(
-                (webAppInfo) =>
-                  webAppInfo.name !== '@signalk/server-admin-ui' &&
-                  webAppInfo.name !== '@signalk/server-admin-ui-react19'
+                (webAppInfo) => webAppInfo.name !== '@signalk/server-admin-ui'
               )
               .map((webAppInfo) => {
                 return (
