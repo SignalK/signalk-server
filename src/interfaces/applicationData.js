@@ -67,8 +67,21 @@ const userApplicationDataUrls = [
 ]
 
 module.exports = function (app) {
+  function requireAdmin(req, res, next) {
+    if (
+      req.skIsAuthenticated === true &&
+      req.skPrincipal &&
+      req.skPrincipal.permissions === 'admin'
+    ) {
+      return next()
+    }
+    res.status(401).json({ error: 'Permission Denied' })
+  }
+
+  const anonAccess = app.config.settings.anonymousApplicationDataAccess
+
   if (app.securityStrategy.isDummy()) {
-    debug('ApplicationData disabled because security is off')
+    debug('ApplicationData: security is off, writes are disabled')
 
     app.post(userApplicationDataUrls, (req, res) => {
       res.status(405).send('security is not enabled')
@@ -78,16 +91,58 @@ module.exports = function (app) {
       res.status(405).send('security is not enabled')
     })
 
-    return
+    if (anonAccess !== 'readonly' && anonAccess !== 'readwrite') {
+      applicationDataUrls.forEach((url) => {
+        app.get(url, (req, res) => {
+          res.status(403).send('anonymous application data access is disabled')
+        })
+      })
+      app.get(`${prefix}/global/:appid`, (req, res) => {
+        res.status(403).send('anonymous application data access is disabled')
+      })
+    }
+  } else {
+
+    // rejectAnonymous blocks the AUTO readonly principal that http_authorize
+    // creates when allow_readonly is true, so applicationData can enforce its
+    // own anonymous-access policy independently.
+    function rejectAnonymous(req, res, next) {
+      if (
+        req.skIsAuthenticated === true &&
+        req.skPrincipal &&
+        req.skPrincipal.identifier !== 'AUTO'
+      ) {
+        return next()
+      }
+      res.status(401).json({ error: 'Permission Denied' })
+    }
+
+    const globalAllUrls = [...applicationDataUrls, `${prefix}/global/:appid`]
+
+    if (anonAccess === 'readonly' || anonAccess === 'readwrite') {
+      // Allow anonymous access to global applicationData.
+      // Only restrict writes when readonly.
+      if (anonAccess === 'readonly') {
+        applicationDataUrls.forEach((url) => {
+          app.post(url, requireAdmin)
+          app.put(url, requireAdmin)
+        })
+      }
+    } else {
+      // No anonymous access: block the AUTO readonly principal on all global
+      // applicationData routes, then apply normal admin-write middleware.
+      globalAllUrls.forEach((url) => {
+        app.use(url, rejectAnonymous)
+      })
+      applicationDataUrls.forEach((url) => {
+        app.securityStrategy.addAdminWriteMiddleware(url)
+      })
+    }
+
+    userApplicationDataUrls.forEach((url) => {
+      app.securityStrategy.addWriteMiddleware(url)
+    })
   }
-
-  applicationDataUrls.forEach((url) => {
-    app.securityStrategy.addAdminWriteMiddleware(url)
-  })
-
-  userApplicationDataUrls.forEach((url) => {
-    app.securityStrategy.addWriteMiddleware(url)
-  })
 
   app.get(userApplicationDataUrls, (req, res) => {
     getApplicationData(req, res, true)

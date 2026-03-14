@@ -23,6 +23,7 @@ import VirtualizedDataTable from './VirtualizedDataTable'
 import type { PathData, MetaData } from '../../store'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import { getPath$SourceKey } from './pathUtils'
+import ApplicationDataBrowser from './ApplicationDataBrowser'
 import {
   useWebSocket,
   useDeltaMessages,
@@ -716,6 +717,8 @@ const DataBrowser: React.FC = () => {
           )}
         </Card>
       )}
+
+      <ApplicationDataBrowser />
     </div>
   )
 }

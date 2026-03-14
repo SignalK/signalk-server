@@ -20,6 +20,7 @@ interface ServerSettingsData {
   runFromSystemd?: boolean
   options?: Record<string, boolean>
   interfaces?: Record<string, boolean>
+  anonymousApplicationDataAccess?: string
   pruneContextsMinutes?: string
   loggingDirectory?: string
   keepMostRecentLogsOnly?: boolean
@@ -57,10 +58,14 @@ const ServerSettings: React.FC = () => {
   }, [fetchSettings])
 
   const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (
+      event: React.ChangeEvent<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >
+    ) => {
       const value =
         event.target.type === 'checkbox'
-          ? event.target.checked
+          ? (event.target as HTMLInputElement).checked
           : event.target.value
       setSettings((prev) => ({ ...prev, [event.target.name]: value }))
     },
@@ -278,6 +283,30 @@ const ServerSettings: React.FC = () => {
                     </div>
                   )
                 })}
+              </Col>
+            </Form.Group>
+            <Form.Group as={Row}>
+              <Col md="2">
+                <Form.Label htmlFor="anonymousApplicationDataAccess">
+                  Anonymous Application Data Access
+                </Form.Label>
+              </Col>
+              <Col xs="12" md={fieldColWidthMd}>
+                <Form.Select
+                  id="anonymousApplicationDataAccess"
+                  name="anonymousApplicationDataAccess"
+                  onChange={handleChange}
+                  value={settings.anonymousApplicationDataAccess || 'none'}
+                  style={{ width: 'auto' }}
+                >
+                  <option value="none">No access</option>
+                  <option value="readonly">Read Only</option>
+                  <option value="readwrite">Read &amp; Write</option>
+                </Form.Select>
+                <Form.Text muted>
+                  Allow unauthenticated access to global application data.
+                  Requires restart.
+                </Form.Text>
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
