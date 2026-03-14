@@ -1,11 +1,11 @@
-import { compile, type EvalFunction } from 'mathjs'
+const compiledFormulaCache = new Map<string, (value: number) => number>()
 
-const compiledFormulaCache = new Map<string, EvalFunction>()
-
-export function getCompiledFormula(formula: string): EvalFunction {
+function compileFormula(formula: string): (value: number) => number {
   let cached = compiledFormulaCache.get(formula)
   if (!cached) {
-    cached = compile(formula)
+    cached = new Function('value', `return (${formula})`) as (
+      value: number
+    ) => number
     compiledFormulaCache.set(formula, cached)
   }
   return cached
@@ -67,8 +67,7 @@ export function convertValue(
     unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
   if (!formula) return null
   try {
-    const compiled = getCompiledFormula(formula)
-    const converted = compiled.evaluate({ value })
+    const converted = compileFormula(formula)(value)
     return { value: converted, unit: symbol }
   } catch {
     return null
@@ -85,7 +84,7 @@ export function convertFromSI(
   const formula = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.formula
   if (!formula) return null
   try {
-    return getCompiledFormula(formula).evaluate({ value: siValue })
+    return compileFormula(formula)(siValue)
   } catch {
     return null
   }
@@ -102,7 +101,7 @@ export function convertToSI(
     unitDefinitions[siUnit]?.conversions?.[targetUnit]?.inverseFormula
   if (!inverseFormula) return null
   try {
-    return getCompiledFormula(inverseFormula).evaluate({ value: displayValue })
+    return compileFormula(inverseFormula)(displayValue)
   } catch {
     return null
   }
