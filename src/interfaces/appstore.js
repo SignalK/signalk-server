@@ -31,10 +31,7 @@ const {
 const { SERVERROUTESPREFIX } = require('../constants')
 const { getCategories, getAvailableCategories } = require('../categories')
 
-const bundledAdminUIs = [
-  '@signalk/server-admin-ui',
-  '@signalk/server-admin-ui-react19'
-]
+const bundledAdminUIs = ['@signalk/server-admin-ui']
 
 const npmServerInstallLocations = [
   '/usr/bin/signalk-server',

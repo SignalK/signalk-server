@@ -226,16 +226,9 @@ module.exports = function (
     })
   }
 
-  // Determine which admin UI to use based on environment variable
-  const adminUiPackage =
-    process.env.SIGNALK_ADMIN_UI === 'react19'
-      ? '@signalk/server-admin-ui-react19'
-      : '@signalk/server-admin-ui'
   const adminUiPath = path.join(
     __dirname,
-    '/../node_modules/',
-    adminUiPackage,
-    '/public'
+    '/../node_modules/@signalk/server-admin-ui/public'
   )
 
   function serveIndexWithAddonScripts(indexPath: string, res: Response) {
@@ -279,23 +272,6 @@ module.exports = function (
   })
 
   app.use('/admin', express.static(adminUiPath))
-
-  // Serve the React 19 admin UI with addon script injection when accessed
-  // via its webapp route (not just when it's the primary /admin/ UI)
-  const react19UiPath = path.join(
-    __dirname,
-    '/../node_modules/@signalk/server-admin-ui-react19/public'
-  )
-  app.get(
-    '/@signalk/server-admin-ui-react19/',
-    (req: Request, res: Response) => {
-      if (!req.originalUrl.endsWith('/')) {
-        res.redirect(301, req.originalUrl + '/')
-        return
-      }
-      serveIndexWithAddonScripts(path.join(react19UiPath, 'index.html'), res)
-    }
-  )
 
   app.get('/', (req: Request, res: Response) => {
     let landingPage = '/admin/'

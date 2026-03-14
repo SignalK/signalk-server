@@ -15,7 +15,7 @@ describe('modulesWithKeyword', () => {
     const expectedModules = [
       '@signalk/instrumentpanel',
       '@signalk/freeboard-sk',
-      '@signalk/server-admin-ui-react19',
+      '@signalk/server-admin-ui',
       '@mxtommy/kip'
     ]
     const updateInstalledModule = '@signalk/instrumentpanel'

@@ -549,12 +549,12 @@ function tokenSecurityFactory(
 
       if (skReq.skIsAuthenticated && skReq.skPrincipal) {
         if (skReq.skPrincipal.identifier === 'AUTO' && redirect) {
-          res.redirect('/@signalk/server-admin-ui/#/login')
+          res.redirect('/admin/#/login')
         } else {
           handlePermissionDenied(req, res)
         }
       } else if (redirect) {
-        res.redirect('/@signalk/server-admin-ui/#/login')
+        res.redirect('/admin/#/login')
       } else {
         handlePermissionDenied(req, res)
       }
@@ -1556,7 +1556,7 @@ function tokenSecurityFactory(
             next()
           } else if (redirect) {
             debug('redirecting to login')
-            res.redirect('/@signalk/server-admin-ui/#/login')
+            res.redirect('/admin/#/login')
           } else {
             res.status(401).send('Unauthorized')
           }

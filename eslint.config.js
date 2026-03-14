@@ -71,7 +71,7 @@ module.exports = defineConfig([
         version: 'detect'
       }
     },
-    files: ['packages/server-admin-ui-react19/src/**/*.{js,jsx,ts,tsx}'],
+    files: ['packages/server-admin-ui/src/**/*.{js,jsx,ts,tsx}'],
     extends: [
       common('@typescript-eslint/'),
       tseslint.configs.recommended,
@@ -88,7 +88,7 @@ module.exports = defineConfig([
         ecmaFeatures: {
           jsx: true
         },
-        project: './packages/server-admin-ui-react19/tsconfig.json'
+        project: './packages/server-admin-ui/tsconfig.json'
       },
       globals: {
         ...globals.browser

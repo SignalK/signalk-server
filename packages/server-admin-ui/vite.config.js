@@ -1,32 +1,109 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { federation } from '@module-federation/vite'
 
-// Note: Peer dependency validation skipped for legacy admin UI
-// The @signalk/server-admin-ui-dependencies package expects React 19
-// This legacy UI uses React 16 and is kept as a fallback
+import '@signalk/server-admin-ui-dependencies'
+
+// %ADDONSCRIPTS% is replaced server-side at request time with actual addon script tags.
+function replaceAddonScripts() {
+  return {
+    name: 'replace-addon-scripts',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        if (process.env.NODE_ENV !== 'production') {
+          return html.replace(
+            '%ADDONSCRIPTS%',
+            '<!-- addon scripts not available in dev mode -->'
+          )
+        }
+        return html
+      }
+    }
+  }
+}
+
+// Strip obsolete SVG font references from @font-face declarations (~2.5MB savings)
+function stripSvgFonts() {
+  return {
+    name: 'strip-svg-fonts',
+    enforce: 'post',
+    transform(code, id) {
+      if (!id.includes('.css') && !id.includes('.scss')) {
+        return null
+      }
+      const svgFontRegex =
+        /,?\s*url\(['"]?[^'"()]+\.svg[^'"()]*['"]?\)\s*format\(['"]svg['"]\)/gi
+      if (svgFontRegex.test(code)) {
+        return {
+          code: code.replace(svgFontRegex, ''),
+          map: null
+        }
+      }
+      return null
+    },
+    generateBundle(options, bundle) {
+      for (const fileName of Object.keys(bundle)) {
+        const chunk = bundle[fileName]
+        if (chunk.type === 'asset' && fileName.endsWith('.css')) {
+          const svgFontRegex =
+            /,?\s*url\(['"]?[^'"()]+\.svg[^'"()]*['"]?\)\s*format\(['"]svg['"]\)/gi
+          if (
+            typeof chunk.source === 'string' &&
+            svgFontRegex.test(chunk.source)
+          ) {
+            chunk.source = chunk.source.replace(svgFontRegex, '')
+          }
+        }
+        if (
+          chunk.type === 'asset' &&
+          fileName.endsWith('.svg') &&
+          (fileName.includes('fontawesome') ||
+            fileName.includes('fa-') ||
+            fileName.includes('Simple-Line-Icons'))
+        ) {
+          delete bundle[fileName]
+        }
+      }
+    }
+  }
+}
 
 export default defineConfig({
   base: './',
   publicDir: 'public_src',
+  // Module Federation requires top-level await (ES2023)
+  esbuild: {
+    target: 'es2023'
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2023'
+    }
+  },
   plugins: [
+    replaceAddonScripts(),
+    stripSvgFonts(),
     react({
       babel: {
-        presets: ['@babel/preset-react']
+        plugins: [['babel-plugin-react-compiler', {}]],
+        presets: [['@babel/preset-react', { runtime: 'automatic' }]]
       }
     }),
     federation({
       name: 'adminUI',
       filename: 'remoteEntry.js',
       remotes: {},
+      dts: false, // dts plugin tries to connect on port 16322 in dev mode
       shared: {
         react: {
           singleton: true,
-          requiredVersion: '^16.14.0'
+          requiredVersion: '^19.0.0'
         },
         'react-dom': {
           singleton: true,
-          requiredVersion: '^16.14.0'
+          requiredVersion: '^19.0.0'
         }
       }
     })
@@ -34,33 +111,71 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        // Silence deprecation warnings from Bootstrap 4 (legacy dependency)
-        // These warnings are from Bootstrap's old Sass code and will be resolved when upgrading to Bootstrap 5
         quietDeps: true,
-        silenceDeprecations: [
-          'import',
-          'global-builtin',
-          'color-functions',
-          'slash-div',
-          'if-function',
-          'abs-percent'
-        ]
+        // Bootstrap 5 still uses @import internally
+        silenceDeprecations: ['import']
+      }
+    }
+  },
+  server: {
+    port: 5173,
+    host: 'localhost',
+    proxy: {
+      '/signalk': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true
+      },
+      '/skServer': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true
+      },
+      '/plugins': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      },
+      // Proxy scoped webapp packages (@signalk/*, etc.) but not Vite internals
+      '/@': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        bypass: (req) => {
+          if (
+            req.url.startsWith('/@vite') ||
+            req.url.startsWith('/@react-refresh') ||
+            req.url.startsWith('/@fs') ||
+            req.url.startsWith('/@id')
+          ) {
+            return req.url
+          }
+        }
       }
     }
   },
   build: {
     outDir: 'public',
     sourcemap: true,
-    target: 'es2022',
+    target: 'es2023',
     assetsInlineLimit: 0, // Prevent inlining assets to allow server-side logo override
     cssCodeSplit: false // Generate single CSS file to ensure it's always loaded
   },
   resolve: {
     alias: {
       path: false,
-      // Polyfill Node.js modules for browser compatibility
       events: 'events',
       buffer: 'buffer'
+    }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/test/**', 'src/**/*.d.ts']
     }
   }
 })
