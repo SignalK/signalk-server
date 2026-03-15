@@ -109,3 +109,13 @@ export const signalKLicense = {
 
 /** Standard Signal K terms of service */
 export const signalKTermsOfService = 'http://signalk.org/terms/'
+
+/**
+ * Extract literal string values from a TypeBox Union schema at runtime.
+ * Useful for generating OpenAPI descriptions from the schema source of truth.
+ */
+export function unionLiterals(schema: {
+  anyOf: Array<{ const: string }>
+}): string[] {
+  return schema.anyOf.map((s) => s.const)
+}

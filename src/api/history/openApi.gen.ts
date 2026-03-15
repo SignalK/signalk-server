@@ -2,7 +2,10 @@
  * OpenAPI 3.1.0 Document for the Signal K History API
  */
 
-import { ValuesResponseSchema } from '@signalk/server-api'
+import {
+  ValuesResponseSchema,
+  AggregateMethodSchema
+} from '@signalk/server-api'
 import {
   toOpenApiSchema,
   okResponse,
@@ -11,8 +14,13 @@ import {
   signalKExternalDocs,
   signalKTermsOfService,
   signalKLicense,
-  serverVersion
+  serverVersion,
+  unionLiterals
 } from '../openapi-utils'
+
+const aggregateMethods = unionLiterals(AggregateMethodSchema)
+  .map((m) => `'${m}'`)
+  .join(' | ')
 
 // ---------------------------------------------------------------------------
 // Reusable parameters
@@ -123,8 +131,7 @@ export const historyOpenApiDoc = {
           {
             name: 'paths',
             in: 'query' as const,
-            description:
-              "Comma separated list of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index' | 'sma' | 'ema'. The 'sma' (simple moving average) and 'ema' (exponential moving average) methods accept an optional numeric parameter separated by colon: for sma it is the number of samples, for ema it is the alpha value (0-1). If not provided, implementations should use sensible defaults.",
+            description: `Comma separated list of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: ${aggregateMethods}. The 'sma' (simple moving average) and 'ema' (exponential moving average) methods accept an optional numeric parameter separated by colon: for sma it is the number of samples, for ema it is the alpha value (0-1). If not provided, implementations should use sensible defaults.`,
             example:
               'navigation.speedOverGround:sma:5,navigation.speedThroughWater:max',
             schema: { type: 'string' },

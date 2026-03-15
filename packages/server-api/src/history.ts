@@ -1,5 +1,6 @@
 import { Context, Path, Timestamp } from '.'
 import { Temporal } from '@js-temporal/polyfill'
+import type { AggregateMethodSchemaType } from './history-schemas'
 
 /**
  * Method for aggregating historical data points within a time bucket.
@@ -14,16 +15,7 @@ import { Temporal } from '@js-temporal/polyfill'
  * - `sma`: Simple Moving Average with number of samples specified in the parameter array (e.g., sma:5 for 5-sample SMA)
  * - `ema`: Exponential Moving Average with alpha specified in the parameter array (e.g., ema:0.2 for alpha=0.2 EMA)
  */
-export type AggregateMethod =
-  | 'average'
-  | 'min'
-  | 'max'
-  | 'first'
-  | 'last'
-  | 'mid'
-  | 'middle_index'
-  | 'sma'
-  | 'ema'
+export type AggregateMethod = AggregateMethodSchemaType
 
 export type ValueList = {
   path: Path

@@ -47,6 +47,9 @@ export const AutopilotActionDefSchema = Type.Object(
   },
   { $id: 'AutopilotActionDef' }
 )
+export type AutopilotActionId = Static<
+  (typeof AutopilotActionDefSchema)['properties']['id']
+>
 
 // ---------------------------------------------------------------------------
 // Autopilot options

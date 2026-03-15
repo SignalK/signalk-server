@@ -1,4 +1,5 @@
 import { Value } from './deltas'
+import type { AutopilotActionId } from './autopilot-schemas'
 
 /**
  * Valid autopilot delta path names.
@@ -443,7 +444,7 @@ export interface AutopilotStateDef {
 
 /** @category  Autopilot API  */
 export interface AutopilotActionDef {
-  id: 'dodge' | 'tack' | 'gybe' | 'courseCurrentPoint' | 'courseNextPoint'
+  id: AutopilotActionId
   name: string // display name
   available: boolean // true if can be used in current AP mode of operation
 }

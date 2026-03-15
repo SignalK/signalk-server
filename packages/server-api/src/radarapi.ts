@@ -9,8 +9,10 @@
 // Radar Status Types
 // ============================================================================
 
+import type { RadarStatusSchemaType } from './radar-schemas'
+
 /** @category Radar API */
-export type RadarStatus = 'off' | 'standby' | 'transmit' | 'warming'
+export type RadarStatus = RadarStatusSchemaType
 
 // ============================================================================
 // Radar Control Types
