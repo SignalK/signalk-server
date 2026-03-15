@@ -1,6 +1,7 @@
 import assert from 'assert'
 import path from 'path'
 import { freeport } from './ts-servertestutilities'
+import { Delta, hasValues } from '@signalk/server-api'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Server = require('../dist/')
@@ -35,6 +36,19 @@ describe('Plugin crash isolation', () => {
     )
     assert(crashingPlugin, 'Crashing plugin should be loaded')
 
+    const deltaReceived = new Promise<void>((resolve) => {
+      server.app.signalk.on('delta', (delta: Delta) => {
+        const hasExpectedValue = delta.updates?.some(
+          (u) =>
+            hasValues(u) &&
+            u.values?.some((v) => v.path === 'environment.outside.pressure')
+        )
+        if (hasExpectedValue) {
+          resolve()
+        }
+      })
+    })
+
     server.app.handleMessage('test', {
       updates: [
         {
@@ -48,8 +62,7 @@ describe('Plugin crash isolation', () => {
       ]
     })
 
-    // Allow the delta to propagate through the BaconJS pipeline
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await deltaReceived
 
     // Server should still be running
     assert(
