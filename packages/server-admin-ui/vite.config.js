@@ -156,8 +156,25 @@ export default defineConfig({
     outDir: 'public',
     sourcemap: true,
     target: 'es2023',
-    assetsInlineLimit: 0, // Prevent inlining assets to allow server-side logo override
-    cssCodeSplit: false // Generate single CSS file to ensure it's always loaded
+    assetsInlineLimit: 0,
+    cssCodeSplit: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (
+            id.includes('node_modules/mathjs/') ||
+            id.includes('node_modules/decimal.js/') ||
+            id.includes('node_modules/typed-function/') ||
+            id.includes('node_modules/complex.js/') ||
+            id.includes('node_modules/fraction.js/') ||
+            id.includes('node_modules/seedrandom/') ||
+            id.includes('node_modules/tiny-emitter/')
+          ) {
+            return 'vendor-mathjs'
+          }
+        }
+      }
+    }
   },
   resolve: {
     alias: {

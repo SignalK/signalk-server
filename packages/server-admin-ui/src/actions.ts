@@ -1,4 +1,3 @@
-import { isUndefined } from 'lodash'
 import { webSocketService } from './services/WebSocketService'
 import { useStore } from './store'
 
@@ -111,7 +110,7 @@ export async function fetchAllData(): Promise<void> {
   ) => {
     try {
       const response = await authFetch(
-        `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
+        `${prefix === undefined ? window.serverRoutesPrefix : prefix}${endpoint}`
       )
       if (response.status === 200) {
         const data = await response.json()
