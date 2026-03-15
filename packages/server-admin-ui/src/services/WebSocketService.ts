@@ -66,8 +66,10 @@ export class WebSocketService {
       this.updateState({ status: 'open', ws })
 
       if (isReconnect) {
-        // Dynamic import avoids circular dependency with actions.ts
         import('../actions').then(({ fetchAllData }) => fetchAllData())
+        import('../store').then(({ useStore }) =>
+          useStore.getState().setRestarting(false)
+        )
       }
     }
 
