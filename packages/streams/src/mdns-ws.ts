@@ -16,6 +16,7 @@
 
 import { Transform, TransformCallback } from 'stream'
 import { Client } from '@signalk/client'
+import { getMetadata } from '@signalk/signalk-schema'
 import { CreateDebug, DebugLogger } from './types'
 
 interface MdnsWsOptions {
@@ -53,6 +54,7 @@ export default class MdnsWs extends Transform {
   private readonly dataDebug: DebugLogger
   private handleContext: (delta: DeltaMessage) => void
   private signalkClient?: Client
+  private fetchedMetaPaths = new Set<string>()
 
   constructor(options: MdnsWsOptions) {
     super({ objectMode: true })
@@ -110,6 +112,7 @@ export default class MdnsWs extends Transform {
   }
 
   private connectClient(client: Client): void {
+    this.fetchedMetaPaths.clear()
     client
       .connect()
       .then(() => {
@@ -184,7 +187,47 @@ export default class MdnsWs extends Transform {
       }
 
       this.push(data)
+
+      if (data?.updates) {
+        for (const update of data.updates) {
+          const values = update.values as Array<{ path: string }> | undefined
+          if (values) {
+            for (const pv of values) {
+              if (!this.fetchedMetaPaths.has(pv.path)) {
+                this.fetchedMetaPaths.add(pv.path)
+                this.fetchMetaIfNeeded(client, data.context, pv.path)
+              }
+            }
+          }
+        }
+      }
     })
+  }
+
+  private fetchMetaIfNeeded(
+    client: Client,
+    context: string | undefined,
+    path: string
+  ): void {
+    if (getMetadata('vessels.self.' + path)) {
+      return
+    }
+
+    client
+      .API()
+      .then((api) => api.getMeta(`/vessels/self/${path.replace(/\./g, '/')}`))
+      .then((meta) => {
+        if (meta) {
+          this.debug(`fetched meta for ${path} from remote`)
+          this.push({
+            context,
+            updates: [{ meta: [{ path, value: meta }] }]
+          })
+        }
+      })
+      .catch((err: Error) => {
+        this.debug(`failed to fetch meta for ${path}: ${err.message}`)
+      })
   }
 
   _transform(

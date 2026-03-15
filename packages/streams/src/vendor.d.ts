@@ -67,7 +67,10 @@ declare module '@signalk/client' {
     constructor(options: ClientOptions)
     connect(): Promise<void>
     subscribe(subscription: object, id: string): void
-    API(): Promise<{ get(path: string): Promise<string> }>
+    API(): Promise<{
+      get(path: string): Promise<string>
+      getMeta(path: string): Promise<unknown>
+    }>
   }
   export { Client }
 }
@@ -98,6 +101,11 @@ declare module 'aws-sdk' {
     getObject(params: S3GetObjectParams): S3Request
   }
   export { S3 }
+}
+
+declare module '@signalk/signalk-schema' {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export function getMetadata(path: string): any
 }
 
 declare module 'node-gpsd-client' {
