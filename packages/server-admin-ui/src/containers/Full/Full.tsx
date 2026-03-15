@@ -1,4 +1,10 @@
-import React, { useEffect, Component, ReactNode, ComponentType } from 'react'
+import React, {
+  Suspense,
+  useEffect,
+  Component,
+  ReactNode,
+  ComponentType
+} from 'react'
 import {
   Routes,
   Route,
@@ -19,27 +25,54 @@ import Embedded from '../../views/Webapps/Embedded'
 import EmbeddedDocs from '../../views/Webapps/EmbeddedDocs'
 import EmbeddedAsyncApi from '../../views/Webapps/EmbeddedAsyncApi'
 import Webapps from '../../views/Webapps/Webapps'
-import DataBrowser from '../../views/DataBrowser/DataBrowser'
-import MetaDataPage from '../../views/DataBrowser/MetaDataPage'
-import SourceDiscovery from '../../views/DataBrowser/SourceDiscovery'
-import SourcePriorityPage from '../../views/DataBrowser/SourcePriorityPage'
-import Playground from '../../views/Playground'
-import Apps from '../../views/appstore/Apps/Apps'
-import DetailView from '../../views/appstore/Detail/DetailView'
-import Configuration from '../../views/Configuration/Configuration'
 import Login from '../../views/security/Login'
-import SecuritySettings from '../../views/security/Settings'
-import Users from '../../views/security/Users'
-import Devices from '../../views/security/Devices'
 import Register from '../../views/security/Register'
-import AccessRequests from '../../views/security/AccessRequests'
-import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
-import Settings from '../../views/ServerConfig/Settings'
-import UnitPreferencesSettings from '../../views/ServerConfig/UnitPreferencesSettings'
-import BackupRestore from '../../views/ServerConfig/BackupRestore'
-import ServerLog from '../../views/ServerConfig/ServerLog'
-import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
-import PathReference from '../../views/PathReference/PathReference'
+
+const DataBrowser = React.lazy(
+  () => import('../../views/DataBrowser/DataBrowser')
+)
+const MetaDataPage = React.lazy(
+  () => import('../../views/DataBrowser/MetaDataPage')
+)
+const SourceDiscovery = React.lazy(
+  () => import('../../views/DataBrowser/SourceDiscovery')
+)
+const SourcePriorityPage = React.lazy(
+  () => import('../../views/DataBrowser/SourcePriorityPage')
+)
+const Playground = React.lazy(() => import('../../views/Playground'))
+const Apps = React.lazy(() => import('../../views/appstore/Apps/Apps'))
+const DetailView = React.lazy(
+  () => import('../../views/appstore/Detail/DetailView')
+)
+const Configuration = React.lazy(
+  () => import('../../views/Configuration/Configuration')
+)
+const Settings = React.lazy(() => import('../../views/ServerConfig/Settings'))
+const UnitPreferencesSettings = React.lazy(
+  () => import('../../views/ServerConfig/UnitPreferencesSettings')
+)
+const BackupRestore = React.lazy(
+  () => import('../../views/ServerConfig/BackupRestore')
+)
+const ProvidersConfiguration = React.lazy(
+  () => import('../../views/ServerConfig/ProvidersConfiguration')
+)
+const ServerLog = React.lazy(() => import('../../views/ServerConfig/ServerLog'))
+const ServerUpdate = React.lazy(
+  () => import('../../views/ServerConfig/ServerUpdate')
+)
+const SecuritySettings = React.lazy(
+  () => import('../../views/security/Settings')
+)
+const Users = React.lazy(() => import('../../views/security/Users'))
+const Devices = React.lazy(() => import('../../views/security/Devices'))
+const AccessRequests = React.lazy(
+  () => import('../../views/security/AccessRequests')
+)
+const PathReference = React.lazy(
+  () => import('../../views/PathReference/PathReference')
+)
 
 import { fetchAllData } from '../../actions'
 
@@ -102,6 +135,16 @@ function loginRequired(
   return (
     loginStatus.authenticationRequired === true &&
     loginStatus.status === 'notLoggedIn'
+  )
+}
+
+function LoadingSpinner() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </div>
+    </div>
   )
 }
 
@@ -185,141 +228,158 @@ export default function Full() {
         <Sidebar location={location} />
         <main className="main">
           <Container fluid style={suppressPadding}>
-            <Routes>
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute component={Dashboard} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/webapps"
-                element={
-                  <ProtectedRoute component={Webapps} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/e/:moduleId"
-                element={
-                  <ProtectedRoute component={Embedded} supportsReadOnly />
-                }
-              />
-              {/* Data menu routes */}
-              <Route
-                path="/data/browser"
-                element={
-                  <ProtectedRoute component={DataBrowser} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/data/meta"
-                element={
-                  <ProtectedRoute component={MetaDataPage} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/data/sources"
-                element={<ProtectedRoute component={SourceDiscovery} />}
-              />
-              <Route
-                path="/data/priorities"
-                element={<ProtectedRoute component={SourcePriorityPage} />}
-              />
-              <Route
-                path="/data/units"
-                element={<ProtectedRoute component={UnitPreferencesSettings} />}
-              />
-              <Route
-                path="/data/fiddler"
-                element={
-                  <ProtectedRoute component={Playground} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/data/connections/:providerId"
-                element={<ProtectedRoute component={ProvidersConfiguration} />}
-              />
-              {/* Backward-compatible redirects */}
-              <Route
-                path="/databrowser"
-                element={<Navigate to="/data/browser" replace />}
-              />
-              <Route
-                path="/serverConfiguration/datafiddler"
-                element={<Navigate to="/data/fiddler" replace />}
-              />
-              <Route
-                path="/apps/store/plugin/:name"
-                element={<ProtectedRoute component={DetailView} />}
-              />
-              <Route
-                path="/apps/store/*"
-                element={<ProtectedRoute component={Apps} />}
-              />
-              <Route
-                path="/apps/configuration/:pluginid"
-                element={<ProtectedRoute component={Configuration} />}
-              />
-              <Route path="/appstore" element={<LegacyAppstoreRedirect />} />
-              <Route
-                path="/appstore/plugin/:name"
-                element={<LegacyAppstorePluginRedirect />}
-              />
-              <Route path="/appstore/*" element={<LegacyAppstoreRedirect />} />
-              <Route
-                path="/serverConfiguration/plugins/:pluginid"
-                element={<LegacyPluginConfigRedirect />}
-              />
-              <Route
-                path="/serverConfiguration/settings"
-                element={<ProtectedRoute component={Settings} />}
-              />
-              <Route
-                path="/serverConfiguration/backuprestore"
-                element={<ProtectedRoute component={BackupRestore} />}
-              />
-              <Route
-                path="/serverConfiguration/connections/:providerId"
-                element={<ProtectedRoute component={ProvidersConfiguration} />}
-              />
-              <Route
-                path="/serverConfiguration/log"
-                element={
-                  <ProtectedRoute component={ServerLog} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/serverConfiguration/update"
-                element={<ProtectedRoute component={ServerUpdate} />}
-              />
-              <Route
-                path="/security/settings"
-                element={<ProtectedRoute component={SecuritySettings} />}
-              />
-              <Route
-                path="/security/users"
-                element={<ProtectedRoute component={Users} />}
-              />
-              <Route
-                path="/security/devices"
-                element={<ProtectedRoute component={Devices} />}
-              />
-              <Route
-                path="/security/access/requests"
-                element={<ProtectedRoute component={AccessRequests} />}
-              />
-              <Route path="/asyncapi" element={<EmbeddedAsyncApi />} />
-              <Route
-                path="/documentation/paths"
-                element={
-                  <ProtectedRoute component={PathReference} supportsReadOnly />
-                }
-              />
-              <Route path="/documentation/*" element={<EmbeddedDocs />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute component={Dashboard} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/webapps"
+                  element={
+                    <ProtectedRoute component={Webapps} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/e/:moduleId"
+                  element={
+                    <ProtectedRoute component={Embedded} supportsReadOnly />
+                  }
+                />
+                {/* Data menu routes */}
+                <Route
+                  path="/data/browser"
+                  element={
+                    <ProtectedRoute component={DataBrowser} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/data/meta"
+                  element={
+                    <ProtectedRoute component={MetaDataPage} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/data/sources"
+                  element={<ProtectedRoute component={SourceDiscovery} />}
+                />
+                <Route
+                  path="/data/priorities"
+                  element={<ProtectedRoute component={SourcePriorityPage} />}
+                />
+                <Route
+                  path="/data/units"
+                  element={
+                    <ProtectedRoute component={UnitPreferencesSettings} />
+                  }
+                />
+                <Route
+                  path="/data/fiddler"
+                  element={
+                    <ProtectedRoute component={Playground} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/data/connections/:providerId"
+                  element={
+                    <ProtectedRoute component={ProvidersConfiguration} />
+                  }
+                />
+                {/* Backward-compatible redirects */}
+                <Route
+                  path="/databrowser"
+                  element={<Navigate to="/data/browser" replace />}
+                />
+                <Route
+                  path="/serverConfiguration/datafiddler"
+                  element={<Navigate to="/data/fiddler" replace />}
+                />
+                <Route
+                  path="/apps/store/plugin/:name"
+                  element={<ProtectedRoute component={DetailView} />}
+                />
+                <Route
+                  path="/apps/store/*"
+                  element={<ProtectedRoute component={Apps} />}
+                />
+                <Route
+                  path="/apps/configuration/:pluginid"
+                  element={<ProtectedRoute component={Configuration} />}
+                />
+                <Route path="/appstore" element={<LegacyAppstoreRedirect />} />
+                <Route
+                  path="/appstore/plugin/:name"
+                  element={<LegacyAppstorePluginRedirect />}
+                />
+                <Route
+                  path="/appstore/*"
+                  element={<LegacyAppstoreRedirect />}
+                />
+                <Route
+                  path="/serverConfiguration/plugins/:pluginid"
+                  element={<LegacyPluginConfigRedirect />}
+                />
+                <Route
+                  path="/serverConfiguration/settings"
+                  element={<ProtectedRoute component={Settings} />}
+                />
+                <Route
+                  path="/serverConfiguration/backuprestore"
+                  element={<ProtectedRoute component={BackupRestore} />}
+                />
+                <Route
+                  path="/serverConfiguration/connections/:providerId"
+                  element={
+                    <ProtectedRoute component={ProvidersConfiguration} />
+                  }
+                />
+                <Route
+                  path="/serverConfiguration/log"
+                  element={
+                    <ProtectedRoute component={ServerLog} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/serverConfiguration/update"
+                  element={<ProtectedRoute component={ServerUpdate} />}
+                />
+                <Route
+                  path="/security/settings"
+                  element={<ProtectedRoute component={SecuritySettings} />}
+                />
+                <Route
+                  path="/security/users"
+                  element={<ProtectedRoute component={Users} />}
+                />
+                <Route
+                  path="/security/devices"
+                  element={<ProtectedRoute component={Devices} />}
+                />
+                <Route
+                  path="/security/access/requests"
+                  element={<ProtectedRoute component={AccessRequests} />}
+                />
+                <Route path="/asyncapi" element={<EmbeddedAsyncApi />} />
+                <Route
+                  path="/documentation/paths"
+                  element={
+                    <ProtectedRoute
+                      component={PathReference}
+                      supportsReadOnly
+                    />
+                  }
+                />
+                <Route path="/documentation/*" element={<EmbeddedDocs />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route
+                  path="/"
+                  element={<Navigate to="/dashboard" replace />}
+                />
+              </Routes>
+            </Suspense>
           </Container>
         </main>
         <Aside />
