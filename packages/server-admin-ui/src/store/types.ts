@@ -102,7 +102,6 @@ export interface NodeInfo {
   nodeVersion?: string
   npmVersion?: string
   recommendedNodeVersion?: string
-  minimumNodeVersion?: string
 }
 
 export interface SourcePriority {

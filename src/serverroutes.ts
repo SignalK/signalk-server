@@ -57,10 +57,7 @@ import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
 import { execSync } from 'child_process'
-import {
-  minimumVersion as minimumNodeVersion,
-  recommendedVersion as recommendedNodeVersion
-} from './version'
+import { recommendedVersion as recommendedNodeVersion } from './version'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
@@ -1105,8 +1102,7 @@ module.exports = function (
     res.json({
       nodeVersion: process.version,
       npmVersion,
-      recommendedNodeVersion,
-      minimumNodeVersion
+      recommendedNodeVersion
     })
   })
 

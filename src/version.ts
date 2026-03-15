@@ -1,6 +1,6 @@
 import { satisfies } from 'semver'
 
-export const minimumVersion = '>=18'
+const minimumVersion = '>=18'
 export const recommendedVersion = '22'
 
 export default function checkNodeVersion() {

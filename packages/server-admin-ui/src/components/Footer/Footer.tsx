@@ -8,33 +8,6 @@ import {
   useNodeInfo
 } from '../../store'
 
-const NODE_UPGRADE_URL =
-  'https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js'
-
-function parseMajor(version: string): number {
-  return parseInt(version.replace(/^[v>=]+/, '').split('.')[0], 10)
-}
-
-function getNodeBadge(
-  nodeVersion: string,
-  recommendedNodeVersion: string,
-  minimumNodeVersion: string
-): { variant: 'warning' | 'danger'; label: string } | null {
-  const current = parseMajor(nodeVersion)
-  const minimum = parseMajor(minimumNodeVersion)
-  const recommended = parseMajor(recommendedNodeVersion)
-
-  if (isNaN(current) || isNaN(minimum) || isNaN(recommended)) return null
-
-  if (current < minimum) {
-    return { variant: 'danger', label: `node ${recommended} required` }
-  }
-  if (current !== recommended) {
-    return { variant: 'warning', label: `node ${recommended} recommended` }
-  }
-  return null
-}
-
 export default function Footer() {
   const loginStatus = useLoginStatus()
   const serverSpecification = useServerSpecification()
@@ -44,16 +17,16 @@ export default function Footer() {
 
   const { name, mmsi, uuid } = vesselInfo
 
-  const badge =
-    nodeInfo.nodeVersion &&
-    nodeInfo.recommendedNodeVersion &&
-    nodeInfo.minimumNodeVersion
-      ? getNodeBadge(
-          nodeInfo.nodeVersion,
-          nodeInfo.recommendedNodeVersion,
-          nodeInfo.minimumNodeVersion
-        )
-      : null
+  const currentMajor = nodeInfo.nodeVersion
+    ? parseInt(nodeInfo.nodeVersion.replace(/^v/, '').split('.')[0], 10)
+    : NaN
+  const recommendedMajor = nodeInfo.recommendedNodeVersion
+    ? parseInt(nodeInfo.recommendedNodeVersion.split('.')[0], 10)
+    : NaN
+  const showWarning =
+    !isNaN(currentMajor) &&
+    !isNaN(recommendedMajor) &&
+    currentMajor > recommendedMajor
 
   return (
     <footer className="app-footer">
@@ -71,12 +44,12 @@ export default function Footer() {
           {nodeInfo.npmVersion && <> · npm {nodeInfo.npmVersion}</>}
         </span>
       )}
-      {badge && (
+      {showWarning && (
         <span>
           &nbsp;
-          <a href={NODE_UPGRADE_URL} style={{ textDecoration: 'none' }}>
-            <Badge bg={badge.variant}>{badge.label}</Badge>
-          </a>
+          <Badge bg="warning">
+            node {nodeInfo.recommendedNodeVersion} recommended
+          </Badge>
         </span>
       )}
       <span>
