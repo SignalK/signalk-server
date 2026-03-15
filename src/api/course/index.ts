@@ -1261,11 +1261,7 @@ export class CourseApi {
         }
       ]
     })
-    this.app.handleMessage(
-      'N/A', //no-op as updates already have $source
-      v2Delta,
-      SKVersion.v2
-    )
+    this.app.handleMessage(API_CMD_SRC.$source, v2Delta, SKVersion.v2)
 
     const p = typeof noSave === 'undefined' ? this.isAPICmdSource() : !noSave
     if (p) {
