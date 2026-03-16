@@ -59,7 +59,15 @@ _Example 3: Retrieve waypoints within a bounded area. Note: the bounded area is 
 HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?bbox=[-135.5,38,-134,38.5]'
 ```
 
-_Example 4: Return notes for display on a map view at zoom level 5._
+_Example 4: Retrieve waypoints within 5km of a specific point using `radius`. Note: the value is three comma-separated numbers in the form longitude,latitude,meters._
+
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?radius=-135.5,38,5000'
+```
+
+The `radius` parameter is an alternative to `distance`+`position` and is mutually exclusive with `bbox`.
+
+_Example 5: Return notes for display on a map view at zoom level 5._
 
 ```typescript
 HTTP GET 'http://hostname:3000/signalk/v2/api/resources/notes?zoom=5'

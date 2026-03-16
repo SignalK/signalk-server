@@ -261,7 +261,9 @@ async function respondWith<T>(
   }
 }
 
-const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
+export const parseValuesQuery = (
+  query: Record<string, unknown>
+): ValuesRequest => {
   const { timeRangeParams, errors } = parseTimeRangeParams(query)
 
   const context = query.context as Context | undefined
@@ -270,6 +272,77 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
   const paths = query.paths as string
   if (!paths) {
     errors.push('paths parameter is required and must be a string')
+  }
+
+  const bboxStr = Array.isArray(query.bbox)
+    ? (query.bbox as string[]).join(',')
+    : (query.bbox as string | undefined)
+  const radiusStr = Array.isArray(query.radius)
+    ? (query.radius as string[]).join(',')
+    : (query.radius as string | undefined)
+
+  const distanceStr = query.distance as string | undefined
+  const positionStr = query.position as string | undefined
+
+  if (radiusStr && (distanceStr || positionStr)) {
+    errors.push('radius and distance/position are mutually exclusive')
+  }
+
+  if (bboxStr && (radiusStr || distanceStr || positionStr)) {
+    errors.push('bbox and radius/distance are mutually exclusive')
+  }
+
+  let bbox:
+    | { west: number; south: number; east: number; north: number }
+    | undefined
+  if (bboxStr) {
+    const parts = bboxStr.split(',').map(Number)
+    if (parts.length !== 4 || parts.some(isNaN)) {
+      errors.push(
+        'bbox must be four comma-separated numbers: west,south,east,north'
+      )
+    } else {
+      bbox = {
+        west: parts[0],
+        south: parts[1],
+        east: parts[2],
+        north: parts[3]
+      }
+    }
+  }
+
+  let radius:
+    | { longitude: number; latitude: number; distance: number }
+    | undefined
+  if (radiusStr) {
+    const parts = radiusStr.split(',').map(Number)
+    if (parts.length !== 3 || parts.some(isNaN)) {
+      errors.push(
+        'radius must be three comma-separated numbers: longitude,latitude,meters'
+      )
+    } else {
+      radius = {
+        longitude: parts[0],
+        latitude: parts[1],
+        distance: parts[2]
+      }
+    }
+  } else if (distanceStr) {
+    const distance = Number(distanceStr)
+    if (isNaN(distance)) {
+      errors.push('distance must be a number (meters)')
+    } else if (positionStr) {
+      const coords = parsePosition(positionStr)
+      if (!coords) {
+        errors.push(
+          'position must be two comma-separated numbers or a JSON array: [lon,lat] or lon,lat'
+        )
+      } else {
+        radius = { longitude: coords[0], latitude: coords[1], distance }
+      }
+    } else {
+      radius = { longitude: NaN, latitude: NaN, distance }
+    }
   }
 
   if (errors.length > 0) {
@@ -281,14 +354,36 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
     .split(',')
   const pathSpecs: PathSpec[] = pathExpressions.map(splitPathExpression)
 
-  const parsed = {
+  const parsed: ValuesRequest = {
     ...timeRangeParams,
     context,
     resolution,
-    pathSpecs
+    pathSpecs,
+    ...(bbox && { bbox }),
+    ...(radius && { radius })
   }
   debug(JSON.stringify(parsed, null, 2))
   return parsed
+}
+
+const parsePosition = (value: string): [number, number] | null => {
+  let lon: number
+  let lat: number
+  try {
+    const parsed = JSON.parse(value)
+    if (Array.isArray(parsed) && parsed.length === 2) {
+      lon = Number(parsed[0])
+      lat = Number(parsed[1])
+      if (!isNaN(lon) && !isNaN(lat)) return [lon, lat]
+    }
+  } catch {
+    // not JSON, try comma-separated
+  }
+  const parts = value.split(',').map(Number)
+  if (parts.length === 2 && !parts.some(isNaN)) {
+    return [parts[0], parts[1]]
+  }
+  return null
 }
 
 const getMaybeNumber = (value: unknown): number | undefined => {
@@ -297,20 +392,34 @@ const getMaybeNumber = (value: unknown): number | undefined => {
   return undefined
 }
 
-const splitPathExpression = (pathExpression: string): PathSpec => {
+export const SMOOTHING_METHODS = ['sma', 'ema'] as const
+type SmoothingMethod = (typeof SMOOTHING_METHODS)[number]
+
+const isSmoothingMethod = (value: string): value is SmoothingMethod =>
+  SMOOTHING_METHODS.includes(value as SmoothingMethod)
+
+export const splitPathExpression = (pathExpression: string): PathSpec => {
   const parts = pathExpression.split(':')
   let aggregateMethod = (parts[1] || 'average') as AggregateMethod
   if (parts[0] === 'navigation.position') {
     aggregateMethod = 'first' as AggregateMethod
   }
 
-  // Extract all parameters from parts[2] onwards
-  const parameters: string[] = parts.slice(2).filter((p) => p.length > 0)
-
   const pathSpec: PathSpec = {
     path: parts[0] as Path,
     aggregate: aggregateMethod,
-    parameter: parameters
+    parameter: []
+  }
+
+  if (parts.length === 4 && isSmoothingMethod(parts[2])) {
+    // 4-segment: path:aggregate:smoothing:param
+    pathSpec.smoothing = {
+      method: parts[2],
+      parameter: parts[3]
+    }
+  } else {
+    // 3-segment or fewer: path:aggregate:param...
+    pathSpec.parameter = parts.slice(2).filter((p) => p.length > 0)
   }
 
   return pathSpec

@@ -151,6 +151,16 @@ export const processParameters = (params: any) => {
         `Bounding box contains invalid coordinate value (${params.bbox})`
       )
     }
+  } else if (typeof params.radius === 'string') {
+    const parts = params.radius.split(',').map(Number)
+    if (parts.length !== 3 || parts.some(isNaN)) {
+      throw new Error(
+        'radius must be three comma-separated numbers: longitude,latitude,meters'
+      )
+    }
+    const sw = computeDestinationPoint([parts[0], parts[1]], parts[2], 225)
+    const ne = computeDestinationPoint([parts[0], parts[1]], parts[2], 45)
+    params.geobounds = toPolygon([sw.longitude, sw.latitude, ne.longitude, ne.latitude])
   } else if (typeof params.distance !== 'undefined' && params.position) {
     params.distance = checkForNumber(params.distance)
     params.position = checkForNumberArray(params.position)
