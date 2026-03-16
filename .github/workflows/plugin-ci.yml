@@ -98,6 +98,16 @@ jobs:
             errors.push('Missing main or exports field');
           }
 
+          // Version must be valid semver — npm normalizes invalid versions in
+          // the registry but the installed package.json retains the original,
+          // which breaks semver comparisons in the appstore
+          const SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
+          if (!pkg.version) {
+            errors.push('Missing "version" field in package.json');
+          } else if (!SEMVER_RE.test(pkg.version)) {
+            errors.push('Invalid semver version "' + pkg.version + '" in package.json — see https://semver.org');
+          }
+
           // Scan source files for hardcoded home directory paths
           const srcFiles = [];
           function collectFiles(dir, exts) {
