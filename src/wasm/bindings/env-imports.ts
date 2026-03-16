@@ -401,10 +401,7 @@ export function createEnvImports(
         // Update configuration while preserving other fields
         existingConfig.configuration = configuration
 
-        atomicWriteFileSync(
-          configFile,
-          JSON.stringify(existingConfig, null, 2)
-        )
+        atomicWriteFileSync(configFile, JSON.stringify(existingConfig, null, 2))
         debug(`[${pluginId}] Config saved to ${configFile}`)
 
         return 0

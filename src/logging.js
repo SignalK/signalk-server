@@ -2,6 +2,7 @@ const debugCore = require('debug')
 const moment = require('moment')
 const path = require('path')
 const fs = require('fs')
+const { atomicWriteFileSync } = require('./atomicWrite')
 
 module.exports = function (app) {
   const log = []
@@ -76,7 +77,7 @@ module.exports = function (app) {
     debugEnabled = enabled
 
     if (rememberDebug && debugPath) {
-      fs.writeFileSync(debugPath, debugEnabled)
+      atomicWriteFileSync(debugPath, debugEnabled)
     }
 
     app.emit('serverevent', {
@@ -100,7 +101,7 @@ module.exports = function (app) {
     rememberDebug: (enabled) => {
       if (debugPath) {
         if (enabled) {
-          fs.writeFileSync(debugPath, debugEnabled)
+          atomicWriteFileSync(debugPath, debugEnabled)
         } else if (fs.existsSync(debugPath)) {
           fs.unlinkSync(debugPath)
         }

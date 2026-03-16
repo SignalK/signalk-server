@@ -268,7 +268,10 @@ module.exports = (theApp: any) => {
     callback: (err: NodeJS.ErrnoException | null) => void
   ) {
     try {
-      atomicWriteFileSync(pathForPluginId(pluginId), JSON.stringify(data, null, 2))
+      atomicWriteFileSync(
+        pathForPluginId(pluginId),
+        JSON.stringify(data, null, 2)
+      )
       callback(null)
     } catch (err: any) {
       callback(err)
