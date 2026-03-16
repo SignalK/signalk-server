@@ -294,6 +294,7 @@ export interface ServerAPI
 
   /**
    * Returns the full path of the directory where the plugin can persist its internal data, e.g. data files, etc.
+   * Callable in plugin's `start()` function and later, not in plugin constructor function.
    *
    * @example
    * ```javascript
