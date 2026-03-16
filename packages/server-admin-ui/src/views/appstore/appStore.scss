@@ -69,6 +69,16 @@
           padding: 3px;
           vertical-align: middle;
         }
+
+        span.badge__deprecated {
+          color: #fff !important;
+          font-size: 10px;
+          border-radius: 3px;
+          background-color: #dc3545 !important;
+          margin-left: 5px;
+          padding: 3px;
+          vertical-align: middle;
+        }
       }
     }
 

@@ -56,13 +56,31 @@ export default function Sidebar({ location }: SidebarProps) {
 
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
-    let updatesBadge: BadgeData | null = null
+    const appDeprecated = appStore.deprecated?.length || 0
+    let appstoreBadge: BadgeData | null = null
     let serverUpdateBadge: BadgeData | null = null
     let accessRequestsBadge: BadgeData | null = null
     let expiredDevicesBadge: BadgeData | null = null
 
-    if (appUpdates > 0) {
-      updatesBadge = {
+    if (appStore.storeAvailable === false) {
+      appstoreBadge = {
+        variant: 'danger',
+        text: 'OFFLINE'
+      }
+    } else if (appUpdates > 0 && appDeprecated > 0) {
+      appstoreBadge = {
+        variant: 'warning',
+        text: `${appUpdates}\u2191 ${appDeprecated}\u2717`,
+        color: 'warning'
+      }
+    } else if (appDeprecated > 0) {
+      appstoreBadge = {
+        variant: 'danger',
+        text: `${appDeprecated}`,
+        color: 'danger'
+      }
+    } else if (appUpdates > 0) {
+      appstoreBadge = {
         variant: 'success',
         text: `${appUpdates}`,
         color: 'success'
@@ -82,13 +100,6 @@ export default function Sidebar({ location }: SidebarProps) {
         variant: 'danger',
         text: `${expiredDeviceCount}`,
         color: 'danger'
-      }
-    }
-
-    if (appStore.storeAvailable === false) {
-      updatesBadge = {
-        variant: 'danger',
-        text: 'OFFLINE'
       }
     }
 
@@ -127,7 +138,7 @@ export default function Sidebar({ location }: SidebarProps) {
           name: 'Appstore',
           url: '/appstore',
           icon: 'icon-basket',
-          badge: updatesBadge
+          badge: appstoreBadge
         },
         {
           name: 'Server',
