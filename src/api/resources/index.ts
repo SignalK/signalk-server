@@ -406,6 +406,9 @@ export class ResourcesApi {
         Object.assign(result, r.value)
       }
     })
+    if (Object.keys(result).length === 0) {
+      throw new Error(`Resource not found! (${resId})`)
+    }
     return result
   }
 
