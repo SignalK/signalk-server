@@ -130,7 +130,6 @@ const {
   getCustomCategories,
   getActivePreset,
   getMergedDefinitions,
-  getConfigUnitprefsDir,
   reloadPreset,
   reloadCustomDefinitions,
   reloadCustomCategories,
