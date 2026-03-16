@@ -2,12 +2,12 @@ import { SignalKResourceType } from '@signalk/server-api'
 import { buildSchemaSync } from 'api-schema-builder'
 import { RESOURCES_API_PATH } from '.'
 import { createDebug } from '../../debug'
-import resourcesOpenApi from './openApi.json'
+import { resourcesApiDoc } from './openApi'
 const debug = createDebug('signalk-server:api:resources:validate')
 
 class ValidationError extends Error {}
 
-const API_SCHEMA = buildSchemaSync(resourcesOpenApi)
+const API_SCHEMA = buildSchemaSync(resourcesApiDoc)
 
 export const validate = {
   resource: (
