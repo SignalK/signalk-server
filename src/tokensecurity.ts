@@ -92,6 +92,10 @@ const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 // Dummy hash for timing attack prevention - pre-generated bcrypt hash
 const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
 
+function isNever(expiration: string | undefined): boolean {
+  return expiration?.toUpperCase() === 'NEVER'
+}
+
 /**
  * Express request with Signal K authentication properties
  */
@@ -431,10 +435,9 @@ function tokenSecurityFactory(
       secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
     }
     if (rememberMe) {
-      const expValue =
-        configuration.expiration === 'NEVER'
-          ? '10y'
-          : configuration.expiration || '1h'
+      const expValue = isNever(configuration.expiration)
+        ? '10y'
+        : configuration.expiration || '1h'
       cookieOptions.maxAge = ms(expValue as StringValue)
     }
     return cookieOptions
@@ -472,7 +475,7 @@ function tokenSecurityFactory(
     const theExpiration = tokenExpiration || configuration.expiration || '1h'
     const payload: JWTPayload = { id: userId }
     const jwtOptions: SignOptions = {}
-    if (theExpiration !== 'NEVER') {
+    if (!isNever(theExpiration)) {
       jwtOptions.expiresIn = theExpiration as StringValue
     }
     return jwt.sign(payload, configuration.secretKey, jwtOptions)
@@ -774,7 +777,7 @@ function tokenSecurityFactory(
             const payload: JWTPayload = { id: user.username }
             const theExpiration = configuration.expiration || '1h'
             const jwtOptions: SignOptions = {}
-            if (theExpiration !== 'NEVER') {
+            if (!isNever(theExpiration)) {
               jwtOptions.expiresIn = theExpiration as StringValue
             }
             debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
@@ -805,7 +808,7 @@ function tokenSecurityFactory(
   }): void => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
-    if (theExpiration !== 'NEVER') {
+    if (!isNever(theExpiration)) {
       jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
         expiresIn: theExpiration as StringValue
       })
@@ -1629,7 +1632,7 @@ function tokenSecurityFactory(
         const jwtOptions: SignOptions = {}
 
         const expiresIn = body.expiration || theConfig.expiration
-        if (expiresIn !== 'NEVER') {
+        if (!isNever(expiresIn)) {
           jwtOptions.expiresIn = expiresIn as StringValue
         }
         const token = jwt.sign(payload, theConfig.secretKey, jwtOptions)
