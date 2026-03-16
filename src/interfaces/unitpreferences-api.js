@@ -1,6 +1,7 @@
 const express = require('express')
 const fs = require('fs')
 const path = require('path')
+const { atomicWriteFileSync } = require('../atomicWrite')
 const busboy = require('busboy')
 const { compile } = require('mathjs')
 const { createDebug } = require('../debug')
@@ -176,7 +177,7 @@ module.exports = function (app) {
   router.put('/config', (req, res) => {
     try {
       const configPath = path.join(UNITPREFS_DIR, 'config.json')
-      fs.writeFileSync(configPath, JSON.stringify(req.body, null, 2))
+      atomicWriteFileSync(configPath, JSON.stringify(req.body, null, 2))
       reloadPreset()
       app.emit('unitpreferencesChanged', { type: 'global' })
       res.json({ success: true })
@@ -241,7 +242,7 @@ module.exports = function (app) {
         UNITPREFS_DIR,
         'custom-units-definitions.json'
       )
-      fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
+      atomicWriteFileSync(customPath, JSON.stringify(req.body, null, 2))
       reloadCustomDefinitions()
       app.emit('unitpreferencesChanged', { type: 'global' })
       res.json({ success: true })
@@ -266,7 +267,7 @@ module.exports = function (app) {
   router.put('/custom-categories', (req, res) => {
     try {
       const customPath = path.join(UNITPREFS_DIR, 'custom-categories.json')
-      fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
+      atomicWriteFileSync(customPath, JSON.stringify(req.body, null, 2))
       reloadCustomCategories()
       app.emit('unitpreferencesChanged', { type: 'global' })
       res.json({ success: true })
@@ -394,7 +395,7 @@ module.exports = function (app) {
       }
 
       const presetPath = path.join(customDir, `${presetName}.json`)
-      fs.writeFileSync(presetPath, JSON.stringify(req.body, null, 2))
+      atomicWriteFileSync(presetPath, JSON.stringify(req.body, null, 2))
       res.json({ success: true })
     } catch (err) {
       debug('Error saving custom preset:', err)
@@ -576,7 +577,7 @@ module.exports = function (app) {
 
         // Save the preset
         const presetPath = path.join(customDir, `${presetName}.json`)
-        fs.writeFileSync(presetPath, JSON.stringify(preset, null, 2))
+        atomicWriteFileSync(presetPath, JSON.stringify(preset, null, 2))
 
         debug(`Custom preset uploaded: ${presetName}`)
         sendResponse(200, {
