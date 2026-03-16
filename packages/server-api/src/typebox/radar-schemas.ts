@@ -4,6 +4,10 @@
 
 import { Type, type Static } from '@sinclair/typebox'
 
+// ---------------------------------------------------------------------------
+// Radar status enum
+// ---------------------------------------------------------------------------
+
 export const RadarStatusSchema = Type.Union(
   [
     Type.Literal('off'),
@@ -17,6 +21,10 @@ export const RadarStatusSchema = Type.Union(
   }
 )
 export type RadarStatusSchemaType = Static<typeof RadarStatusSchema>
+
+// ---------------------------------------------------------------------------
+// Control value (auto + value)
+// ---------------------------------------------------------------------------
 
 export const RadarControlValueSchema = Type.Object(
   {
@@ -34,6 +42,10 @@ export const RadarControlValueSchema = Type.Object(
   }
 )
 export type RadarControlValueSchemaType = Static<typeof RadarControlValueSchema>
+
+// ---------------------------------------------------------------------------
+// Radar controls
+// ---------------------------------------------------------------------------
 
 export const RadarControlsSchema = Type.Object(
   {
@@ -68,6 +80,10 @@ export const RadarControlsSchema = Type.Object(
   }
 )
 export type RadarControlsSchemaType = Static<typeof RadarControlsSchema>
+
+// ---------------------------------------------------------------------------
+// Radar info (response model)
+// ---------------------------------------------------------------------------
 
 export const RadarInfoSchema = Type.Object(
   {
