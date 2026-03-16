@@ -178,6 +178,71 @@ function removeModule(
   runNpm(config, name, null, 'remove', onData, onErr, onClose)
 }
 
+function cleanupAfterRemove(
+  configPath: string,
+  packageName: string,
+  pluginId?: string
+) {
+  const moduleDir = path.join(configPath, 'node_modules', packageName)
+  if (fs.existsSync(moduleDir)) {
+    console.warn(
+      `${packageName}: directory still exists after npm remove, cleaning up`
+    )
+    try {
+      fs.rmSync(moduleDir, { recursive: true, force: true })
+    } catch (e: any) {
+      console.error(`Failed to remove ${moduleDir}: ${e.message}`)
+    }
+  }
+
+  const resolvedDir = path.resolve(moduleDir)
+  for (const key of Object.keys(require.cache)) {
+    if (key.startsWith(resolvedDir)) {
+      delete require.cache[key]
+    }
+  }
+
+  const packageJsonPath = path.join(configPath, 'package.json')
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
+      if (packageJson.dependencies && packageJson.dependencies[packageName]) {
+        delete packageJson.dependencies[packageName]
+        fs.writeFileSync(
+          packageJsonPath,
+          JSON.stringify(packageJson, null, 2) + '\n'
+        )
+        console.warn(`${packageName}: removed from package.json dependencies`)
+      }
+    } catch (e: any) {
+      console.error(`Failed to update package.json: ${e.message}`)
+    }
+  }
+
+  if (pluginId) {
+    const configFile = path.join(
+      configPath,
+      'plugin-config-data',
+      `${pluginId}.json`
+    )
+    if (fs.existsSync(configFile)) {
+      try {
+        fs.unlinkSync(configFile)
+      } catch (e: any) {
+        console.error(`Failed to remove ${configFile}: ${e.message}`)
+      }
+    }
+    const dataDir = path.join(configPath, 'plugin-config-data', pluginId)
+    if (fs.existsSync(dataDir)) {
+      try {
+        fs.rmSync(dataDir, { recursive: true, force: true })
+      } catch (e: any) {
+        console.error(`Failed to remove ${dataDir}: ${e.message}`)
+      }
+    }
+  }
+}
+
 export function restoreModules(
   config: Config,
   onData: (output: any) => void,
@@ -462,6 +527,7 @@ module.exports = {
   modulesWithKeyword,
   installModule,
   removeModule,
+  cleanupAfterRemove,
   isTheServerModule,
   findModulesWithKeyword,
   fetchDistTagsForPackages,
