@@ -32,7 +32,11 @@ import {
   PluginConstructor,
   Plugin,
   Path,
-  Delta
+  Delta,
+  SubscribeCallback,
+  SubscribeMessage,
+  Unsubscribes,
+  UnsubscribeMessage
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -613,6 +617,41 @@ module.exports = (theApp: any) => {
       }
     })
     appCopy.putPath = putPath
+
+    appCopy.subscriptionmanager = {
+      subscribe: (
+        command: SubscribeMessage,
+        unsubscribes: Unsubscribes,
+        errorCallback: (err: unknown) => void,
+        callback: SubscribeCallback,
+        user?: string
+      ) => {
+        const safeCallback: SubscribeCallback = (delta) => {
+          try {
+            callback(delta)
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            console.error(
+              `${packageName} subscription callback error: ${message}`
+            )
+            if (err instanceof Error && err.stack) {
+              console.error(err.stack)
+            }
+            app.setPluginError(plugin.id, `Runtime error: ${message}`)
+          }
+        }
+        app.subscriptionmanager.subscribe(
+          command,
+          unsubscribes,
+          errorCallback,
+          safeCallback,
+          user
+        )
+      },
+      unsubscribe: (msg: UnsubscribeMessage, unsubscribes: Unsubscribes) => {
+        app.subscriptionmanager.unsubscribe(msg, unsubscribes)
+      }
+    }
 
     const weatherApi: WeatherApi = app.weatherApi
     appCopy.registerWeatherProvider = (provider: WeatherProvider) => {

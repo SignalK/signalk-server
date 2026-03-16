@@ -386,6 +386,8 @@ class Server {
     app.on('nmea2000OutAvailable', () => {
       app.isNmea2000OutAvailable = true
     })
+
+    installProcessErrorHandlers(app)
   }
 
   start() {
@@ -608,6 +610,41 @@ class Server {
 }
 
 module.exports = Server
+
+function identifyPluginFromStack(
+  stack: string,
+  plugins: Array<{ id: string; packageName: string }>
+): string | undefined {
+  for (const plugin of plugins) {
+    if (stack.includes(plugin.packageName)) {
+      return plugin.id
+    }
+  }
+  return undefined
+}
+
+function installProcessErrorHandlers(app: any) {
+  process.on('uncaughtException', (err: Error) => {
+    console.error('Uncaught exception:', err)
+    if (app.plugins) {
+      const pluginId = identifyPluginFromStack(err.stack ?? '', app.plugins)
+      if (pluginId) {
+        app.setPluginError(pluginId, `Uncaught error: ${err.message}`)
+      }
+    }
+  })
+
+  process.on('unhandledRejection', (reason: unknown) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason))
+    console.error('Unhandled rejection:', err)
+    if (app.plugins) {
+      const pluginId = identifyPluginFromStack(err.stack ?? '', app.plugins)
+      if (pluginId) {
+        app.setPluginError(pluginId, `Unhandled rejection: ${err.message}`)
+      }
+    }
+  })
+}
 
 function createServer(app: any, cb: (err: any, server?: any) => void) {
   if (app.config.settings.ssl) {
