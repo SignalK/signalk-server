@@ -14,6 +14,10 @@ import {
   GeoJsonMultiPolygonGeometrySchema
 } from './shared-schemas'
 
+// ---------------------------------------------------------------------------
+// Resource href
+// ---------------------------------------------------------------------------
+
 /**
  * Signal K resource href — generic pointer to any resource type by UUID.
  */
@@ -23,6 +27,10 @@ export const SignalKHrefSchema = Type.String({
   description:
     'Reference to a related resource. A pointer to the resource UUID.'
 })
+
+// ---------------------------------------------------------------------------
+// Common resource attributes
+// ---------------------------------------------------------------------------
 
 /** Href attribute — used to link a note to another resource */
 export const HrefAttributeSchema = Type.Object(
@@ -39,6 +47,10 @@ export const PositionAttributeSchema = Type.Object(
   },
   { $id: 'ResourcePositionAttribute', description: 'Resource location.' }
 )
+
+// ---------------------------------------------------------------------------
+// Base response model — timestamp and $source metadata
+// ---------------------------------------------------------------------------
 
 export const BaseResponseModelSchema = Type.Object(
   {
@@ -57,6 +69,10 @@ export const BaseResponseModelSchema = Type.Object(
     description: 'Metadata fields included in resource responses'
   }
 )
+
+// ---------------------------------------------------------------------------
+// Route
+// ---------------------------------------------------------------------------
 
 /** Route point metadata */
 export const RoutePointMetaSchema = Type.Object(
@@ -109,6 +125,10 @@ export const RouteSchema = Type.Object(
 )
 export type RouteResource = Static<typeof RouteSchema>
 
+// ---------------------------------------------------------------------------
+// Waypoint
+// ---------------------------------------------------------------------------
+
 /** Waypoint resource */
 export const WaypointSchema = Type.Object(
   {
@@ -141,6 +161,10 @@ export const WaypointSchema = Type.Object(
 )
 export type WaypointResource = Static<typeof WaypointSchema>
 
+// ---------------------------------------------------------------------------
+// Region
+// ---------------------------------------------------------------------------
+
 /** Region resource */
 export const RegionSchema = Type.Object(
   {
@@ -170,6 +194,10 @@ export const RegionSchema = Type.Object(
   }
 )
 export type RegionResource = Static<typeof RegionSchema>
+
+// ---------------------------------------------------------------------------
+// Note
+// ---------------------------------------------------------------------------
 
 /** Note base model */
 export const NoteBaseModelSchema = Type.Object(
@@ -215,6 +243,10 @@ export const NoteSchema = Type.Intersect(
   }
 )
 export type NoteResource = Static<typeof NoteSchema>
+
+// ---------------------------------------------------------------------------
+// Chart
+// ---------------------------------------------------------------------------
 
 /** Tile layer source */
 export const TileLayerSourceSchema = Type.Object(
@@ -315,6 +347,10 @@ export const ChartSchema = Type.Intersect(
   }
 )
 export type ChartResource = Static<typeof ChartSchema>
+
+// ---------------------------------------------------------------------------
+// Resources API action responses
+// ---------------------------------------------------------------------------
 
 /**
  * 200 success response with resource ID.
