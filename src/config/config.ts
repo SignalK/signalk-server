@@ -159,8 +159,8 @@ export function load(app: ConfigApp) {
 
   // Load unit preferences
   try {
-    loadUnitPreferences()
     setApplicationDataPath(app.config.configPath)
+    loadUnitPreferences()
     debug('Unit preferences loaded')
   } catch (err) {
     console.error('Failed to load unit preferences:', err)
