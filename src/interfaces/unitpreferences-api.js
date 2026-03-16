@@ -139,10 +139,7 @@ const {
 const PACKAGE_UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
 
 module.exports = function (app) {
-  const CONFIG_UNITPREFS_DIR = path.join(
-    app.config.configPath,
-    'unitpreferences'
-  )
+  const configUnitprefsDir = path.join(app.config.configPath, 'unitpreferences')
 
   function checkPresetExists(presetName) {
     const builtInPath = path.join(
@@ -154,7 +151,7 @@ module.exports = function (app) {
       return { type: 'builtin' }
     }
     const customPath = path.join(
-      CONFIG_UNITPREFS_DIR,
+      configUnitprefsDir,
       'presets/custom',
       `${presetName}.json`
     )
@@ -180,7 +177,7 @@ module.exports = function (app) {
   // PUT /signalk/v1/unitpreferences/config
   router.put('/config', (req, res) => {
     try {
-      const configPath = path.join(CONFIG_UNITPREFS_DIR, 'config.json')
+      const configPath = path.join(configUnitprefsDir, 'config.json')
       fs.writeFileSync(configPath, JSON.stringify(req.body, null, 2))
       reloadPreset()
       app.emit('unitpreferencesChanged', { type: 'global' })
@@ -217,7 +214,7 @@ module.exports = function (app) {
   router.get('/custom-definitions', (req, res) => {
     try {
       const customPath = path.join(
-        CONFIG_UNITPREFS_DIR,
+        configUnitprefsDir,
         'custom-units-definitions.json'
       )
       if (fs.existsSync(customPath)) {
@@ -243,7 +240,7 @@ module.exports = function (app) {
       }
 
       const customPath = path.join(
-        CONFIG_UNITPREFS_DIR,
+        configUnitprefsDir,
         'custom-units-definitions.json'
       )
       fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
@@ -270,10 +267,7 @@ module.exports = function (app) {
   // PUT /signalk/v1/unitpreferences/custom-categories
   router.put('/custom-categories', (req, res) => {
     try {
-      const customPath = path.join(
-        CONFIG_UNITPREFS_DIR,
-        'custom-categories.json'
-      )
+      const customPath = path.join(configUnitprefsDir, 'custom-categories.json')
       fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
       reloadCustomCategories()
       app.emit('unitpreferencesChanged', { type: 'global' })
@@ -288,7 +282,7 @@ module.exports = function (app) {
   router.get('/presets', (req, res) => {
     try {
       const presetsDir = path.join(PACKAGE_UNITPREFS_DIR, 'presets')
-      const customDir = path.join(CONFIG_UNITPREFS_DIR, 'presets', 'custom')
+      const customDir = path.join(configUnitprefsDir, 'presets', 'custom')
 
       const builtIn = []
       const custom = []
@@ -342,7 +336,7 @@ module.exports = function (app) {
 
       // Check custom presets in config dir first
       const customPath = path.join(
-        CONFIG_UNITPREFS_DIR,
+        configUnitprefsDir,
         'presets/custom',
         `${presetName}.json`
       )
@@ -396,7 +390,7 @@ module.exports = function (app) {
         return
       }
 
-      const customDir = path.join(CONFIG_UNITPREFS_DIR, 'presets/custom')
+      const customDir = path.join(configUnitprefsDir, 'presets/custom')
       if (!fs.existsSync(customDir)) {
         fs.mkdirSync(customDir, { recursive: true })
       }
@@ -421,7 +415,7 @@ module.exports = function (app) {
       }
 
       const presetPath = path.join(
-        CONFIG_UNITPREFS_DIR,
+        configUnitprefsDir,
         'presets/custom',
         `${presetName}.json`
       )
@@ -594,7 +588,7 @@ module.exports = function (app) {
         }
 
         // Ensure custom directory exists
-        const customDir = path.join(CONFIG_UNITPREFS_DIR, 'presets/custom')
+        const customDir = path.join(configUnitprefsDir, 'presets/custom')
         if (!fs.existsSync(customDir)) {
           fs.mkdirSync(customDir, { recursive: true })
         }
