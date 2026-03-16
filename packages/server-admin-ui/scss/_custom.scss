@@ -274,3 +274,20 @@ form.rjsf {
 .badge.bg-danger {
   color: #fff !important;
 }
+
+// Plugin config: scrollable list and connected panels on desktop
+@media (min-width: 1200px) {
+  .plugin-list-container {
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+  }
+  .plugin-config-row > :first-child .card {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .plugin-config-row > :last-child .card {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 0;
+  }
+}

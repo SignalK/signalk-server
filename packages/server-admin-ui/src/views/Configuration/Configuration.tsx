@@ -20,7 +20,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
 import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 
 interface PluginSchema {
@@ -73,6 +72,7 @@ export default function PluginConfigurationList() {
   const [isFiltering, startFilterTransition] = useTransition()
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
+  const configCardRef = useRef<HTMLDivElement>(null)
 
   const searchPlugins = useCallback(
     (pluginList: Plugin[], searchString: string): Plugin[] => {
@@ -153,18 +153,35 @@ export default function PluginConfigurationList() {
     }
   }, [])
 
-  const selectPlugin = useCallback((plugin: Plugin | null) => {
-    const selectedPluginId = plugin ? plugin.id : null
-
-    // Keep URL static for best performance
-    if (selectedPluginId) {
-      localStorage.setItem(openPluginStorageKey, selectedPluginId)
-      setSelectedPlugin(plugin)
-    } else {
-      localStorage.removeItem(openPluginStorageKey)
-      setSelectedPlugin(null)
-    }
+  const scrollToConfigCard = useCallback(() => {
+    if (!configCardRef.current) return
+    requestAnimationFrame(() => {
+      const rect = configCardRef.current!.getBoundingClientRect()
+      const navbarHeight =
+        document.querySelector('.app-header')?.getBoundingClientRect().height ??
+        55
+      window.scrollBy({
+        top: rect.top - navbarHeight,
+        behavior: 'smooth'
+      })
+    })
   }, [])
+
+  const selectPlugin = useCallback(
+    (plugin: Plugin | null) => {
+      const selectedPluginId = plugin ? plugin.id : null
+
+      if (selectedPluginId) {
+        localStorage.setItem(openPluginStorageKey, selectedPluginId)
+        setSelectedPlugin(plugin)
+        requestAnimationFrame(() => scrollToConfigCard())
+      } else {
+        localStorage.removeItem(openPluginStorageKey)
+        setSelectedPlugin(null)
+      }
+    },
+    [scrollToConfigCard]
+  )
 
   const handleSearch = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value
@@ -191,9 +208,7 @@ export default function PluginConfigurationList() {
       const plugin = plugins.find((p) => p.id === pluginId)
 
       if (plugin) {
-        const currentlySelected =
-          selectedPlugin && selectedPlugin.id === plugin.id
-        selectPlugin(currentlySelected ? null : plugin)
+        selectPlugin(plugin)
       }
     },
     [plugins, selectedPlugin, selectPlugin]
@@ -298,27 +313,24 @@ export default function PluginConfigurationList() {
   const selectedPluginId = selectedPlugin ? selectedPlugin.id : null
 
   return (
-    <div>
-      <Card>
-        <Card.Header>
-          <FontAwesomeIcon icon={faAlignJustify} />{' '}
-          <strong>Plugin Configuration</strong>
-        </Card.Header>
-        <Card.Body>
-          <Form
-            action=""
-            method="post"
-            encType="multipart/form-data"
-            className="form-horizontal"
-            onSubmit={(e: FormEvent) => {
-              e.preventDefault()
-            }}
-          >
-            <Form.Group as={Row}>
-              <Col xs="3" md="1" className={'col-form-label'}>
-                <Form.Label htmlFor="search">Search</Form.Label>
-              </Col>
-              <Col xs="12" md="4">
+    <Row className="plugin-config-row g-0">
+      <Col xl={6}>
+        <Card>
+          <Card.Header>
+            <FontAwesomeIcon icon={faAlignJustify} />{' '}
+            <strong>Plugin Configuration</strong>
+          </Card.Header>
+          <Card.Body>
+            <Form
+              action=""
+              method="post"
+              encType="multipart/form-data"
+              className="form-horizontal"
+              onSubmit={(e: FormEvent) => {
+                e.preventDefault()
+              }}
+            >
+              <Form.Group className="mb-2">
                 <Form.Control
                   type="text"
                   name="search"
@@ -327,131 +339,126 @@ export default function PluginConfigurationList() {
                   value={search}
                   placeholder="Search plugins..."
                 />
-              </Col>
-              <Col xs="3" md="2" className={'col-form-label'}>
-                <Form.Label htmlFor="statusFilter">Filter by Status</Form.Label>
-              </Col>
-              <Col xs="12" md="3">
+              </Form.Group>
+              <Form.Group className="mb-2">
                 <Form.Select
                   name="statusFilter"
                   id="statusFilter"
                   onChange={handleStatusFilter}
                   value={statusFilter}
+                  size="sm"
                 >
                   <option value="all">All Plugins</option>
                   <option value="enabled">Enabled</option>
                   <option value="disabled">Disabled</option>
                 </Form.Select>
-              </Col>
-            </Form.Group>
-          </Form>
+              </Form.Group>
+            </Form>
 
-          <div
-            ref={tableContainerRef}
-            style={{
-              maxHeight: '400px',
-              overflowY: 'auto',
-              border: '1px solid #dee2e6',
-              opacity: isFiltering ? 0.7 : 1,
-              transition: 'opacity 0.2s'
-            }}
-          >
-            <Table responsive bordered striped size="sm" hover className="mb-0">
-              <thead
-                style={{
-                  position: 'sticky',
-                  top: 0,
-                  backgroundColor: '#f8f9fa',
-                  zIndex: 1
-                }}
-              >
-                <tr>
-                  <th style={{ width: '30%' }}>Plugin Name</th>
-                  <th style={{ width: '15%' }}>Status</th>
-                  <th style={{ width: '55%' }}>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pluginList.map((plugin) => {
-                  const isSelected = selectedPluginId === plugin.id
-                  const configurationRequired =
-                    plugin.schema &&
-                    plugin.schema.properties &&
-                    Object.keys(plugin.schema?.properties).length !== 0 &&
-                    (plugin.data.configuration === null ||
-                      plugin.data.configuration === undefined)
+            <div
+              ref={tableContainerRef}
+              className="plugin-list-container"
+              style={{
+                border: '1px solid #dee2e6',
+                opacity: isFiltering ? 0.7 : 1,
+                transition: 'opacity 0.2s'
+              }}
+            >
+              <Table responsive bordered size="sm" hover className="mb-0">
+                <thead
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    backgroundColor: '#f8f9fa',
+                    zIndex: 1
+                  }}
+                >
+                  <tr>
+                    <th>Plugin Name</th>
+                    <th style={{ width: '1%', whiteSpace: 'nowrap' }}>
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pluginList.map((plugin) => {
+                    const isSelected = selectedPluginId === plugin.id
+                    const configurationRequired =
+                      plugin.schema &&
+                      plugin.schema.properties &&
+                      Object.keys(plugin.schema?.properties).length !== 0 &&
+                      (plugin.data.configuration === null ||
+                        plugin.data.configuration === undefined)
 
-                  const isWasmPlugin = plugin.type === 'wasm'
-                  const wasmDisabledForPlugin = isWasmPlugin && !wasmEnabled
+                    const isWasmPlugin = plugin.type === 'wasm'
+                    const wasmDisabledForPlugin = isWasmPlugin && !wasmEnabled
 
-                  let badgeClass = 'text-bg-secondary'
-                  let badgeText = 'Disabled'
+                    let badgeClass = 'text-bg-secondary'
+                    let badgeText = 'Disabled'
 
-                  if (wasmDisabledForPlugin) {
-                    badgeClass = 'text-bg-danger'
-                    badgeText = 'WASM disabled'
-                  } else if (plugin.data.enabled && !configurationRequired) {
-                    badgeClass = 'text-bg-success'
-                    badgeText = 'Enabled'
-                  }
+                    if (wasmDisabledForPlugin) {
+                      badgeClass = 'text-bg-danger'
+                      badgeText = 'WASM disabled'
+                    } else if (plugin.data.enabled && !configurationRequired) {
+                      badgeClass = 'text-bg-success'
+                      badgeText = 'Enabled'
+                    }
 
-                  return (
-                    <tr
-                      key={plugin.id}
-                      data-plugin-id={plugin.id}
-                      onClick={handlePluginClick}
-                      style={{ cursor: 'pointer' }}
-                      className={isSelected ? 'table-active' : ''}
-                    >
-                      <td>
-                        <strong>{plugin.name}</strong>
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center justify-content-between">
+                    return (
+                      <tr
+                        key={plugin.id}
+                        data-plugin-id={plugin.id}
+                        onClick={handlePluginClick}
+                        style={{ cursor: 'pointer' }}
+                        className={isSelected ? 'table-active' : ''}
+                      >
+                        <td>
+                          <strong>{plugin.name}</strong>
+                        </td>
+                        <td>
                           <div className={`badge ${badgeClass}`}>
                             {badgeText}
                           </div>
-                          <FontAwesomeIcon
-                            icon={faGear}
-                            className="text-muted"
-                            style={{ fontSize: '16px' }}
-                            title="Click to configure"
-                          />
-                        </div>
-                      </td>
-                      <td>
-                        <small>
-                          {plugin.description || 'No description available'}
-                        </small>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </Table>
-          </div>
-        </Card.Body>
-      </Card>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </Table>
+            </div>
+          </Card.Body>
+        </Card>
+      </Col>
 
-      {selectedPlugin && (
-        <PluginConfigCard
-          plugin={selectedPlugin}
-          isConfigurator={isConfigurator(selectedPlugin)}
-          saveData={(data: PluginData) => {
-            // Only auto-enable on first-ever configuration save
-            // Check if plugin was never configured before (no enabled state set)
-            // This allows plugins that are already enabled/disabled to be toggled
-            if (
-              selectedPlugin.data.enabled === undefined &&
-              data.enabled === undefined
-            ) {
-              data.enabled = true
-            }
-            return saveData(selectedPlugin.id, data)
-          }}
-        />
-      )}
-    </div>
+      <Col xl={6} ref={configCardRef}>
+        {selectedPlugin && (
+          <PluginConfigCard
+            plugin={selectedPlugin}
+            isConfigurator={isConfigurator(selectedPlugin)}
+            saveData={(data: PluginData) => {
+              if (
+                selectedPlugin.data.enabled === undefined &&
+                data.enabled === undefined
+              ) {
+                data.enabled = true
+              }
+              return saveData(selectedPlugin.id, data)
+            }}
+          />
+        )}
+        {!selectedPlugin && (
+          <Card className="mt-3 mt-xl-0">
+            <Card.Body className="text-center text-muted py-5">
+              <FontAwesomeIcon
+                icon={faGear}
+                style={{ fontSize: '48px', opacity: 0.3 }}
+              />
+              <p className="mt-3">Select a plugin to configure</p>
+            </Card.Body>
+          </Card>
+        )}
+      </Col>
+    </Row>
   )
 }
 
@@ -467,10 +474,7 @@ function PluginConfigCard({
   saveData
 }: PluginConfigCardProps) {
   const [showSaveSuccess, setShowSaveSuccess] = useState(false)
-  const configCardRef = useRef<HTMLDivElement>(null)
 
-  // useOptimistic with simple replacement - the updater ignores current state
-  // since each optimistic update contains the complete new state
   const [optimisticData, setOptimisticData] = useOptimistic<
     PluginData,
     PluginData
@@ -480,7 +484,7 @@ function PluginConfigCard({
     setShowSaveSuccess(true)
     setTimeout(() => {
       setShowSaveSuccess(false)
-    }, 3000) // Hide after 3 seconds
+    }, 3000)
   }, [])
 
   const handleToggle = useCallback(
@@ -525,7 +529,7 @@ function PluginConfigCard({
           </div>
         </div>
       )}
-      <Card className="mt-3 plugin-config-card" ref={configCardRef}>
+      <Card className="mt-3 mt-xl-0 plugin-config-card">
         <Card.Header id="plugin-config-header">
           <Row className="mb-2">
             <Col className={'align-self-center'}>
@@ -537,6 +541,11 @@ function PluginConfigCard({
                 Configure: {plugin.name}
               </h5>
               <small className="text-muted">{plugin.packageName}</small>
+              {plugin.description && (
+                <p className="text-muted mb-0 mt-1">
+                  <small>{plugin.description}</small>
+                </p>
+              )}
             </Col>
           </Row>
           {!configurationRequired && (
@@ -603,55 +612,16 @@ function PluginConfigCard({
         </Card.Header>
         <Card.Body>
           {!isConfigurator && (
-            <div>
-              <PluginConfigurationForm
-                plugin={plugin}
-                onSubmit={(data: PluginData) => {
-                  saveData(data)
-                    .then(() => {
-                      showSuccessMessage()
-                    })
-                    .catch(() => {
-                      // Error is already handled in saveData with alert
-                    })
-                }}
-              />
-              {/* Sticky submit button */}
-              <div
-                style={{
-                  position: 'fixed',
-                  bottom: '20px',
-                  right: '20px',
-                  zIndex: 1000,
-                  backgroundColor: '#fff',
-                  padding: '10px',
-                  borderRadius: '5px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                  border: '1px solid #dee2e6'
-                }}
-              >
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    // Find and trigger the form's submit button
-                    const formSubmitBtn = document.querySelector(
-                      '.plugin-config-card form button[type="submit"]'
-                    ) as HTMLButtonElement | null
-                    if (formSubmitBtn) {
-                      formSubmitBtn.click()
-                    }
-                  }}
-                  style={{ minWidth: '140px' }}
-                >
-                  <FontAwesomeIcon
-                    icon={faFloppyDisk}
-                    style={{ marginRight: '8px' }}
-                  />
-                  Save Configuration
-                </button>
-              </div>
-            </div>
+            <PluginConfigurationForm
+              plugin={plugin}
+              onSubmit={(data: PluginData) => {
+                saveData(data)
+                  .then(() => {
+                    showSuccessMessage()
+                  })
+                  .catch(() => {})
+              }}
+            />
           )}
           {isConfigurator && (
             <EmbeddedPluginConfigurationForm
