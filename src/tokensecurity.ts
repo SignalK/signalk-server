@@ -734,6 +734,12 @@ function tokenSecurityFactory(
         no_redir(req, res, next)
       }
     )
+    app.use(
+      '/signalk/v1/snapshot/*',
+      function (req: Request, res: Response, next: NextFunction) {
+        no_redir(req, res, next)
+      }
+    )
     app.put('/signalk/v1/*', writeAuthenticationMiddleware())
   }
 
