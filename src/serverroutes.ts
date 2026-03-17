@@ -641,7 +641,7 @@ module.exports = function (
     const settings: any = {
       interfaces: {},
       options: {
-        mdns: app.config.settings.mdns || false,
+        mdns: app.config.settings.mdns ?? true,
         wsCompression: app.config.settings.wsCompression || false,
         wsPingInterval: app.config.settings.wsPingInterval ?? 30000,
         accessLogging:
