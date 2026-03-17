@@ -1075,12 +1075,12 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up QEMU for ARM emulation
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: linux/arm/v7
 
       - name: Cache npm for armv7
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/.npm-armv7-cache
           key: armv7-npm-${{ hashFiles('**/package-lock.json', '**/package.json') }}
