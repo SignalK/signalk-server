@@ -950,15 +950,42 @@ jobs:
             process.exit(0);
           }
 
-          console.log('');
-          console.log('::error::Plugin depends on native addons: ' + nativeModules.join(', '));
-          console.log('::error::SignalK App Store uses --ignore-scripts — native addons will NOT be compiled.');
-          console.log('::error::The plugin will install but CRASH at runtime.');
-          console.log('');
-          console.log('Use alternatives that do not require native compilation, e.g.:');
-          console.log('  - node:sqlite (built into Node >= 22) instead of better-sqlite3');
-          console.log('  - Pure JavaScript packages instead of native addons');
-          process.exit(1);
+          // Classify native modules as required vs optional using the lockfile
+          const optionalSet = new Set();
+          const lockPath = path.join(nmDir, '.package-lock.json');
+          if (fs.existsSync(lockPath)) {
+            try {
+              const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+              for (const [key, meta] of Object.entries(lock.packages || {})) {
+                if (meta.optional) optionalSet.add(path.basename(key));
+              }
+            } catch (e) { /* ignore parse errors — treat all as required */ }
+          }
+
+          const requiredNative = nativeModules.filter(m => !optionalSet.has(m));
+          const optionalNative = nativeModules.filter(m => optionalSet.has(m));
+
+          if (optionalNative.length > 0) {
+            console.log('');
+            console.log('::warning::Optional native addons found: ' + optionalNative.join(', '));
+            console.log('::warning::SignalK App Store uses --ignore-scripts — these will NOT be compiled.');
+            console.log('::warning::The parent package declares them optional, so the plugin may still work.');
+            console.log('::warning::Plugin authors should verify the plugin works without these native modules.');
+          }
+
+          if (requiredNative.length > 0) {
+            console.log('');
+            console.log('::error::Plugin depends on native addons: ' + requiredNative.join(', '));
+            console.log('::error::SignalK App Store uses --ignore-scripts — native addons will NOT be compiled.');
+            console.log('::error::The plugin will install but CRASH at runtime.');
+            console.log('');
+            console.log('Use alternatives that do not require native compilation, e.g.:');
+            console.log('  - node:sqlite (built into Node >= 22) instead of better-sqlite3');
+            console.log('  - Pure JavaScript packages instead of native addons');
+            process.exit(1);
+          }
+
+          process.exit(0);
           CHECKSCRIPT
           node "$RUNNER_TEMP/check-native.js"
 
