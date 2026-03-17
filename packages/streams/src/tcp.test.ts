@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { expect } from 'chai'
 import net from 'net'
 import { Writable } from 'stream'
@@ -125,6 +126,120 @@ describe('TcpStream', () => {
       providerId: 'test-tcp',
       toStdout: 'stdoutEvent',
       createDebug: createDebugStub()
+    })
+
+    const writable = createCollectingWritable()
+    tcp.pipe(writable)
+  })
+
+  it('skips outEvent writes when send buffer exceeds threshold', function (done) {
+    this.timeout(5000)
+
+    server.on('connection', () => {
+      // accept connection, do nothing
+    })
+
+    const app = createMockApp()
+    const debugMessages: string[] = []
+    const createDebug = () => {
+      const fn = Object.assign(
+        (...args: unknown[]): void => {
+          debugMessages.push(String(args[0]))
+        },
+        { enabled: true }
+      )
+      return fn
+    }
+
+    const origSetStatus = app.setProviderStatus.bind(app)
+    app.setProviderStatus = (id: string, msg: string) => {
+      origSetStatus(id, msg)
+      if (msg.includes('Connected')) {
+        const tcpStream = (tcp as any).tcpStream as net.Socket | undefined
+        if (tcpStream) {
+          Object.defineProperty(tcpStream, 'writableLength', {
+            get: () => 1024 * 1024,
+            configurable: true
+          })
+        }
+
+        app.emit('tcpOut', 'should be skipped')
+
+        setTimeout(() => {
+          const skipped = debugMessages.some((m) =>
+            m.includes('outEvent write skipped')
+          )
+          expect(skipped).to.equal(true)
+          tcp.end()
+          done()
+        }, 100)
+      }
+    }
+
+    const tcp = new TcpStream({
+      host: '127.0.0.1',
+      port: serverPort,
+      app,
+      providerId: 'test-tcp',
+      outEvent: 'tcpOut',
+      createDebug
+    })
+
+    const writable = createCollectingWritable()
+    tcp.pipe(writable)
+  })
+
+  it('skips toStdout writes when send buffer exceeds threshold', function (done) {
+    this.timeout(5000)
+
+    server.on('connection', () => {
+      // accept connection, do nothing
+    })
+
+    const app = createMockApp()
+    const debugMessages: string[] = []
+    const createDebug = () => {
+      const fn = Object.assign(
+        (...args: unknown[]): void => {
+          debugMessages.push(String(args[0]))
+        },
+        { enabled: true }
+      )
+      return fn
+    }
+
+    const origSetStatus = app.setProviderStatus.bind(app)
+    app.setProviderStatus = (id: string, msg: string) => {
+      origSetStatus(id, msg)
+      if (msg.includes('Connected')) {
+        const tcpStream = (tcp as any).tcpStream as net.Socket | undefined
+        if (tcpStream) {
+          Object.defineProperty(tcpStream, 'writableLength', {
+            get: () => 1024 * 1024,
+            configurable: true
+          })
+        }
+
+        app.emit('stdoutEvent', 'should be skipped')
+
+        setTimeout(() => {
+          const skipped = debugMessages.some((m) =>
+            m.includes('toStdout write skipped')
+          )
+          expect(skipped).to.equal(true)
+          tcp.end()
+          done()
+        }, 100)
+      }
+    }
+
+    const tcp = new TcpStream({
+      host: '127.0.0.1',
+      port: serverPort,
+      app,
+      providerId: 'test-tcp',
+      toStdout: 'stdoutEvent',
+      createDebug
     })
 
     const writable = createCollectingWritable()
