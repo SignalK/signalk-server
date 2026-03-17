@@ -19,11 +19,36 @@ import split from 'split'
 import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { Unsubscribes } from '@signalk/server-api'
+import {
+  AccumulatedItem,
+  accumulateLatestValue,
+  buildFlushDeltas
+} from '../LatestValuesAccumulator'
 const debug = createDebug('signalk-server:interfaces:tcp:signalk')
+
+const BACKPRESSURE_ENTER_THRESHOLD = process.env.BACKPRESSURE_ENTER
+  ? parseInt(process.env.BACKPRESSURE_ENTER, 10)
+  : 512 * 1024
+const BACKPRESSURE_EXIT_THRESHOLD = process.env.BACKPRESSURE_EXIT
+  ? parseInt(process.env.BACKPRESSURE_EXIT, 10)
+  : 1024
+const MAXSENDBUFFERSIZE = process.env.MAXSENDBUFFERSIZE
+  ? parseInt(process.env.MAXSENDBUFFERSIZE, 10)
+  : 4 * 512 * 1024
+const MAXSENDBUFFERCHECKTIME = process.env.MAXSENDBUFFERCHECKTIME
+  ? parseInt(process.env.MAXSENDBUFFERCHECKTIME, 10)
+  : 30 * 1000
 
 interface SocketWithId extends Socket {
   id?: number
   name?: string
+}
+
+interface TcpBackpressureState {
+  active: boolean
+  accumulator: Map<string, AccumulatedItem>
+  since: number | null
+  bufferSizeExceeded: number | undefined
 }
 
 module.exports = (app: SignalKServer) => {
@@ -39,17 +64,39 @@ module.exports = (app: SignalKServer) => {
       return
     }
     debug('Starting tcp interface')
+    debug(
+      'Backpressure thresholds: enter=%d, exit=%d, max=%d, maxTime=%d',
+      BACKPRESSURE_ENTER_THRESHOLD,
+      BACKPRESSURE_EXIT_THRESHOLD,
+      MAXSENDBUFFERSIZE,
+      MAXSENDBUFFERCHECKTIME
+    )
 
     server = createServer((socket: SocketWithId) => {
       socket.id = idSequence++
       socket.name = socket.remoteAddress + ':' + socket.remotePort
       debug('Connected:' + socket.id + ' ' + socket.name)
 
+      const backpressure: TcpBackpressureState = {
+        active: false,
+        accumulator: new Map(),
+        since: null,
+        bufferSizeExceeded: undefined
+      }
+
       socket.on('error', (err: Error) => {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
       })
       socket.on('close', (hadError) => {
         debug('Close:' + hadError + ' ' + socket.id + ' ' + socket.name)
+      })
+
+      socket.on('drain', () => {
+        if (backpressure.active && backpressure.accumulator.size > 0) {
+          if (socket.writableLength <= BACKPRESSURE_EXIT_THRESHOLD) {
+            flushAccumulator(socket, backpressure)
+          }
+        }
       })
 
       const unsubscibes: Unsubscribes = []
@@ -65,12 +112,16 @@ module.exports = (app: SignalKServer) => {
             }
           })
         )
-        .on('data', socketMessageHandler(app, socket, unsubscibes))
+        .on(
+          'data',
+          socketMessageHandler(app, socket, unsubscibes, backpressure)
+        )
         .on('error', (err: Error) => {
           console.error(err)
         })
       socket.on('end', () => {
         unsubscibes.forEach((f) => f())
+        backpressure.accumulator.clear()
         debug('Ended:' + socket.id + ' ' + socket.name)
       })
 
@@ -112,10 +163,51 @@ module.exports = (app: SignalKServer) => {
   return api
 }
 
+function flushAccumulator(
+  socket: SocketWithId,
+  backpressure: TcpBackpressureState
+): void {
+  if (backpressure.accumulator.size === 0) return
+  const countBefore = backpressure.accumulator.size
+  const duration = backpressure.since ? Date.now() - backpressure.since : 0
+  const deltas = buildFlushDeltas(backpressure.accumulator, duration)
+  for (const delta of deltas) {
+    socket.write(`${JSON.stringify(delta)}\r\n`)
+  }
+  backpressure.accumulator.clear()
+  backpressure.active = false
+  backpressure.since = null
+  debug('Flushed %d accumulated values for %s', countBefore, socket.name)
+}
+
+function assertBufferSize(
+  socket: SocketWithId,
+  backpressure: TcpBackpressureState
+): void {
+  if (MAXSENDBUFFERSIZE === 0) return
+  if (socket.writableLength > MAXSENDBUFFERSIZE) {
+    if (!backpressure.bufferSizeExceeded) {
+      console.warn(
+        `TCP ${socket.name} outgoing buffer > max:${socket.writableLength}`
+      )
+      backpressure.bufferSizeExceeded = Date.now()
+    }
+    if (Date.now() - backpressure.bufferSizeExceeded > MAXSENDBUFFERCHECKTIME) {
+      console.error(
+        'TCP send buffer overflow, terminating connection ' + socket.name
+      )
+      socket.destroy()
+    }
+  } else {
+    backpressure.bufferSizeExceeded = undefined
+  }
+}
+
 function socketMessageHandler(
   app: SignalKServer,
   socket: SocketWithId,
-  unsubscribes: Unsubscribes
+  unsubscribes: Unsubscribes,
+  backpressure: TcpBackpressureState
 ) {
   let lastUpdateErrorLogged = 0
   return (msg: any) => {
@@ -136,7 +228,24 @@ function socketMessageHandler(
         (err: any) => {
           console.error(`Subscribe  failed:${err}`)
         },
-        (aMsg: any) => socket.write(`${JSON.stringify(aMsg)}\r\n`)
+        (delta: any) => {
+          const bufferLength = socket.writableLength
+          if (bufferLength > BACKPRESSURE_ENTER_THRESHOLD) {
+            if (!backpressure.active) {
+              backpressure.active = true
+              backpressure.since = Date.now()
+              debug(
+                'Entering backpressure for %s (buffer: %d)',
+                socket.name,
+                bufferLength
+              )
+            }
+            accumulateLatestValue(backpressure.accumulator, delta)
+          } else {
+            socket.write(`${JSON.stringify(delta)}\r\n`)
+          }
+          assertBufferSize(socket, backpressure)
+        }
       )
     } else if (msg.unsubscribe) {
       debug.enabled && debug(`unsubscribe:${JSON.stringify(msg)}`)
