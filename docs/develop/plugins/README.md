@@ -8,6 +8,7 @@ children:
   - backpressure.md
   - autopilot_provider_plugins.md
   - course_calculations.md
+  - database_provider_plugins.md
   - resource_provider_plugins.md
   - weather_provider_plugins.md
   - custom_renderers.md
@@ -43,6 +44,8 @@ Plugins can:
 For example, if the plugin you are looking to develop is providing access to information such as `route,` `waypoint`, `POI`, or `charts` you should be creating a _[Resources Provider Plugin](./resource_provider_plugins.md)_ for the _[Resources API](../rest-api/resources_api.md)_.
 
 Or if you are looking to perform course calculations or integrate with an autopilot, you will want to review the _[Course API](../rest-api/course_api.md)_ documentation prior to commencing your project.
+
+If your plugin needs to persist structured data (configuration, metadata, buffered records), use the _[Database API](../rest-api/database_api.md)_ instead of shipping your own database dependency. The server provides a managed SQLite database per plugin — see the _[Database API documentation](../rest-api/database_api.md)_ for usage, or _[Database Provider Plugins](./database_provider_plugins.md)_ if you want to provide an alternative backend.
 
 **OpenApi description for your plugin's API**
 
