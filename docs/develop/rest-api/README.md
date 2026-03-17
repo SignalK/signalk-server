@@ -4,6 +4,7 @@ children:
   - conventions.md
   - autopilot_api.md
   - course_api.md
+  - database_api.md
   - history_api.md
   - notifications_api.md
   - radar_api.md
@@ -27,6 +28,7 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | [`Autopilot`](./autopilot_api.md)         | Provide the ability to send common commands to an autopilot via a provider plugin.                                                                   | `vessels/self/autopilot`         |
 | [Course](./course_api.md)                 | Set a course, follow a route, advance to next point, etc.                                                                                            | `vessels/self/navigation/course` |
+| [Database](./database_api.md)             | Server-managed relational database for plugin data storage via a provider plugin.                                                                    | `database`                       |
 | [History](./history_api.md)               | Query historical data.                                                                                                                               | `history`                        |
 | [Radar](./radar_api.md)                   | View and control marine radar equipment via a provider plugin. _(In development)_                                                                    | `vessels/self/radars`            |
 | [Resources](./resources_api.md)           | Create, view, update and delete waypoints, routes, etc.                                                                                              | `resources`                      |
