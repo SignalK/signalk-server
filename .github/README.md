@@ -23,7 +23,6 @@ jobs:
 ## Examples
 
 - [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) — Recommended one-liner shared workflow
-- [`examples/standalone-ci.yml`](examples/standalone-ci.yml) — Self-contained version (same checks, no shared workflow dependency)
 
 ## Files
 
@@ -33,6 +32,5 @@ jobs:
     plugin-ci.yml              <- Reusable workflow (lives in SignalK/signalk-server)
   examples/
     plugin-caller-example.yml  <- Drop into your plugin repo
-    standalone-ci.yml          <- Self-contained alternative
   README.md                    <- This file
 ```
