@@ -119,10 +119,10 @@ module.exports = (app: SignalKServer) => {
         .on('error', (err: Error) => {
           console.error(err)
         })
-      socket.on('end', () => {
+      socket.on('close', () => {
         unsubscibes.forEach((f) => f())
         backpressure.accumulator.clear()
-        debug('Ended:' + socket.id + ' ' + socket.name)
+        debug('Closed:' + socket.id + ' ' + socket.name)
       })
 
       socket.write(JSON.stringify(app.getHello()) + '\r\n')
@@ -167,7 +167,7 @@ function flushAccumulator(
   socket: SocketWithId,
   backpressure: TcpBackpressureState
 ): void {
-  if (backpressure.accumulator.size === 0) return
+  if (socket.destroyed || backpressure.accumulator.size === 0) return
   const countBefore = backpressure.accumulator.size
   const duration = backpressure.since ? Date.now() - backpressure.since : 0
   const deltas = buildFlushDeltas(backpressure.accumulator, duration)

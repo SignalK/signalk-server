@@ -91,7 +91,7 @@ module.exports = function (app) {
             }
             return
           }
-          bufferExceededSince[socket.id] = undefined
+          delete bufferExceededSince[socket.id]
           socket.write(data + '\r\n')
         } catch (e) {
           console.error(e + ' ' + socket)
