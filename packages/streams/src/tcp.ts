@@ -3,6 +3,10 @@ import { Transform, TransformCallback } from 'stream'
 import reconnect from 'reconnect-core'
 import type { CreateDebug, DebugLogger } from './types'
 
+const BUFFER_LIMIT = process.env.BACKPRESSURE_ENTER
+  ? parseInt(process.env.BACKPRESSURE_ENTER, 10)
+  : 512 * 1024
+
 interface TcpOptions {
   host: string
   port: number
@@ -44,6 +48,13 @@ export default class TcpStream extends Transform {
     if (this.options.outEvent) {
       this.options.app.on(this.options.outEvent, (d: string) => {
         if (this.tcpStream) {
+          if (this.tcpStream.writableLength > BUFFER_LIMIT) {
+            this.debug(
+              'outEvent write skipped, buffer full: %d',
+              this.tcpStream.writableLength
+            )
+            return
+          }
           this.debug('sending %s', d)
           this.tcpStream.write(d)
           setImmediate(() => {
@@ -61,6 +72,14 @@ export default class TcpStream extends Transform {
       for (const stdEvent of events) {
         this.options.app.on(stdEvent, (d: string) => {
           if (this.tcpStream) {
+            if (this.tcpStream.writableLength > BUFFER_LIMIT) {
+              this.debug(
+                'toStdout write skipped for %s, buffer full: %d',
+                stdEvent,
+                this.tcpStream.writableLength
+              )
+              return
+            }
             this.tcpStream.write(d + '\r\n')
             this.debug('event %s sending %s', stdEvent, d)
           }
