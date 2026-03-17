@@ -309,6 +309,31 @@ class Server {
         ) {
           data.context = ('vessels.' + app.selfId) as Context
         }
+
+        if (
+          data.updates.some((update) => {
+            if (update === null || typeof update !== 'object') {
+              return true
+            }
+            const values = (update as { values?: unknown }).values
+            return (
+              ('values' in update && !Array.isArray(values)) ||
+              (Array.isArray(values) &&
+                values.some(
+                  (v: unknown) =>
+                    v === null ||
+                    v === undefined ||
+                    typeof (v as { path?: unknown }).path !== 'string'
+                ))
+            )
+          })
+        ) {
+          console.warn(
+            `Discarding delta from ${providerId}: invalid values entry (null or missing path)`
+          )
+          return
+        }
+
         const now = new Date()
         data.updates = data.updates
           .map((update: Partial<Update>) => {
@@ -324,11 +349,6 @@ class Server {
             }
             if (!update.timestamp || app.config.overrideTimestampWithNow) {
               update.timestamp = now.toISOString() as Timestamp
-            }
-
-            if ('values' in update && !Array.isArray(update.values)) {
-              debug(`handleMessage: ignoring invalid values`, update.values)
-              delete update.values
             }
 
             if ('meta' in update && !Array.isArray(update.meta)) {
