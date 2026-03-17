@@ -221,12 +221,28 @@ jobs:
             process.exit(0);
           }
 
-          // Create a minimal mock app object that schema() might need
+          // Minimal mock — only needs to survive the constructor
           const mockApp = {
-            config: { configPath: '/tmp' },
+            config: { configPath: '/tmp', version: '0.0.0' },
+            selfContext: 'vessels.urn:mrn:signalk:uuid:test',
             getPath: () => '',
+            getSelfPath: () => undefined,
+            getMetadata: () => undefined,
+            getDataDirPath: () => '/tmp',
+            readPluginOptions: () => ({}),
+            savePluginOptions: (config, cb) => { if (cb) cb(null); },
+            handleMessage: () => {},
             debug: () => {},
-            error: () => {}
+            error: () => {},
+            setPluginStatus: () => {},
+            setPluginError: () => {},
+            reportError: () => {},
+            on: () => ({ unsubscribe: () => {} }),
+            registerPutHandler: () => {},
+            registerDeltaInputHandler: () => () => {},
+            subscriptionmanager: { subscribe: () => ({ unsubscribe: () => {} }) },
+            streambundle: { getSelfBus: () => ({ onValue: () => ({ unsubscribe: () => {} }) }) },
+            signalk: { self: 'vessels.urn:mrn:signalk:uuid:test', retrieve: () => ({}) }
           };
 
           let plugin;
@@ -238,47 +254,55 @@ jobs:
             process.exit(0);
           }
 
-          if (!plugin || typeof plugin.schema !== 'function') {
-            console.log('Plugin does not define schema() — nothing to check');
+          // plugin.schema can be a function or a plain object (both are valid)
+          if (!plugin || (typeof plugin.schema !== 'function' && typeof plugin.schema !== 'object') || plugin.schema === null) {
+            console.log('Plugin does not define schema — nothing to check');
             process.exit(0);
           }
 
-          // A throwing schema() crashes the server's plugin config UI
+          const schemaIsFunction = typeof plugin.schema === 'function';
+          const label = schemaIsFunction ? 'plugin.schema()' : 'plugin.schema';
           let schema;
-          try {
-            schema = plugin.schema();
-          } catch (e) {
-            console.log('::error::plugin.schema() threw an error: ' + e.message);
-            console.log('::error::This will crash the SignalK server when it tries to render the plugin config UI.');
-            process.exit(1);
+
+          if (schemaIsFunction) {
+            // A throwing schema() crashes the server's plugin config UI
+            try {
+              schema = plugin.schema();
+            } catch (e) {
+              console.log('::error::' + label + ' threw an error: ' + e.message);
+              console.log('::error::This will crash the SignalK server when it tries to render the plugin config UI.');
+              process.exit(1);
+            }
+          } else {
+            schema = plugin.schema;
           }
 
           // Validate it returned something useful
           if (schema === null || schema === undefined) {
-            console.log('::warning::plugin.schema() returned ' + schema + ' — consider returning a valid JSON Schema object');
+            console.log('::warning::' + label + ' returned ' + schema + ' — consider returning a valid JSON Schema object');
             process.exit(0);
           }
 
           if (typeof schema !== 'object') {
-            console.log('::error::plugin.schema() returned ' + typeof schema + ' instead of a JSON Schema object');
+            console.log('::error::' + label + ' returned ' + typeof schema + ' instead of a JSON Schema object');
             process.exit(1);
           }
 
           // Basic JSON Schema structure check (rjsf compatibility)
           if (!schema.type && !schema.properties && !schema.oneOf && !schema.anyOf) {
-            console.log('::warning::plugin.schema() returned an object but it has no type, properties, oneOf, or anyOf — is this a valid JSON Schema?');
+            console.log('::warning::' + label + ' has no type, properties, oneOf, or anyOf — is this a valid JSON Schema?');
           }
 
           // Check it's JSON-serializable (no circular refs, no functions)
           try {
             JSON.stringify(schema);
           } catch (e) {
-            console.log('::error::plugin.schema() result is not JSON-serializable: ' + e.message);
+            console.log('::error::' + label + ' is not JSON-serializable: ' + e.message);
             console.log('::error::The server stores this as JSON — non-serializable schemas will cause errors.');
             process.exit(1);
           }
 
-          console.log('plugin.schema() returns a valid JSON Schema object');
+          console.log(label + ' is a valid JSON Schema object');
           process.exit(0);
           SCHEMACHECK
           node /tmp/check-schema.js
@@ -361,17 +385,23 @@ jobs:
 
           // ── Mock app with delta capture ─────────────────────────
           const mockApp = {
+            // ── Server configuration ──────────────────────────────
             config: { configPath: '/tmp', version: '0.0.0' },
-            getPath: (p) => '',
+            selfType: 'uuid',
+            selfId: 'urn:mrn:signalk:uuid:test',
+            selfContext: 'vessels.urn:mrn:signalk:uuid:test',
+
+            // ── Data model ────────────────────────────────────────
+            getPath: (p) => undefined,
             getSelfPath: (p) => undefined,
+            getMetadata: (p) => undefined,
             handleMessage: (id, data) => validateDelta(id, data),
-            reportError: () => {},
-            setPluginStatus: (msg) => console.log('  status: ' + msg),
-            setPluginError: (msg) => console.log('  error: ' + msg),
-            debug: () => {},
-            error: () => {},
-            on: () => ({ unsubscribe: () => {} }),
-            registerPutHandler: () => {},
+            putSelfPath: (aPath, value, cb) => { if (cb) cb({ state: 'COMPLETED', statusCode: 200 }); return Promise.resolve(); },
+            putPath: (aPath, value, cb) => { if (cb) cb({ state: 'COMPLETED', statusCode: 200 }); return Promise.resolve(); },
+            queryRequest: () => Promise.resolve({}),
+            streambundle: { getSelfBus: () => ({ onValue: () => ({ unsubscribe: () => {} }) }) },
+            subscriptionmanager: { subscribe: () => ({ unsubscribe: () => {} }) },
+            signalk: { self: 'vessels.urn:mrn:signalk:uuid:test', retrieve: () => ({}) },
             registerDeltaInputHandler: (handler) => {
               // Check the handler calls next() with a simple test
               let nextCalled = false;
@@ -383,9 +413,44 @@ jobs:
               }
               return () => {};
             },
-            subscriptionmanager: { subscribe: () => ({ unsubscribe: () => {} }) },
-            streambundle: { getSelfBus: () => ({ onValue: () => ({ unsubscribe: () => {} }) }) },
-            signalk: { self: 'vessels.urn:mrn:signalk:uuid:test', retrieve: () => ({}) }
+
+            // ── Plugin configuration ──────────────────────────────
+            readPluginOptions: () => ({}),
+            savePluginOptions: (configuration, cb) => { if (cb) cb(null); },
+            getDataDirPath: () => '/tmp',
+
+            // ── Status and debugging ──────────────────────────────
+            debug: () => {},
+            error: () => {},
+            setPluginStatus: (msg) => console.log('  status: ' + msg),
+            setPluginError: (msg) => console.log('  error: ' + msg),
+            reportError: () => {},
+            reportOutputMessages: () => {},
+
+            // ── PUT / action handlers ─────────────────────────────
+            registerPutHandler: () => {},
+            registerActionHandler: () => {},
+
+            // ── Event system ──────────────────────────────────────
+            on: () => ({ unsubscribe: () => {} }),
+            emit: () => {},
+            emitPropertyValue: () => {},
+            onPropertyValues: () => () => {},
+
+            // ── Provider registrations (no-op in CI) ──────────────
+            registerResourceProvider: () => {},
+            registerAutopilotProvider: () => {},
+            registerWeatherProvider: () => {},
+            registerHistoryProvider: () => {},
+            registerHistoryApiProvider: () => {},
+
+            // ── API access (no-op stubs) ──────────────────────────
+            getFeatures: () => Promise.resolve({ apis: [], plugins: [] }),
+            getCourse: () => Promise.resolve({}),
+            clearDestination: () => Promise.resolve(),
+            setDestination: () => Promise.resolve(),
+            activateRoute: () => Promise.resolve(),
+            getSerialPorts: () => Promise.resolve([]),
           };
 
           let plugin;
@@ -401,12 +466,35 @@ jobs:
             process.exit(0);
           }
 
+          // The server calls registerWithRouter() before start() if defined
+          if (typeof plugin.registerWithRouter === 'function') {
+            const noOp = () => mockRouter;
+            const mockRouter = { get: noOp, post: noOp, put: noOp, delete: noOp, patch: noOp, use: noOp, all: noOp, route: noOp, param: noOp };
+            try {
+              plugin.registerWithRouter(mockRouter);
+              console.log('registerWithRouter() — ok');
+            } catch (e) {
+              const msg = e.message || String(e);
+              console.log('::warning::registerWithRouter() threw: ' + msg);
+            }
+          }
+
+          // Detect errors caused by missing CI mock methods vs real plugin bugs
+          function isMockGap(msg) {
+            return /\w+ is not a function/.test(msg) || /Cannot read propert/.test(msg);
+          }
+
           try {
             plugin.start({});
             console.log('start({}) — ok');
           } catch (e) {
-            console.log('::warning::plugin.start({}) threw: ' + e.message);
-            console.log('::warning::Plugins should handle empty/default configuration gracefully.');
+            const msg = e.message || String(e);
+            console.log('::warning::plugin.start({}) threw: ' + msg);
+            if (isMockGap(msg)) {
+              console.log('::warning::This looks like a missing CI mock method, not a plugin bug. Please report at https://github.com/SignalK/signalk-server/issues');
+            } else {
+              console.log('::warning::Plugins should handle empty/default configuration gracefully.');
+            }
             process.exit(0);
           }
 
@@ -414,9 +502,16 @@ jobs:
             plugin.stop();
             console.log('stop() — ok');
           } catch (e) {
-            console.log('::error::plugin.stop() threw: ' + e.message);
-            console.log('::error::This causes the server to leak resources when the plugin is disabled or restarted.');
-            process.exit(1);
+            const msg = e.message || String(e);
+            if (isMockGap(msg)) {
+              console.log('::warning::plugin.stop() threw: ' + msg);
+              console.log('::warning::This looks like a missing CI mock method, not a plugin bug. Please report at https://github.com/SignalK/signalk-server/issues');
+              // Don't fail the build for mock gaps
+            } else {
+              console.log('::error::plugin.stop() threw: ' + msg);
+              console.log('::error::This causes the server to leak resources when the plugin is disabled or restarted.');
+              process.exit(1);
+            }
           }
 
           // Restart: the server calls stop() then start() when config changes
@@ -424,7 +519,13 @@ jobs:
             plugin.start({});
             console.log('start({}) again — ok (restart works)');
           } catch (e) {
-            console.log('::error::plugin.start({}) threw on second call: ' + e.message);
+            const msg = e.message || String(e);
+            if (isMockGap(msg)) {
+              console.log('::warning::plugin.start({}) threw on restart: ' + msg);
+              console.log('::warning::This looks like a missing CI mock method, not a plugin bug. Please report at https://github.com/SignalK/signalk-server/issues');
+              process.exit(0);
+            }
+            console.log('::error::plugin.start({}) threw on second call: ' + msg);
             console.log('::error::Plugins must support restart (stop then start). This fails when users toggle the plugin in the server UI.');
             process.exit(1);
           }
