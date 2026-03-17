@@ -151,7 +151,7 @@ const ProvidersConfiguration: React.FC = () => {
     const id = selectedProvider.originalId
 
     const response = await fetch(
-      `${window.serverRoutesPrefix}/providers/${id && !isNew ? id : ''}`,
+      `${window.serverRoutesPrefix}/providers/${id && !isNew ? encodeURIComponent(id) : ''}`,
       {
         method: isNew ? 'POST' : 'PUT',
         headers: {
@@ -199,7 +199,7 @@ const ProvidersConfiguration: React.FC = () => {
     if (!selectedProvider) return
 
     const response = await fetch(
-      `${window.serverRoutesPrefix}/providers/${selectedProvider.id}`,
+      `${window.serverRoutesPrefix}/providers/${encodeURIComponent(selectedProvider.id)}`,
       {
         method: 'DELETE',
         headers: {
