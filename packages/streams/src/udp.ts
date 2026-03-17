@@ -8,6 +8,7 @@ interface UdpOptions {
   app: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
+    setProviderStatus(id: string, msg: string): void
     setProviderError(id: string, msg: string): void
   }
   providerId: string
@@ -61,6 +62,11 @@ export default class Udp extends Transform {
 
     socket.bind(this.options.port, () => {
       socket.setBroadcast(true)
+      const addr = socket.address()
+      this.options.app.setProviderStatus(
+        this.options.providerId,
+        `Listening on UDP port ${addr.port}`
+      )
     })
 
     return pipeTo
