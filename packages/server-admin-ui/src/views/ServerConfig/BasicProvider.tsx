@@ -389,6 +389,11 @@ function LoggingInput({ value, onChange }: LoggingInputProps) {
           <span className="switch-label" data-on="Yes" data-off="No" />
           <span className="switch-handle" />
         </Form.Label>
+        {value.logging && (
+          <Form.Text className="text-warning">
+            Creates hourly log files that can consume significant disk space
+          </Form.Text>
+        )}
       </Col>
     </Form.Group>
   )
