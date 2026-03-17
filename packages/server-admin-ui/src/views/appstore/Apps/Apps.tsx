@@ -86,10 +86,12 @@ const Apps: React.FC = () => {
     )
 
     appStore.installed.forEach((app) => {
+      const update = appStore.updates.find((u) => u.name === app.name)
       allApps[app.name] = {
         ...app,
         installed: true,
-        newVersion: updateAvailable(app, appStore) ? app.version : undefined
+        newVersion: update ? app.version : undefined,
+        updateDisabled: update?.updateDisabled
       }
     })
 
@@ -132,7 +134,7 @@ const Apps: React.FC = () => {
   const handleUpdateAll = useCallback(() => {
     if (confirm(`Are you sure you want to install all updates?`)) {
       for (const app of rowData) {
-        if (app.newVersion && app.installed) {
+        if (app.newVersion && app.installed && !app.updateDisabled) {
           fetch(
             `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
             {

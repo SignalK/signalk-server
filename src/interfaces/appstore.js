@@ -249,8 +249,12 @@ module.exports = function (app) {
     getModulesInfo(webapps, getWebApp, all, distTagsMap)
 
     if (process.env.PLUGINS_WITH_UPDATE_DISABLED) {
-      let disabled = process.env.PLUGINS_WITH_UPDATE_DISABLED.split(',')
-      all.updates = all.updates.filter((info) => !disabled.includes(info.name))
+      const disabled = process.env.PLUGINS_WITH_UPDATE_DISABLED.split(',')
+      all.updates.forEach((info) => {
+        if (disabled.includes(info.name)) {
+          info.updateDisabled = true
+        }
+      })
     }
 
     return all
