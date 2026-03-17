@@ -574,6 +574,12 @@ function PluginConfigCard({
                   <span className="switch-handle" />
                 </Form.Label>
                 <span className="ms-1">Data logging</span>
+                {optimisticData.enableLogging && (
+                  <Form.Text className="text-warning d-block">
+                    Creates hourly log files that can consume significant disk
+                    space
+                  </Form.Text>
+                )}
               </Col>
               <Col lg={4} className={'mt-2 mt-lg-0'}>
                 <Form.Label

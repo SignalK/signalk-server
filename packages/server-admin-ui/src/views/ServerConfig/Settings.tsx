@@ -317,8 +317,10 @@ const ServerSettings: React.FC = () => {
                   value={settings.loggingDirectory || ''}
                 />
                 <Form.Text muted>
-                  Connections that have logging enabled create hourly log files
-                  in Multiplexed format in this directory
+                  Connections and plugins that have logging enabled create
+                  hourly log files in Multiplexed format in this directory. This
+                  can consume significant disk space — enable the option below
+                  to limit retention.
                 </Form.Text>
               </Col>
             </Form.Group>
