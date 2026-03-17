@@ -25,6 +25,7 @@ export default class TcpStream extends Transform {
   private readonly options: TcpOptions
   private readonly debug: DebugLogger
   private readonly debugData: DebugLogger
+  private static readonly DEFAULT_TIMEOUT_SECONDS = 60
   private readonly noDataReceivedTimeout: number
   private tcpStream: net.Socket | undefined
   private reconnector: { disconnect(): void } | null = null
@@ -32,8 +33,13 @@ export default class TcpStream extends Transform {
   constructor(options: TcpOptions) {
     super()
     this.options = options
+    const parsedTimeout = Number.parseInt(
+      (this.options.noDataReceivedTimeout + '').trim()
+    )
     this.noDataReceivedTimeout =
-      Number.parseInt((this.options.noDataReceivedTimeout + '').trim()) * 1000
+      (isNaN(parsedTimeout)
+        ? TcpStream.DEFAULT_TIMEOUT_SECONDS
+        : parsedTimeout) * 1000
     const createDebug = options.createDebug ?? require('debug')
     this.debug = createDebug('signalk:streams:tcp')
     this.debug(`noDataReceivedTimeout:${this.noDataReceivedTimeout}`)
@@ -71,7 +77,7 @@ export default class TcpStream extends Transform {
     this.reconnector = reconnect((opts: object) => {
       return net.connect(opts as { host: string; port: number })
     })({ maxDelay: 5 * 1000 }, (tcpStream: net.Socket) => {
-      if (!isNaN(this.noDataReceivedTimeout)) {
+      if (this.noDataReceivedTimeout > 0) {
         tcpStream.setTimeout(this.noDataReceivedTimeout)
         this.debug(
           `Setting socket idle timeout ${this.options.host}:${this.options.port} ${this.noDataReceivedTimeout}`

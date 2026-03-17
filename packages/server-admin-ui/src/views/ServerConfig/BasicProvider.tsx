@@ -763,7 +763,7 @@ function NoDataReceivedTimeoutInput({
     <TextInput
       title="No data timeout"
       name="options.noDataReceivedTimeout"
-      helpText="Timeout for no data received in seconds. Socket is disconnected and reconnection attempted if timeout is reached. Leave empty or 0 to disable."
+      helpText="Timeout for no data received in seconds (default: 60). Socket is disconnected and reconnection attempted if timeout is reached. Set to 0 to disable."
       value={value.noDataReceivedTimeout}
       onChange={onChange}
     />
