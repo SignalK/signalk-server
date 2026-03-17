@@ -125,14 +125,6 @@ Enable `enable-signalk-integration: true` to have the workflow:
 
 The integration test environment exports `SIGNALK_URL=http://localhost:3000` so your tests can connect to the running server. Use `signalk-server-version` to pin a specific server version.
 
-## Standalone Workflow
-
-If you prefer not to depend on the shared workflow, copy the standalone version from the signalk-server repository:
-
-[`.github/examples/standalone-ci.yml`](https://github.com/SignalK/signalk-server/blob/master/.github/examples/standalone-ci.yml)
-
-This is a self-contained workflow with all the same checks.
-
 ## Self-Hosted Runner for Real Hardware
 
 For testing against actual hardware (GPIO, CAN bus, serial ports), add a [self-hosted runner](https://docs.github.com/en/actions/hosting-your-own-runners) on a Cerbo GX or Raspberry Pi:
