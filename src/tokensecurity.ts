@@ -124,6 +124,7 @@ interface LoginResponse {
   token?: string
   user?: string
   message?: string
+  timeToLive?: number
 }
 
 interface CookieOptions {
@@ -637,7 +638,10 @@ function tokenSecurityFactory(
               })
 
               if (requestType === 'application/json') {
-                res.json({ token: reply.token })
+                res.json({
+                  timeToLive: reply.timeToLive,
+                  token: reply.token
+                })
               } else {
                 res.redirect(getSafeDestination(req.body.destination))
               }
@@ -778,7 +782,16 @@ function tokenSecurityFactory(
                 configuration.secretKey,
                 jwtOptions
               )
-              resolve({ statusCode: 200, token, user: user.username })
+              const timeToLive =
+                theExpiration !== 'NEVER'
+                  ? Math.floor(ms(theExpiration as StringValue) / 1000)
+                  : undefined
+              resolve({
+                statusCode: 200,
+                token,
+                user: user.username,
+                timeToLive
+              })
             } catch (signErr) {
               resolve({
                 statusCode: 500,

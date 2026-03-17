@@ -140,7 +140,7 @@ interface SecurityStrategy {
   login: (
     username: string,
     password: string
-  ) => Promise<{ token?: string; statusCode: number }>
+  ) => Promise<{ token?: string; statusCode: number; timeToLive?: number }>
   isDummy: () => boolean
 }
 
@@ -751,6 +751,7 @@ function wsInterface(app: WsApp): WsApi {
           state: 'COMPLETED',
           statusCode: reply.statusCode,
           login: {
+            timeToLive: reply.timeToLive,
             token: reply.token
           }
         })
