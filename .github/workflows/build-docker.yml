@@ -217,12 +217,8 @@ jobs:
           RUN_ID="${{ github.run_id }}"
 
           for TAG in \
-            "amd-24.04-22.x-${RUN_ID}" \
-            "arm-24.04-22.x-${RUN_ID}" \
             "amd-24.04-24.x-${RUN_ID}" \
             "arm-24.04-24.x-${RUN_ID}" \
-            "amd-alpine-22-${RUN_ID}" \
-            "arm-alpine-22-${RUN_ID}" \
             "amd-alpine-24-${RUN_ID}" \
             "arm-alpine-24-${RUN_ID}"; do
 
