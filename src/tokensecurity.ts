@@ -122,6 +122,7 @@ interface JWTPayload {
   device?: string
   exp?: number
   iat?: number
+  rememberMe?: boolean
 }
 
 interface LoginResponse {
@@ -471,10 +472,17 @@ function tokenSecurityFactory(
     res.clearCookie(BROWSER_LOGININFO_COOKIE_NAME)
   }
 
-  function generateJWT(userId: string, tokenExpiration?: string): string {
+  function generateJWT(
+    userId: string,
+    tokenExpiration?: string,
+    rememberMe?: boolean
+  ): string {
     const configuration = getConfiguration()
     const theExpiration = tokenExpiration || configuration.expiration || '1h'
     const payload: JWTPayload = { id: userId }
+    if (rememberMe) {
+      payload.rememberMe = true
+    }
     const jwtOptions: SignOptions = {}
     if (!isNever(theExpiration)) {
       jwtOptions.expiresIn = theExpiration as StringValue
@@ -631,7 +639,7 @@ function tokenSecurityFactory(
         const password = req.body.password
         const remember = req.body.rememberMe
 
-        login(name, password)
+        login(name, password, remember)
           .then((reply) => {
             const requestType = req.get('Content-Type')
 
@@ -747,7 +755,11 @@ function tokenSecurityFactory(
     app.put('/signalk/v1/*', writeAuthenticationMiddleware())
   }
 
-  function login(name: string, password: string): Promise<LoginResponse> {
+  function login(
+    name: string,
+    password: string,
+    rememberMe?: boolean
+  ): Promise<LoginResponse> {
     return new Promise((resolve, reject) => {
       debug('handing login for user: ' + name)
 
@@ -776,6 +788,9 @@ function tokenSecurityFactory(
           } else if (matches === true && user && user.password) {
             // Only succeed if user exists AND password matched real hash
             const payload: JWTPayload = { id: user.username }
+            if (rememberMe) {
+              payload.rememberMe = true
+            }
             const theExpiration = configuration.expiration || '1h'
             const jwtOptions: SignOptions = {}
             if (!isNever(theExpiration)) {
@@ -1532,6 +1547,24 @@ function tokenSecurityFactory(
                 skReq.skPrincipal = principal
                 skReq.skIsAuthenticated = true
                 skReq.userLoggedIn = true
+                const jwtPayload = decoded as JWTPayload
+                if (
+                  jwtPayload.id &&
+                  jwtPayload.exp &&
+                  jwtPayload.iat &&
+                  Date.now() / 1000 >
+                    jwtPayload.iat + (jwtPayload.exp - jwtPayload.iat) / 2
+                ) {
+                  const newToken = generateJWT(
+                    jwtPayload.id,
+                    undefined,
+                    jwtPayload.rememberMe
+                  )
+                  setSessionCookie(res, req, newToken, jwtPayload.id, {
+                    rememberMe: jwtPayload.rememberMe
+                  })
+                  debug('token refreshed for %s', jwtPayload.id)
+                }
                 next()
                 return
               } else {
