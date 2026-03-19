@@ -222,12 +222,10 @@ function buildChart() {
       // If indexed mode is on, normalize to first visible point
       if (indexed && dataPoints.length > 0) {
         const firstValue = dataPoints[0].y
-        if (firstValue !== 0) {
-          dataPoints.forEach(pt => {
-            pt.indexedY = pt.y
-            pt.y = ((pt.y - firstValue) / firstValue) * 100
-          })
-        }
+        dataPoints.forEach(pt => {
+          pt.indexedY = pt.y
+          pt.y = pt.y - firstValue
+        })
       }
       
       return {
@@ -248,14 +246,14 @@ function buildChart() {
   }
   
   const indexedTooltipLabel = (item) => {
-    const pct = item.formattedValue
+    const change = item.formattedValue
     const actualValue = item.raw.indexedY !== undefined ? item.raw.indexedY.toFixed(1) : item.formattedValue
-    return `  ${item.dataset.label}: ${pct}% (${actualValue} ${unitLabel()})`
+    return `  ${item.dataset.label}: ${change > 0 ? '+' : ''}${change} ${unitLabel()} (${actualValue} ${unitLabel()})`
   }
 
   if (chart) {
     chart.data.datasets = datasets
-    chart.options.scales.y.title.text = indexed ? '% change from first visible' : unitLabel()
+    chart.options.scales.y.title.text = indexed ? 'Change from first visible' : unitLabel()
     chart.options.scales.x.min = xMin
     chart.options.scales.x.max = xMax
     chart.options.plugins.tooltip.callbacks.label = indexed ? indexedTooltipLabel : defaultTooltipLabel
@@ -301,7 +299,7 @@ function buildChart() {
           grid: { color: '#21262d' }
         },
         y: {
-          title: { display: true, text: indexed ? '% change from first visible' : unitLabel(), color: '#8b949e' },
+          title: { display: true, text: indexed ? 'Change from first visible' : unitLabel(), color: '#8b949e' },
           ticks: { color: '#8b949e' },
           grid: { color: '#21262d' }
         }
