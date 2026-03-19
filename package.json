@@ -103,7 +103,6 @@
     "esm-resolve": "^1.0.11",
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.1",
-    "figlet": "^1.2.0",
     "file-timestamp-stream": "^2.1.2",
     "geolib": "^3.3.3",
     "helmet": "^8.1.0",
