@@ -1,0 +1,41 @@
+#!/bin/bash
+# Launch a fresh node:lts container with the server directory mounted
+# and run bin/signalk-server-setup inside it.
+# After setup terminates, drops to an interactive shell.
+#
+# Usage:
+#   ./test/scripts/signalk-server-setup              # run as root with mock systemctl
+#   ./test/scripts/signalk-server-setup --no-systemd  # run as non-root user
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SERVER_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+if [[ "$1" == "--no-systemd" ]]; then
+  docker run --rm -it \
+    -v "$SERVER_DIR":/srv/signalk-server \
+    -w /srv/signalk-server \
+    --user node \
+    node:lts \
+    bash -c '
+      bin/signalk-server-setup
+      exec bash
+    '
+else
+  docker run --rm -it \
+    -v "$SERVER_DIR":/srv/signalk-server \
+    -v "$SCRIPT_DIR/mock-systemctl":/usr/bin/systemctl:ro \
+    -w /srv/signalk-server \
+    -e SUDO_USER=node -e SUDO_UID=1000 -e SUDO_GID=1000 \
+    node:lts \
+    bash -c '
+      chmod +x /usr/bin/systemctl
+      mkdir -p /etc/systemd/system
+      bin/signalk-server-setup
+      echo
+      echo "=== systemctl calls ==="
+      cat /tmp/systemctl.log 2>/dev/null || echo "(none)"
+      exec bash
+    '
+fi
