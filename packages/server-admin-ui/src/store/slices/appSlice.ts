@@ -17,7 +17,8 @@ import type {
   BackpressureWarning,
   ServerStatistics,
   PathPriority,
-  LogState
+  LogState,
+  NodeInfo
 } from '../types'
 
 const convert = new Convert()
@@ -50,6 +51,7 @@ export interface AppSliceState {
   backpressureWarning: BackpressureWarning | null
   serverStatistics: ServerStatistics | null
   providerStatus: ProviderStatus[]
+  nodeInfo: NodeInfo
 }
 
 export interface AppSliceActions {
@@ -67,6 +69,7 @@ export interface AppSliceActions {
   setDiscoveredProviders: (providers: DiscoveredProvider[]) => void
   setRestoreStatus: (status: RestoreStatus) => void
   setVesselInfo: (info: VesselInfo) => void
+  setNodeInfo: (info: NodeInfo) => void
   setBackpressureWarning: (warning: BackpressureWarning | null) => void
   setDebugSettings: (settings: {
     debugEnabled?: string
@@ -109,7 +112,8 @@ const initialAppState: AppSliceState = {
   vesselInfo: {},
   backpressureWarning: null,
   serverStatistics: null,
-  providerStatus: []
+  providerStatus: [],
+  nodeInfo: {}
 }
 
 export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
@@ -182,6 +186,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
       document.title = vesselInfo.name
     }
     set({ vesselInfo })
+  },
+
+  setNodeInfo: (nodeInfo) => {
+    set({ nodeInfo })
   },
 
   setBackpressureWarning: (backpressureWarning) => {

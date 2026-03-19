@@ -98,6 +98,12 @@ export interface VesselInfo {
   [key: string]: unknown
 }
 
+export interface NodeInfo {
+  nodeVersion?: string
+  npmVersion?: string
+  recommendedNodeVersion?: string
+}
+
 export interface SourcePriority {
   sourceRef: string
   timeout: string | number
