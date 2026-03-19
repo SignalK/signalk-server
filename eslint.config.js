@@ -55,7 +55,8 @@ module.exports = defineConfig([
     ],
     plugins: { chai },
     rules: {
-      'no-unused-expressions': 'off', // disable original rule
+      'no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
       'chai/no-unused-expressions': 'error'
     },
     languageOptions: {
