@@ -115,7 +115,7 @@ Last, here is how to install the Signal K Server application from NPM:
 
 Prerequisites:
 
-- Node.js version 20 with latest npm installed
+- Node.js version 24 with latest npm installed
 
   $ sudo npm install -g signalk-server
 
