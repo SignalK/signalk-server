@@ -103,7 +103,7 @@ describe('dataSlice', () => {
       )
     })
 
-    it('should merge metadata with existing values', () => {
+    it('should replace metadata on update', () => {
       useStore
         .getState()
         .updateMeta('vessels.self', 'navigation.speedOverGround', {
@@ -113,6 +113,7 @@ describe('dataSlice', () => {
       useStore
         .getState()
         .updateMeta('vessels.self', 'navigation.speedOverGround', {
+          units: 'm/s',
           description: 'Speed over ground'
         })
 
