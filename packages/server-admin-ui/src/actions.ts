@@ -132,7 +132,8 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/loginStatus', state.setLoginStatus),
     fetchAndSet('/signalk', state.setServerSpecification, ''),
     fetchAndSet('/security/access/requests', state.setAccessRequests),
-    fetchAndSet('/security/devices', state.setDevices)
+    fetchAndSet('/security/devices', state.setDevices),
+    fetchAndSet('/nodeInfo', state.setNodeInfo)
   ])
 }
 
