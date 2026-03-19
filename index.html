@@ -79,6 +79,10 @@
       padding: 2px 6px;
       font-size: 0.78rem;
     }
+    #unit-toggle input[type="checkbox"] {
+      margin-left: 8px;
+      cursor: pointer;
+    }
     #chart-wrap {
       flex: 1;
       min-height: 0;
@@ -126,6 +130,9 @@
       <option value="gb">GB</option>
       <option value="bytes">bytes</option>
     </select>
+    <label>
+      <input type="checkbox" id="indexed"> Indexed to first visible
+    </label>
   </span>
 </div>
 <div id="chart-wrap">
@@ -188,6 +195,7 @@ function showToast(msg) {
 // ── build / update chart ─────────────────────────────────────────────────────
 function buildChart() {
   const rangeVal = document.getElementById('range').value
+  const indexed = document.getElementById('indexed').checked
   const now = new Date()
   const cutoff = rangeVal === 'all' ? null
     : new Date(now - parseInt(rangeVal, 10) * 86400_000).toISOString()
@@ -207,24 +215,50 @@ function buildChart() {
 
   const datasets = tags
     .filter(t => activeTagSet.has(t))
-    .map(tag => ({
-      label: tag,
-      data: (byTag[tag] || [])
-        .sort((a, b) => a.ts.localeCompare(b.ts))
-        .map(r => ({ x: r.ts, y: convert(r.bytes), commit: r.commit })),
-      borderColor: colorMap[tag],
-      backgroundColor: colorMap[tag] + '30',
-      borderWidth: 2,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      tension: 0.2,
-    }))
+    .map(tag => {
+      const sorted = (byTag[tag] || []).sort((a, b) => a.ts.localeCompare(b.ts))
+      const dataPoints = sorted.map(r => ({ x: r.ts, y: convert(r.bytes), commit: r.commit, rawBytes: r.bytes }))
+      
+      // If indexed mode is on, normalize to first visible point
+      if (indexed && dataPoints.length > 0) {
+        const firstValue = dataPoints[0].y
+        if (firstValue !== 0) {
+          dataPoints.forEach(pt => {
+            pt.indexedY = pt.y
+            pt.y = ((pt.y - firstValue) / firstValue) * 100
+          })
+        }
+      }
+      
+      return {
+        label: tag,
+        data: dataPoints,
+        borderColor: colorMap[tag],
+        backgroundColor: colorMap[tag] + '30',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0.2,
+      }
+    })
+
+  // Define tooltip callbacks
+  const defaultTooltipLabel = (item) => {
+    return `  ${item.dataset.label}: ${item.formattedValue} ${unitLabel()}`
+  }
+  
+  const indexedTooltipLabel = (item) => {
+    const pct = item.formattedValue
+    const actualValue = item.raw.indexedY !== undefined ? item.raw.indexedY.toFixed(1) : item.formattedValue
+    return `  ${item.dataset.label}: ${pct}% (${actualValue} ${unitLabel()})`
+  }
 
   if (chart) {
     chart.data.datasets = datasets
-    chart.options.scales.y.title.text = unitLabel()
+    chart.options.scales.y.title.text = indexed ? '% change from first visible' : unitLabel()
     chart.options.scales.x.min = xMin
     chart.options.scales.x.max = xMax
+    chart.options.plugins.tooltip.callbacks.label = indexed ? indexedTooltipLabel : defaultTooltipLabel
     chart.update()
     return
   }
@@ -248,9 +282,7 @@ function buildChart() {
               const commit = items[0].raw.commit
               return [ts, `commit: ${commit}`]
             },
-            label(item) {
-              return `  ${item.dataset.label}: ${item.formattedValue} ${unitLabel()}`
-            },
+            label: indexed ? indexedTooltipLabel : defaultTooltipLabel,
             footer() {
               return 'click to copy commit hash'
             }
@@ -269,7 +301,7 @@ function buildChart() {
           grid: { color: '#21262d' }
         },
         y: {
-          title: { display: true, text: unitLabel(), color: '#8b949e' },
+          title: { display: true, text: indexed ? '% change from first visible' : unitLabel(), color: '#8b949e' },
           ticks: { color: '#8b949e' },
           grid: { color: '#21262d' }
         }
@@ -320,6 +352,7 @@ document.getElementById('select-all').addEventListener('click', () => setAll(tru
 document.getElementById('select-none').addEventListener('click', () => setAll(false))
 document.getElementById('unit').addEventListener('change', () => buildChart())
 document.getElementById('range').addEventListener('change', () => buildChart())
+document.getElementById('indexed').addEventListener('change', () => buildChart())
 
 // ── load CSV ─────────────────────────────────────────────────────────────────
 function loadCSV(text) {
