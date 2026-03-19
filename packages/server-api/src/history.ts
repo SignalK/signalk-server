@@ -183,14 +183,14 @@ export interface HistoryProviders {
 }
 
 /**
- * Represents a time duration, either as a {@link Temporal.Duration} object or a number (milliseconds).
+ * Represents a time duration, either as a {@link Temporal.Duration} object or a number (seconds).
  *
  * @example
  * // Using Temporal.Duration
  * const duration: Duration = Temporal.Duration.from({ minutes: 5 });
  *
- * // Using milliseconds
- * const duration: Duration = 300000; // 5 minutes in milliseconds
+ * // Using seconds
+ * const duration: Duration = 300; // 5 minutes in seconds
  */
 export type Duration = Temporal.Duration | number
 
