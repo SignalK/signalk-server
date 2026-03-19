@@ -184,7 +184,7 @@
     "prettier": "^3.5.3",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.1",
-    "typedoc": "^0.28.1",
+    "typedoc": "^0.28.17",
     "typedoc-plugin-mdn-links": "^5.0.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.29.1",
