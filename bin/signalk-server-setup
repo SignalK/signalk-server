@@ -7,7 +7,7 @@ const inquirer = require('inquirer')
 const fs = require('fs')
 const path = require('path')
 const _ = require('lodash')
-const Listr = require('listr')
+const ora = require('ora')
 const { v4: uuidv4 } = require('uuid')
 
 const settingsFile = 'settings.json'
@@ -355,7 +355,18 @@ WantedBy=sockets.target`
           }
         }
 
-        new Listr(tasks).run()
+        ;(async () => {
+          for (const { title, task } of tasks) {
+            const spinner = ora(title).start()
+            try {
+              await task()
+              spinner.succeed()
+            } catch (err) {
+              spinner.fail()
+              throw err
+            }
+          }
+        })()
       })
     })
 }
