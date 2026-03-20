@@ -56,6 +56,7 @@ export interface AppSliceState {
   sourcesData: SourcesData | null
   sourceAliases: Record<string, string>
   multiSourcePaths: Record<string, string[]>
+  ignoredInstanceConflicts: Record<string, string>
 }
 
 export interface AppSliceActions {
@@ -78,6 +79,7 @@ export interface AppSliceActions {
   setSourcesData: (data: SourcesData) => void
   setSourceAliases: (aliases: Record<string, string>) => void
   setMultiSourcePaths: (paths: Record<string, string[]>) => void
+  setIgnoredInstanceConflicts: (data: Record<string, string>) => void
   setDebugSettings: (settings: {
     debugEnabled?: string
     rememberDebug?: boolean
@@ -123,7 +125,8 @@ const initialAppState: AppSliceState = {
   nodeInfo: {},
   sourcesData: null,
   sourceAliases: {},
-  multiSourcePaths: {}
+  multiSourcePaths: {},
+  ignoredInstanceConflicts: {}
 }
 
 export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
@@ -216,6 +219,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setMultiSourcePaths: (multiSourcePaths) => {
     set({ multiSourcePaths })
+  },
+
+  setIgnoredInstanceConflicts: (ignoredInstanceConflicts) => {
+    set({ ignoredInstanceConflicts })
   },
 
   setDebugSettings: (settings) => {

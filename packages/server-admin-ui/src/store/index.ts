@@ -182,6 +182,10 @@ export function useMultiSourcePaths() {
   return useStore((s) => s.multiSourcePaths)
 }
 
+export function useIgnoredInstanceConflicts() {
+  return useStore((s) => s.ignoredInstanceConflicts)
+}
+
 export function useConfiguredPriorityPaths(): Set<string> {
   // Select a primitive string so zustand can compare by ===.
   // useShallow doesn't work with Set (Object.keys returns [] for Sets).

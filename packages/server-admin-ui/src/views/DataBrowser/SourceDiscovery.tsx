@@ -22,7 +22,11 @@ import {
   detectInstanceConflicts,
   conflictKey
 } from '../../utils/sourceLabels'
-import { useSourcesData, useStore } from '../../store'
+import {
+  useSourcesData,
+  useStore,
+  useIgnoredInstanceConflicts
+} from '../../store'
 import SourceLabel from './SourceLabel'
 
 function isVictronDevice(device: N2kDeviceEntry): boolean {
@@ -75,9 +79,8 @@ const SourceDiscovery: React.FC = () => {
   )
   const [sort, setSort] = useState<SortState | null>(null)
   const [conflictFilter, setConflictFilter] = useState<Set<string> | null>(null)
-  const [ignoredConflicts, setIgnoredConflicts] = useState<
-    Record<string, string>
-  >({})
+  const ignoredConflicts = useIgnoredInstanceConflicts()
+  const setIgnoredConflicts = useStore((s) => s.setIgnoredInstanceConflicts)
   const [discoveredAddresses, setDiscoveredAddresses] =
     useState<Set<number> | null>(null)
   const [pgnDataInstances, setPgnDataInstances] = useState<
@@ -105,12 +108,6 @@ const SourceDiscovery: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    fetch(`${window.serverRoutesPrefix}/ignoredInstanceConflicts`, {
-      credentials: 'include'
-    })
-      .then((res) => res.json())
-      .then((data) => setIgnoredConflicts(data || {}))
-      .catch(() => {})
     fetch(`${window.serverRoutesPrefix}/n2kDeviceStatus`, {
       credentials: 'include'
     })
