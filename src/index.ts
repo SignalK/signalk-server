@@ -17,6 +17,7 @@
  * limitations under the License.
 */
 
+import './baconjs-compat'
 import {
   Context,
   Delta,
