@@ -46,6 +46,7 @@ const packageJson = require('../../' + 'package.json')
 export interface Config {
   getExternalHostname: () => string
   getExternalPort: () => number
+  isExternalSsl: () => boolean
   port: number
   appPath: string
   configPath: string
@@ -73,6 +74,7 @@ export interface Config {
     landingPage?: string
     proxy_host?: string
     proxy_port?: number
+    proxy_ssl?: boolean
     hostname?: string
     pruneContextsMinutes?: number
     mdns?: boolean
@@ -104,6 +106,7 @@ export function load(app: ConfigApp) {
 
   config.getExternalHostname = getExternalHostname.bind(config, config)
   config.getExternalPort = getExternalPort.bind(config, app)
+  config.isExternalSsl = isExternalSsl.bind(null, config)
 
   config.appPath = config.appPath || path.normalize(__dirname + '/../../')
   debug('appPath:' + config.appPath)
@@ -465,6 +468,16 @@ function getSettingsFilename(app: ConfigApp) {
 
   const settingsFile = app.argv.s || 'settings.json'
   return path.join(app.config.configPath, settingsFile)
+}
+
+function isExternalSsl(config: Config): boolean {
+  if (process.env.EXTERNALSSL) {
+    return (
+      process.env.EXTERNALSSL === '1' ||
+      process.env.EXTERNALSSL.toLowerCase() === 'true'
+    )
+  }
+  return !!config.settings.proxy_ssl
 }
 
 function getExternalHostname(config: Config) {

@@ -57,7 +57,10 @@ module.exports = function mdnsResponder(app) {
 
   const types = []
   types.push({
-    type: app.config.settings.ssl ? mdns.tcp('https') : mdns.tcp('http'),
+    type:
+      app.config.settings.ssl || app.config.isExternalSsl()
+        ? mdns.tcp('https')
+        : mdns.tcp('http'),
     port: ports.getExternalPort(app)
   })
 

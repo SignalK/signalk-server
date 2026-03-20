@@ -17,7 +17,10 @@ module.exports = (theApp: any) => {
   return {
     start() {
       const port = getExternalPort(theApp)
-      const protocol = theApp.config.settings.ssl ? 'https' : 'http'
+      const protocol =
+        theApp.config.settings.ssl || theApp.config.isExternalSsl()
+          ? 'https'
+          : 'http'
       const publishToNavico = getPublishToNavico(protocol, port)
       setInterval(() => publishToNavico(), 10 * 1000)
     }

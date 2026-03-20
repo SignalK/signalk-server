@@ -191,6 +191,7 @@ interface WsAppConfig {
     wsPingInterval?: number | false
     trustProxy?: boolean | string
   }
+  isExternalSsl: () => boolean
   maxSendBufferSize?: number
   maxSendBufferCheckTime?: number
 }
@@ -252,7 +253,10 @@ function wsInterface(app: WsApp): WsApi {
 
   const api: WsApi = {
     mdns: {
-      name: app.config.settings.ssl ? '_signalk-wss' : '_signalk-ws',
+      name:
+        app.config.settings.ssl || app.config.isExternalSsl()
+          ? '_signalk-wss'
+          : '_signalk-ws',
       type: 'tcp',
       port: getExternalPort(
         app as unknown as Parameters<typeof getExternalPort>[0]
