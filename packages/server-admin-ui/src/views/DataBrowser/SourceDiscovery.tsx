@@ -57,7 +57,6 @@ type SortKey =
   | 'softwareVersionCode'
   | 'deviceClass'
   | 'deviceInstance'
-  | 'deviceInstanceLower'
   | 'installationDescription1'
   | 'src'
 
@@ -521,12 +520,6 @@ const SourceDiscovery: React.FC = () => {
                     onToggle={toggleSort}
                   />
                   <SortableTh
-                    label="Data Instance"
-                    sortKey="deviceInstanceLower"
-                    currentSort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <SortableTh
                     label="Installation"
                     sortKey="installationDescription1"
                     currentSort={sort}
@@ -752,13 +745,6 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
           hasConflict={hasConflict}
           readOnly={readOnly}
         />
-        <InlineInstanceCell
-          device={device}
-          field="deviceInstanceLower"
-          max={7}
-          hasConflict={false}
-          readOnly={readOnly}
-        />
         <td>{device.installationDescription1 || ''}</td>
         <td>{device.src || ''}</td>
       </tr>
@@ -906,7 +892,7 @@ const VERIFY_TIMEOUT_MS = 8000
 
 const InlineInstanceCell: React.FC<{
   device: N2kDeviceEntry
-  field: 'deviceInstance' | 'deviceInstanceLower'
+  field: 'deviceInstance'
   max: number
   hasConflict: boolean
   readOnly?: boolean
