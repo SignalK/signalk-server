@@ -8,10 +8,6 @@
 import { Type, type Static } from '@sinclair/typebox'
 import { IsoTimeSchema } from './shared-schemas'
 
-// ---------------------------------------------------------------------------
-// Weather data model
-// ---------------------------------------------------------------------------
-
 /** Weather data type */
 export const WeatherDataTypeSchema = Type.Union(
   [Type.Literal('daily'), Type.Literal('point'), Type.Literal('observation')],
@@ -288,10 +284,6 @@ export const WeatherDataModelSchema = Type.Object(
   }
 )
 export type WeatherDataModel = Static<typeof WeatherDataModelSchema>
-
-// ---------------------------------------------------------------------------
-// Weather warning model
-// ---------------------------------------------------------------------------
 
 /**
  * Weather warning — time-bound severe weather advisory.

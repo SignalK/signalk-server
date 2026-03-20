@@ -10,10 +10,6 @@
 
 import { Type, type Static } from '@sinclair/typebox'
 
-// ---------------------------------------------------------------------------
-// Reusable patterns
-// ---------------------------------------------------------------------------
-
 /** Signal K UUID v4 pattern (without anchors) */
 export const SignalKUuidPattern =
   '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}'
@@ -21,10 +17,6 @@ export const SignalKUuidPattern =
 /** ISO 8601 date-time pattern */
 export const IsoTimePattern =
   '^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}(?:\\.\\d*)?)((-(\\d{2}):(\\d{2})|Z)?)$'
-
-// ---------------------------------------------------------------------------
-// Primitive schemas
-// ---------------------------------------------------------------------------
 
 /**
  * ISO 8601 date-time string.
@@ -64,18 +56,11 @@ export const MmsiSchema = Type.String({
   examples: ['503123456']
 })
 
-// ---------------------------------------------------------------------------
-// Position
-// The single source of truth for geographic position across all APIs.
-// @see specification/schemas/definitions.json#/definitions/position
-// ---------------------------------------------------------------------------
-
 /**
  * Geographic position with latitude, longitude, and optional altitude.
  *
- * This is THE canonical Position schema — all APIs (Course, Resources,
- * Weather, Notifications, etc.) reference this single definition.
- * The TypeScript `Position` type is derived from this schema.
+ * Canonical Position schema — all APIs reference this single definition.
+ * @see specification/schemas/definitions.json#/definitions/position
  */
 export const PositionSchema = Type.Object(
   {
@@ -107,7 +92,6 @@ export const PositionSchema = Type.Object(
   }
 )
 
-/** Geographic position type — derived from PositionSchema */
 export type Position = Static<typeof PositionSchema>
 
 /**
@@ -129,14 +113,7 @@ export const RelativePositionOriginSchema = Type.Object(
   }
 )
 
-/** Relative position origin type — derived from schema */
 export type RelativePositionOrigin = Static<typeof RelativePositionOriginSchema>
-
-// ---------------------------------------------------------------------------
-// GeoJSON schemas
-// Used by Resources API for routes, waypoints, regions, charts.
-// @see specification/schemas/definitions.json#/definitions/waypoint
-// ---------------------------------------------------------------------------
 
 /** GeoJSON Point geometry object (type + coordinates) */
 export const GeoJsonPointGeometrySchema = Type.Object(
@@ -220,11 +197,6 @@ export const GeoJsonMultiPolygonGeometrySchema = Type.Object(
 export type GeoJsonMultiPolygonGeometry = Static<
   typeof GeoJsonMultiPolygonGeometrySchema
 >
-
-// ---------------------------------------------------------------------------
-// Common API response schemas
-// Shared across all v2 API endpoints.
-// ---------------------------------------------------------------------------
 
 /** Standard success response */
 export const OkResponseSchema = Type.Object(

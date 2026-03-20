@@ -4,10 +4,6 @@
 
 import { Type, type Static } from '@sinclair/typebox'
 
-// ---------------------------------------------------------------------------
-// Autopilot state definition
-// ---------------------------------------------------------------------------
-
 /** Autopilot state definition (name + engaged flag) */
 export const AutopilotStateDefSchema = Type.Object(
   {
@@ -22,10 +18,6 @@ export const AutopilotStateDefSchema = Type.Object(
   },
   { $id: 'AutopilotStateDef' }
 )
-
-// ---------------------------------------------------------------------------
-// Autopilot action definition
-// ---------------------------------------------------------------------------
 
 /** Autopilot action definition */
 export const AutopilotActionDefSchema = Type.Object(
@@ -48,10 +40,6 @@ export const AutopilotActionDefSchema = Type.Object(
   { $id: 'AutopilotActionDef' }
 )
 
-// ---------------------------------------------------------------------------
-// Autopilot options
-// ---------------------------------------------------------------------------
-
 /** Autopilot options — available states, modes, and actions */
 export const AutopilotOptionsSchema = Type.Object(
   {
@@ -71,10 +59,6 @@ export const AutopilotOptionsSchema = Type.Object(
     description: 'Available autopilot states, modes, and actions'
   }
 )
-
-// ---------------------------------------------------------------------------
-// Autopilot info
-// ---------------------------------------------------------------------------
 
 /** Autopilot info — full state of an autopilot device */
 export const AutopilotInfoSchema = Type.Object(
@@ -102,10 +86,6 @@ export const AutopilotInfoSchema = Type.Object(
 )
 export type AutopilotInfoType = Static<typeof AutopilotInfoSchema>
 
-// ---------------------------------------------------------------------------
-// Angle input
-// ---------------------------------------------------------------------------
-
 /** Angle input — value with optional units (deg or rad) */
 export const AngleInputSchema = Type.Object(
   {
@@ -126,10 +106,6 @@ export const AngleInputSchema = Type.Object(
   }
 )
 export type AngleInput = Static<typeof AngleInputSchema>
-
-// ---------------------------------------------------------------------------
-// Simple value inputs
-// ---------------------------------------------------------------------------
 
 /** String value input (for state, mode) */
 export const StringValueInputSchema = Type.Object(
