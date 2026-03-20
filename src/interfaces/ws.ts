@@ -18,7 +18,7 @@ import { Server } from 'http'
 import { Socket } from 'net'
 import Primus from 'primus'
 import WebSocket from 'ws'
-import { getSourceId, getMetadata } from '@signalk/signalk-schema'
+import { getMetadata } from '@signalk/path-metadata'
 import {
   requestAccess,
   InvalidTokenError,
@@ -28,6 +28,7 @@ import {
   LoginRateLimiter,
   LOGIN_RATE_LIMIT_MESSAGE
 } from '../login-rate-limiter'
+import { getSourceId } from '@signalk/server-api'
 import { WithConfig } from '../app'
 import {
   findRequest,
