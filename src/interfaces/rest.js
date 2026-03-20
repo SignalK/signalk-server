@@ -17,7 +17,7 @@
 const { createDebug } = require('../debug')
 const debug = createDebug('signalk-server:interfaces:rest')
 const express = require('express')
-const { getMetadata } = require('@signalk/signalk-schema')
+const { getMetadata } = require('@signalk/path-metadata')
 const ports = require('../ports')
 const {
   resolveDisplayUnits,
