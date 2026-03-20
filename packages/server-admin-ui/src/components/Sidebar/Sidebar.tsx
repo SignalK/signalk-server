@@ -228,6 +228,12 @@ export default function Sidebar({ location }: SidebarProps) {
       }
     })
 
+    result.push({
+      name: 'AsyncApi',
+      url: '/asyncapi',
+      icon: 'icon-feed'
+    })
+
     return result
   }, [appStore, accessRequests, expiredDeviceCount, loginStatus])
 
