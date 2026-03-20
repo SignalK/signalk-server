@@ -219,6 +219,12 @@ export default function Sidebar({ location }: SidebarProps) {
     })
 
     result.push({
+      name: 'Path Reference',
+      url: '/documentation/paths',
+      icon: 'icon-list'
+    })
+
+    result.push({
       name: 'OpenApi',
       url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
       icon: 'icon-energy',

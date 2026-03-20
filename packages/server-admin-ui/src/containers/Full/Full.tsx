@@ -28,6 +28,7 @@ import Settings from '../../views/ServerConfig/Settings'
 import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
+import PathReference from '../../views/PathReference/PathReference'
 
 import { fetchAllData } from '../../actions'
 
@@ -208,6 +209,12 @@ export default function Full() {
                 element={<ProtectedRoute component={AccessRequests} />}
               />
               <Route path="/asyncapi" element={<EmbeddedAsyncApi />} />
+              <Route
+                path="/documentation/paths"
+                element={
+                  <ProtectedRoute component={PathReference} supportsReadOnly />
+                }
+              />
               <Route path="/documentation/*" element={<EmbeddedDocs />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

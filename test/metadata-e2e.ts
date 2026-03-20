@@ -215,4 +215,20 @@ describe('Metadata end to end', function () {
       'Updated description'
     )
   })
+
+  it('serves the path metadata registry via GET /skServer/paths', async () => {
+    const response = await fetch(`http://localhost:${port}/skServer/paths`)
+    expect(response.status).to.equal(200)
+    const body = (await response.json()) as Record<
+      string,
+      { description?: string }
+    >
+    expect(body).to.be.an('object')
+    expect(Object.keys(body).length).to.be.greaterThan(0)
+    // Spot-check a well-known path from navigation.ts
+    expect(body).to.have.property('/vessels/*/navigation/speedOverGround')
+    expect(body['/vessels/*/navigation/speedOverGround']).to.have.property(
+      'description'
+    )
+  })
 })
