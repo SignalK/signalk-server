@@ -454,7 +454,8 @@ module.exports = (app: N2kDiscoveryApp) => {
           sendISORequest(app, src, 130060)
         }
 
-        setTimeout(() => {
+        const discoverTimer = setTimeout(() => {
+          pendingTimers.delete(discoverTimer)
           app.removeListener('N2KAnalyzerOut', listener)
           // Sort by PGN then instance
           instances.sort((a, b) => a.pgn - b.pgn || a.instance - b.instance)
@@ -485,7 +486,12 @@ module.exports = (app: N2kDiscoveryApp) => {
             channelLabels: allChannelLabels
           } as DiscoverResult)
         }, LISTEN_DURATION_MS)
+        pendingTimers.add(discoverTimer)
       }
+    )
+
+    app.securityStrategy.addAdminMiddleware(
+      `${SERVERROUTESPREFIX}/n2kChannelLabel`
     )
 
     // Save a per-channel label locally (fallback for devices without PGN 130060).
