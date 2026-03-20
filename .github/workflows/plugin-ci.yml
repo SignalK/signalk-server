@@ -1297,6 +1297,46 @@ jobs:
           fi
           echo "Plugin '$PLUGIN_PKG_NAME' is loaded"
 
+          # Verify provider API registrations
+          # If the plugin registers as a provider (history, resources, etc.),
+          # check that the corresponding server endpoints actually respond.
+          # This catches the case where a plugin calls registerHistoryApiProvider()
+          # but the endpoint still returns 501 (broken registration), or where a
+          # webapp/plugin depends on an API that no installed provider serves.
+          echo ""
+          echo "Checking provider API registrations..."
+
+          PROVIDER_ERRORS=0
+
+          # History API v2 — check if plugin registered as a history provider
+          HISTORY_PROVIDERS=$(curl -sf http://localhost:3000/signalk/v2/api/history/_providers || echo "{}")
+          if echo "$HISTORY_PROVIDERS" | jq -e 'keys | length > 0' > /dev/null 2>&1; then
+            echo "History API v2: provider(s) registered"
+            echo "$HISTORY_PROVIDERS" | jq -r 'to_entries[] | "  - \(.key)\(if .value.isDefault then " (default)" else "" end)"'
+
+            # Verify the values endpoint responds (not 501)
+            FROM=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-1d +%Y-%m-%dT%H:%M:%SZ)
+            TO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            HISTORY_STATUS=$(curl -sf -o /dev/null -w '%{http_code}' "http://localhost:3000/signalk/v2/api/history/values?paths=navigation.position&from=${FROM}&to=${TO}&resolution=60")
+            if [ "$HISTORY_STATUS" = "501" ]; then
+              echo "::error::History API v2: provider registered but /history/values returns 501 (no provider configured)"
+              PROVIDER_ERRORS=$((PROVIDER_ERRORS + 1))
+            elif [ "$HISTORY_STATUS" = "200" ]; then
+              echo "History API v2: /history/values responds OK"
+            else
+              echo "::warning::History API v2: /history/values returned HTTP $HISTORY_STATUS"
+            fi
+          else
+            echo "History API v2: no providers registered (OK — plugin does not provide history)"
+          fi
+
+          if [ "$PROVIDER_ERRORS" -gt 0 ]; then
+            echo ""
+            echo "::error::Provider API verification found $PROVIDER_ERRORS error(s)"
+            kill $SK_PID 2>/dev/null || true
+            exit 1
+          fi
+
           # Run integration tests from the plugin repo if they exist
           cd "${{ github.workspace }}"
           HAS_INTEGRATION=$(node -e "
