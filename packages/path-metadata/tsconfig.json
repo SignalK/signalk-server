@@ -8,6 +8,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["./src/**/*"],
-  "references": [{ "path": "../path-metadata" }]
+  "include": ["./src/**/*"]
 }

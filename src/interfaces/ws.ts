@@ -18,12 +18,13 @@ import { Server } from 'http'
 import { Socket } from 'net'
 import Primus from 'primus'
 import WebSocket from 'ws'
-import { getSourceId, getMetadata } from '@signalk/signalk-schema'
+import { getMetadata } from '@signalk/path-metadata'
 import {
   requestAccess,
   InvalidTokenError,
   WithSecurityStrategy
 } from '../security'
+import { getSourceId } from '@signalk/server-api'
 import { WithConfig } from '../app'
 import {
   findRequest,
