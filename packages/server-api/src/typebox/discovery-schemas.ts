@@ -4,10 +4,6 @@
 
 import { Type, type Static } from '@sinclair/typebox'
 
-// ---------------------------------------------------------------------------
-// Endpoint schemas
-// ---------------------------------------------------------------------------
-
 /**
  * v1 endpoint descriptor — protocol addresses for a specific API version.
  */
@@ -39,10 +35,6 @@ export const V1EndpointSchema = Type.Object(
   { $id: 'V1Endpoint' }
 )
 
-// ---------------------------------------------------------------------------
-// Discovery data
-// ---------------------------------------------------------------------------
-
 /**
  * Discovery response — server version and service endpoints.
  */
@@ -68,10 +60,6 @@ export const DiscoveryDataSchema = Type.Object(
 )
 export type DiscoveryData = Static<typeof DiscoveryDataSchema>
 
-// ---------------------------------------------------------------------------
-// Plugin metadata
-// ---------------------------------------------------------------------------
-
 /**
  * Plugin metadata for feature discovery.
  */
@@ -87,10 +75,6 @@ export const PluginMetaDataSchema = Type.Object(
   }
 )
 export type PluginMetaData = Static<typeof PluginMetaDataSchema>
-
-// ---------------------------------------------------------------------------
-// Features model
-// ---------------------------------------------------------------------------
 
 /**
  * Server features response — available APIs and installed plugins.
