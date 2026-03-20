@@ -696,6 +696,27 @@ describe('extractN2kDevices', () => {
     expect(devices[0].deviceInstanceUpper).toBe(1)
   })
 
+  it('CAN Name overrides stale parsed fields after device instance change', () => {
+    const sources: SourcesData = {
+      CAN: {
+        type: 'NMEA2000',
+        '7': {
+          n2k: {
+            src: '7',
+            canName: 'c08cbe07e7e00b16',
+            deviceInstanceLower: 0,
+            deviceInstanceUpper: 0,
+            deviceInstance: 0
+          }
+        }
+      }
+    }
+    const devices = extractN2kDevices(sources)
+    expect(devices[0].deviceInstance).toBe(7)
+    expect(devices[0].deviceInstanceLower).toBe(7)
+    expect(devices[0].deviceInstanceUpper).toBe(0)
+  })
+
   it('falls back to raw deviceInstance when no CAN Name', () => {
     const sources: SourcesData = {
       CAN: {

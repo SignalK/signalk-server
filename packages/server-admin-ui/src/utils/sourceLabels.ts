@@ -169,19 +169,18 @@ export function extractN2kDevices(sourcesData: SourcesData): N2kDeviceEntry[] {
       const d = device as SourceDevice
       if (!d.n2k) continue
 
-      const canNameFallback =
-        d.n2k.deviceInstanceLower === undefined
-          ? parseCanNameInstance(d.n2k.canName)
-          : null
+      const canNameParsed = parseCanNameInstance(d.n2k.canName)
 
       const deviceInstanceLower =
-        d.n2k.deviceInstanceLower ?? canNameFallback?.deviceInstanceLower
+        canNameParsed?.deviceInstanceLower ?? d.n2k.deviceInstanceLower
       const deviceInstanceUpper =
-        d.n2k.deviceInstanceUpper ?? canNameFallback?.deviceInstanceUpper
+        canNameParsed?.deviceInstanceUpper ?? d.n2k.deviceInstanceUpper
       const deviceInstance =
-        deviceInstanceLower !== undefined && deviceInstanceUpper !== undefined
-          ? deviceInstanceLower + deviceInstanceUpper * 8
-          : (canNameFallback?.deviceInstance ?? d.n2k.deviceInstance)
+        canNameParsed?.deviceInstance ??
+        (d.n2k.deviceInstanceLower !== undefined &&
+        d.n2k.deviceInstanceUpper !== undefined
+          ? d.n2k.deviceInstanceLower + d.n2k.deviceInstanceUpper * 8
+          : d.n2k.deviceInstance)
 
       devices.push({
         ...d.n2k,
