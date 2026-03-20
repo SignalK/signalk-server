@@ -23,20 +23,20 @@ import {
   Value,
   NormalizedMetaDelta
 } from '@signalk/server-api'
-import * as Bacon from 'baconjs'
+import Bacon from 'baconjs'
 
 export class StreamBundle implements IStreamBundle {
   selfContext: string
-  buses: { [key: Path]: Bacon.Bus<NormalizedDelta> }
-  allPathsBus: Bacon.Bus<NormalizedDelta>
-  selfBuses: Record<Path, Bacon.Bus<NormalizedDelta>>
-  selfAllPathsBus: Bacon.Bus<NormalizedDelta>
-  selfStreams: Record<Path, Bacon.Bus<Value>>
-  selfAllPathsStream: Bacon.Bus<Value>
-  keys: Bacon.Bus<Path>
+  buses: { [key: Path]: Bacon.Bus<unknown, NormalizedDelta> }
+  allPathsBus: Bacon.Bus<unknown, NormalizedDelta>
+  selfBuses: Record<Path, Bacon.Bus<unknown, NormalizedDelta>>
+  selfAllPathsBus: Bacon.Bus<unknown, NormalizedDelta>
+  selfStreams: Record<Path, Bacon.Bus<unknown, Value>>
+  selfAllPathsStream: Bacon.Bus<unknown, Value>
+  keys: Bacon.Bus<unknown, Path>
   availableSelfPaths: { [key: Path]: true }
-  metaBus: Bacon.Bus<NormalizedMetaDelta>
-  selfMetaBus: Bacon.Bus<NormalizedMetaDelta>
+  metaBus: Bacon.Bus<unknown, NormalizedMetaDelta>
+  selfMetaBus: Bacon.Bus<unknown, NormalizedMetaDelta>
 
   constructor(selfId: string) {
     this.selfContext = 'vessels.' + selfId

@@ -1,4 +1,4 @@
-import * as Bacon from 'baconjs'
+import Bacon from 'baconjs'
 
 /**
  * The _PropertyValues_ mechanism provides a means for passing configuration type values between different components running in the server process such as plugins and input connections.
@@ -73,8 +73,9 @@ export type PropertyValuesCallback = (
 
 /** @hidden */
 interface StreamTuple {
-  bus: Bacon.Bus<PropertyValue | undefined>
-  stream: Bacon.Property<(PropertyValue | undefined)[]>
+  bus: Bacon.Bus<unknown, PropertyValue | undefined>
+  /** Bacon.js stream - typed as unknown due to baconjs weak typing */
+  stream: Bacon.Property<unknown, (PropertyValue | undefined)[]>
 }
 
 /** @category Server API */
@@ -101,15 +102,18 @@ export class PropertyValues {
     this.getStreamTuple(pv.name).bus.push(pv)
   }
 
-  private getStreamTuple(propName: string): StreamTuple {
+  private getStreamTuple(propName: string) {
     let streamTuple = this.streams[propName]
     if (!streamTuple) {
-      const bus = new Bacon.Bus<PropertyValue | undefined>()
-      const stream = bus.scan([] as (PropertyValue | undefined)[], (acc, v) => {
-        acc.push(v)
-        this.count++
-        return acc
-      })
+      const bus = new Bacon.Bus<unknown, PropertyValue | undefined>()
+      const stream = bus.scan(
+        [],
+        (acc: (PropertyValue | undefined)[], v: PropertyValue | undefined) => {
+          acc.push(v)
+          this.count++
+          return acc
+        }
+      )
       streamTuple = {
         bus,
         stream
