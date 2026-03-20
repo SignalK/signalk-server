@@ -121,9 +121,20 @@ Enable `enable-signalk-integration: true` to have the workflow:
 4. Auto-configure the plugin to start (creates `plugin-config-data/<id>.json`)
 5. Start the server with sample NMEA 0183 and NMEA 2000 data (navigation, wind, depth, temperature, battery, etc.)
 6. Verify the plugin appears in `/skServer/plugins`
-7. Run `npm run test:integration` if defined in your `package.json`
+7. Verify provider API registrations (see below)
+8. Run `npm run test:integration` if defined in your `package.json`
 
 The integration test environment exports `SIGNALK_URL=http://localhost:3000` so your tests can connect to the running server. Use `signalk-server-version` to pin a specific server version.
+
+### Provider API Verification
+
+If your plugin registers as a provider for one of the server's provider APIs, the integration test verifies the registration actually works by calling the corresponding endpoint:
+
+| Provider API   | Registration method                | Endpoint checked                                     |
+| -------------- | ---------------------------------- | ---------------------------------------------------- |
+| History API v2 | `app.registerHistoryApiProvider()` | `/signalk/v2/api/history/values` must not return 501 |
+
+This catches a common class of bugs where a plugin calls a registration method but the endpoint still returns "no provider configured" — for example due to an API mismatch between the plugin and the server version being tested.
 
 ## Self-Hosted Runner for Real Hardware
 
