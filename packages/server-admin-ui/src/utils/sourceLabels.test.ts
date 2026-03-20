@@ -4,6 +4,7 @@ import {
   getDeviceInfo,
   buildSourceLabel,
   buildSourceLabelMap,
+  extractN2kDevices,
   detectInstanceConflicts,
   type SourcesData,
   type N2kDeviceEntry
@@ -584,5 +585,130 @@ describe('detectInstanceConflicts', () => {
     expect(
       detectInstanceConflicts(devices, undefined, pgnSourceKeys)
     ).toHaveLength(1)
+  })
+
+  it('skips proprietary PGNs without instance data instead of flagging conservatively', () => {
+    const devices: N2kDeviceEntry[] = [
+      makeDevice({
+        sourceRef: 'C.75',
+        connection: 'C',
+        src: '75',
+        deviceInstance: 2,
+        pgns: { '130818': '', '130825': '', '130316': '' }
+      }),
+      makeDevice({
+        sourceRef: 'C.76',
+        connection: 'C',
+        src: '76',
+        deviceInstance: 2,
+        pgns: { '130818': '', '130825': '', '130316': '' }
+      })
+    ]
+    // 130818/130825 are proprietary (>=130816), no instance data → skipped
+    // 130316 is a compound key PGN with non-overlapping source keys → no conflict
+    const pgnSourceKeys = {
+      '75': { '130316': ['20:Inside Temperature'] },
+      '76': { '130316': ['30:Exhaust Gas Temperature'] }
+    }
+    expect(
+      detectInstanceConflicts(devices, undefined, pgnSourceKeys)
+    ).toHaveLength(0)
+  })
+
+  it('still flags standard PGNs without instance data conservatively', () => {
+    const devices: N2kDeviceEntry[] = [
+      makeDevice({
+        sourceRef: 'C.1',
+        connection: 'C',
+        src: '1',
+        deviceInstance: 0,
+        pgns: { '127505': '' }
+      }),
+      makeDevice({
+        sourceRef: 'C.2',
+        connection: 'C',
+        src: '2',
+        deviceInstance: 0,
+        pgns: { '127505': '' }
+      })
+    ]
+    // Standard PGN, no instance data → still flagged conservatively
+    expect(detectInstanceConflicts(devices)).toHaveLength(1)
+  })
+})
+
+describe('extractN2kDevices', () => {
+  it('computes deviceInstance from sub-fields when available', () => {
+    const sources: SourcesData = {
+      CAN: {
+        type: 'NMEA2000',
+        '7': {
+          n2k: {
+            src: '7',
+            manufacturerCode: 'Furuno',
+            deviceInstanceLower: 6,
+            deviceInstanceUpper: 0,
+            deviceInstance: 0
+          }
+        }
+      }
+    }
+    const devices = extractN2kDevices(sources)
+    expect(devices).toHaveLength(1)
+    expect(devices[0].deviceInstance).toBe(6)
+  })
+
+  it('computes deviceInstance with upper bits', () => {
+    const sources: SourcesData = {
+      CAN: {
+        type: 'NMEA2000',
+        '5': {
+          n2k: {
+            src: '5',
+            deviceInstanceLower: 2,
+            deviceInstanceUpper: 16,
+            deviceInstance: 130
+          }
+        }
+      }
+    }
+    const devices = extractN2kDevices(sources)
+    expect(devices[0].deviceInstance).toBe(2 + 16 * 8)
+  })
+
+  it('falls back to CAN Name when deviceInstanceLower missing', () => {
+    const sources: SourcesData = {
+      CAN: {
+        type: 'NMEA2000',
+        '233': {
+          n2k: {
+            src: '233',
+            canName: 'cf78880f10e8098a',
+            deviceInstanceUpper: 1,
+            deviceInstance: 8
+          }
+        }
+      }
+    }
+    const devices = extractN2kDevices(sources)
+    expect(devices[0].deviceInstance).toBe(15)
+    expect(devices[0].deviceInstanceLower).toBe(7)
+    expect(devices[0].deviceInstanceUpper).toBe(1)
+  })
+
+  it('falls back to raw deviceInstance when no CAN Name', () => {
+    const sources: SourcesData = {
+      CAN: {
+        type: 'NMEA2000',
+        '10': {
+          n2k: {
+            src: '10',
+            deviceInstance: 5
+          }
+        }
+      }
+    }
+    const devices = extractN2kDevices(sources)
+    expect(devices[0].deviceInstance).toBe(5)
   })
 })

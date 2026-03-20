@@ -129,6 +129,32 @@ export interface N2kDeviceEntry extends N2kDeviceInfo {
  * Extract a flat list of N2K devices from the sources API response.
  * Sorted by manufacturer, then model, then bus address.
  */
+/**
+ * Extract deviceInstance sub-fields from a CAN Name hex string
+ * (Uint64LE of PGN 60928). Fallback for canboatjs versions that
+ * drop deviceInstanceLower=7.
+ */
+function parseCanNameInstance(canName: string | undefined): {
+  deviceInstanceLower: number
+  deviceInstanceUpper: number
+  deviceInstance: number
+} | null {
+  if (!canName) return null
+  try {
+    const val = BigInt('0x' + canName)
+    const byte4 = Number((val >> 32n) & 0xffn)
+    const dil = byte4 & 0x07
+    const diu = (byte4 >> 3) & 0x1f
+    return {
+      deviceInstanceLower: dil,
+      deviceInstanceUpper: diu,
+      deviceInstance: dil + diu * 8
+    }
+  } catch {
+    return null
+  }
+}
+
 export function extractN2kDevices(sourcesData: SourcesData): N2kDeviceEntry[] {
   const devices: N2kDeviceEntry[] = []
 
@@ -143,8 +169,25 @@ export function extractN2kDevices(sourcesData: SourcesData): N2kDeviceEntry[] {
       const d = device as SourceDevice
       if (!d.n2k) continue
 
+      const canNameFallback =
+        d.n2k.deviceInstanceLower === undefined
+          ? parseCanNameInstance(d.n2k.canName)
+          : null
+
+      const deviceInstanceLower =
+        d.n2k.deviceInstanceLower ?? canNameFallback?.deviceInstanceLower
+      const deviceInstanceUpper =
+        d.n2k.deviceInstanceUpper ?? canNameFallback?.deviceInstanceUpper
+      const deviceInstance =
+        deviceInstanceLower !== undefined && deviceInstanceUpper !== undefined
+          ? deviceInstanceLower + deviceInstanceUpper * 8
+          : (canNameFallback?.deviceInstance ?? d.n2k.deviceInstance)
+
       devices.push({
         ...d.n2k,
+        deviceInstanceLower,
+        deviceInstanceUpper,
+        deviceInstance,
         sourceRef: `${connName}.${d.n2k.canName || srcAddr}`,
         connection: connName
       })
@@ -303,6 +346,10 @@ export function detectInstanceConflicts(
             const aSet = new Set(aInst)
             return bInst.some((i) => aSet.has(i))
           }
+
+          // Proprietary PGNs (130816+) without instance data can't be
+          // verified — skip rather than false-positive
+          if (Number(pgn) >= 130816) return false
 
           // One or both missing instance data — flag conservatively
           return true
