@@ -175,6 +175,9 @@ export default class N2kToSignalK extends Transform {
       }
     )
 
+    const noopEmitter = { emit: () => {} } as unknown as typeof this.app
+    this.n2kMapper.n2kOutIsAvailable(noopEmitter, n2kOutEvent)
+
     if (this.app.isNmea2000OutAvailable) {
       this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent)
     } else {
