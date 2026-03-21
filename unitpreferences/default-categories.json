@@ -120,6 +120,9 @@
         "steering.rudderAngleTarget",
         "steering.autopilot.targetHeadingTrue",
         "steering.autopilot.targetHeadingMagnetic",
+        "steering.autopilot.target.headingMagnetic",
+        "steering.autopilot.target.headingTrue",
+        "steering.autopilot.target.windAngleApparent",
         "sails.*.reefState"
       ]
     },
