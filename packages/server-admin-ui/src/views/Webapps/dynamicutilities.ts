@@ -169,6 +169,75 @@ const initializeContainer = async (
   }
 }
 
+/**
+ * Initialize a legacy container with a share scope containing only React 16.
+ * Using a separate scope ensures webpack's singleton resolution always picks
+ * R16 — if we mutated the host scope (temporarily hiding R19), the container
+ * would keep a reference to that same object and later chunk resolution
+ * would pick R19 (higher version, not yet loaded) over R16.
+ */
+const initLegacyContainer = async (
+  container: Container,
+  moduleName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  legacy: { React16: any; ReactDOM16: any }
+): Promise<void> => {
+  const containerId = toSafeModuleId(moduleName)
+  if (initializedContainers.has(containerId)) {
+    return
+  }
+
+  const r16Version =
+    (legacy.React16 as { version?: string }).version || '16.14.0'
+  const legacyShareScope: ShareScope = {
+    react: {
+      [r16Version]: {
+        get: () => Promise.resolve(() => legacy.React16),
+        loaded: true,
+        from: 'legacyBridge',
+        eager: true,
+        shareConfig: {
+          singleton: true,
+          requiredVersion: `^${r16Version}`
+        }
+      }
+    },
+    'react-dom': {
+      [r16Version]: {
+        get: () => Promise.resolve(() => legacy.ReactDOM16),
+        loaded: true,
+        from: 'legacyBridge',
+        eager: true,
+        shareConfig: {
+          singleton: true,
+          requiredVersion: `^${r16Version}`
+        }
+      }
+    }
+  }
+
+  try {
+    const initResult = container.init(legacyShareScope)
+    if (
+      initResult &&
+      typeof (initResult as Promise<void>).then === 'function'
+    ) {
+      await initResult
+    }
+    initializedContainers.add(containerId)
+    legacyReactContainers.add(containerId)
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('already been initialized')
+    ) {
+      initializedContainers.add(containerId)
+    } else {
+      throw error
+    }
+  }
+}
+
 /** Load a UMD script in an isolated CommonJS shim (no window globals). */
 const loadUMD = async (
   url: string,
@@ -188,74 +257,96 @@ const loadUMD = async (
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let cachedUmdReactDOM: { React16: any; ReactDOM16: any } | null = null
+let cachedLegacyReact: { React16: any; ReactDOM16: any } | null = null
 
 /**
- * Get legacy React and ReactDOM for the bridge. React MUST come from the
- * share scope (same instance as the plugin's hooks). ReactDOM comes from
- * the scope if shared, otherwise from a bundled UMD fallback.
+ * Load React 16 + ReactDOM 16 for bridging legacy remote components.
+ *
+ * React 16 is loaded from the share scope if a plugin already registered it
+ * (via container.init), otherwise from a bundled UMD. ReactDOM 16 always
+ * comes from the bundled UMD, wired to the same React 16 instance so hooks
+ * share a single dispatcher.
  */
-const getPluginLegacyReact = async (): Promise<{
+const getLegacyReact = async (): Promise<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   React16: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ReactDOM16: any
 } | null> => {
-  const shareScope = getShareScope()
-  const hostMajor = parseInt(React.version.split('.')[0], 10)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let pluginReact: any = null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let pluginReactDOM: any = null
+  if (cachedLegacyReact) return cachedLegacyReact
 
-  for (const [pkg, setter] of [
-    ['react', (v: unknown) => (pluginReact = v)],
-    ['react-dom', (v: unknown) => (pluginReactDOM = v)]
-  ] as const) {
-    const entries = shareScope[pkg]
-    if (!entries) continue
-    for (const version of Object.keys(entries)) {
-      const major = parseInt(version.split('.')[0], 10)
-      if (major !== hostMajor) {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(setter as (v: any) => void)((await entries[version].get())())
-          break
-        } catch {
-          // ignore
+  try {
+    const base = document.baseURI || window.location.href
+    const noRequire = (name: string) => {
+      throw new Error(`Unexpected require("${name}")`)
+    }
+
+    // Load UMD React 16 first (includes Scheduler, needed by ReactDOM 16)
+    const React16UMD = await loadUMD(
+      new URL('react-16.production.min.js', base).href,
+      noRequire
+    )
+
+    // Check if a plugin already registered its React 16 in the share scope.
+    // If so, link the UMD's internal dispatchers to the plugin's instance
+    // so hooks work across both the plugin's CJS React and the UMD ReactDOM.
+    const shareScope = getShareScope()
+    const reactEntries = shareScope.react
+    const hostMajor = parseInt(React.version.split('.')[0], 10)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let pluginReact16: any = null
+
+    if (reactEntries) {
+      for (const version of Object.keys(reactEntries)) {
+        const major = parseInt(version.split('.')[0], 10)
+        if (major !== hostMajor) {
+          try {
+            pluginReact16 = (await reactEntries[version].get())()
+            break
+          } catch {
+            // ignore
+          }
         }
       }
     }
-  }
 
-  if (!pluginReact) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let React16ForBridge: any
+    if (pluginReact16) {
+      const pluginInternals =
+        pluginReact16.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED
+      const umdInternals =
+        React16UMD.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED
+      if (pluginInternals && umdInternals) {
+        umdInternals.ReactCurrentDispatcher =
+          pluginInternals.ReactCurrentDispatcher
+        umdInternals.ReactCurrentBatchConfig =
+          pluginInternals.ReactCurrentBatchConfig
+        umdInternals.ReactCurrentOwner = pluginInternals.ReactCurrentOwner
+        umdInternals.IsSomeRendererActing = pluginInternals.IsSomeRendererActing
+      }
+      React16ForBridge = pluginReact16
+    } else {
+      // No plugin React 16 yet (pre-init). The container will be
+      // initialized with a share scope pointing to React16UMD, so
+      // the plugin's webpack chunks will use this same instance.
+      React16ForBridge = React16UMD
+    }
+
+    const ReactDOM16 = await loadUMD(
+      new URL('react-dom-16.production.min.js', base).href,
+      (name: string) => {
+        if (name === 'react') return React16UMD
+        throw new Error(`Unexpected require("${name}") in ReactDOM UMD`)
+      }
+    )
+
+    cachedLegacyReact = { React16: React16ForBridge, ReactDOM16 }
+    return cachedLegacyReact
+  } catch (e) {
+    console.warn('Could not load legacy ReactDOM for bridging:', e)
     return null
   }
-
-  // Some plugins share react but bundle react-dom internally.
-  // Use UMD fallback, wired to the same React 16 instance for hooks.
-  if (!pluginReactDOM) {
-    if (cachedUmdReactDOM) {
-      return { React16: pluginReact, ReactDOM16: cachedUmdReactDOM.ReactDOM16 }
-    }
-    try {
-      const base = document.baseURI || window.location.href
-      const ReactDOM16 = await loadUMD(
-        new URL('react-dom-16.production.min.js', base).href,
-        (name: string) => {
-          if (name === 'react') return pluginReact
-          throw new Error(`Unexpected require("${name}") in ReactDOM UMD`)
-        }
-      )
-      cachedUmdReactDOM = { React16: pluginReact, ReactDOM16 }
-      return { React16: pluginReact, ReactDOM16 }
-    } catch (e) {
-      console.warn('Could not load legacy ReactDOM UMD for bridging:', e)
-      return null
-    }
-  }
-
-  return { React16: pluginReact, ReactDOM16: pluginReactDOM }
 }
 
 const createErrorModule = (message?: string): { default: React.FC } => ({
@@ -394,30 +485,9 @@ export const toLazyDynamicComponent = (
         const isLegacy = await containerUsesLegacyReact(moduleName)
 
         if (isLegacy) {
-          // Hide R19 entries so webpack singleton resolution picks R16.
-          // Only remove host-version entries, preserving R16 entries from
-          // other containers (some plugins share react but not react-dom).
-          const shareScope = getShareScope()
-          const hostMajor = React.version.split('.')[0]
-          const savedEntries: {
-            pkg: string
-            version: string
-            entry: ShareScopeEntry
-          }[] = []
-
-          try {
-            for (const pkg of ['react', 'react-dom'] as const) {
-              const entries = shareScope[pkg]
-              if (!entries) continue
-              for (const version of Object.keys(entries)) {
-                if (version.split('.')[0] === hostMajor) {
-                  savedEntries.push({ pkg, version, entry: entries[version] })
-                  delete entries[version]
-                }
-              }
-            }
-
-            await initializeContainer(container, moduleName)
+          const legacy = await getLegacyReact()
+          if (legacy) {
+            await initLegacyContainer(container, moduleName, legacy)
 
             const factory = await container.get(component)
             if (!factory) {
@@ -430,40 +500,52 @@ export const toLazyDynamicComponent = (
             const RemoteComponent = (Module as { default: React.ComponentType })
               .default
 
-            const pluginLegacy = await getPluginLegacyReact()
-            if (pluginLegacy) {
-              console.log(
-                `Module ${moduleName} uses legacy React — bridging with isolated ReactDOM.render`
+            console.log(
+              `Module ${moduleName} uses legacy React — bridging with isolated ReactDOM.render`
+            )
+            return {
+              default: createLegacyBridge(
+                RemoteComponent,
+                legacy.React16,
+                legacy.ReactDOM16
               )
-              return {
-                default: createLegacyBridge(
-                  RemoteComponent,
-                  pluginLegacy.React16,
-                  pluginLegacy.ReactDOM16
-                )
-              }
-            }
-
-            return Module as { default: React.ComponentType }
-          } finally {
-            for (const { pkg, version, entry } of savedEntries) {
-              if (!shareScope[pkg]) {
-                shareScope[pkg] = {}
-              }
-              shareScope[pkg]![version] = entry
             }
           }
         }
 
         // Normal (non-legacy) path
         await initializeContainer(container, moduleName)
+
         const factory = await container.get(component)
         if (!factory) {
           return createErrorModule(
             `Module "${moduleName}" does not export the required component.`
           )
         }
-        return factory() as { default: React.ComponentType }
+
+        const Module = factory()
+        const RemoteComponent = (Module as { default: React.ComponentType })
+          .default
+
+        // Double-check: initializeContainer may have detected legacy
+        // after init (via share scope version diff)
+        if (await containerUsesLegacyReact(moduleName)) {
+          const legacy = await getLegacyReact()
+          if (legacy) {
+            console.log(
+              `Module ${moduleName} uses legacy React (post-init) — bridging with isolated ReactDOM.render`
+            )
+            return {
+              default: createLegacyBridge(
+                RemoteComponent,
+                legacy.React16,
+                legacy.ReactDOM16
+              )
+            }
+          }
+        }
+
+        return Module as { default: React.ComponentType }
       } catch (ex) {
         console.error(`Error loading ${component} from ${moduleName}:`, ex)
 
