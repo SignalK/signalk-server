@@ -11,7 +11,7 @@ import {
 } from '.'
 import { RadarProviderRegistry, WithRadarApi } from './radarapi'
 import { CourseApi } from './course'
-import { HistoryApiRegistry, WithHistoryApi } from './history'
+import { HistoryProviderRegistry, WithHistoryApi } from './history'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
 
@@ -40,7 +40,7 @@ export interface ServerAPI
     RadarProviderRegistry,
     WithRadarApi,
     WithHistoryApi,
-    HistoryApiRegistry,
+    HistoryProviderRegistry,
     WithFeatures,
     CourseApi,
     WithNotificationsApi,

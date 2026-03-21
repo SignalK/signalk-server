@@ -112,10 +112,16 @@ export type ContextsRequestQueryParams = TimeRangeQueryParams
 export type ContextsResponse = Context[]
 
 /** @category  History API */
-export type HistoryApiRegistry = {
-  registerHistoryApiProvider(provider: HistoryApi): void
+export type HistoryProviderRegistry = {
+  registerHistoryApiProvider(provider: HistoryProvider): void
   unregisterHistoryApiProvider(): void
 }
+
+/**
+ * @deprecated Use {@link HistoryProviderRegistry} instead.
+ * @category  History API
+ */
+export type HistoryApiRegistry = HistoryProviderRegistry
 /** @category  History API */
 export type WithHistoryApi = {
   /**
@@ -130,6 +136,16 @@ export type WithHistoryApi = {
    */
   getHistoryApi?: (providerId?: string) => Promise<HistoryApi>
 }
+
+/**
+ * Provider interface for the History API.
+ *
+ * Plugins that supply historical data implement this interface and register
+ * it via {@link HistoryProviderRegistry.registerHistoryApiProvider}.
+ *
+ * @category  History API
+ */
+export type HistoryProvider = HistoryApi
 
 /** @category  History API */
 export interface HistoryApi {
@@ -161,16 +177,21 @@ export interface HistoryApi {
   getPaths(query: PathsRequest): Promise<PathsResponse>
 }
 
-export function isHistoryApi(obj: unknown): obj is HistoryApi {
+export function isHistoryProvider(obj: unknown): obj is HistoryProvider {
   if (typeof obj !== 'object' || obj === null) {
     return false
   }
   return (
-    typeof (obj as HistoryApi).getValues === 'function' &&
-    typeof (obj as HistoryApi).getContexts === 'function' &&
-    typeof (obj as HistoryApi).getPaths === 'function'
+    typeof (obj as HistoryProvider).getValues === 'function' &&
+    typeof (obj as HistoryProvider).getContexts === 'function' &&
+    typeof (obj as HistoryProvider).getPaths === 'function'
   )
 }
+
+/**
+ * @deprecated Use {@link isHistoryProvider} instead.
+ */
+export const isHistoryApi = isHistoryProvider
 
 /**
  * @hidden visible through ServerAPI

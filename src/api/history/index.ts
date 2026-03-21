@@ -3,8 +3,9 @@ import {
   ContextsRequest,
   ContextsResponse,
   HistoryApi,
+  HistoryProvider,
   HistoryProviders,
-  isHistoryApi,
+  isHistoryProvider,
   PathSpec,
   PathsRequest,
   PathsResponse,
@@ -29,7 +30,7 @@ const HISTORY_API_PATH = `/signalk/v2/api/history`
 interface HistoryApplication extends WithSecurityStrategy, IRouter {}
 
 export class HistoryApiHttpRegistry {
-  private historyProviders: Map<string, HistoryApi> = new Map()
+  private historyProviders: Map<string, HistoryProvider> = new Map()
   private defaultProviderId?: string
   proxy: HistoryApi
 
@@ -61,8 +62,11 @@ export class HistoryApiHttpRegistry {
     }
   }
 
-  registerHistoryApiProvider(pluginId: string, provider: HistoryApi): void {
-    if (!isHistoryApi(provider)) {
+  registerHistoryApiProvider(
+    pluginId: string,
+    provider: HistoryProvider
+  ): void {
+    if (!isHistoryProvider(provider)) {
       throw new Error('Invalid history api provider')
     }
     if (!this.historyProviders.has(pluginId)) {
@@ -101,7 +105,7 @@ export class HistoryApiHttpRegistry {
         debug(`**route = ${req.method} ${req.path}`)
         try {
           const r: HistoryProviders = {}
-          this.historyProviders.forEach((_v: HistoryApi, k: string) => {
+          this.historyProviders.forEach((_v: HistoryProvider, k: string) => {
             r[k] = {
               isDefault: k === this.defaultProviderId
             }
@@ -217,7 +221,7 @@ export class HistoryApiHttpRegistry {
     )
   }
 
-  private defaultProvider(): HistoryApi {
+  private defaultProvider(): HistoryProvider {
     if (
       this.defaultProviderId &&
       this.historyProviders.has(this.defaultProviderId)
@@ -227,7 +231,7 @@ export class HistoryApiHttpRegistry {
     throw new Error('No history api provider configured')
   }
 
-  private useProvider(req: Request): HistoryApi | undefined {
+  private useProvider(req: Request): HistoryProvider | undefined {
     if (req.query.provider) {
       const provider = this.historyProviders.get(req.query.provider as string)
       if (!provider) {
@@ -242,8 +246,8 @@ export class HistoryApiHttpRegistry {
 }
 
 async function respondWith<T>(
-  getProvider: () => HistoryApi | undefined,
-  handler: (provider: HistoryApi) => Promise<T> | undefined,
+  getProvider: () => HistoryProvider | undefined,
+  handler: (provider: HistoryProvider) => Promise<T> | undefined,
   res: Response
 ) {
   try {
