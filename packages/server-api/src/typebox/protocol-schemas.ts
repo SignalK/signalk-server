@@ -15,13 +15,10 @@ import {
   SignalKUuidPattern
 } from './shared-schemas'
 
-// ---------------------------------------------------------------------------
-// Alarm enums
 // Keep as TypeScript enums alongside TypeBox enum schemas — enums are values
 // used at runtime (switch statements, comparisons), not just types.
 // @see specification/schemas/definitions.json#/definitions/alarmState
 // @see specification/schemas/definitions.json#/definitions/alarmMethodEnum
-// ---------------------------------------------------------------------------
 
 /**
  * Alarm state enum.
@@ -79,10 +76,7 @@ export const AlarmMethodSchema = Type.Union(
   }
 )
 
-// ---------------------------------------------------------------------------
-// Zone
 // @see specification/schemas/definitions.json zones definition
-// ---------------------------------------------------------------------------
 
 /**
  * A zone defining display and alarm state for a value range.
@@ -116,10 +110,6 @@ export const ZoneSchema = Type.Object(
 )
 export type Zone = Static<typeof ZoneSchema>
 
-// ---------------------------------------------------------------------------
-// AlarmStatus
-// ---------------------------------------------------------------------------
-
 /**
  * Alarm status flags (silenced, acknowledged, etc.).
  */
@@ -148,10 +138,7 @@ export const AlarmStatusSchema = Type.Object(
 )
 export type AlarmStatus = Static<typeof AlarmStatusSchema>
 
-// ---------------------------------------------------------------------------
-// DisplayUnits
 // Wire format for SI unit conversion metadata sent to clients.
-// ---------------------------------------------------------------------------
 
 /**
  * Stored display-units metadata — the minimal form persisted in path metadata.
@@ -217,10 +204,7 @@ export const EnhancedDisplayUnitsSchema = Type.Object(
 )
 export type EnhancedDisplayUnits = Static<typeof EnhancedDisplayUnitsSchema>
 
-// ---------------------------------------------------------------------------
-// MetaValue & Meta
 // @see specification/schemas/definitions.json commonValueFields
-// ---------------------------------------------------------------------------
 
 /**
  * Metadata payload for a Signal K path.
@@ -298,10 +282,7 @@ export const MetaSchema = Type.Object(
 )
 export type Meta = Static<typeof MetaSchema>
 
-// ---------------------------------------------------------------------------
-// Source
 // @see specification/schemas/definitions.json#/definitions/source
-// ---------------------------------------------------------------------------
 
 /**
  * Source of data in delta format — a record of where the data was received from.
@@ -384,10 +365,7 @@ export const SourceSchema = Type.Object(
 )
 export type Source = Static<typeof SourceSchema>
 
-// ---------------------------------------------------------------------------
-// Notification
 // @see specification/schemas/groups/notifications.json#/definitions/notification
-// ---------------------------------------------------------------------------
 
 /**
  * Notification payload — state, method, message, and optional position/status.
@@ -429,10 +407,6 @@ export const NotificationSchema = Type.Object(
 )
 export type Notification = Static<typeof NotificationSchema>
 
-// ---------------------------------------------------------------------------
-// PathValue
-// ---------------------------------------------------------------------------
-
 /**
  * A path-value pair in an update delta.
  */
@@ -447,10 +421,6 @@ export const PathValueSchema = Type.Object(
   }
 )
 export type PathValue = Static<typeof PathValueSchema>
-
-// ---------------------------------------------------------------------------
-// Update
-// ---------------------------------------------------------------------------
 
 /**
  * An update within a delta message.
@@ -515,10 +485,6 @@ export const UpdateSchema = Type.Union(
       'A Signal K update containing path-value and/or path-meta pairs with timestamp and source'
   }
 )
-
-// ---------------------------------------------------------------------------
-// Delta
-// ---------------------------------------------------------------------------
 
 /**
  * A Signal K delta message — the fundamental unit of data exchange.

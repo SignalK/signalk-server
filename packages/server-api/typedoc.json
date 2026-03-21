@@ -1,4 +1,17 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["src/index.ts"]
+  "entryPoints": ["src/index.ts"],
+  "intentionallyNotExported": [
+    "ActiveRouteSchema",
+    "CourseInfoSchema",
+    "CoursePointTypeSchema",
+    "HrefDestinationSchema",
+    "NextPreviousPointSchema",
+    "PositionDestinationSchema",
+    "RouteDestinationSchema",
+    "AutopilotStateDefType",
+    "AutopilotActionDefType",
+    "AutopilotOptionsType",
+    "AutopilotInfoType"
+  ]
 }

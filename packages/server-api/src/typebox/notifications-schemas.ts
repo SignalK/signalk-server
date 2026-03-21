@@ -18,10 +18,6 @@ export {
   NotificationSchema
 }
 
-// ---------------------------------------------------------------------------
-// API-specific schemas
-// ---------------------------------------------------------------------------
-
 /**
  * Alarm method array — wraps the AlarmMethod enum for OpenAPI.
  */
