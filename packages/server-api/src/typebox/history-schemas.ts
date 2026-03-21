@@ -4,10 +4,6 @@
 
 import { Type, type Static } from '@sinclair/typebox'
 
-// ---------------------------------------------------------------------------
-// Aggregate method
-// ---------------------------------------------------------------------------
-
 export const AggregateMethodSchema = Type.Union(
   [
     Type.Literal('average'),
@@ -26,11 +22,7 @@ export const AggregateMethodSchema = Type.Union(
       "Aggregation method for historical data. The 'sma' (Simple Moving Average) and 'ema' (Exponential Moving Average) methods accept an optional numeric parameter separated by colon: for sma it is the number of samples, for ema it is the alpha value (0-1)."
   }
 )
-export type AggregateMethodSchemaType = Static<typeof AggregateMethodSchema>
-
-// ---------------------------------------------------------------------------
-// Values response schema (GET /values response body)
-// ---------------------------------------------------------------------------
+export type AggregateMethod = Static<typeof AggregateMethodSchema>
 
 export const ValuesResponseSchema = Type.Object(
   {
@@ -79,11 +71,7 @@ export const ValuesResponseSchema = Type.Object(
     description: 'Historical data series with header and data rows'
   }
 )
-export type ValuesResponseSchemaType = Static<typeof ValuesResponseSchema>
-
-// ---------------------------------------------------------------------------
-// PathSpec schema
-// ---------------------------------------------------------------------------
+export type ValuesResponse = Static<typeof ValuesResponseSchema>
 
 export const PathSpecSchema = Type.Object(
   {
@@ -100,11 +88,7 @@ export const PathSpecSchema = Type.Object(
       'Specification for a path to query, including the aggregation method and optional parameters'
   }
 )
-export type PathSpecSchemaType = Static<typeof PathSpecSchema>
-
-// ---------------------------------------------------------------------------
-// Provider schemas
-// ---------------------------------------------------------------------------
+export type PathSpec = Static<typeof PathSpecSchema>
 
 export const HistoryProviderInfoSchema = Type.Object(
   {
@@ -114,9 +98,7 @@ export const HistoryProviderInfoSchema = Type.Object(
   },
   { $id: 'HistoryProviderInfo' }
 )
-export type HistoryProviderInfoSchemaType = Static<
-  typeof HistoryProviderInfoSchema
->
+export type HistoryProviderInfo = Static<typeof HistoryProviderInfoSchema>
 
 export const HistoryProvidersResponseSchema = Type.Record(
   Type.String({ description: 'Plugin id of the history provider' }),
@@ -126,6 +108,6 @@ export const HistoryProvidersResponseSchema = Type.Record(
     description: 'Map of registered history providers keyed by plugin id'
   }
 )
-export type HistoryProvidersResponseSchemaType = Static<
+export type HistoryProvidersResponse = Static<
   typeof HistoryProvidersResponseSchema
 >

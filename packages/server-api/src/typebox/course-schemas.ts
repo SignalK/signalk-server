@@ -13,11 +13,7 @@ import {
 } from './shared-schemas'
 
 export { IsoTimeSchema, PositionSchema, OkResponseSchema, ErrorResponseSchema }
-export type { IsoTimeType } from './shared-schemas'
-
-// ---------------------------------------------------------------------------
-// Primitive schemas (Course-specific)
-// ---------------------------------------------------------------------------
+export type { IsoTime } from './shared-schemas'
 
 /** Signal K route resource href (UUID v4 format). */
 export const SignalKHrefRouteSchema = Type.String({
@@ -42,30 +38,21 @@ export const ArrivalCircleSchema = Type.Number({
   description: 'Radius of arrival zone in meters',
   examples: [500]
 })
-export type ArrivalCircleType = Static<typeof ArrivalCircleSchema>
-
-export type PositionType = Static<typeof PositionSchema>
-
-// ---------------------------------------------------------------------------
-// Course point type
-// ---------------------------------------------------------------------------
+export type ArrivalCircle = Static<typeof ArrivalCircleSchema>
 
 /** Type of course point. */
 export const CoursePointTypeSchema = Type.Union(
   [
     Type.Literal('VesselPosition'),
     Type.Literal('RoutePoint'),
-    Type.Literal('Location')
+    Type.Literal('Location'),
+    Type.Literal('Waypoint')
   ],
   {
     $id: 'CoursePointType',
     description: 'Type of course point'
   }
 )
-
-// ---------------------------------------------------------------------------
-// Destination request body schemas
-// ---------------------------------------------------------------------------
 
 /** Destination by waypoint href. */
 export const HrefDestinationSchema = Type.Object(
@@ -79,7 +66,7 @@ export const HrefDestinationSchema = Type.Object(
   },
   { $id: 'HrefDestination' }
 )
-export type HrefDestinationType = Static<typeof HrefDestinationSchema>
+export type HrefDestination = Static<typeof HrefDestinationSchema>
 
 /** Destination by position coordinates. */
 export const PositionDestinationSchema = Type.Object(
@@ -88,7 +75,7 @@ export const PositionDestinationSchema = Type.Object(
   },
   { $id: 'PositionDestination', description: 'Location coordinates.' }
 )
-export type PositionDestinationType = Static<typeof PositionDestinationSchema>
+export type PositionDestination = Static<typeof PositionDestinationSchema>
 
 /**
  * PUT /course/destination request body.
@@ -103,7 +90,7 @@ export const SetDestinationBodySchema = Type.Intersect(
   ],
   { $id: 'SetDestinationBody' }
 )
-export type SetDestinationBodyType = Static<typeof SetDestinationBodySchema>
+export type SetDestinationBody = Static<typeof SetDestinationBodySchema>
 
 /** PUT /course/activeRoute request body. */
 export const RouteDestinationSchema = Type.Object(
@@ -128,11 +115,7 @@ export const RouteDestinationSchema = Type.Object(
   },
   { $id: 'RouteDestination' }
 )
-export type RouteDestinationType = Static<typeof RouteDestinationSchema>
-
-// ---------------------------------------------------------------------------
-// Endpoint-specific request body schemas
-// ---------------------------------------------------------------------------
+export type RouteDestination = Static<typeof RouteDestinationSchema>
 
 /** PUT /course/arrivalCircle request body */
 export const ArrivalCircleBodySchema = Type.Object(
@@ -141,7 +124,7 @@ export const ArrivalCircleBodySchema = Type.Object(
   },
   { $id: 'ArrivalCircleBody' }
 )
-export type ArrivalCircleBodyType = Static<typeof ArrivalCircleBodySchema>
+export type ArrivalCircleBody = Static<typeof ArrivalCircleBodySchema>
 
 /** PUT /course/targetArrivalTime request body */
 export const TargetArrivalTimeBodySchema = Type.Object(
@@ -156,9 +139,7 @@ export const TargetArrivalTimeBodySchema = Type.Object(
   },
   { $id: 'TargetArrivalTimeBody' }
 )
-export type TargetArrivalTimeBodyType = Static<
-  typeof TargetArrivalTimeBodySchema
->
+export type TargetArrivalTimeBody = Static<typeof TargetArrivalTimeBodySchema>
 
 /** PUT /course/activeRoute/nextPoint request body */
 export const NextPointBodySchema = Type.Object(
@@ -172,7 +153,7 @@ export const NextPointBodySchema = Type.Object(
   },
   { $id: 'NextPointBody' }
 )
-export type NextPointBodyType = Static<typeof NextPointBodySchema>
+export type NextPointBody = Static<typeof NextPointBodySchema>
 
 /** PUT /course/activeRoute/pointIndex request body */
 export const PointIndexBodySchema = Type.Object(
@@ -185,7 +166,7 @@ export const PointIndexBodySchema = Type.Object(
   },
   { $id: 'PointIndexBody' }
 )
-export type PointIndexBodyType = Static<typeof PointIndexBodySchema>
+export type PointIndexBody = Static<typeof PointIndexBodySchema>
 
 /** PUT /course/activeRoute/reverse request body */
 export const ReverseBodySchema = Type.Object(
@@ -200,11 +181,7 @@ export const ReverseBodySchema = Type.Object(
   },
   { $id: 'ReverseBody' }
 )
-export type ReverseBodyType = Static<typeof ReverseBodySchema>
-
-// ---------------------------------------------------------------------------
-// Response model schemas
-// ---------------------------------------------------------------------------
+export type ReverseBody = Static<typeof ReverseBodySchema>
 
 /** Active route state. */
 export const ActiveRouteSchema = Type.Object(
@@ -229,7 +206,7 @@ export const ActiveRouteSchema = Type.Object(
   },
   { $id: 'ActiveRoute' }
 )
-export type ActiveRouteType = Static<typeof ActiveRouteSchema>
+export type ActiveRoute = Static<typeof ActiveRouteSchema>
 
 /** Navigation point (next or previous). */
 export const NextPreviousPointSchema = Type.Object(
@@ -237,16 +214,12 @@ export const NextPreviousPointSchema = Type.Object(
     href: Type.Optional(
       Type.String({ description: 'Reference to a waypoint resource.' })
     ),
-    type: Type.String({
-      description:
-        "Type of point. Known values: VesselPosition (vessel's current location), RoutePoint (a point on the active route), Location (an arbitrary geographic position).",
-      examples: ['RoutePoint', 'Location', 'VesselPosition']
-    }),
+    type: CoursePointTypeSchema,
     position: PositionSchema
   },
   { $id: 'NextPreviousPoint' }
 )
-export type NextPreviousPointType = Static<typeof NextPreviousPointSchema>
+export type NextPreviousPoint = Static<typeof NextPreviousPointSchema>
 
 /** Full course state response. */
 export const CourseInfoSchema = Type.Object(
@@ -285,11 +258,7 @@ export const CourseInfoSchema = Type.Object(
     description: 'Course state including active route and navigation points.'
   }
 )
-export type CourseInfoType = Static<typeof CourseInfoSchema>
-
-// ---------------------------------------------------------------------------
-// Course calculations
-// ---------------------------------------------------------------------------
+export type CourseInfo = Static<typeof CourseInfoSchema>
 
 /**
  * Calculated course values derived from vessel position and destination.
@@ -434,11 +403,7 @@ export const CourseCalculationsSchema = Type.Object(
     description: 'Calculated course data values.'
   }
 )
-export type CourseCalculationsType = Static<typeof CourseCalculationsSchema>
-
-// ---------------------------------------------------------------------------
-// Delta event schemas (for AsyncAPI WebSocket documentation)
-// ---------------------------------------------------------------------------
+export type CourseCalculations = Static<typeof CourseCalculationsSchema>
 
 /**
  * v2 course delta paths emitted on navigation.course.*
@@ -498,10 +463,6 @@ export const CourseDeltaV1Schema = Type.Object(
       'Course delta values emitted under navigation.courseGreatCircle.* and navigation.courseRhumbline.* (Signal K v1)'
   }
 )
-
-// ---------------------------------------------------------------------------
-// Course-specific API response schemas
-// ---------------------------------------------------------------------------
 
 /** API config response */
 export const CourseConfigSchema = Type.Object(
