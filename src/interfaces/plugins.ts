@@ -872,6 +872,18 @@ module.exports = (theApp: any) => {
         app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
       }
     }
+    if (typeof plugin.getRoutePermissions === 'function') {
+      const permissions = plugin.getRoutePermissions()
+      if (
+        app.securityStrategy.registerPluginRoutePermissions &&
+        permissions.length > 0
+      ) {
+        app.securityStrategy.registerPluginRoutePermissions(
+          plugin.id,
+          permissions
+        )
+      }
+    }
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
 
     if (typeof plugin.signalKApiRoutes === 'function') {

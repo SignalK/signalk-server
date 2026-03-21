@@ -15,6 +15,7 @@
  * limitations under the License.
 */
 
+import { RoutePermission } from '@signalk/server-api'
 import { Request, Response } from 'express'
 import { PartialOIDCConfig } from './oidc/types'
 import {
@@ -230,6 +231,12 @@ export interface SecurityStrategy {
   ) => boolean
 
   addAdminMiddleware: (path: string) => void
+  addWriteMiddleware: (path: string) => void
+
+  registerPluginRoutePermissions?: (
+    pluginId: string,
+    permissions: RoutePermission[]
+  ) => void
 
   /** Update OIDC config in memory (optional - only available when token security is active) */
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
