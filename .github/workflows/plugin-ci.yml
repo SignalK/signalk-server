@@ -150,6 +150,28 @@ jobs:
             warnings.push('package.json has "type": "module" — SignalK server loads plugins with require(). ESM-only plugins may fail to load.');
           }
 
+          // React 19 required for plugins with embedded webapps (Module Federation)
+          const webappKeywords = ['signalk-plugin-configurator', 'signalk-embeddable-webapp', 'signalk-webapp'];
+          const matchedWebappKeywords = pkg.keywords ? webappKeywords.filter(kw => pkg.keywords.includes(kw)) : [];
+          if (matchedWebappKeywords.length > 0) {
+            const allDeps = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.peerDependencies };
+            const reactRange = allDeps.react;
+            if (reactRange) {
+              const versionMatch = reactRange.match(/(\d+)\.\d+\.\d+/);
+              if (versionMatch) {
+                const major = parseInt(versionMatch[1], 10);
+                if (major < 19) {
+                  warnings.push(
+                    'Plugin has webapp keyword (' + matchedWebappKeywords.join(', ') +
+                    ') but declares react ' + reactRange + ' (major version ' + major + '). ' +
+                    'The Signal K admin UI requires React >= 19 for Module Federation compatibility. ' +
+                    'Update your react and react-dom dependencies to ^19.0.0'
+                  );
+                }
+              }
+            }
+          }
+
           warnings.forEach(w => console.log('::warning::' + w));
           if (errors.length > 0) {
             errors.forEach(e => console.log('::error::' + e));
@@ -1390,6 +1412,7 @@ jobs:
             echo "- **npm pack** — All files referenced by \`main\`/\`exports\` are included in the package"
             echo "- **App Store install** — No native addons that break with \`--ignore-scripts\`"
             echo "- **Hardcoded paths** — No \`/home/user/...\` literals in source files"
+            echo "- **React version** — Plugins with webapp keywords must use React >= 19 for Module Federation compatibility"
             echo "- **Stray files** — Build/test does not leave untracked files in the repo"
             echo ""
             echo "See the individual job summaries above for per-platform details."
