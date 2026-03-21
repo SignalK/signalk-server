@@ -905,6 +905,47 @@ jobs:
           PACKCHECK
           node /tmp/check-pack.js
 
+      - name: Check ES2023 compatibility (Cerbo GX / Node 20)
+        id: es-check
+        if: always() && steps.pack-check.outcome != 'skipped'
+        shell: bash
+        run: |
+          # Cerbo GX (Venus OS) runs Node 20 which supports ES2023 syntax.
+          # Plugins using ES2024+ syntax (RegExp v flag, import attributes)
+          # will crash with SyntaxError on Node 20.
+          # Only check server-side JS (dist/, lib/, main entry) — skip public/
+          # which is frontend code running in browsers.
+          FILES=""
+          for dir in dist lib; do
+            if [ -d "$dir" ]; then
+              for ext in js cjs mjs; do
+                if find "$dir" -name "*.$ext" -print -quit 2>/dev/null | grep -q .; then
+                  FILES="$FILES $dir/**/*.$ext"
+                fi
+              done
+            fi
+          done
+
+          MAIN=$(node -e "
+            const pkg = require('./package.json');
+            const main = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null);
+            if (main) console.log(main);
+          " 2>/dev/null)
+          if [ -n "$MAIN" ] && [ -f "$MAIN" ] && [ -z "$FILES" ]; then
+            FILES="$MAIN"
+          fi
+
+          if [ -z "$FILES" ]; then
+            echo "No built JS files found to check"
+            exit 0
+          fi
+
+          echo "Checking ES2023 compatibility: $FILES"
+          if ! npx --yes es-check@8 es2023 $FILES 2>&1; then
+            echo ""
+            echo "::warning::Plugin uses ES2024+ syntax not supported by Node 20 (Cerbo GX / Venus OS). Consider targeting ES2023 in your TypeScript/build config or tsconfig.json to maintain Cerbo GX compatibility."
+          fi
+
       - name: Simulate App Store install (--ignore-scripts)
         id: appstore-check
         shell: bash
@@ -1038,6 +1079,7 @@ jobs:
           APPSTORE_CHECK: ${{ steps.appstore-check.outcome }}
           TESTS: ${{ steps.tests.outcome }}
           STRAY_FILES: ${{ steps.stray-files.outcome }}
+          ES_CHECK: ${{ steps.es-check.outcome }}
           OS_NAME: >-
             ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
                 matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
@@ -1071,6 +1113,7 @@ jobs:
             echo "| npm pack includes all files | $(icon "$PACK_CHECK") |"
             echo "| App Store compatible (no native addons) | $(icon "$APPSTORE_CHECK") |"
             echo "| Tests | $(icon "$TESTS") |"
+            echo "| ES2023 compatible (Cerbo GX / Node 20) | $(icon "$ES_CHECK") |"
             echo "| No stray files after build | $(icon "$STRAY_FILES") |"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -1427,6 +1470,7 @@ jobs:
             echo "- **npm pack** — All files referenced by \`main\`/\`exports\` are included in the package"
             echo "- **App Store install** — No native addons that break with \`--ignore-scripts\`"
             echo "- **Hardcoded paths** — No \`/home/user/...\` literals in source files"
+            echo "- **ES2023 compatibility** — Built JS checked for Cerbo GX (Node 20) syntax compatibility"
             echo "- **baconjs** — Plugins must not bundle their own baconjs; the server provides >= 3.x"
             echo "- **React version** — Plugins with webapp keywords must use React >= 19 for Module Federation compatibility"
             echo "- **Stray files** — Build/test does not leave untracked files in the repo"
