@@ -16,7 +16,7 @@ export const RadarStatusSchema = Type.Union(
     description: 'Current operational status of the radar'
   }
 )
-export type RadarStatusSchemaType = Static<typeof RadarStatusSchema>
+export type RadarStatus = Static<typeof RadarStatusSchema>
 
 export const RadarControlValueSchema = Type.Object(
   {
@@ -33,7 +33,7 @@ export const RadarControlValueSchema = Type.Object(
     description: 'A radar control with auto mode and a numeric value'
   }
 )
-export type RadarControlValueSchemaType = Static<typeof RadarControlValueSchema>
+export type RadarControlValue = Static<typeof RadarControlValueSchema>
 
 export const RadarControlsSchema = Type.Object(
   {
@@ -67,7 +67,7 @@ export const RadarControlsSchema = Type.Object(
       'Current control settings for a radar. Additional radar-specific controls beyond gain/sea/rain may be present.'
   }
 )
-export type RadarControlsSchemaType = Static<typeof RadarControlsSchema>
+export type RadarControls = Static<typeof RadarControlsSchema>
 
 export const RadarInfoSchema = Type.Object(
   {
@@ -94,7 +94,7 @@ export const RadarInfoSchema = Type.Object(
       'Discovery information for a radar device. Live state (status, controls) is on /state; static parameters on /capabilities. Stream URLs are reached by convention, not listed here.'
   }
 )
-export type RadarInfoSchemaType = Static<typeof RadarInfoSchema>
+export type RadarInfo = Static<typeof RadarInfoSchema>
 
 export const RadarsResponseSchema = Type.Object(
   {
@@ -110,4 +110,4 @@ export const RadarsResponseSchema = Type.Object(
     description: 'Response for GET /radars'
   }
 )
-export type RadarsResponseSchemaType = Static<typeof RadarsResponseSchema>
+export type RadarsResponse = Static<typeof RadarsResponseSchema>

@@ -28,7 +28,7 @@ export const IsoTimeSchema = Type.String({
   description: 'ISO 8601 date-time string',
   examples: ['2022-04-22T05:02:56.484Z']
 })
-export type IsoTimeType = Static<typeof IsoTimeSchema>
+export type IsoTime = Static<typeof IsoTimeSchema>
 
 /**
  * Signal K UUID — Maritime Resource Name.
@@ -115,6 +115,9 @@ export const RelativePositionOriginSchema = Type.Object(
 
 export type RelativePositionOrigin = Static<typeof RelativePositionOriginSchema>
 
+// Used by Resources API for routes, waypoints, regions, charts.
+// @see specification/schemas/definitions.json#/definitions/waypoint
+
 /** GeoJSON Point geometry object (type + coordinates) */
 export const GeoJsonPointGeometrySchema = Type.Object(
   {
@@ -197,6 +200,8 @@ export const GeoJsonMultiPolygonGeometrySchema = Type.Object(
 export type GeoJsonMultiPolygonGeometry = Static<
   typeof GeoJsonMultiPolygonGeometrySchema
 >
+
+// Shared across all v2 API endpoints.
 
 /** Standard success response */
 export const OkResponseSchema = Type.Object(
