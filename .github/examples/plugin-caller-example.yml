@@ -1,0 +1,35 @@
+# ─────────────────────────────────────────────────────────────
+# SignalK Plugin CI
+#
+# Drop this file into your plugin repo at:
+#   .github/workflows/signalk-ci.yml
+#
+# It calls the shared SignalK workflow which tests your plugin
+# across Linux, macOS, Windows (Node 22 + 24) and armv7/Cerbo GX.
+#
+# That's it — one file, full cross-platform CI.
+# ─────────────────────────────────────────────────────────────
+
+name: SignalK Plugin CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    # ── Point to the shared workflow in signalk-server ───────
+    uses: SignalK/signalk-server/.github/workflows/plugin-ci.yml@master
+
+    # ── Optional: override defaults ─────────────────────────
+    # Uncomment and adjust any of these as needed:
+    #
+    # with:
+    #   test-command: 'npm test'
+    #   build-command: 'npm run build --if-present'
+    #   node-versions: '["22", "24"]'
+    #   enable-armv7: true
+    #   enable-signalk-integration: false
+    #   signalk-server-version: 'latest'
