@@ -38,11 +38,11 @@ import { Responses } from '../'
 import { Store } from '../../serverstate/store'
 
 import { buildSchemaSync } from 'api-schema-builder'
-import courseOpenApi from './openApi.json'
+import { courseApiDoc } from './openApi'
 import { ResourcesApi } from '../resources'
 import { ConfigApp, writeSettingsFile } from '../../config/config'
 
-const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
+const COURSE_API_SCHEMA = buildSchemaSync(courseApiDoc)
 
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`

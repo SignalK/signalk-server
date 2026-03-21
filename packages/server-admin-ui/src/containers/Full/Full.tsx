@@ -11,6 +11,7 @@ import Footer from '../../components/Footer/Footer'
 import Dashboard from '../../views/Dashboard/Dashboard'
 import Embedded from '../../views/Webapps/Embedded'
 import EmbeddedDocs from '../../views/Webapps/EmbeddedDocs'
+import EmbeddedAsyncApi from '../../views/Webapps/EmbeddedAsyncApi'
 import Webapps from '../../views/Webapps/Webapps'
 import DataBrowser from '../../views/DataBrowser/DataBrowser'
 import Playground from '../../views/Playground'
@@ -206,6 +207,7 @@ export default function Full() {
                 path="/security/access/requests"
                 element={<ProtectedRoute component={AccessRequests} />}
               />
+              <Route path="/asyncapi" element={<EmbeddedAsyncApi />} />
               <Route path="/documentation/*" element={<EmbeddedDocs />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
