@@ -15,10 +15,6 @@ import {
 export { IsoTimeSchema, PositionSchema, OkResponseSchema, ErrorResponseSchema }
 export type { IsoTimeType } from './shared-schemas'
 
-// ---------------------------------------------------------------------------
-// Primitive schemas (Course-specific)
-// ---------------------------------------------------------------------------
-
 /** Signal K route resource href (UUID v4 format). */
 export const SignalKHrefRouteSchema = Type.String({
   $id: 'SignalKHrefRoute',
@@ -46,26 +42,19 @@ export type ArrivalCircleType = Static<typeof ArrivalCircleSchema>
 
 export type PositionType = Static<typeof PositionSchema>
 
-// ---------------------------------------------------------------------------
-// Course point type
-// ---------------------------------------------------------------------------
-
 /** Type of course point. */
 export const CoursePointTypeSchema = Type.Union(
   [
     Type.Literal('VesselPosition'),
     Type.Literal('RoutePoint'),
-    Type.Literal('Location')
+    Type.Literal('Location'),
+    Type.Literal('Waypoint')
   ],
   {
     $id: 'CoursePointType',
     description: 'Type of course point'
   }
 )
-
-// ---------------------------------------------------------------------------
-// Destination request body schemas
-// ---------------------------------------------------------------------------
 
 /** Destination by waypoint href. */
 export const HrefDestinationSchema = Type.Object(
@@ -129,10 +118,6 @@ export const RouteDestinationSchema = Type.Object(
   { $id: 'RouteDestination' }
 )
 export type RouteDestinationType = Static<typeof RouteDestinationSchema>
-
-// ---------------------------------------------------------------------------
-// Endpoint-specific request body schemas
-// ---------------------------------------------------------------------------
 
 /** PUT /course/arrivalCircle request body */
 export const ArrivalCircleBodySchema = Type.Object(
@@ -202,10 +187,6 @@ export const ReverseBodySchema = Type.Object(
 )
 export type ReverseBodyType = Static<typeof ReverseBodySchema>
 
-// ---------------------------------------------------------------------------
-// Response model schemas
-// ---------------------------------------------------------------------------
-
 /** Active route state. */
 export const ActiveRouteSchema = Type.Object(
   {
@@ -237,11 +218,7 @@ export const NextPreviousPointSchema = Type.Object(
     href: Type.Optional(
       Type.String({ description: 'Reference to a waypoint resource.' })
     ),
-    type: Type.String({
-      description:
-        "Type of point. Known values: VesselPosition (vessel's current location), RoutePoint (a point on the active route), Location (an arbitrary geographic position).",
-      examples: ['RoutePoint', 'Location', 'VesselPosition']
-    }),
+    type: CoursePointTypeSchema,
     position: PositionSchema
   },
   { $id: 'NextPreviousPoint' }
@@ -286,10 +263,6 @@ export const CourseInfoSchema = Type.Object(
   }
 )
 export type CourseInfoType = Static<typeof CourseInfoSchema>
-
-// ---------------------------------------------------------------------------
-// Course calculations
-// ---------------------------------------------------------------------------
 
 /**
  * Calculated course values derived from vessel position and destination.
@@ -436,10 +409,6 @@ export const CourseCalculationsSchema = Type.Object(
 )
 export type CourseCalculationsType = Static<typeof CourseCalculationsSchema>
 
-// ---------------------------------------------------------------------------
-// Delta event schemas (for AsyncAPI WebSocket documentation)
-// ---------------------------------------------------------------------------
-
 /**
  * v2 course delta paths emitted on navigation.course.*
  * Emitted via handleMessage() with SKVersion.v2
@@ -498,10 +467,6 @@ export const CourseDeltaV1Schema = Type.Object(
       'Course delta values emitted under navigation.courseGreatCircle.* and navigation.courseRhumbline.* (Signal K v1)'
   }
 )
-
-// ---------------------------------------------------------------------------
-// Course-specific API response schemas
-// ---------------------------------------------------------------------------
 
 /** API config response */
 export const CourseConfigSchema = Type.Object(

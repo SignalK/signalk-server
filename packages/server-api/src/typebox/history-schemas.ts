@@ -4,10 +4,6 @@
 
 import { Type, type Static } from '@sinclair/typebox'
 
-// ---------------------------------------------------------------------------
-// Aggregate method
-// ---------------------------------------------------------------------------
-
 export const AggregateMethodSchema = Type.Union(
   [
     Type.Literal('average'),
@@ -27,10 +23,6 @@ export const AggregateMethodSchema = Type.Union(
   }
 )
 export type AggregateMethodSchemaType = Static<typeof AggregateMethodSchema>
-
-// ---------------------------------------------------------------------------
-// Values response schema (GET /values response body)
-// ---------------------------------------------------------------------------
 
 export const ValuesResponseSchema = Type.Object(
   {
@@ -81,10 +73,6 @@ export const ValuesResponseSchema = Type.Object(
 )
 export type ValuesResponseSchemaType = Static<typeof ValuesResponseSchema>
 
-// ---------------------------------------------------------------------------
-// PathSpec schema
-// ---------------------------------------------------------------------------
-
 export const PathSpecSchema = Type.Object(
   {
     path: Type.String({ description: 'Signal K path' }),
@@ -101,10 +89,6 @@ export const PathSpecSchema = Type.Object(
   }
 )
 export type PathSpecSchemaType = Static<typeof PathSpecSchema>
-
-// ---------------------------------------------------------------------------
-// Provider schemas
-// ---------------------------------------------------------------------------
 
 export const HistoryProviderInfoSchema = Type.Object(
   {
