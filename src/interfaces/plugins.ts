@@ -65,7 +65,7 @@ const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 import { queryRequest } from '../requestResponse'
 import { getMetadata } from '@signalk/signalk-schema'
-import { HistoryApi } from '@signalk/server-api/history'
+import { HistoryProvider } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
 
@@ -661,7 +661,7 @@ module.exports = (theApp: any) => {
     const historyApiRegistry: HistoryApiHttpRegistry =
       app.historyApiHttpRegistry
     delete (appCopy as any).historyApiHttpRegistry // expose only the plugin-specific proxy
-    appCopy.registerHistoryApiProvider = (provider: HistoryApi) => {
+    appCopy.registerHistoryApiProvider = (provider: HistoryProvider) => {
       historyApiRegistry.registerHistoryApiProvider(plugin.id, provider)
       onStopHandlers[plugin.id].push(() => {
         historyApiRegistry.unregisterHistoryApiProvider(plugin.id)
