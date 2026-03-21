@@ -70,6 +70,8 @@ function stripSvgFonts() {
   }
 }
 
+const isTest = process.env.VITEST === 'true'
+
 export default defineConfig({
   base: './',
   publicDir: 'public_src',
@@ -91,22 +93,28 @@ export default defineConfig({
         presets: [['@babel/preset-react', { runtime: 'automatic' }]]
       }
     }),
-    federation({
-      name: 'adminUI',
-      filename: 'remoteEntry.js',
-      remotes: {},
-      dts: false, // dts plugin tries to connect on port 16322 in dev mode
-      shared: {
-        react: {
-          singleton: true,
-          requiredVersion: '^19.0.0'
-        },
-        'react-dom': {
-          singleton: true,
-          requiredVersion: '^19.0.0'
-        }
-      }
-    })
+    // Module Federation runtime injects http: imports incompatible with
+    // Node.js ESM loader, so skip it during vitest runs.
+    ...(!isTest
+      ? [
+          federation({
+            name: 'adminUI',
+            filename: 'remoteEntry.js',
+            remotes: {},
+            dts: false,
+            shared: {
+              react: {
+                singleton: true,
+                requiredVersion: '^19.0.0'
+              },
+              'react-dom': {
+                singleton: true,
+                requiredVersion: '^19.0.0'
+              }
+            }
+          })
+        ]
+      : [])
   ],
   css: {
     preprocessorOptions: {
