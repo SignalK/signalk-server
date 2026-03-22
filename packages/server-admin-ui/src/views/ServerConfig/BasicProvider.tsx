@@ -389,6 +389,11 @@ function LoggingInput({ value, onChange }: LoggingInputProps) {
           <span className="switch-label" data-on="Yes" data-off="No" />
           <span className="switch-handle" />
         </Form.Label>
+        {value.logging && (
+          <Form.Text className="text-warning">
+            Creates hourly log files that can consume significant disk space
+          </Form.Text>
+        )}
       </Col>
     </Form.Group>
   )
@@ -758,7 +763,7 @@ function NoDataReceivedTimeoutInput({
     <TextInput
       title="No data timeout"
       name="options.noDataReceivedTimeout"
-      helpText="Timeout for no data received in seconds. Socket is disconnected and reconnection attempted if timeout is reached. Leave empty or 0 to disable."
+      helpText="Timeout for no data received in seconds (default: 60). Socket is disconnected and reconnection attempted if timeout is reached. Set to 0 to disable."
       value={value.noDataReceivedTimeout}
       onChange={onChange}
     />

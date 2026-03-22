@@ -92,11 +92,10 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
   updateMeta: (context, path, metaData) => {
     set((state) => {
       const contextMeta = state.signalkMeta[context] || {}
-      const existingMeta = contextMeta[path] || {}
 
       const newContextMeta = {
         ...contextMeta,
-        [path]: { ...existingMeta, ...metaData }
+        [path]: metaData as MetaData
       }
 
       return {

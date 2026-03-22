@@ -17,11 +17,7 @@
  * limitations under the License.
 */
 
-if (typeof [].includes !== 'function') {
-  console.log('Minimum required Node.js version is 6, please update.')
-  process.exit(-1)
-}
-
+import './baconjs-compat'
 import {
   Context,
   Delta,

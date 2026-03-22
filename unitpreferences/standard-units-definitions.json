@@ -36,16 +36,6 @@
         "formula": "value * 3.280839895013124",
         "inverseFormula": "value / 3.280839895013124",
         "symbol": "fps"
-      },
-      "knot": {
-        "formula": "value * 1.943844494119952",
-        "inverseFormula": "value / 1.943844494119952",
-        "symbol": "knot"
-      },
-      "kph": {
-        "formula": "value * 3.5999999971200007",
-        "inverseFormula": "value / 3.5999999971200007",
-        "symbol": "kph"
       }
     }
   },

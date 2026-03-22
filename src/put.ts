@@ -223,12 +223,22 @@ export function start(app: PutApp): void {
       }
     }
 
+    const previousMeta = app.config.baseDeltaEditor.getMeta(context, metaPath)
     app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
 
+    // Remove fields that were deleted from the in-memory metadata registry
+    // so they don't get re-injected via the spread below
     const full_meta = getMetadata('vessels.self.' + metaPath) as Record<
       string,
       unknown
     >
+    if (previousMeta && full_meta) {
+      for (const key of Object.keys(previousMeta)) {
+        if (!(key in metaValue)) {
+          delete full_meta[key]
+        }
+      }
+    }
 
     app.handleMessage('defaults', {
       context: 'vessels.self' as Context,

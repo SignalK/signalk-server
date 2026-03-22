@@ -73,12 +73,16 @@ export async function loginAction(
 
 export async function enableSecurity(
   userId: string,
-  password: string
+  password: string,
+  allowReadonly?: boolean
 ): Promise<string | null> {
-  const payload = {
+  const payload: Record<string, unknown> = {
     userId,
     password,
     type: 'admin'
+  }
+  if (allowReadonly) {
+    payload.allow_readonly = true
   }
   const response = await fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
     method: 'POST',
@@ -132,7 +136,8 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/loginStatus', state.setLoginStatus),
     fetchAndSet('/signalk', state.setServerSpecification, ''),
     fetchAndSet('/security/access/requests', state.setAccessRequests),
-    fetchAndSet('/security/devices', state.setDevices)
+    fetchAndSet('/security/devices', state.setDevices),
+    fetchAndSet('/nodeInfo', state.setNodeInfo)
   ])
 }
 

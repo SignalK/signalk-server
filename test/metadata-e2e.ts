@@ -169,4 +169,50 @@ describe('Metadata end to end', function () {
     })
     expect(meta3).to.have.property('description', 'A test path')
   })
+
+  it('deletes a metadata field and it does not reappear', async () => {
+    const zones = [{ lower: 14.4, state: 'alarm', message: 'High voltage' }]
+    const setupResult = await selfPutV1(`${TEST_PATH_SLASHES}/meta/zones`, {
+      value: zones
+    })
+    expect(setupResult.status).to.equal(202)
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    const metaBefore = await selfGetMetaJson()
+    expect(metaBefore).to.have.property('zones')
+
+    const deleteResult = await fetch(
+      `${v1Api}/vessels/self/${TEST_PATH_SLASHES}/meta/zones`,
+      { method: 'DELETE' }
+    )
+    expect(deleteResult.status).to.equal(202)
+
+    const metaAfterDelete = await selfGetMetaJson()
+    expect(metaAfterDelete).to.not.have.property('zones')
+
+    const putResult = await selfPutV1(`${TEST_PATH_SLASHES}/meta/description`, {
+      value: 'Updated description'
+    })
+    expect(putResult.status).to.equal(202)
+
+    const metaAfterPut = await selfGetMetaJson()
+    expect(metaAfterPut).to.not.have.property('zones')
+    expect(metaAfterPut).to.have.property('description', 'Updated description')
+
+    await server.stop()
+    server = await startServerP(port, false, {
+      settings: {
+        interfaces: {
+          plugins: false
+        }
+      }
+    })
+
+    const metaAfterRestart = await selfGetMetaJson()
+    expect(metaAfterRestart).to.not.have.property('zones')
+    expect(metaAfterRestart).to.have.property(
+      'description',
+      'Updated description'
+    )
+  })
 })

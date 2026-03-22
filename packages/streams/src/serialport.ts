@@ -48,29 +48,33 @@ export default class SerialStream extends Transform {
     const standardOutEventName = `serial-${this.options.providerId}-toStdout`
     stdOutEvents.push(standardOutEventName)
 
-    const onDrain = (): void => {
-      pendingWrites--
-    }
-
     for (const event of stdOutEvents) {
       this.options.app.on(event, (d: string | Buffer) => {
+        if (!this.serial) {
+          return
+        }
         if (pendingWrites > this.maxPendingWrites) {
           this.debug('Buffer overflow, not writing:' + d)
           return
         }
         this.debug('Writing:' + d)
-        if (Buffer.isBuffer(d)) {
-          this.serial?.write(d)
-        } else {
-          this.serial?.write(d + '\r\n')
-        }
+        const data = Buffer.isBuffer(d) ? d : d + '\r\n'
+        const flushed = this.serial.write(data, (err) => {
+          if (err) {
+            this.debug('Write error: ' + err.message)
+          }
+        })
         setImmediate(() => {
           this.options.app.emit('connectionwrite', {
             providerId: this.options.providerId
           })
         })
-        pendingWrites++
-        this.serial?.drain(onDrain)
+        if (!flushed) {
+          pendingWrites++
+          this.serial.once('drain', () => {
+            pendingWrites--
+          })
+        }
       })
     }
 

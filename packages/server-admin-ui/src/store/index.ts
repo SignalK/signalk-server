@@ -125,6 +125,10 @@ export function useRestarting() {
   return useStore((s) => s.restarting)
 }
 
+export function useNodeInfo() {
+  return useStore((s) => s.nodeInfo)
+}
+
 export function useBackpressureWarning() {
   return useStore((s) => s.backpressureWarning)
 }

@@ -22,19 +22,24 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",
-    "baconjs": "^1.0.1"
+    "@sinclair/typebox": "^0.34.0",
+    "baconjs": "^3.0.0"
   },
   "devDependencies": {
     "ts-auto-guard": "^5.0.1"
   },
   "exports": {
     ".": "./dist/index.js",
-    "./history": "./dist/history.js"
+    "./history": "./dist/history.js",
+    "./typebox": "./dist/typebox/index.js"
   },
   "typesVersions": {
     "*": {
       "history": [
         "dist/history.d.ts"
+      ],
+      "typebox": [
+        "dist/typebox/index.d.ts"
       ]
     }
   }

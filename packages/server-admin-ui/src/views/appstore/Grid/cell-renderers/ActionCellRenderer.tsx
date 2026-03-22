@@ -164,17 +164,23 @@ export default function ActionCellRenderer({
         <Dropdown as={ButtonGroup} className="w-100">
           {app.installed ? (
             app.newVersion ? (
-              <Button
-                className="text-start"
-                variant="success"
-                onClick={handleInstallClick}
-              >
-                <FontAwesomeIcon
-                  className="icon__update me-2"
-                  icon={faCloudArrowDown}
-                />
-                Update
-              </Button>
+              app.updateDisabled ? (
+                <span className="btn btn-outline-secondary text-start disabled">
+                  Update disabled
+                </span>
+              ) : (
+                <Button
+                  className="text-start"
+                  variant="success"
+                  onClick={handleInstallClick}
+                >
+                  <FontAwesomeIcon
+                    className="icon__update me-2"
+                    icon={faCloudArrowDown}
+                  />
+                  Update
+                </Button>
+              )
             ) : app.isPlugin ? (
               <NavLink
                 to={`/serverConfiguration/plugins/${app.id}`}

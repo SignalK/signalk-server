@@ -10,6 +10,7 @@ export {
   getActivePreset,
   getActivePresetForUser,
   getDefaultCategory,
+  getConfigUnitprefsDir,
   setApplicationDataPath,
   DEFAULT_PRESET
 } from './loader'

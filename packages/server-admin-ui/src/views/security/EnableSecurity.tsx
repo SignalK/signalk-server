@@ -1,4 +1,5 @@
 import { useState, useActionState, ChangeEvent, KeyboardEvent } from 'react'
+import Alert from 'react-bootstrap/Alert'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import CardGroup from 'react-bootstrap/CardGroup'
@@ -24,13 +25,14 @@ export default function EnableSecurity() {
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [allowReadonly, setAllowReadonly] = useState(false)
 
   const [state, submitAction, isEnabling] = useActionState<
     EnableSecurityState,
     FormData
   >(
     async () => {
-      const error = await enableSecurity(username, password)
+      const error = await enableSecurity(username, password, allowReadonly)
       return { error }
     },
     { error: null }
@@ -96,6 +98,28 @@ export default function EnableSecurity() {
                             onKeyUp={handleInputKeyUp}
                           />
                         </InputGroup>
+                        <Alert variant="warning" className="mb-4">
+                          <Form.Check
+                            type="checkbox"
+                            id="allow-readonly"
+                            label="Allow Readonly Access"
+                            checked={allowReadonly}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                              setAllowReadonly(e.target.checked)
+                            }
+                            className="mb-2"
+                          />
+                          <small className="d-block text-body-secondary">
+                            When enabled, unauthenticated users can read Signal
+                            K data and use webapps without logging in. This
+                            exposes your data on the local network and
+                            potentially on the public internet.
+                          </small>
+                          <small className="d-block text-body-secondary mt-1">
+                            You can change this anytime in Security &gt;
+                            Settings.
+                          </small>
+                        </Alert>
                         <Row>
                           <Col xs="6">
                             <Button

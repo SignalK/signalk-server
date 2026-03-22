@@ -249,8 +249,12 @@ module.exports = function (app) {
     getModulesInfo(webapps, getWebApp, all, distTagsMap)
 
     if (process.env.PLUGINS_WITH_UPDATE_DISABLED) {
-      let disabled = process.env.PLUGINS_WITH_UPDATE_DISABLED.split(',')
-      all.updates = all.updates.filter((info) => !disabled.includes(info.name))
+      const disabled = process.env.PLUGINS_WITH_UPDATE_DISABLED.split(',')
+      all.updates.forEach((info) => {
+        if (disabled.includes(info.name)) {
+          info.updateDisabled = true
+        }
+      })
     }
 
     return all
@@ -260,6 +264,14 @@ module.exports = function (app) {
     modules.forEach((plugin) => {
       const name = plugin.package.name
       const version = plugin.package.version
+
+      if (!semver.valid(version)) {
+        console.warn(
+          `Skipping ${name}: invalid semver version '${version}'. ` +
+            `Please inform the plugin developer to publish a valid semver version.`
+        )
+        return
+      }
 
       const pluginInfo = {
         name: name,
@@ -327,8 +339,16 @@ module.exports = function (app) {
         pluginInfo.isRemove = modulesInstalledSinceStartup[name].isRemove
         addIfNotDuplicate(result.installing, pluginInfo)
       } else if (installedModule) {
-        if (gt(version, installedModule.version)) {
+        if (
+          semver.valid(installedModule.version) &&
+          gt(version, installedModule.version)
+        ) {
           addIfNotDuplicate(result.updates, pluginInfo)
+        } else if (!semver.valid(installedModule.version)) {
+          console.warn(
+            `Installed module ${name} has invalid semver version '${installedModule.version}'. ` +
+              `Please inform the plugin developer.`
+          )
         }
         addIfNotDuplicate(result.installed, pluginInfo)
       }

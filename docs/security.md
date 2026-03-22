@@ -39,9 +39,39 @@ Security can be enabled in several ways:
   }
 ```
 
-When security is enabled, the next time you access the Admin UI it will prompt you to create an administrator account.
+When security is enabled, the next time you access the Admin UI it will prompt you to create an administrator account. During this setup you can optionally enable [Allow Readonly Access](#allow-readonly-access) if you want unauthenticated users to be able to view data.
 
-Security configuration is stored in file called `security.json` which will be located in the server configuration directory.
+## Security Settings
+
+After enabling security, the following settings are available in **Security > Settings**. They are stored in the `security.json` file in the server configuration directory, and can also be overridden with environment variables.
+
+### Allow Readonly Access
+
+_Default: **off** &nbsp;|&nbsp; Environment variable: `ALLOW_READONLY`_
+
+When enabled, unauthenticated users can read Signal K data and use webapps (such as Instrument Panel or WilhelmSK) without logging in. They cannot modify data or access server configuration.
+
+This is useful when you want guest crew to view navigation data or use instrument displays without creating individual accounts. However, it also exposes your data to anyone on the local network — and potentially on the public internet if your server is accessible externally (e.g. via port forwarding or when connected to marina WiFi).
+
+### Allow New User Registration
+
+_Default: **on** &nbsp;|&nbsp; Environment variable: `ALLOW_NEW_USER_REGISTRATION`_
+
+When enabled, unauthenticated users can request an account by submitting their credentials to the server. The request enters a pending state and the admin is notified. The admin can then review and approve or deny the request in **Security > Access Requests**.
+
+When disabled, only administrators can create user accounts manually via **Security > Users**. Self-registration attempts are rejected.
+
+### Allow New Device Registration
+
+_Default: **on** &nbsp;|&nbsp; Environment variable: `ALLOW_DEVICE_ACCESS_REQUESTS`_
+
+When enabled, external devices (chart plotters, instrument displays, sensors) can request access tokens from the server. The device sends a request with its client identifier and description, and the admin is notified. The admin can approve or deny the request in **Security > Access Requests**, choosing which permission level to grant.
+
+When disabled, devices cannot request access tokens. Administrators must pre-provision device tokens manually via **Security > Devices**.
+
+### Remember Me timeout
+
+Controls how long the server keeps a user logged in when "Remember Me" is checked at login. Examples: `60s`, `1m`, `1h`, `1d`. The default is `NEVER` (session does not expire).
 
 ## Disabling Security / Lost Admin Credentials
 

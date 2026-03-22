@@ -87,7 +87,23 @@ describe('History', (_) => {
     msg.should.equal('timeout')
   })
 
-  it('REST time request works', async function () {
+  it('REST time request works at spec-compliant path', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/snapshot/vessels/self?time=2018-08-09T14:07:29.695Z`
+    )
+    result.status.should.equal(200)
+    const json = await result.json()
+    json.should.have.nested.property('performance.velocityMadeGood')
+  })
+
+  it('REST time request with no data works at spec-compliant path', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/snapshot/vessels/self?time=2018-08-09T14:07:29.694Z`
+    )
+    result.status.should.equal(404)
+  })
+
+  it('REST time request works at legacy path', async function () {
     const result = await fetch(
       `${url}/signalk/v1/api/snapshot/vessels/self?time=2018-08-09T14:07:29.695Z`
     )
@@ -96,7 +112,7 @@ describe('History', (_) => {
     json.should.have.nested.property('performance.velocityMadeGood')
   })
 
-  it('REST time request with no data  works', async function () {
+  it('REST time request with no data works at legacy path', async function () {
     const result = await fetch(
       `${url}/signalk/v1/api/snapshot/vessels/self?time=2018-08-09T14:07:29.694Z`
     )

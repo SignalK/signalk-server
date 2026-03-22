@@ -56,6 +56,8 @@ import { getAISShipTypeName } from '@signalk/signalk-schema'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
+import { execSync } from 'child_process'
+import { recommendedVersion as recommendedNodeVersion } from './version'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
@@ -641,7 +643,7 @@ module.exports = function (
     const settings: any = {
       interfaces: {},
       options: {
-        mdns: app.config.settings.mdns || false,
+        mdns: app.config.settings.mdns ?? true,
         wsCompression: app.config.settings.wsCompression || false,
         wsPingInterval: app.config.settings.wsPingInterval ?? 30000,
         accessLogging:
@@ -702,13 +704,17 @@ module.exports = function (
               console.log(err)
               res.status(500).send('Unable to save to settings file')
             } else {
-              const config = {}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const config: any = {}
               // eslint-disable-next-line @typescript-eslint/no-require-imports
               const securityStrategy = require(defaultSecurityStrategy)(
                 app,
                 config,
                 saveSecurityConfig
               )
+              if (req.body.allow_readonly === true) {
+                config.allow_readonly = true
+              }
               addUser(req, res, securityStrategy, config)
             }
           })
@@ -1086,6 +1092,22 @@ module.exports = function (
 
   app.get(`${SERVERROUTESPREFIX}/debugKeys`, (req: Request, res: Response) => {
     res.json(listKnownDebugs())
+  })
+
+  const npmVersion = (() => {
+    try {
+      return execSync('npm --version', { encoding: 'utf8' }).trim()
+    } catch {
+      return 'unknown'
+    }
+  })()
+
+  app.get(`${SERVERROUTESPREFIX}/nodeInfo`, (_req: Request, res: Response) => {
+    res.json({
+      nodeVersion: process.version,
+      npmVersion,
+      recommendedNodeVersion
+    })
   })
 
   app.post(
