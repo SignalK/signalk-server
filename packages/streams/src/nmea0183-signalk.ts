@@ -17,9 +17,14 @@
 import { Transform, TransformCallback } from 'stream'
 import Parser from '@signalk/nmea0183-signalk'
 import { appendChecksum } from '@signalk/nmea0183-utilities'
-import { toDelta as n2kToDelta } from '@signalk/n2k-signalk'
-import { FromPgn } from '@canboat/canboatjs'
 import type { CreateDebug } from './types'
+
+function isN2KOver0183(msg: string): boolean {
+  const sentence = msg.charAt(0) === '\\' ? msg.split('\\')[2] : msg
+  return sentence
+    ? sentence.startsWith('$PCDIN,') || sentence.startsWith('$MXPGN,')
+    : false
+}
 
 interface Nmea0183ToSignalKOptions {
   app: {
@@ -51,11 +56,15 @@ interface Delta {
 export default class Nmea0183ToSignalK extends Transform {
   private readonly debug: (...args: unknown[]) => void
   private readonly parser: InstanceType<typeof Parser>
-  private readonly n2kParser: InstanceType<typeof FromPgn>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private n2kParser: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private n2kToDelta: any
   private readonly n2kState: Record<string, unknown> = {}
   private readonly app: Nmea0183ToSignalKOptions['app']
   private readonly sentenceEvents: string[]
   private readonly appendChecksumFlag: boolean
+  private readonly options: Nmea0183ToSignalKOptions
 
   constructor(options: Nmea0183ToSignalKOptions) {
     super({ objectMode: true })
@@ -64,7 +73,7 @@ export default class Nmea0183ToSignalK extends Transform {
     )
 
     this.parser = new Parser(options)
-    this.n2kParser = new FromPgn(options)
+    this.options = options
 
     this.app = options.app
     this.appendChecksumFlag = options.appendChecksum ?? false
@@ -114,10 +123,16 @@ export default class Nmea0183ToSignalK extends Transform {
         })
 
         let delta: Delta | null = null
-        if (this.n2kParser.isN2KOver0183(sentence)) {
+        if (isN2KOver0183(sentence)) {
+          if (!this.n2kParser) {
+            const { FromPgn } = require('@canboat/canboatjs')
+            const { toDelta } = require('@signalk/n2k-signalk')
+            this.n2kParser = new FromPgn(this.options)
+            this.n2kToDelta = toDelta
+          }
           const pgn = this.n2kParser.parseN2KOver0183(sentence, () => {})
           if (pgn) {
-            delta = n2kToDelta(pgn, this.n2kState, {
+            delta = this.n2kToDelta(pgn, this.n2kState, {
               sendMetaData: true
             }) as unknown as Delta | null
           }
