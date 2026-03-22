@@ -68,6 +68,7 @@ import { getMetadata } from '@signalk/signalk-schema'
 import { HistoryApi } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
+import { atomicWriteFileSync } from '../atomicWrite'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -267,7 +268,10 @@ module.exports = (theApp: any) => {
     callback: (err: NodeJS.ErrnoException | null) => void
   ) {
     try {
-      fs.writeFileSync(pathForPluginId(pluginId), JSON.stringify(data, null, 2))
+      atomicWriteFileSync(
+        pathForPluginId(pluginId),
+        JSON.stringify(data, null, 2)
+      )
       callback(null)
     } catch (err: any) {
       callback(err)

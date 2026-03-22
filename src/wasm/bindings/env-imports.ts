@@ -22,6 +22,7 @@ import {
 import { socketManager, tcpSocketManager } from './socket-manager'
 import * as fs from 'fs'
 import * as path from 'path'
+import { atomicWriteFileSync } from '../../atomicWrite'
 
 const debug = Debug('signalk:wasm:bindings')
 
@@ -400,11 +401,7 @@ export function createEnvImports(
         // Update configuration while preserving other fields
         existingConfig.configuration = configuration
 
-        fs.writeFileSync(
-          configFile,
-          JSON.stringify(existingConfig, null, 2),
-          'utf8'
-        )
+        atomicWriteFileSync(configFile, JSON.stringify(existingConfig, null, 2))
         debug(`[${pluginId}] Config saved to ${configFile}`)
 
         return 0

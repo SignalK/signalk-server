@@ -23,9 +23,9 @@ import {
   readFileSync,
   Stats,
   statSync,
-  writeFile,
   writeFileSync
 } from 'fs'
+import { atomicWriteFile } from './atomicWrite'
 import _ from 'lodash'
 import path from 'path'
 import { generate } from 'selfsigned'
@@ -311,16 +311,19 @@ export function saveSecurityConfig(
       callback(null)
     }
   } else {
-    //const config = JSON.parse(JSON.stringify(data))
     const configPath = pathForSecurityConfig(app)
-    writeFile(configPath, JSON.stringify(data, null, 2), (err) => {
-      if (!err) {
+    atomicWriteFile(configPath, JSON.stringify(data, null, 2))
+      .then(() => {
         chmodSync(configPath, '600')
-      }
-      if (callback) {
-        callback(err)
-      }
-    })
+        if (callback) {
+          callback(null)
+        }
+      })
+      .catch((err: any) => {
+        if (callback) {
+          callback(err)
+        }
+      })
   }
 }
 

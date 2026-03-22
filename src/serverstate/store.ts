@@ -1,7 +1,8 @@
 import { constants } from 'fs'
-import { access, mkdir, readFile, writeFile } from 'fs/promises'
+import { access, mkdir, readFile } from 'fs/promises'
 import path from 'path'
 import { WithConfig } from '../app'
+import { atomicWriteFile } from '../atomicWrite'
 
 export const SERVERSTATEDIRNAME = 'serverState'
 
@@ -46,7 +47,7 @@ export class Store {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async write(data: any) {
     await this.waitForInit()
-    return writeFile(
+    return atomicWriteFile(
       path.join(this.filePath, this.fileName),
       JSON.stringify(data)
     )
