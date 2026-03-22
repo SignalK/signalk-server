@@ -65,7 +65,7 @@ const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 import { queryRequest } from '../requestResponse'
 import { getMetadata } from '@signalk/signalk-schema'
-import { HistoryProvider } from '@signalk/server-api/history'
+import { HistoryProvider, isHistoryProvider } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
 import { atomicWriteFileSync } from '../atomicWrite'
@@ -665,12 +665,13 @@ module.exports = (theApp: any) => {
     const historyApiRegistry: HistoryApiHttpRegistry =
       app.historyApiHttpRegistry
     delete (appCopy as any).historyApiHttpRegistry // expose only the plugin-specific proxy
-    appCopy.registerHistoryApiProvider = (provider: HistoryProvider) => {
-      historyApiRegistry.registerHistoryApiProvider(plugin.id, provider)
+    const registerV2HistoryProvider = (provider: HistoryProvider) => {
+      historyApiRegistry.registerHistoryProvider(plugin.id, provider)
       onStopHandlers[plugin.id].push(() => {
-        historyApiRegistry.unregisterHistoryApiProvider(plugin.id)
+        historyApiRegistry.unregisterHistoryProvider(plugin.id)
       })
     }
+    ;(appCopy as any).registerHistoryApiProvider = registerV2HistoryProvider
 
     const resourcesApi: ResourcesApi = app.resourcesApi
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
@@ -769,14 +770,18 @@ module.exports = (theApp: any) => {
     }
     appCopy.registerActionHandler = appCopy.registerPutHandler
 
-    appCopy.registerHistoryProvider = (provider) => {
-      app.registerHistoryProvider(provider)
-      const apiList = app.apis as SignalKApiId[]
-      apiList.push('historyplayback')
-      apiList.push('historysnapshot')
-      onStopHandlers[plugin.id].push(() => {
-        app.unregisterHistoryProvider(provider)
-      })
+    appCopy.registerHistoryProvider = (provider: any) => {
+      if (isHistoryProvider(provider)) {
+        registerV2HistoryProvider(provider)
+      } else {
+        app.registerHistoryProvider(provider)
+        const apiList = app.apis as SignalKApiId[]
+        apiList.push('historyplayback')
+        apiList.push('historysnapshot')
+        onStopHandlers[plugin.id].push(() => {
+          app.unregisterHistoryProvider(provider)
+        })
+      }
     }
 
     const startupOptions = getPluginOptions(plugin.id)

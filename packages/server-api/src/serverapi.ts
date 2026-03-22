@@ -406,21 +406,6 @@ export interface ServerAPI
     source?: string
   ): void
 
-  registerHistoryProvider(provider: {
-    hasAnydata: (options: object, cb: (hasResults: boolean) => void) => void
-    getHistory: (
-      date: Date,
-      path: string,
-      cb: (deltas: object[]) => void
-    ) => void
-    streamHistory: (
-      /** Primus spark connection - typed as unknown due to dynamic Primus types */
-      spark: unknown,
-      options: object,
-      onDelta: (delta: object) => void
-    ) => void
-  }): void
-
   /**
    * Returns Ports object which contains information about the serial ports available on the machine.
    *
