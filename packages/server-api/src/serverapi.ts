@@ -6,7 +6,7 @@ import {
   ResourceProviderRegistry,
   WeatherProviderRegistry,
   Delta,
-  WithResourcesApi,
+  WithResourceApi,
   WithNotificationsApi
 } from '.'
 import { RadarProviderRegistry, WithRadarApi } from './radarapi'
@@ -34,7 +34,7 @@ export interface ServerAPI
   extends
     PropertyValuesEmitter,
     ResourceProviderRegistry,
-    WithResourcesApi,
+    WithResourceApi,
     AutopilotProviderRegistry,
     WeatherProviderRegistry,
     RadarProviderRegistry,

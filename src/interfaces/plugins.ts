@@ -46,7 +46,7 @@ import _ from 'lodash'
 import path from 'path'
 import { AutopilotApi } from '../api/autopilot'
 import { CourseApi } from '../api/course'
-import { ResourcesApi } from '../api/resources'
+import { ResourceApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { listAllSerialPorts } from '../serialports'
@@ -673,9 +673,9 @@ module.exports = (theApp: any) => {
     }
     ;(appCopy as any).registerHistoryApiProvider = registerV2HistoryProvider
 
-    const resourcesApi: ResourcesApi = app.resourcesApi
+    const resourceApi: ResourceApi = app.resourcesApi
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
-      resourcesApi.register(plugin.id, provider)
+      resourceApi.register(plugin.id, provider)
     }
 
     const autopilotApi: AutopilotApi = app.autopilotApi

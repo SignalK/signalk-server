@@ -3,7 +3,7 @@ import { SignalKMessageHub, WithConfig } from '../app'
 import { WithSecurityStrategy } from '../security'
 import { CourseApi, CourseApplication } from './course'
 import { FeaturesApi } from './discovery'
-import { ResourcesApi } from './resources'
+import { ResourceApi } from './resources'
 import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
 import { RadarApi } from './radar'
@@ -64,9 +64,11 @@ export const startApis = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initializeBinaryStreams(app as any)
 
-  const resourcesApi = new ResourcesApi(app)
+  const resourcesApi = new ResourceApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(app as any).resourcesApi = resourcesApi
+  ;(app as any).resourceApi = resourcesApi
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).resourcesApi = resourcesApi // deprecated: use resourceApi
   apiList.push('resources')
 
   const courseApi = new CourseApi(app as CourseApplication, resourcesApi)
