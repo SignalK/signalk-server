@@ -375,16 +375,7 @@ function nmea0183input(subOptions: SubOptions): PipeElement[] {
     if (subOptions.removeNulls) {
       pipePart.push(new Replacer({ regexp: '\u0000', template: '' }))
     }
-    if (subOptions.ignoredSentences) {
-      console.log(subOptions.ignoredSentences)
-      subOptions.ignoredSentences.forEach((sentence) => {
-        if (sentence.length > 0) {
-          pipePart!.push(
-            new Replacer({ regexp: `^...${sentence}.*`, template: '' })
-          )
-        }
-      })
-    }
+    nmea0183inputFilter(subOptions, pipePart!)
     return pipePart
   } else {
     throw new Error(`Unknown networking type: ${subOptions.type}`)
@@ -430,10 +421,52 @@ function signalKInput(subOptions: SubOptions): PipeElement[] {
 }
 
 function seatalkInput(subOptions: SubOptions): PipeElement[] {
+  const pipePart: PipeElement[] = []
   if (subOptions.type === 'gpiod') {
-    return [new GpiodSeatalk(subOptions)]
+    pipePart.push(new GpiodSeatalk(subOptions))
   } else {
-    return [new PigpioSeatalk(subOptions)]
+    pipePart.push(new PigpioSeatalk(subOptions))
+  }
+  seatalk1inputFilter(subOptions, pipePart)
+  return pipePart
+}
+
+// Filters NMEA0183 sentences by matching the three-letter sentence identifier
+// that follows the talker id. For example, filtering "RMC" removes lines like
+// "$GPRMC,123519,A,..." because the pattern "^...RMC.*" skips the "$GP"
+// talker prefix (3 chars) and matches "RMC" plus the rest of the line.
+function nmea0183inputFilter(
+  subOptions: SubOptions,
+  pipePart: PipeElement[]
+): void {
+  if (subOptions.ignoredSentences) {
+    subOptions.ignoredSentences.forEach((sentence) => {
+      if (sentence.length > 0) {
+        pipePart.push(
+          new Replacer({ regexp: `^...${sentence}.*`, template: '' })
+        )
+      }
+    })
+  }
+}
+
+// Filters SeaTalk1 datagrams by matching the command byte in $STALK sentences.
+// SeaTalk1 data arrives as "$STALK,<cmd>,<d1>,<d2>,..." where <cmd> is a hex
+// byte identifying the datagram type. For example, filtering "84" removes
+// "$STALK,84,56,FA,01,03,37,2F,1C,0B" (depth) while letting other datagrams
+// like "$STALK,9C,01,23,45" (compass heading) pass through.
+function seatalk1inputFilter(
+  subOptions: SubOptions,
+  pipePart: PipeElement[]
+): void {
+  if (subOptions.ignoredSentences) {
+    subOptions.ignoredSentences.forEach((command) => {
+      if (command.length > 0) {
+        pipePart.push(
+          new Replacer({ regexp: `^\\$STALK,${command}\\b.*`, template: '' })
+        )
+      }
+    })
   }
 }
 
