@@ -25,7 +25,8 @@ import {
   hasValues,
   hasMeta,
   Context,
-  Path
+  Path,
+  RoutePermission
 } from '@signalk/server-api'
 import ms, { StringValue } from 'ms'
 import rateLimit from 'express-rate-limit'
@@ -33,6 +34,8 @@ import bodyParser from 'body-parser'
 import cookieParser from 'cookie-parser'
 import { createHash, randomBytes } from 'crypto'
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pathToRegexp: (path: string) => RegExp = require('path-to-regexp')
 import { createDebug } from './debug'
 import {
   InvalidTokenError,
@@ -226,6 +229,34 @@ function tokenSecurityFactory(
   config: Partial<SecurityConfig>
 ): TokenSecurityStrategy {
   const strategy = {} as TokenSecurityStrategy
+
+  const RESERVED_PLUGIN_PATHS = ['/', '/config']
+
+  const pluginRoutePermissions: Array<{
+    method: string
+    regex: RegExp
+    permission: 'readwrite' | 'readonly'
+  }> = []
+
+  strategy.registerPluginRoutePermissions = function (
+    pluginId: string,
+    permissions: RoutePermission[]
+  ): void {
+    for (const { method, path, permission } of permissions) {
+      const normalizedPath = path.startsWith('/') ? path : `/${path}`
+      if (
+        RESERVED_PLUGIN_PATHS.includes(normalizedPath.replace(/\/$/, '') || '/')
+      ) {
+        continue
+      }
+      const fullPath = `/plugins/${pluginId}${normalizedPath}`
+      pluginRoutePermissions.push({
+        method: method.toUpperCase(),
+        regex: pathToRegexp(fullPath),
+        permission
+      })
+    }
+  }
 
   const { expiration = 'NEVER' } = config
 
@@ -565,6 +596,40 @@ function tokenSecurityFactory(
     }
   }
 
+  function pluginAuthenticationMiddleware(): (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => void {
+    const adminMw = adminAuthenticationMiddleware(false)
+    const writeMw = writeAuthenticationMiddleware()
+    return function (req: Request, res: Response, next: NextFunction): void {
+      if (!getIsEnabled()) {
+        return next()
+      }
+
+      const requestPath =
+        req.baseUrl.replace(/^\/skServer/, '') + req.path.replace(/\/$/, '')
+
+      const match = pluginRoutePermissions.find(
+        (entry) => entry.method === req.method && entry.regex.test(requestPath)
+      )
+
+      if (match) {
+        if (match.permission === 'readonly') {
+          const skReq = req as SKRequest
+          if (skReq.skIsAuthenticated) {
+            return next()
+          }
+          return handlePermissionDenied(req, res)
+        }
+        return writeMw(req, res, next)
+      }
+
+      return adminMw(req, res, next)
+    }
+  }
+
   function setupApp(): void {
     const rawHttpRateLimits = process.env.HTTP_RATE_LIMITS
     const parsedParts =
@@ -712,7 +777,6 @@ function tokenSecurityFactory(
     ;[
       '/restart',
       '/runDiscovery',
-      '/plugins',
       '/appstore',
       '/security',
       '/settings',
@@ -725,7 +789,9 @@ function tokenSecurityFactory(
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
     )
 
-    app.use('/plugins', adminAuthenticationMiddleware(false))
+    app.use('/plugins', http_authorize(false))
+    app.use(`${SERVERROUTESPREFIX}/plugins`, pluginAuthenticationMiddleware())
+    app.use('/plugins', pluginAuthenticationMiddleware())
 
     //TODO remove after grace period
     app.use('/loginStatus', http_authorize(false, true))
