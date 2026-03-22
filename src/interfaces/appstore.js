@@ -19,7 +19,11 @@ const debug = createDebug('signalk-server:interfaces:appstore')
 const _ = require('lodash')
 const semver = require('semver')
 const { gt } = semver
-const { installModule, removeModule } = require('../modules')
+const {
+  installModule,
+  removeModule,
+  cleanupAfterRemove
+} = require('../modules')
 const {
   isTheServerModule,
   findModulesWithKeyword,
@@ -405,10 +409,12 @@ module.exports = function (app) {
   }
 
   function removeSKModule(module) {
-    updateSKModule(module, null, true)
+    const plugin = getPlugin(module)
+    const pluginId = plugin ? plugin.id : undefined
+    updateSKModule(module, null, true, pluginId)
   }
 
-  function updateSKModule(module, version, isRemove) {
+  function updateSKModule(module, version, isRemove, pluginId) {
     moduleInstalling = {
       name: module,
       output: [],
@@ -438,6 +444,13 @@ module.exports = function (app) {
         modulesInstalledSinceStartup[module].code = code
         moduleInstalling = undefined
         debug(`child process exited with code ${code}`)
+
+        if (isRemove) {
+          cleanupAfterRemove(app.config.configPath, module, pluginId)
+          if (pluginId) {
+            delete app.providerStatus[pluginId]
+          }
+        }
 
         if (moduleInstallQueue.length) {
           const next = moduleInstallQueue.splice(0, 1)[0]
