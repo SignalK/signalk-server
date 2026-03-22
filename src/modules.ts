@@ -20,8 +20,10 @@ import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import semver, { SemVer } from 'semver'
+import { atomicWriteFileSync } from './atomicWrite'
 import { Config } from './config/config'
 import { createDebug } from './debug'
+import { pluginConfigPath, pluginDataDir } from './plugin-paths'
 const debug = createDebug('signalk:modules')
 const npmDebug = createDebug('signalk:modules:npm')
 
@@ -208,23 +210,19 @@ function cleanupAfterRemove(
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
       if (packageJson.dependencies && packageJson.dependencies[packageName]) {
         delete packageJson.dependencies[packageName]
-        fs.writeFileSync(
+        atomicWriteFileSync(
           packageJsonPath,
           JSON.stringify(packageJson, null, 2) + '\n'
         )
-        console.warn(`${packageName}: removed from package.json dependencies`)
+        console.warn(`${packageName}: removed from settings package.json`)
       }
     } catch (e: any) {
-      console.error(`Failed to update package.json: ${e.message}`)
+      console.error(`Failed to update settings package.json: ${e.message}`)
     }
   }
 
   if (pluginId) {
-    const configFile = path.join(
-      configPath,
-      'plugin-config-data',
-      `${pluginId}.json`
-    )
+    const configFile = pluginConfigPath(configPath, pluginId)
     if (fs.existsSync(configFile)) {
       try {
         fs.unlinkSync(configFile)
@@ -232,7 +230,7 @@ function cleanupAfterRemove(
         console.error(`Failed to remove ${configFile}: ${e.message}`)
       }
     }
-    const dataDir = path.join(configPath, 'plugin-config-data', pluginId)
+    const dataDir = pluginDataDir(configPath, pluginId)
     if (fs.existsSync(dataDir)) {
       try {
         fs.rmSync(dataDir, { recursive: true, force: true })
