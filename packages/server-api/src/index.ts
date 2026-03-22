@@ -15,7 +15,7 @@ export * as radar from './radarapi'
 export * from './streambundle'
 export * from './subscriptionmanager'
 /** @category History API */
-export * as history from './history'
+export * as history from './historyapi'
 /** @category Notifications API */
 export * from './notificationsapi'
 

@@ -11,7 +11,7 @@ import {
 } from '.'
 import { RadarProviderRegistry, WithRadarApi } from './radarapi'
 import { CourseApi } from './course'
-import { HistoryProviderRegistry, WithHistoryApi } from './history'
+import { HistoryProviderRegistry, WithHistoryApi } from './historyapi'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
 
