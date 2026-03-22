@@ -406,7 +406,7 @@ export function createCertificateOptions(
   debug(`Creating certificate files in ${location}`)
   generate(
     [{ name: 'commonName', value: 'localhost' }],
-    { days: 3650 },
+    { days: 3650, keySize: 2048 },
     function (err, pems) {
       writeFileSync(keyFile, pems.private)
       chmodSync(keyFile, '600')
