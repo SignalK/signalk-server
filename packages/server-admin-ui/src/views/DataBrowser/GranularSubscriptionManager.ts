@@ -1,7 +1,9 @@
 import { getPathFromKey } from './pathUtils'
 
-// Only subscribes to visible paths for continuous updates, but uses
-// announceNewPaths: true so the server announces all existing/new paths once.
+// Only subscribes to visible paths for continuous updates.
+// Initial discovery uses announceNewPaths: true so the server announces all
+// existing/new paths once. Subsequent resubscriptions (on scroll) omit it
+// to avoid redundant path announcements.
 // State machine: IDLE -> SUBSCRIBED <-> RESUBSCRIBING
 
 const STATE = {
@@ -20,6 +22,7 @@ const log = (...args: unknown[]) =>
 interface SubscriptionMessage {
   context: string
   announceNewPaths?: boolean
+  sourcePolicy?: 'preferred' | 'all'
   subscribe?: Array<{ path: string }>
   unsubscribe?: Array<{ path: string }>
 }
@@ -38,6 +41,7 @@ class GranularSubscriptionManager {
   private pendingPaths: Set<string> | null = null
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private messageHandler: MessageHandler | null = null
+  private sourcePolicy: 'preferred' | 'all' = 'preferred'
 
   // Configuration
   private readonly DEBOUNCE_MS = 350
@@ -50,6 +54,10 @@ class GranularSubscriptionManager {
 
   setMessageHandler(handler: MessageHandler): void {
     this.messageHandler = handler
+  }
+
+  setSourcePolicy(policy: 'preferred' | 'all'): void {
+    this.sourcePolicy = policy
   }
 
   /**
@@ -67,6 +75,7 @@ class GranularSubscriptionManager {
     this._send({
       context: '*',
       announceNewPaths: true,
+      sourcePolicy: this.sourcePolicy,
       subscribe: [] // Empty initially, will be populated by requestPaths
     })
 
@@ -214,7 +223,7 @@ class GranularSubscriptionManager {
 
       const subMsg: SubscriptionMessage = {
         context: '*',
-        announceNewPaths: true, // Continue discovering new paths
+        sourcePolicy: this.sourcePolicy,
         subscribe: uniquePaths.map((path) => ({ path }))
       }
 

@@ -15,7 +15,6 @@ interface N2KFilter {
 interface ProviderOptions {
   filtersEnabled?: boolean
   filters?: N2KFilter[]
-  useCanName?: boolean
   [key: string]: unknown
 }
 
@@ -73,7 +72,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
     })
   }
 
-  const sourceName = value.options.useCanName ? 'Can NAME' : 'Address'
+  const sourceName = 'Can NAME'
 
   return (
     <div>

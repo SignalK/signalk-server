@@ -44,6 +44,13 @@ export interface SubscribeMessage {
    * without subscribing to everything continuously.
    */
   announceNewPaths?: boolean
+
+  /**
+   * Controls which sources are included in deltas.
+   * - `preferred` (default): only the preferred source per path (based on source priorities)
+   * - `all`: all sources for every path, useful for source comparison and diagnostics
+   */
+  sourcePolicy?: 'preferred' | 'all'
 }
 
 /** @inline
