@@ -309,6 +309,27 @@ class Server {
         ) {
           data.context = ('vessels.' + app.selfId) as Context
         }
+
+        if (
+          data.updates.some((update) => {
+            const values = (update as { values?: unknown[] }).values
+            return (
+              Array.isArray(values) &&
+              values.some(
+                (v: unknown) =>
+                  v === null ||
+                  v === undefined ||
+                  typeof (v as { path?: unknown }).path !== 'string'
+              )
+            )
+          })
+        ) {
+          console.warn(
+            `Discarding delta from ${providerId}: invalid values entry (null or missing path)`
+          )
+          return
+        }
+
         const now = new Date()
         data.updates = data.updates
           .map((update: Partial<Update>) => {

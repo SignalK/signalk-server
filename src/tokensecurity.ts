@@ -1149,6 +1149,13 @@ function tokenSecurityFactory(
 
         if (hasValues(update)) {
           return update.values.find((valuePath) => {
+            if (
+              valuePath === null ||
+              valuePath === undefined ||
+              typeof valuePath.path !== 'string'
+            ) {
+              return true
+            }
             return (
               strategy.checkACL(
                 skReq.skPrincipal!.identifier,
