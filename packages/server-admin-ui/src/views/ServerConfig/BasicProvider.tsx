@@ -684,10 +684,12 @@ function StdOutInput({
 
 function IgnoredSentences({
   value,
-  onChange
+  onChange,
+  helpText
 }: {
   value: ProviderOptions
   onChange: OnChangeHandler
+  helpText: string
 }) {
   let displayValue = value.ignoredSentences
   if (Array.isArray(displayValue)) {
@@ -709,7 +711,7 @@ function IgnoredSentences({
     <TextInput
       title="Ignored Sentences"
       name="options.ignoredSentences"
-      helpText="NMEA0183 sentences to throw away from the input data. Example: RMC,ROT"
+      helpText={helpText}
       value={displayValue as string}
       onChange={handleChange}
     />
@@ -1108,7 +1110,11 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
       <ValidateChecksumInput value={value.options} onChange={onChange} />
       <AppendChecksum value={value.options} onChange={onChange} />
       <RemoveNullsInput value={value.options} onChange={onChange} />
-      <IgnoredSentences value={value.options} onChange={onChange} />
+      <IgnoredSentences
+        value={value.options}
+        onChange={onChange}
+        helpText="NMEA0183 sentences to throw away from the input data. Example: RMC,ROT"
+      />
     </div>
   )
 }
@@ -1286,6 +1292,11 @@ function Seatalk({ value, onChange }: TypeComponentProps) {
           </Form.Label>
         </Col>
       </Form.Group>
+      <IgnoredSentences
+        value={value.options}
+        onChange={onChange}
+        helpText="SeaTalk1 command bytes (hex) to throw away from the input data. Example: 84,9C,11"
+      />
     </span>
   )
 }
