@@ -349,7 +349,7 @@ function TokenInput({
   const testConnection = useCallback(() => {
     setTesting(true)
     setTestResult(null)
-    fetch(`${window.serverRoutesPrefix}/testConnection`, {
+    fetch(`${window.serverRoutesPrefix}/testSignalKConnection`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
