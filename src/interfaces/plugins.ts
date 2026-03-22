@@ -779,7 +779,7 @@ module.exports = (theApp: any) => {
         apiList.push('historyplayback')
         apiList.push('historysnapshot')
         onStopHandlers[plugin.id].push(() => {
-          app.unregisterHistoryProvider(provider)
+          app.unregisterHistoryProvider()
         })
       }
     }
