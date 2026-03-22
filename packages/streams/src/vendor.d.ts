@@ -107,26 +107,3 @@ declare module '@signalk/signalk-schema' {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export function getMetadata(path: string): any
 }
-
-declare module 'node-gpsd-client' {
-  import { EventEmitter } from 'events'
-  interface GpsdOptions {
-    port?: number
-    hostname?: string
-    logger?: {
-      info: (...args: unknown[]) => void
-      warn: (...args: unknown[]) => void
-      error: (...args: unknown[]) => void
-    }
-    reconnectInterval?: number
-    reconnectThreshold?: number
-    parse: boolean
-  }
-  class Gpsd extends EventEmitter {
-    constructor(options: GpsdOptions)
-    connect(): void
-    disconnect(): void
-    watch(options?: object): void
-  }
-  export default Gpsd
-}
