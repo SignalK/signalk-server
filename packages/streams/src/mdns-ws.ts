@@ -15,6 +15,8 @@
  */
 
 import { Transform, TransformCallback } from 'stream'
+import http from 'http'
+import https from 'https'
 import { Client } from '@signalk/client'
 import { getMetadata } from '@signalk/signalk-schema'
 import { CreateDebug, DebugLogger } from './types'
@@ -35,6 +37,7 @@ interface MdnsWsOptions {
   type?: string
   subscription?: string
   selfHandling?: string
+  token?: string
   remoteSelf?: string
   ignoreServers?: string[]
   selfsignedcert?: boolean
@@ -111,6 +114,39 @@ export default class MdnsWs extends Transform {
     }
   }
 
+  private verifyRemoteToken(): Promise<boolean> {
+    const protocol = this.options.type === 'wss' ? https : http
+    return new Promise((resolve, reject) => {
+      const reqOptions = {
+        hostname: this.options.host,
+        port: this.options.port,
+        path: '/signalk/v1/api/self',
+        method: 'GET',
+        headers: {
+          Authorization: `JWT ${this.options.token}`
+        },
+        rejectUnauthorized: !(this.options.selfsignedcert === true)
+      }
+      const req = protocol.request(reqOptions, (response) => {
+        response.resume()
+        resolve(response.statusCode === 200)
+      })
+      req.on('error', (err) => reject(err))
+      req.setTimeout(10000, () => {
+        req.destroy(new Error('Token verification timed out'))
+      })
+      req.end()
+    })
+  }
+
+  private setProviderStatus(message: string, isError: boolean): void {
+    if (!isError) {
+      this.options.app.setProviderStatus(this.options.providerId, message)
+    } else {
+      this.options.app.setProviderError(this.options.providerId, message)
+    }
+  }
+
   private connectClient(client: Client): void {
     this.fetchedMetaPaths.clear()
     client
@@ -123,7 +159,31 @@ export default class MdnsWs extends Transform {
         console.log(
           `ws connection connected to ${client.options.hostname}:${client.options.port}`
         )
-        if (this.options.selfHandling === 'useRemoteSelf') {
+        if (this.options.token) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const conn = (client as any).connection
+          conn.send(JSON.stringify({ token: this.options.token }))
+          conn.setAuthenticated(this.options.token, 'JWT')
+          this.debug('Sent authentication token to remote server')
+
+          this.verifyRemoteToken()
+            .then((isValid) => {
+              if (!isValid) {
+                this.setProviderStatus(
+                  `Authentication failed for ${client.options.hostname}:${client.options.port} — token may be invalid or revoked`,
+                  true
+                )
+                conn.disconnect()
+              }
+            })
+            .catch((err) => {
+              this.debug('Token verification error: ' + err.message)
+            })
+        }
+        if (
+          this.options.selfHandling !== 'manualSelf' &&
+          this.options.selfHandling !== 'noSelf'
+        ) {
           client
             .API()
             .then((api) => api.get('/self'))
@@ -201,6 +261,20 @@ export default class MdnsWs extends Transform {
           }
         }
       }
+    })
+
+    client.on('disconnect', () => {
+      const hint = this.options.token
+        ? ' — check that the token is valid on the remote server'
+        : ' — the remote server may require authentication'
+      this.setProviderStatus(
+        `Disconnected from ${client.options.hostname}:${client.options.port}${hint}`,
+        true
+      )
+    })
+
+    client.on('error', (err: Error) => {
+      this.setProviderStatus(`Connection error: ${err.message}`, true)
     })
   }
 
