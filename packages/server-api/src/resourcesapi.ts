@@ -24,7 +24,7 @@ export const isSignalKResourceType = (s: string) =>
 export type ResourceType = SignalKResourceType | string
 
 /** @category  Resources API */
-export interface ResourcesApi {
+export interface ResourceApi {
   register(pluginId: string, provider: ResourceProvider): void
   unRegister(pluginId: string): void
 
@@ -167,9 +167,23 @@ export interface ResourcesApi {
 }
 
 /** @category  Resources API */
-export interface WithResourcesApi {
-  resourcesApi: ResourcesApi
+export interface WithResourceApi {
+  resourceApi: ResourceApi
+  /** @deprecated Use {@link WithResourceApi.resourceApi} instead. */
+  resourcesApi: ResourceApi
 }
+
+/**
+ * @deprecated Use {@link WithResourceApi} instead.
+ * @category  Resources API
+ */
+export type WithResourcesApi = WithResourceApi
+
+/**
+ * @deprecated Use {@link ResourceApi} instead.
+ * @category  Resources API
+ */
+export type ResourcesApi = ResourceApi
 
 /** @category  Resources API */
 export interface ResourceProvider {
@@ -402,5 +416,8 @@ export interface ResourceProviderRegistry {
    *
    * @category Resources API
    */
-  resourcesApi: ResourcesApi
+  resourceApi: ResourceApi
+
+  /** @deprecated Use {@link ResourceProviderRegistry.resourceApi} instead. */
+  resourcesApi: ResourceApi
 }

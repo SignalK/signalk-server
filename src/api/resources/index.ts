@@ -38,7 +38,7 @@ interface ResourceSettings {
   defaultProviders: DefaultProviders
 }
 
-export class ResourcesApi {
+export class ResourceApi {
   private resProvider: { [key: string]: Map<string, ResourceProviderMethods> } =
     {}
   private app: ResourceApplication
