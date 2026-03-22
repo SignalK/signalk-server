@@ -368,7 +368,7 @@ function nmea0183input(subOptions: SubOptions): PipeElement[] {
     const Ctor = Serialport.default ?? Serialport
     pipePart = [new (Ctor as new (options: object) => PipeElement)(subOptions)]
   } else if (subOptions.type === 'gpsd') {
-    pipePart = [new Gpsd(subOptions)]
+    pipePart = [new Gpsd(subOptions), new Liner(subOptions)]
   }
 
   if (pipePart) {
