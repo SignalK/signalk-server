@@ -100,7 +100,9 @@ export const startApis = (
 
   const notificationApi = new NotificationApi(app as NotificationApplication)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(app as any).notificationApi = notificationApi
+  ;(app as any).notificationsApi = notificationApi
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).notificationApi = notificationApi // deprecated: use notificationsApi
   apiList.push('notifications')
 
   Promise.all([
