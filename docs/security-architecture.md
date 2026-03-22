@@ -90,6 +90,8 @@ Session cookie helpers ensure consistent security settings:
 - `sameSite: 'strict'`
 - `secure: true` (when over HTTPS)
 
+The server implements a sliding session window: when a JWT token is past the midpoint of its lifetime, the next HTTP request silently replaces the cookie with a freshly issued token. This keeps active users logged in indefinitely while inactive sessions still expire after the configured duration.
+
 ## OIDC Integration
 
 The OIDC module provides OpenID Connect authentication for Single Sign-On.
