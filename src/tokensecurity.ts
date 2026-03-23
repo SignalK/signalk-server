@@ -752,7 +752,15 @@ function tokenSecurityFactory(
         no_redir(req, res, next)
       }
     )
+    app.use(
+      '/signalk/v2/api/*',
+      function (req: Request, res: Response, next: NextFunction) {
+        no_redir(req, res, next)
+      }
+    )
     app.put('/signalk/v1/*', writeAuthenticationMiddleware())
+    app.put('/signalk/v2/*', writeAuthenticationMiddleware())
+    app.post('/signalk/v2/*', writeAuthenticationMiddleware())
   }
 
   function login(
