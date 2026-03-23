@@ -1,0 +1,8 @@
+{
+  "allow_readonly": true,
+  "allowNewUserRegistration": false,
+  "allowDeviceAccessRequests": false,
+  "users": [],
+  "devices": [],
+  "acls": []
+}
