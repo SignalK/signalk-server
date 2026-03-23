@@ -230,6 +230,8 @@ export interface SecurityStrategy {
   ) => boolean
 
   addAdminMiddleware: (path: string) => void
+  addAdminWriteMiddleware: (path: string) => void
+  addWriteMiddleware: (path: string) => void
 
   /** Update OIDC config in memory (optional - only available when token security is active) */
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void

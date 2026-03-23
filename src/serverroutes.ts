@@ -754,6 +754,8 @@ module.exports = function (
     )
   }
 
+  app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/settings`)
+
   app.put(`${SERVERROUTESPREFIX}/settings`, (req: Request, res: Response) => {
     const settings = req.body
 
@@ -946,6 +948,8 @@ module.exports = function (
     })
   }
 
+  app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/vessel`)
+
   app.put(`${SERVERROUTESPREFIX}/vessel`, (req: Request, res: Response) => {
     const de = app.config.baseDeltaEditor
     const vessel = req.body
@@ -1057,6 +1061,10 @@ module.exports = function (
     }
   )
 
+  app.securityStrategy.addAdminWriteMiddleware(
+    `${SERVERROUTESPREFIX}/sourcePriorities`
+  )
+
   app.get(
     `${SERVERROUTESPREFIX}/sourcePriorities`,
     (req: Request, res: Response) => {
@@ -1081,6 +1089,8 @@ module.exports = function (
       })
     }
   )
+
+  app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/debug`)
 
   app.post(`${SERVERROUTESPREFIX}/debug`, (req: Request, res: Response) => {
     if (!app.logging.enableDebug(req.body.value)) {
@@ -1109,6 +1119,10 @@ module.exports = function (
       recommendedNodeVersion
     })
   })
+
+  app.securityStrategy.addAdminWriteMiddleware(
+    `${SERVERROUTESPREFIX}/rememberDebug`
+  )
 
   app.post(
     `${SERVERROUTESPREFIX}/rememberDebug`,
