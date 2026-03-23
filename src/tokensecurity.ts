@@ -761,6 +761,7 @@ function tokenSecurityFactory(
     app.put('/signalk/v1/*', writeAuthenticationMiddleware())
     app.put('/signalk/v2/*', writeAuthenticationMiddleware())
     app.post('/signalk/v2/*', writeAuthenticationMiddleware())
+    app.delete('/signalk/v2/*', writeAuthenticationMiddleware())
   }
 
   function login(
