@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin-ui",
-  "version": "2.23.2",
+  "version": "2.24.0",
   "description": "Signal K server admin webapp",
   "author": "Dirk Wahrheit, Scott Bender, Teppo Kurki",
   "contributors": [
