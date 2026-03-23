@@ -1425,9 +1425,7 @@ module.exports = function (
   app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/testSignalKConnection`
   )
-  app.securityStrategy.addAdminMiddleware(
-    `${SERVERROUTESPREFIX}/requestAccess`
-  )
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/requestAccess`)
   app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/checkAccessRequest`
   )
