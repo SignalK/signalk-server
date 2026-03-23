@@ -2,6 +2,11 @@
   "name": "@signalk/server-admin-ui",
   "version": "2.24.0",
   "description": "Signal K server admin webapp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SignalK/signalk-server.git",
+    "directory": "packages/server-admin-ui"
+  },
   "author": "Dirk Wahrheit, Scott Bender, Teppo Kurki",
   "contributors": [
     {

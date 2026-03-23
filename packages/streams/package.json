@@ -51,7 +51,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SignalK/signalk-server-node.git"
+    "url": "git+https://github.com/SignalK/signalk-server.git",
+    "directory": "packages/streams"
   },
   "keywords": [
     "Signal",

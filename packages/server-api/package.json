@@ -16,7 +16,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/SignalK/signalk-server.git"
+    "url": "https://github.com/SignalK/signalk-server.git",
+    "directory": "packages/server-api"
   },
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",
