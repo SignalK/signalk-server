@@ -99,7 +99,8 @@ const dummyApp = {
   use: () => {},
   get: () => {},
   post: () => {},
-  put: () => {}
+  put: () => {},
+  delete: () => {}
 }
 
 const securityStrategy = require('../dist/tokensecurity')(
