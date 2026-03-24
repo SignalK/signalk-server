@@ -686,6 +686,13 @@ module.exports = function (
     app.post(
       `${SERVERROUTESPREFIX}/enableSecurity`,
       (req: Request, res: Response) => {
+        if (
+          securityWasEnabled ||
+          app.securityStrategy.getUsers(getSecurityConfig(app)).length > 0
+        ) {
+          res.status(403).send('Security already enabled')
+          return
+        }
         if (app.securityStrategy.isDummy()) {
           app.config.settings.security = { strategy: defaultSecurityStrategy }
           const adminUser = req.body
@@ -733,6 +740,7 @@ module.exports = function (
           if (!config) {
             config = app.securityStrategy.getConfiguration()
           }
+          request.body.type = 'admin'
           securityStrategy.addUser(config, request.body, (err, theConfig) => {
             if (err) {
               console.log(err)
