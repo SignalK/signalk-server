@@ -112,67 +112,71 @@ export default class MdnsWs extends Transform {
   }
 
   private connectClient(client: Client): void {
-    this.fetchedMetaPaths.clear()
-    client
-      .connect()
-      .then(() => {
-        this.options.app.setProviderStatus(
-          this.options.providerId,
-          `ws connection connected to ${client.options.hostname}:${client.options.port}`
-        )
-        console.log(
-          `ws connection connected to ${client.options.hostname}:${client.options.port}`
-        )
-        if (this.options.selfHandling === 'useRemoteSelf') {
-          client
-            .API()
-            .then((api) => api.get('/self'))
-            .then((selfFromServer) => {
-              this.debug(
-                `Mapping context ${selfFromServer} to self (empty context)`
-              )
-              this.handleContext = (delta) => {
-                if (delta.context === selfFromServer) {
-                  delete delta.context
-                }
+    client.on('connect', () => {
+      this.fetchedMetaPaths.clear()
+      this.options.app.setProviderStatus(
+        this.options.providerId,
+        `ws connection connected to ${client.options.hostname}:${client.options.port}`
+      )
+      console.log(
+        `ws connection connected to ${client.options.hostname}:${client.options.port}`
+      )
+      if (this.options.selfHandling === 'useRemoteSelf') {
+        client
+          .API()
+          .then((api) => api.get('/self'))
+          .then((selfFromServer) => {
+            this.debug(
+              `Mapping context ${selfFromServer} to self (empty context)`
+            )
+            this.handleContext = (delta) => {
+              if (delta.context === selfFromServer) {
+                delete delta.context
               }
-            })
-            .catch((err) => {
-              console.error('Error retrieving self from remote server')
-              console.error(err)
-            })
-        }
-        this.remoteServers[
-          client.options.hostname + ':' + client.options.port
-        ] = client
-        if (this.options.subscription) {
-          let parsed: object | object[]
-          try {
-            parsed = JSON.parse(this.options.subscription)
-          } catch (ex) {
-            const error = ex as Error
-            this.options.app.setProviderError(
-              this.options.providerId,
-              `unable to parse subscription json: ${this.options.subscription}: ${error.message}`
-            )
-            console.error(
-              `unable to parse subscription json: ${this.options.subscription}: ${error.message}`
-            )
-            return
-          }
-          if (!Array.isArray(parsed)) {
-            parsed = [parsed]
-          }
-          ;(parsed as object[]).forEach((sub: object, idx: number) => {
-            this.debug('sending subscription %j', sub)
-            client.subscribe(sub, String(idx))
+            }
           })
+          .catch((err) => {
+            console.error('Error retrieving self from remote server')
+            console.error(err)
+          })
+      }
+      this.remoteServers[client.options.hostname + ':' + client.options.port] =
+        client
+      if (this.options.subscription) {
+        let parsed: object | object[]
+        try {
+          parsed = JSON.parse(this.options.subscription)
+        } catch (ex) {
+          const error = ex as Error
+          this.options.app.setProviderError(
+            this.options.providerId,
+            `unable to parse subscription json: ${this.options.subscription}: ${error.message}`
+          )
+          console.error(
+            `unable to parse subscription json: ${this.options.subscription}: ${error.message}`
+          )
+          return
         }
-      })
-      .catch((err: Error) => {
-        this.options.app.setProviderError(this.options.providerId, err.message)
-        console.error(err.message)
-      })
+        if (!Array.isArray(parsed)) {
+          parsed = [parsed]
+        }
+        ;(parsed as object[]).forEach((sub: object, idx: number) => {
+          this.debug('sending subscription %j', sub)
+          client.subscribe(sub, String(idx))
+        })
+      }
+    })
+
+    client.on('disconnect', () => {
+      this.options.app.setProviderError(
+        this.options.providerId,
+        `ws connection disconnected from ${client.options.hostname}:${client.options.port}`
+      )
+    })
+
+    client.on('error', (err: Error) => {
+      this.options.app.setProviderError(this.options.providerId, err.message)
+    })
 
     client.on('delta', (data: DeltaMessage) => {
       if (data && data.updates) {
@@ -202,6 +206,8 @@ export default class MdnsWs extends Transform {
         }
       }
     })
+
+    client.connect().catch(() => {})
   }
 
   private fetchMetaIfNeeded(
