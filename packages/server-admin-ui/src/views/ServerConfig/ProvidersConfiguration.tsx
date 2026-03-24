@@ -228,7 +228,6 @@ const ProvidersConfiguration: React.FC = () => {
   const providerClicked = useCallback((provider: Provider, index: number) => {
     setSelectedProvider({
       ...structuredClone(provider),
-      enabled: true,
       originalId: provider.id
     })
     setSelectedIndex(index)
