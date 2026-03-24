@@ -95,7 +95,7 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
 
       const newContextMeta = {
         ...contextMeta,
-        [path]: metaData as MetaData
+        [path]: { ...contextMeta[path], ...metaData } as MetaData
       }
 
       return {

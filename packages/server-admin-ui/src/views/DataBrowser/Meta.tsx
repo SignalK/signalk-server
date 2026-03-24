@@ -95,6 +95,7 @@ interface MetaFormRowProps {
   idPrefix: string
   categories?: string[]
   siUnit?: string
+  unitDefinitions?: UnitDefinitions | null
   description?: string
 }
 
@@ -203,6 +204,7 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
 interface CategorySelectProps extends ValueRenderProps {
   categories?: string[]
   siUnit?: string
+  unitDefinitions?: UnitDefinitions | null
 }
 
 const CategorySelect: React.FC<CategorySelectProps> = ({
@@ -211,28 +213,65 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
   setValue,
   inputId,
   categories,
-  siUnit
+  siUnit,
+  unitDefinitions
 }) => {
   const displayUnits = value as DisplayUnits | undefined
   const category = displayUnits?.category || ''
   const categoryList =
     categories !== undefined ? categories : DEFAULT_CATEGORIES
+  const conversions =
+    siUnit && unitDefinitions ? unitDefinitions[siUnit]?.conversions : undefined
   return (
-    <Form.Select
-      id={inputId}
-      disabled={disabled}
-      value={category}
-      size="sm"
-      onChange={(e) => setValue({ category: e.target.value })}
-    >
-      <option value="">-- No category --</option>
-      {siUnit && <option value="base">base ({siUnit})</option>}
-      {categoryList.map((cat) => (
-        <option key={cat} value={cat}>
-          {cat}
-        </option>
-      ))}
-    </Form.Select>
+    <>
+      <Form.Select
+        id={inputId}
+        disabled={disabled}
+        value={category}
+        size="sm"
+        onChange={(e) => setValue({ category: e.target.value })}
+      >
+        <option value="">-- No category --</option>
+        {siUnit && <option value="base">base ({siUnit})</option>}
+        {conversions && <option value="custom">custom unit</option>}
+        {categoryList.map((cat) => (
+          <option key={cat} value={cat}>
+            {cat}
+          </option>
+        ))}
+      </Form.Select>
+      {category === 'custom' && conversions && (
+        <Form.Select
+          disabled={disabled}
+          value={displayUnits?.targetUnit || ''}
+          size="sm"
+          style={{ marginTop: '4px' }}
+          onChange={(e) => {
+            const targetUnit = e.target.value
+            if (!targetUnit) {
+              setValue({ category: 'custom' })
+              return
+            }
+            const conv = conversions[targetUnit]
+            setValue({
+              category: 'custom',
+              targetUnit,
+              formula: conv?.formula,
+              inverseFormula: conv?.inverseFormula,
+              symbol: conv?.symbol || targetUnit
+            })
+          }}
+        >
+          <option value="">-- Select unit --</option>
+          {Object.entries(conversions).map(([unit, conv]) => (
+            <option key={unit} value={unit}>
+              {conv.symbol || unit}
+              {conv.longName ? ` - ${conv.longName}` : ''}
+            </option>
+          ))}
+        </Form.Select>
+      )}
+    </>
   )
 }
 
@@ -453,7 +492,7 @@ const DisplaySelect: React.FC<ValueRenderProps> = ({
 }
 
 const DisplayUnitsView: React.FC<CategorySelectProps> = (props) => {
-  const { disabled, categories, siUnit } = props
+  const { disabled, categories, siUnit, unitDefinitions } = props
   if (disabled) {
     const displayUnits = props.value as DisplayUnits | undefined
     if (!displayUnits || !displayUnits.category) {
@@ -480,7 +519,14 @@ const DisplayUnitsView: React.FC<CategorySelectProps> = (props) => {
       </div>
     )
   }
-  return <CategorySelect {...props} categories={categories} siUnit={siUnit} />
+  return (
+    <CategorySelect
+      {...props}
+      categories={categories}
+      siUnit={siUnit}
+      unitDefinitions={unitDefinitions}
+    />
+  )
 }
 
 const METAFIELDRENDERERS: Record<
@@ -510,6 +556,7 @@ const METAFIELDRENDERERS: Record<
           {...p}
           categories={props.categories}
           siUnit={props.siUnit}
+          unitDefinitions={props.unitDefinitions}
         />
       )}
       description="Category for unit conversion"
@@ -599,7 +646,8 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context }) => {
     siUnit,
     category,
     presetDetails,
-    unitDefinitions
+    unitDefinitions,
+    localMeta.displayUnits
   )
 
   const handleEdit = () => {
@@ -771,6 +819,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context }) => {
                     disabled: !isEditing,
                     categories: filteredCategories,
                     siUnit,
+                    unitDefinitions,
                     setValue: (metaFieldValue) =>
                       setLocalMeta({ ...localMeta, [key]: metaFieldValue }),
                     setKey: (metaFieldKey) => {

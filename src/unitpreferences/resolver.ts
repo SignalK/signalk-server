@@ -37,6 +37,40 @@ export function resolveDisplayUnits(
     }
   }
 
+  // "custom" category stores explicit conversion info
+  if (category === 'custom') {
+    if (!storedDisplayUnits.targetUnit) {
+      return null
+    }
+    // If formula is stored, use it directly
+    if (storedDisplayUnits.formula) {
+      return {
+        category: 'custom',
+        targetUnit: storedDisplayUnits.targetUnit,
+        formula: storedDisplayUnits.formula,
+        inverseFormula: storedDisplayUnits.inverseFormula || '',
+        symbol: storedDisplayUnits.symbol || storedDisplayUnits.targetUnit,
+        displayFormat: storedDisplayUnits.displayFormat
+      }
+    }
+    // Otherwise look up from definitions using pathSiUnit
+    if (pathSiUnit) {
+      const definitions = getMergedDefinitions()
+      const conversion = definitions[pathSiUnit]?.conversions?.[storedDisplayUnits.targetUnit]
+      if (conversion) {
+        return {
+          category: 'custom',
+          targetUnit: storedDisplayUnits.targetUnit,
+          formula: conversion.formula,
+          inverseFormula: conversion.inverseFormula,
+          symbol: conversion.symbol || storedDisplayUnits.targetUnit,
+          displayFormat: storedDisplayUnits.displayFormat
+        }
+      }
+    }
+    return null
+  }
+
   const categoriesData = getCategories()
   const definitions = getMergedDefinitions()
   const preset = username ? getActivePresetForUser(username) : getActivePreset()
@@ -95,6 +129,11 @@ export function validateCategoryAssignment(
 ): string | null {
   // "base" category is always valid - it means use SI units
   if (category === 'base') {
+    return null
+  }
+
+  // "custom" category is always valid - user picks an explicit target unit
+  if (category === 'custom') {
     return null
   }
 

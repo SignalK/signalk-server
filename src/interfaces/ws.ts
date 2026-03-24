@@ -908,7 +908,7 @@ function handleValuesMeta(
           // Clone and enhance metadata with displayUnits formulas
           meta = JSON.parse(JSON.stringify(meta))
           let storedDisplayUnits = (meta as Record<string, unknown>)
-            .displayUnits as { category?: string } | undefined
+            .displayUnits as Record<string, unknown> | undefined
           if (!storedDisplayUnits?.category && path) {
             const defaultCategory = getDefaultCategory(path)
             if (defaultCategory) {
@@ -918,7 +918,7 @@ function handleValuesMeta(
           if (storedDisplayUnits?.category) {
             const username = this.spark.request.skPrincipal?.identifier
             const enhanced = resolveDisplayUnits(
-              { category: storedDisplayUnits.category },
+              storedDisplayUnits as { category: string; targetUnit?: string; formula?: string; inverseFormula?: string; symbol?: string; displayFormat?: string },
               (meta as Record<string, unknown>).units as string | undefined,
               username
             )
@@ -1157,12 +1157,12 @@ function handleRealtimeConnection(
           const fullPath = 'vessels.self.' + path
           const pathMeta =
             (getMetadata(fullPath) as Record<string, unknown>) || {}
+          const storedDU = pathMeta.displayUnits as Record<string, unknown> | undefined
           const category =
-            (pathMeta.displayUnits as { category?: string } | undefined)
-              ?.category || getDefaultCategory(path)
+            (storedDU?.category as string | undefined) || getDefaultCategory(path)
           if (category) {
             const displayUnits = resolveDisplayUnits(
-              { category },
+              { ...storedDU, category } as { category: string; targetUnit?: string; formula?: string; inverseFormula?: string; symbol?: string; displayFormat?: string },
               pathMeta.units as string | undefined,
               username
             )

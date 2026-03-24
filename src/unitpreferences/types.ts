@@ -51,6 +51,9 @@ export interface UnitPreferencesConfig {
 export interface DisplayUnitsMetadata {
   category: string
   targetUnit?: string // Only if path override
+  formula?: string // Only if custom category
+  inverseFormula?: string // Only if custom category
+  symbol?: string // Only if custom category
   displayFormat?: string // Only if path override
 }
 
