@@ -27,7 +27,7 @@ export interface OIDCConfig {
   issuer: string
   clientId: string
   clientSecret: string
-  redirectUri?: string
+  redirectUri: string
   scope: string
   defaultPermission: SignalKPermission
   autoCreateUsers: boolean
@@ -174,7 +174,7 @@ export class OIDCError extends Error {
  */
 export const OIDC_DEFAULTS: Omit<
   OIDCConfig,
-  'issuer' | 'clientId' | 'clientSecret'
+  'issuer' | 'clientId' | 'clientSecret' | 'redirectUri'
 > = {
   enabled: false,
   scope: 'openid email profile',

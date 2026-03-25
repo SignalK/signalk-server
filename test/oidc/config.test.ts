@@ -13,7 +13,8 @@ describe('OIDC Configuration', () => {
     enabled: true,
     issuer: 'https://auth.example.com',
     clientId: 'signalk-server',
-    clientSecret: 'test-secret'
+    clientSecret: 'test-secret',
+    redirectUri: 'https://signalk.example.com/signalk/v1/auth/oidc/callback'
   }
 
   describe('parseEnvConfig', () => {
@@ -347,6 +348,76 @@ describe('OIDC Configuration', () => {
     it('should not throw when disabled even if incomplete', () => {
       const disabled = { enabled: false }
       expect(() => validateOIDCConfig(disabled)).to.not.throw()
+    })
+
+    it('should throw for missing redirectUri when enabled', () => {
+      const { redirectUri: _redirectUri, ...configWithoutRedirect } =
+        validConfig
+      expect(() => validateOIDCConfig(configWithoutRedirect)).to.throw(
+        OIDCError,
+        /redirectUri/
+      )
+    })
+
+    it('should pass when redirectUri is provided', () => {
+      const configWithRedirect = {
+        ...validConfig,
+        redirectUri: 'https://signalk.local:3000/signalk/v1/auth/oidc/callback'
+      }
+      expect(() => validateOIDCConfig(configWithRedirect)).to.not.throw()
+    })
+
+    it('should throw if redirectUri is not a valid URL', () => {
+      const badRedirect = { ...validConfig, redirectUri: 'not-a-url' }
+      expect(() => validateOIDCConfig(badRedirect)).to.throw(
+        OIDCError,
+        /redirectUri.*valid URL/
+      )
+    })
+
+    it('should throw if redirectUri uses http for non-localhost', () => {
+      const httpRedirect = {
+        ...validConfig,
+        redirectUri: 'http://signalk.example.com/signalk/v1/auth/oidc/callback'
+      }
+      expect(() => validateOIDCConfig(httpRedirect)).to.throw(
+        OIDCError,
+        /https/
+      )
+    })
+
+    it('should allow http redirectUri for localhost', () => {
+      const localhostConfigs = [
+        {
+          ...validConfig,
+          redirectUri: 'http://localhost:3000/signalk/v1/auth/oidc/callback'
+        },
+        {
+          ...validConfig,
+          redirectUri: 'http://127.0.0.1:3000/signalk/v1/auth/oidc/callback'
+        },
+        {
+          ...validConfig,
+          redirectUri: 'http://[::1]:3000/signalk/v1/auth/oidc/callback'
+        }
+      ]
+      for (const config of localhostConfigs) {
+        expect(
+          () => validateOIDCConfig(config),
+          `should allow ${config.redirectUri}`
+        ).to.not.throw()
+      }
+    })
+
+    it('should throw if redirectUri contains a fragment', () => {
+      const fragmentRedirect = {
+        ...validConfig,
+        redirectUri: 'https://signalk.example.com/callback#fragment'
+      }
+      expect(() => validateOIDCConfig(fragmentRedirect)).to.throw(
+        OIDCError,
+        /fragment/
+      )
     })
   })
 

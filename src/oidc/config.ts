@@ -117,7 +117,7 @@ export function mergeConfigs(
     clientId: envConfig.clientId ?? securityJsonConfig.clientId ?? '',
     clientSecret:
       envConfig.clientSecret ?? securityJsonConfig.clientSecret ?? '',
-    redirectUri: envConfig.redirectUri ?? securityJsonConfig.redirectUri,
+    redirectUri: envConfig.redirectUri ?? securityJsonConfig.redirectUri ?? '',
     scope: envConfig.scope ?? securityJsonConfig.scope ?? OIDC_DEFAULTS.scope,
     defaultPermission:
       envConfig.defaultPermission ??
@@ -173,6 +173,42 @@ export function validateOIDCConfig(
   if (!config.clientSecret) {
     throw new OIDCError(
       'OIDC clientSecret is required when enabled',
+      'CONFIG_INVALID'
+    )
+  }
+
+  // Validate redirectUri is required and is a valid URL
+  if (!config.redirectUri) {
+    throw new OIDCError(
+      'OIDC redirectUri is required when enabled. Set it via SIGNALK_OIDC_REDIRECT_URI or in security.json.',
+      'CONFIG_INVALID'
+    )
+  }
+
+  let redirectUrl: URL
+  try {
+    redirectUrl = new URL(config.redirectUri)
+  } catch {
+    throw new OIDCError(
+      `OIDC redirectUri must be a valid URL: ${config.redirectUri}`,
+      'CONFIG_INVALID'
+    )
+  }
+
+  if (redirectUrl.hash) {
+    throw new OIDCError(
+      'OIDC redirectUri must not contain a fragment (RFC 6749 §3.1.2)',
+      'CONFIG_INVALID'
+    )
+  }
+
+  const LOCALHOST_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+  if (
+    redirectUrl.protocol !== 'https:' &&
+    !LOCALHOST_HOSTS.includes(redirectUrl.hostname)
+  ) {
+    throw new OIDCError(
+      'OIDC redirectUri must use https (http is only allowed for localhost)',
       'CONFIG_INVALID'
     )
   }
