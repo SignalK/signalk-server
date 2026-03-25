@@ -17,9 +17,14 @@
 import { Transform, TransformCallback } from 'stream'
 import Parser from '@signalk/nmea0183-signalk'
 import { appendChecksum } from '@signalk/nmea0183-utilities'
-import { toDelta as n2kToDelta } from '@signalk/n2k-signalk'
-import { FromPgn } from '@canboat/canboatjs'
-import type { CreateDebug } from './types'
+import type { CreateDebug, DebugLogger } from './types'
+
+function isN2KOver0183(msg: string): boolean {
+  const sentence = msg.charAt(0) === '\\' ? msg.split('\\')[2] : msg
+  return sentence
+    ? sentence.startsWith('$PCDIN,') || sentence.startsWith('$MXPGN,')
+    : false
+}
 
 interface Nmea0183ToSignalKOptions {
   app: {
@@ -48,14 +53,38 @@ interface Delta {
   updates: DeltaUpdate[]
 }
 
+type N2kToDelta = (
+  pgn: object,
+  state: Record<string, unknown>,
+  options: { sendMetaData: boolean }
+) => Delta | null
+
 export default class Nmea0183ToSignalK extends Transform {
-  private readonly debug: (...args: unknown[]) => void
+  private readonly debug: DebugLogger
   private readonly parser: InstanceType<typeof Parser>
-  private readonly n2kParser: InstanceType<typeof FromPgn>
+
+  private parseN2KOver0183: (
+    sentence: string,
+    callback: (err: Error | null, pgn?: unknown) => void
+  ) => object | undefined =
+    // runs only once when needed, replaces itself with the actual function
+    // after loading the required modules
+    (sentence: string) => {
+      const { FromPgn } = require('@canboat/canboatjs')
+      const n2kParser = new FromPgn({
+        ...this.options,
+        useCamelCompat: this.options.useCamelCompat ?? true
+      })
+      this.parseN2KOver0183 = n2kParser.parseN2KOver0183.bind(n2kParser)
+      this.n2kToDelta = require('@signalk/n2k-signalk').toDelta as N2kToDelta
+      return this.parseN2KOver0183(sentence, () => {})
+    }
+  private n2kToDelta?: N2kToDelta
   private readonly n2kState: Record<string, unknown> = {}
   private readonly app: Nmea0183ToSignalKOptions['app']
   private readonly sentenceEvents: string[]
   private readonly appendChecksumFlag: boolean
+  private readonly options: Nmea0183ToSignalKOptions
 
   constructor(options: Nmea0183ToSignalKOptions) {
     super({ objectMode: true })
@@ -64,7 +93,7 @@ export default class Nmea0183ToSignalK extends Transform {
     )
 
     this.parser = new Parser(options)
-    this.n2kParser = new FromPgn(options)
+    this.options = options
 
     this.app = options.app
     this.appendChecksumFlag = options.appendChecksum ?? false
@@ -130,12 +159,12 @@ export default class Nmea0183ToSignalK extends Transform {
         })
 
         let delta: Delta | null = null
-        if (this.n2kParser.isN2KOver0183(sentence)) {
-          const pgn = this.n2kParser.parseN2KOver0183(sentence, () => {})
+        if (isN2KOver0183(sentence)) {
+          const pgn = this.parseN2KOver0183(sentence, () => {})
           if (pgn) {
-            delta = n2kToDelta(pgn, this.n2kState, {
+            delta = this.n2kToDelta!(pgn, this.n2kState, {
               sendMetaData: true
-            }) as unknown as Delta | null
+            })
           }
         } else {
           delta = this.parser.parse(sentence) as Delta | null

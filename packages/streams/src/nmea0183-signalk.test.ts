@@ -215,4 +215,24 @@ describe('Nmea0183ToSignalK', () => {
     expect(results).to.have.length(1)
     expect(app.nmea0183Events).to.deep.equal([RMC_SENTENCE])
   })
+
+  it('parses N2K-over-0183 (PCDIN) sentence into Signal K delta', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test'
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    // PGN 127250 (Vessel Heading) via PCDIN encapsulation
+    stream.write('$PCDIN,01F112,00000000,0F,2AAF00D1067414FF*59')
+    stream.end()
+
+    const results = await outputPromise
+    expect(results.length).to.be.greaterThan(0)
+    const delta = results[0] as { updates: Array<{ values: unknown[] }> }
+    expect(delta.updates).to.be.an('array')
+    expect(delta.updates[0]!.values).to.be.an('array')
+  })
 })
