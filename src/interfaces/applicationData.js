@@ -117,9 +117,7 @@ module.exports = function (app) {
       res.status(401).send('Unauthorized')
       return
     }
-    const isAdmin =
-      req.skPrincipal.permissions === 'admin' ||
-      req.skPrincipal.type === 'admin'
+    const isAdmin = req.skPrincipal.permissions === 'admin'
     const isOwnDevice = req.skPrincipal.identifier === req.params.deviceId
     if (!isAdmin && !isOwnDevice) {
       res.status(403).send('Forbidden')

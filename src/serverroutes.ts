@@ -291,12 +291,13 @@ module.exports = function (
             (d: Device) => d.clientId === payload.device
           )
           if (device?.dashboard?.mode === 'redirect' && device.dashboard.url) {
-            const dashUrl = device.dashboard.url.startsWith('/')
-              ? device.dashboard.url
-              : `/${device.dashboard.url}`
-            const separator = dashUrl.includes('?') ? '&' : '?'
-            res.redirect(`${dashUrl}${separator}token=${queryToken}`)
-            return
+            const rawUrl = device.dashboard.url.trim()
+            const dashUrl = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`
+            if (!dashUrl.startsWith('//')) {
+              const separator = dashUrl.includes('?') ? '&' : '?'
+              res.redirect(`${dashUrl}${separator}token=${queryToken}`)
+              return
+            }
           }
         }
       } catch (_) {
