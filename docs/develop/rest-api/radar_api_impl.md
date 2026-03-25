@@ -18,7 +18,9 @@ interface RadarProviderMethods {
   // Required - radar discovery
   getRadars(): Promise<RadarInfo[]>
   getCapabilities(radarId: string): Promise<Capabilities | null>
-  getControlValues(radarId: string): Promise<Record<string, ControlValue> | null>
+  getControlValues(
+    radarId: string
+  ): Promise<Record<string, ControlValue> | null>
 
   // Required - control
   setControl(
@@ -48,12 +50,12 @@ Information returned for each detected radar:
 
 ```typescript
 interface RadarInfo {
-  name: string                // User-defined or auto-detected name
-  brand: string               // Manufacturer (Navico, Furuno, Raymarine, Garmin)
-  model?: string              // Model name if detected
-  radarIpAddress: string      // IP address of radar unit
-  spokeDataUrl: string        // WebSocket URL for spoke data
-  streamUrl: string           // WebSocket URL for control stream
+  name: string // User-defined or auto-detected name
+  brand: string // Manufacturer (Navico, Furuno, Raymarine, Garmin)
+  model?: string // Model name if detected
+  radarIpAddress: string // IP address of radar unit
+  spokeDataUrl: string // WebSocket URL for spoke data
+  streamUrl: string // WebSocket URL for control stream
 }
 ```
 
@@ -63,16 +65,16 @@ Static capabilities returned by `getCapabilities()`:
 
 ```typescript
 interface Capabilities {
-  maxRange: number                    // Maximum range in meters
-  minRange: number                    // Minimum range in meters
-  supportedRanges: number[]           // All supported range values in meters
-  spokesPerRevolution: number         // Spokes per full rotation
-  maxSpokeLength: number              // Max samples per spoke
-  pixelValues: number                 // Distinct intensity values
-  hasDoppler: boolean                 // Supports Doppler detection
-  hasDualRadar: boolean               // Part of dual-radar system
-  hasDualRange: boolean               // Supports dual-range mode
-  noTransmitSectors: number           // Configurable no-transmit sectors
+  maxRange: number // Maximum range in meters
+  minRange: number // Minimum range in meters
+  supportedRanges: number[] // All supported range values in meters
+  spokesPerRevolution: number // Spokes per full rotation
+  maxSpokeLength: number // Max samples per spoke
+  pixelValues: number // Distinct intensity values
+  hasDoppler: boolean // Supports Doppler detection
+  hasDualRadar: boolean // Part of dual-radar system
+  hasDualRange: boolean // Supports dual-range mode
+  noTransmitSectors: number // Configurable no-transmit sectors
   controls: Record<string, ControlDefinition>
   legend: Legend
 }
@@ -87,17 +89,36 @@ interface ControlDefinition {
   id: number
   name: string
   description: string
-  category: 'base' | 'targets' | 'guardZones' | 'trails' | 'advanced' | 'installation' | 'info'
+  category:
+    | 'base'
+    | 'targets'
+    | 'guardZones'
+    | 'trails'
+    | 'advanced'
+    | 'installation'
+    | 'info'
   dataType: 'number' | 'enum' | 'string' | 'button' | 'sector' | 'zone'
   isReadOnly?: boolean
   hasEnabled?: boolean
   minValue?: number
   maxValue?: number
   stepValue?: number
-  maxDistance?: number                // For zone types
-  units?: 'Meters' | 'KiloMeters' | 'NauticalMiles' | 'MetersPerSecond' | 'Knots' | 'Degrees' | 'Radians' | 'RadiansPerSecond' | 'RotationsPerMinute' | 'Seconds' | 'Minutes' | 'Hours'
-  descriptions?: Record<string, string>  // For enum types: value -> label
-  validValues?: number[]                 // For enum types: settable values
+  maxDistance?: number // For zone types
+  units?:
+    | 'Meters'
+    | 'KiloMeters'
+    | 'NauticalMiles'
+    | 'MetersPerSecond'
+    | 'Knots'
+    | 'Degrees'
+    | 'Radians'
+    | 'RadiansPerSecond'
+    | 'RotationsPerMinute'
+    | 'Seconds'
+    | 'Minutes'
+    | 'Hours'
+  descriptions?: Record<string, string> // For enum types: value -> label
+  validValues?: number[] // For enum types: settable values
   hasAuto?: boolean
   hasAutoAdjustable?: boolean
   autoAdjustMinValue?: number
@@ -111,13 +132,13 @@ Values for reading and writing controls:
 
 ```typescript
 interface ControlValue {
-  value?: number | string      // The control value
-  auto?: boolean               // Auto mode enabled
-  autoValue?: number           // Adjustment when auto=true
-  enabled?: boolean            // Control enabled (sectors, zones)
-  endValue?: number            // End angle for sectors/zones (radians)
-  startDistance?: number       // Inner radius for zones (meters)
-  endDistance?: number         // Outer radius for zones (meters)
+  value?: number | string // The control value
+  auto?: boolean // Auto mode enabled
+  autoValue?: number // Adjustment when auto=true
+  enabled?: boolean // Control enabled (sectors, zones)
+  endValue?: number // End angle for sectors/zones (radians)
+  startDistance?: number // Inner radius for zones (meters)
+  endDistance?: number // Outer radius for zones (meters)
 }
 ```
 
@@ -139,7 +160,12 @@ interface Legend {
 }
 
 interface LegendPixel {
-  type: 'normal' | 'targetBorder' | 'dopplerApproaching' | 'dopplerReceding' | 'history'
+  type:
+    | 'normal'
+    | 'targetBorder'
+    | 'dopplerApproaching'
+    | 'dopplerReceding'
+    | 'history'
   color: { r: number; g: number; b: number; a: number }
 }
 ```
@@ -150,18 +176,24 @@ interface LegendPixel {
 app.radarApi.register(plugin.id, {
   name: 'My Radar Plugin',
   methods: {
-    getRadars: async () => [{
-      name: 'HALO 034A',
-      brand: 'Navico',
-      model: 'HALO',
-      radarIpAddress: '192.168.1.50',
-      spokeDataUrl: 'ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034A/spokes',
-      streamUrl: 'ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/stream'
-    }],
+    getRadars: async () => [
+      {
+        name: 'HALO 034A',
+        brand: 'Navico',
+        model: 'HALO',
+        radarIpAddress: '192.168.1.50',
+        spokeDataUrl:
+          'ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034A/spokes',
+        streamUrl:
+          'ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/stream'
+      }
+    ],
     getCapabilities: async (id) => ({
       maxRange: 74080,
       minRange: 50,
-      supportedRanges: [50, 100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 74080],
+      supportedRanges: [
+        50, 100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 74080
+      ],
       spokesPerRevolution: 2048,
       maxSpokeLength: 1024,
       pixelValues: 16,
@@ -238,15 +270,15 @@ Navico "VelocityTrack"   →    dopplerMode
 
 ### Control Categories
 
-| Category       | Description                  | Examples                                         |
-| -------------- | ---------------------------- | ------------------------------------------------ |
-| `base`         | Available on all radars      | power, range, gain, sea, rain                    |
-| `targets`      | Target tracking settings     | targetExpansion, targetTrails                    |
-| `guardZones`   | Guard zone configuration     | guardZone1, guardZone2                           |
-| `trails`       | Trail display settings       | trailsTime, clearTrails                          |
+| Category       | Description                  | Examples                                           |
+| -------------- | ---------------------------- | -------------------------------------------------- |
+| `base`         | Available on all radars      | power, range, gain, sea, rain                      |
+| `targets`      | Target tracking settings     | targetExpansion, targetTrails                      |
+| `guardZones`   | Guard zone configuration     | guardZone1, guardZone2                             |
+| `trails`       | Trail display settings       | trailsTime, clearTrails                            |
 | `advanced`     | Model-specific features      | dopplerMode, beamSharpening, interferenceRejection |
 | `installation` | Setup/configuration settings | antennaHeight, bearingAlignment, noTransmitSector1 |
-| `info`         | Read-only information        | serialNumber, firmwareVersion, transmitTime      |
+| `info`         | Read-only information        | serialNumber, firmwareVersion, transmitTime        |
 
 ### Standard Control IDs
 
@@ -254,21 +286,21 @@ Providers should use these standard IDs when their radar supports the equivalent
 
 **Base Controls (All Radars)**
 
-| ID      | dataType | Description                                        |
-| ------- | -------- | -------------------------------------------------- |
+| ID      | dataType | Description                                                  |
+| ------- | -------- | ------------------------------------------------------------ |
 | `power` | enum     | Operational state: 0=Off, 1=Standby, 2=Transmit, 3=Preparing |
-| `range` | number   | Detection range in meters                          |
-| `gain`  | number   | Signal amplification (0-100), supports auto        |
-| `sea`   | number   | Sea clutter suppression (0-100), supports auto     |
-| `rain`  | number   | Rain clutter suppression (0-100), supports auto    |
+| `range` | number   | Detection range in meters                                    |
+| `gain`  | number   | Signal amplification (0-100), supports auto                  |
+| `sea`   | number   | Sea clutter suppression (0-100), supports auto               |
+| `rain`  | number   | Rain clutter suppression (0-100), supports auto              |
 
 **Read-Only Info**
 
-| ID              | dataType | Description                |
-| --------------- | -------- | -------------------------- |
-| `serialNumber`  | string   | Hardware serial number     |
-| `firmwareVersion` | string | Firmware version string    |
-| `transmitTime`  | number   | Total transmission time (seconds) |
+| ID                | dataType | Description                       |
+| ----------------- | -------- | --------------------------------- |
+| `serialNumber`    | string   | Hardware serial number            |
+| `firmwareVersion` | string   | Firmware version string           |
+| `transmitTime`    | number   | Total transmission time (seconds) |
 
 **Signal Processing**
 
@@ -299,19 +331,19 @@ Providers should use these standard IDs when their radar supports the equivalent
 
 **Installation Settings**
 
-| ID                   | dataType | Description                             |
-| -------------------- | -------- | --------------------------------------- |
-| `bearingAlignment`   | number   | Heading offset correction (radians)     |
-| `antennaHeight`      | number   | Antenna height above waterline (meters) |
-| `noTransmitSector1`  | sector   | First no-transmit sector                |
-| `noTransmitSector2`  | sector   | Second no-transmit sector               |
+| ID                  | dataType | Description                             |
+| ------------------- | -------- | --------------------------------------- |
+| `bearingAlignment`  | number   | Heading offset correction (radians)     |
+| `antennaHeight`     | number   | Antenna height above waterline (meters) |
+| `noTransmitSector1` | sector   | First no-transmit sector                |
+| `noTransmitSector2` | sector   | Second no-transmit sector               |
 
 **Guard Zones**
 
-| ID           | dataType | Description                      |
-| ------------ | -------- | -------------------------------- |
-| `guardZone1` | zone     | First guard zone for detection   |
-| `guardZone2` | zone     | Second guard zone for detection  |
+| ID           | dataType | Description                     |
+| ------------ | -------- | ------------------------------- |
+| `guardZone1` | zone     | First guard zone for detection  |
+| `guardZone2` | zone     | Second guard zone for detection |
 
 ### Control Value Patterns
 

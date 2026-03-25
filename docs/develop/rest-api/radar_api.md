@@ -6,9 +6,9 @@ title: Radar API
 
 The Signal K server Radar API provides a unified interface for viewing and controlling marine radar equipment from any manufacturer. The API is **(web)app-friendly**: clients can build dynamic UIs that automatically adapt to any radar's capabilities without hardcoding support for specific brands or models.
 
-Radar functionality is provided by "provider plugins" that handle the interaction with radar hardware and stream spoke data to connected clients. 
+Radar functionality is provided by "provider plugins" that handle the interaction with radar hardware and stream spoke data to connected clients.
 
-Requests to the Radar API are made to HTTP REST endpoints rooted at `/signalk/v2/api/vessels/self/radars` or the Signal K websocket stream at `/signalk/v1/api/stream` 
+Requests to the Radar API are made to HTTP REST endpoints rooted at `/signalk/v2/api/vessels/self/radars` or the Signal K websocket stream at `/signalk/v1/api/stream`
 
 ## Design Philosophy: Capabilities-Driven API
 
@@ -32,7 +32,6 @@ Build a **single, adaptive UI** that works with any radar—now and in the futur
 3. **Subscribe to updates for current values** — the schema tells you what to expect
 4. **Connect to websocket for spoke data** - receive the binary spoke data stream
 
-
 **Example: Rendering a Gain Control**
 
 ```shell
@@ -54,8 +53,9 @@ $ curl -s http://10.56.0.1:6502/signalk/v2/api/vessels/self/radars/nav1034A/cont
 ```
 
 Your UI renders:
-  - Mode toggle: `[Auto] [Manual]`
-  - Value slider: `0 ----[58]---- 100` (disabled or hidden when mode=auto)
+
+- Mode toggle: `[Auto] [Manual]`
+- Value slider: `0 ----[58]---- 100` (disabled or hidden when mode=auto)
 
 Whether it's a Furuno DRS4D-NXT with 20, a Navico HALO with 40 controls or a basic radar with 5 controls, the same client code handles both.
 
@@ -68,19 +68,20 @@ Different manufacturers have vastly different hardware capabilities, control set
 
 ## Control Categories
 
-| Category       | Description                  | Examples                                                      |
-| -------------- | ---------------------------- | ------------------------------------------------------------- |
-| `base`         | Available on all radars      | power, range, gain, sea, rain                                 |
-| `targets`      | Target tracking settings     | targetExpansion, targetTrails                                 |
-| `guardZones`   | Guard zone configuration     | guardZone1, guardZone2                                        |
-| `trails`       | Trail display settings       | trailsTime, clearTrails                                       |
-| `advanced`     | Model-specific features      | dopplerMode, beamSharpening, interferenceRejection            |
-| `installation` | Setup/configuration settings | antennaHeight, bearingAlignment, noTransmitSector1            |
-| `info`         | Read-only information        | serialNumber, firmwareVersion, transmitTime                   |
+| Category       | Description                  | Examples                                           |
+| -------------- | ---------------------------- | -------------------------------------------------- |
+| `base`         | Available on all radars      | power, range, gain, sea, rain                      |
+| `targets`      | Target tracking settings     | targetExpansion, targetTrails                      |
+| `guardZones`   | Guard zone configuration     | guardZone1, guardZone2                             |
+| `trails`       | Trail display settings       | trailsTime, clearTrails                            |
+| `advanced`     | Model-specific features      | dopplerMode, beamSharpening, interferenceRejection |
+| `installation` | Setup/configuration settings | antennaHeight, bearingAlignment, noTransmitSector1 |
+| `info`         | Read-only information        | serialNumber, firmwareVersion, transmitTime        |
 
-Read-only information (serialNumber, firmwareVersion, operatingHours) is exposed as controls with `isReadOnly: true`. Some controls are __dynamically__ read-only when a particular mode is set. This is handled with an optional `allowed: <bool>` field in the control value.
+Read-only information (serialNumber, firmwareVersion, operatingHours) is exposed as controls with `isReadOnly: true`. Some controls are **dynamically** read-only when a particular mode is set. This is handled with an optional `allowed: <bool>` field in the control value.
 
 Some further considerations as how to show controls:
+
 - Within each category, all controls have a numeric `id` field which may be used for ordering.
 - The `advanced` and especially the `installation` categories could be shown in a different panel.
 - In particular the `installation` controls are typically configured once.
@@ -192,7 +193,10 @@ _Response:_
 {
   "maxRange": 74080,
   "minRange": 50,
-  "supportedRanges": [50, 75, 100, 250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 12000, 16000, 24000, 36000, 48000, 64000, 74080],
+  "supportedRanges": [
+    50, 75, 100, 250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 12000,
+    16000, 24000, 36000, 48000, 64000, 74080
+  ],
   "spokesPerRevolution": 2048,
   "maxSpokeLength": 1024,
   "pixelValues": 16,
@@ -224,8 +228,8 @@ _Response:_
     "historyStart": 20,
     "pixelColors": 16,
     "pixels": [
-      {"type": "normal", "color": {"r": 0, "g": 0, "b": 0, "a": 0}},
-      {"type": "normal", "color": {"r": 0, "g": 0, "b": 51, "a": 255}}
+      { "type": "normal", "color": { "r": 0, "g": 0, "b": 0, "a": 0 } },
+      { "type": "normal", "color": { "r": 0, "g": 0, "b": 51, "a": 255 } }
     ]
   }
 }
@@ -257,12 +261,21 @@ All spokes are sent with one byte per pixel. The legend explains what each byte 
   "historyStart": 20,
   "pixelColors": 16,
   "pixels": [
-    {"type": "normal", "color": {"r": 0, "g": 0, "b": 0, "a": 0}},
-    {"type": "normal", "color": {"r": 0, "g": 0, "b": 255, "a": 255}},
-    {"type": "targetBorder", "color": {"r": 200, "g": 200, "b": 200, "a": 255}},
-    {"type": "dopplerApproaching", "color": {"r": 255, "g": 0, "b": 0, "a": 255}},
-    {"type": "dopplerReceding", "color": {"r": 0, "g": 255, "b": 0, "a": 255}},
-    {"type": "history", "color": {"r": 69, "g": 69, "b": 69, "a": 255}}
+    { "type": "normal", "color": { "r": 0, "g": 0, "b": 0, "a": 0 } },
+    { "type": "normal", "color": { "r": 0, "g": 0, "b": 255, "a": 255 } },
+    {
+      "type": "targetBorder",
+      "color": { "r": 200, "g": 200, "b": 200, "a": 255 }
+    },
+    {
+      "type": "dopplerApproaching",
+      "color": { "r": 255, "g": 0, "b": 0, "a": 255 }
+    },
+    {
+      "type": "dopplerReceding",
+      "color": { "r": 0, "g": 255, "b": 0, "a": 255 }
+    },
+    { "type": "history", "color": { "r": 69, "g": 69, "b": 69, "a": 255 } }
   ]
 }
 ```
@@ -425,9 +438,9 @@ _Response:_
   "radars": {
     "nav1034A": {
       "controls": {
-        "gain": {"auto": false, "value": 50},
-        "sea": {"auto": true, "autoValue": 25, "value": 30},
-        "range": {"value": 3000}
+        "gain": { "auto": false, "value": 50 },
+        "sea": { "auto": true, "autoValue": 25, "value": 30 },
+        "range": { "value": 3000 }
       }
     }
   }
@@ -443,7 +456,7 @@ HTTP GET "/signalk/v2/api/vessels/self/radars/{radar_id}/controls/{control_id}"
 _Response:_
 
 ```json
-{"auto": false, "value": 50}
+{ "auto": false, "value": 50 }
 ```
 
 ### Setting a Control Value
@@ -455,19 +468,19 @@ HTTP PUT "/signalk/v2/api/vessels/self/radars/{radar_id}/controls/{control_id}"
 **Simple numeric control:**
 
 ```json
-{"value": 75}
+{ "value": 75 }
 ```
 
 **Control with auto mode:**
 
 ```json
-{"auto": false, "value": 75}
+{ "auto": false, "value": 75 }
 ```
 
 or just change auto mode:
 
 ```json
-{"auto": true}
+{ "auto": true }
 ```
 
 **Control with auto adjustment (e.g., Sea on HALO):**
@@ -475,13 +488,13 @@ or just change auto mode:
 When in auto mode, some controls accept an adjustment value:
 
 ```json
-{"auto": true, "autoValue": -20}
+{ "auto": true, "autoValue": -20 }
 ```
 
 **Sector control:**
 
 ```json
-{"enabled": true, "value": -1.5533, "endValue": -1.2217}
+{ "enabled": true, "value": -1.5533, "endValue": -1.2217 }
 ```
 
 **Zone control:**
@@ -530,17 +543,18 @@ ws://{host}:{port}/signalk/v1/stream
 ```
 
 This websocket endpoint works identical to a Signal K stream, as documented in
-https://signalk.org/specification/1.5.0/doc/streaming_api.html 
+https://signalk.org/specification/1.5.0/doc/streaming_api.html
 
 In short:
+
 - By default you are described to all paths
 - Query parameters `subscribe=none` can be used to start without any subscriptions and `sendCachedValues=false` to disable sending all currently cached values.
-- Subscriptions and desubscriptions can be made for paths. You can use '*' for all radars
+- Subscriptions and desubscriptions can be made for paths. You can use '\*' for all radars
   including radars still to be discovered.
 - When first connected all radar meta data will be sent, as when already connected and a radar
   is discovered.
 
-The recommended way of connecting is to either send `subscribe=none` and then a subscribe to all controls, as in the example below, with a policy of `instant`. The number of updates after the 
+The recommended way of connecting is to either send `subscribe=none` and then a subscribe to all controls, as in the example below, with a policy of `instant`. The number of updates after the
 initial cache dump is low, about 2 messages per second.
 
 ```json
@@ -596,15 +610,28 @@ Example of received meta-data:
 Example of received data:
 
 ```json
-{"updates":[{"$source":"mayara","values":[{"path":"radars.nav1034A.controls.spokes","value":{"value":2048}}]}]}
+{
+  "updates": [
+    {
+      "$source": "mayara",
+      "values": [
+        {
+          "path": "radars.nav1034A.controls.spokes",
+          "value": { "value": 2048 }
+        }
+      ]
+    }
+  ]
+}
 ```
 
 Example of setting a control:
 
 ```json
-{ "path": "radars.nav1034A.controls.guardZone1",
+{
+  "path": "radars.nav1034A.controls.guardZone1",
   "value": {
-    "value":0.735,
+    "value": 0.735,
     "endValue": 3.1415,
     "startDistance": 0,
     "endDistance": 500,
@@ -633,7 +660,8 @@ const radarId = Object.keys(data.radars)[0]
 const radar = data.radars[radarId]
 
 // Connect to spoke data stream
-const wsUrl = radar.spokeDataUrl ??
+const wsUrl =
+  radar.spokeDataUrl ??
   `ws://${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
 
 const socket = new WebSocket(wsUrl)
@@ -692,6 +720,7 @@ _Response:_
 **Units:** All distances are in meters. All angles (bearing, course) are in radians [0, 2π). Speed is in m/s. Time values (tcpa) are in seconds.
 
 **Optional fields:** Sub-structures are omitted when data is not yet known or not applicable:
+
 - `motion`: Omitted when motion is not yet computed (target still acquiring). Present with `speed: 0` and `course: 0` for confirmed stationary targets (buoys, anchored vessels).
 - `danger`: Omitted when vessels are diverging (no CPA exists) or own-ship motion unavailable
 - `position.latitude`/`longitude`: Omitted when radar position is unavailable
@@ -764,7 +793,14 @@ interface ControlDefinition {
   id: number
   name: string
   description: string
-  category: 'base' | 'targets' | 'guardZones' | 'trails' | 'advanced' | 'installation' | 'info'
+  category:
+    | 'base'
+    | 'targets'
+    | 'guardZones'
+    | 'trails'
+    | 'advanced'
+    | 'installation'
+    | 'info'
   dataType: 'number' | 'enum' | 'string' | 'button' | 'sector' | 'zone'
   isReadOnly?: boolean
   hasEnabled?: boolean
@@ -772,9 +808,21 @@ interface ControlDefinition {
   maxValue?: number
   stepValue?: number
   maxDistance?: number
-  units?: 'Meters' | 'KiloMeters' | 'NauticalMiles' | 'MetersPerSecond' | 'Knots' | 'Degrees' | 'Radians' | 'RadiansPerSecond' | 'RotationsPerMinute' | 'Seconds' | 'Minutes' | 'Hours'
-  descriptions?: Record<string, string>  // For enum types
-  validValues?: number[]  // For enum types
+  units?:
+    | 'Meters'
+    | 'KiloMeters'
+    | 'NauticalMiles'
+    | 'MetersPerSecond'
+    | 'Knots'
+    | 'Degrees'
+    | 'Radians'
+    | 'RadiansPerSecond'
+    | 'RotationsPerMinute'
+    | 'Seconds'
+    | 'Minutes'
+    | 'Hours'
+  descriptions?: Record<string, string> // For enum types
+  validValues?: number[] // For enum types
   hasAuto?: boolean
   hasAutoAdjustable?: boolean
   autoAdjustMinValue?: number
@@ -812,7 +860,12 @@ interface Legend {
 }
 
 interface LegendPixel {
-  type: 'normal' | 'targetBorder' | 'dopplerApproaching' | 'dopplerReceding' | 'history'
+  type:
+    | 'normal'
+    | 'targetBorder'
+    | 'dopplerApproaching'
+    | 'dopplerReceding'
+    | 'history'
   color: { r: number; g: number; b: number; a: number }
 }
 ```
@@ -824,22 +877,24 @@ interface Target {
   id: number
   status: 'tracking' | 'lost' | 'acquiring'
   position: {
-    bearing: number    // radians [0, 2π)
-    distance: number   // meters
-    latitude?: number  // omitted if radar position unavailable
+    bearing: number // radians [0, 2π)
+    distance: number // meters
+    latitude?: number // omitted if radar position unavailable
     longitude?: number // omitted if radar position unavailable
   }
-  motion?: {           // omitted if motion not yet computed; present with zeros for stationary targets
-    course: number     // radians [0, 2π)
-    speed: number      // m/s
+  motion?: {
+    // omitted if motion not yet computed; present with zeros for stationary targets
+    course: number // radians [0, 2π)
+    speed: number // m/s
   }
-  danger?: {           // omitted if vessels diverging or own-ship motion unavailable
-    cpa: number        // meters
-    tcpa: number       // seconds
+  danger?: {
+    // omitted if vessels diverging or own-ship motion unavailable
+    cpa: number // meters
+    tcpa: number // seconds
   }
   acquisition: 'manual' | 'auto'
-  sourceZone?: number  // guard zone (1 or 2) that acquired this target; omitted for manual/Doppler
-  firstSeen: string    // ISO 8601 timestamp
-  lastSeen: string     // ISO 8601 timestamp
+  sourceZone?: number // guard zone (1 or 2) that acquired this target; omitted for manual/Doppler
+  firstSeen: string // ISO 8601 timestamp
+  lastSeen: string // ISO 8601 timestamp
 }
 ```

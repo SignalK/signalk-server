@@ -23,7 +23,10 @@ const radarApiDoc = {
       ArpaTarget: {
         type: 'object',
         properties: {
-          id: { type: 'integer', description: 'Target ID (unique within radar)' },
+          id: {
+            type: 'integer',
+            description: 'Target ID (unique within radar)'
+          },
           status: {
             type: 'string',
             enum: ['tracking', 'acquiring', 'lost'],
@@ -40,8 +43,14 @@ const radarApiDoc = {
                 type: 'integer',
                 description: 'Distance from radar in meters'
               },
-              latitude: { type: 'number', description: 'Latitude if available' },
-              longitude: { type: 'number', description: 'Longitude if available' }
+              latitude: {
+                type: 'number',
+                description: 'Latitude if available'
+              },
+              longitude: {
+                type: 'number',
+                description: 'Longitude if available'
+              }
             },
             required: ['bearing', 'distance']
           },
@@ -60,7 +69,8 @@ const radarApiDoc = {
           },
           danger: {
             type: 'object',
-            description: 'Collision danger assessment. Omitted when vessels are diverging.',
+            description:
+              'Collision danger assessment. Omitted when vessels are diverging.',
             properties: {
               cpa: {
                 type: 'number',
@@ -80,7 +90,8 @@ const radarApiDoc = {
           },
           sourceZone: {
             type: 'integer',
-            description: 'Guard zone that acquired this target (1 or 2). Omitted for manual acquisition.'
+            description:
+              'Guard zone that acquired this target (1 or 2). Omitted for manual acquisition.'
           },
           firstSeen: {
             type: 'string',
@@ -93,7 +104,14 @@ const radarApiDoc = {
             description: 'ISO 8601 timestamp when target was last updated'
           }
         },
-        required: ['id', 'status', 'position', 'acquisition', 'firstSeen', 'lastSeen']
+        required: [
+          'id',
+          'status',
+          'position',
+          'acquisition',
+          'firstSeen',
+          'lastSeen'
+        ]
       }
     }
   },
@@ -306,7 +324,8 @@ const radarApiDoc = {
       get: {
         tags: ['radar', 'targets'],
         summary: 'Get tracked targets',
-        description: 'Returns all currently tracked ARPA/MARPA targets for this radar',
+        description:
+          'Returns all currently tracked ARPA/MARPA targets for this radar',
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
         ],
@@ -329,7 +348,8 @@ const radarApiDoc = {
       post: {
         tags: ['radar', 'targets'],
         summary: 'Acquire target manually',
-        description: 'Manually acquire a target at the specified bearing and distance',
+        description:
+          'Manually acquire a target at the specified bearing and distance',
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
         ],
@@ -381,7 +401,12 @@ const radarApiDoc = {
         summary: 'Cancel target tracking',
         description: 'Stop tracking the specified target',
         parameters: [
-          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' }
+          },
           {
             name: 'targetId',
             in: 'path',
