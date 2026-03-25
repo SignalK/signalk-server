@@ -229,4 +229,55 @@ describe('Application Data', () => {
       data.should.equal(test.settings.something)
     }
   })
+
+  it('rejects prototype pollution via path in add', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: {
+          ...adminHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify([
+          { op: 'add', path: '/__proto__/polluted', value: 'hacked' }
+        ])
+      }
+    )
+    result.status.should.equal(400)
+  })
+
+  it('rejects prototype read via from in copy', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: {
+          ...adminHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify([
+          { op: 'copy', from: '/__proto__/toString', path: '/stolen' }
+        ])
+      }
+    )
+    result.status.should.equal(400)
+  })
+
+  it('rejects prototype read via from in move', async function () {
+    const result = await fetch(
+      `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}`,
+      {
+        method: 'POST',
+        headers: {
+          ...adminHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify([
+          { op: 'move', from: '/__proto__/constructor', path: '/stolen' }
+        ])
+      }
+    )
+    result.status.should.equal(400)
+  })
 })

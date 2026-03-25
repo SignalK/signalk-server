@@ -52,7 +52,9 @@ function isPrototypePollutionPath(pathString) {
 
 function hasPrototypePollutionPatch(patches) {
   return patches.some(
-    (patch) => patch.path && isPrototypePollutionPath(patch.path)
+    (patch) =>
+      (patch.path && isPrototypePollutionPath(patch.path)) ||
+      (patch.from && isPrototypePollutionPath(patch.from))
   )
 }
 
