@@ -1,0 +1,72 @@
+language: en-US
+
+reviews:
+  profile: assertive
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_instructions:
+    - path: '**/*'
+      instructions: |
+        ## Contribution guidelines compliance
+        Check that the PR follows the SignalK contribution guidelines:
+        https://github.com/SignalK/signalk-server/blob/master/CONTRIBUTING.md
+        Flag any deviation in PR structure, commit message format, or documentation
+        requirements.
+
+        ## Echo comments
+        Flag any comment that merely restates what the code already says.
+        Examples of echo comments to flag:
+        - `// Sets the age` above a function named `setAge()`
+        - `// Loop through items` above a `for` loop
+        These add noise without adding meaning. Request removal or replacement
+        with a comment explaining *why*, not *what*.
+
+        ## Leftover crumbs from intermediate commits
+        Check for references to things that existed in earlier commits of this PR
+        but are no longer present — removed variables, old function names, deleted
+        files, superseded approaches. These are confusing to future readers.
+        Flag any comments, docs, or code that refer to something not present in
+        the current state of the branch.
+
+        ## Documentation drift risk
+        Flag any .md file that contains detailed implementation steps, specific
+        API call sequences, code snippets, or configuration values that are likely
+        to fall out of sync as the code evolves. Documentation should describe
+        architecture and how things work conceptually — not step-by-step
+        instructions that duplicate or shadow the code itself.
+
+        ## Unchecked items in test plans
+        If a PR description or any .md file contains a checklist with unchecked
+        items, flag it. Either the work is incomplete, or the checklist should be
+        removed before merge. Do not let unchecked boxes pass silently.
+
+        ## Implementation status in documentation
+        Flag any .md file that describes implementation progress, status, or
+        build steps (e.g. "Step 3: implement X", "TODO: add Y", "currently
+        implemented as Z"). This belongs in PR descriptions or commit messages,
+        not in documentation. Documentation should describe how things work,
+        not how they were built or what stage they are in.
+        Architecture decisions and design rationale are fine. Build narratives
+        are not.
+
+        ## What NOT to flag
+        Do not flag the following patterns — they are intentional:
+        - Constant names that are descriptive in their own context (e.g.
+          DEFAULT_PULL_TIMEOUT) — do not suggest renames for clarity.
+        - Test cleanup using Object.assign(process.env, original) — this is
+          sufficient when the test only reads from process.env.
+        - Test assertions that verify array length and structure rather than
+          exact element order — Object property iteration order is guaranteed
+          for string keys in modern JS.
+        - Smoke tests that verify a method does not throw without asserting
+          on internal state — exposing internals for testing is worse.
+        - Callbacks typed as functions that only work in-process — do not
+          suggest REST/WebSocket alternatives unless specifically requested.
+          The limitation is obvious from the type signature.
+
+        ## Scope
+        Focus on files changed since master. Think carefully about how changes
+        interact with existing code and documentation — not just the diff in
+        isolation.
