@@ -18,6 +18,8 @@ export * from './subscriptionmanager'
 export * as history from './history'
 /** @category Notifications API */
 export * from './notificationsapi'
+/** @category Container Jobs API */
+export * from './containerjobapi'
 
 /** @category  Server API */
 export interface Position {
