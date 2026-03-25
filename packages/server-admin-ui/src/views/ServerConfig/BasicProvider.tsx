@@ -1035,17 +1035,22 @@ function talkerGroupsToEntries(
   }))
 }
 
+function normalizeTalkerGroupName(name: string) {
+  return name.trim().toLowerCase()
+}
+
 function entriesToTalkerGroups(
   entries: TalkerGroup[]
 ): Record<string, string[]> {
   const result: Record<string, string[]> = {}
   for (const entry of entries) {
-    const name = entry.name.trim().toLowerCase()
+    const name = normalizeTalkerGroupName(entry.name)
     if (!name) continue
-    result[name] = entry.talkers
+    const talkers = entry.talkers
       .split(',')
       .map((t) => t.trim().toUpperCase())
       .filter((t) => t.length > 0)
+    result[name] = [...new Set([...(result[name] ?? []), ...talkers])]
   }
   return result
 }
@@ -1102,7 +1107,10 @@ function TalkerGroups({
   }
 
   const handleAddPreset = (preset: TalkerGroup) => {
-    if (entries.some((e) => e.name === preset.name)) return
+    const presetName = normalizeTalkerGroupName(preset.name)
+    if (entries.some((e) => normalizeTalkerGroupName(e.name) === presetName)) {
+      return
+    }
     persistEntries([...entries, preset])
   }
 
@@ -1124,6 +1132,7 @@ function TalkerGroups({
                 type="text"
                 placeholder="e.g. gps"
                 value={entry.name}
+                aria-label={`Talker group name ${index + 1}`}
                 onChange={(e) =>
                   handleFieldChange(index, 'name', e.target.value)
                 }
@@ -1135,6 +1144,11 @@ function TalkerGroups({
                 type="text"
                 placeholder="e.g. GP,GL,GA,GN"
                 value={entry.talkers}
+                aria-label={
+                  entry.name
+                    ? `Talker IDs for ${entry.name}`
+                    : `Talker IDs for group ${index + 1}`
+                }
                 onChange={(e) =>
                   handleFieldChange(index, 'talkers', e.target.value)
                 }
@@ -1146,6 +1160,11 @@ function TalkerGroups({
                 variant="link"
                 className="text-danger p-0"
                 onClick={() => handleDelete(index)}
+                aria-label={
+                  entry.name
+                    ? `Delete ${entry.name}`
+                    : `Delete talker group ${index + 1}`
+                }
               >
                 <FontAwesomeIcon icon={faTrash} />
               </Button>
@@ -1160,7 +1179,11 @@ function TalkerGroups({
             size="sm"
             variant="outline-secondary"
             onClick={() => handleAddPreset(GPS_PRESET)}
-            disabled={entries.some((e) => e.name === GPS_PRESET.name)}
+            disabled={entries.some(
+              (e) =>
+                normalizeTalkerGroupName(e.name) ===
+                normalizeTalkerGroupName(GPS_PRESET.name)
+            )}
           >
             + GPS Preset
           </Button>
