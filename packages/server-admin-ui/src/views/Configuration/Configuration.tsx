@@ -553,6 +553,11 @@ function PluginConfigCard({
               )}
             </Col>
           </Row>
+          {configurationRequired && (
+            <Row>
+              <Col>Save configuration to enable this plugin</Col>
+            </Row>
+          )}
           {!configurationRequired && (
             <Row>
               <Col lg={4} className={'mt-2 mt-lg-0'}>
