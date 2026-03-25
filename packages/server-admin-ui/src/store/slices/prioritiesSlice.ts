@@ -155,6 +155,9 @@ export const createPrioritiesSlice: StateCreator<
         priorities: prios
       }
 
+      const allTimeoutsOk = sourcePriorities.every((pp) =>
+        checkTimeouts(pp.priorities)
+      )
       return {
         sourcePrioritiesData: {
           ...state.sourcePrioritiesData,
@@ -162,7 +165,7 @@ export const createPrioritiesSlice: StateCreator<
           saveState: {
             ...state.sourcePrioritiesData.saveState,
             dirty: true,
-            timeoutsOk: checkTimeouts(prios)
+            timeoutsOk: allTimeoutsOk
           }
         }
       }
@@ -203,6 +206,9 @@ export const createPrioritiesSlice: StateCreator<
         priorities: prios
       }
 
+      const allTimeoutsOk = sourcePriorities.every((pp) =>
+        checkTimeouts(pp.priorities)
+      )
       return {
         sourcePrioritiesData: {
           ...state.sourcePrioritiesData,
@@ -210,7 +216,7 @@ export const createPrioritiesSlice: StateCreator<
           saveState: {
             ...state.sourcePrioritiesData.saveState,
             dirty: true,
-            timeoutsOk: checkTimeouts(prios)
+            timeoutsOk: allTimeoutsOk
           }
         }
       }

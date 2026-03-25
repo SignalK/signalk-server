@@ -39,14 +39,15 @@ export function migrateSourceRef(
 
   // 1. sourceRanking
   if (settings.sourceRanking) {
+    let rankingChanged = false
     for (const entry of settings.sourceRanking) {
       if (entry.sourceRef === oldRef) {
         entry.sourceRef = newRef
         settingsChanged = true
-        migrated.push('sourceRanking')
-        break
+        rankingChanged = true
       }
     }
+    if (rankingChanged) migrated.push('sourceRanking')
   }
 
   // 2. sourcePriorities (path-level)

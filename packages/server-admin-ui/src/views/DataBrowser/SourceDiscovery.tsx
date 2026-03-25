@@ -724,7 +724,10 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
         <td style={{ width: '24px', textAlign: 'center' }}>
           <button
             type="button"
-            onClick={() => onToggle(device.sourceRef)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggle(device.sourceRef)
+            }}
             aria-expanded={isExpanded}
             aria-label={`Toggle details for ${device.sourceRef}`}
             style={{
