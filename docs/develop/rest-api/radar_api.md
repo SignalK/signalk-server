@@ -667,26 +667,35 @@ _Response:_
       "id": 1,
       "status": "tracking",
       "position": {
-        "bearing": 45.2,
+        "bearing": 0.789,
         "distance": 1852,
         "latitude": 52.3702,
         "longitude": 4.8952
       },
       "motion": {
-        "course": 180.0,
-        "speed": 6.5
+        "course": 3.14159,
+        "speed": 3.34
       },
       "danger": {
         "cpa": 150,
         "tcpa": 324
       },
       "acquisition": "auto",
+      "sourceZone": 1,
       "firstSeen": "2025-01-15T10:25:00Z",
       "lastSeen": "2025-01-15T10:30:00Z"
     }
   ]
 }
 ```
+
+**Units:** All distances are in meters. All angles (bearing, course) are in radians [0, 2π). Speed is in m/s. Time values (tcpa) are in seconds.
+
+**Optional fields:** Sub-structures are omitted when data is not yet known or not applicable:
+- `motion`: Omitted when motion is not yet computed (target still acquiring). Present with `speed: 0` and `course: 0` for confirmed stationary targets (buoys, anchored vessels).
+- `danger`: Omitted when vessels are diverging (no CPA exists) or own-ship motion unavailable
+- `position.latitude`/`longitude`: Omitted when radar position is unavailable
+- `sourceZone`: Omitted for manually acquired targets or Doppler-detected targets
 
 ### Manual Target Acquisition
 
@@ -698,7 +707,7 @@ _Request body:_
 
 ```json
 {
-  "bearing": 45.0,
+  "bearing": 0.785,
   "distance": 2000
 }
 ```
@@ -815,21 +824,22 @@ interface Target {
   id: number
   status: 'tracking' | 'lost' | 'acquiring'
   position: {
-    bearing: number
-    distance: number
-    latitude?: number
-    longitude?: number
+    bearing: number    // radians [0, 2π)
+    distance: number   // meters
+    latitude?: number  // omitted if radar position unavailable
+    longitude?: number // omitted if radar position unavailable
   }
-  motion: {
-    course: number
-    speed: number
+  motion?: {           // omitted if motion not yet computed; present with zeros for stationary targets
+    course: number     // radians [0, 2π)
+    speed: number      // m/s
   }
-  danger: {
-    cpa: number
-    tcpa: number
+  danger?: {           // omitted if vessels diverging or own-ship motion unavailable
+    cpa: number        // meters
+    tcpa: number       // seconds
   }
   acquisition: 'manual' | 'auto'
-  firstSeen: string
-  lastSeen: string
+  sourceZone?: number  // guard zone (1 or 2) that acquired this target; omitted for manual/Doppler
+  firstSeen: string    // ISO 8601 timestamp
+  lastSeen: string     // ISO 8601 timestamp
 }
 ```

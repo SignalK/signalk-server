@@ -14,11 +14,88 @@ const radarApiDoc = {
     description: 'API for managing marine radar devices'
   },
   components: {
-    schemas: typeboxToOpenApiSchemas([
-      RadarControlValueSchema,
-      RadarControlsSchema,
-      RadarInfoSchema
-    ])
+    schemas: {
+      ...typeboxToOpenApiSchemas([
+        RadarControlValueSchema,
+        RadarControlsSchema,
+        RadarInfoSchema
+      ]),
+      ArpaTarget: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', description: 'Target ID (unique within radar)' },
+          status: {
+            type: 'string',
+            enum: ['tracking', 'acquiring', 'lost'],
+            description: 'Current tracking status'
+          },
+          position: {
+            type: 'object',
+            properties: {
+              bearing: {
+                type: 'number',
+                description: 'Bearing from radar in radians [0, 2π)'
+              },
+              distance: {
+                type: 'integer',
+                description: 'Distance from radar in meters'
+              },
+              latitude: { type: 'number', description: 'Latitude if available' },
+              longitude: { type: 'number', description: 'Longitude if available' }
+            },
+            required: ['bearing', 'distance']
+          },
+          motion: {
+            type: 'object',
+            description:
+              'Target motion. Omitted if not yet known; present with speed=0 for stationary targets.',
+            properties: {
+              course: {
+                type: 'number',
+                description: 'Course over ground in radians [0, 2π)'
+              },
+              speed: { type: 'number', description: 'Speed in m/s' }
+            },
+            required: ['course', 'speed']
+          },
+          danger: {
+            type: 'object',
+            description: 'Collision danger assessment. Omitted when vessels are diverging.',
+            properties: {
+              cpa: {
+                type: 'number',
+                description: 'Closest Point of Approach in meters'
+              },
+              tcpa: {
+                type: 'number',
+                description: 'Time to CPA in seconds'
+              }
+            },
+            required: ['cpa', 'tcpa']
+          },
+          acquisition: {
+            type: 'string',
+            enum: ['auto', 'manual'],
+            description: 'How target was acquired'
+          },
+          sourceZone: {
+            type: 'integer',
+            description: 'Guard zone that acquired this target (1 or 2). Omitted for manual acquisition.'
+          },
+          firstSeen: {
+            type: 'string',
+            format: 'date-time',
+            description: 'ISO 8601 timestamp when target was first seen'
+          },
+          lastSeen: {
+            type: 'string',
+            format: 'date-time',
+            description: 'ISO 8601 timestamp when target was last updated'
+          }
+        },
+        required: ['id', 'status', 'position', 'acquisition', 'firstSeen', 'lastSeen']
+      }
+    }
   },
   paths: {
     '/signalk/v2/api/vessels/self/radars': {
@@ -222,6 +299,114 @@ const radarApiDoc = {
           '200': { description: 'Gain updated' },
           '403': { description: 'Unauthorized' },
           '404': { description: 'Radar not found' }
+        }
+      }
+    },
+    '/signalk/v2/api/vessels/self/radars/{id}/targets': {
+      get: {
+        tags: ['radar', 'targets'],
+        summary: 'Get tracked targets',
+        description: 'Returns all currently tracked ARPA/MARPA targets for this radar',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          '200': {
+            description: 'List of tracked targets',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/ArpaTarget' }
+                }
+              }
+            }
+          },
+          '404': { description: 'Radar not found' },
+          '501': { description: 'Target tracking not supported by this radar' }
+        }
+      },
+      post: {
+        tags: ['radar', 'targets'],
+        summary: 'Acquire target manually',
+        description: 'Manually acquire a target at the specified bearing and distance',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  bearing: {
+                    type: 'number',
+                    description: 'Bearing in radians [0, 2π)'
+                  },
+                  distance: {
+                    type: 'number',
+                    description: 'Distance in meters'
+                  }
+                },
+                required: ['bearing', 'distance']
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Target acquired',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    targetId: { type: 'integer' }
+                  }
+                }
+              }
+            }
+          },
+          '400': { description: 'Invalid bearing or distance' },
+          '403': { description: 'Unauthorized' },
+          '404': { description: 'Radar not found' },
+          '501': { description: 'Target acquisition not supported' }
+        }
+      }
+    },
+    '/signalk/v2/api/vessels/self/radars/{id}/targets/{targetId}': {
+      delete: {
+        tags: ['radar', 'targets'],
+        summary: 'Cancel target tracking',
+        description: 'Stop tracking the specified target',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          {
+            name: 'targetId',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' }
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Target cancelled',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' }
+                  }
+                }
+              }
+            }
+          },
+          '400': { description: 'Invalid target ID' },
+          '403': { description: 'Unauthorized' },
+          '404': { description: 'Radar or target not found' },
+          '501': { description: 'Target cancellation not supported' }
         }
       }
     }
