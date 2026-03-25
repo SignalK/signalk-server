@@ -640,6 +640,91 @@ Example of setting a control:
 }
 ```
 
+### Subscribing to Target Updates
+
+To receive real-time ARPA target updates, subscribe to the target path:
+
+```json
+{
+  "subscribe": [
+    {
+      "path": "radars.*.targets.*",
+      "policy": "instant"
+    }
+  ]
+}
+```
+
+Target updates are sent whenever a target's position, motion, or status changes:
+
+```json
+{
+  "updates": [
+    {
+      "$source": "mayara",
+      "timestamp": "2025-01-15T10:30:00Z",
+      "values": [
+        {
+          "path": "radars.nav1034A.targets.1",
+          "value": {
+            "id": 1,
+            "status": "tracking",
+            "position": {
+              "bearing": 0.789,
+              "distance": 1852,
+              "latitude": 52.3702,
+              "longitude": 4.8952
+            },
+            "motion": {
+              "course": 3.14159,
+              "speed": 3.34
+            },
+            "danger": {
+              "cpa": 150,
+              "tcpa": 324
+            },
+            "acquisition": "auto",
+            "sourceZone": 1,
+            "firstSeen": "2025-01-15T10:25:00Z",
+            "lastSeen": "2025-01-15T10:30:00Z"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+When a target is deleted (either because it has been in status `lost` for a while or a client explicitly deletes it), a final `null` value is sent:
+
+```json
+{
+  "updates": [
+    {
+      "$source": "mayara",
+      "timestamp": "2025-01-15T10:32:00Z",
+      "values": [
+        {
+          "path": "radars.nav1034A.targets.1",
+          "value": null
+        }
+      ]
+    }
+  ]
+}
+```
+
+You can subscribe to both controls and targets simultaneously:
+
+```json
+{
+  "subscribe": [
+    { "path": "radars.*.controls.*", "period": 1000 },
+    { "path": "radars.*.targets.*", "policy": "instant" }
+  ]
+}
+```
+
 ### Spoke Data Stream
 
 Radar spoke data is streamed via WebSocket as binary frames. The URL is found in the `radars` REST response as `spokeDataUrl` or can be constructed as:
