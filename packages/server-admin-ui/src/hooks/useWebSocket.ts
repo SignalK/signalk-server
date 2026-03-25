@@ -2,7 +2,8 @@ import { useSyncExternalStore, useCallback, useEffect, useRef } from 'react'
 import { webSocketService } from '../services/WebSocketService'
 import type {
   WebSocketStatus,
-  DeltaMessageHandler
+  DeltaMessageHandler,
+  ServerEventHandler
 } from '../services/WebSocketService'
 
 interface WebSocketState {
@@ -58,6 +59,24 @@ export function useDeltaMessages(handler: DeltaMessageHandler): void {
     }
     return webSocketService.addDeltaHandler(wrappedHandler)
   }, [])
+}
+
+export function useServerEvent(
+  eventType: string,
+  handler: ServerEventHandler
+): void {
+  const handlerRef = useRef(handler)
+
+  useEffect(() => {
+    handlerRef.current = handler
+  })
+
+  useEffect(() => {
+    const wrappedHandler: ServerEventHandler = (data) => {
+      handlerRef.current(data)
+    }
+    return webSocketService.addServerEventHandler(eventType, wrappedHandler)
+  }, [eventType])
 }
 
 export function useWebSocketActions() {
