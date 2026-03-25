@@ -235,16 +235,16 @@ const SourceDiscovery: React.FC = () => {
 
   const conflictSourceRefs = useMemo(() => {
     const refs = new Set<string>()
-    for (const c of conflicts) {
+    for (const c of activeConflicts) {
       refs.add(c.deviceA.sourceRef)
       refs.add(c.deviceB.sourceRef)
     }
     return refs
-  }, [conflicts])
+  }, [activeConflicts])
 
   const conflictPGNsByDevice = useMemo(() => {
     const map = new Map<string, Set<string>>()
-    for (const c of conflicts) {
+    for (const c of activeConflicts) {
       for (const ref of [c.deviceA.sourceRef, c.deviceB.sourceRef]) {
         const existing = map.get(ref)
         if (existing) {
@@ -255,7 +255,7 @@ const SourceDiscovery: React.FC = () => {
       }
     }
     return map
-  }, [conflicts])
+  }, [activeConflicts])
 
   const nmea0183 = useMemo(
     () => (sourcesData ? extractNmea0183(sourcesData) : []),
@@ -383,15 +383,21 @@ const SourceDiscovery: React.FC = () => {
             <>
               <Badge bg="success" style={{ fontSize: '0.75em' }}>
                 {
-                  devices.filter((d) => discoveredAddresses.has(Number(d.src)))
-                    .length
+                  devices.filter(
+                    (d) =>
+                      !wsConnectionIds.has(d.connection) &&
+                      discoveredAddresses.has(Number(d.src))
+                  ).length
                 }{' '}
                 online
               </Badge>
               <Badge bg="secondary" style={{ fontSize: '0.75em' }}>
                 {
-                  devices.filter((d) => !discoveredAddresses.has(Number(d.src)))
-                    .length
+                  devices.filter(
+                    (d) =>
+                      !wsConnectionIds.has(d.connection) &&
+                      !discoveredAddresses.has(Number(d.src))
+                  ).length
                 }{' '}
                 offline
               </Badge>
@@ -663,9 +669,23 @@ const SortableTh: React.FC<{
       ? faSortUp
       : faSortDown
     : faSort
+  const ariaSort = isActive
+    ? currentSort.direction === 'asc'
+      ? 'ascending'
+      : 'descending'
+    : undefined
   return (
     <th
+      role="button"
+      tabIndex={0}
       onClick={() => onToggle(sortKey)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onToggle(sortKey)
+        }
+      }}
+      aria-sort={ariaSort}
       style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
     >
       {label}{' '}
@@ -1155,7 +1175,14 @@ const InlineInstanceCell: React.FC<{
 
   return (
     <td
+      tabIndex={0}
       onClick={handleStartEdit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleStartEdit(e as unknown as React.MouseEvent)
+        }
+      }}
       title={`Click to edit (0-${max})`}
       style={{ cursor: 'pointer' }}
     >
@@ -1606,7 +1633,6 @@ const DataInstanceSection: React.FC<{
       })
   }, [fetchInstances])
 
-  // Auto-discover on mount
   useEffect(() => {
     let cancelled = false
     fetchInstances()
@@ -1694,7 +1720,6 @@ const DataInstanceSection: React.FC<{
     )
   }
 
-  // Group data instances by PGN
   const byPgn = new Map<number, DataInstance[]>()
   if (instances) {
     for (const inst of instances) {
@@ -2193,7 +2218,8 @@ const ConflictDetail: React.FC<{
       paddingLeft: '16px'
     }}
   >
-    <span
+    <button
+      type="button"
       onClick={() =>
         onFilter(new Set([c.deviceA.sourceRef, c.deviceB.sourceRef]))
       }
@@ -2203,7 +2229,13 @@ const ConflictDetail: React.FC<{
         fontWeight: isActive ? 600 : undefined,
         textDecoration: 'underline',
         textDecorationStyle: 'dotted' as const,
-        textUnderlineOffset: '3px'
+        textUnderlineOffset: '3px',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        textAlign: 'left',
+        font: 'inherit',
+        color: 'inherit'
       }}
       title="Click to filter table to these two devices"
     >
@@ -2213,8 +2245,9 @@ const ConflictDetail: React.FC<{
       {' \u2014 instance '}
       {c.deviceInstance}, {c.sharedPGNs.length} shared PGN
       {c.sharedPGNs.length > 1 ? 's' : ''}
-    </span>
-    <span
+    </button>
+    <button
+      type="button"
       onClick={(e) => {
         e.stopPropagation()
         onIgnore(c)
@@ -2223,12 +2256,16 @@ const ConflictDetail: React.FC<{
         cursor: 'pointer',
         marginLeft: '8px',
         opacity: 0.6,
-        fontSize: '0.85em'
+        fontSize: '0.85em',
+        background: 'none',
+        border: 'none',
+        padding: 0
       }}
       title="Ignore this conflict"
+      aria-label={`Ignore conflict between ${c.deviceA.sourceRef} and ${c.deviceB.sourceRef}`}
     >
       <FontAwesomeIcon icon={faEyeSlash} />
-    </span>
+    </button>
   </div>
 )
 
