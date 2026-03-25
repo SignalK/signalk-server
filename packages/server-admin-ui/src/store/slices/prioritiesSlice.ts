@@ -182,11 +182,18 @@ export const createPrioritiesSlice: StateCreator<
         priorities: prios
       }
 
+      const allTimeoutsOk = sourcePriorities.every((pp) =>
+        checkTimeouts(pp.priorities)
+      )
       return {
         sourcePrioritiesData: {
           ...state.sourcePrioritiesData,
           sourcePriorities,
-          saveState: { ...state.sourcePrioritiesData.saveState, dirty: true }
+          saveState: {
+            ...state.sourcePrioritiesData.saveState,
+            dirty: true,
+            timeoutsOk: allTimeoutsOk
+          }
         }
       }
     })
@@ -351,6 +358,7 @@ export const createPrioritiesSlice: StateCreator<
   changeRankedTimeout: (index, timeout) => {
     set((state) => {
       const ranking = [...state.sourceRankingData.ranking]
+      if (index < 0 || index >= ranking.length) return state
       ranking[index] = { ...ranking[index], timeout }
       return {
         sourceRankingData: {
