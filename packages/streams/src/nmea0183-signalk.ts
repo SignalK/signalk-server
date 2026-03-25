@@ -69,6 +69,12 @@ export default class Nmea0183ToSignalK extends Transform {
         ...this.options,
         useCamelCompat: this.options.useCamelCompat ?? true
       })
+      n2kParser.on('warning', (pgn: { pgn: number }, warning: string) => {
+        this.debug(`[warning] ${pgn.pgn} ${warning}`)
+      })
+      n2kParser.on('error', (pgn: { input: string }, err: Error) => {
+        this.debug(`[error] ${pgn.input} ${err.message}`)
+      })
       this.parseN2KOver0183 = n2kParser.parseN2KOver0183.bind(n2kParser)
       this.n2kToDelta = require('@signalk/n2k-signalk').toDelta
       return this.parseN2KOver0183(sentence, () => {})
