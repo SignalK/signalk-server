@@ -70,10 +70,17 @@ export function useSourceAliases() {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(current)
-    }).catch((err) => {
-      console.error('Failed to save source alias:', err)
-      useStore.getState().setSourceAliases(prev)
     })
+      .then((res) => {
+        if (!res.ok) {
+          console.error('Failed to save source alias:', res.status)
+          useStore.getState().setSourceAliases(prev)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to save source alias:', err)
+        useStore.getState().setSourceAliases(prev)
+      })
   }, [])
 
   const removeAlias = useCallback((sourceRef: string) => {
@@ -86,10 +93,17 @@ export function useSourceAliases() {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(current)
-    }).catch((err) => {
-      console.error('Failed to remove source alias:', err)
-      useStore.getState().setSourceAliases(prev)
     })
+      .then((res) => {
+        if (!res.ok) {
+          console.error('Failed to remove source alias:', res.status)
+          useStore.getState().setSourceAliases(prev)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to remove source alias:', err)
+        useStore.getState().setSourceAliases(prev)
+      })
   }, [])
 
   const getDisplayName = useCallback(
