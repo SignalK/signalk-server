@@ -34,11 +34,13 @@ import cookieParser from 'cookie-parser'
 import { createHash, randomBytes } from 'crypto'
 
 import { createDebug } from './debug'
+import type { DeviceTracker as DeviceTrackerType } from './deviceTracker'
 import {
   InvalidTokenError,
   SecurityConfig,
   User,
   Device,
+  DeviceDashboard,
   UserData,
   UserDataUpdate,
   DeviceDataUpdate,
@@ -243,6 +245,15 @@ function tokenSecurityFactory(
     devices = [],
     acls = []
   } = config
+
+  const pluginRoutePermissions = new Map<
+    string,
+    Array<{
+      method: string
+      path: string
+      permission: 'admin' | 'readwrite' | 'readonly' | 'authenticated'
+    }>
+  >()
 
   /**
    * Derive a domain-specific secret from the master key.
@@ -573,6 +584,67 @@ function tokenSecurityFactory(
     }
   }
 
+  function pluginRoutePermissionMiddleware(): (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => void {
+    const adminMiddleware = adminAuthenticationMiddleware(false)
+    return function (req: Request, res: Response, next: NextFunction): void {
+      if (!getIsEnabled()) {
+        return next()
+      }
+      if (hasAdminAccess(req)) {
+        return next()
+      }
+      const parts = req.path.split('/')
+      const pluginId = parts[1]
+      if (pluginId) {
+        const permissions = pluginRoutePermissions.get(pluginId)
+        if (permissions) {
+          const routePath = '/' + parts.slice(2).join('/')
+          const method = req.method.toUpperCase()
+          const match = permissions.find((p) => {
+            const methodMatch =
+              p.method === '*' || p.method.toUpperCase() === method
+            if (!methodMatch) return false
+            if (p.path.endsWith('/*')) {
+              return routePath.startsWith(p.path.slice(0, -1))
+            }
+            return routePath === p.path
+          })
+          if (match) {
+            const skReq = req as SKRequest
+            if (!skReq.skIsAuthenticated || !skReq.skPrincipal) {
+              handlePermissionDenied(req, res)
+              return
+            }
+            if (match.permission === 'authenticated') {
+              return next()
+            }
+            if (
+              match.permission === 'readonly' &&
+              (skReq.skPrincipal.permissions === 'readonly' ||
+                skReq.skPrincipal.permissions === 'readwrite' ||
+                skReq.skPrincipal.permissions === 'admin')
+            ) {
+              return next()
+            }
+            if (
+              match.permission === 'readwrite' &&
+              (skReq.skPrincipal.permissions === 'readwrite' ||
+                skReq.skPrincipal.permissions === 'admin')
+            ) {
+              return next()
+            }
+            // permission === 'admin' falls through to admin middleware
+          }
+        }
+      }
+      adminMiddleware(req, res, next)
+    }
+  }
+
   function setupApp(): void {
     const rawHttpRateLimits = process.env.HTTP_RATE_LIMITS
     const parsedParts =
@@ -733,7 +805,7 @@ function tokenSecurityFactory(
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
     )
 
-    app.use('/plugins', adminAuthenticationMiddleware(false))
+    app.use('/plugins', pluginRoutePermissionMiddleware())
 
     //TODO remove after grace period
     app.use('/loginStatus', http_authorize(false, true))
@@ -864,6 +936,22 @@ function tokenSecurityFactory(
     app.post(aPath, writeAuthenticationMiddleware())
   }
 
+  strategy.registerPluginRoutePermissions = function (
+    pluginId: string,
+    permissions: Array<{
+      method: string
+      path: string
+      permission: 'admin' | 'readwrite' | 'readonly' | 'authenticated'
+    }>
+  ): void {
+    pluginRoutePermissions.set(pluginId, permissions)
+    debug(
+      'registered route permissions for plugin %s: %o',
+      pluginId,
+      permissions
+    )
+  }
+
   strategy.generateToken = function (
     req: Request,
     res: Response,
@@ -911,6 +999,18 @@ function tokenSecurityFactory(
     if (skReq.skIsAuthenticated && skReq.skPrincipal) {
       result.userLevel = skReq.skPrincipal.permissions
       result.username = skReq.skPrincipal.identifier
+
+      const device = options.devices?.find(
+        (d) => d.clientId === skReq.skPrincipal!.identifier
+      )
+      if (device) {
+        result.principalType = 'device'
+        result.deviceId = device.clientId
+        result.deviceName = device.displayName || device.description
+        if (device.dashboard) {
+          result.deviceDashboard = device.dashboard
+        }
+      }
     }
     if (configuration.users.length === 0) {
       result.noUsers = true
@@ -1127,6 +1227,70 @@ function tokenSecurityFactory(
     callback(null, theConfig)
   }
 
+  strategy.createDevice = (
+    theConfig: SecurityConfig,
+    device: {
+      displayName: string
+      permissions: string
+      expiration?: string
+      dashboard?: DeviceDashboard
+    },
+    cb: (
+      err: Error | null,
+      config?: SecurityConfig,
+      result?: { clientId: string; token: string }
+    ) => void
+  ): void => {
+    assertConfigImmutability()
+    const clientId = crypto.randomUUID()
+    const payload: JWTPayload = { device: clientId }
+    const jwtOptions: SignOptions = {}
+
+    const expiresIn = device.expiration || theConfig.expiration
+    if (expiresIn !== 'NEVER') {
+      jwtOptions.expiresIn = expiresIn as StringValue
+    }
+
+    const token = jwt.sign(payload, theConfig.secretKey, jwtOptions)
+    const decoded = jwt.decode(token) as JWTPayload
+
+    if (!theConfig.devices) {
+      theConfig.devices = []
+    }
+
+    theConfig.devices.push({
+      clientId,
+      permissions: device.permissions,
+      config: {},
+      description: device.displayName,
+      displayName: device.displayName,
+      requestedPermissions: '',
+      tokenExpiry: decoded?.exp,
+      createdAt: new Date().toISOString(),
+      dashboard: device.dashboard
+    })
+
+    options = theConfig as TokenSecurityOptions
+    cb(null, theConfig, { clientId, token })
+  }
+
+  strategy.generateDeviceToken = (
+    theConfig: SecurityConfig,
+    clientId: string
+  ): string | null => {
+    const device = theConfig.devices?.find((d) => d.clientId === clientId)
+    if (!device) return null
+    const payload: JWTPayload = { device: clientId }
+    const jwtOptions: SignOptions = {}
+    if (device.tokenExpiry) {
+      const remaining = device.tokenExpiry - Math.floor(Date.now() / 1000)
+      if (remaining > 0) {
+        jwtOptions.expiresIn = remaining
+      }
+    }
+    return jwt.sign(payload, theConfig.secretKey, jwtOptions)
+  }
+
   strategy.updateDevice = (
     theConfig: SecurityConfig,
     clientId: string,
@@ -1147,6 +1311,14 @@ function tokenSecurityFactory(
 
     if (updates.description) {
       device.description = updates.description
+    }
+
+    if (updates.displayName !== undefined) {
+      device.displayName = updates.displayName
+    }
+
+    if (updates.dashboard !== undefined) {
+      device.dashboard = updates.dashboard
     }
 
     callback(null, theConfig)
@@ -1543,6 +1715,10 @@ function tokenSecurityFactory(
         token = getAuthorizationFromHeaders(req)
       }
 
+      if (!token && req.query?.token) {
+        token = req.query.token as string
+      }
+
       if (token) {
         jwt.verify(
           token,
@@ -1550,7 +1726,8 @@ function tokenSecurityFactory(
           function (err: Error | null, decoded: unknown) {
             debug('verify')
             if (!err) {
-              const principal = getPrincipal(decoded as JWTPayload)
+              const jwtData = decoded as JWTPayload
+              const principal = getPrincipal(jwtData)
               if (principal) {
                 debug('authorized')
                 skReq.skPrincipal = principal
@@ -1573,6 +1750,15 @@ function tokenSecurityFactory(
                     rememberMe: jwtPayload.rememberMe
                   })
                   debug('token refreshed for %s', jwtPayload.id)
+                }
+                if (
+                  jwtData.device &&
+                  (app as unknown as { deviceTracker?: DeviceTrackerType })
+                    .deviceTracker
+                ) {
+                  ;(
+                    app as unknown as { deviceTracker: DeviceTrackerType }
+                  ).deviceTracker.onActivity(principal.identifier, req.ip)
                 }
                 next()
                 return
@@ -1696,6 +1882,10 @@ function tokenSecurityFactory(
           (d) => d.clientId !== identifier
         )
 
+        const accessReq = request.clientRequest.accessRequest as Record<
+          string,
+          unknown
+        >
         theConfig.devices.push({
           clientId: request.accessIdentifier,
           permissions: !request.clientRequest.requestedPermissions
@@ -1706,7 +1896,19 @@ function tokenSecurityFactory(
           requestedPermissions: request.clientRequest.requestedPermissions
             ? 'true'
             : '',
-          tokenExpiry: decoded?.exp
+          tokenExpiry: decoded?.exp,
+          createdAt: new Date().toISOString(),
+          registrationInfo: {
+            sourceIp: request.ip,
+            deviceId:
+              typeof accessReq.deviceId === 'string'
+                ? accessReq.deviceId
+                : undefined,
+            firmwareVersion:
+              typeof accessReq.firmwareVersion === 'string'
+                ? accessReq.firmwareVersion
+                : undefined
+          }
         })
         request.token = token
       } else {

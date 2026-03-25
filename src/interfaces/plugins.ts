@@ -747,6 +747,34 @@ module.exports = (theApp: any) => {
     }
     appCopy.getDataDirPath = () => dirForPluginId(plugin.id)
 
+    appCopy.setDevicePluginData = (
+      clientId: string,
+      metadata: Record<string, unknown>
+    ) => {
+      if (app.deviceTracker) {
+        app.deviceTracker.setPluginData(plugin.id, clientId, metadata)
+      }
+    }
+    appCopy.getDevicePluginData = (
+      clientId: string
+    ): Record<string, unknown> | undefined => {
+      return app.deviceTracker?.getPluginData(plugin.id, clientId)
+    }
+    appCopy.onDeviceStateChange = (
+      callback: (event: any) => void
+    ): (() => void) => {
+      if (app.deviceTracker) {
+        app.deviceTracker.on('deviceStateChange', callback)
+        onStopHandlers[plugin.id].push(() => {
+          app.deviceTracker?.removeListener('deviceStateChange', callback)
+        })
+        return () => {
+          app.deviceTracker?.removeListener('deviceStateChange', callback)
+        }
+      }
+      return () => {}
+    }
+
     appCopy.registerPutHandler = (context, aPath, callback, source) => {
       appCopy.handleMessage(plugin.id, {
         updates: [
@@ -875,6 +903,15 @@ module.exports = (theApp: any) => {
       if (typeof plugin.getOpenApi === 'function') {
         app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
       }
+    }
+    if (
+      typeof plugin.getRoutePermissions === 'function' &&
+      typeof app.securityStrategy.registerPluginRoutePermissions === 'function'
+    ) {
+      app.securityStrategy.registerPluginRoutePermissions(
+        plugin.id,
+        plugin.getRoutePermissions()
+      )
     }
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
 

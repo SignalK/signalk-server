@@ -32,6 +32,7 @@ import {
   Reply
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
+import type { DeviceTracker } from '../deviceTracker'
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -220,6 +221,7 @@ interface WsApp {
   handleMessage: (source: string, msg: WsMessage) => void
   setProviderError: (provider: string, message: string) => void
   getHello: () => Record<string, unknown>
+  deviceTracker?: DeviceTracker
 }
 
 interface WsApi {
@@ -427,6 +429,13 @@ function wsInterface(app: WsApp): WsApi {
             }:${principalId}`
           )
 
+          if (principalId && app.deviceTracker) {
+            app.deviceTracker.onConnect(
+              principalId,
+              spark.request.connection.remoteAddress
+            )
+          }
+
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
           spark.sentMetaData = {}
 
@@ -561,6 +570,10 @@ function wsInterface(app: WsApp): WsApi {
                 spark.request.connection.remoteAddress
               }:${principalId}`
             )
+
+            if (principalId && app.deviceTracker) {
+              app.deviceTracker.onDisconnect(principalId)
+            }
 
             unsubscribes.forEach((unsubscribe) => unsubscribe())
 

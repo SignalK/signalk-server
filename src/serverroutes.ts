@@ -43,12 +43,14 @@ import { getAuthor, Package, restoreModules } from './modules'
 import { getHttpPort, getSslPort } from './ports'
 import { queryRequest } from './requestResponse'
 import {
+  Device,
   getRateLimitValidationOptions,
   SecurityConfigGetter,
   SecurityConfigSaver,
   SecurityStrategy,
   WithSecurityStrategy
 } from './security'
+import { DeviceTracker } from './deviceTracker'
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
@@ -141,6 +143,7 @@ interface App
   }
   activateSourcePriorities: () => void
   streambundle: StreamBundle
+  deviceTracker?: DeviceTracker
 }
 
 interface ModuleInfo {
@@ -276,6 +279,31 @@ module.exports = function (
   app.use('/admin', express.static(adminUiPath))
 
   app.get('/', (req: Request, res: Response) => {
+    const queryToken = req.query?.token as string | undefined
+    if (queryToken) {
+      try {
+        const payload = JSON.parse(
+          Buffer.from(queryToken.split('.')[1], 'base64url').toString()
+        )
+        if (payload.device) {
+          const config = getSecurityConfig(app)
+          const device = config.devices?.find(
+            (d: Device) => d.clientId === payload.device
+          )
+          if (device?.dashboard?.mode === 'redirect' && device.dashboard.url) {
+            const dashUrl = device.dashboard.url.startsWith('/')
+              ? device.dashboard.url
+              : `/${device.dashboard.url}`
+            const separator = dashUrl.includes('?') ? '&' : '?'
+            res.redirect(`${dashUrl}${separator}token=${queryToken}`)
+            return
+          }
+        }
+      } catch (_) {
+        // invalid token, fall through to default landing page
+      }
+    }
+
     let landingPage = '/admin/'
 
     // if accessed with hostname that starts with a webapp's displayName redirect there
@@ -411,7 +439,57 @@ module.exports = function (
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
         const config = getSecurityConfig(app)
-        res.json(app.securityStrategy.getDevices(config))
+        const devices = app.securityStrategy.getDevices(config)
+        if (app.deviceTracker) {
+          const runtimeStates = app.deviceTracker.getAllStates()
+          res.json(
+            devices.map((device: Device) => {
+              const state = runtimeStates.get(device.clientId)
+              if (state) {
+                return {
+                  ...device,
+                  isConnected: state.isConnected,
+                  lastSeen: state.lastSeen,
+                  lastIp: state.lastIp,
+                  pluginData: state.pluginData
+                }
+              }
+              return { ...device, isConnected: false }
+            })
+          )
+        } else {
+          res.json(devices)
+        }
+      }
+    }
+  )
+
+  app.post(
+    `${SERVERROUTESPREFIX}/security/devices`,
+    (req: Request, res: Response) => {
+      if (checkAllowConfigure(req, res)) {
+        const config = getSecurityConfig(app)
+        app.securityStrategy.createDevice(
+          config,
+          req.body,
+          (err, updatedConfig, result) => {
+            if (err) {
+              console.log(err)
+              res.status(500).json({ error: 'Unable to create device' })
+            } else if (updatedConfig) {
+              saveSecurityConfig(app, updatedConfig, (saveErr) => {
+                if (saveErr) {
+                  console.log(saveErr)
+                  res
+                    .status(500)
+                    .json({ error: 'Unable to save configuration' })
+                  return
+                }
+                res.json(result)
+              })
+            }
+          }
+        )
       }
     }
   )
@@ -449,6 +527,24 @@ module.exports = function (
             res
           )
         )
+      }
+    }
+  )
+
+  app.post(
+    `${SERVERROUTESPREFIX}/security/devices/:uuid/token`,
+    (req: Request, res: Response) => {
+      if (checkAllowConfigure(req, res)) {
+        const config = getSecurityConfig(app)
+        const token = app.securityStrategy.generateDeviceToken(
+          config,
+          req.params.uuid
+        )
+        if (token) {
+          res.json({ token })
+        } else {
+          res.status(404).json({ error: 'Device not found' })
+        }
       }
     }
   )
