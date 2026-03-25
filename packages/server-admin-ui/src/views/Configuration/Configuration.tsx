@@ -156,7 +156,8 @@ export default function PluginConfigurationList() {
   const scrollToConfigCard = useCallback(() => {
     if (!configCardRef.current) return
     requestAnimationFrame(() => {
-      const rect = configCardRef.current!.getBoundingClientRect()
+      if (!configCardRef.current) return
+      const rect = configCardRef.current.getBoundingClientRect()
       const navbarHeight =
         document.querySelector('.app-header')?.getBoundingClientRect().height ??
         55
@@ -211,7 +212,7 @@ export default function PluginConfigurationList() {
         selectPlugin(plugin)
       }
     },
-    [plugins, selectedPlugin, selectPlugin]
+    [plugins, selectPlugin]
   )
 
   const saveData = useCallback(
