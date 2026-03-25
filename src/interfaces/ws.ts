@@ -1064,7 +1064,9 @@ function processUnsubscribe(
       }
     } else {
       app.subscriptionmanager.unsubscribe(msg, unsubscribes)
-      app.signalk.removeListener('delta', onChange)
+      const deltaEvent =
+        spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
+      app.signalk.removeListener(deltaEvent, onChange)
       spark.sentMetaData = {}
     }
   } catch (e) {

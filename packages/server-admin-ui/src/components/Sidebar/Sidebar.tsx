@@ -60,8 +60,8 @@ export default function Sidebar({ location }: SidebarProps) {
 
   const conflictCount = useMemo(() => {
     if (!sourcesData) return 0
-    const devices = extractN2kDevices(sourcesData)
-    return detectInstanceConflicts(devices).length
+    const n2kDevices = extractN2kDevices(sourcesData)
+    return detectInstanceConflicts(n2kDevices).length
   }, [sourcesData])
 
   const multiSourcePaths = useMultiSourcePaths()

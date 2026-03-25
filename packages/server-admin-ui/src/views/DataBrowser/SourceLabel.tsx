@@ -15,6 +15,7 @@ const SourceLabel: React.FC<SourceLabelProps> = ({
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const isCancelRef = useRef(false)
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -26,10 +27,15 @@ const SourceLabel: React.FC<SourceLabelProps> = ({
   const handleStartEdit = (e: React.MouseEvent) => {
     e.stopPropagation()
     setEditValue(aliases[sourceRef] || '')
+    isCancelRef.current = false
     setIsEditing(true)
   }
 
   const handleSave = () => {
+    if (isCancelRef.current) {
+      isCancelRef.current = false
+      return
+    }
     setAlias(sourceRef, editValue)
     setIsEditing(false)
   }
@@ -38,6 +44,7 @@ const SourceLabel: React.FC<SourceLabelProps> = ({
     if (e.key === 'Enter') {
       handleSave()
     } else if (e.key === 'Escape') {
+      isCancelRef.current = true
       setIsEditing(false)
     }
   }

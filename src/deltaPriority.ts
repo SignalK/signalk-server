@@ -76,6 +76,7 @@ export type ToPreferredDelta = (
 export const getToPreferredDelta = (
   sourcePrioritiesData: SourcePrioritiesData,
   sourceRanking?: SourceRankingEntry[],
+  // 120s tolerates transient N2K bus drops without rapid source flapping
   unknownSourceTimeout = 120000
 ): ToPreferredDelta => {
   if (!sourcePrioritiesData && (!sourceRanking || sourceRanking.length === 0)) {

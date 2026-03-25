@@ -254,19 +254,22 @@ export function detectInstanceConflicts(
 ): InstanceConflict[] {
   const conflicts: InstanceConflict[] = []
 
-  const byInstance = new Map<number, N2kDeviceEntry[]>()
+  // Group by connection + deviceInstance to avoid false positives across buses
+  const byConnInstance = new Map<string, N2kDeviceEntry[]>()
   for (const d of devices) {
     if (d.deviceInstance === undefined) continue
-    const group = byInstance.get(d.deviceInstance)
+    const groupKey = `${d.connection}\0${d.deviceInstance}`
+    const group = byConnInstance.get(groupKey)
     if (group) {
       group.push(d)
     } else {
-      byInstance.set(d.deviceInstance, [d])
+      byConnInstance.set(groupKey, [d])
     }
   }
 
-  for (const [instance, group] of byInstance) {
+  for (const [key, group] of byConnInstance) {
     if (group.length < 2) continue
+    const instance = Number(key.split('\0')[1])
     for (let i = 0; i < group.length; i++) {
       for (let j = i + 1; j < group.length; j++) {
         const a = group[i]

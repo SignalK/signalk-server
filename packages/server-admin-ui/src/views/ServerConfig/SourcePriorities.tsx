@@ -481,16 +481,15 @@ const SourcePriorities: React.FC = () => {
     return result.sort()
   }, [multiSourcePaths, sourcePriorities, sourceRankingData])
 
-  // Handle ?path= query parameter — render-time sync.
-  // changePath is a synchronous zustand action, safe during render.
   const pathParam = searchParams.get('path')
-  if (pathParam) {
+  useEffect(() => {
+    if (!pathParam) return
     const alreadyExists = sourcePriorities.some((pp) => pp.path === pathParam)
     if (!alreadyExists) {
       changePath(sourcePriorities.length, pathParam)
     }
     setSearchParams({}, { replace: true })
-  }
+  }, [pathParam, sourcePriorities, changePath, setSearchParams])
 
   const handleAddPath = useCallback(
     (path: string) => {

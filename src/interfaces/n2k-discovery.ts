@@ -202,7 +202,7 @@ module.exports = (app: N2kDiscoveryApp) => {
 
   const n2kListener = (pgn: unknown) => {
     const n2k = pgn as N2kPGN
-    if (typeof n2k.src === 'number' && n2k.src > 0 && n2k.src < 254) {
+    if (typeof n2k.src === 'number' && n2k.src >= 0 && n2k.src < 254) {
       knownAddresses.add(n2k.src)
       // Track discovery responses (Address Claim + Product Info)
       if (n2k.pgn === 60928 || n2k.pgn === 126996) {
@@ -274,6 +274,18 @@ module.exports = (app: N2kDiscoveryApp) => {
     app.securityStrategy.addAdminMiddleware(
       `${SERVERROUTESPREFIX}/n2kConfigDevice`
     )
+    app.securityStrategy.addAdminMiddleware(
+      `${SERVERROUTESPREFIX}/n2kDiscoverDevices`
+    )
+    app.securityStrategy.addAdminMiddleware(
+      `${SERVERROUTESPREFIX}/n2kDeviceStatus`
+    )
+    app.securityStrategy.addAdminMiddleware(
+      `${SERVERROUTESPREFIX}/n2kDiscoverInstances`
+    )
+    app.securityStrategy.addAdminMiddleware(
+      `${SERVERROUTESPREFIX}/n2kChannelLabel`
+    )
 
     app.post(
       `${SERVERROUTESPREFIX}/n2kDiscoverDevices`,
@@ -338,11 +350,11 @@ module.exports = (app: N2kDiscoveryApp) => {
       (req: Request, res: Response) => {
         const src = Number(req.query.src)
         const sourceRef = req.query.sourceRef as string | undefined
-        if (isNaN(src) || src < 1 || src > 253) {
+        if (isNaN(src) || src < 0 || src > 253) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
-            message: 'src query parameter required (1-253)'
+            message: 'src query parameter required (0-253)'
           })
           return
         }

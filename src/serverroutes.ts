@@ -1277,6 +1277,10 @@ module.exports = function (
     }
   )
 
+  app.securityStrategy.addAdminWriteMiddleware(
+    `${SERVERROUTESPREFIX}/sourceRanking`
+  )
+
   app.get(
     `${SERVERROUTESPREFIX}/sourceRanking`,
     (req: Request, res: Response) => {
@@ -1298,6 +1302,10 @@ module.exports = function (
         }
       })
     }
+  )
+
+  app.securityStrategy.addAdminWriteMiddleware(
+    `${SERVERROUTESPREFIX}/sourceAliases`
   )
 
   app.get(
@@ -1324,6 +1332,10 @@ module.exports = function (
         }
       })
     }
+  )
+
+  app.securityStrategy.addAdminWriteMiddleware(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`
   )
 
   app.get(
