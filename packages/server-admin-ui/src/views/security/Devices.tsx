@@ -388,9 +388,9 @@ export default function Devices() {
                   size="sm"
                   variant="outline-success"
                   onClick={() => {
-                    navigator.clipboard.writeText(
-                      getTokenUrl(createdToken.token)
-                    )
+                    navigator.clipboard
+                      .writeText(getTokenUrl(createdToken.token))
+                      .catch(() => alert('Failed to copy to clipboard'))
                   }}
                 >
                   Copy URL
@@ -660,9 +660,9 @@ export default function Devices() {
                           size="sm"
                           variant="outline-success"
                           onClick={() => {
-                            navigator.clipboard.writeText(
-                              getTokenUrl(deviceToken)
-                            )
+                            navigator.clipboard
+                              .writeText(getTokenUrl(deviceToken))
+                              .catch(() => alert('Failed to copy to clipboard'))
                           }}
                         >
                           Copy URL
