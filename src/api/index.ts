@@ -10,6 +10,8 @@ import { RadarApi } from './radar'
 import { HistoryApiHttpRegistry } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 import { NotificationApi, NotificationApplication } from './notifications'
+import { ContainerJobsApi } from './containerjobs'
+import { ContainerJobConfig } from '@signalk/server-api'
 import { binaryStreamManager, initializeBinaryStreams } from './streams'
 
 export interface ApiResponse {
@@ -101,6 +103,23 @@ export const startApis = (
   ;(app as any).notificationApi = notificationApi
   apiList.push('notifications')
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const containerJobsApi = new ContainerJobsApi(app as any)
+  const containerJobsApiStarted = containerJobsApi.start()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).containerJobsApi = containerJobsApi
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).runContainerJob = async (config: ContainerJobConfig) => {
+    await containerJobsApiStarted
+    return containerJobsApi.runJob(config)
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).listContainerJobs = (label?: string) =>
+    containerJobsApi.listJobs(label)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).getContainerRuntime = () => containerJobsApi.getRuntimeInfo()
+  apiList.push('containerjobs')
+
   Promise.all([
     resourcesApi.start(),
     courseApi.start(),
@@ -109,7 +128,8 @@ export const startApis = (
     autopilotApi.start(),
     radarApi.start(),
     historyApiHttpRegistry.start(),
-    notificationApi.start()
+    notificationApi.start(),
+    containerJobsApiStarted
   ])
   return apiList
 }
