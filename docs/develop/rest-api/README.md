@@ -3,6 +3,7 @@ title: REST APIs
 children:
   - conventions.md
   - autopilot_api.md
+  - container_jobs_api.md
   - course_api.md
   - history_api.md
   - notifications_api.md
@@ -26,6 +27,7 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 | API                                       | Description                                                                                                                                          | Endpoint                         |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | [`Autopilot`](./autopilot_api.md)         | Provide the ability to send common commands to an autopilot via a provider plugin.                                                                   | `vessels/self/autopilot`         |
+| [Container Jobs](./container_jobs_api.md) | Run containerized workloads (podman/docker) from plugins with runtime detection, progress streaming, and concurrency control.                        | `containerjobs`                  |
 | [Course](./course_api.md)                 | Set a course, follow a route, advance to next point, etc.                                                                                            | `vessels/self/navigation/course` |
 | [History](./history_api.md)               | Query historical data.                                                                                                                               | `history`                        |
 | [Radar](./radar_api.md)                   | View and control marine radar equipment via a provider plugin. _(In development)_                                                                    | `vessels/self/radars`            |
