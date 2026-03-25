@@ -453,7 +453,7 @@ export default function PluginConfigurationList() {
                 icon={faGear}
                 style={{ fontSize: '48px', opacity: 0.3 }}
               />
-              <p className="mt-3">Select a plugin to configure</p>
+              <p className="mt-3">Select a plugin in the list to configure</p>
             </Card.Body>
           </Card>
         )}
