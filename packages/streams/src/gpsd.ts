@@ -40,6 +40,10 @@ export default class Gpsd extends Transform {
   }
 
   pipe<T extends NodeJS.WritableStream>(pipeTo: T): T {
+    if (this.reconnector) {
+      return super.pipe(pipeTo)
+    }
+
     const label = `${this.hostname}:${this.port}`
 
     this.options.app.setProviderStatus(
@@ -50,8 +54,6 @@ export default class Gpsd extends Transform {
     this.reconnector = reconnect((opts: object) => {
       return net.connect(opts as { host: string; port: number })
     })({ maxDelay: 5 * 1000 }, (socket: net.Socket) => {
-      socket.setEncoding('ascii')
-
       if (this.noDataReceivedTimeout > 0) {
         socket.setTimeout(this.noDataReceivedTimeout)
         this.debug(`Socket idle timeout set to ${this.noDataReceivedTimeout}ms`)
@@ -64,7 +66,7 @@ export default class Gpsd extends Transform {
       socket.write(GPSD_WATCH_COMMAND)
       this.debug(`Sent WATCH command to ${label}`)
 
-      socket.on('data', (data: string) => {
+      socket.on('data', (data: Buffer) => {
         this.write(data)
       })
     })
