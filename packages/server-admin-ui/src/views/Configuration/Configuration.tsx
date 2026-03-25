@@ -337,7 +337,7 @@ export default function PluginConfigurationList() {
                   id="search"
                   onChange={handleSearch}
                   value={search}
-                  placeholder="Search plugins..."
+                  placeholder="Filter installed plugins..."
                 />
               </Form.Group>
               <Form.Group className="mb-2">
