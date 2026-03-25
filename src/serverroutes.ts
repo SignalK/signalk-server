@@ -311,10 +311,17 @@ module.exports = function (
     }
   })
 
+  const securityActivationDisabled =
+    process.env.DISABLE_SECURITY_ACTIVATION === '1' ||
+    process.env.DISABLE_SECURITY_ACTIVATION === 'true'
+
   const getLoginStatus = (req: Request, res: Response) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = app.securityStrategy.getLoginStatus(req)
     result.securityWasEnabled = securityWasEnabled
+    if (securityActivationDisabled) {
+      delete result.noUsers
+    }
 
     setNoCache(res)
     res.json(result)
@@ -683,83 +690,94 @@ module.exports = function (
   })
 
   if (app.securityStrategy.getUsers(getSecurityConfig(app)).length === 0) {
-    app.post(
-      `${SERVERROUTESPREFIX}/enableSecurity`,
-      (req: Request, res: Response) => {
-        if (
-          securityWasEnabled ||
-          app.securityStrategy.getUsers(getSecurityConfig(app)).length > 0
-        ) {
-          res.status(403).send('Security already enabled')
-          return
+    if (securityActivationDisabled) {
+      app.post(
+        `${SERVERROUTESPREFIX}/enableSecurity`,
+        (_req: Request, res: Response) => {
+          res.status(403).send('Security activation is disabled')
         }
-        if (app.securityStrategy.isDummy()) {
-          app.config.settings.security = { strategy: defaultSecurityStrategy }
-          const adminUser = req.body
+      )
+    } else {
+      app.post(
+        `${SERVERROUTESPREFIX}/enableSecurity`,
+        (req: Request, res: Response) => {
           if (
-            !adminUser.userId ||
-            adminUser.userId.length === 0 ||
-            !adminUser.password ||
-            adminUser.password.length === 0
+            securityWasEnabled ||
+            app.securityStrategy.getUsers(getSecurityConfig(app)).length > 0
           ) {
-            res.status(400).send('userId or password missing or too short')
+            res.status(403).send('Security already enabled')
             return
           }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          writeSettingsFile(app, app.config.settings, (err: any) => {
-            if (err) {
-              console.log(err)
-              res.status(500).send('Unable to save to settings file')
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const config: any = {}
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              const securityStrategy = require(defaultSecurityStrategy)(
-                app,
-                config,
-                saveSecurityConfig
-              )
-              if (req.body.allow_readonly === true) {
-                config.allow_readonly = true
-              }
-              addUser(req, res, securityStrategy, config)
+          if (app.securityStrategy.isDummy()) {
+            app.config.settings.security = { strategy: defaultSecurityStrategy }
+            const adminUser = req.body
+            if (
+              !adminUser.userId ||
+              adminUser.userId.length === 0 ||
+              !adminUser.password ||
+              adminUser.password.length === 0
+            ) {
+              res.status(400).send('userId or password missing or too short')
+              return
             }
-          })
-        } else {
-          addUser(req, res, app.securityStrategy)
-        }
-        securityWasEnabled = true
-
-        function addUser(
-          request: Request,
-          response: Response,
-          securityStrategy: SecurityStrategy,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          config?: any
-        ) {
-          if (!config) {
-            config = app.securityStrategy.getConfiguration()
-          }
-          request.body.type = 'admin'
-          securityStrategy.addUser(config, request.body, (err, theConfig) => {
-            if (err) {
-              console.log(err)
-              response.status(500)
-              response.send('Unable to add user')
-            } else {
-              saveSecurityConfig(app, theConfig, (theError) => {
-                if (theError) {
-                  console.log(theError)
-                  response.status(500)
-                  response.send('Unable to save security configuration change')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            writeSettingsFile(app, app.config.settings, (err: any) => {
+              if (err) {
+                console.log(err)
+                res.status(500).send('Unable to save to settings file')
+              } else {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const config: any = {}
+                // eslint-disable-next-line @typescript-eslint/no-require-imports
+                const securityStrategy = require(defaultSecurityStrategy)(
+                  app,
+                  config,
+                  saveSecurityConfig
+                )
+                if (req.body.allow_readonly === true) {
+                  config.allow_readonly = true
                 }
-                response.send('Security enabled')
-              })
+                addUser(req, res, securityStrategy, config)
+              }
+            })
+          } else {
+            addUser(req, res, app.securityStrategy)
+          }
+          securityWasEnabled = true
+
+          function addUser(
+            request: Request,
+            response: Response,
+            securityStrategy: SecurityStrategy,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            config?: any
+          ) {
+            if (!config) {
+              config = app.securityStrategy.getConfiguration()
             }
-          })
+            request.body.type = 'admin'
+            securityStrategy.addUser(config, request.body, (err, theConfig) => {
+              if (err) {
+                console.log(err)
+                response.status(500)
+                response.send('Unable to add user')
+              } else {
+                saveSecurityConfig(app, theConfig, (theError) => {
+                  if (theError) {
+                    console.log(theError)
+                    response.status(500)
+                    response.send(
+                      'Unable to save security configuration change'
+                    )
+                  }
+                  response.send('Security enabled')
+                })
+              }
+            })
+          }
         }
-      }
-    )
+      )
+    }
   }
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/settings`)
