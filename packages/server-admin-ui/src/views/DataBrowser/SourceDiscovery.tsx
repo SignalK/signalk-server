@@ -205,15 +205,25 @@ const SourceDiscovery: React.FC = () => {
     [conflicts, ignoredConflicts]
   )
 
-  const saveIgnored = useCallback((updated: Record<string, string>) => {
-    setIgnoredConflicts(updated)
-    fetch(`${window.serverRoutesPrefix}/ignoredInstanceConflicts`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updated)
-    }).catch(() => {})
-  }, [])
+  const saveIgnored = useCallback(
+    (updated: Record<string, string>) => {
+      const prev = ignoredConflicts
+      setIgnoredConflicts(updated)
+      fetch(`${window.serverRoutesPrefix}/ignoredInstanceConflicts`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      })
+        .then((res) => {
+          if (!res.ok) setIgnoredConflicts(prev)
+        })
+        .catch(() => {
+          setIgnoredConflicts(prev)
+        })
+    },
+    [ignoredConflicts]
+  )
 
   const handleIgnoreConflict = useCallback(
     (c: InstanceConflict) => {
@@ -1315,7 +1325,10 @@ const InstanceRow: React.FC<{
                 }
               }
             }
-            if (allInstances.has(num)) {
+            const targetExists = allInstances.has(num)
+            const oldGone =
+              currentValue === null || !allInstances.has(currentValue)
+            if (targetExists && oldGone) {
               setSaveResult('ok')
               setIsSaving(false)
               setEditValue('')

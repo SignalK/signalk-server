@@ -55,6 +55,7 @@ export interface AppSliceState {
   nodeInfo: NodeInfo
   sourcesData: SourcesData | null
   sourceAliases: Record<string, string>
+  sourceAliasesLoaded: boolean
   multiSourcePaths: Record<string, string[]>
 }
 
@@ -123,6 +124,7 @@ const initialAppState: AppSliceState = {
   nodeInfo: {},
   sourcesData: null,
   sourceAliases: {},
+  sourceAliasesLoaded: false,
   multiSourcePaths: {}
 }
 
@@ -211,7 +213,7 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
   },
 
   setSourceAliases: (sourceAliases) => {
-    set({ sourceAliases })
+    set({ sourceAliases, sourceAliasesLoaded: true })
   },
 
   setMultiSourcePaths: (multiSourcePaths) => {
