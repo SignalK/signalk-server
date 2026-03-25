@@ -17,7 +17,7 @@
 import busboy from 'busboy'
 import commandExists from 'command-exists'
 import express, { IRouter, NextFunction, Request, Response } from 'express'
-import zip from 'express-easy-zip'
+import { sendZip } from './zip'
 import fs from 'fs'
 import { forIn, get, isNumber, isUndefined, set, uniq, unset } from 'lodash'
 import moment from 'moment'
@@ -56,6 +56,8 @@ import { getAISShipTypeName } from '@signalk/signalk-schema'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
+import { execSync } from 'child_process'
+import { recommendedVersion as recommendedNodeVersion } from './version'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
@@ -226,25 +228,19 @@ module.exports = function (
     })
   }
 
-  // Determine which admin UI to use based on environment variable
-  const adminUiPackage =
-    process.env.SIGNALK_ADMIN_UI === 'react19'
-      ? '@signalk/server-admin-ui-react19'
-      : '@signalk/server-admin-ui'
   const adminUiPath = path.join(
     __dirname,
-    '/../node_modules/',
-    adminUiPackage,
-    '/public'
+    '/../node_modules/@signalk/server-admin-ui/public'
   )
 
-  app.get('/admin/', (req: Request, res: Response) => {
-    fs.readFile(path.join(adminUiPath, 'index.html'), (err, indexContent) => {
+  function serveIndexWithAddonScripts(indexPath: string, res: Response) {
+    fs.readFile(indexPath, (err, indexContent) => {
       if (err) {
         console.error(err)
         res.status(500)
         res.type('text/plain')
         res.send('Could not handle admin ui root request')
+        return
       }
       res.type('html')
       const addonScripts = uniq(
@@ -267,6 +263,14 @@ module.exports = function (
         )
       )
     })
+  }
+
+  app.get('/admin/', (req: Request, res: Response) => {
+    if (!req.originalUrl.endsWith('/')) {
+      res.redirect(301, req.originalUrl + '/')
+      return
+    }
+    serveIndexWithAddonScripts(path.join(adminUiPath, 'index.html'), res)
   })
 
   app.use('/admin', express.static(adminUiPath))
@@ -594,10 +598,10 @@ module.exports = function (
       }
       const config = getSecurityConfig(app)
       const ip = req.ip
-      if (!app.securityStrategy.requestAccess) {
+      if (app.securityStrategy.isDummy()) {
         res.status(404).json({
           message:
-            'Access requests not available. Server security may not be enabled.'
+            'Access requests not available. Server security is not enabled.'
         })
         return
       }
@@ -639,8 +643,9 @@ module.exports = function (
     const settings: any = {
       interfaces: {},
       options: {
-        mdns: app.config.settings.mdns || false,
+        mdns: app.config.settings.mdns ?? true,
         wsCompression: app.config.settings.wsCompression || false,
+        wsPingInterval: app.config.settings.wsPingInterval ?? 30000,
         accessLogging:
           isUndefined(app.config.settings.accessLogging) ||
           app.config.settings.accessLogging,
@@ -681,6 +686,13 @@ module.exports = function (
     app.post(
       `${SERVERROUTESPREFIX}/enableSecurity`,
       (req: Request, res: Response) => {
+        if (
+          securityWasEnabled ||
+          app.securityStrategy.getUsers(getSecurityConfig(app)).length > 0
+        ) {
+          res.status(403).send('Security already enabled')
+          return
+        }
         if (app.securityStrategy.isDummy()) {
           app.config.settings.security = { strategy: defaultSecurityStrategy }
           const adminUser = req.body
@@ -699,13 +711,17 @@ module.exports = function (
               console.log(err)
               res.status(500).send('Unable to save to settings file')
             } else {
-              const config = {}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const config: any = {}
               // eslint-disable-next-line @typescript-eslint/no-require-imports
               const securityStrategy = require(defaultSecurityStrategy)(
                 app,
                 config,
                 saveSecurityConfig
               )
+              if (req.body.allow_readonly === true) {
+                config.allow_readonly = true
+              }
               addUser(req, res, securityStrategy, config)
             }
           })
@@ -724,6 +740,7 @@ module.exports = function (
           if (!config) {
             config = app.securityStrategy.getConfiguration()
           }
+          request.body.type = 'admin'
           securityStrategy.addUser(config, request.body, (err, theConfig) => {
             if (err) {
               console.log(err)
@@ -745,6 +762,8 @@ module.exports = function (
     )
   }
 
+  app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/settings`)
+
   app.put(`${SERVERROUTESPREFIX}/settings`, (req: Request, res: Response) => {
     const settings = req.body
 
@@ -764,6 +783,10 @@ module.exports = function (
 
     if (!isUndefined(settings.options.wsCompression)) {
       app.config.settings.wsCompression = settings.options.wsCompression
+    }
+
+    if (!isUndefined(settings.options.wsPingInterval)) {
+      app.config.settings.wsPingInterval = settings.options.wsPingInterval
     }
 
     if (!isUndefined(settings.options.accessLogging)) {
@@ -933,6 +956,8 @@ module.exports = function (
     })
   }
 
+  app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/vessel`)
+
   app.put(`${SERVERROUTESPREFIX}/vessel`, (req: Request, res: Response) => {
     const de = app.config.baseDeltaEditor
     const vessel = req.body
@@ -1044,6 +1069,10 @@ module.exports = function (
     }
   )
 
+  app.securityStrategy.addAdminWriteMiddleware(
+    `${SERVERROUTESPREFIX}/sourcePriorities`
+  )
+
   app.get(
     `${SERVERROUTESPREFIX}/sourcePriorities`,
     (req: Request, res: Response) => {
@@ -1069,6 +1098,8 @@ module.exports = function (
     }
   )
 
+  app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/debug`)
+
   app.post(`${SERVERROUTESPREFIX}/debug`, (req: Request, res: Response) => {
     if (!app.logging.enableDebug(req.body.value)) {
       res.status(400).send('invalid debug value')
@@ -1080,6 +1111,26 @@ module.exports = function (
   app.get(`${SERVERROUTESPREFIX}/debugKeys`, (req: Request, res: Response) => {
     res.json(listKnownDebugs())
   })
+
+  const npmVersion = (() => {
+    try {
+      return execSync('npm --version', { encoding: 'utf8' }).trim()
+    } catch {
+      return 'unknown'
+    }
+  })()
+
+  app.get(`${SERVERROUTESPREFIX}/nodeInfo`, (_req: Request, res: Response) => {
+    res.json({
+      nodeVersion: process.version,
+      npmVersion,
+      recommendedNodeVersion
+    })
+  })
+
+  app.securityStrategy.addAdminWriteMiddleware(
+    `${SERVERROUTESPREFIX}/rememberDebug`
+  )
 
   app.post(
     `${SERVERROUTESPREFIX}/rememberDebug`,
@@ -1096,7 +1147,7 @@ module.exports = function (
           name: webapp.name,
           version: webapp.version,
           description: webapp.description,
-          location: `/${webapp.name}`,
+          location: `/${webapp.name}/`,
           license: webapp.license,
           author: getAuthor(webapp)
         }
@@ -1350,8 +1401,6 @@ module.exports = function (
     }
   )
 
-  app.use(zip())
-
   app.get(`${SERVERROUTESPREFIX}/backup`, (req: Request, res: Response) => {
     readdir(app.config.configPath).then((filenames) => {
       const files = filenames
@@ -1372,9 +1421,7 @@ module.exports = function (
             name
           }
         })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const anyRes = res as any
-      anyRes.zip({
+      sendZip(res, {
         files,
         filename: `signalk-${moment().format('MMM-DD-YYYY-HHTmm')}.backup`
       })

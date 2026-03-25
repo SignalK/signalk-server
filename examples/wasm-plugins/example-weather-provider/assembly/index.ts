@@ -23,16 +23,17 @@ import {
   createSimpleDelta
 } from '@signalk/assemblyscript-plugin-sdk/assembly'
 
-import {
-  hasNetworkCapability
-} from '@signalk/assemblyscript-plugin-sdk/assembly/network'
+import { hasNetworkCapability } from '@signalk/assemblyscript-plugin-sdk/assembly/network'
 
 import { fetchSync } from 'as-fetch/sync'
 
 // ===== Weather Provider FFI =====
 // Declare the host-provided function for registering as a weather provider
 @external("env", "sk_register_weather_provider")
-declare function sk_register_weather_provider(namePtr: usize, nameLen: usize): i32
+declare function sk_register_weather_provider(
+  namePtr: usize,
+  nameLen: usize
+): i32
 
 /**
  * Register this plugin as a weather provider
@@ -60,23 +61,23 @@ class WeatherData {
   description: string = ''
 
   // Outside conditions
-  temperature: f64 = 0.0          // Kelvin
-  minTemperature: f64 = 0.0       // Kelvin (for daily forecasts)
-  maxTemperature: f64 = 0.0       // Kelvin (for daily forecasts)
+  temperature: f64 = 0.0 // Kelvin
+  minTemperature: f64 = 0.0 // Kelvin (for daily forecasts)
+  maxTemperature: f64 = 0.0 // Kelvin (for daily forecasts)
   feelsLikeTemperature: f64 = 0.0 // Kelvin
-  humidity: f64 = 0.0             // Ratio (0-1)
-  pressure: f64 = 0.0             // Pascals
-  dewPointTemperature: f64 = 0.0  // Kelvin
-  cloudCover: f64 = 0.0           // Ratio (0-1)
+  humidity: f64 = 0.0 // Ratio (0-1)
+  pressure: f64 = 0.0 // Pascals
+  dewPointTemperature: f64 = 0.0 // Kelvin
+  cloudCover: f64 = 0.0 // Ratio (0-1)
   uvIndex: f64 = 0.0
 
   // Wind
-  windSpeedTrue: f64 = 0.0        // m/s
-  windDirectionTrue: f64 = 0.0    // Radians
-  windGust: f64 = 0.0             // m/s
+  windSpeedTrue: f64 = 0.0 // m/s
+  windDirectionTrue: f64 = 0.0 // Radians
+  windGust: f64 = 0.0 // m/s
 
   // Precipitation
-  precipitationVolume: f64 = 0.0  // mm
+  precipitationVolume: f64 = 0.0 // mm
 
   toJSON(): string {
     let json = '{"date":"' + this.date + '"'
@@ -126,11 +127,23 @@ class WeatherWarning {
   type: string = 'Warning'
 
   toJSON(): string {
-    return '{"startTime":"' + this.startTime + '"' +
-      ',"endTime":"' + this.endTime + '"' +
-      ',"details":"' + this.details + '"' +
-      ',"source":"' + this.source + '"' +
-      ',"type":"' + this.type + '"}'
+    return (
+      '{"startTime":"' +
+      this.startTime +
+      '"' +
+      ',"endTime":"' +
+      this.endTime +
+      '"' +
+      ',"details":"' +
+      this.details +
+      '"' +
+      ',"source":"' +
+      this.source +
+      '"' +
+      ',"type":"' +
+      this.type +
+      '"}'
+    )
   }
 }
 
@@ -138,7 +151,7 @@ class WeatherWarning {
 
 class WeatherConfig {
   apiKey: string = ''
-  defaultLatitude: f64 = 60.1699  // Helsinki
+  defaultLatitude: f64 = 60.1699 // Helsinki
   defaultLongitude: f64 = 24.9384
 }
 
@@ -155,10 +168,12 @@ function extractNumber(json: string, key: string): f64 {
 
   const start = match + key.length + 3
   let end = start
-  while (end < json.length &&
-    (json.charCodeAt(end) >= 48 && json.charCodeAt(end) <= 57 ||
+  while (
+    end < json.length &&
+    ((json.charCodeAt(end) >= 48 && json.charCodeAt(end) <= 57) ||
       json.charCodeAt(end) === 46 ||
-      json.charCodeAt(end) === 45)) {
+      json.charCodeAt(end) === 45)
+  ) {
     end++
   }
   if (end > start) {
@@ -182,9 +197,13 @@ function extractString(json: string, key: string): string {
 // ===== Weather API Functions =====
 
 function fetchCurrentWeather(lat: f64, lon: f64): WeatherData | null {
-  const url = 'https://api.openweathermap.org/data/2.5/weather?lat=' +
-    lat.toString() + '&lon=' + lon.toString() +
-    '&appid=' + config.apiKey
+  const url =
+    'https://api.openweathermap.org/data/2.5/weather?lat=' +
+    lat.toString() +
+    '&lon=' +
+    lon.toString() +
+    '&appid=' +
+    config.apiKey
 
   debug('Fetching current weather from: ' + url)
 
@@ -210,7 +229,7 @@ function fetchCurrentWeather(lat: f64, lon: f64): WeatherData | null {
   // Parse wind
   data.windSpeedTrue = extractNumber(json, 'speed')
   const windDeg = extractNumber(json, 'deg')
-  data.windDirectionTrue = windDeg * 3.14159265359 / 180.0
+  data.windDirectionTrue = (windDeg * 3.14159265359) / 180.0
 
   // Parse clouds
   data.cloudCover = extractNumber(json, 'all') / 100.0
@@ -221,12 +240,20 @@ function fetchCurrentWeather(lat: f64, lon: f64): WeatherData | null {
   return data
 }
 
-function fetchForecast(lat: f64, lon: f64, forecastType: string): WeatherData[] {
+function fetchForecast(
+  lat: f64,
+  lon: f64,
+  forecastType: string
+): WeatherData[] {
   // OpenWeatherMap One Call API would be better for forecasts
   // For this example, we'll use the basic forecast API
-  const url = 'https://api.openweathermap.org/data/2.5/forecast?lat=' +
-    lat.toString() + '&lon=' + lon.toString() +
-    '&appid=' + config.apiKey
+  const url =
+    'https://api.openweathermap.org/data/2.5/forecast?lat=' +
+    lat.toString() +
+    '&lon=' +
+    lon.toString() +
+    '&appid=' +
+    config.apiKey
 
   debug('Fetching forecast from: ' + url)
 
@@ -252,7 +279,7 @@ function fetchForecast(lat: f64, lon: f64, forecastType: string): WeatherData[] 
   data.pressure = extractNumber(json, 'pressure') * 100.0
   data.windSpeedTrue = extractNumber(json, 'speed')
   const windDeg = extractNumber(json, 'deg')
-  data.windDirectionTrue = windDeg * 3.14159265359 / 180.0
+  data.windDirectionTrue = (windDeg * 3.14159265359) / 180.0
   data.description = extractString(json, 'description')
 
   if (forecastType === 'daily') {
@@ -314,7 +341,9 @@ class WeatherProviderPlugin extends Plugin {
 
     // Validate configuration
     if (config.apiKey.length === 0) {
-      setError('No API key configured - get one from https://openweathermap.org/api')
+      setError(
+        'No API key configured - get one from https://openweathermap.org/api'
+      )
       return 1
     }
 
@@ -324,18 +353,38 @@ class WeatherProviderPlugin extends Plugin {
       debug('Successfully registered as weather provider')
     } else {
       debug('Warning: Failed to register as weather provider')
-      setError('Failed to register as weather provider - capability may not be granted')
+      setError(
+        'Failed to register as weather provider - capability may not be granted'
+      )
       return 1
     }
 
     // Fetch initial weather data
-    lastObservation = fetchCurrentWeather(config.defaultLatitude, config.defaultLongitude)
+    lastObservation = fetchCurrentWeather(
+      config.defaultLatitude,
+      config.defaultLongitude
+    )
     if (lastObservation !== null) {
       // Also emit as deltas for real-time display
       const obs = lastObservation as WeatherData
-      emit(createSimpleDelta('environment.outside.temperature', obs.temperature.toString()))
-      emit(createSimpleDelta('environment.outside.humidity', obs.humidity.toString()))
-      emit(createSimpleDelta('environment.outside.pressure', obs.pressure.toString()))
+      emit(
+        createSimpleDelta(
+          'environment.outside.temperature',
+          obs.temperature.toString()
+        )
+      )
+      emit(
+        createSimpleDelta(
+          'environment.outside.humidity',
+          obs.humidity.toString()
+        )
+      )
+      emit(
+        createSimpleDelta(
+          'environment.outside.pressure',
+          obs.pressure.toString()
+        )
+      )
     }
 
     setStatus('Weather provider running - data from OpenWeatherMap')

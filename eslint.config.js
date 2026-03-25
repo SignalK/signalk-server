@@ -12,6 +12,7 @@ const chai = require('eslint-plugin-chai-friendly')
 module.exports = defineConfig([
   globalIgnores([
     '**/public',
+    '**/public_src',
     '**/dist',
     '**/.__mf__temp',
     // WASM plugin examples - AssemblyScript has different semantics
@@ -54,7 +55,8 @@ module.exports = defineConfig([
     ],
     plugins: { chai },
     rules: {
-      'no-unused-expressions': 'off', // disable original rule
+      'no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
       'chai/no-unused-expressions': 'error'
     },
     languageOptions: {
@@ -70,7 +72,7 @@ module.exports = defineConfig([
         version: 'detect'
       }
     },
-    files: ['packages/server-admin-ui-react19/src/**/*.{js,jsx,ts,tsx}'],
+    files: ['packages/server-admin-ui/src/**/*.{js,jsx,ts,tsx}'],
     extends: [
       common('@typescript-eslint/'),
       tseslint.configs.recommended,
@@ -87,7 +89,7 @@ module.exports = defineConfig([
         ecmaFeatures: {
           jsx: true
         },
-        project: './packages/server-admin-ui-react19/tsconfig.json'
+        project: './packages/server-admin-ui/tsconfig.json'
       },
       globals: {
         ...globals.browser
@@ -104,6 +106,14 @@ module.exports = defineConfig([
       'react/prop-types': 'off',
       'react/no-string-refs': 'off',
       'react/no-direct-mutation-state': 'off'
+    }
+  },
+
+  // Streams package - uses synchronous require() for lazy/dynamic imports
+  {
+    files: ['packages/streams/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off'
     }
   },
 

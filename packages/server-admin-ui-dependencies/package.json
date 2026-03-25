@@ -1,7 +1,12 @@
 {
   "name": "@signalk/server-admin-ui-dependencies",
-  "version": "2.22.0",
+  "version": "2.23.0",
   "description": "UI dependencies of the admin UI exposed to plugins that expose federated components",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SignalK/signalk-server.git",
+    "directory": "packages/server-admin-ui-dependencies"
+  },
   "main": "index.js",
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",

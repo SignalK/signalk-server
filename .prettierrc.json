@@ -1,5 +1,13 @@
 {
   "semi": false,
   "singleQuote": true,
-  "trailingComma": "none"
+  "trailingComma": "none",
+  "overrides": [
+    {
+      "files": ["**/assembly/**/*.ts"],
+      "options": {
+        "plugins": ["assemblyscript-prettier"]
+      }
+    }
+  ]
 }

@@ -3,39 +3,25 @@
  * keeping only the latest value for each unique context:path:$source combination.
  */
 
-interface PathValue {
-  path: string
+import {
+  Context,
+  Delta,
+  hasValues,
+  Path,
+  SourceRef,
+  Timestamp,
+  Update
+} from '@signalk/server-api'
+
+export interface AccumulatedItem {
+  context: Context
+  path: Path
   value: unknown
+  $source: SourceRef | undefined
+  timestamp: Timestamp | undefined
 }
 
-interface Update {
-  $source?: string
-  timestamp?: string
-  values?: PathValue[]
-}
-
-interface Delta {
-  context: string
-  updates?: Update[]
-}
-
-interface AccumulatedItem {
-  context: string
-  path: string
-  value: unknown
-  $source: string | undefined
-  timestamp: string | undefined
-}
-
-interface GroupedUpdate {
-  $source: string | undefined
-  timestamp: string | undefined
-  values: PathValue[]
-}
-
-export interface BackpressureDelta {
-  context: string
-  updates: GroupedUpdate[]
+export interface BackpressureDelta extends Delta {
   $backpressure: {
     accumulated: number
     duration: number
@@ -55,11 +41,11 @@ export function accumulateLatestValue(
 ): void {
   if (!delta.updates) return
   for (const update of delta.updates) {
-    if (!update.values) continue
+    if (!hasValues(update)) continue
     for (const pv of update.values) {
       const key = `${delta.context}:${pv.path}:${update.$source || 'unknown'}`
       accumulator.set(key, {
-        context: delta.context,
+        context: delta.context as Context,
         path: pv.path,
         value: pv.value,
         $source: update.$source,
@@ -86,7 +72,7 @@ export function buildFlushDeltas(
   const countBefore = accumulator.size
 
   // Group by context
-  const byContext = new Map<string, Map<string, GroupedUpdate>>()
+  const byContext = new Map<Context, Map<string, Update>>()
   for (const [, item] of accumulator) {
     if (!byContext.has(item.context)) {
       byContext.set(item.context, new Map())
@@ -96,22 +82,25 @@ export function buildFlushDeltas(
     const sourceKey = item.$source || 'unknown'
     if (!bySource.has(sourceKey)) {
       bySource.set(sourceKey, {
-        $source: item.$source,
-        timestamp: item.timestamp,
+        $source: item.$source as SourceRef,
+        timestamp: item.timestamp as Timestamp,
         values: []
       })
     }
     const update = bySource.get(sourceKey)!
-    update.values.push({
-      path: item.path,
-      value: item.value
-    })
-    // Use the most recent timestamp for this source
-    if (
-      item.timestamp &&
-      (!update.timestamp || item.timestamp > update.timestamp)
-    ) {
-      update.timestamp = item.timestamp
+    if (hasValues(update)) {
+      update.values.push({
+        path: item.path as Path,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        value: item.value as any
+      })
+      // Use the most recent timestamp for this source
+      if (
+        item.timestamp &&
+        (!update.timestamp || item.timestamp > update.timestamp)
+      ) {
+        update.timestamp = item.timestamp as Timestamp
+      }
     }
   }
 

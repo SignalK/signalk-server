@@ -6,14 +6,19 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
 jobs:
   build_and_publish:
+    if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '22.x'
+          node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install and build all
@@ -139,7 +144,7 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
           - vm: ubuntu-latest
@@ -147,21 +152,11 @@ jobs:
             platform: linux/amd64
           - vm: ubuntu-24.04-arm
             arch: arm
-            node: 22.x
-            platform: linux/arm64
-          - vm: ubuntu-24.04-arm
-            arch: arm
             node: 24.x
             platform: linux/arm64
-          - os: 24.04
-            node: 22.x
-            node_safe: 22.x
           - os: 24.04
             node: 24.x
             node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
           - os: alpine
             node: 24.x
             node_safe: 24
@@ -199,26 +194,16 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         include:
           - os: 24.04
-            node: 22.x
-            tag: latest
-            node_safe: 22.x
-          - os: 24.04
             node: 24.x
             tag: latest
-            suffix: -24.x
             node_safe: 24.x
           - os: alpine
-            node: 22.x
-            tag: latest
-            suffix: -22-alpine
-            node_safe: 22
-          - os: alpine
             node: 24.x
             tag: latest
-            suffix: -24-alpine
+            suffix: -alpine
             node_safe: 24
 
     steps:
@@ -259,7 +244,7 @@ jobs:
           mkdir -p /tmp/tags
           echo "${{ steps.docker_meta.outputs.tags }}" > /tmp/tags/${{ matrix.node_safe }}.txt
       - name: Upload tag artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-tag-${{ matrix.node_safe }}
           path: /tmp/tags/${{ matrix.node_safe }}.txt
@@ -271,30 +256,26 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         include:
-          - os: 24.04
-            node: 22.x
-            node_safe: 22.x
           - os: 24.04
             node: 24.x
             node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
           - os: alpine
             node: 24.x
             node_safe: 24
     steps:
       - name: Download tag artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: release-tag-${{ matrix.node_safe }}
           path: /tmp/tags
+
       - name: Install skopeo
         run: |
           sudo apt-get update
           sudo apt-get install -y skopeo
+
       - name: Copy images from GHCR to Docker Hub
         shell: bash
         env:
@@ -305,29 +286,15 @@ jobs:
         run: |
           set -euo pipefail
           TAGS_FILE="/tmp/tags/${{ matrix.node_safe }}.txt"
-          cat "$TAGS_FILE"
-          MANIFEST_DIGEST=""
-          while IFS= read -r FULL_TAG || [ -n "$FULL_TAG" ]; do
-            if [ -z "$FULL_TAG" ]; then
-              continue
-            fi
+          while IFS= read -r FULL_TAG || [ -n "${FULL_TAG:-}" ]; do
+            [ -z "${FULL_TAG:-}" ] && continue
             TAG="${FULL_TAG##*:}"
-            if [ -z "$MANIFEST_DIGEST" ]; then
-              skopeo copy --all \
-                --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
-                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                "docker://${FULL_TAG}" \
-                "docker://docker.io/signalk/signalk-server:${TAG}"
-              MANIFEST_DIGEST=$(skopeo inspect \
-                --creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                "docker://docker.io/signalk/signalk-server:${TAG}" | jq -r '.Digest')              
-            else
-              skopeo copy \
-                --src-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                "docker://docker.io/signalk/signalk-server@${MANIFEST_DIGEST}" \
-                "docker://docker.io/signalk/signalk-server:${TAG}"
-            fi
+            echo "Copying: ${FULL_TAG} -> signalk/signalk-server:${TAG}"
+            skopeo copy --all \
+              --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
+              --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+              "docker://${FULL_TAG}" \
+              "docker://docker.io/signalk/signalk-server:${TAG}"
           done < "$TAGS_FILE"
 
   housekeeping:

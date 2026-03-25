@@ -5,7 +5,11 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
-  "repository": "https://github.com/SignalK/signalk-server",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SignalK/signalk-server.git",
+    "directory": "packages/typedoc-theme"
+  },
   "author": "Brandon Keepers <brandon@opensoul.org>",
   "license": "MIT",
   "peerDependencies": {
@@ -19,7 +23,7 @@
     "build": "tsc"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "keywords": [
     "typedoc-theme"

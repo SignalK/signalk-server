@@ -17,14 +17,21 @@ settings/ssl-cert.pem
 
 *.tgz
 work/
+data/
+plugin-config-data/
+unitpreferences/custom-units-definitions.json
+unitpreferences/custom/
+unitpreferences/presets/custom/
 
 test/plugin-test-config/.npmrc
 test/plugin-test-config/plugin-config-data/
 test/plugin-test-config/ssl-cert.pem
 test/plugin-test-config/ssl-key.pem
 test/plugin-test-config/baseDeltas.json
+test/plugin-test-config/unitpreferences/
 
 test/server-test-config/applicationData/
+test/server-test-config/unitpreferences/
 test/server-test-config/ssl-cert.pem
 test/server-test-config/ssl-key.pem
 test/server-test-config/plugin-config-data/
@@ -48,3 +55,4 @@ nul
 
 # debug artefacts
 *.sln
+test/server-test-config/debug

@@ -8,6 +8,31 @@ This document lists breaking changes and deprecations in Signal K Server.
 
 ---
 
+## Node.js: Default Version Updated to 24
+
+Signal K Server now defaults to **Node.js 24** and requires **Node.js 22 or later**.
+
+### What Changed
+
+| Setting          | Before | After |
+| ---------------- | ------ | ----- |
+| Recommended      | 22     | 24    |
+| Minimum required | 20     | 22    |
+
+### Dropped Platform Support
+
+Node.js 24 drops support for the following platforms:
+
+- **armv7** (32-bit ARM) — Affects older Raspberry Pi models (Pi 2, Pi Zero/Zero W). Use a 64-bit OS on Pi 3/4/5 or stay on an older Signal K Server version.
+- **Windows x86** (32-bit Windows) — Use 64-bit Windows instead.
+
+### Action Required
+
+- Update your Node.js installation to version 22 or later (version 24 recommended)
+- If running on armv7 or Windows x86, you must migrate to a supported platform or remain on the previous Signal K Server version
+
+---
+
 ## Admin UI: React 19 Migration
 
 The Admin UI has been upgraded from React 16 to **React 19**. This is a significant update that may affect embedded webapps and plugin configuration panels.
@@ -25,7 +50,7 @@ The Admin UI has been upgraded from React 16 to **React 19**. This is a signific
 
 **If your webapp uses Module Federation to share React with the Admin UI:**
 
-1. **Singleton sharing is now required** - Your webapp must configure React and ReactDOM as singletons with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui-react19/vite.config.js) for the current configuration.
+1. **Singleton sharing is now required** - Your webapp must configure React and ReactDOM as singletons with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the current configuration.
 
 2. **React 19 compatibility** - If your webapp bundles its own React, it should be compatible with components rendered by the host. Most React 16/17/18 code works unchanged in React 19, but some deprecated APIs have been removed.
 
@@ -45,6 +70,21 @@ Plugin configuration panels using `./PluginConfigurationPanel` export continue t
 - **Standalone webapps** - Webapps that don't use Module Federation sharing are not affected
 - **Server APIs** - All Signal K HTTP and WebSocket APIs remain unchanged
 - **Plugin JavaScript APIs** - Server-side plugin APIs are not affected
+
+---
+
+## Security: Anonymous Read Access Disabled by Default
+
+When security is first enabled on a new installation, `allow_readonly` now defaults to `false`. Previously it defaulted to `true`, meaning anyone could read all Signal K data without authentication.
+
+### Impact
+
+- **New installations** will require authentication for all access, including read-only. Devices like chart plotters and instrument displays that previously worked without a token will need to be configured with access credentials.
+- **Existing installations** are **not affected** — the `allow_readonly` value is already written explicitly in `security.json` and will be preserved.
+
+### Mitigation
+
+During initial security setup, the Enable Security dialog offers an **"Allow Readonly Access"** checkbox to opt in. Alternatively, you can enable it at any time in **Security > Settings**.
 
 ---
 

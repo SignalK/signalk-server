@@ -1,0 +1,25 @@
+# Default: normalize line endings to LF in the repo, auto-detect on checkout
+* text=auto eol=lf
+
+# Force LF for files that must never be CRLF
+*.sh text eol=lf
+*.bash text eol=lf
+*.json text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.conf text eol=lf
+Dockerfile text eol=lf
+
+# Binary files — do not normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

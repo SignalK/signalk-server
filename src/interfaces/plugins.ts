@@ -32,7 +32,11 @@ import {
   PluginConstructor,
   Plugin,
   Path,
-  Delta
+  Delta,
+  SubscribeCallback,
+  SubscribeMessage,
+  Unsubscribes,
+  UnsubscribeMessage
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -59,11 +63,12 @@ import { importOrRequire, modulesWithKeyword, NpmPackageData } from '../modules'
 const put = require('../put')
 const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
-const queryRequest = require('../requestResponse').queryRequest
+import { queryRequest } from '../requestResponse'
 import { getMetadata } from '@signalk/signalk-schema'
-import { HistoryApi } from '@signalk/server-api/history'
+import { HistoryProvider } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
+import { atomicWriteFileSync } from '../atomicWrite'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -263,7 +268,10 @@ module.exports = (theApp: any) => {
     callback: (err: NodeJS.ErrnoException | null) => void
   ) {
     try {
-      fs.writeFileSync(pathForPluginId(pluginId), JSON.stringify(data, null, 2))
+      atomicWriteFileSync(
+        pathForPluginId(pluginId),
+        JSON.stringify(data, null, 2)
+      )
       callback(null)
     } catch (err: any) {
       callback(err)
@@ -614,6 +622,41 @@ module.exports = (theApp: any) => {
     })
     appCopy.putPath = putPath
 
+    appCopy.subscriptionmanager = {
+      subscribe: (
+        command: SubscribeMessage,
+        unsubscribes: Unsubscribes,
+        errorCallback: (err: unknown) => void,
+        callback: SubscribeCallback,
+        user?: string
+      ) => {
+        const safeCallback: SubscribeCallback = (delta) => {
+          try {
+            callback(delta)
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            console.error(
+              `${packageName} subscription callback error: ${message}`
+            )
+            if (err instanceof Error && err.stack) {
+              console.error(err.stack)
+            }
+            app.setPluginError(plugin.id, `Runtime error: ${message}`)
+          }
+        }
+        app.subscriptionmanager.subscribe(
+          command,
+          unsubscribes,
+          errorCallback,
+          safeCallback,
+          user
+        )
+      },
+      unsubscribe: (msg: UnsubscribeMessage, unsubscribes: Unsubscribes) => {
+        app.subscriptionmanager.unsubscribe(msg, unsubscribes)
+      }
+    }
+
     const weatherApi: WeatherApi = app.weatherApi
     appCopy.registerWeatherProvider = (provider: WeatherProvider) => {
       weatherApi.register(plugin.id, provider)
@@ -622,7 +665,7 @@ module.exports = (theApp: any) => {
     const historyApiRegistry: HistoryApiHttpRegistry =
       app.historyApiHttpRegistry
     delete (appCopy as any).historyApiHttpRegistry // expose only the plugin-specific proxy
-    appCopy.registerHistoryApiProvider = (provider: HistoryApi) => {
+    appCopy.registerHistoryApiProvider = (provider: HistoryProvider) => {
       historyApiRegistry.registerHistoryApiProvider(plugin.id, provider)
       onStopHandlers[plugin.id].push(() => {
         historyApiRegistry.unregisterHistoryApiProvider(plugin.id)

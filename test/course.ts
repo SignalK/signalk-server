@@ -469,7 +469,7 @@ describe('Course Api', () => {
     )
 
     // wait for subscription to process the route update (period: 500ms)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 600))
 
     data = (await selfGetJson('navigation/course')) as CourseInfo
     expect(data.previousPoint?.position?.latitude).to.equal(60.0)

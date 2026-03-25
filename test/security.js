@@ -353,7 +353,7 @@ describe('Security', () => {
         } else {
           resolve()
         }
-      }, 250)
+      }, 100)
     })
     return result
   })
@@ -588,6 +588,47 @@ describe('Security', () => {
       })
     })
     res.status.should.equal(413)
+  })
+
+  it('should reject access request with invalid permissions', async function () {
+    const result = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: 'device-invalid-perm',
+        description: 'Bad Sensor',
+        permissions: 'badvalue'
+      })
+    })
+    result.status.should.equal(400)
+  })
+
+  it('should reject approval with invalid permissions', async function () {
+    let result = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: 'device-invalid-approve',
+        description: 'Another Sensor'
+      })
+    })
+    result.status.should.equal(202)
+
+    result = await fetch(
+      `${url}/skServer/security/access/requests/device-invalid-approve/approved`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `JAUTHENTICATION=${adminToken}`
+        },
+        body: JSON.stringify({
+          expiration: '1y',
+          permissions: 'badvalue'
+        })
+      }
+    )
+    result.status.should.equal(500)
   })
 
   it('User registration request and approval works', async function () {

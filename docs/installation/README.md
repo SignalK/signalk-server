@@ -19,7 +19,7 @@ Pi](https://www.raspberrypi.com). Any Raspberry Pi (even the very first model) c
 ## Prerequisites
 
 > [!NOTE]
-> Signal K server requires [NodeJS](https://nodejs.org) version >= 20 be installed on the target system.
+> Signal K server requires [NodeJS](https://nodejs.org) version >= 22 (version 24 recommended) be installed on the target system.
 
 ## Getting Started
 

@@ -29,6 +29,10 @@ import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
 import { atomicWriteFile } from '../atomicWrite'
+import {
+  loadAll as loadUnitPreferences,
+  setApplicationDataPath
+} from '../unitpreferences'
 const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
@@ -42,6 +46,7 @@ const packageJson = require('../../' + 'package.json')
 export interface Config {
   getExternalHostname: () => string
   getExternalPort: () => number
+  isExternalSsl: () => boolean
   port: number
   appPath: string
   configPath: string
@@ -64,10 +69,12 @@ export interface Config {
     security?: any
     ssl?: boolean
     wsCompression?: boolean
+    wsPingInterval?: number | false
     accessLogging?: boolean
     landingPage?: string
     proxy_host?: string
     proxy_port?: number
+    proxy_ssl?: boolean
     hostname?: string
     pruneContextsMinutes?: number
     mdns?: boolean
@@ -99,6 +106,7 @@ export function load(app: ConfigApp) {
 
   config.getExternalHostname = getExternalHostname.bind(config, config)
   config.getExternalPort = getExternalPort.bind(config, app)
+  config.isExternalSsl = isExternalSsl.bind(null, config)
 
   config.appPath = config.appPath || path.normalize(__dirname + '/../../')
   debug('appPath:' + config.appPath)
@@ -151,6 +159,16 @@ export function load(app: ConfigApp) {
     }
   }
   setSelfSettings(app)
+
+  // Load unit preferences
+  try {
+    setApplicationDataPath(app.config.configPath)
+    loadUnitPreferences()
+    debug('Unit preferences loaded')
+  } catch (err) {
+    console.error('Failed to load unit preferences:', err)
+    // Non-fatal - server can run without unit preferences
+  }
 
   if (app.argv['sample-nmea0183-data']) {
     const sample = path.join(app.config.appPath, 'samples/plaka.log')
@@ -450,6 +468,16 @@ function getSettingsFilename(app: ConfigApp) {
 
   const settingsFile = app.argv.s || 'settings.json'
   return path.join(app.config.configPath, settingsFile)
+}
+
+function isExternalSsl(config: Config): boolean {
+  if (process.env.EXTERNALSSL) {
+    return (
+      process.env.EXTERNALSSL === '1' ||
+      process.env.EXTERNALSSL.toLowerCase() === 'true'
+    )
+  }
+  return !!config.settings.proxy_ssl
 }
 
 function getExternalHostname(config: Config) {

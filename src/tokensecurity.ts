@@ -88,9 +88,14 @@ const skAuthPrefix = `${skPrefix}/auth`
 const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
+const VALID_PERMISSIONS = new Set(['readonly', 'readwrite', 'admin'])
 
 // Dummy hash for timing attack prevention - pre-generated bcrypt hash
 const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
+
+function isNever(expiration: string | undefined): boolean {
+  return expiration?.toUpperCase() === 'NEVER'
+}
 
 /**
  * Express request with Signal K authentication properties
@@ -117,6 +122,7 @@ interface JWTPayload {
   device?: string
   exp?: number
   iat?: number
+  rememberMe?: boolean
 }
 
 interface LoginResponse {
@@ -232,7 +238,7 @@ function tokenSecurityFactory(
   } = config
 
   const {
-    allow_readonly = true,
+    allow_readonly = false,
     secretKey = process.env.SECRETKEY || randomBytes(256).toString('hex'),
     devices = [],
     acls = []
@@ -431,10 +437,9 @@ function tokenSecurityFactory(
       secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
     }
     if (rememberMe) {
-      const expValue =
-        configuration.expiration === 'NEVER'
-          ? '10y'
-          : configuration.expiration || '1h'
+      const expValue = isNever(configuration.expiration)
+        ? '10y'
+        : configuration.expiration || '1h'
       cookieOptions.maxAge = ms(expValue as StringValue)
     }
     return cookieOptions
@@ -467,12 +472,19 @@ function tokenSecurityFactory(
     res.clearCookie(BROWSER_LOGININFO_COOKIE_NAME)
   }
 
-  function generateJWT(userId: string, tokenExpiration?: string): string {
+  function generateJWT(
+    userId: string,
+    tokenExpiration?: string,
+    rememberMe?: boolean
+  ): string {
     const configuration = getConfiguration()
     const theExpiration = tokenExpiration || configuration.expiration || '1h'
     const payload: JWTPayload = { id: userId }
+    if (rememberMe) {
+      payload.rememberMe = true
+    }
     const jwtOptions: SignOptions = {}
-    if (theExpiration !== 'NEVER') {
+    if (!isNever(theExpiration)) {
       jwtOptions.expiresIn = theExpiration as StringValue
     }
     return jwt.sign(payload, configuration.secretKey, jwtOptions)
@@ -549,12 +561,12 @@ function tokenSecurityFactory(
 
       if (skReq.skIsAuthenticated && skReq.skPrincipal) {
         if (skReq.skPrincipal.identifier === 'AUTO' && redirect) {
-          res.redirect('/@signalk/server-admin-ui/#/login')
+          res.redirect('/admin/#/login')
         } else {
           handlePermissionDenied(req, res)
         }
       } else if (redirect) {
-        res.redirect('/@signalk/server-admin-ui/#/login')
+        res.redirect('/admin/#/login')
       } else {
         handlePermissionDenied(req, res)
       }
@@ -627,7 +639,7 @@ function tokenSecurityFactory(
         const password = req.body.password
         const remember = req.body.rememberMe
 
-        login(name, password)
+        login(name, password, remember)
           .then((reply) => {
             const requestType = req.get('Content-Type')
 
@@ -734,10 +746,29 @@ function tokenSecurityFactory(
         no_redir(req, res, next)
       }
     )
+    app.use(
+      '/signalk/v1/snapshot/*',
+      function (req: Request, res: Response, next: NextFunction) {
+        no_redir(req, res, next)
+      }
+    )
+    app.use(
+      '/signalk/v2/api/*',
+      function (req: Request, res: Response, next: NextFunction) {
+        no_redir(req, res, next)
+      }
+    )
     app.put('/signalk/v1/*', writeAuthenticationMiddleware())
+    app.put('/signalk/v2/*', writeAuthenticationMiddleware())
+    app.post('/signalk/v2/*', writeAuthenticationMiddleware())
+    app.delete('/signalk/v2/*', writeAuthenticationMiddleware())
   }
 
-  function login(name: string, password: string): Promise<LoginResponse> {
+  function login(
+    name: string,
+    password: string,
+    rememberMe?: boolean
+  ): Promise<LoginResponse> {
     return new Promise((resolve, reject) => {
       debug('handing login for user: ' + name)
 
@@ -766,9 +797,12 @@ function tokenSecurityFactory(
           } else if (matches === true && user && user.password) {
             // Only succeed if user exists AND password matched real hash
             const payload: JWTPayload = { id: user.username }
+            if (rememberMe) {
+              payload.rememberMe = true
+            }
             const theExpiration = configuration.expiration || '1h'
             const jwtOptions: SignOptions = {}
-            if (theExpiration !== 'NEVER') {
+            if (!isNever(theExpiration)) {
               jwtOptions.expiresIn = theExpiration as StringValue
             }
             debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
@@ -799,7 +833,7 @@ function tokenSecurityFactory(
   }): void => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
-    if (theExpiration !== 'NEVER') {
+    if (!isNever(theExpiration)) {
       jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
         expiresIn: theExpiration as StringValue
       })
@@ -1343,14 +1377,18 @@ function tokenSecurityFactory(
       }
     }
 
-    if (!token || error) {
+    if (error) {
+      // Token was provided but is invalid — always reject
+      debug(error.message)
+      throw error
+    }
+
+    if (!token) {
       if (configuration.allow_readonly) {
         req.skPrincipal = { identifier: 'AUTO', permissions: 'readonly' }
         return
       } else {
-        if (!error) {
-          error = new Error('Missing access token')
-        }
+        error = new Error('Missing access token')
         debug(error.message)
         throw error
       }
@@ -1518,6 +1556,24 @@ function tokenSecurityFactory(
                 skReq.skPrincipal = principal
                 skReq.skIsAuthenticated = true
                 skReq.userLoggedIn = true
+                const jwtPayload = decoded as JWTPayload
+                if (
+                  jwtPayload.id &&
+                  jwtPayload.exp &&
+                  jwtPayload.iat &&
+                  Date.now() / 1000 >
+                    jwtPayload.iat + (jwtPayload.exp - jwtPayload.iat) / 2
+                ) {
+                  const newToken = generateJWT(
+                    jwtPayload.id,
+                    undefined,
+                    jwtPayload.rememberMe
+                  )
+                  setSessionCookie(res, req, newToken, jwtPayload.id, {
+                    rememberMe: jwtPayload.rememberMe
+                  })
+                  debug('token refreshed for %s', jwtPayload.id)
+                }
                 next()
                 return
               } else {
@@ -1526,15 +1582,16 @@ function tokenSecurityFactory(
               }
             } else {
               debug(`bad token: ${err.message} ${req.path}`)
-              res.clearCookie('JAUTHENTICATION')
             }
 
-            if (configuration.allow_readonly) {
+            // Token was provided but is invalid/revoked — always reject.
+            // allow_readonly only applies when no token is provided at all.
+            res.clearCookie('JAUTHENTICATION')
+            if (forLoginStatus) {
               skReq.skIsAuthenticated = false
-              next()
-            } else {
-              res.status(401).send('bad auth token')
+              return next()
             }
+            res.status(401).send('bad auth token')
           }
         )
       } else {
@@ -1551,7 +1608,7 @@ function tokenSecurityFactory(
             next()
           } else if (redirect) {
             debug('redirecting to login')
-            res.redirect('/@signalk/server-admin-ui/#/login')
+            res.redirect('/admin/#/login')
           } else {
             res.status(401).send('Unauthorized')
           }
@@ -1613,15 +1670,23 @@ function tokenSecurityFactory(
 
     let approved: boolean
     if (status === 'approved') {
+      if (
+        !request.clientRequest.requestedPermissions &&
+        !VALID_PERMISSIONS.has(body.permissions)
+      ) {
+        cb(new Error('Invalid permissions value'), theConfig)
+        return
+      }
       if (request.clientRequest.accessRequest.clientId) {
         const payload: JWTPayload = { device: identifier }
         const jwtOptions: SignOptions = {}
 
         const expiresIn = body.expiration || theConfig.expiration
-        if (expiresIn !== 'NEVER') {
+        if (!isNever(expiresIn)) {
           jwtOptions.expiresIn = expiresIn as StringValue
         }
         const token = jwt.sign(payload, theConfig.secretKey, jwtOptions)
+        const decoded = jwt.decode(token) as JWTPayload
 
         if (!theConfig.devices) {
           theConfig.devices = []
@@ -1640,7 +1705,8 @@ function tokenSecurityFactory(
           description: request.accessDescription,
           requestedPermissions: request.clientRequest.requestedPermissions
             ? 'true'
-            : ''
+            : '',
+          tokenExpiry: decoded?.exp
         })
         request.token = token
       } else {
@@ -1727,6 +1793,16 @@ function tokenSecurityFactory(
         .then((request: AccessRequest) => {
           const accessRequest = clientRequest.accessRequest
           if (!validateAccessRequest(accessRequest)) {
+            updateRequest(request.requestId, 'COMPLETED', { statusCode: 400 })
+              .then(resolve)
+              .catch(reject)
+            return
+          }
+
+          if (
+            accessRequest.permissions !== undefined &&
+            !VALID_PERMISSIONS.has(accessRequest.permissions)
+          ) {
             updateRequest(request.requestId, 'COMPLETED', { statusCode: 400 })
               .then(resolve)
               .catch(reject)

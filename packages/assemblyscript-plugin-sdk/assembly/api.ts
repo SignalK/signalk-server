@@ -17,7 +17,11 @@ import { Delta } from './signalk'
  * @param version - Signal K version: 0 = v1 (default), 1 = v2
  */
 @external("env", "sk_handle_message")
-declare function sk_handle_message_ffi(deltaPtr: usize, deltaLen: usize, version: i32): void
+declare function sk_handle_message_ffi(
+  deltaPtr: usize,
+  deltaLen: usize,
+  version: i32
+): void
 
 /**
  * @internal
@@ -223,12 +227,7 @@ export function getPath(path: string): string | null {
   const resultBuffer = new ArrayBuffer(1024)
   const resultPtr = changetype<usize>(resultBuffer)
 
-  const len = sk_get_path_ffi(
-    pathPtr,
-    pathBuffer.byteLength,
-    resultPtr,
-    1024
-  )
+  const len = sk_get_path_ffi(pathPtr, pathBuffer.byteLength, resultPtr, 1024)
 
   if (len === 0) {
     return null

@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-api",
-  "version": "2.22.0",
+  "version": "2.24.0",
   "description": "signalk-server Typescript API for plugins etc with relevant implementation classes",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,27 +16,31 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/SignalK/signalk-server.git"
+    "url": "https://github.com/SignalK/signalk-server.git",
+    "directory": "packages/server-api"
   },
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",
   "dependencies": {
-    "@js-temporal/polyfill": "^0.5.1"
+    "@js-temporal/polyfill": "^0.5.1",
+    "@sinclair/typebox": "^0.34.0",
+    "baconjs": "^3.0.0"
   },
   "devDependencies": {
     "ts-auto-guard": "^5.0.1"
   },
-  "peerDependencies": {
-    "baconjs": "^1.0.1"
-  },
   "exports": {
     ".": "./dist/index.js",
-    "./history": "./dist/history.js"
+    "./history": "./dist/history.js",
+    "./typebox": "./dist/typebox/index.js"
   },
   "typesVersions": {
     "*": {
       "history": [
         "dist/history.d.ts"
+      ],
+      "typebox": [
+        "dist/typebox/index.d.ts"
       ]
     }
   }

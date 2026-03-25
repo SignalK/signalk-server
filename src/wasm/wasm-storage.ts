@@ -10,6 +10,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import Debug from 'debug'
 import { derivePluginId } from '../pluginid'
+import { atomicWriteFileSync } from '../atomicWrite'
 
 const debug = Debug('signalk:wasm:storage')
 
@@ -130,7 +131,7 @@ export function writePluginConfig(configFile: string, config: any): void {
       fs.mkdirSync(configDir, { recursive: true })
     }
 
-    fs.writeFileSync(configFile, JSON.stringify(config, null, 2), 'utf8')
+    atomicWriteFileSync(configFile, JSON.stringify(config, null, 2))
     debug(`Wrote plugin config to ${configFile}`)
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)

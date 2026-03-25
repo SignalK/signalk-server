@@ -19,6 +19,43 @@ const debug = createDebug('signalk-server:interfaces:rest')
 const express = require('express')
 const { getMetadata } = require('@signalk/signalk-schema')
 const ports = require('../ports')
+const {
+  resolveDisplayUnits,
+  getDefaultCategory
+} = require('../unitpreferences')
+
+// Enhance metadata response with displayUnits from unit preferences
+function enhanceMetadataResponse(metadata, signalkPath, username) {
+  if (!metadata) return metadata
+
+  // Check if displayUnits.category exists in stored metadata
+  let storedDisplayUnits = metadata.displayUnits
+
+  // If no category set, try to get default category for this path
+  if (!storedDisplayUnits?.category && signalkPath) {
+    const defaultCategory = getDefaultCategory(signalkPath)
+    if (defaultCategory) {
+      storedDisplayUnits = { category: defaultCategory }
+    }
+  }
+
+  if (storedDisplayUnits?.category) {
+    try {
+      const enhanced = resolveDisplayUnits(
+        storedDisplayUnits,
+        metadata.units,
+        username
+      )
+      if (enhanced) {
+        metadata.displayUnits = enhanced
+      }
+    } catch (err) {
+      debug('Error enhancing metadata with displayUnits:', err)
+    }
+  }
+
+  return metadata
+}
 
 const iso8601rexexp =
   /^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?Z$/
@@ -29,6 +66,7 @@ module.exports = function (app) {
   const pathPrefix = '/signalk'
   const versionPrefix = '/v1'
   const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
+  const snapshotPathPrefix = pathPrefix + versionPrefix + '/snapshot/'
   const streamPath = pathPrefix + versionPrefix + '/stream'
 
   const KNOWN_OTHER_PATH_PREFIXES = ['resources']
@@ -36,6 +74,62 @@ module.exports = function (app) {
   return {
     start: function () {
       app.use('/', express.static(__dirname + '/../../public'))
+
+      function snapshotHandler(snapshotPath, req, res, next) {
+        if (!req.query.time) {
+          res.status(400).send('Snapshot api requires time query parameter')
+        } else if (!iso8601rexexp.test(req.query.time)) {
+          res
+            .status(400)
+            .send(
+              'Time query parameter must be a valid ISO 8601 UTC time value like 2018-12-11T18:40:03.246'
+            )
+        } else if (!app.historyProvider) {
+          res.status(501).send('No history provider')
+        } else {
+          app.historyProvider.getHistory(
+            new Date(req.query.time),
+            snapshotPath,
+            (deltas) => {
+              if (deltas.length === 0) {
+                res.status(404).send('No data found for the given time')
+                return
+              }
+              const full = app.deltaCache.buildFullFromDeltas(
+                req.skPrincipal,
+                deltas
+              )
+              if (!full) {
+                next()
+                return
+              }
+              let result = full
+              for (const p of snapshotPath) {
+                if (typeof result[p] !== 'undefined') {
+                  result = result[p]
+                } else {
+                  next()
+                  return
+                }
+              }
+              res.json(result)
+            }
+          )
+        }
+      }
+
+      // Spec-compliant snapshot path: /signalk/v1/snapshot/...
+      app.get(snapshotPathPrefix + '*', function (req, res, next) {
+        const pathStr = req.params[0] || ''
+        const snapshotPath =
+          pathStr.length > 0
+            ? pathStr
+                .replace(/\/$/, '')
+                .split('/')
+                .map((p) => (p === 'self' ? app.selfId : p))
+            : []
+        snapshotHandler(snapshotPath, req, res, next)
+      })
 
       app.get(apiPathPrefix + '*', function (req, res, next) {
         let path = String(req.path).replace(apiPathPrefix, '')
@@ -52,10 +146,16 @@ module.exports = function (app) {
         }
 
         if (path.length > 4 && path[path.length - 1] === 'meta') {
-          let meta = getMetadata(path.slice(0, path.length - 1).join('.'))
+          const metaPath = path.slice(0, path.length - 1).join('.')
+          const meta = getMetadata(metaPath)
 
           if (meta) {
-            res.json(meta)
+            // Deep clone to avoid mutating the cached metadata object
+            const metaCopy = JSON.parse(JSON.stringify(meta))
+            // Extract signalk path (remove vessels.self prefix)
+            const signalkPath = metaPath.replace(/^vessels\.[^.]+\./, '')
+            const username = req.skPrincipal?.identifier
+            res.json(enhanceMetadataResponse(metaCopy, signalkPath, username))
             return
           }
         }
@@ -91,36 +191,7 @@ module.exports = function (app) {
         }
 
         if (path[0] && path[0] === 'snapshot') {
-          if (!req.query.time) {
-            res.status(400).send('Snapshot api requires time query parameter')
-          } else {
-            if (!iso8601rexexp.test(req.query.time)) {
-              res
-                .status(400)
-                .send(
-                  'Time query parameter must be a valid ISO 8601 UTC time value like 2018-12-11T18:40:03.246'
-                )
-            } else if (!app.historyProvider) {
-              res.status(501).send('No history provider')
-            } else {
-              const realPath = path.slice(1)
-              app.historyProvider.getHistory(
-                new Date(req.query.time),
-                realPath,
-                (deltas) => {
-                  if (deltas.length === 0) {
-                    res.status(404).send('No data found for the given time')
-                    return
-                  }
-                  const last = app.deltaCache.buildFullFromDeltas(
-                    req.skPrincipal,
-                    deltas
-                  )
-                  sendResult(last, realPath)
-                }
-              )
-            }
-          }
+          return snapshotHandler(path.slice(1), req, res, next)
         } else {
           let last
           if (app.securityStrategy.anyACLs()) {
@@ -178,7 +249,10 @@ module.exports = function (app) {
     },
 
     mdns: {
-      name: app.config.settings.ssl ? '_signalk-https' : '_signalk-http',
+      name:
+        app.config.settings.ssl || app.config.isExternalSsl()
+          ? '_signalk-https'
+          : '_signalk-http',
       type: 'tcp',
       port: ports.getExternalPort(app)
     }

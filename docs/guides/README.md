@@ -5,12 +5,14 @@ children:
   - datalogging/datalogging.md
   - navdataserver/navdataserver.md
   - udev.md
+  - unitpreferences.md
 ---
 
 # Signal K Server Guides
 
 These guides will help you understand and use various features of the Signal K server. Using the server for a specific use case often involves one or more plugins.
 
+- [Unit Preferences](unitpreferences.md) - Learn how to configure and use unit preferences for automatic unit conversion
 - [Setting up an NMEA 0183 Navigation Data Server](navdataserver/navdataserver.md) - Learn how to set up Signal K as your boat's navigation data server
 - [Data Logging](datalogging/datalogging.md) - Configure and use Signal K's data logging capabilities
 - [Anchor Alarm](anchoralarm/anchoralarm.md) - Set up and use the anchor alarm feature

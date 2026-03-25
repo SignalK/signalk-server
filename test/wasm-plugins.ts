@@ -172,15 +172,25 @@ describe('WASM Plugins', function () {
         }
       })
 
-      // Wait a moment for plugins to fully load
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Poll until WASM plugin appears in the plugins list
+      let wasmPlugin: PluginInfo | undefined
+      for (let i = 0; i < 40; i++) {
+        const res = await fetch(`http://0.0.0.0:${port}/skServer/plugins`)
+        const plugins: PluginInfo[] = await res.json()
+        wasmPlugin = plugins.find(
+          (p) =>
+            p.id === '_signalk_example-hello-assemblyscript' ||
+            p.packageName === '@signalk/example-hello-assemblyscript'
+        )
+        if (wasmPlugin) break
+        await new Promise((r) => setTimeout(r, 50))
+      }
 
-      // Check that the plugin appears in the plugins list
       const response = await fetch(`http://0.0.0.0:${port}/skServer/plugins`)
       expect(response.status).to.equal(200)
 
       const plugins: PluginInfo[] = await response.json()
-      const wasmPlugin = plugins.find(
+      wasmPlugin = plugins.find(
         (p) =>
           p.id === '_signalk_example-hello-assemblyscript' ||
           p.packageName === '@signalk/example-hello-assemblyscript'
@@ -233,15 +243,15 @@ describe('WASM Plugins', function () {
       )
       expect(configResponse.status).to.equal(200)
 
-      // Wait for plugin to start
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Check plugin status
-      const statusResponse = await fetch(
-        `http://0.0.0.0:${port}/skServer/plugins`
-      )
-      const plugins: PluginInfo[] = await statusResponse.json()
-      const wasmPlugin = plugins.find((p) => p.id === pluginId)
+      // Poll until plugin is enabled
+      let wasmPlugin: PluginInfo | undefined
+      for (let i = 0; i < 20; i++) {
+        const res = await fetch(`http://0.0.0.0:${port}/skServer/plugins`)
+        const plugins: PluginInfo[] = await res.json()
+        wasmPlugin = plugins.find((p) => p.id === pluginId)
+        if (wasmPlugin?.data?.enabled) break
+        await new Promise((r) => setTimeout(r, 50))
+      }
 
       expect(
         wasmPlugin,

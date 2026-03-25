@@ -11,7 +11,7 @@ import {
 } from '.'
 import { RadarProviderRegistry, WithRadarApi } from './radarapi'
 import { CourseApi } from './course'
-import { HistoryApiRegistry, WithHistoryApi } from './history'
+import { HistoryProviderRegistry, WithHistoryApi } from './history'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
 
@@ -40,7 +40,7 @@ export interface ServerAPI
     RadarProviderRegistry,
     WithRadarApi,
     WithHistoryApi,
-    HistoryApiRegistry,
+    HistoryProviderRegistry,
     WithFeatures,
     CourseApi,
     WithNotificationsApi,
@@ -294,6 +294,7 @@ export interface ServerAPI
 
   /**
    * Returns the full path of the directory where the plugin can persist its internal data, e.g. data files, etc.
+   * Callable in plugin's `start()` function and later, not in plugin constructor function.
    *
    * @example
    * ```javascript

@@ -1,5 +1,9 @@
 name: Build Docker development container
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -12,6 +16,7 @@ on:
 
 jobs:
   signalk-server_npm_files:
+    if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,7 +24,7 @@ jobs:
       - name: Node setup
         uses: actions/setup-node@v6
         with:
-          node-version: '22.x'
+          node-version: '24.x'
       - name: Build npm files locally and upload artifacts
         run: |
           npm cache clean -f
@@ -31,7 +36,7 @@ jobs:
           rm signalk-typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
           npm pack
       - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           retention-days: 1
           name: packed-modules
@@ -43,7 +48,7 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
           - vm: ubuntu-latest
@@ -51,21 +56,11 @@ jobs:
             platform: linux/amd64
           - vm: ubuntu-24.04-arm
             arch: arm
-            node: 22.x
-            platform: linux/arm64
-          - vm: ubuntu-24.04-arm
-            arch: arm
             node: 24.x
             platform: linux/arm64
-          - os: 24.04
-            node: 22.x
-            node_safe: 22.x
           - os: 24.04
             node: 24.x
             node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
           - os: alpine
             node: 24.x
             node_safe: 24
@@ -83,7 +78,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with:
           name: packed-modules
       - name: Build and push
@@ -104,20 +99,12 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         include:
-          - os: 24.04
-            node: 22.x
-            suffix: -22.x
-            node_safe: 22.x
           - os: 24.04
             node: 24.x
             suffix: -24.x
             node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            suffix: -22-alpine
-            node_safe: 22
           - os: alpine
             node: 24.x
             suffix: -24-alpine
@@ -158,7 +145,7 @@ jobs:
           mkdir -p /tmp/tags
           echo "${{ steps.docker_meta.outputs.tags }}" > /tmp/tags/${{ matrix.node_safe }}.txt
       - name: Upload tag artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ubuntu-tag-${{ matrix.node_safe }}
           path: /tmp/tags/${{ matrix.node_safe }}.txt
@@ -170,23 +157,17 @@ jobs:
     strategy:
       matrix:
         os: [24.04, alpine]
-        node: [22.x, 24.x]
+        node: [24.x]
         include:
-          - os: 24.04
-            node: 22.x
-            node_safe: 22.x
           - os: 24.04
             node: 24.x
             node_safe: 24.x
-          - os: alpine
-            node: 22.x
-            node_safe: 22
           - os: alpine
             node: 24.x
             node_safe: 24
     steps:
       - name: Download tag artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: ubuntu-tag-${{ matrix.node_safe }}
           path: /tmp/tags
@@ -204,32 +185,66 @@ jobs:
         run: |
           set -euo pipefail
           TAGS_FILE="/tmp/tags/${{ matrix.node_safe }}.txt"
-          MANIFEST_DIGEST=""
-          while IFS= read -r FULL_TAG || [ -n "$FULL_TAG" ]; do
-            if [ -z "$FULL_TAG" ]; then
-              continue
-            fi
+          while IFS= read -r FULL_TAG || [ -n "${FULL_TAG:-}" ]; do
+            [ -z "${FULL_TAG:-}" ] && continue
             TAG="${FULL_TAG##*:}"
-            if [ -z "$MANIFEST_DIGEST" ]; then
-              skopeo copy --all \
-                --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
-                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                "docker://${FULL_TAG}" \
-                "docker://docker.io/signalk/signalk-server:${TAG}"
-              MANIFEST_DIGEST=$(skopeo inspect \
-                --creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                "docker://docker.io/signalk/signalk-server:${TAG}" | jq -r '.Digest')
-            else
-              skopeo copy \
-                --src-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-                "docker://docker.io/signalk/signalk-server@${MANIFEST_DIGEST}" \
-                "docker://docker.io/signalk/signalk-server:${TAG}"
-            fi
+            echo "Copying: ${FULL_TAG} -> signalk/signalk-server:${TAG}"
+            skopeo copy --all \
+              --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
+              --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
+              "docker://${FULL_TAG}" \
+              "docker://docker.io/signalk/signalk-server:${TAG}"
           done < "$TAGS_FILE"
 
+  record-image-sizes:
+    needs: create-and-push-manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout metrics branch
+        uses: actions/checkout@v6
+        with:
+          ref: metrics
+      - name: Record image sizes
+        env:
+          GHCR_CREDS: '${{ github.actor }}:${{ secrets.GHCR_PAT }}'
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          COMMIT="${{ github.sha }}"
+          CSV="master-container_sizes.csv"
+
+          if [ ! -f "$CSV" ]; then
+            echo "timestamp,commit,tag,size_bytes" > "$CSV"
+          fi
+
+          REGISTRY="ghcr.io/signalk/signalk-server"
+          RUN_ID="${{ github.run_id }}"
+
+          for TAG in \
+            "amd-24.04-24.x-${RUN_ID}" \
+            "arm-24.04-24.x-${RUN_ID}" \
+            "amd-alpine-24-${RUN_ID}" \
+            "arm-alpine-24-${RUN_ID}"; do
+
+            DIGEST=$(skopeo inspect --raw --creds "${GHCR_CREDS}" \
+              "docker://${REGISTRY}:${TAG}" | \
+              jq -r '.manifests[0].digest')
+            SIZE=$(skopeo inspect --raw --creds "${GHCR_CREDS}" \
+              "docker://${REGISTRY}@${DIGEST}" | \
+              jq '[.layers[].size] | add')
+
+            echo "${TIMESTAMP},${COMMIT},${TAG%-${RUN_ID}},${SIZE}" >> "$CSV"
+          done
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add master-container_sizes.csv
+          git commit -m "chore: record container sizes for ${GITHUB_SHA::7}"
+          git push
+
   housekeeping:
-    needs: [copy-to-dockerhub]
+    needs: [copy-to-dockerhub, record-image-sizes]
     runs-on: ubuntu-latest
     permissions:
       packages: write

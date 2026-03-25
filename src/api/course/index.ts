@@ -38,11 +38,11 @@ import { Responses } from '../'
 import { Store } from '../../serverstate/store'
 
 import { buildSchemaSync } from 'api-schema-builder'
-import courseOpenApi from './openApi.json'
+import { courseApiDoc } from './openApi'
 import { ResourcesApi } from '../resources'
 import { ConfigApp, writeSettingsFile } from '../../config/config'
 
-const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
+const COURSE_API_SCHEMA = buildSchemaSync(courseApiDoc)
 
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
@@ -1261,11 +1261,7 @@ export class CourseApi {
         }
       ]
     })
-    this.app.handleMessage(
-      'N/A', //no-op as updates already have $source
-      v2Delta,
-      SKVersion.v2
-    )
+    this.app.handleMessage(API_CMD_SRC.$source, v2Delta, SKVersion.v2)
 
     const p = typeof noSave === 'undefined' ? this.isAPICmdSource() : !noSave
     if (p) {

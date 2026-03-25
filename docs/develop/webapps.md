@@ -168,7 +168,7 @@ The exposed modules need to `export default` a React component. Functional compo
 
 The Admin UI uses **React 19** with shared dependencies via Module Federation. Your embedded webapp should:
 
-1. **Share React as a singleton** - Configure Module Federation to use the host's React instance with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui-react19/vite.config.js) for the current configuration.
+1. **Share React as a singleton** - Configure Module Federation to use the host's React instance with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the current configuration.
 
 2. **Use functional components** - The Admin UI is built with functional components and React hooks. While class components still work, functional components are recommended for consistency.
 
@@ -206,9 +206,9 @@ Per [the specification](https://signalk.org/specification/1.7.0/doc/security.htm
 
 For **cookie based, shared sessions** all a webapp needs to do is use `credentials: "include"` when making api calls with [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#sending_a_request_with_credentials_included). Cookies are included automatically in the initial WebSocket opening HTTP request, so the same works automatically for WebSocket connections.
 
-The session cookie's value is the same as the token value: it is a JWT token that includes a validity period and is signed by the server. The server is stateless: JWT is verified for each request for a valid signature and time. Validity period is governed by server's security `expires` configuration value that can be changed in Admin UI's Security section.
+The session cookie's value is the same as the token value: it is a JWT token that includes a validity period and is signed by the server. The server is stateless: JWT is verified for each request for a valid signature and time. Validity period is governed by server's security `expires` configuration value that can be changed in Admin UI's Security section. The server uses a sliding session window: when a token is past the midpoint of its lifetime, the server silently issues a fresh token on the next HTTP request, so active users are never logged out.
 
-The login endpoint has an optional `rememberMe` request parameter. By default, without `rememberMe` set to true, the cookie is erased on browser restarts per standard browser behavior. When true the response's set cookie header includes MaxAge value based on the server's `expires` value. This makes the cookie persist over browser restarts.
+The login endpoint has an optional `rememberMe` request parameter. By default, without `rememberMe` set to true, the cookie is erased on browser restarts per standard browser behavior. When true the response's set cookie header includes MaxAge value based on the server's `expires` value. This makes the cookie persist over browser restarts. The `rememberMe` flag is preserved in refreshed tokens.
 
 As the cookie is set to be [`HttpOnly`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#security) webapp JavaScript has no access to it. Including it in server requests and persisting its value is managed by the browser, governed by the `Set-Cookie` headers sent by the server.
 
