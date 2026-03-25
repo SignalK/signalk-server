@@ -815,7 +815,6 @@ function tokenSecurityFactory(
     ;[
       '/restart',
       '/runDiscovery',
-      '/plugins',
       '/appstore',
       '/security',
       '/settings',
@@ -828,7 +827,10 @@ function tokenSecurityFactory(
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
     )
 
-    app.use('/plugins', pluginRoutePermissionMiddleware())
+    app.use(
+      ['/plugins', `${SERVERROUTESPREFIX}/plugins`],
+      pluginRoutePermissionMiddleware()
+    )
 
     //TODO remove after grace period
     app.use('/loginStatus', http_authorize(false, true))
@@ -1281,7 +1283,7 @@ function tokenSecurityFactory(
     const jwtOptions: SignOptions = {}
 
     const expiresIn = device.expiration || theConfig.expiration
-    if (expiresIn !== 'NEVER') {
+    if (!isNever(expiresIn)) {
       jwtOptions.expiresIn = expiresIn as StringValue
     }
 
@@ -1351,7 +1353,7 @@ function tokenSecurityFactory(
     }
 
     if (updates.dashboard !== undefined) {
-      device.dashboard = updates.dashboard
+      device.dashboard = updates.dashboard || undefined
     }
 
     callback(null, theConfig)

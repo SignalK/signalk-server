@@ -242,10 +242,8 @@ export default function Devices() {
     const payload: Record<string, unknown> = {
       permissions: selectedDevice.permissions || 'readonly',
       description: selectedDevice.description,
-      displayName: selectedDevice.displayName
-    }
-    if (selectedDevice.dashboard) {
-      payload.dashboard = selectedDevice.dashboard
+      displayName: selectedDevice.displayName,
+      dashboard: selectedDevice.dashboard ?? null
     }
 
     const response = await fetch(
@@ -355,7 +353,6 @@ export default function Devices() {
       {loginStatus.authenticationRequired === false && <EnableSecurity />}
       {loginStatus.authenticationRequired && (
         <div>
-          {/* Created Token Result */}
           {createdToken && (
             <Card className="mb-3 border-success">
               <Card.Header className="bg-success text-white">
@@ -406,7 +403,6 @@ export default function Devices() {
             </Card>
           )}
 
-          {/* Displays & Apps */}
           <Card className="mb-3">
             <Card.Header className="d-flex justify-content-between align-items-center">
               <span>
@@ -431,7 +427,6 @@ export default function Devices() {
             </Card.Body>
           </Card>
 
-          {/* Sensors & Bridges */}
           {sensors.length > 0 && (
             <Card className="mb-3">
               <Card.Header>
@@ -443,7 +438,6 @@ export default function Devices() {
             </Card>
           )}
 
-          {/* Remote Servers */}
           {servers.length > 0 && (
             <Card className="mb-3">
               <Card.Header>
@@ -455,7 +449,6 @@ export default function Devices() {
             </Card>
           )}
 
-          {/* Device Detail Panel */}
           {selectedDevice && (
             <div ref={selectedDeviceRef}>
               <Card>
@@ -675,7 +668,6 @@ export default function Devices() {
             </div>
           )}
 
-          {/* Add Device Modal */}
           <Modal show={showAddModal} onHide={() => setShowAddModal(false)}>
             <Modal.Header closeButton>
               <Modal.Title>Add Device</Modal.Title>
