@@ -81,7 +81,9 @@ export default class Gpsd extends Transform {
         this.debug(msg)
       })
       .on('disconnect', () => {
-        this.debug(`Disconnected from ${label}`)
+        const msg = `Disconnected from ${label}`
+        this.options.app.setProviderError(this.options.providerId, msg)
+        this.debug(msg)
       })
       .on('error', (err: Error & { errors?: string[] }) => {
         let msg: string
