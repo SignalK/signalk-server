@@ -193,9 +193,11 @@ export const createPrioritiesSlice: StateCreator<
     set((state) => {
       const sourcePriorities = [...state.sourcePrioritiesData.sourcePriorities]
       const prios = [...sourcePriorities[pathIndex].priorities]
+      const target = index + change
+      if (target < 0 || target >= prios.length) return state
       const tmp = prios[index]
-      prios[index] = prios[index + change]
-      prios[index + change] = tmp
+      prios[index] = prios[target]
+      prios[target] = tmp
       sourcePriorities[pathIndex] = {
         ...sourcePriorities[pathIndex],
         priorities: prios
@@ -321,9 +323,11 @@ export const createPrioritiesSlice: StateCreator<
   moveRankedSource: (index, change) => {
     set((state) => {
       const ranking = [...state.sourceRankingData.ranking]
+      const target = index + change
+      if (target < 0 || target >= ranking.length) return state
       const tmp = ranking[index]
-      ranking[index] = ranking[index + change]
-      ranking[index + change] = tmp
+      ranking[index] = ranking[target]
+      ranking[target] = tmp
       return {
         sourceRankingData: {
           ...state.sourceRankingData,

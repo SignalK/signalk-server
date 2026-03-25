@@ -202,10 +202,12 @@ export function useConfiguredPriorityPaths(): Set<string> {
 export function useConfiguredSourcesByPath(): Map<string, Set<string>> {
   const serialized = useStore((s) => {
     const entries: string[] = []
+    const globalRefs = s.sourceRankingData.ranking.map((r) => r.sourceRef)
     for (const pp of s.sourcePrioritiesData.sourcePriorities) {
       if (pp.path) {
-        const refs = pp.priorities.map((p) => p.sourceRef).join(',')
-        entries.push(`${pp.path}\t${refs}`)
+        const pathRefs = pp.priorities.map((p) => p.sourceRef)
+        const allRefs = [...new Set([...pathRefs, ...globalRefs])]
+        entries.push(`${pp.path}\t${allRefs.join(',')}`)
       }
     }
     return entries.sort().join('\0')

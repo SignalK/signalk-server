@@ -123,7 +123,7 @@ const MetaDataPage: React.FC = () => {
                 <Col xs="3" md="2">
                   <label htmlFor="metadata-search">Search</label>
                 </Col>
-                <Col xs="12" md="12">
+                <Col xs="9" md="10">
                   <Form.Control
                     type="text"
                     id="metadata-search"

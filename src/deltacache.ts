@@ -48,9 +48,13 @@ export default class DeltaCache {
   private multiSourceTimer: ReturnType<typeof setTimeout> | null = null
   private lastEmittedMultiSourceCount = 0
 
+  private subscribedPaths = new Set<string>()
+
   constructor(app: SignalKServer, streambundle: StreamBundle) {
     this.app = app
     streambundle.keys.onValue((key) => {
+      if (this.subscribedPaths.has(key)) return
+      this.subscribedPaths.add(key)
       streambundle.getBus(key).onValue(this.onValue.bind(this))
     })
 
@@ -226,6 +230,12 @@ export default class DeltaCache {
         )
         const isNewSource = !leaf[sourceRef]
         leaf[sourceRef] = msg
+        // Populate preferredSources so getCachedDeltas('preferred')
+        // works correctly after restart/replay
+        const prefKey = delta.context + '\0' + pathValue.path
+        if (!this.preferredSources.has(prefKey)) {
+          this.preferredSources.set(prefKey, sourceRef)
+        }
 
         if (isNewSource) {
           const sourceCount = Object.keys(leaf).filter((k) => {
@@ -487,6 +497,7 @@ export default class DeltaCache {
     const result: NormalizedDelta[] = []
     for (const d of deltas) {
       if (d.path.length === 0) {
+        // Root multi-value deltas carry distinct data per source — keep all
         result.push(d)
         continue
       }

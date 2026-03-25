@@ -722,7 +722,22 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
         style={{ cursor: 'pointer' }}
       >
         <td style={{ width: '24px', textAlign: 'center' }}>
-          {isExpanded ? '\u25BC' : '\u25B6'}
+          <button
+            type="button"
+            onClick={() => onToggle(device.sourceRef)}
+            aria-expanded={isExpanded}
+            aria-label={`Toggle details for ${device.sourceRef}`}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              fontSize: 'inherit',
+              lineHeight: 1
+            }}
+          >
+            {isExpanded ? '\u25BC' : '\u25B6'}
+          </button>
         </td>
         <td>
           <SourceLabel sourceRef={device.sourceRef} sourcesData={sourcesData} />
@@ -1722,7 +1737,7 @@ const DataInstanceSection: React.FC<{
           </span>
           {insts.map((inst) => (
             <DataInstanceRow
-              key={`${inst.pgn}-${inst.instance}`}
+              key={`${inst.pgn}-${inst.instance}-${inst.sourceEnum ?? inst.sourceLabel ?? ''}`}
               device={device}
               inst={inst}
               readOnly={readOnly}

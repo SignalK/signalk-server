@@ -1063,6 +1063,14 @@ function TalkerGroups({
     )
   )
 
+  useEffect(() => {
+    setEntries(
+      talkerGroupsToEntries(
+        value.talkerGroups as Record<string, string[]> | undefined
+      )
+    )
+  }, [value.talkerGroups])
+
   const persistEntries = (updated: TalkerGroup[]) => {
     setEntries(updated)
     const groups = entriesToTalkerGroups(updated)
@@ -1082,15 +1090,7 @@ function TalkerGroups({
     const updated = entries.map((entry, i) =>
       i === index ? { ...entry, [field]: newValue } : entry
     )
-    setEntries(updated)
-    // Debounce persistence: only persist entries with non-empty names
-    const groups = entriesToTalkerGroups(updated)
-    onChange({
-      target: {
-        name: 'options.talkerGroups',
-        value: Object.keys(groups).length > 0 ? groups : undefined
-      }
-    })
+    persistEntries(updated)
   }
 
   const handleDelete = (index: number) => {

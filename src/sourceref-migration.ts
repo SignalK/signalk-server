@@ -80,8 +80,8 @@ export function migrateSourceRef(
     for (const [key, value] of Object.entries(
       settings.ignoredInstanceConflicts
     )) {
-      if (key.includes(oldRef)) {
-        const parts = key.split('+')
+      const parts = key.split('+')
+      if (parts.includes(oldRef)) {
         const newParts = parts.map((p) => (p === oldRef ? newRef : p))
         const newKey = newParts.sort().join('+')
         updates.push({ oldKey: key, newKey, value })
@@ -141,20 +141,20 @@ export function migrateSourceRef(
   // 8. Recompile priority engine
   app.activateSourcePriorities()
 
-  // 9. Notify clients
-  if (settings.sourceRanking) {
+  // 9. Notify clients (only for sections that were actually migrated)
+  if (migrated.includes('sourceRanking') && settings.sourceRanking) {
     app.emit('serverevent', {
       type: 'SOURCERANKING',
       data: settings.sourceRanking
     })
   }
-  if (settings.sourcePriorities) {
+  if (migrated.includes('sourcePriorities') && settings.sourcePriorities) {
     app.emit('serverevent', {
       type: 'SOURCEPRIORITIES',
       data: settings.sourcePriorities
     })
   }
-  if (settings.sourceAliases) {
+  if (migrated.includes('sourceAliases') && settings.sourceAliases) {
     app.emit('serverAdminEvent', {
       type: 'SOURCEALIASES',
       data: settings.sourceAliases

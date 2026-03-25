@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useStore } from '../store'
 import { buildSourceLabel, type SourcesData } from '../utils/sourceLabels'
 
@@ -33,13 +33,17 @@ function migrateFromLocalStorage(serverAliases: Record<string, string>): void {
         .then((res) => {
           if (res.ok) {
             useStore.getState().setSourceAliases(localAliases)
+            localStorage.removeItem(LEGACY_STORAGE_KEY)
+          } else {
+            migrationDone = false
           }
         })
         .catch(() => {
           migrationDone = false
         })
+    } else {
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
     }
-    localStorage.removeItem(LEGACY_STORAGE_KEY)
   } catch {
     // Ignore localStorage errors
   }
@@ -48,7 +52,9 @@ function migrateFromLocalStorage(serverAliases: Record<string, string>): void {
 export function useSourceAliases() {
   const aliases = useStore((s) => s.sourceAliases)
 
-  migrateFromLocalStorage(aliases)
+  useEffect(() => {
+    migrateFromLocalStorage(aliases)
+  }, [aliases])
 
   const setAlias = useCallback((sourceRef: string, alias: string) => {
     const current = { ...useStore.getState().sourceAliases }

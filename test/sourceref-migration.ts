@@ -167,8 +167,8 @@ describe('migrateSourceRef', () => {
     expect(app._activateCalled).to.be.true
   })
 
-  it('emits SOURCERANKING event when ranking exists', () => {
-    const ranking = [{ sourceRef: NEW_REF, timeout: 60000 }]
+  it('emits SOURCERANKING event when ranking is migrated', () => {
+    const ranking = [{ sourceRef: OLD_REF, timeout: 60000 }]
     const app = createMockApp({ sourceRanking: ranking })
     migrateSourceRef(app, OLD_REF, NEW_REF)
 
@@ -177,6 +177,10 @@ describe('migrateSourceRef', () => {
       return e.event === 'serverevent' && d?.type === 'SOURCERANKING'
     })
     expect(rankingEvent).to.exist
+    expect(
+      (app.config.settings.sourceRanking as Array<{ sourceRef: string }>)[0]
+        .sourceRef
+    ).to.equal(NEW_REF)
   })
 
   it('does not write settings when nothing matches', () => {
