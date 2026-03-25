@@ -1284,9 +1284,8 @@ function tokenSecurityFactory(
     const jwtOptions: SignOptions = {}
     if (device.tokenExpiry) {
       const remaining = device.tokenExpiry - Math.floor(Date.now() / 1000)
-      if (remaining > 0) {
-        jwtOptions.expiresIn = remaining
-      }
+      if (remaining <= 0) return null
+      jwtOptions.expiresIn = remaining
     }
     return jwt.sign(payload, theConfig.secretKey, jwtOptions)
   }

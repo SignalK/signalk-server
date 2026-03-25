@@ -112,33 +112,7 @@ module.exports = function (app) {
     postApplicationData(req, res, false)
   })
 
-  deviceApplicationDataUrls.forEach((url) => {
-    app.use(url, (req, res, next) => {
-      if (!req.skPrincipal) {
-        res.status(401).send('Unauthorized')
-        return
-      }
-      const isAdmin =
-        req.skPrincipal.permissions === 'admin' ||
-        req.skPrincipal.type === 'admin'
-      const isOwnDevice = req.skPrincipal.identifier === req.params.deviceId
-      if (!isAdmin && !isOwnDevice) {
-        res.status(403).send('Forbidden')
-        return
-      }
-      next()
-    })
-  })
-
-  app.get(deviceApplicationDataUrls, (req, res) => {
-    getApplicationData(req, res, false, req.params.deviceId)
-  })
-
-  app.post(deviceApplicationDataUrls, (req, res) => {
-    postApplicationData(req, res, false, req.params.deviceId)
-  })
-
-  app.get(`${prefix}/device/:deviceId/:appid`, (req, res) => {
+  function deviceAuthMiddleware(req, res, next) {
     if (!req.skPrincipal) {
       res.status(401).send('Unauthorized')
       return
@@ -151,8 +125,28 @@ module.exports = function (app) {
       res.status(403).send('Forbidden')
       return
     }
-    listVersions(req, res, false, req.params.deviceId)
+    next()
+  }
+
+  deviceApplicationDataUrls.forEach((url) => {
+    app.use(url, deviceAuthMiddleware)
   })
+
+  app.get(deviceApplicationDataUrls, (req, res) => {
+    getApplicationData(req, res, false, req.params.deviceId)
+  })
+
+  app.post(deviceApplicationDataUrls, (req, res) => {
+    postApplicationData(req, res, false, req.params.deviceId)
+  })
+
+  app.get(
+    `${prefix}/device/:deviceId/:appid`,
+    deviceAuthMiddleware,
+    (req, res) => {
+      listVersions(req, res, false, req.params.deviceId)
+    }
+  )
 
   app.get(`${prefix}/global/:appid`, (req, res) => {
     listVersions(req, res, false)

@@ -468,6 +468,15 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/security/devices`,
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
+        const { displayName, permissions } = req.body
+        if (typeof displayName !== 'string' || !displayName.trim()) {
+          res.status(400).json({ error: 'displayName is required' })
+          return
+        }
+        if (!['readonly', 'readwrite', 'admin'].includes(permissions)) {
+          res.status(400).json({ error: 'Invalid permissions value' })
+          return
+        }
         const config = getSecurityConfig(app)
         app.securityStrategy.createDevice(
           config,

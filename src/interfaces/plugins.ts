@@ -36,7 +36,8 @@ import {
   SubscribeCallback,
   SubscribeMessage,
   Unsubscribes,
-  UnsubscribeMessage
+  UnsubscribeMessage,
+  DeviceStateChangeEvent
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -761,16 +762,15 @@ module.exports = (theApp: any) => {
       return app.deviceTracker?.getPluginData(plugin.id, clientId)
     }
     appCopy.onDeviceStateChange = (
-      callback: (event: any) => void
+      callback: (event: DeviceStateChangeEvent) => void
     ): (() => void) => {
       if (app.deviceTracker) {
         app.deviceTracker.on('deviceStateChange', callback)
-        onStopHandlers[plugin.id].push(() => {
-          app.deviceTracker?.removeListener('deviceStateChange', callback)
-        })
-        return () => {
+        const cleanup = () => {
           app.deviceTracker?.removeListener('deviceStateChange', callback)
         }
+        onStopHandlers[plugin.id].push(cleanup)
+        return cleanup
       }
       return () => {}
     }
