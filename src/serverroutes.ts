@@ -518,14 +518,28 @@ module.exports = function (
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
         const config = getSecurityConfig(app)
+        const clientId = req.params.uuid
         app.securityStrategy.deleteDevice(
           config,
-          req.params.uuid,
-          getConfigSavingCallback(
-            'Device deleted',
-            'Unable to delete device',
-            res
-          )
+          clientId,
+          (err, updatedConfig) => {
+            if (err) {
+              console.log(err)
+              res.status(500).type('text/plain').send('Unable to delete device')
+            } else if (updatedConfig) {
+              saveSecurityConfig(app, updatedConfig, (saveErr) => {
+                if (saveErr) {
+                  console.log(saveErr)
+                  res.status(500).send('Unable to save configuration change')
+                  return
+                }
+                app.deviceTracker?.onDeviceRemoved(clientId)
+                res.type('text/plain').send('Device deleted')
+              })
+            } else {
+              res.type('text/plain').send('Device deleted')
+            }
+          }
         )
       }
     }

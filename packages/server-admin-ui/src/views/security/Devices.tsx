@@ -7,6 +7,7 @@ import {
   FormEvent
 } from 'react'
 import { useLoginStatus } from '../../store'
+import { useServerEvent } from '../../hooks/useWebSocket'
 import Badge from 'react-bootstrap/Badge'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
@@ -205,6 +206,8 @@ export default function Devices() {
       loadDevices().then(setDevices)
     }
   }, [loginStatus.authenticationRequired, loadDevices])
+
+  useServerEvent('DEVICE_STATUS_CHANGE', refreshDevices)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDeviceChange = (event: any) => {
