@@ -413,7 +413,12 @@ export default function PluginConfigurationList() {
                         className={isSelected ? 'table-active' : ''}
                       >
                         <td>
-                          {isSelected ? <strong>{plugin.name}</strong> : plugin.name}
+                          {isSelected ? (
+                            <strong>
+                              <FontAwesomeIcon icon={faGear} className="me-1" />
+                              {plugin.name}
+                            </strong>
+                          ) : plugin.name}
                         </td>
                         <td>
                           <div className={`badge ${badgeClass}`}>
