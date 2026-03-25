@@ -418,7 +418,9 @@ export default function PluginConfigurationList() {
                               <FontAwesomeIcon icon={faGear} className="me-1" />
                               {plugin.name}
                             </strong>
-                          ) : plugin.name}
+                          ) : (
+                            plugin.name
+                          )}
                         </td>
                         <td>
                           <div className={`badge ${badgeClass}`}>
