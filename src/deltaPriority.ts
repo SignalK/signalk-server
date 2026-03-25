@@ -145,6 +145,12 @@ export const getToPreferredDelta = (
     if (pathPrecedences) {
       const p = pathPrecedences.get(sourceRef)
       if (p) return p
+      // Source not in path config — check if globally disabled before
+      // falling back to unknown-source handling
+      if (rankingPrecedences) {
+        const rp = rankingPrecedences.get(sourceRef)
+        if (rp && rp.timeout < 0) return rp
+      }
       return isLatest ? HIGHESTPRECEDENCE : LOWESTPRECEDENCE
     }
     // Fall back to source-level ranking

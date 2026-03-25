@@ -57,7 +57,8 @@ export function useSourceAliases() {
   }, [aliases])
 
   const setAlias = useCallback((sourceRef: string, alias: string) => {
-    const current = { ...useStore.getState().sourceAliases }
+    const prev = useStore.getState().sourceAliases
+    const current = { ...prev }
     if (alias.trim()) {
       current[sourceRef] = alias.trim()
     } else {
@@ -71,11 +72,13 @@ export function useSourceAliases() {
       body: JSON.stringify(current)
     }).catch((err) => {
       console.error('Failed to save source alias:', err)
+      useStore.getState().setSourceAliases(prev)
     })
   }, [])
 
   const removeAlias = useCallback((sourceRef: string) => {
-    const current = { ...useStore.getState().sourceAliases }
+    const prev = useStore.getState().sourceAliases
+    const current = { ...prev }
     delete current[sourceRef]
     useStore.getState().setSourceAliases(current)
     fetch(`${window.serverRoutesPrefix}/sourceAliases`, {
@@ -85,6 +88,7 @@ export function useSourceAliases() {
       body: JSON.stringify(current)
     }).catch((err) => {
       console.error('Failed to remove source alias:', err)
+      useStore.getState().setSourceAliases(prev)
     })
   }, [])
 

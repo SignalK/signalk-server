@@ -1702,10 +1702,11 @@ function Seatalk({ value, onChange }: TypeComponentProps) {
     <span>
       <Form.Group as={Row} className="mb-3">
         <Col md="3">
-          <Form.Label htmlFor="options.type">GPIO Library</Form.Label>
+          <Form.Label htmlFor="seatalk-type">GPIO Library</Form.Label>
         </Col>
         <Col xs="12" md="3">
           <Form.Select
+            id="seatalk-type"
             value={value.options.type || 'none'}
             name="options.type"
             onChange={(event) => onChange(event)}
