@@ -175,6 +175,7 @@ export const createPrioritiesSlice: StateCreator<
   deletePriority: (pathIndex, index) => {
     set((state) => {
       const sourcePriorities = [...state.sourcePrioritiesData.sourcePriorities]
+      if (pathIndex < 0 || pathIndex >= sourcePriorities.length) return state
       const prios = [...sourcePriorities[pathIndex].priorities]
       remove(prios, (_, i) => i === index)
       sourcePriorities[pathIndex] = {

@@ -6,8 +6,11 @@ const LEGACY_STORAGE_KEY = 'admin.v1.sourceAliases'
 
 let migrationDone = false
 
-function migrateFromLocalStorage(serverAliases: Record<string, string>): void {
-  if (migrationDone) return
+function migrateFromLocalStorage(
+  serverAliases: Record<string, string>,
+  loaded: boolean
+): void {
+  if (migrationDone || !loaded) return
   migrationDone = true
 
   try {
@@ -51,10 +54,11 @@ function migrateFromLocalStorage(serverAliases: Record<string, string>): void {
 
 export function useSourceAliases() {
   const aliases = useStore((s) => s.sourceAliases)
+  const loaded = useStore((s) => s.sourceAliasesLoaded)
 
   useEffect(() => {
-    migrateFromLocalStorage(aliases)
-  }, [aliases])
+    migrateFromLocalStorage(aliases, loaded)
+  }, [aliases, loaded])
 
   const setAlias = useCallback((sourceRef: string, alias: string) => {
     const prev = useStore.getState().sourceAliases
@@ -74,12 +78,16 @@ export function useSourceAliases() {
       .then((res) => {
         if (!res.ok) {
           console.error('Failed to save source alias:', res.status)
-          useStore.getState().setSourceAliases(prev)
+          if (useStore.getState().sourceAliases === current) {
+            useStore.getState().setSourceAliases(prev)
+          }
         }
       })
       .catch((err) => {
         console.error('Failed to save source alias:', err)
-        useStore.getState().setSourceAliases(prev)
+        if (useStore.getState().sourceAliases === current) {
+          useStore.getState().setSourceAliases(prev)
+        }
       })
   }, [])
 
@@ -97,12 +105,16 @@ export function useSourceAliases() {
       .then((res) => {
         if (!res.ok) {
           console.error('Failed to remove source alias:', res.status)
-          useStore.getState().setSourceAliases(prev)
+          if (useStore.getState().sourceAliases === current) {
+            useStore.getState().setSourceAliases(prev)
+          }
         }
       })
       .catch((err) => {
         console.error('Failed to remove source alias:', err)
-        useStore.getState().setSourceAliases(prev)
+        if (useStore.getState().sourceAliases === current) {
+          useStore.getState().setSourceAliases(prev)
+        }
       })
   }, [])
 
