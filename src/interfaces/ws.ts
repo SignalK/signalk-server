@@ -900,15 +900,18 @@ function handleValuesMeta(
         break
       } else {
         this.spark.sentMetaData[partialContextPathKey] = true
-        let meta = getMetadata(partialContextPathKey) as Record<
+        const meta = getMetadata(partialContextPathKey) as Record<
           string,
           unknown
         > | null
         if (meta) {
           // Clone and enhance metadata with displayUnits formulas
-          meta = JSON.parse(JSON.stringify(meta))
-          let storedDisplayUnits = (meta as Record<string, unknown>)
-            .displayUnits as Record<string, unknown> | undefined
+          const metaClone: Record<string, unknown> = JSON.parse(
+            JSON.stringify(meta)
+          )
+          let storedDisplayUnits = metaClone.displayUnits as
+            | Record<string, unknown>
+            | undefined
           if (!storedDisplayUnits?.category && path) {
             const defaultCategory = getDefaultCategory(path)
             if (defaultCategory) {
@@ -926,11 +929,11 @@ function handleValuesMeta(
                 symbol?: string
                 displayFormat?: string
               },
-              (meta as Record<string, unknown>).units as string | undefined,
+              metaClone.units as string | undefined,
               username
             )
             if (enhanced) {
-              ;(meta as Record<string, unknown>).displayUnits = enhanced
+              metaClone.displayUnits = enhanced
             }
           }
           this.spark.write({
@@ -941,7 +944,7 @@ function handleValuesMeta(
                 meta: [
                   {
                     path: path,
-                    value: meta
+                    value: metaClone
                   }
                 ]
               }
