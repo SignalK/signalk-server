@@ -14,6 +14,8 @@
  * limitations under the License.
 */
 
+import * as http from 'http'
+import * as https from 'https'
 import busboy from 'busboy'
 import commandExists from 'command-exists'
 import express, { IRouter, NextFunction, Request, Response } from 'express'
@@ -1426,6 +1428,192 @@ module.exports = function (
         filename: `signalk-${moment().format('MMM-DD-YYYY-HHTmm')}.backup`
       })
     })
+  })
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/testSignalKConnection`
+  )
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/requestAccess`)
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/checkAccessRequest`
+  )
+
+  app.post(
+    `${SERVERROUTESPREFIX}/testSignalKConnection`,
+    (req: Request, res: Response) => {
+      const { host, port, useTLS, token, selfsignedcert } = req.body
+
+      makeRemoteRequest(host, port, useTLS, selfsignedcert, '/signalk')
+        .then((discovery) => {
+          if (discovery.status !== 200) {
+            return res.json({
+              success: false,
+              error: `Discovery failed: HTTP ${discovery.status}`
+            })
+          }
+
+          let server: Record<string, string> | undefined
+          try {
+            server = JSON.parse(discovery.data).server
+          } catch (_e) {
+            // ignore parse errors for server info
+          }
+
+          if (!token) {
+            return res.json({
+              success: true,
+              authenticated: false,
+              server
+            })
+          }
+
+          return makeRemoteRequest(
+            host,
+            port,
+            useTLS,
+            selfsignedcert,
+            '/skServer/loginStatus',
+            'GET',
+            { Authorization: `JWT ${token}` }
+          ).then((loginResult) => {
+            let loginStatus
+            try {
+              loginStatus = JSON.parse(loginResult.data)
+            } catch (_e) {
+              // ignore parse errors
+            }
+
+            if (
+              loginResult.status !== 200 ||
+              !loginStatus ||
+              loginStatus.status !== 'loggedIn'
+            ) {
+              return res.json({
+                success: false,
+                connected: true,
+                error: 'Authentication failed: token may be invalid or revoked',
+                server
+              })
+            }
+
+            res.json({
+              success: true,
+              authenticated: true,
+              userLevel: loginStatus.userLevel,
+              username: loginStatus.username,
+              server
+            })
+          })
+        })
+        .catch((err: Error) => {
+          res.json({ success: false, error: err.message })
+        })
+    }
+  )
+
+  app.post(
+    `${SERVERROUTESPREFIX}/requestAccess`,
+    (req: Request, res: Response) => {
+      const { host, port, useTLS, selfsignedcert, clientId, description } =
+        req.body
+
+      makeRemoteRequest(
+        host,
+        port,
+        useTLS,
+        selfsignedcert,
+        '/signalk/v1/access/requests',
+        'POST',
+        {},
+        { clientId, description }
+      )
+        .then((result) => {
+          try {
+            const data = JSON.parse(result.data)
+            res.json(data)
+          } catch (_e) {
+            res.json({
+              state: 'ERROR',
+              error: `Unexpected response: HTTP ${result.status}`
+            })
+          }
+        })
+        .catch((err: Error) => {
+          res.json({ state: 'ERROR', error: err.message })
+        })
+    }
+  )
+
+  app.post(
+    `${SERVERROUTESPREFIX}/checkAccessRequest`,
+    (req: Request, res: Response) => {
+      const { host, port, useTLS, selfsignedcert, requestId } = req.body
+
+      makeRemoteRequest(
+        host,
+        port,
+        useTLS,
+        selfsignedcert,
+        `/signalk/v1/requests/${requestId}`
+      )
+        .then((result) => {
+          try {
+            const data = JSON.parse(result.data)
+            res.json(data)
+          } catch (_e) {
+            res.json({
+              state: 'ERROR',
+              error: `Unexpected response: HTTP ${result.status}`
+            })
+          }
+        })
+        .catch((err: Error) => {
+          res.json({ state: 'ERROR', error: err.message })
+        })
+    }
+  )
+}
+
+function makeRemoteRequest(
+  host: string,
+  port: number,
+  useTLS: boolean,
+  selfsignedcert: boolean,
+  path: string,
+  method?: string,
+  headers?: Record<string, string>,
+  body?: unknown
+): Promise<{ status: number | undefined; data: string }> {
+  const protocol = useTLS ? https : http
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: host,
+      port,
+      path,
+      method: method || 'GET',
+      headers: {
+        ...(headers || {}),
+        ...(body ? { 'Content-Type': 'application/json' } : {})
+      },
+      rejectUnauthorized: !selfsignedcert
+    }
+    const req = protocol.request(options, (response) => {
+      let data = ''
+      response.on('data', (chunk: string) => {
+        data += chunk
+      })
+      response.on('end', () => {
+        resolve({ status: response.statusCode, data })
+      })
+    })
+    req.on('error', reject)
+    req.setTimeout(10000, () => {
+      req.destroy(new Error('Connection timed out'))
+    })
+    if (body) {
+      req.write(JSON.stringify(body))
+    }
+    req.end()
   })
 }
 
