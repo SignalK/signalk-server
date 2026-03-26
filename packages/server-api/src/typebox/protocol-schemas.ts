@@ -74,8 +74,6 @@ export const AlarmMethodSchema = Type.Union(
   }
 )
 
-// @see specification/schemas/definitions.json zones definition
-
 /**
  * A zone defining display and alarm state for a value range.
  * @see specification/schemas/definitions.json zones definition
@@ -200,8 +198,6 @@ export const EnhancedDisplayUnitsSchema = Type.Object(
 )
 export type EnhancedDisplayUnits = Static<typeof EnhancedDisplayUnitsSchema>
 
-// @see specification/schemas/definitions.json commonValueFields
-
 /**
  * Metadata payload for a Signal K path.
  * Contains display hints, units, timeout, and alarm zones.
@@ -277,8 +273,6 @@ export const MetaSchema = Type.Object(
   }
 )
 export type Meta = Static<typeof MetaSchema>
-
-// @see specification/schemas/definitions.json#/definitions/source
 
 /**
  * Source of data in delta format — a record of where the data was received from.
