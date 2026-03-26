@@ -41,7 +41,11 @@ import {
   buildFlushDeltas
 } from '../LatestValuesAccumulator'
 import { getExternalPort } from '../ports'
-import { resolveDisplayUnits, getDefaultCategory } from '../unitpreferences'
+import {
+  resolveDisplayUnits,
+  getDefaultCategory,
+  DisplayUnitsMetadata
+} from '../unitpreferences'
 import { Delta, hasValues } from '@signalk/server-api'
 
 const debug = createDebug('signalk-server:interfaces:ws')
@@ -1168,21 +1172,12 @@ function handleRealtimeConnection(
           const pathMeta =
             (getMetadata(fullPath) as Record<string, unknown>) || {}
           const storedDU = pathMeta.displayUnits as
-            | Record<string, unknown>
+            | DisplayUnitsMetadata
             | undefined
-          const category =
-            (storedDU?.category as string | undefined) ||
-            getDefaultCategory(path)
+          const category = storedDU?.category || getDefaultCategory(path)
           if (category) {
             const displayUnits = resolveDisplayUnits(
-              { ...storedDU, category } as {
-                category: string
-                targetUnit?: string
-                formula?: string
-                inverseFormula?: string
-                symbol?: string
-                displayFormat?: string
-              },
+              { ...storedDU, category },
               pathMeta.units as string | undefined,
               username
             )
