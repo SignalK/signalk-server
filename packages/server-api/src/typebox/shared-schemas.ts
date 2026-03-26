@@ -115,6 +115,9 @@ export const RelativePositionOriginSchema = Type.Object(
 
 export type RelativePositionOrigin = Static<typeof RelativePositionOriginSchema>
 
+// Used by Resources API for routes, waypoints, regions, charts.
+// @see specification/schemas/definitions.json#/definitions/waypoint
+
 /** GeoJSON Point geometry object (type + coordinates) */
 export const GeoJsonPointGeometrySchema = Type.Object(
   {
@@ -197,6 +200,8 @@ export const GeoJsonMultiPolygonGeometrySchema = Type.Object(
 export type GeoJsonMultiPolygonGeometry = Static<
   typeof GeoJsonMultiPolygonGeometrySchema
 >
+
+// Shared across all v2 API endpoints.
 
 /** Standard success response */
 export const OkResponseSchema = Type.Object(

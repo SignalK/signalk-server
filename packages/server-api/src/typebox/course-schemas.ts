@@ -47,7 +47,8 @@ export const CoursePointTypeSchema = Type.Union(
   [
     Type.Literal('VesselPosition'),
     Type.Literal('RoutePoint'),
-    Type.Literal('Location')
+    Type.Literal('Location'),
+    Type.Literal('Waypoint')
   ],
   {
     $id: 'CoursePointType',
@@ -217,11 +218,7 @@ export const NextPreviousPointSchema = Type.Object(
     href: Type.Optional(
       Type.String({ description: 'Reference to a waypoint resource.' })
     ),
-    type: Type.String({
-      description:
-        "Type of point. Known values: VesselPosition (vessel's current location), RoutePoint (a point on the active route), Location (an arbitrary geographic position).",
-      examples: ['RoutePoint', 'Location', 'VesselPosition']
-    }),
+    type: CoursePointTypeSchema,
     position: PositionSchema
   },
   { $id: 'NextPreviousPoint' }
