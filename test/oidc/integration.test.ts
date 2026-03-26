@@ -25,7 +25,8 @@ describe('OIDC Integration', () => {
           enabled: true,
           issuer: 'https://auth.example.com',
           clientId: 'test-client',
-          clientSecret: 'test-secret'
+          clientSecret: 'test-secret',
+          redirectUri: 'https://signalk.local:3000/oidc/callback'
         }
       })
       expect(isOIDCEnabled(config)).to.equal(true)
@@ -59,6 +60,7 @@ describe('OIDC Integration', () => {
         issuer: 'https://auth.example.com',
         clientId: 'signalk-server',
         clientSecret: 'test-secret',
+        redirectUri: 'https://signalk.local:3000/oidc/callback',
         scope: 'openid email profile',
         defaultPermission: 'readonly' as const,
         autoCreateUsers: true,
