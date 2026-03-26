@@ -600,6 +600,123 @@ describe('Subscriptions', (_) => {
       })
   })
 
+  it('JSON subscription with string period works', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+    )
+
+    const self = JSON.parse(await wsPromiser.nthMessage(1)).self
+
+    await wsPromiser.send({
+      context: 'vessels.*',
+      subscribe: [
+        {
+          path: 'navigation.logTrip',
+          policy: 'fixed',
+          period: '500'
+        }
+      ]
+    })
+
+    await sendDelta(getDelta({ context: self }), deltaUrl)
+    await new Promise((resolve) => setTimeout(resolve, 600))
+
+    const messages = wsPromiser.parsedMessages().slice(1)
+    const logTripMessages = messages.filter(
+      (d) =>
+        d.updates &&
+        d.updates.some(
+          (u) =>
+            u.values && u.values.some((v) => v.path === 'navigation.logTrip')
+        )
+    )
+    assert(
+      logTripMessages.length > 0,
+      'Should receive logTrip delta with string period'
+    )
+  })
+
+  it('JSON subscription with string minPeriod works', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+    )
+
+    const self = JSON.parse(await wsPromiser.nthMessage(1)).self
+
+    await wsPromiser.send({
+      context: 'vessels.*',
+      subscribe: [
+        {
+          path: 'navigation.courseOverGroundTrue',
+          minPeriod: '200'
+        }
+      ]
+    })
+
+    await sendDelta(getDelta({ context: self }), deltaUrl)
+    await sendDelta(getDelta({ context: self }), deltaUrl)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
+    const messages = wsPromiser.parsedMessages().slice(1)
+    const cogMessages = messages.filter(
+      (d) =>
+        d.updates &&
+        d.updates.some(
+          (u) =>
+            u.values &&
+            u.values.some((v) => v.path === 'navigation.courseOverGroundTrue')
+        )
+    )
+    assert(
+      cogMessages.length > 0,
+      'Should receive COG delta with string minPeriod'
+    )
+  })
+
+  it('JSON subscription with invalid minPeriod warns and delivers deltas', function () {
+    let self, wsPromiser
+
+    return serverP
+      .then((_) => {
+        wsPromiser = new WsPromiser(
+          'ws://localhost:' +
+            port +
+            '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+        )
+        return wsPromiser.nextMsg()
+      })
+      .then((wsHello) => {
+        self = JSON.parse(wsHello).self
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getDelta({ context: self }), deltaUrl)
+        ])
+      })
+      .then(() => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          wsPromiser.send({
+            context: '*',
+            subscribe: [
+              {
+                path: 'navigation.courseOverGroundTrue',
+                minPeriod: 'abc'
+              }
+            ]
+          })
+        ])
+      })
+      .then(([response]) => {
+        assert.equal(response, '"invalid minPeriod value \'abc\', ignoring"')
+      })
+  })
+
   it('announceNewPaths sends existing paths once and announces new paths', async function () {
     await serverP
     const wsPromiser = new WsPromiser(
