@@ -559,7 +559,7 @@ const METAFIELDRENDERERS: Record<
           unitDefinitions={props.unitDefinitions}
         />
       )}
-      description="Category for unit conversion"
+      description={(props.value as DisplayUnits)?.category !== 'custom' ? 'Target category for unit conversion' : ''}
     />
   ),
   zones: () => <></>,
