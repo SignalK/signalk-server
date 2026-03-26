@@ -221,11 +221,16 @@ function handleSubscribeRow(
             `minPeriod assumes policy 'instant', ignoring policy ${subscribeRow.policy}`
           )
         }
+        const minPeriodValue = Number(subscribeRow.minPeriod)
         debug('minPeriod:' + subscribeRow.minPeriod)
-        if (key !== '') {
+        if (isNaN(minPeriodValue)) {
+          errorCallback(
+            `invalid minPeriod value '${subscribeRow.minPeriod}', ignoring`
+          )
+        } else if (key !== '') {
           // we can not apply minPeriod for empty path subscriptions
           debug('debouncing')
-          filteredBus = filteredBus.debounceImmediate(subscribeRow.minPeriod)
+          filteredBus = filteredBus.debounceImmediate(minPeriodValue)
         }
       } else if (
         subscribeRow.period ||
@@ -237,7 +242,7 @@ function handleSubscribeRow(
           )
         } else if (key !== '') {
           // we can not apply period for empty path subscriptions
-          const interval = subscribeRow.period || 1000
+          const interval = Number(subscribeRow.period) || 1000
           filteredBus = filteredBus
             .bufferWithTime(interval)
             .flatMapLatest((bufferedValues: any) => {
