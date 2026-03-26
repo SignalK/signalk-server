@@ -46,6 +46,7 @@ import { getHttpPort, getSslPort } from './ports'
 import { queryRequest } from './requestResponse'
 import {
   getRateLimitValidationOptions,
+  pathForSecurityConfig,
   SecurityConfigGetter,
   SecurityConfigSaver,
   SecurityStrategy,
@@ -703,6 +704,39 @@ module.exports = function (
       app.post(
         `${SERVERROUTESPREFIX}/enableSecurity`,
         (req: Request, res: Response) => {
+          if (req.body.restore === true) {
+            const securityConfigPath = pathForSecurityConfig(app)
+            const backupPath = securityConfigPath + '.disabled'
+            if (!fs.existsSync(backupPath)) {
+              res.status(404).send('No security backup found')
+              return
+            }
+            try {
+              fs.renameSync(backupPath, securityConfigPath)
+              app.config.settings.security = {
+                strategy: defaultSecurityStrategy
+              }
+              writeSettingsFile(
+                app,
+                app.config.settings,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (err: any) => {
+                  if (err) {
+                    console.error(err)
+                    fs.renameSync(securityConfigPath, backupPath)
+                    res.status(500).send('Unable to save settings')
+                    return
+                  }
+                  securityWasEnabled = true
+                  res.send('Security restored, please restart the server')
+                }
+              )
+            } catch (err) {
+              console.error(err)
+              res.status(500).send('Unable to restore security')
+            }
+            return
+          }
           if (
             securityWasEnabled ||
             app.securityStrategy.getUsers(getSecurityConfig(app)).length > 0
@@ -781,6 +815,53 @@ module.exports = function (
       )
     }
   }
+
+  app.post(
+    `${SERVERROUTESPREFIX}/disableSecurity`,
+    (req: Request, res: Response) => {
+      if (!app.securityStrategy.allowConfigure(req)) {
+        res.status(401).send('Disable security not allowed')
+        return
+      }
+      const securityConfigPath = pathForSecurityConfig(app)
+      const backupPath = securityConfigPath + '.disabled'
+      try {
+        if (fs.existsSync(securityConfigPath)) {
+          fs.renameSync(securityConfigPath, backupPath)
+        }
+        delete app.config.settings.security
+        writeSettingsFile(app, app.config.settings, (err: Error) => {
+          if (err) {
+            console.error(err)
+            if (fs.existsSync(backupPath)) {
+              fs.renameSync(backupPath, securityConfigPath)
+            }
+            res.status(500).send('Unable to save settings')
+            return
+          }
+          res.send('Security disabled, please restart the server')
+        })
+      } catch (err) {
+        console.error(err)
+        res.status(500).send('Unable to disable security')
+      }
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/security/hasBackup`,
+    (req: Request, res: Response) => {
+      if (
+        !app.securityStrategy.isDummy() &&
+        !app.securityStrategy.allowConfigure(req)
+      ) {
+        res.status(401).send('Not authorized')
+        return
+      }
+      const backupPath = pathForSecurityConfig(app) + '.disabled'
+      res.json({ hasBackup: fs.existsSync(backupPath) })
+    }
+  )
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/settings`)
 

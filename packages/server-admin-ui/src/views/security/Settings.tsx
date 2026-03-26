@@ -8,8 +8,10 @@ import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
+import { faShieldHalved } from '@fortawesome/free-solid-svg-icons/faShieldHalved'
 import EnableSecurity from './EnableSecurity'
 import OIDCSettings from './OIDCSettings'
+import { disableSecurity } from '../../actions'
 
 const adminUIOrigin = `${window.location.protocol}//${window.location.host}`
 
@@ -256,6 +258,41 @@ export default function Settings() {
             </Card.Footer>
           </Card>
           <OIDCSettings />
+          <Card className="mt-3">
+            <Card.Header>
+              <FontAwesomeIcon icon={faShieldHalved} /> Disable Security
+            </Card.Header>
+            <Card.Body>
+              <p className="text-muted">
+                Disabling security removes all authentication requirements. Your
+                security configuration (users, devices) will be backed up and
+                can be restored when re-enabling security.
+              </p>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      'Are you sure you want to disable security? The server will need to be restarted.'
+                    )
+                  ) {
+                    return
+                  }
+                  const error = await disableSecurity()
+                  if (error) {
+                    alert(error)
+                  } else {
+                    alert(
+                      'Security disabled. Please restart the server for changes to take effect.'
+                    )
+                  }
+                }}
+              >
+                <FontAwesomeIcon icon={faShieldHalved} /> Disable Security
+              </Button>
+            </Card.Body>
+          </Card>
         </div>
       )}
     </div>

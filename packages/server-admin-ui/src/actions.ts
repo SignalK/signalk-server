@@ -99,6 +99,43 @@ export async function enableSecurity(
   return null
 }
 
+export async function disableSecurity(): Promise<string | null> {
+  const response = await fetch(`${window.serverRoutesPrefix}/disableSecurity`, {
+    method: 'POST',
+    credentials: 'include'
+  })
+  const text = await response.text()
+  if (response.status !== 200) {
+    return text
+  }
+  return null
+}
+
+export async function restoreSecurity(): Promise<string | null> {
+  const response = await fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restore: true })
+  })
+  const text = await response.text()
+  if (response.status !== 200) {
+    return text
+  }
+  await fetchLoginStatus()
+  return null
+}
+
+export async function checkSecurityBackup(): Promise<boolean> {
+  const response = await fetch(
+    `${window.serverRoutesPrefix}/security/hasBackup`
+  )
+  if (response.ok) {
+    const data = await response.json()
+    return data.hasBackup === true
+  }
+  return false
+}
+
 export async function fetchLoginStatus(): Promise<void> {
   const response = await authFetch(`${window.serverRoutesPrefix}/loginStatus`)
   if (response.status === 200) {
