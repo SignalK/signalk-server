@@ -133,11 +133,11 @@ function DataRow({
   const displayUnits =
     (meta as Record<string, unknown> | null)?.displayUnits &&
     typeof (meta as Record<string, unknown>).displayUnits === 'object'
-      ? (meta as Record<string, unknown>).displayUnits as {
+      ? ((meta as Record<string, unknown>).displayUnits as {
           targetUnit?: string
           formula?: string
           symbol?: string
-        }
+        })
       : undefined
 
   let convertedValue: number | null = null

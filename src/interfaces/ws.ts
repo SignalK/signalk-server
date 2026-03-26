@@ -918,7 +918,14 @@ function handleValuesMeta(
           if (storedDisplayUnits?.category) {
             const username = this.spark.request.skPrincipal?.identifier
             const enhanced = resolveDisplayUnits(
-              storedDisplayUnits as { category: string; targetUnit?: string; formula?: string; inverseFormula?: string; symbol?: string; displayFormat?: string },
+              storedDisplayUnits as {
+                category: string
+                targetUnit?: string
+                formula?: string
+                inverseFormula?: string
+                symbol?: string
+                displayFormat?: string
+              },
               (meta as Record<string, unknown>).units as string | undefined,
               username
             )
@@ -1157,12 +1164,22 @@ function handleRealtimeConnection(
           const fullPath = 'vessels.self.' + path
           const pathMeta =
             (getMetadata(fullPath) as Record<string, unknown>) || {}
-          const storedDU = pathMeta.displayUnits as Record<string, unknown> | undefined
+          const storedDU = pathMeta.displayUnits as
+            | Record<string, unknown>
+            | undefined
           const category =
-            (storedDU?.category as string | undefined) || getDefaultCategory(path)
+            (storedDU?.category as string | undefined) ||
+            getDefaultCategory(path)
           if (category) {
             const displayUnits = resolveDisplayUnits(
-              { ...storedDU, category } as { category: string; targetUnit?: string; formula?: string; inverseFormula?: string; symbol?: string; displayFormat?: string },
+              { ...storedDU, category } as {
+                category: string
+                targetUnit?: string
+                formula?: string
+                inverseFormula?: string
+                symbol?: string
+                displayFormat?: string
+              },
               pathMeta.units as string | undefined,
               username
             )

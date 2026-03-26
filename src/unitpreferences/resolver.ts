@@ -56,7 +56,8 @@ export function resolveDisplayUnits(
     // Otherwise look up from definitions using pathSiUnit
     if (pathSiUnit) {
       const definitions = getMergedDefinitions()
-      const conversion = definitions[pathSiUnit]?.conversions?.[storedDisplayUnits.targetUnit]
+      const conversion =
+        definitions[pathSiUnit]?.conversions?.[storedDisplayUnits.targetUnit]
       if (conversion) {
         return {
           category: 'custom',
