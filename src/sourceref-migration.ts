@@ -37,40 +37,67 @@ export function migrateSourceRef(
   let settingsChanged = false
   const migrated: string[] = []
 
-  // 1. sourceRanking
+  // 1. sourceRanking — merge if newRef already present
   if (settings.sourceRanking) {
-    let rankingChanged = false
-    for (const entry of settings.sourceRanking) {
-      if (entry.sourceRef === oldRef) {
-        entry.sourceRef = newRef
+    const hasNewRef = settings.sourceRanking.some((e) => e.sourceRef === newRef)
+    if (hasNewRef) {
+      const before = settings.sourceRanking.length
+      settings.sourceRanking = settings.sourceRanking.filter(
+        (e) => e.sourceRef !== oldRef
+      )
+      if (settings.sourceRanking.length !== before) {
         settingsChanged = true
-        rankingChanged = true
+        migrated.push('sourceRanking')
       }
-    }
-    if (rankingChanged) migrated.push('sourceRanking')
-  }
-
-  // 2. sourcePriorities (path-level)
-  if (settings.sourcePriorities) {
-    for (const entries of Object.values(settings.sourcePriorities)) {
-      if (!Array.isArray(entries)) continue
-      for (const entry of entries) {
+    } else {
+      let rankingChanged = false
+      for (const entry of settings.sourceRanking) {
         if (entry.sourceRef === oldRef) {
           entry.sourceRef = newRef
           settingsChanged = true
+          rankingChanged = true
+        }
+      }
+      if (rankingChanged) migrated.push('sourceRanking')
+    }
+  }
+
+  // 2. sourcePriorities (path-level) — dedupe per path if newRef already present
+  if (settings.sourcePriorities) {
+    for (const [, entries] of Object.entries(settings.sourcePriorities)) {
+      if (!Array.isArray(entries)) continue
+      const hasNewRef = entries.some((e) => e.sourceRef === newRef)
+      if (hasNewRef) {
+        const before = entries.length
+        const filtered = entries.filter((e) => e.sourceRef !== oldRef)
+        if (filtered.length !== before) {
+          entries.length = 0
+          entries.push(...filtered)
+          settingsChanged = true
           if (!migrated.includes('sourcePriorities')) {
             migrated.push('sourcePriorities')
+          }
+        }
+      } else {
+        for (const entry of entries) {
+          if (entry.sourceRef === oldRef) {
+            entry.sourceRef = newRef
+            settingsChanged = true
+            if (!migrated.includes('sourcePriorities')) {
+              migrated.push('sourcePriorities')
+            }
           }
         }
       }
     }
   }
 
-  // 3. sourceAliases
+  // 3. sourceAliases — keep existing newRef alias if present
   if (settings.sourceAliases && oldRef in settings.sourceAliases) {
-    const alias = settings.sourceAliases[oldRef]
+    if (!(newRef in settings.sourceAliases)) {
+      settings.sourceAliases[newRef] = settings.sourceAliases[oldRef]
+    }
     delete settings.sourceAliases[oldRef]
-    settings.sourceAliases[newRef] = alias
     settingsChanged = true
     migrated.push('sourceAliases')
   }
@@ -90,7 +117,9 @@ export function migrateSourceRef(
     }
     for (const { oldKey, newKey, value } of updates) {
       delete settings.ignoredInstanceConflicts[oldKey]
-      settings.ignoredInstanceConflicts[newKey] = value
+      if (!(newKey in settings.ignoredInstanceConflicts)) {
+        settings.ignoredInstanceConflicts[newKey] = value
+      }
       settingsChanged = true
     }
     if (updates.length > 0) {
@@ -114,7 +143,9 @@ export function migrateSourceRef(
     if (labelUpdates.length > 0) {
       for (const [oldKey, newKey, value] of labelUpdates) {
         delete labels[oldKey]
-        labels[newKey] = value
+        if (!(newKey in labels)) {
+          labels[newKey] = value
+        }
       }
       fs.writeFileSync(labelsPath, JSON.stringify(labels, null, 2))
       migrated.push('channelLabels')

@@ -103,6 +103,9 @@ Plugin sources use the plugin ID as their `$source`, e.g. `derived-data` or `sig
 
 ## REST API
 
+> The server implementation is authoritative.
+> Request/response payloads below are illustrative examples and may evolve.
+
 The Source Priority configuration is managed through the following REST endpoints:
 
 ### GET /skServer/sourcePriorities

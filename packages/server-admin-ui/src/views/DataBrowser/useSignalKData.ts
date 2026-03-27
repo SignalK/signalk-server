@@ -259,7 +259,7 @@ export function useSignalKData() {
     })
 
     return options
-  }, [contextKeys])
+  }, [contextKeys, dataVersion])
 
   useEffect(() => {
     subscribeToDataIfNeeded()

@@ -291,6 +291,11 @@ const SourceDiscovery: React.FC = () => {
       .catch(() => {})
   }, [])
 
+  // N2K address claim takes ~250ms per device; pad with base delay for safety
+  const DISCOVERY_PER_DEVICE_MS = 1000
+  const DISCOVERY_BASE_MS = 2000
+  const DISCOVERY_FALLBACK_MS = 5000
+
   const handleDiscover = useCallback(() => {
     setIsDiscovering(true)
     fetch(`${window.serverRoutesPrefix}/n2kDiscoverDevices`, {
@@ -301,9 +306,11 @@ const SourceDiscovery: React.FC = () => {
         const body = await res.json().catch(() => ({}))
         const match = (body.message || '').match(/(\d+) devices/)
         const deviceCount = match ? parseInt(match[1], 10) : 0
-        return deviceCount > 0 ? deviceCount * 1000 + 2000 : 5000
+        return deviceCount > 0
+          ? deviceCount * DISCOVERY_PER_DEVICE_MS + DISCOVERY_BASE_MS
+          : DISCOVERY_FALLBACK_MS
       })
-      .catch(() => 5000)
+      .catch(() => DISCOVERY_FALLBACK_MS)
       .then((delayMs) => {
         setTimeout(() => {
           Promise.all([loadSources(), loadDeviceStatus()]).finally(() =>
@@ -1001,7 +1008,7 @@ const InlineInstanceCell: React.FC<{
     )
   }
 
-  const handleStartEdit = (e: React.MouseEvent) => {
+  const handleStartEdit = (e: React.SyntheticEvent) => {
     e.stopPropagation()
     setEditValue(String(currentValue ?? ''))
     setIsEditing(true)
@@ -1190,7 +1197,7 @@ const InlineInstanceCell: React.FC<{
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          handleStartEdit(e as unknown as React.MouseEvent)
+          handleStartEdit(e)
         }
       }}
       title={`Click to edit (0-${max})`}

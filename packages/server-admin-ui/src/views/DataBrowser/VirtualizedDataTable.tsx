@@ -39,7 +39,10 @@ function VirtualizedDataTable({
   // Subscribe to all paths at once
   useEffect(() => {
     if (isPaused) return
-    if (path$SourceKeys.length === 0) return
+    if (path$SourceKeys.length === 0) {
+      granularSubscriptionManager.requestPaths([], [])
+      return
+    }
 
     granularSubscriptionManager.requestPaths(path$SourceKeys, path$SourceKeys)
   }, [path$SourceKeys, isPaused])

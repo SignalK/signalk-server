@@ -16,6 +16,7 @@ interface SourceGroup {
   source: string
   label: string
   paths: {
+    key: string
     path: string
     value: unknown
     timestamp: string
@@ -41,11 +42,12 @@ const SourceView: React.FC<SourceViewProps> = ({
     const contexts = context === 'all' ? Object.keys(currentData) : [context]
 
     // Collect all entries, grouping by source
+    const isAllContext = context === 'all'
     const bySource = new Map<
       string,
-      { path: string; value: unknown; timestamp: string }[]
+      { key: string; path: string; value: unknown; timestamp: string }[]
     >()
-    // Track which sources provide each path
+    // Track which sources provide each path (context-qualified in "all" mode)
     const pathToSources = new Map<string, Set<string>>()
 
     for (const ctx of contexts) {
@@ -60,15 +62,19 @@ const SourceView: React.FC<SourceViewProps> = ({
           continue
         }
 
+        const qualifiedKey = isAllContext ? `${ctx}:${path}` : path
+
         if (!bySource.has(source)) bySource.set(source, [])
         bySource.get(source)!.push({
+          key: qualifiedKey,
           path,
           value: pathData.value,
           timestamp: pathData.timestamp || ''
         })
 
-        if (!pathToSources.has(path)) pathToSources.set(path, new Set())
-        pathToSources.get(path)!.add(source)
+        if (!pathToSources.has(qualifiedKey))
+          pathToSources.set(qualifiedKey, new Set())
+        pathToSources.get(qualifiedKey)!.add(source)
       }
     }
 
@@ -77,9 +83,9 @@ const SourceView: React.FC<SourceViewProps> = ({
     for (const [source, entries] of bySource) {
       const label = getDisplayName(source, sourcesData)
       const paths = entries
-        .sort((a, b) => a.path.localeCompare(b.path))
+        .sort((a, b) => a.key.localeCompare(b.key))
         .map((entry) => {
-          const others = pathToSources.get(entry.path) || new Set()
+          const others = pathToSources.get(entry.key) || new Set()
           return {
             ...entry,
             otherSources: [...others].filter((s) => s !== source)
@@ -194,7 +200,7 @@ const SourceView: React.FC<SourceViewProps> = ({
               <div style={{ fontSize: '0.8rem' }}>
                 {group.paths.map((entry) => (
                   <div
-                    key={entry.path}
+                    key={entry.key}
                     style={{
                       display: 'grid',
                       gridTemplateColumns: '1fr auto',
