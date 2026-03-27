@@ -565,6 +565,7 @@ class Server {
           intf.stop()
         }
       })
+      ;(this.app as any).containerJobsApi?.stop()
 
       this.app.intervals.forEach((interval) => {
         clearInterval(interval)

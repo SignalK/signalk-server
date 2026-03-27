@@ -89,6 +89,11 @@ export interface Config {
     courseApi?: {
       apiOnly?: boolean
     }
+    containerJobsApi?: {
+      preferredRuntime?: 'podman' | 'docker' | 'auto'
+      maxConcurrentJobs?: number
+      completedJobRetention?: number
+    }
   }
   defaults: object
 }
