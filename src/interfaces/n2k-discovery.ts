@@ -506,16 +506,25 @@ module.exports = (app: N2kDiscoveryApp) => {
       `${SERVERROUTESPREFIX}/n2kChannelLabel`,
       (req: Request, res: Response) => {
         const { sourceRef, pgn, instance, label } = req.body as {
-          sourceRef?: string
-          pgn?: number
-          instance?: number
-          label?: string
+          sourceRef?: unknown
+          pgn?: unknown
+          instance?: unknown
+          label?: unknown
         }
-        if (!sourceRef || pgn === undefined || instance === undefined) {
+        if (
+          typeof sourceRef !== 'string' ||
+          !sourceRef ||
+          typeof pgn !== 'number' ||
+          !Number.isInteger(pgn) ||
+          typeof instance !== 'number' ||
+          !Number.isInteger(instance) ||
+          (label !== undefined && typeof label !== 'string')
+        ) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
-            message: 'sourceRef, pgn, and instance are required'
+            message:
+              'sourceRef: string, pgn: integer, instance: integer required; label: string optional'
           })
           return
         }
@@ -609,10 +618,12 @@ module.exports = (app: N2kDiscoveryApp) => {
           app.deltaCache.removeSourceDelta(key)
         }
 
-        // Remove from knownAddresses and discoveredAddresses
+        // Remove from all address-keyed maps
         for (const addr of addressesToRemove) {
           knownAddresses.delete(addr)
           discoveredAddresses.delete(addr)
+          pgnDataInstances.delete(addr)
+          pgnSourceKeys.delete(addr)
         }
 
         // Clean up source aliases

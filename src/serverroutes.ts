@@ -1211,6 +1211,9 @@ module.exports = function (
     }
   )
 
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/multiSourcePaths`
+  )
   app.get(
     `${SERVERROUTESPREFIX}/multiSourcePaths`,
     (req: Request, res: Response) => {

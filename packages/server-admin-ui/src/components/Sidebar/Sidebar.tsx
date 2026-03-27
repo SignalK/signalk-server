@@ -196,10 +196,10 @@ export default function Sidebar({ location }: SidebarProps) {
         url: '/data',
         icon: 'icon-folder',
         badge:
-          unconfiguredPriorityCount + conflictCount > 0
+          (isAdmin ? unconfiguredPriorityCount : 0) + conflictCount > 0
             ? {
                 variant: 'warning',
-                text: `${unconfiguredPriorityCount + conflictCount}`
+                text: `${(isAdmin ? unconfiguredPriorityCount : 0) + conflictCount}`
               }
             : null,
         children: dataChildren

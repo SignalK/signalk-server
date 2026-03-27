@@ -585,4 +585,24 @@ describe('detectInstanceConflicts', () => {
       detectInstanceConflicts(devices, undefined, pgnSourceKeys)
     ).toHaveLength(1)
   })
+
+  it('no conflict for same deviceInstance on different connections (multi-bus)', () => {
+    const devices: N2kDeviceEntry[] = [
+      makeDevice({
+        sourceRef: 'can0.1',
+        connection: 'can0',
+        src: '1',
+        deviceInstance: 0,
+        pgns: { '127505': '', '130312': '' }
+      }),
+      makeDevice({
+        sourceRef: 'can1.1',
+        connection: 'can1',
+        src: '1',
+        deviceInstance: 0,
+        pgns: { '127505': '', '130312': '' }
+      })
+    ]
+    expect(detectInstanceConflicts(devices)).toHaveLength(0)
+  })
 })
