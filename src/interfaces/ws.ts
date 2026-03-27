@@ -19,11 +19,7 @@ import { Socket } from 'net'
 import Primus from 'primus'
 import WebSocket from 'ws'
 import { getSourceId, getMetadata } from '@signalk/signalk-schema'
-import {
-  requestAccess,
-  InvalidTokenError,
-  WithSecurityStrategy
-} from '../security'
+import { requestAccess, WithSecurityStrategy } from '../security'
 import { WithConfig } from '../app'
 import {
   findRequest,
@@ -33,7 +29,6 @@ import {
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
 import { createDebug } from '../debug'
-import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
 import {
   AccumulatedItem,
@@ -796,15 +791,7 @@ function createPrimusAuthorize(
         req.source = 'ws.' + identifier.replace(/\./g, '_')
       }
     } catch (error) {
-      if (
-        error instanceof InvalidTokenError ||
-        error instanceof JsonWebTokenError ||
-        error instanceof TokenExpiredError
-      ) {
-        authorized(error as Error)
-      } else {
-        authorized()
-      }
+      authorized(error as Error)
     }
   }
 }

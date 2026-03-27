@@ -318,44 +318,20 @@ describe('Security', () => {
     result.status.should.equal(401)
   })
 
-  it('websocket with no token returns only hello', async function () {
-    //send some data semisynchronously, so that there is data in the cache that
-    //should not appear
-    const writePromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
-    )
-    const msg = await writePromiser.nextMsg()
-    JSON.parse(msg)
-    await writePromiser.send(openNavigationDelta)
-
-    const result = new Promise((resolve, reject) => {
+  it('websocket with no token is rejected', async function () {
+    const statusCode = await new Promise((resolve, reject) => {
       const ws = new WebSocket(`ws://0.0.0.0:${port}/signalk/v1/stream`)
-      let msgCount = 0
-      ws.on('message', (msg) => {
-        const msgStr = msg.toString()
-        msgCount++
-        const parsed = JSON.parse(msgStr)
-        if (!parsed.self) {
-          reject(
-            `ws returned non-hello data:${msgStr} with allow_readonly set to false`
-          )
-        }
+      ws.once('unexpected-response', (_req, res) => {
+        resolve(res.statusCode)
+        ws.terminate()
       })
-      ws.on('connect', () => {
-        // send some data now that non-authenticated client is connected
-        writePromiser.send(openNavigationDelta)
+      ws.once('open', () => {
+        ws.terminate()
+        reject(new Error('unauthenticated websocket unexpectedly opened'))
       })
-      setTimeout(() => {
-        if (msgCount > 1) {
-          reject(
-            `ws returned ${msgCount} messages, expected only hello with allow_readonly set to false`
-          )
-        } else {
-          resolve()
-        }
-      }, 100)
+      ws.once('error', reject)
     })
-    return result
+    statusCode.should.equal(401)
   })
 
   it('websocket with mangled token returns 401', async () => {
@@ -887,7 +863,8 @@ describe('WS Access Request IP reporting', () => {
 
   it('without trustProxy setting the ip address reported is not from x-forwarded-for', async function () {
     const securityConfig = {
-      allowDeviceAccessRequests: true
+      allowDeviceAccessRequests: true,
+      allow_readonly: true
     }
     server = await startServerP(port, true, {}, securityConfig)
 
@@ -923,7 +900,8 @@ describe('WS Access Request IP reporting', () => {
 
   it('with trustProxy: true the ip address reported is from x-forwarded-for', async function () {
     const securityConfig = {
-      allowDeviceAccessRequests: true
+      allowDeviceAccessRequests: true,
+      allow_readonly: true
     }
     server = await startServerP(
       port,
