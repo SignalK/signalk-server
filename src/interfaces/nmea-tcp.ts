@@ -13,9 +13,10 @@
  * limitations under the License.
  */
 
-const _ = require('lodash')
-
+import { createServer, Server, Socket } from 'net'
 import { createDebug } from '../debug'
+import { Interface, SignalKServer } from '../types'
+
 const debug = createDebug('signalk-server:interfaces:tcp:nmea0183')
 
 const BUFFER_LIMIT = process.env.BACKPRESSURE_ENTER
@@ -28,41 +29,50 @@ const MAX_BUFFER_TIME = process.env.MAXSENDBUFFERCHECKTIME
   ? parseInt(process.env.MAXSENDBUFFERCHECKTIME, 10)
   : 30 * 1000
 
-module.exports = function (app) {
-  'use strict'
-  const net = require('net')
-  const openSockets = {}
-  const bufferExceededSince = {}
-  let idSequence = 0
-  let server = null
-  const port = Number(process.env.NMEA0183PORT) || 10110
-  const api = {}
+interface SocketWithId extends Socket {
+  id?: number
+  name?: string
+}
 
-  api.start = function () {
+interface NmeaTcpApp extends SignalKServer {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  emit(event: string, ...args: any[]): boolean
+  on(event: string, listener: (...args: string[]) => void): this
+}
+
+module.exports = (app: NmeaTcpApp) => {
+  'use strict'
+  const openSockets: Record<number, SocketWithId> = {}
+  const bufferExceededSince: Record<number, number | undefined> = {}
+  let idSequence = 0
+  let server: Server | null = null
+  const port = Number(process.env.NMEA0183PORT) || 10110
+  const api = new Interface()
+
+  api.start = () => {
     debug('Starting tcp interface')
 
-    server = net.createServer(function (socket) {
+    server = createServer((socket: SocketWithId) => {
       socket.id = idSequence++
       socket.name = socket.remoteAddress + ':' + socket.remotePort
       debug('Connected:' + socket.id + ' ' + socket.name)
       openSockets[socket.id] = socket
-      socket.on('data', (data) => {
+      socket.on('data', (data: Buffer) => {
         app.emit('tcpserver0183data', data.toString())
       })
-      socket.on('end', function () {
-        // client disconnects
+      socket.on('end', () => {
         debug('Ended:' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id]
-        delete bufferExceededSince[socket.id]
+        delete openSockets[socket.id!]
+        delete bufferExceededSince[socket.id!]
       })
-      socket.on('error', function (err) {
+      socket.on('error', (err: Error) => {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id]
-        delete bufferExceededSince[socket.id]
+        delete openSockets[socket.id!]
+        delete bufferExceededSince[socket.id!]
       })
     })
-    const send = (data) => {
-      _.values(openSockets).forEach(function (socket) {
+    const send = (data: string) => {
+      Object.values(openSockets).forEach((socket) => {
         try {
           if (socket.writableLength > BUFFER_LIMIT) {
             debug(
@@ -71,27 +81,27 @@ module.exports = function (app) {
               socket.writableLength
             )
             if (MAX_BUFFER > 0 && socket.writableLength > MAX_BUFFER) {
-              if (!bufferExceededSince[socket.id]) {
+              if (!bufferExceededSince[socket.id!]) {
                 console.warn(
                   `NMEA TCP ${socket.name} buffer exceeded max: ${socket.writableLength}`
                 )
-                bufferExceededSince[socket.id] = Date.now()
+                bufferExceededSince[socket.id!] = Date.now()
               }
               if (
-                Date.now() - bufferExceededSince[socket.id] >
+                Date.now() - bufferExceededSince[socket.id!]! >
                 MAX_BUFFER_TIME
               ) {
                 console.error(
                   'NMEA TCP buffer overflow, terminating ' + socket.name
                 )
                 socket.destroy()
-                delete openSockets[socket.id]
-                delete bufferExceededSince[socket.id]
+                delete openSockets[socket.id!]
+                delete bufferExceededSince[socket.id!]
               }
             }
             return
           }
-          delete bufferExceededSince[socket.id]
+          delete bufferExceededSince[socket.id!]
           socket.write(data + '\r\n')
         } catch (e) {
           console.error(e + ' ' + socket)
@@ -101,15 +111,15 @@ module.exports = function (app) {
     app.signalk.on('nmea0183', send)
     app.on('nmea0183out', send)
     server.on('listening', () =>
-      debug('NMEA0138 tcp server listening on ' + port)
+      debug('NMEA0183 tcp server listening on ' + port)
     )
-    server.on('error', (e) => {
-      console.error(`NMEA0138 tcp server error: ${e.message}`)
+    server.on('error', (e: Error) => {
+      console.error(`NMEA0183 tcp server error: ${e.message}`)
     })
     server.listen(port)
   }
 
-  api.stop = function () {
+  api.stop = () => {
     if (server) {
       server.close()
       server = null
@@ -119,7 +129,7 @@ module.exports = function (app) {
   api.mdns = {
     name: '_nmea-0183',
     type: 'tcp',
-    port: port
+    port
   }
 
   return api
