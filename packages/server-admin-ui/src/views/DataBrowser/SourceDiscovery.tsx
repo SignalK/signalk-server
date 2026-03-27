@@ -303,6 +303,9 @@ const SourceDiscovery: React.FC = () => {
       credentials: 'include'
     })
       .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`Discovery failed: ${res.status}`)
+        }
         const body = await res.json().catch(() => ({}))
         const match = (body.message || '').match(/(\d+) devices/)
         const deviceCount = match ? parseInt(match[1], 10) : 0
@@ -310,8 +313,12 @@ const SourceDiscovery: React.FC = () => {
           ? deviceCount * DISCOVERY_PER_DEVICE_MS + DISCOVERY_BASE_MS
           : DISCOVERY_FALLBACK_MS
       })
-      .catch(() => DISCOVERY_FALLBACK_MS)
+      .catch(() => {
+        setIsDiscovering(false)
+        return -1
+      })
       .then((delayMs) => {
+        if (delayMs < 0) return
         setTimeout(() => {
           Promise.all([loadSources(), loadDeviceStatus()]).finally(() =>
             setIsDiscovering(false)
@@ -439,7 +446,14 @@ const SourceDiscovery: React.FC = () => {
               'Discover Devices'
             )}
           </Button>
-          <Button size="sm" variant="outline-secondary" onClick={loadSources}>
+          <Button
+            size="sm"
+            variant="outline-secondary"
+            onClick={() => {
+              loadSources()
+              loadDeviceStatus()
+            }}
+          >
             Refresh
           </Button>
           <Button size="sm" variant="outline-secondary" onClick={expandAll}>

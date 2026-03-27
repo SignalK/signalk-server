@@ -32,7 +32,7 @@ Sources are ordered by priority — source #1 is preferred over source #2, and s
 
 A source can be **disabled** to block its data entirely for all paths, without removing it from the ranking.
 
-Sources not listed in the ranking are unranked and treated as lowest priority with a default timeout.
+Sources not listed in the ranking are unranked and treated as lowest priority with a default timeout of 120000ms (120 seconds).
 
 ### Example
 

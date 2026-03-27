@@ -35,7 +35,7 @@ How you restart the server will depend on the installation type _(i.e. installed
 
 ## Set up data connections
 
-To get data into Signal K server you will need to configure one or more data connections via the _Server -> Data Connections_ menu option.
+To get data into Signal K server you will need to configure one or more data connections via the _Data -> Data Connections_ menu option.
 
 From this screen you can add connections for various data types including:
 

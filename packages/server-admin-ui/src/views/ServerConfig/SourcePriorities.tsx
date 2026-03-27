@@ -22,6 +22,9 @@ import {
 import { type SourcesData } from '../../utils/sourceLabels'
 import { useSourceAliases } from '../../hooks/useSourceAliases'
 
+const DEFAULT_TIMEOUT_MS = 60000
+const SAVE_FEEDBACK_MS = 5000
+
 // Types
 interface Priority {
   sourceRef: string
@@ -78,7 +81,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
     }
     const hasUnassigned = sourceRefs.some((ref) => !assigned.has(ref))
     if (hasUnassigned) {
-      return [...priorities, { sourceRef: '', timeout: 60000 }]
+      return [...priorities, { sourceRef: '', timeout: DEFAULT_TIMEOUT_MS }]
     }
     return priorities
   }, [priorities, sourceRefs])
@@ -154,7 +157,11 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       pathIndex,
                       index,
                       sourceRef,
-                      e.target.checked ? (index === 0 ? 0 : 60000) : -1
+                      e.target.checked
+                        ? index === 0
+                          ? 0
+                          : DEFAULT_TIMEOUT_MS
+                        : -1
                     )
                   }
                 />
@@ -255,7 +262,7 @@ const SourceRankingSection: React.FC<{
   const handleAdd = useCallback(
     (option: SelectOption | null) => {
       if (option) {
-        addRankedSource(option.value, 60000)
+        addRankedSource(option.value, DEFAULT_TIMEOUT_MS)
       }
     },
     [addRankedSource]
@@ -285,7 +292,7 @@ const SourceRankingSection: React.FC<{
         })
         .catch(() => {
           setRankingSaveFailed()
-          setTimeout(() => clearRankingSaveFailed(), 5000)
+          setTimeout(() => clearRankingSaveFailed(), SAVE_FEEDBACK_MS)
         })
     },
     [
@@ -353,7 +360,11 @@ const SourceRankingSection: React.FC<{
                         onChange={(e) =>
                           changeRankedTimeout(
                             index,
-                            e.target.checked ? (index === 0 ? 0 : 60000) : -1
+                            e.target.checked
+                              ? index === 0
+                                ? 0
+                                : DEFAULT_TIMEOUT_MS
+                              : -1
                           )
                         }
                       />
@@ -560,7 +571,7 @@ const SourcePriorities: React.FC = () => {
         })
         .catch(() => {
           setSaveFailed()
-          setTimeout(() => clearSaveFailed(), 5000)
+          setTimeout(() => clearSaveFailed(), SAVE_FEEDBACK_MS)
         })
     },
     [sourcePriorities, setSaving, setSaved, setSaveFailed, clearSaveFailed]

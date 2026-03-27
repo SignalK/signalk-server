@@ -36,12 +36,10 @@ export function buildProviderTalkerLookups(
   for (const provider of pipedProviders) {
     if (!provider.id || !provider.pipeElements?.[0]?.options) continue
     const options = provider.pipeElements[0].options
-    const subOptions = options.subOptions || options
-    if (
-      subOptions.talkerGroups &&
-      typeof subOptions.talkerGroups === 'object'
-    ) {
-      result.set(provider.id, buildTalkerLookup(subOptions.talkerGroups))
+    const talkerGroups =
+      options.subOptions?.talkerGroups ?? options.talkerGroups
+    if (talkerGroups && typeof talkerGroups === 'object') {
+      result.set(provider.id, buildTalkerLookup(talkerGroups))
     }
   }
   return result

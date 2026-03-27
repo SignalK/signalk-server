@@ -51,7 +51,7 @@ export interface SourcesData {
 export function parseSourceRef(
   sourceRef: string
 ): { connection: string; src: string } | null {
-  const dotIdx = sourceRef.indexOf('.')
+  const dotIdx = sourceRef.lastIndexOf('.')
   if (dotIdx === -1) return null
   return {
     connection: sourceRef.slice(0, dotIdx),

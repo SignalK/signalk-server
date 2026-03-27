@@ -141,7 +141,14 @@ export function useSignalKData() {
                 : timestamp.format(TIMESTAMP_FORMAT)
 
               if (vp.path === '') {
-                Object.keys(vp.value as object).forEach((k) => {
+                if (
+                  typeof vp.value !== 'object' ||
+                  vp.value === null ||
+                  Array.isArray(vp.value)
+                ) {
+                  return
+                }
+                Object.keys(vp.value).forEach((k) => {
                   const path$SourceKey = getPath$SourceKey(k, update.$source)
                   const pathData: PathData = {
                     path: k,

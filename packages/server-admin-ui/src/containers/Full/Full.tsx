@@ -152,7 +152,6 @@ export default function Full() {
                   <ProtectedRoute component={Embedded} supportsReadOnly />
                 }
               />
-              {/* Data menu routes */}
               <Route
                 path="/data/browser"
                 element={
@@ -184,9 +183,7 @@ export default function Full() {
               />
               <Route
                 path="/data/fiddler"
-                element={
-                  <ProtectedRoute component={Playground} supportsReadOnly />
-                }
+                element={<ProtectedRoute component={Playground} />}
               />
               <Route
                 path="/data/connections/:providerId"

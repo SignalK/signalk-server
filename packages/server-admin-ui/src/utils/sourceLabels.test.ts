@@ -60,10 +60,10 @@ describe('parseSourceRef', () => {
     })
   })
 
-  it('splits on first dot only (connection names do not contain dots)', () => {
+  it('splits on last dot to handle dotted connection names', () => {
     expect(parseSourceRef('some.host.99')).toEqual({
-      connection: 'some',
-      src: 'host.99'
+      connection: 'some.host',
+      src: '99'
     })
   })
 
