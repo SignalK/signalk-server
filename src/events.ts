@@ -77,6 +77,19 @@ export function startServerEvents(
     type: 'SOURCEPRIORITIES',
     data: app.config.settings.sourcePriorities || {}
   })
+  spark.write({
+    type: 'SOURCERANKING',
+    data: app.config.settings.sourceRanking || []
+  })
+  spark.write({
+    type: 'SOURCEALIASES',
+    data: app.config.settings.sourceAliases || {}
+  })
+  const multiSourcePaths = app.deltaCache.getMultiSourcePaths()
+  spark.write({
+    type: 'MULTISOURCEPATHS',
+    data: multiSourcePaths
+  })
 }
 
 type Handler = (...args: any[]) => void

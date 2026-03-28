@@ -1,0 +1,46 @@
+export interface TalkerGroups {
+  [groupName: string]: string[]
+}
+
+// Reverse lookup: talker ID → group name
+export type TalkerLookup = Map<string, string>
+
+interface PipeElementOptions {
+  subOptions?: { talkerGroups?: TalkerGroups; [key: string]: unknown }
+  talkerGroups?: TalkerGroups
+  [key: string]: unknown
+}
+
+interface PipedProviderConfig {
+  id?: string
+  pipeElements?: Array<{ options?: PipeElementOptions }>
+  [key: string]: unknown
+}
+
+export function buildTalkerLookup(groups: TalkerGroups): TalkerLookup {
+  const lookup = new Map<string, string>()
+  for (const [groupName, talkers] of Object.entries(groups)) {
+    for (const talker of talkers) {
+      lookup.set(talker, groupName)
+    }
+  }
+  return lookup
+}
+
+export function buildProviderTalkerLookups(
+  pipedProviders: PipedProviderConfig[]
+): Map<string, TalkerLookup> {
+  const result = new Map<string, TalkerLookup>()
+  if (!Array.isArray(pipedProviders)) return result
+
+  for (const provider of pipedProviders) {
+    if (!provider.id || !provider.pipeElements?.[0]?.options) continue
+    const options = provider.pipeElements[0].options
+    const talkerGroups =
+      options.subOptions?.talkerGroups ?? options.talkerGroups
+    if (talkerGroups && typeof talkerGroups === 'object') {
+      result.set(provider.id, buildTalkerLookup(talkerGroups))
+    }
+  }
+  return result
+}
