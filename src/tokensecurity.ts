@@ -1562,6 +1562,27 @@ function tokenSecurityFactory(
     return principal
   }
 
+  function sanitizeLogField(value: unknown): string {
+    return typeof value === 'string'
+      ? value.replace(/[\r\n\t]/g, ' ').slice(0, 128)
+      : 'unknown'
+  }
+
+  function logUnknownUser(jwtPayload: JWTPayload): void {
+    const identity = sanitizeLogField(jwtPayload.id ?? jwtPayload.device)
+    console.warn(`unknown user: ${identity}`)
+  }
+
+  function logBadToken(token: string, path: string, err: Error): void {
+    // jwt.decode returns null instead of throwing when the token is malformed
+    const payload = jwt.decode(token) as JWTPayload | null
+    const id = sanitizeLogField(payload?.id)
+    const device = sanitizeLogField(payload?.device)
+    console.warn(
+      `bad token: ${err.message} (user: ${id}, device: ${device}, path: ${path})`
+    )
+  }
+
   function http_authorize(
     redirect: boolean,
     forLoginStatus?: boolean
@@ -1617,16 +1638,19 @@ function tokenSecurityFactory(
                 next()
                 return
               } else {
-                const jwtPayload = decoded as JWTPayload
-                debug('unknown user: ' + (jwtPayload.id || jwtPayload.device))
+                logUnknownUser(decoded as JWTPayload)
               }
             } else {
-              debug(`bad token: ${err.message} ${req.path}`)
+              logBadToken(token, req.path, err)
             }
 
             // Token was provided but is invalid/revoked — always reject.
             // allow_readonly only applies when no token is provided at all.
-            res.clearCookie('JAUTHENTICATION')
+            console.warn(
+              'force clearing invalid/revoked auth cookie for %s',
+              req.path
+            )
+            clearSessionCookie(res)
             if (forLoginStatus) {
               skReq.skIsAuthenticated = false
               return next()
