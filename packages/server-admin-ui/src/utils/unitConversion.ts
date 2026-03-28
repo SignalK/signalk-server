@@ -46,7 +46,8 @@ export function convertValue(
   siUnit: string,
   category: string,
   presetDetails: PresetDetails | null,
-  unitDefinitions: UnitDefinitions | null
+  unitDefinitions: UnitDefinitions | null,
+  displayUnits?: { targetUnit?: string; formula?: string; symbol?: string }
 ): ConvertedValue | null {
   if (typeof value !== 'number' || !category) {
     return null
@@ -54,6 +55,19 @@ export function convertValue(
   // "base" category means display in SI units without conversion
   if (category === 'base' && siUnit) {
     return { value, unit: siUnit }
+  }
+  // "custom" category uses explicitly stored formula/targetUnit
+  if (category === 'custom' && displayUnits?.formula) {
+    try {
+      const compiled = getCompiledFormula(displayUnits.formula)
+      const converted = compiled.evaluate({ value })
+      return {
+        value: converted,
+        unit: displayUnits.symbol || displayUnits.targetUnit || ''
+      }
+    } catch {
+      return null
+    }
   }
   if (!presetDetails || !unitDefinitions) {
     return null

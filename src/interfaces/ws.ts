@@ -41,7 +41,11 @@ import {
   buildFlushDeltas
 } from '../LatestValuesAccumulator'
 import { getExternalPort } from '../ports'
-import { resolveDisplayUnits, getDefaultCategory } from '../unitpreferences'
+import {
+  resolveDisplayUnits,
+  getDefaultCategory,
+  DisplayUnitsMetadata
+} from '../unitpreferences'
 import { Delta, hasValues } from '@signalk/server-api'
 
 const debug = createDebug('signalk-server:interfaces:ws')
@@ -900,15 +904,18 @@ function handleValuesMeta(
         break
       } else {
         this.spark.sentMetaData[partialContextPathKey] = true
-        let meta = getMetadata(partialContextPathKey) as Record<
+        const meta = getMetadata(partialContextPathKey) as Record<
           string,
           unknown
         > | null
         if (meta) {
           // Clone and enhance metadata with displayUnits formulas
-          meta = JSON.parse(JSON.stringify(meta))
-          let storedDisplayUnits = (meta as Record<string, unknown>)
-            .displayUnits as { category?: string } | undefined
+          const metaClone: Record<string, unknown> = JSON.parse(
+            JSON.stringify(meta)
+          )
+          let storedDisplayUnits = metaClone.displayUnits as
+            | Record<string, unknown>
+            | undefined
           if (!storedDisplayUnits?.category && path) {
             const defaultCategory = getDefaultCategory(path)
             if (defaultCategory) {
@@ -918,12 +925,19 @@ function handleValuesMeta(
           if (storedDisplayUnits?.category) {
             const username = this.spark.request.skPrincipal?.identifier
             const enhanced = resolveDisplayUnits(
-              { category: storedDisplayUnits.category },
-              (meta as Record<string, unknown>).units as string | undefined,
+              storedDisplayUnits as {
+                category: string
+                targetUnit?: string
+                formula?: string
+                inverseFormula?: string
+                symbol?: string
+                displayFormat?: string
+              },
+              metaClone.units as string | undefined,
               username
             )
             if (enhanced) {
-              ;(meta as Record<string, unknown>).displayUnits = enhanced
+              metaClone.displayUnits = enhanced
             }
           }
           this.spark.write({
@@ -934,7 +948,7 @@ function handleValuesMeta(
                 meta: [
                   {
                     path: path,
-                    value: meta
+                    value: metaClone
                   }
                 ]
               }
@@ -1157,12 +1171,13 @@ function handleRealtimeConnection(
           const fullPath = 'vessels.self.' + path
           const pathMeta =
             (getMetadata(fullPath) as Record<string, unknown>) || {}
-          const category =
-            (pathMeta.displayUnits as { category?: string } | undefined)
-              ?.category || getDefaultCategory(path)
+          const storedDU = pathMeta.displayUnits as
+            | DisplayUnitsMetadata
+            | undefined
+          const category = storedDU?.category || getDefaultCategory(path)
           if (category) {
             const displayUnits = resolveDisplayUnits(
-              { category },
+              { ...storedDU, category },
               pathMeta.units as string | undefined,
               username
             )

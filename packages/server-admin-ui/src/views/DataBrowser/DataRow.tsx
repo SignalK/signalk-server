@@ -130,6 +130,16 @@ function DataRow({
     category = findCategoryForPath(data.path, defaultCategories) ?? undefined
   }
 
+  const displayUnits =
+    (meta as Record<string, unknown> | null)?.displayUnits &&
+    typeof (meta as Record<string, unknown>).displayUnits === 'object'
+      ? ((meta as Record<string, unknown>).displayUnits as {
+          targetUnit?: string
+          formula?: string
+          symbol?: string
+        })
+      : undefined
+
   let convertedValue: number | null = null
   let convertedUnit: string | null = null
   if (category && typeof data.value === 'number') {
@@ -138,7 +148,8 @@ function DataRow({
       units,
       category,
       presetDetails,
-      unitDefinitions
+      unitDefinitions,
+      displayUnits
     )
     if (converted && converted.unit !== units) {
       convertedValue = converted.value
