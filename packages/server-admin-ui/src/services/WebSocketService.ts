@@ -257,6 +257,15 @@ export class WebSocketService {
             .setVesselInfo(data as Parameters<SignalKStore['setVesselInfo']>[0])
         })
         break
+      case 'SOURCEPRIORITIES':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setSourcePriorities(
+              data as Parameters<SignalKStore['setSourcePriorities']>[0]
+            )
+        })
+        break
       case 'RECEIVE_APPSTORE_LIST':
       case 'APP_STORE_CHANGED':
         // Dynamic import avoids circular dependency with store
