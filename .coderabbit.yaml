@@ -9,7 +9,7 @@ reviews:
     Write all summaries in present tense.
     Describe what the code does, not what it did.
     Example: "This PR adds feature X" instead of "This PR added feature X"
-    
+
   path_instructions:
     - path: '**/*'
       instructions: |
