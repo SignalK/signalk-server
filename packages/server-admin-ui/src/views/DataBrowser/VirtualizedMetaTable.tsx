@@ -25,8 +25,9 @@ const MetaRow = memo(function MetaRow({
     >
       <Meta
         meta={meta || {}}
-        path={showContext ? `${ctx}: ${path}` : path}
+        path={path}
         context={ctx}
+        showContext={showContext}
       />
     </div>
   )
