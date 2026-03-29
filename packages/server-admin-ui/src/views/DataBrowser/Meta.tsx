@@ -82,6 +82,7 @@ interface MetaProps {
   meta: MetaData
   path: string
   context?: string
+  showContext?: boolean
 }
 
 interface MetaFormRowProps {
@@ -601,7 +602,7 @@ const saveMeta = (path: string, meta: MetaData) => {
   })
 }
 
-const Meta: React.FC<MetaProps> = ({ meta, path, context }) => {
+const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   const loginStatus = useLoginStatus()
   const presetDetails = usePresetDetails()
   const unitDefinitions = useUnitDefinitions()
@@ -736,7 +737,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context }) => {
           }}
         >
           <strong style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
-            {path}
+            {showContext && context ? `${context}: ${path}` : path}
           </strong>
           {category && (
             <Badge
