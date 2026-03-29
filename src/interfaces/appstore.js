@@ -405,10 +405,12 @@ module.exports = function (app) {
   }
 
   function removeSKModule(module) {
-    updateSKModule(module, null, true)
+    const plugin = getPlugin(module)
+    const pluginId = plugin ? plugin.id : undefined
+    updateSKModule(module, null, true, pluginId)
   }
 
-  function updateSKModule(module, version, isRemove) {
+  function updateSKModule(module, version, isRemove, pluginId) {
     moduleInstalling = {
       name: module,
       output: [],
@@ -419,38 +421,49 @@ module.exports = function (app) {
 
     sendAppStoreChangedEvent()
 
-    const fn = isRemove ? removeModule : installModule
+    const onData = (output) => {
+      modulesInstalledSinceStartup[module].output.push(output)
+      console.log(`stdout: ${output}`)
+    }
+    const onErr = (output) => {
+      modulesInstalledSinceStartup[module].output.push(output)
+      console.error(`stderr: ${output}`)
+    }
+    const onClose = (code) => {
+      debug('close: ' + module)
+      modulesInstalledSinceStartup[module].code = code
+      moduleInstalling = undefined
+      debug(`child process exited with code ${code}`)
 
-    fn(
-      app.config,
-      module,
-      version,
-      (output) => {
-        modulesInstalledSinceStartup[module].output.push(output)
-        console.log(`stdout: ${output}`)
-      },
-      (output) => {
-        modulesInstalledSinceStartup[module].output.push(output)
-        console.error(`stderr: ${output}`)
-      },
-      (code) => {
-        debug('close: ' + module)
-        modulesInstalledSinceStartup[module].code = code
-        moduleInstalling = undefined
-        debug(`child process exited with code ${code}`)
-
-        if (moduleInstallQueue.length) {
-          const next = moduleInstallQueue.splice(0, 1)[0]
-          if (next.isRemove) {
-            removeSKModule(next.name)
-          } else {
-            installSKModule(next.name, next.version)
-          }
-        }
-
-        sendAppStoreChangedEvent()
+      if (isRemove && pluginId) {
+        delete app.providerStatus[pluginId]
       }
-    )
+
+      if (moduleInstallQueue.length) {
+        const next = moduleInstallQueue.splice(0, 1)[0]
+        if (next.isRemove) {
+          removeSKModule(next.name)
+        } else {
+          installSKModule(next.name, next.version)
+        }
+      }
+
+      sendAppStoreChangedEvent()
+    }
+
+    if (isRemove) {
+      removeModule(
+        app.config,
+        module,
+        version,
+        onData,
+        onErr,
+        onClose,
+        pluginId
+      )
+    } else {
+      installModule(app.config, module, version, onData, onErr, onClose)
+    }
   }
 }
 

@@ -20,8 +20,10 @@ import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import semver, { SemVer } from 'semver'
+import { atomicWriteFileSync } from './atomicWrite'
 import { Config } from './config/config'
 import { createDebug } from './debug'
+import { pluginConfigPath, pluginDataDir } from './plugin-paths'
 const debug = createDebug('signalk:modules')
 const npmDebug = createDebug('signalk:modules:npm')
 
@@ -173,9 +175,74 @@ function removeModule(
   version: any,
   onData: () => any,
   onErr: (err: Error) => any,
-  onClose: (code: number) => any
+  onClose: (code: number) => any,
+  pluginId?: string
 ) {
-  runNpm(config, name, null, 'remove', onData, onErr, onClose)
+  runNpm(config, name, null, 'remove', onData, onErr, (code: number) => {
+    cleanupAfterRemove(config.configPath, name, pluginId)
+    onClose(code)
+  })
+}
+
+function cleanupAfterRemove(
+  configPath: string,
+  packageName: string,
+  pluginId?: string
+) {
+  const moduleDir = path.join(configPath, 'node_modules', packageName)
+  if (fs.existsSync(moduleDir)) {
+    console.warn(
+      `${packageName}: directory still exists after npm remove, cleaning up`
+    )
+    try {
+      fs.rmSync(moduleDir, { recursive: true, force: true })
+    } catch (e: any) {
+      console.error(`Failed to remove ${moduleDir}: ${e.message}`)
+    }
+  }
+
+  const resolvedDir = path.resolve(moduleDir)
+  for (const key of Object.keys(require.cache)) {
+    if (key.startsWith(resolvedDir)) {
+      delete require.cache[key]
+    }
+  }
+
+  const packageJsonPath = path.join(configPath, 'package.json')
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
+      if (packageJson.dependencies && packageJson.dependencies[packageName]) {
+        delete packageJson.dependencies[packageName]
+        atomicWriteFileSync(
+          packageJsonPath,
+          JSON.stringify(packageJson, null, 2) + '\n'
+        )
+        console.warn(`${packageName}: removed from settings package.json`)
+      }
+    } catch (e: any) {
+      console.error(`Failed to update settings package.json: ${e.message}`)
+    }
+  }
+
+  if (pluginId) {
+    const configFile = pluginConfigPath(configPath, pluginId)
+    if (fs.existsSync(configFile)) {
+      try {
+        fs.unlinkSync(configFile)
+      } catch (e: any) {
+        console.error(`Failed to remove ${configFile}: ${e.message}`)
+      }
+    }
+    const dataDir = pluginDataDir(configPath, pluginId)
+    if (fs.existsSync(dataDir)) {
+      try {
+        fs.rmSync(dataDir, { recursive: true, force: true })
+      } catch (e: any) {
+        console.error(`Failed to remove ${dataDir}: ${e.message}`)
+      }
+    }
+  }
 }
 
 export function restoreModules(
