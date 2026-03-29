@@ -39,7 +39,7 @@ import { Store } from '../../serverstate/store'
 
 import { buildSchemaSync } from 'api-schema-builder'
 import { courseApiDoc } from './openApi'
-import { ResourcesApi } from '../resources'
+import { ResourceApi } from '../resources'
 import { ConfigApp, writeSettingsFile } from '../../config/config'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseApiDoc)
@@ -89,7 +89,7 @@ export class CourseApi {
 
   constructor(
     private app: CourseApplication,
-    private resourcesApi: ResourcesApi
+    private resourcesApi: ResourceApi
   ) {
     this.store = new Store(app, 'course')
     this.parseSettings()

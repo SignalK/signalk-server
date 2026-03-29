@@ -112,9 +112,24 @@ export type ContextsRequestQueryParams = TimeRangeQueryParams
 export type ContextsResponse = Context[]
 
 /** @category  History API */
-export type HistoryProviderRegistry = {
-  registerHistoryApiProvider(provider: HistoryProvider): void
-  unregisterHistoryApiProvider(): void
+export interface HistoryProviderRegistry {
+  /** Register a v2 History API provider. */
+  registerHistoryProvider(provider: HistoryProvider): void
+  /** @internal Register a v1 legacy history provider. */
+  registerHistoryProvider(provider: {
+    hasAnydata: (options: object, cb: (hasResults: boolean) => void) => void
+    getHistory: (
+      date: Date,
+      path: string,
+      cb: (deltas: object[]) => void
+    ) => void
+    streamHistory: (
+      spark: unknown,
+      options: object,
+      onDelta: (delta: object) => void
+    ) => void
+  }): void
+  unregisterHistoryProvider(): void
 }
 
 /**
@@ -141,7 +156,7 @@ export type WithHistoryApi = {
  * Provider interface for the History API.
  *
  * Plugins that supply historical data implement this interface and register
- * it via {@link HistoryProviderRegistry.registerHistoryApiProvider}.
+ * it via {@link HistoryProviderRegistry.registerHistoryProvider}.
  *
  * @category  History API
  */
