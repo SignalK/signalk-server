@@ -1534,6 +1534,12 @@ function tokenSecurityFactory(
     return principal
   }
 
+  function sanitizeLogField(value: unknown): string {
+    return typeof value === 'string'
+      ? value.replace(/[\r\n\t]/g, ' ').slice(0, 128)
+      : 'unknown'
+  }
+
   function http_authorize(
     redirect: boolean,
     forLoginStatus?: boolean
@@ -1590,10 +1596,19 @@ function tokenSecurityFactory(
                 return
               } else {
                 const jwtPayload = decoded as JWTPayload
-                debug('unknown user: ' + (jwtPayload.id || jwtPayload.device))
+                const identity = sanitizeLogField(
+                  jwtPayload.id ?? jwtPayload.device
+                )
+                console.log(`unknown user: ${identity}`)
               }
             } else {
-              debug(`bad token: ${err.message} ${req.path}`)
+              // jwt.decode returns null instead of throwing when the token is malformed
+              const payload = jwt.decode(token) as JWTPayload | null
+              const id = sanitizeLogField(payload?.id)
+              const device = sanitizeLogField(payload?.device)
+              console.log(
+                `bad token, clearing auth cookie: ${err.message} (user: ${id}, device: ${device}, path: ${req.path})`
+              )
             }
 
             // Token was provided but is invalid/revoked — always reject.
