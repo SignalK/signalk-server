@@ -175,9 +175,13 @@ function removeModule(
   version: any,
   onData: () => any,
   onErr: (err: Error) => any,
-  onClose: (code: number) => any
+  onClose: (code: number) => any,
+  pluginId?: string
 ) {
-  runNpm(config, name, null, 'remove', onData, onErr, onClose)
+  runNpm(config, name, null, 'remove', onData, onErr, (code: number) => {
+    cleanupAfterRemove(config.configPath, name, pluginId)
+    onClose(code)
+  })
 }
 
 function cleanupAfterRemove(
@@ -525,7 +529,6 @@ module.exports = {
   modulesWithKeyword,
   installModule,
   removeModule,
-  cleanupAfterRemove,
   isTheServerModule,
   findModulesWithKeyword,
   fetchDistTagsForPackages,
