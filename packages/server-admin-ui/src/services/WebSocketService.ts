@@ -9,6 +9,7 @@ export type WebSocketStatus =
 
 export type DeltaMessageHandler = (message: unknown) => void
 export type StatusChangeHandler = (status: WebSocketStatus) => void
+export type ServerEventHandler = (data: unknown) => void
 
 interface WebSocketServiceState {
   status: WebSocketStatus
@@ -33,6 +34,7 @@ export class WebSocketService {
   private listeners = new Set<Listener>()
   private deltaHandlers = new Set<DeltaMessageHandler>()
   private statusHandlers = new Set<StatusChangeHandler>()
+  private serverEventHandlers = new Map<string, Set<ServerEventHandler>>()
   private reconnectTimer: ReturnType<typeof setInterval> | null = null
   private reconnectAttempts = 0
   private maxReconnectAttempts = Infinity
@@ -146,6 +148,24 @@ export class WebSocketService {
     this.statusHandlers.add(handler)
     return () => {
       this.statusHandlers.delete(handler)
+    }
+  }
+
+  addServerEventHandler(
+    eventType: string,
+    handler: ServerEventHandler
+  ): () => void {
+    let handlers = this.serverEventHandlers.get(eventType)
+    if (!handlers) {
+      handlers = new Set()
+      this.serverEventHandlers.set(eventType, handlers)
+    }
+    handlers.add(handler)
+    return () => {
+      handlers!.delete(handler)
+      if (handlers!.size === 0) {
+        this.serverEventHandlers.delete(eventType)
+      }
     }
   }
 
@@ -277,6 +297,17 @@ export class WebSocketService {
         break
       default:
         console.debug('Unhandled server event:', eventType)
+    }
+
+    const handlers = this.serverEventHandlers.get(eventType)
+    if (handlers) {
+      handlers.forEach((handler) => {
+        try {
+          handler(data)
+        } catch (e) {
+          console.error('Server event handler error:', e)
+        }
+      })
     }
   }
 

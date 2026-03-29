@@ -2,6 +2,24 @@ import { IRouter } from 'express'
 import { ServerAPI } from './serverapi'
 
 /**
+ * Declares the permission level required to access a plugin HTTP route.
+ * Plugins that implement {@link Plugin.getRoutePermissions} can open specific
+ * routes to non-admin principals (e.g. authenticated devices).
+ *
+ * Routes not listed default to admin-only access.
+ *
+ * @category Rest API
+ */
+export interface RoutePermission {
+  /** HTTP method (GET, POST, PUT, DELETE) or '*' for all methods */
+  method: string
+  /** Path relative to the plugin's mount point (e.g. '/status', '/data/*') */
+  path: string
+  /** Required permission level */
+  permission: 'admin' | 'readwrite' | 'readonly' | 'authenticated'
+}
+
+/**
  * A plugin constructor is the interface that all plugins must export.
  * It is called by the server when the server is starting up.
  *  @category Server API
@@ -178,6 +196,15 @@ export interface Plugin {
   registerWithRouter?(router: IRouter): void
 
   getOpenApi?: () => object
+
+  /**
+   * Declares which plugin routes should be accessible to non-admin principals.
+   * Routes not listed remain admin-only (the server default).
+   *
+   * @category Rest API
+   * @returns Array of route permission declarations
+   */
+  getRoutePermissions?: () => RoutePermission[]
 
   statusMessage?: () => string | void
 

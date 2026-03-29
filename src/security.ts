@@ -17,6 +17,7 @@
 
 import { Request, Response } from 'express'
 import { PartialOIDCConfig } from './oidc/types'
+import { DeviceTracker } from './deviceTracker'
 import {
   chmodSync,
   existsSync,
@@ -48,6 +49,10 @@ export interface LoginStatusResponse {
   allowDeviceAccessRequests?: boolean
   userLevel?: any
   username?: string
+  principalType?: 'user' | 'device'
+  deviceId?: string
+  deviceName?: string
+  deviceDashboard?: DeviceDashboard
 }
 
 export interface ACL {
@@ -104,6 +109,19 @@ export interface UserWithPassword {
   password: string
 }
 
+export interface DeviceRegistrationInfo {
+  sourceIp?: string
+  deviceId?: string
+  firmwareVersion?: string
+  userAgent?: string
+}
+
+export interface DeviceDashboard {
+  mode: 'redirect' | 'metadata'
+  url?: string
+  metadata?: Record<string, unknown>
+}
+
 export interface Device {
   clientId: string
   permissions: string
@@ -111,11 +129,17 @@ export interface Device {
   description: string
   requestedPermissions: string
   tokenExpiry?: number
+  displayName?: string
+  createdAt?: string
+  registrationInfo?: DeviceRegistrationInfo
+  dashboard?: DeviceDashboard
 }
 
 export interface DeviceDataUpdate {
   permissions?: string
   description?: string
+  displayName?: string
+  dashboard?: DeviceDashboard
 }
 
 export interface OIDCSecurityConfig {
@@ -189,6 +213,26 @@ export interface SecurityStrategy {
     cb: ICallback<SecurityConfig>
   ) => void
 
+  createDevice: (
+    theConfig: SecurityConfig,
+    device: {
+      displayName: string
+      permissions: string
+      expiration?: string
+      dashboard?: DeviceDashboard
+    },
+    cb: (
+      err: Error | null,
+      config?: SecurityConfig,
+      result?: { clientId: string; token: string }
+    ) => void
+  ) => void
+
+  generateDeviceToken: (
+    theConfig: SecurityConfig,
+    clientId: string
+  ) => string | null
+
   generateToken: (
     req: Request,
     res: Response,
@@ -233,6 +277,15 @@ export interface SecurityStrategy {
   addAdminWriteMiddleware: (path: string) => void
   addWriteMiddleware: (path: string) => void
 
+  registerPluginRoutePermissions?: (
+    pluginId: string,
+    permissions: Array<{
+      method: string
+      path: string
+      permission: 'admin' | 'readwrite' | 'readonly' | 'authenticated'
+    }>
+  ) => void
+
   /** Update OIDC config in memory (optional - only available when token security is active) */
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
 }
@@ -272,6 +325,14 @@ export function startSecurity(
       app.securityStrategy.configFromArguments = true
       app.securityStrategy.securityConfig = securityConfig
     }
+
+    const appWithTracker = app as WithSecurityStrategy &
+      WithConfig & { deviceTracker?: DeviceTracker }
+    appWithTracker.deviceTracker = new DeviceTracker((event) => {
+      if (typeof (app as any).emit === 'function') {
+        ;(app as any).emit('serverAdminEvent', event)
+      }
+    })
   } else {
     app.securityStrategy = dummysecurity()
   }
