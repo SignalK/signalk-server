@@ -19,10 +19,7 @@ const debug = createDebug('signalk-server:interfaces:appstore')
 const _ = require('lodash')
 const semver = require('semver')
 const { gt } = semver
-const {
-  installModule,
-  removeModule
-} = require('../modules')
+const { installModule, removeModule } = require('../modules')
 const {
   isTheServerModule,
   findModulesWithKeyword,
@@ -455,7 +452,15 @@ module.exports = function (app) {
     }
 
     if (isRemove) {
-      removeModule(app.config, module, version, onData, onErr, onClose, pluginId)
+      removeModule(
+        app.config,
+        module,
+        version,
+        onData,
+        onErr,
+        onClose,
+        pluginId
+      )
     } else {
       installModule(app.config, module, version, onData, onErr, onClose)
     }
