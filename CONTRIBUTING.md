@@ -113,6 +113,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
    - Don't include too much detail, like the exact changed lines or a version you tested the change with unless there is specific reason to do so. If the change is not directly related to a version adding a version is misleading. Git shows what's changed and extra content in PR description is just double work for maintainers to read, unless there is something that rquires attention.
 
 1. Wait for labeling and review
+   - PRs are automatically reviewed by [CodeRabbit](https://coderabbit.ai/). Address any comments it raises. Once you are done addressing CodeRabbit's feedback, add a comment **"Ready for human review"** to signal that the PR is ready for maintainer review.
    - The maintainers will apply a label to the PR. The label is used to group PRs, mainly to distinguish fixes and new features.
    - If we require changes to your PR we expect you to:
    - Implement the agreed changes.
