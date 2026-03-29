@@ -55,17 +55,5 @@
   },
   "courseApi": {
     "apiOnly": false
-  },
-  "sourcePriorities": {
-    "electrical.batteries.1.temperature": [
-      {
-        "sourceRef": "foos",
-        "timeout": ""
-      },
-      {
-        "sourceRef": "bars",
-        "timeout": "1000"
-      }
-    ]
   }
 }
