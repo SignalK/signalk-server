@@ -99,10 +99,15 @@ export async function enableSecurity(
   return null
 }
 
-export async function disableSecurity(): Promise<string | null> {
+export async function disableSecurity(
+  username: string,
+  password: string
+): Promise<string | null> {
   const response = await fetch(`${window.serverRoutesPrefix}/disableSecurity`, {
     method: 'POST',
-    credentials: 'include'
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ username, password })
   })
   const text = await response.text()
   if (response.status !== 200) {

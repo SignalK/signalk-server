@@ -4,11 +4,16 @@ import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
+import InputGroup from 'react-bootstrap/InputGroup'
+import Modal from 'react-bootstrap/Modal'
 import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
+import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faShieldHalved } from '@fortawesome/free-solid-svg-icons/faShieldHalved'
+import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
+import { faUser } from '@fortawesome/free-solid-svg-icons/faUser'
 import EnableSecurity from './EnableSecurity'
 import OIDCSettings from './OIDCSettings'
 import { disableSecurity } from '../../actions'
@@ -258,43 +263,116 @@ export default function Settings() {
             </Card.Footer>
           </Card>
           <OIDCSettings />
-          <Card className="mt-3">
-            <Card.Header>
-              <FontAwesomeIcon icon={faShieldHalved} /> Disable Security
-            </Card.Header>
-            <Card.Body>
-              <p className="text-muted">
-                Disabling security removes all authentication requirements. Your
-                security configuration (users, devices) will be backed up and
-                can be restored when re-enabling security.
-              </p>
-              <Button
-                size="sm"
-                variant="danger"
-                onClick={async () => {
-                  if (
-                    !window.confirm(
-                      'Are you sure you want to disable security? The server will need to be restarted.'
-                    )
-                  ) {
-                    return
-                  }
-                  const error = await disableSecurity()
-                  if (error) {
-                    alert(error)
-                  } else {
-                    alert(
-                      'Security disabled. Please restart the server for changes to take effect.'
-                    )
-                  }
-                }}
-              >
-                <FontAwesomeIcon icon={faShieldHalved} /> Disable Security
-              </Button>
-            </Card.Body>
-          </Card>
+          <DisableSecurity />
         </div>
       )}
     </div>
+  )
+}
+
+function DisableSecurity() {
+  const [showModal, setShowModal] = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isDisabling, setIsDisabling] = useState(false)
+
+  const handleClose = () => {
+    setShowModal(false)
+    setUsername('')
+    setPassword('')
+    setError(null)
+  }
+
+  const handleSubmit = async () => {
+    setIsDisabling(true)
+    setError(null)
+    const result = await disableSecurity(username, password)
+    setIsDisabling(false)
+    if (result) {
+      setError(result)
+    } else {
+      handleClose()
+      alert(
+        'Security disabled. Please restart the server for changes to take effect.'
+      )
+    }
+  }
+
+  return (
+    <>
+      <Card className="mt-3">
+        <Card.Header>
+          <FontAwesomeIcon icon={faShieldHalved} /> Disable Security
+        </Card.Header>
+        <Card.Body>
+          <p className="text-muted">
+            Disabling security removes all authentication requirements. Your
+            security configuration (users, devices) will be backed up and can be
+            restored when re-enabling security.
+          </p>
+          <Button size="sm" variant="danger" onClick={() => setShowModal(true)}>
+            <FontAwesomeIcon icon={faShieldHalved} /> Disable Security
+          </Button>
+        </Card.Body>
+      </Card>
+      <Modal show={showModal} onHide={handleClose} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Disable Security</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-muted">
+            Enter your admin credentials to confirm disabling security. The
+            server will need to be restarted.
+          </p>
+          <InputGroup className="mb-3">
+            <InputGroup.Text>
+              <FontAwesomeIcon icon={faUser} />
+            </InputGroup.Text>
+            <Form.Control
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setUsername(e.target.value)
+              }
+              onKeyUp={(e) => e.key === 'Enter' && handleSubmit()}
+              autoFocus
+            />
+          </InputGroup>
+          <InputGroup className="mb-3">
+            <InputGroup.Text>
+              <FontAwesomeIcon icon={faLock} />
+            </InputGroup.Text>
+            <Form.Control
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setPassword(e.target.value)
+              }
+              onKeyUp={(e) => e.key === 'Enter' && handleSubmit()}
+            />
+          </InputGroup>
+          {error && <p className="text-danger">{error}</p>}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleSubmit}
+            disabled={isDisabling || !username || !password}
+          >
+            <FontAwesomeIcon
+              icon={isDisabling ? faSpinner : faShieldHalved}
+              spin={isDisabling}
+            />{' '}
+            Disable Security
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   )
 }

@@ -235,6 +235,12 @@ export interface SecurityStrategy {
 
   /** Update OIDC config in memory (optional - only available when token security is active) */
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
+
+  /** Verify credentials (optional - only available when token security is active) */
+  login?: (
+    username: string,
+    password: string
+  ) => Promise<{ statusCode: number }>
 }
 
 export class InvalidTokenError extends Error {

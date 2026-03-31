@@ -823,28 +823,49 @@ module.exports = function (
         res.status(401).send('Disable security not allowed')
         return
       }
-      const securityConfigPath = pathForSecurityConfig(app)
-      const backupPath = securityConfigPath + '.disabled'
-      try {
-        if (fs.existsSync(securityConfigPath)) {
-          fs.renameSync(securityConfigPath, backupPath)
-        }
-        delete app.config.settings.security
-        writeSettingsFile(app, app.config.settings, (err: Error) => {
-          if (err) {
-            console.error(err)
-            if (fs.existsSync(backupPath)) {
-              fs.renameSync(backupPath, securityConfigPath)
-            }
-            res.status(500).send('Unable to save settings')
+      const { username, password } = req.body || {}
+      if (!username || !password) {
+        res.status(400).send('Username and password are required')
+        return
+      }
+      if (!app.securityStrategy.login) {
+        res.status(500).send('Login not supported by security strategy')
+        return
+      }
+      app.securityStrategy
+        .login(username, password)
+        .then((reply) => {
+          if (reply.statusCode !== 200) {
+            res.status(401).send('Invalid username or password')
             return
           }
-          res.send('Security disabled, please restart the server')
+          const securityConfigPath = pathForSecurityConfig(app)
+          const backupPath = securityConfigPath + '.disabled'
+          try {
+            if (fs.existsSync(securityConfigPath)) {
+              fs.renameSync(securityConfigPath, backupPath)
+            }
+            delete app.config.settings.security
+            writeSettingsFile(app, app.config.settings, (err: Error) => {
+              if (err) {
+                console.error(err)
+                if (fs.existsSync(backupPath)) {
+                  fs.renameSync(backupPath, securityConfigPath)
+                }
+                res.status(500).send('Unable to save settings')
+                return
+              }
+              res.send('Security disabled, please restart the server')
+            })
+          } catch (err) {
+            console.error(err)
+            res.status(500).send('Unable to disable security')
+          }
         })
-      } catch (err) {
-        console.error(err)
-        res.status(500).send('Unable to disable security')
-      }
+        .catch((err) => {
+          console.error(err)
+          res.status(500).send('Unable to verify credentials')
+        })
     }
   )
 
