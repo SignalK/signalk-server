@@ -40,6 +40,8 @@ export default function EnableSecurity() {
   const [hasBackup, setHasBackup] = useState(false)
   const [isRestoring, setIsRestoring] = useState(false)
   const [restoreError, setRestoreError] = useState<string | null>(null)
+  const [restoreUsername, setRestoreUsername] = useState('')
+  const [restorePassword, setRestorePassword] = useState('')
 
   useEffect(() => {
     checkSecurityBackup()
@@ -50,7 +52,7 @@ export default function EnableSecurity() {
   const handleRestore = async () => {
     setIsRestoring(true)
     setRestoreError(null)
-    const error = await restoreSecurity()
+    const error = await restoreSecurity(restoreUsername, restorePassword)
     setIsRestoring(false)
     if (error) {
       setRestoreError(error)
@@ -109,14 +111,50 @@ export default function EnableSecurity() {
                         <h1>Enable Security</h1>
                         <Alert variant="info">
                           <p className="mb-2">
-                            A previous security configuration was found. You can
-                            restore it to re-enable security with your existing
-                            users and settings.
+                            A previous security configuration was found. Enter
+                            admin credentials from the previous configuration to
+                            restore it.
                           </p>
+                          <InputGroup className="mb-2">
+                            <InputGroup.Text>
+                              <FontAwesomeIcon icon={faUser} />
+                            </InputGroup.Text>
+                            <Form.Control
+                              type="text"
+                              placeholder="Admin username"
+                              value={restoreUsername}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                setRestoreUsername(e.target.value)
+                              }
+                              onKeyUp={(e: KeyboardEvent<HTMLInputElement>) =>
+                                e.key === 'Enter' && handleRestore()
+                              }
+                            />
+                          </InputGroup>
+                          <InputGroup className="mb-2">
+                            <InputGroup.Text>
+                              <FontAwesomeIcon icon={faLock} />
+                            </InputGroup.Text>
+                            <Form.Control
+                              type="password"
+                              placeholder="Password"
+                              value={restorePassword}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                setRestorePassword(e.target.value)
+                              }
+                              onKeyUp={(e: KeyboardEvent<HTMLInputElement>) =>
+                                e.key === 'Enter' && handleRestore()
+                              }
+                            />
+                          </InputGroup>
                           <Button
                             variant="primary"
                             onClick={handleRestore}
-                            disabled={isRestoring}
+                            disabled={
+                              isRestoring ||
+                              !restoreUsername ||
+                              !restorePassword
+                            }
                           >
                             <FontAwesomeIcon
                               icon={isRestoring ? faSpinner : faRotateLeft}

@@ -16,6 +16,7 @@
 
 import * as http from 'http'
 import * as https from 'https'
+import bcrypt from 'bcryptjs'
 import busboy from 'busboy'
 import commandExists from 'command-exists'
 import express, { IRouter, NextFunction, Request, Response } from 'express'
@@ -47,9 +48,11 @@ import { queryRequest } from './requestResponse'
 import {
   getRateLimitValidationOptions,
   pathForSecurityConfig,
+  SecurityConfig,
   SecurityConfigGetter,
   SecurityConfigSaver,
   SecurityStrategy,
+  User,
   WithSecurityStrategy
 } from './security'
 import { listAllSerialPorts } from './serialports'
@@ -705,36 +708,70 @@ module.exports = function (
         `${SERVERROUTESPREFIX}/enableSecurity`,
         (req: Request, res: Response) => {
           if (req.body.restore === true) {
+            const { username, password } = req.body
+            if (!username || !password) {
+              res.status(400).send('Username and password are required')
+              return
+            }
             const securityConfigPath = pathForSecurityConfig(app)
             const backupPath = securityConfigPath + '.disabled'
             if (!fs.existsSync(backupPath)) {
               res.status(404).send('No security backup found')
               return
             }
+            let backupConfig: SecurityConfig
             try {
-              fs.renameSync(backupPath, securityConfigPath)
-              app.config.settings.security = {
-                strategy: defaultSecurityStrategy
-              }
-              writeSettingsFile(
-                app,
-                app.config.settings,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (err: any) => {
-                  if (err) {
-                    console.error(err)
-                    fs.renameSync(securityConfigPath, backupPath)
-                    res.status(500).send('Unable to save settings')
-                    return
-                  }
-                  securityWasEnabled = true
-                  res.send('Security restored, please restart the server')
-                }
-              )
+              backupConfig = JSON.parse(
+                fs.readFileSync(backupPath, 'utf8')
+              ) as SecurityConfig
             } catch (err) {
               console.error(err)
-              res.status(500).send('Unable to restore security')
+              res.status(500).send('Unable to read security backup')
+              return
             }
+            const user = backupConfig.users?.find(
+              (u: User) => u.username === username && u.type === 'admin'
+            )
+            const hashToCompare = user?.password || '$2b$10$invalidhashpadding'
+            bcrypt.compare(
+              password,
+              hashToCompare,
+              (err: Error | null, matches: boolean) => {
+                if (err) {
+                  console.error(err)
+                  res.status(500).send('Unable to verify credentials')
+                  return
+                }
+                if (!matches || !user?.password) {
+                  res.status(401).send('Invalid username or password')
+                  return
+                }
+                try {
+                  fs.renameSync(backupPath, securityConfigPath)
+                  app.config.settings.security = {
+                    strategy: defaultSecurityStrategy
+                  }
+                  writeSettingsFile(
+                    app,
+                    app.config.settings,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (err: any) => {
+                      if (err) {
+                        console.error(err)
+                        fs.renameSync(securityConfigPath, backupPath)
+                        res.status(500).send('Unable to save settings')
+                        return
+                      }
+                      securityWasEnabled = true
+                      res.send('Security restored, please restart the server')
+                    }
+                  )
+                } catch (err) {
+                  console.error(err)
+                  res.status(500).send('Unable to restore security')
+                }
+              }
+            )
             return
           }
           if (
@@ -830,6 +867,14 @@ module.exports = function (
       }
       if (!app.securityStrategy.login) {
         res.status(500).send('Login not supported by security strategy')
+        return
+      }
+      const config = getSecurityConfig(app)
+      const user = config?.users?.find(
+        (u: User) => u.username === username && u.type === 'admin'
+      )
+      if (!user) {
+        res.status(401).send('Invalid username or password')
         return
       }
       app.securityStrategy
