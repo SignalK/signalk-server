@@ -183,6 +183,11 @@ export const getToPreferredDelta = (
       return false
     }
 
+    // A source updating its own value is always accepted
+    if (latest.sourceRef === sourceRef) {
+      return true
+    }
+
     const latestIsFromHigherPrecedence =
       latestPrecedence.precedence < incomingPrecedence.precedence
 

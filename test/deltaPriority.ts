@@ -225,6 +225,42 @@ describe('source ranking', () => {
       'first update from lower-ranked source should be accepted'
     )
   })
+
+  it('unranked source can update its own value repeatedly', () => {
+    const ranking: SourceRankingEntry[] = [
+      { sourceRef: 'a' as SourceRef, timeout: 0 }
+    ]
+    const toPreferred = getToPreferredDelta({}, ranking)
+    const t = 1000000
+
+    const r1 = toPreferred(makeDelta('unranked', PATH, 1), new Date(t), 'self')
+    assert(accepted(r1), 'first update from unranked source should be accepted')
+
+    const r2 = toPreferred(
+      makeDelta('unranked', PATH, 2),
+      new Date(t + 1),
+      'self'
+    )
+    assert(
+      accepted(r2),
+      'same unranked source updating its own value should be accepted'
+    )
+  })
+
+  it('ranked source can update its own value repeatedly', () => {
+    const ranking: SourceRankingEntry[] = [
+      { sourceRef: 'a' as SourceRef, timeout: 0 },
+      { sourceRef: 'b' as SourceRef, timeout: 5000 }
+    ]
+    const toPreferred = getToPreferredDelta({}, ranking)
+    const t = 1000000
+
+    const r1 = toPreferred(makeDelta('b', PATH, 1), new Date(t), 'self')
+    assert(accepted(r1), 'first update from b accepted')
+
+    const r2 = toPreferred(makeDelta('b', PATH, 2), new Date(t + 1), 'self')
+    assert(accepted(r2), 'b updating its own value should be accepted')
+  })
 })
 
 describe('disabled source (timeout=-1)', () => {
