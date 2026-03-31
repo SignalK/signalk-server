@@ -707,6 +707,13 @@ module.exports = function (
       app.post(
         `${SERVERROUTESPREFIX}/enableSecurity`,
         (req: Request, res: Response) => {
+          if (
+            securityWasEnabled ||
+            app.securityStrategy.getUsers(getSecurityConfig(app)).length > 0
+          ) {
+            res.status(403).send('Security already enabled')
+            return
+          }
           if (req.body.restore === true) {
             const { username, password } = req.body
             if (!username || !password) {
@@ -772,13 +779,6 @@ module.exports = function (
                 }
               }
             )
-            return
-          }
-          if (
-            securityWasEnabled ||
-            app.securityStrategy.getUsers(getSecurityConfig(app)).length > 0
-          ) {
-            res.status(403).send('Security already enabled')
             return
           }
           if (app.securityStrategy.isDummy()) {
