@@ -285,6 +285,9 @@ function DisableSecurity() {
   }
 
   const handleSubmit = async () => {
+    if (isDisabling || !username || !password) {
+      return
+    }
     setIsDisabling(true)
     setError(null)
     const result = await disableSecurity(username, password)

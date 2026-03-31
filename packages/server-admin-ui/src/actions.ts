@@ -103,34 +103,47 @@ export async function disableSecurity(
   username: string,
   password: string
 ): Promise<string | null> {
-  const response = await fetch(`${window.serverRoutesPrefix}/disableSecurity`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ username, password })
-  })
-  const text = await response.text()
-  if (response.status !== 200) {
-    return text
+  try {
+    const response = await fetch(
+      `${window.serverRoutesPrefix}/disableSecurity`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username, password })
+      }
+    )
+    const text = await response.text()
+    return response.ok ? null : text || 'Unable to disable security'
+  } catch (error) {
+    console.error('Disable security failed:', error)
+    return 'Unable to disable security'
   }
-  return null
 }
 
 export async function restoreSecurity(
   username: string,
   password: string
 ): Promise<string | null> {
-  const response = await fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ restore: true, username, password })
-  })
-  const text = await response.text()
-  if (response.status !== 200) {
-    return text
+  try {
+    const response = await fetch(
+      `${window.serverRoutesPrefix}/enableSecurity`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: true, username, password })
+      }
+    )
+    const text = await response.text()
+    if (!response.ok) {
+      return text || 'Unable to restore security'
+    }
+    await fetchLoginStatus()
+    return null
+  } catch (error) {
+    console.error('Restore security failed:', error)
+    return 'Unable to restore security'
   }
-  await fetchLoginStatus()
-  return null
 }
 
 export async function checkSecurityBackup(): Promise<boolean> {

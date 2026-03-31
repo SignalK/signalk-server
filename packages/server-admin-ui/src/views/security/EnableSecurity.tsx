@@ -50,6 +50,9 @@ export default function EnableSecurity() {
   }, [])
 
   const handleRestore = async () => {
+    if (isRestoring || !restoreUsername || !restorePassword) {
+      return
+    }
     setIsRestoring(true)
     setRestoreError(null)
     const error = await restoreSecurity(restoreUsername, restorePassword)
