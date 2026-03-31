@@ -138,7 +138,9 @@ export async function restoreSecurity(
     if (!response.ok) {
       return text || 'Unable to restore security'
     }
-    await fetchLoginStatus()
+    fetchLoginStatus().catch((err) =>
+      console.error('Failed to refresh login status:', err)
+    )
     return null
   } catch (error) {
     console.error('Restore security failed:', error)

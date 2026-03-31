@@ -125,6 +125,7 @@ export default function EnableSecurity() {
                             <Form.Control
                               type="text"
                               placeholder="Admin username"
+                              aria-label="Admin username"
                               value={restoreUsername}
                               onChange={(e: ChangeEvent<HTMLInputElement>) =>
                                 setRestoreUsername(e.target.value)
@@ -141,6 +142,7 @@ export default function EnableSecurity() {
                             <Form.Control
                               type="password"
                               placeholder="Password"
+                              aria-label="Password"
                               value={restorePassword}
                               onChange={(e: ChangeEvent<HTMLInputElement>) =>
                                 setRestorePassword(e.target.value)

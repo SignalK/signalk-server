@@ -335,6 +335,7 @@ function DisableSecurity() {
             <Form.Control
               type="text"
               placeholder="Username"
+              aria-label="Username"
               value={username}
               onChange={(e: ChangeEvent<HTMLInputElement>) =>
                 setUsername(e.target.value)
@@ -350,6 +351,7 @@ function DisableSecurity() {
             <Form.Control
               type="password"
               placeholder="Password"
+              aria-label="Password"
               value={password}
               onChange={(e: ChangeEvent<HTMLInputElement>) =>
                 setPassword(e.target.value)
