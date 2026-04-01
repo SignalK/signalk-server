@@ -22,7 +22,6 @@ import { initializeLifecycleFunctions } from './plugin-registry'
 initializeLifecycleFunctions(
   startWasmPlugin,
   updateWasmPluginConfig,
-  unloadWasmPlugin,
   stopWasmPlugin
 )
 

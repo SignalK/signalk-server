@@ -6,3 +6,5 @@ public
 **/.__mf__temp
 # AssemblyScript build outputs
 packages/assemblyscript-plugin-sdk/build
+# Rust build outputs
+**/target
