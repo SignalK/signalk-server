@@ -99,6 +99,66 @@ export async function enableSecurity(
   return null
 }
 
+export async function disableSecurity(
+  username: string,
+  password: string
+): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `${window.serverRoutesPrefix}/disableSecurity`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username, password })
+      }
+    )
+    const text = await response.text()
+    return response.ok ? null : text || 'Unable to disable security'
+  } catch (error) {
+    console.error('Disable security failed:', error)
+    return 'Unable to disable security'
+  }
+}
+
+export async function restoreSecurity(
+  username: string,
+  password: string
+): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `${window.serverRoutesPrefix}/enableSecurity`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: true, username, password })
+      }
+    )
+    const text = await response.text()
+    if (!response.ok) {
+      return text || 'Unable to restore security'
+    }
+    fetchLoginStatus().catch((err) =>
+      console.error('Failed to refresh login status:', err)
+    )
+    return null
+  } catch (error) {
+    console.error('Restore security failed:', error)
+    return 'Unable to restore security'
+  }
+}
+
+export async function checkSecurityBackup(): Promise<boolean> {
+  const response = await authFetch(
+    `${window.serverRoutesPrefix}/security/hasBackup`
+  )
+  if (response.ok) {
+    const data = await response.json()
+    return data.hasBackup === true
+  }
+  return false
+}
+
 export async function fetchLoginStatus(): Promise<void> {
   const response = await authFetch(`${window.serverRoutesPrefix}/loginStatus`)
   if (response.status === 200) {

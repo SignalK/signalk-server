@@ -16,6 +16,7 @@
 
 import * as http from 'http'
 import * as https from 'https'
+import bcrypt from 'bcryptjs'
 import busboy from 'busboy'
 import commandExists from 'command-exists'
 import express, { IRouter, NextFunction, Request, Response } from 'express'
@@ -46,9 +47,12 @@ import { getHttpPort, getSslPort } from './ports'
 import { queryRequest } from './requestResponse'
 import {
   getRateLimitValidationOptions,
+  pathForSecurityConfig,
+  SecurityConfig,
   SecurityConfigGetter,
   SecurityConfigSaver,
   SecurityStrategy,
+  User,
   WithSecurityStrategy
 } from './security'
 import { listAllSerialPorts } from './serialports'
@@ -710,6 +714,73 @@ module.exports = function (
             res.status(403).send('Security already enabled')
             return
           }
+          if (req.body.restore === true) {
+            const { username, password } = req.body
+            if (!username || !password) {
+              res.status(400).send('Username and password are required')
+              return
+            }
+            const securityConfigPath = pathForSecurityConfig(app)
+            const backupPath = securityConfigPath + '.disabled'
+            if (!fs.existsSync(backupPath)) {
+              res.status(404).send('No security backup found')
+              return
+            }
+            let backupConfig: SecurityConfig
+            try {
+              backupConfig = JSON.parse(
+                fs.readFileSync(backupPath, 'utf8')
+              ) as SecurityConfig
+            } catch (err) {
+              console.error(err)
+              res.status(500).send('Unable to read security backup')
+              return
+            }
+            const user = backupConfig.users?.find(
+              (u: User) => u.username === username && u.type === 'admin'
+            )
+            const hashToCompare = user?.password || '$2b$10$invalidhashpadding'
+            bcrypt.compare(
+              password,
+              hashToCompare,
+              (err: Error | null, matches: boolean) => {
+                if (err) {
+                  console.error(err)
+                  res.status(500).send('Unable to verify credentials')
+                  return
+                }
+                if (!matches || !user?.password) {
+                  res.status(401).send('Invalid username or password')
+                  return
+                }
+                try {
+                  fs.renameSync(backupPath, securityConfigPath)
+                  app.config.settings.security = {
+                    strategy: defaultSecurityStrategy
+                  }
+                  writeSettingsFile(
+                    app,
+                    app.config.settings,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (err: any) => {
+                      if (err) {
+                        console.error(err)
+                        fs.renameSync(securityConfigPath, backupPath)
+                        res.status(500).send('Unable to save settings')
+                        return
+                      }
+                      securityWasEnabled = true
+                      res.send('Security restored, please restart the server')
+                    }
+                  )
+                } catch (err) {
+                  console.error(err)
+                  res.status(500).send('Unable to restore security')
+                }
+              }
+            )
+            return
+          }
           if (app.securityStrategy.isDummy()) {
             const adminUser = req.body
             if (
@@ -784,6 +855,82 @@ module.exports = function (
       )
     }
   }
+
+  app.post(
+    `${SERVERROUTESPREFIX}/disableSecurity`,
+    (req: Request, res: Response) => {
+      if (!app.securityStrategy.allowConfigure(req)) {
+        res.status(401).send('Disable security not allowed')
+        return
+      }
+      const { username, password } = req.body || {}
+      if (!username || !password) {
+        res.status(400).send('Username and password are required')
+        return
+      }
+      if (!app.securityStrategy.login) {
+        res.status(500).send('Login not supported by security strategy')
+        return
+      }
+      const config = getSecurityConfig(app)
+      const user = config?.users?.find(
+        (u: User) => u.username === username && u.type === 'admin'
+      )
+      if (!user) {
+        res.status(401).send('Invalid username or password')
+        return
+      }
+      app.securityStrategy
+        .login(username, password)
+        .then((reply) => {
+          if (reply.statusCode !== 200) {
+            res.status(401).send('Invalid username or password')
+            return
+          }
+          const securityConfigPath = pathForSecurityConfig(app)
+          const backupPath = securityConfigPath + '.disabled'
+          try {
+            if (fs.existsSync(securityConfigPath)) {
+              fs.renameSync(securityConfigPath, backupPath)
+            }
+            delete app.config.settings.security
+            writeSettingsFile(app, app.config.settings, (err: Error) => {
+              if (err) {
+                console.error(err)
+                if (fs.existsSync(backupPath)) {
+                  fs.renameSync(backupPath, securityConfigPath)
+                }
+                res.status(500).send('Unable to save settings')
+                return
+              }
+              res.send('Security disabled, please restart the server')
+            })
+          } catch (err) {
+            console.error(err)
+            res.status(500).send('Unable to disable security')
+          }
+        })
+        .catch((err) => {
+          console.error(err)
+          res.status(500).send('Unable to verify credentials')
+        })
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/security/hasBackup`,
+    (req: Request, res: Response) => {
+      if (
+        !app.securityStrategy.isDummy() &&
+        !app.securityStrategy.allowConfigure(req)
+      ) {
+        res.status(401).send('Not authorized')
+        return
+      }
+      const backupPath = pathForSecurityConfig(app) + '.disabled'
+      res.json({ hasBackup: fs.existsSync(backupPath) })
+    }
+  )
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/settings`)
 
