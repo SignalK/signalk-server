@@ -711,7 +711,6 @@ module.exports = function (
             return
           }
           if (app.securityStrategy.isDummy()) {
-            app.config.settings.security = { strategy: defaultSecurityStrategy }
             const adminUser = req.body
             if (
               !adminUser.userId ||
@@ -722,12 +721,15 @@ module.exports = function (
               res.status(400).send('userId or password missing or too short')
               return
             }
+            const updatedSettings = structuredClone(app.config.settings)
+            updatedSettings.security = { strategy: defaultSecurityStrategy }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            writeSettingsFile(app, app.config.settings, (err: any) => {
+            writeSettingsFile(app, updatedSettings, (err: any) => {
               if (err) {
                 console.log(err)
                 res.status(500).send('Unable to save to settings file')
               } else {
+                app.config.settings = updatedSettings
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const config: any = {}
                 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -745,7 +747,6 @@ module.exports = function (
           } else {
             addUser(req, res, app.securityStrategy)
           }
-          securityWasEnabled = true
 
           function addUser(
             request: Request,
@@ -771,8 +772,10 @@ module.exports = function (
                     response.send(
                       'Unable to save security configuration change'
                     )
+                  } else {
+                    securityWasEnabled = true
+                    response.send('Security enabled')
                   }
-                  response.send('Security enabled')
                 })
               }
             })
@@ -786,79 +789,79 @@ module.exports = function (
 
   app.put(`${SERVERROUTESPREFIX}/settings`, (req: Request, res: Response) => {
     const settings = req.body
+    const updatedSettings = structuredClone(app.config.settings)
 
     forIn(settings.interfaces, (enabled, name) => {
       const interfaces =
-        app.config.settings.interfaces || (app.config.settings.interfaces = {})
+        updatedSettings.interfaces || (updatedSettings.interfaces = {})
       interfaces[name] = enabled
     })
 
     if (!isUndefined(settings.options.mdns)) {
-      app.config.settings.mdns = settings.options.mdns
+      updatedSettings.mdns = settings.options.mdns
     }
 
     if (!isUndefined(settings.options.ssl)) {
-      app.config.settings.ssl = settings.options.ssl
+      updatedSettings.ssl = settings.options.ssl
     }
 
     if (!isUndefined(settings.options.wsCompression)) {
-      app.config.settings.wsCompression = settings.options.wsCompression
+      updatedSettings.wsCompression = settings.options.wsCompression
     }
 
     if (!isUndefined(settings.options.wsPingInterval)) {
-      app.config.settings.wsPingInterval = settings.options.wsPingInterval
+      updatedSettings.wsPingInterval = settings.options.wsPingInterval
     }
 
     if (!isUndefined(settings.options.accessLogging)) {
-      app.config.settings.accessLogging = settings.options.accessLogging
+      updatedSettings.accessLogging = settings.options.accessLogging
     }
 
     if (!isUndefined(settings.options.enablePluginLogging)) {
-      app.config.settings.enablePluginLogging =
-        settings.options.enablePluginLogging
+      updatedSettings.enablePluginLogging = settings.options.enablePluginLogging
     }
 
     if (!isUndefined(settings.options.trustProxy)) {
-      app.config.settings.trustProxy = settings.options.trustProxy
+      updatedSettings.trustProxy = settings.options.trustProxy
     }
 
     if (!isUndefined(settings.port)) {
-      app.config.settings.port = Number(settings.port)
+      updatedSettings.port = Number(settings.port)
     }
 
     if (!isUndefined(settings.sslport)) {
-      app.config.settings.sslport = Number(settings.sslport)
+      updatedSettings.sslport = Number(settings.sslport)
     }
 
     if (!isUndefined(settings.loggingDirectory)) {
-      app.config.settings.loggingDirectory = settings.loggingDirectory
+      updatedSettings.loggingDirectory = settings.loggingDirectory
     }
 
     if (!isUndefined(settings.pruneContextsMinutes)) {
-      app.config.settings.pruneContextsMinutes = Number(
+      updatedSettings.pruneContextsMinutes = Number(
         settings.pruneContextsMinutes
       )
     }
 
     if (!isUndefined(settings.keepMostRecentLogsOnly)) {
-      app.config.settings.keepMostRecentLogsOnly =
-        settings.keepMostRecentLogsOnly
+      updatedSettings.keepMostRecentLogsOnly = settings.keepMostRecentLogsOnly
     }
 
     if (!isUndefined(settings.logCountToKeep)) {
-      app.config.settings.logCountToKeep = Number(settings.logCountToKeep)
+      updatedSettings.logCountToKeep = Number(settings.logCountToKeep)
     }
 
     forIn(settings.courseApi, (enabled, name) => {
       const courseApi: { [index: string]: boolean | string | number } =
-        app.config.settings.courseApi || (app.config.settings.courseApi = {})
+        updatedSettings.courseApi || (updatedSettings.courseApi = {})
       courseApi[name] = enabled
     })
 
-    writeSettingsFile(app, app.config.settings, (err: Error) => {
+    writeSettingsFile(app, updatedSettings, (err: Error) => {
       if (err) {
         res.status(500).send('Unable to save to settings file')
       } else {
+        app.config.settings = updatedSettings
         res.type('text/plain').send('Settings changed')
       }
     })
@@ -1103,15 +1106,17 @@ module.exports = function (
   app.put(
     `${SERVERROUTESPREFIX}/sourcePriorities`,
     (req: Request, res: Response) => {
-      app.config.settings.sourcePriorities = req.body
-      app.activateSourcePriorities()
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.sourcePriorities = req.body
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app, app.config.settings, (err: any) => {
+      writeSettingsFile(app, updatedSettings, (err: any) => {
         if (err) {
           res
             .status(500)
             .send('Unable to save to sourcePrefences in settings file')
         } else {
+          app.config.settings = updatedSettings
+          app.activateSourcePriorities()
           res.json({ result: 'ok' })
         }
       })
