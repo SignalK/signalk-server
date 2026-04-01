@@ -160,9 +160,61 @@ You need to configure your build tool (Webpack or Vite) to create the necessary 
 - plugin configuration form: `./PluginConfigurationPanel`
 - embedded component: `./AddonPanel`
 
-The ModuleFederationPlugin library name must match the package name and be a "safe" name for a module like in `library: { type: 'var', name: packageJson.name.replace(/[-@/]/g, '_') },`
-
 The exposed modules need to `export default` a React component. Functional components with hooks are recommended. The server dependencies like `reactstrap` can and should be used. Add `@signalk/server-admin-ui-dependencies` as a dependency to the webapp, it defines the dependencies used by the server admin UI.
+
+### Webpack (var library)
+
+With Webpack's ModuleFederationPlugin, use `library.type: 'var'` with a safe module name derived from the package name:
+
+```javascript
+library: { type: 'var', name: packageJson.name.replace(/[-@/]/g, '_') },
+```
+
+The server loads these via a classic `<script>` tag which places the container on the `window` object.
+
+### Vite / ESM bundlers
+
+The server also supports ESM containers produced by Vite, Rollup, esbuild, or any bundler that outputs standard `export { init, get }`. To use an ESM container:
+
+1. Set `"type": "module"` in your plugin's `package.json`. The server uses this to emit `<script type="module">` instead of a classic `<script>` tag.
+2. Configure your bundler to produce a Module Federation container as ESM. For example with `@module-federation/vite`:
+
+```javascript
+// vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { federation } from '@module-federation/vite'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    federation({
+      name: 'my-plugin',
+      filename: 'remoteEntry.js',
+      exposes: {
+        './PluginConfigurationPanel': './src/PluginConfigurationPanel.tsx'
+      },
+      shared: {
+        react: { singleton: true, requiredVersion: false },
+        'react-dom': { singleton: true, requiredVersion: false }
+      }
+    })
+  ],
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production')
+  },
+  build: {
+    outDir: 'public',
+    emptyOutDir: false
+  }
+})
+```
+
+The `process.env.NODE_ENV` define is required because some shared dependencies reference `process.env` which is not available in the browser.
+
+If your plugin's server-side code uses CommonJS (`module.exports`), set `"main"` to a `.cjs` file so Node.js treats it as CommonJS despite the `"type": "module"` in `package.json`.
+
+The Admin UI detects ESM containers automatically via dynamic `import()` when the expected container is not present on `window`.
 
 ### React Version Compatibility
 
