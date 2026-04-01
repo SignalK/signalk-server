@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Request, Response } from 'express'
-import { writeSettingsFile } from '../config/config'
+import { IRouter, Request, Response } from 'express'
+import { ConfigApp, writeSettingsFile } from '../config/config'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { runDiscovery } = require('../discovery')
 import { SERVERROUTESPREFIX } from '../constants'
@@ -68,25 +68,8 @@ interface ProviderResponse {
   [key: string]: unknown
 }
 
-interface ProviderApp {
-  config: {
-    settings: {
-      pipedProviders: PipedProvider[]
-      [key: string]: unknown
-    }
-    [key: string]: unknown
-  }
+interface App extends ConfigApp, IRouter {
   discoveredProviders: PipedProvider[]
-  pipedProviders: {
-    stopProvider: (id: string) => void
-    restartProvider: (id: string) => void
-  }
-  on: (event: string, handler: (...args: unknown[]) => void) => void
-  emit: (event: string, data: unknown) => boolean
-  get: (path: string, handler: (req: Request, res: Response) => void) => void
-  put: (path: string, handler: (req: Request, res: Response) => void) => void
-  post: (path: string, handler: (req: Request, res: Response) => void) => void
-  delete: (path: string, handler: (req: Request, res: Response) => void) => void
 }
 
 function getProviders(
@@ -161,7 +144,7 @@ function isValidProviderBody(body: unknown): body is ProviderRequest {
   return true
 }
 
-module.exports = function (app: ProviderApp) {
+module.exports = function (app: App) {
   app.on('discovered', (provider) => {
     const p = provider as PipedProvider
     if (p.enabled === undefined) {
@@ -219,8 +202,7 @@ module.exports = function (app: ProviderApp) {
       }
       app.config.settings.pipedProviders.splice(idx, 1)
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app as any, app.config.settings, (err: Error) => {
+      writeSettingsFile(app, app.config.settings, (err: Error) => {
         if (err) {
           console.error(err)
           res.status(500).send('Unable to save to settings file')
@@ -310,8 +292,7 @@ module.exports = function (app: ProviderApp) {
         app.config.settings.pipedProviders.push(updatedProvider)
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app as any, app.config.settings, (err: Error) => {
+      writeSettingsFile(app, app.config.settings, (err: Error) => {
         if (err) {
           console.error(err)
           res.status(500).send('Unable to save to settings file')
