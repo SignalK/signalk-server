@@ -157,6 +157,7 @@ export default function EnableSecurity() {
                             onClick={handleRestore}
                             disabled={
                               isRestoring ||
+                              isEnabling ||
                               !restoreUsername ||
                               !restorePassword
                             }
@@ -233,7 +234,7 @@ export default function EnableSecurity() {
                               type="submit"
                               variant="primary"
                               className="px-4"
-                              disabled={isEnabling}
+                              disabled={isEnabling || isRestoring}
                             >
                               <FontAwesomeIcon
                                 icon={isEnabling ? faSpinner : faLock}

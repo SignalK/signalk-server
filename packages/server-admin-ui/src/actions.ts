@@ -149,7 +149,7 @@ export async function restoreSecurity(
 }
 
 export async function checkSecurityBackup(): Promise<boolean> {
-  const response = await fetch(
+  const response = await authFetch(
     `${window.serverRoutesPrefix}/security/hasBackup`
   )
   if (response.ok) {
