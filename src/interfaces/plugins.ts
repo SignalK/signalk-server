@@ -104,6 +104,7 @@ function backwardsCompat(url: string) {
 
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
+  const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
   return {
     async start() {
       ensureExists(path.join(theApp.config.configPath, 'plugin-config-data'))
@@ -144,6 +145,16 @@ module.exports = (theApp: any) => {
     )
   }
 
+  function emitPluginsChanged() {
+    getPluginResponseInfos().then((plugins) => {
+      theApp.emit('serverevent', {
+        type: 'PLUGINS_CHANGED',
+        from: 'signalk-server',
+        data: plugins
+      })
+    })
+  }
+
   function getPluginsList(enabled?: boolean) {
     return getPluginResponseInfos().then((pa) => {
       const res = pa.map((p: any) => {
@@ -163,6 +174,10 @@ module.exports = (theApp: any) => {
         })
       }
     })
+  }
+
+  function isBundledPlugin(plugin: PluginInfo) {
+    return plugin.packageLocation === appNodeModules
   }
 
   function getPluginResponseInfo(plugin: PluginInfo, providerStatus: any) {
@@ -229,7 +244,8 @@ module.exports = (theApp: any) => {
             uiSchema,
             state: plugin.state,
             data,
-            type: plugin.type // Include type to identify WASM plugins in Admin UI
+            type: plugin.type, // Include type to identify WASM plugins in Admin UI
+            bundled: isBundledPlugin(plugin)
           })
         })
         .catch((err) => {
@@ -788,9 +804,8 @@ module.exports = (theApp: any) => {
           console.error(err)
         } else {
           stopPlugin(plugin).then(() => {
-            return Promise.resolve(
-              doPluginStart(app, plugin, location, newConfiguration, restart)
-            )
+            doPluginStart(app, plugin, location, newConfiguration, restart)
+            emitPluginsChanged()
           })
         }
       })
@@ -862,6 +877,7 @@ module.exports = (theApp: any) => {
           if (options.enabled) {
             doPluginStart(app, plugin, location, options.configuration, restart)
           }
+          emitPluginsChanged()
         })
       })
     })
