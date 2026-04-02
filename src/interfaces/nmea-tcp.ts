@@ -13,43 +13,53 @@
  * limitations under the License.
  */
 
-const _ = require('lodash')
-
+import { createServer, Server, Socket } from 'net'
 import { createDebug } from '../debug'
+import { Interface, SignalKServer } from '../types'
+
 const debug = createDebug('signalk-server:interfaces:tcp:nmea0183')
 
-module.exports = function (app) {
-  'use strict'
-  const net = require('net')
-  const openSockets = {}
-  let idSequence = 0
-  let server = null
-  const port = Number(process.env.NMEA0183PORT) || 10110
-  const api = {}
+interface SocketWithId extends Socket {
+  id?: number
+  name?: string
+}
 
-  api.start = function () {
+interface NmeaTcpApp extends SignalKServer {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  emit(event: string, ...args: any[]): boolean
+  on(event: string, listener: (...args: string[]) => void): this
+}
+
+module.exports = (app: NmeaTcpApp) => {
+  'use strict'
+  const openSockets: Record<number, SocketWithId> = {}
+  let idSequence = 0
+  let server: Server | null = null
+  const port = Number(process.env.NMEA0183PORT) || 10110
+  const api = new Interface()
+
+  api.start = () => {
     debug('Starting tcp interface')
 
-    server = net.createServer(function (socket) {
+    server = createServer((socket: SocketWithId) => {
       socket.id = idSequence++
       socket.name = socket.remoteAddress + ':' + socket.remotePort
       debug('Connected:' + socket.id + ' ' + socket.name)
       openSockets[socket.id] = socket
-      socket.on('data', (data) => {
+      socket.on('data', (data: Buffer) => {
         app.emit('tcpserver0183data', data.toString())
       })
-      socket.on('end', function () {
-        // client disconnects
+      socket.on('end', () => {
         debug('Ended:' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id]
+        delete openSockets[socket.id!]
       })
-      socket.on('error', function (err) {
+      socket.on('error', (err: Error) => {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id]
+        delete openSockets[socket.id!]
       })
     })
-    const send = (data) => {
-      _.values(openSockets).forEach(function (socket) {
+    const send = (data: string) => {
+      Object.values(openSockets).forEach((socket) => {
         try {
           socket.write(data + '\r\n')
         } catch (e) {
@@ -60,15 +70,15 @@ module.exports = function (app) {
     app.signalk.on('nmea0183', send)
     app.on('nmea0183out', send)
     server.on('listening', () =>
-      debug('NMEA0138 tcp server listening on ' + port)
+      debug('NMEA0183 tcp server listening on ' + port)
     )
-    server.on('error', (e) => {
-      console.error(`NMEA0138 tcp server error: ${e.message}`)
+    server.on('error', (e: Error) => {
+      console.error(`NMEA0183 tcp server error: ${e.message}`)
     })
     server.listen(port)
   }
 
-  api.stop = function () {
+  api.stop = () => {
     if (server) {
       server.close()
       server = null
@@ -78,7 +88,7 @@ module.exports = function (app) {
   api.mdns = {
     name: '_nmea-0183',
     type: 'tcp',
-    port: port
+    port
   }
 
   return api
