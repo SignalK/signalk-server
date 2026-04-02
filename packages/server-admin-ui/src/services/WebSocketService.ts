@@ -247,6 +247,39 @@ export class WebSocketService {
           discoveredProviders: data
         } as Partial<SignalKStore>)
         break
+      case 'SOURCEPRIORITIES':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setSourcePrioritiesFromServer(
+              data as Record<
+                string,
+                { sourceRef: string; timeout: string | number }[]
+              >
+            )
+        })
+        break
+      case 'SOURCERANKING':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setSourceRanking(
+              data as { sourceRef: string; timeout: string | number }[]
+            )
+        })
+        break
+      case 'SOURCEALIASES':
+        import('../store').then(({ useStore }) => {
+          useStore.getState().setSourceAliases(data as Record<string, string>)
+        })
+        break
+      case 'MULTISOURCEPATHS':
+        import('../store').then(({ useStore }) => {
+          useStore
+            .getState()
+            .setMultiSourcePaths(data as Record<string, string[]>)
+        })
+        break
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break
@@ -255,15 +288,6 @@ export class WebSocketService {
           useStore
             .getState()
             .setVesselInfo(data as Parameters<SignalKStore['setVesselInfo']>[0])
-        })
-        break
-      case 'SOURCEPRIORITIES':
-        import('../store').then(({ useStore }) => {
-          useStore
-            .getState()
-            .setSourcePriorities(
-              data as Parameters<SignalKStore['setSourcePriorities']>[0]
-            )
         })
         break
       case 'RECEIVE_APPSTORE_LIST':

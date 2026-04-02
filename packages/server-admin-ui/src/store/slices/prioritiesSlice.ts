@@ -3,33 +3,36 @@ import remove from 'lodash.remove'
 import type {
   SourcePrioritiesData,
   SourcePriority,
-  PathPriority
+  PathPriority,
+  SourceRankingData,
+  SourceRankingEntry
 } from '../types'
 
 function checkTimeouts(priorities: SourcePriority[]): boolean {
-  return priorities.reduce((acc: boolean, prio, i) => {
-    const { timeout } = prio
-    if (!acc) {
-      return acc
-    }
+  return priorities.every((prio, i) => {
     if (i === 0) {
       return true
     }
+    const value = Number(prio.timeout)
+    // Allow -1 (disabled) or positive values
+    return !Number.isNaN(value) && (value === -1 || value > 0)
+  })
+}
 
-    const thisOne = Number(timeout)
-    if (Number.isNaN(thisOne) || thisOne <= 0) {
-      return false
-    }
-    if (i === 1) {
+function checkRankingTimeouts(ranking: SourceRankingEntry[]): boolean {
+  return ranking.every((entry, i) => {
+    if (i === 0) {
       return true
     }
-
-    return thisOne > Number(priorities[i - 1].timeout)
-  }, true)
+    const value = Number(entry.timeout)
+    // Allow -1 (disabled) or positive values
+    return !Number.isNaN(value) && (value === -1 || value > 0)
+  })
 }
 
 export interface PrioritiesSliceState {
   sourcePrioritiesData: SourcePrioritiesData
+  sourceRankingData: SourceRankingData
 }
 
 export interface PrioritiesSliceActions {
@@ -48,6 +51,16 @@ export interface PrioritiesSliceActions {
   setSaved: () => void
   setSaveFailed: () => void
   clearSaveFailed: () => void
+  // Source ranking actions
+  setSourceRanking: (ranking: SourceRankingEntry[]) => void
+  addRankedSource: (sourceRef: string, timeout: number) => void
+  removeRankedSource: (index: number) => void
+  moveRankedSource: (index: number, change: 1 | -1) => void
+  changeRankedTimeout: (index: number, timeout: string | number) => void
+  setRankingSaving: () => void
+  setRankingSaved: () => void
+  setRankingSaveFailed: () => void
+  clearRankingSaveFailed: () => void
 }
 
 export type PrioritiesSlice = PrioritiesSliceState & PrioritiesSliceActions
@@ -55,6 +68,13 @@ export type PrioritiesSlice = PrioritiesSliceState & PrioritiesSliceActions
 const initialPrioritiesState: PrioritiesSliceState = {
   sourcePrioritiesData: {
     sourcePriorities: [],
+    saveState: {
+      dirty: false,
+      timeoutsOk: true
+    }
+  },
+  sourceRankingData: {
+    ranking: [],
     saveState: {
       dirty: false,
       timeoutsOk: true
@@ -127,7 +147,7 @@ export const createPrioritiesSlice: StateCreator<
       }
       const prios = [...sourcePriorities[pathIndex].priorities]
       if (index === prios.length) {
-        prios.push({ sourceRef: '', timeout: '' })
+        prios.push({ sourceRef: '', timeout: index > 0 ? 60000 : '' })
       }
       prios[index] = { sourceRef, timeout }
       sourcePriorities[pathIndex] = {
@@ -135,6 +155,9 @@ export const createPrioritiesSlice: StateCreator<
         priorities: prios
       }
 
+      const allTimeoutsOk = sourcePriorities.every((pp) =>
+        checkTimeouts(pp.priorities)
+      )
       return {
         sourcePrioritiesData: {
           ...state.sourcePrioritiesData,
@@ -142,7 +165,7 @@ export const createPrioritiesSlice: StateCreator<
           saveState: {
             ...state.sourcePrioritiesData.saveState,
             dirty: true,
-            timeoutsOk: checkTimeouts(prios)
+            timeoutsOk: allTimeoutsOk
           }
         }
       }
@@ -152,6 +175,7 @@ export const createPrioritiesSlice: StateCreator<
   deletePriority: (pathIndex, index) => {
     set((state) => {
       const sourcePriorities = [...state.sourcePrioritiesData.sourcePriorities]
+      if (pathIndex < 0 || pathIndex >= sourcePriorities.length) return state
       const prios = [...sourcePriorities[pathIndex].priorities]
       remove(prios, (_, i) => i === index)
       sourcePriorities[pathIndex] = {
@@ -159,11 +183,18 @@ export const createPrioritiesSlice: StateCreator<
         priorities: prios
       }
 
+      const allTimeoutsOk = sourcePriorities.every((pp) =>
+        checkTimeouts(pp.priorities)
+      )
       return {
         sourcePrioritiesData: {
           ...state.sourcePrioritiesData,
           sourcePriorities,
-          saveState: { ...state.sourcePrioritiesData.saveState, dirty: true }
+          saveState: {
+            ...state.sourcePrioritiesData.saveState,
+            dirty: true,
+            timeoutsOk: allTimeoutsOk
+          }
         }
       }
     })
@@ -173,14 +204,19 @@ export const createPrioritiesSlice: StateCreator<
     set((state) => {
       const sourcePriorities = [...state.sourcePrioritiesData.sourcePriorities]
       const prios = [...sourcePriorities[pathIndex].priorities]
+      const target = index + change
+      if (target < 0 || target >= prios.length) return state
       const tmp = prios[index]
-      prios[index] = prios[index + change]
-      prios[index + change] = tmp
+      prios[index] = prios[target]
+      prios[target] = tmp
       sourcePriorities[pathIndex] = {
         ...sourcePriorities[pathIndex],
         priorities: prios
       }
 
+      const allTimeoutsOk = sourcePriorities.every((pp) =>
+        checkTimeouts(pp.priorities)
+      )
       return {
         sourcePrioritiesData: {
           ...state.sourcePrioritiesData,
@@ -188,7 +224,7 @@ export const createPrioritiesSlice: StateCreator<
           saveState: {
             ...state.sourcePrioritiesData.saveState,
             dirty: true,
-            timeoutsOk: checkTimeouts(prios)
+            timeoutsOk: allTimeoutsOk
           }
         }
       }
@@ -241,6 +277,150 @@ export const createPrioritiesSlice: StateCreator<
         ...state.sourcePrioritiesData,
         saveState: {
           ...state.sourcePrioritiesData.saveState,
+          saveFailed: false
+        }
+      }
+    }))
+  },
+
+  // Source ranking actions
+  setSourceRanking: (ranking) => {
+    set({
+      sourceRankingData: {
+        ranking,
+        saveState: {
+          dirty: false,
+          timeoutsOk: true
+        }
+      }
+    })
+  },
+
+  addRankedSource: (sourceRef, timeout) => {
+    set((state) => {
+      const ranking = [
+        ...state.sourceRankingData.ranking,
+        { sourceRef, timeout }
+      ]
+      return {
+        sourceRankingData: {
+          ...state.sourceRankingData,
+          ranking,
+          saveState: {
+            ...state.sourceRankingData.saveState,
+            dirty: true,
+            timeoutsOk: checkRankingTimeouts(ranking)
+          }
+        }
+      }
+    })
+  },
+
+  removeRankedSource: (index) => {
+    set((state) => {
+      const ranking = [...state.sourceRankingData.ranking]
+      remove(ranking, (_, i) => i === index)
+      return {
+        sourceRankingData: {
+          ...state.sourceRankingData,
+          ranking,
+          saveState: {
+            ...state.sourceRankingData.saveState,
+            dirty: true,
+            timeoutsOk: checkRankingTimeouts(ranking)
+          }
+        }
+      }
+    })
+  },
+
+  moveRankedSource: (index, change) => {
+    set((state) => {
+      const ranking = [...state.sourceRankingData.ranking]
+      const target = index + change
+      if (target < 0 || target >= ranking.length) return state
+      const tmp = ranking[index]
+      ranking[index] = ranking[target]
+      ranking[target] = tmp
+      return {
+        sourceRankingData: {
+          ...state.sourceRankingData,
+          ranking,
+          saveState: {
+            ...state.sourceRankingData.saveState,
+            dirty: true,
+            timeoutsOk: checkRankingTimeouts(ranking)
+          }
+        }
+      }
+    })
+  },
+
+  changeRankedTimeout: (index, timeout) => {
+    set((state) => {
+      const ranking = [...state.sourceRankingData.ranking]
+      if (index < 0 || index >= ranking.length) return state
+      ranking[index] = { ...ranking[index], timeout }
+      return {
+        sourceRankingData: {
+          ...state.sourceRankingData,
+          ranking,
+          saveState: {
+            ...state.sourceRankingData.saveState,
+            dirty: true,
+            timeoutsOk: checkRankingTimeouts(ranking)
+          }
+        }
+      }
+    })
+  },
+
+  setRankingSaving: () => {
+    set((state) => ({
+      sourceRankingData: {
+        ...state.sourceRankingData,
+        saveState: {
+          ...state.sourceRankingData.saveState,
+          isSaving: true,
+          saveFailed: false
+        }
+      }
+    }))
+  },
+
+  setRankingSaved: () => {
+    set((state) => ({
+      sourceRankingData: {
+        ...state.sourceRankingData,
+        saveState: {
+          ...state.sourceRankingData.saveState,
+          dirty: false,
+          isSaving: false,
+          saveFailed: false
+        }
+      }
+    }))
+  },
+
+  setRankingSaveFailed: () => {
+    set((state) => ({
+      sourceRankingData: {
+        ...state.sourceRankingData,
+        saveState: {
+          ...state.sourceRankingData.saveState,
+          isSaving: false,
+          saveFailed: true
+        }
+      }
+    }))
+  },
+
+  clearRankingSaveFailed: () => {
+    set((state) => ({
+      sourceRankingData: {
+        ...state.sourceRankingData,
+        saveState: {
+          ...state.sourceRankingData.saveState,
           saveFailed: false
         }
       }

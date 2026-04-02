@@ -6,8 +6,16 @@ import {
   useAppStore,
   useAccessRequests,
   useDevices,
-  useLoginStatus
+  useLoginStatus,
+  useSourcesData,
+  useMultiSourcePaths,
+  useSourcePriorities,
+  useSourceRanking
 } from '../../store'
+import {
+  extractN2kDevices,
+  detectInstanceConflicts
+} from '../../utils/sourceLabels'
 import classNames from 'classnames'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
@@ -48,6 +56,44 @@ export default function Sidebar({ location }: SidebarProps) {
   const accessRequests = useAccessRequests()
   const devices = useDevices()
   const loginStatus = useLoginStatus()
+  const sourcesData = useSourcesData()
+
+  const conflictCount = useMemo(() => {
+    if (!sourcesData) return 0
+    const n2kDevices = extractN2kDevices(sourcesData)
+    return detectInstanceConflicts(n2kDevices).length
+  }, [sourcesData])
+
+  const multiSourcePaths = useMultiSourcePaths()
+  const sourcePrioritiesData = useSourcePriorities()
+  const sourceRankingData = useSourceRanking()
+
+  const unconfiguredPriorityCount = useMemo(() => {
+    const configuredSourcesByPath = new Map<string, Set<string>>()
+    for (const pp of sourcePrioritiesData.sourcePriorities) {
+      if (pp.path) {
+        configuredSourcesByPath.set(
+          pp.path,
+          new Set(pp.priorities.map((p) => p.sourceRef))
+        )
+      }
+    }
+    const rankedRefs = new Set(
+      sourceRankingData.ranking.map((r) => r.sourceRef)
+    )
+
+    let count = 0
+    for (const [path, sources] of Object.entries(multiSourcePaths)) {
+      const configuredRefs = configuredSourcesByPath.get(path)
+      const hasUncoveredSource = sources.some((ref) => {
+        if (configuredRefs?.has(ref)) return false
+        if (rankedRefs.has(ref)) return false
+        return true
+      })
+      if (hasUncoveredSource) count++
+    }
+    return count
+  }, [multiSourcePaths, sourcePrioritiesData, sourceRankingData])
 
   const nowMs = Date.now() // eslint-disable-line react-hooks/purity -- expired status is stable
   const expiredDeviceCount = devices.filter(
@@ -100,6 +146,40 @@ export default function Sidebar({ location }: SidebarProps) {
       }
     }
 
+    const isAdmin =
+      !loginStatus.authenticationRequired || loginStatus.userLevel === 'admin'
+
+    const dataChildren: NavItemData[] = [
+      { name: 'Data Browser', url: '/data/browser' },
+      { name: 'Meta Data', url: '/data/meta' },
+      {
+        name: 'Source Discovery',
+        url: '/data/sources',
+        badge:
+          conflictCount > 0
+            ? { variant: 'warning', text: `${conflictCount}` }
+            : null
+      }
+    ]
+    if (isAdmin) {
+      dataChildren.push(
+        {
+          name: 'Source Priority',
+          url: '/data/priorities',
+          badge:
+            unconfiguredPriorityCount > 0
+              ? {
+                  variant: 'warning',
+                  text: `${unconfiguredPriorityCount}`
+                }
+              : null
+        },
+        { name: 'Unit Preferences', url: '/data/units' },
+        { name: 'Data Fiddler', url: '/data/fiddler' },
+        { name: 'Data Connections', url: '/data/connections/-' }
+      )
+    }
+
     const result: NavItemData[] = [
       {
         name: 'Dashboard',
@@ -112,16 +192,21 @@ export default function Sidebar({ location }: SidebarProps) {
         icon: 'icon-grid'
       },
       {
-        name: 'Data Browser',
-        url: '/databrowser',
-        icon: 'icon-folder'
+        name: 'Data',
+        url: '/data',
+        icon: 'icon-folder',
+        badge:
+          (isAdmin ? unconfiguredPriorityCount : 0) + conflictCount > 0
+            ? {
+                variant: 'warning',
+                text: `${(isAdmin ? unconfiguredPriorityCount : 0) + conflictCount}`
+              }
+            : null,
+        children: dataChildren
       }
     ]
 
-    if (
-      !loginStatus.authenticationRequired ||
-      loginStatus.userLevel === 'admin'
-    ) {
+    if (isAdmin) {
       result.push(
         {
           name: 'Appstore',
@@ -139,10 +224,6 @@ export default function Sidebar({ location }: SidebarProps) {
               url: '/serverConfiguration/settings'
             },
             {
-              name: 'Data Connections',
-              url: '/serverConfiguration/connections/-'
-            },
-            {
               name: 'Plugin Config',
               url: '/serverConfiguration/plugins/-'
             },
@@ -154,10 +235,6 @@ export default function Sidebar({ location }: SidebarProps) {
               name: 'Update',
               url: '/serverConfiguration/update',
               badge: serverUpdateBadge
-            },
-            {
-              name: 'Data Fiddler',
-              url: '/serverConfiguration/datafiddler'
             },
             {
               name: 'Backup/Restore',
@@ -235,7 +312,14 @@ export default function Sidebar({ location }: SidebarProps) {
     })
 
     return result
-  }, [appStore, accessRequests, expiredDeviceCount, loginStatus])
+  }, [
+    appStore,
+    accessRequests,
+    expiredDeviceCount,
+    loginStatus,
+    conflictCount,
+    unconfiguredPriorityCount
+  ])
 
   const handleClick = useCallback((e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
@@ -378,6 +462,7 @@ export default function Sidebar({ location }: SidebarProps) {
 
   return (
     <div className="sidebar">
+      <style>{`.nav-dropdown.open > .nav-dropdown-toggle > .badge { display: none; }`}</style>
       <SidebarHeader />
       <SidebarForm />
       <nav className="sidebar-nav">
