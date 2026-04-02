@@ -233,18 +233,39 @@ export class NotificationManager {
   processNotificationUpdate(u: Update, context: Context) {
     if (hasValues(u) && u.values.length) {
       const id = u.notificationId as NotificationId
+      const path = u.values[0].path
       let alarm: Alarm
       if (this.alarms.has(id)) {
         alarm = this.alarms.get(id) as Alarm
         alarm.syncFromNotificationUpdate(u, context)
-        this.alarms.set(id, alarm)
       } else {
-        alarm = new Alarm()
-        alarm.syncFromNotificationUpdate(u, context)
-        this.alarms.set(id, alarm)
+        const isSelf =
+          context === (this.app.selfContext as Context) || context === ''
+        const existing = isSelf ? this.findSelfAlarmByPath(path) : undefined
+        if (existing) {
+          existing.syncFromNotificationUpdate(u, context)
+          alarm = existing
+        } else {
+          alarm = new Alarm()
+          alarm.syncFromNotificationUpdate(u, context)
+          this.alarms.set(id, alarm)
+        }
       }
       this.emitNotification(alarm)
     }
+  }
+
+  private findSelfAlarmByPath(path: Path): Alarm | undefined {
+    for (const [, alarm] of this.alarms) {
+      const ctx = alarm.properties.context
+      if (
+        alarm.properties.path === path &&
+        (ctx === (this.app.selfContext as Context) || ctx === '')
+      ) {
+        return alarm
+      }
+    }
+    return undefined
   }
 
   /**
