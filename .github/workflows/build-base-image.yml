@@ -52,7 +52,7 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
 
       - name: Build Ubuntu baseimages
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./docker/Dockerfile_base_${{ matrix.os }}
