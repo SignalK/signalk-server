@@ -182,4 +182,39 @@ export interface Plugin {
   statusMessage?: () => string | void
 
   signalKApiRoutes?(router: IRouter): IRouter
+
+  /**
+   * Declares non-admin permission levels for specific plugin routes.
+   *
+   * By default all plugin routes require admin authentication. Implement this
+   * method to allow `readwrite` or `readonly` users to access specific endpoints.
+   * Supports Express-style parameterized paths (e.g. `/data/:sensorId`).
+   *
+   * Routes not listed here remain admin-only. The reserved paths `/` and `/config`
+   * cannot be overridden.
+   *
+   * @category Rest API
+   *
+   * @example
+   * ```typescript
+   * getRoutePermissions() {
+   *   return [
+   *     { method: 'GET', path: '/data/:id', permission: 'readonly' },
+   *     { method: 'POST', path: '/data', permission: 'readwrite' }
+   *   ]
+   * }
+   * ```
+   */
+  getRoutePermissions?(): RoutePermission[]
+}
+
+/**
+ * Declares the required permission level for a specific plugin route.
+ *
+ * @category Rest API
+ */
+export type RoutePermission = {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  path: string
+  permission: 'readwrite' | 'readonly'
 }

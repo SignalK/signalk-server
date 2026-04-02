@@ -1096,3 +1096,99 @@ describe('WS Access Request IP reporting', () => {
     response.ip.should.equal('1.2.3.4')
   })
 })
+
+describe('Plugin route permissions', () => {
+  let server, url, port, readToken, writeToken, adminToken
+  let previousHttpRateLimits
+
+  before(async function () {
+    this.timeout(20000)
+    previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
+    process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000,login=1000'
+
+    port = await freeport()
+    url = `http://0.0.0.0:${port}`
+
+    server = await startServerP(port, true, {
+      disableSchemaMetaDeltas: true,
+      settings: { interfaces: { plugins: true } }
+    })
+
+    readToken = await getReadOnlyToken(server)
+    writeToken = await getWriteToken(server)
+    adminToken = await getAdminToken(server)
+  })
+
+  after(async function () {
+    await server.stop()
+    if (previousHttpRateLimits === undefined) {
+      delete process.env.HTTP_RATE_LIMITS
+    } else {
+      process.env.HTTP_RATE_LIMITS = previousHttpRateLimits
+    }
+  })
+
+  it('admin can access undeclared plugin route', async function () {
+    const result = await fetch(`${url}/plugins/testplugin/demopluginGet`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    })
+    result.status.should.equal(200)
+  })
+
+  it('readwrite user is denied undeclared plugin route', async function () {
+    const result = await fetch(`${url}/plugins/testplugin/demopluginGet`, {
+      headers: { Authorization: `Bearer ${writeToken}` }
+    })
+    result.status.should.equal(401)
+  })
+
+  it('readonly user can access route declared as readonly', async function () {
+    const result = await fetch(`${url}/plugins/testplugin/readonlyData`, {
+      headers: { Authorization: `Bearer ${readToken}` }
+    })
+    result.status.should.equal(200)
+    const body = await result.json()
+    body.data.should.equal('readonly ok')
+  })
+
+  it('readwrite user can access route declared as readwrite', async function () {
+    const result = await fetch(`${url}/plugins/testplugin/writeData`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${writeToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ value: 1 })
+    })
+    result.status.should.equal(200)
+    const body = await result.json()
+    body.data.should.equal('write ok')
+  })
+
+  it('readonly user is denied route declared as readwrite', async function () {
+    const result = await fetch(`${url}/plugins/testplugin/writeData`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${readToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ value: 1 })
+    })
+    result.status.should.equal(401)
+  })
+
+  it('unauthenticated request is denied readonly plugin route', async function () {
+    const result = await fetch(`${url}/plugins/testplugin/readonlyData`)
+    result.status.should.equal(401)
+  })
+
+  it('readonly user can access parameterized route declared as readonly', async function () {
+    const result = await fetch(
+      `${url}/plugins/testplugin/sensorData/temperature`,
+      { headers: { Authorization: `Bearer ${readToken}` } }
+    )
+    result.status.should.equal(200)
+    const body = await result.json()
+    body.sensor.should.equal('temperature')
+  })
+})
