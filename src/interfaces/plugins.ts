@@ -17,6 +17,7 @@
 */
 import {
   Brand,
+  Context,
   PointDestination,
   PropertyValues,
   PropertyValuesCallback,
@@ -27,6 +28,7 @@ import {
   WeatherProvider,
   WeatherApi,
   Value,
+  MetaValue,
   SignalKApiId,
   SourceRef,
   PluginConstructor,
@@ -74,6 +76,9 @@ import { HistoryProvider } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
 import { atomicWriteFileSync } from '../atomicWrite'
+import { writeBaseDeltasFile, ConfigApp } from '../config/config'
+import DeltaEditor from '../deltaeditor'
+import { validateCategoryAssignment } from '../unitpreferences'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -610,6 +615,69 @@ module.exports = (theApp: any) => {
       getSerialPorts,
       supportsMetaDeltas: true,
       getMetadata,
+      setDefaultMetadata: async (
+        skPath: string,
+        value: MetaValue
+      ): Promise<boolean> => {
+        const context = 'vessels.self'
+        const existingMeta = app.config.baseDeltaEditor.getMeta(
+          context,
+          skPath
+        ) as Record<string, unknown> | undefined
+
+        const { hasNewFields, fieldsToSet, merged } =
+          DeltaEditor.computeDefaultFields(
+            existingMeta,
+            value as unknown as Record<string, unknown>
+          )
+
+        if (!hasNewFields) {
+          return false
+        }
+
+        const displayUnits = fieldsToSet.displayUnits as
+          | { category?: string }
+          | undefined
+        if (displayUnits?.category) {
+          const schemaMeta = getMetadata('vessels.self.' + skPath) as Record<
+            string,
+            unknown
+          > | null
+          const pathSiUnit =
+            (fieldsToSet.units as string | undefined) ??
+            (existingMeta?.units as string | undefined) ??
+            (schemaMeta?.units as string | undefined)
+          const validationError = validateCategoryAssignment(
+            pathSiUnit,
+            displayUnits.category
+          )
+          if (validationError) {
+            debug(
+              `setDefaultMetadata: invalid category for ${skPath}: ${validationError}`
+            )
+            return false
+          }
+        }
+
+        app.config.baseDeltaEditor.setMeta(context, skPath, merged)
+        await writeBaseDeltasFile(app as unknown as ConfigApp)
+
+        app.handleMessage(plugin.id, {
+          context: 'vessels.self' as Context,
+          updates: [
+            {
+              meta: [
+                {
+                  path: skPath as Path,
+                  value: merged
+                }
+              ]
+            }
+          ]
+        })
+
+        return true
+      },
       reportOutputMessages: (count?: number) => {
         app.emit(CONNECTION_WRITE_EVENT_NAME, {
           providerId: plugin.id,
