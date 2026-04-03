@@ -151,6 +151,7 @@ interface App
 
 interface ModuleInfo {
   name: string
+  type?: string
 }
 
 module.exports = function (
@@ -260,9 +261,10 @@ module.exports = function (
         indexContent.toString().replace(
           /%ADDONSCRIPTS%/g,
           addonScripts
-            .map(
-              (moduleInfo) =>
-                `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
+            .map((moduleInfo) =>
+              moduleInfo.type === 'module'
+                ? `<script type="module" src="/${moduleInfo.name}/remoteEntry.js"></script>`
+                : `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
             )
             .join('\n')
             .toString()
