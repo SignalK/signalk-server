@@ -487,7 +487,7 @@ jobs:
             clearDestination: () => Promise.resolve(),
             setDestination: () => Promise.resolve(),
             activateRoute: () => Promise.resolve(),
-            getSerialPorts: () => Promise.resolve([]),
+            getSerialPorts: () => Promise.resolve({ byId: [], byPath: [], byOpenPlotter: [], serialports: [] }),
           };
 
           let plugin;
@@ -1269,8 +1269,13 @@ jobs:
       - name: Build plugin
         env:
           BUILD_CMD: ${{ inputs.build-command }}
+        shell: bash
         run: |
-          npm ci
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
           eval "$BUILD_CMD"
 
       - name: Install plugin into SignalK
