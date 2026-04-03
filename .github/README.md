@@ -20,9 +20,11 @@ jobs:
     uses: SignalK/signalk-server/.github/workflows/plugin-ci.yml@master
 ```
 
+For manual trigger support (run from GitHub UI with custom settings), see the full example below.
+
 ## Examples
 
-- [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) — Recommended one-liner shared workflow
+- [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) — Full workflow with manual trigger and custom inputs
 
 ## Files
 
