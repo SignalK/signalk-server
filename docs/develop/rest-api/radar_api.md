@@ -620,33 +620,30 @@ HTTP GET "/signalk/v2/api/vessels/self/radars/{id}/targets"
 _Response:_
 
 ```json
-{
-  "timestamp": "2025-01-15T10:30:00Z",
-  "targets": [
-    {
-      "id": 1,
-      "status": "tracking",
-      "position": {
-        "bearing": 0.789,
-        "distance": 1852,
-        "latitude": 52.3702,
-        "longitude": 4.8952
-      },
-      "motion": {
-        "course": 3.14159,
-        "speed": 3.34
-      },
-      "danger": {
-        "cpa": 150,
-        "tcpa": 324
-      },
-      "acquisition": "auto",
-      "sourceZone": 1,
-      "firstSeen": "2025-01-15T10:25:00Z",
-      "lastSeen": "2025-01-15T10:30:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": 1,
+    "status": "tracking",
+    "position": {
+      "bearing": 0.789,
+      "distance": 1852,
+      "latitude": 52.3702,
+      "longitude": 4.8952
+    },
+    "motion": {
+      "course": 3.14159,
+      "speed": 3.34
+    },
+    "danger": {
+      "cpa": 150,
+      "tcpa": 324
+    },
+    "acquisition": "auto",
+    "sourceZone": 1,
+    "firstSeen": "2025-01-15T10:25:00Z",
+    "lastSeen": "2025-01-15T10:30:00Z"
+  }
+]
 ```
 
 **Units:** All distances are in meters. All angles (bearing, course) are in radians [0, 2π). Speed is in m/s. Time values (tcpa) are in seconds.
