@@ -10,9 +10,10 @@ import {
   SKVersion,
   SourceRef,
   Update,
-  AlarmOptions,
   AlarmProperties,
-  NotificationId
+  NotificationId,
+  AlarmRaiseOptions,
+  AlarmUpdateOptions
 } from '@signalk/server-api'
 import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
@@ -311,11 +312,11 @@ export class NotificationApi {
     this.notificationManager.clear(id)
   }
 
-  raise(options: AlarmOptions): NotificationId {
+  raise(options: AlarmRaiseOptions): NotificationId {
     return this.notificationManager.raise(options)
   }
 
-  update(id: NotificationId, options: AlarmOptions): void {
+  update(id: NotificationId, options: AlarmUpdateOptions): void {
     this.notificationManager.update(id, options)
   }
 

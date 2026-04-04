@@ -8,7 +8,8 @@ import {
   AlarmSchema,
   NotificationResponseSchema,
   NotificationIdParamSchema,
-  AlarmOptionsSchema,
+  AlarmUpdateOptionsSchema,
+  AlarmRaiseOptionsSchema,
   PositionSchema,
   IsoTimeSchema
 } from '@signalk/server-api/typebox'
@@ -39,7 +40,8 @@ const notificationsApiDoc = {
       ...typeboxToOpenApiSchemas([
         NotificationIdParamSchema,
         NotificationResponseSchema,
-        AlarmOptionsSchema,
+        AlarmUpdateOptionsSchema,
+        AlarmRaiseOptionsSchema,
         AlarmStateSchema,
         AlarmMethodSchema,
         AlarmMethodArraySchema,
@@ -79,7 +81,7 @@ const notificationsApiDoc = {
               type: 'object',
               description: '200 OK response',
               properties: {
-                state: { type: 'string', enum: ['COMPLETE'] },
+                state: { type: 'string', enum: ['COMPLETED'] },
                 statusCode: { type: 'number', enum: [200] }
               },
               required: ['state', 'statusCode']
@@ -95,7 +97,7 @@ const notificationsApiDoc = {
               type: 'object',
               description: '200 OK response',
               properties: {
-                state: { type: 'string', enum: ['COMPLETE'] },
+                state: { type: 'string', enum: ['COMPLETED'] },
                 statusCode: { type: 'number', enum: [200] },
                 id: { type: 'string', description: 'Notification Identifier' }
               },
@@ -153,7 +155,7 @@ const notificationsApiDoc = {
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/AlarmOptions'
+                $ref: '#/components/schemas/AlarmRaiseOptions'
               }
             }
           }
@@ -187,7 +189,7 @@ const notificationsApiDoc = {
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/AlarmOptions'
+                $ref: '#/components/schemas/AlarmUpdateOptions'
               }
             }
           }

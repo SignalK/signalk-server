@@ -7,7 +7,8 @@ import {
   Update,
   Context,
   Path,
-  AlarmOptions,
+  AlarmRaiseOptions,
+  AlarmUpdateOptions,
   SourceRef,
   NotificationId,
   Brand,
@@ -90,7 +91,7 @@ export class NotificationManager {
    * @param options Object to initialise the Alarm
    * @returns alarm id
    */
-  raise(options: AlarmOptions): NotificationId {
+  raise(options: AlarmRaiseOptions): NotificationId {
     const id = uuid.v4() as NotificationId
     const alarm = new Alarm(id)
 
@@ -126,7 +127,7 @@ export class NotificationManager {
    * @param id Alarm identifier
    * @param options Key / values to update
    */
-  update(id: NotificationId, options: AlarmOptions) {
+  update(id: NotificationId, options: AlarmUpdateOptions) {
     const alarm = this.alarms.get(id)
     if (!alarm) {
       throw new Error('Notification not found!')

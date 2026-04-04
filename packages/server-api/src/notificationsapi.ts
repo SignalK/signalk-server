@@ -2,9 +2,9 @@ import {
   ALARM_STATE,
   Context,
   Notification,
-  NotificationData,
   NotificationId,
-  Path
+  Path,
+  Value
 } from '.'
 
 /**
@@ -39,7 +39,7 @@ export interface NotificationsApi {
    * @returns Notification Identifier
    *
    */
-  raise(options: AlarmOptions): NotificationId
+  raise(options: AlarmRaiseOptions): NotificationId
 
   /**
    * Raise a Person Overboard notification.
@@ -61,7 +61,7 @@ export interface NotificationsApi {
    * @param options - Alarm options.
    *
    */
-  update(id: NotificationId, options: AlarmOptions): void
+  update(id: NotificationId, options: AlarmUpdateOptions): void
 
   /**
    * Silences the notification with the supplied identifier.
@@ -128,14 +128,26 @@ export interface WithNotificationsApi {
  * @property appendId - Set true to append the `notificationId` to the Notification path
  * @property data - Additional information provided in key | value pairs
  */
-export interface AlarmOptions {
+export interface AlarmRaiseOptions {
   state: ALARM_STATE
-  message: string
+  message?: string
   path?: Path
   position?: boolean
   createdAt?: boolean
   appendId?: boolean
-  data?: Record<string, NotificationData>
+  data?: Record<string, Value>
+}
+
+/**
+ * @category  Notifications API
+ * @property state - Alarm State value to apply
+ * @property message - Message to display or speak
+ * @property data - Additional information provided in key | value pairs
+ */
+export interface AlarmUpdateOptions {
+  state?: ALARM_STATE
+  message?: string
+  data?: Record<string, Value>
 }
 
 /**

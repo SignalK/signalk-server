@@ -48,7 +48,7 @@ export const AlarmSchema = Type.Object(
     }),
     position: Type.Optional(PositionSchema),
     createdAt: Type.Optional(IsoTimeSchema),
-    data: Type.Optional(Type.Object({}))
+    data: Type.Optional(Type.Record(Type.String(), Type.Unknown()))
   },
   {
     $id: 'Alarm',
@@ -58,36 +58,65 @@ export const AlarmSchema = Type.Object(
 export type Alarm = Static<typeof AlarmSchema>
 
 /**
- * Alarm Options object — state, method, message, and optional status.
- * Used as the `value` field in a notification response.
+ * Alarm Raise Options object — state and optional message, path, position, createdAt, appendId, data.
+ * Used as the `options` parameter in a raise notification request.
  */
-export const AlarmOptionsSchema = Type.Object(
+export const AlarmRaiseOptionsSchema = Type.Object(
   {
     state: AlarmStateSchema,
-    path: Type.Optional(Type.String({
-      description: 'Signal K path',
-      example: 'notifications.mob.8dac314c-ef20-4e6f-9098-db64ce20e117'
-    })),
-    message: Type.String({ description: 'Message to display or speak' }),
-    position: Type.Optional(Type.Boolean({
-      description:
-        'Set `true` to include the position at which the notification was raised.'
-    })),
-    createdAt: Type.Optional(Type.Boolean({
-      description:
-        'Set `true` to include the timestamp when the notification was raised.'
-    })),
-    appendId: Type.Optional(Type.Boolean({
-      description: 'Set `true` to include the `notificationId` in the path.'
-    })),
-    data: Type.Optional(Type.Object({}))
+    message: Type.Optional(
+      Type.String({ description: 'Message to display or speak' })
+    ),
+    path: Type.Optional(
+      Type.String({
+        description: 'Signal K path',
+        example: 'notifications.mob.8dac314c-ef20-4e6f-9098-db64ce20e117'
+      })
+    ),
+    position: Type.Optional(
+      Type.Boolean({
+        description:
+          'Set `true` to include the position at which the notification was raised.'
+      })
+    ),
+    createdAt: Type.Optional(
+      Type.Boolean({
+        description:
+          'Set `true` to include the timestamp when the notification was raised.'
+      })
+    ),
+    appendId: Type.Optional(
+      Type.Boolean({
+        description: 'Set `true` to include the `notificationId` in the path.'
+      })
+    ),
+    data: Type.Optional(Type.Record(Type.String(), Type.Unknown()))
   },
   {
-    $id: 'AlarmOptions',
-    description: 'Alarm Options object'
+    $id: 'AlarmRaiseOptions',
+    description: 'Alarm Raise Options object'
   }
 )
-export type AlarmOptions = Static<typeof AlarmOptionsSchema>
+export type AlarmRaiseOptions = Static<typeof AlarmRaiseOptionsSchema>
+
+/**
+ * Alarm Update Options object — Optional properties state, method, data.
+ * Used as the `options` parameter in an update notification request.
+ */
+export const AlarmUpdateOptionsSchema = Type.Object(
+  {
+    state: Type.Optional(AlarmStateSchema),
+    message: Type.Optional(
+      Type.String({ description: 'Message to display or speak' })
+    ),
+    data: Type.Optional(Type.Record(Type.String(), Type.Unknown()))
+  },
+  {
+    $id: 'AlarmUpdateOptions',
+    description: 'Options object for raising an Alarm'
+  }
+)
+export type AlarmUpdateOptions = Static<typeof AlarmUpdateOptionsSchema>
 
 /**
  * Notification response wrapper — value containing an alarm.
