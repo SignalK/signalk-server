@@ -877,7 +877,7 @@ on a separate websocket _per radar_ and is in a binary format. The data is encod
 
 The message schema is stable and will not change within a major version (per [semver](https://semver.org/)):
 
-```protobuf
+```text
 syntax = "proto3";
 
 /*
