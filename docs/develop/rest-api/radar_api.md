@@ -595,7 +595,8 @@ Control values contain different fields depending on the control's `dataType` (d
 
 The Radar API defines ARPA (Automatic Radar Plotting Aid) target tracking with CPA/TCPA calculations and SignalK notification integration.
 
-`mayara-server` fully supports this API.
+`mayara-server` fully supports both ARPA and MARPA, but this is an optional part of the API. When a server does not support it it shall
+return HTTP status 501.
 
 If the radar is a dual-radar device then `mayara-server` has a CLI option `--merge-targets`, when this
 is used targets will be shared between both ranges and move from one radar to another.
