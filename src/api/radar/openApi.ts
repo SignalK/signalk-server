@@ -576,7 +576,9 @@ const radarApiDoc = {
             }
           },
           '404': { description: 'Radar not found' },
-          '501': { description: 'Provider does not support (M)ARPA target tracking' }
+          '501': {
+            description: 'Provider does not support (M)ARPA target tracking'
+          }
         }
       },
       post: {
