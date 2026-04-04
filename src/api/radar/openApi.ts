@@ -517,14 +517,14 @@ const radarApiDoc = {
         ],
         responses: {
           '200': {
-            description: 'Control value (bare, not wrapped)',
+            description: 'Control value',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ControlValue' }
               }
             }
           },
-          '400': { description: 'Unknown control' }
+          '404': { description: 'Control or radar not found' }
         }
       },
       put: {
@@ -551,7 +551,8 @@ const radarApiDoc = {
         },
         responses: {
           '200': { description: 'Control updated' },
-          '400': { description: 'Unknown control or invalid value' }
+          '400': { description: 'Invalid value' },
+          '404': { description: 'Control or radar not found' }
         }
       }
     },
@@ -574,8 +575,8 @@ const radarApiDoc = {
               }
             }
           },
-          '400': { description: 'Target tracking not enabled' },
-          '404': { description: 'Radar not found' }
+          '404': { description: 'Radar not found' },
+          '501': { description: 'Provider does not support (M)ARPA target tracking' }
         }
       },
       post: {
@@ -600,10 +601,11 @@ const radarApiDoc = {
               }
             }
           },
-          '400': {
-            description: 'Target tracking not enabled or invalid position'
-          },
-          '404': { description: 'Radar not found' }
+          '400': { description: 'Invalid position' },
+          '404': { description: 'Radar not found' },
+          '501': {
+            description: 'Provider does not support (M)ARPA target tracking'
+          }
         }
       }
     },
@@ -625,8 +627,11 @@ const radarApiDoc = {
         ],
         responses: {
           '200': { description: 'Target tracking cancelled' },
-          '400': { description: 'Target tracking not enabled' },
-          '404': { description: 'Radar or target not found' }
+          '400': { description: 'Invalid target ID' },
+          '404': { description: 'Radar or target not found' },
+          '501': {
+            description: 'Provider does not support (M)ARPA target tracking'
+          }
         }
       }
     }

@@ -295,8 +295,7 @@ These radars therefore also show up as two radars in the API.
 As long as clients listen to updates to controls, which they should do anyway to be able to function in a setting where there is for instance a MFD device, they can assume that all controls can be set.
 
 Furuno radars do this in a way where the second range shares as many control settings as possible.
-At this time `mayara-server` does not yet support this mode. Once it does, a future version of this API
-may be released if it has API consequences.
+Currently there is no support for Furuno dual range yet and its impact on the API is unknown.
 
 ### Controls
 
@@ -596,7 +595,7 @@ Control values contain different fields depending on the control's `dataType` (d
 
 The Radar API defines ARPA (Automatic Radar Plotting Aid) target tracking with CPA/TCPA calculations and SignalK notification integration.
 
-`mayara-server` now fully supports this API.
+`mayara-server` fully supports this API.
 
 If the radar is a dual-radar device then `mayara-server` has a CLI option `--merge-targets`, when this
 is used targets will be shared between both ranges and move from one radar to another.
@@ -971,7 +970,7 @@ In a later API release it is likely that the legend will be expanded to contain 
 ### Spoke skipping
 
 Some radars have a high value for `spokesPerRevolution` but actually only produce fewer spokes
-per each revolution. At the moment of writing this is true for Furuno radars but not the other
+per each revolution. This is true for Furuno radars but not the other
 supported radars from Garmin, Navico and Raymarine. The Furuno radars set `hasSparseSpokes` in
 the capabilities struct to `true`.
 
