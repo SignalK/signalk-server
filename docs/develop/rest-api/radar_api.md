@@ -10,7 +10,7 @@ This is version v3.1.0 of the API. The version will use semver for version updat
 
 Radar functionality is provided by "provider plugins" that handle the interaction with radar hardware and stream spoke data to connected clients.
 
-Requests to the Radar API are made to HTTP REST endpoints rooted at `/signalk/v2/api/vessels/self/radars` or the Signal K websocket stream at `/signalk/v1/api/stream`.
+Requests to the Radar API are made to HTTP REST endpoints rooted at `/signalk/v2/api/vessels/self/radars` or the Signal K websocket stream at `/signalk/v1/stream`.
 
 Like `signalk-server` vis-a-vis the Signal K specification there is a reference implementation
 for this API, which may very well remain the only implementation of the server side of the API,
@@ -933,8 +933,8 @@ const response = await fetch('/signalk/v2/api/vessels/self/radars/')
 const data = await response.json()
 
 // Choose a radar_id from the returned radars
-const radarId = Object.keys(data.radars)[0]
-const radar = data.radars[radarId]
+const radarId = Object.keys(data)[0]
+const radar = data[radarId]
 
 // Connect to spoke data stream
 const wsUrl =
@@ -970,7 +970,7 @@ In a later API release it is likely that the legend will be expanded to contain 
 
 ### Spoke skipping
 
-Some radars have a high value for `spokes_per_revolution` but actually only produce fewer spokes
+Some radars have a high value for `spokesPerRevolution` but actually only produce fewer spokes
 per each revolution. At the moment of writing this is true for Furuno radars but not the other
 supported radars from Garmin, Navico and Raymarine. The Furuno radars set `hasSparseSpokes` in
 the capabilities struct to `true`.
@@ -979,7 +979,7 @@ A conforming GUI must allow for this and either implement some way to expand mis
 to reconsider the width of spokes to be from the angle/bearing from the received spoke to the
 previously received spoke.
 
-A typical value for Furuno is to have `spokes_per_revolution = 8192` but the actual # of spokes
+A typical value for Furuno is to have `spokesPerRevolution = 8192` but the actual # of spokes
 will be ~ 900. Weirdly enough it is not a "round" figure like 1440, 2048, 512 or 250 like the
 other radars.
 
