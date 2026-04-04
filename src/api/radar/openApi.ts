@@ -72,17 +72,6 @@ const radarApiDoc = {
           'radarIpAddress'
         ]
       },
-      RadarsResponse: {
-        type: 'object',
-        properties: {
-          version: { type: 'string' },
-          radars: {
-            type: 'object',
-            additionalProperties: { $ref: '#/components/schemas/RadarInfo' }
-          }
-        },
-        required: ['version', 'radars']
-      },
       Capabilities: {
         type: 'object',
         properties: {
@@ -411,7 +400,12 @@ const radarApiDoc = {
             description: 'Map of radar IDs to radar information',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/RadarsResponse' }
+                schema: {
+                  type: 'object',
+                  additionalProperties: {
+                    $ref: '#/components/schemas/RadarInfo'
+                  }
+                }
               }
             }
           }

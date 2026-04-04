@@ -135,24 +135,21 @@ _Response:_
 
 ```json
 {
-  "version": "3.1.0",
-  "radars": {
-    "nav1034A": {
-      "brand": "Navico",
-      "model": "HALO",
-      "name": "HALO 034A",
-      "radarIpAddress": "192.168.1.50",
-      "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034A/spokes",
-      "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
-    },
-    "nav1034B": {
-      "brand": "Navico",
-      "model": "HALO",
-      "name": "HALO 034B",
-      "radarIpAddress": "192.168.1.50",
-      "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034B/spokes",
-      "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
-    }
+  "nav1034A": {
+    "brand": "Navico",
+    "model": "HALO",
+    "name": "HALO 034A",
+    "radarIpAddress": "192.168.1.50",
+    "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034A/spokes",
+    "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
+  },
+  "nav1034B": {
+    "brand": "Navico",
+    "model": "HALO",
+    "name": "HALO 034B",
+    "radarIpAddress": "192.168.1.50",
+    "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034B/spokes",
+    "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
   }
 }
 ```
