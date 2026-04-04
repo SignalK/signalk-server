@@ -24,7 +24,7 @@ module.exports = function (app) {
   const openSockets = {}
   let idSequence = 0
   let server = null
-  const port = process.env.NMEA0183PORT || 10110
+  const port = Number(process.env.NMEA0183PORT) || 10110
   const api = {}
 
   api.start = function () {

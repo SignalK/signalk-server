@@ -49,6 +49,11 @@ import { CourseApi } from '../api/course'
 import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
+import {
+  PLUGIN_CONFIG_DATA_DIR,
+  pluginConfigPath,
+  pluginDataDir
+} from '../plugin-paths'
 import { listAllSerialPorts } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
@@ -106,7 +111,7 @@ module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
   return {
     async start() {
-      ensureExists(path.join(theApp.config.configPath, 'plugin-config-data'))
+      ensureExists(path.join(theApp.config.configPath, PLUGIN_CONFIG_DATA_DIR))
 
       theApp.getPluginsList = async (enabled?: boolean) => {
         return await getPluginsList(enabled)
@@ -245,19 +250,11 @@ module.exports = (theApp: any) => {
   }
 
   function pathForPluginId(id: string) {
-    return path.join(
-      theApp.config.configPath,
-      'plugin-config-data',
-      id + '.json'
-    )
+    return pluginConfigPath(theApp.config.configPath, id)
   }
 
   function dirForPluginId(id: string) {
-    const dirName = path.join(
-      theApp.config.configPath,
-      'plugin-config-data',
-      id
-    )
+    const dirName = pluginDataDir(theApp.config.configPath, id)
     ensureExists(dirName)
     return dirName
   }

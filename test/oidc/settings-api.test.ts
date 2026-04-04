@@ -29,6 +29,7 @@ describe('OIDC Settings API', function () {
     issuer: 'https://auth.example.com',
     clientId: 'signalk-client',
     clientSecret: 'test-secret-123',
+    redirectUri: 'https://signalk.local:3000/oidc/callback',
     providerName: 'Test SSO',
     defaultPermission: 'readonly',
     autoCreateUsers: true,

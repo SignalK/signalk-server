@@ -274,12 +274,8 @@ export function registerOIDCRoutes(
 
       const metadata = await getDiscoveryDocument(oidcConfig.issuer)
 
-      // Build redirect URI
-      const protocol = req.secure ? 'https' : 'http'
-      const host = req.get('host')
-      const redirectUri =
-        oidcConfig.redirectUri ||
-        `${protocol}://${host}${skAuthPrefix}/oidc/callback`
+      // Use the configured redirect URI (required by validation)
+      const redirectUri = oidcConfig.redirectUri
 
       // Store original destination (validated to prevent open redirect attacks)
       const requestedRedirect = req.query.redirect
@@ -510,9 +506,9 @@ export function registerOIDCRoutes(
         }
 
         // Build logout URL with post_logout_redirect_uri
-        const protocol = req.secure ? 'https' : 'http'
-        const host = req.get('host')
-        const fullPostLogoutUri = `${protocol}://${host}${postLogoutRedirect}`
+        // Derive origin from configured redirectUri to avoid Host header injection
+        const redirectOrigin = new URL(oidcConfig.redirectUri).origin
+        const fullPostLogoutUri = `${redirectOrigin}${postLogoutRedirect}`
 
         const logoutUrl = new URL(metadata.end_session_endpoint)
         logoutUrl.searchParams.set(

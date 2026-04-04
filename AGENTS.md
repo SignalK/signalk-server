@@ -31,6 +31,7 @@ Do not add error handling, fallbacks, or validation for scenarios that cannot ha
 ### Type Safety
 
 - **All new code must be written in TypeScript**, not JavaScript
+- When converting JavaScript to TypeScript use pre-existing types when possible instead of creating new local types
 - Use strict type checking; avoid `any` or equivalent escape hatches
 - Validate external inputs at system boundaries
 - Prefer immutable data structures where practical

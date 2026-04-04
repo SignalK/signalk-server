@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin-ui",
-  "version": "2.24.1",
+  "version": "2.24.2",
   "description": "Signal K server admin webapp",
   "repository": {
     "type": "git",

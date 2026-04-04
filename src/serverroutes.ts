@@ -14,6 +14,9 @@
  * limitations under the License.
 */
 
+import * as http from 'http'
+import * as https from 'https'
+import bcrypt from 'bcryptjs'
 import busboy from 'busboy'
 import commandExists from 'command-exists'
 import express, { IRouter, NextFunction, Request, Response } from 'express'
@@ -44,9 +47,12 @@ import { getHttpPort, getSslPort } from './ports'
 import { queryRequest } from './requestResponse'
 import {
   getRateLimitValidationOptions,
+  pathForSecurityConfig,
+  SecurityConfig,
   SecurityConfigGetter,
   SecurityConfigSaver,
   SecurityStrategy,
+  User,
   WithSecurityStrategy
 } from './security'
 import { listAllSerialPorts } from './serialports'
@@ -311,10 +317,17 @@ module.exports = function (
     }
   })
 
+  const securityActivationDisabled =
+    process.env.DISABLE_SECURITY_ACTIVATION === '1' ||
+    process.env.DISABLE_SECURITY_ACTIVATION === 'true'
+
   const getLoginStatus = (req: Request, res: Response) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = app.securityStrategy.getLoginStatus(req)
     result.securityWasEnabled = securityWasEnabled
+    if (securityActivationDisabled) {
+      delete result.noUsers
+    }
 
     setNoCache(res)
     res.json(result)
@@ -683,162 +696,319 @@ module.exports = function (
   })
 
   if (app.securityStrategy.getUsers(getSecurityConfig(app)).length === 0) {
-    app.post(
-      `${SERVERROUTESPREFIX}/enableSecurity`,
-      (req: Request, res: Response) => {
-        if (
-          securityWasEnabled ||
-          app.securityStrategy.getUsers(getSecurityConfig(app)).length > 0
-        ) {
-          res.status(403).send('Security already enabled')
-          return
+    if (securityActivationDisabled) {
+      app.post(
+        `${SERVERROUTESPREFIX}/enableSecurity`,
+        (_req: Request, res: Response) => {
+          res.status(403).send('Security activation is disabled')
         }
-        if (app.securityStrategy.isDummy()) {
-          app.config.settings.security = { strategy: defaultSecurityStrategy }
-          const adminUser = req.body
+      )
+    } else {
+      app.post(
+        `${SERVERROUTESPREFIX}/enableSecurity`,
+        (req: Request, res: Response) => {
           if (
-            !adminUser.userId ||
-            adminUser.userId.length === 0 ||
-            !adminUser.password ||
-            adminUser.password.length === 0
+            securityWasEnabled ||
+            app.securityStrategy.getUsers(getSecurityConfig(app)).length > 0
           ) {
-            res.status(400).send('userId or password missing or too short')
+            res.status(403).send('Security already enabled')
             return
           }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          writeSettingsFile(app, app.config.settings, (err: any) => {
-            if (err) {
-              console.log(err)
-              res.status(500).send('Unable to save to settings file')
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const config: any = {}
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              const securityStrategy = require(defaultSecurityStrategy)(
-                app,
-                config,
-                saveSecurityConfig
-              )
-              if (req.body.allow_readonly === true) {
-                config.allow_readonly = true
-              }
-              addUser(req, res, securityStrategy, config)
+          if (req.body.restore === true) {
+            const { username, password } = req.body
+            if (!username || !password) {
+              res.status(400).send('Username and password are required')
+              return
             }
-          })
-        } else {
-          addUser(req, res, app.securityStrategy)
-        }
-        securityWasEnabled = true
-
-        function addUser(
-          request: Request,
-          response: Response,
-          securityStrategy: SecurityStrategy,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          config?: any
-        ) {
-          if (!config) {
-            config = app.securityStrategy.getConfiguration()
-          }
-          request.body.type = 'admin'
-          securityStrategy.addUser(config, request.body, (err, theConfig) => {
-            if (err) {
-              console.log(err)
-              response.status(500)
-              response.send('Unable to add user')
-            } else {
-              saveSecurityConfig(app, theConfig, (theError) => {
-                if (theError) {
-                  console.log(theError)
-                  response.status(500)
-                  response.send('Unable to save security configuration change')
+            const securityConfigPath = pathForSecurityConfig(app)
+            const backupPath = securityConfigPath + '.disabled'
+            if (!fs.existsSync(backupPath)) {
+              res.status(404).send('No security backup found')
+              return
+            }
+            let backupConfig: SecurityConfig
+            try {
+              backupConfig = JSON.parse(
+                fs.readFileSync(backupPath, 'utf8')
+              ) as SecurityConfig
+            } catch (err) {
+              console.error(err)
+              res.status(500).send('Unable to read security backup')
+              return
+            }
+            const user = backupConfig.users?.find(
+              (u: User) => u.username === username && u.type === 'admin'
+            )
+            const hashToCompare = user?.password || '$2b$10$invalidhashpadding'
+            bcrypt.compare(
+              password,
+              hashToCompare,
+              (err: Error | null, matches: boolean) => {
+                if (err) {
+                  console.error(err)
+                  res.status(500).send('Unable to verify credentials')
+                  return
                 }
-                response.send('Security enabled')
-              })
+                if (!matches || !user?.password) {
+                  res.status(401).send('Invalid username or password')
+                  return
+                }
+                try {
+                  fs.renameSync(backupPath, securityConfigPath)
+                  app.config.settings.security = {
+                    strategy: defaultSecurityStrategy
+                  }
+                  writeSettingsFile(
+                    app,
+                    app.config.settings,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (err: any) => {
+                      if (err) {
+                        console.error(err)
+                        fs.renameSync(securityConfigPath, backupPath)
+                        res.status(500).send('Unable to save settings')
+                        return
+                      }
+                      securityWasEnabled = true
+                      res.send('Security restored, please restart the server')
+                    }
+                  )
+                } catch (err) {
+                  console.error(err)
+                  res.status(500).send('Unable to restore security')
+                }
+              }
+            )
+            return
+          }
+          if (app.securityStrategy.isDummy()) {
+            const adminUser = req.body
+            if (
+              !adminUser.userId ||
+              adminUser.userId.length === 0 ||
+              !adminUser.password ||
+              adminUser.password.length === 0
+            ) {
+              res.status(400).send('userId or password missing or too short')
+              return
             }
-          })
+            const updatedSettings = structuredClone(app.config.settings)
+            updatedSettings.security = { strategy: defaultSecurityStrategy }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            writeSettingsFile(app, updatedSettings, (err: any) => {
+              if (err) {
+                console.log(err)
+                res.status(500).send('Unable to save to settings file')
+              } else {
+                app.config.settings = updatedSettings
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const config: any = {}
+                // eslint-disable-next-line @typescript-eslint/no-require-imports
+                const securityStrategy = require(defaultSecurityStrategy)(
+                  app,
+                  config,
+                  saveSecurityConfig
+                )
+                if (req.body.allow_readonly === true) {
+                  config.allow_readonly = true
+                }
+                addUser(req, res, securityStrategy, config)
+              }
+            })
+          } else {
+            addUser(req, res, app.securityStrategy)
+          }
+
+          function addUser(
+            request: Request,
+            response: Response,
+            securityStrategy: SecurityStrategy,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            config?: any
+          ) {
+            if (!config) {
+              config = app.securityStrategy.getConfiguration()
+            }
+            request.body.type = 'admin'
+            securityStrategy.addUser(config, request.body, (err, theConfig) => {
+              if (err) {
+                console.log(err)
+                response.status(500)
+                response.send('Unable to add user')
+              } else {
+                saveSecurityConfig(app, theConfig, (theError) => {
+                  if (theError) {
+                    console.log(theError)
+                    response.status(500)
+                    response.send(
+                      'Unable to save security configuration change'
+                    )
+                  } else {
+                    securityWasEnabled = true
+                    response.send('Security enabled')
+                  }
+                })
+              }
+            })
+          }
         }
-      }
-    )
+      )
+    }
   }
+
+  app.post(
+    `${SERVERROUTESPREFIX}/disableSecurity`,
+    (req: Request, res: Response) => {
+      if (!app.securityStrategy.allowConfigure(req)) {
+        res.status(401).send('Disable security not allowed')
+        return
+      }
+      const { username, password } = req.body || {}
+      if (!username || !password) {
+        res.status(400).send('Username and password are required')
+        return
+      }
+      if (!app.securityStrategy.login) {
+        res.status(500).send('Login not supported by security strategy')
+        return
+      }
+      const config = getSecurityConfig(app)
+      const user = config?.users?.find(
+        (u: User) => u.username === username && u.type === 'admin'
+      )
+      if (!user) {
+        res.status(401).send('Invalid username or password')
+        return
+      }
+      app.securityStrategy
+        .login(username, password)
+        .then((reply) => {
+          if (reply.statusCode !== 200) {
+            res.status(401).send('Invalid username or password')
+            return
+          }
+          const securityConfigPath = pathForSecurityConfig(app)
+          const backupPath = securityConfigPath + '.disabled'
+          try {
+            if (fs.existsSync(securityConfigPath)) {
+              fs.renameSync(securityConfigPath, backupPath)
+            }
+            delete app.config.settings.security
+            writeSettingsFile(app, app.config.settings, (err: Error) => {
+              if (err) {
+                console.error(err)
+                if (fs.existsSync(backupPath)) {
+                  fs.renameSync(backupPath, securityConfigPath)
+                }
+                res.status(500).send('Unable to save settings')
+                return
+              }
+              res.send('Security disabled, please restart the server')
+            })
+          } catch (err) {
+            console.error(err)
+            res.status(500).send('Unable to disable security')
+          }
+        })
+        .catch((err) => {
+          console.error(err)
+          res.status(500).send('Unable to verify credentials')
+        })
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/security/hasBackup`,
+    (req: Request, res: Response) => {
+      if (
+        !app.securityStrategy.isDummy() &&
+        !app.securityStrategy.allowConfigure(req)
+      ) {
+        res.status(401).send('Not authorized')
+        return
+      }
+      const backupPath = pathForSecurityConfig(app) + '.disabled'
+      res.json({ hasBackup: fs.existsSync(backupPath) })
+    }
+  )
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/settings`)
 
   app.put(`${SERVERROUTESPREFIX}/settings`, (req: Request, res: Response) => {
     const settings = req.body
+    const updatedSettings = structuredClone(app.config.settings)
 
     forIn(settings.interfaces, (enabled, name) => {
       const interfaces =
-        app.config.settings.interfaces || (app.config.settings.interfaces = {})
+        updatedSettings.interfaces || (updatedSettings.interfaces = {})
       interfaces[name] = enabled
     })
 
     if (!isUndefined(settings.options.mdns)) {
-      app.config.settings.mdns = settings.options.mdns
+      updatedSettings.mdns = settings.options.mdns
     }
 
     if (!isUndefined(settings.options.ssl)) {
-      app.config.settings.ssl = settings.options.ssl
+      updatedSettings.ssl = settings.options.ssl
     }
 
     if (!isUndefined(settings.options.wsCompression)) {
-      app.config.settings.wsCompression = settings.options.wsCompression
+      updatedSettings.wsCompression = settings.options.wsCompression
     }
 
     if (!isUndefined(settings.options.wsPingInterval)) {
-      app.config.settings.wsPingInterval = settings.options.wsPingInterval
+      updatedSettings.wsPingInterval = settings.options.wsPingInterval
     }
 
     if (!isUndefined(settings.options.accessLogging)) {
-      app.config.settings.accessLogging = settings.options.accessLogging
+      updatedSettings.accessLogging = settings.options.accessLogging
     }
 
     if (!isUndefined(settings.options.enablePluginLogging)) {
-      app.config.settings.enablePluginLogging =
-        settings.options.enablePluginLogging
+      updatedSettings.enablePluginLogging = settings.options.enablePluginLogging
     }
 
     if (!isUndefined(settings.options.trustProxy)) {
-      app.config.settings.trustProxy = settings.options.trustProxy
+      updatedSettings.trustProxy = settings.options.trustProxy
     }
 
     if (!isUndefined(settings.port)) {
-      app.config.settings.port = Number(settings.port)
+      updatedSettings.port = Number(settings.port)
     }
 
     if (!isUndefined(settings.sslport)) {
-      app.config.settings.sslport = Number(settings.sslport)
+      updatedSettings.sslport = Number(settings.sslport)
     }
 
     if (!isUndefined(settings.loggingDirectory)) {
-      app.config.settings.loggingDirectory = settings.loggingDirectory
+      updatedSettings.loggingDirectory = settings.loggingDirectory
     }
 
     if (!isUndefined(settings.pruneContextsMinutes)) {
-      app.config.settings.pruneContextsMinutes = Number(
+      updatedSettings.pruneContextsMinutes = Number(
         settings.pruneContextsMinutes
       )
     }
 
     if (!isUndefined(settings.keepMostRecentLogsOnly)) {
-      app.config.settings.keepMostRecentLogsOnly =
-        settings.keepMostRecentLogsOnly
+      updatedSettings.keepMostRecentLogsOnly = settings.keepMostRecentLogsOnly
     }
 
     if (!isUndefined(settings.logCountToKeep)) {
-      app.config.settings.logCountToKeep = Number(settings.logCountToKeep)
+      updatedSettings.logCountToKeep = Number(settings.logCountToKeep)
     }
 
     forIn(settings.courseApi, (enabled, name) => {
       const courseApi: { [index: string]: boolean | string | number } =
-        app.config.settings.courseApi || (app.config.settings.courseApi = {})
+        updatedSettings.courseApi || (updatedSettings.courseApi = {})
       courseApi[name] = enabled
     })
 
-    writeSettingsFile(app, app.config.settings, (err: Error) => {
+    writeSettingsFile(app, updatedSettings, (err: Error) => {
       if (err) {
         res.status(500).send('Unable to save to settings file')
       } else {
+        app.config.settings = updatedSettings
         res.type('text/plain').send('Settings changed')
       }
     })
@@ -1083,15 +1253,17 @@ module.exports = function (
   app.put(
     `${SERVERROUTESPREFIX}/sourcePriorities`,
     (req: Request, res: Response) => {
-      app.config.settings.sourcePriorities = req.body
-      app.activateSourcePriorities()
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.sourcePriorities = req.body
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app, app.config.settings, (err: any) => {
+      writeSettingsFile(app, updatedSettings, (err: any) => {
         if (err) {
           res
             .status(500)
             .send('Unable to save to sourcePrefences in settings file')
         } else {
+          app.config.settings = updatedSettings
+          app.activateSourcePriorities()
           res.json({ result: 'ok' })
         }
       })
@@ -1426,6 +1598,192 @@ module.exports = function (
         filename: `signalk-${moment().format('MMM-DD-YYYY-HHTmm')}.backup`
       })
     })
+  })
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/testSignalKConnection`
+  )
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/requestAccess`)
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/checkAccessRequest`
+  )
+
+  app.post(
+    `${SERVERROUTESPREFIX}/testSignalKConnection`,
+    (req: Request, res: Response) => {
+      const { host, port, useTLS, token, selfsignedcert } = req.body
+
+      makeRemoteRequest(host, port, useTLS, selfsignedcert, '/signalk')
+        .then((discovery) => {
+          if (discovery.status !== 200) {
+            return res.json({
+              success: false,
+              error: `Discovery failed: HTTP ${discovery.status}`
+            })
+          }
+
+          let server: Record<string, string> | undefined
+          try {
+            server = JSON.parse(discovery.data).server
+          } catch (_e) {
+            // ignore parse errors for server info
+          }
+
+          if (!token) {
+            return res.json({
+              success: true,
+              authenticated: false,
+              server
+            })
+          }
+
+          return makeRemoteRequest(
+            host,
+            port,
+            useTLS,
+            selfsignedcert,
+            '/skServer/loginStatus',
+            'GET',
+            { Authorization: `JWT ${token}` }
+          ).then((loginResult) => {
+            let loginStatus
+            try {
+              loginStatus = JSON.parse(loginResult.data)
+            } catch (_e) {
+              // ignore parse errors
+            }
+
+            if (
+              loginResult.status !== 200 ||
+              !loginStatus ||
+              loginStatus.status !== 'loggedIn'
+            ) {
+              return res.json({
+                success: false,
+                connected: true,
+                error: 'Authentication failed: token may be invalid or revoked',
+                server
+              })
+            }
+
+            res.json({
+              success: true,
+              authenticated: true,
+              userLevel: loginStatus.userLevel,
+              username: loginStatus.username,
+              server
+            })
+          })
+        })
+        .catch((err: Error) => {
+          res.json({ success: false, error: err.message })
+        })
+    }
+  )
+
+  app.post(
+    `${SERVERROUTESPREFIX}/requestAccess`,
+    (req: Request, res: Response) => {
+      const { host, port, useTLS, selfsignedcert, clientId, description } =
+        req.body
+
+      makeRemoteRequest(
+        host,
+        port,
+        useTLS,
+        selfsignedcert,
+        '/signalk/v1/access/requests',
+        'POST',
+        {},
+        { clientId, description }
+      )
+        .then((result) => {
+          try {
+            const data = JSON.parse(result.data)
+            res.json(data)
+          } catch (_e) {
+            res.json({
+              state: 'ERROR',
+              error: `Unexpected response: HTTP ${result.status}`
+            })
+          }
+        })
+        .catch((err: Error) => {
+          res.json({ state: 'ERROR', error: err.message })
+        })
+    }
+  )
+
+  app.post(
+    `${SERVERROUTESPREFIX}/checkAccessRequest`,
+    (req: Request, res: Response) => {
+      const { host, port, useTLS, selfsignedcert, requestId } = req.body
+
+      makeRemoteRequest(
+        host,
+        port,
+        useTLS,
+        selfsignedcert,
+        `/signalk/v1/requests/${requestId}`
+      )
+        .then((result) => {
+          try {
+            const data = JSON.parse(result.data)
+            res.json(data)
+          } catch (_e) {
+            res.json({
+              state: 'ERROR',
+              error: `Unexpected response: HTTP ${result.status}`
+            })
+          }
+        })
+        .catch((err: Error) => {
+          res.json({ state: 'ERROR', error: err.message })
+        })
+    }
+  )
+}
+
+function makeRemoteRequest(
+  host: string,
+  port: number,
+  useTLS: boolean,
+  selfsignedcert: boolean,
+  path: string,
+  method?: string,
+  headers?: Record<string, string>,
+  body?: unknown
+): Promise<{ status: number | undefined; data: string }> {
+  const protocol = useTLS ? https : http
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: host,
+      port,
+      path,
+      method: method || 'GET',
+      headers: {
+        ...(headers || {}),
+        ...(body ? { 'Content-Type': 'application/json' } : {})
+      },
+      rejectUnauthorized: !selfsignedcert
+    }
+    const req = protocol.request(options, (response) => {
+      let data = ''
+      response.on('data', (chunk: string) => {
+        data += chunk
+      })
+      response.on('end', () => {
+        resolve({ status: response.statusCode, data })
+      })
+    })
+    req.on('error', reject)
+    req.setTimeout(10000, () => {
+      req.destroy(new Error('Connection timed out'))
+    })
+    if (body) {
+      req.write(JSON.stringify(body))
+    }
+    req.end()
   })
 }
 

@@ -18,6 +18,7 @@ describe('Token Exchange', () => {
     issuer: 'https://auth.example.com',
     clientId: 'signalk-server',
     clientSecret: 'test-secret',
+    redirectUri: 'https://signalk.local:3000/oidc/callback',
     scope: 'openid email profile',
     defaultPermission: 'readonly',
     autoCreateUsers: true,

@@ -212,6 +212,140 @@ describe('Security', () => {
     limitedUserToken.length.should.equal(149)
   })
 
+  it('websocket login works', async function () {
+    const ws = new WebSocket(
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
+    )
+    const response = await new Promise((resolve, reject) => {
+      const cleanup = () => {
+        clearTimeout(timer)
+        ws.removeAllListeners()
+      }
+      const timer = setTimeout(() => {
+        cleanup()
+        ws.close()
+        reject(new Error('Timed out waiting for ws-login-1 response'))
+      }, 10000)
+      ws.on('message', (msg) => {
+        const data = JSON.parse(msg.toString())
+        if (data.name && data.version) {
+          ws.send(
+            JSON.stringify({
+              requestId: 'ws-login-1',
+              login: {
+                username: WRITE_USER_NAME,
+                password: WRITE_USER_PASSWORD
+              }
+            })
+          )
+        } else if (data.requestId === 'ws-login-1') {
+          cleanup()
+          resolve(data)
+          ws.close()
+        }
+      })
+      ws.on('error', (err) => {
+        cleanup()
+        reject(err)
+      })
+      ws.on('close', () => {
+        cleanup()
+        reject(new Error('WebSocket closed before ws-login-1 response'))
+      })
+    })
+
+    response.state.should.equal('COMPLETED')
+    response.statusCode.should.equal(200)
+    response.login.should.have.property('token')
+    response.login.token.length.should.be.greaterThan(0)
+  })
+
+  it('websocket login with bad password fails', async function () {
+    const ws = new WebSocket(
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
+    )
+    const response = await new Promise((resolve, reject) => {
+      const cleanup = () => {
+        clearTimeout(timer)
+        ws.removeAllListeners()
+      }
+      const timer = setTimeout(() => {
+        cleanup()
+        ws.close()
+        reject(new Error('Timed out waiting for ws-login-bad response'))
+      }, 10000)
+      ws.on('message', (msg) => {
+        const data = JSON.parse(msg.toString())
+        if (data.name && data.version) {
+          ws.send(
+            JSON.stringify({
+              requestId: 'ws-login-bad',
+              login: {
+                username: WRITE_USER_NAME,
+                password: 'wrongpassword'
+              }
+            })
+          )
+        } else if (data.requestId === 'ws-login-bad') {
+          cleanup()
+          resolve(data)
+          ws.close()
+        }
+      })
+      ws.on('error', (err) => {
+        cleanup()
+        reject(err)
+      })
+      ws.on('close', () => {
+        cleanup()
+        reject(new Error('WebSocket closed before ws-login-bad response'))
+      })
+    })
+
+    response.state.should.equal('COMPLETED')
+    response.statusCode.should.equal(401)
+  })
+
+  it('websocket login grants access for subsequent data', async function () {
+    const promiser = new WsPromiser(
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none&metaDeltas=none`
+    )
+
+    try {
+      // Receive hello message
+      const hello = JSON.parse(await promiser.nextMsg())
+      hello.should.have.property('name')
+
+      // Login over the websocket
+      await promiser.send({
+        requestId: 'ws-login-data',
+        login: {
+          username: WRITE_USER_NAME,
+          password: WRITE_USER_PASSWORD
+        }
+      })
+      const loginResponse = JSON.parse(await promiser.nextMsg())
+      loginResponse.state.should.equal('COMPLETED')
+      loginResponse.statusCode.should.equal(200)
+      loginResponse.login.should.have.property('token')
+
+      // Subscribe to self after login
+      await promiser.send({
+        context: 'vessels.self',
+        subscribe: [{ path: 'navigation.rateOfTurn' }]
+      })
+
+      // Send a delta via the authenticated websocket
+      await promiser.send(openNavigationDelta)
+
+      // Should receive the delta because we are now authenticated
+      const deltaMsg = JSON.parse(await promiser.nextMsg())
+      deltaMsg.should.have.property('updates')
+    } finally {
+      promiser.ws.close()
+    }
+  })
+
   async function formLoginWithDestination(username, password, destination) {
     const body = new URLSearchParams({
       username,

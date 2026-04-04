@@ -45,6 +45,7 @@ describe('OIDC Auth Routes', () => {
     issuer: 'https://auth.example.com',
     clientId: 'signalk-server',
     clientSecret: 'test-secret',
+    redirectUri: 'https://signalk.local:3000/signalk/v1/auth/oidc/callback',
     scope: 'openid email profile',
     defaultPermission: 'readonly',
     autoCreateUsers: true,
@@ -349,7 +350,8 @@ describe('OIDC Auth Routes', () => {
       const postLogoutUri = logoutUrl.searchParams.get(
         'post_logout_redirect_uri'
       )
-      expect(postLogoutUri).to.equal('http://signalk.local:3000/dashboard')
+      // Derived from configured redirectUri origin, not Host header
+      expect(postLogoutUri).to.equal('https://signalk.local:3000/dashboard')
     })
 
     it('should fall back to local redirect when discovery fails', async () => {
@@ -482,6 +484,97 @@ describe('OIDC Auth Routes', () => {
         true,
         'cryptoService.getStateEncryptionSecret() should be called'
       )
+    })
+  })
+
+  describe('Host header injection prevention', () => {
+    const discoveryResponse = JSON.stringify({
+      issuer: 'https://auth.example.com',
+      authorization_endpoint: 'https://auth.example.com/authorize',
+      token_endpoint: 'https://auth.example.com/token',
+      jwks_uri: 'https://auth.example.com/.well-known/jwks.json',
+      response_types_supported: ['code'],
+      end_session_endpoint: 'https://auth.example.com/logout'
+    })
+
+    beforeEach(() => {
+      registeredRoutes.length = 0
+      clearCookieCalled = false
+      clearDiscoveryCache()
+      setDiscoveryFetch(
+        async () => new Response(discoveryResponse, { status: 200 })
+      )
+    })
+
+    it('login handler should use configured redirectUri, not Host header', async () => {
+      // Config with explicit redirectUri
+      const configWithRedirect: OIDCConfig = {
+        ...mockOIDCConfig,
+        redirectUri: 'https://myserver.com/signalk/v1/auth/oidc/callback'
+      }
+      const depsWithRedirect: OIDCAuthDependencies = {
+        ...mockDeps,
+        getOIDCConfig: () => configWithRedirect
+      }
+
+      registerOIDCRoutes(mockApp, depsWithRedirect)
+
+      const handler = findRoute('get', '/signalk/v1/auth/oidc/login')
+      // Request with a spoofed Host header
+      const req = createMockRequest({
+        get: ((header: string) => {
+          if (header === 'host') return 'evil.com'
+          return undefined
+        }) as Request['get']
+      })
+      const res = {
+        ...createMockResponse(),
+        cookie: () => {}
+      }
+
+      await handler!(req, res as unknown as ExpressResponse)
+
+      // The redirect should go to the OIDC provider with the configured redirectUri
+      expect(res.redirectUrl).to.include('redirect_uri=')
+      expect(res.redirectUrl).to.include(
+        encodeURIComponent('https://myserver.com/signalk/v1/auth/oidc/callback')
+      )
+      // Must NOT contain the spoofed host
+      expect(res.redirectUrl).to.not.include('evil.com')
+    })
+
+    it('logout handler should derive post_logout_redirect_uri from configured redirectUri, not Host header', async () => {
+      const configWithRedirect: OIDCConfig = {
+        ...mockOIDCConfig,
+        redirectUri: 'https://myserver.com/signalk/v1/auth/oidc/callback'
+      }
+      const depsWithRedirect: OIDCAuthDependencies = {
+        ...mockDeps,
+        getOIDCConfig: () => configWithRedirect
+      }
+
+      registerOIDCRoutes(mockApp, depsWithRedirect)
+
+      const handler = findRoute('get', '/signalk/v1/auth/oidc/logout')
+      // Request with a spoofed Host header
+      const req = createMockRequest({
+        get: ((header: string) => {
+          if (header === 'host') return 'evil.com'
+          return undefined
+        }) as Request['get']
+      })
+      const res = createMockResponse()
+
+      await handler!(req, res as unknown as ExpressResponse)
+
+      const logoutUrl = new URL(res.redirectUrl!)
+      const postLogoutUri = logoutUrl.searchParams.get(
+        'post_logout_redirect_uri'
+      )
+      // Should use origin from configured redirectUri
+      expect(postLogoutUri).to.include('https://myserver.com/')
+      // Must NOT contain the spoofed host
+      expect(postLogoutUri).to.not.include('evil.com')
     })
   })
 })

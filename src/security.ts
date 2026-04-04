@@ -235,6 +235,12 @@ export interface SecurityStrategy {
 
   /** Update OIDC config in memory (optional - only available when token security is active) */
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
+
+  /** Verify credentials (optional - only available when token security is active) */
+  login?: (
+    username: string,
+    password: string
+  ) => Promise<{ statusCode: number }>
 }
 
 export class InvalidTokenError extends Error {
@@ -408,7 +414,7 @@ export function createCertificateOptions(
   debug(`Creating certificate files in ${location}`)
   generate(
     [{ name: 'commonName', value: 'localhost' }],
-    { days: 3650 },
+    { days: 3650, keySize: 2048 },
     function (err, pems) {
       writeFileSync(keyFile, pems.private)
       chmodSync(keyFile, '600')

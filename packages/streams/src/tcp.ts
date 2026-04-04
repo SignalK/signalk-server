@@ -109,7 +109,9 @@ export default class TcpStream extends Transform {
       })
       .on('disconnect', () => {
         this.tcpStream = undefined
-        this.debug(`Disconnected ${this.options.host} ${this.options.port}`)
+        const msg = `Disconnected ${this.options.host} ${this.options.port}`
+        this.options.app.setProviderError(this.options.providerId, msg)
+        this.debug(msg)
       })
       .on('error', (err: Error & { errors?: string[] }) => {
         let msg: string
