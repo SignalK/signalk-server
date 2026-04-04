@@ -3,10 +3,14 @@ import { typeboxToOpenApiSchemas } from '../openApiSchemas'
 import {
   AlarmStateSchema,
   AlarmMethodArraySchema,
+  AlarmMethodSchema,
   AlarmStatusSchema,
   AlarmSchema,
   NotificationResponseSchema,
-  NotificationIdParamSchema
+  NotificationIdParamSchema,
+  AlarmOptionsSchema,
+  PositionSchema,
+  IsoTimeSchema
 } from '@signalk/server-api/typebox'
 
 const notificationsApiDoc = {
@@ -25,22 +29,45 @@ const notificationsApiDoc = {
     description: 'Signal K specification.'
   },
   servers: [{ url: '/signalk/v2/api/notifications' }],
-  tags: [{ name: 'Alerts', description: 'Alerts & Alarms' }],
+  tags: [
+    { name: 'Operations', description: 'Notification operations' },
+    { name: 'Alarms', description: 'Predefined alarms' },
+    { name: 'Actions', description: 'Notification Alarm Actions' }
+  ],
   components: {
-    schemas: typeboxToOpenApiSchemas([
-      NotificationIdParamSchema,
-      AlarmStateSchema,
-      AlarmMethodArraySchema,
-      AlarmStatusSchema,
-      AlarmSchema,
-      NotificationResponseSchema
-    ]),
+    schemas: {
+      ...typeboxToOpenApiSchemas([
+        NotificationIdParamSchema,
+        NotificationResponseSchema,
+        AlarmOptionsSchema,
+        AlarmStateSchema,
+        AlarmMethodSchema,
+        AlarmMethodArraySchema,
+        AlarmStatusSchema,
+        AlarmSchema,
+        IsoTimeSchema,
+        PositionSchema
+      ])
+    },
     responses: {
       Notification: {
         description: 'OK',
         content: {
           'application/json': {
             schema: { $ref: '#/components/schemas/NotificationResponse' }
+          }
+        }
+      },
+      NotificationList: {
+        description: 'OK',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              additionalProperties: {
+                $ref: '#/components/schemas/NotificationResponse'
+              }
+            }
           }
         }
       },
@@ -56,6 +83,23 @@ const notificationsApiDoc = {
                 statusCode: { type: 'number', enum: [200] }
               },
               required: ['state', 'statusCode']
+            }
+          }
+        }
+      },
+      '200Post': {
+        description: 'Successful operation',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              description: '200 OK response',
+              properties: {
+                state: { type: 'string', enum: ['COMPLETE'] },
+                statusCode: { type: 'number', enum: [200] },
+                id: { type: 'string', description: 'Notification Identifier' }
+              },
+              required: ['state', 'statusCode', 'id']
             }
           }
         }
@@ -89,13 +133,144 @@ const notificationsApiDoc = {
     }
   },
   paths: {
+    '/': {
+      parameters: [{ $ref: '#/components/parameters/id' }],
+      get: {
+        tags: ['Operations'],
+        summary: 'List notifications.',
+        description: 'Returns a list of notifications.',
+        responses: {
+          '200': { $ref: '#/components/responses/NotificationList' },
+          default: { $ref: '#/components/responses/ErrorResponse' }
+        }
+      },
+      post: {
+        tags: ['Operations'],
+        summary: 'Raise notification.',
+        description: 'Raises a notification setting message and ALARM_STATE.',
+        requestBody: {
+          description: 'Alarm Options',
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/AlarmOptions'
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { $ref: '#/components/responses/200Post' },
+          default: { $ref: '#/components/responses/ErrorResponse' }
+        }
+      }
+    },
+    '/{id}': {
+      parameters: [{ $ref: '#/components/parameters/id' }],
+      get: {
+        tags: ['Operations'],
+        summary: 'Return notification details.',
+        description:
+          'Returns details of the notification with the supplied identifier.',
+        responses: {
+          '200': { $ref: '#/components/responses/Notification' },
+          default: { $ref: '#/components/responses/ErrorResponse' }
+        }
+      },
+      put: {
+        tags: ['Operations'],
+        summary: 'Update notification.',
+        description:
+          'Update details of the notification with the supplied identifier.',
+        requestBody: {
+          description: 'Alarm Options',
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/AlarmOptions'
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { $ref: '#/components/responses/200Ok' },
+          default: { $ref: '#/components/responses/ErrorResponse' }
+        }
+      },
+      delete: {
+        tags: ['Operations'],
+        summary: 'Clear notification.',
+        description:
+          "Clears the notification with the supplied identifier (set ALARM_STATE = 'normal').",
+        responses: {
+          '200': { $ref: '#/components/responses/200Ok' },
+          default: { $ref: '#/components/responses/ErrorResponse' }
+        }
+      }
+    },
+    '/mob': {
+      post: {
+        tags: ['Alarms'],
+        summary: 'Raise person overboard alarm.',
+        description:
+          'Raises a person overboard notification setting message and ALARM_STATE = `emergency`.',
+        requestBody: {
+          description: 'Alarm Options',
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    description: 'Message to display or speak.'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { $ref: '#/components/responses/200Post' },
+          default: { $ref: '#/components/responses/ErrorResponse' }
+        }
+      }
+    },
+    '/silenceAll': {
+      parameters: [{ $ref: '#/components/parameters/id' }],
+      post: {
+        tags: ['Actions'],
+        summary: 'Silence all notification alarms.',
+        description:
+          'Removes `sound` from the ALARM METHOD of all notifications and sets `status.silenced = true`.',
+        responses: {
+          '200': { $ref: '#/components/responses/200Ok' },
+          default: { $ref: '#/components/responses/ErrorResponse' }
+        }
+      }
+    },
+    '/acknowledgeAll': {
+      parameters: [{ $ref: '#/components/parameters/id' }],
+      post: {
+        tags: ['Actions'],
+        summary: 'Acknowledge all notification alarms.',
+        description:
+          'Removes both `visual` and `sound` from the ALARM METHOD of all notifications and sets `status.acknowledged = true`.',
+        responses: {
+          '200': { $ref: '#/components/responses/200Ok' },
+          default: { $ref: '#/components/responses/ErrorResponse' }
+        }
+      }
+    },
     '/{id}/silence': {
       parameters: [{ $ref: '#/components/parameters/id' }],
       post: {
-        tags: ['Alerts'],
-        summary: 'Silence alert notification.',
+        tags: ['Actions'],
+        summary: 'Silence notification alarm.',
         description:
-          'Removes `sound` from the ALARM METHOD of the notification and sets `status.silenced = true`.',
+          'Removes `sound` from the notification ALARM METHOD and sets `status.silenced = true`.',
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
           default: { $ref: '#/components/responses/ErrorResponse' }
@@ -105,10 +280,10 @@ const notificationsApiDoc = {
     '/{id}/acknowledge': {
       parameters: [{ $ref: '#/components/parameters/id' }],
       post: {
-        tags: ['Alerts'],
-        summary: 'Acknowledge alert notification.',
+        tags: ['Actions'],
+        summary: 'Acknowledge notification alarm.',
         description:
-          'Removes both `visual` and `sound` from the ALARM METHOD of the notification and sets `status.acknowledged = true`.',
+          'Removes both `visual` and `sound` from the notification ALARM METHOD and sets `status.acknowledged = true`.',
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
           default: { $ref: '#/components/responses/ErrorResponse' }

@@ -102,7 +102,10 @@ export interface Notification {
   position?: Position
   createdAt?: Timestamp
   id?: string
+  data?: Record<string, NotificationData>
 }
+
+export type NotificationData = Exclude<Value, Notification>
 
 // MetaMessage
 /** @category Server API */

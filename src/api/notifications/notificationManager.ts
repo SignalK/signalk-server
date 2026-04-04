@@ -10,11 +10,12 @@ import {
   AlarmOptions,
   SourceRef,
   NotificationId,
-  Brand
+  Brand,
+  AlarmProperties
 } from '@signalk/server-api'
 
 import { NotificationApplication } from './index'
-import { Alarm, AlarmProperties } from './alarm'
+import { Alarm } from './alarm'
 import * as uuid from 'uuid'
 import * as _ from 'lodash'
 
@@ -112,9 +113,9 @@ export class NotificationManager {
     if (options.createdAt || options.state === ALARM_STATE.emergency) {
       alarm.value.createdAt = new Date().toISOString() as Timestamp
     }
-    /*if (options.meta) {
-      (alarm.value as any).meta = options.meta
-    }*/
+    if (options.data) {
+      alarm.value.data = options.data
+    }
     this.alarms.set(id, alarm)
     this.emitNotification(alarm)
     return id
@@ -139,9 +140,9 @@ export class NotificationManager {
     if (options.message) {
       alarm.value.message = options.message
     }
-    /*if (options.meta) {
-      (alarm.value as any).meta = options.meta
-    }*/
+    if (options.data) {
+      alarm.value.data = options.data
+    }
     this.alarms.set(id, alarm)
     this.emitNotification(alarm)
   }

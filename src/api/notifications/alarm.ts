@@ -11,15 +11,9 @@ import {
   SourceRef,
   Timestamp,
   Update,
-  Value
+  AlarmProperties
 } from '@signalk/server-api'
 import { buildKey } from './notificationManager'
-
-export interface AlarmProperties {
-  context: Context
-  path: Path
-  value: Value
-}
 
 export class Alarm {
   private external = false // true when alarm was created from delta
