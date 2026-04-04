@@ -11,6 +11,7 @@ import { SignalKMessageHub } from '../../app'
 import { radar } from '@signalk/server-api'
 
 const RADAR_API_PATH = `/signalk/v2/api/vessels/self/radars`
+const TWO_PI = 2 * Math.PI
 
 interface RadarApplication
   extends WithSecurityStrategy, SignalKMessageHub, IRouter {}
@@ -893,7 +894,7 @@ export class RadarApi {
             })
             return
           }
-          if (bearing < 0 || bearing >= 2 * Math.PI) {
+          if (bearing < 0 || bearing >= TWO_PI) {
             res.status(400).json({
               statusCode: 400,
               state: 'FAILED',

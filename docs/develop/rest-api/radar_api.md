@@ -13,7 +13,7 @@ Radar functionality is provided by "provider plugins" that handle the interactio
 Requests to the Radar API are made to HTTP REST endpoints rooted at `/signalk/v2/api/vessels/self/radars` or the Signal K websocket stream at `/signalk/v1/api/stream`.
 
 Like `signalk-server` vis-a-vis the Signal K specification there is a reference implementation
-for this API, which may very well remain the only implementation of the server side of the API, 
+for this API, which may very well remain the only implementation of the server side of the API,
 at https://github.com/MarineYachtRadar/mayara-server. However, like Signal K itself, there is no
 reason it needs to remain the only implementation. In particular it would be ultra cool if some
 manufacturer of marine hardware would implement this API -- even though this is very unlikely.
@@ -99,12 +99,11 @@ Some further considerations as how to show controls:
 
 ## API Overview
 
-```
+```text
 /signalk/v2/api/vessels/self/radars
 ├── GET                              → List all active radars
 ├── /interfaces
 │   └── GET                          → List network interfaces and listener status
-├── /stream                          → WebSocket (control values and targets for all radars)
 └── /{radar_id}
     ├── /capabilities GET            → Get radar capabilities and control definitions
     ├── /controls
@@ -112,7 +111,14 @@ Some further considerations as how to show controls:
     │   └── /{control_id}
     │       ├── GET                  → Get single control value
     │       └── PUT                  → Set single control value
-    └── /spokes                      → WebSocket (spoke data in binary format)
+    ├── /spokes                      → WebSocket (spoke data in binary format)
+    └── /targets
+        ├── GET                      → List tracked targets
+        ├── POST                     → Acquire target manually
+        └── /{target_id}
+            └── DELETE               → Cancel target tracking
+
+/signalk/v1/stream                   → WebSocket (control values and targets for all radars)
 ```
 
 ## REST API
@@ -121,7 +127,7 @@ Some further considerations as how to show controls:
 
 Retrieve all available radars with their current info:
 
-```
+```text
 HTTP GET "/signalk/v2/api/vessels/self/radars"
 ```
 
@@ -155,7 +161,7 @@ _Response:_
 
 Check which network interfaces are available and which radar brands are listening:
 
-```
+```text
 HTTP GET "/signalk/v2/api/vessels/self/radars/interfaces"
 ```
 
@@ -188,7 +194,7 @@ This endpoint is useful for diagnosing network configuration issues when radars 
 
 The capability manifest describes everything a radar can do. Clients should fetch this at the beginning of a session. The contents do not change during radar operation.
 
-```
+```text
 HTTP GET "/signalk/v2/api/vessels/self/radars/{radar_id}/capabilities"
 ```
 
@@ -282,20 +288,18 @@ If the radar doesn't implement Doppler, the `dopplerApproaching` and `dopplerRec
 
 ### Dual range/radar
 
-There are two different ways that radars handle "dual" ranges. 
+There are two different ways that radars handle "dual" ranges.
 
 Navico radars implement this by acting
 as if both radars are full independent, to the point where both radars use different ports and IP addresses.
-They can be seen to be dependent in that if you change some controls they also change on the other radar. 
+They can be seen to be dependent in that if you change some controls they also change on the other radar.
 The NoTransmitZones are examples of such controls.
-These radars therefore also show up as two radars in the API. 
+These radars therefore also show up as two radars in the API.
 As long as clients listen to updates to controls, which they should do anyway to be able to function in a setting where there is for instance a MFD device, they can assume that all controls can be set.
-
 
 Furuno radars do this in a way where the second range shares as many control settings as possible.
 At this time `mayara-server` does not yet support this mode. Once it does, a future version of this API
-may be released if it has API consequences. 
-
+may be released if it has API consequences.
 
 ### Controls
 
@@ -359,7 +363,7 @@ a client:
 | Duration         | Minutes            | `min`        |
 | Duration         | Hours              | `h`          |
 
-1. **enum**
+2. **enum**
 
 ```json
 {
@@ -383,7 +387,7 @@ a client:
 
 The `validValues` array indicates which values can be set by clients. The `power` control guarantees that at least these values can be set across all radars: 1 (Standby) and 2 (Transmit).
 
-1. **string**
+3. **string**
 
 ```json
 {
@@ -484,7 +488,7 @@ Controlling the radar can be done via HTTP REST requests or via the stream webso
 
 ### Getting All Control Values
 
-```
+```text
 HTTP GET "/signalk/v2/api/vessels/self/radars/{radar_id}/controls"
 ```
 
@@ -500,7 +504,7 @@ _Response:_
 
 ### Getting a Single Control Value
 
-```
+```text
 HTTP GET "/signalk/v2/api/vessels/self/radars/{radar_id}/controls/{control_id}"
 ```
 
@@ -512,7 +516,7 @@ _Response:_
 
 ### Setting a Control Value
 
-```
+```text
 HTTP PUT "/signalk/v2/api/vessels/self/radars/{radar_id}/controls/{control_id}"
 ```
 
@@ -591,8 +595,6 @@ Control values contain different fields depending on the control's `dataType` (d
 | `y2`            | rect               | Second corner Y (meters, ahead +)     |
 | `width`         | rect               | Perpendicular width (meters)          |
 
-
-
 ## ARPA Target Tracking
 
 The Radar API defines ARPA (Automatic Radar Plotting Aid) target tracking with CPA/TCPA calculations and SignalK notification integration.
@@ -604,7 +606,7 @@ is used targets will be shared between both ranges and move from one radar to an
 
 ### Listing Tracked Targets
 
-```
+```text
 HTTP GET "/signalk/v2/api/vessels/self/radars/{id}/targets"
 ```
 
@@ -648,7 +650,7 @@ _Response:_
 
 ### Manual Target Acquisition
 
-```
+```text
 HTTP POST "/signalk/v2/api/vessels/self/radars/{id}/targets"
 ```
 
@@ -663,7 +665,7 @@ _Request body:_
 
 ### Cancel Target Tracking
 
-```
+```text
 HTTP DELETE "/signalk/v2/api/vessels/self/radars/{id}/targets/{targetId}"
 ```
 
@@ -671,8 +673,8 @@ HTTP DELETE "/signalk/v2/api/vessels/self/radars/{id}/targets/{targetId}"
 
 There are two types of websocket:
 
-1. Control Stream: Signal K formatted JSON messages containing control information to and from radars, as well as targets.
-2. Spoke Data Stream: High volume radar spoke data in binary format (up to 1 MB/s).
+1. Control Stream: Signal-K-formatted JSON messages containing control information to and from radars, as well as targets.
+2. Spoke Data Stream: High-volume radar spoke data in binary format (up to 1 MB/s).
 
 ## Control Stream
 
@@ -680,7 +682,7 @@ The JSON data websocket provides real-time control value updates for all radars 
 
 The URI is found in the radar response as `streamUrl` or can be constructed as:
 
-```
+```text
 ws://{host}:{port}/signalk/v1/stream
 ```
 
@@ -871,7 +873,6 @@ When a target is deleted (either because it has been in status `lost` for a whil
 }
 ```
 
-
 ## Spoke Data Stream
 
 Because radars can produce up to 4 megabytes of data per rotation, this data is transmitted
@@ -885,21 +886,21 @@ syntax = "proto3";
 /*
  * The data stream coming from a radar is a series of spokes.
  * The number of spokes per revolution is different for each type of
- * radar and can be found in the radar specification found at
- * .../v1/api/radars as 'spokes_per_revolution' or .../v3/api/radar/{id}/capabilities
+ * radar and can be found in the capabilities at
+ * .../v2/api/vessels/self/radars/{id}/capabilities as 'spokesPerRevolution'.
  * The maximum length of each spoke is also defined there, as well as the legend that provides
  * a lookup table for each byte of data in the spoke.
  *
  * The angle and bearing fields below are in terms of spokes, so
- * range from [0..spokes_per_revolution>.
+ * range from [0..spokesPerRevolution>.
  *
  * Angle is a mandatory field and tells you the rotation of the spoke
  * relative to the front of the boat, going clockwise. 0 means directly
- * ahead, spokes_per_revolution / 4 is to starboard, spokes_per_revolution / 2 is directly astern, etc.
+ * ahead, spokesPerRevolution / 4 is to starboard, spokesPerRevolution / 2 is directly astern, etc.
  *
  * Bearing, if set, means that either the radar or the radar server has
  * enriched the data with a true bearing, e.g. 0 is directly North,
- * spokes_per_revolution / 4 is directly West, spokes_per_revolution / 2 is South, etc.
+ * spokesPerRevolution / 4 is directly West, spokesPerRevolution / 2 is South, etc.
  *
  * Likewise, time and lat/lon indicate the best effort when the spoke
  * was generated, and the lat/lon of the radar at the time of generation.
@@ -907,8 +908,8 @@ syntax = "proto3";
  */
 message RadarMessage {
     message Spoke {
-        uint32 angle = 1; // [0..spokes_per_revolution>, angle from bow
-        optional uint32 bearing = 2; // [0..spokes_per_revolution>, offset from True North
+        uint32 angle = 1; // [0..spokesPerRevolution>, angle from bow
+        optional uint32 bearing = 2; // [0..spokesPerRevolution>, offset from True North
         uint32 range = 3; // [meters], range in meters of the last pixel in data
         optional uint64 time = 4; // [millis since UNIX epoch] Time when spoke was generated or received
         optional double lat = 6; // Location of radar at time of generation
@@ -921,7 +922,7 @@ message RadarMessage {
 
 The URL is found in the `radars` REST response as `spokeDataUrl` or can be constructed as:
 
-```
+```text
 /signalk/v2/api/vessels/self/radars/{radar_id}/spokes
 ```
 
@@ -974,12 +975,12 @@ In a later API release it is likely that the legend will be expanded to contain 
 
 Some radars have a high value for `spokes_per_revolution` but actually only produce fewer spokes
 per each revolution. At the moment of writing this is true for Furuno radars but not the other
-supported radars from Garmin, Navico and Raymarine. The Furuno radars set `hasSparseSpokes` in 
+supported radars from Garmin, Navico and Raymarine. The Furuno radars set `hasSparseSpokes` in
 the capabilities struct to `true`.
 
 A conforming GUI must allow for this and either implement some way to expand missing spokes or
 to reconsider the width of spokes to be from the angle/bearing from the received spoke to the
-previously received spoke. 
+previously received spoke.
 
 A typical value for Furuno is to have `spokes_per_revolution = 8192` but the actual # of spokes
 will be ~ 900. Weirdly enough it is not a "round" figure like 1440, 2048, 512 or 250 like the
@@ -1062,7 +1063,19 @@ interface ControlDefinition {
 ```typescript
 interface ControlValue {
   value?: number | string
-  units?: 'm' | 'km' | 'nm' | 'm/s' | 'kn' | 'rad' | 'deg' | 'rad/s' | 'rpm' | 's' | 'min' | 'h'
+  units?:
+    | 'm'
+    | 'km'
+    | 'nm'
+    | 'm/s'
+    | 'kn'
+    | 'rad'
+    | 'deg'
+    | 'rad/s'
+    | 'rpm'
+    | 's'
+    | 'min'
+    | 'h'
   auto?: boolean
   autoValue?: number
   enabled?: boolean
@@ -1094,11 +1107,7 @@ interface Legend {
 }
 
 interface LegendPixel {
-  type:
-    | 'normal'
-    | 'dopplerApproaching'
-    | 'dopplerReceding'
-    | 'history'
+  type: 'normal' | 'dopplerApproaching' | 'dopplerReceding' | 'history'
   color: string
 }
 ```

@@ -64,7 +64,13 @@ const radarApiDoc = {
             description: 'IP address of the radar unit on the network'
           }
         },
-        required: ['name', 'brand', 'spokeDataUrl', 'streamUrl', 'radarIpAddress']
+        required: [
+          'name',
+          'brand',
+          'spokeDataUrl',
+          'streamUrl',
+          'radarIpAddress'
+        ]
       },
       RadarsResponse: {
         type: 'object',
@@ -119,7 +125,8 @@ const radarApiDoc = {
           },
           stationary: {
             type: 'boolean',
-            description: 'Whether radar is configured as stationary (shore-based)'
+            description:
+              'Whether radar is configured as stationary (shore-based)'
           },
           controls: {
             type: 'object',
@@ -153,12 +160,21 @@ const radarApiDoc = {
           name: { type: 'string', description: 'Human-readable control name' },
           dataType: {
             type: 'string',
-            enum: ['number', 'enum', 'string', 'button', 'sector', 'zone', 'rect'],
+            enum: [
+              'number',
+              'enum',
+              'string',
+              'button',
+              'sector',
+              'zone',
+              'rect'
+            ],
             description: 'Control data type'
           },
           category: {
             type: 'string',
-            description: 'Control category (e.g., display, installation, targets)'
+            description:
+              'Control category (e.g., display, installation, targets)'
           },
           minValue: { type: 'number' },
           maxValue: { type: 'number' },
@@ -174,7 +190,26 @@ const radarApiDoc = {
             additionalProperties: { type: 'string' }
           },
           hasAuto: { type: 'boolean' },
-          hasAutoAdjustable: { type: 'boolean' }
+          hasAutoAdjustable: { type: 'boolean' },
+          hasEnabled: {
+            type: 'boolean',
+            description:
+              'Whether the control has an enabled/disabled toggle (sector, zone, rect)'
+          },
+          isReadOnly: {
+            type: 'boolean',
+            description: 'Whether the control is read-only'
+          },
+          maxDistance: {
+            type: 'number',
+            description: 'Maximum distance for zone controls (meters)'
+          },
+          validValues: {
+            type: 'array',
+            items: { type: 'integer' },
+            description:
+              'Subset of values that can be set by clients (enum controls)'
+          }
         },
         required: ['id', 'name', 'dataType', 'category']
       },
@@ -215,8 +250,14 @@ const radarApiDoc = {
             type: 'number',
             description: 'Outer radius in meters (zone)'
           },
-          x1: { type: 'number', description: 'First corner X in meters (rect)' },
-          y1: { type: 'number', description: 'First corner Y in meters (rect)' },
+          x1: {
+            type: 'number',
+            description: 'First corner X in meters (rect)'
+          },
+          y1: {
+            type: 'number',
+            description: 'First corner Y in meters (rect)'
+          },
           x2: {
             type: 'number',
             description: 'Second corner X in meters (rect)'
@@ -231,11 +272,13 @@ const radarApiDoc = {
           },
           allowed: {
             type: 'boolean',
-            description: 'Whether changing this control is currently allowed (read-only)'
+            description:
+              'Whether changing this control is currently allowed (read-only)'
           },
           error: {
             type: 'string',
-            description: 'Error message if the control change failed (read-only)'
+            description:
+              'Error message if the control change failed (read-only)'
           }
         }
       },
@@ -259,7 +302,7 @@ const radarApiDoc = {
                 description: 'Bearing from radar in radians [0, 2π)'
               },
               distance: {
-                type: 'integer',
+                type: 'number',
                 description: 'Distance from radar in meters'
               },
               latitude: { type: 'number' },
@@ -563,7 +606,9 @@ const radarApiDoc = {
               }
             }
           },
-          '400': { description: 'Target tracking not enabled or invalid position' },
+          '400': {
+            description: 'Target tracking not enabled or invalid position'
+          },
           '404': { description: 'Radar not found' }
         }
       }
