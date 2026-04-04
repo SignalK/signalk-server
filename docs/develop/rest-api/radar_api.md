@@ -6,6 +6,8 @@ title: Radar API
 
 The Signal K server Radar API provides a unified interface for viewing and controlling marine radar equipment from any manufacturer. The API is **(web)app-friendly**: clients can build dynamic UIs that automatically adapt to any radar's capabilities without hardcoding support for specific brands or models.
 
+This is version v3.1.0 of the API. The version will use semver for version updates.
+
 Radar functionality is provided by "provider plugins" that handle the interaction with radar hardware and stream spoke data to connected clients.
 
 Requests to the Radar API are made to HTTP REST endpoints rooted at `/signalk/v2/api/vessels/self/radars` or the Signal K websocket stream at `/signalk/v1/api/stream`.
@@ -127,7 +129,7 @@ _Response:_
 
 ```json
 {
-  "version": "3.0.0",
+  "version": "3.1.0",
   "radars": {
     "nav1034A": {
       "brand": "Navico",
@@ -161,24 +163,20 @@ _Response:_
 
 ```json
 {
-  "radars": {
-    "interfaces": {
-      "brands": ["Navico", "Furuno", "Raymarine"],
-      "interfaces": {
-        "en0": {
-          "status": "Ok",
-          "ip": "192.168.1.100",
-          "netmask": "255.255.255.0",
-          "listeners": {
-            "Navico": "Active",
-            "Furuno": "No match for 172.31.255.255",
-            "Raymarine": "Listening"
-          }
-        },
-        "en1": {
-          "status": "WirelessIgnored"
-        }
+  "brands": ["Navico", "Furuno", "Raymarine"],
+  "interfaces": {
+    "en0": {
+      "status": "Ok",
+      "ip": "192.168.1.100",
+      "netmask": "255.255.255.0",
+      "listeners": {
+        "Navico": "Active",
+        "Furuno": "No match for 172.31.255.255",
+        "Raymarine": "Listening"
       }
+    },
+    "en1": {
+      "status": "WirelessIgnored"
     }
   }
 }
@@ -494,16 +492,9 @@ _Response:_
 
 ```json
 {
-  "version": "3.0.0",
-  "radars": {
-    "nav1034A": {
-      "controls": {
-        "gain": { "auto": false, "value": 50 },
-        "sea": { "auto": true, "autoValue": 25, "value": 30 },
-        "range": { "value": 3000 }
-      }
-    }
-  }
+  "gain": { "auto": false, "value": 50 },
+  "sea": { "auto": true, "autoValue": 25, "value": 30 },
+  "range": { "value": 3000 }
 }
 ```
 
