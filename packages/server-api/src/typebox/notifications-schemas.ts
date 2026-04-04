@@ -64,23 +64,23 @@ export type Alarm = Static<typeof AlarmSchema>
 export const AlarmOptionsSchema = Type.Object(
   {
     state: AlarmStateSchema,
-    path: Type.String({
+    path: Type.Optional(Type.String({
       description: 'Signal K path',
       example: 'notifications.mob.8dac314c-ef20-4e6f-9098-db64ce20e117'
-    }),
+    })),
     message: Type.String({ description: 'Message to display or speak' }),
-    position: Type.Boolean({
+    position: Type.Optional(Type.Boolean({
       description:
         'Set `true` to include the position at which the notification was raised.'
-    }),
-    createdAt: Type.Boolean({
+    })),
+    createdAt: Type.Optional(Type.Boolean({
       description:
         'Set `true` to include the timestamp when the notification was raised.'
-    }),
-    appendId: Type.Boolean({
+    })),
+    appendId: Type.Optional(Type.Boolean({
       description: 'Set `true` to include the `notificationId` in the path.'
-    })
-    //meta?: { [key: string]: object | number | string | null | boolean }
+    })),
+    data: Type.Optional(Type.Object({}))
   },
   {
     $id: 'AlarmOptions',

@@ -134,7 +134,6 @@ const notificationsApiDoc = {
   },
   paths: {
     '/': {
-      parameters: [{ $ref: '#/components/parameters/id' }],
       get: {
         tags: ['Operations'],
         summary: 'List notifications.',
@@ -239,7 +238,6 @@ const notificationsApiDoc = {
       }
     },
     '/silenceAll': {
-      parameters: [{ $ref: '#/components/parameters/id' }],
       post: {
         tags: ['Actions'],
         summary: 'Silence all notification alarms.',
@@ -252,7 +250,6 @@ const notificationsApiDoc = {
       }
     },
     '/acknowledgeAll': {
-      parameters: [{ $ref: '#/components/parameters/id' }],
       post: {
         tags: ['Actions'],
         summary: 'Acknowledge all notification alarms.',
