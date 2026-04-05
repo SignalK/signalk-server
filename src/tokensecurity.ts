@@ -1185,6 +1185,13 @@ function tokenSecurityFactory(
 
         if (hasValues(update)) {
           return update.values.find((valuePath) => {
+            if (
+              valuePath === null ||
+              valuePath === undefined ||
+              typeof valuePath.path !== 'string'
+            ) {
+              return true
+            }
             return (
               strategy.checkACL(
                 skReq.skPrincipal!.identifier,
@@ -1197,6 +1204,13 @@ function tokenSecurityFactory(
           })
         } else if (hasMeta(update)) {
           return update.meta.find((metaPath) => {
+            if (
+              metaPath === null ||
+              metaPath === undefined ||
+              typeof metaPath.path !== 'string'
+            ) {
+              return true
+            }
             return (
               strategy.checkACL(
                 skReq.skPrincipal!.identifier,
