@@ -440,7 +440,11 @@ function nmea0183inputFilter(ignoredSentences: string[]): PipeElement[] {
   return ignoredSentences
     .filter((sentence) => sentence.length > 0)
     .map(
-      (sentence) => new Replacer({ regexp: `^...${sentence}.*`, template: '' })
+      (sentence) =>
+        new Replacer({
+          regexp: `^...${sentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*`,
+          template: ''
+        })
     )
 }
 
@@ -455,7 +459,10 @@ function seatalk1inputFilter(ignoredCommands: string[]): PipeElement[] {
     .filter((command) => command.length > 0)
     .map(
       (command) =>
-        new Replacer({ regexp: `^\\$STALK,${command}\\b.*`, template: '' })
+        new Replacer({
+          regexp: `^\\$STALK,${command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b.*`,
+          template: ''
+        })
     )
 }
 

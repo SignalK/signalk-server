@@ -261,7 +261,12 @@ export function getDefaultCategory(signalkPath: string): string | null {
   for (const [pattern, category] of Object.entries(defaultCategories)) {
     if (pattern.includes('*')) {
       const regex = new RegExp(
-        '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^.]+') + '$'
+        '^' +
+          pattern
+            .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
+            .replace(/\./g, '\\.')
+            .replace(/\*/g, '[^.]+') +
+          '$'
       )
       if (regex.test(signalkPath)) {
         return category
