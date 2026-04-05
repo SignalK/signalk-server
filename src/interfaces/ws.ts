@@ -36,10 +36,9 @@ import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
 import {
-  AccumulatedItem,
-  accumulateLatestValue,
-  buildFlushDeltas
-} from '../LatestValuesAccumulator'
+  BackpressureManager,
+  parseBackpressureThresholds
+} from '../BackpressureManager'
 import { getExternalPort } from '../ports'
 import {
   resolveDisplayUnits,
@@ -50,19 +49,6 @@ import { Delta, hasValues } from '@signalk/server-api'
 
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
-
-const BACKPRESSURE_ENTER_THRESHOLD = process.env.BACKPRESSURE_ENTER
-  ? parseInt(process.env.BACKPRESSURE_ENTER, 10)
-  : 512 * 1024
-const BACKPRESSURE_EXIT_THRESHOLD = process.env.BACKPRESSURE_EXIT
-  ? parseInt(process.env.BACKPRESSURE_EXIT, 10)
-  : 1024
-
-interface BackpressureState {
-  active: boolean
-  accumulator: Map<string, AccumulatedItem>
-  since: number | null
-}
 
 interface SkPrincipal {
   identifier: string
@@ -75,7 +61,7 @@ interface SignalKSparkRequest {
   cookies?: Record<string, string>
   headers: Record<string, string | string[] | undefined>
   query?: Record<string, string>
-  socket: Socket & { bufferSize: number }
+  socket: Socket
   connection: { remoteAddress: string }
 }
 
@@ -93,10 +79,9 @@ interface Spark {
   request: SignalKSparkRequest
   sendMetaDeltas: boolean
   sentMetaData: Record<string, boolean>
-  backpressure: BackpressureState
+  backpressureManager?: BackpressureManager
   skPendingAccessRequest?: boolean
   logUnsubscribe?: () => void
-  bufferSizeExceeded?: number
   onDisconnects: Array<() => void>
   hasServerEvents?: boolean
   isHistory?: boolean
@@ -250,10 +235,16 @@ interface WsApi {
 }
 
 function wsInterface(app: WsApp): WsApi {
+  const backpressureThresholds = parseBackpressureThresholds({
+    maxSendBufferSize: app.config.maxSendBufferSize,
+    maxSendBufferCheckTime: app.config.maxSendBufferCheckTime
+  })
   debug(
-    'Backpressure thresholds: enter=%d, exit=%d',
-    BACKPRESSURE_ENTER_THRESHOLD,
-    BACKPRESSURE_EXIT_THRESHOLD
+    'Backpressure thresholds: enter=%d, exit=%d, max=%d, maxTime=%d',
+    backpressureThresholds.enterThreshold,
+    backpressureThresholds.exitThreshold,
+    backpressureThresholds.maxBufferSize,
+    backpressureThresholds.maxBufferCheckTime
   )
 
   let primuses: Primus[] = []
@@ -394,8 +385,6 @@ function wsInterface(app: WsApp): WsApi {
         }
       ]
 
-      const assertBufferSize = getAssertBufferSize(app.config)
-
       primuses = allWsOptions.map((primusOptions) => {
         const primus = new Primus(app.server as Server, primusOptions)
 
@@ -438,22 +427,32 @@ function wsInterface(app: WsApp): WsApi {
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
           spark.sentMetaData = {}
 
-          spark.backpressure = {
-            active: false,
-            accumulator: new Map(),
-            since: null
-          }
+          spark.backpressureManager = new BackpressureManager(
+            {
+              get id() {
+                return spark.id
+              },
+              getBufferLength() {
+                return spark.request.socket.writableLength
+              },
+              write(delta) {
+                spark.write(delta)
+              },
+              destroy() {
+                spark.end({
+                  errorMessage:
+                    'Server outgoing buffer overflow, terminating connection'
+                })
+              }
+            },
+            {
+              ...backpressureThresholds,
+              beforeWrite: (delta) => sendMetaData(app, spark, delta)
+            }
+          )
 
           spark.request.socket.on('drain', () => {
-            if (
-              spark.backpressure.active &&
-              spark.backpressure.accumulator.size > 0
-            ) {
-              const bufferSize = spark.request.socket.bufferSize
-              if (bufferSize <= BACKPRESSURE_EXIT_THRESHOLD) {
-                flushAccumulator(app, spark)
-              }
-            }
+            spark.backpressureManager!.onDrain()
           })
 
           if (wsPingInterval) {
@@ -469,26 +468,7 @@ function wsInterface(app: WsApp): WsApi {
               delta
             )
             if (filtered === null) return
-
-            const bufferSize = spark.request.socket.bufferSize
-
-            if (bufferSize > BACKPRESSURE_ENTER_THRESHOLD) {
-              if (!spark.backpressure.active) {
-                spark.backpressure.active = true
-                spark.backpressure.since = Date.now()
-                debug(
-                  'Entering backpressure mode for spark %s (buffer: %d)',
-                  spark.id,
-                  bufferSize
-                )
-              }
-              accumulateLatestValue(spark.backpressure.accumulator, filtered)
-            } else {
-              sendMetaData(app, spark, filtered)
-              spark.write(filtered)
-            }
-
-            assertBufferSize(spark)
+            spark.backpressureManager!.send(filtered)
           }
 
           const unsubscribes: Array<() => void> = []
@@ -519,13 +499,7 @@ function wsInterface(app: WsApp): WsApi {
                 }
 
                 if (parsedMsg.subscribe) {
-                  processSubscribe(
-                    app,
-                    unsubscribes,
-                    spark,
-                    assertBufferSize,
-                    parsedMsg
-                  )
+                  processSubscribe(app, unsubscribes, spark, parsedMsg)
                 }
 
                 if (parsedMsg.unsubscribe) {
@@ -597,7 +571,7 @@ function wsInterface(app: WsApp): WsApi {
 
           onChange = wrapWithVerifyWS(app.securityStrategy, spark, onChange)
 
-          spark.onDisconnects = []
+          spark.onDisconnects = [() => spark.backpressureManager?.clear()]
 
           if (primusOptions.isPlayback) {
             if (!spark.query.startTime) {
@@ -989,7 +963,6 @@ function processSubscribe(
   app: WsApp,
   unsubscribes: Array<() => void>,
   spark: Spark,
-  assertBufferSize: (spark: Spark) => void,
   msg: WsMessage
 ): void {
   if (
@@ -1011,26 +984,7 @@ function processSubscribe(
           message
         )
         if (!filtered) return
-
-        const bufferSize = spark.request.socket.bufferSize
-
-        if (bufferSize > BACKPRESSURE_ENTER_THRESHOLD) {
-          if (!spark.backpressure.active) {
-            spark.backpressure.active = true
-            spark.backpressure.since = Date.now()
-            debug(
-              'Entering backpressure mode for spark %s (buffer: %d)',
-              spark.id,
-              bufferSize
-            )
-          }
-          accumulateLatestValue(spark.backpressure.accumulator, filtered)
-        } else {
-          sendMetaData(app, spark, filtered)
-          spark.write(filtered)
-        }
-
-        assertBufferSize(spark)
+        spark.backpressureManager!.send(filtered)
       },
       spark.request.skPrincipal
     )
@@ -1283,63 +1237,6 @@ function startServerLog(app: WsApp, spark: Spark): () => void {
   })
   return () => {
     app.removeListener('serverlog', onServerLogEvent as (data: unknown) => void)
-  }
-}
-
-function flushAccumulator(app: WsApp, spark: Spark): void {
-  const map = spark.backpressure.accumulator
-  if (map.size === 0) return
-
-  const countBefore = map.size
-  const duration = spark.backpressure.since
-    ? Date.now() - spark.backpressure.since
-    : 0
-
-  const deltas = buildFlushDeltas(map, duration)
-  for (const delta of deltas) {
-    sendMetaData(app, spark, delta as Delta)
-    spark.write(delta)
-  }
-
-  map.clear()
-  spark.backpressure.active = false
-  spark.backpressure.since = null
-  debug('Flushed %d accumulated values for spark %s', countBefore, spark.id)
-}
-
-function getAssertBufferSize(config: WsAppConfig): (spark: Spark) => void {
-  const MAXSENDBUFFERSIZE = process.env.MAXSENDBUFFERSIZE
-    ? parseInt(process.env.MAXSENDBUFFERSIZE, 10)
-    : config.maxSendBufferSize || 4 * 512 * 1024
-  const MAXSENDBUFFERCHECKTIME = process.env.MAXSENDBUFFERCHECKTIME
-    ? parseInt(process.env.MAXSENDBUFFERCHECKTIME, 10)
-    : config.maxSendBufferCheckTime || 30 * 1000
-  debug(`MAXSENDBUFFERSIZE:${MAXSENDBUFFERSIZE}`)
-
-  if (MAXSENDBUFFERSIZE === 0) {
-    return () => undefined
-  }
-
-  return (spark: Spark) => {
-    if (spark.request.socket.bufferSize > MAXSENDBUFFERSIZE) {
-      if (!spark.bufferSizeExceeded) {
-        console.warn(
-          `${spark.id} outgoing buffer > max:${spark.request.socket.bufferSize}`
-        )
-        spark.bufferSizeExceeded = Date.now()
-      }
-      if (Date.now() - spark.bufferSizeExceeded > MAXSENDBUFFERCHECKTIME) {
-        spark.end({
-          errorMessage:
-            'Server outgoing buffer overflow, terminating connection'
-        })
-        console.error(
-          'Send buffer overflow, terminating connection ' + spark.id
-        )
-      }
-    } else {
-      spark.bufferSizeExceeded = undefined
-    }
   }
 }
 
