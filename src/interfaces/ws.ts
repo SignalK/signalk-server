@@ -109,7 +109,6 @@ interface Spark {
 }
 
 interface WsMessage {
-  token?: string
   updates?: Delta['updates']
   subscribe?: Array<{ path: string }> | string
   unsubscribe?: Array<{ path: string }>
@@ -510,10 +509,6 @@ function wsInterface(app: WsApp): WsApi {
               debug('<' + JSON.stringify(parsedMsg))
 
               try {
-                if (parsedMsg.token) {
-                  spark.request.token = parsedMsg.token
-                }
-
                 if (parsedMsg.updates) {
                   processUpdates(app, pathSources, spark, parsedMsg)
                 }
