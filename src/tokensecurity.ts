@@ -28,12 +28,15 @@ import {
   Path
 } from '@signalk/server-api'
 import ms, { StringValue } from 'ms'
-import rateLimit from 'express-rate-limit'
 import bodyParser from 'body-parser'
 import cookieParser from 'cookie-parser'
 import { createHash, randomBytes } from 'crypto'
 
 import { createDebug } from './debug'
+import {
+  createLoginRateLimiter,
+  LOGIN_RATE_LIMIT_MESSAGE
+} from './login-rate-limiter'
 import {
   InvalidTokenError,
   SecurityConfig,
@@ -45,7 +48,6 @@ import {
   LoginStatusResponse,
   saveSecurityConfig,
   RequestStatusData,
-  getRateLimitValidationOptions,
   ACL,
   SecurityStrategy,
   isOIDCUserIdentifier
@@ -606,15 +608,18 @@ function tokenSecurityFactory(
       }
     }
 
-    const loginLimiter = rateLimit({
-      windowMs: loginWindowMs,
-      max: loginMax,
-      message: {
-        message:
-          'Too many login attempts from this IP, please try again after 10 minutes'
-      },
-      validate: getRateLimitValidationOptions(app)
-    })
+    const loginRateLimiter = createLoginRateLimiter(loginWindowMs, loginMax)
+    strategy.loginRateLimiter = loginRateLimiter
+
+    const loginLimiter = (req: Request, res: Response, next: NextFunction) => {
+      const { allowed, retryAfterMs } = loginRateLimiter.check(req.ip ?? '')
+      if (!allowed) {
+        res.set('Retry-After', String(Math.ceil(retryAfterMs / 1000)))
+        res.status(429).json({ message: LOGIN_RATE_LIMIT_MESSAGE })
+        return
+      }
+      next()
+    }
 
     app.use(bodyParser.urlencoded({ extended: true }))
 
