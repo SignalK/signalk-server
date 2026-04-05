@@ -310,33 +310,16 @@ class Server {
           data.context = ('vessels.' + app.selfId) as Context
         }
 
-        if (
-          data.updates.some((update) => {
-            if (update === null || typeof update !== 'object') {
-              return true
-            }
-            const values = (update as { values?: unknown }).values
-            return (
-              ('values' in update && !Array.isArray(values)) ||
-              (Array.isArray(values) &&
-                values.some(
-                  (v: unknown) =>
-                    v === null ||
-                    v === undefined ||
-                    typeof (v as { path?: unknown }).path !== 'string'
-                ))
-            )
-          })
-        ) {
-          console.warn(
-            `Discarding delta from ${providerId}: invalid values entry (null or missing path)`
-          )
-          return
-        }
-
         const now = new Date()
         data.updates = data.updates
           .map((update: Partial<Update>) => {
+            if (!isValidUpdate(update)) {
+              console.warn(
+                `Discarding update from ${providerId}: invalid values entry (null or missing path)`
+              )
+              return undefined
+            }
+
             if (typeof update.source !== 'undefined') {
               update.source.label = providerId
               if (!update.$source) {
@@ -765,6 +748,28 @@ async function startInterfaces(
       }
     })
   )
+}
+
+function isValidUpdate(update: unknown): update is Partial<Update> {
+  if (update === null || typeof update !== 'object') {
+    return false
+  }
+  const values = (update as { values?: unknown }).values
+  if ('values' in update && !Array.isArray(values)) {
+    return false
+  }
+  if (
+    Array.isArray(values) &&
+    values.some(
+      (v: unknown) =>
+        v === null ||
+        v === undefined ||
+        typeof (v as { path?: unknown }).path !== 'string'
+    )
+  ) {
+    return false
+  }
+  return true
 }
 
 function filterStaticSelfData(delta: any, selfContext: string) {
