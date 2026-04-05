@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import react, { reactCompilerPreset } from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
 import { federation } from '@module-federation/vite'
 
 import '@signalk/server-admin-ui-dependencies'
@@ -75,23 +76,12 @@ const isTest = process.env.VITEST === 'true'
 export default defineConfig({
   base: './',
   publicDir: 'public_src',
-  // Module Federation requires top-level await (ES2023)
-  esbuild: {
-    target: 'es2023'
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'es2023'
-    }
-  },
   plugins: [
     replaceAddonScripts(),
     stripSvgFonts(),
-    react({
-      babel: {
-        plugins: [['babel-plugin-react-compiler', {}]],
-        presets: [['@babel/preset-react', { runtime: 'automatic' }]]
-      }
+    react(),
+    babel({
+      presets: [reactCompilerPreset()]
     }),
     // Module Federation runtime injects http: imports incompatible with
     // Node.js ESM loader, so skip it during vitest runs.
