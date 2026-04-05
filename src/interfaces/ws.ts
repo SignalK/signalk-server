@@ -1060,7 +1060,7 @@ function processUnsubscribe(
       spark.sentMetaData = {}
     }
   } catch (e) {
-    console.log((e as Error).message)
+    console.log(e)
     spark.write((e as Error).message)
     spark.end()
   }
