@@ -527,7 +527,7 @@ module.exports = function (
         app.securityStrategy.setPassword(
           config,
           req.params.username,
-          req.body,
+          req.body.password,
           getConfigSavingCallback(
             'Password changed',
             'Unable to change password',
