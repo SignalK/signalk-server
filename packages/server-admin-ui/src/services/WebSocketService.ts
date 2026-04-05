@@ -1,4 +1,5 @@
-import type { SignalKStore } from '../store'
+import { useStore, type SignalKStore } from '../store'
+import { fetchAllData } from '../dataFetching'
 
 export type WebSocketStatus =
   | 'initial'
@@ -66,10 +67,8 @@ export class WebSocketService {
       this.updateState({ status: 'open', ws })
 
       if (isReconnect) {
-        import('../actions').then(({ fetchAllData }) => fetchAllData())
-        import('../store').then(({ useStore }) =>
-          useStore.getState().setRestarting(false)
-        )
+        fetchAllData()
+        useStore.getState().setRestarting(false)
       }
     }
 
@@ -225,17 +224,15 @@ export class WebSocketService {
           }
         }))
         break
-      case 'LOG':
-        // Dynamic import avoids circular dependency with store
-        import('../store').then(({ useStore }) => {
-          const logData = msg.data as {
-            isError?: boolean
-            ts: string
-            row: string
-          }
-          useStore.getState().addLogEntry(logData)
-        })
+      case 'LOG': {
+        const logData = msg.data as {
+          isError?: boolean
+          ts: string
+          row: string
+        }
+        useStore.getState().addLogEntry(logData)
         break
+      }
       case 'ACCESS_REQUEST':
         this.zustandSetState({ accessRequests: data } as Partial<SignalKStore>)
         break
@@ -251,29 +248,22 @@ export class WebSocketService {
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break
       case 'VESSEL_INFO':
-        import('../store').then(({ useStore }) => {
-          useStore
-            .getState()
-            .setVesselInfo(data as Parameters<SignalKStore['setVesselInfo']>[0])
-        })
+        useStore
+          .getState()
+          .setVesselInfo(data as Parameters<SignalKStore['setVesselInfo']>[0])
         break
       case 'SOURCEPRIORITIES':
-        import('../store').then(({ useStore }) => {
-          useStore
-            .getState()
-            .setSourcePriorities(
-              data as Parameters<SignalKStore['setSourcePriorities']>[0]
-            )
-        })
+        useStore
+          .getState()
+          .setSourcePriorities(
+            data as Parameters<SignalKStore['setSourcePriorities']>[0]
+          )
         break
       case 'RECEIVE_APPSTORE_LIST':
       case 'APP_STORE_CHANGED':
-        // Dynamic import avoids circular dependency with store
-        import('../store').then(({ useStore }) => {
-          useStore
-            .getState()
-            .setAppStore(data as Parameters<SignalKStore['setAppStore']>[0])
-        })
+        useStore
+          .getState()
+          .setAppStore(data as Parameters<SignalKStore['setAppStore']>[0])
         break
       default:
         console.debug('Unhandled server event:', eventType)
