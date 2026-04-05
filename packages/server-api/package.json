@@ -31,13 +31,13 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./history": "./dist/history.js",
+    "./history": "./dist/historyapi.js",
     "./typebox": "./dist/typebox/index.js"
   },
   "typesVersions": {
     "*": {
       "history": [
-        "dist/history.d.ts"
+        "dist/historyapi.d.ts"
       ],
       "typebox": [
         "dist/typebox/index.d.ts"

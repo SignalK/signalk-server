@@ -6,12 +6,12 @@ import {
   ResourceProviderRegistry,
   WeatherProviderRegistry,
   Delta,
-  WithResourcesApi,
+  WithResourceApi,
   WithNotificationsApi
 } from '.'
 import { RadarProviderRegistry, WithRadarApi } from './radarapi'
 import { CourseApi } from './course'
-import { HistoryProviderRegistry, WithHistoryApi } from './history'
+import { HistoryProviderRegistry, WithHistoryApi } from './historyapi'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
 
@@ -34,7 +34,7 @@ export interface ServerAPI
   extends
     PropertyValuesEmitter,
     ResourceProviderRegistry,
-    WithResourcesApi,
+    WithResourceApi,
     AutopilotProviderRegistry,
     WeatherProviderRegistry,
     RadarProviderRegistry,
@@ -405,21 +405,6 @@ export interface ServerAPI
     callback: ActionHandler,
     source?: string
   ): void
-
-  registerHistoryProvider(provider: {
-    hasAnydata: (options: object, cb: (hasResults: boolean) => void) => void
-    getHistory: (
-      date: Date,
-      path: string,
-      cb: (deltas: object[]) => void
-    ) => void
-    streamHistory: (
-      /** Primus spark connection - typed as unknown due to dynamic Primus types */
-      spark: unknown,
-      options: object,
-      onDelta: (delta: object) => void
-    ) => void
-  }): void
 
   /**
    * Returns Ports object which contains information about the serial ports available on the machine.

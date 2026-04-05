@@ -62,10 +62,7 @@ export class HistoryApiHttpRegistry {
     }
   }
 
-  registerHistoryApiProvider(
-    pluginId: string,
-    provider: HistoryProvider
-  ): void {
+  registerHistoryProvider(pluginId: string, provider: HistoryProvider): void {
     if (!isHistoryProvider(provider)) {
       throw new Error('Invalid history api provider')
     }
@@ -82,7 +79,7 @@ export class HistoryApiHttpRegistry {
     )
   }
 
-  unregisterHistoryApiProvider(pluginId: string): void {
+  unregisterHistoryProvider(pluginId: string): void {
     if (!pluginId || !this.historyProviders.has(pluginId)) {
       return
     }
