@@ -23,6 +23,8 @@ import { writeSettingsFile } from '../../config/config'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
+export const CHART_TILE_REGEX = /\/charts\/[^?]+\/\d+\/\d+\/\d+$/
+
 export const skUuid = () => `${uuidv4()}`
 
 interface DefaultProviders {
@@ -599,7 +601,7 @@ export class ResourcesApi {
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** GET ${RESOURCES_API_PATH}/:resourceType/:resourceId/*`)
 
-        if (req.path.match(`/charts/(\\w*\\W*)+/[0-9]*/[0-9]*/[0-9]*`)) {
+        if (req.path.match(CHART_TILE_REGEX)) {
           debug('*** CHART TILE request -> next()')
           next()
           return
