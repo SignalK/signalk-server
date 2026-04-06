@@ -29,7 +29,9 @@ import {
   findRequest,
   updateRequest,
   queryRequest,
-  Reply
+  Reply,
+  RequestState,
+  UpdateOptions
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
 import { createDebug } from '../debug'
@@ -108,6 +110,44 @@ interface WsMessage {
   state?: string
   statusCode?: number
   message?: string
+}
+
+interface WsRequestReply extends UpdateOptions {
+  requestId: string
+  state: RequestState | null
+}
+
+function isWsRequestReply(msg: unknown): msg is WsRequestReply {
+  if (!msg || typeof msg !== 'object') {
+    return false
+  }
+
+  const candidate = msg as Record<string, unknown>
+  const state = candidate.state
+
+  return (
+    typeof candidate.requestId === 'string' &&
+    (state === 'PENDING' || state === 'COMPLETED' || state === null)
+  )
+}
+
+function normalizeStatusCode(statusCode: unknown): number | null {
+  return typeof statusCode === 'number' && Number.isFinite(statusCode)
+    ? statusCode
+    : null
+}
+
+function normalizeMessage(message: unknown): string | null {
+  return typeof message === 'string' ? message : null
+}
+
+function normalizePercentComplete(percentComplete: unknown): number | null {
+  return typeof percentComplete === 'number' &&
+    Number.isFinite(percentComplete) &&
+    percentComplete >= 0 &&
+    percentComplete <= 100
+    ? percentComplete
+    : null
 }
 
 interface PathSources {
@@ -309,13 +349,27 @@ function wsInterface(app: WsApp): WsApi {
             return
           }
 
-          const listener = (msg: WsMessage) => {
-            if (msg.requestId === requestId) {
-              updateRequest(
-                requestId,
-                msg.state as 'PENDING' | 'COMPLETED' | null,
-                msg
-              )
+          const listener = (msg: unknown) => {
+            let parsedMsg = msg
+            if (typeof parsedMsg === 'string' || Buffer.isBuffer(parsedMsg)) {
+              try {
+                parsedMsg = JSON.parse(String(parsedMsg))
+              } catch (_err) {
+                return
+              }
+            }
+
+            if (isWsRequestReply(parsedMsg) && parsedMsg.requestId === requestId) {
+              const updateOptions: UpdateOptions = {
+                statusCode: normalizeStatusCode(parsedMsg.statusCode),
+                data: parsedMsg.data ?? null,
+                message: normalizeMessage(parsedMsg.message),
+                percentComplete: normalizePercentComplete(
+                  parsedMsg.percentComplete
+                )
+              }
+
+              updateRequest(requestId, parsedMsg.state, updateOptions)
                 .then((reply) => {
                   if (reply.state !== 'PENDING') {
                     spark!.removeListener(
