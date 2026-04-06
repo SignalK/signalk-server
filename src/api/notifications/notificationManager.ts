@@ -7,14 +7,16 @@ import {
   Update,
   Context,
   Path,
-  AlarmOptions,
+  AlarmRaiseOptions,
+  AlarmUpdateOptions,
   SourceRef,
   NotificationId,
-  Brand
+  Brand,
+  AlarmProperties
 } from '@signalk/server-api'
 
 import { NotificationApplication } from './index'
-import { Alarm, AlarmProperties } from './alarm'
+import { Alarm } from './alarm'
 import * as uuid from 'uuid'
 import * as _ from 'lodash'
 
@@ -89,32 +91,40 @@ export class NotificationManager {
    * @param options Object to initialise the Alarm
    * @returns alarm id
    */
-  raise(options: AlarmOptions): NotificationId {
+  raise(options: AlarmRaiseOptions): NotificationId {
     const id = uuid.v4() as NotificationId
     const alarm = new Alarm(id)
+    const {
+      state,
+      path,
+      idInPath,
+      message,
+      includePosition,
+      includeCreatedAt,
+      data
+    } = options
 
-    alarm.value.state = options.state
-    alarm.status.canSilence =
-      options.state === ALARM_STATE.emergency ? false : true
+    alarm.value.state = state ?? alarm.value.state
+    alarm.status.canSilence = state === ALARM_STATE.emergency ? false : true
 
-    if (options.path) {
-      alarm.setPath(options.path, options.appendId ? id : undefined)
+    if (path) {
+      alarm.setPath(path, idInPath ? id : undefined)
     }
-    if (options.message) {
-      alarm.value.message = options.message
-    }
-    if (options.position || options.state === ALARM_STATE.emergency) {
+
+    alarm.value.message = message ?? alarm.value.message
+
+    if (includePosition || state === ALARM_STATE.emergency) {
       alarm.value.position =
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         _.get((this.app.signalk as any).self, 'navigation.position')?.value ??
         null
     }
-    if (options.createdAt || options.state === ALARM_STATE.emergency) {
+    if (includeCreatedAt || state === ALARM_STATE.emergency) {
       alarm.value.createdAt = new Date().toISOString() as Timestamp
     }
-    /*if (options.meta) {
-      (alarm.value as any).meta = options.meta
-    }*/
+
+    alarm.value.data = data ?? alarm.value.data
+
     this.alarms.set(id, alarm)
     this.emitNotification(alarm)
     return id
@@ -125,23 +135,20 @@ export class NotificationManager {
    * @param id Alarm identifier
    * @param options Key / values to update
    */
-  update(id: NotificationId, options: AlarmOptions) {
+  update(id: NotificationId, options: AlarmUpdateOptions) {
     const alarm = this.alarms.get(id)
     if (!alarm) {
       throw new Error('Notification not found!')
     }
 
-    if (options.state) {
-      alarm.value.state = options.state
-      alarm.status.canSilence =
-        options.state === ALARM_STATE.emergency ? false : true
-    }
-    if (options.message) {
-      alarm.value.message = options.message
-    }
-    /*if (options.meta) {
-      (alarm.value as any).meta = options.meta
-    }*/
+    const { state, message, data } = options
+
+    alarm.value.state = state ?? alarm.value.state
+    alarm.status.canSilence = state === ALARM_STATE.emergency ? false : true
+
+    alarm.value.message = message ?? alarm.value.message
+    alarm.value.data = data ?? alarm.value.data
+
     this.alarms.set(id, alarm)
     this.emitNotification(alarm)
   }
@@ -156,9 +163,9 @@ export class NotificationManager {
       state: ALARM_STATE.emergency,
       message: options?.message ?? 'Person Overboard!',
       path: 'mob' as Path,
-      appendId: true,
-      position: true,
-      createdAt: true
+      idInPath: true,
+      includePosition: true,
+      includeCreatedAt: true
     })
   }
 

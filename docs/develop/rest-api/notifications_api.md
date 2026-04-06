@@ -34,26 +34,19 @@ For consistency and clarity this document will use the the following terminology
 - `notification` - A Signal K update delta message with a path starting with the text _notifications._
 - `alarm` - The communication of the event / condition to the operator.
 
-### Initial Release
+### Features
 
-The initial release of the Notifications API implements core functionality to attribute Signal K notifications to allow them to be actioned and managed, regardless of their source.
+The Notifications API implements a **Notification Manager** that provides the ability to action alarms and lifecycle management.
+
 It does this by:
 
 - Placing notifications into their own `update` in the delta message
-- Assigning them a unique identifier
+- Assigning unique identifier which is used to perfom actions
 - Adding a `status` property to the payload
-- Making available HTTP endpoints at `/signalk/v2/api/notifications` to perform actions.
+- Making available HTTP endpoints at `/signalk/v2/api/notifications` to perform actions
+- Providing a plugin interface to allow plugins to access API methods
 
 > **Note:** Actions are only available for notifications containing a payload containing `state` and `method` properties.
-
-### Target State
-
-Subsequent releases of Signal K server will contain enhancements to the **Notification API** to implement the remaining functionality including:
-
-- Creating and clearing notifications
-- Managing Alarm lifecycle
-- Raising specified alarms i.e. MOB
-- Plugin interface
 
 ## Notification Payload
 
@@ -62,21 +55,28 @@ The Notification API adds the following attributes to the notification payload:
 - `id` - Unique identifier for use when taking action.
 - `status` - An object detailing the actions that can be and have been taken.
 
+The following attributes can be applied when a notification is raised using the API:
+
+- `createdAt` - Timestamp indicating when the notification was raised.
+- `position` - Position associated with the notification _(i.e. vessel position when notification was raised)_
+
 _Example_
 
 ```json
 {
- "state": "...",
- "method": [..],
- "message": "...",
- "id": "a987be59-d26f-46db-afeb-83987b837a8f",
- "status": {
-      "silenced": true,
-      "acknowledged": false,
-      "canSilence": true,
-      "canAcknowledge": true,
-      "canClear": true
-   }
+  "state": "emergency",
+  "method": ["sound", "visual"],
+  "message": "Person Overboard!",
+  "id": "a987be59-d26f-46db-afeb-83987b837a8f",
+  "status": {
+    "silenced": false,
+    "acknowledged": false,
+    "canSilence": true,
+    "canAcknowledge": true,
+    "canClear": true
+  },
+  "createdAt": "2026-04-06T03:34:48.203Z",
+  "position": { "latitude": 57.73241514375983, "longitude": 11.66365146637231 }
 }
 ```
 
@@ -97,7 +97,71 @@ The remaining properties indicate the actions that **HAVE been taken**:
 
 ## Taking Action
 
-To take action on the alarm associated with a notification, send an HTTP POST request to `/signalk/v2/api/notifications/{notificationId}/{action}`.
+The Notification API implements endpoints to raise, update, take action, and clear notifications and their associated alarm at `/signalk/v2/api/notifications/`.
+
+### Raising an Alarm
+
+> Note: To Do
+
+### Updating an Alarm
+
+> Note: To Do
+
+### Clearing an Alarm
+
+> Note: The clear action is only available for alarms associated with notifications having `status.canClear = true`.
+
+To clear the alarm send an HTTP DELETE request to `/signalk/v2/api/notifications/{notificationId}`.
+
+The result of a successful clear request is that the:
+
+- `state` value is set to `normal`
+- `status.silenced` is set to `false`
+- `status.acknowledged` is set to `false`
+
+If the clear action is requested when the `status.canClear` property is `false`, the alarm will not be cleared and an ERROR response is returned to the requestor.
+
+_Example: Notification payload prior to `clear` action request._
+
+```JSON
+{
+   "message": "Engine temperature is high!",
+   "method": ["visual"],
+   "state": "alert",
+   "id": "a987be59-d26f-46db-afeb-83987b837a8f",
+   "status": {
+      "silenced": true,
+      "acknowledged": false,
+      "canSilence": true,
+      "canAcknowledge": true,
+      "canClear": true
+   }
+}
+```
+
+_Clear action request_
+
+```typescript
+HTTP DELETE "/signalk/v2/api/notifications/a987be59-d26f-46db-afeb-83987b837a8f"
+```
+
+_Notification: post `clear` request_
+
+```JSON
+{
+   "message": "Engine temperature is high!",
+   "method": ["visual"],
+   "state": "normal",
+   "id": "a987be59-d26f-46db-afeb-83987b837a8f",
+   "status": {
+      "silenced": false,
+      "acknowledged": false,
+      "canSilence": true,
+      "canAcknow;edge": true,
+      "canClear": true
+   }
+}
+```
 
 ### Silencing an Alarm
 
@@ -278,3 +342,49 @@ _Reference: [Signal K Specification](https://signalk.org/specification/1.7.0/doc
 The `n2k-signalk` plugin will set a notification's `method = []` when the NMEA2000 `acknowledgeStatus` OR `temporarySilenceStatus` attributes are set to **"Yes"**.
 
 The **Notifications API** will re-write the `method` attribute value, as outlined above in [Silencing a Notification](#silencing-a-notification) and [Acknowledging a Notification](#acknowledging-a-notification), to ensure alignment across all notifications regardless of source.
+
+## Operations and Notification Properties
+
+> The Notification `method` property is managed by the API and the value assigned is based
+> on the value of the `state` and`status` properties.
+
+The tables below detail the resultant notification `method` following the successful completion of an operation.
+
+### 1. Raise
+
+Generates notifcations with the following property values:
+
+| Source | State        | Method             | canSilence | canAcknowledge | canClear |
+| ------ | ------------ | ------------------ | ---------- | -------------- | -------- |
+| API    | `emergency`  | [`visual`,`sound`] | false      | true           | true     |
+| Delta  | `emergency`  | [`visual`,`sound`] | false      | true           | false    |
+| API    | _all others_ | [`visual`,`sound`] | true       | true           | true     |
+| Delta  | _all others_ | [`visual`,`sound`] | true       | true           | false    |
+
+> _Note: All incoming notifications to the Signal K Server, that were not generated
+> by the Notification API, will have `canClear = false`._
+
+### 2. Silence
+
+Updates notifcation `method` property:
+
+| Source | Condition           | Method     |
+| ------ | ------------------- | ---------- |
+| API    | `canSilence = true` | [`visual`] |
+
+### 3. Acknowledge
+
+Updates notifcation `method` property as follows:
+
+| Source | State        | Condition               | Method     |
+| ------ | ------------ | ----------------------- | ---------- |
+| API    | `emergency`  | `canAcknowledge = true` | [`visual`] |
+| API    | _all others_ | `canAcknowledge = true` | []         |
+
+### 4. Clear
+
+Updates notifcation `state` & `status` properties as follows:
+
+| Source | Condition         | State    | silenced | acknowledged |
+| ------ | ----------------- | -------- | -------- | ------------ |
+| API    | `canClear = true` | `normal` | false    | false        |
