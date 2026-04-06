@@ -165,7 +165,10 @@ module.exports = function (app) {
         const installedNames = getInstalledPackageNames()
 
         Promise.all([
-          findPluginsAndWebapps(),
+          findPluginsAndWebapps().catch((err) => {
+            console.log(`findPluginsAndWebapps failed: ${err.message}`)
+            return [[], []]
+          }),
           getLatestServerVersion(app.config.version).catch(() => '0.0.0'),
           fetchDistTagsForPackages(installedNames).catch(() => ({}))
         ])
