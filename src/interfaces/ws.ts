@@ -142,6 +142,25 @@ function isWsRequestReply(msg: unknown): msg is WsRequestReply {
   )
 }
 
+function normalizeStatusCode(statusCode: unknown): number | null {
+  return typeof statusCode === 'number' && Number.isFinite(statusCode)
+    ? statusCode
+    : null
+}
+
+function normalizeMessage(message: unknown): string | null {
+  return typeof message === 'string' ? message : null
+}
+
+function normalizePercentComplete(percentComplete: unknown): number | null {
+  return typeof percentComplete === 'number' &&
+    Number.isFinite(percentComplete) &&
+    percentComplete >= 0 &&
+    percentComplete <= 100
+    ? percentComplete
+    : null
+}
+
 interface PathSources {
   [path: string]: {
     [source: string]: Spark
@@ -343,10 +362,12 @@ function wsInterface(app: WsApp): WsApi {
 
             if (isWsRequestReply(parsedMsg) && parsedMsg.requestId === requestId) {
               const updateOptions: UpdateOptions = {
-                statusCode: parsedMsg.statusCode ?? null,
+                statusCode: normalizeStatusCode(parsedMsg.statusCode),
                 data: parsedMsg.data ?? null,
-                message: parsedMsg.message ?? null,
-                percentComplete: parsedMsg.percentComplete ?? null
+                message: normalizeMessage(parsedMsg.message),
+                percentComplete: normalizePercentComplete(
+                  parsedMsg.percentComplete
+                )
               }
 
               updateRequest(requestId, parsedMsg.state, updateOptions)
