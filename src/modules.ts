@@ -176,10 +176,11 @@ function removeModule(
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any,
-  pluginId?: string
+  pluginId?: string,
+  deleteData: boolean = false
 ) {
   runNpm(config, name, null, 'remove', onData, onErr, (code: number) => {
-    cleanupAfterRemove(config.configPath, name, pluginId)
+    cleanupAfterRemove(config.configPath, name, pluginId, deleteData)
     onClose(code)
   })
 }
@@ -187,7 +188,8 @@ function removeModule(
 function cleanupAfterRemove(
   configPath: string,
   packageName: string,
-  pluginId?: string
+  pluginId?: string,
+  deleteData: boolean = false
 ) {
   const moduleDir = path.join(configPath, 'node_modules', packageName)
   if (fs.existsSync(moduleDir)) {
@@ -225,7 +227,7 @@ function cleanupAfterRemove(
     }
   }
 
-  if (pluginId) {
+  if (pluginId && deleteData) {
     const configFile = pluginConfigPath(configPath, pluginId)
     if (fs.existsSync(configFile)) {
       try {
@@ -243,6 +245,63 @@ function cleanupAfterRemove(
       }
     }
   }
+}
+
+function getDirectorySize(dir: string): {
+  totalBytes: number
+  fileCount: number
+} {
+  let totalBytes = 0
+  let fileCount = 0
+
+  function walk(d: string): void {
+    if (!fs.existsSync(d)) return
+    for (const entry of fs.readdirSync(d)) {
+      try {
+        const entryPath = path.join(d, entry)
+        const stats = fs.statSync(entryPath)
+        if (stats.isFile()) {
+          totalBytes += stats.size
+          fileCount++
+        } else if (stats.isDirectory()) {
+          walk(entryPath)
+        }
+      } catch {
+        // entry may have been removed between readdir and stat
+      }
+    }
+  }
+
+  walk(dir)
+  return { totalBytes, fileCount }
+}
+
+function getPluginDataSize(
+  configPath: string,
+  pluginId: string
+): { totalBytes: number; fileCount: number; hasData: boolean } {
+  let totalBytes = 0
+  let fileCount = 0
+
+  const configFile = pluginConfigPath(configPath, pluginId)
+  if (fs.existsSync(configFile)) {
+    try {
+      const stats = fs.statSync(configFile)
+      totalBytes += stats.size
+      fileCount++
+    } catch {
+      // ignore
+    }
+  }
+
+  const dataDir = pluginDataDir(configPath, pluginId)
+  if (fs.existsSync(dataDir)) {
+    const dirSize = getDirectorySize(dataDir)
+    totalBytes += dirSize.totalBytes
+    fileCount += dirSize.fileCount
+  }
+
+  return { totalBytes, fileCount, hasData: totalBytes > 0 }
 }
 
 export function restoreModules(
@@ -538,5 +597,7 @@ module.exports = {
   getKeywords,
   restoreModules,
   importOrRequire,
-  runNpm
+  runNpm,
+  cleanupAfterRemove,
+  getPluginDataSize
 }

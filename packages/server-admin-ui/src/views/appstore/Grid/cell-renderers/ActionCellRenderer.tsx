@@ -12,8 +12,21 @@ import { faCloudArrowDown } from '@fortawesome/free-solid-svg-icons/faCloudArrow
 import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
 import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons/faArrowUpRightFromSquare'
 import { faLink } from '@fortawesome/free-solid-svg-icons/faLink'
+import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import { urlToWebapp } from '../../../Webapps/Webapp'
 import semver from 'semver'
+
+interface PluginDataSize {
+  totalBytes: number
+  fileCount: number
+  hasData: boolean
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 interface AppData {
   name: string
@@ -46,6 +59,10 @@ export default function ActionCellRenderer({
   const [distTags, setDistTags] = useState<Record<string, string>>({})
   const [loadingVersions, setLoadingVersions] = useState(false)
   const [showAllVersions, setShowAllVersions] = useState(false)
+  const [showRemoveModal, setShowRemoveModal] = useState(false)
+  const [deleteData, setDeleteData] = useState(false)
+  const [dataSize, setDataSize] = useState<PluginDataSize | null>(null)
+  const [loadingDataSize, setLoadingDataSize] = useState(false)
 
   const handleInstallClick = () => {
     fetch(
@@ -114,13 +131,35 @@ export default function ActionCellRenderer({
     }
   }
 
-  const handleRemoveClick = () => {
-    if (confirm(`Are you sure you want to uninstall ${app.name}?`)) {
-      fetch(`${window.serverRoutesPrefix}/appstore/remove/${app.name}`, {
-        method: 'POST',
-        credentials: 'include'
-      })
+  const handleRemoveClick = async () => {
+    setDeleteData(false)
+    setShowRemoveModal(true)
+    setLoadingDataSize(true)
+    setDataSize(null)
+
+    try {
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/appstore/datasize/${app.name}`,
+        { credentials: 'include' }
+      )
+      if (response.ok) {
+        setDataSize(await response.json())
+      }
+    } catch (error) {
+      console.error('Failed to fetch data size:', error)
+    } finally {
+      setLoadingDataSize(false)
     }
+  }
+
+  const handleConfirmRemove = () => {
+    fetch(`${window.serverRoutesPrefix}/appstore/remove/${app.name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ deleteData })
+    })
+    setShowRemoveModal(false)
   }
 
   let content: ReactNode
@@ -353,6 +392,72 @@ export default function ActionCellRenderer({
             </p>
           )}
         </Modal.Body>
+      </Modal>
+      {/* Remove Confirmation Modal */}
+      <Modal show={showRemoveModal} onHide={() => setShowRemoveModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Remove {app.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Are you sure you want to remove <strong>{app.name}</strong>?
+          </p>
+          {loadingDataSize ? (
+            <div className="text-center">
+              <div
+                className="spinner-border spinner-border-sm text-primary"
+                role="status"
+              >
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <span className="ms-2">Checking plugin data...</span>
+            </div>
+          ) : dataSize && dataSize.hasData ? (
+            <div className="mt-3">
+              <div className="form-check form-switch">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id={`deleteDataCheck-${app.name}`}
+                  checked={deleteData}
+                  onChange={(e) => setDeleteData(e.target.checked)}
+                />
+                <label
+                  className="form-check-label"
+                  htmlFor={`deleteDataCheck-${app.name}`}
+                >
+                  Also delete plugin data ({formatBytes(dataSize.totalBytes)})
+                </label>
+              </div>
+              {deleteData && (
+                <div className="alert alert-danger mt-2 py-2" role="alert">
+                  <FontAwesomeIcon
+                    icon={faTriangleExclamation}
+                    className="me-2"
+                  />
+                  <small>
+                    Plugin configuration and data files ({dataSize.fileCount}{' '}
+                    {dataSize.fileCount === 1 ? 'file' : 'files'}) will be
+                    permanently deleted.
+                  </small>
+                </div>
+              )}
+            </div>
+          ) : dataSize && !dataSize.hasData ? (
+            <p className="text-muted mb-0">
+              <small>No plugin data found on disk.</small>
+            </p>
+          ) : null}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowRemoveModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleConfirmRemove}>
+            <FontAwesomeIcon className="me-2" icon={faTrashCan} />
+            Remove
+          </Button>
+        </Modal.Footer>
       </Modal>
     </div>
   )

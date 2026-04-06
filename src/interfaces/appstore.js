@@ -19,7 +19,7 @@ const debug = createDebug('signalk-server:interfaces:appstore')
 const _ = require('lodash')
 const semver = require('semver')
 const { gt } = semver
-const { installModule, removeModule } = require('../modules')
+const { installModule, removeModule, getPluginDataSize } = require('../modules')
 const {
   isTheServerModule,
   findModulesWithKeyword,
@@ -109,11 +109,16 @@ module.exports = function (app) {
                 res.status(404)
                 res.json('No such webapp or plugin available:' + name)
               } else {
+                const deleteData = req.body && req.body.deleteData === true
                 if (moduleInstalling) {
-                  moduleInstallQueue.push({ name: name, isRemove: true })
+                  moduleInstallQueue.push({
+                    name: name,
+                    isRemove: true,
+                    deleteData: deleteData
+                  })
                   sendAppStoreChangedEvent()
                 } else {
-                  removeSKModule(name)
+                  removeSKModule(name, deleteData)
                 }
                 res.json(`Removing ${name}...`)
               }
@@ -124,6 +129,32 @@ module.exports = function (app) {
               res.status(500)
               res.json(error.message)
             })
+        }
+      )
+
+      app.get(
+        [
+          `${SERVERROUTESPREFIX}/appstore/datasize/:name`,
+          `${SERVERROUTESPREFIX}/appstore/datasize/:org/:name`
+        ],
+        (req, res) => {
+          let name = req.params.name
+          if (req.params.org) {
+            name = req.params.org + '/' + name
+          }
+          const plugin = getPlugin(name)
+          const pluginId = plugin ? plugin.id : undefined
+          if (!pluginId) {
+            res.json({ totalBytes: 0, fileCount: 0, hasData: false })
+            return
+          }
+          try {
+            const dataSize = getPluginDataSize(app.config.configPath, pluginId)
+            res.json(dataSize)
+          } catch (error) {
+            console.error('Failed to get plugin data size:', error)
+            res.json({ totalBytes: 0, fileCount: 0, hasData: false })
+          }
         }
       )
 
@@ -404,13 +435,13 @@ module.exports = function (app) {
     updateSKModule(module, version, false)
   }
 
-  function removeSKModule(module) {
+  function removeSKModule(module, deleteData) {
     const plugin = getPlugin(module)
     const pluginId = plugin ? plugin.id : undefined
-    updateSKModule(module, null, true, pluginId)
+    updateSKModule(module, null, true, pluginId, deleteData)
   }
 
-  function updateSKModule(module, version, isRemove, pluginId) {
+  function updateSKModule(module, version, isRemove, pluginId, deleteData) {
     moduleInstalling = {
       name: module,
       output: [],
@@ -442,7 +473,7 @@ module.exports = function (app) {
       if (moduleInstallQueue.length) {
         const next = moduleInstallQueue.splice(0, 1)[0]
         if (next.isRemove) {
-          removeSKModule(next.name)
+          removeSKModule(next.name, next.deleteData)
         } else {
           installSKModule(next.name, next.version)
         }
@@ -459,7 +490,8 @@ module.exports = function (app) {
         onData,
         onErr,
         onClose,
-        pluginId
+        pluginId,
+        deleteData
       )
     } else {
       installModule(app.config, module, version, onData, onErr, onClose)
