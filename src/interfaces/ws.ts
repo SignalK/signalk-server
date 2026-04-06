@@ -310,12 +310,21 @@ function wsInterface(app: WsApp): WsApi {
             return
           }
 
-          const listener = (msg: WsMessage) => {
-            if (msg.requestId === requestId) {
+          const listener = (msg: unknown) => {
+            let parsedMsg = msg
+            if (typeof parsedMsg === 'string' || Buffer.isBuffer(parsedMsg)) {
+              try {
+                parsedMsg = JSON.parse(String(parsedMsg))
+              } catch (_err) {
+                return
+              }
+            }
+
+            if ((parsedMsg as WsMessage).requestId === requestId) {
               updateRequest(
                 requestId,
-                msg.state as 'PENDING' | 'COMPLETED' | null,
-                msg
+                (parsedMsg as WsMessage).state as 'PENDING' | 'COMPLETED' | null,
+                parsedMsg as WsMessage
               )
                 .then((reply) => {
                   if (reply.state !== 'PENDING') {
