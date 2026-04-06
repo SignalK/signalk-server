@@ -136,7 +136,7 @@ export class NotificationApi {
           if (n) {
             res.status(200).json(n)
           } else {
-            res.status(200).json(Responses.notFound)
+            res.status(400).json(Responses.notFound)
           }
         } else {
           res.status(400).json(Responses.invalid)

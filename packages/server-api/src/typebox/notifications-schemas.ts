@@ -113,7 +113,7 @@ export const AlarmUpdateOptionsSchema = Type.Object(
   },
   {
     $id: 'AlarmUpdateOptions',
-    description: 'Options object for raising an Alarm'
+    description: 'Options object when updating an Alarm'
   }
 )
 export type AlarmUpdateOptions = Static<typeof AlarmUpdateOptionsSchema>
