@@ -336,23 +336,9 @@ describe('Rate limiting with trustProxy enabled', () => {
     allLogs.should.not.include('ERR_ERL_UNEXPECTED_X_FORWARDED_FOR')
   })
 
-  it('should respect X-Forwarded-For header when trustProxy is enabled', async function () {
-    const res1 = await fetch(`${url}/loginStatus`, {
-      headers: {
-        'X-Forwarded-For': '192.168.1.100'
-      }
-    })
-    res1.status.should.be.oneOf([200, 401, 403])
-
-    const res2 = await fetch(`${url}/loginStatus`, {
-      headers: {
-        'X-Forwarded-For': '192.168.1.101'
-      }
-    })
-    res2.status.should.be.oneOf([200, 401, 403])
-
+  it('should use X-Forwarded-For for per-IP rate limit buckets', async function () {
     const requests = []
-    for (let i = 0; i < API_MAX + 1; i++) {
+    for (let i = 0; i < API_MAX; i++) {
       requests.push(
         fetch(`${url}/loginStatus`, {
           headers: {
@@ -361,15 +347,20 @@ describe('Rate limiting with trustProxy enabled', () => {
         })
       )
     }
+    await Promise.all(requests)
 
-    const results = await Promise.all(requests)
+    const blocked = await fetch(`${url}/loginStatus`, {
+      headers: {
+        'X-Forwarded-For': '192.168.1.200'
+      }
+    })
+    blocked.status.should.equal(429)
 
-    const succeeded = results.filter((r) =>
-      [200, 401, 403].includes(r.status)
-    ).length
-    const rateLimited = results.filter((r) => r.status === 429).length
-
-    succeeded.should.equal(API_MAX)
-    rateLimited.should.be.at.least(1)
+    const differentIp = await fetch(`${url}/loginStatus`, {
+      headers: {
+        'X-Forwarded-For': '192.168.1.201'
+      }
+    })
+    differentIp.status.should.be.oneOf([200, 401, 403])
   })
 })
