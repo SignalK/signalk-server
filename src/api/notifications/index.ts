@@ -131,11 +131,15 @@ export class NotificationApi {
       `${NOTI_API_PATH}/:id`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
-        const n = this.getById(req.params.id as NotificationId)
-        if (n) {
-          res.status(200).json(n)
+        if (uuid.validate(req.params.id)) {
+          const n = this.getById(req.params.id as NotificationId)
+          if (n) {
+            res.status(200).json(n)
+          } else {
+            res.status(200).json(Responses.notFound)
+          }
         } else {
-          res.status(200).json(Responses.notFound)
+          res.status(400).json(Responses.invalid)
         }
       }
     )
@@ -164,8 +168,12 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          this.silence(req.params.id as NotificationId)
-          res.status(200).json(Responses.ok)
+          if (uuid.validate(req.params.id)) {
+            this.silence(req.params.id as NotificationId)
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
         } catch (err) {
           res.status(400).json({
             state: 'FAILED',
@@ -200,8 +208,12 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          this.acknowledge(req.params.id as NotificationId)
-          res.status(200).json(Responses.ok)
+          if (uuid.validate(req.params.id)) {
+            this.acknowledge(req.params.id as NotificationId)
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
         } catch (err) {
           res.status(400).json({
             state: 'FAILED',
@@ -218,8 +230,12 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          this.clear(req.params.id as NotificationId)
-          res.status(200).json(Responses.ok)
+          if (uuid.validate(req.params.id)) {
+            this.clear(req.params.id as NotificationId)
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
         } catch (err) {
           res.status(400).json({
             state: 'FAILED',
@@ -251,8 +267,12 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path} ${req.body}`)
         try {
-          this.update(req.params.id as NotificationId, req.body)
-          res.status(200).json(Responses.ok)
+          if (uuid.validate(req.params.id)) {
+            this.update(req.params.id as NotificationId, req.body)
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
         } catch (err) {
           res.status(400).json({
             state: 'FAILED',
@@ -320,7 +340,9 @@ export class NotificationApi {
     this.notificationManager.update(id, options)
   }
 
-  mob(message: string): NotificationId {
-    return this.notificationManager.mob({ message: message })
+  mob(message?: string): NotificationId {
+    return this.notificationManager.mob(
+      message ? { message: message } : undefined
+    )
   }
 }

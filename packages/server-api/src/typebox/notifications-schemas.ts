@@ -46,7 +46,7 @@ export const AlarmSchema = Type.Object(
       description: 'Notification Identifier',
       example: '8dac314c-ef20-4e6f-9098-db64ce20e117'
     }),
-    position: Type.Optional(PositionSchema),
+    position: Type.Optional(Type.Union([PositionSchema, Type.Null()])),
     createdAt: Type.Optional(IsoTimeSchema),
     data: Type.Optional(Type.Record(Type.String(), Type.Unknown()))
   },
@@ -73,21 +73,21 @@ export const AlarmRaiseOptionsSchema = Type.Object(
         example: 'notifications.mob.8dac314c-ef20-4e6f-9098-db64ce20e117'
       })
     ),
-    position: Type.Optional(
+    idInPath: Type.Optional(
+      Type.Boolean({
+        description: 'Set `true` to include the `notificationId` in the path.'
+      })
+    ),
+    includePosition: Type.Optional(
       Type.Boolean({
         description:
           'Set `true` to include the position at which the notification was raised.'
       })
     ),
-    createdAt: Type.Optional(
+    includeCreatedAt: Type.Optional(
       Type.Boolean({
         description:
           'Set `true` to include the timestamp when the notification was raised.'
-      })
-    ),
-    appendId: Type.Optional(
-      Type.Boolean({
-        description: 'Set `true` to include the `notificationId` in the path.'
       })
     ),
     data: Type.Optional(Type.Record(Type.String(), Type.Unknown()))

@@ -115,7 +115,7 @@ const notificationsApiDoc = {
               description: 'Request error response',
               properties: {
                 state: { type: 'string', enum: ['FAILED'] },
-                statusCode: { type: 'number', enum: [404] },
+                statusCode: { type: 'number', enum: [400] },
                 message: { type: 'string' }
               },
               required: ['state', 'statusCode', 'message']
@@ -148,7 +148,8 @@ const notificationsApiDoc = {
       post: {
         tags: ['Operations'],
         summary: 'Raise notification.',
-        description: 'Raises a notification setting message and ALARM_STATE.',
+        description:
+          'Raises a notification and sets `ALARM_METHOD` based on the supplied `state`.',
         requestBody: {
           description: 'Alarm Options',
           required: true,
@@ -203,7 +204,7 @@ const notificationsApiDoc = {
         tags: ['Operations'],
         summary: 'Clear notification.',
         description:
-          "Clears the notification with the supplied identifier (set ALARM_STATE = 'normal').",
+          "Clears the alarm from notification with the supplied identifier by setting `ALARM_STATE = normal`').",
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
           default: { $ref: '#/components/responses/ErrorResponse' }
@@ -282,7 +283,7 @@ const notificationsApiDoc = {
         tags: ['Actions'],
         summary: 'Acknowledge notification alarm.',
         description:
-          'Removes both `visual` and `sound` from the notification ALARM METHOD and sets `status.acknowledged = true`.',
+          'Acknowledge alarm by setting `status.acknowledged = true` and removing `sound` from ALARM METHOD.',
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
           default: { $ref: '#/components/responses/ErrorResponse' }

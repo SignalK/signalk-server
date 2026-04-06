@@ -94,29 +94,37 @@ export class NotificationManager {
   raise(options: AlarmRaiseOptions): NotificationId {
     const id = uuid.v4() as NotificationId
     const alarm = new Alarm(id)
+    const {
+      state,
+      path,
+      idInPath,
+      message,
+      includePosition,
+      includeCreatedAt,
+      data
+    } = options
 
-    alarm.value.state = options.state
-    alarm.status.canSilence =
-      options.state === ALARM_STATE.emergency ? false : true
+    alarm.value.state = state ?? alarm.value.state
+    alarm.status.canSilence = state === ALARM_STATE.emergency ? false : true
 
-    if (options.path) {
-      alarm.setPath(options.path, options.appendId ? id : undefined)
+    if (path) {
+      alarm.setPath(path, idInPath ? id : undefined)
     }
-    if (options.message) {
-      alarm.value.message = options.message
-    }
-    if (options.position || options.state === ALARM_STATE.emergency) {
+
+    alarm.value.message = message ?? alarm.value.message
+
+    if (includePosition || state === ALARM_STATE.emergency) {
       alarm.value.position =
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         _.get((this.app.signalk as any).self, 'navigation.position')?.value ??
         null
     }
-    if (options.createdAt || options.state === ALARM_STATE.emergency) {
+    if (includeCreatedAt || state === ALARM_STATE.emergency) {
       alarm.value.createdAt = new Date().toISOString() as Timestamp
     }
-    if (options.data) {
-      alarm.value.data = options.data
-    }
+
+    alarm.value.data = data ?? alarm.value.data
+
     this.alarms.set(id, alarm)
     this.emitNotification(alarm)
     return id
@@ -133,17 +141,17 @@ export class NotificationManager {
       throw new Error('Notification not found!')
     }
 
-    if (options.state) {
-      alarm.value.state = options.state
+    const { state, message, data } = options
+
+    if (state) {
+      alarm.value.state = state ?? alarm.value.state
       alarm.status.canSilence =
         options.state === ALARM_STATE.emergency ? false : true
     }
-    if (options.message) {
-      alarm.value.message = options.message
-    }
-    if (options.data) {
-      alarm.value.data = options.data
-    }
+
+    alarm.value.message = message ?? alarm.value.message
+    alarm.value.data = data ?? alarm.value.data
+
     this.alarms.set(id, alarm)
     this.emitNotification(alarm)
   }
@@ -158,9 +166,9 @@ export class NotificationManager {
       state: ALARM_STATE.emergency,
       message: options?.message ?? 'Person Overboard!',
       path: 'mob' as Path,
-      appendId: true,
-      position: true,
-      createdAt: true
+      idInPath: true,
+      includePosition: true,
+      includeCreatedAt: true
     })
   }
 

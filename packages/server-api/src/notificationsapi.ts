@@ -31,7 +31,7 @@ export interface NotificationsApi {
   list(): Record<NotificationId, AlarmProperties>
 
   /**
-   * Raise a notification.
+   * Raises a new notification and assigns an identifier.
    *
    * @category Notifications API
    *
@@ -50,7 +50,7 @@ export interface NotificationsApi {
    * @returns Notification Identifier
    *
    */
-  mob(message: string): NotificationId
+  mob(message?: string): NotificationId
 
   /**
    * Update the notification with the supplied identifier.
@@ -64,7 +64,9 @@ export interface NotificationsApi {
   update(id: NotificationId, options: AlarmUpdateOptions): void
 
   /**
-   * Silences the notification with the supplied identifier.
+   * Silence the alarm of the notification with the supplied identifier.
+   * Sets `status.silenced = true`
+   * Removes `sound` from `method`
    * Note: Calling this method on a Notifications with a status of `canSilence = false` will throw an Error
    *
    * @category Notifications API
@@ -83,7 +85,9 @@ export interface NotificationsApi {
   silenceAll(): void
 
   /**
-   * Acknowledges the notification with the supplied identifier.
+   * Acknowledge the alarm condition of the notification with the supplied identifier.
+   * Sets `status.acknowledged = true`
+   * Removes `sound` from `method`
    * Note: Calling this method on a Notifications with a status of `canAcknowledge = false` will throw an Error
    *
    * @category Notifications API
@@ -102,7 +106,8 @@ export interface NotificationsApi {
   acknowledgeAll(): void
 
   /**
-   * Clears the notification with the supplied identifier.
+   * Clears the alarm from the notification with the supplied identifier
+   * by setting `state = normal`
    * Note: Calling this method on a Notifications with a status of `canClear = false` will throw an Error
    *
    * @category Notifications API
@@ -122,19 +127,19 @@ export interface WithNotificationsApi {
  * @category  Notifications API
  * @property state - Alarm State value to apply
  * @property message - Message to display or speak
- * @property path - Path to assign to the Notification (default: `notifications.{notificationId}`)
- * @property position - Set true to include the vessel position in the Notification
- * @property createdAt - Set true to include the time in the Notification
- * @property appendId - Set true to append the `notificationId` to the Notification path
+ * @property path - Path to assign to the Notification (default = `notifications.{notificationId}`)
+ * @property idInPath - Set true to append the `notificationId` to the Notification path (default = false)
+ * @property includePosition - Set true to include the vessel position in the Notification (default = false)
+ * @property includeCreatedAt - Set true to include the time in the Notification (default = false)
  * @property data - Additional information provided in key | value pairs
  */
 export interface AlarmRaiseOptions {
   state: ALARM_STATE
   message?: string
   path?: Path
-  position?: boolean
-  createdAt?: boolean
-  appendId?: boolean
+  idInPath?: boolean
+  includePosition?: boolean
+  includeCreatedAt?: boolean
   data?: Record<string, Value>
 }
 
