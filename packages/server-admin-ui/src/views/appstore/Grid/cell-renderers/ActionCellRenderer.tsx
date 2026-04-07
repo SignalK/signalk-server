@@ -65,6 +65,7 @@ export default function ActionCellRenderer({
   const [deleteData, setDeleteData] = useState(false)
   const [dataSize, setDataSize] = useState<PluginDataSize | null>(null)
   const [loadingDataSize, setLoadingDataSize] = useState(false)
+  const [removeError, setRemoveError] = useState<string | null>(null)
 
   const handleInstallClick = () => {
     fetch(
@@ -135,6 +136,7 @@ export default function ActionCellRenderer({
 
   const handleRemoveClick = async () => {
     setDeleteData(false)
+    setRemoveError(null)
     setShowRemoveModal(true)
     setLoadingDataSize(true)
     setDataSize(null)
@@ -154,14 +156,30 @@ export default function ActionCellRenderer({
     }
   }
 
-  const handleConfirmRemove = () => {
-    fetch(`${window.serverRoutesPrefix}/appstore/remove/${app.name}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ deleteData })
-    })
-    setShowRemoveModal(false)
+  const handleConfirmRemove = async () => {
+    setRemoveError(null)
+    try {
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/appstore/remove/${app.name}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ deleteData })
+        }
+      )
+      if (!response.ok) {
+        setRemoveError(
+          `Failed to remove ${app.name}: server returned ${response.status}`
+        )
+        return
+      }
+      setShowRemoveModal(false)
+    } catch (error) {
+      setRemoveError(
+        `Failed to remove ${app.name}: ${error instanceof Error ? error.message : String(error)}`
+      )
+    }
   }
 
   let content: ReactNode
@@ -451,12 +469,21 @@ export default function ActionCellRenderer({
               <small>No plugin data found on disk.</small>
             </p>
           ) : null}
+          {removeError && (
+            <div className="alert alert-danger mt-3 py-2 mb-0" role="alert">
+              <small>{removeError}</small>
+            </div>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowRemoveModal(false)}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={handleConfirmRemove}>
+          <Button
+            variant="danger"
+            onClick={handleConfirmRemove}
+            disabled={loadingDataSize}
+          >
             <FontAwesomeIcon className="me-2" icon={faTrashCan} />
             Remove
           </Button>

@@ -268,7 +268,7 @@ async function getDirectorySize(dir: string): Promise<{
         if (stats.isFile()) {
           totalBytes += stats.size
           fileCount++
-        } else if (stats.isDirectory() && !stats.isSymbolicLink()) {
+        } else if (stats.isDirectory()) {
           await walk(entryPath)
         }
       } catch {
