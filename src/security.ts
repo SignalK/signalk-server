@@ -32,6 +32,7 @@ import { generate } from 'selfsigned'
 import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
+import { LoginRateLimiter } from './login-rate-limiter'
 import dummysecurity from './dummysecurity'
 import { ICallback } from './types'
 const debug = createDebug('signalk-server:security')
@@ -241,6 +242,9 @@ export interface SecurityStrategy {
     username: string,
     password: string
   ) => Promise<{ statusCode: number }>
+
+  /** Shared login rate limiter (optional - only available when token security is active) */
+  loginRateLimiter?: LoginRateLimiter
 }
 
 export class InvalidTokenError extends Error {

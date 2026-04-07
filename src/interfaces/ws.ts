@@ -24,6 +24,10 @@ import {
   InvalidTokenError,
   WithSecurityStrategy
 } from '../security'
+import {
+  LoginRateLimiter,
+  LOGIN_RATE_LIMIT_MESSAGE
+} from '../login-rate-limiter'
 import { WithConfig } from '../app'
 import {
   findRequest,
@@ -135,6 +139,7 @@ interface SecurityStrategy {
     timeToLive?: number | null
   }>
   isDummy: () => boolean
+  loginRateLimiter?: LoginRateLimiter
 }
 
 interface SubscriptionManager {
@@ -668,6 +673,22 @@ function wsInterface(app: WsApp): WsApi {
     })
   }
 
+  function getClientIp(app: WsApp, spark: Spark): string {
+    if (
+      app.config.settings.trustProxy &&
+      app.config.settings.trustProxy !== 'false'
+    ) {
+      const forwardedFor = spark.request.headers['x-forwarded-for']
+      if (typeof forwardedFor === 'string') {
+        const firstIp = forwardedFor.split(',')[0].trim()
+        if (firstIp) {
+          return firstIp
+        }
+      }
+    }
+    return spark.request.connection.remoteAddress
+  }
+
   function processAccessRequest(
     app: WsApp,
     spark: Spark,
@@ -681,13 +702,7 @@ function wsInterface(app: WsApp): WsApi {
         message: 'A request has already been submitted'
       })
     } else {
-      const forwardedFor = spark.request.headers['x-forwarded-for']
-      const clientIp =
-        (app.config.settings.trustProxy &&
-          app.config.settings.trustProxy !== 'false' &&
-          typeof forwardedFor === 'string' &&
-          forwardedFor) ||
-        spark.request.connection.remoteAddress
+      const clientIp = getClientIp(app, spark)
       requestAccess(
         app as unknown as WithSecurityStrategy & WithConfig,
         msg,
@@ -725,6 +740,20 @@ function wsInterface(app: WsApp): WsApi {
   }
 
   function processLoginRequest(app: WsApp, spark: Spark, msg: WsMessage): void {
+    const rateLimiter = app.securityStrategy.loginRateLimiter
+    if (rateLimiter) {
+      const { allowed } = rateLimiter.check(getClientIp(app, spark))
+      if (!allowed) {
+        spark.write({
+          requestId: msg.requestId,
+          state: 'COMPLETED',
+          statusCode: 429,
+          message: LOGIN_RATE_LIMIT_MESSAGE
+        })
+        return
+      }
+    }
+
     app.securityStrategy
       .login(msg.login!.username, msg.login!.password)
       .then((reply) => {
