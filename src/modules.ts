@@ -302,7 +302,7 @@ async function getPluginDataSize(
   const dataDir = pluginDataDir(configPath, pluginId)
   try {
     const dirStats = await fs.promises.lstat(dataDir)
-    if (dirStats.isDirectory() && !dirStats.isSymbolicLink()) {
+    if (dirStats.isDirectory()) {
       const dirSize = await getDirectorySize(dataDir)
       totalBytes += dirSize.totalBytes
       fileCount += dirSize.fileCount
