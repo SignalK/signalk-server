@@ -428,7 +428,8 @@ export default function ActionCellRenderer({
                   className="form-check-label"
                   htmlFor={`deleteDataCheck-${app.name}`}
                 >
-                  Also delete plugin configuration and data ({formatBytes(dataSize.totalBytes)})
+                  Also delete plugin configuration and data (
+                  {formatBytes(dataSize.totalBytes)})
                 </label>
               </div>
               {deleteData && (
