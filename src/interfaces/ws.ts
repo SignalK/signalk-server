@@ -360,7 +360,10 @@ function wsInterface(app: WsApp): WsApi {
               }
             }
 
-            if (isWsRequestReply(parsedMsg) && parsedMsg.requestId === requestId) {
+            if (
+              isWsRequestReply(parsedMsg) &&
+              parsedMsg.requestId === requestId
+            ) {
               const updateOptions: UpdateOptions = {
                 statusCode: normalizeStatusCode(parsedMsg.statusCode),
                 data: parsedMsg.data ?? null,
