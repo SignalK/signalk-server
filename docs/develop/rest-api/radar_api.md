@@ -4,11 +4,19 @@ title: Radar API
 
 # Radar API
 
-The Signal K server Radar API provides a unified interface for viewing and controlling marine radar equipment from any manufacturer. The API is **chartplotter-friendly**: clients can build dynamic UIs that automatically adapt to any radar's capabilities without hardcoding support for specific brands or models.
+The Signal K server Radar API provides a unified interface for viewing and controlling marine radar equipment from any manufacturer. The API is **(web)app-friendly**: clients can build dynamic UIs that automatically adapt to any radar's capabilities without hardcoding support for specific brands or models.
+
+This is version v3.1.0 of the API. The version will use semver for version updates.
 
 Radar functionality is provided by "provider plugins" that handle the interaction with radar hardware and stream spoke data to connected clients.
 
-Requests to the Radar API are made to HTTP REST endpoints rooted at `/signalk/v2/api/vessels/self/radars`.
+Requests to the Radar API are made to HTTP REST endpoints rooted at `/signalk/v2/api/vessels/self/radars` or the Signal K websocket stream at `/signalk/v1/stream`.
+
+Like `signalk-server` vis-a-vis the Signal K specification there is a reference implementation
+for this API, which may very well remain the only implementation of the server side of the API,
+at https://github.com/MarineYachtRadar/mayara-server. However, like Signal K itself, there is no
+reason it needs to remain the only implementation. In particular it would be ultra cool if some
+manufacturer of marine hardware would implement this API -- even though this is very unlikely.
 
 ## Design Philosophy: Capabilities-Driven API
 
@@ -22,90 +30,581 @@ Build a **single, adaptive UI** that works with any radar—now and in the futur
 
 1. **Fetch capabilities once** when a radar connects — this tells you what the radar can do
 2. **Generate UI widgets from the schema:**
-   - `type: "boolean"` → Toggle switch
-   - `type: "number"` with `range` → Slider with min/max/step
-   - `type: "enum"` with `values` → Dropdown or button group (hide values where `readOnly: true`)
-   - `type: "compound"` → Nested panel (e.g., mode selector + value slider)
-   - `readOnly: true` on control → Display-only label (for info like serial number)
-   - `readOnly: true` on enum value → Value can be reported but not set (e.g., "off", "warming" for power)
-3. **Apply constraints dynamically** — gray out controls when conditions are met, show reasons
-4. **Poll state for current values** — the schema tells you what to expect
+   - `dataType: "number"` → Slider with min/max/step
+   - `dataType: "enum"` with `descriptions` → Dropdown or button group
+   - `dataType: "string"` → Text input field
+   - `dataType: "button"` → Action button
+   - `dataType: "sector"` → Angle range selector (start/end angles)
+   - `dataType: "zone"` → Guard zone editor (angles + distances)
+   - `dataType: "rect"` → Rectangular exclusion zone (two corners + width)
+   - `isReadOnly: true` → Display-only label
+3. **Subscribe to updates for current values** — the schema tells you what to expect
+4. **Connect to websocket for spoke data** - receive the binary spoke data stream
 
 **Example: Rendering a Gain Control**
 
-```typescript
-// Capability definition tells you everything needed:
-const gainControl = {
-  id: 'gain',
-  name: 'Gain',
-  type: 'compound',
-  modes: ['auto', 'manual'],
-  properties: {
-    mode: { type: 'enum', values: [{ value: 'auto' }, { value: 'manual' }] },
-    value: { type: 'number', range: { min: 0, max: 100, unit: 'percent' } }
-  }
+```shell
+$ curl -s http://10.56.0.1:6502/signalk/v2/api/vessels/self/radars/nav1034A/capabilities | jq '.controls.gain'
+{
+  "category": "base",
+  "dataType": "number",
+  "description": "How sensitive the radar is to returning echoes",
+  "hasAuto": true,
+  "hasAutoAdjustable": false,
+  "id": 4,
+  "maxValue": 100.0,
+  "minValue": 0.0,
+  "name": "Gain",
+  "stepValue": 1.0
 }
-
-// Your UI renders:
-// - Mode toggle: [Auto] [Manual]
-// - Value slider: 0 ----[50]---- 100 (disabled when mode=auto)
+$ curl -s http://10.56.0.1:6502/signalk/v2/api/vessels/self/radars/nav1034A/controls/gain
+{"auto":false,"value":58}
 ```
 
-Whether it's a Furuno DRS4D-NXT with 20+ controls or a basic radar with 5 controls, the same client code handles both.
+Your UI renders:
+
+- Mode toggle: `[Auto] [Manual]`
+- Value slider: `0 ----[58]---- 100` (disabled or hidden when mode=auto)
+
+Whether it's a Furuno DRS4D-NXT with 20, a Navico HALO with 40 controls or a basic radar with 5 controls, the same client code handles both.
 
 ### For Radar Provider Developers (Plugin Authors)
 
 Different manufacturers have vastly different hardware capabilities, control sets, value ranges, and operating modes. Instead of clients hardcoding knowledge about each model, your provider plugin **declares** what the radar can do:
 
-1. **Characteristics** — hardware capabilities (Doppler, dual-range, no-transmit zones, supported ranges)
+1. **Capabilities** — hardware capabilities (Doppler, dual-range, no-transmit zones, supported ranges)
 2. **Controls** — schema for each control (type, valid values, modes, read-only status)
-3. **Constraints** — dependencies between controls (e.g., "gain is read-only when preset mode is active")
 
-### Control Categories
+## Control Categories
 
-| Category       | Description                  | Examples                                                      |
-| -------------- | ---------------------------- | ------------------------------------------------------------- |
-| `base`         | Available on all radars      | power, range, gain, sea, rain                                 |
-| `extended`     | Model-specific features      | dopplerMode, beamSharpening, targetExpansion, noTransmitZones |
-| `installation` | Setup/configuration settings | antennaHeight, bearingAlignment                               |
+| Category       | Description                  | Examples                                           |
+| -------------- | ---------------------------- | -------------------------------------------------- |
+| `base`         | Available on all radars      | power, range, gain, sea, rain                      |
+| `targets`      | Target tracking settings     | targetExpansion, targetTrails                      |
+| `guardZones`   | Guard zone configuration     | guardZone1, guardZone2                             |
+| `trails`       | Trail display settings       | trailsTime, clearTrails                            |
+| `advanced`     | Model-specific features      | dopplerMode, beamSharpening, interferenceRejection |
+| `installation` | Setup/configuration settings | antennaHeight, bearingAlignment, noTransmitSector1 |
+| `info`         | Read-only information        | serialNumber, firmwareVersion, transmitTime        |
 
-Read-only information (serialNumber, firmwareVersion, operatingHours) is exposed as controls with `readOnly: true`.
+Read-only information (serialNumber, firmwareVersion, operatingHours) is exposed as controls with `isReadOnly: true`. Some controls are **dynamically** read-only when a particular mode is set. This is handled with an optional `allowed: <bool>` field in the control value.
 
-_Note: Clients should consider showing `installation` category controls in a separate setup panel, potentially with confirmation dialogs, as these are typically configured once during radar installation._
+Some further considerations as how to show controls:
+
+- Within each category, all controls have a numeric `id` field which may be used for ordering.
+- The `advanced` and especially the `installation` categories could be shown in a different panel.
+- In particular the `installation` controls are typically configured once.
+- The `power` and `range` controls are used often and should be easy to be controlled.
+- The `gain`, `sea` and `rain` controls are usually represented graphically on a PPI window.
 
 ## API Overview
 
-```
+```text
 /signalk/v2/api/vessels/self/radars
-├── GET                              → List all radar IDs
-├── /_providers
-│   └── GET                          → List registered providers
-└── /{id}
-    ├── /capabilities GET            → Get radar schema (characteristics, controls)
-    ├── /state GET                   → Get current values for all controls
+├── GET                              → List all active radars
+├── /interfaces
+│   └── GET                          → List network interfaces and listener status
+└── /{radar_id}
+    ├── /capabilities GET            → Get radar capabilities and control definitions
     ├── /controls
     │   ├── GET                      → Get all control values
-    │   ├── PUT                      → Set multiple controls
-    │   └── /{controlId}
+    │   └── /{control_id}
     │       ├── GET                  → Get single control value
     │       └── PUT                  → Set single control value
-    ├── /stream                      → WebSocket (binary spoke data)
-    └── /targets                     → ARPA target tracking
-        ├── GET                      → List tracked targets with CPA/TCPA
-        ├── POST                     → Manual target acquisition
-        ├── WS                       → Stream target updates
-        └── /{targetId}
+    ├── /spokes                      → WebSocket (spoke data in binary format)
+    └── /targets
+        ├── GET                      → List tracked targets
+        ├── POST                     → Acquire target manually
+        └── /{target_id}
             └── DELETE               → Cancel target tracking
+
+/signalk/v1/stream                   → WebSocket (control values and targets for all radars)
 ```
 
-## Radar Information
+## REST API
 
 ### Listing All Radars
 
 Retrieve all available radars with their current info:
 
-```typescript
+```text
 HTTP GET "/signalk/v2/api/vessels/self/radars"
+```
+
+_Response:_
+
+```json
+{
+  "nav1034A": {
+    "brand": "Navico",
+    "model": "HALO",
+    "name": "HALO 034A",
+    "radarIpAddress": "192.168.1.50",
+    "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034A/spokes",
+    "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
+  },
+  "nav1034B": {
+    "brand": "Navico",
+    "model": "HALO",
+    "name": "HALO 034B",
+    "radarIpAddress": "192.168.1.50",
+    "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034B/spokes",
+    "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
+  }
+}
+```
+
+### Network Interfaces
+
+Check which network interfaces are available and which radar brands are listening:
+
+```text
+HTTP GET "/signalk/v2/api/vessels/self/radars/interfaces"
+```
+
+_Response:_
+
+```json
+{
+  "brands": ["Navico", "Furuno", "Raymarine"],
+  "interfaces": {
+    "en0": {
+      "status": "Ok",
+      "ip": "192.168.1.100",
+      "netmask": "255.255.255.0",
+      "listeners": {
+        "Navico": "Active",
+        "Furuno": "No match for 172.31.255.255",
+        "Raymarine": "Listening"
+      }
+    },
+    "en1": {
+      "status": "WirelessIgnored"
+    }
+  }
+}
+```
+
+This endpoint is useful for diagnosing network configuration issues when radars are not being detected.
+
+### Getting Radar Capabilities
+
+The capability manifest describes everything a radar can do. Clients should fetch this at the beginning of a session. The contents do not change during radar operation.
+
+```text
+HTTP GET "/signalk/v2/api/vessels/self/radars/{radar_id}/capabilities"
+```
+
+_Response:_
+
+```json
+{
+  "maxRange": 74080,
+  "minRange": 50,
+  "supportedRanges": [
+    50, 75, 100, 250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 12000,
+    16000, 24000, 36000, 48000, 64000, 74080
+  ],
+  "spokesPerRevolution": 2048,
+  "maxSpokeLength": 1024,
+  "pixelValues": 16,
+  "hasDoppler": true,
+  "hasDualRadar": false,
+  "hasDualRange": true,
+  "hasSparseSpokes": false,
+  "noTransmitSectors": 2,
+  "controls": {
+    "gain": {
+      "id": 4,
+      "name": "Gain",
+      "description": "How sensitive the radar is to returning echoes",
+      "category": "base",
+      "dataType": "number",
+      "minValue": 0.0,
+      "maxValue": 100.0,
+      "stepValue": 1.0,
+      "hasAuto": true,
+      "hasAutoAdjustable": false
+    }
+  },
+  "legend": {
+    "lowReturn": 1,
+    "mediumReturn": 8,
+    "strongReturn": 13,
+    "targetBorder": 17,
+    "dopplerApproaching": 18,
+    "dopplerReceding": 19,
+    "historyStart": 20,
+    "pixelColors": 16,
+    "pixels": [
+      { "type": "normal", "color": { "r": 0, "g": 0, "b": 0, "a": 0 } },
+      { "type": "normal", "color": { "r": 0, "g": 0, "b": 51, "a": 255 } }
+    ]
+  }
+}
+```
+
+Capability fields:
+
+1. `hasDoppler` - if true, the radar can detect boats or objects approaching or receding and emits separate pixel colors for these.
+2. `hasDualRadar` - if true, the physical radome reports itself as two independent radars that can be set to different ranges and modes. Currently only Navico 4G and HALO support this.
+3. `hasDualRange` - mutually exclusive with `hasDualRadar`, indicates a more limited form of supporting two ranges with one device.
+4. `minRange` and `maxRange` - define what ranges the radar supports (in meters).
+5. `supportedRanges` - list of all discrete range values the radar supports (in meters).
+6. `maxSpokeLength` and `spokesPerRevolution` - define how many pixels the radar produces each revolution.
+7. `noTransmitSectors` - how many sectors the radar can stop transmitting to avoid obstacles like masts.
+8. `pixelValues` - number of distinct pixel intensity values.
+9. `hasSparseSpokes` - if true, the radar produces fewer spokes per revolution than `spokesPerRevolution` indicates (see [Spoke skipping](#spoke-skipping)).
+
+### Legend
+
+All spokes are sent with one byte per pixel. The legend explains what each byte value represents.
+
+```json
+{
+  "lowReturn": 1,
+  "mediumReturn": 8,
+  "strongReturn": 13,
+  "dopplerApproaching": 18,
+  "dopplerReceding": 19,
+  "historyStart": 20,
+  "pixelColors": 16,
+  "pixels": [
+    { "type": "normal", "color": "#00000000" },
+    { "type": "normal", "color": "#0000ffff" },
+    { "type": "dopplerApproaching", "color": "#ff00ffff" },
+    { "type": "dopplerReceding", "color": "#00ff00ff" },
+    { "type": "history", "color": "#454545ff" }
+  ]
+}
+```
+
+The `lowReturn`, `mediumReturn`, and `strongReturn` indicate offsets in the array, typically used for smoothing algorithms.
+
+If the radar doesn't implement Doppler, the `dopplerApproaching` and `dopplerReceding` fields will be null. If the provider doesn't implement target trails, `historyStart` will be null.
+
+### Dual range/radar
+
+There are two different ways that radars handle "dual" ranges.
+
+Navico radars implement this by acting
+as if both radars are full independent, to the point where both radars use different ports and IP addresses.
+They can be seen to be dependent in that if you change some controls they also change on the other radar.
+The NoTransmitZones are examples of such controls.
+These radars therefore also show up as two radars in the API.
+As long as clients listen to updates to controls, which they should do anyway to be able to function in a setting where there is for instance a MFD device, they can assume that all controls can be set.
+
+Furuno radars do this in a way where the second range shares as many control settings as possible.
+Currently there is no support for Furuno dual range yet and its impact on the API is unknown.
+
+### Controls
+
+The `controls` object in capabilities lists all controls the radar supports. Control data types:
+
+| dataType | Description                              |
+| -------- | ---------------------------------------- |
+| number   | Numeric value with min/max/step          |
+| enum     | Discrete set of values with descriptions |
+| string   | Text value                               |
+| button   | Action trigger (no value)                |
+| sector   | Angle range (start/end)                  |
+| zone     | Guard zone (angles + distances)          |
+| rect     | Rectangular exclusion zone               |
+
+1. **number**
+
+```json
+{
+  "id": 47,
+  "name": "Transmit time",
+  "description": "How long the radar has been transmitting over its lifetime",
+  "category": "info",
+  "dataType": "number",
+  "isReadOnly": true,
+  "minValue": 0.0,
+  "maxValue": 3599996400.0,
+  "stepValue": 3600.0,
+  "units": "s"
+}
+```
+
+The `units` field indicates the unit of measurement for the control value. A conforming server implementation sends only SI units to clients:
+
+| Category         | SI Unit            | Abbreviation |
+| ---------------- | ------------------ | ------------ |
+| Distance         | Meters             | `m`          |
+| Speed            | Meters per second  | `m/s`        |
+| Angle            | Radians            | `rad`        |
+| Rotational speed | Radians per second | `rad/s`      |
+| Duration         | Seconds            | `s`          |
+
+Note how in the above example the server has converted a value in hours (3600 seconds) to seconds to conform to the above, but the client can convert the value back to hours for representation to
+a human.
+
+A conforming API server will allow the following units to be specified when receiving values from
+a client:
+
+| Category         | Unit               | Abbreviation |
+| ---------------- | ------------------ | ------------ |
+| Distance         | Meters             | `m`          |
+| Distance         | Kilometers         | `km`         |
+| Distance         | Nautical miles     | `nm`         |
+| Speed            | Meters per second  | `m/s`        |
+| Speed            | Knots              | `kn`         |
+| Angle            | Radians            | `rad`        |
+| Angle            | Degrees            | `deg`        |
+| Rotational speed | Radians per second | `rad/s`      |
+| Rotational speed | Rotations/minute   | `rpm`        |
+| Duration         | Seconds            | `s`          |
+| Duration         | Minutes            | `min`        |
+| Duration         | Hours              | `h`          |
+
+2. **enum**
+
+```json
+{
+  "id": 0,
+  "name": "Power",
+  "description": "Radar operational state",
+  "category": "base",
+  "dataType": "enum",
+  "minValue": 0.0,
+  "maxValue": 3.0,
+  "stepValue": 1.0,
+  "descriptions": {
+    "0": "Off",
+    "1": "Standby",
+    "2": "Transmit",
+    "3": "Preparing"
+  },
+  "validValues": [1, 2]
+}
+```
+
+The `validValues` array indicates which values can be set by clients. The `power` control guarantees that at least these values can be set across all radars: 1 (Standby) and 2 (Transmit).
+
+3. **string**
+
+```json
+{
+  "id": 53,
+  "name": "Custom name",
+  "description": "User defined name for the radar",
+  "category": "advanced",
+  "dataType": "string"
+}
+```
+
+4. **button**
+
+A button triggers an action without needing a value:
+
+```json
+{
+  "id": 15,
+  "name": "Clear trails",
+  "description": "Clear target trails",
+  "category": "trails",
+  "dataType": "button"
+}
+```
+
+5. **sector**
+
+```json
+{
+  "id": 35,
+  "name": "No Transmit sector",
+  "description": "First no-transmit sector",
+  "category": "installation",
+  "dataType": "sector",
+  "hasEnabled": true,
+  "minValue": -3.141592653589793,
+  "maxValue": 3.141592653589793,
+  "stepValue": 0.0017453292519943296,
+  "units": "rad"
+}
+```
+
+A sector defines a start and end angle from -π to +π radians, plus an enabled flag. The value for start is transmitted in `value` and the end in `endValue`.
+
+```shell
+$ curl -s http://localhost:6502/signalk/v2/api/vessels/self/radars/nav1034A/controls/noTransmitSector1
+{"enabled":true,"value":-1.5533,"endValue":-1.2217}
+```
+
+6. **zone**
+
+```json
+{
+  "id": 16,
+  "name": "Guard zone",
+  "description": "First guard zone for target detection",
+  "category": "guardZones",
+  "dataType": "zone",
+  "hasEnabled": true,
+  "minValue": -3.141592653589793,
+  "maxValue": 3.141592653589793,
+  "maxDistance": 100000.0,
+  "units": "rad"
+}
+```
+
+A zone defines five attributes: start angle, end angle, start distance, end distance, and enabled.
+
+```shell
+$ curl -s http://localhost:6502/signalk/v2/api/vessels/self/radars/nav1034A/controls/guardZone1
+{"enabled":true,"value":-0.5585,"endValue":1.7104,"startDistance":100.0,"endDistance":232.0}
+```
+
+7. **rect**
+
+```json
+{
+  "id": 60,
+  "name": "Exclusion zone",
+  "description": "Rectangular exclusion zone",
+  "category": "guardZones",
+  "dataType": "rect",
+  "hasEnabled": true,
+  "maxValue": 100000.0
+}
+```
+
+A rect defines a rectangular zone using two corners and a perpendicular width. The corners (x1, y1) and (x2, y2) define one edge of the rectangle in meters relative to the radar position (positive X is starboard, positive Y is ahead). The width extends perpendicular to this edge.
+
+```shell
+$ curl -s http://localhost:6502/signalk/v2/api/vessels/self/radars/nav1034A/controls/exclusionZone1
+{"enabled":true,"x1":-50.0,"y1":100.0,"x2":50.0,"y2":100.0,"width":200.0}
+```
+
+## Radar Control
+
+Controlling the radar can be done via HTTP REST requests or via the stream websocket.
+
+### Getting All Control Values
+
+```text
+HTTP GET "/signalk/v2/api/vessels/self/radars/{radar_id}/controls"
+```
+
+_Response:_
+
+```json
+{
+  "gain": { "auto": false, "value": 50 },
+  "sea": { "auto": true, "autoValue": 25, "value": 30 },
+  "range": { "value": 3000 }
+}
+```
+
+### Getting a Single Control Value
+
+```text
+HTTP GET "/signalk/v2/api/vessels/self/radars/{radar_id}/controls/{control_id}"
+```
+
+_Response:_
+
+```json
+{ "auto": false, "value": 50 }
+```
+
+### Setting a Control Value
+
+```text
+HTTP PUT "/signalk/v2/api/vessels/self/radars/{radar_id}/controls/{control_id}"
+```
+
+**Simple numeric control:**
+
+```json
+{ "value": 75 }
+```
+
+**Control with auto mode:**
+
+```json
+{ "auto": false, "value": 75 }
+```
+
+or just change auto mode:
+
+```json
+{ "auto": true }
+```
+
+**Control with auto adjustment (e.g., Sea on HALO):**
+
+When in auto mode, some controls accept an adjustment value:
+
+```json
+{ "auto": true, "autoValue": -20 }
+```
+
+**Sector control:**
+
+```json
+{ "enabled": true, "value": -1.5533, "endValue": -1.2217 }
+```
+
+**Zone control:**
+
+```json
+{
+  "enabled": true,
+  "value": -0.5585,
+  "endValue": 1.7104,
+  "startDistance": 100.0,
+  "endDistance": 500.0
+}
+```
+
+**Button control:**
+
+For buttons, send an empty body or `{}` - the PUT request itself triggers the action.
+
+### Control Value Fields
+
+Control values contain different fields depending on the control's `dataType` (defined in the capability schema).
+
+**Common fields**:
+
+| Field       | Description                                                       |
+| ----------- | ----------------------------------------------------------------- |
+| `value`     | The control value (numeric or string) (if dataType is not `rect`) |
+| `auto`      | Whether automatic mode is enabled (if `hasAuto` is true)          |
+| `autoValue` | Adjustment when auto=true (if `hasAutoAdjustable` is true)        |
+| `timestamp` | ISO 8601 timestamp when value was last changed                    |
+
+**dataType-specific fields**:
+
+| Field           | dataType           | Description                           |
+| --------------- | ------------------ | ------------------------------------- |
+| `enabled`       | sector, zone, rect | Whether the control is enabled        |
+| `endValue`      | sector, zone       | End angle (radians)                   |
+| `startDistance` | zone               | Inner radius (meters)                 |
+| `endDistance`   | zone               | Outer radius (meters)                 |
+| `x1`            | rect               | First corner X (meters, starboard +)  |
+| `y1`            | rect               | First corner Y (meters, ahead +)      |
+| `x2`            | rect               | Second corner X (meters, starboard +) |
+| `y2`            | rect               | Second corner Y (meters, ahead +)     |
+| `width`         | rect               | Perpendicular width (meters)          |
+
+## ARPA Target Tracking
+
+The Radar API defines ARPA (Automatic Radar Plotting Aid) target tracking with CPA/TCPA calculations and SignalK notification integration.
+
+`mayara-server` fully supports both ARPA and MARPA, but this is an optional part of the API. When a server does not support it it shall
+return HTTP status 501.
+
+If the radar is a dual-radar device then `mayara-server` has a CLI option `--merge-targets`, when this
+is used targets will be shared between both ranges and move from one radar to another.
+
+### Listing Tracked Targets
+
+```text
+HTTP GET "/signalk/v2/api/vessels/self/radars/{id}/targets"
 ```
 
 _Response:_
@@ -113,275 +612,335 @@ _Response:_
 ```json
 [
   {
-    "id": "Furuno-6424",
-    "name": "Furuno DRS4D-NXT",
-    "brand": "Furuno",
-    "model": "DRS4D-NXT",
-    "status": "transmit",
-    "spokesPerRevolution": 2048,
-    "maxSpokeLen": 512,
-    "range": 1852,
-    "controls": {
-      "gain": { "mode": "auto", "value": 50 },
-      "sea": { "mode": "auto", "value": 30 },
-      "rain": { "mode": "manual", "value": 0 }
-    }
-  },
-  {
-    "id": "Navico-HALO",
-    "name": "Navico HALO24",
-    "brand": "Navico",
-    "model": "HALO24",
-    "status": "standby",
-    "spokesPerRevolution": 2048,
-    "maxSpokeLen": 512,
-    "range": 3704
+    "id": 1,
+    "status": "tracking",
+    "position": {
+      "bearing": 0.789,
+      "distance": 1852,
+      "latitude": 52.3702,
+      "longitude": 4.8952
+    },
+    "motion": {
+      "course": 3.14159,
+      "speed": 3.34
+    },
+    "danger": {
+      "cpa": 150,
+      "tcpa": 324
+    },
+    "acquisition": "auto",
+    "sourceZone": 1,
+    "firstSeen": "2025-01-15T10:25:00Z",
+    "lastSeen": "2025-01-15T10:30:00Z"
   }
 ]
 ```
 
-### Getting Radar Capabilities
+**Units:** All distances are in meters. All angles (bearing, course) are in radians [0, 2π). Speed is in m/s. Time values (tcpa) are in seconds.
 
-The capability manifest describes everything a radar can do. Clients should fetch this once and cache it.
+**Optional fields:** Sub-structures are omitted when data is not yet known or not applicable:
 
-```typescript
-HTTP GET "/signalk/v2/api/vessels/self/radars/{id}/capabilities"
+- `motion`: Omitted when motion is not yet computed (target still acquiring). Present with `speed: 0` and `course: 0` for confirmed stationary targets (buoys, anchored vessels).
+- `danger`: Omitted when vessels are diverging (no CPA exists) or own-ship motion unavailable
+- `position.latitude`/`longitude`: Omitted when radar position is unavailable
+- `sourceZone`: Omitted for manually acquired targets or Doppler-detected targets
+
+### Manual Target Acquisition
+
+```text
+HTTP POST "/signalk/v2/api/vessels/self/radars/{id}/targets"
 ```
 
-_Response:_
+_Request body:_
 
 ```json
 {
-  "id": "Furuno-6424",
-  "make": "Furuno",
-  "model": "DRS4D-NXT",
-  "modelFamily": "DRS-NXT",
-  "serialNumber": "6424",
-  "characteristics": {
-    "maxRange": 74080,
-    "minRange": 50,
-    "supportedRanges": [
-      50, 75, 100, 250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000,
-      12000, 16000, 24000, 36000, 48000, 64000, 74080
-    ],
-    "spokesPerRevolution": 2048,
-    "maxSpokeLength": 512,
-    "hasDoppler": true,
-    "hasDualRange": true,
-    "maxDualRange": 22224,
-    "noTransmitZoneCount": 2
-  },
-  "controls": [
+  "bearing": 0.785,
+  "distance": 2000
+}
+```
+
+### Cancel Target Tracking
+
+```text
+HTTP DELETE "/signalk/v2/api/vessels/self/radars/{id}/targets/{targetId}"
+```
+
+## Streaming API (WebSocket)
+
+There are two types of websocket:
+
+1. Control Stream: Signal-K-formatted JSON messages containing control information to and from radars, as well as targets.
+2. Spoke Data Stream: High-volume radar spoke data in binary format (up to 1 MB/s).
+
+## Control Stream
+
+The JSON data websocket provides real-time control value updates for all radars via the standard Signal K stream.
+
+The URI is found in the radar response as `streamUrl` or can be constructed as:
+
+```text
+ws://{host}:{port}/signalk/v1/stream
+```
+
+This websocket endpoint works identical to a Signal K stream, as documented in
+https://signalk.org/specification/1.5.0/doc/streaming_api.html
+
+In short:
+
+- By default you are described to all paths
+- Query parameters `subscribe=none` can be used to start without any subscriptions and `sendCachedValues=false` to disable sending all currently cached values.
+- Subscriptions and desubscriptions can be made for paths. You can use '\*' for all radars
+  including radars still to be discovered.
+- When first connected all radar meta data will be sent.
+- When a new radar is discovered all existing streams will also be sent the meta
+  data for the new radar.
+
+The recommended way of connecting is to either send `subscribe=none` and then a subscribe to all controls, as in the example below, with a policy of `instant`. The number of updates after the
+initial cache dump is low, about 2 messages per second.
+
+```json
+"subscribe": [
+            {
+              "path": "radars.*.controls.*",
+              "period": 1000
+            },
+          ]
+```
+
+To receive real-time ARPA target updates, subscribe to the targets path:
+
+```json
+{
+  "subscribe": [
     {
-      "id": "power",
-      "name": "Power",
-      "description": "Radar power state",
-      "category": "base",
-      "type": "enum",
-      "values": [
-        { "value": "off", "label": "Off", "readOnly": true },
-        { "value": "standby", "label": "Standby" },
-        { "value": "transmit", "label": "Transmit" },
-        { "value": "warming", "label": "Warming Up", "readOnly": true }
-      ]
-    },
+      "path": "radars.*.targets.*",
+      "policy": "instant"
+    }
+  ]
+}
+```
+
+You can subscribe to both controls and targets simultaneously:
+
+```json
+{
+  "subscribe": [
+    { "path": "radars.*.controls.*", "period": 1000 },
+    { "path": "radars.*.targets.*", "policy": "instant" }
+  ]
+}
+```
+
+### Controls
+
+Example of received meta-data:
+
+```json
+{
+  "updates": [
     {
-      "id": "range",
-      "name": "Range",
-      "description": "Detection range in meters",
-      "category": "base",
-      "type": "enum",
-      "values": [
-        { "value": 50, "label": "50m" },
-        { "value": 1852, "label": "1nm" },
-        { "value": 3704, "label": "2nm" }
-      ]
-    },
-    {
-      "id": "gain",
-      "name": "Gain",
-      "description": "Receiver gain adjustment",
-      "category": "base",
-      "type": "compound",
-      "modes": ["auto", "manual"],
-      "defaultMode": "auto",
-      "properties": {
-        "mode": { "type": "string" },
-        "value": {
-          "type": "number",
-          "range": { "min": 0, "max": 100, "unit": "percent" }
+      "$source": "mayara",
+      "timestamp": "2026-02-23T18:15:26.409454084Z",
+      "meta": [
+        {
+          "path": "radars.nav1034A.controls.guardZone1",
+          "value": {
+            "id": 13,
+            "name": "Guard zone",
+            "description": "First guard zone for target detection",
+            "category": "guardZones",
+            "dataType": "zone",
+            "hasEnabled": true,
+            "minValue": -3.141592653589793,
+            "maxValue": 3.141592653589793,
+            "units": "rad",
+            "maxDistance": 100000.0
+          }
+        },
+        {
+          "path": "radars.nav1034A.controls.firmwareVersion",
+          "value": {
+            "id": 48,
+            "name": "Firmware version",
+            "description": "Version of the radar firmware",
+            "category": "info",
+            "dataType": "string",
+            "isReadOnly": true
+          }
         }
-      }
-    },
-    {
-      "id": "serialNumber",
-      "name": "Serial Number",
-      "description": "Radar hardware serial number",
-      "category": "base",
-      "type": "string",
-      "readOnly": true
-    },
-    {
-      "id": "firmwareVersion",
-      "name": "Firmware Version",
-      "description": "Radar firmware version",
-      "category": "base",
-      "type": "string",
-      "readOnly": true
-    },
-    {
-      "id": "operatingHours",
-      "name": "Operating Hours",
-      "description": "Total hours of radar operation",
-      "category": "base",
-      "type": "number",
-      "range": { "min": 0, "max": 999999, "step": 0.1, "unit": "hours" },
-      "readOnly": true
-    },
-    {
-      "id": "dopplerMode",
-      "name": "Doppler Mode",
-      "description": "Target velocity color coding",
-      "category": "extended",
-      "type": "enum",
-      "values": [
-        { "value": "off", "label": "Off" },
-        { "value": "normal", "label": "Normal" },
-        { "value": "approaching", "label": "Approaching Only" }
       ]
     }
-  ],
-  "constraints": [
+  ]
+}
+```
+
+Example of received data:
+
+```json
+{
+  "updates": [
     {
-      "controlId": "gain",
-      "condition": {
-        "type": "read_only_when",
-        "dependsOn": "presetMode",
-        "operator": "!=",
-        "value": "custom"
-      },
-      "effect": {
-        "readOnly": true,
-        "reason": "Controlled by preset mode"
-      }
+      "$source": "mayara",
+      "values": [
+        {
+          "path": "radars.nav1034A.controls.spokes",
+          "value": { "value": 2048 }
+        }
+      ]
     }
-  ],
-  "supportedFeatures": ["arpa", "guardZones", "trails"]
+  ]
 }
 ```
 
-### Getting Radar State
-
-Current values for all controls, plus operational status:
-
-```typescript
-HTTP GET "/signalk/v2/api/vessels/self/radars/{id}/state"
-```
-
-_Response:_
+Example of setting a control:
 
 ```json
 {
-  "id": "Furuno-6424",
-  "timestamp": "2025-01-15T10:30:00Z",
-  "status": "transmit",
-  "controls": {
-    "power": "transmit",
-    "range": 1852,
-    "gain": { "mode": "auto", "value": 50 },
-    "sea": { "mode": "auto", "value": 30 },
-    "rain": { "mode": "manual", "value": 0 },
-    "serialNumber": "6424",
-    "firmwareVersion": "01.05",
-    "operatingHours": 29410.6,
-    "dopplerMode": "normal"
-  },
-  "disabledControls": []
+  "path": "radars.nav1034A.controls.guardZone1",
+  "value": {
+    "value": 0.735,
+    "endValue": 3.1415,
+    "startDistance": 0,
+    "endDistance": 500,
+    "enabled": true
+  }
 }
 ```
 
-## Radar Control
-
-All control operations require appropriate security permissions.
-
-### Setting a Single Control
-
-```typescript
-HTTP PUT "/signalk/v2/api/vessels/self/radars/{id}/controls/{controlId}"
-```
-
-**Setting power state:**
-
-```typescript
-HTTP PUT "/signalk/v2/api/vessels/self/radars/Furuno-6424/controls/power"
-```
-
-_Request body:_
-
-```json
-{ "value": "transmit" }
-```
-
-**Setting range:**
-
-```typescript
-HTTP PUT "/signalk/v2/api/vessels/self/radars/Furuno-6424/controls/range"
-```
-
-_Request body:_
-
-```json
-{ "value": 1852 }
-```
-
-**Setting gain (compound control):**
-
-```typescript
-HTTP PUT "/signalk/v2/api/vessels/self/radars/Furuno-6424/controls/gain"
-```
-
-_Request body:_
-
-```json
-{ "value": { "mode": "manual", "value": 75 } }
-```
-
-### Setting Multiple Controls
-
-Update multiple controls in a single request:
-
-```typescript
-HTTP PUT "/signalk/v2/api/vessels/self/radars/{id}/controls"
-```
-
-_Request body:_
+Target updates are sent whenever a target's position, motion, or status changes:
 
 ```json
 {
-  "gain": { "mode": "manual", "value": 60 },
-  "sea": { "mode": "auto" },
-  "rain": { "mode": "manual", "value": 20 }
+  "updates": [
+    {
+      "$source": "mayara",
+      "timestamp": "2025-01-15T10:30:00Z",
+      "values": [
+        {
+          "path": "radars.nav1034A.targets.1",
+          "value": {
+            "id": 1,
+            "status": "tracking",
+            "position": {
+              "bearing": 0.789,
+              "distance": 1852,
+              "latitude": 52.3702,
+              "longitude": 4.8952
+            },
+            "motion": {
+              "course": 3.14159,
+              "speed": 3.34
+            },
+            "danger": {
+              "cpa": 150,
+              "tcpa": 324
+            },
+            "acquisition": "auto",
+            "sourceZone": 1,
+            "firstSeen": "2025-01-15T10:25:00Z",
+            "lastSeen": "2025-01-15T10:30:00Z"
+          }
+        }
+      ]
+    }
+  ]
 }
 ```
 
-## Streaming (WebSocket)
+Targets are created either automatically (ARPA) or manually (MARPA, via a REST or stream message.)
+In all cases the targets go through the following states: `acquiring` -> `tracking` -> `lost`.
 
-Radar spoke data is streamed via WebSocket as binary frames. The state response includes an optional `streamUrl` field indicating where to connect.
+When a target is deleted (either because it has been in status `lost` for a while or a client explicitly deletes it), a final `null` value is sent:
+
+```json
+{
+  "updates": [
+    {
+      "$source": "mayara",
+      "timestamp": "2025-01-15T10:32:00Z",
+      "values": [
+        {
+          "path": "radars.nav1034A.targets.1",
+          "value": null
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Spoke Data Stream
+
+Because radars can produce up to 4 megabytes of data per rotation, this data is transmitted
+on a separate websocket _per radar_ and is in a binary format. The data is encoded using [Protocol Buffers](https://protobuf.dev/) (protobuf), Google's language-neutral binary serialization format. Protobuf provides compact encoding and fast parsing, with official implementations available for most programming languages including JavaScript, Python, Java, C++, Go, and Rust.
+
+The message schema is stable and will not change within a major version (per [semver](https://semver.org/)):
+
+```text
+syntax = "proto3";
+
+/*
+ * The data stream coming from a radar is a series of spokes.
+ * The number of spokes per revolution is different for each type of
+ * radar and can be found in the capabilities at
+ * .../v2/api/vessels/self/radars/{id}/capabilities as 'spokesPerRevolution'.
+ * The maximum length of each spoke is also defined there, as well as the legend that provides
+ * a lookup table for each byte of data in the spoke.
+ *
+ * The angle and bearing fields below are in terms of spokes, so
+ * range from [0..spokesPerRevolution>.
+ *
+ * Angle is a mandatory field and tells you the rotation of the spoke
+ * relative to the front of the boat, going clockwise. 0 means directly
+ * ahead, spokesPerRevolution / 4 is to starboard, spokesPerRevolution / 2 is directly astern, etc.
+ *
+ * Bearing, if set, means that either the radar or the radar server has
+ * enriched the data with a true bearing, e.g. 0 is directly North,
+ * spokesPerRevolution / 4 is directly West, spokesPerRevolution / 2 is South, etc.
+ *
+ * Likewise, time and lat/lon indicate the best effort when the spoke
+ * was generated, and the lat/lon of the radar at the time of generation.
+ *
+ */
+message RadarMessage {
+    message Spoke {
+        uint32 angle = 1; // [0..spokesPerRevolution>, angle from bow
+        optional uint32 bearing = 2; // [0..spokesPerRevolution>, offset from True North
+        uint32 range = 3; // [meters], range in meters of the last pixel in data
+        optional uint64 time = 4; // [millis since UNIX epoch] Time when spoke was generated or received
+        optional double lat = 6; // Location of radar at time of generation
+        optional double lon = 7; // Location of radar at time of generation
+        bytes data = 5;
+    }
+    repeated Spoke spokes = 2;
+}
+```
+
+The URL is found in the `radars` REST response as `spokeDataUrl` or can be constructed as:
+
+```text
+/signalk/v2/api/vessels/self/radars/{radar_id}/spokes
+```
 
 ### Connection Logic
 
+This a Javascript example how to set up the connection to receive spokes:
+
 ```javascript
-// Fetch radar state
-const state = await fetch(
-  '/signalk/v2/api/vessels/self/radars/Furuno-6424/state'
-).then((r) => r.json())
+// Fetch radars
+const response = await fetch('/signalk/v2/api/vessels/self/radars/')
+const data = await response.json()
 
-// Determine WebSocket URL
+// Choose a radar_id from the returned radars
+const radarId = Object.keys(data)[0]
+const radar = data[radarId]
+
+// Connect to spoke data stream
 const wsUrl =
-  state.streamUrl ??
-  `ws://${location.host}/signalk/v2/api/vessels/self/radars/${state.id}/stream`
+  radar.spokeDataUrl ??
+  `ws://${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
 
-// Connect to stream
 const socket = new WebSocket(wsUrl)
 socket.binaryType = 'arraybuffer'
 
@@ -391,362 +950,76 @@ socket.onmessage = (event) => {
 }
 ```
 
-### Stream URL Patterns
+### Spoke content and the legend
 
-| Scenario          | streamUrl | Description                                |
-| ----------------- | --------- | ------------------------------------------ |
-| External server   | Present   | High-bandwidth streams bypass Signal K     |
-| Integrated plugin | Absent    | Signal K handles everything via `/stream`  |
-| WASM plugin       | Present   | Points to dedicated binary stream endpoint |
+Every spoke contains `spoke_len` bytes. The radar API always uses one byte per pixel, with every byte representing a value explained by the `legend` contained in the capabilities.
 
-## ARPA Target Tracking
+The legend provides a lookup table mapping each byte value to its meaning and suggested display color:
 
-The Radar API has ARPA (Automatic Radar Plotting Aid) target tracking with CPA/TCPA calculations and SignalK notification integration.
+- **Byte values 0 to `pixelColors - 1`**: Normal radar returns, ranging from no echo (0) to strongest echo. The `lowReturn`, `mediumReturn`, and `strongReturn` fields indicate thresholds within this range, useful for smoothing or color gradient algorithms.
+- **Byte value at `targetBorder`**: Indicates the edge of a tracked ARPA target.
+- **Byte value at `dopplerApproaching`**: Object moving toward the radar (requires Doppler-capable radar).
+- **Byte value at `dopplerReceding`**: Object moving away from the radar (requires Doppler-capable radar).
+- **Byte values from `historyStart` onward**: Historical trail data showing where targets were in previous rotations.
 
-### Listing Tracked Targets
+The `pixels` array provides the complete mapping from byte value to RGBA color. Clients can use this directly for rendering, or implement their own color scheme based on the semantic pixel types (`normal`, `targetBorder`, `dopplerApproaching`, `dopplerReceding`, `history`).
 
-```typescript
-HTTP GET "/signalk/v2/api/vessels/self/radars/{id}/targets"
-```
+If the radar doesn't support a feature, the corresponding legend field will be absent or null (e.g., `dopplerApproaching` and `dopplerReceding` are absent for non-Doppler radars).
 
-_Response:_
+In a later API release it is likely that the legend will be expanded to contain color mappings for different palettes.
 
-```json
-{
-  "radarId": "Furuno-6424",
-  "timestamp": "2025-01-15T10:30:00Z",
-  "targets": [
-    {
-      "id": 1,
-      "status": "tracking",
-      "position": {
-        "bearing": 45.2,
-        "distance": 1852,
-        "latitude": 52.3702,
-        "longitude": 4.8952
-      },
-      "motion": {
-        "course": 180.0,
-        "speed": 6.5
-      },
-      "danger": {
-        "cpa": 150,
-        "tcpa": 324
-      },
-      "acquisition": "auto",
-      "firstSeen": "2025-01-15T10:25:00Z",
-      "lastSeen": "2025-01-15T10:30:00Z"
-    },
-    {
-      "id": 3,
-      "status": "tracking",
-      "position": {
-        "bearing": 270.0,
-        "distance": 3500
-      },
-      "motion": {
-        "course": 90.0,
-        "speed": 4.2
-      },
-      "danger": {
-        "cpa": 820,
-        "tcpa": 450
-      },
-      "acquisition": "manual",
-      "firstSeen": "2025-01-15T10:20:00Z",
-      "lastSeen": "2025-01-15T10:30:00Z"
-    }
-  ]
-}
-```
+### Spoke skipping
 
-### Manual Target Acquisition
+Some radars have a high value for `spokesPerRevolution` but actually only produce fewer spokes
+per each revolution. This is true for Furuno radars but not the other
+supported radars from Garmin, Navico and Raymarine. The Furuno radars set `hasSparseSpokes` in
+the capabilities struct to `true`.
 
-Acquire a target at a specific bearing and distance:
+A conforming GUI must allow for this and either implement some way to expand missing spokes or
+to reconsider the width of spokes to be from the angle/bearing from the received spoke to the
+previously received spoke.
+
+A typical value for Furuno is to have `spokesPerRevolution = 8192` but the actual # of spokes
+will be ~ 900. Weirdly enough it is not a "round" figure like 1440, 2048, 512 or 250 like the
+other radars.
+
+## TypeScript Interfaces
+
+### RadarsResponse
 
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/radars/{id}/targets"
-```
+interface RadarsResponse {
+  version: string
+  radars: Record<string, RadarInfo>
+}
 
-_Request body:_
-
-```json
-{
-  "bearing": 45.0,
-  "distance": 2000
+interface RadarInfo {
+  name: string
+  brand: string
+  model?: string
+  radarIpAddress: string
+  spokeDataUrl: string
+  streamUrl: string
 }
 ```
 
-_Response:_
-
-```json
-{
-  "success": true,
-  "targetId": 5,
-  "status": "acquiring"
-}
-```
-
-### Cancel Target Tracking
+### Capabilities
 
 ```typescript
-HTTP DELETE "/signalk/v2/api/vessels/self/radars/{id}/targets/{targetId}"
-```
-
-_Response:_
-
-```json
-{
-  "success": true
-}
-```
-
-### Target Stream (WebSocket)
-
-Stream real-time target updates:
-
-```typescript
-WS "/signalk/v2/api/vessels/self/radars/{id}/targets"
-```
-
-_Server sends messages:_
-
-```json
-// Target position/motion update
-{
-  "type": "target_update",
-  "target": {
-    "id": 1,
-    "status": "tracking",
-    "position": { "bearing": 45.5, "distance": 1800 },
-    "motion": { "course": 180.0, "speed": 6.5 },
-    "danger": { "cpa": 140, "tcpa": 310 }
-  }
-}
-
-// New target acquired
-{
-  "type": "target_acquired",
-  "target": { /* full ArpaTarget */ }
-}
-
-// Target tracking lost
-{
-  "type": "target_lost",
-  "targetId": 3,
-  "reason": "no_return",
-  "lastPosition": { "bearing": 120.5, "distance": 3500 }
-}
-```
-
-### Target Grace Period
-
-When a target temporarily disappears (behind waves, in rain clutter), the tracker maintains prediction for a configurable grace period before marking it as lost.
-
-Configure via radar state:
-
-```typescript
-HTTP PUT "/signalk/v2/api/vessels/self/radars/{id}/state"
-```
-
-```json
-{
-  "arpaSettings": {
-    "targetLostTimeout": 45,
-    "cpaAlertThreshold": 500,
-    "tcpaAlertThreshold": 600
-  }
-}
-```
-
-| Setting              | Default | Description                              |
-| -------------------- | ------- | ---------------------------------------- |
-| `targetLostTimeout`  | 45      | Seconds before marking target lost       |
-| `cpaAlertThreshold`  | 500     | CPA (meters) triggering alert state      |
-| `tcpaAlertThreshold` | 600     | TCPA (seconds) within which to check CPA |
-
-## SignalK Notifications
-
-ARPA targets publish collision warnings to SignalK's notification system, enabling chart plotters to display radar-based alerts alongside AIS alerts.
-
-### Notification Paths
-
-```
-notifications.navigation.closestApproach.radar:{radarId}:target:{targetId}
-notifications.navigation.radarGuardZone.radar:{radarId}:zone:{zoneId}
-notifications.navigation.radarTargetLost.radar:{radarId}:target:{targetId}
-```
-
-### Closest Approach Alert
-
-Published when a target's CPA crosses a threshold. States follow SignalK conventions:
-
-| State       | CPA Threshold | Description                  |
-| ----------- | ------------- | ---------------------------- |
-| `normal`    | > 1000m       | Target tracked, no danger    |
-| `alert`     | < 1000m       | Approaching, monitor closely |
-| `warn`      | < 500m        | Getting close                |
-| `alarm`     | < 200m        | Danger, take action          |
-| `emergency` | < 100m        | Imminent collision           |
-
-_Example notification:_
-
-```json
-{
-  "path": "notifications.navigation.closestApproach.radar:Furuno-6424:target:3",
-  "value": {
-    "state": "warn",
-    "method": ["visual", "sound"],
-    "message": "ARPA target 3: CPA 320m in 5m 24s",
-    "timestamp": "2025-01-15T10:30:00Z",
-    "data": {
-      "cpa": 320,
-      "tcpa": 324,
-      "bearing": 45.2,
-      "distance": 1852,
-      "targetCourse": 180,
-      "targetSpeed": 6.5
-    }
-  }
-}
-```
-
-### Guard Zone Alert
-
-Published when a target enters a guard zone:
-
-```json
-{
-  "path": "notifications.navigation.radarGuardZone.radar:Furuno-6424:zone:1",
-  "value": {
-    "state": "alarm",
-    "method": ["visual", "sound"],
-    "message": "Target in guard zone 1",
-    "timestamp": "2025-01-15T10:30:00Z",
-    "data": {
-      "zoneId": 1,
-      "zoneName": "Starboard sector",
-      "targetBearing": 45.2,
-      "targetDistance": 500
-    }
-  }
-}
-```
-
-### Target Lost Alert
-
-Published when tracking is lost on a **manually-acquired** target. Auto-acquired targets silently drop without notification.
-
-```json
-{
-  "path": "notifications.navigation.radarTargetLost.radar:Furuno-6424:target:5",
-  "value": {
-    "state": "warn",
-    "method": ["visual"],
-    "message": "ARPA target 5 lost",
-    "timestamp": "2025-01-15T10:30:00Z",
-    "data": {
-      "targetId": 5,
-      "lastBearing": 120.5,
-      "lastDistance": 3500,
-      "trackedDuration": 324
-    }
-  }
-}
-```
-
-### Subscribing to Radar Notifications
-
-Use standard SignalK delta subscription to receive radar notifications:
-
-```json
-{
-  "context": "vessels.self",
-  "subscribe": [
-    {
-      "path": "notifications.navigation.closestApproach.radar:*",
-      "policy": "instant"
-    },
-    {
-      "path": "notifications.navigation.radarGuardZone.*",
-      "policy": "instant"
-    },
-    {
-      "path": "notifications.navigation.radarTargetLost.*",
-      "policy": "instant"
-    }
-  ]
-}
-```
-
-## Data Types
-
-### SupportedFeature
-
-Optional features a radar provider may implement. This declares what API capabilities are available, NOT hardware capabilities (those are in `characteristics`).
-
-```typescript
-type SupportedFeature = 'arpa' | 'guardZones' | 'trails' | 'dualRange'
-```
-
-| Feature      | Description                        | Related Endpoints                         |
-| ------------ | ---------------------------------- | ----------------------------------------- |
-| `arpa`       | ARPA target tracking with CPA/TCPA | `GET/POST/DELETE /targets`, `WS /targets` |
-| `guardZones` | Guard zone alerting                | `GET/PUT /guardZones`                     |
-| `trails`     | Target history/trail data          | `GET /trails`                             |
-| `dualRange`  | Dual-range simultaneous display    | Secondary range controls                  |
-
-**Important distinction:**
-
-- `characteristics.hasDoppler = true` means the hardware supports Doppler
-- `supportedFeatures.includes('trails')` means the provider implements the `/trails` endpoint
-
-A radar may have Doppler hardware but the provider might not implement trails. Clients should check both when deciding what UI to show.
-
-**Client usage example:**
-
-```typescript
-const caps = await fetch(`/radars/${id}/capabilities`).then((r) => r.json())
-
-// Use optional chaining for backward compatibility
-const hasArpa = caps.supportedFeatures?.includes('arpa') ?? false
-const hasGuardZones = caps.supportedFeatures?.includes('guardZones') ?? false
-
-if (hasArpa) {
-  // Show ARPA target panel, enable target acquisition
-}
-```
-
-### CapabilityManifest
-
-```typescript
-interface CapabilityManifest {
-  id: string
-  make: string
-  model: string
-  modelFamily?: string
-  serialNumber?: string
-  firmwareVersion?: string
-  characteristics: Characteristics
-  controls: ControlDefinition[]
-  constraints?: ControlConstraint[]
-  supportedFeatures?: SupportedFeature[] // Optional API features this provider implements
-}
-```
-
-### Characteristics
-
-```typescript
-interface Characteristics {
-  maxRange: number // Maximum detection range in meters
-  minRange: number // Minimum detection range in meters
-  supportedRanges: number[] // Discrete range values in meters
+interface Capabilities {
+  maxRange: number
+  minRange: number
+  supportedRanges: number[]
   spokesPerRevolution: number
   maxSpokeLength: number
+  pixelValues: number
   hasDoppler: boolean
+  hasDualRadar: boolean
   hasDualRange: boolean
-  maxDualRange?: number // Max range in dual-range mode (meters), omitted if 0
-  noTransmitZoneCount: number
+  hasSparseSpokes: boolean
+  noTransmitSectors: number
+  controls: Record<string, ControlDefinition>
+  legend: Legend
 }
 ```
 
@@ -754,457 +1027,113 @@ interface Characteristics {
 
 ```typescript
 interface ControlDefinition {
-  id: string // Semantic ID (e.g., "gain", "beamSharpening")
-  name: string // Human-readable name
-  description: string // Tooltip/help text
-  category: 'base' | 'extended' | 'installation'
-  type: 'boolean' | 'number' | 'enum' | 'compound' | 'string'
-  range?: RangeSpec // For number types
-  values?: EnumValue[] // For enum types
-  properties?: Record<string, PropertyDefinition> // For compound types
-  modes?: string[] // e.g., ["auto", "manual"]
-  defaultMode?: string
-  readOnly?: boolean // True for info fields
-  default?: boolean | number | string | Record<string, unknown>
-}
-
-interface RangeSpec {
-  min: number
-  max: number
-  step?: number
-  unit?: string // e.g., "percent", "meters", "hours"
-}
-
-interface EnumValue {
-  value: string | number
-  label: string
-  description?: string
-  readOnly?: boolean // True if this value can be reported but not set by clients
-}
-
-interface PropertyDefinition {
-  type: string
-  description?: string
-  range?: RangeSpec
-  values?: EnumValue[]
+  id: number
+  name: string
+  description: string
+  category:
+    | 'base'
+    | 'targets'
+    | 'guardZones'
+    | 'trails'
+    | 'advanced'
+    | 'installation'
+    | 'info'
+  dataType: 'number' | 'enum' | 'string' | 'button' | 'sector' | 'zone' | 'rect'
+  isReadOnly?: boolean
+  hasEnabled?: boolean
+  minValue?: number
+  maxValue?: number
+  stepValue?: number
+  maxDistance?: number
+  units?: 'm' | 'm/s' | 'rad' | 'rad/s' | 's'
+  descriptions?: Record<string, string> // For enum types
+  validValues?: number[] // For enum types
+  hasAuto?: boolean
+  hasAutoAdjustable?: boolean
+  autoAdjustMinValue?: number
+  autoAdjustMaxValue?: number
 }
 ```
 
-### RadarState
+### ControlValue
 
 ```typescript
-interface RadarState {
-  id: string
-  timestamp: string // ISO 8601
-  status: 'off' | 'standby' | 'transmit' | 'warming'
-  controls: Record<string, unknown>
-  disabledControls?: DisabledControl[]
-  streamUrl?: string // WebSocket URL for spoke data
-}
-
-interface DisabledControl {
-  controlId: string
-  reason: string
-}
-```
-
-### ControlConstraint
-
-```typescript
-interface ControlConstraint {
-  controlId: string
-  condition: {
-    type: 'disabled_when' | 'read_only_when' | 'restricted_when'
-    dependsOn: string // Control ID this depends on
-    operator: '==' | '!=' | '>' | '<' | '>=' | '<='
-    value: string | number | boolean
-  }
-  effect: {
-    disabled?: boolean
-    readOnly?: boolean
-    allowedValues?: (string | number | boolean)[]
-    reason?: string // Human-readable explanation
-  }
+interface ControlValue {
+  value?: number | string
+  units?:
+    | 'm'
+    | 'km'
+    | 'nm'
+    | 'm/s'
+    | 'kn'
+    | 'rad'
+    | 'deg'
+    | 'rad/s'
+    | 'rpm'
+    | 's'
+    | 'min'
+    | 'h'
+  auto?: boolean
+  autoValue?: number
+  enabled?: boolean
+  endValue?: number // End angle for sectors/zones (radians)
+  startDistance?: number // Inner radius for zones (meters)
+  endDistance?: number // Outer radius for zones (meters)
+  x1?: number // Rect: first corner X (meters)
+  y1?: number // Rect: first corner Y (meters)
+  x2?: number // Rect: second corner X (meters)
+  y2?: number // Rect: second corner Y (meters)
+  width?: number // Rect: perpendicular width (meters)
+  timestamp?: string // ISO 8601 timestamp when value was last changed
 }
 ```
 
-### ArpaTarget
+### Legend
 
 ```typescript
-interface ArpaTarget {
-  id: number // Target ID (1-99 typically)
+interface Legend {
+  lowReturn: number
+  mediumReturn: number
+  strongReturn: number
+  targetBorder: number
+  dopplerApproaching?: number
+  dopplerReceding?: number
+  historyStart: number
+  pixelColors: number
+  pixels: LegendPixel[]
+}
+
+interface LegendPixel {
+  type: 'normal' | 'dopplerApproaching' | 'dopplerReceding' | 'history'
+  color: string
+}
+```
+
+### Target
+
+```typescript
+interface Target {
+  id: number
   status: 'tracking' | 'lost' | 'acquiring'
   position: {
-    bearing: number // Degrees true from own vessel
-    distance: number // Meters from own vessel
-    latitude?: number // Calculated lat (if heading available)
-    longitude?: number // Calculated lon (if heading available)
+    bearing: number // radians [0, 2π)
+    distance: number // meters
+    latitude?: number // omitted if radar position unavailable
+    longitude?: number // omitted if radar position unavailable
   }
-  motion: {
-    course: number // Computed COG (degrees true)
-    speed: number // Computed SOG (m/s)
+  motion?: {
+    // omitted if motion not yet computed; present with zeros for stationary targets
+    course: number // radians [0, 2π)
+    speed: number // m/s
   }
-  danger: {
-    cpa: number // Closest Point of Approach (meters)
-    tcpa: number // Time to CPA (seconds, negative = past)
+  danger?: {
+    // omitted if vessels diverging or own-ship motion unavailable
+    cpa: number // meters
+    tcpa: number // seconds
   }
   acquisition: 'manual' | 'auto'
+  sourceZone?: number // guard zone (1 or 2) that acquired this target; omitted for manual/Doppler
   firstSeen: string // ISO 8601 timestamp
   lastSeen: string // ISO 8601 timestamp
 }
 ```
-
-### TargetListResponse
-
-```typescript
-interface TargetListResponse {
-  radarId: string
-  timestamp: string // ISO 8601
-  targets: ArpaTarget[]
-}
-```
-
-### TargetStreamMessage
-
-```typescript
-type TargetStreamMessage =
-  | { type: 'target_update'; target: ArpaTarget }
-  | { type: 'target_acquired'; target: ArpaTarget }
-  | {
-      type: 'target_lost'
-      targetId: number
-      reason: 'no_return' | 'manual_cancel'
-      lastPosition: { bearing: number; distance: number }
-    }
-```
-
-### ArpaSettings
-
-```typescript
-interface ArpaSettings {
-  targetLostTimeout: number // Seconds before marking target lost (default: 45)
-  cpaAlertThreshold: number // CPA meters for alert state (default: 500)
-  tcpaAlertThreshold: number // TCPA seconds within which to check CPA (default: 600)
-}
-```
-
-## Providers
-
-The Radar API supports registration of multiple radar provider plugins. All radars from all providers are aggregated under the unified API.
-
-### Listing Available Radar Providers
-
-```typescript
-HTTP GET "/signalk/v2/api/vessels/self/radars/_providers"
-```
-
-_Response:_
-
-```json
-{
-  "mayara-radar": {
-    "name": "Mayara Radar Plugin"
-  },
-  "navico-radar": {
-    "name": "Navico Radar Provider"
-  }
-}
-```
-
-## Creating a Radar Provider Plugin
-
-To create a radar provider plugin, implement the `RadarProvider` interface:
-
-```typescript
-interface RadarProvider {
-  name: string
-  methods: RadarProviderMethods
-}
-
-interface RadarProviderMethods {
-  // Required - radar discovery
-  getRadars(): Promise<string[]>
-  getCapabilities(radarId: string): Promise<CapabilityManifest | null>
-  getState(radarId: string): Promise<RadarState | null>
-
-  // Required - control
-  setControl(
-    radarId: string,
-    controlId: string,
-    value: unknown
-  ): Promise<{ success: boolean; error?: string }>
-  setControls(
-    radarId: string,
-    controls: Record<string, unknown>
-  ): Promise<{ success: boolean; error?: string }>
-
-  // Optional - streaming (for integrated providers)
-  handleStreamConnection?(radarId: string, ws: WebSocket): void
-
-  // Optional - ARPA targets
-  getTargets?(radarId: string): Promise<TargetListResponse | null>
-  acquireTarget?(
-    radarId: string,
-    bearing: number,
-    distance: number
-  ): Promise<{ success: boolean; targetId?: number }>
-  cancelTarget?(radarId: string, targetId: number): Promise<boolean>
-  handleTargetStreamConnection?(radarId: string, ws: WebSocket): void
-}
-```
-
-Register with the server:
-
-```typescript
-app.radarApi.register(plugin.id, {
-  name: 'My Radar Plugin',
-  methods: {
-    getRadars: async () => ['radar-1'],
-    getCapabilities: async (id) => ({
-      id,
-      make: 'MyBrand',
-      model: 'Model-X',
-      characteristics: {
-        /* ... */
-      },
-      controls: [
-        /* ... */
-      ]
-    }),
-    getState: async (id) => ({
-      id,
-      timestamp: new Date().toISOString(),
-      status: 'transmit',
-      controls: { power: 'transmit', gain: { mode: 'auto', value: 50 } }
-    }),
-    setControl: async (id, controlId, value) => {
-      // Send command to radar hardware
-      return true
-    },
-    setControls: async (id, controls) => {
-      // Send multiple commands
-      return true
-    }
-  }
-})
-```
-
-For WASM plugins, use the `radarProvider` capability and implement the corresponding FFI exports.
-
-## Accessing the Radar API from Plugins
-
-Plugins that want to **consume** radar data (rather than provide it) can access the Radar API programmatically using the `getRadarApi()` method on the server app object.
-
-This provides typed, in-process access to the Radar API without going through HTTP:
-
-```typescript
-plugin.start = async (settings) => {
-  // Check if Radar API is available
-  if (app.getRadarApi) {
-    try {
-      const radarApi = await app.getRadarApi()
-
-      // List all available radars
-      const radars = await radarApi.getRadars()
-      app.debug(`Found ${radars.length} radars`)
-
-      // Get info for a specific radar
-      for (const radar of radars) {
-        const info = await radarApi.getRadarInfo(radar.id)
-        if (info) {
-          app.debug(
-            `Radar ${info.name}: status=${info.status}, range=${info.range}m`
-          )
-        }
-      }
-    } catch (err) {
-      app.debug('Radar API not available:', err.message)
-    }
-  }
-}
-```
-
-This pattern follows the same approach as the History API's `getHistoryApi()` method. The property is optional to support older servers that don't have radar API support.
-
-## Naming Conventions
-
-Following consistent naming conventions ensures that clients can work with any radar provider without custom mapping code. When multiple providers use the same control IDs, client UIs "just work" across brands.
-
-### Why This Matters
-
-The Radar API uses **semantic control IDs** that are vendor-neutral. Each vendor's proprietary control names should be mapped to standardized IDs:
-
-```
-Vendor-Specific Name     →    Semantic API ID
-─────────────────────────────────────────────
-Furuno "RezBoost"        →    beamSharpening
-Navico "Beam Sharpening" →    beamSharpening
-Furuno "Target Analyzer" →    dopplerMode
-Navico "VelocityTrack"   →    dopplerMode
-```
-
-### Quick Reference
-
-| Element             | Convention     | Example                              |
-| ------------------- | -------------- | ------------------------------------ |
-| Control IDs         | lowerCamelCase | `beamSharpening`, `dopplerMode`      |
-| Property names      | lowerCamelCase | `mode`, `value`, `enabled`           |
-| String enum values  | lowercase      | `"auto"`, `"manual"`, `"standby"`    |
-| Numeric enum values | integers       | `0`, `1`, `2`, `3`                   |
-| Display names       | Title Case     | `"Beam Sharpening"`                  |
-| Units               | lowercase      | `"meters"`, `"degrees"`, `"percent"` |
-
-### Control ID Naming
-
-Use **lowerCamelCase** for all control identifiers:
-
-```
-✓ beamSharpening
-✓ dopplerMode
-✓ interferenceRejection
-✓ noTransmitZones
-
-✗ beam_sharpening      (no underscores)
-✗ BeamSharpening       (no PascalCase)
-✗ BEAM_SHARPENING      (no SCREAMING_CASE)
-```
-
-Name controls by what they **do**, not what the vendor calls them:
-
-```
-✓ beamSharpening     (describes function)
-✗ rezBoost           (vendor-specific name)
-
-✓ dopplerMode        (describes technology)
-✗ targetAnalyzer     (Furuno marketing name)
-✗ velocityTrack      (Navico marketing name)
-```
-
-### Standard Control IDs
-
-Providers should use these standard IDs when their radar supports the equivalent functionality:
-
-**Base Controls (All Radars)**
-
-| ID      | Type     | Description                                        |
-| ------- | -------- | -------------------------------------------------- |
-| `power` | enum     | Operational state: off, standby, transmit, warming |
-| `range` | number   | Detection range in meters                          |
-| `gain`  | compound | Signal amplification: {mode, value}                |
-| `sea`   | compound | Sea clutter suppression: {mode, value}             |
-| `rain`  | compound | Rain clutter suppression: {mode, value}            |
-
-**Read-Only Info**
-
-| ID                | Type   | Description              |
-| ----------------- | ------ | ------------------------ |
-| `serialNumber`    | string | Hardware serial number   |
-| `firmwareVersion` | string | Firmware version string  |
-| `operatingHours`  | number | Total hours of operation |
-
-**Signal Processing**
-
-| ID                    | Type     | Common Vendor Names                            |
-| --------------------- | -------- | ---------------------------------------------- |
-| `beamSharpening`      | enum     | Furuno: RezBoost, Navico: Beam Sharpening      |
-| `dopplerMode`         | compound | Furuno: Target Analyzer, Navico: VelocityTrack |
-| `dopplerSpeed`        | number   | Navico: Doppler Speed                          |
-| `birdMode`            | enum     | Furuno: Bird Mode                              |
-| `noiseReduction`      | boolean  | Noise Reduction                                |
-| `mainBangSuppression` | number   | MBS                                            |
-
-**Interference Filtering**
-
-| ID                           | Type         | Description                            |
-| ---------------------------- | ------------ | -------------------------------------- |
-| `interferenceRejection`      | boolean/enum | Filters interference from other radars |
-| `localInterferenceRejection` | enum         | Navico: Local IR                       |
-| `sidelobeSuppression`        | compound     | Navico: SLS                            |
-
-**Target Processing**
-
-| ID                 | Type    | Description                          |
-| ------------------ | ------- | ------------------------------------ |
-| `targetSeparation` | enum    | Distinguishes closely-spaced targets |
-| `targetExpansion`  | enum    | Makes small targets more visible     |
-| `targetBoost`      | enum    | Amplifies weak targets               |
-| `autoAcquire`      | boolean | Automatic ARPA target acquisition    |
-
-**Operating Modes**
-
-| ID           | Type | Description                                          |
-| ------------ | ---- | ---------------------------------------------------- |
-| `presetMode` | enum | Pre-configured mode (harbor/offshore/weather/custom) |
-| `scanSpeed`  | enum | Antenna rotation speed                               |
-| `txChannel`  | enum | TX frequency channel selection                       |
-
-**Receiver Controls**
-
-| ID          | Type     | Description                    |
-| ----------- | -------- | ------------------------------ |
-| `tune`      | compound | Receiver tuning: {mode, value} |
-| `colorGain` | compound | Color intensity: {mode, value} |
-
-**Installation Settings**
-
-| ID                 | Type     | Description                             |
-| ------------------ | -------- | --------------------------------------- |
-| `bearingAlignment` | number   | Heading offset correction (degrees)     |
-| `antennaHeight`    | number   | Antenna height above waterline (meters) |
-| `noTransmitZones`  | compound | Sectors where radar won't transmit      |
-
-### Compound Control Patterns
-
-**Mode + Value Pattern** (for controls with auto/manual):
-
-```json
-{
-  "gain": {
-    "mode": "auto",
-    "value": 50
-  }
-}
-```
-
-**Enabled + Mode Pattern** (for toggleable features with sub-modes):
-
-```json
-{
-  "dopplerMode": {
-    "enabled": true,
-    "mode": "approaching"
-  }
-}
-```
-
-**Array Pattern** (for multi-item controls):
-
-```json
-{
-  "noTransmitZones": {
-    "zones": [
-      { "enabled": true, "start": 90, "end": 180 },
-      { "enabled": false, "start": 0, "end": 0 }
-    ]
-  }
-}
-```
-
-### Adding a New Control
-
-Before creating a new control ID:
-
-1. **Check if a semantic ID already exists** - Don't create `echoBoost` if `targetBoost` covers the same functionality
-2. **Use semantic naming** - Name by function, not vendor marketing
-3. **Document the vendor mapping** - Help other developers understand the equivalence
-4. **Follow the patterns** - Use established compound control structures
-
-## Caching
-
-Radar API responses include `Cache-Control: no-cache` headers. Clients should not cache radar data as it can change at any time:
-
-- **Model identification**: Some radars (e.g., Furuno) identify their model via TCP connection, which happens after initial discovery
-- **Status changes**: Radar power state, transmit status can change
-- **Control values**: Gain, sea clutter, range, etc. can be modified by the user or other clients
-
-Clients that need to minimize API calls should implement their own caching strategy with appropriate invalidation logic.

@@ -11,6 +11,7 @@ import { SignalKMessageHub } from '../../app'
 import { radar } from '@signalk/server-api'
 
 const RADAR_API_PATH = `/signalk/v2/api/vessels/self/radars`
+const TWO_PI = 2 * Math.PI
 
 interface RadarApplication
   extends WithSecurityStrategy, SignalKMessageHub, IRouter {}
@@ -889,15 +890,15 @@ export class RadarApi {
               statusCode: 400,
               state: 'FAILED',
               message:
-                'Invalid request. Must provide bearing (degrees) and distance (meters)'
+                'Invalid request. Must provide bearing (radians) and distance (meters)'
             })
             return
           }
-          if (bearing < 0 || bearing >= 360) {
+          if (bearing < 0 || bearing >= TWO_PI) {
             res.status(400).json({
               statusCode: 400,
               state: 'FAILED',
-              message: 'Bearing must be between 0 and 360 degrees'
+              message: 'Bearing must be in radians [0, 2π)'
             })
             return
           }
