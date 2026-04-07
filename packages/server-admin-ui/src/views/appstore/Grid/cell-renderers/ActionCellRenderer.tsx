@@ -416,7 +416,7 @@ export default function ActionCellRenderer({
             </div>
           ) : dataSize && dataSize.hasData ? (
             <div className="mt-3">
-              <div className="form-check form-switch">
+              <div className="form-check">
                 <input
                   className="form-check-input"
                   type="checkbox"
@@ -428,7 +428,7 @@ export default function ActionCellRenderer({
                   className="form-check-label"
                   htmlFor={`deleteDataCheck-${app.name}`}
                 >
-                  Also delete plugin data ({formatBytes(dataSize.totalBytes)})
+                  Also delete plugin configuration and data ({formatBytes(dataSize.totalBytes)})
                 </label>
               </div>
               {deleteData && (
