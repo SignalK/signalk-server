@@ -413,7 +413,6 @@ export default function ActionCellRenderer({
           )}
         </Modal.Body>
       </Modal>
-      {/* Remove Confirmation Modal */}
       <Modal show={showRemoveModal} onHide={() => setShowRemoveModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Remove {app.name}</Modal.Title>
