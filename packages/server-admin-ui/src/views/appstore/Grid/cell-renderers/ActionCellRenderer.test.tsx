@@ -19,4 +19,9 @@ describe('formatBytes', () => {
     expect(formatBytes(2621440)).toBe('2.5 MB')
     expect(formatBytes(10485760)).toBe('10.0 MB')
   })
+
+  it('formats gigabytes', () => {
+    expect(formatBytes(1073741824)).toBe('1.0 GB')
+    expect(formatBytes(2684354560)).toBe('2.5 GB')
+  })
 })

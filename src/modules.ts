@@ -247,58 +247,68 @@ function cleanupAfterRemove(
   }
 }
 
-function getDirectorySize(dir: string): {
+async function getDirectorySize(dir: string): Promise<{
   totalBytes: number
   fileCount: number
-} {
+}> {
   let totalBytes = 0
   let fileCount = 0
 
-  function walk(d: string): void {
-    if (!fs.existsSync(d)) return
-    for (const entry of fs.readdirSync(d)) {
+  async function walk(d: string): Promise<void> {
+    let entries
+    try {
+      entries = await fs.promises.readdir(d)
+    } catch {
+      return
+    }
+    for (const entry of entries) {
       try {
         const entryPath = path.join(d, entry)
-        const stats = fs.statSync(entryPath)
+        const stats = await fs.promises.lstat(entryPath)
         if (stats.isFile()) {
           totalBytes += stats.size
           fileCount++
-        } else if (stats.isDirectory()) {
-          walk(entryPath)
+        } else if (stats.isDirectory() && !stats.isSymbolicLink()) {
+          await walk(entryPath)
         }
       } catch {
-        // entry may have been removed between readdir and stat
+        // entry may have been removed between readdir and lstat
       }
     }
   }
 
-  walk(dir)
+  await walk(dir)
   return { totalBytes, fileCount }
 }
 
-function getPluginDataSize(
+async function getPluginDataSize(
   configPath: string,
   pluginId: string
-): { totalBytes: number; fileCount: number; hasData: boolean } {
+): Promise<{ totalBytes: number; fileCount: number; hasData: boolean }> {
   let totalBytes = 0
   let fileCount = 0
 
   const configFile = pluginConfigPath(configPath, pluginId)
-  if (fs.existsSync(configFile)) {
-    try {
-      const stats = fs.statSync(configFile)
+  try {
+    const stats = await fs.promises.lstat(configFile)
+    if (stats.isFile()) {
       totalBytes += stats.size
       fileCount++
-    } catch {
-      // ignore
     }
+  } catch {
+    // file does not exist or inaccessible
   }
 
   const dataDir = pluginDataDir(configPath, pluginId)
-  if (fs.existsSync(dataDir)) {
-    const dirSize = getDirectorySize(dataDir)
-    totalBytes += dirSize.totalBytes
-    fileCount += dirSize.fileCount
+  try {
+    const dirStats = await fs.promises.lstat(dataDir)
+    if (dirStats.isDirectory() && !dirStats.isSymbolicLink()) {
+      const dirSize = await getDirectorySize(dataDir)
+      totalBytes += dirSize.totalBytes
+      fileCount += dirSize.fileCount
+    }
+  } catch {
+    // directory does not exist or inaccessible
   }
 
   return { totalBytes, fileCount, hasData: totalBytes > 0 }
@@ -598,6 +608,5 @@ module.exports = {
   restoreModules,
   importOrRequire,
   runNpm,
-  cleanupAfterRemove,
   getPluginDataSize
 }

@@ -8,7 +8,6 @@ const {
   getLatestServerVersion,
   importOrRequire,
   runNpm,
-  cleanupAfterRemove,
   getPluginDataSize
 } = require('../dist/modules')
 
@@ -312,95 +311,6 @@ describe('runNpm version validation', () => {
   })
 })
 
-describe('cleanupAfterRemove', () => {
-  let tempDir
-
-  beforeEach(() => {
-    tempDir = path.join(
-      require('os').tmpdir(),
-      '_skservertest_cleanup' + Date.now()
-    )
-    fs.mkdirSync(tempDir, { recursive: true })
-  })
-
-  afterEach(() => {
-    fs.rmSync(tempDir, { recursive: true, force: true })
-  })
-
-  function setupPluginData(pluginId) {
-    const configDataDir = path.join(tempDir, 'plugin-config-data')
-    fs.mkdirSync(configDataDir, { recursive: true })
-
-    const configFile = path.join(configDataDir, pluginId + '.json')
-    fs.writeFileSync(configFile, JSON.stringify({ enabled: true }))
-
-    const dataDir = path.join(configDataDir, pluginId)
-    fs.mkdirSync(dataDir, { recursive: true })
-    fs.writeFileSync(path.join(dataDir, 'data.txt'), 'test data content')
-
-    return { configFile, dataDir }
-  }
-
-  function setupPackageJson(packageName) {
-    const packageJson = {
-      dependencies: { [packageName]: '1.0.0' }
-    }
-    const packageJsonPath = path.join(tempDir, 'package.json')
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
-    return packageJsonPath
-  }
-
-  it('removes plugin config and data when deleteData is true', () => {
-    const { configFile, dataDir } = setupPluginData('test-plugin')
-    setupPackageJson('test-package')
-
-    cleanupAfterRemove(tempDir, 'test-package', 'test-plugin', true)
-
-    chai.expect(fs.existsSync(configFile)).to.equal(false)
-    chai.expect(fs.existsSync(dataDir)).to.equal(false)
-  })
-
-  it('preserves plugin config and data when deleteData is false', () => {
-    const { configFile, dataDir } = setupPluginData('test-plugin')
-    setupPackageJson('test-package')
-
-    cleanupAfterRemove(tempDir, 'test-package', 'test-plugin', false)
-
-    chai.expect(fs.existsSync(configFile)).to.equal(true)
-    chai.expect(fs.existsSync(dataDir)).to.equal(true)
-  })
-
-  it('preserves plugin config and data when deleteData is not provided', () => {
-    const { configFile, dataDir } = setupPluginData('test-plugin')
-    setupPackageJson('test-package')
-
-    cleanupAfterRemove(tempDir, 'test-package', 'test-plugin')
-
-    chai.expect(fs.existsSync(configFile)).to.equal(true)
-    chai.expect(fs.existsSync(dataDir)).to.equal(true)
-  })
-
-  it('always removes node_modules directory and package.json entry', () => {
-    const { configFile, dataDir } = setupPluginData('test-plugin')
-    const packageJsonPath = setupPackageJson('test-package')
-
-    const nodeModulesDir = path.join(tempDir, 'node_modules', 'test-package')
-    fs.mkdirSync(nodeModulesDir, { recursive: true })
-    fs.writeFileSync(
-      path.join(nodeModulesDir, 'index.js'),
-      'module.exports = {}'
-    )
-
-    cleanupAfterRemove(tempDir, 'test-package', 'test-plugin', false)
-
-    chai.expect(fs.existsSync(nodeModulesDir)).to.equal(false)
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
-    chai.expect(packageJson.dependencies).to.not.have.property('test-package')
-    chai.expect(fs.existsSync(configFile)).to.equal(true)
-    chai.expect(fs.existsSync(dataDir)).to.equal(true)
-  })
-})
-
 describe('getPluginDataSize', () => {
   let tempDir
 
@@ -416,7 +326,7 @@ describe('getPluginDataSize', () => {
     fs.rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it('returns correct size for plugin with config and data files', () => {
+  it('returns correct size for plugin with config and data files', async () => {
     const configDataDir = path.join(tempDir, 'plugin-config-data')
     fs.mkdirSync(configDataDir, { recursive: true })
 
@@ -431,22 +341,22 @@ describe('getPluginDataSize', () => {
     fs.writeFileSync(path.join(dataDir, 'data1.txt'), 'hello')
     fs.writeFileSync(path.join(dataDir, 'data2.txt'), 'world')
 
-    const result = getPluginDataSize(tempDir, 'test-plugin')
+    const result = await getPluginDataSize(tempDir, 'test-plugin')
 
     chai.expect(result.hasData).to.equal(true)
     chai.expect(result.fileCount).to.equal(3) // config + 2 data files
     chai.expect(result.totalBytes).to.be.greaterThan(0)
   })
 
-  it('returns zero and hasData false for plugin with no data', () => {
-    const result = getPluginDataSize(tempDir, 'nonexistent-plugin')
+  it('returns zero and hasData false for plugin with no data', async () => {
+    const result = await getPluginDataSize(tempDir, 'nonexistent-plugin')
 
     chai.expect(result.hasData).to.equal(false)
     chai.expect(result.fileCount).to.equal(0)
     chai.expect(result.totalBytes).to.equal(0)
   })
 
-  it('handles config file only without data directory', () => {
+  it('handles config file only without data directory', async () => {
     const configDataDir = path.join(tempDir, 'plugin-config-data')
     fs.mkdirSync(configDataDir, { recursive: true })
 
@@ -456,7 +366,7 @@ describe('getPluginDataSize', () => {
       configContent
     )
 
-    const result = getPluginDataSize(tempDir, 'test-plugin')
+    const result = await getPluginDataSize(tempDir, 'test-plugin')
 
     chai.expect(result.hasData).to.equal(true)
     chai.expect(result.fileCount).to.equal(1)

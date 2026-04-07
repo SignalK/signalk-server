@@ -137,7 +137,7 @@ module.exports = function (app) {
           `${SERVERROUTESPREFIX}/appstore/datasize/:name`,
           `${SERVERROUTESPREFIX}/appstore/datasize/:org/:name`
         ],
-        (req, res) => {
+        async (req, res) => {
           let name = req.params.name
           if (req.params.org) {
             name = req.params.org + '/' + name
@@ -149,7 +149,10 @@ module.exports = function (app) {
             return
           }
           try {
-            const dataSize = getPluginDataSize(app.config.configPath, pluginId)
+            const dataSize = await getPluginDataSize(
+              app.config.configPath,
+              pluginId
+            )
             res.json(dataSize)
           } catch (error) {
             console.error('Failed to get plugin data size:', error)
