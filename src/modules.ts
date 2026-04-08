@@ -247,40 +247,6 @@ function cleanupAfterRemove(
   }
 }
 
-async function getDirectorySize(dir: string): Promise<{
-  totalBytes: number
-  fileCount: number
-}> {
-  let totalBytes = 0
-  let fileCount = 0
-
-  async function walk(d: string): Promise<void> {
-    let entries
-    try {
-      entries = await fs.promises.readdir(d)
-    } catch {
-      return
-    }
-    for (const entry of entries) {
-      try {
-        const entryPath = path.join(d, entry)
-        const stats = await fs.promises.lstat(entryPath)
-        if (stats.isFile()) {
-          totalBytes += stats.size
-          fileCount++
-        } else if (stats.isDirectory()) {
-          await walk(entryPath)
-        }
-      } catch {
-        // entry may have been removed between readdir and lstat
-      }
-    }
-  }
-
-  await walk(dir)
-  return { totalBytes, fileCount }
-}
-
 async function getPluginDataSize(
   configPath: string,
   pluginId: string
@@ -303,9 +269,33 @@ async function getPluginDataSize(
   try {
     const dirStats = await fs.promises.lstat(dataDir)
     if (dirStats.isDirectory()) {
-      const dirSize = await getDirectorySize(dataDir)
-      totalBytes += dirSize.totalBytes
-      fileCount += dirSize.fileCount
+      const { default: getFolderSize } = await import('get-folder-size')
+      totalBytes += await getFolderSize.loose(dataDir)
+
+      async function countFiles(d: string): Promise<number> {
+        let entries: string[]
+        try {
+          entries = await fs.promises.readdir(d)
+        } catch {
+          return 0
+        }
+        let count = 0
+        for (const entry of entries) {
+          try {
+            const stats = await fs.promises.lstat(path.join(d, entry))
+            if (stats.isFile()) {
+              count++
+            } else if (stats.isDirectory()) {
+              count += await countFiles(path.join(d, entry))
+            }
+          } catch {
+            // entry removed or inaccessible between readdir and lstat
+          }
+        }
+        return count
+      }
+
+      fileCount += await countFiles(dataDir)
     }
   } catch {
     // directory does not exist or inaccessible
