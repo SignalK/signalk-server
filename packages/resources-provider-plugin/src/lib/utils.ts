@@ -35,7 +35,7 @@ export const passFilter = (res: any, type: string, params: any) => {
         params.distance
       )
     } else if( ['MultiLineString', 'Polygon'].includes(res.feature?.geometry?.type)) {
-      ok = ok && isPolygonWithInRadius(
+      ok = isPolygonWithInRadius(
         res.feature.geometry.coordinates,
         params.position, 
         params.distance
