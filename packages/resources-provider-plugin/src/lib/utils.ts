@@ -29,7 +29,7 @@ export const passFilter = (res: any, type: string, params: any) => {
         params.distance
       );
     } else if( res.feature?.geometry?.type === 'LineString') {
-      ok = ok && isLineStringWithInRadius(
+      ok = isLineStringWithInRadius(
         res.feature.geometry.coordinates,
         params.position, 
         params.distance
