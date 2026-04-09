@@ -54,7 +54,7 @@ export const passFilter = (res: any, type: string, params: any) => {
   if (params.href) {
     // check is attached to another resource
     if (typeof res.href === 'undefined' || !res.href) {
-      ok = ok && false
+      ok = false
     } else {
       // deconstruct resource href value
       const ha = res.href.split('/')
@@ -76,7 +76,7 @@ export const passFilter = (res: any, type: string, params: any) => {
             : 'regions'
       const pId = pa.length === 1 ? pa[0] : pa[pa.length - 1]
 
-      ok = ok && hType === pType && hId === pId
+      ok = hType === pType && hId === pId
     }
   }
 
