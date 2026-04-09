@@ -18,76 +18,75 @@ import ngeohash from 'ngeohash'
  **/
 export const passFilter = (res: any, type: string, params: any) => {
 
+  let ok = true
   if (params.position && params.distance) {
     if(type ==='notes' && res.position) {
-      return isPointWithinRadius(res.position, params.position, params.distance)
+      ok && isPointWithinRadius(res.position, params.position, params.distance)
     } else if( res.feature?.geometry?.type === 'Point') {
-      return isPointWithinRadius(
+      ok && isPointWithinRadius(
         res.feature.geometry.coordinates, 
         params.position, 
         params.distance
       );
     } else if( res.feature?.geometry?.type === 'LineString') {
-      return isLineStringWithInRadius(
+      ok && isLineStringWithInRadius(
         res.feature.geometry.coordinates,
         params.position, 
         params.distance
       )
-    } else if( res.feature?.geometry?.type === 'Polygon') {
-      return isPolygonWithInRadius(
+    } else if( ['MultiLineString', 'Polygon'].includes(res.feature?.geometry?.type)) {
+      ok && isPolygonWithInRadius(
         res.feature.geometry.coordinates,
         params.position, 
         params.distance
       )
     } else if( res.feature?.geometry?.type === 'MultiPolygon') {
-      return isMultiPolygonWithInRadius(
+      ok && isMultiPolygonWithInRadius(
         res.feature.geometry.coordinates,
         params.position, 
         params.distance
       )
     }
-  } else {
-
-    let ok = true
-    if (params.href) {
-      if (typeof res.href === 'undefined' || !res.href) {
-        ok = false
-      } else {
-        const ha = res.href.split('/')
-        const hType: string =
-          ha.length === 1
-            ? 'regions'
-            : ha.length > 2
-              ? ha[ha.length - 2]
-              : 'regions'
-        const hId = ha.length === 1 ? ha[0] : ha[ha.length - 1]
-
-        const pa = params.href.split('/')
-        const pType: string =
-          pa.length === 1
-            ? 'regions'
-            : pa.length > 2
-              ? pa[pa.length - 2]
-              : 'regions'
-        const pId = pa.length === 1 ? pa[0] : pa[pa.length - 1]
-
-        ok = hType === pType && hId === pId
-      }
-    }
-
-    if (params.group) {
-      if (typeof res.group === 'undefined') {
-        ok = ok && false
-      } else {
-        ok = ok && res.group === params.group
-      }
-    }
-
-    if (params.geobounds) {
-      ok = ok && isInBounds(res, type, params.geobounds)
-    }
-    return ok
   }
+  
+  if (params.href) {
+    if (typeof res.href === 'undefined' || !res.href) {
+      ok = false
+    } else {
+      const ha = res.href.split('/')
+      const hType: string =
+        ha.length === 1
+          ? 'regions'
+          : ha.length > 2
+            ? ha[ha.length - 2]
+            : 'regions'
+      const hId = ha.length === 1 ? ha[0] : ha[ha.length - 1]
+
+      const pa = params.href.split('/')
+      const pType: string =
+        pa.length === 1
+          ? 'regions'
+          : pa.length > 2
+            ? pa[pa.length - 2]
+            : 'regions'
+      const pId = pa.length === 1 ? pa[0] : pa[pa.length - 1]
+
+      ok = ok && hType === pType && hId === pId
+    }
+  }
+
+  if (params.group) {
+    if (typeof res.group === 'undefined') {
+      ok = ok && false
+    } else {
+      ok = ok && res.group === params.group
+    }
+  }
+
+  if (params.geobounds) {
+    ok = ok && isInBounds(res, type, params.geobounds)
+  }
+  return ok
 }
 
 /**
