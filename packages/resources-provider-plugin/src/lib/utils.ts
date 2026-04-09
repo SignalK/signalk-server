@@ -21,34 +21,34 @@ export const passFilter = (res: any, type: string, params: any) => {
   let ok = true
   if (params.position && params.distance) {
     if(type ==='notes' && res.position) {
-      ok && isPointWithinRadius(res.position, params.position, params.distance)
+      ok = ok && isPointWithinRadius(res.position, params.position, params.distance)
     } else if( res.feature?.geometry?.type === 'Point') {
-      ok && isPointWithinRadius(
+      ok = ok && isPointWithinRadius(
         res.feature.geometry.coordinates, 
         params.position, 
         params.distance
       );
     } else if( res.feature?.geometry?.type === 'LineString') {
-      ok && isLineStringWithInRadius(
+      ok = ok && isLineStringWithInRadius(
         res.feature.geometry.coordinates,
         params.position, 
         params.distance
       )
     } else if( ['MultiLineString', 'Polygon'].includes(res.feature?.geometry?.type)) {
-      ok && isPolygonWithInRadius(
+      ok = ok && isPolygonWithInRadius(
         res.feature.geometry.coordinates,
         params.position, 
         params.distance
       )
     } else if( res.feature?.geometry?.type === 'MultiPolygon') {
-      ok && isMultiPolygonWithInRadius(
+      ok = ok && isMultiPolygonWithInRadius(
         res.feature.geometry.coordinates,
         params.position, 
         params.distance
       )
     }
   }
-  
+
   if (params.href) {
     if (typeof res.href === 'undefined' || !res.href) {
       ok = false
