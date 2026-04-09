@@ -41,7 +41,7 @@ export const passFilter = (res: any, type: string, params: any) => {
         params.distance
       )
     } else if( res.feature?.geometry?.type === 'MultiPolygon') {
-      ok = ok && isMultiPolygonWithInRadius(
+      ok = isMultiPolygonWithInRadius(
         res.feature.geometry.coordinates,
         params.position, 
         params.distance
