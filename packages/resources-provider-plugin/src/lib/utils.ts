@@ -21,7 +21,7 @@ export const passFilter = (res: any, type: string, params: any) => {
   let ok = true
   if (params.position && params.distance) {
     if(type ==='notes' && res.position) {
-      ok = ok && isPointWithinRadius(res.position, params.position, params.distance)
+      ok = isPointWithinRadius(res.position, params.position, params.distance)
     } else if( res.feature?.geometry?.type === 'Point') {
       ok = ok && isPointWithinRadius(
         res.feature.geometry.coordinates, 
