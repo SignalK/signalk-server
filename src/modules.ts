@@ -176,10 +176,11 @@ function removeModule(
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any,
-  pluginId?: string
+  pluginId?: string,
+  deleteData: boolean = false
 ) {
   runNpm(config, name, null, 'remove', onData, onErr, (code: number) => {
-    cleanupAfterRemove(config.configPath, name, pluginId)
+    cleanupAfterRemove(config.configPath, name, pluginId, deleteData)
     onClose(code)
   })
 }
@@ -187,7 +188,8 @@ function removeModule(
 function cleanupAfterRemove(
   configPath: string,
   packageName: string,
-  pluginId?: string
+  pluginId?: string,
+  deleteData: boolean = false
 ) {
   const moduleDir = path.join(configPath, 'node_modules', packageName)
   if (fs.existsSync(moduleDir)) {
@@ -225,7 +227,7 @@ function cleanupAfterRemove(
     }
   }
 
-  if (pluginId) {
+  if (pluginId && deleteData) {
     const configFile = pluginConfigPath(configPath, pluginId)
     if (fs.existsSync(configFile)) {
       try {
@@ -243,6 +245,63 @@ function cleanupAfterRemove(
       }
     }
   }
+}
+
+async function getPluginDataSize(
+  configPath: string,
+  pluginId: string
+): Promise<{ totalBytes: number; fileCount: number; hasData: boolean }> {
+  let totalBytes = 0
+  let fileCount = 0
+
+  const configFile = pluginConfigPath(configPath, pluginId)
+  try {
+    const stats = await fs.promises.lstat(configFile)
+    if (stats.isFile()) {
+      totalBytes += stats.size
+      fileCount++
+    }
+  } catch {
+    // file does not exist or inaccessible
+  }
+
+  const dataDir = pluginDataDir(configPath, pluginId)
+  try {
+    const dirStats = await fs.promises.lstat(dataDir)
+    if (dirStats.isDirectory()) {
+      const { default: getFolderSize } = await import('get-folder-size')
+      totalBytes += await getFolderSize.loose(dataDir)
+
+      async function countFiles(d: string): Promise<number> {
+        let entries: string[]
+        try {
+          entries = await fs.promises.readdir(d)
+        } catch {
+          return 0
+        }
+        let count = 0
+        for (const entry of entries) {
+          try {
+            const stats = await fs.promises.lstat(path.join(d, entry))
+            if (stats.isFile()) {
+              count++
+            } else if (stats.isDirectory()) {
+              count += await countFiles(path.join(d, entry))
+            }
+          } catch {
+            // entry removed or inaccessible between readdir and lstat
+          }
+        }
+        return count
+      }
+
+      fileCount += await countFiles(dataDir)
+    }
+  } catch {
+    // directory does not exist or inaccessible
+  }
+
+  return { totalBytes, fileCount, hasData: totalBytes > 0 }
 }
 
 export function restoreModules(
@@ -538,5 +597,6 @@ module.exports = {
   getKeywords,
   restoreModules,
   importOrRequire,
-  runNpm
+  runNpm,
+  getPluginDataSize
 }

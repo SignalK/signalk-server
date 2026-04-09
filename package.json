@@ -104,6 +104,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.1",
     "file-timestamp-stream": "^2.1.2",
+    "get-folder-size": "^5.0.0",
     "geolib": "^3.3.3",
     "helmet": "^8.1.0",
     "jose": "^6.1.0",

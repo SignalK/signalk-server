@@ -12,8 +12,23 @@ import { faCloudArrowDown } from '@fortawesome/free-solid-svg-icons/faCloudArrow
 import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
 import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons/faArrowUpRightFromSquare'
 import { faLink } from '@fortawesome/free-solid-svg-icons/faLink'
+import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import { urlToWebapp } from '../../../Webapps/Webapp'
 import semver from 'semver'
+
+interface PluginDataSize {
+  totalBytes: number
+  fileCount: number
+  hasData: boolean
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+}
 
 interface AppData {
   name: string
@@ -46,6 +61,11 @@ export default function ActionCellRenderer({
   const [distTags, setDistTags] = useState<Record<string, string>>({})
   const [loadingVersions, setLoadingVersions] = useState(false)
   const [showAllVersions, setShowAllVersions] = useState(false)
+  const [showRemoveModal, setShowRemoveModal] = useState(false)
+  const [deleteData, setDeleteData] = useState(false)
+  const [dataSize, setDataSize] = useState<PluginDataSize | null>(null)
+  const [loadingDataSize, setLoadingDataSize] = useState(false)
+  const [removeError, setRemoveError] = useState<string | null>(null)
 
   const handleInstallClick = () => {
     fetch(
@@ -114,12 +134,51 @@ export default function ActionCellRenderer({
     }
   }
 
-  const handleRemoveClick = () => {
-    if (confirm(`Are you sure you want to uninstall ${app.name}?`)) {
-      fetch(`${window.serverRoutesPrefix}/appstore/remove/${app.name}`, {
-        method: 'POST',
-        credentials: 'include'
-      })
+  const handleRemoveClick = async () => {
+    setDeleteData(false)
+    setRemoveError(null)
+    setShowRemoveModal(true)
+    setLoadingDataSize(true)
+    setDataSize(null)
+
+    try {
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/appstore/datasize/${app.name}`,
+        { credentials: 'include' }
+      )
+      if (response.ok) {
+        setDataSize(await response.json())
+      }
+    } catch (error) {
+      console.error('Failed to fetch data size:', error)
+    } finally {
+      setLoadingDataSize(false)
+    }
+  }
+
+  const handleConfirmRemove = async () => {
+    setRemoveError(null)
+    try {
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/appstore/remove/${app.name}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ deleteData })
+        }
+      )
+      if (!response.ok) {
+        setRemoveError(
+          `Failed to remove ${app.name}: server returned ${response.status}`
+        )
+        return
+      }
+      setShowRemoveModal(false)
+    } catch (error) {
+      setRemoveError(
+        `Failed to remove ${app.name}: ${error instanceof Error ? error.message : String(error)}`
+      )
     }
   }
 
@@ -353,6 +412,81 @@ export default function ActionCellRenderer({
             </p>
           )}
         </Modal.Body>
+      </Modal>
+      <Modal show={showRemoveModal} onHide={() => setShowRemoveModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Remove {app.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Are you sure you want to remove <strong>{app.name}</strong>?
+          </p>
+          {loadingDataSize ? (
+            <div className="text-center">
+              <div
+                className="spinner-border spinner-border-sm text-primary"
+                role="status"
+              >
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <span className="ms-2">Checking plugin data...</span>
+            </div>
+          ) : dataSize && dataSize.hasData ? (
+            <div className="mt-3">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id={`deleteDataCheck-${app.name}`}
+                  checked={deleteData}
+                  onChange={(e) => setDeleteData(e.target.checked)}
+                />
+                <label
+                  className="form-check-label"
+                  htmlFor={`deleteDataCheck-${app.name}`}
+                >
+                  Also delete plugin configuration and data (
+                  {formatBytes(dataSize.totalBytes)})
+                </label>
+              </div>
+              {deleteData && (
+                <div className="alert alert-danger mt-2 py-2" role="alert">
+                  <FontAwesomeIcon
+                    icon={faTriangleExclamation}
+                    className="me-2"
+                  />
+                  <small>
+                    Plugin configuration and data files ({dataSize.fileCount}{' '}
+                    {dataSize.fileCount === 1 ? 'file' : 'files'}) will be
+                    permanently deleted.
+                  </small>
+                </div>
+              )}
+            </div>
+          ) : dataSize && !dataSize.hasData ? (
+            <p className="text-muted mb-0">
+              <small>No plugin data found on disk.</small>
+            </p>
+          ) : null}
+          {removeError && (
+            <div className="alert alert-danger mt-3 py-2 mb-0" role="alert">
+              <small>{removeError}</small>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowRemoveModal(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleConfirmRemove}
+            disabled={loadingDataSize}
+          >
+            <FontAwesomeIcon className="me-2" icon={faTrashCan} />
+            Remove
+          </Button>
+        </Modal.Footer>
       </Modal>
     </div>
   )

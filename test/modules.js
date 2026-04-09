@@ -7,7 +7,8 @@ const {
   checkForNewServerVersion,
   getLatestServerVersion,
   importOrRequire,
-  runNpm
+  runNpm,
+  getPluginDataSize
 } = require('../dist/modules')
 
 describe('modulesWithKeyword', () => {
@@ -307,5 +308,68 @@ describe('runNpm version validation', () => {
 
   it('should reject plain git URL', () => {
     return testVersion('git+https://attacker.com/malicious-plugin.git', false)
+  })
+})
+
+describe('getPluginDataSize', () => {
+  let tempDir
+
+  beforeEach(() => {
+    tempDir = path.join(
+      require('os').tmpdir(),
+      '_skservertest_datasize' + Date.now()
+    )
+    fs.mkdirSync(tempDir, { recursive: true })
+  })
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  it('returns correct size for plugin with config and data files', async () => {
+    const configDataDir = path.join(tempDir, 'plugin-config-data')
+    fs.mkdirSync(configDataDir, { recursive: true })
+
+    const configContent = JSON.stringify({ enabled: true, configuration: {} })
+    fs.writeFileSync(
+      path.join(configDataDir, 'test-plugin.json'),
+      configContent
+    )
+
+    const dataDir = path.join(configDataDir, 'test-plugin')
+    fs.mkdirSync(dataDir, { recursive: true })
+    fs.writeFileSync(path.join(dataDir, 'data1.txt'), 'hello')
+    fs.writeFileSync(path.join(dataDir, 'data2.txt'), 'world')
+
+    const result = await getPluginDataSize(tempDir, 'test-plugin')
+
+    chai.expect(result.hasData).to.equal(true)
+    chai.expect(result.fileCount).to.equal(3) // config + 2 data files
+    chai.expect(result.totalBytes).to.be.greaterThan(0)
+  })
+
+  it('returns zero and hasData false for plugin with no data', async () => {
+    const result = await getPluginDataSize(tempDir, 'nonexistent-plugin')
+
+    chai.expect(result.hasData).to.equal(false)
+    chai.expect(result.fileCount).to.equal(0)
+    chai.expect(result.totalBytes).to.equal(0)
+  })
+
+  it('handles config file only without data directory', async () => {
+    const configDataDir = path.join(tempDir, 'plugin-config-data')
+    fs.mkdirSync(configDataDir, { recursive: true })
+
+    const configContent = JSON.stringify({ enabled: false })
+    fs.writeFileSync(
+      path.join(configDataDir, 'test-plugin.json'),
+      configContent
+    )
+
+    const result = await getPluginDataSize(tempDir, 'test-plugin')
+
+    chai.expect(result.hasData).to.equal(true)
+    chai.expect(result.fileCount).to.equal(1)
+    chai.expect(result.totalBytes).to.be.greaterThan(0)
   })
 })
