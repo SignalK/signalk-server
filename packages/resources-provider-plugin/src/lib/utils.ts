@@ -17,7 +17,6 @@ import ngeohash from 'ngeohash'
  * @returns: true if entry should be included in results 
  **/
 export const passFilter = (res: any, type: string, params: any) => {
-  let ok = true
 
   if (params.position && params.distance) {
     if(type ==='notes' && res.position) {
@@ -47,53 +46,48 @@ export const passFilter = (res: any, type: string, params: any) => {
         params.distance
       )
     }
+  } else {
 
-    return false
-  }
+    let ok = true
+    if (params.href) {
+      if (typeof res.href === 'undefined' || !res.href) {
+        ok = false
+      } else {
+        const ha = res.href.split('/')
+        const hType: string =
+          ha.length === 1
+            ? 'regions'
+            : ha.length > 2
+              ? ha[ha.length - 2]
+              : 'regions'
+        const hId = ha.length === 1 ? ha[0] : ha[ha.length - 1]
 
-  if (params.href) {
-    // check is attached to another resource
-    if (typeof res.href === 'undefined' || !res.href) {
-      ok = false
-    } else {
-      // deconstruct resource href value
-      const ha = res.href.split('/')
-      const hType: string =
-        ha.length === 1
-          ? 'regions'
-          : ha.length > 2
-            ? ha[ha.length - 2]
-            : 'regions'
-      const hId = ha.length === 1 ? ha[0] : ha[ha.length - 1]
+        const pa = params.href.split('/')
+        const pType: string =
+          pa.length === 1
+            ? 'regions'
+            : pa.length > 2
+              ? pa[pa.length - 2]
+              : 'regions'
+        const pId = pa.length === 1 ? pa[0] : pa[pa.length - 1]
 
-      // deconstruct param.href value
-      const pa = params.href.split('/')
-      const pType: string =
-        pa.length === 1
-          ? 'regions'
-          : pa.length > 2
-            ? pa[pa.length - 2]
-            : 'regions'
-      const pId = pa.length === 1 ? pa[0] : pa[pa.length - 1]
-
-      ok = hType === pType && hId === pId
+        ok = hType === pType && hId === pId
+      }
     }
-  }
 
-  if (params.group) {
-    // check is attached to group
-    if (typeof res.group === 'undefined') {
-      ok = ok && false
-    } else {
-      ok = ok && res.group === params.group
+    if (params.group) {
+      if (typeof res.group === 'undefined') {
+        ok = ok && false
+      } else {
+        ok = ok && res.group === params.group
+      }
     }
-  }
 
-  if (params.geobounds) {
-    // check is within bounds
-    ok = ok && isInBounds(res, type, params.geobounds)
+    if (params.geobounds) {
+      ok = ok && isInBounds(res, type, params.geobounds)
+    }
+    return ok
   }
-  return ok
 }
 
 /**
@@ -286,7 +280,7 @@ const isMultiPolygonWithInRadius = (
  * @returns The supplied value if it is numeric.
  */
 const checkForNumber = (value: number): number => {
-  if (!Number.isFinite(value)) {
+  if (!Number.isFinite(Number(value))) {
     throw new Error(`Supplied value is not a number! (${value})`)
   } else {
     return Number(value)
@@ -302,6 +296,7 @@ const checkForNumberArray = (value: number[]): Array<number> => {
   if (!Array.isArray(value)) {
     throw new Error(`Supplied value is not valid! (Array<number>) (${value})`)
   } else {
+    value = value.map( i => Number(i) )
     value.forEach((i: number) => {
       if (!Number.isFinite(i)) {
         throw new Error(
