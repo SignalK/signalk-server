@@ -160,6 +160,19 @@ export function load(app: ConfigApp) {
   }
   setSelfSettings(app)
 
+  // TRUST_PROXY env var overrides settings file — useful for container deployments
+  if (process.env.TRUST_PROXY !== undefined) {
+    const envVal = process.env.TRUST_PROXY
+    app.config.settings.trustProxy =
+      envVal === 'true'
+        ? true
+        : envVal === 'false'
+          ? false
+          : isNaN(Number(envVal))
+            ? envVal
+            : Number(envVal)
+  }
+
   // Load unit preferences
   try {
     setApplicationDataPath(app.config.configPath)
