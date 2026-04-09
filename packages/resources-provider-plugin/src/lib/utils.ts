@@ -19,8 +19,8 @@ import ngeohash from 'ngeohash'
 export const passFilter = (res: any, type: string, params: any) => {
 
   let ok = true
-  if (params.position && params.distance) {
-    if(type ==='notes' && res.position) {
+  if (params.position && typeof params.distance !== 'undefined') {
+    if(type === 'notes' && res.position) {
       ok = isPointWithinRadius(res.position, params.position, params.distance)
     } else if( res.feature?.geometry?.type === 'Point') {
       ok = isPointWithinRadius(
