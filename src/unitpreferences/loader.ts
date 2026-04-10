@@ -23,7 +23,7 @@ let baseUnitToCategoriesCache: { [baseUnit: string]: string[] } | null = null
 let applicationDataPath: string = ''
 let configUnitprefsDir: string = ''
 
-const DEFAULT_PRIMARY_CATEGORIES: PrimaryCategoryMap = { m: 'distance' }
+let defaultPrimaryCategories: PrimaryCategoryMap = {}
 
 export function setApplicationDataPath(configPath: string): void {
   applicationDataPath = path.join(configPath, 'applicationData')
@@ -138,6 +138,17 @@ export function loadAll(): void {
         defaultCategories[p] = categoryName
       }
     }
+  }
+
+  // Load default primary categories (read-only, from package)
+  const primaryCatPath = path.join(
+    PACKAGE_UNITPREFS_DIR,
+    'primary-categories.json'
+  )
+  if (fs.existsSync(primaryCatPath)) {
+    defaultPrimaryCategories = JSON.parse(
+      fs.readFileSync(primaryCatPath, 'utf-8')
+    )
   }
 
   // Invalidate reverse lookup cache
@@ -329,7 +340,7 @@ export function getCategoryForBaseUnit(
   }
 
   // 2. Fall back to system default
-  const defaultPrimary = DEFAULT_PRIMARY_CATEGORIES[baseUnit]
+  const defaultPrimary = defaultPrimaryCategories[baseUnit]
   if (defaultPrimary && matchingCategories.includes(defaultPrimary))
     return defaultPrimary
 
