@@ -4,7 +4,9 @@ import {
   CategoryMap,
   UnitDefinitions,
   Preset,
-  UnitPreferencesConfig
+  UnitPreferencesConfig,
+  PrimaryCategoryMap,
+  UserUnitPreferences
 } from './types'
 
 const PACKAGE_UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
@@ -17,8 +19,11 @@ let customDefinitions: UnitDefinitions
 let activePreset: Preset
 let config: UnitPreferencesConfig
 let defaultCategories: { [path: string]: string } = {}
+let baseUnitToCategoriesCache: { [baseUnit: string]: string[] } | null = null
 let applicationDataPath: string = ''
 let configUnitprefsDir: string = ''
+
+const DEFAULT_PRIMARY_CATEGORIES: PrimaryCategoryMap = { m: 'distance' }
 
 export function setApplicationDataPath(configPath: string): void {
   applicationDataPath = path.join(configPath, 'applicationData')
@@ -135,6 +140,9 @@ export function loadAll(): void {
     }
   }
 
+  // Invalidate reverse lookup cache
+  baseUnitToCategoriesCache = null
+
   // Load active preset
   loadActivePreset()
 }
@@ -223,6 +231,7 @@ export function reloadCustomDefinitions(): void {
 }
 
 export function reloadCustomCategories(): void {
+  baseUnitToCategoriesCache = null
   const customCatPath = configUnitprefsDir
     ? path.join(configUnitprefsDir, 'custom-categories.json')
     : path.join(PACKAGE_UNITPREFS_DIR, 'custom-categories.json')
@@ -251,13 +260,17 @@ export function getMergedDefinitions(): UnitDefinitions {
   return merged
 }
 
-export function getDefaultCategory(signalkPath: string): string | null {
-  // Direct match first
+export function getDefaultCategory(
+  signalkPath: string,
+  pathSiUnit?: string,
+  username?: string
+): string | null {
+  // Priority 1: Direct match in default-categories.json
   if (defaultCategories[signalkPath]) {
     return defaultCategories[signalkPath]
   }
 
-  // Try wildcard matching
+  // Priority 2: Wildcard match in default-categories.json
   for (const [pattern, category] of Object.entries(defaultCategories)) {
     if (pattern.includes('*')) {
       const regex = new RegExp(
@@ -274,7 +287,91 @@ export function getDefaultCategory(signalkPath: string): string | null {
     }
   }
 
+  // Priority 3: Auto-assign from base unit
+  if (pathSiUnit) {
+    return getCategoryForBaseUnit(pathSiUnit, username)
+  }
+
   return null
+}
+
+export function getBaseUnitToCategories(): { [baseUnit: string]: string[] } {
+  if (!baseUnitToCategoriesCache) {
+    baseUnitToCategoriesCache = {}
+    const cats = getCategories()
+    for (const [category, baseUnit] of Object.entries(cats.categoryToBaseUnit)) {
+      if (!baseUnitToCategoriesCache[baseUnit]) {
+        baseUnitToCategoriesCache[baseUnit] = []
+      }
+      baseUnitToCategoriesCache[baseUnit].push(category)
+    }
+  }
+  return baseUnitToCategoriesCache
+}
+
+export function getCategoryForBaseUnit(
+  baseUnit: string,
+  username?: string
+): string | null {
+  const map = getBaseUnitToCategories()
+  const matchingCategories = map[baseUnit]
+  if (!matchingCategories || matchingCategories.length === 0) return null
+  if (matchingCategories.length === 1) return matchingCategories[0]
+
+  // Multiple categories for this base unit — need disambiguation
+  // 1. Check per-user primary category
+  if (username) {
+    const userPrefs = loadUserPreferences(username)
+    if (userPrefs?.primaryCategories?.[baseUnit]) {
+      const userPrimary = userPrefs.primaryCategories[baseUnit]
+      if (matchingCategories.includes(userPrimary)) return userPrimary
+    }
+  }
+
+  // 2. Fall back to system default
+  const defaultPrimary = DEFAULT_PRIMARY_CATEGORIES[baseUnit]
+  if (defaultPrimary && matchingCategories.includes(defaultPrimary))
+    return defaultPrimary
+
+  // 3. Fall back to first category alphabetically (deterministic)
+  return [...matchingCategories].sort()[0]
+}
+
+export function loadUserPreferences(
+  username: string
+): UserUnitPreferences | null {
+  if (!applicationDataPath) return null
+  try {
+    const userPrefPath = path.join(
+      applicationDataPath,
+      'users',
+      username,
+      'unitpreferences',
+      '1.0.0.json'
+    )
+    if (fs.existsSync(userPrefPath)) {
+      return JSON.parse(fs.readFileSync(userPrefPath, 'utf-8'))
+    }
+  } catch {
+    // Fall through
+  }
+  return null
+}
+
+export function saveUserPreferences(
+  username: string,
+  prefs: UserUnitPreferences
+): void {
+  if (!applicationDataPath) throw new Error('applicationDataPath not set')
+  const dir = path.join(
+    applicationDataPath,
+    'users',
+    username,
+    'unitpreferences'
+  )
+  fs.mkdirSync(dir, { recursive: true })
+  const filePath = path.join(dir, '1.0.0.json')
+  fs.writeFileSync(filePath, JSON.stringify(prefs, null, 2))
 }
 
 function loadPresetByName(presetName: string): Preset | null {
@@ -309,24 +406,11 @@ function loadPresetByName(presetName: string): Preset | null {
 
 export function getActivePresetForUser(username?: string): Preset {
   // 1. Check applicationData for user's preset preference
-  if (username && applicationDataPath) {
-    try {
-      const userPrefPath = path.join(
-        applicationDataPath,
-        'users',
-        username,
-        'unitpreferences',
-        '1.0.0.json'
-      )
-      if (fs.existsSync(userPrefPath)) {
-        const userPref = JSON.parse(fs.readFileSync(userPrefPath, 'utf-8'))
-        if (userPref?.activePreset) {
-          const preset = loadPresetByName(userPref.activePreset)
-          if (preset) return preset
-        }
-      }
-    } catch {
-      // Fall through to other options
+  if (username) {
+    const userPref = loadUserPreferences(username)
+    if (userPref?.activePreset) {
+      const preset = loadPresetByName(userPref.activePreset)
+      if (preset) return preset
     }
   }
   // 2. User-specific preset from config (legacy)

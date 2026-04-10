@@ -134,7 +134,11 @@ const {
   reloadPreset,
   reloadCustomDefinitions,
   reloadCustomCategories,
-  getDefaultCategory
+  getDefaultCategory,
+  getBaseUnitToCategories,
+  getCategoryForBaseUnit,
+  loadUserPreferences,
+  saveUserPreferences
 } = require('../unitpreferences')
 
 const PACKAGE_UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
@@ -619,6 +623,73 @@ module.exports = function (app) {
     }
   })
 
+  // GET /signalk/v1/unitpreferences/primary-categories
+  router.get('/primary-categories', (req, res) => {
+    try {
+      const baseUnitMap = getBaseUnitToCategories()
+      const username = req.skPrincipal?.identifier
+
+      // Only include base units with multiple categories
+      const ambiguousUnits = {}
+      for (const [baseUnit, cats] of Object.entries(baseUnitMap)) {
+        if (cats.length > 1) {
+          ambiguousUnits[baseUnit] = cats
+        }
+      }
+
+      // Get effective primary for each ambiguous unit
+      const effectivePrimary = {}
+      for (const baseUnit of Object.keys(ambiguousUnits)) {
+        effectivePrimary[baseUnit] = getCategoryForBaseUnit(baseUnit, username)
+      }
+
+      res.json({ ambiguousUnits, effectivePrimary })
+    } catch (err) {
+      debug('Error getting primary categories:', err)
+      res.status(500).json({ error: 'Failed to get primary categories' })
+    }
+  })
+
+  // PUT /signalk/v1/unitpreferences/primary-categories
+  router.put('/primary-categories', (req, res) => {
+    try {
+      const username = req.skPrincipal?.identifier
+      if (!username) {
+        res.status(401).json({ error: 'Authentication required' })
+        return
+      }
+
+      const baseUnitMap = getBaseUnitToCategories()
+      for (const [baseUnit, category] of Object.entries(req.body)) {
+        if (!baseUnitMap[baseUnit]) {
+          res.status(400).json({ error: `Unknown base unit: ${baseUnit}` })
+          return
+        }
+        if (!baseUnitMap[baseUnit].includes(category)) {
+          res
+            .status(400)
+            .json({
+              error: `Category "${category}" does not use base unit "${baseUnit}"`
+            })
+          return
+        }
+      }
+
+      const userPrefs = loadUserPreferences(username) || {}
+      userPrefs.primaryCategories = {
+        ...userPrefs.primaryCategories,
+        ...req.body
+      }
+      saveUserPreferences(username, userPrefs)
+
+      app.emit('unitpreferencesChanged', { username })
+      res.json({ success: true })
+    } catch (err) {
+      debug('Error saving primary categories:', err)
+      res.status(500).json({ error: 'Failed to save primary categories' })
+    }
+  })
+
   return {
     start: function () {
       if (!app.securityStrategy.isDummy()) {
@@ -633,6 +704,9 @@ module.exports = function (app) {
         )
         app.securityStrategy.addAdminWriteMiddleware(
           '/signalk/v1/unitpreferences/presets/custom/upload'
+        )
+        app.securityStrategy.addWriteMiddleware(
+          '/signalk/v1/unitpreferences/primary-categories'
         )
         // addAdminMiddleware protects all methods (including DELETE)
         app.securityStrategy.addAdminMiddleware(
