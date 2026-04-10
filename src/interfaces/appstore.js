@@ -166,7 +166,8 @@ module.exports = function (app) {
 
         Promise.all([
           findPluginsAndWebapps().catch((err) => {
-            console.log(`findPluginsAndWebapps failed: ${err.message}`)
+            console.error(`findPluginsAndWebapps failed: ${err.message}`)
+            debug(err.stack)
             return [[], []]
           }),
           getLatestServerVersion(app.config.version).catch(() => '0.0.0'),

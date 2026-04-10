@@ -420,8 +420,8 @@ async function findModulesWithKeyword(
   return packages
 }
 
-const NPM_SEARCH_TIMEOUT_MS = 30_000
-const NPM_DIST_TAGS_TIMEOUT_MS = 10_000
+const NPM_SEARCH_TIMEOUT_MS = 60_000
+const NPM_DIST_TAGS_TIMEOUT_MS = 20_000
 
 async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
   let fetchedCount = 0
@@ -495,7 +495,7 @@ function doFetchDistTags() {
   return fetch(
     'https://registry.npmjs.org/-/package/signalk-server/dist-tags',
     {
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(NPM_DIST_TAGS_TIMEOUT_MS)
     }
   )
 }
