@@ -93,7 +93,21 @@ export function resolveDisplayUnits(
     return null // No target unit defined
   }
 
-  // Step 3: Get formula from definitions
+  // Step 3: Identity conversion (targetUnit === baseUnit)
+  if (targetUnit === siUnit) {
+    return {
+      category,
+      targetUnit,
+      formula: 'value',
+      inverseFormula: 'value',
+      symbol: siUnit,
+      displayFormat:
+        storedDisplayUnits.displayFormat ||
+        preset?.categories?.[category]?.displayFormat
+    }
+  }
+
+  // Step 4: Get formula from definitions
   const unitDef = definitions[siUnit]
   if (!unitDef?.conversions) {
     return null // No conversions for this SI unit
@@ -104,7 +118,7 @@ export function resolveDisplayUnits(
     return null // Target unit not found in conversions
   }
 
-  // Step 4: Build response
+  // Step 5: Build response
   return {
     category,
     targetUnit,

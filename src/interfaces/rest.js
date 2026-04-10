@@ -71,7 +71,9 @@ function enhanceTreeMetadata(node, pathParts, username) {
   if (node === null || typeof node !== 'object') return
   if (node.meta) {
     const signalkPath = pathParts.join('.')
-    enhanceMetadataResponse(node.meta, signalkPath, username)
+    const metaCopy = JSON.parse(JSON.stringify(node.meta))
+    enhanceMetadataResponse(metaCopy, signalkPath, username)
+    node.meta = metaCopy
   }
   for (const key in node) {
     if (!SKIP_KEYS.has(key)) {
