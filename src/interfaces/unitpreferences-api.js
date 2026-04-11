@@ -664,9 +664,7 @@ module.exports = function (app) {
         typeof req.body !== 'object' ||
         Array.isArray(req.body)
       ) {
-        res
-          .status(400)
-          .json({ error: 'Request body must be a JSON object' })
+        res.status(400).json({ error: 'Request body must be a JSON object' })
         return
       }
 
