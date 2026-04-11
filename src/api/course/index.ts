@@ -938,7 +938,7 @@ export class CourseApi {
     if ('href' in dest) {
       const typedHref = this.parseHref(dest.href)
       if (typedHref) {
-        debug(`fetching ${JSON.stringify(typedHref)}`)
+        debug.enabled && debug(`fetching ${JSON.stringify(typedHref)}`)
         // fetch waypoint resource details
         try {
           const r = (await this.resourcesApi.getResource(

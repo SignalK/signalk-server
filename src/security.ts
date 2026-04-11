@@ -373,7 +373,7 @@ export function getCertificateOptions(app: WithConfig, cb: any) {
     if (existsSync(chainFile)) {
       debug('Found ssl-chain.pem')
       ca = getCAChainArray(chainFile)
-      debug(JSON.stringify(ca, null, 2))
+      debug.enabled && debug(JSON.stringify(ca, null, 2))
     }
     debug(`Using certificate ssl-key.pem and ssl-cert.pem in ${certLocation}`)
     cb(null, {

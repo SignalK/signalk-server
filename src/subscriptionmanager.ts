@@ -293,7 +293,7 @@ function contextMatcher(
   subscribeCommand: SubscribeMessage,
   errorCallback: any
 ): ContextMatcher {
-  debug('subscribeCommand:' + JSON.stringify(subscribeCommand))
+  debug.enabled && debug('subscribeCommand:' + JSON.stringify(subscribeCommand))
   if (subscribeCommand.context) {
     if (isString(subscribeCommand.context)) {
       const pattern = subscribeCommand.context

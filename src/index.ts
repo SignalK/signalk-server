@@ -701,7 +701,8 @@ function startMdns(app: ServerApp & WithConfig) {
 async function startInterfaces(
   app: ServerApp & WithConfig & WithWrappedEmitter
 ) {
-  debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
+  debug.enabled &&
+    debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
   const availableInterfaces = require('./interfaces')
   return await Promise.all(
     Object.keys(availableInterfaces).map(async (name) => {
