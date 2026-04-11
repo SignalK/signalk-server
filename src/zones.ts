@@ -22,7 +22,7 @@ export class Zones {
     private sendDelta: (delta: Delta) => void
   ) {
     streambundle.getSelfMetaBus().onValue((metaMessage) => {
-      debug(`${JSON.stringify(metaMessage)}`)
+      debug.enabled && debug(`${JSON.stringify(metaMessage)}`)
       const { path, value } = metaMessage
 
       //send normal notification to clear out any previous notification

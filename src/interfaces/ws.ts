@@ -563,7 +563,11 @@ function wsInterface(app: WsApp): WsApi {
                 debug('Failed to parse message: ' + (e as Error).message)
                 return
               }
-              debug('<' + JSON.stringify(parsedMsg))
+              // Guard to avoid JSON.stringify on every inbound message
+              // when the debug namespace is disabled — the argument to
+              // debug() would otherwise be eagerly evaluated for each
+              // message. Pattern mirrors tcp.ts:169/181.
+              debug.enabled && debug('<' + JSON.stringify(parsedMsg))
 
               try {
                 if (parsedMsg.token) {

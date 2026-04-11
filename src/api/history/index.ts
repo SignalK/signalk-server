@@ -198,7 +198,7 @@ export class HistoryApiHttpRegistry {
           if (errors.length > 0) {
             throw new Error(`Validation errors: ${errors.join(', ')}`)
           }
-          debug(JSON.stringify(timeRangeParams, null, 2))
+          debug.enabled && debug(JSON.stringify(timeRangeParams, null, 2))
           return provider.getContexts(timeRangeParams)
         },
         res
@@ -213,7 +213,7 @@ export class HistoryApiHttpRegistry {
           if (errors.length > 0) {
             throw new Error(`Validation errors: ${errors.join(', ')}`)
           }
-          debug(JSON.stringify(timeRangeParams, null, 2))
+          debug.enabled && debug(JSON.stringify(timeRangeParams, null, 2))
           return provider.getPaths(timeRangeParams)
         },
         res
@@ -291,7 +291,7 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
     resolution,
     pathSpecs
   }
-  debug(JSON.stringify(parsed, null, 2))
+  debug.enabled && debug(JSON.stringify(parsed, null, 2))
   return parsed
 }
 

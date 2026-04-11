@@ -814,7 +814,8 @@ function tokenSecurityFactory(
             if (!isNever(theExpiration)) {
               jwtOptions.expiresIn = theExpiration as StringValue
             }
-            debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
+            debug.enabled &&
+              debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
             try {
               const token = jwt.sign(
                 payload,
