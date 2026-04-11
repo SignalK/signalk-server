@@ -217,11 +217,16 @@ export default class DeltaCache {
       []
     )
 
-    deltas.sort((left, right) => {
-      return (
-        new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
-      )
-    })
+    // ISO 8601 Zulu timestamps (as produced by new Date().toISOString() in
+    // handleMessage) are lexicographically sortable, so we can avoid
+    // allocating two Date objects per comparison.
+    deltas.sort((left, right) =>
+      left.timestamp < right.timestamp
+        ? -1
+        : left.timestamp > right.timestamp
+          ? 1
+          : 0
+    )
 
     return deltas.map(toDelta).filter((delta) => {
       return this.app.securityStrategy.filterReadDelta(user, delta)
