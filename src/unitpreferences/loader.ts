@@ -179,8 +179,9 @@ export function loadAll(): void {
     )
   }
 
-  // Invalidate reverse lookup cache
+  // Invalidate caches
   baseUnitToCategoriesCache = null
+  userPreferencesCache.clear()
 
   // Load active preset
   loadActivePreset()
@@ -401,7 +402,6 @@ export function loadUserPreferences(
       debug('Error reading user preferences for %s: %O', username, err)
     }
   }
-  userPreferencesCache.set(username, null)
   return null
 }
 
@@ -414,7 +414,7 @@ export function saveUserPreferences(
   const dir = path.dirname(filePath)
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(filePath, JSON.stringify(prefs, null, 2))
-  userPreferencesCache.set(username, prefs)
+  userPreferencesCache.set(username, JSON.parse(JSON.stringify(prefs)))
 }
 
 function loadPresetByName(presetName: string): Preset | null {

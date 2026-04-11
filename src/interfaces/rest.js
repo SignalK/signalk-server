@@ -89,7 +89,7 @@ function enhanceTreeMetadata(node, pathParts, username) {
 function collectMeta(node, pathParts, result) {
   if (node === null || typeof node !== 'object') return
   if (node.meta) {
-    result[pathParts.join('.')] = node.meta
+    result[pathParts.join('.')] = JSON.parse(JSON.stringify(node.meta))
   }
   for (const key in node) {
     if (!SKIP_KEYS.has(key)) {
