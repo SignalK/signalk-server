@@ -659,8 +659,31 @@ module.exports = function (app) {
         return
       }
 
+      if (
+        !req.body ||
+        typeof req.body !== 'object' ||
+        Array.isArray(req.body)
+      ) {
+        res
+          .status(400)
+          .json({ error: 'Request body must be a JSON object' })
+        return
+      }
+
+      const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
       const baseUnitMap = getBaseUnitToCategories()
+      const validated = {}
       for (const [baseUnit, category] of Object.entries(req.body)) {
+        if (UNSAFE_KEYS.has(baseUnit)) {
+          res.status(400).json({ error: `Invalid key: ${baseUnit}` })
+          return
+        }
+        if (typeof category !== 'string') {
+          res
+            .status(400)
+            .json({ error: `Value for "${baseUnit}" must be a string` })
+          return
+        }
         if (!baseUnitMap[baseUnit]) {
           res.status(400).json({ error: `Unknown base unit: ${baseUnit}` })
           return
@@ -671,12 +694,13 @@ module.exports = function (app) {
           })
           return
         }
+        validated[baseUnit] = category
       }
 
       const userPrefs = loadUserPreferences(username) || {}
       userPrefs.primaryCategories = {
         ...userPrefs.primaryCategories,
-        ...req.body
+        ...validated
       }
       saveUserPreferences(username, userPrefs)
 

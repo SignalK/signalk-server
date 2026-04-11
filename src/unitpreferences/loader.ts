@@ -8,9 +8,14 @@ import {
   PrimaryCategoryMap,
   UserUnitPreferences
 } from './types'
+import { createDebug } from '../debug'
+
+const debug = createDebug('signalk-server:unitpreferences:loader')
 
 const PACKAGE_UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
 export const DEFAULT_PRESET = 'nautical-metric'
+const VALID_USERNAME = /^[a-zA-Z0-9_.\-@]+$/
+const USER_PREFS_FILE = '1.0.0.json'
 
 let categories: CategoryMap
 let customCategories: { [category: string]: string } = {}
@@ -20,10 +25,33 @@ let activePreset: Preset
 let config: UnitPreferencesConfig
 let defaultCategories: { [path: string]: string } = {}
 let baseUnitToCategoriesCache: { [baseUnit: string]: string[] } | null = null
+const userPreferencesCache = new Map<string, UserUnitPreferences | null>()
 let applicationDataPath: string = ''
 let configUnitprefsDir: string = ''
 
 let defaultPrimaryCategories: PrimaryCategoryMap = {}
+
+function validateUsername(username: string): void {
+  if (!VALID_USERNAME.test(username)) {
+    throw new Error(`Invalid username: ${username}`)
+  }
+}
+
+function getUserPrefsPath(username: string): string {
+  validateUsername(username)
+  const result = path.join(
+    applicationDataPath,
+    'users',
+    username,
+    'unitpreferences',
+    USER_PREFS_FILE
+  )
+  const resolved = path.resolve(result)
+  if (!resolved.startsWith(path.resolve(applicationDataPath))) {
+    throw new Error(`Invalid username path: ${username}`)
+  }
+  return result
+}
 
 export function setApplicationDataPath(configPath: string): void {
   applicationDataPath = path.join(configPath, 'applicationData')
@@ -354,20 +382,26 @@ export function loadUserPreferences(
   username: string
 ): UserUnitPreferences | null {
   if (!applicationDataPath) return null
+
+  const cached = userPreferencesCache.get(username)
+  if (cached !== undefined) return cached
+
   try {
-    const userPrefPath = path.join(
-      applicationDataPath,
-      'users',
-      username,
-      'unitpreferences',
-      '1.0.0.json'
-    )
+    const userPrefPath = getUserPrefsPath(username)
     if (fs.existsSync(userPrefPath)) {
-      return JSON.parse(fs.readFileSync(userPrefPath, 'utf-8'))
+      const prefs = JSON.parse(
+        fs.readFileSync(userPrefPath, 'utf-8')
+      ) as UserUnitPreferences
+      userPreferencesCache.set(username, prefs)
+      return prefs
     }
-  } catch {
-    // Fall through
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException).code
+    if (code !== 'ENOENT') {
+      debug('Error reading user preferences for %s: %O', username, err)
+    }
   }
+  userPreferencesCache.set(username, null)
   return null
 }
 
@@ -376,15 +410,11 @@ export function saveUserPreferences(
   prefs: UserUnitPreferences
 ): void {
   if (!applicationDataPath) throw new Error('applicationDataPath not set')
-  const dir = path.join(
-    applicationDataPath,
-    'users',
-    username,
-    'unitpreferences'
-  )
+  const filePath = getUserPrefsPath(username)
+  const dir = path.dirname(filePath)
   fs.mkdirSync(dir, { recursive: true })
-  const filePath = path.join(dir, '1.0.0.json')
   fs.writeFileSync(filePath, JSON.stringify(prefs, null, 2))
+  userPreferencesCache.set(username, prefs)
 }
 
 function loadPresetByName(presetName: string): Preset | null {
