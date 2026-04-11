@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { EventEmitter } from 'events'
 import Nmea0183ToSignalK from './nmea0183-signalk'
+import Liner from './liner'
 import { collectStreamOutput } from './test-helpers'
 
 function createNmeaApp() {
@@ -132,5 +133,86 @@ describe('Nmea0183ToSignalK', () => {
 
     const results = await outputPromise
     expect(results).to.have.length(0)
+  })
+
+  it('drops # comment lines without parsing or emitting events', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test'
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write('# not a start bit')
+    stream.write('# invalid stop bits')
+    stream.write('# anything else upstream wants to say')
+    stream.end()
+
+    const results = await outputPromise
+    expect(results).to.have.length(0)
+    expect(app.nmea0183Events).to.have.length(0)
+    expect(app.signalkEvents).to.have.length(0)
+  })
+
+  it('passes valid sentences through when interleaved with # comments', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test'
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write('# not a start bit')
+    stream.write(RMC_SENTENCE)
+    stream.write('# invalid stop bits')
+    stream.end()
+
+    const results = await outputPromise
+    expect(results).to.have.length(1)
+    expect(app.nmea0183Events).to.deep.equal([RMC_SENTENCE])
+  })
+
+  it('drops empty input lines silently', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test'
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write('')
+    stream.write('   ')
+    stream.end()
+
+    const results = await outputPromise
+    expect(results).to.have.length(0)
+    expect(app.nmea0183Events).to.have.length(0)
+    expect(app.signalkEvents).to.have.length(0)
+  })
+
+  it('parses a valid sentence inside a multi-line chunk via Liner', async () => {
+    const app = createNmeaApp()
+    const liner = new Liner({})
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test'
+    })
+
+    liner.pipe(stream)
+    const outputPromise = collectStreamOutput(stream)
+
+    // Simulate the OS pipe coalescing several Python print() calls into a
+    // single read: a framing-error comment, a real sentence, another
+    // comment, all in one chunk. The Liner splits the chunk back into
+    // individual lines so the parser sees each one on its own.
+    liner.write(`# not a start bit\n${RMC_SENTENCE}\n# invalid stop bits\n`)
+    liner.end()
+
+    const results = await outputPromise
+    expect(results).to.have.length(1)
+    expect(app.nmea0183Events).to.deep.equal([RMC_SENTENCE])
   })
 })
