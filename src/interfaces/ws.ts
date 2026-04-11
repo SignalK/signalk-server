@@ -1016,9 +1016,7 @@ function handleValuesMeta(
         > | null
         if (meta) {
           // Clone and enhance metadata with displayUnits formulas
-          const metaClone: Record<string, unknown> = JSON.parse(
-            JSON.stringify(meta)
-          )
+          const metaClone = structuredClone(meta) as Record<string, unknown>
           let storedDisplayUnits = metaClone.displayUnits as
             | Record<string, unknown>
             | undefined
