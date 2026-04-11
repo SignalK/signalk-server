@@ -41,7 +41,7 @@ The Notifications API implements a **Notification Manager** that provides the ab
 It does this by:
 
 - Placing notifications into their own `update` in the delta message
-- Assigning unique identifier which is used to perfom actions
+- Assigning unique identifier which is used to perform actions
 - Adding a `status` property to the payload
 - Making available HTTP endpoints at `/signalk/v2/api/notifications` to perform actions
 - Providing a plugin interface to allow plugins to access API methods
@@ -157,7 +157,7 @@ _Notification: post `clear` request_
       "silenced": false,
       "acknowledged": false,
       "canSilence": true,
-      "canAcknow;edge": true,
+      "canAcknowledge": true,
       "canClear": true
    }
 }
@@ -352,7 +352,7 @@ The tables below detail the resultant notification `method` following the succes
 
 ### 1. Raise
 
-Generates notifcations with the following property values:
+Generates notifications with the following property values:
 
 | Source | State        | Method             | canSilence | canAcknowledge | canClear |
 | ------ | ------------ | ------------------ | ---------- | -------------- | -------- |

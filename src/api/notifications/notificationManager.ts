@@ -144,7 +144,7 @@ export class NotificationManager {
     const { state, message, data } = options
 
     alarm.value.state = state ?? alarm.value.state
-    alarm.status.canSilence = state === ALARM_STATE.emergency ? false : true
+    alarm.status.canSilence = state && state === ALARM_STATE.emergency ? false : true
 
     alarm.value.message = message ?? alarm.value.message
     alarm.value.data = data ?? alarm.value.data
