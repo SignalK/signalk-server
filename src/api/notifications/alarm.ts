@@ -39,10 +39,6 @@ export class Alarm {
     status: this.status
   }
 
-  /**
-   * Alarm Object
-   * @param notificationId Notification identifier
-   */
   constructor(notificationId?: NotificationId) {
     if (notificationId) {
       this.timeStamp()
@@ -54,8 +50,6 @@ export class Alarm {
 
   /**
    * Extract and populate attributes from update and context
-   * @param update Update object
-   * @param context Context value
    */
   private parseDelta(update: Update, context: Context) {
     this.context = context
@@ -97,8 +91,6 @@ export class Alarm {
 
   /**
    * Create / update alarm from incoming update and context
-   * @param update Update object
-   * @param context Context value
    */
   public syncFromNotificationUpdate(update: Update, context: Context) {
     this.external = true
@@ -143,7 +135,6 @@ export class Alarm {
 
   /**
    * Generates and returns the delta payload for use with `handleMessage()`
-   * @returns Delta message payload
    */
   get delta(): Delta {
     if (hasValues(this.update)) {
@@ -185,7 +176,6 @@ export class Alarm {
 
   /**
    * Sets the path associated with the alarm.
-   * @param id If supplied, the identifier will be appended to the notification path.
    */
   public setPath(path: Path, id?: string) {
     if (path) {
@@ -196,7 +186,6 @@ export class Alarm {
     }
   }
 
-  /** Silence Alarm */
   public silence() {
     if (!this.status.canSilence) {
       throw new Error('Alarm cannot be silenced!')
@@ -212,7 +201,6 @@ export class Alarm {
     this.timeStamp()
   }
 
-  /** Acknowledge Alarm */
   public acknowledge() {
     if (!this.status.canAcknowledge) {
       throw new Error('Alarm cannot be acknowledged!')
@@ -225,9 +213,6 @@ export class Alarm {
     this.timeStamp()
   }
 
-  /**
-   * Clears the Alarm by setting state = normal and resetting status.
-   */
   public clear() {
     if (!this.status.canClear) {
       throw new Error('Alarm cannot be cleared!')

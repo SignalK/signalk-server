@@ -250,7 +250,7 @@ export class NotificationApi {
     this.app.post(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path} ${req.body}`)
       try {
-        const id = this.notificationManager.raise(req.body)
+        const id = this.raise(req.body)
         res.status(200).json(Object.assign({}, Responses.ok, { id: id }))
       } catch (err) {
         res.status(400).json({
@@ -289,7 +289,7 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path} ${req.body}`)
         try {
-          const id = this.notificationManager.mob(req.body)
+          const id = this.mob(req.body)
           res.status(200).json(Object.assign({}, Responses.ok, { id: id }))
         } catch (err) {
           res.status(400).json({

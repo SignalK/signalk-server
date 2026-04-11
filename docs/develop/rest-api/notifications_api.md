@@ -52,12 +52,12 @@ It does this by:
 
 The Notification API adds the following attributes to the notification payload:
 
-- `id` - Unique identifier for use when taking action.
-- `status` - An object detailing the actions that can be and have been taken.
+- `id` - Unique identifier that is used when taking action on a notification
+- `status` - An object detailing the actions that can be and have been taken
 
 The following attributes can be applied when a notification is raised using the API:
 
-- `createdAt` - Timestamp indicating when the notification was raised.
+- `createdAt` - Timestamp indicating when the notification was raised
 - `position` - Position associated with the notification _(i.e. vessel position when notification was raised)_
 
 _Example_
@@ -76,7 +76,10 @@ _Example_
     "canClear": true
   },
   "createdAt": "2026-04-06T03:34:48.203Z",
-  "position": { "latitude": 57.73241514375983, "longitude": 11.66365146637231 }
+  "position": {
+    "latitude": 57.73241514375983,
+    "longitude": 11.66365146637231
+  }
 }
 ```
 
@@ -88,12 +91,14 @@ The following status properties indicate the actions that **CAN be taken**. Thei
 
 - `canSilence` - indicates whether the Alarm associated with this notification can be silenced
 - `canAcknowledge` - indicates whether the Alarm associated with this notification can be acknowledged
-- `canClear` - Indicates that the associated Alarm can be cleared (triggering condition has been resolved). _The value is `false` when the notification is not originated by the Notifcations API._
+- `canClear` - Indicates that the associated Alarm can be cleared (triggering condition has been resolved).
+
+> Note: `canClear` will always be `false` for notifications that are not originated by the Notifcations API.
 
 The remaining properties indicate the actions that **HAVE been taken**:
 
-- `silenced` - `true` when silence action has been taken
-- `acknowledged` - `true` when acknowledge action has been taken
+- `silenced` - `true` when the silence action has been taken
+- `acknowledged` - `true` when the acknowledge action has been taken
 
 ## Taking Action
 
@@ -101,17 +106,217 @@ The Notification API implements endpoints to raise, update, take action, and cle
 
 ### Raising an Alarm
 
-> Note: To Do
+To raise a new notification with a specified alarm `state` send a HTTP POST request to `/signalk/v2/api/notifications` with an object containing the following properties:
+
+- `state` (mandatory) - alarm state value to set _(e.g. emergency, alarm, etc.)_
+- `message` (mandatory) - message to display or speak.
+- `path` (optional) - path to assign. _(default: `notifications.{notificationId}`)_
+- `idInPath` (optional) - when `true` will append the `notificationId` to the supplied `path` _(e.g. `notifications.myalarm.{notificationId}`)_
+- `includePosition` (optional) - when `true` includes the vessel position in the notification payload
+- `includeCreatedAt` (optional) - when `true` includes the current date/time in the notification payload
+- `data` (optional) - object containing additional key / value pairs to include in the notification payload
+
+The response from a successful `raise` request will contain the `notificationId` of the notification.
+
+```JSON
+{
+  "state": "COMPLETED",
+  "statusCode": 200,
+  "id": "a987be59-d26f-46db-afeb-83987b837a8f"
+}
+```
+
+_Example: Minimal `raise` request_
+
+```typescript
+HTTP POST "/signalk/v2/api/notifications"
+{
+   "state": "alarm"
+   "message": "Port engine temperature is very high!"
+}
+```
+
+_Notification_
+
+```JSON
+{
+   "path": "notifications.a987be59-d26f-46db-afeb-83987b837a8f",
+   "value": {
+      "message": "Port engine temperature is very high!",
+      "method": ["sound", "visual"],
+      "state": "alarm",
+      "id": "a987be59-d26f-46db-afeb-83987b837a8f",
+      "status": {
+         "silenced": false,
+         "acknowledged": false,
+         "canSilence": true,
+         "canAcknowledge": true,
+         "canClear": true
+      }
+   }
+}
+```
+
+_Example: `raise` request specifying path_
+
+```typescript
+HTTP POST "/signalk/v2/api/notifications"
+{
+   "state": "alarm"
+   "message": "Port engine temperature is very high!",
+   "path": "propulsion.port.temperature"
+}
+```
+
+_Notification_
+
+```JSON
+{
+   "path": "notifications.propulsion.port.temperature",
+   "value": {
+      "message": "Port engine temperature is very high!",
+      "method": ["sound", "visual"],
+      "state": "alarm",
+      "id": "a987be59-d26f-46db-afeb-83987b837a8f",
+      "status": {
+         "silenced": false,
+         "acknowledged": false,
+         "canSilence": true,
+         "canAcknowledge": true,
+         "canClear": true
+      }
+   }
+}
+```
+
+### (MOB) Person Overboard Alarm
+
+To raise a MOB alarm send a HTTP POST request to `/signalk/v2/api/notifications/mob`.
+
+```typescript
+HTTP POST "/signalk/v2/api/notifications/mob"
+```
+
+_MOB Notification_
+
+```JSON
+{
+   "path": "notifications.mob.a987be59-d26f-46db-afeb-83987b837a8f",
+   "value": {
+      "message": "Person Overboard!",
+      "method": ["sound", "visual"],
+      "state": "emergency",
+      "id": "a987be59-d26f-46db-afeb-83987b837a8f",
+      "status": {
+         "silenced": false,
+         "acknowledged": false,
+         "canSilence": false,
+         "canAcknowledge": true,
+         "canClear": true
+      },
+      "createdAt": "2026-04-06T03:34:48.203Z",
+      "position": {
+         "latitude": 57.73241514375983,
+         "longitude": 11.66365146637231
+      }
+   }
+}
+```
+
+To include a specific message, provide a `message` with the request.
+
+```typescript
+HTTP POST "/signalk/v2/api/notifications/mob" {
+   "message": "Crew member #1 overboard!"
+}
+```
+
+_MOB Notification_
+
+```JSON
+{
+   "path": "notifications.mob.a987be59-d26f-46db-afeb-83987b837a8f",
+   "value": {
+      "message": "Crew member #1 overboard!",
+      "method": ["sound", "visual"],
+      "state": "emergency",
+      "id": "a987be59-d26f-46db-afeb-83987b837a8f",
+      "status": {
+         "silenced": false,
+         "acknowledged": false,
+         "canSilence": false,
+         "canAcknowledge": true,
+         "canClear": true
+      },
+      "createdAt": "2026-04-06T03:34:48.203Z",
+      "position": {
+         "latitude": 57.73241514375983,
+         "longitude": 11.66365146637231
+      }
+   }
+}
+```
 
 ### Updating an Alarm
 
-> Note: To Do
+To change the alarm `state` or message send a HTTP PUT request to `/signalk/v2/api/notifications/{notificationId}` with an object containing `state`, `message` and / or `data` properties.
+
+The result of a successful update request that changes the `state` is that:
+
+- `state` is set to the supplied value
+- `status.silenced` is set to `false`
+- `status.acknowledged` is set to `false`
+
+_Example: Notification payload prior to `update` action request._
+
+```JSON
+{
+   "message": "Engine temperature is above normal range!",
+   "method": ["visual"],
+   "state": "warn",
+   "id": "a987be59-d26f-46db-afeb-83987b837a8f",
+   "status": {
+      "silenced": true,
+      "acknowledged": false,
+      "canSilence": true,
+      "canAcknowledge": true,
+      "canClear": true
+   }
+}
+```
+
+_Update action request_
+
+```typescript
+HTTP PUT "/signalk/v2/api/notifications/a987be59-d26f-46db-afeb-83987b837a8f" {
+   "message": "Engine temperature is very high!",
+   "state": "alarm"
+}
+```
+
+_Notification: after successful `update` request_
+
+```JSON
+{
+   "message": "Engine temperature is very high!",
+   "method": ["sound", "visual"],
+   "state": "alarm",
+   "id": "a987be59-d26f-46db-afeb-83987b837a8f",
+   "status": {
+      "silenced": false,
+      "acknowledged": false,
+      "canSilence": true,
+      "canAcknowledge": true,
+      "canClear": true
+   }
+}
+```
 
 ### Clearing an Alarm
 
 > Note: The clear action is only available for alarms associated with notifications having `status.canClear = true`.
 
-To clear the alarm send an HTTP DELETE request to `/signalk/v2/api/notifications/{notificationId}`.
+To clear the alarm send a HTTP DELETE request to `/signalk/v2/api/notifications/{notificationId}`.
 
 The result of a successful clear request is that the:
 
@@ -145,7 +350,7 @@ _Clear action request_
 HTTP DELETE "/signalk/v2/api/notifications/a987be59-d26f-46db-afeb-83987b837a8f"
 ```
 
-_Notification: post `clear` request_
+_Notification: after successful `clear` request_
 
 ```JSON
 {
@@ -167,7 +372,7 @@ _Notification: post `clear` request_
 
 > Note: The silence action is only available for alarms associated with notifications having `status.canSilence = true`.
 
-To silence the alarm send an HTTP POST request to `/signalk/v2/api/notifications/{notificationId}/silence`.
+To silence the alarm send a HTTP POST request to `/signalk/v2/api/notifications/{notificationId}/silence`.
 
 The result of a successful silence request is that the:
 
@@ -202,7 +407,7 @@ _Silence action request_
 HTTP POST "/signalk/v2/api/notifications/a987be59-d26f-46db-afeb-83987b837a8f/silence"
 ```
 
-_Notification: post `silence` request_
+_Notification: after successful `silence` request_
 
 ```JSON
 {
@@ -224,7 +429,7 @@ _Notification: post `silence` request_
 
 > Note: The acknowledge action is only available for alarms associated with notifications having `status.canAcknowledge` = `true`.
 
-To acknowledge the alarm send an HTTP POST request to `/signalk/v2/api/notifications/{notificationId}/acknowledge`.
+To acknowledge the alarm send a HTTP POST request to `/signalk/v2/api/notifications/{notificationId}/acknowledge`.
 
 The result of a successful acknowledge request is that the:
 
@@ -259,7 +464,7 @@ _Acknowledge action request_
 HTTP POST "/signalk/v2/api/notifications/a987be59-d26f-46db-afeb-83987b837a8f/acknowledge"
 ```
 
-_Notification: post `acknowledge` request_
+_Notification: after successful `acknowledge` request_
 
 ```JSON
 {

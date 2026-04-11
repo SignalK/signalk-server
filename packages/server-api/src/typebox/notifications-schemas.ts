@@ -64,9 +64,7 @@ export type Alarm = Static<typeof AlarmSchema>
 export const AlarmRaiseOptionsSchema = Type.Object(
   {
     state: AlarmStateSchema,
-    message: Type.Optional(
-      Type.String({ description: 'Message to display or speak' })
-    ),
+    message: Type.String({ description: 'Message to display or speak' }),
     path: Type.Optional(
       Type.String({
         description: 'Signal K path',

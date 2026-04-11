@@ -56,10 +56,6 @@ export class NotificationManager {
     this.cleanTimer = setInterval(() => this.clean(), CLEAN_INTERVAL)
   }
 
-  /**
-   * Emit notification for the supplied alarm object
-   * @param alarm Alarm object
-   */
   private emitNotification(alarm: Alarm) {
     this.app.handleMessage(
       'notificationApi',
@@ -77,42 +73,43 @@ export class NotificationManager {
     return l
   }
 
-  /**
-   * Return alarm with specified identifier
-   * @param id alarm identifier
-   * @returns alarm properties
-   */
   get(id: NotificationId): AlarmProperties | undefined {
+    if (!id) {
+      throw new Error('Notification identifier not supplied!')
+    }
     return this.alarms.get(id)?.properties
   }
 
-  /**
-   * Raise alarm and return identifier
-   * @param options Object to initialise the Alarm
-   * @returns alarm id
-   */
   raise(options: AlarmRaiseOptions): NotificationId {
-    const id = uuid.v4() as NotificationId
-    const alarm = new Alarm(id)
+    if (!options) {
+      throw new Error('Notification properties not supplied!')
+    }
     const {
       state,
+      message,
       path,
       idInPath,
-      message,
       includePosition,
       includeCreatedAt,
       data
     } = options
 
-    alarm.value.state = state ?? alarm.value.state
+    if (!state || !message) {
+      throw new Error(
+        'Notification `state` or `message` properties are missing!'
+      )
+    }
+
+    const id = uuid.v4() as NotificationId
+    const alarm = new Alarm(id)
+
+    alarm.value.state = state
     alarm.status.canSilence = state === ALARM_STATE.emergency ? false : true
+    alarm.value.message = message
 
     if (path) {
       alarm.setPath(path, idInPath ? id : undefined)
     }
-
-    alarm.value.message = message ?? alarm.value.message
-
     if (includePosition || state === ALARM_STATE.emergency) {
       alarm.value.position =
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
@@ -122,41 +119,45 @@ export class NotificationManager {
     if (includeCreatedAt || state === ALARM_STATE.emergency) {
       alarm.value.createdAt = new Date().toISOString() as Timestamp
     }
-
-    alarm.value.data = data ?? alarm.value.data
+    if (data) {
+      alarm.value.data = data
+    }
 
     this.alarms.set(id, alarm)
     this.emitNotification(alarm)
     return id
   }
 
-  /**
-   * Update alarm properties
-   * @param id Alarm identifier
-   * @param options Key / values to update
-   */
   update(id: NotificationId, options: AlarmUpdateOptions) {
+    if (!id) {
+      throw new Error('Notification identifier not supplied!')
+    }
     const alarm = this.alarms.get(id)
     if (!alarm) {
       throw new Error('Notification not found!')
     }
 
     const { state, message, data } = options
+    const stateChanged = alarm.value.state !== state
 
     alarm.value.state = state ?? alarm.value.state
-    alarm.status.canSilence = state && state === ALARM_STATE.emergency ? false : true
-
+    alarm.status.canSilence =
+      state && state === ALARM_STATE.emergency ? false : true
     alarm.value.message = message ?? alarm.value.message
-    alarm.value.data = data ?? alarm.value.data
+    if (stateChanged) {
+      alarm.status.silenced = false
+      alarm.status.acknowledged = false
+    }
+    if (data) {
+      alarm.value.data = data
+    }
 
     this.alarms.set(id, alarm)
     this.emitNotification(alarm)
   }
 
   /**
-   * Raise MOB alarm and return identifier
-   * @param options  Object to initialise the alarm. default= 'Person Overboard!'
-   * @returns alarm id
+   * Raise MOB alarm
    */
   mob(options?: { message: string }): NotificationId {
     return this.raise({
@@ -169,9 +170,6 @@ export class NotificationManager {
     })
   }
 
-  /**
-   * Silence All alarms
-   */
   silenceAll() {
     this.alarms.forEach((alarm: Alarm) => {
       try {
@@ -183,11 +181,10 @@ export class NotificationManager {
     })
   }
 
-  /**
-   * Silence alarm by removing the 'sound' method from the notification
-   * @param id Notification identifier
-   */
   silence(id: NotificationId) {
+    if (!id) {
+      throw new Error('Notification identifier not supplied!')
+    }
     if (!this.alarms.has(id)) {
       throw new Error('Alarm not found!')
     }
@@ -196,9 +193,6 @@ export class NotificationManager {
     this.emitNotification(alarm)
   }
 
-  /**
-   * Acknowledge All alarms
-   */
   acknowledgeAll() {
     this.alarms.forEach((alarm: Alarm) => {
       alarm?.acknowledge()
@@ -206,11 +200,10 @@ export class NotificationManager {
     })
   }
 
-  /**
-   * Acknowledge alarm by removing the 'sound' method from the notification
-   * @param id Notification identifier
-   */
   acknowledge(id: NotificationId) {
+    if (!id) {
+      throw new Error('Notification identifier not supplied!')
+    }
     if (!this.alarms.has(id)) {
       throw new Error('Alarm not found!')
     }
@@ -219,11 +212,10 @@ export class NotificationManager {
     this.emitNotification(alarm)
   }
 
-  /**
-   * Clear alarm by setting notification state to `normal`
-   * @param id Notification identifier
-   */
   clear(id: NotificationId) {
+    if (!id) {
+      throw new Error('Notification identifier not supplied!')
+    }
     if (!this.alarms.has(id)) {
       throw new Error('Alarm not found!')
     }
