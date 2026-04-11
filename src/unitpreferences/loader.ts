@@ -8,6 +8,7 @@ import {
   PrimaryCategoryMap,
   UserUnitPreferences
 } from './types'
+import { atomicWriteFileSync } from '../atomicWrite'
 import { createDebug } from '../debug'
 
 const debug = createDebug('signalk-server:unitpreferences:loader')
@@ -32,7 +33,7 @@ let configUnitprefsDir: string = ''
 let defaultPrimaryCategories: PrimaryCategoryMap = {}
 
 function validateUsername(username: string): void {
-  if (!VALID_USERNAME.test(username)) {
+  if (!VALID_USERNAME.test(username) || username === '.' || username === '..') {
     throw new Error(`Invalid username: ${username}`)
   }
 }
@@ -47,7 +48,8 @@ function getUserPrefsPath(username: string): string {
     USER_PREFS_FILE
   )
   const resolved = path.resolve(result)
-  if (!resolved.startsWith(path.resolve(applicationDataPath))) {
+  const usersRoot = path.resolve(applicationDataPath, 'users') + path.sep
+  if (!resolved.startsWith(usersRoot)) {
     throw new Error(`Invalid username path: ${username}`)
   }
   return result
@@ -413,7 +415,7 @@ export function saveUserPreferences(
   const filePath = getUserPrefsPath(username)
   const dir = path.dirname(filePath)
   fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(filePath, JSON.stringify(prefs, null, 2))
+  atomicWriteFileSync(filePath, JSON.stringify(prefs, null, 2))
   userPreferencesCache.set(username, JSON.parse(JSON.stringify(prefs)))
 }
 
