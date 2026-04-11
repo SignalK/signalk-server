@@ -103,6 +103,22 @@ export default class Nmea0183ToSignalK extends Transform {
       sentence = chunk.trim()
     }
 
+    if (sentence === '') {
+      // Empty input (e.g. trailing newline from upstream source). Drop
+      // silently without emitting events or invoking the parser.
+      done()
+      return
+    }
+
+    if (sentence !== undefined && sentence.startsWith('#')) {
+      // Comment line from upstream source (e.g. gpiod-seatalk framing
+      // diagnostics). Log at debug level and drop without parsing or
+      // emitting nmea0183 events.
+      this.debug(sentence)
+      done()
+      return
+    }
+
     try {
       if (sentence !== undefined) {
         if (this.appendChecksumFlag) {

@@ -427,6 +427,10 @@ function seatalkInput(subOptions: SubOptions): PipeElement[] {
   } else {
     pipePart.push(new PigpioSeatalk(subOptions))
   }
+  // Split the child process stdout on newlines so each $STALK frame and
+  // each '# ...' comment from the bit-bang reader becomes its own line,
+  // even when multiple writes get coalesced into one read by the OS pipe.
+  pipePart.push(new Liner(subOptions))
   pipePart.push(...seatalk1inputFilter(subOptions.ignoredSentences ?? []))
   return pipePart
 }
