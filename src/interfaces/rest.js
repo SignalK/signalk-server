@@ -33,7 +33,11 @@ function enhanceMetadataResponse(metadata, signalkPath, username) {
 
   // If no category set, try to get default category for this path
   if (!storedDisplayUnits?.category && signalkPath) {
-    const defaultCategory = getDefaultCategory(signalkPath, metadata.units, username)
+    const defaultCategory = getDefaultCategory(
+      signalkPath,
+      metadata.units,
+      username
+    )
     if (defaultCategory) {
       storedDisplayUnits = { category: defaultCategory }
     }

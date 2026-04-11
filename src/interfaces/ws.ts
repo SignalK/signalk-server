@@ -983,7 +983,11 @@ function handleValuesMeta(
             | undefined
           const username = this.spark.request.skPrincipal?.identifier
           if (!storedDisplayUnits?.category && path) {
-            const defaultCategory = getDefaultCategory(path, metaClone.units as string | undefined, username)
+            const defaultCategory = getDefaultCategory(
+              path,
+              metaClone.units as string | undefined,
+              username
+            )
             if (defaultCategory) {
               storedDisplayUnits = { category: defaultCategory }
             }
@@ -1219,7 +1223,13 @@ function handleRealtimeConnection(
           const storedDU = pathMeta.displayUnits as
             | DisplayUnitsMetadata
             | undefined
-          const category = storedDU?.category || getDefaultCategory(path, pathMeta.units as string | undefined, username)
+          const category =
+            storedDU?.category ||
+            getDefaultCategory(
+              path,
+              pathMeta.units as string | undefined,
+              username
+            )
           if (category) {
             const displayUnits = resolveDisplayUnits(
               { ...storedDU, category },

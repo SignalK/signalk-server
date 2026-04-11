@@ -666,11 +666,9 @@ module.exports = function (app) {
           return
         }
         if (!baseUnitMap[baseUnit].includes(category)) {
-          res
-            .status(400)
-            .json({
-              error: `Category "${category}" does not use base unit "${baseUnit}"`
-            })
+          res.status(400).json({
+            error: `Category "${category}" does not use base unit "${baseUnit}"`
+          })
           return
         }
       }

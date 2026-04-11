@@ -310,7 +310,9 @@ export function getBaseUnitToCategories(): { [baseUnit: string]: string[] } {
   if (!baseUnitToCategoriesCache) {
     baseUnitToCategoriesCache = {}
     const cats = getCategories()
-    for (const [category, baseUnit] of Object.entries(cats.categoryToBaseUnit)) {
+    for (const [category, baseUnit] of Object.entries(
+      cats.categoryToBaseUnit
+    )) {
       if (!baseUnitToCategoriesCache[baseUnit]) {
         baseUnitToCategoriesCache[baseUnit] = []
       }
