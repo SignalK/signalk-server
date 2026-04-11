@@ -9,40 +9,33 @@ import {
 import { GeolibInputCoordinates } from 'geolib/es/types'
 import ngeohash from 'ngeohash'
 
-/** 
- * Filter the supplied Resource entry
- * @param res - Resource entry
- * @param type - Resource type
- * @params params - query string parameters
- * @returns: true if entry should be included in results 
- **/
-export const passFilter = (res: any, type: string, params: any) => {
 
+export const passFilter = (resource: any, type: string, params: any) => {
   let ok = true
   if (params.position && typeof params.distance !== 'undefined') {
-    if(type === 'notes' && res.position) {
-      ok = isPointWithinRadius(res.position, params.position, params.distance)
-    } else if( res.feature?.geometry?.type === 'Point') {
+    if(type === 'notes' && resource.position) {
+      ok = isPointWithinRadius(resource.position, params.position, params.distance)
+    } else if( resource.feature?.geometry?.type === 'Point') {
       ok = isPointWithinRadius(
-        res.feature.geometry.coordinates, 
+        resource.feature.geometry.coordinates, 
         params.position, 
         params.distance
       );
-    } else if( res.feature?.geometry?.type === 'LineString') {
+    } else if( resource.feature?.geometry?.type === 'LineString') {
       ok = isLineStringWithInRadius(
-        res.feature.geometry.coordinates,
+        resource.feature.geometry.coordinates,
         params.position, 
         params.distance
       )
-    } else if( ['MultiLineString', 'Polygon'].includes(res.feature?.geometry?.type)) {
+    } else if( ['MultiLineString', 'Polygon'].includes(resource.feature?.geometry?.type)) {
       ok = isPolygonWithInRadius(
-        res.feature.geometry.coordinates,
+        resource.feature.geometry.coordinates,
         params.position, 
         params.distance
       )
-    } else if( res.feature?.geometry?.type === 'MultiPolygon') {
+    } else if( resource.feature?.geometry?.type === 'MultiPolygon') {
       ok = isMultiPolygonWithInRadius(
-        res.feature.geometry.coordinates,
+        resource.feature.geometry.coordinates,
         params.position, 
         params.distance
       )
@@ -50,10 +43,10 @@ export const passFilter = (res: any, type: string, params: any) => {
   }
 
   if (params.href) {
-    if (typeof res.href === 'undefined' || !res.href) {
+    if (typeof resource.href === 'undefined' || !resource.href) {
       ok = false
     } else {
-      const ha = res.href.split('/')
+      const ha = resource.href.split('/')
       const hType: string =
         ha.length === 1
           ? 'regions'
@@ -76,24 +69,19 @@ export const passFilter = (res: any, type: string, params: any) => {
   }
 
   if (params.group) {
-    if (typeof res.group === 'undefined') {
+    if (typeof resource.group === 'undefined') {
       ok = ok && false
     } else {
-      ok = ok && res.group === params.group
+      ok = ok && resource.group === params.group
     }
   }
 
   if (params.geobounds) {
-    ok = ok && isInBounds(res, type, params.geobounds)
+    ok = ok && isInBounds(resource, type, params.geobounds)
   }
   return ok
 }
 
-/**
- * Parse query parameters
- * @param params - object containing query values
- * @returns Transformed params object
- */
 export const processParameters = (params: any) => {
   if (typeof params.limit !== 'undefined') {
     params.limit = checkForNumber(params.limit)
@@ -101,7 +89,6 @@ export const processParameters = (params: any) => {
 
   if (typeof params.bbox !== 'undefined') {
     params.bbox = checkForNumberArray(params.bbox)
-    // generate geobounds polygon from bbox
     params.geobounds = toPolygon(params.bbox)
     if (params.geobounds.length !== 5) {
       params.geobounds = null
@@ -121,75 +108,34 @@ export const processParameters = (params: any) => {
   return params
 }
 
-/**
- * check geometry is in bounds
- * @param val - Resource entry
- * @param type - Resource type
- * @param polygon - Area to test that the resource is within
- * @returns true when resource contains coordinates that are within the polygon.
- */
 const isInBounds = (
-  val: any,
+  resource: any,
   type: string,
-  polygon: GeolibInputCoordinates[]
+  bounds: GeolibInputCoordinates[]
 ): boolean => {
   let ok = false
-  switch (type) {
-    case 'notes':
-    case 'waypoints':
-      if (val?.feature?.geometry?.coordinates) {
-        ok = isPointInPolygon(val?.feature?.geometry?.coordinates, polygon)
-      }
-      if (val.position) {
-        ok = isPointInPolygon(val.position, polygon)
-      }
-      if (val.geohash) {
-        const bar = ngeohash.decode_bbox(val.geohash)
-        const bounds = toPolygon([bar[1], bar[0], bar[3], bar[2]])
-        const center = getCenterOfBounds(bounds)
-        ok = isPointInPolygon(center, polygon)
-      }
-      break
-    case 'routes':
-      if (val.feature.geometry.coordinates) {
-        val.feature.geometry.coordinates.forEach((pt: any) => {
-          ok = ok || isPointInPolygon(pt, polygon)
-        })
-      }
-      break
-    case 'regions':
-      if (
-        val.feature.geometry.coordinates &&
-        val.feature.geometry.coordinates.length > 0
-      ) {
-        if (val.feature.geometry.type === 'Polygon') {
-          val.feature.geometry.coordinates.forEach((ls: any) => {
-            ls.forEach((pt: any) => {
-              ok = ok || isPointInPolygon(pt, polygon)
-            })
-          })
-        } else if (val.feature.geometry.type === 'MultiPolygon') {
-          val.feature.geometry.coordinates.forEach((polygon: any) => {
-            polygon.forEach((ls: any) => {
-              ls.forEach((pt: any) => {
-                ok = ok || isPointInPolygon(pt, polygon)
-              })
-            })
-          })
-        }
-      }
-      break
+  if (type === 'notes') {
+    if(resource.position) {
+      ok = isPointInPolygon(resource.position, bounds)
+    } else if (resource.geohash) {
+      const bar = ngeohash.decode_bbox(resource.geohash)
+      const p = toPolygon([bar[1], bar[0], bar[3], bar[2]])
+      const center = getCenterOfBounds(p)
+      ok = isPointInPolygon(center, bounds)
+    }
+  } else if( resource.feature?.geometry?.type === 'Point') {
+    ok = isPointInPolygon(resource.feature?.geometry?.coordinates, bounds)
+  } else if (resource.feature?.geometry?.type === 'LineString') {
+    ok = isLineStringWithInBounds(resource.feature.geometry.coordinates, bounds)
+  } else if( ['MultiLineString', 'Polygon'].includes(resource.feature?.geometry?.type)) {
+    ok = isPolygonWithInBounds(resource.feature.geometry.coordinates, bounds)
+  } else if( resource.feature?.geometry?.type === 'MultiPolygon') {
+    ok = isMultiPolygonWithInBounds(resource.feature.geometry.coordinates, bounds)
   }
   return ok
 }
 
-/**
- * Test if any LineString coordinates are within the distance from the center point
- * @param coords LineString coordinates
- * @param center 
- * @param distance 
- * @returns true if any coordinate is within the radius
- */
+
 const isLineStringWithInRadius = (
   coords: Array<GeolibInputCoordinates>, 
   center: GeolibInputCoordinates,
@@ -211,13 +157,22 @@ const isLineStringWithInRadius = (
   return res
 }
 
-/**
- * Test if any Polygon coordinates are within the distance from the center point
- * @param coords Polygon coordinates
- * @param center 
- * @param radius 
- * @returns true if any coordinate is within the radius
- */
+const isLineStringWithInBounds = (
+  coords: Array<GeolibInputCoordinates>, 
+  bounds: Array<GeolibInputCoordinates>
+): boolean => {
+  let res = false
+  for(let i = 0; i < coords.length; ++i) {
+    if(
+      isPointInPolygon(coords[i], bounds)
+    ) {
+      res = true
+      break
+    }
+  }
+  return res
+}
+
 const isPolygonWithInRadius = (
   coords: Array<GeolibInputCoordinates[]>, 
   center: GeolibInputCoordinates,
@@ -239,13 +194,25 @@ const isPolygonWithInRadius = (
   return res
 }
 
-/**
- * Test if any MultiPolygon coordinates are within the distance from the center point
- * @param coords MultiPolygon coordinates
- * @param center 
- * @param radius 
- * @returns true if any coordinate is within the radius
- */
+const isPolygonWithInBounds = (
+  coords: Array<GeolibInputCoordinates[]>, 
+  bounds: Array<GeolibInputCoordinates>,
+): boolean => {
+  let res = false
+  for (let lineNo = 0; lineNo < coords.length; ++lineNo) {
+    if(
+      isLineStringWithInBounds(
+        coords[lineNo],
+        bounds
+      )
+    ) {
+      res = true
+      break
+    }
+  }
+  return res
+}
+
 const isMultiPolygonWithInRadius = (
   coords: Array<Array<GeolibInputCoordinates[]>>, 
   center: GeolibInputCoordinates,
@@ -253,31 +220,41 @@ const isMultiPolygonWithInRadius = (
 ): boolean => {
   let res = false
   for (let polygonNo = 0; polygonNo < coords.length; ++polygonNo) {
-    const polygon = coords[polygonNo]
-    for (let lineNo = 0; lineNo < polygon.length; ++lineNo) {
-      if(
-        isLineStringWithInRadius(
-          coords[polygonNo][lineNo],
-          center,
-          distance
-        )
-      ) {
-        res = true
-        break
-      }
-    }
-    if (res) {
+    const polygonCoords = coords[polygonNo]
+    if(
+      isPolygonWithInRadius(
+        polygonCoords,
+        center,
+        distance
+      )
+    ) {
+      res = true
       break
     }
   }
   return res
 }
 
-/**
- * Test for numeric value
- * @param value - Value to test 
- * @returns The supplied value if it is numeric.
- */
+const isMultiPolygonWithInBounds = (
+  coords: Array<Array<GeolibInputCoordinates[]>>, 
+  bounds: Array<GeolibInputCoordinates>
+): boolean => {
+  let res = false
+  for (let polygonNo = 0; polygonNo < coords.length; ++polygonNo) {
+    const polygonCoords = coords[polygonNo]
+    if(
+      isPolygonWithInBounds(
+        polygonCoords,
+        bounds
+      )
+    ) {
+      res = true
+      break
+    }
+  }
+  return res
+}
+
 const checkForNumber = (value: number): number => {
   if (!Number.isFinite(Number(value))) {
     throw new Error(`Supplied value is not a number! (${value})`)
@@ -286,11 +263,6 @@ const checkForNumber = (value: number): number => {
   }
 }
 
-/**
- * Test value for an array of numbers
- * @param value - Value to test 
- * @returns The supplied value if it contains an array of numbers
- */
 const checkForNumberArray = (value: number[]): Array<number> => {
   if (!Array.isArray(value)) {
     throw new Error(`Supplied value is not valid! (Array<number>) (${value})`)
@@ -307,11 +279,6 @@ const checkForNumberArray = (value: number[]): Array<number> => {
   }
 }
 
-/**
- * Convert bbox string to array of points (polygon)
- * @param bbox 
- * @returns 
- */
 const toPolygon = (bbox: number[]): GeolibInputCoordinates[] => {
   const polygon: GeolibInputCoordinates[] = []
   if (bbox.length === 4) {
@@ -320,10 +287,6 @@ const toPolygon = (bbox: number[]): GeolibInputCoordinates[] => {
     polygon.push([bbox[2], bbox[3]])
     polygon.push([bbox[2], bbox[1]])
     polygon.push([bbox[0], bbox[1]])
-  } else {
-    console.error(
-      `*** Error: Bounding box contains invalid coordinate value (${bbox}) ***`
-    )
   }
   return polygon
 }
