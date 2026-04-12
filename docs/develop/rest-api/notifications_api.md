@@ -93,7 +93,7 @@ The following status properties indicate the actions that **CAN be taken**. Thei
 - `canAcknowledge` - indicates whether the Alarm associated with this notification can be acknowledged
 - `canClear` - Indicates that the associated Alarm can be cleared (triggering condition has been resolved).
 
-> Note: `canClear` will always be `false` for notifications that are not originated by the Notifcations API.
+> Note: `canClear` will always be `false` for notifications that are not originated by the Notifications API.
 
 The remaining properties indicate the actions that **HAVE been taken**:
 
@@ -571,7 +571,7 @@ Generates notifications with the following property values:
 
 ### 2. Silence
 
-Updates notifcation `method` property:
+Updates notification `method` property:
 
 | Source | Condition           | Method     |
 | ------ | ------------------- | ---------- |
@@ -579,7 +579,7 @@ Updates notifcation `method` property:
 
 ### 3. Acknowledge
 
-Updates notifcation `method` property as follows:
+Updates notification `method` property as follows:
 
 | Source | State        | Condition               | Method     |
 | ------ | ------------ | ----------------------- | ---------- |
@@ -588,7 +588,7 @@ Updates notifcation `method` property as follows:
 
 ### 4. Clear
 
-Updates notifcation `state` & `status` properties as follows:
+Updates notification `state` & `status` properties as follows:
 
 | Source | Condition         | State    | silenced | acknowledged |
 | ------ | ----------------- | -------- | -------- | ------------ |

@@ -53,7 +53,7 @@ export interface NotificationsApi {
    * ```typescript
    * app.notificationsApi.raise({
    *  state: 'warn',
-   *  message: 'Port engine temperature is higher than normal.'
+   *  message: 'Port engine temperature is higher than normal.',
    *  path: 'propulsion.port.temperature'
    * })
    * ```
@@ -107,7 +107,7 @@ export interface NotificationsApi {
    * @example
    * ```typescript
    * app.notificationsApi.update(
-   *  9922c05a-2813-4995-ab72-33f8f2246ff7,
+   *  '9922c05a-2813-4995-ab72-33f8f2246ff7',
    *  {
    *    state: 'alarm',
    *    message: 'Port engine temperature is dangerously high!'
