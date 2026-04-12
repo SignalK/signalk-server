@@ -106,10 +106,13 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.update({
-   *  state: 'alarm',
-   *  message: 'Port engine temperature is dangerously high!'
-   * })
+   * app.notificationsApi.update(
+   *  9922c05a-2813-4995-ab72-33f8f2246ff7,
+   *  {
+   *    state: 'alarm',
+   *    message: 'Port engine temperature is dangerously high!'
+   *  }
+   * )
    * ```
    *
    */
@@ -187,7 +190,7 @@ export interface WithNotificationsApi {
  */
 export interface AlarmRaiseOptions {
   state: ALARM_STATE
-  message?: string
+  message: string
   path?: Path
   idInPath?: boolean
   includePosition?: boolean
