@@ -248,7 +248,7 @@ export class NotificationApi {
 
     // raise
     this.app.post(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
-      debug(`** ${req.method} ${req.path} ${req.body}`)
+      debug(`** ${req.method} ${req.path}`)
       try {
         const id = this.raise(req.body)
         res.status(200).json(Object.assign({}, Responses.ok, { id: id }))
@@ -265,7 +265,7 @@ export class NotificationApi {
     this.app.put(
       `${NOTI_API_PATH}/:id`,
       async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path} ${req.body}`)
+        debug(`** ${req.method} ${req.path}`)
         try {
           if (uuid.validate(req.params.id)) {
             this.update(req.params.id as NotificationId, req.body)
@@ -287,7 +287,7 @@ export class NotificationApi {
     this.app.post(
       `${NOTI_API_PATH}/mob`,
       async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path} ${req.body}`)
+        debug(`** ${req.method} ${req.path}`)
         try {
           const id = this.mob(req.body)
           res.status(200).json(Object.assign({}, Responses.ok, { id: id }))
