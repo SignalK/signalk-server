@@ -106,6 +106,23 @@ const notificationsApiDoc = {
           }
         }
       },
+      '404NotFound': {
+        description: 'Entity not found',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              description: 'Request error response',
+              properties: {
+                state: { type: 'string', enum: ['FAILED'] },
+                statusCode: { type: 'number', enum: [404] },
+                message: { type: 'string' }
+              },
+              required: ['state', 'statusCode', 'message']
+            }
+          }
+        }
+      },
       ErrorResponse: {
         description: 'Failed operation',
         content: {
@@ -176,6 +193,7 @@ const notificationsApiDoc = {
           'Returns details of the notification with the supplied identifier.',
         responses: {
           '200': { $ref: '#/components/responses/Notification' },
+          '404': { $ref: '#/components/responses/404NotFound' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       },

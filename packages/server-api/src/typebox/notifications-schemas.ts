@@ -58,7 +58,7 @@ export const AlarmSchema = Type.Object(
 export type Alarm = Static<typeof AlarmSchema>
 
 /**
- * Alarm Raise Options object — state and optional message, path, position, createdAt, appendId, data.
+ * Alarm Raise Options object.
  * Used as the `options` parameter in a raise notification request.
  */
 export const AlarmRaiseOptionsSchema = Type.Object(
@@ -98,7 +98,7 @@ export const AlarmRaiseOptionsSchema = Type.Object(
 export type AlarmRaiseOptions = Static<typeof AlarmRaiseOptionsSchema>
 
 /**
- * Alarm Update Options object — Optional properties state, method, data.
+ * Alarm Update Options object.
  * Used as the `options` parameter in an update notification request.
  */
 export const AlarmUpdateOptionsSchema = Type.Object(

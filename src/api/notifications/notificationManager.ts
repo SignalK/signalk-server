@@ -24,13 +24,6 @@ const CLEAN_INTERVAL = 60000
 
 export type NotificationKey = Brand<string, 'notificationKey'>
 
-/**
- *
- * @param context Signal K Context
- * @param path Signal K Path
- * @param source Delta sourceRef
- * @returns String representing a key associating notification deltas to their notificationId
- */
 export const buildKey = (
   context: Context,
   path: Path,
@@ -52,7 +45,6 @@ export class NotificationManager {
 
   constructor(private server: NotificationApplication) {
     this.app = server
-    // start cleanup timer
     this.cleanTimer = setInterval(() => this.clean(), CLEAN_INTERVAL)
   }
 
@@ -64,7 +56,6 @@ export class NotificationManager {
     )
   }
 
-  /** Return a list of Alarms keyed by their id */
   get list(): Record<string, AlarmProperties> {
     const l: Record<string, AlarmProperties> = {}
     this.alarms.forEach((v: Alarm, k: string) => {
@@ -103,6 +94,7 @@ export class NotificationManager {
     const id = uuid.v4() as NotificationId
     const alarm = new Alarm(id)
 
+    alarm.properties.context = 'self' as Context
     alarm.value.state = state
     alarm.status.canSilence = state === ALARM_STATE.emergency ? false : true
     alarm.value.message = message
@@ -156,9 +148,6 @@ export class NotificationManager {
     this.emitNotification(alarm)
   }
 
-  /**
-   * Raise MOB alarm
-   */
   mob(options?: { message: string }): NotificationId {
     return this.raise({
       state: ALARM_STATE.emergency,
@@ -224,11 +213,6 @@ export class NotificationManager {
     this.emitNotification(alarm)
   }
 
-  /**
-   * Process alarm from notification delta
-   * @param u Update object of incoming Delta message
-   * @param context Incoming Delta message context value
-   */
   processNotificationUpdate(u: Update, context: Context) {
     if (hasValues(u) && u.values.length) {
       const id = u.notificationId as NotificationId

@@ -8,7 +8,8 @@ import {
 } from '.'
 
 /**
- * @see [Notifications REST API](../../../docs/develop/rest-api/notifications_api.md) provides the following functions for use by plugins.
+ * Plugin interface functions.
+ * @see [Notifications REST API](../../../docs/develop/rest-api/notifications_api.md) for further details.
  * @category  Notifications API
  */
 export interface NotificationsApi {
@@ -38,16 +39,59 @@ export interface NotificationsApi {
    * @param options - Alarm options.
    * @returns Notification Identifier
    *
+   * @example Raise notification with minimum information
+   * ```typescript
+   * app.notificationsApi.raise({
+   *  state: 'warn',
+   *  message: 'Port engine temperature is higher than normal.'
+   * })
+   *
+   * // path = `notifications.{notificationId}`
+   * ```
+   *
+   *@example Raise notification specifying the path
+   * ```typescript
+   * app.notificationsApi.raise({
+   *  state: 'warn',
+   *  message: 'Port engine temperature is higher than normal.'
+   *  path: 'propulsion.port.temperature'
+   * })
+   * ```
+   *
+   * @example Raise notification specifying the path and append notification id
+   * ```typescript
+   * app.notificationsApi.raise({
+   *  state: 'warn',
+   *  message: 'Port engine temperature is higher than normal.'
+   *  path: 'propulsion.port.temperature',
+   *  idInPath: true
+   * })
+   *
+   * // path = `propulsion.port.temperature.{notificationId}`
+   * ```
+   *
    */
   raise(options: AlarmRaiseOptions): NotificationId
 
   /**
-   * Raise a Person Overboard notification.
+   * Raise a Person Overboard (MOB) notification.
    *
    * @category Notifications API
    *
    * @param message - Message to display or speak.
    * @returns Notification Identifier
+   *
+   * @example Raise MOB with default message ('Person Overboard!')
+   * ```typescript
+   * app.notificationsApi.mob()
+   *
+   * // path = `notifications.mob.{notificationId}`
+   * ```
+   *
+   * @example Raise MOB with specified message
+   * ```typescript
+   * app.notificationsApi.mob('Crew member overboard!')
+   * ```
    *
    */
   mob(message?: string): NotificationId
@@ -59,6 +103,14 @@ export interface NotificationsApi {
    *
    * @param id - Notification identifier.
    * @param options - Alarm options.
+   *
+   * @example
+   * ```typescript
+   * app.notificationsApi.update({
+   *  state: 'alarm',
+   *  message: 'Port engine temperature is dangerously high!'
+   * })
+   * ```
    *
    */
   update(id: NotificationId, options: AlarmUpdateOptions): void
