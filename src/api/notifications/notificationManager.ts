@@ -151,10 +151,10 @@ export class NotificationManager {
     this.emitNotification(alarm)
   }
 
-  mob(options?: { message: string }): NotificationId {
+  mob(message?: string): NotificationId {
     return this.raise({
       state: ALARM_STATE.emergency,
-      message: options?.message ?? 'Person Overboard!',
+      message: message ?? 'Person Overboard!',
       path: 'mob' as Path,
       idInPath: true,
       includePosition: true,

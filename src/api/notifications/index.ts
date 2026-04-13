@@ -289,7 +289,7 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          const id = this.mob(req.body)
+          const id = this.mob(req.body?.message)
           res.status(200).json(Object.assign({}, Responses.ok, { id: id }))
         } catch (err) {
           res.status(400).json({
@@ -341,8 +341,6 @@ export class NotificationApi {
   }
 
   mob(message?: string): NotificationId {
-    return this.notificationManager.mob(
-      message ? { message: message } : undefined
-    )
+    return this.notificationManager.mob(message)
   }
 }
