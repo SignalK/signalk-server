@@ -126,6 +126,10 @@ export class Alarm {
     this.alignAlarmMethod()
   }
 
+  public setContext(context: Context) {
+    this.context = context
+  }
+
   /**
    * Returns true if Alarm is external (generated from incoming Delta message)
    */
@@ -152,7 +156,7 @@ export class Alarm {
       ]
     }
     const d: Delta = { updates: [this.update] }
-    if (this.external) {
+    if (this.context) {
       d.context = this.context
     }
     return d

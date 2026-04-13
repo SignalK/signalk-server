@@ -65,6 +65,12 @@ export const AlarmRaiseOptionsSchema = Type.Object(
   {
     state: AlarmStateSchema,
     message: Type.String({ description: 'Message to display or speak' }),
+    context: Type.Optional(
+      Type.String({
+        description: 'Signal K context',
+        example: 'meteo.8dac314c-ef20-4e6f-9098-db64ce20e117'
+      })
+    ),
     path: Type.Optional(
       Type.String({
         description: 'Signal K path',

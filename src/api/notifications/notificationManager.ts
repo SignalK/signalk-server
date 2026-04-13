@@ -78,6 +78,7 @@ export class NotificationManager {
     const {
       state,
       message,
+      context,
       path,
       idInPath,
       includePosition,
@@ -94,7 +95,9 @@ export class NotificationManager {
     const id = uuid.v4() as NotificationId
     const alarm = new Alarm(id)
 
-    alarm.properties.context = 'self' as Context
+    if (context) {
+      alarm.setContext(context)
+    }
     alarm.value.state = state
     alarm.status.canSilence = state === ALARM_STATE.emergency ? false : true
     alarm.value.message = message
@@ -112,7 +115,7 @@ export class NotificationManager {
       alarm.value.createdAt = new Date().toISOString() as Timestamp
     }
     if (data) {
-      alarm.value.data = data
+      alarm.value.data = { ...data }
     }
 
     this.alarms.set(id, alarm)
@@ -141,7 +144,7 @@ export class NotificationManager {
       alarm.status.acknowledged = false
     }
     if (data) {
-      alarm.value.data = data
+      alarm.value.data = { ...data }
     }
 
     this.alarms.set(id, alarm)

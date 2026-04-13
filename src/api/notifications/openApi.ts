@@ -215,6 +215,7 @@ const notificationsApiDoc = {
         },
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
+          '404': { $ref: '#/components/responses/404NotFound' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       },
@@ -225,6 +226,7 @@ const notificationsApiDoc = {
           'Clears the alarm from notification with the supplied identifier by setting `ALARM_STATE = normal`.',
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
+          '404': { $ref: '#/components/responses/404NotFound' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }

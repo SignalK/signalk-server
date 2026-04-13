@@ -62,7 +62,7 @@ export interface NotificationsApi {
    * ```typescript
    * app.notificationsApi.raise({
    *  state: 'warn',
-   *  message: 'Port engine temperature is higher than normal.'
+   *  message: 'Port engine temperature is higher than normal.',
    *  path: 'propulsion.port.temperature',
    *  idInPath: true
    * })
@@ -182,6 +182,7 @@ export interface WithNotificationsApi {
  * @category  Notifications API
  * @property state - Alarm State value to apply
  * @property message - Message to display or speak
+ * @property context - Context to assign to the Notification (default = `self`)
  * @property path - Path to assign to the Notification (default = `notifications.{notificationId}`)
  * @property idInPath - Set true to append the `notificationId` to the Notification path (default = false)
  * @property includePosition - Set true to include the vessel position in the Notification (default = false)
@@ -191,6 +192,7 @@ export interface WithNotificationsApi {
 export interface AlarmRaiseOptions {
   state: ALARM_STATE
   message: string
+  context?: Context
   path?: Path
   idInPath?: boolean
   includePosition?: boolean
