@@ -162,6 +162,10 @@ export default function Sidebar({ location }: SidebarProps) {
             {
               name: 'Backup/Restore',
               url: '/serverConfiguration/backuprestore'
+            },
+            {
+              name: 'BLE Manager',
+              url: '/serverConfiguration/blemanager'
             }
           ]
         }
