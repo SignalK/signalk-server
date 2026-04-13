@@ -133,7 +133,9 @@
     "ws": "^8.17.0"
   },
   "optionalDependencies": {
+    "@jellybrick/dbus-next": "^0.10.3",
     "@mxtommy/kip": "^4.0.0",
+    "@naugehyde/node-ble": "^1.13.5",
     "@signalk/freeboard-sk": "^2.0.0-beta.3",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.5.0",
