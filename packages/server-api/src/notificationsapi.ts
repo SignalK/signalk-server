@@ -67,7 +67,7 @@ export interface NotificationsApi {
    *  idInPath: true
    * })
    *
-   * // path = `propulsion.port.temperature.{notificationId}`
+   * // path = `notifications.propulsion.port.temperature.{notificationId}`
    * ```
    *
    */

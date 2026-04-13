@@ -109,7 +109,8 @@ The Notification API implements endpoints to raise, update, take action, and cle
 To raise a new notification with a specified alarm `state` send a HTTP POST request to `/signalk/v2/api/notifications` with an object containing the following properties:
 
 - `state` (mandatory) - alarm state value to set _(e.g. emergency, alarm, etc.)_
-- `message` (mandatory) - message to display or speak.
+- `message` (mandatory) - message to display or speak
+- `context` (optional) - notification context
 - `path` (optional) - path to assign. _(default: `notifications.{notificationId}`)_
 - `idInPath` (optional) - when `true` will append the `notificationId` to the supplied `path` _(e.g. `notifications.myalarm.{notificationId}`)_
 - `includePosition` (optional) - when `true` includes the vessel position in the notification payload
