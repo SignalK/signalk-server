@@ -12,6 +12,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import VesselConfiguration from './VesselConfiguration'
 import UnitPreferencesSettings from './UnitPreferencesSettings'
 import Logging from './Logging'
+import BLESettings from './BLESettings'
 
 interface ServerSettingsData {
   hasData?: boolean
@@ -429,6 +430,7 @@ const Settings: React.FC = () => {
       <VesselConfiguration />
       <UnitPreferencesSettings />
       <ServerSettings />
+      <BLESettings />
       <Logging />
     </div>
   )

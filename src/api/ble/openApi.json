@@ -1,0 +1,552 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "0.1.0",
+    "title": "BLE API",
+    "description": "Signal K BLE Provider API endpoints.  Provides a unified view of BLE devices across multiple providers (local adapters, remote gateways) with advertisement streaming and GATT subscription management.",
+    "termsOfService": "http://signalk.org/terms/",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "externalDocs": {
+    "url": "http://signalk.org/specification/",
+    "description": "Signal K specification."
+  },
+  "servers": [
+    {
+      "url": "/signalk/v2/api/vessels/self/ble"
+    }
+  ],
+  "tags": [
+    {
+      "name": "BLE",
+      "description": "BLE device and advertisement operations."
+    },
+    {
+      "name": "Provider",
+      "description": "Operations to view registered BLE providers."
+    },
+    {
+      "name": "Gateway",
+      "description": "ESP32 remote BLE gateway management."
+    }
+  ],
+  "components": {
+    "schemas": {
+      "BLEDeviceInfo": {
+        "type": "object",
+        "properties": {
+          "mac": { "type": "string", "example": "AA:BB:CC:DD:EE:FF" },
+          "name": { "type": "string", "example": "SmartShunt 500A" },
+          "rssi": { "type": "number", "example": -52 },
+          "lastSeen": {
+            "type": "number",
+            "description": "Unix timestamp (ms)"
+          },
+          "connectable": { "type": "boolean" },
+          "seenBy": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "providerId": { "type": "string" },
+                "rssi": { "type": "number" },
+                "lastSeen": { "type": "number" }
+              }
+            }
+          },
+          "gattClaimedBy": { "type": "string", "nullable": true }
+        }
+      },
+      "BLEAdvertisement": {
+        "type": "object",
+        "properties": {
+          "mac": { "type": "string" },
+          "name": { "type": "string" },
+          "rssi": { "type": "number" },
+          "manufacturerData": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "serviceData": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "serviceUuids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "providerId": { "type": "string" },
+          "timestamp": { "type": "number" },
+          "connectable": { "type": "boolean" },
+          "txPower": { "type": "number" },
+          "addressType": { "type": "string", "enum": ["public", "random"] }
+        }
+      },
+      "BLEGatewayDevice": {
+        "type": "object",
+        "required": ["mac", "rssi"],
+        "properties": {
+          "mac": {
+            "type": "string",
+            "description": "Device MAC address (AA:BB:CC:DD:EE:FF)"
+          },
+          "rssi": {
+            "type": "number",
+            "description": "Received signal strength (dBm)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Advertised local name"
+          },
+          "adv_data": {
+            "type": "string",
+            "description": "Raw advertisement payload as hex string (AD structures). The server parses this into manufacturerData, serviceData, etc."
+          },
+          "manufacturer_data": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Pre-parsed manufacturer data: company ID (decimal string) to hex payload"
+          },
+          "service_data": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Pre-parsed service data: service UUID to hex payload"
+          },
+          "service_uuids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Advertised service UUIDs"
+          },
+          "connectable": {
+            "type": "boolean",
+            "description": "Whether the device accepts GATT connections"
+          },
+          "tx_power": {
+            "type": "number",
+            "description": "TX power level (dBm)"
+          }
+        }
+      },
+      "BLEGatewayAdvertisementBatch": {
+        "type": "object",
+        "required": ["gateway_id", "devices"],
+        "properties": {
+          "gateway_id": {
+            "type": "string",
+            "description": "Unique identifier for this gateway (typically the hostname)"
+          },
+          "devices": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/BLEGatewayDevice" },
+            "description": "BLE devices discovered since the last batch"
+          },
+          "firmware": {
+            "type": "string",
+            "description": "Gateway firmware version (for HTTP-only gateways)"
+          },
+          "mac": {
+            "type": "string",
+            "description": "Gateway's own MAC address"
+          },
+          "hostname": {
+            "type": "string",
+            "description": "Gateway hostname"
+          },
+          "uptime": {
+            "type": "number",
+            "description": "Gateway uptime in seconds"
+          },
+          "free_heap": {
+            "type": "number",
+            "description": "Free heap memory in bytes"
+          }
+        }
+      },
+      "GatewayInfo": {
+        "type": "object",
+        "properties": {
+          "gatewayId": { "type": "string", "example": "signalk-ble-gw" },
+          "providerId": {
+            "type": "string",
+            "example": "ble:gateway:signalk-ble-gw"
+          },
+          "online": { "type": "boolean" },
+          "ipAddress": {
+            "type": "string",
+            "nullable": true,
+            "example": "192.168.0.120"
+          },
+          "mac": {
+            "type": "string",
+            "nullable": true,
+            "example": "F0:24:F9:F5:BD:4E"
+          },
+          "hostname": {
+            "type": "string",
+            "nullable": true,
+            "example": "signalk-ble-gw"
+          },
+          "firmware": {
+            "type": "string",
+            "nullable": true,
+            "example": "1.0.0"
+          },
+          "connectedAt": {
+            "type": "number",
+            "description": "Unix timestamp (ms) when gateway connected"
+          },
+          "disconnectedAt": {
+            "type": "number",
+            "description": "Unix timestamp (ms) when gateway disconnected (offline only)"
+          },
+          "uptime": {
+            "type": "number",
+            "description": "Gateway uptime in seconds"
+          },
+          "freeHeap": {
+            "type": "number",
+            "description": "Free heap memory in bytes"
+          },
+          "gattSlots": {
+            "type": "object",
+            "properties": {
+              "total": { "type": "number" },
+              "available": { "type": "number" }
+            }
+          },
+          "deviceCount": {
+            "type": "number",
+            "description": "Number of unique BLE devices seen by this gateway"
+          }
+        }
+      },
+      "BLEProviders": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "supportsGATT": { "type": "boolean" },
+            "gattSlots": {
+              "type": "object",
+              "properties": {
+                "total": { "type": "number" },
+                "available": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "JAUTHENTICATION"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["BLE"],
+        "summary": "BLE API overview",
+        "responses": {
+          "200": {
+            "description": "API endpoint descriptions"
+          }
+        }
+      }
+    },
+    "/_providers": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "List registered BLE providers",
+        "responses": {
+          "200": {
+            "description": "Map of provider IDs to provider info",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BLEProviders" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_providers/_default": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "Get default BLE provider",
+        "description": "Returns the current default provider ID. The default provider is preferred for GATT connections when it has available slots and can see the target device.",
+        "responses": {
+          "200": {
+            "description": "Default provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_providers/_default/{id}": {
+      "post": {
+        "tags": ["Provider"],
+        "summary": "Set default BLE provider",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Provider ID to set as default"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Default provider updated" },
+          "404": { "description": "Provider not found" }
+        }
+      }
+    },
+    "/devices": {
+      "get": {
+        "tags": ["BLE"],
+        "summary": "List all visible BLE devices",
+        "description": "Returns all visible devices across all providers, deduplicated by MAC address.  Devices not seen for 120 seconds are pruned.",
+        "responses": {
+          "200": {
+            "description": "Array of BLE device info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/BLEDeviceInfo" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/devices/{mac}": {
+      "get": {
+        "tags": ["BLE"],
+        "summary": "Get a single BLE device",
+        "parameters": [
+          {
+            "name": "mac",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Device MAC address (AA:BB:CC:DD:EE:FF)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "BLE device info",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BLEDeviceInfo" }
+              }
+            }
+          },
+          "404": { "description": "Device not found" }
+        }
+      }
+    },
+    "/devices/{mac}/gatt": {
+      "get": {
+        "tags": ["BLE"],
+        "summary": "Get GATT claim status for a device",
+        "parameters": [
+          {
+            "name": "mac",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "GATT claim info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "claimedBy": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gateway/advertisements": {
+      "post": {
+        "tags": ["Gateway"],
+        "summary": "Receive BLE advertisement batch from ESP32 gateway",
+        "description": "ESP32 gateways POST advertisement batches to this endpoint. Full path: /signalk/v2/api/ble/gateway/advertisements",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BLEGatewayAdvertisementBatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Accepted" },
+          "400": { "description": "Invalid body" }
+        }
+      }
+    },
+    "/gateway/ws": {
+      "get": {
+        "tags": ["Gateway"],
+        "summary": "WebSocket GATT command channel for ESP32 gateways",
+        "description": "Upgrade to WebSocket for GATT subscribe/data/disconnect messaging. Full path: /signalk/v2/api/ble/gateway/ws"
+      }
+    },
+    "/gateways": {
+      "get": {
+        "tags": ["Gateway"],
+        "summary": "List all registered BLE gateways",
+        "description": "Returns online gateways and recently-disconnected gateways (up to 60s after disconnect). Full path: /signalk/v2/api/ble/gateways",
+        "responses": {
+          "200": {
+            "description": "Array of gateway info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GatewayInfo" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/consumers": {
+      "get": {
+        "tags": ["BLE"],
+        "summary": "List consumer plugins",
+        "description": "Returns all plugins subscribed to BLE advertisements or holding GATT claims.",
+        "responses": {
+          "200": {
+            "description": "Consumer plugin list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "pluginId": { "type": "string" },
+                      "advertisementSubscriber": { "type": "boolean" },
+                      "gattClaims": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings": {
+      "get": {
+        "tags": ["BLE"],
+        "summary": "Get BLE settings",
+        "responses": {
+          "200": {
+            "description": "BLE configuration and adapter status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "localBluetoothManaged": { "type": "boolean" },
+                    "localAdapters": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "localMaxGATTSlots": { "type": "number" },
+                    "localBLESupported": { "type": "boolean" },
+                    "activeAdapters": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "adapterErrors": {
+                      "type": "object",
+                      "additionalProperties": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["BLE"],
+        "summary": "Update BLE settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "localBluetoothManaged": { "type": "boolean" },
+                  "localAdapters": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "localMaxGATTSlots": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 10
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Settings updated" },
+          "400": { "description": "Invalid settings" }
+        }
+      }
+    },
+    "/advertisements": {
+      "get": {
+        "tags": ["BLE"],
+        "summary": "WebSocket stream of BLE advertisements",
+        "description": "Upgrade to WebSocket to receive a real-time stream of BLEAdvertisement JSON objects from all registered providers."
+      }
+    }
+  }
+}

@@ -28,6 +28,7 @@ import Settings from '../../views/ServerConfig/Settings'
 import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
+import BLEManager from '../../views/ServerConfig/BLEManager'
 
 import { fetchAllData } from '../../actions'
 
@@ -190,6 +191,10 @@ export default function Full() {
               <Route
                 path="/serverConfiguration/update"
                 element={<ProtectedRoute component={ServerUpdate} />}
+              />
+              <Route
+                path="/serverConfiguration/blemanager"
+                element={<ProtectedRoute component={BLEManager} />}
               />
               <Route
                 path="/security/settings"
