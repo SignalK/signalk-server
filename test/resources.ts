@@ -79,7 +79,7 @@ describe('Resources Api', () => {
         [138.34794155831, -34.8965531416984],
         [138.437388789013, -34.8549193092418],
         [138.266384575389, -34.7607885290325]
-      ].map(async ([latitude, longitude]) => {
+      ].map(async ([longitude, latitude]) => {
         const r = await post(`/resources/waypoints/`, {
           feature: {
             type: 'Feature',
