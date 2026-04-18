@@ -99,8 +99,7 @@ describe('Resources Api', () => {
       )
     ).json()) as object
     const returnedIds = Object.keys(r)
-    returnedIds.length.should.equal(2)
-    returnedIds[0].should.equal(resourceIds[1])
+    returnedIds.should.have.members([resourceIds[0], resourceIds[1]])
   })
 
   it('Create route with route point metadata', async function () {
