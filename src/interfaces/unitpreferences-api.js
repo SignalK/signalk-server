@@ -629,7 +629,6 @@ module.exports = function (app) {
       const baseUnitMap = getBaseUnitToCategories()
       const username = req.skPrincipal?.identifier
 
-      // Only include base units with multiple categories
       const ambiguousUnits = {}
       for (const [baseUnit, cats] of Object.entries(baseUnitMap)) {
         if (cats.length > 1) {
@@ -637,7 +636,6 @@ module.exports = function (app) {
         }
       }
 
-      // Get effective primary for each ambiguous unit
       const effectivePrimary = {}
       for (const baseUnit of Object.keys(ambiguousUnits)) {
         effectivePrimary[baseUnit] = getCategoryForBaseUnit(baseUnit, username)

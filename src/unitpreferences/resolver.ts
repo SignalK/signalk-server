@@ -42,6 +42,17 @@ export function resolveDisplayUnits(
     if (!storedDisplayUnits.targetUnit) {
       return null
     }
+    // Identity conversion: targetUnit matches the path's SI unit
+    if (pathSiUnit && storedDisplayUnits.targetUnit === pathSiUnit) {
+      return {
+        category: 'custom',
+        targetUnit: storedDisplayUnits.targetUnit,
+        formula: 'value',
+        inverseFormula: 'value',
+        symbol: storedDisplayUnits.symbol || storedDisplayUnits.targetUnit,
+        displayFormat: storedDisplayUnits.displayFormat
+      }
+    }
     // If formula is stored, use it directly
     if (storedDisplayUnits.formula) {
       return {

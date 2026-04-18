@@ -286,9 +286,7 @@ export function reloadCustomCategories(): void {
 
 export function getMergedDefinitions(): UnitDefinitions {
   // Custom definitions override standard
-  const merged: UnitDefinitions = JSON.parse(
-    JSON.stringify(standardDefinitions)
-  )
+  const merged: UnitDefinitions = structuredClone(standardDefinitions)
   for (const [siUnit, def] of Object.entries(customDefinitions)) {
     if (!merged[siUnit]) {
       merged[siUnit] = def
@@ -339,16 +337,20 @@ export function getDefaultCategory(
 
 export function getBaseUnitToCategories(): { [baseUnit: string]: string[] } {
   if (!baseUnitToCategoriesCache) {
-    baseUnitToCategoriesCache = {}
+    // Object.create(null): baseUnit values come from admin-controlled
+    // custom-categories.json and become keys here; a null-prototype map
+    // is immune to __proto__/constructor pollution.
+    const cache: { [baseUnit: string]: string[] } = Object.create(null)
     const cats = getCategories()
     for (const [category, baseUnit] of Object.entries(
       cats.categoryToBaseUnit
     )) {
-      if (!baseUnitToCategoriesCache[baseUnit]) {
-        baseUnitToCategoriesCache[baseUnit] = []
+      if (!cache[baseUnit]) {
+        cache[baseUnit] = []
       }
-      baseUnitToCategoriesCache[baseUnit].push(category)
+      cache[baseUnit].push(category)
     }
+    baseUnitToCategoriesCache = cache
   }
   return baseUnitToCategoriesCache
 }
@@ -387,7 +389,9 @@ export function loadUserPreferences(
   if (!applicationDataPath) return null
 
   const cached = userPreferencesCache.get(username)
-  if (cached !== undefined) return cached
+  if (cached !== undefined) {
+    return cached === null ? null : structuredClone(cached)
+  }
 
   try {
     const userPrefPath = getUserPrefsPath(username)
@@ -396,7 +400,7 @@ export function loadUserPreferences(
         fs.readFileSync(userPrefPath, 'utf-8')
       ) as UserUnitPreferences
       userPreferencesCache.set(username, prefs)
-      return prefs
+      return structuredClone(prefs)
     }
   } catch (err: unknown) {
     const code = (err as NodeJS.ErrnoException).code
@@ -404,6 +408,7 @@ export function loadUserPreferences(
       debug('Error reading user preferences for %s: %O', username, err)
     }
   }
+  userPreferencesCache.set(username, null)
   return null
 }
 
@@ -416,7 +421,7 @@ export function saveUserPreferences(
   const dir = path.dirname(filePath)
   fs.mkdirSync(dir, { recursive: true })
   atomicWriteFileSync(filePath, JSON.stringify(prefs, null, 2))
-  userPreferencesCache.set(username, JSON.parse(JSON.stringify(prefs)))
+  userPreferencesCache.set(username, structuredClone(prefs))
 }
 
 function loadPresetByName(presetName: string): Preset | null {

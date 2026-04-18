@@ -75,7 +75,7 @@ function enhanceTreeMetadata(node, pathParts, username) {
   if (node === null || typeof node !== 'object') return
   if (node.meta) {
     const signalkPath = pathParts.join('.')
-    const metaCopy = JSON.parse(JSON.stringify(node.meta))
+    const metaCopy = structuredClone(node.meta)
     enhanceMetadataResponse(metaCopy, signalkPath, username)
     node.meta = metaCopy
   }
@@ -89,7 +89,7 @@ function enhanceTreeMetadata(node, pathParts, username) {
 function collectMeta(node, pathParts, result) {
   if (node === null || typeof node !== 'object') return
   if (node.meta) {
-    result[pathParts.join('.')] = JSON.parse(JSON.stringify(node.meta))
+    result[pathParts.join('.')] = structuredClone(node.meta)
   }
   for (const key in node) {
     if (!SKIP_KEYS.has(key)) {

@@ -112,7 +112,7 @@
     "jsonwebtoken": "^9.0.0",
     "lodash": "^4.17.21",
     "marked": "^17.0.5",
-    "mathjs": "^12.4.0",
+    "mathjs": "^15.2.0",
     "mdns-js": "^1.0.3",
     "minimist": "^1.2.8",
     "moment": "^2.10.6",
