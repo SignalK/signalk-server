@@ -293,7 +293,7 @@ This is useful when:
 - Signal K is behind a reverse proxy that handles authentication
 - You want a seamless SSO experience
 
-**Note**: Local login remains available at `/admin/#/login?local=true`
+**Note**: Local login remains available at `/admin/#/login?noAutoLogin=true`
 
 ## Security Considerations
 
