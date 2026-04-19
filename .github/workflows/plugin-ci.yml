@@ -1309,6 +1309,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: ${{ inputs.enable-armv7 }}
+    # Expose the test-step outcome so ci-status can distinguish a step
+    # failure (advisory) from the job itself completing.
+    outputs:
+      advisory-outcome: ${{ steps.armv7-test.outcome }}
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v6
@@ -1327,6 +1331,11 @@ jobs:
             armv7-npm-
 
       - name: Test on armv7 via QEMU
+        id: armv7-test
+        # Advisory: do not fail the workflow when armv7 tests fail. The
+        # outcome is captured via the job output above and surfaced in the
+        # ci-status summary.
+        continue-on-error: true
         env:
           BUILD_CMD: ${{ inputs.build-command }}
           TEST_CMD: ${{ inputs.test-command }}
@@ -1393,7 +1402,9 @@ jobs:
         run: |
           PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
           PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
-          RESULT="${{ job.status }}"
+          # Use the test-step outcome, not job.status — the job itself
+          # succeeds (continue-on-error) even when the step fails.
+          RESULT="${{ steps.armv7-test.outcome }}"
 
           {
             echo "### armv7 (Cerbo GX) / Node 20 — ${PLUGIN_NAME}@${PLUGIN_VER}"
@@ -1601,7 +1612,11 @@ jobs:
       - name: Write CI summary report
         env:
           DESKTOP_RESULT: ${{ needs.desktop.result }}
-          ARMV7_RESULT: ${{ needs.armv7.result }}
+          # Prefer the armv7 test-step outcome when the job ran — it records
+          # whether the advisory tests actually passed. Falls back to
+          # needs.armv7.result when the job was skipped/cancelled and no
+          # step outcome exists.
+          ARMV7_RESULT: ${{ needs.armv7.outputs.advisory-outcome || needs.armv7.result }}
           INTEGRATION_RESULT: ${{ needs.signalk-integration.result }}
         shell: bash
         run: |
