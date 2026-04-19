@@ -5,7 +5,9 @@
 #   .github/workflows/signalk-ci.yml
 #
 # It calls the shared SignalK workflow which tests your plugin
-# across Linux, macOS, Windows (Node 22 + 24) and armv7/Cerbo GX.
+# across Linux, macOS, and Windows (Node 22 + 24). armv7/Cerbo GX
+# and the Signal K integration test are opt-in — the auto-run job
+# below disables them; use the manual trigger to enable per-run.
 #
 # On push/PR it runs with sensible defaults.
 # You can also trigger it manually from the GitHub Actions UI

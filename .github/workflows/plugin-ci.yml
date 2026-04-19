@@ -1657,7 +1657,6 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          # --- Exit code logic (same as before) ---
           echo ""
           echo "Desktop:              $DESKTOP_RESULT"
           echo "armv7 (Cerbo GX):     $ARMV7_RESULT"
