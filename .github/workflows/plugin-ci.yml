@@ -217,7 +217,10 @@ jobs:
         shell: bash
 
       - name: Build
-        run: ${{ inputs.build-command }}
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+        shell: bash
+        run: eval "$BUILD_CMD"
 
       - name: Validate plugin entry point
         id: validate-entry
@@ -1167,16 +1170,20 @@ jobs:
 
       - name: Check formatting
         if: ${{ inputs.format-check-command != '' }}
+        env:
+          FORMAT_CMD: ${{ inputs.format-check-command }}
         shell: bash
-        run: ${{ inputs.format-check-command }}
+        run: eval "$FORMAT_CMD"
 
       - name: Run tests with coverage
         if: ${{ inputs.coverage-command != '' }}
         id: coverage
+        env:
+          COVERAGE_CMD: ${{ inputs.coverage-command }}
         shell: bash
         run: |
           set -eo pipefail
-          ${{ inputs.coverage-command }} | tee "$RUNNER_TEMP/coverage.log"
+          eval "$COVERAGE_CMD" | tee "$RUNNER_TEMP/coverage.log"
           {
             echo '## Test coverage (Node ${{ matrix.node }} / ${{ runner.os }})'
             echo
@@ -1188,6 +1195,8 @@ jobs:
       - name: Run tests
         if: ${{ inputs.coverage-command == '' }}
         id: tests
+        env:
+          TEST_CMD: ${{ inputs.test-command }}
         shell: bash
         run: |
           # Detect if the plugin has a real test script
@@ -1201,7 +1210,7 @@ jobs:
           " && echo "yes" || echo "no")
 
           if [ "$HAS_TESTS" = "yes" ]; then
-            ${{ inputs.test-command }}
+            eval "$TEST_CMD"
           else
             echo "::notice::No test script defined — skipping tests"
           fi
