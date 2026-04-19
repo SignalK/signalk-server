@@ -18,7 +18,7 @@ import { createDebug } from './debug'
 const debug = createDebug('signalk-server:discovery')
 const canboatjs = require('@canboat/canboatjs')
 const dgram = require('dgram')
-const mdns = require('mdns-js')
+const { Browser } = require('@astronautlabs/mdns')
 const { networkInterfaces } = require('os')
 
 module.exports.runDiscovery = function (app) {
@@ -196,24 +196,16 @@ module.exports.runDiscovery = function (app) {
 
   function discoverSignalkWs(wsType) {
     try {
-      mdns.excludeInterface('0.0.0.0')
-      var browser = mdns.createBrowser(mdns.tcp('signalk-' + wsType))
+      const browser = new Browser('_signalk-' + wsType + '._tcp')
 
-      browser.on('ready', function onReady() {
-        try {
-          debug('looking for SignalK ' + wsType)
-          browser.discover()
-        } catch (err) {
-          debug('discoverSignalkWs:', err)
-        }
-      })
+      debug('looking for SignalK ' + wsType)
 
-      browser.on('update', function onUpdate(data) {
+      browser.on('serviceUp', function onServiceUp(data) {
         try {
           if (
             !isLocalIP(data.addresses[0]) &&
-            Array.isArray(data.type) &&
-            data.type[0].name === 'signalk-' + wsType &&
+            data.type &&
+            data.type.name === 'signalk-' + wsType &&
             !findWSProvider(data.addresses[0], wsType, data.host, data.port)
           ) {
             debug('discoverSignalkWs found data[' + wsType + ']:', data)
@@ -243,6 +235,12 @@ module.exports.runDiscovery = function (app) {
           debug('discoverSignalkWs:', err)
         }
       })
+
+      browser.on('error', (err) => {
+        debug('discoverSignalkWs:', err)
+      })
+
+      browser.start()
 
       setTimeout(() => {
         try {

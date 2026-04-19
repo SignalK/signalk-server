@@ -19,21 +19,11 @@
 const _ = require('lodash')
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:mdns')
-const dnssd = require('dnssd2')
+const { Advertisement } = require('@astronautlabs/mdns')
 const ports = require('./ports')
 
 module.exports = function mdnsResponder(app) {
   const config = app.config
-
-  let mdns = dnssd
-
-  try {
-    mdns = require('mdns')
-    debug('using  mdns')
-  } catch (ex) {
-    debug(ex)
-    debug('mdns not found, using dnssd2')
-  }
 
   if (typeof config.settings.mdns !== 'undefined' && !config.settings.mdns) {
     debug('Mdns disabled by configuration')
@@ -59,8 +49,8 @@ module.exports = function mdnsResponder(app) {
   types.push({
     type:
       app.config.settings.ssl || app.config.isExternalSsl()
-        ? mdns.tcp('https')
-        : mdns.tcp('http'),
+        ? '_https._tcp'
+        : '_http._tcp',
     port: ports.getExternalPort(app)
   })
 
@@ -76,7 +66,7 @@ module.exports = function mdnsResponder(app) {
         service.name.charAt(0) === '_'
       ) {
         types.push({
-          type: mdns[service.type](service.name),
+          type: `${service.name}._${service.type}`,
           port: service.port
         })
       } else {
@@ -89,11 +79,13 @@ module.exports = function mdnsResponder(app) {
   }
 
   const options = {
-    txtRecord,
     txt: txtRecord
   }
 
-  const host = app.config.getExternalHostname()
+  const host = app.config
+    .getExternalHostname()
+    .replace(/\.$/, '')
+    .replace(/\.local$/i, '')
 
   if (host !== require('os').hostname()) {
     options.host = host
@@ -113,9 +105,9 @@ module.exports = function mdnsResponder(app) {
         ':' +
         type.port
     )
-    const ad = new mdns.Advertisement(type.type, type.port, options)
+    const ad = new Advertisement(type.type, type.port, options)
     ad.on('error', (err) => {
-      console.log(type.type.name)
+      console.log(type.type)
       console.error(err)
     })
     ad.start()
