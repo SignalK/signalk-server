@@ -54,7 +54,7 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **Entry point** — After build, verifies the plugin exports a constructor function
 
-**plugin.schema()** — Calls `schema()` and checks it returns a valid JSON Schema object without crashing
+**plugin.schema()** — Calls `schema()` and checks it returns a JSON-serializable schema-like object without crashing (not fully validated against the JSON Schema meta-schema)
 
 **Lifecycle** — Runs `start()` → `stop()` → `start()` (restart) with an empty configuration. Validates delta messages emitted during startup and checks that `registerDeltaInputHandler` handlers forward deltas correctly.
 
@@ -71,7 +71,7 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **App Store compatibility** — Installs the plugin with `--ignore-scripts` (as the App Store does) and checks for native addon dependencies
 
-**Stray files** — Verifies that build and test steps don't leave untracked files
+**Stray files** — Warns when build and test steps leave untracked files
 
 ## Configuration
 
