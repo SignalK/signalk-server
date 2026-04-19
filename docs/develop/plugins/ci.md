@@ -96,7 +96,7 @@ jobs:
 | `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms        |
 | `enable-armv7`               | `true`                       | Test on armv7 (Cerbo GX) via QEMU          |
 | `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests |
-| `signalk-server-version`     | `latest`                     | SignalK server version to test against     |
+| `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each |
 
 ## package.json
 
@@ -132,7 +132,17 @@ Enable `enable-signalk-integration: true` to have the workflow:
 7. Verify provider API registrations (see below)
 8. Run `npm run test:integration` if defined in your `package.json`
 
-The integration test environment exports `SIGNALK_URL=http://localhost:3000` so your tests can connect to the running server. Use `signalk-server-version` to pin a specific server version.
+The integration test environment exports `SIGNALK_URL=http://localhost:3000` so your tests can connect to the running server.
+
+Pass `signalk-server-versions` as a JSON array to fan the integration job out over multiple server versions — useful for catching regressions across the baconjs 1 → 3 transition (server 2.23.x vs 2.24.0+) and similar cross-generation breakage:
+
+```yaml
+with:
+  enable-signalk-integration: true
+  signalk-server-versions: '["2.23.0", "latest"]'
+```
+
+The integration job runs the full Cartesian product of `node-versions × signalk-server-versions`. The default `["22", "24"] × ["latest"]` is 2 jobs; `["22", "24"] × ["2.23.0", "latest"]` is 4. To keep the matrix small, shrink either dimension — integration coverage often only needs a single Node version (`node-versions: '["22"]'`) even when the desktop jobs exercise several.
 
 ### Provider API Verification
 

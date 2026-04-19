@@ -44,10 +44,10 @@ on:
         description: 'Start a SignalK server and install the plugin for integration testing'
         type: boolean
         default: false
-      signalk-server-version:
-        description: 'SignalK server version to test against'
+      signalk-server-versions:
+        description: 'JSON array of signalk-server versions to fan the integration test out over (e.g. ''["2.23.0", "latest"]'')'
         type: string
-        default: 'latest'
+        default: '["latest"]'
 
 jobs:
   # ════════════════════════════════════════════════════════════
@@ -1274,7 +1274,7 @@ jobs:
   #  Optional: SignalK server integration test
   # ════════════════════════════════════════════════════════════
   signalk-integration:
-    name: Integration
+    name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: ${{ inputs.enable-signalk-integration }}
@@ -1282,6 +1282,7 @@ jobs:
       fail-fast: false
       matrix:
         node: ${{ fromJson(inputs.node-versions) }}
+        signalk-server-version: ${{ fromJson(inputs.signalk-server-versions) }}
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v6
@@ -1292,12 +1293,12 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
 
-      - name: Install SignalK server
+      - name: Install SignalK server ${{ matrix.signalk-server-version }}
         run: |
           mkdir -p /tmp/sk-test
           cd /tmp/sk-test
           npm init -y
-          npm install signalk-server@${{ inputs.signalk-server-version }}
+          npm install signalk-server@${{ matrix.signalk-server-version }}
 
       - name: Build plugin
         env:

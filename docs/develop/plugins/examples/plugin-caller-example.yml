@@ -48,10 +48,10 @@ on:
         required: false
         default: false
         type: boolean
-      signalk-server-version:
-        description: SignalK server version for integration testing
+      signalk-server-versions:
+        description: 'JSON array of signalk-server versions for integration testing, e.g. ["2.23.0","latest"]'
         required: false
-        default: latest
+        default: '["latest"]'
         type: string
 
 jobs:
@@ -65,7 +65,7 @@ jobs:
       node-versions: '["22", "24"]'
       enable-armv7: false
       enable-signalk-integration: false
-      signalk-server-version: latest
+      signalk-server-versions: '["latest"]'
 
   # ── Manual runs (workflow_dispatch with custom inputs) ────
   test-plugin-manual:
@@ -77,4 +77,4 @@ jobs:
       node-versions: ${{ inputs.node-versions }}
       enable-armv7: ${{ inputs.enable-armv7 }}
       enable-signalk-integration: ${{ inputs.enable-signalk-integration }}
-      signalk-server-version: ${{ inputs.signalk-server-version }}
+      signalk-server-versions: ${{ inputs.signalk-server-versions }}
