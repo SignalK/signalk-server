@@ -163,15 +163,20 @@ jobs:
           // baconjs is provided by the server — plugins must not bundle their own copy
           if (pkg.dependencies && pkg.dependencies.baconjs) {
             const baconRange = pkg.dependencies.baconjs;
-            const baconMatch = baconRange.match(/(\d+)\.\d+\.\d+/);
-            const baconMajor = baconMatch ? parseInt(baconMatch[1], 10) : 0;
-            if (baconMajor < 3) {
-              warnings.push(
-                'Plugin bundles baconjs ' + baconRange + ' in dependencies. ' +
-                'The Signal K server provides baconjs >= 3.x and forces all plugins to use its copy. ' +
-                'Bundling an older version will be ignored at runtime and wastes install size. ' +
-                'Remove baconjs from dependencies or update to ^3.0.0 and use the server-provided instance'
-              );
+            // Accept shorthand ranges ("^3", "3", "3.x") as well as full semver.
+            // Only warn when we confidently parse a leading major < 3 — dist-tags,
+            // git specs, and other non-numeric ranges are left alone.
+            const baconMatch = baconRange.match(/^\s*[~^]?(\d+)(?:[.\s]|$)/);
+            if (baconMatch) {
+              const baconMajor = parseInt(baconMatch[1], 10);
+              if (baconMajor < 3) {
+                warnings.push(
+                  'Plugin bundles baconjs ' + baconRange + ' in dependencies. ' +
+                  'The Signal K server provides baconjs >= 3.x and forces all plugins to use its copy. ' +
+                  'Bundling an older version will be ignored at runtime and wastes install size. ' +
+                  'Remove baconjs from dependencies or update to ^3.0.0 and use the server-provided instance'
+                );
+              }
             }
           }
 
