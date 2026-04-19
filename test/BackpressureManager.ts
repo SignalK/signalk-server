@@ -11,6 +11,7 @@ interface MockTransport extends BackpressureTransport {
   _bufferLength: number
   _writes: Delta[]
   _destroyed: boolean
+  _bufferLengthCalls: number
 }
 
 function createMockTransport(bufferLength = 0): MockTransport {
@@ -19,7 +20,9 @@ function createMockTransport(bufferLength = 0): MockTransport {
     _bufferLength: bufferLength,
     _writes: [],
     _destroyed: false,
+    _bufferLengthCalls: 0,
     getBufferLength() {
+      this._bufferLengthCalls++
       return this._bufferLength
     },
     write(delta: Delta) {
@@ -110,6 +113,15 @@ describe('BackpressureManager', function () {
       manager.send(createDelta('navigation.speedOverGround', 6.0))
 
       expect(manager.accumulatorSize).to.equal(1)
+    })
+
+    it('should read transport buffer length only once per send', function () {
+      const transport = createMockTransport(0)
+      const manager = new BackpressureManager(transport, defaultOptions)
+
+      manager.send(createDelta('navigation.speedOverGround', 5.0))
+
+      expect(transport._bufferLengthCalls).to.equal(1)
     })
 
     it('should work without beforeWrite hook', function () {
