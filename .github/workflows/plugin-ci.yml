@@ -1499,6 +1499,10 @@ jobs:
           # --override-timestamps keeps N2K data current instead of stale
           npx signalk-server --sample-nmea0183-data --sample-n2k-data --override-timestamps -p 3000 &
           SK_PID=$!
+          # Ensure the background server is killed on any exit path — step
+          # failure, early return from a check, or normal completion. Without
+          # this a failing `npm run test:integration` would leak the process.
+          trap 'kill $SK_PID 2>/dev/null || true' EXIT
 
           # Wait for server to be ready (max 90 seconds)
           echo "Waiting for SignalK server..."
@@ -1513,7 +1517,6 @@ jobs:
 
           if [ "$READY" != "true" ]; then
             echo "::error::SignalK server failed to start within 90 seconds"
-            kill $SK_PID 2>/dev/null || true
             exit 1
           fi
           echo "SignalK server is ready (PID $SK_PID)"
@@ -1529,7 +1532,6 @@ jobs:
           if ! echo "$PLUGINS_JSON" | jq -e ".[] | select(.packageName == \"$PLUGIN_PKG_NAME\")" > /dev/null 2>&1; then
             echo "::error::Plugin '$PLUGIN_PKG_NAME' not found in loaded plugins"
             echo "$PLUGINS_JSON" | jq .
-            kill $SK_PID 2>/dev/null || true
             exit 1
           fi
           echo "Plugin '$PLUGIN_PKG_NAME' is loaded"
@@ -1572,7 +1574,6 @@ jobs:
           if [ "$PROVIDER_ERRORS" -gt 0 ]; then
             echo ""
             echo "::error::Provider API verification found $PROVIDER_ERRORS error(s)"
-            kill $SK_PID 2>/dev/null || true
             exit 1
           fi
 
@@ -1590,9 +1591,7 @@ jobs:
           else
             echo "::notice::No test:integration script found — skipping"
           fi
-
-          # Cleanup
-          kill $SK_PID 2>/dev/null || true
+          # Server cleanup is handled by the EXIT trap set above.
 
   # ════════════════════════════════════════════════════════════
   #  Summary — collect all results
