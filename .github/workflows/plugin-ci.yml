@@ -57,6 +57,12 @@ on:
         type: string
         default: '["latest"]'
 
+# Least-privilege token for the jobs in this reusable workflow. We only
+# read the caller's repository — install, build, and test steps never
+# need to write to GitHub resources.
+permissions:
+  contents: read
+
 jobs:
   # ════════════════════════════════════════════════════════════
   #  Desktop platforms matrix: Linux x64, Linux arm64, macOS, Windows
