@@ -32,7 +32,7 @@ Add `workflow_dispatch` to get a **"Run workflow"** button in the GitHub Actions
 
 Because `workflow_call` and `workflow_dispatch` inputs are separate namespaces in GitHub Actions, the workflow needs two jobs: one for automatic runs (push/PR) with hardcoded defaults, and one for manual runs that passes through your form inputs.
 
-See [`examples/plugin-caller-example.yml`](https://github.com/SignalK/signalk-server/blob/master/.github/examples/plugin-caller-example.yml) for the full workflow with manual trigger support.
+See [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) for the full workflow with manual trigger support.
 
 ## What Gets Tested
 

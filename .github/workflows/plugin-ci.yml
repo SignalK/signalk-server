@@ -12,7 +12,7 @@
 #                    Runs under QEMU emulation with python3, make, g++
 #
 # Usage in your plugin repo:
-#   See examples/plugin-caller-example.yml
+#   See docs/develop/plugins/examples/plugin-caller-example.yml
 
 name: SignalK Plugin CI
 
