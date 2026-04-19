@@ -93,10 +93,24 @@ jobs:
 | ---------------------------- | ---------------------------- | ------------------------------------------ |
 | `test-command`               | `npm test`                   | Command to run your test suite             |
 | `build-command`              | `npm run build --if-present` | Build command                              |
+| `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty |
+| `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary |
 | `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms        |
 | `enable-armv7`               | `true`                       | Test on armv7 (Cerbo GX) via QEMU          |
 | `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests |
 | `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each |
+
+### Formatting and coverage
+
+Both are tool-agnostic command strings — the workflow doesn't care whether you use Prettier/Biome or c8/nyc/`jest --coverage`. Leave either empty to opt out.
+
+```yaml
+with:
+  format-check-command: 'npm run prettier:check'
+  coverage-command: 'npm run coverage'
+```
+
+`format-check-command` runs after lint and **blocks the job** if it fails (unlike `npm run lint --if-present`, which is advisory). `coverage-command` replaces the standard `Run tests` step — its stdout is captured and appended to the GitHub Actions step summary so you can see coverage output without digging through logs.
 
 ## package.json
 

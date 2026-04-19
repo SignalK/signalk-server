@@ -33,6 +33,16 @@ on:
         required: false
         default: npm run build --if-present
         type: string
+      format-check-command:
+        description: 'Optional blocking format check, e.g. npm run prettier:check'
+        required: false
+        default: ''
+        type: string
+      coverage-command:
+        description: 'Optional coverage command (replaces the test run), e.g. npm run coverage'
+        required: false
+        default: ''
+        type: string
       node-versions:
         description: 'JSON array of Node versions, example: ["22","24"]'
         required: false
@@ -74,6 +84,8 @@ jobs:
     with:
       test-command: ${{ inputs.test-command }}
       build-command: ${{ inputs.build-command }}
+      format-check-command: ${{ inputs.format-check-command }}
+      coverage-command: ${{ inputs.coverage-command }}
       node-versions: ${{ inputs.node-versions }}
       enable-armv7: ${{ inputs.enable-armv7 }}
       enable-signalk-integration: ${{ inputs.enable-signalk-integration }}

@@ -28,6 +28,14 @@ on:
         description: 'Command to build the plugin (default: npm run build --if-present)'
         type: string
         default: 'npm run build --if-present'
+      format-check-command:
+        description: 'Command to verify formatting (e.g. "npm run prettier:check" or "npx biome check ."). Blocking when set, skipped when empty.'
+        type: string
+        default: ''
+      coverage-command:
+        description: 'Command that runs tests with coverage (e.g. "npm run coverage"). When set, replaces the standard test run and its output is appended to the job step summary.'
+        type: string
+        default: ''
       node-versions:
         description: 'JSON array of Node versions for desktop platforms (default: ["22", "24"])'
         type: string
@@ -1064,7 +1072,28 @@ jobs:
         run: npm run lint --if-present
         continue-on-error: true
 
+      - name: Check formatting
+        if: ${{ inputs.format-check-command != '' }}
+        shell: bash
+        run: ${{ inputs.format-check-command }}
+
+      - name: Run tests with coverage
+        if: ${{ inputs.coverage-command != '' }}
+        id: coverage
+        shell: bash
+        run: |
+          set -eo pipefail
+          ${{ inputs.coverage-command }} | tee "$RUNNER_TEMP/coverage.log"
+          {
+            echo '## Test coverage (Node ${{ matrix.node }} / ${{ runner.os }})'
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/coverage.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run tests
+        if: ${{ inputs.coverage-command == '' }}
         id: tests
         shell: bash
         run: |
