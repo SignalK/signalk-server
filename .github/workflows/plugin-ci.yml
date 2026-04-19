@@ -227,7 +227,25 @@ jobs:
           cat << 'ENTRYPOINT' > /tmp/validate-entry.js
           const path = require('path');
           const pkg = require(process.cwd() + '/package.json');
-          const entry = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null) || 'index.js';
+          // Resolve the plugin's CommonJS entry point, honoring conditional
+          // exports like { ".": { "require": "./cjs/index.cjs" } } that
+          // modern TypeScript templates emit. Falls back to 'index.js'.
+          function resolveEntry(p, fallback) {
+            if (p && p.main) return p.main;
+            const e = p && p.exports;
+            if (typeof e === 'string') return e;
+            if (e && typeof e === 'object') {
+              const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+              if (typeof root === 'string') return root;
+              if (root && typeof root === 'object') {
+                for (const k of ['require', 'node', 'default', 'import']) {
+                  if (typeof root[k] === 'string') return root[k];
+                }
+              }
+            }
+            return fallback;
+          }
+          const entry = resolveEntry(pkg, 'index.js');
           try {
             const mod = require(path.resolve(entry));
             const pluginConstructor = mod.default || mod;
@@ -252,7 +270,24 @@ jobs:
           cat << 'SCHEMACHECK' > /tmp/check-schema.js
           const path = require('path');
           const pkg = require(process.cwd() + '/package.json');
-          const entry = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null) || 'index.js';
+          // See validate-entry.js for the rationale — object/conditional
+          // exports must be resolved, not flattened to 'index.js'.
+          function resolveEntry(p, fallback) {
+            if (p && p.main) return p.main;
+            const e = p && p.exports;
+            if (typeof e === 'string') return e;
+            if (e && typeof e === 'object') {
+              const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+              if (typeof root === 'string') return root;
+              if (root && typeof root === 'object') {
+                for (const k of ['require', 'node', 'default', 'import']) {
+                  if (typeof root[k] === 'string') return root[k];
+                }
+              }
+            }
+            return fallback;
+          }
+          const entry = resolveEntry(pkg, 'index.js');
 
           let mod;
           try {
@@ -362,7 +397,24 @@ jobs:
           cat << 'LIFECYCLE' > /tmp/check-lifecycle.js
           const path = require('path');
           const pkg = require(process.cwd() + '/package.json');
-          const entry = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null) || 'index.js';
+          // See validate-entry.js for the rationale — object/conditional
+          // exports must be resolved, not flattened to 'index.js'.
+          function resolveEntry(p, fallback) {
+            if (p && p.main) return p.main;
+            const e = p && p.exports;
+            if (typeof e === 'string') return e;
+            if (e && typeof e === 'object') {
+              const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+              if (typeof root === 'string') return root;
+              if (root && typeof root === 'object') {
+                for (const k of ['require', 'node', 'default', 'import']) {
+                  if (typeof root[k] === 'string') return root[k];
+                }
+              }
+            }
+            return fallback;
+          }
+          const entry = resolveEntry(pkg, 'index.js');
 
           let mod;
           try {
@@ -534,8 +586,12 @@ jobs:
             return /\w+ is not a function/.test(msg) || /Cannot read propert/.test(msg);
           }
 
+          // Wrap in an async IIFE so that Promise-returning start()/stop()
+          // hooks surface rejections via await — a sync try/catch around
+          // `plugin.start({})` would silently swallow them.
+          (async () => {
           try {
-            plugin.start({});
+            await Promise.resolve(plugin.start({}));
             console.log('start({}) — ok');
           } catch (e) {
             const msg = e.message || String(e);
@@ -549,7 +605,7 @@ jobs:
           }
 
           try {
-            plugin.stop();
+            await Promise.resolve(plugin.stop());
             console.log('stop() — ok');
           } catch (e) {
             const msg = e.message || String(e);
@@ -566,7 +622,7 @@ jobs:
 
           // Restart: the server calls stop() then start() when config changes
           try {
-            plugin.start({});
+            await Promise.resolve(plugin.start({}));
             console.log('start({}) again — ok (restart works)');
           } catch (e) {
             const msg = e.message || String(e);
@@ -580,7 +636,7 @@ jobs:
             process.exit(1);
           }
 
-          try { plugin.stop(); } catch (e) { /* ignore */ }
+          try { await Promise.resolve(plugin.stop()); } catch (e) { /* ignore */ }
 
           // ── Report delta validation results ─────────────────────
           if (deltaWarnings.length > 0 || deltaErrors.length > 0) {
@@ -598,6 +654,10 @@ jobs:
 
           console.log('Plugin lifecycle (start/stop/restart) is clean');
           process.exit(0);
+          })().catch(e => {
+            console.log('::error::Unexpected error during lifecycle check: ' + (e && e.message || String(e)));
+            process.exit(1);
+          });
           LIFECYCLE
           node /tmp/check-lifecycle.js
 
@@ -872,6 +932,24 @@ jobs:
           const pkg = require(process.cwd() + '/package.json');
           const path = require('path');
 
+          // See validate-entry.js for the rationale. Null fallback: if the
+          // plugin declares no main/exports, there is nothing to check.
+          function resolveEntry(p, fallback) {
+            if (p && p.main) return p.main;
+            const e = p && p.exports;
+            if (typeof e === 'string') return e;
+            if (e && typeof e === 'object') {
+              const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+              if (typeof root === 'string') return root;
+              if (root && typeof root === 'object') {
+                for (const k of ['require', 'node', 'default', 'import']) {
+                  if (typeof root[k] === 'string') return root[k];
+                }
+              }
+            }
+            return fallback;
+          }
+
           // Get list of files that npm pack would include
           // --ignore-scripts: don't re-run prepack (we already built in a prior step)
           // stdio pipe suppresses stderr cross-platform (2>/dev/null breaks on Windows)
@@ -900,7 +978,7 @@ jobs:
           const warnings = [];
 
           // Check main entry point is included
-          const main = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null);
+          const main = resolveEntry(pkg, null);
           if (main && !files.includes(main) && !files.includes(main.replace(/^\.\//, ''))) {
             errors.push('"main" field points to ' + main + ' but this file is NOT in the npm package.');
             errors.push('The plugin will be broken when installed from npm. Add it to "files" in package.json or remove it from .npmignore.');
@@ -969,7 +1047,22 @@ jobs:
 
           MAIN=$(node -e "
             const pkg = require('./package.json');
-            const main = pkg.main || (typeof pkg.exports === 'string' ? pkg.exports : null);
+            function resolveEntry(p, fallback) {
+              if (p && p.main) return p.main;
+              const e = p && p.exports;
+              if (typeof e === 'string') return e;
+              if (e && typeof e === 'object') {
+                const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+                if (typeof root === 'string') return root;
+                if (root && typeof root === 'object') {
+                  for (const k of ['require', 'node', 'default', 'import']) {
+                    if (typeof root[k] === 'string') return root[k];
+                  }
+                }
+              }
+              return fallback;
+            }
+            const main = resolveEntry(pkg, null);
             if (main) console.log(main);
           " 2>/dev/null)
           if [ -n "$MAIN" ] && [ -f "$MAIN" ] && [ -z "$FILES" ]; then
@@ -1432,7 +1525,9 @@ jobs:
             # Verify the values endpoint responds (not 501)
             FROM=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-1d +%Y-%m-%dT%H:%M:%SZ)
             TO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-            HISTORY_STATUS=$(curl -sf -o /dev/null -w '%{http_code}' "http://localhost:3000/signalk/v2/api/history/values?paths=navigation.position&from=${FROM}&to=${TO}&resolution=60")
+            # No -f: we need to capture 4xx/5xx codes (notably 501) instead of
+            # exiting early with an empty HISTORY_STATUS.
+            HISTORY_STATUS=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:3000/signalk/v2/api/history/values?paths=navigation.position&from=${FROM}&to=${TO}&resolution=60" || echo "000")
             if [ "$HISTORY_STATUS" = "501" ]; then
               echo "::error::History API v2: provider registered but /history/values returns 501 (no provider configured)"
               PROVIDER_ERRORS=$((PROVIDER_ERRORS + 1))
