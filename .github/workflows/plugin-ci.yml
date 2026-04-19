@@ -1255,7 +1255,9 @@ jobs:
           DEPRECATED_API: ${{ steps.deprecated-api.outcome }}
           PACK_CHECK: ${{ steps.pack-check.outcome }}
           APPSTORE_CHECK: ${{ steps.appstore-check.outcome }}
-          TESTS: ${{ steps.tests.outcome }}
+          # When coverage-command is set, steps.tests is skipped and the
+          # coverage step runs instead — surface whichever actually ran.
+          TESTS: ${{ inputs.coverage-command != '' && steps.coverage.outcome || steps.tests.outcome }}
           STRAY_FILES: ${{ steps.stray-files.outcome }}
           ES_CHECK: ${{ steps.es-check.outcome }}
           OS_NAME: >-
@@ -1290,7 +1292,7 @@ jobs:
             echo "| API usage (no deprecated/internal) | $(icon "$DEPRECATED_API") |"
             echo "| npm pack includes all files | $(icon "$PACK_CHECK") |"
             echo "| App Store compatible (no native addons) | $(icon "$APPSTORE_CHECK") |"
-            echo "| Tests | $(icon "$TESTS") |"
+            echo "| Tests / coverage | $(icon "$TESTS") |"
             echo "| ES2023 compatible (Cerbo GX / Node 20) | $(icon "$ES_CHECK") |"
             echo "| No stray files after build | $(icon "$STRAY_FILES") |"
           } >> "$GITHUB_STEP_SUMMARY"
