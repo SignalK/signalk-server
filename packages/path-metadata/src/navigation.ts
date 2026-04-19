@@ -72,7 +72,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     units: 'm'
   },
   '/vessels/*/navigation/courseRhumbline/previousPoint/position': {
-    description: 'The position of lastPoint in two dimensions',
+    description: 'The position of previousPoint in two dimensions',
     properties: {
       longitude: {
         type: 'number',
@@ -151,7 +151,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     units: 'm'
   },
   '/vessels/*/navigation/courseGreatCircle/previousPoint/position': {
-    description: 'The position of lastPoint in two dimensions',
+    description: 'The position of previousPoint in two dimensions',
     properties: {
       longitude: {
         type: 'number',

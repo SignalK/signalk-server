@@ -21,7 +21,7 @@ export const communicationMetadata: Record<string, PathMetadataEntry> = {
     description: 'Regular email for the skipper'
   },
   '/vessels/*/communication/satPhoneNumber': {
-    description: 'Satellite phone number for vessel.'
+    description: 'Satellite phone number for the vessel.'
   },
   '/vessels/*/communication/skipperName': {
     description: 'Full name of the skipper of the vessel.'

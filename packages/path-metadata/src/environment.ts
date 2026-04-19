@@ -184,12 +184,12 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/environment/tide/heightHigh': {
     description:
-      'Next high tide height  relative to lowest astronomical tide (LAT/Chart Datum)',
+      'Next high tide height relative to lowest astronomical tide (LAT/Chart Datum)',
     units: 'm'
   },
   '/vessels/*/environment/tide/heightNow': {
     description:
-      'The current tide height  relative to lowest astronomical tide (LAT/Chart Datum)',
+      'The current tide height relative to lowest astronomical tide (LAT/Chart Datum)',
     units: 'm'
   },
   '/vessels/*/environment/tide/heightLow': {
@@ -255,7 +255,7 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/environment/time': {
     description:
-      'A time reference for the vessel. All clocks on the vessel displaying local time should use the timezone offset here. If a timezoneRegion is supplied the timezone must also be supplied. If timezoneRegion is supplied that should be displayed by UIs in preference to simply timezone. ie 12:05 (Europe/London) should be displayed in preference to 12:05 (UTC+01:00)'
+      'A time reference for the vessel. All clocks on the vessel displaying local time should use the timezoneOffset here. If timezoneRegion is supplied, timezoneOffset must also be supplied. UIs should display timezoneRegion in preference to timezoneOffset, i.e. 12:05 (Europe/London) instead of 12:05 (UTC+01:00)'
   },
   '/vessels/*/environment/time/millis': {
     description: 'Milliseconds since the UNIX epoch (1970-01-01 00:00:00)'
@@ -266,7 +266,7 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/environment/time/timezoneRegion': {
     description:
-      'Onboard timezone offset as listed in the IANA timezone database (tz database)'
+      'Onboard timezone region as listed in the IANA timezone database (tz database), e.g. Europe/London'
   },
   '/vessels/*/environment/mode': {
     description:

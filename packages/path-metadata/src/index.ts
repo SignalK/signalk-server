@@ -73,19 +73,19 @@ function buildRegexArray(
 ): RegexEntry[] {
   const result: RegexEntry[] = []
   for (const [key, metadata] of Object.entries(allEntries)) {
-    // Convert path wildcards to regex: * → [^/]+ and RegExp → [^/]+
-    const pattern = key
-      .replace(/\*/g, '[^/]+')
-      .replace(/RegExp/g, '[^/]+')
-      .replace(/\(([^)]+)\)/g, '($1)') // preserve regex groups like (single)|([A-C])
+    const pattern = key.replace(/\*/g, '[^/]+').replace(/RegExp/g, '[^/]+')
     try {
       result.push({
         pattern: new RegExp(`^${pattern}$`),
         key,
         metadata
       })
-    } catch {
-      // Skip invalid patterns
+    } catch (error) {
+      throw new Error(
+        `Invalid path metadata pattern "${key}": ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
     }
   }
   return result

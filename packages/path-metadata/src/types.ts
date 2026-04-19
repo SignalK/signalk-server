@@ -17,11 +17,8 @@ export interface PathMetadataEntry {
       title?: string
       default?: string | number | boolean
       enum?: ReadonlyArray<{ id: number; name: string } | string>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      items?: Record<string, any>
+      items?: Record<string, unknown>
     }
   >
-  /** Runtime metadata (zones, displayUnits, etc.) added via meta deltas or PUT. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
+  [key: string]: unknown
 }

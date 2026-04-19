@@ -25,6 +25,9 @@ interface PathMetadataEntry {
 
 type AllMetadata = Record<string, PathMetadataEntry>
 
+// Approximate height of card header + filter row + table heading in the viewer
+const TABLE_VIEWPORT_OFFSET_PX = 280
+
 const GROUP_LABELS: Record<string, string> = {
   navigation: 'Navigation',
   environment: 'Environment',
@@ -184,7 +187,7 @@ export default function PathReference() {
 
         <div
           style={{
-            maxHeight: 'calc(100vh - 280px)',
+            maxHeight: `calc(100vh - ${TABLE_VIEWPORT_OFFSET_PX}px)`,
             overflowY: 'auto'
           }}
         >
@@ -206,7 +209,6 @@ export default function PathReference() {
             <tbody>
               {filtered.map(([key, meta]) => {
                 const dotPath = toDotPath(key)
-                // Show relative path: strip vessels.*.
                 const displayPath = dotPath.replace(/^vessels\.\*\./, '')
                 const isExpanded = expandedPath === key
                 return (

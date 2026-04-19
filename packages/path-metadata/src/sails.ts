@@ -12,7 +12,7 @@ export const sailsMetadata: Record<string, PathMetadataEntry> = {
     description: "'sail' data type."
   },
   '/vessels/*/sails/inventory/RegExp/name': {
-    description: 'An unique identifier by which the crew identifies a sail'
+    description: 'A unique identifier by which the crew identifies a sail'
   },
   '/vessels/*/sails/inventory/RegExp/type': {
     description: 'The type of sail'
@@ -24,7 +24,7 @@ export const sailsMetadata: Record<string, PathMetadataEntry> = {
     description: 'The brand of the sail (optional)'
   },
   '/vessels/*/sails/inventory/RegExp/active': {
-    description: 'Indicates wether this sail is currently in use or not'
+    description: 'Indicates whether this sail is currently in use or not'
   },
   '/vessels/*/sails/inventory/RegExp/area': {
     description: 'The total area of this sail in square meters',

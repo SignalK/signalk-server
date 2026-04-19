@@ -3,7 +3,7 @@ import type { PathMetadataEntry } from './types'
 export const tanksMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/tanks': {
     description:
-      'Tank data, each tank indentified by a unique name i.e. FreshWater_2'
+      'Tank data, each tank identified by a unique name i.e. FreshWater_2'
   },
   '/vessels/*/tanks/freshWater': {
     description: 'Fresh water tank (drinking)'
