@@ -21,23 +21,6 @@ import { SignalKMessageHub, WithConfig } from './app'
 import { createDebug } from './debug'
 import { EventsActorId, WithWrappedEmitter } from './events'
 
-class DevNull extends Writable {
-  constructor() {
-    super({
-      objectMode: true
-    })
-  }
-
-  _write(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    chunk: any,
-    encoding: BufferEncoding,
-    done: (error?: Error | null) => void
-  ): void {
-    done()
-  }
-}
-
 interface PipeElementConfig {
   type: string
   options?: {
@@ -121,10 +104,14 @@ export function pipedProviders(
       result.pipeElements[i].pipe(result.pipeElements[i + 1])
     }
 
-    result.pipeElements[result.pipeElements.length - 1].pipe(new DevNull())
-    result.pipeElements[result.pipeElements.length - 1].on('data', (msg) => {
-      app.handleMessage(providerConfig.id, msg)
+    const deltaSink = new Writable({
+      objectMode: true,
+      write(msg, _encoding, done) {
+        app.handleMessage(providerConfig.id, msg)
+        done()
+      }
     })
+    result.pipeElements[result.pipeElements.length - 1].pipe(deltaSink)
     app.emit('pipedProvidersStarted', providerConfig)
     return result
   }
