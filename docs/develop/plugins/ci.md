@@ -177,7 +177,7 @@ test-cerbo-hardware:
   name: Cerbo GX (real hardware)
   runs-on: [self-hosted, cerbo-gx]
   steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - run: npm ci
     - run: npm test
 ```

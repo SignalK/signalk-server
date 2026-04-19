@@ -1450,10 +1450,11 @@ jobs:
 
       - name: Install plugin into SignalK
         run: |
-          # Pack the plugin and install it into the test server
+          # Pack the plugin and install it into the test server. Use basename
+          # defensively: some npm versions emit a path-prefixed tarball name.
           PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination /tmp)
           cd /tmp/sk-test
-          npm install "/tmp/$PLUGIN_TGZ"
+          npm install "/tmp/$(basename "$PLUGIN_TGZ")"
 
       - name: Configure plugin to auto-start
         run: |
