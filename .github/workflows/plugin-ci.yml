@@ -187,7 +187,10 @@ jobs:
             const allDeps = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.peerDependencies };
             const reactRange = allDeps.react;
             if (reactRange) {
-              const versionMatch = reactRange.match(/(\d+)\.\d+\.\d+/);
+              // Accept shorthand ranges ("^18", "18", "18.x") as well as full semver.
+              // Matches the baconjs check above — only warn when a leading major
+              // parses confidently. Dist-tags and git specs are left alone.
+              const versionMatch = reactRange.match(/^\s*[~^]?(\d+)(?:[.\s]|$)/);
               if (versionMatch) {
                 const major = parseInt(versionMatch[1], 10);
                 if (major < 19) {
