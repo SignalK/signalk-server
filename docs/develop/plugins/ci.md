@@ -89,16 +89,16 @@ jobs:
       node-versions: '["22"]'
 ```
 
-| Input                        | Default                      | Description                                |
-| ---------------------------- | ---------------------------- | ------------------------------------------ |
-| `test-command`               | `npm test`                   | Command to run your test suite             |
-| `build-command`              | `npm run build --if-present` | Build command                              |
-| `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty |
+| Input                        | Default                      | Description                                                                                                              |
+| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `test-command`               | `npm test`                   | Command to run your test suite                                                                                           |
+| `build-command`              | `npm run build --if-present` | Build command                                                                                                            |
+| `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty                           |
 | `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary |
-| `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms        |
-| `enable-armv7`               | `true`                       | Test on armv7 (Cerbo GX) via QEMU          |
-| `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests |
-| `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each |
+| `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms                                                                                      |
+| `enable-armv7`               | `true`                       | Test on armv7 (Cerbo GX) via QEMU                                                                                        |
+| `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                               |
+| `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                            |
 
 ### Formatting and coverage
 
