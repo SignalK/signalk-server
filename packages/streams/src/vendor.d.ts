@@ -45,10 +45,6 @@ declare module '@signalk/nmea0183-signalk' {
   export = Parser
 }
 
-declare module '@signalk/nmea0183-utilities' {
-  export function appendChecksum(sentence: string): string
-}
-
 declare module '@signalk/client' {
   import { EventEmitter } from 'events'
   interface ClientOptions {
