@@ -15,7 +15,7 @@ export const communicationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/communication/emailHf': {
     description:
-      'Email address to be used for HF email (Winmail, Airmail, Sailmail)'
+      'Email address to be used for HF email (Winlink, Airmail, Sailmail)'
   },
   '/vessels/*/communication/email': {
     description: 'Regular email for the skipper'

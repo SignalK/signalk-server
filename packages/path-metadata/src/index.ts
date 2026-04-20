@@ -68,6 +68,12 @@ interface RegexEntry {
   metadata: PathMetadataEntry
 }
 
+/**
+ * Template keys intentionally embed regex syntax (e.g. `(single)|([A-C])`,
+ * `[A-Za-z0-9]+`), so we deliberately do not escape metacharacters here.
+ * Runtime paths constructed from deltas are escaped separately where needed
+ * (see `internalGetMetadata` / `addMetaData`).
+ */
 function buildRegexArray(
   allEntries: Record<string, PathMetadataEntry>
 ): RegexEntry[] {
@@ -103,8 +109,21 @@ export class MetadataRegistry {
   /**
    * Look up metadata for a dot-separated Signal K path.
    * Returns the metadata entry or undefined if no match.
+   *
+   * Runtime metadata (registered via addMetaData for a specific identity) is
+   * checked first so it wins over a generic wildcard template that would
+   * otherwise shadow it.
    */
   getMetadata(path: string): PathMetadataEntry | undefined {
+    const parts = path.split('.')
+    if (parts.length >= 3) {
+      const wildcardKey = `/${parts[0]}/*/${parts.slice(2).join('/')}`
+      const exact = this.allMetadata[wildcardKey]
+      if (exact && Object.keys(exact).length > 0) {
+        return exact
+      }
+    }
+
     const slashPath = '/' + path.replace(/\./g, '/')
     const result = this.regexEntries.find((entry) =>
       entry.pattern.test(slashPath)

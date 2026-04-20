@@ -211,10 +211,21 @@ export default function PathReference() {
                 const dotPath = toDotPath(key)
                 const displayPath = dotPath.replace(/^vessels\.\*\./, '')
                 const isExpanded = expandedPath === key
+                const toggleExpanded = () =>
+                  setExpandedPath(isExpanded ? null : key)
                 return (
                   <tr
                     key={key}
-                    onClick={() => setExpandedPath(isExpanded ? null : key)}
+                    onClick={toggleExpanded}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        toggleExpanded()
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
                     style={{ cursor: 'pointer' }}
                   >
                     <td>
