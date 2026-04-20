@@ -208,6 +208,11 @@ export class CourseApi {
                       rte,
                       pointIndex,
                       !!this.courseInfo.activeRoute.reverse
+                    ),
+                    name: this.getRoutePointName(
+                      rte,
+                      pointIndex,
+                      !!this.courseInfo.activeRoute.reverse
                     )
                   }
                   if (this.courseInfo.previousPoint?.type === RoutePoint) {
@@ -217,6 +222,11 @@ export class CourseApi {
                       this.courseInfo.previousPoint = {
                         type: RoutePoint,
                         position: this.getRoutePoint(
+                          rte,
+                          prevIndex,
+                          !!this.courseInfo.activeRoute.reverse
+                        ),
+                        name: this.getRoutePointName(
                           rte,
                           prevIndex,
                           !!this.courseInfo.activeRoute.reverse
@@ -236,6 +246,9 @@ export class CourseApi {
                 ;(this.courseInfo.nextPoint as NextPreviousPoint).position = {
                   latitude: r.feature.geometry.coordinates[1],
                   longitude: r.feature.geometry.coordinates[0]
+                }
+                if (this.courseInfo.nextPoint?.href) {
+                  this.courseInfo.nextPoint.name = r.name ?? ''
                 }
                 this.emitCourseInfo()
               }
@@ -791,6 +804,7 @@ export class CourseApi {
           if (idx !== -1) {
             this.courseInfo.activeRoute.pointIndex = idx
           }
+
           this.emitCourseInfo()
           res.status(200).json(Responses.ok)
           return
@@ -803,7 +817,12 @@ export class CourseApi {
             this.courseInfo.activeRoute.pointIndex as number,
             this.courseInfo.activeRoute.reverse
           ),
-          type: RoutePoint
+          type: RoutePoint,
+          name: this.getRoutePointName(
+            rte,
+            this.courseInfo.activeRoute.pointIndex,
+            !!this.courseInfo.activeRoute.reverse
+          )
         }
 
         // set previousPoint
@@ -831,7 +850,12 @@ export class CourseApi {
               (this.courseInfo.activeRoute.pointIndex as number) - 1,
               this.courseInfo.activeRoute.reverse
             ),
-            type: RoutePoint
+            type: RoutePoint,
+            name: this.getRoutePointName(
+              rte,
+              (this.courseInfo.activeRoute.pointIndex as number) - 1,
+              !!this.courseInfo.activeRoute.reverse
+            )
           }
         }
         this.emitCourseInfo()
@@ -881,7 +905,8 @@ export class CourseApi {
     newCourse.activeRoute = activeRoute
     newCourse.nextPoint = {
       type: RoutePoint,
-      position: this.getRoutePoint(rte, pointIndex, !!reverse)
+      position: this.getRoutePoint(rte, pointIndex, !!reverse),
+      name: this.getRoutePointName(rte, pointIndex, !!reverse)
     }
     newCourse.startTime = new Date().toISOString()
 
@@ -911,7 +936,12 @@ export class CourseApi {
           activeRoute.pointIndex - 1,
           activeRoute.reverse
         ),
-        type: RoutePoint
+        type: RoutePoint,
+        name: this.getRoutePointName(
+          rte,
+          activeRoute.pointIndex - 1,
+          activeRoute.reverse
+        )
       }
     }
 
@@ -952,7 +982,8 @@ export class CourseApi {
                 longitude: r.feature.geometry.coordinates[0]
               },
               href: dest.href,
-              type: (r.type as CoursePointType) ?? 'Waypoint'
+              type: (r.type as CoursePointType) ?? 'Waypoint',
+              name: r.name ?? ''
             }
             newCourse.activeRoute = null
           } else {
@@ -1070,6 +1101,19 @@ export class CourseApi {
       result.altitude = pos[2]
     }
     return result
+  }
+
+  private getRoutePointName(rte: any, index: number, reverse: boolean | null) {
+    if (!Array.isArray(rte.feature.properties?.coordinatesMeta)) {
+      return ''
+    }
+    const meta = reverse
+      ? rte.feature.properties.coordinatesMeta[
+          rte.feature.properties.coordinatesMeta.length - (index + 1)
+        ]
+      : rte.feature.properties.coordinatesMeta[index]
+
+    return meta?.name ?? ''
   }
 
   private getRoutePoints(rte: any) {
