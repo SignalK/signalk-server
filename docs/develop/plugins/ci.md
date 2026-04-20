@@ -135,18 +135,11 @@ The armv7 job runs install, build, and tests — it does not repeat the full val
 
 ## Integration Tests
 
-Enable `enable-signalk-integration: true` to have the workflow:
+Enable `enable-signalk-integration: true` to run your plugin against a real Signal K server.
 
-1. Install a Signal K server
-2. Build your plugin and pack it with `npm pack`
-3. Install the packed tarball into the server
-4. Auto-configure the plugin to start (creates `plugin-config-data/<id>.json`)
-5. Start the server with sample NMEA 0183 and NMEA 2000 data (navigation, wind, depth, temperature, battery, etc.)
-6. Verify the plugin appears in `/skServer/plugins`
-7. Verify provider API registrations (see below)
-8. Run `npm run test:integration` if defined in your `package.json`
+The job installs a Signal K server, packs and installs your plugin, auto-enables it, and starts the server with sample NMEA 0183 + NMEA 2000 data so the plugin has a realistic data environment (navigation, wind, depth, temperature, battery, and more). It then verifies the plugin loaded, checks provider API registrations, and runs `npm run test:integration` if defined. Your tests receive `SIGNALK_URL=http://localhost:3000` to connect to the running server.
 
-The integration test environment exports `SIGNALK_URL=http://localhost:3000` so your tests can connect to the running server.
+The authoritative sequence of steps lives in the workflow itself: [.github/workflows/plugin-ci.yml](https://github.com/SignalK/signalk-server/blob/master/.github/workflows/plugin-ci.yml).
 
 Pass `signalk-server-versions` as a JSON array to fan the integration job out over multiple server versions — useful for catching regressions across the baconjs 1 → 3 transition (server 2.23.x vs 2.24.0+) and similar cross-generation breakage:
 
