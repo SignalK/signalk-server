@@ -835,41 +835,41 @@ jobs:
             const lines = content.split('\n');
             const relFile = path.relative('.', file);
 
-            // Precompute which lines to skip as comments. Tracks /* ... */
-            // block state across lines and handles // line comments and
-            // single-line /* ... */ blocks. String literals are not parsed,
-            // so a comment-like sequence inside a string is still treated as
-            // a comment — an acceptable false-positive for this scanner.
-            const skipLine = new Array(lines.length);
+            // Strip comments before scanning so commented-out examples (either
+            // "// app.server" or "/* app.server */" forms, on their own line
+            // or inline with real code) do not trigger API misuse warnings.
+            // String literals are not parsed — a comment-like sequence inside
+            // a string is still treated as a comment, an accepted false-pos.
+            const codeLines = new Array(lines.length);
             let inBlock = false;
             for (let i = 0; i < lines.length; i++) {
               const line = lines[i];
-              const trimmed = line.trim();
-              if (inBlock) {
-                skipLine[i] = true;
-                if (line.indexOf('*/') !== -1) inBlock = false;
-                continue;
-              }
-              if (trimmed.startsWith('//')) { skipLine[i] = true; continue; }
-              // Ignore // tail comments when looking for block-comment starts —
-              // otherwise a // comment containing "/*" would start a fake block.
-              const lineComment = line.indexOf('//');
-              const searchEnd = lineComment === -1 ? line.length : lineComment;
-              const blockStart = line.indexOf('/*');
-              if (blockStart !== -1 && blockStart < searchEnd) {
-                const blockEnd = line.indexOf('*/', blockStart + 2);
-                if (blockEnd === -1) {
+              let out = '';
+              let pos = 0;
+              while (pos < line.length) {
+                if (inBlock) {
+                  const end = line.indexOf('*/', pos);
+                  if (end === -1) { pos = line.length; break; }
+                  inBlock = false;
+                  pos = end + 2;
+                } else if (line.startsWith('//', pos)) {
+                  break; // rest of line is a // comment
+                } else if (line.startsWith('/*', pos)) {
                   inBlock = true;
-                  skipLine[i] = trimmed.startsWith('/*');
+                  pos += 2;
+                } else {
+                  out += line[pos];
+                  pos += 1;
                 }
               }
+              codeLines[i] = out;
             }
 
             function scanPatterns(patterns, target) {
               for (const pat of patterns) {
                 for (let i = 0; i < lines.length; i++) {
-                  if (skipLine[i]) continue;
-                  if (pat.pattern.test(lines[i])) {
+                  if (!codeLines[i]) continue;
+                  if (pat.pattern.test(codeLines[i])) {
                     target.push(relFile + ':' + (i + 1) + ' — ' + pat.message);
                   }
                   pat.pattern.lastIndex = 0;
