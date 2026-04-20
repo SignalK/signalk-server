@@ -392,12 +392,43 @@ jobs:
             console.log('::warning::' + label + ' has no type, properties, oneOf, or anyOf — is this a valid JSON Schema?');
           }
 
-          // Check it's JSON-serializable (no circular refs, no functions)
-          try {
-            JSON.stringify(schema);
-          } catch (e) {
-            console.log('::error::' + label + ' is not JSON-serializable: ' + e.message);
-            console.log('::error::The server stores this as JSON — non-serializable schemas will cause errors.');
+          // Check for JSON-hostile values that would be silently dropped or
+          // replaced by JSON.stringify. Circular refs throw from stringify;
+          // functions/symbols/undefined properties do not — walk the tree
+          // explicitly so authors get a useful error instead of data loss.
+          const jsonIssues = [];
+          const seen = new WeakSet();
+          function walk(node, path) {
+            if (node === null) return;
+            const t = typeof node;
+            if (t === 'function' || t === 'symbol') {
+              jsonIssues.push(path + ' is a ' + t + ' — JSON.stringify will drop it');
+              return;
+            }
+            if (t !== 'object') return;
+            if (seen.has(node)) {
+              jsonIssues.push(path + ' is a circular reference');
+              return;
+            }
+            seen.add(node);
+            if (Array.isArray(node)) {
+              node.forEach((v, i) => walk(v, path + '[' + i + ']'));
+              return;
+            }
+            for (const k of Object.keys(node)) {
+              const v = node[k];
+              if (v === undefined) {
+                jsonIssues.push(path + '.' + k + ' is undefined — JSON.stringify will drop this property');
+                continue;
+              }
+              walk(v, path + '.' + k);
+            }
+          }
+          walk(schema, 'schema');
+
+          if (jsonIssues.length > 0) {
+            jsonIssues.forEach(m => console.log('::error::' + label + ': ' + m));
+            console.log('::error::The server stores the schema as JSON — non-serializable members cause silent data loss.');
             process.exit(1);
           }
 
