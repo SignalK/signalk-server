@@ -1357,6 +1357,10 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up QEMU for ARM emulation
+        # Advisory: a QEMU setup failure must not block the workflow — the
+        # armv7 test step handles its own failure via continue-on-error, and
+        # if QEMU truly didn't initialize, docker run will fail there instead.
+        continue-on-error: true
         uses: docker/setup-qemu-action@v4
         with:
           platforms: linux/arm/v7
