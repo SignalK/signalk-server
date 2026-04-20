@@ -1087,7 +1087,7 @@ export class CourseApi {
     }
   }
 
-  private getRoutePoint(rte: any, index: number, reverse: boolean | null) {
+  private getRoutePoint(rte: Route, index: number, reverse: boolean | null) {
     const pos = reverse
       ? rte.feature.geometry.coordinates[
           rte.feature.geometry.coordinates.length - (index + 1)
@@ -1103,15 +1103,16 @@ export class CourseApi {
     return result
   }
 
-  private getRoutePointName(rte: any, index: number, reverse: boolean | null) {
-    if (!Array.isArray(rte.feature.properties?.coordinatesMeta)) {
+  private getRoutePointName(rte: Route, index: number, reverse: boolean | null) {
+    const {coordinatesMeta} = rte.feature.properties as Record<string, {name: string}>
+    if (!Array.isArray(coordinatesMeta)) {
       return ''
     }
     const meta = reverse
-      ? rte.feature.properties.coordinatesMeta[
-          rte.feature.properties.coordinatesMeta.length - (index + 1)
+      ? coordinatesMeta[
+          coordinatesMeta.length - (index + 1)
         ]
-      : rte.feature.properties.coordinatesMeta[index]
+      : coordinatesMeta[index]
 
     return meta?.name ?? ''
   }
