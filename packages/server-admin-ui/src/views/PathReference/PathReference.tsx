@@ -53,7 +53,6 @@ function getGroup(path: string): string {
 }
 
 function toDotPath(slashPath: string): string {
-  // /vessels/*/navigation/speedOverGround → vessels.*.navigation.speedOverGround
   return slashPath.replace(/^\//, '').replace(/\//g, '.')
 }
 

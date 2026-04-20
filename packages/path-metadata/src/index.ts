@@ -73,13 +73,22 @@ interface RegexEntry {
  * `[A-Za-z0-9]+`), so we deliberately do not escape metacharacters here.
  * Runtime paths constructed from deltas are escaped separately where needed
  * (see `internalGetMetadata` / `addMetaData`).
+ *
+ * Each segment is wrapped in `(?:...)` so any `|` alternation inside a segment
+ * stays scoped to that segment and cannot swallow the surrounding anchors.
  */
+function metadataKeySegmentToRegex(segment: string): string {
+  if (segment === '') return ''
+  if (segment === '*' || segment === 'RegExp') return '[^/]+'
+  return `(?:${segment})`
+}
+
 function buildRegexArray(
   allEntries: Record<string, PathMetadataEntry>
 ): RegexEntry[] {
   const result: RegexEntry[] = []
   for (const [key, metadata] of Object.entries(allEntries)) {
-    const pattern = key.replace(/\*/g, '[^/]+').replace(/RegExp/g, '[^/]+')
+    const pattern = key.split('/').map(metadataKeySegmentToRegex).join('/')
     try {
       result.push({
         pattern: new RegExp(`^${pattern}$`),

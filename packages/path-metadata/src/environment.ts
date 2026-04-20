@@ -167,14 +167,14 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
         type: 'number',
         description:
           'The direction component of the water current vector referenced to true (geographic) north',
-        example: 123.45,
+        example: 2.155,
         units: 'rad'
       },
       setMagnetic: {
         type: 'number',
         description:
           'The direction component of the water current vector referenced to magnetic north',
-        example: 131.22,
+        example: 2.29,
         units: 'rad'
       }
     }
