@@ -711,7 +711,7 @@ module.exports = (theApp: any) => {
       list: () => app.notificationApi.list(),
       getById: (id: NotificationId) => app.notificationApi.getById(id),
       raise: (options: AlarmRaiseOptions) => app.notificationApi.raise(options),
-      mob: (message: string) => app.notificationApi.mob(message),
+      mob: (message?: string) => app.notificationApi.mob(message),
       update: (id: NotificationId, options: AlarmUpdateOptions) =>
         app.notificationApi.update(id, options),
       clear: (id: NotificationId) => app.notificationApi.clear(id),

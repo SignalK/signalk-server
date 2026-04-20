@@ -560,12 +560,12 @@ The tables below detail the resultant notification `method` following the succes
 
 Generates notifications with the following property values:
 
-| Source | State        | Method             | canSilence | canAcknowledge | canClear |
-| ------ | ------------ | ------------------ | ---------- | -------------- | -------- |
-| API    | `emergency`  | [`visual`,`sound`] | false      | true           | true     |
-| Delta  | `emergency`  | _from delta_       | false      | true           | false    |
-| API    | _all others_ | [`visual`,`sound`] | true       | true           | true     |
-| Delta  | _all others_ | _from delta_       | true       | true           | false    |
+| Source | State        | Method             | canSilence                           | canAcknowledge                  | canClear |
+| ------ | ------------ | ------------------ | ------------------------------------ | ------------------------------- | -------- |
+| API    | `emergency`  | [`visual`,`sound`] | false                                | true                            | true     |
+| Delta  | `emergency`  | _from delta_       | _from delta temporarySilenceSupport_ | _from delta acknowledgeSupport_ | false    |
+| API    | _all others_ | [`visual`,`sound`] | true                                 | true                            | true     |
+| Delta  | _all others_ | _from delta_       | _from delta temporarySilenceSupport_ | _from delta acknowledgeSupport_ | false    |
 
 > _Note: All incoming notifications to the Signal K Server, that were not generated
 > by the Notification API, will have `canClear = false`._
