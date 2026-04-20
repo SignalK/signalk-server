@@ -305,14 +305,13 @@ export function getDefaultCategory(
   pathSiUnit?: string,
   username?: string
 ): string | null {
-  // Priority 1: Direct match in default-categories.json
   if (defaultCategories[signalkPath]) {
     return defaultCategories[signalkPath]
   }
 
-  // Priority 2: Wildcard match in default-categories.json
   for (const [pattern, category] of Object.entries(defaultCategories)) {
     if (pattern.includes('*')) {
+      // '*' matches a single path segment, not dots
       const regex = new RegExp(
         '^' +
           pattern
@@ -327,7 +326,6 @@ export function getDefaultCategory(
     }
   }
 
-  // Priority 3: Auto-assign from base unit
   if (pathSiUnit) {
     return getCategoryForBaseUnit(pathSiUnit, username)
   }
@@ -364,8 +362,6 @@ export function getCategoryForBaseUnit(
   if (!matchingCategories || matchingCategories.length === 0) return null
   if (matchingCategories.length === 1) return matchingCategories[0]
 
-  // Multiple categories for this base unit — need disambiguation
-  // 1. Check per-user primary category
   if (username) {
     const userPrefs = loadUserPreferences(username)
     if (userPrefs?.primaryCategories?.[baseUnit]) {
@@ -374,12 +370,11 @@ export function getCategoryForBaseUnit(
     }
   }
 
-  // 2. Fall back to system default
   const defaultPrimary = defaultPrimaryCategories[baseUnit]
   if (defaultPrimary && matchingCategories.includes(defaultPrimary))
     return defaultPrimary
 
-  // 3. Fall back to first category alphabetically (deterministic)
+  // Deterministic fallback when neither user nor system default resolves.
   return [...matchingCategories].sort()[0]
 }
 
