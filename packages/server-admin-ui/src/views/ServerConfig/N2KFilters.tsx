@@ -60,8 +60,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
     onChange({
       target: {
         name: 'options.filtersEnabled',
-        value: event.target.checked,
-        type: 'checkbox'
+        value: event.target.checked
       }
     })
   }
@@ -85,7 +84,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
               type="checkbox"
               name="filtersEnabled"
               className="switch-input"
-              checked={value.options.filtersEnabled}
+              checked={!!value.options.filtersEnabled}
               onChange={handleEnabledChange}
             />
             <span className="switch-label" data-on="Yes" data-off="No" />
@@ -112,10 +111,8 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
               </thead>
               <tbody>
                 {filters.map((filter, index) => {
-                  // Use composite key - filters don't have stable unique IDs
-                  const filterKey = `${index}-${filter.source}-${filter.pgn}`
                   return (
-                    <tr key={filterKey}>
+                    <tr key={index}>
                       <td>
                         <Form.Control
                           type="text"
