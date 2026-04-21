@@ -61,7 +61,7 @@
     },
     "power": {
       "baseUnit": "W",
-      "targetUnit": "horsepower",
+      "targetUnit": "W",
       "displayFormat": "0.00"
     },
     "percentage": {
