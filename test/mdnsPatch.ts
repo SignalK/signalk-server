@@ -120,4 +120,36 @@ describe('patchAstronautLabsMdns', () => {
       console.error = originalConsoleError
     }
   })
+
+  it('does not clobber a later console.error wrapper on uninstall', async () => {
+    const originalConsoleError = console.error
+    const logged: unknown[][] = []
+    const laterConsoleError: typeof console.error = (...args: unknown[]) => {
+      logged.push(args)
+    }
+
+    console.error = (...args: unknown[]) => {
+      logged.push(['original', ...args])
+    }
+
+    try {
+      const FakeNetworkInterface = loadPatchedHelper(async () => {
+        console.error = laterConsoleError
+      })
+
+      await (
+        FakeNetworkInterface.prototype as {
+          _bindSocket: () => Promise<unknown>
+        }
+      )._bindSocket()
+
+      expect(console.error).to.equal(laterConsoleError)
+
+      console.error('still wrapped')
+
+      expect(logged).to.deep.equal([['still wrapped']])
+    } finally {
+      console.error = originalConsoleError
+    }
+  })
 })

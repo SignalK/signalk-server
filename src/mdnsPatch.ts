@@ -46,7 +46,7 @@ function installConsoleFilter() {
 
   const originalConsoleError = console.error
 
-  console.error = (...args: unknown[]) => {
+  const wrappedConsoleError: typeof console.error = (...args: unknown[]) => {
     if (isIgnorableMembershipError(args)) {
       const address = (args[0] as string).slice(MEMBERSHIP_ERROR_PREFIX.length)
       debug.enabled &&
@@ -59,8 +59,12 @@ function installConsoleFilter() {
     originalConsoleError(...args)
   }
 
+  console.error = wrappedConsoleError
+
   restoreConsoleError = () => {
-    console.error = originalConsoleError
+    if (console.error === wrappedConsoleError) {
+      console.error = originalConsoleError
+    }
     restoreConsoleError = undefined
   }
 }

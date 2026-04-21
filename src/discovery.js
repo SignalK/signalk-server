@@ -199,6 +199,7 @@ module.exports.runDiscovery = function (app) {
   function discoverSignalkWs(wsType) {
     try {
       const browser = new Browser('_signalk-' + wsType + '._tcp')
+      let browserStopped = false
 
       debug('looking for SignalK ' + wsType)
 
@@ -239,6 +240,7 @@ module.exports.runDiscovery = function (app) {
       })
 
       browser.on('error', (err) => {
+        browserStopped = true
         debug('discoverSignalkWs:', err)
       })
 
@@ -246,6 +248,11 @@ module.exports.runDiscovery = function (app) {
 
       setTimeout(() => {
         try {
+          if (browserStopped) {
+            return
+          }
+
+          browserStopped = true
           browser.stop()
           debug('discoverSignalkWs close')
         } catch (err) {
