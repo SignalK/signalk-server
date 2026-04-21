@@ -18,7 +18,9 @@
 
 const _ = require('lodash')
 import { createDebug } from './debug'
+import { patchAstronautLabsMdns } from './mdnsPatch'
 const debug = createDebug('signalk-server:mdns')
+patchAstronautLabsMdns()
 const { Advertisement } = require('@astronautlabs/mdns')
 const ports = require('./ports')
 

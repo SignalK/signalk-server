@@ -15,9 +15,11 @@
  */
 
 import { createDebug } from './debug'
+import { patchAstronautLabsMdns } from './mdnsPatch'
 const debug = createDebug('signalk-server:discovery')
 const canboatjs = require('@canboat/canboatjs')
 const dgram = require('dgram')
+patchAstronautLabsMdns()
 const { Browser } = require('@astronautlabs/mdns')
 const { networkInterfaces } = require('os')
 
