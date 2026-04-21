@@ -232,7 +232,10 @@ module.exports = function (
   app.use(
     '/admin/assets/public_src/img',
     express.static(
-      path.join(__dirname, '/../node_modules/@signalk/server-admin-ui/public/img')
+      path.join(
+        __dirname,
+        '/../node_modules/@signalk/server-admin-ui/public/img'
+      )
     )
   )
 
