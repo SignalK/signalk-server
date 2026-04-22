@@ -1,0 +1,81 @@
+# ─────────────────────────────────────────────────────────────
+# SignalK Plugin Release + Publish
+#
+# Drop this file into your plugin repo at:
+#   .github/workflows/release.yml
+#
+# On every pushed tag (e.g. `1.4.2` or `v1.4.2`) this workflow:
+#   1. Creates a GitHub Release with auto-generated notes built
+#      from merged PRs since the previous tag.
+#   2. Publishes the package to npm with provenance.
+#
+# Tags containing "beta" (e.g. `1.5.0-beta.1`) are published to
+# the `beta` npm dist-tag instead of `latest`.
+#
+# Prerequisites:
+#   - Create an npm access token and add it as repo secret NPM_TOKEN.
+#     (Needed only if your account requires a token; provenance
+#     works without one via OIDC on public npm packages, but most
+#     accounts still need NPM_TOKEN set.)
+#   - Release the package once manually from your machine so npm
+#     knows the package exists under the correct scope.
+#
+# Releasing a new version:
+#   npm version patch     # or minor / major — updates package.json and tags
+#   git push && git push --tags
+# ─────────────────────────────────────────────────────────────
+
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          if [[ "$tag" == *beta* ]]; then
+            npm publish --provenance --access public --tag beta
+          else
+            npm publish --provenance --access public
+          fi
