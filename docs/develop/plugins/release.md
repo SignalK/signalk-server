@@ -55,6 +55,8 @@ steps:
 
 The [example workflow](./examples/plugin-release-example.yml) shows the full shape, including a beta-tag branch for `*-beta*` versions.
 
+If the publish step fails transiently after the GitHub Release was already created, re-run the failed `publish` job from the Actions UI. If that's not possible, cut a new patch tag (e.g. `v1.4.3`) rather than force-retagging — tags and releases should be immutable so downstream consumers of the GitHub Release can trust them.
+
 ## Dependabot
 
 Dependabot fetches the GitHub Release notes of each updated package and embeds them into its update PRs — so plugins that follow the contract above already benefit their downstream users. Dependabot is also useful _for_ your plugin: it keeps the dependencies of your plugin (and the versions of the GitHub Actions your CI/release workflows use) up to date.
