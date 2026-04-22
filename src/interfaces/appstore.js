@@ -225,23 +225,37 @@ module.exports = function (app) {
   function getInstalledAsPackageEntries(keyword) {
     const sources =
       keyword === 'signalk-node-server-plugin'
-        ? [app.plugins || []]
-        : [app.webapps || [], app.addons || [], app.embeddablewebapps || []]
+        ? [{ entries: app.plugins || [], fallbackKeyword: keyword }]
+        : [
+            { entries: app.webapps || [], fallbackKeyword: 'signalk-webapp' },
+            { entries: app.addons || [], fallbackKeyword: 'signalk-webapp' },
+            {
+              entries: app.embeddablewebapps || [],
+              fallbackKeyword: 'signalk-embeddable-webapp'
+            }
+          ]
     const seen = new Set()
     const entries = []
-    for (const source of sources) {
-      for (const installed of source) {
+    for (const { entries: sourceEntries, fallbackKeyword } of sources) {
+      for (const installed of sourceEntries) {
         const name = installed.packageName || installed.name
         if (!name || seen.has(name)) continue
         seen.add(name)
+        const authorName =
+          typeof installed.author === 'string'
+            ? installed.author
+            : installed.author && installed.author.name
         entries.push({
           package: {
             name,
             version: installed.version,
             description: installed.description,
-            keywords: [keyword],
-            date: undefined,
-            links: {}
+            keywords: installed.keywords || [fallbackKeyword],
+            publisher:
+              installed.publisher ||
+              (authorName ? { username: authorName } : { username: '' }),
+            date: installed.date,
+            links: installed.links || {}
           }
         })
       }
