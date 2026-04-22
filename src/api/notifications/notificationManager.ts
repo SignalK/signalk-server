@@ -71,6 +71,19 @@ export class NotificationManager {
     return this.alarms.get(id)?.properties
   }
 
+  getPath(path: Path): Record<string, AlarmProperties> {
+    if (!path) {
+      throw new Error('Notification path not supplied!')
+    }
+    const l: Record<string, AlarmProperties> = {}
+    this.alarms.forEach((v: Alarm, k: string) => {
+      if (v.properties.path === path) {
+        l[k] = v.properties
+      }
+    })
+    return l
+  }
+
   raise(options: AlarmRaiseOptions): NotificationId {
     if (!options) {
       throw new Error('Notification properties not supplied!')

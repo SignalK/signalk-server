@@ -13,7 +13,8 @@ import {
   AlarmProperties,
   NotificationId,
   AlarmRaiseOptions,
-  AlarmUpdateOptions
+  AlarmUpdateOptions,
+  Path
 } from '@signalk/server-api'
 import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
@@ -132,7 +133,7 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         if (uuid.validate(req.params.id)) {
-          const n = this.getById(req.params.id as NotificationId)
+          const n = this.getId(req.params.id as NotificationId)
           if (n) {
             res.status(200).json(n)
           } else {
@@ -308,8 +309,12 @@ export class NotificationApi {
     return this.notificationManager.list
   }
 
-  getById(id: NotificationId): AlarmProperties | undefined {
+  getId(id: NotificationId): AlarmProperties | undefined {
     return this.notificationManager.get(id)
+  }
+
+  getPath(path: Path): Record<NotificationId, AlarmProperties> {
+    return this.notificationManager.getPath(path)
   }
 
   silence(id: NotificationId): void {

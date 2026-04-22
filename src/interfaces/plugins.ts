@@ -709,7 +709,8 @@ module.exports = (theApp: any) => {
 
     appCopy.notificationsApi = {
       list: () => app.notificationApi.list(),
-      getById: (id: NotificationId) => app.notificationApi.getById(id),
+      getId: (id: NotificationId) => app.notificationApi.getId(id),
+      getPath: (path: Path) => app.notificationApi.getPath(path),
       raise: (options: AlarmRaiseOptions) => app.notificationApi.raise(options),
       mob: (message?: string) => app.notificationApi.mob(message),
       update: (id: NotificationId, options: AlarmUpdateOptions) =>
@@ -720,6 +721,7 @@ module.exports = (theApp: any) => {
       acknowledge: (id: NotificationId) => app.notificationApi.acknowledge(id),
       acknowledgeAll: () => app.notificationApi.acknowledgeAll()
     }
+    delete (appCopy as any).notificationApi // expose only the plugin-specific methods
 
     try {
       const moduleDir = path.join(location, packageName)

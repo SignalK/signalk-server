@@ -20,14 +20,36 @@ export interface NotificationsApi {
    *
    * @param id - Notification identifier.
    *
+   * @example
+   * ```typescript
+   * app.notificationsApi.getId('9922c05a-2813-4995-ab72-33f8f2246ff7')
+   * ```
    */
-  getById(id: NotificationId): AlarmProperties | undefined
+  getId(id: NotificationId): AlarmProperties | undefined
+
+  /**
+   * Retrieve the notification(s) with the supplied path.
+   *
+   * @category Notifications API
+   *
+   * @param path - Notification path.
+   *
+   * @example
+   * ```typescript
+   * app.notificationsApi.getPath('notifications.server.newVersion')
+   * ```
+   */
+  getPath(path: Path): Record<NotificationId, AlarmProperties>
 
   /**
    * Retrieve a list notifications keyed by identifier.
    *
    * @category Notifications API
    *
+   * @example
+   * ```typescript
+   * app.notificationsApi.list()
+   * ```
    */
   list(): Record<NotificationId, AlarmProperties>
 
@@ -128,6 +150,10 @@ export interface NotificationsApi {
    *
    * @param id - Notification identifier.
    *
+   * @example
+   * ```typescript
+   * app.notificationsApi.silence('9922c05a-2813-4995-ab72-33f8f2246ff7')
+   * ```
    */
   silence(id: NotificationId): void
 
@@ -136,6 +162,10 @@ export interface NotificationsApi {
    *
    * @category Notifications API
    *
+   * @example
+   * ```typescript
+   * app.notificationsApi.silenceAll()
+   * ```
    */
   silenceAll(): void
 
@@ -149,6 +179,10 @@ export interface NotificationsApi {
    *
    * @param id - Notification identifier.
    *
+   * @example
+   * ```typescript
+   * app.notificationsApi.acknowledge('9922c05a-2813-4995-ab72-33f8f2246ff7')
+   * ```
    */
   acknowledge(id: NotificationId): void
 
@@ -157,6 +191,10 @@ export interface NotificationsApi {
    *
    * @category Notifications API
    *
+   * @example
+   * ```typescript
+   * app.notificationsApi.acknowledgeAll()
+   * ```
    */
   acknowledgeAll(): void
 
@@ -168,6 +206,11 @@ export interface NotificationsApi {
    * @category Notifications API
    *
    * @param id - Notification identifier.
+   *
+   * @example
+   * ```typescript
+   * app.notificationsApi.clear('9922c05a-2813-4995-ab72-33f8f2246ff7')
+   * ```
    *
    */
   clear(id: NotificationId): void

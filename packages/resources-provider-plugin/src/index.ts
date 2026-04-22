@@ -2,7 +2,8 @@ import {
   Plugin,
   ServerAPI,
   ResourceProviderRegistry,
-  SIGNALKRESOURCETYPES
+  SIGNALKRESOURCETYPES,
+  Path
 } from '@signalk/server-api'
 
 import { FileStore, getUuid } from './lib/filestorage'
@@ -136,6 +137,17 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       server.debug(`${plugin.name} starting.......`)
       config = cleanConfig(settings)
       server.debug(`Applied config: ${JSON.stringify(config)}`)
+
+      setTimeout(() => {
+        const id = server.notificationsApi.mob()
+        console.log('mob id =', id)
+        console.log(
+          server.notificationsApi.getPath(
+            'notifications.server.newVersion' as Path
+          )
+        )
+        console.log(server.notificationsApi.getId(id))
+      }, 10000)
 
       // compile list of enabled resource types
       let apiProviderFor: string[] = []
