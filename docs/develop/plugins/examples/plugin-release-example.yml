@@ -69,6 +69,8 @@ jobs:
 
       - run: npm ci
 
+      # Assumes your package.json defines `prepublishOnly` (or `prepare`) if a
+      # build step is needed — see the AppStore publishing guide.
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
