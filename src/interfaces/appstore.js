@@ -163,19 +163,35 @@ module.exports = function (app) {
 
       app.get(`${SERVERROUTESPREFIX}/appstore/available/`, (req, res) => {
         const installedNames = getInstalledPackageNames()
+        let storeAvailable = true
 
         Promise.all([
           findPluginsAndWebapps().catch((err) => {
             console.error(`findPluginsAndWebapps failed: ${err.message}`)
             debug(err.stack)
-            return [[], []]
+            storeAvailable = false
+            return [
+              getInstalledAsPackageEntries('signalk-node-server-plugin'),
+              getInstalledAsPackageEntries('signalk-webapp')
+            ]
           }),
           getLatestServerVersion(app.config.version).catch(() => '0.0.0'),
           fetchDistTagsForPackages(installedNames).catch(() => ({}))
         ])
-          .then(([[plugins, webapps], serverVersion, distTagsMap]) =>
-            getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap)
-          )
+          .then(([[plugins, webapps], serverVersion, distTagsMap]) => {
+            const result = getAllModuleInfo(
+              plugins,
+              webapps,
+              serverVersion,
+              distTagsMap
+            )
+            result.storeAvailable = storeAvailable
+            if (!storeAvailable) {
+              result.available = []
+              result.updates = []
+            }
+            return result
+          })
           .then((result) => res.json(result))
           .catch((error) => {
             console.log(error.message)
@@ -204,6 +220,33 @@ module.exports = function (app) {
         })
       ]
     })
+  }
+
+  function getInstalledAsPackageEntries(keyword) {
+    const sources =
+      keyword === 'signalk-node-server-plugin'
+        ? [app.plugins || []]
+        : [app.webapps || [], app.addons || [], app.embeddablewebapps || []]
+    const seen = new Set()
+    const entries = []
+    for (const source of sources) {
+      for (const installed of source) {
+        const name = installed.packageName || installed.name
+        if (!name || seen.has(name)) continue
+        seen.add(name)
+        entries.push({
+          package: {
+            name,
+            version: installed.version,
+            description: installed.description,
+            keywords: [keyword],
+            date: undefined,
+            links: {}
+          }
+        })
+      }
+    }
+    return entries
   }
 
   function getInstalledPackageNames() {
