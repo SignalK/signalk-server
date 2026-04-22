@@ -17,7 +17,7 @@
 
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:deltacache')
-import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
+import { FullSignalK, getSourceId } from '@signalk/server-api'
 import _, { isUndefined } from 'lodash'
 import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
