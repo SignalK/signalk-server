@@ -1,3 +1,14 @@
+// Maps a base unit to its primary (default) category when multiple categories share that unit
+export interface PrimaryCategoryMap {
+  [baseUnit: string]: string // e.g., "m" -> "distance"
+}
+
+// Per-user unit preferences (applicationData/users/{username}/unitpreferences/1.0.0.json)
+export interface UserUnitPreferences {
+  activePreset?: string
+  primaryCategories?: PrimaryCategoryMap
+}
+
 // categories.json structure
 export interface CategoryMap {
   categoryToBaseUnit: {

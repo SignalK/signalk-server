@@ -33,7 +33,11 @@ function enhanceMetadataResponse(metadata, signalkPath, username) {
 
   // If no category set, try to get default category for this path
   if (!storedDisplayUnits?.category && signalkPath) {
-    const defaultCategory = getDefaultCategory(signalkPath)
+    const defaultCategory = getDefaultCategory(
+      signalkPath,
+      metadata.units,
+      username
+    )
     if (defaultCategory) {
       storedDisplayUnits = { category: defaultCategory }
     }
@@ -71,7 +75,9 @@ function enhanceTreeMetadata(node, pathParts, username) {
   if (node === null || typeof node !== 'object') return
   if (node.meta) {
     const signalkPath = pathParts.join('.')
-    enhanceMetadataResponse(node.meta, signalkPath, username)
+    const metaCopy = structuredClone(node.meta)
+    enhanceMetadataResponse(metaCopy, signalkPath, username)
+    node.meta = metaCopy
   }
   for (const key in node) {
     if (!SKIP_KEYS.has(key)) {
@@ -83,7 +89,7 @@ function enhanceTreeMetadata(node, pathParts, username) {
 function collectMeta(node, pathParts, result) {
   if (node === null || typeof node !== 'object') return
   if (node.meta) {
-    result[pathParts.join('.')] = node.meta
+    result[pathParts.join('.')] = structuredClone(node.meta)
   }
   for (const key in node) {
     if (!SKIP_KEYS.has(key)) {

@@ -4,6 +4,12 @@ import path from 'path'
 import { rimraf } from 'rimraf'
 import { startServer } from './ts-servertestutilities'
 import { WsPromiser, serverTestConfigDirectory } from './servertestutilities'
+// Import from dist, not src: the running server loads the dist build and we
+// need the same module instance (and its initialized applicationDataPath).
+import {
+  loadUserPreferences,
+  saveUserPreferences
+} from '../dist/unitpreferences/loader'
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
@@ -336,6 +342,97 @@ describe('Unit Preferences', function () {
       })
 
       ws.ws.close()
+    })
+  })
+
+  describe('Primary Categories API', function () {
+    it('GET returns ambiguousUnits and effectivePrimary', async function () {
+      const res = await fetch(
+        `${host}/signalk/v1/unitpreferences/primary-categories`
+      )
+      expect(res.status).to.equal(200)
+
+      const body = await res.json()
+      expect(body).to.have.property('ambiguousUnits')
+      expect(body).to.have.property('effectivePrimary')
+
+      for (const [baseUnit, cats] of Object.entries(body.ambiguousUnits)) {
+        expect(cats).to.be.an('array')
+        expect((cats as string[]).length).to.be.greaterThan(1)
+        expect(cats as string[]).to.include(body.effectivePrimary[baseUnit])
+      }
+    })
+
+    it('GET effectivePrimary falls back to system default for `m`', async function () {
+      const res = await fetch(
+        `${host}/signalk/v1/unitpreferences/primary-categories`
+      )
+      const body = await res.json()
+      // unitpreferences/primary-categories.json maps 'm' -> 'distance'
+      if (body.ambiguousUnits.m) {
+        expect(body.effectivePrimary.m).to.equal('distance')
+      }
+    })
+
+    it('PUT without authentication returns 401', async function () {
+      const res = await fetch(
+        `${host}/signalk/v1/unitpreferences/primary-categories`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ m: 'depth' })
+        }
+      )
+      expect(res.status).to.equal(401)
+      const body = await res.json()
+      expect(body.error).to.equal('Authentication required')
+    })
+  })
+
+  describe('User preferences loader', function () {
+    const TEST_USER = 'unitprefs-test-user'
+    const usersDir = path.join(
+      serverTestConfigDirectory(),
+      'applicationData',
+      'users'
+    )
+    const testUserDir = path.join(usersDir, TEST_USER)
+
+    afterEach(async function () {
+      await rimraf(testUserDir)
+    })
+
+    it('returns null for unknown user', function () {
+      const prefs = loadUserPreferences('nonexistent-user-xyz')
+      expect(prefs).to.equal(null)
+    })
+
+    it('round-trips saved preferences', function () {
+      saveUserPreferences(TEST_USER, { primaryCategories: { m: 'depth' } })
+      const loaded = loadUserPreferences(TEST_USER)
+      expect(loaded).to.deep.equal({ primaryCategories: { m: 'depth' } })
+    })
+
+    it('returns a clone so callers cannot mutate the cache', function () {
+      saveUserPreferences(TEST_USER, { primaryCategories: { m: 'depth' } })
+      const first = loadUserPreferences(TEST_USER)
+      expect(first).to.not.equal(null)
+      // Mutate the returned object
+      first!.primaryCategories!.m = 'mutated'
+      const second = loadUserPreferences(TEST_USER)
+      expect(second!.primaryCategories!.m).to.equal('depth')
+    })
+
+    it('rejects invalid usernames', function () {
+      expect(() =>
+        saveUserPreferences('..', { primaryCategories: {} })
+      ).to.throw(/Invalid username/)
+      expect(() =>
+        saveUserPreferences('.', { primaryCategories: {} })
+      ).to.throw(/Invalid username/)
+      expect(() =>
+        saveUserPreferences('a/b', { primaryCategories: {} })
+      ).to.throw(/Invalid username/)
     })
   })
 })
