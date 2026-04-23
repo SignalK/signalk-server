@@ -79,7 +79,7 @@ export class Alarm {
       }
     } else if (this.status.silenced) {
       if (this.value.state !== 'emergency') {
-        this.value.method = this.value.method.filter((i) => i !== 'sound')
+        this.value.method = this.value.method?.filter((i) => i !== 'sound')
       }
     }
   }

@@ -128,7 +128,7 @@ export class NotificationManager {
       alarm.value.createdAt = new Date().toISOString() as Timestamp
     }
     if (data) {
-      alarm.value.data = { ...data }
+      alarm.value.data = structuredClone(data)
     }
 
     this.alarms.set(id, alarm)
@@ -157,7 +157,7 @@ export class NotificationManager {
       alarm.status.acknowledged = false
     }
     if (data) {
-      alarm.value.data = { ...data }
+      alarm.value.data = structuredClone(data)
     }
 
     this.alarms.set(id, alarm)
