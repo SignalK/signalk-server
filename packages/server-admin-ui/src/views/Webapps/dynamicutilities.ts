@@ -471,9 +471,27 @@ export const toLazyDynamicComponent = (
 ): React.LazyExoticComponent<React.ComponentType> =>
   React.lazy(() =>
     (async () => {
-      const container = window[toSafeModuleId(moduleName)] as
+      let container = window[toSafeModuleId(moduleName)] as
         | Container
         | undefined
+
+      if (container === undefined) {
+        const remoteEntryUrl = findRemoteEntryUrl(moduleName)
+        if (remoteEntryUrl) {
+          try {
+            const esmModule = await import(/* @vite-ignore */ remoteEntryUrl)
+            if (
+              typeof esmModule.get === 'function' &&
+              typeof esmModule.init === 'function'
+            ) {
+              container = esmModule as Container
+            }
+          } catch (e) {
+            console.warn(`ESM import failed for ${moduleName}:`, e)
+          }
+        }
+      }
+
       if (container === undefined) {
         console.error(`Could not load module ${moduleName}`)
         return createErrorModule(

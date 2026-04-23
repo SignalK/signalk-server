@@ -476,9 +476,10 @@ export function createEnvImports(
             value: any,
             cb: (result: any) => void
           ) => {
-            debug(
-              `[${pluginId}] PUT request received: ${cbContext}.${cbPath} = ${JSON.stringify(value)}`
-            )
+            debug.enabled &&
+              debug(
+                `[${pluginId}] PUT request received: ${cbContext}.${cbPath} = ${JSON.stringify(value)}`
+              )
 
             const handlerName = `handle_put_${cbContext.replace(/\./g, '_')}_${cbPath.replace(/\./g, '_')}`
             const exports =
@@ -531,9 +532,10 @@ export function createEnvImports(
                 }
 
                 const response = JSON.parse(responseJson)
-                debug(
-                  `[${pluginId}] PUT handler response: ${JSON.stringify(response)}`
-                )
+                debug.enabled &&
+                  debug(
+                    `[${pluginId}] PUT handler response: ${JSON.stringify(response)}`
+                  )
                 cb(response)
               } catch (error) {
                 debug(`[${pluginId}] PUT handler error: ${error}`)

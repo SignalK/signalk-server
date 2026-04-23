@@ -95,7 +95,7 @@ module.exports = (app: SignalKServer) => {
               try {
                 return JSON.parse(s)
               } catch (e: any) {
-                console.log(e.message)
+                console.log(e)
               }
             }
           })
@@ -182,7 +182,7 @@ function socketMessageHandler(
       try {
         app.subscriptionmanager.unsubscribe(msg, unsubscribes)
       } catch (e: any) {
-        console.error(e.message)
+        console.error(e)
         socket.write(JSON.stringify(e.message))
         socket.end(() => {
           console.error(`Closed ${socket.name}`)
@@ -191,3 +191,5 @@ function socketMessageHandler(
     }
   }
 }
+
+module.exports.socketMessageHandler = socketMessageHandler

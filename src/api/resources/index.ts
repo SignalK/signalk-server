@@ -183,7 +183,8 @@ export class ResourcesApi {
     params: { [key: string]: any },
     providerId?: string
   ) {
-    debug(`** listResources(${resType}, ${JSON.stringify(params)})`)
+    debug.enabled &&
+      debug(`** listResources(${resType}, ${JSON.stringify(params)})`)
 
     const provider = this.checkForProvider(resType, providerId)
     debug(`** provider = ${provider}`)
@@ -199,7 +200,8 @@ export class ResourcesApi {
     data: { [key: string]: any },
     providerId?: string
   ) {
-    debug(`** setResource(${resType}, ${resId}, ${JSON.stringify(data)})`)
+    debug.enabled &&
+      debug(`** setResource(${resType}, ${resId}, ${JSON.stringify(data)})`)
 
     if (isSignalKResourceType(resType)) {
       let isValidId: boolean
@@ -360,7 +362,7 @@ export class ResourcesApi {
 
   /** Retrieve matching resources from ALL providers */
   private async listFromAll(resType: string, params: { [key: string]: any }) {
-    debug(`listFromAll(${resType}, ${JSON.stringify(params)})`)
+    debug.enabled && debug(`listFromAll(${resType}, ${JSON.stringify(params)})`)
 
     const result = {}
     if (!this.resProvider[resType]) {

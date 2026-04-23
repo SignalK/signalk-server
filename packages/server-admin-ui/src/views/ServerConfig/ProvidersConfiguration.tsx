@@ -112,6 +112,28 @@ const ProvidersConfiguration: React.FC = () => {
 
       const updatedProvider = { ...selectedProvider }
       set(updatedProvider, event.target.name, value)
+      // createDevice only applies to YDWG source types. Drop a stale
+      // value when the user picks a non-YDWG type so we don't submit a
+      // hidden option that no longer has a UI control. On a brand-new
+      // connection picking a YDWG type, default createDevice to on —
+      // without it the gateway silently drops ISO Requests for PGN
+      // 60928 / 126996 / 126998, leaving device identity incomplete.
+      // Existing connections that already store a value are left alone:
+      // an MFD on the bus may already be locked onto current $source
+      // refs, and flipping createDevice on retroactively makes the
+      // server claim a new address and disrupts that binding.
+      if (event.target.name === 'options.type' && typeof value === 'string') {
+        const isYdwg = /^ydwg02/.test(value)
+        if (!isYdwg && updatedProvider.options?.createDevice !== undefined) {
+          delete updatedProvider.options.createDevice
+        } else if (
+          isYdwg &&
+          updatedProvider.isNew &&
+          updatedProvider.options?.createDevice === undefined
+        ) {
+          set(updatedProvider, 'options.createDevice', true)
+        }
+      }
       setSelectedProvider(updatedProvider)
     },
     [selectedProvider]

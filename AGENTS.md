@@ -43,6 +43,30 @@ Do not add error handling, fallbacks, or validation for scenarios that cannot ha
 - Unit tests for business logic; integration tests for boundaries
 - Aim for meaningful coverage, not arbitrary percentages
 
+## Performance
+
+Signal K Server runs on Raspberry Pi 3-5 hardware, often on battery power. CPU cycles cost watts. Treat the delta ingestion and fanout path as allocation-sensitive.
+
+### Hot paths
+
+Assume 100+ deltas/sec, 20+ WebSocket clients:
+
+- `src/streambundle.ts` `pushDelta` / `push` — per value
+- `src/subscriptionmanager.ts` subscriber callbacks — per delta per client
+- `src/interfaces/ws.ts` `onChange`, `data` handler — per client, per message
+- `src/BackpressureManager.ts` `send` — per delta per client
+- `src/deltacache.ts` `onValue` — per delta
+- `src/interfaces/rest.js` tree traversal — per HTTP request
+
+### Rules
+
+- **Guard `debug()` arguments.** `debug('x=' + JSON.stringify(obj))` evaluates eagerly even when disabled. Wrap with `debug.enabled &&` (see `src/interfaces/tcp.ts`).
+- **Build objects in their final shape.** On hot paths, write all properties in a single object literal with consistent key order (V8 hidden class / shape optimization). Do not build up objects incrementally via spread or `Object.assign`.
+- **Minimize allocations on the per-delta path.** Hoist constants, `Set`s, and closures to module scope. Do not `reduce` into a new array when nothing was removed. Prefer `for...of` over `.forEach`.
+- **Use `structuredClone`**, not `JSON.parse(JSON.stringify(...))`, for deep cloning.
+- **Prefer `Set` over `Array.includes`** for repeated membership checks.
+- **Avoid lodash on hot paths.** `_.get`/`_.set` re-parse path strings; use `obj?.a?.b`. `_.isUndefined(x)` is just `x === undefined`.
+
 ## Git Commit Conventions
 
 Use conventional format: `<type>(<scope>): <subject>` where type = feat|fix|docs|style|refactor|test|chore|perf. Subject: 50 chars max, imperative mood ("add" not "added"), no period. For small changes: one-line commit only. For complex changes: add body explaining what/why (72-char lines) and reference issues.

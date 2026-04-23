@@ -69,6 +69,8 @@ interface SignalKSparkRequest {
   query?: Record<string, string>
   socket: Socket
   connection: { remoteAddress: string }
+  /** Resolved client IP, accounting for trustProxy / X-Forwarded-For */
+  _resolvedIp: string
 }
 
 interface Spark {
@@ -100,7 +102,6 @@ interface Spark {
 }
 
 interface WsMessage {
-  token?: string
   updates?: Delta['updates']
   subscribe?: Array<{ path: string }> | string
   unsubscribe?: Array<{ path: string }>
@@ -279,7 +280,15 @@ interface WsApi {
   stop: () => void
 }
 
+const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
+
 function wsInterface(app: WsApp): WsApi {
+  const maxWsConnectionsPerIp = parseInt(
+    process.env.MAX_WS_CONNECTIONS_PER_IP ??
+      String(DEFAULT_MAX_WS_CONNECTIONS_PER_IP),
+    10
+  )
+
   const backpressureThresholds = parseBackpressureThresholds({
     maxSendBufferSize: app.config.maxSendBufferSize,
     maxSendBufferCheckTime: app.config.maxSendBufferCheckTime
@@ -294,6 +303,7 @@ function wsInterface(app: WsApp): WsApi {
 
   let primuses: Primus[] = []
   const pathSources: PathSources = {}
+  const ipConnectionCounts = new Map<string, number>()
 
   const api: WsApi = {
     mdns: {
@@ -467,11 +477,16 @@ function wsInterface(app: WsApp): WsApi {
           primus.once('close', () => clearInterval(interval))
         }
 
-        if (app.securityStrategy.canAuthorizeWS()) {
-          primus.authorize(
-            createPrimusAuthorize(app.securityStrategy.authorizeWS)
+        primus.authorize(
+          createPrimusAuthorize(
+            app.securityStrategy.canAuthorizeWS()
+              ? app.securityStrategy.authorizeWS
+              : undefined,
+            ipConnectionCounts,
+            maxWsConnectionsPerIp,
+            app.config.settings.trustProxy
           )
-        }
+        )
 
         primus.on('connection', function (primusSpark: unknown) {
           const spark = primusSpark as Spark
@@ -481,9 +496,7 @@ function wsInterface(app: WsApp): WsApi {
           }
 
           debugConnection(
-            `${spark.id} connected ${JSON.stringify(spark.query)} ${
-              spark.request.connection.remoteAddress
-            }:${principalId}`
+            `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'})`
           )
 
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
@@ -549,13 +562,13 @@ function wsInterface(app: WsApp): WsApi {
                 debug('Failed to parse message: ' + (e as Error).message)
                 return
               }
-              debug('<' + JSON.stringify(parsedMsg))
+              // Guard to avoid JSON.stringify on every inbound message
+              // when the debug namespace is disabled — the argument to
+              // debug() would otherwise be eagerly evaluated for each
+              // message. Pattern mirrors tcp.ts:169/181.
+              debug.enabled && debug('<' + JSON.stringify(parsedMsg))
 
               try {
-                if (parsedMsg.token) {
-                  spark.request.token = parsedMsg.token
-                }
-
                 if (parsedMsg.updates) {
                   processUpdates(app, pathSources, spark, parsedMsg)
                 }
@@ -601,9 +614,7 @@ function wsInterface(app: WsApp): WsApi {
 
           spark.on('end', function () {
             debugConnection(
-              `${spark.id} end ${JSON.stringify(spark.query)} ${
-                spark.request.connection.remoteAddress
-              }:${principalId}`
+              `${spark.id} end ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId}`
             )
 
             unsubscribes.forEach((unsubscribe) => unsubscribe())
@@ -633,7 +644,19 @@ function wsInterface(app: WsApp): WsApi {
 
           onChange = wrapWithVerifyWS(app.securityStrategy, spark, onChange)
 
-          spark.onDisconnects = [() => spark.backpressureManager?.clear()]
+          const sparkIp = spark.request._resolvedIp
+
+          spark.onDisconnects = [
+            () => spark.backpressureManager?.clear(),
+            () => {
+              const count = ipConnectionCounts.get(sparkIp)
+              if (count !== undefined && count > 1) {
+                ipConnectionCounts.set(sparkIp, count - 1)
+              } else {
+                ipConnectionCounts.delete(sparkIp)
+              }
+            }
+          ]
 
           if (primusOptions.isPlayback) {
             if (!spark.query.startTime) {
@@ -730,22 +753,6 @@ function wsInterface(app: WsApp): WsApi {
     })
   }
 
-  function getClientIp(app: WsApp, spark: Spark): string {
-    if (
-      app.config.settings.trustProxy &&
-      app.config.settings.trustProxy !== 'false'
-    ) {
-      const forwardedFor = spark.request.headers['x-forwarded-for']
-      if (typeof forwardedFor === 'string') {
-        const firstIp = forwardedFor.split(',')[0].trim()
-        if (firstIp) {
-          return firstIp
-        }
-      }
-    }
-    return spark.request.connection.remoteAddress
-  }
-
   function processAccessRequest(
     app: WsApp,
     spark: Spark,
@@ -759,7 +766,7 @@ function wsInterface(app: WsApp): WsApi {
         message: 'A request has already been submitted'
       })
     } else {
-      const clientIp = getClientIp(app, spark)
+      const clientIp = spark.request._resolvedIp
       requestAccess(
         app as unknown as WithSecurityStrategy & WithConfig,
         msg,
@@ -799,7 +806,7 @@ function wsInterface(app: WsApp): WsApi {
   function processLoginRequest(app: WsApp, spark: Spark, msg: WsMessage): void {
     const rateLimiter = app.securityStrategy.loginRateLimiter
     if (rateLimiter) {
-      const { allowed } = rateLimiter.check(getClientIp(app, spark))
+      const { allowed } = rateLimiter.check(spark.request._resolvedIp)
       if (!allowed) {
         spark.write({
           requestId: msg.requestId,
@@ -843,13 +850,46 @@ function wsInterface(app: WsApp): WsApi {
 }
 
 function createPrimusAuthorize(
-  authorizeWS: (req: SignalKSparkRequest) => void
+  authorizeWS: ((req: SignalKSparkRequest) => void) | undefined,
+  ipConnectionCounts: Map<string, number>,
+  maxConnectionsPerIp: number,
+  trustProxy: boolean | string | undefined
 ): (req: unknown, authorized: (err?: Error) => void) => void {
   return function (
     primusReq: unknown,
     authorized: (err?: Error) => void
   ): void {
     const req = primusReq as SignalKSparkRequest
+
+    const forwardedFor = req.headers['x-forwarded-for']
+    const firstForwardedIp =
+      trustProxy && trustProxy !== 'false' && typeof forwardedFor === 'string'
+        ? forwardedFor.split(',')[0].trim()
+        : undefined
+    req._resolvedIp = firstForwardedIp || req.connection.remoteAddress
+    const ip = req._resolvedIp
+    if ((ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp) {
+      debug(`IP ${ip} exceeded max connections (${maxConnectionsPerIp})`)
+      const err = Object.assign(
+        new Error(
+          JSON.stringify({
+            error:
+              'Too many concurrent websocket connections from same IP address'
+          })
+        ),
+        { statusCode: 429 }
+      )
+      authorized(err)
+      return
+    }
+
+    ipConnectionCounts.set(ip, (ipConnectionCounts.get(ip) ?? 0) + 1)
+
+    if (!authorizeWS) {
+      authorized()
+      return
+    }
+
     try {
       const cookieHeader = req.headers.cookie
       if (typeof cookieHeader === 'string') {
@@ -975,9 +1015,7 @@ function handleValuesMeta(
         > | null
         if (meta) {
           // Clone and enhance metadata with displayUnits formulas
-          const metaClone: Record<string, unknown> = JSON.parse(
-            JSON.stringify(meta)
-          )
+          const metaClone = structuredClone(meta) as Record<string, unknown>
           let storedDisplayUnits = metaClone.displayUnits as
             | Record<string, unknown>
             | undefined
@@ -1104,7 +1142,7 @@ function processUnsubscribe(
       spark.sentMetaData = {}
     }
   } catch (e) {
-    console.log((e as Error).message)
+    console.log(e)
     spark.write((e as Error).message)
     spark.end()
   }

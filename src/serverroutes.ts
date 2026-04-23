@@ -151,6 +151,7 @@ interface App
 
 interface ModuleInfo {
   name: string
+  type?: string
 }
 
 module.exports = function (
@@ -188,13 +189,17 @@ module.exports = function (
   const logopath = path.resolve(app.config.configPath, 'logo.svg')
   if (fs.existsSync(logopath)) {
     debug(`Found custom logo at ${logopath}, adding route for it`)
-    // Intercept both Webpack (fonts/) and Vite (assets/) paths for the main logo
+    // Intercept Webpack (fonts/), Vite 6 (assets/ hashed), and Vite 8 (assets/public_src/img/) paths
     app.use(
       '/admin/fonts/signal-k-logo-image-text.*',
       (req: Request, res: Response) => res.sendFile(logopath)
     )
     app.use(
       '/admin/assets/signal-k-logo-image-text*.svg',
+      (req: Request, res: Response) => res.sendFile(logopath)
+    )
+    app.use(
+      '/admin/assets/public_src/img/signal-k-logo-image-text.svg',
       (req: Request, res: Response) => res.sendFile(logopath)
     )
 
@@ -206,7 +211,7 @@ module.exports = function (
     const minimizedLogo = fs.existsSync(minimizedLogoPath)
       ? minimizedLogoPath
       : logopath
-    // Intercept both Webpack (fonts/) and Vite (assets/) paths for the minimized logo
+    // Intercept Webpack (fonts/), Vite 6 (assets/ hashed), and Vite 8 (assets/public_src/img/) paths
     app.use(
       '/admin/fonts/signal-k-logo-image.*',
       (req: Request, res: Response) => res.sendFile(minimizedLogo)
@@ -215,7 +220,24 @@ module.exports = function (
       '/admin/assets/signal-k-logo-image*.svg',
       (req: Request, res: Response) => res.sendFile(minimizedLogo)
     )
+    app.use(
+      '/admin/assets/public_src/img/signal-k-logo-image.svg',
+      (req: Request, res: Response) => res.sendFile(minimizedLogo)
+    )
   }
+
+  // Vite 8 (Rolldown) changed CSS url() rewriting for publicDir assets: the built CSS
+  // references logos as url(public_src/img/...) which resolves to assets/public_src/img/
+  // relative to the CSS file, not the actual img/ location. Serve default logos from there.
+  app.use(
+    '/admin/assets/public_src/img',
+    express.static(
+      path.join(
+        __dirname,
+        '/../node_modules/@signalk/server-admin-ui/public/img'
+      )
+    )
+  )
 
   // mount before the main /admin
   mountSwaggerUi(app, '/doc/openapi')
@@ -260,9 +282,10 @@ module.exports = function (
         indexContent.toString().replace(
           /%ADDONSCRIPTS%/g,
           addonScripts
-            .map(
-              (moduleInfo) =>
-                `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
+            .map((moduleInfo) =>
+              moduleInfo.type === 'module'
+                ? `<script type="module" src="/${moduleInfo.name}/remoteEntry.js"></script>`
+                : `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
             )
             .join('\n')
             .toString()

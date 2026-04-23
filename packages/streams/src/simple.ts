@@ -2,8 +2,6 @@ import { Transform, TransformCallback } from 'stream'
 import N2kAnalyzer from './n2kAnalyzer'
 import FromJson from './from_json'
 import MultiplexedLog from './multiplexedlog'
-import Nmea0183ToSignalK from './nmea0183-signalk'
-import N2kToSignalK from './n2k-signalk'
 import Log from './log'
 import Liner from './liner'
 import SplittingLiner from './splitting-liner'
@@ -15,8 +13,6 @@ import FileStream from './filestream'
 import Replacer from './replacer'
 import Throttle from './throttle'
 import TimestampThrottle from './timestamp-throttle'
-import CanboatJs from './canboatjs'
-import { iKonvert, Ydwg02, W2k01 } from '@canboat/canboatjs'
 import Gpsd from './gpsd'
 import PigpioSeatalk from './pigpio-seatalk'
 import GpiodSeatalk from './gpiod-seatalk'
@@ -28,9 +24,35 @@ import type { CreateDebug, DeltaCache } from './types'
 interface CanboatCtor {
   new (options: object, ...args: unknown[]): Transform
 }
-const W2k01Ctor = W2k01 as unknown as CanboatCtor
-const Ydwg02Ctor = Ydwg02 as unknown as CanboatCtor
-const iKonvertCtor = iKonvert as unknown as CanboatCtor
+
+// CJS/ESM compat: these modules export the constructor on .default
+// when compiled from ESM, or as the module itself in plain CJS.
+function requireN2K(): {
+  CanboatJs: new (options: object) => PipeElement
+  N2kToSignalK: new (options: object) => PipeElement
+} {
+  const cb = require('./canboatjs')
+  const n2k = require('./n2k-signalk')
+  return {
+    CanboatJs: cb.default ?? cb,
+    N2kToSignalK: n2k.default ?? n2k
+  }
+}
+
+function requireN2kToSignalK(): new (options: object) => PipeElement {
+  const n2k = require('./n2k-signalk')
+  return n2k.default ?? n2k
+}
+
+function requireNmea0183ToSignalK(): new (options: object) => PipeElement {
+  const mod = require('./nmea0183-signalk')
+  return mod.default ?? mod
+}
+
+function requireW2k01(): CanboatCtor {
+  return (require('@canboat/canboatjs') as { W2k01: unknown })
+    .W2k01 as unknown as CanboatCtor
+}
 
 interface SimpleApp {
   selfContext: string
@@ -130,14 +152,18 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     options.subOptions.type !== 'wss' && options.subOptions.type !== 'ws'
       ? [new FromJson()]
       : [],
-  Seatalk: (options) => [
-    new Nmea0183ToSignalK({
-      ...options.subOptions,
-      validateChecksum: false
-    } as SubOptions & { app: SimpleApp; providerId: string })
-  ],
+  Seatalk: (options) => {
+    const Ctor = requireNmea0183ToSignalK()
+    return [
+      new Ctor({
+        ...options.subOptions,
+        validateChecksum: false
+      })
+    ]
+  },
   NMEA0183: (options) => {
-    const result: PipeElement[] = [new Nmea0183ToSignalK(options.subOptions)]
+    const Ctor = requireNmea0183ToSignalK()
+    const result: PipeElement[] = [new Ctor(options.subOptions)]
     if (options.type === 'FileStream') {
       result.unshift(
         new Throttle({
@@ -149,13 +175,15 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     return result
   },
   NMEA2000: (options) => {
+    const N2kCtor = requireN2kToSignalK()
     const result: PipeElement[] = [new N2kAnalyzer(options.subOptions)]
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
-    return [...result, new N2kToSignalK(options.subOptions)]
+    return [...result, new N2kCtor(options.subOptions)]
   },
   NMEA2000JS: (options) => {
+    const { CanboatJs, N2kToSignalK } = requireN2K()
     const result: PipeElement[] = [new CanboatJs(options.subOptions)]
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
@@ -163,6 +191,11 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     return [...result, new N2kToSignalK(options.subOptions)]
   },
   NMEA2000IK: (options) => {
+    const { CanboatJs, N2kToSignalK } = requireN2K()
+    const canboatjs = require('@canboat/canboatjs') as {
+      iKonvert: unknown
+    }
+    const iKonvertCtor = canboatjs.iKonvert as unknown as CanboatCtor
     const result: PipeElement[] = [new CanboatJs(options.subOptions)]
     if (options.type === 'FileStream') {
       result.push(
@@ -185,6 +218,11 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     return [...result, new N2kToSignalK(options.subOptions)]
   },
   NMEA2000YD: (options) => {
+    const N2kCtor = requireN2kToSignalK()
+    const canboatjs = require('@canboat/canboatjs') as {
+      Ydwg02: unknown
+    }
+    const Ydwg02Ctor = canboatjs.Ydwg02 as unknown as CanboatCtor
     const result: PipeElement[] = [
       new Ydwg02Ctor(
         { ...options.subOptions },
@@ -194,9 +232,11 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
-    return [...result, new N2kToSignalK(options.subOptions)]
+    return [...result, new N2kCtor(options.subOptions)]
   },
   NMEA2000W2K_ASCII: (options) => {
+    const N2kCtor = requireN2kToSignalK()
+    const W2k01Ctor = requireW2k01()
     const result: PipeElement[] = [
       new W2k01Ctor({
         format: 'ascii',
@@ -206,9 +246,11 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
-    return [...result, new N2kToSignalK(options.subOptions)]
+    return [...result, new N2kCtor(options.subOptions)]
   },
   NMEA2000W2K_ACTISENSE: (options) => {
+    const N2kCtor = requireN2kToSignalK()
+    const W2k01Ctor = requireW2k01()
     const result: PipeElement[] = [
       new W2k01Ctor({
         format: 'actisense',
@@ -218,7 +260,7 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
-    return [...result, new N2kToSignalK(options.subOptions)]
+    return [...result, new N2kCtor(options.subOptions)]
   },
   Multiplexed: (options) => [new MultiplexedLog(options.subOptions)]
 }
@@ -288,6 +330,7 @@ function nmea2000input(
       new Liner(subOptions)
     ]
   } else if (subOptions.type === 'w2k-1-n2k-ascii-canboatjs') {
+    const W2k01Ctor = requireW2k01()
     return [
       new Tcp({ ...subOptions, outEvent: 'w2k-1-out' } as SubOptions & {
         host: string
@@ -298,6 +341,7 @@ function nmea2000input(
       new W2k01Ctor(subOptions, 'ascii', 'w2k-1-out')
     ]
   } else if (subOptions.type === 'w2k-1-n2k-actisense-canboatjs') {
+    const W2k01Ctor = requireW2k01()
     return [
       new Tcp({ ...subOptions, outEvent: 'w2k-1-out' } as SubOptions & {
         host: string
@@ -427,6 +471,10 @@ function seatalkInput(subOptions: SubOptions): PipeElement[] {
   } else {
     pipePart.push(new PigpioSeatalk(subOptions))
   }
+  // Split the child process stdout on newlines so each $STALK frame and
+  // each '# ...' comment from the bit-bang reader becomes its own line,
+  // even when multiple writes get coalesced into one read by the OS pipe.
+  pipePart.push(new Liner(subOptions))
   pipePart.push(...seatalk1inputFilter(subOptions.ignoredSentences ?? []))
   return pipePart
 }

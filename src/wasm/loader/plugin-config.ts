@@ -28,9 +28,10 @@ export async function updateWasmPluginConfig(
   }
 
   debug(`updateWasmPluginConfig: Starting for ${pluginId}`)
-  debug(
-    `updateWasmPluginConfig: New configuration: ${JSON.stringify(configuration)}`
-  )
+  debug.enabled &&
+    debug(
+      `updateWasmPluginConfig: New configuration: ${JSON.stringify(configuration)}`
+    )
 
   plugin.configuration = configuration
   debug(`updateWasmPluginConfig: Updated in-memory configuration`)
@@ -48,9 +49,10 @@ export async function updateWasmPluginConfig(
     enabled: plugin.enabled,
     enableDebug: plugin.enableDebug
   }
-  debug(
-    `updateWasmPluginConfig: Writing config to disk: ${JSON.stringify(config)}`
-  )
+  debug.enabled &&
+    debug(
+      `updateWasmPluginConfig: Writing config to disk: ${JSON.stringify(config)}`
+    )
   writePluginConfig(storagePaths.configFile, config)
   debug(`updateWasmPluginConfig: Config written to disk`)
 
@@ -109,9 +111,10 @@ export async function setWasmPluginEnabled(
     enabled,
     enableDebug: plugin.enableDebug
   }
-  debug(
-    `setWasmPluginEnabled: Writing config to disk: ${JSON.stringify(config)}`
-  )
+  debug.enabled &&
+    debug(
+      `setWasmPluginEnabled: Writing config to disk: ${JSON.stringify(config)}`
+    )
   writePluginConfig(storagePaths.configFile, config)
   debug(`setWasmPluginEnabled: Config written to disk`)
 

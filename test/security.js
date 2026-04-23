@@ -3,6 +3,7 @@ chai.Should()
 chai.use(require('chai-things'))
 const { freeport } = require('./ts-servertestutilities')
 const WebSocket = require('ws')
+const jwt = require('jsonwebtoken')
 const {
   startServerP,
   getReadOnlyToken,
@@ -589,6 +590,61 @@ describe('Security', () => {
   it('request after logout fails', async function () {
     const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {})
     result.status.should.equal(401)
+  })
+
+  it('expired token returns 401 and clears cookie', async function () {
+    const secretKey = server.app.securityStrategy.securityConfig.secretKey
+    const expiredToken = jwt.sign({ id: LIMITED_USER_NAME }, secretKey, {
+      expiresIn: '-1s'
+    })
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+      headers: {
+        Cookie: `JAUTHENTICATION=${expiredToken}`
+      }
+    })
+    result.status.should.equal(401)
+    const setCookie = result.headers.get('set-cookie')
+    setCookie.should.be.a('string')
+    setCookie.startsWith('JAUTHENTICATION=;').should.be.true
+  })
+
+  it('malformed token returns 401 and clears cookie', async function () {
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+      headers: {
+        Cookie: 'JAUTHENTICATION=not.a.valid.jwt.token'
+      }
+    })
+    result.status.should.equal(401)
+    const setCookie = result.headers.get('set-cookie')
+    setCookie.should.be.a('string')
+    setCookie.startsWith('JAUTHENTICATION=;').should.be.true
+  })
+
+  it('garbage token returns 401 and clears cookie', async function () {
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+      headers: {
+        Cookie: 'JAUTHENTICATION=totalgarbage'
+      }
+    })
+    result.status.should.equal(401)
+    const setCookie = result.headers.get('set-cookie')
+    setCookie.should.be.a('string')
+    setCookie.startsWith('JAUTHENTICATION=;').should.be.true
+  })
+
+  it('token signed with wrong secret returns 401 and clears cookie', async function () {
+    const wrongToken = jwt.sign({ id: LIMITED_USER_NAME }, 'wrong-secret-key', {
+      expiresIn: '1h'
+    })
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+      headers: {
+        Cookie: `JAUTHENTICATION=${wrongToken}`
+      }
+    })
+    result.status.should.equal(401)
+    const setCookie = result.headers.get('set-cookie')
+    setCookie.should.be.a('string')
+    setCookie.startsWith('JAUTHENTICATION=;').should.be.true
   })
 
   it('Device access request and approval works', async function () {

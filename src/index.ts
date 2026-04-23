@@ -290,7 +290,7 @@ class Server {
           app.config.settings.sourcePriorities
         )
       } catch (e) {
-        console.error(`getToPreferredDelta failed: ${(e as any).message}`)
+        console.error('getToPreferredDelta failed:', e)
       }
     }
     app.activateSourcePriorities()
@@ -309,9 +309,17 @@ class Server {
         ) {
           data.context = ('vessels.' + app.selfId) as Context
         }
+
         const now = new Date()
         data.updates = data.updates
           .map((update: Partial<Update>) => {
+            if (!isValidUpdate(update)) {
+              console.warn(
+                `Discarding update from ${providerId}: invalid values entry (null or missing path)`
+              )
+              return undefined
+            }
+
             if (typeof update.source !== 'undefined') {
               update.source.label = providerId
               if (!update.$source) {
@@ -324,11 +332,6 @@ class Server {
             }
             if (!update.timestamp || app.config.overrideTimestampWithNow) {
               update.timestamp = now.toISOString() as Timestamp
-            }
-
-            if ('values' in update && !Array.isArray(update.values)) {
-              debug(`handleMessage: ignoring invalid values`, update.values)
-              delete update.values
             }
 
             if ('meta' in update && !Array.isArray(update.meta)) {
@@ -698,7 +701,8 @@ function startMdns(app: ServerApp & WithConfig) {
 async function startInterfaces(
   app: ServerApp & WithConfig & WithWrappedEmitter
 ) {
-  debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
+  debug.enabled &&
+    debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
   const availableInterfaces = require('./interfaces')
   return await Promise.all(
     Object.keys(availableInterfaces).map(async (name) => {
@@ -745,6 +749,28 @@ async function startInterfaces(
       }
     })
   )
+}
+
+function isValidUpdate(update: unknown): update is Partial<Update> {
+  if (update === null || typeof update !== 'object') {
+    return false
+  }
+  const values = (update as { values?: unknown }).values
+  if ('values' in update && !Array.isArray(values)) {
+    return false
+  }
+  if (
+    Array.isArray(values) &&
+    values.some(
+      (v: unknown) =>
+        v === null ||
+        v === undefined ||
+        typeof (v as { path?: unknown }).path !== 'string'
+    )
+  ) {
+    return false
+  }
+  return true
 }
 
 function filterStaticSelfData(delta: any, selfContext: string) {

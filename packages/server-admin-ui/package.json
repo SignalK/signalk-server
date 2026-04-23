@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin-ui",
-  "version": "2.24.2",
+  "version": "2.25.0",
   "description": "Signal K server admin webapp",
   "repository": {
     "type": "git",
@@ -66,6 +66,7 @@
     "lodash.set": "^4.3.2",
     "lodash.uniq": "^4.5.0",
     "mathjs": "^15.2.0",
+    "path-browserify": "^1.0.1",
     "react": "^19.2.0",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.2.0",
@@ -78,7 +79,7 @@
     "sass": "^1.81.0",
     "simple-line-icons": "^2.5.5",
     "typescript": "^5.7.2",
-    "vite": "^8.0.3",
+    "vite": "^8.0.9",
     "vitest": "^4.1.2"
   },
   "scripts": {

@@ -298,11 +298,13 @@ export function getSecurityConfig(
       const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
       return JSON.parse(optionsAsString)
     } catch (e: any) {
-      console.error(
-        'Could not parse security config at %s: %s',
-        pathForSecurityConfig(app),
-        e.message
-      )
+      if (e.code !== 'ENOENT' || !app.securityStrategy?.isDummy()) {
+        console.error(
+          'Could not parse security config at %s: %s',
+          pathForSecurityConfig(app),
+          e.message
+        )
+      }
       return {}
     }
   }
@@ -373,7 +375,7 @@ export function getCertificateOptions(app: WithConfig, cb: any) {
     if (existsSync(chainFile)) {
       debug('Found ssl-chain.pem')
       ca = getCAChainArray(chainFile)
-      debug(JSON.stringify(ca, null, 2))
+      debug.enabled && debug(JSON.stringify(ca, null, 2))
     }
     debug(`Using certificate ssl-key.pem and ssl-cert.pem in ${certLocation}`)
     cb(null, {

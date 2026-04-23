@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "2.24.0",
+  "version": "2.25.0",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -78,10 +78,10 @@
     "@signalk/n2k-signalk": ">=4.1.0-beta",
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/resources-provider": "^1.5.1",
-    "@signalk/server-admin-ui": "2.24.x",
+    "@signalk/server-admin-ui": "2.25.x",
     "@signalk/server-api": "^2.24.0",
     "@signalk/signalk-schema": "^1.7.1",
-    "@signalk/streams": "6.2.x",
+    "@signalk/streams": "6.3.x",
     "api-schema-builder": "^2.0.11",
     "archiver": "^7.0.1",
     "as-fetch": "^2.1.4",
@@ -134,6 +134,7 @@
   },
   "optionalDependencies": {
     "@mxtommy/kip": "^4.0.0",
+    "@signalk/app-dock": "^0.2.0",
     "@signalk/freeboard-sk": "^2.0.0-beta.3",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.5.0",

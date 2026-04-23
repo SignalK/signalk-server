@@ -14,6 +14,7 @@ const {
 describe('modulesWithKeyword', () => {
   it('returns a list of modules with one "installed" update in config dir', () => {
     const expectedModules = [
+      '@signalk/app-dock',
       '@signalk/instrumentpanel',
       '@signalk/freeboard-sk',
       '@signalk/server-admin-ui',
