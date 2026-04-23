@@ -449,6 +449,36 @@ export interface ServerAPI
    * @category Status and Debugging
    */
   reportOutputMessages(count?: number): void
+
+  /**
+   * Store plugin-specific metadata for a device. This data is merged into
+   * the device list API response and is available to the admin UI.
+   *
+   * @param clientId - The device's clientId
+   * @param metadata - Key-value metadata to store
+   * @category Device API
+   */
+  setDevicePluginData(clientId: string, metadata: Record<string, unknown>): void
+
+  /**
+   * Retrieve plugin-specific metadata previously stored for a device.
+   *
+   * @param clientId - The device's clientId
+   * @returns The stored metadata, or undefined if none
+   * @category Device API
+   */
+  getDevicePluginData(clientId: string): Record<string, unknown> | undefined
+
+  /**
+   * Register a callback for device connection state changes (connect/disconnect).
+   *
+   * @param callback - Called with event data when a device connects or disconnects
+   * @returns A function to unsubscribe
+   * @category Device API
+   */
+  onDeviceStateChange(
+    callback: (event: DeviceStateChangeEvent) => void
+  ): () => void
 }
 
 /**
@@ -506,4 +536,15 @@ export interface ActionResult {
   statusCode?: number
   message?: string
   timestamp?: string
+}
+
+/**
+ * Event emitted when a device's connection state changes.
+ * @category Device API
+ */
+export interface DeviceStateChangeEvent {
+  clientId: string
+  connected: boolean
+  ip?: string
+  connectionType?: 'websocket' | 'http'
 }
