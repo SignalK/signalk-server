@@ -22,31 +22,44 @@ import Webapps from '../../views/Webapps/Webapps'
 import Login from '../../views/security/Login'
 import Register from '../../views/security/Register'
 
-const DataBrowser = React.lazy(
+// One retry covers transient network blips; persistent failures (e.g. stale
+// chunk hashes after a redeploy) fall through to the ErrorBoundary, which
+// triggers a one-shot reload.
+function lazyWithRetry<T extends ComponentType<unknown>>(
+  importer: () => Promise<{ default: T }>
+) {
+  return React.lazy(() => importer().catch(() => importer()))
+}
+
+const DataBrowser = lazyWithRetry(
   () => import('../../views/DataBrowser/DataBrowser')
 )
-const Playground = React.lazy(() => import('../../views/Playground'))
-const Apps = React.lazy(() => import('../../views/appstore/Apps/Apps'))
-const Configuration = React.lazy(
+const Playground = lazyWithRetry(() => import('../../views/Playground'))
+const Apps = lazyWithRetry(() => import('../../views/appstore/Apps/Apps'))
+const Configuration = lazyWithRetry(
   () => import('../../views/Configuration/Configuration')
 )
-const Settings = React.lazy(() => import('../../views/ServerConfig/Settings'))
-const BackupRestore = React.lazy(
+const Settings = lazyWithRetry(
+  () => import('../../views/ServerConfig/Settings')
+)
+const BackupRestore = lazyWithRetry(
   () => import('../../views/ServerConfig/BackupRestore')
 )
-const ProvidersConfiguration = React.lazy(
+const ProvidersConfiguration = lazyWithRetry(
   () => import('../../views/ServerConfig/ProvidersConfiguration')
 )
-const ServerLog = React.lazy(() => import('../../views/ServerConfig/ServerLog'))
-const ServerUpdate = React.lazy(
+const ServerLog = lazyWithRetry(
+  () => import('../../views/ServerConfig/ServerLog')
+)
+const ServerUpdate = lazyWithRetry(
   () => import('../../views/ServerConfig/ServerUpdate')
 )
-const SecuritySettings = React.lazy(
+const SecuritySettings = lazyWithRetry(
   () => import('../../views/security/Settings')
 )
-const Users = React.lazy(() => import('../../views/security/Users'))
-const Devices = React.lazy(() => import('../../views/security/Devices'))
-const AccessRequests = React.lazy(
+const Users = lazyWithRetry(() => import('../../views/security/Users'))
+const Devices = lazyWithRetry(() => import('../../views/security/Devices'))
+const AccessRequests = lazyWithRetry(
   () => import('../../views/security/AccessRequests')
 )
 
@@ -61,6 +74,17 @@ interface ErrorBoundaryState {
   error: Error | null
 }
 
+const CHUNK_RELOAD_FLAG = 'signalk:chunkReloaded'
+
+function isChunkLoadError(error: Error): boolean {
+  return (
+    error.name === 'ChunkLoadError' ||
+    /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
+      error.message
+    )
+  )
+}
+
 // Must be a class component — React error boundaries don't support hooks
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
@@ -73,6 +97,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    // Hashed chunk filenames change on redeploy; an open tab will fail to
+    // fetch its old chunks. Reload once to pick up the new index, but guard
+    // against loops if the failure is caused by something else.
+    if (isChunkLoadError(error) && !sessionStorage.getItem(CHUNK_RELOAD_FLAG)) {
+      sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1')
+      window.location.reload()
+      return
+    }
     console.error('ErrorBoundary caught an error:', error, errorInfo)
   }
 
@@ -145,6 +177,7 @@ export default function Full() {
   const location = useLocation()
 
   useEffect(() => {
+    sessionStorage.removeItem(CHUNK_RELOAD_FLAG)
     fetchAllData()
   }, [])
 

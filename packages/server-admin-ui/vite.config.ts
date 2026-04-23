@@ -135,13 +135,9 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (
-            id.includes('node_modules/mathjs/') ||
-            id.includes('node_modules/decimal.js/') ||
-            id.includes('node_modules/typed-function/') ||
-            id.includes('node_modules/complex.js/') ||
-            id.includes('node_modules/fraction.js/') ||
-            id.includes('node_modules/seedrandom/') ||
-            id.includes('node_modules/tiny-emitter/')
+            /[\\/]node_modules[\\/](mathjs|decimal\.js|typed-function|complex\.js|fraction\.js|seedrandom|escape-latex|javascript-natural-sort)[\\/]/.test(
+              id
+            )
           ) {
             return 'vendor-mathjs'
           }
