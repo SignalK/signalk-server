@@ -58,7 +58,7 @@ import {
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
-import { getAISShipTypeName } from '@signalk/signalk-schema'
+import { getAISShipTypeName, metadataRegistry } from '@signalk/path-metadata'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
@@ -1233,6 +1233,10 @@ module.exports = function (
       res.json(app.streambundle.getAvailablePaths())
     }
   )
+
+  app.get(`${SERVERROUTESPREFIX}/paths`, (_req: Request, res: Response) => {
+    res.json(metadataRegistry.getAllMetadata())
+  })
 
   app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/eventsRoutingData`

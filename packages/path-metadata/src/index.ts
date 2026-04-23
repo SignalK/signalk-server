@@ -1,0 +1,226 @@
+/**
+ * Signal K Path Metadata Registry
+ *
+ * Provides lookup of well-known path metadata (units, description, enum)
+ * via regex-based matching. Supports runtime additions from meta deltas.
+ */
+
+import type { PathMetadataEntry } from './types'
+
+import { rootMetadata } from './root'
+import { navigationMetadata } from './navigation'
+import { environmentMetadata } from './environment'
+import { electricalMetadata } from './electrical'
+import { tanksMetadata } from './tanks'
+import { propulsionMetadata } from './propulsion'
+import { performanceMetadata } from './performance'
+import { sailsMetadata } from './sails'
+import { steeringMetadata } from './steering'
+import { designMetadata } from './design'
+import { registrationsMetadata } from './registrations'
+import { communicationMetadata } from './communication'
+import { sensorsMetadata } from './sensors'
+import { notificationsMetadata } from './notifications'
+
+export type { PathMetadataEntry } from './types'
+export { getAISShipTypeName } from './ais-ship-types'
+export { getAtonTypeName } from './aton-types'
+
+const vesselMetadata: Record<string, PathMetadataEntry> = {
+  ...navigationMetadata,
+  ...environmentMetadata,
+  ...electricalMetadata,
+  ...tanksMetadata,
+  ...propulsionMetadata,
+  ...performanceMetadata,
+  ...sailsMetadata,
+  ...steeringMetadata,
+  ...designMetadata,
+  ...registrationsMetadata,
+  ...communicationMetadata,
+  ...sensorsMetadata,
+  ...notificationsMetadata
+}
+
+/**
+ * Expand /vessels/* paths to also cover /aircraft/*, /aton/*, /sar/*
+ * since they share the same data model structure.
+ */
+function expandContextPrefixes(
+  entries: Record<string, PathMetadataEntry>
+): Record<string, PathMetadataEntry> {
+  const expanded: Record<string, PathMetadataEntry> = {}
+  for (const [key, value] of Object.entries(entries)) {
+    expanded[key] = value
+    if (key.startsWith('/vessels/*/')) {
+      const suffix = key.slice('/vessels/*/'.length)
+      expanded[`/aircraft/*/${suffix}`] = value
+      expanded[`/aton/*/${suffix}`] = value
+      expanded[`/sar/*/${suffix}`] = value
+    }
+  }
+  return expanded
+}
+
+interface RegexEntry {
+  pattern: RegExp
+  key: string
+  metadata: PathMetadataEntry
+}
+
+/**
+ * Template keys intentionally embed regex syntax (e.g. `(single)|([A-C])`,
+ * `[A-Za-z0-9]+`), so we deliberately do not escape metacharacters here.
+ * Runtime paths constructed from deltas are escaped separately where needed
+ * (see `internalGetMetadata` / `addMetaData`).
+ *
+ * Each segment is wrapped in `(?:...)` so any `|` alternation inside a segment
+ * stays scoped to that segment and cannot swallow the surrounding anchors.
+ */
+function metadataKeySegmentToRegex(segment: string): string {
+  if (segment === '') return ''
+  if (segment === '*' || segment === 'RegExp') return '[^/]+'
+  return `(?:${segment})`
+}
+
+function buildRegexArray(
+  allEntries: Record<string, PathMetadataEntry>
+): RegexEntry[] {
+  const result: RegexEntry[] = []
+  for (const [key, metadata] of Object.entries(allEntries)) {
+    const pattern = key.split('/').map(metadataKeySegmentToRegex).join('/')
+    try {
+      result.push({
+        pattern: new RegExp(`^${pattern}$`),
+        key,
+        metadata
+      })
+    } catch (error) {
+      throw new Error(
+        `Invalid path metadata pattern "${key}": ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    }
+  }
+  return result
+}
+
+export class MetadataRegistry {
+  private allMetadata: Record<string, PathMetadataEntry>
+  private regexEntries: RegexEntry[]
+
+  constructor(entries: Record<string, PathMetadataEntry>) {
+    this.allMetadata = { ...entries }
+    this.regexEntries = buildRegexArray(this.allMetadata)
+  }
+
+  /**
+   * Look up metadata for a dot-separated Signal K path.
+   * Returns the metadata entry or undefined if no match.
+   *
+   * Runtime metadata (registered via addMetaData for a specific identity) is
+   * checked first so it wins over a generic wildcard template that would
+   * otherwise shadow it.
+   */
+  getMetadata(path: string): PathMetadataEntry | undefined {
+    const parts = path.split('.')
+    if (parts.length >= 3) {
+      const wildcardKey = `/${parts[0]}/*/${parts.slice(2).join('/')}`
+      const exact = this.allMetadata[wildcardKey]
+      if (exact && Object.keys(exact).length > 0) {
+        return exact
+      }
+    }
+
+    const slashPath = '/' + path.replace(/\./g, '/')
+    const result = this.regexEntries.find((entry) =>
+      entry.pattern.test(slashPath)
+    )
+    return result && result.metadata && Object.keys(result.metadata).length > 0
+      ? result.metadata
+      : undefined
+  }
+
+  /**
+   * Get or create a metadata entry for a specific context+path combination.
+   * Used internally by FullSignalK to attach metadata to first-seen values.
+   * If an exact entry doesn't exist, clones the matched pattern entry
+   * so runtime metadata additions don't pollute the template.
+   */
+  internalGetMetadata(path: string): PathMetadataEntry | undefined {
+    const slashPath = '/' + path.replace(/\./g, '/')
+    const parts = path.split('.')
+    // Use wildcard key so all identities share the same cloned entry
+    const key = `/${parts[0]}/*/${parts.slice(2).join('/')}`
+
+    // Check for existing wildcard entry first
+    if (this.allMetadata[key]) {
+      return this.allMetadata[key]
+    }
+
+    // Find via regex against the full path
+    const result = this.regexEntries.find((entry) =>
+      entry.pattern.test(slashPath)
+    )
+    if (!result || Object.keys(result.metadata).length === 0) {
+      return undefined
+    }
+
+    // Clone the matched entry so runtime additions are per-path
+    const cloned = { ...result.metadata }
+    this.allMetadata[key] = cloned
+    // Escape special chars first, then replace wildcard
+    const escaped = key.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    this.regexEntries.push({
+      pattern: new RegExp(`^${escaped.replace(/\*/g, '[^/]+')}$`),
+      key,
+      metadata: cloned
+    })
+    return cloned
+  }
+
+  /**
+   * Merge runtime metadata into the registry for a specific context+path.
+   * Called when meta deltas are received.
+   */
+  addMetaData(
+    context: string,
+    path: string,
+    meta: Record<string, unknown>
+  ): void {
+    // Use wildcard key pattern so lookups with any identity match
+    const root = context.split('.')[0]
+    const key = `/${root}/*/${path.replace(/\./g, '/')}`
+    let entry = this.allMetadata[key]
+    if (!entry) {
+      entry = { description: '' }
+      this.allMetadata[key] = entry
+      // Escape special chars first, then replace wildcard
+      const escaped = key.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+      this.regexEntries.push({
+        pattern: new RegExp(`^${escaped.replace(/\*/g, '[^/]+')}$`),
+        key,
+        metadata: entry
+      })
+    }
+    Object.assign(entry, meta)
+  }
+
+  /** Return all registered metadata entries (for the /paths endpoint). */
+  getAllMetadata(): Record<string, PathMetadataEntry> {
+    return this.allMetadata
+  }
+}
+
+const allEntries = expandContextPrefixes({
+  ...rootMetadata,
+  ...vesselMetadata
+})
+
+export const metadataRegistry = new MetadataRegistry(allEntries)
+
+/** Look up metadata for a dot-separated Signal K path. */
+export function getMetadata(path: string): PathMetadataEntry | undefined {
+  return metadataRegistry.getMetadata(path)
+}

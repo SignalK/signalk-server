@@ -215,4 +215,28 @@ describe('Metadata end to end', function () {
       'Updated description'
     )
   })
+
+  it('serves the path metadata registry via GET /skServer/paths', async () => {
+    const response = await fetch(`http://localhost:${port}/skServer/paths`)
+    expect(response.status).to.equal(200)
+    const body = (await response.json()) as Record<
+      string,
+      { description?: string }
+    >
+    expect(body).to.be.an('object')
+    expect(Object.keys(body).length).to.be.greaterThan(0)
+    const spotChecks = [
+      '/vessels/*/navigation/speedOverGround',
+      '/vessels/*/environment/wind/speedApparent',
+      '/vessels/*/electrical/batteries',
+      '/vessels/*/propulsion',
+      '/vessels/*/tanks',
+      '/vessels/*/design/length',
+      '/vessels/*/sails/inventory'
+    ]
+    for (const key of spotChecks) {
+      expect(body, `missing ${key}`).to.have.property(key)
+      expect(body[key]).to.have.property('description')
+    }
+  })
 })
