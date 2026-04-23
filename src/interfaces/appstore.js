@@ -163,15 +163,35 @@ module.exports = function (app) {
 
       app.get(`${SERVERROUTESPREFIX}/appstore/available/`, (req, res) => {
         const installedNames = getInstalledPackageNames()
+        let storeAvailable = true
 
         Promise.all([
-          findPluginsAndWebapps(),
+          findPluginsAndWebapps().catch((err) => {
+            console.error(`findPluginsAndWebapps failed: ${err.message}`)
+            debug(err.stack)
+            storeAvailable = false
+            return [
+              getInstalledAsPackageEntries('signalk-node-server-plugin'),
+              getInstalledAsPackageEntries('signalk-webapp')
+            ]
+          }),
           getLatestServerVersion(app.config.version).catch(() => '0.0.0'),
           fetchDistTagsForPackages(installedNames).catch(() => ({}))
         ])
-          .then(([[plugins, webapps], serverVersion, distTagsMap]) =>
-            getAllModuleInfo(plugins, webapps, serverVersion, distTagsMap)
-          )
+          .then(([[plugins, webapps], serverVersion, distTagsMap]) => {
+            const result = getAllModuleInfo(
+              plugins,
+              webapps,
+              serverVersion,
+              distTagsMap
+            )
+            result.storeAvailable = storeAvailable
+            if (!storeAvailable) {
+              result.available = []
+              result.updates = []
+            }
+            return result
+          })
           .then((result) => res.json(result))
           .catch((error) => {
             console.log(error.message)
@@ -200,6 +220,47 @@ module.exports = function (app) {
         })
       ]
     })
+  }
+
+  function getInstalledAsPackageEntries(keyword) {
+    const sources =
+      keyword === 'signalk-node-server-plugin'
+        ? [{ entries: app.plugins || [], fallbackKeyword: keyword }]
+        : [
+            { entries: app.webapps || [], fallbackKeyword: 'signalk-webapp' },
+            { entries: app.addons || [], fallbackKeyword: 'signalk-webapp' },
+            {
+              entries: app.embeddablewebapps || [],
+              fallbackKeyword: 'signalk-embeddable-webapp'
+            }
+          ]
+    const seen = new Set()
+    const entries = []
+    for (const { entries: sourceEntries, fallbackKeyword } of sources) {
+      for (const installed of sourceEntries) {
+        const name = installed.packageName || installed.name
+        if (!name || seen.has(name)) continue
+        seen.add(name)
+        const authorName =
+          typeof installed.author === 'string'
+            ? installed.author
+            : installed.author && installed.author.name
+        entries.push({
+          package: {
+            name,
+            version: installed.version,
+            description: installed.description,
+            keywords: installed.keywords || [fallbackKeyword],
+            publisher:
+              installed.publisher ||
+              (authorName ? { username: authorName } : { username: '' }),
+            date: installed.date,
+            links: installed.links || {}
+          }
+        })
+      }
+    }
+    return entries
   }
 
   function getInstalledPackageNames() {

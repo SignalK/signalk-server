@@ -420,6 +420,9 @@ async function findModulesWithKeyword(
   return packages
 }
 
+const NPM_SEARCH_TIMEOUT_MS = 60_000
+const NPM_DIST_TAGS_TIMEOUT_MS = 20_000
+
 async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
   let fetchedCount = 0
   let toFetchCount = 1
@@ -430,7 +433,8 @@ async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
     const res = await fetch(
       `https://registry.npmjs.org/-/v1/search?size=250&from=${
         fetchedCount > 0 ? fetchedCount : 0
-      }&text=keywords:${keyword}`
+      }&text=keywords:${keyword}`,
+      { signal: AbortSignal.timeout(NPM_SEARCH_TIMEOUT_MS) }
     )
     if (!res.ok) {
       npmDebug(`npm search failed with status ${res.status}: ${res.statusText}`)
@@ -467,7 +471,8 @@ async function fetchDistTagsForPackages(
     const settled = await Promise.allSettled(
       batch.map(async (name) => {
         const res = await fetch(
-          `https://registry.npmjs.org/-/package/${name}/dist-tags`
+          `https://registry.npmjs.org/-/package/${name}/dist-tags`,
+          { signal: AbortSignal.timeout(NPM_DIST_TAGS_TIMEOUT_MS) }
         )
         if (!res.ok) return null
         const tags = (await res.json()) as NpmDistTags
@@ -487,7 +492,12 @@ async function fetchDistTagsForPackages(
 }
 
 function doFetchDistTags() {
-  return fetch('https://registry.npmjs.org/-/package/signalk-server/dist-tags')
+  return fetch(
+    'https://registry.npmjs.org/-/package/signalk-server/dist-tags',
+    {
+      signal: AbortSignal.timeout(NPM_DIST_TAGS_TIMEOUT_MS)
+    }
+  )
 }
 
 async function getLatestServerVersion(
