@@ -112,6 +112,22 @@ const ProvidersConfiguration: React.FC = () => {
 
       const updatedProvider = { ...selectedProvider }
       set(updatedProvider, event.target.name, value)
+      // On a brand-new connection, default createDevice to on when the
+      // user picks a YDWG gateway type — without it the gateway silently
+      // drops ISO Requests for PGN 60928 / 126996 / 126998, leaving
+      // device identity incomplete. Existing connections are left alone:
+      // an MFD on the bus may already be locked onto current $source
+      // refs, and flipping createDevice on retroactively makes the
+      // server claim a new address and disrupts that binding.
+      if (
+        updatedProvider.isNew &&
+        event.target.name === 'options.type' &&
+        typeof value === 'string' &&
+        /^ydwg02/.test(value) &&
+        updatedProvider.options?.createDevice === undefined
+      ) {
+        set(updatedProvider, 'options.createDevice', true)
+      }
       setSelectedProvider(updatedProvider)
     },
     [selectedProvider]
