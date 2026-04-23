@@ -150,6 +150,11 @@ module.exports = function (app: App) {
     if (p.enabled === undefined) {
       p.enabled = true
     }
+    // mDNS browsers fire 'update' repeatedly for the same service, so
+    // the list would otherwise accumulate dozens of rows per remote.
+    if (app.discoveredProviders.some((existing) => existing.id === p.id)) {
+      return
+    }
     app.discoveredProviders.push(p)
     app.emit('serverevent', {
       type: 'DISCOVERY_CHANGED',
