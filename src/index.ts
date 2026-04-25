@@ -778,14 +778,27 @@ function filterStaticSelfData(delta: any, selfContext: string) {
     delta.updates &&
       delta.updates.forEach((update: any) => {
         if ('values' in update && update['$source'] !== 'defaults') {
-          update.values = update.values.reduce((acc: any, pathValue: any) => {
-            const nvp = filterSelfDataKP(pathValue)
-            if (nvp) {
-              acc.push(nvp)
+          const values = update.values
+          // Avoid rebuilding the array when nothing is filtered out: only
+          // allocate a kept-values array once we encounter the first drop.
+          let kept: any[] | null = null
+          for (let i = 0; i < values.length; i++) {
+            const nvp = filterSelfDataKP(values[i])
+            if (nvp === null) {
+              if (kept === null) {
+                kept = values.slice(0, i)
+              }
+            } else if (kept !== null) {
+              kept.push(nvp)
             }
-            return acc
-          }, [])
-          if (update.values.length === 0) {
+          }
+          if (kept !== null) {
+            if (kept.length === 0) {
+              delete update.values
+            } else {
+              update.values = kept
+            }
+          } else if (values.length === 0) {
             delete update.values
           }
         }

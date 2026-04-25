@@ -145,4 +145,80 @@ describe('Static Data', () => {
     self.should.have.nested.property('sensors.gps.fromCenter')
     self.should.have.nested.property('communication.callsignVhf')
   })
+
+  it('passes through a self update where no value is filtered', async function () {
+    const delta = {
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: 'test.no-filter',
+          values: [
+            { path: 'design.airHeight', value: 5 },
+            { path: 'navigation.speedOverGround', value: 7 }
+          ]
+        }
+      ]
+    }
+    await doSendADelta(delta)
+
+    const fullTree = theServer.app.deltaCache.buildFull(null, [])
+    const self = _.get(fullTree, fullTree.self)
+
+    self.should.have.nested.property('design.airHeight.value', 5)
+    self.should.have.nested.property('navigation.speedOverGround.value', 7)
+  })
+
+  it('drops a self update when every value is on a filtered path', async function () {
+    // The previous "defaults" test wrote design.draft=20 / design.beam=10
+    // under vessels.self. Sending an all-filtered delta from a non-defaults
+    // source must leave those values intact: the filter should drop the
+    // entire update before it can overwrite anything.
+    const delta = {
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: 'test.all-filtered',
+          values: [
+            { path: 'design.draft', value: 999 },
+            { path: 'design.beam', value: 999 }
+          ]
+        }
+      ]
+    }
+    await doSendADelta(delta)
+
+    const fullTree = theServer.app.deltaCache.buildFull(null, [])
+    const self = _.get(fullTree, fullTree.self)
+
+    self.should.have.nested.property('design.draft.value', 20)
+    self.should.have.nested.property('design.beam.value', 10)
+  })
+
+  it('tolerates an empty values array on a self update', async function () {
+    const empty = {
+      context: 'vessels.self',
+      updates: [{ $source: 'test.empty-values', values: [] }]
+    }
+    await doSendADelta(empty)
+
+    // Follow up with a regular delta to confirm the pipeline is still healthy
+    // and that the empty update did not poison the server state.
+    const followUp = {
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: 'test.empty-values',
+          values: [{ path: 'environment.outside.temperature', value: 273 }]
+        }
+      ]
+    }
+    await doSendADelta(followUp)
+
+    const fullTree = theServer.app.deltaCache.buildFull(null, [])
+    const self = _.get(fullTree, fullTree.self)
+    self.should.have.nested.property(
+      'environment.outside.temperature.value',
+      273
+    )
+  })
 })

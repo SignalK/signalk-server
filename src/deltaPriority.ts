@@ -146,32 +146,39 @@ export const getToPreferredDelta = (
       delta.updates &&
         delta.updates.forEach((update: any) => {
           if ('values' in update) {
-            update.values = update.values.reduce(
-              (acc: any, pathValue: PathValue) => {
-                const latest = getLatest(
+            const values = update.values
+            // Avoid rebuilding the array when every value is preferred: only
+            // allocate a kept-values array once we encounter the first drop.
+            let kept: PathValue[] | null = null
+            for (let i = 0; i < values.length; i++) {
+              const pathValue: PathValue = values[i]
+              const latest = getLatest(
+                delta.context as Context,
+                pathValue.path as Path
+              )
+              const isPreferred = isPreferredValue(
+                pathValue.path as Path,
+                latest,
+                update.$source,
+                millis
+              )
+              if (isPreferred) {
+                setLatest(
                   delta.context as Context,
-                  pathValue.path as Path
-                )
-                const isPreferred = isPreferredValue(
                   pathValue.path as Path,
-                  latest,
-                  update.$source,
+                  update.$source as SourceRef,
                   millis
                 )
-                if (isPreferred) {
-                  setLatest(
-                    delta.context as Context,
-                    pathValue.path as Path,
-                    update.$source as SourceRef,
-                    millis
-                  )
-                  acc.push(pathValue)
-                  return acc
+                if (kept !== null) {
+                  kept.push(pathValue)
                 }
-                return acc
-              },
-              []
-            )
+              } else if (kept === null) {
+                kept = values.slice(0, i)
+              }
+            }
+            if (kept !== null) {
+              update.values = kept
+            }
           }
         })
     }
