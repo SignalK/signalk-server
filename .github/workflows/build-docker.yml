@@ -9,6 +9,7 @@ on:
     branches:
       - master
       - 'build-docker'
+      - 'source-priority-ux'
     tags:
       - '*'
       - '!v*'
