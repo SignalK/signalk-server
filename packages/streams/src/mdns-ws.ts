@@ -255,7 +255,7 @@ export default class MdnsWs extends Transform {
         }
         data.updates.forEach((update) => {
           update['$source'] =
-            `${this.options.providerId}.${client.options.hostname}:${client.options.port}`
+            `${this.options.providerId}.${client.options.hostname}:${client.options.port}.${update['$source'] ?? '-'}`
         })
       }
 
