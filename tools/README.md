@@ -108,3 +108,38 @@ All scripts save detailed output to `/tmp/oidc_test_<timestamp>/` or `/tmp/sso_t
 - **Authelia**: Full support with firstfactor API
 - **Keycloak**: Form-based login support
 - **Generic**: Basic flow (may require manual authentication)
+
+## WebSocket Stress Test
+
+Reproduces the event-loop stall described in [#2624](https://github.com/SignalK/signalk-server/issues/2624). Connects multiple WebSocket clients with `policy: fixed` subscriptions at various periods and monitors HTTP API responsiveness.
+
+### Quick Start
+
+Start a server with sample data (e.g. in Docker):
+
+```bash
+docker run -it --rm --init --name test-signalk-server \
+  -p 3009:3000 \
+  --entrypoint /home/node/signalk/node_modules/signalk-server/bin/signalk-server \
+  signalk/signalk-server --sample-n2k-data
+```
+
+Run the stress test:
+
+```bash
+npx ts-node --transpile-only --compiler-options \
+  '{"module": "commonjs", "moduleResolution": "node"}' \
+  tools/ws-stress-test.ts --url http://localhost:3009
+```
+
+Press Ctrl-C to stop and print a summary.
+
+### Options
+
+| Option              | Default                  | Description                     |
+| ------------------- | ------------------------ | ------------------------------- |
+| `--url`             | `http://localhost:3000`  | Server base URL                 |
+| `--clients`         | `10`                     | Number of WebSocket clients     |
+| `--subscriptions`   | `5`                      | Subscriptions per client        |
+| `--http-interval`   | `5000`                   | HTTP poll interval (ms)         |
+| `--duration`        | `0` (unlimited)          | Run duration in seconds         |
