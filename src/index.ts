@@ -740,7 +740,10 @@ async function startInterfaces(
   return await Promise.all(
     Object.keys(availableInterfaces).map(async (name) => {
       if (skippedInterfaces.has(name)) {
-        debug(`Not loading interface '${name}' (disabled by command line flag)`)
+        debug.enabled &&
+          debug(
+            `Not loading interface '${name}' (disabled by command line flag)`
+          )
         return
       }
       const theInterface = availableInterfaces[name]
