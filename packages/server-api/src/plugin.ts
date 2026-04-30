@@ -1,5 +1,41 @@
 import { IRouter } from 'express'
+import { IncomingMessage } from 'http'
+import { Duplex } from 'stream'
 import { ServerAPI } from './serverapi'
+
+/**
+ * Handler for a WebSocket `upgrade` request, matching Node.js's HTTP server
+ * `upgrade` event signature. The plugin is responsible for completing the
+ * handshake (e.g. via a `ws.Server({ noServer: true })` plus
+ * `wss.handleUpgrade(request, socket, head, ...)`) or destroying the socket.
+ *
+ * @category Server API
+ */
+export type PluginUpgradeHandler = (
+  request: IncomingMessage,
+  socket: Duplex,
+  head: Buffer
+) => void
+
+/**
+ * Registry passed to {@link Plugin.registerWithUpgrade} that lets a plugin
+ * subscribe to WebSocket `upgrade` events on paths under its own plugin
+ * route (`/plugins/<pluginId>`).
+ *
+ * @category Server API
+ */
+export interface PluginUpgradeRouter {
+  /**
+   * Register a handler for `upgrade` requests whose URL path, relative to
+   * the plugin's route, matches `pattern` as a prefix. For example, with
+   * `pattern = '/socket'` a plugin with id `my-plugin` will receive
+   * upgrades for `/plugins/my-plugin/socket` and any sub-paths.
+   *
+   * The plugin is responsible for completing the WebSocket handshake or
+   * closing the socket; the server only dispatches.
+   */
+  upgrade(pattern: string, handler: PluginUpgradeHandler): void
+}
 
 /**
  * A plugin constructor is the interface that all plugins must export.
@@ -176,6 +212,52 @@ export interface Plugin {
    * @returns
    */
   registerWithRouter?(router: IRouter): void
+
+  /**
+   * Plugins can implement this method to handle WebSocket `upgrade` events
+   * on paths under their plugin route (`/plugins/<pluginId>/...`).
+   *
+   * Express routers do not see HTTP `upgrade` events — those are emitted on
+   * the underlying HTTP server. This hook lets a plugin register one or
+   * more URL patterns and receive the raw `upgrade` request, socket and
+   * head exactly as Node.js's HTTP server delivers them. The plugin then
+   * completes the handshake itself (typically with a `ws.Server({
+   * noServer: true })` plus `wss.handleUpgrade(...)`).
+   *
+   * Like {@link registerWithRouter}, this is called once at plugin
+   * registration time and registrations persist for the lifetime of the
+   * server. The plugin's handler is responsible for guarding against the
+   * plugin being stopped — typically by checking a module-scope state
+   * variable and destroying the socket if not running.
+   *
+   * Patterns are matched as path prefixes relative to the plugin's route.
+   * For example, registering `/socket` on plugin `my-plugin` will dispatch
+   * upgrades to `/plugins/my-plugin/socket` and any sub-path.
+   *
+   * Authentication is the plugin's responsibility — call
+   * `app.securityStrategy.authorizeWS(request)` if you need the same
+   * cookie/JWT auth the rest of the server uses.
+   *
+   * @category Rest API
+   *
+   * @param upgrader registry to add upgrade handlers to
+   *
+   * @example
+   * ```typescript
+   * import { WebSocketServer } from 'ws'
+   *
+   * const wss = new WebSocketServer({ noServer: true })
+   *
+   * plugin.registerWithUpgrade = (upgrader) => {
+   *   upgrader.upgrade('/socket', (request, socket, head) => {
+   *     wss.handleUpgrade(request, socket, head, (ws) => {
+   *       // use ws ...
+   *     })
+   *   })
+   * }
+   * ```
+   */
+  registerWithUpgrade?(upgrader: PluginUpgradeRouter): void
 
   getOpenApi?: () => object
 

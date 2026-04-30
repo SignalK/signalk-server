@@ -287,6 +287,29 @@ const openapi = require('./openApi.json')
 plugin.getOpenApi = () => openapi
 ```
 
+- `registerWithUpgrade(upgrader)`: This function (called during plugin startup) lets a plugin handle WebSocket `upgrade` events on paths under its plugin route. Express routers do not see `upgrade` events &mdash; those are emitted on the underlying HTTP server &mdash; so this is the only way a plugin can serve WebSockets, including any reverse-proxied WebSocket the plugin forwards to a third-party service.
+
+  Patterns are matched as path prefixes relative to the plugin's route. For example, registering `/socket` on plugin `my-plugin` will dispatch upgrades for `/plugins/my-plugin/socket` and any sub-path. Authentication is the plugin's responsibility &mdash; call `app.securityStrategy.authorizeWS(request)` if you need the same cookie/JWT auth the rest of the server uses.
+
+  _Example:_
+
+  ```javascript
+  const { WebSocketServer } = require('ws')
+
+  const wss = new WebSocketServer({ noServer: true })
+
+  plugin.registerWithUpgrade = (upgrader) => {
+    upgrader.upgrade('/socket', (request, socket, head) => {
+      // URL will be ws://{skserver}:3000/plugins/{pluginId}/socket
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        ws.on('message', (msg) => {
+          ws.send('echo: ' + msg.toString())
+        })
+      })
+    })
+  }
+  ```
+
 ---
 
 ## Add an OpenAPI Definition

@@ -107,11 +107,111 @@ function backwardsCompat(url: string) {
   return [`${SERVERROUTESPREFIX}${url}`, url]
 }
 
+type UpgradeHandler = (
+  request: import('http').IncomingMessage,
+  socket: import('stream').Duplex,
+  head: Buffer
+) => void
+
+interface UpgradeRegistration {
+  pluginId: string
+  pattern: string
+  handler: UpgradeHandler
+}
+
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
+  const upgradeRegistrations: UpgradeRegistration[] = []
+  let upgradeListenerInstalled = false
+
+  function installUpgradeListenerOnce() {
+    if (upgradeListenerInstalled || !theApp.server) {
+      debug(
+        'upgrade listener install skipped (installed=%s, server=%s)',
+        upgradeListenerInstalled,
+        !!theApp.server
+      )
+      return
+    }
+    upgradeListenerInstalled = true
+    debug('upgrade listener installed on app.server')
+    theApp.server.on(
+      'upgrade',
+      (
+        request: import('http').IncomingMessage,
+        socket: import('stream').Duplex,
+        head: Buffer
+      ) => {
+        debug(
+          'upgrade event url=%s registrations=%d',
+          request.url,
+          upgradeRegistrations.length
+        )
+        if (!request.url) return
+        // Match /plugins/<id>/<rest>; if no plugin matches, leave the
+        // event for other handlers (e.g. binary streams, primary WS).
+        const match = request.url.match(/^\/plugins\/([^/?]+)(\/[^?]*)?/)
+        if (!match) {
+          debug(
+            'upgrade url did not match /plugins/<id>/<rest> pattern: %s',
+            request.url
+          )
+          return
+        }
+        const [, pluginId, restPath = '/'] = match
+        debug('upgrade matched plugin=%s restPath=%s', pluginId, restPath)
+        for (const reg of upgradeRegistrations) {
+          if (reg.pluginId !== pluginId) continue
+          if (
+            restPath === reg.pattern ||
+            restPath.startsWith(
+              reg.pattern.endsWith('/') ? reg.pattern : reg.pattern + '/'
+            )
+          ) {
+            debug(
+              'upgrade dispatch to plugin=%s pattern=%s',
+              pluginId,
+              reg.pattern
+            )
+            try {
+              reg.handler(request, socket, head)
+            } catch (err) {
+              debug(
+                'Plugin %s upgrade handler threw: %s',
+                pluginId,
+                err instanceof Error ? err.message : err
+              )
+              try {
+                socket.destroy()
+              } catch {
+                // ignore
+              }
+            }
+            return
+          }
+        }
+        debug(
+          'upgrade no pattern matched for plugin=%s restPath=%s',
+          pluginId,
+          restPath
+        )
+      }
+    )
+  }
+
   return {
     async start() {
       ensureExists(path.join(theApp.config.configPath, PLUGIN_CONFIG_DATA_DIR))
+
+      // Install the plugin upgrade dispatcher early — before the WS
+      // interface (Primus) attaches. Primus's transformer snapshots any
+      // pre-existing `'upgrade'` listeners as `previous::upgrade` and
+      // forwards non-matching upgrades back to them. If we install
+      // lazily after Primus has run, our listener never sees Primus's
+      // miss path. Installing here from the plugins-interface start()
+      // works because the interface loader runs `plugins` (alphabetical)
+      // before `ws`, and `theApp.server` is already assigned by then.
+      installUpgradeListenerOnce()
 
       theApp.getPluginsList = async (enabled?: boolean) => {
         return await getPluginsList(enabled)
@@ -874,6 +974,33 @@ module.exports = (theApp: any) => {
       }
     }
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
+
+    if (typeof plugin.registerWithUpgrade === 'function') {
+      // Lazy-install a single 'upgrade' listener on the HTTP server the
+      // first time any plugin asks for it. The dispatcher matches the
+      // request URL against per-plugin patterns and delegates.
+      //
+      // Registrations are made once at plugin registration time and
+      // persist for the lifetime of the server, mirroring the
+      // registerWithRouter convention (Express has no public API for
+      // unmounting sub-routers, so router routes also persist across
+      // plugin stop/start cycles). The plugin's handler is responsible
+      // for guarding against the plugin being stopped — typically by
+      // checking a module-scope state variable and destroying the
+      // socket if not running.
+      installUpgradeListenerOnce()
+      const upgrader = {
+        upgrade: (pattern: string, handler: UpgradeHandler) => {
+          const normalized = pattern.startsWith('/') ? pattern : '/' + pattern
+          upgradeRegistrations.push({
+            pluginId: plugin.id,
+            pattern: normalized,
+            handler
+          })
+        }
+      }
+      plugin.registerWithUpgrade(upgrader)
+    }
 
     if (typeof plugin.signalKApiRoutes === 'function') {
       app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))
