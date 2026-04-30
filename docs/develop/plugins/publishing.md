@@ -4,7 +4,7 @@ title: Publishing to The AppStore
 
 # Publishing to The AppStore
 
-Plugins and WebApps are available in the AppStore when they have been published to [npm repository](https://www.npmjs.com/) with the one or more of the following keywords in the `package.json` file:
+Plugins and WebApps are available in the AppStore when they have been published to the [npm registry](https://www.npmjs.com/) with one or more of the following keywords in `package.json`:
 
 - `signalk-node-server-plugin`
 - `signalk-webapp`

@@ -296,9 +296,7 @@ const DetailView: React.FC = () => {
                   </div>
                   <h2 className="mb-1 mt-2">{displayTitle}</h2>
                   <p className="text-muted mb-2">
-                    {detail.description ||
-                      (listEntry?.description as string) ||
-                      ''}
+                    {detail.description || listEntry?.description || ''}
                   </p>
                   <div className="text-muted small d-flex gap-3 flex-wrap">
                     {(detail.author || listEntry?.author) && (
