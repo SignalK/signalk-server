@@ -299,7 +299,7 @@ export default function Dashboard() {
 }
 
 function pluginNameLink(id: string): ReactNode {
-  return <a href={'#/serverConfiguration/plugins/' + id}>{id}</a>
+  return <a href={'#/apps/configuration/' + id}>{id}</a>
 }
 
 function providerIdLink(id: string): ReactNode {
