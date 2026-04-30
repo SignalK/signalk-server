@@ -1,24 +1,47 @@
+import { useRef, useEffect, useState } from 'react'
+
 interface TimestampCellProps {
   timestamp: string
   isPaused: boolean
   className?: string
 }
 
-// TimestampCell triggers a CSS animation when the timestamp changes.
-// We use the timestamp string itself as the animation key to trigger re-animation.
-// The CSS animation class is always applied when not paused - the key change
-// triggers the animation restart.
 function TimestampCell({ timestamp, isPaused, className }: TimestampCellProps) {
-  // Use timestamp as animation key - when it changes, React remounts the element
-  // which restarts the CSS animation. When paused, use static key.
-  const animationKey = isPaused ? 'paused' : timestamp
+  const prevTimestampRef = useRef(timestamp)
+  // A counter that bumps on every timestamp change. Used as a React key on
+  // the animated overlay so the CSS animation restarts from the beginning
+  // with each new value — otherwise a continuously-updating path would fade
+  // to zero once and never flash again.
+  const [pulseKey, setPulseKey] = useState(0)
+  const [animate, setAnimate] = useState(false)
 
-  const cellClass = `virtual-table-cell timestamp-cell ${className || ''} ${
-    !isPaused ? 'timestamp-updated' : ''
-  }`
+  useEffect(() => {
+    // Track the latest timestamp regardless of pause state — otherwise
+    // unpausing after a few updates would compare the new timestamp
+    // against the value at pause time and either flash spuriously or
+    // miss the next change entirely.
+    const changed = timestamp !== prevTimestampRef.current
+    if (changed) {
+      prevTimestampRef.current = timestamp
+    }
+    if (isPaused) {
+      setAnimate(false)
+      return
+    }
+    if (changed) {
+      setPulseKey((k) => k + 1)
+      setAnimate(true)
+      const timer = setTimeout(() => setAnimate(false), 15000)
+      return () => clearTimeout(timer)
+    }
+  }, [timestamp, isPaused])
 
   return (
-    <div className={cellClass} key={animationKey} data-label="Time">
+    <div
+      className={`virtual-table-cell timestamp-cell ${className || ''}`}
+      data-label="Time"
+    >
+      {animate && <span key={pulseKey} className="timestamp-updated-bar" />}
       {timestamp}
     </div>
   )
