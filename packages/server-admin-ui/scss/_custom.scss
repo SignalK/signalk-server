@@ -493,6 +493,43 @@ form.rjsf {
 // shows manufacturer + model on line 1 and the canName on line 2, so
 // the hint is redundant and the stats are demoted to the second line
 // after the canName.
+// Source row metadata always stacks vertically: rank + primary label on
+// line 1, canName under it (already column-stacked inside .pg-source-name),
+// then device label / each badge / wins X/Y each on their own line. Inline
+// rendering on wide screens looked good only at the extremes — between ~900
+// and ~1700px the canName cascaded to one char per line because the device
+// label / Offline badge / stats competed with .pg-source-name for line 1.
+// flex-basis: 100% forces each meta child onto its own row; max-width:
+// fit-content keeps badges pill-sized instead of stretching to full width.
+.pg-source-select {
+  flex-wrap: wrap;
+  row-gap: 0.2rem;
+  align-items: flex-start;
+
+  .pg-source-name {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  // The meta block (device label, badges, stats) lives in its own
+  // wrapper so it can claim the full second row of the source button
+  // and lay its children out independently of the rank/name row.
+  .pg-source-meta {
+    flex: 0 0 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+
+    .pg-device-label,
+    .pg-source-stats,
+    .badge {
+      margin-left: 0 !important;
+    }
+  }
+}
+
 @media (max-width: 575.98px) {
   .pg-device-label {
     display: none;

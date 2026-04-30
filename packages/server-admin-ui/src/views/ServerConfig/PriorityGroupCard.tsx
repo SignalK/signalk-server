@@ -144,48 +144,47 @@ const SortableSourceRow: React.FC<SortableSourceRowProps> = ({
             </span>
           )}
         </span>
-        {deviceLabel && (
-          <span
-            className="pg-device-label text-muted small ms-2"
-            style={{ fontStyle: 'italic' }}
-            title="Device model / manufacturer resolved from the N2K ProductInformation PGN"
-          >
-            ({deviceLabel})
+        <span className="pg-source-meta">
+          {deviceLabel && (
+            <span
+              className="pg-device-label text-muted small"
+              style={{ fontStyle: 'italic' }}
+              title="Device model / manufacturer resolved from the N2K ProductInformation PGN"
+            >
+              ({deviceLabel})
+            </span>
+          )}
+          {isOffline && (
+            <Badge
+              bg="secondary"
+              style={{ fontSize: '0.7em' }}
+              title="No frames seen from this source in the last 90s — its rank is preserved so it auto-recovers when it returns."
+            >
+              Offline
+            </Badge>
+          )}
+          {isNewcomer && (
+            <Badge
+              bg="warning"
+              text="dark"
+              style={{ fontSize: '0.7em' }}
+              title="This source started publishing a path in this group after the ranking was saved. Drag it where you want it and Save to include it."
+            >
+              New
+            </Badge>
+          )}
+          {isPlugin && (
+            <Badge
+              bg="info"
+              style={{ fontSize: '0.7em' }}
+              title="This source is a Signal K plugin emitting deltas directly into the server (no bus address). Rank it explicitly — a derived/fallback plugin usually belongs at the bottom, an authoritative one at the top."
+            >
+              Plugin
+            </Badge>
+          )}
+          <span className="pg-source-stats text-muted small">
+            wins {wins}/{publishes}
           </span>
-        )}
-        {isOffline && (
-          <Badge
-            bg="secondary"
-            className="ms-2"
-            style={{ fontSize: '0.7em' }}
-            title="No frames seen from this source in the last 90s — its rank is preserved so it auto-recovers when it returns."
-          >
-            Offline
-          </Badge>
-        )}
-        {isNewcomer && (
-          <Badge
-            bg="warning"
-            text="dark"
-            className="ms-2"
-            style={{ fontSize: '0.7em' }}
-            title="This source started publishing a path in this group after the ranking was saved. Drag it where you want it and Save to include it."
-          >
-            New
-          </Badge>
-        )}
-        {isPlugin && (
-          <Badge
-            bg="info"
-            className="ms-2"
-            style={{ fontSize: '0.7em' }}
-            title="This source is a Signal K plugin emitting deltas directly into the server (no bus address). Rank it explicitly — a derived/fallback plugin usually belongs at the bottom, an authoritative one at the top."
-          >
-            Plugin
-          </Badge>
-        )}
-        <span className="pg-source-stats text-muted small">
-          wins {wins}/{publishes}
         </span>
       </button>
       {canRemove && onRemove && (
