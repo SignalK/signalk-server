@@ -47,7 +47,11 @@ interface NpmPackageLike {
 }
 
 function isGithubUrl(url: string | undefined): boolean {
-  return !!url && /(^|\/\/|@)github\.com[/:]/i.test(url)
+  // Require a real boundary in front of github.com so a URL containing
+  // 'notgithub.com' followed by 'github.com' later in the path can't
+  // accidentally match. ':\\/' covers https:// and git+ssh://;
+  // '@' covers the ssh form (git@github.com:...).
+  return !!url && /(^|:\/\/|@)github\.com[/:]/i.test(url)
 }
 
 function extractGithubUrl(pkg: NpmPackageLike): string | undefined {

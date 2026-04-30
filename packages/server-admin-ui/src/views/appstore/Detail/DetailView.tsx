@@ -359,7 +359,7 @@ const DetailView: React.FC = () => {
                   <>
                     <NavLink
                       to={`/apps/configuration/${encodeURIComponent(
-                        (listEntry.id as string) || detail.name
+                        listEntry.id as string
                       )}`}
                       className="btn btn-primary"
                     >

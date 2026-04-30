@@ -137,19 +137,18 @@ export async function parseReleasesFeed(
   xml: string
 ): Promise<GithubReleaseEntry[]> {
   const matches = xml.match(ENTRY_RE) || []
-  const out: GithubReleaseEntry[] = []
-  for (const raw of matches) {
-    const { tag, url, date, contentHtml } = parseEntry(raw)
-    if (!tag || !url) continue
-    const body = contentHtml ? await htmlToMarkdown(contentHtml) : ''
-    out.push({
-      tag,
-      url,
-      date,
-      bodyMarkdown: body
+  // Convert each entry's HTML body to Markdown in parallel — the unified
+  // pipeline is CPU-light per entry but feeds with 30+ releases were
+  // serializing into a noticeable wait on slow boxes.
+  const entries = await Promise.all(
+    matches.map(async (raw): Promise<GithubReleaseEntry | undefined> => {
+      const { tag, url, date, contentHtml } = parseEntry(raw)
+      if (!tag || !url) return undefined
+      const body = contentHtml ? await htmlToMarkdown(contentHtml) : ''
+      return { tag, url, date, bodyMarkdown: body }
     })
-  }
-  return out
+  )
+  return entries.filter((e): e is GithubReleaseEntry => e !== undefined)
 }
 
 export function renderReleasesAsChangelog(

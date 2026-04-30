@@ -247,9 +247,14 @@ export function createRegistryClient(
 
   let indexMemo: IndexEntry | undefined
   let lookupCache: Map<string, RegistryIndexEntry> | undefined
-  // Coalesces concurrent getIndex() callers when the cache is stale
-  // so we don't fan out N parallel network fetches under load.
+  // Coalesces concurrent callers when the cache is stale so we don't
+  // fan out N parallel network fetches under load. One entry per
+  // plugin for getPlugin(); a single cell for the index.
   let indexInFlight: Promise<RegistryIndex | undefined> | undefined
+  const pluginInFlight: Map<
+    string,
+    Promise<RegistryPluginDetail | undefined>
+  > = new Map()
 
   function buildLookup(idx: RegistryIndex): Map<string, RegistryIndexEntry> {
     const map = new Map<string, RegistryIndexEntry>()
@@ -309,22 +314,33 @@ export function createRegistryClient(
       if (disk && Date.now() - disk.writtenAt < pluginTtl) {
         return disk.payload
       }
-      const fresh = await fetchJson<RegistryPluginDetail>(
-        `${baseUrl}/plugins/${safeName(name)}.json`,
-        RegistryPluginDetailSchema,
-        timeoutMs
-      )
-      if (fresh) {
-        writePluginToDisk(name, fresh)
-        return fresh
+      const existing = pluginInFlight.get(name)
+      if (existing) return existing
+      const promise = (async () => {
+        const fresh = await fetchJson<RegistryPluginDetail>(
+          `${baseUrl}/plugins/${safeName(name)}.json`,
+          RegistryPluginDetailSchema,
+          timeoutMs
+        )
+        if (fresh) {
+          writePluginToDisk(name, fresh)
+          return fresh
+        }
+        return disk?.payload
+      })()
+      pluginInFlight.set(name, promise)
+      try {
+        return await promise
+      } finally {
+        pluginInFlight.delete(name)
       }
-      return disk?.payload
     },
 
     invalidate() {
       indexMemo = undefined
       lookupCache = undefined
       indexInFlight = undefined
+      pluginInFlight.clear()
       if (indexFile && fs.existsSync(indexFile)) {
         try {
           fs.unlinkSync(indexFile)

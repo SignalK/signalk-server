@@ -15,8 +15,8 @@
 */
 
 import { createDebug } from '../debug'
+import fs from 'fs'
 const debug = createDebug('signalk-server:interfaces:appstore')
-const fs = require('fs')
 const _ = require('lodash')
 const semver = require('semver')
 const { gt } = semver
@@ -482,7 +482,7 @@ module.exports = function (app) {
         }
       } catch (err) {
         debug.enabled &&
-          debug('npm metadata fetch for %s failed: %O', name, err)
+          debug('icon/screenshot probe for %s failed: %O', name, err)
       }
     }
     const ext = enrichEntry(pkgForEnrichment, {

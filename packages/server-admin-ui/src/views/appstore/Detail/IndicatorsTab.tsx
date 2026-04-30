@@ -31,6 +31,11 @@ interface IndicatorsTabProps {
   pluginCi?: PluginCi
 }
 
+// Public registry that publishes the per-plugin scoring data the
+// Indicators tab attributes. Defined here so the link can be updated
+// in one place if the registry ever moves.
+const PLUGIN_REGISTRY_URL = 'https://dirkwa.github.io/signalk-plugin-registry/'
+
 const statusToVariant: Record<Check['status'], string> = {
   ok: 'success',
   warn: 'warning',
@@ -73,11 +78,7 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({
           <div className="h4 mb-0">{normalizedScore} / 100</div>
           <div className="text-muted">
             Composite score from the{' '}
-            <a
-              href="https://dirkwa.github.io/signalk-plugin-registry/"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href={PLUGIN_REGISTRY_URL} target="_blank" rel="noreferrer">
               Signal K Plugin Registry
             </a>
           </div>

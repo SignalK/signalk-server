@@ -73,22 +73,31 @@ export function createIconBytesCache(cacheDir: string): IconBytesCache {
   }
 
   function purgeOldVersions(pkgName: string, keepVersion?: string) {
+    // Drop the existsSync probe and readdir directly: avoids a TOCTOU
+    // window where another process removes `root` between the two
+    // calls. ENOENT just means there's nothing to purge.
+    let entries: string[]
     try {
-      if (!fs.existsSync(root)) return
-      const prefix = `${safeName(pkgName)}@`
-      const keep = keepVersion ? `${prefix}${keepVersion}.` : undefined
-      for (const entry of fs.readdirSync(root)) {
-        if (!entry.startsWith(prefix)) continue
-        if (keep && entry.startsWith(keep)) continue
-        try {
-          fs.unlinkSync(path.join(root, entry))
-          debug.enabled && debug('purged stale icon %s', entry)
-        } catch (err) {
+      entries = fs.readdirSync(root)
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        debug.enabled && debug('purgeOldVersions %s failed: %O', pkgName, err)
+      }
+      return
+    }
+    const prefix = `${safeName(pkgName)}@`
+    const keep = keepVersion ? `${prefix}${keepVersion}.` : undefined
+    for (const entry of entries) {
+      if (!entry.startsWith(prefix)) continue
+      if (keep && entry.startsWith(keep)) continue
+      try {
+        fs.unlinkSync(path.join(root, entry))
+        debug.enabled && debug('purged stale icon %s', entry)
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
           debug.enabled && debug('purge %s failed: %O', entry, err)
         }
       }
-    } catch (err) {
-      debug.enabled && debug('purgeOldVersions %s failed: %O', pkgName, err)
     }
   }
 
@@ -150,6 +159,20 @@ export function createIconBytesCache(cacheDir: string): IconBytesCache {
       if (!ALLOWED_CONTENT_TYPES.test(contentType)) {
         debug.enabled &&
           debug('rejected %s: content-type %s not image/*', cdnUrl, contentType)
+        return null
+      }
+      // Reject by Content-Length up front when the server sets it,
+      // so a misconfigured or malicious URL advertising a 500 MB
+      // payload doesn't tie up the download buffer at all.
+      const declaredLength = Number(res.headers.get('content-length') || '0')
+      if (declaredLength > MAX_BYTES) {
+        debug.enabled &&
+          debug(
+            'rejected %s: declared size %d exceeds %d',
+            cdnUrl,
+            declaredLength,
+            MAX_BYTES
+          )
         return null
       }
       const ab = await res.arrayBuffer()

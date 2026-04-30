@@ -80,10 +80,21 @@ export function createIconProbeCache(cacheDir: string): IconProbeCache {
       debug.enabled && debug('iconUrls cache mkdir failed: %O', err)
       return
     }
+    // Write to a sibling tempfile then rename so a crash mid-write
+    // can't leave a half-serialized JSON blob that the next load()
+    // throws on. rename within the same directory is atomic on POSIX
+    // and best-effort atomic on Windows.
+    const tmp = `${file}.${process.pid}.tmp`
     try {
-      fs.writeFileSync(file, JSON.stringify(memo), 'utf8')
+      fs.writeFileSync(tmp, JSON.stringify(memo), 'utf8')
+      fs.renameSync(tmp, file)
     } catch (err) {
       debug.enabled && debug('iconUrls cache write failed: %O', err)
+      try {
+        fs.rmSync(tmp, { force: true })
+      } catch {
+        /* leave the partial tmpfile alone */
+      }
     }
   }
 

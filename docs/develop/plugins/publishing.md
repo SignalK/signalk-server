@@ -63,6 +63,8 @@ Files must be published to npm — check your `files` field and `.npmignore`. Be
 npm pack --dry-run | grep -E '(screenshots|icon)'
 ```
 
+If the command prints nothing, the listed assets are not in the tarball — adjust your `files` field or `.npmignore`.
+
 Images are served via the npm CDN (`https://unpkg.com/{pkg}@{version}/...`), so paths resolve per version. Relative images in your `README.md` (`![caption](./docs/foo.png)`) are rewritten the same way and render inline on the AppStore detail page.
 
 If no screenshots are declared, the detail page omits the hero image and shows a polite note. The card and list views degrade silently.
