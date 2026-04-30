@@ -6,9 +6,16 @@ interface ScoreRingProps {
   label?: string
 }
 
+// Score-tier thresholds. Match the heuristic-disclaimer copy on the
+// IndicatorsTab — a low score isn't a verdict, just a feedback hint
+// for plugin authors. The cutoffs mirror what the registry's nightly
+// scoring uses.
+const SCORE_GREEN_THRESHOLD = 70
+const SCORE_YELLOW_THRESHOLD = 40
+
 function colorFor(score: number): string {
-  if (score >= 70) return '#4dbd74'
-  if (score >= 40) return '#f8cb00'
+  if (score >= SCORE_GREEN_THRESHOLD) return '#4dbd74'
+  if (score >= SCORE_YELLOW_THRESHOLD) return '#f8cb00'
   return '#f86c6b'
 }
 

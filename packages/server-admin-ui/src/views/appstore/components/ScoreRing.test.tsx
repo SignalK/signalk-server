@@ -24,12 +24,14 @@ describe('ScoreRing', () => {
   it('clamps scores above 100', () => {
     const { container } = render(<ScoreRing score={150} />)
     const svg = container.querySelector('svg')
-    expect(svg?.textContent).toContain('100')
+    // aria-label is the precise rendered score; textContent could
+    // accidentally match a stroke-dasharray digit.
+    expect(svg?.getAttribute('aria-label')).toMatch(/\b100 of 100\b/)
   })
 
   it('clamps negative scores to 0', () => {
     const { container } = render(<ScoreRing score={-10} />)
     const svg = container.querySelector('svg')
-    expect(svg?.textContent).toContain('0')
+    expect(svg?.getAttribute('aria-label')).toMatch(/\b0 of 100\b/)
   })
 })

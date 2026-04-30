@@ -10,6 +10,10 @@ interface ReadmeTabProps {
   onScreenshotClick?: (index: number) => void
 }
 
+// Same cap the publishing docs advertise to plugin authors and the
+// detail-payload schema validates at the boundary.
+const MAX_SCREENSHOTS = 6
+
 function rewriteRelativeImages(
   src: string,
   packageName: string,
@@ -59,7 +63,7 @@ const ReadmeTab: React.FC<ReadmeTabProps> = ({
           style={{ flexBasis: '40%', flexShrink: 0 }}
         >
           <div className="row g-2">
-            {screenshots.slice(0, 6).map((src, idx) => (
+            {screenshots.slice(0, MAX_SCREENSHOTS).map((src, idx) => (
               <div className="col-6" key={src}>
                 <button
                   type="button"

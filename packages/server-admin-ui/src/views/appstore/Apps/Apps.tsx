@@ -355,9 +355,7 @@ const Apps: React.FC = () => {
 
         <Card.Body>
           <section className="appstore__tags section">
-            {(
-              appStore as AppStoreState & { categories?: string[] }
-            ).categories?.map((item) => (
+            {appStore.categories?.map((item) => (
               <Button
                 key={item}
                 variant={category === item ? 'secondary' : 'outline-secondary'}

@@ -14,6 +14,7 @@ export interface AppStoreState {
   installed: AppInfo[]
   available: AppInfo[]
   installing: InstallingApp[]
+  categories?: string[]
   storeAvailable?: boolean
   canUpdateServer?: boolean
   serverUpdate?: string

@@ -146,9 +146,10 @@ function LegacyAppstoreRedirect() {
 
 function LegacyPluginConfigRedirect() {
   const { pluginid } = useParams<{ pluginid: string }>()
+  const location = useLocation()
   return (
     <Navigate
-      to={`/apps/configuration/${encodeURIComponent(pluginid || '-')}`}
+      to={`/apps/configuration/${encodeURIComponent(pluginid || '-')}${location.search}${location.hash}`}
       replace
     />
   )

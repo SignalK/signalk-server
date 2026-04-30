@@ -10,6 +10,14 @@ describe('DeprecatedToggle', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('stays visible when enabled even if count is 0', () => {
+    // Regression: turning the filter on filters the deprecated plugins
+    // back into the list, dropping the count to 0. The toggle must
+    // remain mounted so the user can turn it back off.
+    render(<DeprecatedToggle count={0} enabled={true} onChange={() => {}} />)
+    expect(screen.getByRole('checkbox')).toBeDefined()
+  })
+
   it('renders singular label for count of 1', () => {
     render(<DeprecatedToggle count={1} enabled={false} onChange={() => {}} />)
     expect(screen.getByText(/1 deprecated plugin\b/)).toBeDefined()

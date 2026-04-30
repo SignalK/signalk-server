@@ -47,6 +47,14 @@ const htmlProcessor = unified()
     strong: '*'
   })
 
+// String.fromCodePoint throws RangeError for values outside [0, 0x10FFFF],
+// which would otherwise abort htmlToMarkdown on a malformed entity (e.g.
+// &#99999999; or &#xFFFFFFFF;) and degrade the Changelog tab to raw HTML.
+function safeFromCodePoint(n: number): string {
+  if (!Number.isFinite(n) || n < 0 || n > 0x10ffff) return ''
+  return String.fromCodePoint(n)
+}
+
 function decodeEntities(s: string): string {
   return s
     .replace(/&amp;/g, '&')
@@ -55,10 +63,8 @@ function decodeEntities(s: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) =>
-      String.fromCodePoint(parseInt(n, 16))
-    )
+    .replace(/&#(\d+);/g, (_, n) => safeFromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => safeFromCodePoint(parseInt(n, 16)))
 }
 
 async function htmlToMarkdown(html: string): Promise<string> {

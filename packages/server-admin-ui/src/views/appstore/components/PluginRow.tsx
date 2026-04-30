@@ -65,7 +65,9 @@ const PluginRow: React.FC<PluginRowProps> = ({
           {(app.categories || [])[0]}
         </div>
         <div className="text-muted small font-monospace text-nowrap">
-          v{app.installedVersion || app.version}
+          {app.installedVersion || app.version
+            ? `v${app.installedVersion || app.version}`
+            : '—'}
         </div>
       </div>
       <div className="plugin-row__action-slot">

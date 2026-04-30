@@ -24,6 +24,7 @@
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
+
     // Whenever the header wraps (title takes one line, action controls
     // the next), give the rows breathing room. Without this the wrapped
     // controls row sits directly under the All/Installed/Updates buttons
@@ -38,6 +39,7 @@
       .title__container {
         width: 100%;
         justify-content: space-between;
+
         // The All / Installed / Updates row needs enough room when the
         // title and the buttons can't fit on one line at narrower widths.
         flex-wrap: wrap;
@@ -164,6 +166,7 @@
           border-top-right-radius: 0;
           border-bottom-right-radius: 0;
           flex: 1 1 auto;
+
           // Allow the label to truncate gracefully when the cell shrinks
           // below its natural size, rather than forcing the whole group
           // out of the card.
