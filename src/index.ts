@@ -22,6 +22,8 @@ import {
   Context,
   Delta,
   DeltaInputHandler,
+  FullSignalK,
+  getSourceId,
   Path,
   PropertyValues,
   SKVersion,
@@ -31,7 +33,6 @@ import {
   Update,
   WithFeatures
 } from '@signalk/server-api'
-import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
@@ -41,7 +42,7 @@ import { startApis } from './api'
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
-import DeltaCache from './deltacache'
+import DeltaCache, { buildSrcToCanonicalMap } from './deltacache'
 import DeltaChain from './deltachain'
 import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
@@ -60,6 +61,7 @@ import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
 import { WithProviderStatistics } from './deltastats'
+import { buildProviderTalkerLookups } from './nmea0183TalkerGroups'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
@@ -67,7 +69,27 @@ import checkNodeVersion from './version'
 import helmet from 'helmet'
 const debug = createDebug('signalk-server')
 
+import { migrateSourceRef } from './sourceref-migration'
 import { StreamBundle } from './streambundle'
+
+function cloneDelta(delta: any): any {
+  // Per-element shallow copy of values/meta entries — without it, an
+  // unfilteredDelta consumer that mutates a single value object would
+  // also corrupt the delta still travelling through the main pipeline.
+  // Deep cloning (structuredClone) would isolate nested mutations too
+  // but is too expensive on the per-delta hot path; consumers must not
+  // mutate nested objects within a value.
+  return {
+    ...delta,
+    updates: delta.updates?.map((update: any) => ({
+      ...update,
+      values: update.values
+        ? update.values.map((v: any) => ({ ...v }))
+        : update.values,
+      meta: update.meta ? update.meta.map((m: any) => ({ ...m })) : update.meta
+    }))
+  }
+}
 
 class Server {
   app: ServerApp &
@@ -284,16 +306,78 @@ class Server {
     }
 
     let toPreferredDelta: ToPreferredDelta = () => undefined
+    // Translate `<label>.<numeric>` deltas to their `<label>.<canName>`
+    // form so a saved canName-form ranking matches incoming refs from
+    // providers that have useCanName off. The cache is keyed by the
+    // sources tree's last-mutation marker (Object reference comparison
+    // would suffice if signalk-schema replaced the object on every
+    // change, but it mutates in place, so we rebuild on each call and
+    // rely on Map construction being cheap for typical fleets).
+    let cachedCanonicalMap: Map<string, string> | null = null
+    let cachedCanonicalSnapshot: unknown = null
+    const canonicaliseSourceRef = (sourceRef: string): string => {
+      const sources = (app.signalk as any)?.sources
+      if (sources !== cachedCanonicalSnapshot || cachedCanonicalMap === null) {
+        cachedCanonicalSnapshot = sources
+        cachedCanonicalMap = buildSrcToCanonicalMap(sources)
+      }
+      return cachedCanonicalMap.get(sourceRef) ?? sourceRef
+    }
+    // Refresh the canonical cache whenever a new device is observed or
+    // a numeric-keyed source is replaced by a canName-keyed one. This
+    // covers the cold-boot window where an early delta arrives before
+    // the address claim and the engine briefly treats it as unknown.
+    app.on('sourceRefChanged', () => {
+      cachedCanonicalSnapshot = null
+    })
     app.activateSourcePriorities = () => {
       try {
+        cachedCanonicalSnapshot = null
         toPreferredDelta = getToPreferredDelta(
-          app.config.settings.sourcePriorities
+          app.config.settings.sourcePriorities,
+          undefined,
+          canonicaliseSourceRef
         )
+        // Drop preferredSources entries for paths that no longer have
+        // a priority config. Without this, the bootstrap snapshot
+        // served to admin-ui clients with sourcePolicy=preferred keeps
+        // returning the previously-preferred source for paths whose
+        // group was just deactivated.
+        const activePaths = new Set<string>(
+          Object.keys(app.config.settings.sourcePriorities ?? {})
+        )
+        app.deltaCache?.resetPreferredSourcesNotIn?.(activePaths)
       } catch (e) {
         console.error('getToPreferredDelta failed:', e)
       }
     }
     app.activateSourcePriorities()
+
+    // Defer migration so that the moved device's own re-arbitration
+    // address claim has time to land in app.signalk.sources first.
+    // Without this delay, every legitimate address takeover would be
+    // misclassified as a reclaim by the takeover guard, since the
+    // arbitration loser only re-claims a fraction of a second later.
+    // 10s is well within an admin-attention window and well past the
+    // worst-case bus settling time observed on busy fleets.
+    const SOURCE_REF_MIGRATION_DELAY_MS = 10_000
+    app.on(
+      'sourceRefChanged',
+      ({ oldRef, newRef }: { oldRef: string; newRef: string }) => {
+        setTimeout(() => {
+          migrateSourceRef(app, oldRef, newRef)
+        }, SOURCE_REF_MIGRATION_DELAY_MS)
+      }
+    )
+
+    let providerTalkerLookups = buildProviderTalkerLookups(
+      app.config.settings.pipedProviders
+    )
+    app.on('pipedProvidersStarted', () => {
+      providerTalkerLookups = buildProviderTalkerLookups(
+        app.config.settings.pipedProviders
+      )
+    })
 
     app.handleMessage = (
       providerId: string,
@@ -321,9 +405,42 @@ class Server {
             }
 
             if (typeof update.source !== 'undefined') {
-              update.source.label = providerId
+              // Respect an existing label if the upstream provider has
+              // already set one that is schema-conformant (no slashes
+              // or other special characters that would fail Signal K
+              // $source validation). Remote Signal K servers forward
+              // deltas that already carry their own label (e.g. canhat,
+              // ydwg02); preserving that lets the receiving server
+              // recognise the same physical device across transports.
+              // Native providers and providers that set illegal labels
+              // (e.g. a raw device path /dev/actisense) get normalised
+              // to providerId.
+              const existing = update.source.label
+              if (
+                typeof existing !== 'string' ||
+                existing.length === 0 ||
+                !/^[A-Za-z0-9-_.]+$/.test(existing)
+              ) {
+                update.source.label = providerId
+              }
               if (!update.$source) {
                 update.$source = getSourceId(update.source)
+              }
+              // Talker-group rewriting is a local-provider feature: only
+              // apply it when this provider actually owns the label.
+              if (
+                update.source.type === 'NMEA0183' &&
+                update.source.talker &&
+                update.source.label === providerId
+              ) {
+                const lookup = providerTalkerLookups.get(providerId)
+                if (lookup) {
+                  const groupName = lookup.get(update.source.talker)
+                  if (groupName) {
+                    update.$source = (providerId + '.' + groupName) as SourceRef
+                    update.source.talker = groupName
+                  }
+                }
               }
             } else {
               if (typeof update.$source === 'undefined') {
@@ -350,6 +467,12 @@ class Server {
 
         try {
           let delta = filterStaticSelfData(data, app.selfContext)
+          if (app.deltaCache) {
+            app.deltaCache.ingestDelta(delta)
+          }
+          if (app.signalk.listenerCount('unfilteredDelta') > 0) {
+            app.signalk.emit('unfilteredDelta', cloneDelta(delta))
+          }
           delta = toPreferredDelta(delta, now, app.selfContext)
 
           if (skVersion === SKVersion.v1) {
@@ -370,6 +493,10 @@ class Server {
       )
     )
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
+    app.signalk.on(
+      'unfilteredDelta',
+      app.streambundle.pushUnfilteredDelta.bind(app.streambundle)
+    )
     app.subscriptionmanager = new SubscriptionManager(app)
     app.deltaCache = new DeltaCache(app, app.streambundle)
 
