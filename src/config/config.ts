@@ -30,6 +30,12 @@ import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
 import { atomicWriteFile } from '../atomicWrite'
 import {
+  loadPrioritiesIntoSettings,
+  migratePrioritiesIntoSeparateFile,
+  splitPrioritiesFromSettings,
+  writePrioritiesFile
+} from './priorities-file'
+import {
   loadAll as loadUnitPreferences,
   setApplicationDataPath
 } from '../unitpreferences'
@@ -85,6 +91,36 @@ export interface Config {
     enablePluginLogging?: boolean
     loggingDirectory?: string
     sourcePriorities?: any
+
+    /** Ordered list of sources per priority group. UI-layer organisation
+     * of sources that share output paths; the delta engine never reads
+     * this — on save, rankings are fanned out into sourcePriorities for
+     * every shared path without an explicit override. */
+    priorityGroups?: Array<{
+      id: string
+      sources: string[]
+      /** When true, the saved ranking is preserved but not fanned out
+       * into sourcePriorities — paths covered by this group accept all
+       * sources. Lets a user temporarily disable a ranking without
+       * losing the order they configured. */
+      inactive?: boolean
+    }>
+
+    /** Global default fallback in ms used when fanning out a group ranking
+     * into sourcePriorities. Overrides can still specify their own values. */
+    priorityDefaults?: { fallbackMs?: number }
+
+    /** Paths the user has explicitly marked as path-level overrides in the
+     * Admin UI. Fan-out skips these paths so reordering their rows does not
+     * turn them back into group-ranked paths and silently erase the user's
+     * intent. */
+    sourcePriorityOverrides?: string[]
+
+    /** Map of sourceRef → user-defined display alias for that source */
+    sourceAliases?: Record<string, string>
+    /** Map of "sourceRefA+sourceRefB" (sorted) → ISO timestamp when the
+     * conflict was dismissed by the user */
+    ignoredInstanceConflicts?: Record<string, string>
     trustProxy?: boolean | string | number
     courseApi?: {
       apiOnly?: boolean
@@ -459,16 +495,42 @@ function readSettingsFile(app: ConfigApp) {
   if (_.isUndefined(app.config.settings.interfaces)) {
     app.config.settings.interfaces = {}
   }
+  loadPrioritiesIntoSettings(app)
+  const migrated = migratePrioritiesIntoSeparateFile(app)
+  if (migrated && !disableWriteSettings) {
+    // Persist settings.json without the priority keys so it stays clean.
+    atomicWriteFile(
+      getSettingsFilename(app),
+      JSON.stringify(app.config.settings, null, 2)
+    ).catch((e) => {
+      console.error(
+        'Failed to strip migrated priority keys from settings.json:',
+        e
+      )
+    })
+  }
 }
 
 export function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
-  if (!disableWriteSettings) {
-    atomicWriteFile(getSettingsFilename(app), JSON.stringify(settings, null, 2))
-      .then(() => cb())
-      .catch(cb)
-  } else {
+  if (disableWriteSettings) {
     cb()
+    return
   }
+  const { settingsWithoutPriorities, priorities } =
+    splitPrioritiesFromSettings(settings)
+  // Always overwrite priorities.json — when the user resets all priority
+  // state, the in-memory `priorities` is `{}` and the file must be cleared
+  // too, otherwise stale entries from a previous save reload on next start.
+  const tasks: Promise<void>[] = [
+    atomicWriteFile(
+      getSettingsFilename(app),
+      JSON.stringify(settingsWithoutPriorities, null, 2)
+    ),
+    writePrioritiesFile(app, priorities)
+  ]
+  Promise.all(tasks)
+    .then(() => cb())
+    .catch(cb)
 }
 
 function getSettingsFilename(app: ConfigApp) {

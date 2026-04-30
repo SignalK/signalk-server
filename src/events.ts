@@ -77,6 +77,26 @@ export function startServerEvents(
     type: 'SOURCEPRIORITIES',
     data: app.config.settings.sourcePriorities || {}
   })
+  spark.write({
+    type: 'SOURCEALIASES',
+    data: app.config.settings.sourceAliases || {}
+  })
+  spark.write({
+    type: 'PRIORITYGROUPS',
+    data: app.config.settings.priorityGroups || []
+  })
+  spark.write({
+    type: 'PRIORITYDEFAULTS',
+    data: app.config.settings.priorityDefaults || {}
+  })
+  spark.write({
+    type: 'SOURCEPRIORITYOVERRIDES',
+    data: app.config.settings.sourcePriorityOverrides || []
+  })
+  spark.write({
+    type: 'MULTISOURCEPATHS',
+    data: app.deltaCache?.getMultiSourcePaths?.() || {}
+  })
 }
 
 type Handler = (...args: any[]) => void

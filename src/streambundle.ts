@@ -37,6 +37,8 @@ export class StreamBundle implements IStreamBundle {
   availableSelfPaths: { [key: Path]: true }
   metaBus: Bacon.Bus<NormalizedMetaDelta>
   selfMetaBus: Bacon.Bus<NormalizedMetaDelta>
+  unfilteredBuses: { [key: Path]: Bacon.Bus<NormalizedDelta> }
+  unfilteredAllPathsBus: Bacon.Bus<NormalizedDelta>
 
   constructor(selfId: string) {
     this.selfContext = 'vessels.' + selfId
@@ -50,6 +52,8 @@ export class StreamBundle implements IStreamBundle {
     this.availableSelfPaths = {}
     this.metaBus = new Bacon.Bus()
     this.selfMetaBus = new Bacon.Bus()
+    this.unfilteredBuses = {}
+    this.unfilteredAllPathsBus = new Bacon.Bus()
   }
 
   pushDelta(delta: Delta) {
@@ -100,15 +104,20 @@ export class StreamBundle implements IStreamBundle {
         this.selfMetaBus.push(normalizedDelta)
       }
     }
-    if (!this.availableSelfPaths[path]) {
-      this.availableSelfPaths[path] = true
-    }
     this.getBus().push(normalizedDelta)
     this.getBus(path).push(normalizedDelta)
     if (isSelf) {
       this.getSelfBus().push(normalizedDelta)
       this.getSelfBus(path).push(normalizedDelta)
       if (!isMeta) {
+        // Record a path only once we have seen a real value for it on the
+        // self vessel. Plugins sometimes pre-register meta templates for a
+        // whole schema (e.g. the Weather provider schema); including those
+        // here polluted getAvailablePaths() with entries the user's vessel
+        // is not actually reporting.
+        if (!this.availableSelfPaths[path]) {
+          this.availableSelfPaths[path] = true
+        }
         this.getSelfStream().push(normalizedDelta.value)
         this.getSelfStream(path).push(normalizedDelta.value)
       }
@@ -157,6 +166,52 @@ export class StreamBundle implements IStreamBundle {
       return result
     } else {
       return this.selfAllPathsBus
+    }
+  }
+
+  pushUnfilteredDelta(delta: Delta) {
+    try {
+      if (delta.updates) {
+        delta.updates.forEach((update) => {
+          const base = {
+            context: delta.context!,
+            source: update.source,
+            $source: update.$source!,
+            timestamp: update.timestamp!
+          }
+
+          if ('values' in update && update.values) {
+            update.values.forEach((pathValue) => {
+              const normalizedDelta: NormalizedDelta = {
+                ...base,
+                path: pathValue.path,
+                value: pathValue.value,
+                isMeta: false
+              }
+              this.getUnfilteredBus().push(normalizedDelta)
+              this.getUnfilteredBus(pathValue.path).push(normalizedDelta)
+            })
+          }
+        })
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  getUnfilteredBus(path?: Path) {
+    if (path !== undefined) {
+      let result = this.unfilteredBuses[path]
+      if (!result) {
+        result = this.unfilteredBuses[path] = new Bacon.Bus()
+        // Don't double-emit on `keys` if getBus(path) already announced it.
+        if (!this.buses[path]) {
+          this.keys.push(path)
+        }
+      }
+      return result
+    } else {
+      return this.unfilteredAllPathsBus
     }
   }
 
