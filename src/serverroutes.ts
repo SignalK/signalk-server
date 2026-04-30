@@ -38,6 +38,8 @@ import {
   writeDefaultsFile,
   writeSettingsFile
 } from './config/config'
+import { resetPriorities } from './config/priorities-file'
+import { buildDeviceIdentities } from './deviceIdentities'
 import { SERVERROUTESPREFIX } from './constants'
 import { handleAdminUICORSOrigin } from './cors'
 import { createDebug, listKnownDebugs } from './debug'
@@ -58,15 +60,128 @@ import {
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
-import { getAISShipTypeName } from '@signalk/signalk-schema'
+import { getAISShipTypeName, metadataRegistry } from '@signalk/path-metadata'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
 import { execSync } from 'child_process'
 import { recommendedVersion as recommendedNodeVersion } from './version'
+import { Type } from '@sinclair/typebox'
+import { Value } from '@sinclair/typebox/value'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
+
+// Schemas for the atomic priorities payload and its sub-documents. These are
+// the same shapes the delta engine and the persisted settings.json already
+// expect; the schemas exist so bad admin requests cannot poison settings.json
+// with the wrong types.
+const priorityEntrySchema = Type.Object({
+  sourceRef: Type.String({ minLength: 1 }),
+  // String form is accepted because the admin UI sometimes round-trips
+  // numbers through input fields, but the value must still parse as a
+  // (possibly negative) integer — anything else would corrupt the
+  // priority engine when it does Number(timeout).
+  timeout: Type.Union([Type.Number(), Type.String({ pattern: '^-?\\d+$' })])
+})
+
+const sourcePrioritiesSchema = Type.Record(
+  Type.String(),
+  Type.Array(priorityEntrySchema)
+)
+
+const priorityGroupSchema = Type.Object({
+  id: Type.String({ minLength: 1 }),
+  sources: Type.Array(Type.String({ minLength: 1 })),
+  inactive: Type.Optional(Type.Boolean())
+})
+
+const priorityGroupsSchema = Type.Array(priorityGroupSchema)
+
+const priorityDefaultsSchema = Type.Object({
+  fallbackMs: Type.Optional(Type.Number({ exclusiveMinimum: 0 }))
+})
+
+const prioritiesPayloadSchema = Type.Object({
+  groups: priorityGroupsSchema,
+  priorities: sourcePrioritiesSchema,
+  defaults: priorityDefaultsSchema,
+  overrides: Type.Array(Type.String({ minLength: 1 }))
+})
+
+type PrioritiesPayload = {
+  groups: Array<{ id: string; sources: string[]; inactive?: boolean }>
+  priorities: Record<
+    string,
+    Array<{ sourceRef: string; timeout: number | string }>
+  >
+  defaults: { fallbackMs?: number }
+  overrides: string[]
+}
+
+// Coerce numeric-string `timeout` values to numbers in-place. The schema
+// accepts both shapes for round-tripping through the admin-ui form, but
+// downstream consumers (the priority engine, settings.json) expect a
+// number — leaving a string here makes typeof checks downstream
+// silently misbehave.
+function normaliseSourcePriorityTimeouts(
+  priorities: Record<
+    string,
+    Array<{ sourceRef: string; timeout: number | string }>
+  >
+): void {
+  for (const entries of Object.values(priorities)) {
+    for (const entry of entries) {
+      if (typeof entry.timeout === 'string') {
+        entry.timeout = Number(entry.timeout)
+      }
+    }
+  }
+}
+
+function validatePrioritiesPayload(
+  body: unknown
+): { ok: true; value: PrioritiesPayload } | { ok: false; error: string } {
+  if (!Value.Check(prioritiesPayloadSchema, body)) {
+    const first = Value.Errors(prioritiesPayloadSchema, body).First()
+    return {
+      ok: false,
+      error: first
+        ? `Invalid priorities payload at ${first.path}: ${first.message}`
+        : 'Invalid priorities payload'
+    }
+  }
+  const value = body as PrioritiesPayload
+  normaliseSourcePriorityTimeouts(value.priorities)
+  return { ok: true, value }
+}
+
+const sourceAliasesSchema = Type.Record(
+  Type.String(),
+  Type.String({ minLength: 1 })
+)
+
+const ignoredInstanceConflictsSchema = Type.Record(
+  Type.String(),
+  Type.String({ minLength: 1 })
+)
+
+function validateAgainst(
+  schema: Parameters<typeof Value.Check>[0],
+  body: unknown,
+  name: string
+): { ok: true; value: unknown } | { ok: false; error: string } {
+  if (!Value.Check(schema, body)) {
+    const first = Value.Errors(schema, body).First()
+    return {
+      ok: false,
+      error: first
+        ? `Invalid ${name} payload at ${first.path}: ${first.message}`
+        : `Invalid ${name} payload`
+    }
+  }
+  return { ok: true, value: body }
+}
 const ncp = ncpI.ncp
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
@@ -1234,6 +1349,44 @@ module.exports = function (
     }
   )
 
+  app.get(`${SERVERROUTESPREFIX}/paths`, (_req: Request, res: Response) => {
+    res.json(metadataRegistry.getAllMetadata())
+  })
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/multiSourcePaths`
+  )
+  app.get(
+    `${SERVERROUTESPREFIX}/multiSourcePaths`,
+    (req: Request, res: Response) => {
+      res.json(app.deltaCache.getMultiSourcePaths())
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/livePreferredSources`
+  )
+  // The currently-winning source per path according to the priority
+  // engine — distinct from sourcePriorities (the saved configuration).
+  // Used by the admin-ui to label and dedup against the actual live
+  // winner instead of the rank-1 source from config.
+  app.get(
+    `${SERVERROUTESPREFIX}/livePreferredSources`,
+    (_req: Request, res: Response) => {
+      res.json(app.deltaCache.getLivePreferredSources())
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/deviceIdentities`
+  )
+  app.get(
+    `${SERVERROUTESPREFIX}/deviceIdentities`,
+    (_req: Request, res: Response) => {
+      res.json(buildDeviceIdentities(app.signalk.sources))
+    }
+  )
+
   app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/eventsRoutingData`
   )
@@ -1262,7 +1415,7 @@ module.exports = function (
     }
   )
 
-  app.securityStrategy.addAdminWriteMiddleware(
+  app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/sourcePriorities`
   )
 
@@ -1276,8 +1429,21 @@ module.exports = function (
   app.put(
     `${SERVERROUTESPREFIX}/sourcePriorities`,
     (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        sourcePrioritiesSchema,
+        req.body,
+        'sourcePriorities'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const priorities = validation.value as Record<
+        string,
+        Array<{ sourceRef: string; timeout: number | string }>
+      >
+      normaliseSourcePriorityTimeouts(priorities)
       const updatedSettings = structuredClone(app.config.settings)
-      updatedSettings.sourcePriorities = req.body
+      updatedSettings.sourcePriorities = priorities
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       writeSettingsFile(app, updatedSettings, (err: any) => {
         if (err) {
@@ -1287,6 +1453,278 @@ module.exports = function (
         } else {
           app.config.settings = updatedSettings
           app.activateSourcePriorities()
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  // /priorities admin middleware: registered up front so every method
+  // (DELETE, GET, PUT) below it picks up auth. Express applies a
+  // middleware to routes registered AFTER the middleware call, so the
+  // ordering matters — historically the DELETE was registered before
+  // this call and silently bypassed auth.
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/priorities`)
+
+  app.delete(
+    `${SERVERROUTESPREFIX}/priorities`,
+    async (_req: Request, res: Response) => {
+      try {
+        await resetPriorities(app)
+        app.activateSourcePriorities()
+        // Broadcast fresh empty state so admin-ui store mirrors disk.
+        // Event channels match what the PUT handler below emits so
+        // subscribers see the same event type on reset and save.
+        app.emit('serverevent', {
+          type: 'SOURCEPRIORITIES',
+          data: {}
+        })
+        app.emit('serverAdminEvent', {
+          type: 'SOURCEALIASES',
+          data: {}
+        })
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYGROUPS',
+          data: []
+        })
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYDEFAULTS',
+          data: {}
+        })
+        app.emit('serverAdminEvent', {
+          type: 'SOURCEPRIORITYOVERRIDES',
+          data: []
+        })
+        res.json({ result: 'ok' })
+      } catch (err) {
+        console.error('Failed to reset priorities:', err)
+        res.status(500).send('Failed to reset priorities')
+      }
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/sourceAliases`)
+
+  app.get(
+    `${SERVERROUTESPREFIX}/sourceAliases`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.sourceAliases || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/sourceAliases`,
+    (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        sourceAliasesSchema,
+        req.body,
+        'sourceAliases'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.sourceAliases = validation.value as Record<string, string>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, updatedSettings, (err: any) => {
+        if (err) {
+          res.status(500).send('Unable to save sourceAliases in settings file')
+        } else {
+          app.config.settings = updatedSettings
+          app.emit('serverAdminEvent', {
+            type: 'SOURCEALIASES',
+            data: validation.value
+          })
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  // Atomic priorities endpoint: writes priorityGroups, sourcePriorities and
+  // priorityDefaults in a single settings-file write so clients cannot end up
+  // with mismatched ranking vs. overrides vs. default fallback. The three
+  // per-field endpoints below remain for plugins/scripts that touch a single
+  // surface directly. (Auth middleware was registered above the DELETE
+  // handler so all methods on this path are protected.)
+
+  app.get(`${SERVERROUTESPREFIX}/priorities`, (req: Request, res: Response) => {
+    res.json({
+      groups: app.config.settings.priorityGroups || [],
+      priorities: app.config.settings.sourcePriorities || {},
+      defaults: app.config.settings.priorityDefaults || {},
+      overrides: app.config.settings.sourcePriorityOverrides || []
+    })
+  })
+
+  app.put(`${SERVERROUTESPREFIX}/priorities`, (req: Request, res: Response) => {
+    const validation = validatePrioritiesPayload(req.body)
+    if (!validation.ok) {
+      return res.status(400).send(validation.error)
+    }
+    const { groups, priorities, defaults, overrides } = validation.value
+    const updatedSettings = structuredClone(app.config.settings)
+    updatedSettings.priorityGroups = groups
+    updatedSettings.sourcePriorities = priorities
+    updatedSettings.priorityDefaults = defaults
+    updatedSettings.sourcePriorityOverrides = overrides
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    writeSettingsFile(app, updatedSettings, (err: any) => {
+      if (err) {
+        res.status(500).send('Unable to save priorities in settings file')
+      } else {
+        app.config.settings = updatedSettings
+        app.activateSourcePriorities()
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYGROUPS',
+          data: groups
+        })
+        app.emit('serverevent', {
+          type: 'SOURCEPRIORITIES',
+          data: priorities
+        })
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYDEFAULTS',
+          data: defaults
+        })
+        app.emit('serverAdminEvent', {
+          type: 'SOURCEPRIORITYOVERRIDES',
+          data: overrides
+        })
+        res.json({ result: 'ok' })
+      }
+    })
+  })
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/priorityGroups`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/priorityGroups`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.priorityGroups || [])
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/priorityGroups`,
+    (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        priorityGroupsSchema,
+        req.body,
+        'priorityGroups'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.priorityGroups = validation.value as Array<{
+        id: string
+        sources: string[]
+      }>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, updatedSettings, (err: any) => {
+        if (err) {
+          res.status(500).send('Unable to save priorityGroups in settings file')
+        } else {
+          app.config.settings = updatedSettings
+          app.emit('serverAdminEvent', {
+            type: 'PRIORITYGROUPS',
+            data: validation.value
+          })
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/priorityDefaults`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/priorityDefaults`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.priorityDefaults || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/priorityDefaults`,
+    (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        priorityDefaultsSchema,
+        req.body,
+        'priorityDefaults'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.priorityDefaults = validation.value as {
+        fallbackMs?: number
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, updatedSettings, (err: any) => {
+        if (err) {
+          res
+            .status(500)
+            .send('Unable to save priorityDefaults in settings file')
+        } else {
+          app.config.settings = updatedSettings
+          app.emit('serverAdminEvent', {
+            type: 'PRIORITYDEFAULTS',
+            data: validation.value
+          })
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.ignoredInstanceConflicts || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`,
+    (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        ignoredInstanceConflictsSchema,
+        req.body,
+        'ignoredInstanceConflicts'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.ignoredInstanceConflicts = validation.value as Record<
+        string,
+        string
+      >
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, updatedSettings, (err: any) => {
+        if (err) {
+          res
+            .status(500)
+            .send('Unable to save ignoredInstanceConflicts in settings file')
+        } else {
+          app.config.settings = updatedSettings
+          // Match the broadcast pattern used by /sourceAliases and the
+          // priority-related routes so admin-ui subscribers can pick up
+          // changes live without a refetch.
+          app.emit('serverAdminEvent', {
+            type: 'IGNOREDINSTANCECONFLICTS',
+            data: validation.value
+          })
           res.json({ result: 'ok' })
         }
       })
