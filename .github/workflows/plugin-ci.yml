@@ -211,6 +211,74 @@ jobs:
             }
           }
 
+          // Changelog: either a CHANGELOG.md-style file at repo root, or a
+          // .github/release.yml configuring GitHub's auto-generated release
+          // notes (see signalk-server PR #2615 for the release-notes
+          // convention the App Store surfaces). Non-blocking — plugins
+          // without either also lose 5 points in the plugin registry score.
+          const CHANGELOG_FILES = ['CHANGELOG.md', 'CHANGELOG', 'CHANGES.md', 'CHANGES', 'HISTORY.md', 'HISTORY'];
+          const rootEntriesUpper = new Set(fs.readdirSync('.').map(n => n.toUpperCase()));
+          const hasChangelogFile = CHANGELOG_FILES.some(n => rootEntriesUpper.has(n.toUpperCase()));
+          const hasReleaseYml = fs.existsSync('.github/release.yml') || fs.existsSync('.github/release.yaml');
+          if (!hasChangelogFile && !hasReleaseYml) {
+            warnings.push(
+              'No CHANGELOG.md or .github/release.yml found. ' +
+              'Plugins should publish per-version release notes so users know what changed — ' +
+              'either maintain a CHANGELOG.md or configure GitHub auto-generated release notes. ' +
+              'See https://github.com/SignalK/signalk-server/pull/2615 for the recommended release-notes convention.'
+            );
+          }
+
+          // Screenshots: signalk.screenshots array with at least one entry in
+          // package.json. The App Store shows the first screenshot as the
+          // hero image on the plugin detail page; without any, the page
+          // degrades to a text-only layout. Non-blocking.
+          const screenshots = pkg.signalk && pkg.signalk.screenshots;
+          const hasScreenshot = Array.isArray(screenshots) && screenshots.some(s => typeof s === 'string' && s.trim().length > 0);
+          if (!hasScreenshot) {
+            warnings.push(
+              'No signalk.screenshots declared in package.json. ' +
+              'Add at least one package-relative image path under "signalk": { "screenshots": [...] } ' +
+              'so the App Store can show users what your plugin looks like. ' +
+              'See https://demo.signalk.org/documentation/develop/plugins/publishing.html for the full schema.'
+            );
+          }
+
+          // Verify signalk.appIcon and signalk.screenshots paths actually
+          // exist in the working tree. Common failure mode: author lists
+          // "./app-icon.svg" in signalk.appIcon but the file is at
+          // ./public/app-icon.svg — the App Store CDN then 404s and shows
+          // the monogram fallback instead of the real icon.
+          function normaliseRelPath(p) {
+            return p.replace(/^\.?\//, '');
+          }
+          function checkDeclaredPath(field, declared) {
+            const rel = normaliseRelPath(declared);
+            // existsSync returns true for directories too. The CDN serves
+            // files; pointing signalk.appIcon at a directory is just as
+            // broken as pointing it at a missing path.
+            let stat;
+            try { stat = fs.statSync(rel); } catch { stat = undefined; }
+            if (!stat || !stat.isFile()) {
+              warnings.push(
+                field + ' "' + declared + '" does not resolve to a file in the repo. ' +
+                'The App Store fetches assets from unpkg.com/{pkg}@{version}/{path} — ' +
+                'if the file is not at the declared path in the published tarball, it will 404. ' +
+                'Move the file or update the path to match where it actually lives (e.g. ./public/... or ./assets/...).'
+              );
+            }
+          }
+          if (pkg.signalk && typeof pkg.signalk.appIcon === 'string' && pkg.signalk.appIcon.trim()) {
+            checkDeclaredPath('signalk.appIcon', pkg.signalk.appIcon.trim());
+          }
+          if (Array.isArray(pkg.signalk && pkg.signalk.screenshots)) {
+            pkg.signalk.screenshots.forEach((s, i) => {
+              if (typeof s === 'string' && s.trim()) {
+                checkDeclaredPath('signalk.screenshots[' + i + ']', s.trim());
+              }
+            });
+          }
+
           warnings.forEach(w => console.log('::warning::' + w));
           if (errors.length > 0) {
             errors.forEach(e => console.log('::error::' + e));
@@ -729,6 +797,15 @@ jobs:
             },
           ];
 
+          // ── Informational notices ────────────────────────────────
+          // Not errors or warnings — just pointers to newer alternatives
+          const informational = [
+            {
+              pattern: /\bregisterHistoryProvider\s*\(/g,
+              message: 'registerHistoryProvider() is the v1 history API (playback/snapshots). For time-series history, see registerHistoryApiProvider() (v2 History API)',
+            },
+          ];
+
           // ── API misuse (errors) ─────────────────────────────────
           // These access internal server properties not exposed to plugins
           const misuse = [
@@ -817,6 +894,7 @@ jobs:
           }
           collectFiles('.');
 
+          const notices = [];
           const warnings = [];
           const errors = [];
 
@@ -867,6 +945,7 @@ jobs:
               }
             }
 
+            scanPatterns(informational, notices);
             scanPatterns(deprecated, warnings);
             scanPatterns(misuse, errors);
             scanPatterns(routeAntiPatterns, warnings);
@@ -939,9 +1018,10 @@ jobs:
             }
           }
 
-          if (warnings.length === 0 && errors.length === 0) {
+          if (notices.length === 0 && warnings.length === 0 && errors.length === 0) {
             console.log('No deprecated or misused API patterns found');
           }
+          notices.forEach(n => console.log('::notice::' + n));
           warnings.forEach(w => console.log('::warning::' + w));
           errors.forEach(e => console.log('::error::' + e));
 
@@ -1048,6 +1128,38 @@ jobs:
             if (!files.some(f => f.startsWith(dir + '/'))) {
               errors.push('"main" references ' + dir + '/ directory but no files from it are in the package. Did you forget to build, or need to add "' + dir + '" to the "files" array in package.json?');
             }
+          }
+
+          // Check that signalk.appIcon and signalk.screenshots[] paths are
+          // included in the npm tarball. Paths missing from the pack will
+          // 404 on the App Store CDN and degrade to the monogram fallback.
+          function normaliseDeclared(p) {
+            return p.replace(/^\.?\//, '');
+          }
+          function assetIncluded(declared) {
+            const clean = normaliseDeclared(declared);
+            return files.includes(clean) || files.includes(declared);
+          }
+          if (pkg.signalk && typeof pkg.signalk.appIcon === 'string' && pkg.signalk.appIcon.trim()) {
+            const declared = pkg.signalk.appIcon.trim();
+            if (!assetIncluded(declared)) {
+              warnings.push(
+                'signalk.appIcon "' + declared + '" is NOT included in the npm tarball. ' +
+                'The App Store will 404 and show the monogram fallback. ' +
+                'Ensure the file is covered by the "files" field or not excluded by .npmignore.'
+              );
+            }
+          }
+          if (Array.isArray(pkg.signalk && pkg.signalk.screenshots)) {
+            pkg.signalk.screenshots.forEach((s, i) => {
+              if (typeof s === 'string' && s.trim() && !assetIncluded(s.trim())) {
+                warnings.push(
+                  'signalk.screenshots[' + i + '] "' + s.trim() + '" is NOT included in the npm tarball. ' +
+                  'The App Store detail page will not show this screenshot. ' +
+                  'Ensure the file is covered by the "files" field or not excluded by .npmignore.'
+                );
+              }
+            });
           }
 
           warnings.forEach(w => console.log('::warning::' + w));
