@@ -34,6 +34,11 @@ export interface RawMetricsSample {
 interface CachedEntry {
   writtenAt: number
   payload: RawMetricsSample
+  // Cached entries are invalidated when the package's recorded GitHub
+  // slug stops matching the live one (e.g. the maintainer moved the
+  // repo to a different org). Otherwise stars/issues/contributors
+  // would keep showing the previous repo's numbers until the TTL.
+  slug?: string
 }
 
 export interface RawMetricsClient {
@@ -199,12 +204,16 @@ export function createRawMetricsClient(cacheDir: string): RawMetricsClient {
     return path.join(dir, `${safeName(pkgName)}.json`)
   }
 
-  function readDisk(pkgName: string): CachedEntry | undefined {
+  function readDisk(
+    pkgName: string,
+    expectedSlug: string | undefined
+  ): CachedEntry | undefined {
     try {
       const file = fileFor(pkgName)
       if (!fs.existsSync(file)) return undefined
       const entry = JSON.parse(fs.readFileSync(file, 'utf8')) as CachedEntry
       if (Date.now() - entry.writtenAt > CACHE_TTL_MS) return undefined
+      if (entry.slug !== expectedSlug) return undefined
       return entry
     } catch (err) {
       debug.enabled && debug('readDisk failed: %O', err)
@@ -212,14 +221,19 @@ export function createRawMetricsClient(cacheDir: string): RawMetricsClient {
     }
   }
 
-  function writeDisk(pkgName: string, payload: RawMetricsSample) {
+  function writeDisk(
+    pkgName: string,
+    payload: RawMetricsSample,
+    slug: string | undefined
+  ) {
     ensureDir()
     try {
       fs.writeFileSync(
         fileFor(pkgName),
         JSON.stringify({
           writtenAt: Date.now(),
-          payload
+          payload,
+          slug
         } satisfies CachedEntry),
         'utf8'
       )
@@ -230,10 +244,11 @@ export function createRawMetricsClient(cacheDir: string): RawMetricsClient {
 
   return {
     async get(pkgName, githubUrl) {
-      const disk = readDisk(pkgName)
+      const slug = parseSlug(githubUrl)
+      const slugKey = slug ? `${slug.owner}/${slug.repo}` : undefined
+      const disk = readDisk(pkgName, slugKey)
       if (disk) return disk.payload
 
-      const slug = parseSlug(githubUrl)
       const sources: RawMetricsSample['sources'] = {}
 
       // Kick off all four in parallel. Each independently tolerates
@@ -268,7 +283,7 @@ export function createRawMetricsClient(cacheDir: string): RawMetricsClient {
         sample.contributors !== undefined ||
         sample.downloadsPerWeek !== undefined
       ) {
-        writeDisk(pkgName, sample)
+        writeDisk(pkgName, sample, slugKey)
       }
       return sample
     },

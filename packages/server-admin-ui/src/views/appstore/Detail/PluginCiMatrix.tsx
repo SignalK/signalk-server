@@ -83,11 +83,7 @@ const PluginCiMatrix: React.FC<PluginCiMatrixProps> = ({ data }) => {
   // Render nothing so the section is invisible rather than confusing.
   if (!data) return null
 
-  if (
-    data.status === 'no-githead' ||
-    data.status === 'no-run' ||
-    data.status === 'no-plugin-ci'
-  ) {
+  if (data.status === 'no-plugin-ci') {
     return (
       <div className="plugin-detail__plugin-ci">
         <h5 className="mt-4">plugin-ci matrix</h5>
@@ -95,6 +91,48 @@ const PluginCiMatrix: React.FC<PluginCiMatrixProps> = ({ data }) => {
           This plugin does not use the SignalK plugin-ci workflow.{' '}
           <a href={PLUGIN_CI_DOCS_URL} target="_blank" rel="noreferrer">
             See how to add it →
+          </a>
+        </p>
+      </div>
+    )
+  }
+
+  if (data.status === 'no-githead') {
+    return (
+      <div className="plugin-detail__plugin-ci">
+        <h5 className="mt-4">plugin-ci matrix</h5>
+        <p className="text-muted small mb-0">
+          This version was published without a <code>gitHead</code> in its npm
+          metadata, so the App Store can&apos;t link it to a specific commit on
+          GitHub. Re-publishing from a clean git checkout will attach{' '}
+          <code>gitHead</code> automatically.{' '}
+          <a href={PLUGIN_CI_DOCS_URL} target="_blank" rel="noreferrer">
+            Learn more →
+          </a>
+        </p>
+      </div>
+    )
+  }
+
+  if (data.status === 'no-run') {
+    return (
+      <div className="plugin-detail__plugin-ci">
+        <h5 className="mt-4">plugin-ci matrix</h5>
+        <p className="text-muted small mb-0">
+          The published commit{' '}
+          <a
+            href={data.commit_url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-monospace"
+          >
+            {data.head_sha.slice(0, 7)}
+          </a>{' '}
+          has no matching plugin-ci workflow run yet — push the commit to a
+          branch that triggers your CI workflow, or re-run the existing workflow
+          against this SHA.{' '}
+          <a href={PLUGIN_CI_DOCS_URL} target="_blank" rel="noreferrer">
+            Learn more →
           </a>
         </p>
       </div>

@@ -60,9 +60,9 @@ function neutralCheck(id: string, title: string): IndicatorCheck {
   }
 }
 
-function daysSince(iso: string): number {
+function daysSince(iso: string): number | undefined {
   const t = Date.parse(iso)
-  if (Number.isNaN(t)) return Number.POSITIVE_INFINITY
+  if (Number.isNaN(t)) return undefined
   return (Date.now() - t) / (1000 * 60 * 60 * 24)
 }
 
@@ -114,6 +114,12 @@ function scoreActivelyMaintained(inputs: IndicatorInputs): IndicatorCheck {
     return neutralCheck('actively-maintained', 'Actively maintained')
   }
   const days = daysSince(inputs.lastReleaseDate)
+  if (days === undefined) {
+    // The release date came back unparseable — neutral (unknown) is
+    // closer to the truth than rendering "Last release Infinity days
+    // ago" and downgrading the maintenance check.
+    return neutralCheck('actively-maintained', 'Actively maintained')
+  }
   if (days < MAINTENANCE_OK_DAYS) {
     return {
       id: 'actively-maintained',

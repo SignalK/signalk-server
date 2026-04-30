@@ -56,10 +56,16 @@ export interface NpmMetadataClient {
   invalidate(): void
 }
 
+// 'gone' = the registry definitively says the package/version is not
+// there (4xx). undefined = transient failure (network, 5xx) — only the
+// transient case should fall back to stale disk data, otherwise we'd
+// keep showing removed packages indefinitely.
+type FetchResult = NpmPackageMetadata | 'gone' | undefined
+
 async function fetchPackageMetadata(
   name: string,
   version: string
-): Promise<NpmPackageMetadata | undefined> {
+): Promise<FetchResult> {
   const url = `https://registry.npmjs.org/${encodeURIComponent(name).replace(
     '%40',
     '@'
@@ -70,6 +76,7 @@ async function fetchPackageMetadata(
     })
     if (!res.ok) {
       debug.enabled && debug('GET %s returned %d', url, res.status)
+      if (res.status >= 400 && res.status < 500) return 'gone'
       return undefined
     }
     return (await res.json()) as NpmPackageMetadata
@@ -137,13 +144,19 @@ export function createNpmMetadataClient(cacheDir: string): NpmMetadataClient {
       const disk = readDisk(name, version)
       if (disk) return disk.payload
       const fresh = await fetchPackageMetadata(name, version)
+      if (fresh === 'gone') {
+        // Registry definitively says this version isn't there. Don't
+        // serve stale data — keeping a removed package's screenshots
+        // and dependencies visible would mislead users.
+        return undefined
+      }
       if (fresh) {
         writeDisk(name, version, fresh)
         return fresh
       }
-      // Network unreachable. A stale cache entry is strictly more useful
-      // than nothing — the alternative is the page degrading to "no
-      // signalk metadata" until npm comes back.
+      // Transient failure (network, 5xx). A stale cache entry is
+      // strictly more useful than nothing — the alternative is the
+      // page degrading to "no signalk metadata" until npm comes back.
       const stale = readDiskRaw(name, version)
       return stale?.payload
     },

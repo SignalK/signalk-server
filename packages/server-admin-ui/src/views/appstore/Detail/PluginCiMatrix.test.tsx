@@ -8,25 +8,32 @@ describe('PluginCiMatrix', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders the no-CI text for status no-githead / no-run / no-plugin-ci', () => {
-    const cases: PluginCi[] = [
-      { status: 'no-githead' },
+  it('renders distinct copy for each absence-of-data status', () => {
+    const cases: Array<{ data: PluginCi; expect: RegExp }> = [
       {
-        status: 'no-run',
-        head_sha: 'abc',
-        commit_url: 'https://x'
+        data: { status: 'no-githead' },
+        expect: /published without a/
       },
       {
-        status: 'no-plugin-ci',
-        head_sha: 'abc',
-        workflow_run_url: 'https://y'
+        data: {
+          status: 'no-run',
+          head_sha: 'abc',
+          commit_url: 'https://x'
+        },
+        expect: /no matching plugin-ci workflow run yet/
+      },
+      {
+        data: {
+          status: 'no-plugin-ci',
+          head_sha: 'abc',
+          workflow_run_url: 'https://y'
+        },
+        expect: /does not use the SignalK plugin-ci workflow/
       }
     ]
-    for (const data of cases) {
-      const { unmount } = render(<PluginCiMatrix data={data} />)
-      expect(
-        screen.getByText(/does not use the SignalK plugin-ci workflow/)
-      ).toBeDefined()
+    for (const c of cases) {
+      const { unmount } = render(<PluginCiMatrix data={c.data} />)
+      expect(screen.getByText(c.expect)).toBeDefined()
       unmount()
     }
   })

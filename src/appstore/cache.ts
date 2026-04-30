@@ -38,6 +38,7 @@ export interface AppStoreCache {
   writePluginDetail(detail: PluginDetailPayload, installed: boolean): void
   invalidateList(): void
   invalidatePluginDetail(name: string): void
+  invalidateAllPluginDetail(): void
   cacheRoot(): string
 }
 
@@ -163,6 +164,16 @@ export function createCache(configPath: string): AppStoreCache {
       } catch (err) {
         debug.enabled &&
           debug('invalidatePluginDetail failed for %s: %O', name, err)
+      }
+    },
+
+    invalidateAllPluginDetail() {
+      try {
+        if (fs.existsSync(pluginsDir)) {
+          fs.rmSync(pluginsDir, { recursive: true, force: true })
+        }
+      } catch (err) {
+        debug.enabled && debug('invalidateAllPluginDetail failed: %O', err)
       }
     },
 

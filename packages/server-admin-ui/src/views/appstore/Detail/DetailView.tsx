@@ -92,6 +92,11 @@ const DetailView: React.FC = () => {
   useEffect(() => {
     let cancelled = false
     if (!decodedName) return
+    // Reset per-page UI state when the route switches to a different
+    // plugin so a stale install/remove banner or open lightbox from
+    // the previous page can't bleed into this one.
+    setActionError(null)
+    setLightboxIndex(null)
     setState({ status: 'loading' })
     fetch(
       `${window.serverRoutesPrefix}/appstore/plugin/${encodeURIComponent(decodedName)}`,

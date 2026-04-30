@@ -312,6 +312,7 @@ module.exports = function (app) {
 
       app.post(`${SERVERROUTESPREFIX}/appstore/refresh`, (req, res) => {
         cache.invalidateList()
+        cache.invalidateAllPluginDetail()
         registry.invalidate()
         iconProbe.invalidate()
         iconBytes.invalidate()
@@ -661,6 +662,14 @@ module.exports = function (app) {
     if (/^(https?:)?\/\//i.test(declaredPath)) return declaredPath
     if (declaredPath.startsWith('data:')) return declaredPath
     const cleaned = declaredPath.replace(/^\.\//, '')
+    // declaredPath comes from a plugin's own package.json, so a hostile
+    // or buggy plugin could ask the admin UI to load /admin or
+    // /plugins/somethingelse/... by setting signalk.appIcon to
+    // "../foo.png" or "/admin". Drop anything that doesn't sit cleanly
+    // under the plugin's own /<pkgName>/ mount.
+    if (cleaned.startsWith('/') || cleaned.split('/').includes('..')) {
+      return undefined
+    }
     return `/${pkgName}/${cleaned}`
   }
 

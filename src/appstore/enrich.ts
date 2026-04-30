@@ -61,11 +61,17 @@ function extractGithubUrl(pkg: NpmPackageLike): string | undefined {
   else if (pkg.repository?.url) candidates.push(pkg.repository.url)
   for (const c of candidates) {
     if (c && isGithubUrl(c)) {
-      return c
-        .replace(/^git\+/, '')
-        .replace(/^git:\/\//, 'https://')
-        .replace(/\.git$/, '')
-        .replace(/^git@github\.com:/, 'https://github.com/')
+      return (
+        c
+          .replace(/^git\+/, '')
+          .replace(/^git:\/\//, 'https://')
+          // ssh://git@github.com/... is a valid clone URL but not a
+          // browser-openable link. Rewrite it the same way we rewrite
+          // the scp-style git@github.com:... form below.
+          .replace(/^ssh:\/\/git@github\.com\//, 'https://github.com/')
+          .replace(/\.git$/, '')
+          .replace(/^git@github\.com:/, 'https://github.com/')
+      )
     }
   }
   return undefined

@@ -223,10 +223,7 @@ export default function Full() {
                 path="/apps/configuration/:pluginid"
                 element={<ProtectedRoute component={Configuration} />}
               />
-              <Route
-                path="/appstore"
-                element={<Navigate to="/apps/store" replace />}
-              />
+              <Route path="/appstore" element={<LegacyAppstoreRedirect />} />
               <Route
                 path="/appstore/plugin/:name"
                 element={<LegacyAppstorePluginRedirect />}
