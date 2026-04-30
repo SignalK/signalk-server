@@ -11,6 +11,7 @@
 import fs from 'fs'
 import path from 'path'
 import { createDebug } from '../debug'
+import { safeName } from './safe-name'
 
 const debug = createDebug('signalk-server:appstore:npm-metadata')
 
@@ -53,10 +54,6 @@ interface CachedEntry {
 export interface NpmMetadataClient {
   get(name: string, version: string): Promise<NpmPackageMetadata | undefined>
   invalidate(): void
-}
-
-function safeName(pkg: string): string {
-  return pkg.replace(/\//g, '__')
 }
 
 async function fetchPackageMetadata(

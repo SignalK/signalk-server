@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import DetailView from './DetailView'
@@ -44,13 +44,17 @@ function samplePayload(overrides: Partial<DetailPayload> = {}): DetailPayload {
 }
 
 function mockFetch(payload: DetailPayload, status = 200) {
-  ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
-    .fn()
-    .mockResolvedValue({
+  // vi.stubGlobal lets vitest restore globalThis.fetch automatically
+  // after the test suite, so test files don't leak a fetch mock to
+  // unrelated suites that share the worker.
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
       ok: status >= 200 && status < 300,
       status,
       json: () => Promise.resolve(payload)
     } as Response)
+  )
 }
 
 function renderDetail(name: string) {
@@ -69,6 +73,13 @@ function renderDetail(name: string) {
 
 beforeEach(() => {
   vi.restoreAllMocks()
+})
+
+afterEach(() => {
+  // Restore globalThis.fetch (and any other globals stubbed via
+  // vi.stubGlobal) so unrelated tests in the same worker don't see
+  // a leftover mock.
+  vi.unstubAllGlobals()
 })
 
 describe('DetailView', () => {
@@ -142,19 +153,20 @@ describe('DetailView', () => {
       expect(
         screen.getByRole('button', { name: 'Open screenshot viewer' })
       ).toBeDefined()
+      expect(screen.getByText(/1 more in README tab/)).toBeDefined()
     })
-    expect(screen.getByText(/1 more in README tab/)).toBeDefined()
   })
 
   it('displays an offline error when /plugin/:name returns 503', async () => {
-    ;(globalThis as unknown as { fetch: typeof fetch }).fetch = vi
-      .fn()
-      .mockResolvedValue({
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
         ok: false,
         status: 503,
         json: () =>
           Promise.resolve({ error: 'Plugin details not available offline.' })
       } as Response)
+    )
     renderDetail('signalk-example')
     await waitFor(() => {
       expect(

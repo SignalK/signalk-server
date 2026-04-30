@@ -329,6 +329,16 @@ module.exports = function (app) {
             res.status(400).json({ error: 'name is required' })
             return
           }
+          if (
+            typeof version !== 'string' ||
+            version.length === 0 ||
+            !semver.valid(version)
+          ) {
+            res
+              .status(400)
+              .json({ error: 'version is required and must be valid semver' })
+            return
+          }
           try {
             const [plugins, webapps] = await findPluginsAndWebapps()
             const match =

@@ -96,16 +96,7 @@ Keep your README scannable — most users will read it before installing — and
 
 If your plugin's repository runs the reusable [SignalK plugin-ci workflow](https://github.com/SignalK/signalk-server/blob/master/.github/workflows/plugin-ci.yml), the App Store Indicators tab shows the resulting per-platform pass/fail matrix for the published version — green for success, red for failure, grey for skipped or disabled platforms.
 
-To opt in, add a workflow that calls the reusable plugin-ci on your repo's pushes:
-
-```yaml
-# .github/workflows/ci.yml in your plugin's repo
-name: CI
-on: [push, pull_request]
-jobs:
-  test:
-    uses: SignalK/signalk-server/.github/workflows/plugin-ci.yml@master
-```
+To opt in, add a small workflow on your repo that calls the reusable plugin-ci. The current usage line (job inputs, supported platforms, Node versions) is documented at the top of the canonical [`plugin-ci.yml`](https://github.com/SignalK/signalk-server/blob/master/.github/workflows/plugin-ci.yml) — follow that file rather than copy-pasting examples that may drift over time.
 
 Platforms you opt out of via workflow inputs are simply omitted from the App Store grid (not shown as red). If your plugin doesn't use the workflow, the Indicators tab notes that the workflow isn't configured.
 

@@ -5,8 +5,11 @@ import path from 'path'
 import { createCache } from '../../dist/appstore/cache.js'
 import type { PluginDetailPayload } from '../../dist/appstore/types.js'
 
+const tmpDirs: string[] = []
 function tmpDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'appstore-cache-test-'))
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'appstore-cache-test-'))
+  tmpDirs.push(dir)
+  return dir
 }
 
 function samplePayload(name: string): PluginDetailPayload {
@@ -26,6 +29,13 @@ function samplePayload(name: string): PluginDetailPayload {
 }
 
 describe('appstore/cache', () => {
+  afterEach(() => {
+    while (tmpDirs.length > 0) {
+      const dir = tmpDirs.pop()
+      if (dir) fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
   it('writes and reads the list snapshot', () => {
     const dir = tmpDir()
     const cache = createCache(dir)

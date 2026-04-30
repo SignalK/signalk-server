@@ -11,6 +11,7 @@
 import fs from 'fs'
 import path from 'path'
 import { createDebug } from '../debug'
+import { safeName } from './safe-name'
 import { PluginDetailPayload } from './types'
 
 const debug = createDebug('signalk-server:appstore:cache')
@@ -27,10 +28,6 @@ interface CachedDetail {
   writtenAt: number
   installed: boolean
   payload: PluginDetailPayload
-}
-
-function safeName(pkg: string): string {
-  return pkg.replace(/\//g, '__')
 }
 
 export interface AppStoreCache {
@@ -63,6 +60,13 @@ export function createCache(configPath: string): AppStoreCache {
   }
 
   function isFresh(writtenAt: number, ttl: number, installed = false): boolean {
+    // Cached detail for an installed plugin is treated as fresh
+    // indefinitely. The on-disk plugin tarball is the source of truth
+    // for installed plugins (we render its README/CHANGELOG locally),
+    // so the cache only ages out when the plugin is uninstalled or
+    // the user clicks Refresh. This also keeps the detail tab usable
+    // offline — npm being unreachable doesn't blank the cached
+    // README/Changelog/Indicators for plugins the user already runs.
     if (installed) return true
     return Date.now() - writtenAt < ttl
   }

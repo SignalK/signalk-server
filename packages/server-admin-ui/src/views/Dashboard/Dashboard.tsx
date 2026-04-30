@@ -140,9 +140,9 @@ export default function Dashboard() {
         key={status.id}
         onClick={() => {
           navigate(
-            '/serverConfiguration/' +
-              (status.statusType === 'plugin' ? 'plugins/' : 'connections/') +
-              status.id
+            status.statusType === 'plugin'
+              ? '/apps/configuration/' + status.id
+              : '/serverConfiguration/connections/' + status.id
           )
         }}
       >

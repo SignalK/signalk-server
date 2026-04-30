@@ -217,11 +217,7 @@ const Apps: React.FC = () => {
   const handleUpdateAll = useCallback(() => {
     if (confirm(`Are you sure you want to install all updates?`)) {
       for (const app of rowData) {
-        if (
-          (app as AppInfo & { newVersion?: string }).newVersion &&
-          (app as AppInfo & { installed?: boolean }).installed &&
-          !(app as AppInfo & { updateDisabled?: boolean }).updateDisabled
-        ) {
+        if (app.newVersion && app.installed && !app.updateDisabled) {
           fetch(
             `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
             {

@@ -73,7 +73,7 @@
     "react-infinite-scroll-component": "^6.1.0",
     "react-json-tree": "^0.20.0",
     "react-markdown": "^9.0.1",
-    "remark-gfm": "^4.0.0",
+    "remark-gfm": "^4.0.1",
     "react-router-dom": "^6.28.0",
     "react-select": "^5.10.2",
     "reconnecting-websocket": "^4.4.0",

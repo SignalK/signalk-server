@@ -11,6 +11,7 @@
 import fs from 'fs'
 import path from 'path'
 import { createDebug } from '../debug'
+import { safeName } from './safe-name'
 
 const debug = createDebug('signalk-server:appstore:raw-metrics')
 
@@ -41,10 +42,6 @@ export interface RawMetricsClient {
     githubUrl: string | undefined
   ): Promise<RawMetricsSample | undefined>
   invalidate(): void
-}
-
-function safeName(pkg: string): string {
-  return pkg.replace(/\//g, '__')
 }
 
 // Minimal GitHub slug parser mirrors github-releases.ts but stays self-contained

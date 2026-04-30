@@ -11,6 +11,7 @@
 import fs from 'fs'
 import path from 'path'
 import { createDebug } from '../debug'
+import { safeName } from './safe-name'
 
 const debug = createDebug('signalk-server:appstore:icon-bytes')
 
@@ -53,10 +54,6 @@ export interface IconBytesCache {
   ): Promise<StoredIcon | null>
   /** Remove every cached icon byte. Used by /appstore/refresh. */
   invalidate(): void
-}
-
-function safeName(pkg: string): string {
-  return pkg.replace(/\//g, '__')
 }
 
 function extForContentType(ct: string): string | undefined {

@@ -271,7 +271,7 @@ jobs:
           if (pkg.signalk && typeof pkg.signalk.appIcon === 'string' && pkg.signalk.appIcon.trim()) {
             checkDeclaredPath('signalk.appIcon', pkg.signalk.appIcon.trim());
           }
-          if (Array.isArray(pkg.signalk && pkg.signalk.screenshots)) {
+          if (Array.isArray(pkg.signalk?.screenshots)) {
             pkg.signalk.screenshots.forEach((s, i) => {
               if (typeof s === 'string' && s.trim()) {
                 checkDeclaredPath('signalk.screenshots[' + i + ']', s.trim());
@@ -1150,7 +1150,7 @@ jobs:
               );
             }
           }
-          if (Array.isArray(pkg.signalk && pkg.signalk.screenshots)) {
+          if (Array.isArray(pkg.signalk?.screenshots)) {
             pkg.signalk.screenshots.forEach((s, i) => {
               if (typeof s === 'string' && s.trim() && !assetIncluded(s.trim())) {
                 warnings.push(

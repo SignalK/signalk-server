@@ -39,6 +39,12 @@ export interface AppInfo {
   recommends?: string[]
   categories?: string[]
   installedVersion?: string
+  // Synthetic fields layered on by Apps.tsx when projecting the
+  // AppStore state into a single per-row record. Optional because they
+  // exist only after that projection runs.
+  newVersion?: string
+  installed?: boolean
+  updateDisabled?: boolean
   [key: string]: unknown
 }
 

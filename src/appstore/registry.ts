@@ -13,6 +13,7 @@ import { Value } from '@sinclair/typebox/value'
 import fs from 'fs'
 import path from 'path'
 import { createDebug } from '../debug'
+import { safeName } from './safe-name'
 import { type IndicatorCheck, PluginCiSchema } from './schemas'
 
 const debug = createDebug('signalk-server:appstore:registry')
@@ -137,10 +138,6 @@ export interface RegistryClient {
   baseUrl(): string
 }
 
-function safeName(pkg: string): string {
-  return pkg.replace(/\//g, '__')
-}
-
 async function fetchJson<T>(
   url: string,
   schema: Parameters<typeof Value.Check>[0],
@@ -250,6 +247,9 @@ export function createRegistryClient(
 
   let indexMemo: IndexEntry | undefined
   let lookupCache: Map<string, RegistryIndexEntry> | undefined
+  // Coalesces concurrent getIndex() callers when the cache is stale
+  // so we don't fan out N parallel network fetches under load.
+  let indexInFlight: Promise<RegistryIndex | undefined> | undefined
 
   function buildLookup(idx: RegistryIndex): Map<string, RegistryIndexEntry> {
     const map = new Map<string, RegistryIndexEntry>()
@@ -270,23 +270,31 @@ export function createRegistryClient(
         lookupCache = buildLookup(disk.payload)
         return disk.payload
       }
-      const fresh = await fetchJson<RegistryIndex>(
-        `${baseUrl}/index.json`,
-        RegistryIndexSchema,
-        timeoutMs
-      )
-      if (fresh) {
-        indexMemo = { writtenAt: Date.now(), payload: fresh }
-        lookupCache = buildLookup(fresh)
-        writeIndexToDisk(fresh)
-        return fresh
+      if (indexInFlight) return indexInFlight
+      indexInFlight = (async () => {
+        const fresh = await fetchJson<RegistryIndex>(
+          `${baseUrl}/index.json`,
+          RegistryIndexSchema,
+          timeoutMs
+        )
+        if (fresh) {
+          indexMemo = { writtenAt: Date.now(), payload: fresh }
+          lookupCache = buildLookup(fresh)
+          writeIndexToDisk(fresh)
+          return fresh
+        }
+        if (disk) {
+          indexMemo = disk
+          lookupCache = buildLookup(disk.payload)
+          return disk.payload
+        }
+        return undefined
+      })()
+      try {
+        return await indexInFlight
+      } finally {
+        indexInFlight = undefined
       }
-      if (disk) {
-        indexMemo = disk
-        lookupCache = buildLookup(disk.payload)
-        return disk.payload
-      }
-      return undefined
     },
 
     async getIndexEntry(name: string): Promise<RegistryIndexEntry | undefined> {
@@ -316,6 +324,7 @@ export function createRegistryClient(
     invalidate() {
       indexMemo = undefined
       lookupCache = undefined
+      indexInFlight = undefined
       if (indexFile && fs.existsSync(indexFile)) {
         try {
           fs.unlinkSync(indexFile)
