@@ -1,0 +1,3 @@
+.nav-dropdown.open > .nav-dropdown-toggle > .badge {
+  display: none;
+}

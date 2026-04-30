@@ -20,6 +20,7 @@ import type {
   LogState,
   NodeInfo
 } from '../types'
+import type { SourcesData } from '../../utils/sourceLabels'
 
 const convert = new Convert()
 let logEntryCount = 0
@@ -52,6 +53,29 @@ export interface AppSliceState {
   serverStatistics: ServerStatistics | null
   providerStatus: ProviderStatus[]
   nodeInfo: NodeInfo
+  sourcesData: SourcesData | null
+  sourceAliases: Record<string, string>
+  sourceAliasesLoaded: boolean
+  multiSourcePaths: Record<string, string[]>
+  /**
+   * Live "currently winning" source per path according to the server's
+   * priority engine. Keys are `${context}\0${path}`. Distinct from the
+   * saved priority configuration: this reflects what the engine is
+   * actually routing right now, including fallback to a lower-ranked
+   * source when the configured rank-1 has been silent past its
+   * timeout. Loaded once via REST and merged on each LIVEPREFERRED
+   * server event.
+   */
+  livePreferredSources: Record<string, string>
+  livePreferredSourcesLoaded: boolean
+  ignoredInstanceConflicts: Record<string, string>
+  activeConflictCount: number
+  pgnDataInstances: Record<string, Record<string, number[]>>
+  pgnSourceKeys: Record<string, Record<string, string[]>>
+  discoveredAddresses: number[]
+  n2kDeviceStatusLoaded: boolean
+  sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
+  sourceStatusLoaded: boolean
 }
 
 export interface AppSliceActions {
@@ -71,6 +95,27 @@ export interface AppSliceActions {
   setVesselInfo: (info: VesselInfo) => void
   setNodeInfo: (info: NodeInfo) => void
   setBackpressureWarning: (warning: BackpressureWarning | null) => void
+  setSourcesData: (data: SourcesData) => void
+  setSourceAliases: (aliases: Record<string, string>) => void
+  setIgnoredInstanceConflicts: (conflicts: Record<string, string>) => void
+  setActiveConflictCount: (count: number) => void
+  setN2kDeviceStatus: (status: {
+    pgnDataInstances?: Record<string, Record<string, number[]>>
+    pgnSourceKeys?: Record<string, Record<string, string[]>>
+    discoveredAddresses?: number[]
+  }) => void
+  setMultiSourcePaths: (paths: Record<string, string[]>) => void
+  setLivePreferredSources: (paths: Record<string, string>) => void
+  mergeLivePreferredSources: (paths: Record<string, string>) => void
+  setSourceStatus: (
+    statuses: {
+      sourceRef?: string
+      providerId: string
+      src: string
+      online: boolean
+      lastSeen?: number
+    }[]
+  ) => void
   setDebugSettings: (settings: {
     debugEnabled?: string
     rememberDebug?: boolean
@@ -113,7 +158,21 @@ const initialAppState: AppSliceState = {
   backpressureWarning: null,
   serverStatistics: null,
   providerStatus: [],
-  nodeInfo: {}
+  nodeInfo: {},
+  sourcesData: null,
+  sourceAliases: {},
+  sourceAliasesLoaded: false,
+  multiSourcePaths: {},
+  livePreferredSources: {},
+  livePreferredSourcesLoaded: false,
+  ignoredInstanceConflicts: {},
+  activeConflictCount: 0,
+  pgnDataInstances: {},
+  pgnSourceKeys: {},
+  discoveredAddresses: [],
+  n2kDeviceStatusLoaded: false,
+  sourceStatus: {},
+  sourceStatusLoaded: false
 }
 
 export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
@@ -194,6 +253,72 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setBackpressureWarning: (backpressureWarning) => {
     set({ backpressureWarning })
+  },
+
+  setSourcesData: (sourcesData) => {
+    set({ sourcesData })
+  },
+
+  setSourceAliases: (sourceAliases) => {
+    set({ sourceAliases, sourceAliasesLoaded: true })
+  },
+
+  setIgnoredInstanceConflicts: (ignoredInstanceConflicts) => {
+    set({ ignoredInstanceConflicts })
+  },
+
+  setActiveConflictCount: (activeConflictCount) => {
+    set({ activeConflictCount })
+  },
+
+  setN2kDeviceStatus: (status) => {
+    set({
+      pgnDataInstances: status.pgnDataInstances ?? {},
+      pgnSourceKeys: status.pgnSourceKeys ?? {},
+      discoveredAddresses: status.discoveredAddresses ?? [],
+      n2kDeviceStatusLoaded: true
+    })
+  },
+
+  setMultiSourcePaths: (multiSourcePaths) => {
+    set({ multiSourcePaths })
+  },
+
+  setLivePreferredSources: (livePreferredSources) => {
+    set({ livePreferredSources, livePreferredSourcesLoaded: true })
+  },
+
+  // Server emits only the paths whose winner CHANGED since the last
+  // tick, so we merge over the existing snapshot instead of replacing.
+  // The full snapshot is loaded once via REST at startup.
+  mergeLivePreferredSources: (changes) => {
+    set((state) => ({
+      livePreferredSources: { ...state.livePreferredSources, ...changes },
+      livePreferredSourcesLoaded: true
+    }))
+  },
+
+  setSourceStatus: (statuses) => {
+    set((state) => {
+      // Merge rather than replace. The server emits a full snapshot on
+      // every transition, but its sourceMeta map can transiently lose a
+      // sourceRef across an upstream reconnect — the snapshot would
+      // then omit that source entirely, and a replace-based slice
+      // would silently drop the entry. The PriorityGroupCard treats
+      // a missing entry as Offline, leaving the source stuck Offline
+      // until the next transition that happens to mention it.
+      const sourceStatus = { ...state.sourceStatus }
+      for (const s of statuses) {
+        // Prefer the canonical sourceRef field; fall back to providerId+src
+        // for older server payloads that didn't include it.
+        const key = s.sourceRef ?? `${s.providerId}.${s.src}`
+        sourceStatus[key] = {
+          online: s.online,
+          lastSeen: s.lastSeen
+        }
+      }
+      return { sourceStatus, sourceStatusLoaded: true }
+    })
   },
 
   setDebugSettings: (settings) => {

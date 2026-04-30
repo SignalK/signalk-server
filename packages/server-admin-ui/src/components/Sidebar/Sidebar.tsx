@@ -6,9 +6,16 @@ import {
   useAppStore,
   useAccessRequests,
   useDevices,
-  useLoginStatus
+  useLoginStatus,
+  useMultiSourcePaths,
+  usePriorityGroups,
+  useSourcePriorities,
+  usePriorityOverrides,
+  useActiveConflictCount
 } from '../../store'
+import { computeGroups, reconcileGroups } from '../../utils/sourceGroups'
 import classNames from 'classnames'
+import './Sidebar.css'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
 import SidebarHeader from './../SidebarHeader/SidebarHeader'
@@ -48,6 +55,80 @@ export default function Sidebar({ location }: SidebarProps) {
   const accessRequests = useAccessRequests()
   const devices = useDevices()
   const loginStatus = useLoginStatus()
+  const conflictCount = useActiveConflictCount()
+
+  const multiSourcePaths = useMultiSourcePaths()
+  const priorityGroupsData = usePriorityGroups()
+  const sourcePrioritiesData = useSourcePriorities()
+  const priorityOverridesData = usePriorityOverrides()
+
+  // Two reasons a group needs the user's attention:
+  //   1. it has no saved ranking yet ("Unranked"), or
+  //   2. it has a saved ranking but a new source has started publishing
+  //      one of the group's paths since the last save — that source sits
+  //      unranked at the bottom and will only take over after the
+  //      configured timeouts elapse on every ranked source.
+  // Both feed the same warning badge so a user notices the new device
+  // without having to open the page.
+  const unconfiguredPriorityCount = useMemo(() => {
+    if (!multiSourcePaths) return 0
+    const derived = computeGroups(multiSourcePaths)
+    const reconciled = reconcileGroups(derived, priorityGroupsData.groups)
+    return reconciled.filter(
+      (g) => g.matchedSavedId === null || g.newcomerSources.length > 0
+    ).length
+  }, [multiSourcePaths, priorityGroupsData])
+
+  // Path-level overrides where not every current publisher is listed. The
+  // scan is scoped to paths the user has flagged as an explicit override —
+  // fan-out entries (which only list group sources that actually publish
+  // the path) are intentional and must not trigger a warning. Publishers
+  // are further restricted to the group's saved source list so a source
+  // the user trashed from the group does not haunt the override warning.
+  const overridesWithMissingSourcesCount = useMemo(() => {
+    if (!multiSourcePaths || !sourcePrioritiesData?.sourcePriorities) return 0
+    const overrideSet = new Set(priorityOverridesData?.paths ?? [])
+    if (overrideSet.size === 0) return 0
+
+    const allDerived = computeGroups(multiSourcePaths)
+    const groupSourcesByPath = new Map<string, Set<string>>()
+    for (const g of priorityGroupsData.groups) {
+      const set = new Set(g.sources)
+      const derivedGroup = allDerived.find((d) =>
+        d.sources.some((s) => set.has(s))
+      )
+      const paths = derivedGroup?.paths ?? []
+      for (const p of paths) groupSourcesByPath.set(p, set)
+    }
+
+    let count = 0
+    for (const pp of sourcePrioritiesData.sourcePriorities) {
+      if (!overrideSet.has(pp.path)) continue
+      // Fan-out overrides intentionally accept every source; "missing"
+      // doesn't apply, so they never contribute to the warning badge.
+      if (pp.priorities.length === 1 && pp.priorities[0].sourceRef === '*') {
+        continue
+      }
+      const allPublishers = multiSourcePaths[pp.path]
+      if (!allPublishers || allPublishers.length === 0) continue
+      const restrict = groupSourcesByPath.get(pp.path)
+      const publishers = restrict
+        ? allPublishers.filter((ref) => restrict.has(ref))
+        : allPublishers
+      if (publishers.length === 0) continue
+      const listed = new Set(
+        pp.priorities.map((p) => p.sourceRef).filter(Boolean)
+      )
+      const hasMissing = publishers.some((ref) => !listed.has(ref))
+      if (hasMissing) count++
+    }
+    return count
+  }, [
+    multiSourcePaths,
+    sourcePrioritiesData,
+    priorityOverridesData,
+    priorityGroupsData
+  ])
 
   const nowMs = Date.now() // eslint-disable-line react-hooks/purity -- expired status is stable
   const expiredDeviceCount = devices.filter(
@@ -100,6 +181,48 @@ export default function Sidebar({ location }: SidebarProps) {
       }
     }
 
+    const isAdmin =
+      loginStatus.authenticationRequired === false ||
+      loginStatus.userLevel === 'admin'
+
+    const dataChildren: NavItemData[] = [
+      { name: 'Browser', url: '/data/browser' },
+      { name: 'Metadata', url: '/data/meta' }
+    ]
+    if (isAdmin) {
+      dataChildren.push({
+        name: 'Connections',
+        url: '/data/connections/-'
+      })
+    }
+    dataChildren.push({
+      name: 'NMEA Discovery',
+      url: '/data/sources',
+      badge:
+        conflictCount > 0
+          ? { variant: 'warning', text: `${conflictCount}` }
+          : null
+    })
+    const prioritiesAttentionCount =
+      unconfiguredPriorityCount + overridesWithMissingSourcesCount
+    if (isAdmin) {
+      dataChildren.push(
+        {
+          name: 'Priorities',
+          url: '/data/priorities',
+          badge:
+            prioritiesAttentionCount > 0
+              ? {
+                  variant: 'warning',
+                  text: `${prioritiesAttentionCount}`
+                }
+              : null
+        },
+        { name: 'Unit Preferences', url: '/data/units' },
+        { name: 'Fiddler', url: '/data/fiddler' }
+      )
+    }
+
     const result: NavItemData[] = [
       {
         name: 'Dashboard',
@@ -111,17 +234,23 @@ export default function Sidebar({ location }: SidebarProps) {
         url: '/webapps',
         icon: 'icon-grid'
       },
-      {
-        name: 'Data Browser',
-        url: '/databrowser',
-        icon: 'icon-folder'
-      }
+      ((): NavItemData => {
+        const dataBadgeCount =
+          (isAdmin ? prioritiesAttentionCount : 0) + conflictCount
+        return {
+          name: 'Data',
+          url: '/data',
+          icon: 'icon-folder',
+          badge:
+            dataBadgeCount > 0
+              ? { variant: 'warning', text: `${dataBadgeCount}` }
+              : null,
+          children: dataChildren
+        }
+      })()
     ]
 
-    if (
-      !loginStatus.authenticationRequired ||
-      loginStatus.userLevel === 'admin'
-    ) {
+    if (isAdmin) {
       result.push(
         {
           name: 'Appstore',
@@ -139,10 +268,6 @@ export default function Sidebar({ location }: SidebarProps) {
               url: '/serverConfiguration/settings'
             },
             {
-              name: 'Data Connections',
-              url: '/serverConfiguration/connections/-'
-            },
-            {
               name: 'Plugin Config',
               url: '/serverConfiguration/plugins/-'
             },
@@ -156,10 +281,6 @@ export default function Sidebar({ location }: SidebarProps) {
               badge: serverUpdateBadge
             },
             {
-              name: 'Data Fiddler',
-              url: '/serverConfiguration/datafiddler'
-            },
-            {
               name: 'Backup/Restore',
               url: '/serverConfiguration/backuprestore'
             }
@@ -168,10 +289,7 @@ export default function Sidebar({ location }: SidebarProps) {
       )
     }
 
-    if (
-      loginStatus.authenticationRequired === false ||
-      loginStatus.userLevel === 'admin'
-    ) {
+    if (isAdmin) {
       const securityBadges: BadgeData[] = []
       if (accessRequestsBadge) securityBadges.push(accessRequestsBadge)
       if (expiredDevicesBadge) securityBadges.push(expiredDevicesBadge)
@@ -219,6 +337,12 @@ export default function Sidebar({ location }: SidebarProps) {
     })
 
     result.push({
+      name: 'Path Reference',
+      url: '/documentation/paths',
+      icon: 'icon-list'
+    })
+
+    result.push({
       name: 'OpenApi',
       url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
       icon: 'icon-energy',
@@ -235,7 +359,15 @@ export default function Sidebar({ location }: SidebarProps) {
     })
 
     return result
-  }, [appStore, accessRequests, expiredDeviceCount, loginStatus])
+  }, [
+    appStore,
+    accessRequests,
+    expiredDeviceCount,
+    loginStatus,
+    conflictCount,
+    unconfiguredPriorityCount,
+    overridesWithMissingSourcesCount
+  ])
 
   const handleClick = useCallback((e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()

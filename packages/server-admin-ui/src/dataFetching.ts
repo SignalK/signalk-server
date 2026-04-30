@@ -55,6 +55,22 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/signalk', state.setServerSpecification, ''),
     fetchAndSet('/security/access/requests', state.setAccessRequests),
     fetchAndSet('/security/devices', state.setDevices),
-    fetchAndSet('/nodeInfo', state.setNodeInfo)
+    fetchAndSet('/nodeInfo', state.setNodeInfo),
+    fetchAndSet('/signalk/v1/api/sources', state.setSourcesData, ''),
+    fetchAndSet<{
+      groups: Parameters<typeof state.setPriorityGroupsFromServer>[0]
+      priorities: Parameters<typeof state.setSourcePrioritiesFromServer>[0]
+      defaults: Parameters<typeof state.setPriorityDefaultsFromServer>[0]
+      overrides: Parameters<typeof state.setPriorityOverridesFromServer>[0]
+    }>('/priorities', (data) => {
+      state.setPriorityGroupsFromServer(data.groups || [])
+      state.setSourcePrioritiesFromServer(data.priorities || {})
+      state.setPriorityDefaultsFromServer(data.defaults || {})
+      state.setPriorityOverridesFromServer(data.overrides || [])
+    }),
+    fetchAndSet('/sourceAliases', state.setSourceAliases),
+    fetchAndSet('/ignoredInstanceConflicts', state.setIgnoredInstanceConflicts),
+    fetchAndSet('/n2kDeviceStatus', state.setN2kDeviceStatus),
+    fetchAndSet('/livePreferredSources', state.setLivePreferredSources)
   ])
 }

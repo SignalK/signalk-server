@@ -244,19 +244,73 @@ export class WebSocketService {
           discoveredProviders: data
         } as Partial<SignalKStore>)
         break
+      case 'SOURCEPRIORITIES':
+        useStore
+          .getState()
+          .setSourcePrioritiesFromServer(
+            (data ?? {}) as Record<
+              string,
+              { sourceRef: string; timeout: string | number }[]
+            >
+          )
+        break
+      case 'PRIORITYGROUPS':
+        useStore
+          .getState()
+          .setPriorityGroupsFromServer(
+            (data ?? []) as unknown as Parameters<
+              SignalKStore['setPriorityGroupsFromServer']
+            >[0]
+          )
+        break
+      case 'PRIORITYDEFAULTS':
+        useStore
+          .getState()
+          .setPriorityDefaultsFromServer(
+            (data ?? {}) as Parameters<
+              SignalKStore['setPriorityDefaultsFromServer']
+            >[0]
+          )
+        break
+      case 'SOURCEPRIORITYOVERRIDES':
+        useStore
+          .getState()
+          .setPriorityOverridesFromServer(
+            (data ?? []) as Parameters<
+              SignalKStore['setPriorityOverridesFromServer']
+            >[0]
+          )
+        break
+      case 'SOURCEALIASES':
+        useStore
+          .getState()
+          .setSourceAliases((data ?? {}) as Record<string, string>)
+        break
+      case 'MULTISOURCEPATHS':
+        useStore
+          .getState()
+          .setMultiSourcePaths((data ?? {}) as Record<string, string[]>)
+        break
+      case 'LIVEPREFERREDSOURCES':
+        useStore
+          .getState()
+          .mergeLivePreferredSources((data ?? {}) as Record<string, string>)
+        break
+      case 'SOURCESTATUS':
+        useStore
+          .getState()
+          .setSourceStatus(
+            (data ?? []) as Parameters<SignalKStore['setSourceStatus']>[0]
+          )
+        break
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break
       case 'VESSEL_INFO':
         useStore
           .getState()
-          .setVesselInfo(data as Parameters<SignalKStore['setVesselInfo']>[0])
-        break
-      case 'SOURCEPRIORITIES':
-        useStore
-          .getState()
-          .setSourcePriorities(
-            data as Parameters<SignalKStore['setSourcePriorities']>[0]
+          .setVesselInfo(
+            (data ?? {}) as Parameters<SignalKStore['setVesselInfo']>[0]
           )
         break
       case 'RECEIVE_APPSTORE_LIST':

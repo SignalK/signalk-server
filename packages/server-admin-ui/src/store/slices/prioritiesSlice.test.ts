@@ -197,16 +197,14 @@ describe('prioritiesSlice', () => {
       ).toBe(true)
     })
 
-    it('should fail timeout validation when third is not greater than second', () => {
-      // Note: The checkTimeouts function only validates that timeouts are increasing
-      // starting from the 3rd element (index 2). First two just need to be valid numbers.
+    it('should allow non-ascending timeout values', () => {
       useStore.getState().changePriority(0, 0, 'nmea0183.0', 5000)
       useStore.getState().changePriority(0, 1, 'n2k.1', 10000)
-      useStore.getState().changePriority(0, 2, 'ais', 8000) // Less than second
+      useStore.getState().changePriority(0, 2, 'ais', 8000) // Less than second — valid
 
       expect(
         useStore.getState().sourcePrioritiesData.saveState.timeoutsOk
-      ).toBe(false)
+      ).toBe(true)
     })
 
     it('should fail timeout validation for invalid timeout values', () => {
@@ -307,10 +305,10 @@ describe('prioritiesSlice', () => {
       // Move third item to second position - now timeouts are 5000, 15000, 10000
       useStore.getState().movePriority(0, 2, -1)
 
-      // After swap: index 1 has 15000, index 2 has 10000 - invalid (not increasing)
+      // After swap: index 1 has 15000, index 2 has 10000 - still valid (order doesn't matter)
       expect(
         useStore.getState().sourcePrioritiesData.saveState.timeoutsOk
-      ).toBe(false)
+      ).toBe(true)
     })
   })
 
@@ -354,5 +352,86 @@ describe('prioritiesSlice', () => {
         useStore.getState().sourcePrioritiesData.saveState.saveFailed
       ).toBe(false)
     })
+  })
+})
+
+describe('priorityGroups slice', () => {
+  beforeEach(() => {
+    useStore.setState({
+      priorityGroupsData: {
+        groups: [],
+        saveState: { dirty: false, timeoutsOk: true }
+      }
+    })
+  })
+
+  it('initial state has empty groups and clean save state', () => {
+    const { groups, saveState } = useStore.getState().priorityGroupsData
+    expect(groups).toEqual([])
+    expect(saveState.dirty).toBe(false)
+  })
+
+  it('setPriorityGroupsFromServer stores groups without marking dirty', () => {
+    useStore
+      .getState()
+      .setPriorityGroupsFromServer([{ id: 'g1', sources: ['a', 'b'] }])
+    const { groups, saveState } = useStore.getState().priorityGroupsData
+    expect(groups).toEqual([{ id: 'g1', sources: ['a', 'b'] }])
+    expect(saveState.dirty).toBe(false)
+  })
+
+  it('reorderGroupSources swaps source positions and marks dirty', () => {
+    useStore
+      .getState()
+      .setPriorityGroupsFromServer([{ id: 'g1', sources: ['a', 'b', 'c'] }])
+    useStore.getState().reorderGroupSources('g1', 0, 2)
+    const { groups, saveState } = useStore.getState().priorityGroupsData
+    expect(groups[0].sources).toEqual(['b', 'c', 'a'])
+    expect(saveState.dirty).toBe(true)
+  })
+
+  it('reorderGroupSources is a no-op when indices are equal', () => {
+    useStore
+      .getState()
+      .setPriorityGroupsFromServer([{ id: 'g1', sources: ['a', 'b'] }])
+    useStore.getState().reorderGroupSources('g1', 1, 1)
+    expect(useStore.getState().priorityGroupsData.groups[0].sources).toEqual([
+      'a',
+      'b'
+    ])
+    // No-op must not flip dirty: the user dragged a source onto itself,
+    // there is nothing to save.
+    expect(useStore.getState().priorityGroupsData.saveState.dirty).toBe(false)
+  })
+
+  it('setGroupSources creates a new group when id is unknown', () => {
+    useStore.getState().setGroupSources('brand-new', ['x', 'y'])
+    expect(useStore.getState().priorityGroupsData.groups).toEqual([
+      { id: 'brand-new', sources: ['x', 'y'], inactive: false }
+    ])
+    expect(useStore.getState().priorityGroupsData.saveState.dirty).toBe(true)
+  })
+
+  it('setGroupsSaving / setGroupsSaved / setGroupsSaveFailed drive save state', () => {
+    useStore.getState().setGroupsSaving()
+    expect(useStore.getState().priorityGroupsData.saveState.isSaving).toBe(true)
+
+    useStore.getState().setGroupsSaveFailed()
+    const after = useStore.getState().priorityGroupsData.saveState
+    expect(after.isSaving).toBe(false)
+    expect(after.saveFailed).toBe(true)
+
+    useStore.getState().setGroupsSaved()
+    const final = useStore.getState().priorityGroupsData.saveState
+    expect(final.dirty).toBe(false)
+    expect(final.saveFailed).toBe(false)
+  })
+
+  it('clearGroupsSaveFailed clears the failed flag', () => {
+    useStore.getState().setGroupsSaveFailed()
+    useStore.getState().clearGroupsSaveFailed()
+    expect(useStore.getState().priorityGroupsData.saveState.saveFailed).toBe(
+      false
+    )
   })
 })
