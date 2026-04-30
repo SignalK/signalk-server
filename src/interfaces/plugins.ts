@@ -69,7 +69,7 @@ const put = require('../put')
 const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 import { queryRequest } from '../requestResponse'
-import { getMetadata } from '@signalk/signalk-schema'
+import { getMetadata } from '@signalk/path-metadata'
 import { HistoryProvider } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
@@ -506,6 +506,9 @@ module.exports = (theApp: any) => {
     result.then(() => {
       theApp.setPluginStatus(plugin.id, 'Stopped')
       debug('Stopped plugin ' + plugin.name)
+      if (theApp.deltaCache) {
+        theApp.deltaCache.removeSource(plugin.id)
+      }
     })
     return result
   }
