@@ -105,12 +105,16 @@ export async function buildPluginDetail(
   const changelogRaw = await fetchText(
     changelogUrlFor(summary.name, summary.version)
   )
-  let changelog = changelogRaw ?? ''
-  let changelogFormat: PluginDetailPayload['changelogFormat'] = changelogRaw
-    ? 'markdown'
-    : 'synthesized'
+  // An empty or whitespace-only CHANGELOG.md (200 with no real content)
+  // shouldn't claim 'markdown' — the Changelog tab would render an
+  // empty page with no fallback. Treat it as missing and try the
+  // GitHub releases fallback instead.
+  const hasChangelogContent = !!changelogRaw && changelogRaw.trim().length > 0
+  let changelog = hasChangelogContent ? changelogRaw! : ''
+  let changelogFormat: PluginDetailPayload['changelogFormat'] =
+    hasChangelogContent ? 'markdown' : 'synthesized'
 
-  if (!changelogRaw) {
+  if (!hasChangelogContent) {
     const slug = parseGithubSlug(summary.githubUrl)
     if (slug) {
       const releases = await fetchReleasesMarkdown(slug.owner, slug.repo)

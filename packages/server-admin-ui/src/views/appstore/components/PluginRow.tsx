@@ -62,7 +62,7 @@ const PluginRow: React.FC<PluginRowProps> = ({
       <div className="plugin-row__meta">
         <div className="text-muted small text-nowrap">{app.author}</div>
         <div className="text-muted small text-nowrap d-none d-md-block">
-          {(app.categories || [])[0]}
+          {app.categories?.[0] ?? null}
         </div>
         <div className="text-muted small font-monospace text-nowrap">
           {app.installedVersion || app.version

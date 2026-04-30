@@ -237,7 +237,7 @@ module.exports = function (app) {
             } catch (err) {
               debug.enabled && debug('writeList failed: %O', err)
             }
-            scheduleInstalledDetailRefresh(result)
+            scheduleInstalledDetailRefresh()
             scheduleIconProbe(plugins, webapps)
             res.json(result)
           })
@@ -711,7 +711,7 @@ module.exports = function (app) {
     }
   }
 
-  function scheduleInstalledDetailRefresh(result) {
+  function scheduleInstalledDetailRefresh() {
     const installedNames = getInstalledPackageNames()
     if (installedNames.length === 0) return
     setImmediate(() => {
@@ -722,7 +722,6 @@ module.exports = function (app) {
             debug('background detail refresh for %s failed: %O', name, err)
         )
       })
-      void result
     })
   }
 

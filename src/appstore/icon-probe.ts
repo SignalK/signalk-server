@@ -76,6 +76,11 @@ export function createIconProbeCache(cacheDir: string): IconProbeCache {
   function persist() {
     try {
       fs.mkdirSync(cacheDir, { recursive: true })
+    } catch (err) {
+      debug.enabled && debug('iconUrls cache mkdir failed: %O', err)
+      return
+    }
+    try {
       fs.writeFileSync(file, JSON.stringify(memo), 'utf8')
     } catch (err) {
       debug.enabled && debug('iconUrls cache write failed: %O', err)

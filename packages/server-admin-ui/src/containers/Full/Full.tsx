@@ -147,9 +147,14 @@ function LegacyAppstoreRedirect() {
 function LegacyPluginConfigRedirect() {
   const { pluginid } = useParams<{ pluginid: string }>()
   const location = useLocation()
+  // No id in the legacy URL → fall back to the store rather than
+  // /apps/configuration/- which would 404 the configuration view.
+  if (!pluginid) {
+    return <Navigate to="/apps/store" replace />
+  }
   return (
     <Navigate
-      to={`/apps/configuration/${encodeURIComponent(pluginid || '-')}${location.search}${location.hash}`}
+      to={`/apps/configuration/${encodeURIComponent(pluginid)}${location.search}${location.hash}`}
       replace
     />
   )

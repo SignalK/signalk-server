@@ -116,11 +116,20 @@ export function createIconBytesCache(cacheDir: string): IconBytesCache {
     const full = path.join(root, best.entry)
     const ext = best.entry.split('.').pop() || ''
     const contentType = guessContentTypeFromExt(ext)
-    const stat = fs.statSync(full)
+    // Re-stat for the size: a concurrent purgeOldVersions or a manual
+    // /appstore/refresh between the loop and here could have removed
+    // the file. Treat that as "not stored" rather than throwing.
+    let size: number
+    try {
+      size = fs.statSync(full).size
+    } catch (err) {
+      debug.enabled && debug('findStored %s re-stat failed: %O', pkgName, err)
+      return undefined
+    }
     return {
       path: full,
       contentType,
-      size: stat.size,
+      size,
       writtenAt: best.mtime
     }
   }

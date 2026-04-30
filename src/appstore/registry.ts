@@ -113,15 +113,21 @@ export interface RegistryClientOptions {
   fetchTimeoutMs?: number
 }
 
-interface IndexEntry {
-  writtenAt: number
-  payload: RegistryIndex
-}
+// Cache envelope schemas. The on-disk payload is JSON written by us, but
+// past releases or partially-written files can leave a malformed or
+// stale-shaped record on disk. Validating with the same TypeBox schemas
+// the network path uses keeps the boundary check uniform.
+const IndexEntrySchema = Type.Object({
+  writtenAt: Type.Number(),
+  payload: RegistryIndexSchema
+})
+type IndexEntry = Static<typeof IndexEntrySchema>
 
-interface PluginEntry {
-  writtenAt: number
-  payload: RegistryPluginDetail
-}
+const PluginEntrySchema = Type.Object({
+  writtenAt: Type.Number(),
+  payload: RegistryPluginDetailSchema
+})
+type PluginEntry = Static<typeof PluginEntrySchema>
 
 export interface RegistryClient {
   getIndex(): Promise<RegistryIndex | undefined>
@@ -185,7 +191,13 @@ export function createRegistryClient(
     try {
       if (!fs.existsSync(indexFile)) return undefined
       const raw = fs.readFileSync(indexFile, 'utf8')
-      return JSON.parse(raw) as IndexEntry
+      const parsed = JSON.parse(raw)
+      if (!Value.Check(IndexEntrySchema, parsed)) {
+        debug.enabled &&
+          debug('readIndex: cached file failed schema validation')
+        return undefined
+      }
+      return parsed
     } catch (err) {
       debug.enabled && debug('readIndex failed: %O', err)
       return undefined
@@ -208,7 +220,13 @@ export function createRegistryClient(
     try {
       const file = path.join(pluginsDir, `${safeName(name)}.json`)
       if (!fs.existsSync(file)) return undefined
-      return JSON.parse(fs.readFileSync(file, 'utf8')) as PluginEntry
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'))
+      if (!Value.Check(PluginEntrySchema, parsed)) {
+        debug.enabled &&
+          debug('readPlugin %s: cached file failed schema validation', name)
+        return undefined
+      }
+      return parsed
     } catch (err) {
       debug.enabled && debug('readPlugin failed for %s: %O', name, err)
       return undefined

@@ -147,10 +147,17 @@ const Apps: React.FC = () => {
 
     appStore.installing.forEach((app) => {
       if (allApps[app.name]) {
+        // Only carry the install-state flags forward; the rest of
+        // app.installing entries are not AppInfo-shaped, so spreading
+        // them into AppInfo via `as unknown as` would erase real fields.
         allApps[app.name] = {
           ...allApps[app.name],
-          ...(app as unknown as AppInfo),
-          installing: true
+          installing: true,
+          isInstalling: app.isInstalling,
+          isWaiting: app.isWaiting,
+          isRemoving: app.isRemoving,
+          isRemove: app.isRemove,
+          installFailed: app.installFailed
         }
       }
     })
@@ -164,11 +171,12 @@ const Apps: React.FC = () => {
         (a.indicators as { score?: number } | undefined)?.score ?? -1
       sorted.sort((a, b) => score(b) - score(a))
     } else {
-      sorted.sort(
-        (a, b) =>
-          new Date((b.updated as string) || 0).getTime() -
-          new Date((a.updated as string) || 0).getTime()
-      )
+      // Apps without an `updated` field sort to the bottom of
+      // "recently updated" via the epoch fallback — older than any
+      // real release date.
+      const updatedAt = (a: AppInfo) =>
+        typeof a.updated === 'string' ? Date.parse(a.updated) || 0 : 0
+      sorted.sort((a, b) => updatedAt(b) - updatedAt(a))
     }
     return sorted
   }, [appStore, sortMode])

@@ -7,11 +7,21 @@ import {
   probeIconUrl
 } from '../../dist/appstore/icon-probe.js'
 
+const tmpDirs: string[] = []
 function tmpDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'appstore-iconprobe-'))
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'appstore-iconprobe-'))
+  tmpDirs.push(dir)
+  return dir
 }
 
 describe('appstore/icon-probe cache', () => {
+  afterEach(() => {
+    while (tmpDirs.length > 0) {
+      const dir = tmpDirs.pop()
+      if (dir) fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
   it('returns undefined for unknown entries', () => {
     const cache = createIconProbeCache(tmpDir())
     expect(cache.get('@signalk/foo', '1.0.0', './icon.svg')).to.equal(undefined)

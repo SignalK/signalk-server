@@ -148,9 +148,13 @@ const PluginCiMatrix: React.FC<PluginCiMatrixProps> = ({ data }) => {
         </div>
       ) : (
         <div className="d-flex flex-wrap gap-2">
-          {data.jobs.map((j) => (
+          {data.jobs.map((j, i) => (
             <Badge
-              key={`${j.platform}-${j.node}-${j.server_version ?? ''}`}
+              // Index disambiguates two jobs that share platform+node and
+              // both lack server_version (e.g. two non-integration runs
+              // on the same matrix cell). The array order is stable
+              // for the lifetime of one render's data.
+              key={`${i}-${j.platform}-${j.node}-${j.server_version ?? ''}`}
               bg={conclusionVariant(j.conclusion)}
               className="fw-normal plugin-detail__plugin-ci-cell"
             >

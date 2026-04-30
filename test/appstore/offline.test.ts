@@ -5,11 +5,21 @@ import path from 'path'
 import { createCache } from '../../dist/appstore/cache.js'
 import { buildOfflineResponse } from '../../dist/appstore/offline.js'
 
+const tmpDirs: string[] = []
 function tmpDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'appstore-offline-test-'))
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'appstore-offline-test-'))
+  tmpDirs.push(dir)
+  return dir
 }
 
 describe('appstore/offline', () => {
+  afterEach(() => {
+    while (tmpDirs.length > 0) {
+      const dir = tmpDirs.pop()
+      if (dir) fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
   it('returns cached list when available and marks storeAvailable=false', () => {
     const dir = tmpDir()
     const cache = createCache(dir)

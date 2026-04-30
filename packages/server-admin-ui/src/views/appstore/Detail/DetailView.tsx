@@ -190,7 +190,10 @@ const DetailView: React.FC = () => {
   ): Promise<void> => {
     setActionError(null)
     try {
-      const res = await fetch(url, { credentials: 'include', ...init })
+      // credentials: 'include' is the postAction contract — every
+      // appstore admin call needs the session cookie. Spread first so
+      // a caller's init can't accidentally drop it.
+      const res = await fetch(url, { ...init, credentials: 'include' })
       if (!res.ok) {
         const body = await res.text().catch(() => '')
         setActionError(

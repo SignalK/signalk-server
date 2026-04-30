@@ -32,9 +32,26 @@ export interface GithubReleaseEntry {
 const ENTRY_RE = /<entry\b[\s\S]*?<\/entry>/g
 const TITLE_RE = /<title[^>]*>([\s\S]*?)<\/title>/
 const UPDATED_RE = /<updated[^>]*>([\s\S]*?)<\/updated>/
-const LINK_RE =
-  /<link\b[^>]*\brel=["']alternate["'][^>]*\bhref=["']([^"']+)["']/
+// Extract <link> tags first, then read attributes by name. The XML spec
+// doesn't guarantee attribute order — matching `rel="..." href="..."`
+// in one regex would miss feeds that emit href before rel.
+const LINK_TAG_RE = /<link\b([^>]*)\/?>/g
+const ATTR_RE = (name: string) => new RegExp(`\\b${name}=["']([^"']+)["']`)
 const CONTENT_RE = /<content[^>]*>([\s\S]*?)<\/content>/
+
+function extractAlternateLink(entryXml: string): string | undefined {
+  let m: RegExpExecArray | null
+  LINK_TAG_RE.lastIndex = 0
+  while ((m = LINK_TAG_RE.exec(entryXml))) {
+    const attrs = m[1]
+    const rel = ATTR_RE('rel').exec(attrs)?.[1]
+    if (rel === undefined || rel === 'alternate') {
+      const href = ATTR_RE('href').exec(attrs)?.[1]
+      if (href) return href
+    }
+  }
+  return undefined
+}
 
 const htmlProcessor = unified()
   .use(rehypeParse, { fragment: true })
@@ -85,7 +102,7 @@ function parseEntry(entryXml: string): {
 } {
   const title = TITLE_RE.exec(entryXml)?.[1]
   const updated = UPDATED_RE.exec(entryXml)?.[1]
-  const href = LINK_RE.exec(entryXml)?.[1]
+  const href = extractAlternateLink(entryXml)
   const content = CONTENT_RE.exec(entryXml)?.[1]
   return {
     tag: title ? decodeEntities(title).trim() : undefined,
