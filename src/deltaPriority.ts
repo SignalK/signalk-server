@@ -26,14 +26,17 @@ export interface PriorityResolutionConfig {
   canonicalise?: CanonicaliseSourceRef
 }
 
-// An NMEA 2000 CAN Name is a 64-bit identifier rendered as 16 lowercase
-// hex digits. Matching $source refs by CAN Name suffix lets a user
+// An NMEA 2000 CAN Name is a 64-bit identifier rendered as 16 hex
+// digits. Matching $source refs by CAN Name suffix lets a user
 // rank a physical device once (e.g. "YDEN02.c0788c00e7e04312") and
 // have it count whenever the same device is seen through a different
 // transport (e.g. "canhat.c0788c00e7e04312" forwarded from a remote
-// Signal K server). Shorter suffixes — NMEA 0183 talker IDs, N2K
-// addresses like "43" — are not globally unique and stay exact-match.
-const CAN_NAME_SUFFIX = /\.([0-9a-f]{16})$/
+// Signal K server). Hex digits are case-insensitive so a hand-edited
+// or imported priorities.json carrying uppercase letters still
+// matches the lowercase form our pipeline emits. Shorter suffixes —
+// NMEA 0183 talker IDs, N2K addresses like "43" — are not globally
+// unique and stay exact-match.
+const CAN_NAME_SUFFIX = /\.([0-9a-fA-F]{16})$/
 
 /**
  * Sentinel sourceRef that turns a path-level override into a
@@ -62,7 +65,11 @@ export function isFanOutPriorities(
  */
 export function sourceRefIdentity(sourceRef: string): string {
   const m = CAN_NAME_SUFFIX.exec(sourceRef)
-  return m ? m[1]! : sourceRef
+  // Normalise to lowercase: the canonical wire format is lowercase
+  // (Uint64LE().toString(16)) but a hand-edited priorities.json may
+  // carry uppercase letters. Without lowercasing, identity comparison
+  // would silently fail to match the same device.
+  return m ? m[1]!.toLowerCase() : sourceRef
 }
 
 interface PathValue {
