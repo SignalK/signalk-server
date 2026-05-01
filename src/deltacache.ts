@@ -253,6 +253,10 @@ export default class DeltaCache {
       type: 'MULTISOURCEPATHS',
       data: paths
     })
+    ;(this.app as any).emit('serverevent', {
+      type: 'RECONCILEDGROUPS',
+      data: this.getReconciledGroups()
+    })
     if (countChanged) {
       this.scheduleMultiSourceEmit()
     }
@@ -746,41 +750,260 @@ export default class DeltaCache {
       }
     }
 
-    // Anchor every path covered by an active priorityGroup so the UI's
-    // connected-components reconciliation keeps the path in its group
-    // even when only one publisher is currently live. The engine
-    // resolves group rankings dynamically per delta, so a path doesn't
-    // need to appear in priorityOverrides to be group-covered — but
-    // the multi-source view does need to see ≥2 candidate sources to
-    // attach the path to a group card.
-    const groups = (this.app.config as any).settings?.priorityGroups as
-      | Array<{ sources?: string[]; inactive?: boolean }>
-      | undefined
-    if (Array.isArray(groups)) {
-      for (const [path, cached] of Object.entries(cachePublishers)) {
-        if (path === 'notifications' || path.startsWith('notifications.')) {
-          continue
-        }
-        if (result[path]) continue
-        for (const group of groups) {
-          if (group?.inactive) continue
-          if (!Array.isArray(group?.sources)) continue
-          const groupSet = new Set(group.sources)
-          const overlap = [...cached].some((s) => groupSet.has(s))
-          if (!overlap) continue
-          const set = result[path] ?? (result[path] = new Set<string>())
-          for (const s of cached) set.add(s)
-          for (const s of group.sources) set.add(canonical(s))
-          break
-        }
-      }
-    }
-
     const out: Record<string, string[]> = {}
     for (const [path, set] of Object.entries(result)) {
       out[path] = [...set].sort()
     }
     return out
+  }
+
+  /**
+   * Compute reconciled priority groups for the admin UI: saved groups
+   * are authoritative (composition is fixed by priorityGroups, not by
+   * who is currently live), unsaved sources fall through to connected-
+   * components discovery on multiSourcePaths.
+   *
+   * For each saved group:
+   * - sources = saved order + newcomers (sources currently publishing a
+   *   group path but not in the saved list)
+   * - paths = paths historically published by ≥2 of the saved sources,
+   *   excluding paths owned by another active group (the group with
+   *   more current live publishers wins a shared path)
+   *
+   * For unsaved residue: standard connected-components grouping with
+   * the ≥2-live-publisher edge rule.
+   */
+  getReconciledGroups(): Array<{
+    id: string
+    matchedSavedId: string | null
+    inactive?: boolean
+    sources: string[]
+    paths: string[]
+    newcomerSources: string[]
+  }> {
+    const selfParts = this.app.selfContext.split('.')
+    let selfBranch: any = this.cache
+    for (const part of selfParts) {
+      if (!selfBranch || !selfBranch[part]) return []
+      selfBranch = selfBranch[part]
+    }
+
+    const srcToCanonical = buildSrcToCanonicalMap(
+      (this.app.signalk as any)?.sources
+    )
+    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+
+    // Walk once to populate two views: per-source path history, and
+    // per-path live publisher set. The latter is the same set of edges
+    // computeGroups would build from multiSourcePaths.
+    const bySource: Record<string, Set<string>> = {}
+    const livePublishers: Record<string, Set<string>> = {}
+    const walk = (node: any, pathParts: string[]) => {
+      for (const key of Object.keys(node)) {
+        if (key === 'meta') continue
+        const child = node[key]
+        if (!child || typeof child !== 'object') continue
+        if (child.path !== undefined && child.value !== undefined) {
+          if (pathParts[0] === 'notifications') return
+          const path = pathParts.join('.')
+          const pathLive =
+            livePublishers[path] ?? (livePublishers[path] = new Set<string>())
+          for (const sourceKey of Object.keys(node)) {
+            const v = node[sourceKey]
+            if (
+              !v ||
+              typeof v !== 'object' ||
+              v.path === undefined ||
+              v.value === undefined
+            ) {
+              continue
+            }
+            const ref = canonical(sourceKey)
+            const srcSet = bySource[ref] ?? (bySource[ref] = new Set<string>())
+            srcSet.add(path)
+            pathLive.add(ref)
+          }
+          return
+        }
+        walk(child, [...pathParts, key])
+      }
+    }
+    walk(selfBranch, [])
+
+    // pathsBySource history: every path each source has cached.
+    // Inverted so per-path "all-time publishers" is O(1).
+    const pathPublishersAllTime: Record<string, Set<string>> = {}
+    for (const [src, paths] of Object.entries(bySource)) {
+      for (const p of paths) {
+        const set =
+          pathPublishersAllTime[p] ??
+          (pathPublishersAllTime[p] = new Set<string>())
+        set.add(src)
+      }
+    }
+
+    const savedGroups = (this.app.config as any).settings?.priorityGroups as
+      | Array<{ id: string; sources: string[]; inactive?: boolean }>
+      | undefined
+
+    // Membership: which saved group claims each source? Inactive groups
+    // still claim their sources for display purposes.
+    const sourceToSavedGroup = new Map<
+      string,
+      { id: string; sources: string[]; inactive?: boolean }
+    >()
+    if (Array.isArray(savedGroups)) {
+      for (const sg of savedGroups) {
+        if (sg.inactive) continue
+        for (const src of sg.sources) {
+          if (!sourceToSavedGroup.has(src)) sourceToSavedGroup.set(src, sg)
+        }
+      }
+      for (const sg of savedGroups) {
+        if (!sg.inactive) continue
+        for (const src of sg.sources) {
+          if (!sourceToSavedGroup.has(src)) sourceToSavedGroup.set(src, sg)
+        }
+      }
+    }
+
+    // Each multi-publisher path belongs to whichever active saved group
+    // has the most current live publishers — keeps cross-group fan-out
+    // attached to the dominant group.
+    const pathOwner = new Map<string, string>()
+    for (const [path, refs] of Object.entries(livePublishers)) {
+      if (refs.size === 0) continue
+      const counts = new Map<string, number>()
+      for (const ref of refs) {
+        const sg = sourceToSavedGroup.get(ref)
+        if (!sg || sg.inactive) continue
+        counts.set(sg.id, (counts.get(sg.id) ?? 0) + 1)
+      }
+      let bestId: string | null = null
+      let bestCount = 0
+      for (const [gid, n] of counts) {
+        if (n > bestCount) {
+          bestCount = n
+          bestId = gid
+        }
+      }
+      if (bestId) pathOwner.set(path, bestId)
+    }
+
+    const out: Array<{
+      id: string
+      matchedSavedId: string | null
+      inactive?: boolean
+      sources: string[]
+      paths: string[]
+      newcomerSources: string[]
+    }> = []
+
+    if (Array.isArray(savedGroups)) {
+      for (const sg of savedGroups) {
+        const savedSet = new Set(sg.sources)
+        const groupPaths = new Set<string>()
+        for (const src of sg.sources) {
+          const paths = bySource[src]
+          if (!paths) continue
+          for (const p of paths) {
+            const owner = pathOwner.get(p)
+            // Path owned by another active group → skip.
+            if (owner && owner !== sg.id && !sg.inactive) continue
+            // Require ≥2 group sources to have published this path
+            // (now or ever). Otherwise a plugin source in the group
+            // drags every unrelated path it emits into the group card.
+            const allTime = pathPublishersAllTime[p]
+            if (!allTime) continue
+            let groupCount = 0
+            for (const ref of allTime) {
+              if (savedSet.has(ref)) groupCount++
+              if (groupCount >= 2) break
+            }
+            if (groupCount < 2) continue
+            groupPaths.add(p)
+          }
+        }
+
+        const newcomers = new Set<string>()
+        for (const path of groupPaths) {
+          const live = livePublishers[path]
+          if (!live) continue
+          for (const ref of live) {
+            if (savedSet.has(ref)) continue
+            const claimedBy = sourceToSavedGroup.get(ref)
+            if (claimedBy && claimedBy.id !== sg.id) continue
+            newcomers.add(ref)
+          }
+        }
+        const newcomerList = [...newcomers].sort()
+
+        out.push({
+          id: sg.id,
+          matchedSavedId: sg.id,
+          inactive: sg.inactive ?? false,
+          sources: [...sg.sources, ...newcomerList],
+          paths: [...groupPaths].sort(),
+          newcomerSources: newcomerList
+        })
+      }
+    }
+
+    // Discovery for unsaved residue: connected-components on paths
+    // whose live publishers are all unsaved.
+    const residue: Record<string, string[]> = {}
+    for (const [path, refs] of Object.entries(livePublishers)) {
+      if (refs.size < 2) continue
+      const arr = [...refs]
+      if (arr.every((r) => !sourceToSavedGroup.has(r))) {
+        residue[path] = arr
+      }
+    }
+    if (Object.keys(residue).length > 0) {
+      const parent = new Map<string, string>()
+      const find = (x: string): string => {
+        let root = x
+        while (parent.get(root)! !== root) root = parent.get(root)!
+        return root
+      }
+      const union = (a: string, b: string) => {
+        const ra = find(a)
+        const rb = find(b)
+        if (ra !== rb) parent.set(ra, rb)
+      }
+      for (const refs of Object.values(residue)) {
+        for (const ref of refs) {
+          if (!parent.has(ref)) parent.set(ref, ref)
+        }
+        for (let i = 1; i < refs.length; i++) union(refs[0], refs[i])
+      }
+      const buckets = new Map<
+        string,
+        { sources: Set<string>; paths: Set<string> }
+      >()
+      for (const [path, refs] of Object.entries(residue)) {
+        const root = find(refs[0])
+        let bucket = buckets.get(root)
+        if (!bucket) {
+          bucket = { sources: new Set(), paths: new Set() }
+          buckets.set(root, bucket)
+        }
+        for (const r of refs) bucket.sources.add(r)
+        bucket.paths.add(path)
+      }
+      for (const { sources, paths } of buckets.values()) {
+        const sortedSources = [...sources].sort()
+        out.push({
+          id: sortedSources.join(''),
+          matchedSavedId: null,
+          sources: sortedSources,
+          paths: [...paths].sort(),
+          newcomerSources: []
+        })
+      }
+    }
+
+    return out.sort((a, b) => a.id.localeCompare(b.id))
   }
 
   getSources() {

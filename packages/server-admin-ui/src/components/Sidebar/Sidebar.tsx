@@ -8,12 +8,12 @@ import {
   useDevices,
   useLoginStatus,
   useMultiSourcePaths,
+  useReconciledGroups,
   usePriorityGroups,
   useSourcePriorities,
   usePriorityOverrides,
   useActiveConflictCount
 } from '../../store'
-import { computeGroups, reconcileGroups } from '../../utils/sourceGroups'
 import classNames from 'classnames'
 import './Sidebar.css'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
@@ -58,6 +58,7 @@ export default function Sidebar({ location }: SidebarProps) {
   const conflictCount = useActiveConflictCount()
 
   const multiSourcePaths = useMultiSourcePaths()
+  const reconciled = useReconciledGroups()
   const priorityGroupsData = usePriorityGroups()
   const sourcePrioritiesData = useSourcePriorities()
   const priorityOverridesData = usePriorityOverrides()
@@ -71,13 +72,10 @@ export default function Sidebar({ location }: SidebarProps) {
   // Both feed the same warning badge so a user notices the new device
   // without having to open the page.
   const unconfiguredPriorityCount = useMemo(() => {
-    if (!multiSourcePaths) return 0
-    const derived = computeGroups(multiSourcePaths)
-    const reconciled = reconcileGroups(derived, priorityGroupsData.groups)
     return reconciled.filter(
       (g) => g.matchedSavedId === null || g.newcomerSources.length > 0
     ).length
-  }, [multiSourcePaths, priorityGroupsData])
+  }, [reconciled])
 
   // Path-level overrides where not every current publisher is listed. The
   // scan is scoped to paths the user has flagged as an explicit override —
@@ -90,15 +88,14 @@ export default function Sidebar({ location }: SidebarProps) {
     const overrideSet = new Set(priorityOverridesData?.paths ?? [])
     if (overrideSet.size === 0) return 0
 
-    const allDerived = computeGroups(multiSourcePaths)
+    // Use the server-reconciled group composition to scope the publisher
+    // check: for each saved group, every path in its `paths` belongs to
+    // that group's source set. Falling back to the raw publisher list
+    // when no group covers a path keeps unscoped overrides working.
     const groupSourcesByPath = new Map<string, Set<string>>()
-    for (const g of priorityGroupsData.groups) {
-      const set = new Set(g.sources)
-      const derivedGroup = allDerived.find((d) =>
-        d.sources.some((s) => set.has(s))
-      )
-      const paths = derivedGroup?.paths ?? []
-      for (const p of paths) groupSourcesByPath.set(p, set)
+    for (const g of reconciled) {
+      const sourceSet = new Set(g.sources)
+      for (const p of g.paths) groupSourcesByPath.set(p, sourceSet)
     }
 
     let count = 0
@@ -127,7 +124,7 @@ export default function Sidebar({ location }: SidebarProps) {
     multiSourcePaths,
     sourcePrioritiesData,
     priorityOverridesData,
-    priorityGroupsData
+    reconciled
   ])
 
   const nowMs = Date.now() // eslint-disable-line react-hooks/purity -- expired status is stable

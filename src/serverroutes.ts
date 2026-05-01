@@ -1381,6 +1381,20 @@ module.exports = function (
   )
 
   app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/reconciledGroups`
+  )
+  // Reconciled priority groups for the admin UI. Saved groups are
+  // authoritative (composition driven by priorityGroups, not by
+  // current cache flux); unsaved sources fall through to connected-
+  // components discovery.
+  app.get(
+    `${SERVERROUTESPREFIX}/reconciledGroups`,
+    (req: Request, res: Response) => {
+      res.json(app.deltaCache.getReconciledGroups())
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/livePreferredSources`
   )
   // The currently-winning source per path according to the priority

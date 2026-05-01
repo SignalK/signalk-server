@@ -17,6 +17,7 @@ interface VirtualizedDataTableProps {
   sourcesData: SourcesData | null
   configuredPriorityPaths: Set<string>
   preferredSourceByPath?: Map<string, string>
+  fanOutPaths?: Set<string>
   collapsedSources?: Set<string>
   onToggleSourceCollapse?: (sourceRef: string) => void
 }
@@ -30,6 +31,7 @@ function VirtualizedDataTable({
   sourcesData,
   configuredPriorityPaths,
   preferredSourceByPath,
+  fanOutPaths,
   collapsedSources,
   onToggleSourceCollapse
 }: VirtualizedDataTableProps) {
@@ -125,6 +127,7 @@ function VirtualizedDataTable({
               sourcesData={sourcesData}
               configuredPriorityPaths={configuredPriorityPaths}
               preferredSourceByPath={preferredSourceByPath}
+              fanOutPaths={fanOutPaths}
             />
           )
         })}

@@ -37,7 +37,8 @@ import {
   useUnitPrefsLoaded,
   useConfiguredPriorityPaths,
   usePreferredSourceByPath,
-  useLivePreferredSources
+  useLivePreferredSources,
+  useSourcePrioritiesLoaded
 } from '../../store'
 
 const getSignalkData = () => useStore.getState().signalkData
@@ -148,6 +149,18 @@ const DataBrowser: React.FC = () => {
   const configuredPriorityPaths = useConfiguredPriorityPaths()
   const preferredSourceByPath = usePreferredSourceByPath()
   const livePreferredSourcesRaw = useLivePreferredSources()
+  const sourcePrioritiesLoaded = useSourcePrioritiesLoaded()
+
+  // Paths the user has flagged for fan-out (sentinel '*' override).
+  // Used to suppress the "Preferred" badge — a fan-out path delivers
+  // every source, so no single row is the engine's preferred.
+  const fanOutPaths = useMemo(() => {
+    const set = new Set<string>()
+    for (const [path, ref] of preferredSourceByPath) {
+      if (ref === '*') set.add(path)
+    }
+    return set
+  }, [preferredSourceByPath])
 
   const didSubscribeRef = useRef(false)
   const webSocketRef = useRef<WebSocket | null>(null)
@@ -362,35 +375,6 @@ const DataBrowser: React.FC = () => {
     }
   }, [])
 
-  // Drop cached entries whose $source no longer matches the path's
-  // configured preferred. Without this the cached dump can keep showing
-  // a now-deprioritized source after a group activates, even though the
-  // live stream has switched away from it.
-  useEffect(() => {
-    if (preferredSourceByPath.size === 0) return
-    const data = getSignalkData()
-    for (const ctx of Object.keys(data)) {
-      const contextData = data[ctx]
-      for (const key of Object.keys(contextData)) {
-        const path = getPathFromKey(key)
-        const preferred = preferredSourceByPath.get(path)
-        if (!preferred) continue
-        // Fan-out paths intentionally accept every source — pruning by
-        // preferred=='*' would wipe every cached row on every run.
-        if (preferred === '*') continue
-        const src = contextData[key]?.$source
-        // Canonicalise src so a numeric-form delta (`can0.4`) compares
-        // equal to the canName-form rank-1 stored in priorities.json
-        // (`can0.c050a0…`). Without this the prune wrongly removes
-        // legitimate matches whenever the provider runs with
-        // useCanName=false.
-        if (src && canonicaliseSourceRef(src, rawSourcesData) !== preferred) {
-          removePath(ctx, key)
-        }
-      }
-    }
-  }, [preferredSourceByPath, removePath, rawSourcesData])
-
   const handleContextChange = useCallback(
     (selectedOption: SingleValue<SelectOption>) => {
       const value = selectedOption ? selectedOption.value : 'none'
@@ -445,6 +429,52 @@ const DataBrowser: React.FC = () => {
     }
     return out
   }, [livePreferredSourcesRaw, skSelf])
+
+  // Drop cached entries whose $source no longer matches the engine's
+  // current preferred source for the path. Without this the cached
+  // dump keeps showing a deprioritized source after the engine has
+  // switched the winner. Sourced from livePreferredSources (the engine's
+  // actual per-path winner) so paths covered by a group ranking — not
+  // just explicit overrides — get pruned too. Fan-out paths
+  // (priorityOverrides[*] = '*') are skipped: every source is
+  // intentionally delivered, so there's no winner to prune to.
+  //
+  // Gated on sourcePrioritiesLoaded — pruning before the saved-overrides
+  // map has arrived would mistakenly evict fan-out rows because
+  // preferredSourceByPath.get(path) returns undefined instead of the
+  // sentinel '*' that signals fan-out.
+  useEffect(() => {
+    if (!sourcePrioritiesLoaded) return
+    if (liveWinnerByPath.size === 0) return
+    const data = getSignalkData()
+    for (const ctx of Object.keys(data)) {
+      const contextData = data[ctx]
+      const winnersForCtx =
+        liveWinnerByPath.get(ctx) ??
+        (skSelf && ctx === skSelf ? liveWinnerByPath.get('self') : undefined)
+      if (!winnersForCtx || winnersForCtx.size === 0) continue
+      for (const key of Object.keys(contextData)) {
+        const path = getPathFromKey(key)
+        const preferred = winnersForCtx.get(path)
+        if (!preferred) continue
+        // Fan-out paths from priorityOverrides accept every source by
+        // design — never prune them. The override map gives the cheapest
+        // signal: an entry of '*' means fan-out.
+        if (preferredSourceByPath.get(path) === '*') continue
+        const src = contextData[key]?.$source
+        if (src && canonicaliseSourceRef(src, rawSourcesData) !== preferred) {
+          removePath(ctx, key)
+        }
+      }
+    }
+  }, [
+    sourcePrioritiesLoaded,
+    liveWinnerByPath,
+    preferredSourceByPath,
+    removePath,
+    rawSourcesData,
+    skSelf
+  ])
 
   const liveWinnerForCurrentContext: Map<string, string> = useMemo(() => {
     if (context === 'all') {
@@ -857,6 +887,7 @@ const DataBrowser: React.FC = () => {
                   preferredSourceByPath={
                     !sourceFilter ? liveWinnerForCurrentContext : undefined
                   }
+                  fanOutPaths={fanOutPaths}
                   collapsedSources={viewBySource ? collapsedSources : undefined}
                   onToggleSourceCollapse={
                     viewBySource ? toggleSourceCollapse : undefined

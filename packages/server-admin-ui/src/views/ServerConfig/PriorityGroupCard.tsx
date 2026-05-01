@@ -26,9 +26,19 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-import { useStore, useSourceStatus, useSourceStatusLoaded } from '../../store'
+import {
+  useStore,
+  useSourceStatus,
+  useSourceStatusLoaded,
+  useLivePreferredSources
+} from '../../store'
+import { getWebSocketService } from '../../hooks/useWebSocket'
 import type { ReconciledGroup } from '../../utils/sourceGroups'
-import { isPluginSource, type SourcesData } from '../../utils/sourceLabels'
+import {
+  canonicaliseSourceRef,
+  isPluginSource,
+  type SourcesData
+} from '../../utils/sourceLabels'
 import { useSourceAliases } from '../../hooks/useSourceAliases'
 import PrefsEditor from './PrefsEditor'
 import type { PathPriority } from '../../store/types'
@@ -312,6 +322,7 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
   const removePriorityOverride = useStore((s) => s.removePriorityOverride)
   const deletePath = useStore((s) => s.deletePath)
   const sourceStatus = useSourceStatus()
+  const livePreferredSourcesRaw = useLivePreferredSources()
   const sourceStatusLoaded = useSourceStatusLoaded()
   const { getDisplayName, getDisplayParts } = useSourceAliases()
 
@@ -383,33 +394,26 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
     return map
   }, [group.paths, multiSourcePaths, pathSourceMeta])
 
-  // For each path compute the current winner. Override paths use the
-  // override's first enabled row, else rank-1 of the group (filtered to
-  // sources that actually publish this path).
+  // Live engine winner per path for the self vessel — the only context
+  // priority groups apply to. Server keys are `${context}\0${path}` so
+  // we strip the prefix matching skSelf and surface a path → winner
+  // map. Used below to render `wins X/Y` directly from the engine's
+  // actual choice instead of recomputing it client-side; without this
+  // the rank-1 source's win counter is wrong any time the engine has
+  // fallen back to rank-2 because rank-1 went silent past its timeout.
   const winnerByPath = useMemo(() => {
     const map = new Map<string, string>()
-    for (const path of group.paths) {
-      let winner: string | undefined
-      if (overridePaths.has(path)) {
-        const priorities = pathPrioritiesByPath.get(path) ?? []
-        const firstEnabled = priorities.find(
-          (p) => p.sourceRef && Number(p.timeout) !== -1
-        )
-        winner = firstEnabled?.sourceRef
-      } else {
-        const publishers = new Set(multiSourcePaths[path] ?? [])
-        winner = group.sources.find((src) => publishers.has(src))
+    const skSelf = getWebSocketService().getSkSelf()
+    if (skSelf) {
+      const ctxPrefix = skSelf + '\0'
+      for (const [composite, src] of Object.entries(livePreferredSourcesRaw)) {
+        if (!composite.startsWith(ctxPrefix)) continue
+        const path = composite.slice(ctxPrefix.length)
+        if (groupPathSet.has(path)) map.set(path, src)
       }
-      if (winner) map.set(path, winner)
     }
     return map
-  }, [
-    group.paths,
-    group.sources,
-    multiSourcePaths,
-    overridePaths,
-    pathPrioritiesByPath
-  ])
+  }, [livePreferredSourcesRaw, groupPathSet])
 
   // Inverse index: source → paths it wins, and source → paths it publishes.
   const { pathsWonBySource, pathsPublishedBySource } = useMemo(() => {
@@ -425,11 +429,17 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
         publishes.get(ref)?.add(path)
       }
       const winner = winnerByPath.get(path)
-      if (winner) wins.get(winner)?.push(path)
+      // Canonicalise the engine's winner before bumping the count so a
+      // numeric-form delivery on a useCanName=false provider still maps
+      // back onto the group's canName-form source list.
+      const canonicalWinner = winner
+        ? canonicaliseSourceRef(winner, sourcesData)
+        : undefined
+      if (canonicalWinner) wins.get(canonicalWinner)?.push(path)
     }
     for (const list of wins.values()) list.sort()
     return { pathsWonBySource: wins, pathsPublishedBySource: publishes }
-  }, [group.sources, group.paths, multiSourcePaths, winnerByPath])
+  }, [group.sources, group.paths, multiSourcePaths, winnerByPath, sourcesData])
 
   // Given a path, which group sources publish it?
   const publishersByPath = useMemo(() => {

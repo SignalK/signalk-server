@@ -93,6 +93,10 @@ export function startServerEvents(
     type: 'MULTISOURCEPATHS',
     data: app.deltaCache?.getMultiSourcePaths?.() || {}
   })
+  spark.write({
+    type: 'RECONCILEDGROUPS',
+    data: app.deltaCache?.getReconciledGroups?.() || []
+  })
 }
 
 type Handler = (...args: any[]) => void

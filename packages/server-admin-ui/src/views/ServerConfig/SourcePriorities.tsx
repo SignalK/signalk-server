@@ -14,6 +14,7 @@ import {
   useStore,
   useSourcePriorities,
   useMultiSourcePaths,
+  useReconciledGroups,
   usePriorityGroups,
   usePriorityDefaults,
   usePriorityOverrides,
@@ -21,7 +22,6 @@ import {
   useSourceStatusLoaded
 } from '../../store'
 import type { SourcesData } from '../../utils/sourceLabels'
-import { computeGroups, reconcileGroups } from '../../utils/sourceGroups'
 import type { SourcePriority } from '../../store/types'
 import PrefsEditor from './PrefsEditor'
 import PriorityGroupCard from './PriorityGroupCard'
@@ -327,6 +327,7 @@ const SourcePriorities: React.FC = () => {
   const priorityDefaultsData = usePriorityDefaults()
   const priorityOverridesData = usePriorityOverrides()
   const multiSourcePaths = useMultiSourcePaths()
+  const reconciled = useReconciledGroups()
   const sourceStatus = useSourceStatus()
   const sourceStatusLoaded = useSourceStatusLoaded()
 
@@ -416,16 +417,6 @@ const SourcePriorities: React.FC = () => {
   >(new Map())
   const [helpOpen, setHelpOpen] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
-
-  const derived = useMemo(
-    () => computeGroups(multiSourcePaths),
-    [multiSourcePaths]
-  )
-
-  const reconciled = useMemo(
-    () => reconcileGroups(derived, savedGroups),
-    [derived, savedGroups]
-  )
 
   // Merge the user's in-progress DnD edits (stored in the slice) with the
   // reconciled live groups. Reconciled gives us the canonical group identity

@@ -214,6 +214,14 @@ export function useMultiSourcePaths() {
   return useStore((s) => s.multiSourcePaths)
 }
 
+export function useReconciledGroups() {
+  return useStore((s) => s.reconciledGroups)
+}
+
+export function useSourcePrioritiesLoaded() {
+  return useStore((s) => s.sourcePrioritiesLoaded)
+}
+
 export function useLivePreferredSources() {
   return useStore((s) => s.livePreferredSources)
 }

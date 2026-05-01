@@ -387,8 +387,8 @@ describe('Deltacache', () => {
       // Stamp the fan-out marker into the running config (simulates
       // a save from the admin UI).
       const settings = theServer.app.config.settings
-      if (!settings.sourcePriorities) settings.sourcePriorities = {}
-      settings.sourcePriorities[fanOutPath] = [{ sourceRef: '*', timeout: 0 }]
+      if (!settings.priorityOverrides) settings.priorityOverrides = {}
+      settings.priorityOverrides[fanOutPath] = [{ sourceRef: '*', timeout: 0 }]
       // Prime a priority group that lists the live publisher so the
       // fan-out branch can find the matching group and inject all
       // its sources as publishers, anchoring the path back to the
@@ -404,7 +404,7 @@ describe('Deltacache', () => {
       paths[fanOutPath].should.include('fanout.solo')
       paths[fanOutPath].should.include('fanout.partner')
       // Cleanup so subsequent tests start from a clean slate.
-      delete settings.sourcePriorities[fanOutPath]
+      delete settings.priorityOverrides[fanOutPath]
       delete settings.priorityGroups
     })
   })

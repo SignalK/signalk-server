@@ -58,6 +58,21 @@ export interface AppSliceState {
   sourceAliasesLoaded: boolean
   multiSourcePaths: Record<string, string[]>
   /**
+   * Reconciled priority groups: server-computed view of saved groups
+   * (composition fixed by priorityGroups) plus discovery groups for
+   * unsaved sources. Pushed via the RECONCILEDGROUPS server event;
+   * the priority groups page renders from this directly instead of
+   * recomputing from raw multiSourcePaths + saved.
+   */
+  reconciledGroups: Array<{
+    id: string
+    matchedSavedId: string | null
+    inactive?: boolean
+    sources: string[]
+    paths: string[]
+    newcomerSources: string[]
+  }>
+  /**
    * Live "currently winning" source per path according to the server's
    * priority engine. Keys are `${context}\0${path}`. Distinct from the
    * saved priority configuration: this reflects what the engine is
@@ -68,6 +83,12 @@ export interface AppSliceState {
    */
   livePreferredSources: Record<string, string>
   livePreferredSourcesLoaded: boolean
+  /**
+   * True once the saved priority overrides have been received from the
+   * server. The Data Browser uses this to gate cache pruning so the
+   * fan-out skip can rely on the saved overrides map being authoritative.
+   */
+  sourcePrioritiesLoaded: boolean
   ignoredInstanceConflicts: Record<string, string>
   activeConflictCount: number
   pgnDataInstances: Record<string, Record<string, number[]>>
@@ -105,6 +126,16 @@ export interface AppSliceActions {
     discoveredAddresses?: number[]
   }) => void
   setMultiSourcePaths: (paths: Record<string, string[]>) => void
+  setReconciledGroups: (
+    groups: Array<{
+      id: string
+      matchedSavedId: string | null
+      inactive?: boolean
+      sources: string[]
+      paths: string[]
+      newcomerSources: string[]
+    }>
+  ) => void
   setLivePreferredSources: (paths: Record<string, string>) => void
   mergeLivePreferredSources: (paths: Record<string, string>) => void
   setSourceStatus: (
@@ -163,8 +194,10 @@ const initialAppState: AppSliceState = {
   sourceAliases: {},
   sourceAliasesLoaded: false,
   multiSourcePaths: {},
+  reconciledGroups: [],
   livePreferredSources: {},
   livePreferredSourcesLoaded: false,
+  sourcePrioritiesLoaded: false,
   ignoredInstanceConflicts: {},
   activeConflictCount: 0,
   pgnDataInstances: {},
@@ -284,6 +317,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
     set({ multiSourcePaths })
   },
 
+  setReconciledGroups: (reconciledGroups) => {
+    set({ reconciledGroups })
+  },
+
   setLivePreferredSources: (livePreferredSources) => {
     set({ livePreferredSources, livePreferredSourcesLoaded: true })
   },
@@ -363,7 +400,8 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
           dirty: false,
           timeoutsOk: true
         }
-      }
+      },
+      sourcePrioritiesLoaded: true
     }))
   }
 })

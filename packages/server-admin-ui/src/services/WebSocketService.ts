@@ -284,6 +284,13 @@ export class WebSocketService {
           .getState()
           .setMultiSourcePaths((data ?? {}) as Record<string, string[]>)
         break
+      case 'RECONCILEDGROUPS':
+        useStore
+          .getState()
+          .setReconciledGroups(
+            (data ?? []) as Parameters<SignalKStore['setReconciledGroups']>[0]
+          )
+        break
       case 'LIVEPREFERREDSOURCES':
         useStore
           .getState()

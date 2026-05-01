@@ -29,6 +29,12 @@ interface DataRowProps {
   sourcesData: SourcesData | null
   configuredPriorityPaths: Set<string>
   preferredSourceByPath?: Map<string, string>
+  /**
+   * Paths the user has flagged for fan-out (sentinel '*' override).
+   * The "Preferred" badge is suppressed for these because every source
+   * is intentionally delivered — no row is "the" winner.
+   */
+  fanOutPaths?: Set<string>
 }
 
 interface ValueRendererProps {
@@ -74,7 +80,8 @@ function DataRow({
   sourceCountsByPath,
   sourcesData,
   configuredPriorityPaths,
-  preferredSourceByPath
+  preferredSourceByPath,
+  fanOutPaths
 }: DataRowProps) {
   // When showContext is true, path$SourceKey is a composite key: context\0realKey
   const nullIdx = showContext ? path$SourceKey.indexOf('\0') : -1
@@ -174,12 +181,15 @@ function DataRow({
   // Server emits livePreferredSources in canonical (canName) form, but
   // delta `$source` may be numeric when the provider has useCanName off.
   // Canonicalise the row's source before comparing so the badge follows
-  // the same identity rule the priority engine uses.
+  // the same identity rule the priority engine uses. Fan-out paths
+  // intentionally deliver every source — no row is "the preferred",
+  // so the badge would just oscillate between rows on each delta.
   const isPreferred =
-    preferredSourceByPath && path
-      ? preferredSourceByPath.get(path) ===
-        canonicaliseSourceRef(source, sourcesData)
-      : false
+    !!preferredSourceByPath &&
+    !!path &&
+    !fanOutPaths?.has(path) &&
+    preferredSourceByPath.get(path) ===
+      canonicaliseSourceRef(source, sourcesData)
 
   return (
     <div
@@ -221,6 +231,15 @@ function DataRow({
             style={{ marginRight: '4px', fontSize: '0.7em' }}
           >
             Preferred
+          </Badge>
+        )}
+        {fanOutPaths?.has(path) && (
+          <Badge
+            bg="info"
+            title="Fan-out path — every source's value is delivered, no priority filtering"
+            style={{ marginRight: '4px', fontSize: '0.7em' }}
+          >
+            Fan-out
           </Badge>
         )}
         <CopyToClipboardWithFade text={source}>

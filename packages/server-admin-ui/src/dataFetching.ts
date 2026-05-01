@@ -73,6 +73,8 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/sourceAliases', state.setSourceAliases),
     fetchAndSet('/ignoredInstanceConflicts', state.setIgnoredInstanceConflicts),
     fetchAndSet('/n2kDeviceStatus', state.setN2kDeviceStatus),
-    fetchAndSet('/livePreferredSources', state.setLivePreferredSources)
+    fetchAndSet('/livePreferredSources', state.setLivePreferredSources),
+    fetchAndSet('/multiSourcePaths', state.setMultiSourcePaths),
+    fetchAndSet('/reconciledGroups', state.setReconciledGroups)
   ])
 }
