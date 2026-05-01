@@ -244,16 +244,18 @@ export class WebSocketService {
           discoveredProviders: data
         } as Partial<SignalKStore>)
         break
-      case 'SOURCEPRIORITIES':
-        useStore
-          .getState()
-          .setSourcePrioritiesFromServer(
-            (data ?? {}) as Record<
-              string,
-              { sourceRef: string; timeout: string | number }[]
-            >
-          )
+      case 'PRIORITYOVERRIDES': {
+        const overrides = (data ?? {}) as Record<
+          string,
+          { sourceRef: string; timeout: string | number }[]
+        >
+        const store = useStore.getState()
+        store.setSourcePrioritiesFromServer(overrides)
+        // Override-paths list is implicit in the per-path map under the
+        // group-aware engine: every path with an entry is an override.
+        store.setPriorityOverridesFromServer(Object.keys(overrides))
         break
+      }
       case 'PRIORITYGROUPS':
         useStore
           .getState()
@@ -269,15 +271,6 @@ export class WebSocketService {
           .setPriorityDefaultsFromServer(
             (data ?? {}) as Parameters<
               SignalKStore['setPriorityDefaultsFromServer']
-            >[0]
-          )
-        break
-      case 'SOURCEPRIORITYOVERRIDES':
-        useStore
-          .getState()
-          .setPriorityOverridesFromServer(
-            (data ?? []) as Parameters<
-              SignalKStore['setPriorityOverridesFromServer']
             >[0]
           )
         break

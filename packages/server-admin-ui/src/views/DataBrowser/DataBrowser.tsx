@@ -535,16 +535,18 @@ const DataBrowser: React.FC = () => {
           deduped.push(compositeKey)
           continue
         }
-        if (!preferredSourceByPath.has(path)) {
-          deduped.push(compositeKey)
-          continue
-        }
         const ctxPrefix = nullIdx >= 0 ? compositeKey.slice(0, nullIdx) : ''
         const dedupKey = ctxPrefix ? `${ctxPrefix}\0${path}` : path
         const liveWinner =
           context === 'all'
             ? (liveWinnerByPath.get(ctxPrefix)?.get(path) ?? null)
             : (liveWinnerForCurrentContext.get(path) ?? null)
+        // No live winner means the engine is not filtering this path
+        // (no override, source not in any active group). Show every row.
+        if (!liveWinner) {
+          deduped.push(compositeKey)
+          continue
+        }
         const incomingData = currentData[ctxPrefix || context]?.[realKey] as
           | PathData
           | undefined
@@ -552,9 +554,8 @@ const DataBrowser: React.FC = () => {
         // canonicalise the incoming raw $source before comparing so the
         // dedup decision matches the engine's identity rule.
         const incomingMatches =
-          !!liveWinner &&
           canonicaliseSourceRef(incomingData?.$source ?? '', rawSourcesData) ===
-            liveWinner
+          liveWinner
 
         if (!seenPaths.has(dedupKey)) {
           seenPaths.set(dedupKey, compositeKey)

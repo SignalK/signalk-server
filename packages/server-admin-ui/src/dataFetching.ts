@@ -59,14 +59,16 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/signalk/v1/api/sources', state.setSourcesData, ''),
     fetchAndSet<{
       groups: Parameters<typeof state.setPriorityGroupsFromServer>[0]
-      priorities: Parameters<typeof state.setSourcePrioritiesFromServer>[0]
+      overrides: Parameters<typeof state.setSourcePrioritiesFromServer>[0]
       defaults: Parameters<typeof state.setPriorityDefaultsFromServer>[0]
-      overrides: Parameters<typeof state.setPriorityOverridesFromServer>[0]
     }>('/priorities', (data) => {
       state.setPriorityGroupsFromServer(data.groups || [])
-      state.setSourcePrioritiesFromServer(data.priorities || {})
+      const overrides = data.overrides || {}
+      state.setSourcePrioritiesFromServer(overrides)
+      // Override-paths list is implicit in the per-path map under the
+      // group-aware engine: every path with an entry is an override.
+      state.setPriorityOverridesFromServer(Object.keys(overrides))
       state.setPriorityDefaultsFromServer(data.defaults || {})
-      state.setPriorityOverridesFromServer(data.overrides || [])
     }),
     fetchAndSet('/sourceAliases', state.setSourceAliases),
     fetchAndSet('/ignoredInstanceConflicts', state.setIgnoredInstanceConflicts),

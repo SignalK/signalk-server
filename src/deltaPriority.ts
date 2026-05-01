@@ -12,6 +12,20 @@ export interface SourcePrioritiesData {
   [path: string]: SourcePriority[]
 }
 
+export interface PriorityGroupConfig {
+  id: string
+  sources: string[]
+  inactive?: boolean
+}
+
+export interface PriorityResolutionConfig {
+  groups?: PriorityGroupConfig[]
+  overrides?: SourcePrioritiesData
+  fallbackMs?: number
+  unknownSourceTimeout?: number
+  canonicalise?: CanonicaliseSourceRef
+}
+
 // An NMEA 2000 CAN Name is a 64-bit identifier rendered as 16 lowercase
 // hex digits. Matching $source refs by CAN Name suffix lets a user
 // rank a physical device once (e.g. "YDEN02.c0788c00e7e04312") and
@@ -22,7 +36,7 @@ export interface SourcePrioritiesData {
 const CAN_NAME_SUFFIX = /\.([0-9a-f]{16})$/
 
 /**
- * Sentinel sourceRef that turns a path-level priority entry into a
+ * Sentinel sourceRef that turns a path-level override into a
  * "fan out" rule: every source's value is delivered unchanged for that
  * path, regardless of ranking. Stored in priorities.json as a single
  * entry of the form `[{ sourceRef: '*', timeout: 0 }]` so older code
@@ -68,31 +82,62 @@ interface SourcePrecedenceData {
 
 type PathLatestTimestamps = Map<Path, TimestampedSource>
 
-// Keys in PathPrecedences are identities — either a CAN Name (stripped
-// of its providerId prefix) or the raw sourceRef when no CAN Name is
-// present. This is what lets the priority list match the same physical
-// N2K device regardless of which transport delivered it.
-type PathPrecedences = Map<string, SourcePrecedenceData>
-const toPrecedences = (sourcePrioritiesMap: {
-  [path: string]: SourcePriority[]
-}) =>
-  Object.keys(sourcePrioritiesMap).reduce<Map<Path, PathPrecedences>>(
-    (acc, path: string) => {
-      const priorityIndices = sourcePrioritiesMap[path].reduce<PathPrecedences>(
-        (acc2, { sourceRef, timeout }, i: number) => {
-          acc2.set(sourceRefIdentity(sourceRef), {
-            precedence: i,
-            timeout
-          })
-          return acc2
-        },
-        new Map<string, SourcePrecedenceData>()
-      )
-      acc.set(path as Path, priorityIndices)
-      return acc
-    },
-    new Map<Path, PathPrecedences>()
-  )
+// Keys are identities — either a CAN Name (stripped of its providerId
+// prefix) or the raw sourceRef when no CAN Name is present. This is
+// what lets the priority list match the same physical N2K device
+// regardless of which transport delivered it.
+type SourcePrecedences = Map<string, SourcePrecedenceData>
+
+const DEFAULT_FALLBACK_MS = 15000
+
+const buildOverridePrecedences = (
+  overrides: SourcePrioritiesData
+): Map<Path, SourcePrecedences> => {
+  const out = new Map<Path, SourcePrecedences>()
+  for (const path of Object.keys(overrides)) {
+    const entries = overrides[path]
+    const precedences: SourcePrecedences = new Map()
+    entries.forEach(({ sourceRef, timeout }, i) => {
+      precedences.set(sourceRefIdentity(sourceRef), {
+        precedence: i,
+        timeout
+      })
+    })
+    out.set(path as Path, precedences)
+  }
+  return out
+}
+
+const buildGroupPrecedences = (
+  groups: PriorityGroupConfig[],
+  fallbackMs: number
+): {
+  sourceToGroupId: Map<string, string>
+  groupPrecedences: Map<string, SourcePrecedences>
+} => {
+  const sourceToGroupId = new Map<string, string>()
+  const groupPrecedences = new Map<string, SourcePrecedences>()
+  for (const group of groups) {
+    if (group.inactive) continue
+    const precedences: SourcePrecedences = new Map()
+    group.sources.forEach((sourceRef, i) => {
+      const identity = sourceRefIdentity(sourceRef)
+      // First group wins on overlap. The PUT validator on the server
+      // and the connected-component derivation on the client both
+      // prevent a source from belonging to two groups; this is a
+      // defence against a hand-edited priorities.json.
+      if (!sourceToGroupId.has(identity)) {
+        sourceToGroupId.set(identity, group.id)
+      }
+      precedences.set(identity, {
+        precedence: i,
+        timeout: i === 0 ? 0 : fallbackMs
+      })
+    })
+    groupPrecedences.set(group.id, precedences)
+  }
+  return { sourceToGroupId, groupPrecedences }
+}
 
 export type ToPreferredDelta = (
   delta: any,
@@ -113,25 +158,34 @@ export type CanonicaliseSourceRef = (sourceRef: string) => string
 const identityCanonicaliser: CanonicaliseSourceRef = (s) => s
 
 export const getToPreferredDelta = (
-  sourcePrioritiesData: SourcePrioritiesData,
-  unknownSourceTimeout = 10000,
-  canonicalise: CanonicaliseSourceRef = identityCanonicaliser
+  config: PriorityResolutionConfig = {}
 ): ToPreferredDelta => {
-  if (!sourcePrioritiesData || Object.keys(sourcePrioritiesData).length === 0) {
+  const overrides = config.overrides ?? {}
+  const groups = config.groups ?? []
+  const fallbackMs = config.fallbackMs ?? DEFAULT_FALLBACK_MS
+  const unknownSourceTimeout = config.unknownSourceTimeout ?? 10000
+  const canonicalise = config.canonicalise ?? identityCanonicaliser
+
+  const hasOverrides = Object.keys(overrides).length > 0
+  const hasActiveGroups = groups.some((g) => !g.inactive)
+  if (!hasOverrides && !hasActiveGroups) {
     debug('No priorities data')
     return (delta: any, _now: Date, _selfContext: string) => delta
   }
+
   // Paths with a single sentinel-source entry bypass priority filtering
   // entirely — every source's value is delivered unchanged. Used when
   // the user wants to compare or aggregate readings across sources
   // (e.g. satellitesInView from multiple GPSes) while still honouring
   // priorities on the rest of the group.
   const fanOutPaths = new Set<string>(
-    Object.keys(sourcePrioritiesData).filter((p) =>
-      isFanOutPriorities(sourcePrioritiesData[p])
-    )
+    Object.keys(overrides).filter((p) => isFanOutPriorities(overrides[p]))
   )
-  const precedences = toPrecedences(sourcePrioritiesData)
+  const overridePrecedences = buildOverridePrecedences(overrides)
+  const { sourceToGroupId, groupPrecedences } = buildGroupPrecedences(
+    groups,
+    fallbackMs
+  )
 
   const contextPathTimestamps = new Map<Context, PathLatestTimestamps>()
 
@@ -177,51 +231,58 @@ export const getToPreferredDelta = (
     timeout: unknownSourceTimeout
   }
 
-  const getPrecedence = (
+  // Resolve which precedence map applies to (path, source).
+  // Override on the path wins; otherwise the source's group ranking
+  // applies; otherwise null → no config, accept all.
+  const resolvePrecedences = (
     path: Path,
+    canonicalSource: SourceRef
+  ): SourcePrecedences | null => {
+    const override = overridePrecedences.get(path)
+    if (override) return override
+    const groupId = sourceToGroupId.get(sourceRefIdentity(canonicalSource))
+    if (!groupId) return null
+    return groupPrecedences.get(groupId) ?? null
+  }
+
+  const getPrecedence = (
+    pathPrecedences: SourcePrecedences,
     sourceRef: SourceRef,
     isLatest: boolean
   ): SourcePrecedenceData => {
-    const pathPrecedences = precedences.get(path)
-    if (!pathPrecedences) {
-      // No config for this path — accept everything
-      return HIGHESTPRECEDENCE
-    }
     const p = pathPrecedences.get(sourceRefIdentity(canonicalise(sourceRef)))
     if (p) return p
     return isLatest ? HIGHESTPRECEDENCE : LOWESTPRECEDENCE
   }
 
-  const isKnownSource = (path: Path, sourceRef: SourceRef): boolean => {
-    return (
-      precedences.get(path)?.has(sourceRefIdentity(canonicalise(sourceRef))) ??
-      false
-    )
+  const isKnownSource = (
+    pathPrecedences: SourcePrecedences,
+    sourceRef: SourceRef
+  ): boolean => {
+    return pathPrecedences.has(sourceRefIdentity(canonicalise(sourceRef)))
   }
 
   const isPreferredValue = (
+    pathPrecedences: SourcePrecedences,
     path: Path,
     latest: TimestampedSource,
     sourceRef: SourceRef,
     millis: number
   ) => {
-    const pathPrecedences = precedences.get(path)
-
-    // No path-level config → accept all
-    if (!pathPrecedences) {
-      return true
-    }
-
-    const latestPrecedence = getPrecedence(path, latest.sourceRef, true)
-    const incomingPrecedence = getPrecedence(path, sourceRef, false)
+    const latestPrecedence = getPrecedence(
+      pathPrecedences,
+      latest.sourceRef,
+      true
+    )
+    const incomingPrecedence = getPrecedence(pathPrecedences, sourceRef, false)
 
     // Negative timeout means the source is disabled — always reject
     if (incomingPrecedence.timeout < 0) {
       return false
     }
 
-    const latestKnown = isKnownSource(path, latest.sourceRef)
-    const incomingKnown = isKnownSource(path, sourceRef)
+    const latestKnown = isKnownSource(pathPrecedences, latest.sourceRef)
+    const incomingKnown = isKnownSource(pathPrecedences, sourceRef)
 
     // A configured source must always outrank an unconfigured one:
     // if the user ranked source X for this path, X should displace
@@ -297,12 +358,20 @@ export const getToPreferredDelta = (
                   acc.push(pathValue)
                   return acc
                 }
-                const latest = getLatest(
-                  delta.context as Context,
-                  pathValue.path as Path
+                const path = pathValue.path as Path
+                const pathPrecedences = resolvePrecedences(
+                  path,
+                  canonicalSource
                 )
+                if (!pathPrecedences) {
+                  // No override and source not in any active group → passthrough.
+                  acc.push(pathValue)
+                  return acc
+                }
+                const latest = getLatest(delta.context as Context, path)
                 const isPreferred = isPreferredValue(
-                  pathValue.path as Path,
+                  pathPrecedences,
+                  path,
                   latest,
                   canonicalSource,
                   millis
@@ -310,7 +379,7 @@ export const getToPreferredDelta = (
                 if (isPreferred) {
                   setLatest(
                     delta.context as Context,
-                    pathValue.path as Path,
+                    path,
                     canonicalSource,
                     millis
                   )

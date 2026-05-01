@@ -21,11 +21,7 @@ import {
   useSourceStatusLoaded
 } from '../../store'
 import type { SourcesData } from '../../utils/sourceLabels'
-import {
-  computeGroups,
-  reconcileGroups,
-  fanOutGroupRanking
-} from '../../utils/sourceGroups'
+import { computeGroups, reconcileGroups } from '../../utils/sourceGroups'
 import type { SourcePriority } from '../../store/types'
 import PrefsEditor from './PrefsEditor'
 import PriorityGroupCard from './PriorityGroupCard'
@@ -580,65 +576,48 @@ const SourcePriorities: React.FC = () => {
     const draftNum = Number(fallbackDraft)
     const pendingFallbackMs =
       Number.isFinite(draftNum) && draftNum > 0 ? draftNum : effectiveFallbackMs
-    // Normalise timeouts: rank 1 is always `timeout: 0` (preferred has no
-    // fallback), -1 stays -1 (disabled), else a positive number.
-    const nextPriorityMap: Record<string, SourcePriority[]> =
-      sourcePriorities.reduce<Record<string, SourcePriority[]>>((acc, pp) => {
-        if (!pp.path) return acc
-        const valid = pp.priorities
-          .filter((p) => p.sourceRef)
-          .map((p, i) => {
-            const raw = Number(p.timeout)
-            const coerced = Number.isFinite(raw) ? raw : 0
-            const timeout =
-              i === 0
-                ? 0
-                : coerced === -1
-                  ? -1
-                  : coerced > 0
-                    ? coerced
-                    : pendingFallbackMs
-            return { sourceRef: p.sourceRef, timeout }
-          })
-        if (valid.length > 0) acc[pp.path] = valid
-        return acc
-      }, {})
+    // Build the per-path overrides map. Group rankings are NOT fanned
+    // out here — the server-side engine resolves them dynamically per
+    // delta. Only paths with an explicit user override (path-level row
+    // edited or fan-out checkbox set) appear in this map.
+    // Normalise timeouts: rank 1 is always `timeout: 0`, -1 stays -1
+    // (disabled), else a positive number.
+    const overrides: Record<string, SourcePriority[]> = sourcePriorities.reduce<
+      Record<string, SourcePriority[]>
+    >((acc, pp) => {
+      if (!pp.path) return acc
+      if (!overridePathsSet.has(pp.path)) return acc
+      const valid = pp.priorities
+        .filter((p) => p.sourceRef)
+        .map((p, i) => {
+          const raw = Number(p.timeout)
+          const coerced = Number.isFinite(raw) ? raw : 0
+          const timeout =
+            i === 0
+              ? 0
+              : coerced === -1
+                ? -1
+                : coerced > 0
+                  ? coerced
+                  : pendingFallbackMs
+          return { sourceRef: p.sourceRef, timeout }
+        })
+      if (valid.length > 0) acc[pp.path] = valid
+      return acc
+    }, {})
 
-    let fannedOut = { ...nextPriorityMap }
-    for (const group of displayed) {
-      // Inactive groups keep their saved structure but are not enforced —
-      // strip any path entries left over from a previous fan-out so the
-      // engine sees no per-path config and falls back to first-come,
-      // first-served. The override set is left alone: explicit per-path
-      // overrides outrank the group's active/inactive state.
-      if (group.inactive) {
-        for (const path of group.paths) {
-          if (!overridePathsSet.has(path)) delete fannedOut[path]
-        }
-        continue
-      }
-      fannedOut = fanOutGroupRanking(
-        { sources: group.sources, paths: group.paths },
-        multiSourcePaths,
-        fannedOut,
-        overridePathsSet,
-        pendingFallbackMs
-      )
-    }
     return {
       groups: displayed.map((g) => ({
         id: g.id,
         sources: g.sources,
         ...(g.inactive ? { inactive: true } : {})
       })),
-      priorities: fannedOut,
-      defaults: { fallbackMs: pendingFallbackMs },
-      overrides: [...overridePathsSet].sort()
+      overrides,
+      defaults: { fallbackMs: pendingFallbackMs }
     }
   }, [
     displayed,
     sourcePriorities,
-    multiSourcePaths,
     overridePathsSet,
     effectiveFallbackMs,
     fallbackDraft
@@ -695,10 +674,15 @@ const SourcePriorities: React.FC = () => {
       // and dirty-detection flips on then off, which confuses the UI.
       useStore.getState().setPriorityGroupsFromServer(payload.groups)
       useStore.getState().setPriorityDefaultsFromServer(payload.defaults)
-      useStore.getState().setPriorityOverridesFromServer(payload.overrides)
+      // The override-paths list is implicit in the payload's overrides
+      // map under the group-aware engine: every path with an entry is
+      // an override.
+      useStore
+        .getState()
+        .setPriorityOverridesFromServer(Object.keys(payload.overrides))
       setGroupsSaved()
       setSaved()
-      setSourcePriorities(payload.priorities)
+      setSourcePriorities(payload.overrides)
     } catch {
       setGroupsSaveFailed()
       setSaveFailed()

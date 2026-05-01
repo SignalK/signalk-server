@@ -85,7 +85,7 @@ const priorityEntrySchema = Type.Object({
   timeout: Type.Union([Type.Number(), Type.String({ pattern: '^-?\\d+$' })])
 })
 
-const sourcePrioritiesSchema = Type.Record(
+const priorityOverridesSchema = Type.Record(
   Type.String(),
   Type.Array(priorityEntrySchema)
 )
@@ -104,19 +104,17 @@ const priorityDefaultsSchema = Type.Object({
 
 const prioritiesPayloadSchema = Type.Object({
   groups: priorityGroupsSchema,
-  priorities: sourcePrioritiesSchema,
-  defaults: priorityDefaultsSchema,
-  overrides: Type.Array(Type.String({ minLength: 1 }))
+  overrides: priorityOverridesSchema,
+  defaults: priorityDefaultsSchema
 })
 
 type PrioritiesPayload = {
   groups: Array<{ id: string; sources: string[]; inactive?: boolean }>
-  priorities: Record<
+  overrides: Record<
     string,
     Array<{ sourceRef: string; timeout: number | string }>
   >
   defaults: { fallbackMs?: number }
-  overrides: string[]
 }
 
 // Coerce numeric-string `timeout` values to numbers in-place. The schema
@@ -152,7 +150,26 @@ function validatePrioritiesPayload(
     }
   }
   const value = body as PrioritiesPayload
-  normaliseSourcePriorityTimeouts(value.priorities)
+  // Reject duplicate sourceRefs across active groups. The engine resolves
+  // a source's group with first-found-wins, but the connected-component
+  // construction on the client should never produce overlap; defending
+  // here stops a hand-edited or out-of-sync payload from poisoning the
+  // engine's source→group map.
+  const seen = new Map<string, string>()
+  for (const g of value.groups) {
+    if (g.inactive) continue
+    for (const src of g.sources) {
+      const prev = seen.get(src)
+      if (prev && prev !== g.id) {
+        return {
+          ok: false,
+          error: `Source ${src} appears in groups ${prev} and ${g.id}; a source may belong to at most one active group.`
+        }
+      }
+      seen.set(src, g.id)
+    }
+  }
+  normaliseSourcePriorityTimeouts(value.overrides)
   return { ok: true, value }
 }
 
@@ -1367,7 +1384,7 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/livePreferredSources`
   )
   // The currently-winning source per path according to the priority
-  // engine — distinct from sourcePriorities (the saved configuration).
+  // engine — distinct from priorityOverrides (the saved configuration).
   // Used by the admin-ui to label and dedup against the actual live
   // winner instead of the rank-1 source from config.
   app.get(
@@ -1415,50 +1432,6 @@ module.exports = function (
     }
   )
 
-  app.securityStrategy.addAdminMiddleware(
-    `${SERVERROUTESPREFIX}/sourcePriorities`
-  )
-
-  app.get(
-    `${SERVERROUTESPREFIX}/sourcePriorities`,
-    (req: Request, res: Response) => {
-      res.json(app.config.settings.sourcePriorities || {})
-    }
-  )
-
-  app.put(
-    `${SERVERROUTESPREFIX}/sourcePriorities`,
-    (req: Request, res: Response) => {
-      const validation = validateAgainst(
-        sourcePrioritiesSchema,
-        req.body,
-        'sourcePriorities'
-      )
-      if (!validation.ok) {
-        return res.status(400).send(validation.error)
-      }
-      const priorities = validation.value as Record<
-        string,
-        Array<{ sourceRef: string; timeout: number | string }>
-      >
-      normaliseSourcePriorityTimeouts(priorities)
-      const updatedSettings = structuredClone(app.config.settings)
-      updatedSettings.sourcePriorities = priorities
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app, updatedSettings, (err: any) => {
-        if (err) {
-          res
-            .status(500)
-            .send('Unable to save to sourcePrefences in settings file')
-        } else {
-          app.config.settings = updatedSettings
-          app.activateSourcePriorities()
-          res.json({ result: 'ok' })
-        }
-      })
-    }
-  )
-
   // /priorities admin middleware: registered up front so every method
   // (DELETE, GET, PUT) below it picks up auth. Express applies a
   // middleware to routes registered AFTER the middleware call, so the
@@ -1473,10 +1446,8 @@ module.exports = function (
         await resetPriorities(app)
         app.activateSourcePriorities()
         // Broadcast fresh empty state so admin-ui store mirrors disk.
-        // Event channels match what the PUT handler below emits so
-        // subscribers see the same event type on reset and save.
         app.emit('serverevent', {
-          type: 'SOURCEPRIORITIES',
+          type: 'PRIORITYOVERRIDES',
           data: {}
         })
         app.emit('serverAdminEvent', {
@@ -1490,10 +1461,6 @@ module.exports = function (
         app.emit('serverAdminEvent', {
           type: 'PRIORITYDEFAULTS',
           data: {}
-        })
-        app.emit('serverAdminEvent', {
-          type: 'SOURCEPRIORITYOVERRIDES',
-          data: []
         })
         res.json({ result: 'ok' })
       } catch (err) {
@@ -1541,9 +1508,9 @@ module.exports = function (
     }
   )
 
-  // Atomic priorities endpoint: writes priorityGroups, sourcePriorities and
+  // Atomic priorities endpoint: writes priorityGroups, priorityOverrides and
   // priorityDefaults in a single settings-file write so clients cannot end up
-  // with mismatched ranking vs. overrides vs. default fallback. The three
+  // with mismatched ranking vs. overrides vs. default fallback. The two
   // per-field endpoints below remain for plugins/scripts that touch a single
   // surface directly. (Auth middleware was registered above the DELETE
   // handler so all methods on this path are protected.)
@@ -1551,9 +1518,8 @@ module.exports = function (
   app.get(`${SERVERROUTESPREFIX}/priorities`, (req: Request, res: Response) => {
     res.json({
       groups: app.config.settings.priorityGroups || [],
-      priorities: app.config.settings.sourcePriorities || {},
-      defaults: app.config.settings.priorityDefaults || {},
-      overrides: app.config.settings.sourcePriorityOverrides || []
+      overrides: app.config.settings.priorityOverrides || {},
+      defaults: app.config.settings.priorityDefaults || {}
     })
   })
 
@@ -1562,12 +1528,16 @@ module.exports = function (
     if (!validation.ok) {
       return res.status(400).send(validation.error)
     }
-    const { groups, priorities, defaults, overrides } = validation.value
+    const { groups, overrides, defaults } = validation.value
+    // overrides has been normalised to numbers by validatePrioritiesPayload.
+    const overridesNumeric = overrides as Record<
+      string,
+      Array<{ sourceRef: string; timeout: number }>
+    >
     const updatedSettings = structuredClone(app.config.settings)
     updatedSettings.priorityGroups = groups
-    updatedSettings.sourcePriorities = priorities
+    updatedSettings.priorityOverrides = overridesNumeric
     updatedSettings.priorityDefaults = defaults
-    updatedSettings.sourcePriorityOverrides = overrides
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeSettingsFile(app, updatedSettings, (err: any) => {
       if (err) {
@@ -1580,16 +1550,12 @@ module.exports = function (
           data: groups
         })
         app.emit('serverevent', {
-          type: 'SOURCEPRIORITIES',
-          data: priorities
+          type: 'PRIORITYOVERRIDES',
+          data: overrides
         })
         app.emit('serverAdminEvent', {
           type: 'PRIORITYDEFAULTS',
           data: defaults
-        })
-        app.emit('serverAdminEvent', {
-          type: 'SOURCEPRIORITYOVERRIDES',
-          data: overrides
         })
         res.json({ result: 'ok' })
       }
@@ -1629,9 +1595,64 @@ module.exports = function (
           res.status(500).send('Unable to save priorityGroups in settings file')
         } else {
           app.config.settings = updatedSettings
+          // Group changes affect engine resolution: a source's group
+          // membership determines which ranking applies to its deltas.
+          app.activateSourcePriorities()
           app.emit('serverAdminEvent', {
             type: 'PRIORITYGROUPS',
             data: validation.value
+          })
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/priorityOverrides`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/priorityOverrides`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.priorityOverrides || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/priorityOverrides`,
+    (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        priorityOverridesSchema,
+        req.body,
+        'priorityOverrides'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const overrides = validation.value as Record<
+        string,
+        Array<{ sourceRef: string; timeout: number | string }>
+      >
+      normaliseSourcePriorityTimeouts(overrides)
+      const overridesNumeric = overrides as unknown as Record<
+        string,
+        Array<{ sourceRef: string; timeout: number }>
+      >
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.priorityOverrides = overridesNumeric
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, updatedSettings, (err: any) => {
+        if (err) {
+          res
+            .status(500)
+            .send('Unable to save priorityOverrides in settings file')
+        } else {
+          app.config.settings = updatedSettings
+          app.activateSourcePriorities()
+          app.emit('serverevent', {
+            type: 'PRIORITYOVERRIDES',
+            data: overridesNumeric
           })
           res.json({ result: 'ok' })
         }

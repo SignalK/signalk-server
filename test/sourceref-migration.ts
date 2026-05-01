@@ -46,9 +46,9 @@ function createMockApp(
 }
 
 describe('migrateSourceRef', () => {
-  it('updates sourcePriorities entries across paths', () => {
+  it('updates priorityOverrides entries across paths', () => {
     const app = createMockApp({
-      sourcePriorities: {
+      priorityOverrides: {
         'navigation.position': [
           { sourceRef: OLD_REF, timeout: 60000 },
           { sourceRef: 'canhat.other', timeout: 30000 }
@@ -62,7 +62,7 @@ describe('migrateSourceRef', () => {
     migrateSourceRef(app, OLD_REF, NEW_REF)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const prios = app.config.settings.sourcePriorities as any
+    const prios = app.config.settings.priorityOverrides as any
     expect(prios['navigation.position'][0].sourceRef).to.equal(NEW_REF)
     expect(prios['navigation.position'][1].sourceRef).to.equal('canhat.other')
     expect(prios['navigation.speedOverGround'][1].sourceRef).to.equal(NEW_REF)
@@ -141,7 +141,7 @@ describe('migrateSourceRef', () => {
 
   it('does not write settings when nothing matches', () => {
     const app = createMockApp({
-      sourcePriorities: {
+      priorityOverrides: {
         'navigation.speedOverGround': [
           { sourceRef: 'canhat.other', timeout: 60000 }
         ]
@@ -150,7 +150,7 @@ describe('migrateSourceRef', () => {
     migrateSourceRef(app, OLD_REF, NEW_REF)
 
     // Priority entry should be unchanged
-    const prios = app.config.settings.sourcePriorities as Record<
+    const prios = app.config.settings.priorityOverrides as Record<
       string,
       Array<{ sourceRef: string }>
     >
@@ -215,7 +215,7 @@ describe('migrateSourceRef', () => {
           sources: [TAKEOVER_OLD, 'canhat.other']
         }
       ],
-      sourcePriorities: {
+      priorityOverrides: {
         'navigation.headingMagnetic': [
           { sourceRef: TAKEOVER_OLD, timeout: 0 },
           { sourceRef: 'canhat.other', timeout: 5000 }
@@ -242,7 +242,7 @@ describe('migrateSourceRef', () => {
     expect(groups[0].sources[0]).to.equal(TAKEOVER_OLD)
     expect(groups[0].sources[1]).to.equal('canhat.other')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const prios = app.config.settings.sourcePriorities as any
+    const prios = app.config.settings.priorityOverrides as any
     expect(prios['navigation.headingMagnetic'][0].sourceRef).to.equal(
       TAKEOVER_OLD
     )

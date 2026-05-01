@@ -58,12 +58,12 @@ describe('Endpoint authentication', function () {
     const endpoints: Array<{ method: string; path: string; body: object }> = [
       {
         method: 'PUT',
-        path: '/skServer/sourcePriorities',
+        path: '/skServer/priorityOverrides',
         body: {}
       },
       {
         method: 'GET',
-        path: '/skServer/sourcePriorities',
+        path: '/skServer/priorityOverrides',
         body: {}
       },
       {

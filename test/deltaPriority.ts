@@ -1,6 +1,10 @@
 import { SourceRef } from '@signalk/server-api'
 import assert from 'assert'
-import { getToPreferredDelta, SourcePrioritiesData } from '../src/deltaPriority'
+import {
+  getToPreferredDelta,
+  PriorityGroupConfig,
+  SourcePrioritiesData
+} from '../src/deltaPriority'
 import chai from 'chai'
 chai.should()
 
@@ -25,7 +29,10 @@ function accepted(result: any): boolean {
 describe('toPreferredDelta logic', () => {
   it('handles undefined values', () => {
     const sourcePreferences: SourcePrioritiesData = {}
-    const toPreferredDelta = getToPreferredDelta(sourcePreferences, 200)
+    const toPreferredDelta = getToPreferredDelta({
+      overrides: sourcePreferences,
+      unknownSourceTimeout: 200
+    })
 
     const delta = toPreferredDelta(
       {
@@ -64,7 +71,10 @@ describe('toPreferredDelta logic', () => {
         }
       ]
     }
-    const toPreferredDelta = getToPreferredDelta(sourcePreferences, 200)
+    const toPreferredDelta = getToPreferredDelta({
+      overrides: sourcePreferences,
+      unknownSourceTimeout: 200
+    })
 
     let totalDelay = 0
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -144,7 +154,7 @@ describe('disabled source (timeout=-1)', () => {
         { sourceRef: 'b' as SourceRef, timeout: -1 }
       ]
     }
-    const toPreferred = getToPreferredDelta(pathConfig)
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
     const t = 1000000
 
     const r1 = toPreferred(makeDelta('b', PATH, 1), new Date(t), 'self')
@@ -166,7 +176,7 @@ describe('disabled source (timeout=-1)', () => {
         { sourceRef: 'c' as SourceRef, timeout: 5000 }
       ]
     }
-    const toPreferred = getToPreferredDelta(pathConfig)
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
     const t = 1000000
 
     toPreferred(makeDelta('a', PATH, 1), new Date(t), 'self')
@@ -185,7 +195,7 @@ describe('disabled source (timeout=-1)', () => {
         { sourceRef: 'b' as SourceRef, timeout: 0 }
       ]
     }
-    const toPreferred = getToPreferredDelta(pathConfig)
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
     const t = 1000000
 
     const r1 = toPreferred(makeDelta('a', PATH, 1), new Date(t), 'self')
@@ -210,7 +220,7 @@ describe('path-level displaces unknown incumbent', () => {
     const pathConfig: SourcePrioritiesData = {
       [PATH]: [{ sourceRef: 'venus' as SourceRef, timeout: 60000 }]
     }
-    const toPreferred = getToPreferredDelta(pathConfig)
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
     const t = 1000000
 
     const r1 = toPreferred(makeDelta('n2k', PATH, 1), new Date(t), 'self')
@@ -233,7 +243,10 @@ describe('path-level displaces unknown incumbent', () => {
     const pathConfig: SourcePrioritiesData = {
       [PATH]: [{ sourceRef: 'plugin' as SourceRef, timeout: 60000 }]
     }
-    const toPreferred = getToPreferredDelta(pathConfig, 10000)
+    const toPreferred = getToPreferredDelta({
+      overrides: pathConfig,
+      unknownSourceTimeout: 10000
+    })
     const t = 1000000
 
     toPreferred(makeDelta('plugin', PATH, 1), new Date(t), 'self')
@@ -265,7 +278,10 @@ describe('path-level displaces unknown incumbent', () => {
     const pathConfig: SourcePrioritiesData = {
       [PATH]: [{ sourceRef: 'plugin' as SourceRef, timeout: 1000 }]
     }
-    const toPreferred = getToPreferredDelta(pathConfig, 500)
+    const toPreferred = getToPreferredDelta({
+      overrides: pathConfig,
+      unknownSourceTimeout: 500
+    })
     const t = 1000000
 
     toPreferred(makeDelta('plugin', PATH, 1), new Date(t), 'self')
@@ -296,7 +312,7 @@ describe('notifications bypass priority', () => {
         { sourceRef: 'i70' as SourceRef, timeout: 5000 }
       ]
     }
-    const toPreferred = getToPreferredDelta(pathConfig)
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
     const t = 1000000
 
     toPreferred(makeDelta('plotter', NOTI, 1), new Date(t), 'self')
@@ -311,7 +327,7 @@ describe('notifications bypass priority', () => {
     const pathConfig: SourcePrioritiesData = {
       [NOTI]: [{ sourceRef: 'i70' as SourceRef, timeout: -1 }]
     }
-    const toPreferred = getToPreferredDelta(pathConfig)
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
     const r = toPreferred(makeDelta('i70', NOTI, 1), new Date(1000000), 'self')
     assert(accepted(r), 'disabled source notification still accepted')
   })
@@ -320,7 +336,7 @@ describe('notifications bypass priority', () => {
     const pathConfig: SourcePrioritiesData = {
       [NOTI]: [{ sourceRef: 'plotter' as SourceRef, timeout: 5000 }]
     }
-    const toPreferred = getToPreferredDelta(pathConfig)
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
     const t = 1000000
 
     toPreferred(makeDelta('plotter', NOTI, 1), new Date(t), 'self')
@@ -335,7 +351,7 @@ describe('notifications bypass priority', () => {
         { sourceRef: 'i70' as SourceRef, timeout: 5000 }
       ]
     }
-    const toPreferred = getToPreferredDelta(pathConfig)
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
     const PATH = 'environment.wind.speedApparent'
     const t = 1000000
 
@@ -356,7 +372,7 @@ describe('non-self context', () => {
         { sourceRef: 'b' as SourceRef, timeout: -1 }
       ]
     }
-    const toPreferred = getToPreferredDelta(pathConfig)
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
     const PATH = 'environment.wind.speedApparent'
 
     // Even disabled source b passes through for non-self context
@@ -378,7 +394,7 @@ describe('transport-agnostic CAN Name matching', () => {
         { sourceRef: 'derived-data' as SourceRef, timeout: 5000 }
       ]
     }
-    const toPreferred = getToPreferredDelta(cfg)
+    const toPreferred = getToPreferredDelta({ overrides: cfg })
     // Delta arrives via a remote Signal K server with the remote
     // providerId baked into $source.
     const r = toPreferred(
@@ -399,7 +415,7 @@ describe('transport-agnostic CAN Name matching', () => {
         { sourceRef: `YDEN02.${CAN}` as SourceRef, timeout: -1 }
       ]
     }
-    const toPreferred = getToPreferredDelta(cfg)
+    const toPreferred = getToPreferredDelta({ overrides: cfg })
     const r = toPreferred(
       makeDelta(`canhat.${CAN}`, PATH, 5),
       new Date(1000000),
@@ -418,7 +434,7 @@ describe('transport-agnostic CAN Name matching', () => {
         { sourceRef: 'tcp.GP' as SourceRef, timeout: -1 }
       ]
     }
-    const toPreferred = getToPreferredDelta(cfg)
+    const toPreferred = getToPreferredDelta({ overrides: cfg })
     // serial0.GP is the preferred source; tcp.GP is disabled.
     // Both share the suffix "GP" but that is not a unique identity.
     const rDisabled = toPreferred(
@@ -452,7 +468,10 @@ describe('canonicalise sourceRef (useCanName=false providers)', () => {
         { sourceRef: 'derived-data' as SourceRef, timeout: 5000 }
       ]
     }
-    const toPreferred = getToPreferredDelta(cfg, undefined, canonical)
+    const toPreferred = getToPreferredDelta({
+      overrides: cfg,
+      canonicalise: canonical
+    })
     const r = toPreferred(
       makeDelta('can0.4', PATH, 5),
       new Date(1000000),
@@ -481,7 +500,10 @@ describe('canonicalise sourceRef (useCanName=false providers)', () => {
         { sourceRef: `can0.${CAN_B}` as SourceRef, timeout: 5000 }
       ]
     }
-    const toPreferred = getToPreferredDelta(cfg, undefined, canonical)
+    const toPreferred = getToPreferredDelta({
+      overrides: cfg,
+      canonicalise: canonical
+    })
     // Rank-1 wins immediately.
     let r = toPreferred(makeDelta('can0.5', PATH, 1), new Date(1000000), 'self')
     assert(accepted(r), 'rank-1 should win')
@@ -505,7 +527,7 @@ describe('canonicalise sourceRef (useCanName=false providers)', () => {
       ],
       [FAN_PATH]: [{ sourceRef: '*' as SourceRef, timeout: 0 }]
     }
-    const toPreferred = getToPreferredDelta(cfg)
+    const toPreferred = getToPreferredDelta({ overrides: cfg })
     const r1 = toPreferred(
       makeDelta('can0.4', FAN_PATH, 5),
       new Date(1000000),
@@ -536,7 +558,10 @@ describe('canonicalise sourceRef (useCanName=false providers)', () => {
       [FAN_PATH]: [{ sourceRef: '*' as SourceRef, timeout: 0 }]
     }
     const canonical = (ref: string) => (ref === 'can0.9' ? `can0.${CAN}` : ref)
-    const toPreferred = getToPreferredDelta(cfg, undefined, canonical)
+    const toPreferred = getToPreferredDelta({
+      overrides: cfg,
+      canonicalise: canonical
+    })
     // PATH should still respect rank-1.
     const r1 = toPreferred(
       makeDelta('can0.9', PATH, 5),
@@ -564,7 +589,10 @@ describe('canonicalise sourceRef (useCanName=false providers)', () => {
         { sourceRef: 'derived-data' as SourceRef, timeout: 5000 }
       ]
     }
-    const toPreferred = getToPreferredDelta(cfg, undefined, canonical)
+    const toPreferred = getToPreferredDelta({
+      overrides: cfg,
+      canonicalise: canonical
+    })
     const r = toPreferred(
       makeDelta('can0.4', PATH, 5),
       new Date(1000000),
@@ -575,5 +603,172 @@ describe('canonicalise sourceRef (useCanName=false providers)', () => {
     // "unknown that briefly wins" semantics. No fix from us — just
     // confirming we don't crash on missing translation.
     assert(accepted(r), 'unknown first-arrival is accepted (existing rule)')
+  })
+})
+
+describe('group-aware resolution', () => {
+  const PATH = 'environment.wind.speedApparent'
+
+  it('group ranking applies dynamically when path has no override', () => {
+    const groups: PriorityGroupConfig[] = [{ id: 'g1', sources: ['a', 'b'] }]
+    const toPreferred = getToPreferredDelta({
+      groups,
+      fallbackMs: 5000
+    })
+    const t = 1000000
+
+    // a wins immediately as rank-1
+    let r = toPreferred(makeDelta('a', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'rank-1 a accepted')
+
+    // b within fallback window: rejected
+    r = toPreferred(makeDelta('b', PATH, 2), new Date(t + 1000), 'self')
+    assert(!accepted(r), 'rank-2 b held off while a is fresh')
+
+    // b after fallback: accepted
+    r = toPreferred(makeDelta('b', PATH, 3), new Date(t + 6000), 'self')
+    assert(accepted(r), 'rank-2 b takes over after fallback')
+  })
+
+  it('override outranks group ranking on the same path', () => {
+    const groups: PriorityGroupConfig[] = [{ id: 'g1', sources: ['a', 'b'] }]
+    const overrides: SourcePrioritiesData = {
+      [PATH]: [
+        { sourceRef: 'c' as SourceRef, timeout: 0 },
+        { sourceRef: 'a' as SourceRef, timeout: 5000 }
+      ]
+    }
+    const toPreferred = getToPreferredDelta({
+      groups,
+      overrides,
+      fallbackMs: 5000
+    })
+    const t = 1000000
+
+    // c wins (override rank-1)
+    let r = toPreferred(makeDelta('c', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'override rank-1 c accepted')
+
+    // b is in the group but the override doesn't list it; resolver hits
+    // the override (because path is in overrides) so b is unknown to that
+    // precedences map. With a known incumbent (c), b is rejected.
+    r = toPreferred(makeDelta('b', PATH, 2), new Date(t + 100), 'self')
+    assert(!accepted(r), 'b in group but not in override is unknown')
+  })
+
+  it('inactive group is excluded from resolution', () => {
+    const groups: PriorityGroupConfig[] = [
+      { id: 'g1', sources: ['a', 'b'], inactive: true }
+    ]
+    const toPreferred = getToPreferredDelta({
+      groups,
+      fallbackMs: 5000
+    })
+    const t = 1000000
+
+    // Both a and b accepted as they arrive — no active config.
+    let r = toPreferred(makeDelta('a', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'a accepted (group inactive)')
+    r = toPreferred(makeDelta('b', PATH, 2), new Date(t + 100), 'self')
+    assert(accepted(r), 'b accepted (group inactive)')
+  })
+
+  it('source not in any group passes through', () => {
+    const groups: PriorityGroupConfig[] = [{ id: 'g1', sources: ['a', 'b'] }]
+    const toPreferred = getToPreferredDelta({
+      groups,
+      fallbackMs: 5000
+    })
+    const r = toPreferred(makeDelta('z', PATH, 1), new Date(1000000), 'self')
+    assert(accepted(r), 'unconfigured source passes through')
+  })
+
+  it('group ranking applies dynamically as new publishers join', () => {
+    // The frozen-snapshot bug: under the old engine, a path with one
+    // publisher at save time got dropped from priorities entirely;
+    // a second publisher joining later flowed through unfiltered.
+    // With group-aware resolution, the group ranking applies the
+    // moment the second source emits.
+    const groups: PriorityGroupConfig[] = [{ id: 'g1', sources: ['a', 'b'] }]
+    const toPreferred = getToPreferredDelta({
+      groups,
+      fallbackMs: 5000
+    })
+    const t = 1000000
+
+    // Only a publishes for a while.
+    let r = toPreferred(makeDelta('a', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'a accepted (sole publisher)')
+
+    // Now b joins — it must be ranked behind a per the group order.
+    r = toPreferred(makeDelta('b', PATH, 2), new Date(t + 100), 'self')
+    assert(!accepted(r), 'b held off — group ranking applied dynamically')
+  })
+
+  it('group ranking honours canonicalise for canName matching', () => {
+    const CAN_A = 'c1111111111aaaaa'
+    const CAN_B = 'c2222222222bbbbb'
+    const canonical = (ref: string) => {
+      if (ref === 'can0.5') return `can0.${CAN_A}`
+      if (ref === 'can0.7') return `can0.${CAN_B}`
+      return ref
+    }
+    const groups: PriorityGroupConfig[] = [
+      {
+        id: 'g1',
+        sources: [`YDEN02.${CAN_A}`, `YDEN02.${CAN_B}`]
+      }
+    ]
+    const toPreferred = getToPreferredDelta({
+      groups,
+      canonicalise: canonical,
+      fallbackMs: 5000
+    })
+    const t = 1000000
+
+    // Numeric-form delta resolves via canonicalise + canName identity to
+    // the group's rank-1 entry.
+    let r = toPreferred(makeDelta('can0.5', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'rank-1 (canName) wins via canonicalise')
+
+    r = toPreferred(makeDelta('can0.7', PATH, 2), new Date(t + 1000), 'self')
+    assert(!accepted(r), 'rank-2 held off')
+  })
+
+  it('fan-out override on a path bypasses group ranking', () => {
+    const groups: PriorityGroupConfig[] = [{ id: 'g1', sources: ['a', 'b'] }]
+    const overrides: SourcePrioritiesData = {
+      [PATH]: [{ sourceRef: '*' as SourceRef, timeout: 0 }]
+    }
+    const toPreferred = getToPreferredDelta({
+      groups,
+      overrides
+    })
+    const t = 1000000
+    const r1 = toPreferred(makeDelta('a', PATH, 1), new Date(t), 'self')
+    const r2 = toPreferred(makeDelta('b', PATH, 2), new Date(t + 100), 'self')
+    const r3 = toPreferred(makeDelta('z', PATH, 3), new Date(t + 200), 'self')
+    assert(accepted(r1) && accepted(r2) && accepted(r3), 'all sources fan out')
+  })
+
+  it('overlapping group sources: first match wins', () => {
+    // The validator on the server rejects this, but the engine must
+    // not crash if the config slips through. First-found-wins.
+    const groups: PriorityGroupConfig[] = [
+      { id: 'g1', sources: ['a', 'b'] },
+      { id: 'g2', sources: ['a', 'c'] }
+    ]
+    const toPreferred = getToPreferredDelta({
+      groups,
+      fallbackMs: 5000
+    })
+    const t = 1000000
+
+    // a is in g1 (first occurrence). g1's ranking [a, b] applies to its
+    // paths; a wins, b would be rank-2.
+    let r = toPreferred(makeDelta('a', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'a accepted as g1 rank-1')
+    r = toPreferred(makeDelta('b', PATH, 2), new Date(t + 100), 'self')
+    assert(!accepted(r), 'b held off as g1 rank-2')
   })
 })

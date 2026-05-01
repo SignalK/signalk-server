@@ -1,4 +1,4 @@
-import type { PriorityGroup, SourcePriority } from '../store/types'
+import type { PriorityGroup } from '../store/types'
 
 /**
  * Default Fallback timeout (ms) applied to a freshly-added priority row
@@ -153,62 +153,4 @@ export function reconcileGroups(
       newcomerSources: newcomers
     }
   })
-}
-
-/**
- * Given a path's current priorities and the expected group order for the
- * subset of group sources that publish that path, decide whether the path
- * is an "override": its source order differs from the group order.
- *
- * If any listed row has `timeout === -1` (disabled), also treat the path
- * as an override — the user has explicit enabled/disabled intent. Missing
- * entries, extra sources, or a different ordering all count as override.
- */
-export function isPathOverride(
-  pathPriorities: SourcePriority[],
-  expectedOrder: string[]
-): boolean {
-  if (pathPriorities.length !== expectedOrder.length) return true
-  for (let i = 0; i < pathPriorities.length; i++) {
-    if (pathPriorities[i].sourceRef !== expectedOrder[i]) return true
-    if (Number(pathPriorities[i].timeout) === -1) return true
-  }
-  return false
-}
-
-/**
- * Fan out a group's ranking into sourcePriorities entries for each path
- * the group covers. Paths whose ids are in `overridePaths` are left
- * untouched.
- *
- * For each covered path, emit one entry per group-ranked source that also
- * publishes that path, in group order, with the default fallback timeout
- * (first row gets `timeout: 0` — it's the preferred, timeout is unused).
- */
-export function fanOutGroupRanking(
-  group: { sources: string[]; paths: string[] },
-  multiSourcePaths: Record<string, string[]>,
-  currentSourcePriorities: Record<string, SourcePriority[]>,
-  overridePaths: Set<string>,
-  fallbackMs: number = DEFAULT_FALLBACK_MS
-): Record<string, SourcePriority[]> {
-  const updated: Record<string, SourcePriority[]> = {
-    ...currentSourcePriorities
-  }
-
-  for (const path of group.paths) {
-    if (overridePaths.has(path)) continue
-    const publishers = new Set(multiSourcePaths[path] ?? [])
-    const ordered = group.sources.filter((src) => publishers.has(src))
-    if (ordered.length < 2) {
-      delete updated[path]
-      continue
-    }
-    updated[path] = ordered.map((sourceRef, i) => ({
-      sourceRef,
-      timeout: i === 0 ? 0 : fallbackMs
-    }))
-  }
-
-  return updated
 }

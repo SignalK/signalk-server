@@ -74,8 +74,8 @@ export function startServerEvents(
     })
   }
   spark.write({
-    type: 'SOURCEPRIORITIES',
-    data: app.config.settings.sourcePriorities || {}
+    type: 'PRIORITYOVERRIDES',
+    data: app.config.settings.priorityOverrides || {}
   })
   spark.write({
     type: 'SOURCEALIASES',
@@ -88,10 +88,6 @@ export function startServerEvents(
   spark.write({
     type: 'PRIORITYDEFAULTS',
     data: app.config.settings.priorityDefaults || {}
-  })
-  spark.write({
-    type: 'SOURCEPRIORITYOVERRIDES',
-    data: app.config.settings.sourcePriorityOverrides || []
   })
   spark.write({
     type: 'MULTISOURCEPATHS',

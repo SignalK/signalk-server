@@ -333,20 +333,24 @@ class Server {
     app.activateSourcePriorities = () => {
       try {
         cachedCanonicalSnapshot = null
-        toPreferredDelta = getToPreferredDelta(
-          app.config.settings.sourcePriorities,
-          undefined,
-          canonicaliseSourceRef
-        )
+        const s = app.config.settings
+        toPreferredDelta = getToPreferredDelta({
+          groups: s.priorityGroups ?? [],
+          overrides: s.priorityOverrides ?? {},
+          fallbackMs: s.priorityDefaults?.fallbackMs,
+          canonicalise: canonicaliseSourceRef
+        })
         // Drop preferredSources entries for paths that no longer have
-        // a priority config. Without this, the bootstrap snapshot
-        // served to admin-ui clients with sourcePolicy=preferred keeps
-        // returning the previously-preferred source for paths whose
-        // group was just deactivated.
-        const activePaths = new Set<string>(
-          Object.keys(app.config.settings.sourcePriorities ?? {})
+        // an explicit override. Group-covered paths are kept so a path
+        // whose only ranking came from group resolution doesn't lose
+        // its winner from the bootstrap snapshot. The next delta will
+        // re-evaluate via the engine anyway.
+        const activeOverridePaths = new Set<string>(
+          Object.keys(s.priorityOverrides ?? {})
         )
-        app.deltaCache?.resetPreferredSourcesNotIn?.(activePaths)
+        app.deltaCache?.resetPreferredSourcesNotIn?.(activeOverridePaths, {
+          keepGroupCovered: true
+        })
       } catch (e) {
         console.error('getToPreferredDelta failed:', e)
       }

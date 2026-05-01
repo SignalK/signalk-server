@@ -12,7 +12,7 @@ interface MigrationApp {
   config: {
     configPath: string
     settings: {
-      sourcePriorities?: Record<
+      priorityOverrides?: Record<
         string,
         Array<{ sourceRef: string; timeout: number }>
       >
@@ -99,9 +99,9 @@ export function migrateSourceRef(
   let settingsChanged = false
   const migrated = new Set<string>()
 
-  // 1. sourcePriorities (path-level) — dedupe per path if newRef already present
-  if (settings.sourcePriorities) {
-    for (const [, entries] of Object.entries(settings.sourcePriorities)) {
+  // 1. priorityOverrides (path-level) — dedupe per path if newRef already present
+  if (settings.priorityOverrides) {
+    for (const [, entries] of Object.entries(settings.priorityOverrides)) {
       if (!Array.isArray(entries)) continue
       const hasNewRef = entries.some((e) => e.sourceRef === newRef)
       if (hasNewRef) {
@@ -111,14 +111,14 @@ export function migrateSourceRef(
           entries.length = 0
           entries.push(...filtered)
           settingsChanged = true
-          migrated.add('sourcePriorities')
+          migrated.add('priorityOverrides')
         }
       } else {
         for (const entry of entries) {
           if (entry.sourceRef === oldRef) {
             entry.sourceRef = newRef
             settingsChanged = true
-            migrated.add('sourcePriorities')
+            migrated.add('priorityOverrides')
           }
         }
       }
@@ -227,10 +227,10 @@ export function migrateSourceRef(
     app.activateSourcePriorities()
 
     // 8. Notify clients (only for sections that were actually migrated)
-    if (migrated.has('sourcePriorities') && settings.sourcePriorities) {
+    if (migrated.has('priorityOverrides') && settings.priorityOverrides) {
       app.emit('serverevent', {
-        type: 'SOURCEPRIORITIES',
-        data: settings.sourcePriorities
+        type: 'PRIORITYOVERRIDES',
+        data: settings.priorityOverrides
       })
     }
     if (migrated.has('sourceAliases') && settings.sourceAliases) {

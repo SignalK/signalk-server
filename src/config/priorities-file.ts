@@ -24,15 +24,32 @@ const debug = createDebug('signalk-server:priorities-file')
 const PRIORITIES_FILE = 'priorities.json'
 
 export const PRIORITIES_KEYS = [
-  'sourcePriorities',
   'priorityGroups',
+  'priorityOverrides',
   'priorityDefaults',
-  'sourcePriorityOverrides',
   'sourceAliases',
   'ignoredInstanceConflicts'
 ] as const
 
 export type PrioritiesKey = (typeof PRIORITIES_KEYS)[number]
+
+const LEGACY_KEYS = ['sourcePriorities', 'sourcePriorityOverrides'] as const
+
+/**
+ * Fold any legacy schema keys into the new shape. Older priorities.json
+ * files used `sourcePriorities` (per-path map) and `sourcePriorityOverrides`
+ * (paths list). The new model has only `priorityOverrides` (per-path map
+ * of explicit user overrides); group rankings are resolved by the engine
+ * dynamically. The legacy per-path map maps directly onto the new
+ * priorityOverrides map; the override-paths list is no longer needed
+ * because override-ness is implicit in the path having an entry.
+ */
+function foldLegacyKeys(stored: Settings): void {
+  if ('sourcePriorities' in stored && !('priorityOverrides' in stored)) {
+    stored.priorityOverrides = stored.sourcePriorities
+  }
+  for (const k of LEGACY_KEYS) delete stored[k]
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Settings = Record<string, any>
@@ -75,11 +92,14 @@ function readPrioritiesFile(app: MigrationApp): Settings | undefined {
 export function loadPrioritiesIntoSettings(app: MigrationApp): void {
   const stored = readPrioritiesFile(app)
   if (!stored) return
+  foldLegacyKeys(stored)
   for (const key of PRIORITIES_KEYS) {
     if (key in stored) {
       app.config.settings[key] = stored[key]
     }
   }
+  // Strip legacy keys from in-memory settings so they don't get re-persisted.
+  for (const k of LEGACY_KEYS) delete app.config.settings[k]
   debug('Loaded priorities from %s', PRIORITIES_FILE)
 }
 
@@ -95,10 +115,14 @@ export function loadPrioritiesIntoSettings(app: MigrationApp): void {
  */
 export function migratePrioritiesIntoSeparateFile(app: MigrationApp): boolean {
   if (readPrioritiesFile(app)) return false
+  const settings = app.config.settings
+  // Fold legacy keys into the new shape before extracting, so settings.json
+  // installs from older versions emerge as priorityOverrides on disk.
+  foldLegacyKeys(settings)
   const present: Settings = {}
   for (const key of PRIORITIES_KEYS) {
-    if (key in app.config.settings) {
-      present[key] = app.config.settings[key]
+    if (key in settings) {
+      present[key] = settings[key]
     }
   }
   if (Object.keys(present).length === 0) {
@@ -112,7 +136,7 @@ export function migratePrioritiesIntoSeparateFile(app: MigrationApp): boolean {
     return false
   }
   for (const key of PRIORITIES_KEYS) {
-    delete app.config.settings[key]
+    delete settings[key]
   }
   console.log(
     `Migrated priority state from settings.json to ${PRIORITIES_FILE}`
@@ -167,5 +191,10 @@ export async function resetPriorities(app: MigrationApp): Promise<void> {
   for (const key of PRIORITIES_KEYS) {
     delete app.config.settings[key]
   }
+  // Defensive: legacy keys should never be set in-memory after load,
+  // but a hand-edited settings.json that bypassed loadPrioritiesIntoSettings
+  // could still have them. Strip on reset so the next save can't carry
+  // them back to disk.
+  for (const k of LEGACY_KEYS) delete app.config.settings[k]
   console.log(`Priority state reset (${PRIORITIES_FILE} removed)`)
 }

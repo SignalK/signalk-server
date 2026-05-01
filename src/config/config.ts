@@ -90,31 +90,33 @@ export interface Config {
     logCountToKeep?: number
     enablePluginLogging?: boolean
     loggingDirectory?: string
-    sourcePriorities?: any
+    /** Per-path explicit overrides. The engine consults this map first;
+     * if a path has an entry here, that ranking is used. Includes the
+     * fan-out sentinel `[{ sourceRef: '*', timeout: 0 }]` for paths the
+     * user has marked as "deliver every source's value". Paths with no
+     * entry here fall through to group resolution (see priorityGroups). */
+    priorityOverrides?: Record<
+      string,
+      Array<{ sourceRef: string; timeout: number }>
+    >
 
-    /** Ordered list of sources per priority group. UI-layer organisation
-     * of sources that share output paths; the delta engine never reads
-     * this — on save, rankings are fanned out into sourcePriorities for
-     * every shared path without an explicit override. */
+    /** Ordered list of sources per priority group. The engine resolves
+     * a path's ranking dynamically: if a delta's source is in an active
+     * group, the group's ordering applies to the path. */
     priorityGroups?: Array<{
       id: string
       sources: string[]
-      /** When true, the saved ranking is preserved but not fanned out
-       * into sourcePriorities — paths covered by this group accept all
-       * sources. Lets a user temporarily disable a ranking without
-       * losing the order they configured. */
+      /** When true, the group is excluded from engine resolution —
+       * paths whose only ranking would have come from this group accept
+       * all sources first-come-first-served. Lets a user temporarily
+       * disable a ranking without losing the order they configured. */
       inactive?: boolean
     }>
 
-    /** Global default fallback in ms used when fanning out a group ranking
-     * into sourcePriorities. Overrides can still specify their own values. */
+    /** Global default fallback in ms applied to ranks below rank-1
+     * when the engine derives a path's ranking from a group. Per-path
+     * overrides can still specify their own timeouts. */
     priorityDefaults?: { fallbackMs?: number }
-
-    /** Paths the user has explicitly marked as path-level overrides in the
-     * Admin UI. Fan-out skips these paths so reordering their rows does not
-     * turn them back into group-ranked paths and silently erase the user's
-     * intent. */
-    sourcePriorityOverrides?: string[]
 
     /** Map of sourceRef → user-defined display alias for that source */
     sourceAliases?: Record<string, string>

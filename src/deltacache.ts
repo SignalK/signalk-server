@@ -310,14 +310,38 @@ export default class DeltaCache {
    * the cache entry. Called from activateSourcePriorities() after the
    * priority engine is rebuilt so the snapshot stays in sync with what
    * the engine will actually enforce.
+   *
+   * `keepGroupCovered`: when set, a cached entry is preserved if the
+   * current preferred source is in any active priorityGroup. This is
+   * needed under the group-aware engine: a path can have no explicit
+   * override yet still be covered by a group's ranking, so dropping
+   * it would briefly orphan the bootstrap snapshot until the next
+   * delta re-populates the cache.
    */
-  resetPreferredSourcesNotIn(activePaths: Set<string>): void {
-    for (const key of this.preferredSources.keys()) {
+  resetPreferredSourcesNotIn(
+    activePaths: Set<string>,
+    opts: { keepGroupCovered?: boolean } = {}
+  ): void {
+    let groupedSources: Set<string> | null = null
+    if (opts.keepGroupCovered) {
+      groupedSources = new Set<string>()
+      const groups = (this.app.config as any).settings?.priorityGroups as
+        | Array<{ sources?: string[]; inactive?: boolean }>
+        | undefined
+      if (Array.isArray(groups)) {
+        for (const g of groups) {
+          if (g?.inactive) continue
+          if (!Array.isArray(g?.sources)) continue
+          for (const s of g.sources) groupedSources.add(s)
+        }
+      }
+    }
+    for (const [key, ref] of this.preferredSources) {
       const nullIdx = key.indexOf('\0')
       const path = nullIdx === -1 ? '' : key.slice(nullIdx + 1)
-      if (!activePaths.has(path)) {
-        this.preferredSources.delete(key)
-      }
+      if (activePaths.has(path)) continue
+      if (groupedSources && groupedSources.has(ref)) continue
+      this.preferredSources.delete(key)
     }
   }
 
@@ -672,7 +696,7 @@ export default class DeltaCache {
       walk(selfBranch, [])
     }
 
-    const persisted = (this.app.config as any).settings?.sourcePriorities as
+    const persisted = (this.app.config as any).settings?.priorityOverrides as
       | Record<string, Array<{ sourceRef?: string }>>
       | undefined
     if (persisted) {
@@ -718,6 +742,36 @@ export default class DeltaCache {
           if (entry && typeof entry.sourceRef === 'string') {
             set.add(canonical(entry.sourceRef))
           }
+        }
+      }
+    }
+
+    // Anchor every path covered by an active priorityGroup so the UI's
+    // connected-components reconciliation keeps the path in its group
+    // even when only one publisher is currently live. The engine
+    // resolves group rankings dynamically per delta, so a path doesn't
+    // need to appear in priorityOverrides to be group-covered — but
+    // the multi-source view does need to see ≥2 candidate sources to
+    // attach the path to a group card.
+    const groups = (this.app.config as any).settings?.priorityGroups as
+      | Array<{ sources?: string[]; inactive?: boolean }>
+      | undefined
+    if (Array.isArray(groups)) {
+      for (const [path, cached] of Object.entries(cachePublishers)) {
+        if (path === 'notifications' || path.startsWith('notifications.')) {
+          continue
+        }
+        if (result[path]) continue
+        for (const group of groups) {
+          if (group?.inactive) continue
+          if (!Array.isArray(group?.sources)) continue
+          const groupSet = new Set(group.sources)
+          const overlap = [...cached].some((s) => groupSet.has(s))
+          if (!overlap) continue
+          const set = result[path] ?? (result[path] = new Set<string>())
+          for (const s of cached) set.add(s)
+          for (const s of group.sources) set.add(canonical(s))
+          break
         }
       }
     }
