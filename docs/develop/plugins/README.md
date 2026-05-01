@@ -277,6 +277,17 @@ plugin.registerWithRouter = (router) => {
 }
 ```
 
+- `getRoutePermissions()`: By default all plugin routes require admin authentication. Implement this function to allow `readwrite` or `readonly` users to access specific endpoints. Supports Express-style parameterized paths. Routes not listed remain admin-only. The reserved paths `/` and `/config` cannot be overridden.
+
+_Example:_
+
+```javascript
+plugin.getRoutePermissions = () => [
+  { method: 'GET', path: '/data/:id', permission: 'readonly' },
+  { method: 'POST', path: '/data', permission: 'readwrite' }
+]
+```
+
 - `getOpenApi()`: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OpenAPI definition available in the server Admin UI under `Documentation -> OpenAPI`.
 
 _Example:_
