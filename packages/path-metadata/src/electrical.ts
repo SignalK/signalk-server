@@ -247,8 +247,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'W'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/apparentPower': {
-    description: 'Data should be of type number.',
-    units: 'W'
+    description: 'Apparent power (|V| × |I|), in volt-amperes.',
+    units: 'VA'
   },
   '/vessels/*/electrical/inverters/RegExp/inverterMode': {
     description: 'Mode of inverter'
@@ -628,7 +628,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'W'
   },
   '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/apparentPower': {
-    description: 'Data should be of type number.',
-    units: 'W'
+    description: 'Apparent power (|V| × |I|), in volt-amperes.',
+    units: 'VA'
   }
 }

@@ -29,6 +29,6 @@ export const sensorsMetadata: Record<string, PathMetadataEntry> = {
     units: 'm'
   },
   '/vessels/*/sensors/RegExp/class': {
-    description: 'AIS transponder class in sensors.ais.class, A or B'
+    description: 'Sensor class — for an AIS transponder, A or B.'
   }
 }
