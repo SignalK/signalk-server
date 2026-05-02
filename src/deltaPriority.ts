@@ -194,6 +194,15 @@ export const getToPreferredDelta = (
     fallbackMs
   )
 
+  // Tracks which group has "claimed" each path. A path is claimed the
+  // first time a delta from any group source emits it. Once claimed,
+  // every delta on that path — including from sources NOT in the group
+  // (e.g. a derived-data plugin computing the same value) — resolves
+  // against the claiming group's ranking. Without this, an
+  // unconfigured source publishing a group-covered path would always
+  // bypass priority filtering, defeating the user's saved ranking.
+  const pathToGroupId = new Map<string, string>()
+
   const contextPathTimestamps = new Map<Context, PathLatestTimestamps>()
 
   const setLatest = (
@@ -240,7 +249,16 @@ export const getToPreferredDelta = (
 
   // Resolve which precedence map applies to (path, source).
   // Override on the path wins; otherwise the source's group ranking
-  // applies; otherwise null → no config, accept all.
+  // applies AND the path is claimed by that group for any future
+  // delta on the same path (from any source); otherwise the path's
+  // existing claim — if any — applies; otherwise null → passthrough.
+  //
+  // Once a path is claimed by a group, an unconfigured source emitting
+  // the same path is treated as an unknown source against the group's
+  // precedences (LOWESTPRECEDENCE) and obeys the existing
+  // configured-displaces-unknown rule. That stops a derived-data
+  // plugin from oscillating the cache's preferred winner against the
+  // group's actual rank-1 source.
   const resolvePrecedences = (
     path: Path,
     canonicalSource: SourceRef
@@ -248,8 +266,20 @@ export const getToPreferredDelta = (
     const override = overridePrecedences.get(path)
     if (override) return override
     const groupId = sourceToGroupId.get(sourceRefIdentity(canonicalSource))
-    if (!groupId) return null
-    return groupPrecedences.get(groupId) ?? null
+    if (groupId) {
+      // Claim this path for the source's group on first encounter.
+      // Subsequent deltas on this path from sources NOT in the group
+      // will fall through to the existing claim below.
+      if (!pathToGroupId.has(path)) {
+        pathToGroupId.set(path, groupId)
+      }
+      return groupPrecedences.get(groupId) ?? null
+    }
+    const claimedGroupId = pathToGroupId.get(path)
+    if (claimedGroupId) {
+      return groupPrecedences.get(claimedGroupId) ?? null
+    }
+    return null
   }
 
   const getPrecedence = (

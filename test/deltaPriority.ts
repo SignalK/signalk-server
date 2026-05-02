@@ -771,4 +771,71 @@ describe('group-aware resolution', () => {
     r = toPreferred(makeDelta('b', PATH, 2), new Date(t + 100), 'self')
     assert(!accepted(r), 'b held off as g1 rank-2')
   })
+
+  it('path claimed by group blocks unconfigured source from passthrough', () => {
+    // Real bug from the field: a group ranks two GPSes, but a separate
+    // unconfigured source (e.g. derived-data WMM) also publishes the
+    // same path. Without claim-on-publish, the unconfigured source
+    // bypasses priority filtering and oscillates the cache's preferred
+    // winner against the group's rank-1.
+    const groups: PriorityGroupConfig[] = [
+      { id: 'g1', sources: ['gps-a', 'gps-b'] }
+    ]
+    const toPreferred = getToPreferredDelta({
+      groups,
+      fallbackMs: 5000
+    })
+    const t = 1000000
+
+    // Group rank-1 emits first → claims the path for g1.
+    let r = toPreferred(makeDelta('gps-a', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'gps-a accepted as g1 rank-1')
+
+    // Unconfigured source emits — must be rejected because g1 owns the
+    // path now and gps-a is fresh.
+    r = toPreferred(
+      makeDelta('derived-data', PATH, 99),
+      new Date(t + 100),
+      'self'
+    )
+    assert(
+      !accepted(r),
+      'derived-data rejected: g1 owns path and gps-a is fresh'
+    )
+
+    // After gps-a goes silent past timeout, derived-data still loses
+    // to gps-b (group rank-2) under the existing fallback rule, but
+    // also loses to its own LOWESTPRECEDENCE timeout vs nobody.
+    r = toPreferred(makeDelta('gps-b', PATH, 2), new Date(t + 6000), 'self')
+    assert(accepted(r), 'gps-b takes over after gps-a timeout')
+
+    // derived-data (unconfigured) still rejected — gps-b is now fresh.
+    r = toPreferred(
+      makeDelta('derived-data', PATH, 100),
+      new Date(t + 6100),
+      'self'
+    )
+    assert(!accepted(r), 'derived-data still rejected: gps-b is fresh')
+  })
+
+  it('unconfigured source on uncovered path still passes through', () => {
+    // Negative case: a path NEVER touched by any group source must
+    // not be claimed by any group, so unconfigured sources keep
+    // working as today.
+    const groups: PriorityGroupConfig[] = [
+      { id: 'g1', sources: ['gps-a', 'gps-b'] }
+    ]
+    const toPreferred = getToPreferredDelta({
+      groups,
+      fallbackMs: 5000
+    })
+    // No group source ever publishes this path — derived-data is
+    // alone here.
+    const r = toPreferred(
+      makeDelta('derived-data', 'environment.outside.pressure', 101300),
+      new Date(1000000),
+      'self'
+    )
+    assert(accepted(r), 'derived-data passthrough on uncovered path')
+  })
 })
