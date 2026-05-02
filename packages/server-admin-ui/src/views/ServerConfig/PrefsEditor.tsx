@@ -64,6 +64,17 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
   const deletePriority = useStore((s) => s.deletePriority)
   const movePriority = useStore((s) => s.movePriority)
   const setPathPriorities = useStore((s) => s.setPathPriorities)
+
+  // pathIndex passed in via props is the index in sourcePriorities[] at
+  // render time. It goes stale the moment another override is deleted
+  // — the next click on this card would otherwise reach into the wrong
+  // row. Resolve the current index from path at click time so the slice
+  // action always operates on the right entry.
+  const resolvePathIndex = (): number => {
+    const arr = useStore.getState().sourcePrioritiesData.sourcePriorities
+    const i = arr.findIndex((p) => p.path === path)
+    return i === -1 ? pathIndex : i
+  }
   const sourceStatus = useSourceStatus()
   const sourceStatusLoaded = useSourceStatusLoaded()
   const { getDisplayName } = useSourceAliases()
@@ -187,7 +198,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                         }}
                         onChange={(e) => {
                           changePriority(
-                            pathIndex,
+                            resolvePathIndex(),
                             index,
                             e?.value || '',
                             timeout
@@ -226,7 +237,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       disabled={isDisabled}
                       onChange={(e) =>
                         changePriority(
-                          pathIndex,
+                          resolvePathIndex(),
                           index,
                           sourceRef,
                           e.target.value
@@ -262,7 +273,12 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       } else {
                         nextTimeout = -1
                       }
-                      changePriority(pathIndex, index, sourceRef, nextTimeout)
+                      changePriority(
+                        resolvePathIndex(),
+                        index,
+                        sourceRef,
+                        nextTimeout
+                      )
                     }}
                   />
                 </td>
@@ -272,7 +288,9 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       type="button"
                       aria-label={`Move row ${index + 1} up`}
                       disabled={isSaving}
-                      onClick={() => movePriority(pathIndex, index, -1)}
+                      onClick={() =>
+                        movePriority(resolvePathIndex(), index, -1)
+                      }
                     >
                       <FontAwesomeIcon icon={faArrowUp} />
                     </button>
@@ -282,7 +300,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       type="button"
                       aria-label={`Move row ${index + 1} down`}
                       disabled={isSaving}
-                      onClick={() => movePriority(pathIndex, index, 1)}
+                      onClick={() => movePriority(resolvePathIndex(), index, 1)}
                     >
                       <FontAwesomeIcon icon={faArrowDown} />
                     </button>
@@ -301,7 +319,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                         cursor: isSaving ? 'not-allowed' : 'pointer',
                         color: 'inherit'
                       }}
-                      onClick={() => deletePriority(pathIndex, index)}
+                      onClick={() => deletePriority(resolvePathIndex(), index)}
                     >
                       <FontAwesomeIcon icon={faTrash} />
                     </button>

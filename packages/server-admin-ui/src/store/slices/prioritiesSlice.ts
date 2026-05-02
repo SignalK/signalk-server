@@ -226,9 +226,21 @@ export const createPrioritiesSlice: StateCreator<
       const tmp = prios[index]
       prios[index] = prios[target]
       prios[target] = tmp
+      // After swapping, normalise timeouts so rank-1 stays at 0 and any
+      // row that just moved out of rank-1 picks up the default fallback
+      // (it was carrying 0 only because rank-1 doesn't use a timeout).
+      // Without this the demoted source displays "0 ms" in the UI until
+      // the save handler renormalises on its way to disk.
+      const normalised = prios.map((p, i) => {
+        const t = Number(p.timeout)
+        if (i === 0) return { ...p, timeout: 0 }
+        if (t === -1) return p
+        if (t > 0) return p
+        return { ...p, timeout: DEFAULT_FALLBACK_MS }
+      })
       sourcePriorities[pathIndex] = {
         ...sourcePriorities[pathIndex],
-        priorities: prios
+        priorities: normalised
       }
 
       const allTimeoutsOk = sourcePriorities.every((pp) =>

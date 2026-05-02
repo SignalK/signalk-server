@@ -897,8 +897,16 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                             disabled={isSaving}
                             onClick={() => {
                               if (isSaving) return
+                              // Re-derive the index from current state at
+                              // click time. The render-time `index` goes
+                              // stale the moment another override is
+                              // deleted: subsequent clicks would otherwise
+                              // remove the wrong row.
+                              const currentIdx = sourcePriorities.findIndex(
+                                (p) => p.path === pp.path
+                              )
                               removePriorityOverride(pp.path)
-                              deletePath(index)
+                              if (currentIdx !== -1) deletePath(currentIdx)
                             }}
                           >
                             <FontAwesomeIcon icon={faTrash} />

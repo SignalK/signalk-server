@@ -523,14 +523,20 @@ export function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
   // Always overwrite priorities.json — when the user resets all priority
   // state, the in-memory `priorities` is `{}` and the file must be cleared
   // too, otherwise stale entries from a previous save reload on next start.
-  const tasks: Promise<void>[] = [
-    atomicWriteFile(
-      getSettingsFilename(app),
-      JSON.stringify(settingsWithoutPriorities, null, 2)
-    ),
-    writePrioritiesFile(app, priorities)
-  ]
-  Promise.all(tasks)
+  //
+  // Sequence the writes (priorities first, then settings) so that if the
+  // priorities write fails, settings.json is left untouched — on restart
+  // the loader still has legacy priority keys to fold back in. If the
+  // settings write fails after priorities succeeded, only the
+  // non-priority slice is stale, which is the safer half: the engine
+  // keeps using the just-saved priorities.json on next load.
+  writePrioritiesFile(app, priorities)
+    .then(() =>
+      atomicWriteFile(
+        getSettingsFilename(app),
+        JSON.stringify(settingsWithoutPriorities, null, 2)
+      )
+    )
     .then(() => cb())
     .catch(cb)
 }
