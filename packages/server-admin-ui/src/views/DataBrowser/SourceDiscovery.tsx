@@ -1957,6 +1957,15 @@ const DataInstanceRow: React.FC<{
   const [saveResult, setSaveResult] = useState<'ok' | 'fail' | null>(null)
   const sourceChanged = editSource !== savedSource
 
+  // Verify-poll guard: prevents setState after the row unmounts mid-poll
+  // (e.g. user navigates away during the 8s verification).
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
   useEffect(() => {
     if (saveResult === null) return
     const t = setTimeout(() => setSaveResult(null), 3000)
@@ -1997,6 +2006,62 @@ const DataInstanceRow: React.FC<{
     )
   }
 
+  // Verify the device actually accepted the write by re-running
+  // discovery and checking the returned instance/source matches what
+  // we asked for. /n2kDiscoverInstances listens for ~6s before
+  // responding, so each poll attempt takes that long; allow up to two
+  // discovery cycles (~14s) before giving up. Without this, an
+  // accepted-by-the-server-but-rejected-by-the-bus-device write would
+  // silently report success.
+  //
+  // /signalk/v1/api/sources doesn't surface per-PGN instance +
+  // source-enum, so InlineInstanceCell's faster sources-poll cannot
+  // be reused here.
+  const VERIFY_TIMEOUT_DISCOVERY_MS = 14000
+  const verifyChange = (
+    expected: { instance?: number; sourceEnum?: number },
+    onSuccess: () => void
+  ) => {
+    const deadline = Date.now() + VERIFY_TIMEOUT_DISCOVERY_MS
+    const poll = () => {
+      if (!isMountedRef.current) return
+      fetch(
+        `${window.serverRoutesPrefix}/n2kDiscoverInstances?src=${encodeURIComponent(String(device.src))}&sourceRef=${encodeURIComponent(device.sourceRef)}`,
+        { credentials: 'include' }
+      )
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+        .then((data: DiscoverResult) => {
+          if (!isMountedRef.current) return
+          const matched = data.instances?.some(
+            (di) =>
+              di.pgn === inst.pgn &&
+              (expected.instance === undefined ||
+                di.instance === expected.instance) &&
+              (expected.sourceEnum === undefined ||
+                di.sourceEnum === expected.sourceEnum)
+          )
+          if (matched) {
+            setSaveResult('ok')
+            setIsSaving(false)
+            onSuccess()
+          } else if (Date.now() < deadline) {
+            // Discovery just used 6s of our budget; poll again
+            // immediately rather than adding a fixed interval.
+            poll()
+          } else {
+            setSaveResult('fail')
+            setIsSaving(false)
+          }
+        })
+        .catch(() => {
+          if (!isMountedRef.current) return
+          setSaveResult('fail')
+          setIsSaving(false)
+        })
+    }
+    poll()
+  }
+
   const handleSaveInstance = () => {
     const num = Number(editInstance)
     if (isNaN(num) || num < 0 || num > 252) return
@@ -2016,11 +2081,12 @@ const DataInstanceRow: React.FC<{
     })
       .then((res) => {
         if (!res.ok) throw new Error()
-        setSaveResult('ok')
-        setIsSaving(false)
-        setEditInstance('')
+        verifyChange({ instance: num }, () => {
+          setEditInstance('')
+        })
       })
       .catch(() => {
+        if (!isMountedRef.current) return
         setSaveResult('fail')
         setIsSaving(false)
       })
@@ -2047,11 +2113,12 @@ const DataInstanceRow: React.FC<{
     })
       .then((res) => {
         if (!res.ok) throw new Error()
-        setSaveResult('ok')
-        setIsSaving(false)
-        setSavedSource(editSource)
+        verifyChange({ sourceEnum: num }, () => {
+          setSavedSource(editSource)
+        })
       })
       .catch(() => {
+        if (!isMountedRef.current) return
         setSaveResult('fail')
         setIsSaving(false)
       })
@@ -2205,6 +2272,27 @@ const InlineTextField: React.FC<{
   const [isSaving, setIsSaving] = useState(false)
   const [saveResult, setSaveResult] = useState<'ok' | 'fail' | null>(null)
 
+  // Verify-poll guard: prevents setState calls after the field unmounts
+  // mid-poll (the verification window can be ~8s). Also tracks any
+  // in-flight refresh timers so they get cleared on unmount.
+  const isMountedRef = useRef(true)
+  const refreshTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      for (const t of refreshTimersRef.current) clearTimeout(t)
+      refreshTimersRef.current.clear()
+    }
+  }, [])
+  const scheduleRefresh = (delay: number, fn: () => void) => {
+    const t = setTimeout(() => {
+      refreshTimersRef.current.delete(t)
+      if (!isMountedRef.current) return
+      fn()
+    }, delay)
+    refreshTimersRef.current.add(t)
+  }
+
   // Sync editValue from props via effect when the upstream value changes
   // and we are not in the middle of a save. Setting state during render is
   // tolerated by React 18+ but causes an extra render; the effect makes
@@ -2256,9 +2344,11 @@ const InlineTextField: React.FC<{
         // Poll sources API to verify the device accepted the change
         const deadline = Date.now() + VERIFY_TIMEOUT_MS
         const poll = () => {
+          if (!isMountedRef.current) return
           fetch('/signalk/v1/api/sources', { credentials: 'include' })
             .then((r) => r.json())
             .then((data) => {
+              if (!isMountedRef.current) return
               useStore.getState().setSourcesData(data)
               const updated = extractN2kDevices(data).find(
                 (d) => d.sourceRef === device.sourceRef
@@ -2268,24 +2358,28 @@ const InlineTextField: React.FC<{
                 setIsSaving(false)
                 setEditValue(updated[field] || '')
                 // Schedule extra refreshes to catch sibling field changes
-                // (e.g. device updates desc2 in response to desc1 write)
-                setTimeout(refreshSources, 2000)
-                setTimeout(refreshSources, 4000)
+                // (e.g. device updates desc2 in response to desc1 write).
+                // scheduleRefresh tracks the timer so it's cleared on
+                // unmount.
+                scheduleRefresh(2000, refreshSources)
+                scheduleRefresh(4000, refreshSources)
               } else if (Date.now() < deadline) {
-                setTimeout(poll, VERIFY_INTERVAL_MS)
+                scheduleRefresh(VERIFY_INTERVAL_MS, poll)
               } else {
                 setSaveResult('fail')
                 setIsSaving(false)
               }
             })
             .catch(() => {
+              if (!isMountedRef.current) return
               setSaveResult('fail')
               setIsSaving(false)
             })
         }
-        setTimeout(poll, VERIFY_INTERVAL_MS)
+        scheduleRefresh(VERIFY_INTERVAL_MS, poll)
       })
       .catch(() => {
+        if (!isMountedRef.current) return
         setSaveResult('fail')
         setIsSaving(false)
       })

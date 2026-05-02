@@ -27,6 +27,28 @@ interface Provider {
   [key: string]: unknown
 }
 
+// Walk the provider's pipeElements and strip the client-only `_key`
+// from any N2K filter row before save. The server-side N2kFilter type
+// only knows about source/pgn; an extra _key field would persist
+// indefinitely in settings.json otherwise.
+function stripFilterKeys(provider: Provider): void {
+  const elements = provider.pipeElements
+  if (!Array.isArray(elements)) return
+  for (const el of elements) {
+    const opts = (el as { options?: { subOptions?: Record<string, unknown> } })
+      ?.options
+    const subOpts = opts?.subOptions
+    if (!subOpts || !Array.isArray(subOpts.filters)) continue
+    subOpts.filters = (subOpts.filters as Array<Record<string, unknown>>).map(
+      (f) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { _key, ...rest } = f
+        return rest
+      }
+    )
+  }
+}
+
 const ProvidersConfiguration: React.FC = () => {
   const params = useParams<{ providerId?: string }>()
   const navigate = useNavigate()
@@ -178,8 +200,13 @@ const ProvidersConfiguration: React.FC = () => {
 
     const isNew = selectedProvider.isNew
     const wasDiscovered = selectedProvider.wasDiscovered
-    const providerToSave = { ...selectedProvider }
+    const providerToSave = structuredClone(selectedProvider)
     delete providerToSave.json
+    // Strip the client-only React-key tag from N2K filter rows so it
+    // doesn't bleed into the persisted settings.json. The server's
+    // N2kFilter type only declares source/pgn; an extra _key field
+    // would round-trip but is meaningless to the engine.
+    stripFilterKeys(providerToSave)
 
     const id = selectedProvider.originalId
 

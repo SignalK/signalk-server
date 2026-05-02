@@ -10,7 +10,19 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
 interface N2KFilter {
   source: string
   pgn: string
+  /**
+   * Client-only stable id for React keys. Not persisted to the server —
+   * stripped before save in BasicProvider. Without this, deleting a row
+   * with index-based keys would shuffle subsequent rows' input state.
+   */
+  _key?: string
 }
+
+let filterKeyCounter = 0
+const newKey = () => `n2kf-${++filterKeyCounter}`
+
+const ensureKey = (filter: N2KFilter): N2KFilter =>
+  filter._key ? filter : { ...filter, _key: newKey() }
 
 interface ProviderOptions {
   filtersEnabled?: boolean
@@ -41,7 +53,7 @@ interface N2KFiltersProps {
 }
 
 export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
-  const filters = value.options.filters ?? []
+  const filters = (value.options.filters ?? []).map(ensureKey)
 
   const handleFilterFieldChange = (
     index: number,
@@ -75,7 +87,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
   }
 
   const handleAddFilter = () => {
-    const updatedFilters = [...filters, { source: '', pgn: '' }]
+    const updatedFilters = [...filters, { source: '', pgn: '', _key: newKey() }]
     onChange({
       target: { name: 'options.filters', value: updatedFilters }
     })
@@ -121,7 +133,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
               <tbody>
                 {filters.map((filter, index) => {
                   return (
-                    <tr key={index}>
+                    <tr key={filter._key ?? index}>
                       <td>
                         <Form.Control
                           type="text"
