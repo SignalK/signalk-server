@@ -813,6 +813,31 @@ function isValidUpdate(update: unknown): update is Partial<Update> {
   return true
 }
 
+const SELF_DATA_DEEP_KEYS: { [path: string]: Set<string> } = {
+  '': new Set(['name', 'mmsi'])
+}
+
+const SELF_DATA_FILTERED_PATHS = new Set<string>([
+  'design.aisShipType',
+  'design.beam',
+  'design.length',
+  'design.draft',
+  'sensors.gps.fromBow',
+  'sensors.gps.fromCenter'
+])
+
+const COMMUNICATION_FILTERED_KEYS = new Set<string>(['callsignVhf'])
+
+function omitKeys(obj: any, exclude: Set<string>) {
+  const res: { [key: string]: any } = {}
+  for (const k of Object.keys(obj)) {
+    if (!exclude.has(k)) {
+      res[k] = obj[k]
+    }
+  }
+  return res
+}
+
 function filterStaticSelfData(delta: any, selfContext: string) {
   if (delta.context === selfContext) {
     delta.updates &&
@@ -835,39 +860,16 @@ function filterStaticSelfData(delta: any, selfContext: string) {
 }
 
 function filterSelfDataKP(pathValue: any) {
-  const deepKeys: { [key: string]: string[] } = {
-    '': ['name', 'mmsi']
-  }
-
-  const filteredPaths: string[] = [
-    'design.aisShipType',
-    'design.beam',
-    'design.length',
-    'design.draft',
-    'sensors.gps.fromBow',
-    'sensors.gps.fromCenter'
-  ]
-
-  const deep = deepKeys[pathValue.path]
-
-  const filterValues = (obj: any, items: string[]) => {
-    const res: { [key: string]: any } = {}
-    Object.keys(obj).forEach((k) => {
-      if (!items.includes(k)) {
-        res[k] = obj[k]
-      }
-    })
-    return res
-  }
+  const deep = SELF_DATA_DEEP_KEYS[pathValue.path]
 
   if (deep !== undefined) {
-    if (Object.keys(pathValue.value).some((k) => deep.includes(k))) {
-      pathValue.value = filterValues(pathValue.value, deep)
+    if (Object.keys(pathValue.value).some((k) => deep.has(k))) {
+      pathValue.value = omitKeys(pathValue.value, deep)
     }
     if (pathValue.path === '' && pathValue.value.communication !== undefined) {
-      pathValue.value.communication = filterValues(
+      pathValue.value.communication = omitKeys(
         pathValue.value.communication,
-        ['callsignVhf']
+        COMMUNICATION_FILTERED_KEYS
       )
       if (Object.keys(pathValue.value.communication).length === 0) {
         delete pathValue.value.communication
@@ -876,7 +878,7 @@ function filterSelfDataKP(pathValue: any) {
     if (Object.keys(pathValue.value).length === 0) {
       return null
     }
-  } else if (filteredPaths.includes(pathValue.path)) {
+  } else if (SELF_DATA_FILTERED_PATHS.has(pathValue.path)) {
     return null
   }
   return pathValue
