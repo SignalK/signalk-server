@@ -1,5 +1,12 @@
-import { useState, useEffect, useMemo, useDeferredValue } from 'react'
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useDeferredValue,
+  useCallback
+} from 'react'
 import Badge from 'react-bootstrap/Badge'
+import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
@@ -60,15 +67,28 @@ export default function PathReference() {
   const [groupFilter, setGroupFilter] = useState<string>('all')
   const [expandedPath, setExpandedPath] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetch(`${window.serverRoutesPrefix}/paths`, { credentials: 'include' })
+  const loadMeta = useCallback((signal?: AbortSignal) => {
+    setError(null)
+    return fetch(`${window.serverRoutesPrefix}/paths`, {
+      credentials: 'include',
+      signal
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
       .then((data: AllMetadata) => setAllMeta(data))
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        if (err.name === 'AbortError') return
+        setError(err.message)
+      })
   }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    loadMeta(controller.signal)
+    return () => controller.abort()
+  }, [loadMeta])
 
   // Show /vessels/* paths plus the root-level entries the registry
   // currently carries (/self, /version, /resources/*). The same vessel
@@ -121,6 +141,9 @@ export default function PathReference() {
           <p style={{ color: '#e74c3c' }}>
             Failed to load path metadata: {error}
           </p>
+          <Button variant="primary" size="sm" onClick={() => loadMeta()}>
+            Retry
+          </Button>
         </Card.Body>
       </Card>
     )

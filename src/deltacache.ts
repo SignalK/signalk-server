@@ -19,8 +19,9 @@ import { createDebug } from './debug'
 const debug = createDebug('signalk-server:deltacache')
 import { FullSignalK, getSourceId } from '@signalk/server-api'
 import _, { isUndefined } from 'lodash'
-import { readFileSync, writeFile } from 'fs'
+import { readFileSync } from 'fs'
 import { join } from 'path'
+import { atomicWriteFile } from './atomicWrite'
 import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
 import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
@@ -576,17 +577,15 @@ export default class DeltaCache {
       return
     }
     const data = JSON.stringify(this.sourceDeltas, null, 2)
-    writeFile(cachePath, data, (err) => {
-      if (err) {
-        debug('Failed to save sources cache: %s', err.message)
-      } else {
+    atomicWriteFile(cachePath, data).then(
+      () =>
         debug(
           'Saved %d sources to %s',
           Object.keys(this.sourceDeltas).length,
           cachePath
-        )
-      }
-    })
+        ),
+      (err) => debug('Failed to save sources cache: %s', err.message)
+    )
   }
 
   deleteContext(contextKey: string) {

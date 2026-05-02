@@ -383,29 +383,38 @@ describe('Deltacache', () => {
           values: [{ path: fanOutPath, value: 7 }]
         }
       ]
-    }).then(() => {
-      // Stamp the fan-out marker into the running config (simulates
-      // a save from the admin UI).
-      const settings = theServer.app.config.settings
-      if (!settings.priorityOverrides) settings.priorityOverrides = {}
-      settings.priorityOverrides[fanOutPath] = [{ sourceRef: '*', timeout: 0 }]
-      // Prime a priority group that lists the live publisher so the
-      // fan-out branch can find the matching group and inject all
-      // its sources as publishers, anchoring the path back to the
-      // group.
-      settings.priorityGroups = [
-        {
-          id: 'fanout.test.group',
-          sources: ['fanout.solo', 'fanout.partner']
-        }
-      ]
-      const paths = theServer.app.deltaCache.getMultiSourcePaths()
-      paths.should.have.property(fanOutPath)
-      paths[fanOutPath].should.include('fanout.solo')
-      paths[fanOutPath].should.include('fanout.partner')
-      // Cleanup so subsequent tests start from a clean slate.
-      delete settings.priorityOverrides[fanOutPath]
-      delete settings.priorityGroups
     })
+      .then(() => {
+        // Stamp the fan-out marker into the running config (simulates
+        // a save from the admin UI).
+        const settings = theServer.app.config.settings
+        if (!settings.priorityOverrides) settings.priorityOverrides = {}
+        settings.priorityOverrides[fanOutPath] = [
+          { sourceRef: '*', timeout: 0 }
+        ]
+        // Prime a priority group that lists the live publisher so the
+        // fan-out branch can find the matching group and inject all
+        // its sources as publishers, anchoring the path back to the
+        // group.
+        settings.priorityGroups = [
+          {
+            id: 'fanout.test.group',
+            sources: ['fanout.solo', 'fanout.partner']
+          }
+        ]
+        const paths = theServer.app.deltaCache.getMultiSourcePaths()
+        paths.should.have.property(fanOutPath)
+        paths[fanOutPath].should.include('fanout.solo')
+        paths[fanOutPath].should.include('fanout.partner')
+      })
+      .finally(() => {
+        // Always restore so a failing assertion doesn't leak state to
+        // subsequent tests.
+        const settings = theServer.app.config.settings
+        if (settings.priorityOverrides) {
+          delete settings.priorityOverrides[fanOutPath]
+        }
+        delete settings.priorityGroups
+      })
   })
 })

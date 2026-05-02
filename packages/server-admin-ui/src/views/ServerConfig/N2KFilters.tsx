@@ -1,4 +1,4 @@
-import { ChangeEvent } from 'react'
+import { ChangeEvent, useMemo } from 'react'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Form from 'react-bootstrap/Form'
@@ -21,8 +21,19 @@ interface N2KFilter {
 let filterKeyCounter = 0
 const newKey = () => `n2kf-${++filterKeyCounter}`
 
-const ensureKey = (filter: N2KFilter): N2KFilter =>
-  filter._key ? filter : { ...filter, _key: newKey() }
+// Filters loaded from the server arrive without _key. Assign keys lazily
+// and cache by object identity so the same filter object keeps its key
+// across re-renders and re-derivations of the filters array.
+const keyByFilter = new WeakMap<N2KFilter, string>()
+const ensureKey = (filter: N2KFilter): N2KFilter => {
+  if (filter._key) return filter
+  let key = keyByFilter.get(filter)
+  if (!key) {
+    key = newKey()
+    keyByFilter.set(filter, key)
+  }
+  return { ...filter, _key: key }
+}
 
 interface ProviderOptions {
   filtersEnabled?: boolean
@@ -53,7 +64,8 @@ interface N2KFiltersProps {
 }
 
 export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
-  const filters = (value.options.filters ?? []).map(ensureKey)
+  const rawFilters = value.options.filters ?? []
+  const filters = useMemo(() => rawFilters.map(ensureKey), [rawFilters])
 
   const handleFilterFieldChange = (
     index: number,

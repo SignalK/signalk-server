@@ -31,19 +31,24 @@ export interface DeviceIdentity {
 const CAN_NAME = /^[0-9a-f]{16}$/i
 
 export function buildDeviceIdentities(sources: SourcesTree): DeviceIdentity[] {
-  const byCanName = new Map<string, DeviceIdentity>()
+  // Build with Sets for O(1) sourceRef dedup, then materialise to arrays
+  // at the end so the public type stays `string[]`.
+  type Building = Omit<DeviceIdentity, 'sourceRefs'> & {
+    sourceRefs: Set<string>
+  }
+  const byCanName = new Map<string, Building>()
 
-  const ensure = (canName: string): DeviceIdentity => {
+  const ensure = (canName: string): Building => {
     let d = byCanName.get(canName)
     if (!d) {
-      d = { canName, sourceRefs: [] }
+      d = { canName, sourceRefs: new Set() }
       byCanName.set(canName, d)
     }
     return d
   }
 
   const recordIdentity = (
-    d: DeviceIdentity,
+    d: Building,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     n2k: Record<string, any> | undefined
   ) => {
@@ -91,20 +96,15 @@ export function buildDeviceIdentities(sources: SourcesTree): DeviceIdentity[] {
       // "YDEN02.c0788c00e7e04312") depending on useCanName and on which
       // form the delta emitter picked for $source. Expose both so the UI
       // can recognise either form as the same device.
-      const refs: string[] = [`${label}.${subKey}`]
+      d.sourceRefs.add(`${label}.${subKey}`)
       if (subKey !== canName) {
-        refs.push(`${label}.${canName}`)
-      }
-      for (const ref of refs) {
-        if (!d.sourceRefs.includes(ref)) {
-          d.sourceRefs.push(ref)
-        }
+        d.sourceRefs.add(`${label}.${canName}`)
       }
       recordIdentity(d, n2k)
     }
   }
 
-  return [...byCanName.values()].sort((a, b) =>
-    a.canName.localeCompare(b.canName)
-  )
+  return [...byCanName.values()]
+    .map((d) => ({ ...d, sourceRefs: [...d.sourceRefs] }))
+    .sort((a, b) => a.canName.localeCompare(b.canName))
 }

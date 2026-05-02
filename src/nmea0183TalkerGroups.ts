@@ -17,9 +17,12 @@ interface PipedProviderConfig {
   [key: string]: unknown
 }
 
+// Group names are normalised to lowercase to match the admin UI, so that
+// manual settings.json edits with mixed case still match canonical group ids.
 export function buildTalkerLookup(groups: TalkerGroups): TalkerLookup {
   const lookup = new Map<string, string>()
-  for (const [groupName, talkers] of Object.entries(groups)) {
+  for (const [rawGroupName, talkers] of Object.entries(groups)) {
+    const groupName = rawGroupName.trim().toLowerCase()
     for (const talker of talkers) {
       const existing = lookup.get(talker)
       if (existing && existing !== groupName) {

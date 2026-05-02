@@ -22,6 +22,7 @@ const getSignalkData = () => useStore.getState().signalkData
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
+const SOURCES_FETCH_TIMEOUT_MS = 10_000
 
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
 const contextStorageKey = 'admin.v1.dataBrowser.context'
@@ -103,16 +104,23 @@ export function useSignalKData() {
   const loadSources = useCallback(async (): Promise<{
     raw: SourcesData
   }> => {
-    const response = await fetch(`/signalk/v1/api/sources`, {
-      credentials: 'include'
-    })
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load /signalk/v1/api/sources: ${response.status} ${response.statusText}`
-      )
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), SOURCES_FETCH_TIMEOUT_MS)
+    try {
+      const response = await fetch(`/signalk/v1/api/sources`, {
+        credentials: 'include',
+        signal: controller.signal
+      })
+      if (!response.ok) {
+        throw new Error(
+          `Failed to load /signalk/v1/api/sources: ${response.status} ${response.statusText}`
+        )
+      }
+      const sourcesData = (await response.json()) as SourcesData
+      return { raw: sourcesData }
+    } finally {
+      clearTimeout(timer)
     }
-    const sourcesData = (await response.json()) as SourcesData
-    return { raw: sourcesData }
   }, [])
 
   const handleMessage = useCallback(

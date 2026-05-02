@@ -128,9 +128,21 @@ function labelsFilePath(app: N2kDiscoveryApp): string {
 }
 
 function loadLabels(app: N2kDiscoveryApp): ChannelLabels {
+  const filePath = labelsFilePath(app)
+  let content: string
   try {
-    return JSON.parse(fs.readFileSync(labelsFilePath(app), 'utf-8'))
-  } catch {
+    content = fs.readFileSync(filePath, 'utf-8')
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return {}
+    }
+    debug('Failed to read %s: %s', filePath, (err as Error).message)
+    return {}
+  }
+  try {
+    return JSON.parse(content)
+  } catch (err) {
+    debug('Malformed JSON in %s: %s', filePath, (err as Error).message)
     return {}
   }
 }

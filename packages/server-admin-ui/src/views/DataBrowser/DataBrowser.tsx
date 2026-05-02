@@ -454,27 +454,33 @@ const DataBrowser: React.FC = () => {
     if (!sourceFilter) return
     if (!sourcePrioritiesLoaded) return
     if (liveWinnerByPath.size === 0) return
-    const data = getSignalkData()
-    for (const ctx of Object.keys(data)) {
-      const contextData = data[ctx]
-      const winnersForCtx =
-        liveWinnerByPath.get(ctx) ??
-        (skSelf && ctx === skSelf ? liveWinnerByPath.get('self') : undefined)
-      if (!winnersForCtx || winnersForCtx.size === 0) continue
-      for (const key of Object.keys(contextData)) {
-        const path = getPathFromKey(key)
-        const preferred = winnersForCtx.get(path)
-        if (!preferred) continue
-        // Fan-out paths from priorityOverrides accept every source by
-        // design — never prune them. The override map gives the cheapest
-        // signal: an entry of '*' means fan-out.
-        if (preferredSourceByPath.get(path) === '*') continue
-        const src = contextData[key]?.$source
-        if (src && canonicaliseSourceRef(src, rawSourcesData) !== preferred) {
-          removePath(ctx, key)
+    // Coalesce bursts of LIVEPREFERREDSOURCES updates into one prune pass
+    // per animation frame — on a busy server winners can re-emit dozens
+    // of times per second and the inner Object.keys traversal is O(paths).
+    const handle = requestAnimationFrame(() => {
+      const data = getSignalkData()
+      for (const ctx of Object.keys(data)) {
+        const contextData = data[ctx]
+        const winnersForCtx =
+          liveWinnerByPath.get(ctx) ??
+          (skSelf && ctx === skSelf ? liveWinnerByPath.get('self') : undefined)
+        if (!winnersForCtx || winnersForCtx.size === 0) continue
+        for (const key of Object.keys(contextData)) {
+          const path = getPathFromKey(key)
+          const preferred = winnersForCtx.get(path)
+          if (!preferred) continue
+          // Fan-out paths from priorityOverrides accept every source by
+          // design — never prune them. The override map gives the cheapest
+          // signal: an entry of '*' means fan-out.
+          if (preferredSourceByPath.get(path) === '*') continue
+          const src = contextData[key]?.$source
+          if (src && canonicaliseSourceRef(src, rawSourcesData) !== preferred) {
+            removePath(ctx, key)
+          }
         }
       }
-    }
+    })
+    return () => cancelAnimationFrame(handle)
   }, [
     sourceFilter,
     sourcePrioritiesLoaded,
