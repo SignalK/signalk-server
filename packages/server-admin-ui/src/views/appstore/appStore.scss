@@ -25,21 +25,36 @@
     align-items: center;
     flex-wrap: wrap;
 
+    // Whenever the header wraps (title takes one line, action controls
+    // the next), give the rows breathing room. Without this the wrapped
+    // controls row sits directly under the All/Installed/Updates buttons
+    // and the dropdown/icons/search look glued to them.
+    row-gap: 12px;
+
     @media (max-width: 768px) {
       flex-direction: column;
+      align-items: stretch;
+      row-gap: 16px;
 
       .title__container {
         width: 100%;
         justify-content: space-between;
-        margin-bottom: 10px;
+
+        // The All / Installed / Updates row needs enough room when the
+        // title and the buttons can't fit on one line at narrower widths.
+        flex-wrap: wrap;
+        row-gap: 8px;
+        margin-bottom: 0;
       }
 
       .action__container {
         width: 100%;
         flex-direction: row-reverse;
+        flex-wrap: wrap;
+        row-gap: 8px;
 
         .search {
-          min-width: none;
+          min-width: 0;
           justify-self: flex-start;
         }
       }
@@ -78,6 +93,19 @@
 
       button {
         margin: 0 5px;
+      }
+
+      // Buttons inside a ButtonGroup must stay edge-to-edge so Bootstrap's
+      // joined-pill look reads as one unit (grid/list view toggle); the
+      // generic margin above would otherwise split them with 10px gaps.
+      // The group itself keeps the same outer 5px spacing as a standalone
+      // button so it stays separated from the sort dropdown / search.
+      .btn-group {
+        margin: 0 5px;
+
+        .btn {
+          margin: 0;
+        }
       }
 
       .search {
@@ -122,19 +150,35 @@
     }
 
     .cell-action {
+      // The action cell aims for 160px so Install/Update + split toggle
+      // sit comfortably side by side, but it must shrink rather than
+      // overflow when the card column is narrower (e.g. 2-column grid
+      // at tablet widths). max-width: 100% keeps the inner ButtonGroup
+      // bounded by the parent footer cell instead of escaping it.
       width: 160px;
-      min-width: 160px;
+      max-width: 100%;
 
       // Connect the main button and split-toggle into one visual unit
       .btn-group {
+        max-width: 100%;
+
         > .btn:first-child {
           border-top-right-radius: 0;
           border-bottom-right-radius: 0;
           flex: 1 1 auto;
+
+          // Allow the label to truncate gracefully when the cell shrinks
+          // below its natural size, rather than forcing the whole group
+          // out of the card.
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         > .dropdown-toggle-split {
           border-top-left-radius: 0;
           border-bottom-left-radius: 0;
+          flex-shrink: 0;
         }
       }
 
@@ -151,6 +195,389 @@
       .progress__bar {
         width: 100%;
       }
+    }
+  }
+}
+
+.appstore__sort {
+  max-width: 180px;
+}
+
+.appstore__deprecated-toggle {
+  margin: 6px 0 14px 2px;
+}
+
+.plugin-card {
+  border: 1px solid #dee2e6;
+  transition: box-shadow 0.15s;
+}
+
+.plugin-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.plugin-card__title {
+  font-size: 1rem;
+  font-weight: 600;
+
+  // Long unbreakable npm package names (e.g. @marineyachtradar/signalk-plugin)
+  // would otherwise force the title block wider than its container, squeezing
+  // the score-ring stats column. overflow-wrap: anywhere lets the browser
+  // break inside the token at any glyph when needed.
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.plugin-card__author {
+  font-size: 0.8rem;
+}
+
+.plugin-card__description {
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: #4a4a4a;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.plugin-card__badge {
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+}
+
+.plugin-card__stats {
+  width: 56px;
+  min-width: 56px;
+  border-left: 1px solid #e4e7ea;
+  margin-left: 12px;
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-family: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.plugin-card__metric {
+  line-height: 1.1;
+}
+
+.plugin-card__star {
+  color: #f8cb00;
+  margin-right: 1px;
+}
+
+.plugin-card__action {
+  // No fixed/min width — the inner .cell-action targets 160px and
+  // shrinks to fit when the card column is narrower (2-col grid at
+  // tablet widths). Forcing min-width here would re-introduce overflow
+  // by reserving more space than the footer can give.
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.plugin-row {
+  background: #fff;
+  transition: background 0.1s;
+  padding: 8px 12px;
+
+  // Narrow layout (< md): two visual lines.
+  // Line 1: icon + title/badges/desc on the left, action button on the right
+  // Line 2: author / category / version indented under the title
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'title   action'
+    'meta    meta';
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: center;
+}
+
+.plugin-row:hover {
+  background: #f8f9fa;
+}
+
+.plugin-row__title-line {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.plugin-row__title-block {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.plugin-row__meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  // Line up under the title text: 28px icon + 12px column gap = 40px.
+  margin-left: 40px;
+}
+
+.plugin-row__action-slot {
+  grid-area: action;
+  min-width: 160px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+// md+ (>= 768px): collapse to a single dense row for classic desktop
+// density. Same grid, just one template row with three columns.
+@media (min-width: 768px) {
+  .plugin-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: 'title meta action';
+    padding: 6px 12px;
+    row-gap: 0;
+  }
+  .plugin-row__meta {
+    margin-left: 0;
+  }
+}
+
+.plugin-row__badge {
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+}
+
+.plugin-row__desc {
+  max-width: 40ch;
+}
+
+.plugin-list {
+  border: 1px solid #e4e7ea;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.plugin-detail {
+  &__typedot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4dbd74;
+
+    &.is-webapp {
+      background: #20a8d8;
+    }
+  }
+
+  &__deps {
+    margin-top: 16px;
+  }
+
+  &__dep-card {
+    background: #f0f3f5;
+    border: 1px solid #e4e7ea;
+    border-radius: 6px;
+    padding: 6px 10px;
+    min-width: 180px;
+    max-width: 260px;
+    color: #23282c;
+
+    &:hover {
+      background: #e4e7ea;
+    }
+  }
+
+  &__dep-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  &__markdown {
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    pre {
+      background: #f0f3f5;
+      padding: 8px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    code {
+      background: #f0f3f5;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    pre code {
+      background: transparent;
+      padding: 0;
+    }
+  }
+
+  &__screenshots {
+    .plugin-detail__screenshot {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+    }
+  }
+
+  &__no-screenshots {
+    border-top: 1px solid #e4e7ea;
+    padding-top: 16px;
+  }
+
+  &__checks {
+    margin: 0;
+  }
+
+  &__changelog-feat {
+    color: #1e7e34;
+    font-weight: 600;
+  }
+
+  &__changelog-fix {
+    color: #117a8b;
+    font-weight: 600;
+  }
+
+  &__changelog-breaking {
+    color: #c82333;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  // Button reset: screenshots are <button> now instead of <a target="_blank">
+  // so clicks open the lightbox. The button should look like a plain image.
+  &__screenshot-button {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: zoom-in;
+    display: block;
+    width: 100%;
+
+    img {
+      transition: transform 0.12s ease;
+      width: 100%;
+    }
+
+    &:hover img {
+      transform: scale(1.01);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #20a8d8;
+      outline-offset: 2px;
+    }
+  }
+
+  &__lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    z-index: 1080; // above bootstrap modals (1050) and toasts (1055)
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 60px;
+    cursor: zoom-out;
+  }
+
+  &__lightbox-body {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    cursor: default;
+  }
+
+  &__lightbox-img {
+    max-width: 100%;
+    max-height: calc(100vh - 120px);
+    object-fit: contain;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    background: #fff;
+  }
+
+  &__lightbox-counter {
+    color: #fff;
+    font-size: 0.9rem;
+    opacity: 0.75;
+  }
+
+  &__lightbox-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 0;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+  }
+
+  &__lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 0;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 42px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 6px; // visual centring for the chevron glyph
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+
+    &--prev {
+      left: 16px;
+    }
+
+    &--next {
+      right: 16px;
     }
   }
 }

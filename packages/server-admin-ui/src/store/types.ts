@@ -14,6 +14,7 @@ export interface AppStoreState {
   installed: AppInfo[]
   available: AppInfo[]
   installing: InstallingApp[]
+  categories?: string[]
   storeAvailable?: boolean
   canUpdateServer?: boolean
   serverUpdate?: string
@@ -25,6 +26,25 @@ export interface AppInfo {
   version?: string
   description?: string
   author?: string
+  displayName?: string
+  appIcon?: string
+  installedIconUrl?: string
+  screenshots?: string[]
+  installedScreenshotUrls?: string[]
+  official?: boolean
+  deprecated?: boolean
+  githubUrl?: string
+  issuesUrl?: string
+  requires?: string[]
+  recommends?: string[]
+  categories?: string[]
+  installedVersion?: string
+  // Synthetic fields layered on by Apps.tsx when projecting the
+  // AppStore state into a single per-row record. Optional because they
+  // exist only after that projection runs.
+  newVersion?: string
+  installed?: boolean
+  updateDisabled?: boolean
   [key: string]: unknown
 }
 

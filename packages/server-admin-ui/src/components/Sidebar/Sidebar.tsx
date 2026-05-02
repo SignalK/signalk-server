@@ -124,10 +124,21 @@ export default function Sidebar({ location }: SidebarProps) {
     ) {
       result.push(
         {
-          name: 'Appstore',
-          url: '/appstore',
+          name: 'Apps & Plugins',
+          url: '/apps',
           icon: 'icon-basket',
-          badge: updatesBadge
+          badge: updatesBadge,
+          children: [
+            {
+              name: 'Store',
+              url: '/apps/store',
+              badge: updatesBadge
+            },
+            {
+              name: 'Configuration',
+              url: '/apps/configuration/-'
+            }
+          ]
         },
         {
           name: 'Server',
@@ -141,10 +152,6 @@ export default function Sidebar({ location }: SidebarProps) {
             {
               name: 'Data Connections',
               url: '/serverConfiguration/connections/-'
-            },
-            {
-              name: 'Plugin Config',
-              url: '/serverConfiguration/plugins/-'
             },
             {
               name: 'Server Logs',

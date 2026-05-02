@@ -140,9 +140,9 @@ export default function Dashboard() {
         key={status.id}
         onClick={() => {
           navigate(
-            '/serverConfiguration/' +
-              (status.statusType === 'plugin' ? 'plugins/' : 'connections/') +
-              status.id
+            status.statusType === 'plugin'
+              ? '/apps/configuration/' + status.id
+              : '/serverConfiguration/connections/' + status.id
           )
         }}
       >
@@ -299,7 +299,7 @@ export default function Dashboard() {
 }
 
 function pluginNameLink(id: string): ReactNode {
-  return <a href={'#/serverConfiguration/plugins/' + id}>{id}</a>
+  return <a href={'#/apps/configuration/' + id}>{id}</a>
 }
 
 function providerIdLink(id: string): ReactNode {

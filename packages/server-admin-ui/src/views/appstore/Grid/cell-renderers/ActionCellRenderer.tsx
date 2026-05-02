@@ -242,7 +242,7 @@ export default function ActionCellRenderer({
               )
             ) : app.isPlugin ? (
               <NavLink
-                to={`/serverConfiguration/plugins/${app.id}`}
+                to={`/apps/configuration/${app.id}`}
                 role="button"
                 className="btn btn-light text-start"
               >
@@ -278,7 +278,7 @@ export default function ActionCellRenderer({
           <Dropdown.Menu align="end">
             {app.installed && app.newVersion && (
               <NavLink
-                to={`/serverConfiguration/plugins/${app.id}`}
+                to={`/apps/configuration/${app.id}`}
                 className="dropdown-item"
               >
                 <FontAwesomeIcon className="me-2" icon={faGear} /> Configure
