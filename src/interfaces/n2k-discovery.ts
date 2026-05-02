@@ -15,6 +15,7 @@ import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { SERVERROUTESPREFIX } from '../constants'
 import { writeSettingsFile } from '../config/config'
+import { atomicWriteFile } from '../atomicWrite'
 import {
   getAllPGNs,
   getEnumerationName,
@@ -134,8 +135,11 @@ function loadLabels(app: N2kDiscoveryApp): ChannelLabels {
   }
 }
 
-function saveLabels(app: N2kDiscoveryApp, labels: ChannelLabels): void {
-  fs.writeFileSync(labelsFilePath(app), JSON.stringify(labels, null, 2))
+async function saveLabels(
+  app: N2kDiscoveryApp,
+  labels: ChannelLabels
+): Promise<void> {
+  await atomicWriteFile(labelsFilePath(app), JSON.stringify(labels, null, 2))
 }
 
 function sendISORequest(
@@ -676,7 +680,7 @@ module.exports = (app: N2kDiscoveryApp) => {
     // Labels from PGN 130060 (read from device) take priority over local labels.
     app.put(
       `${SERVERROUTESPREFIX}/n2kChannelLabel`,
-      (req: Request, res: Response) => {
+      async (req: Request, res: Response) => {
         const { sourceRef, pgn, instance, label } = req.body as {
           sourceRef?: unknown
           pgn?: unknown
@@ -707,7 +711,17 @@ module.exports = (app: N2kDiscoveryApp) => {
         } else {
           delete labels[key]
         }
-        saveLabels(app, labels)
+        try {
+          await saveLabels(app, labels)
+        } catch (err) {
+          console.error('Failed to save channel labels:', err)
+          res.status(500).json({
+            state: 'FAILED',
+            statusCode: 500,
+            message: 'Failed to write channel labels file'
+          })
+          return
+        }
         debug('Channel label %s = %s', key, label || '(deleted)')
         res.json({ state: 'COMPLETED', statusCode: 200 })
       }
@@ -809,7 +823,7 @@ module.exports = (app: N2kDiscoveryApp) => {
 
     app.delete(
       `${SERVERROUTESPREFIX}/n2kRemoveSource`,
-      (req: Request, res: Response) => {
+      async (req: Request, res: Response) => {
         const sourceRef = req.query.sourceRef as string | undefined
         if (!sourceRef) {
           res.status(400).json({
@@ -898,7 +912,10 @@ module.exports = (app: N2kDiscoveryApp) => {
           }
         }
 
-        // Clean up channel labels (synchronous)
+        // Clean up channel labels (best-effort: a write failure here
+        // doesn't prevent the source-removal from completing — the
+        // labels file just retains stale entries that won't match any
+        // live source).
         const labels = loadLabels(app)
         const labelPrefixes = Array.from(allRefs).map((r) => r + ':')
         let labelsChanged = false
@@ -909,7 +926,14 @@ module.exports = (app: N2kDiscoveryApp) => {
           }
         }
         if (labelsChanged) {
-          saveLabels(app, labels)
+          try {
+            await saveLabels(app, labels)
+          } catch (err) {
+            debug(
+              'Failed to save channel labels during source removal: %s',
+              err
+            )
+          }
         }
 
         const respondOk = () => {

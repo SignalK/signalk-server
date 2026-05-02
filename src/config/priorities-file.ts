@@ -16,7 +16,7 @@
 
 import fs from 'fs'
 import path from 'path'
-import { atomicWriteFile } from '../atomicWrite'
+import { atomicWriteFile, atomicWriteFileSync } from '../atomicWrite'
 import { createDebug } from '../debug'
 
 const debug = createDebug('signalk-server:priorities-file')
@@ -130,7 +130,10 @@ export function migratePrioritiesIntoSeparateFile(app: MigrationApp): boolean {
   }
   const file = getPrioritiesFilePath(app)
   try {
-    fs.writeFileSync(file, JSON.stringify(present, null, 2))
+    // Sync write at boot is fine — the event loop isn't serving traffic
+    // yet. atomicWriteFileSync ensures we don't leave a half-written
+    // priorities.json behind if the process is killed mid-migration.
+    atomicWriteFileSync(file, JSON.stringify(present, null, 2))
   } catch (e) {
     console.error(`Failed to create ${PRIORITIES_FILE}:`, e)
     return false
