@@ -69,8 +69,7 @@ describe('WebSocket sourcePolicy', () => {
     const sources = deltas.map((d: Delta) => d.updates[0].$source).sort()
     expect(sources).to.deep.equal(['sensor.A', 'sensor.B'])
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(ws as any).ws.close()
+    ws.close()
   })
 
   it('default connection delivers deltas', async function () {
@@ -109,7 +108,6 @@ describe('WebSocket sourcePolicy', () => {
     expect(deltas.length).to.be.greaterThan(0)
     expect(deltas[0].updates[0]).to.have.property('$source')
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(ws as any).ws.close()
+    ws.close()
   })
 })

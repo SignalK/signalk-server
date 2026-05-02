@@ -1,10 +1,10 @@
-import assert from 'assert'
+import { expect } from 'chai'
 import { buildDeviceIdentities } from '../src/deviceIdentities'
 
 describe('buildDeviceIdentities', () => {
   it('returns an empty list when nothing identifiable is present', () => {
     const out = buildDeviceIdentities({})
-    assert.deepStrictEqual(out, [])
+    expect(out).to.deep.equal([])
   })
 
   it('picks up a CAN Name from the subKey itself (useCanName provider)', () => {
@@ -18,9 +18,9 @@ describe('buildDeviceIdentities', () => {
       }
     }
     const out = buildDeviceIdentities(sources)
-    assert.strictEqual(out.length, 1)
-    assert.strictEqual(out[0]!.canName, 'c0788c00e7e04312')
-    assert.deepStrictEqual(out[0]!.sourceRefs, ['canhat.c0788c00e7e04312'])
+    expect(out).to.have.lengthOf(1)
+    expect(out[0]!.canName).to.equal('c0788c00e7e04312')
+    expect(out[0]!.sourceRefs).to.deep.equal(['canhat.c0788c00e7e04312'])
   })
 
   it('picks up a CAN Name from n2k.canName (useCanName off)', () => {
@@ -39,14 +39,14 @@ describe('buildDeviceIdentities', () => {
       }
     }
     const out = buildDeviceIdentities(sources)
-    assert.strictEqual(out.length, 1)
-    assert.strictEqual(out[0]!.canName, 'c0788c00e7e04312')
-    assert.deepStrictEqual([...out[0]!.sourceRefs].sort(), [
+    expect(out).to.have.lengthOf(1)
+    expect(out[0]!.canName).to.equal('c0788c00e7e04312')
+    expect([...out[0]!.sourceRefs].sort()).to.deep.equal([
       'YDEN02.159',
       'YDEN02.c0788c00e7e04312'
     ])
-    assert.strictEqual(out[0]!.manufacturerCode, 'Furuno')
-    assert.strictEqual(out[0]!.modelId, 'SCX-20')
+    expect(out[0]!.manufacturerCode).to.equal('Furuno')
+    expect(out[0]!.modelId).to.equal('SCX-20')
   })
 
   it('merges two providers that see the same CAN Name under different keys', () => {
@@ -65,10 +65,10 @@ describe('buildDeviceIdentities', () => {
       }
     }
     const out = buildDeviceIdentities(sources)
-    assert.strictEqual(out.length, 1)
+    expect(out).to.have.lengthOf(1)
     // YDEN02 keeps its address ref plus gains the CAN-Name form.
     // '1' is already CAN-Name-keyed so only one form is present.
-    assert.deepStrictEqual([...out[0]!.sourceRefs].sort(), [
+    expect([...out[0]!.sourceRefs].sort()).to.deep.equal([
       '1.c0788c00e7e04312',
       'YDEN02.159',
       'YDEN02.c0788c00e7e04312'
@@ -83,7 +83,7 @@ describe('buildDeviceIdentities', () => {
         }
       }
     }
-    assert.deepStrictEqual(buildDeviceIdentities(sources), [])
+    expect(buildDeviceIdentities(sources)).to.deep.equal([])
   })
 
   it('exposes both address-keyed and CAN-Name-keyed refs for a useCanName provider', () => {
@@ -100,8 +100,8 @@ describe('buildDeviceIdentities', () => {
       }
     }
     const out = buildDeviceIdentities(sources)
-    assert.strictEqual(out.length, 1)
-    assert.deepStrictEqual([...out[0]!.sourceRefs].sort(), [
+    expect(out).to.have.lengthOf(1)
+    expect([...out[0]!.sourceRefs].sort()).to.deep.equal([
       'YDEN02.159',
       'YDEN02.c0788c00e7e04312'
     ])
@@ -115,6 +115,6 @@ describe('buildDeviceIdentities', () => {
         }
       }
     }
-    assert.deepStrictEqual(buildDeviceIdentities(sources), [])
+    expect(buildDeviceIdentities(sources)).to.deep.equal([])
   })
 })

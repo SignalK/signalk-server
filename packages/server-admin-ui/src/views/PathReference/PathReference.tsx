@@ -11,22 +11,7 @@ import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
-
-interface PathMetadataEntry {
-  description: string
-  units?: string
-  enum?: ReadonlyArray<{ id: number; name: string } | string>
-  properties?: Record<
-    string,
-    {
-      type?: string
-      description?: string
-      units?: string
-      example?: number | string
-      title?: string
-    }
-  >
-}
+import type { PathMetadataEntry } from '@signalk/path-metadata'
 
 type AllMetadata = Record<string, PathMetadataEntry>
 

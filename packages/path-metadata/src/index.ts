@@ -94,16 +94,14 @@ function buildRegexArray(
       })
     } catch (e) {
       // A bad metadata key shouldn't take the whole registry down, but
-      // it should be visible in the dev console so the typo or unescaped
-      // regex special character can be tracked down.
-      if (
-        typeof process === 'undefined' ||
-        process.env.NODE_ENV !== 'production'
-      ) {
-        console.warn(
-          `path-metadata: skipping invalid pattern for key "${key}": ${(e as Error).message}`
-        )
-      }
+      // it must be visible so the typo or unescaped regex special
+      // character can be tracked down. The check runs once at module
+      // load over a static set of keys, so warning in production is
+      // both cheap and the only way to catch a bug introduced by a
+      // future schema sync.
+      console.warn(
+        `path-metadata: skipping invalid pattern for key "${key}": ${(e as Error).message}`
+      )
     }
   }
   return result
@@ -112,9 +110,21 @@ function buildRegexArray(
 export class MetadataRegistry {
   private allMetadata: Record<string, PathMetadataEntry>
   private regexEntries: RegexEntry[]
+  private readonly seedEntries: Record<string, PathMetadataEntry>
 
   constructor(entries: Record<string, PathMetadataEntry>) {
+    this.seedEntries = entries
     this.allMetadata = { ...entries }
+    this.regexEntries = buildRegexArray(this.allMetadata)
+  }
+
+  /**
+   * Restore the registry to its construction-time state, dropping any
+   * runtime additions made via addMetaData / internalGetMetadata. Intended
+   * for test isolation; production code should not call this.
+   */
+  reset(): void {
+    this.allMetadata = { ...this.seedEntries }
     this.regexEntries = buildRegexArray(this.allMetadata)
   }
 
@@ -141,6 +151,12 @@ export class MetadataRegistry {
   internalGetMetadata(path: string): PathMetadataEntry | undefined {
     const slashPath = '/' + path.replace(/\./g, '/')
     const parts = path.split('.')
+    // Need at least context root + identity + one path segment to
+    // produce a meaningful per-path key. Anything shorter would yield
+    // keys like "/vessels/*/" that match nothing.
+    if (parts.length < 3) {
+      return undefined
+    }
     // Use wildcard key so all identities share the same cloned entry
     const key = `/${parts[0]}/*/${parts.slice(2).join('/')}`
 
@@ -190,6 +206,11 @@ export class MetadataRegistry {
     path: string,
     meta: Record<string, unknown>
   ): void {
+    // An empty path would key the entry at "/vessels/*/" (no tail) and
+    // mask every per-vessel entry under the same context root.
+    if (!path) {
+      return
+    }
     // Use wildcard key pattern so lookups with any identity match
     const root = context.split('.')[0]
     const key = `/${root}/*/${path.replace(/\./g, '/')}`

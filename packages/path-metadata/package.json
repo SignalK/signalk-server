@@ -4,6 +4,9 @@
   "description": "Signal K path metadata registry — well-known path descriptions, units, and enums",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b",
     "watch": "tsc --watch",

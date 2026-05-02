@@ -5,6 +5,12 @@ import { getMetadata, metadataRegistry } from './index'
 const self = (p: string) => `vessels.self.${p}`
 
 describe('getMetadata', () => {
+  beforeEach(() => {
+    // The registry is a module singleton; addMetaData calls below would
+    // otherwise leak state into subsequent tests.
+    metadataRegistry.reset()
+  })
+
   describe('wildcard (RegExp) entries must not match non-spec descendants', () => {
     // /vessels/*/electrical/ac/RegExp defines the shape of a named AC bus
     // (bus1, bus2, …). A plugin-invented path like
