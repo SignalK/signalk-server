@@ -444,6 +444,14 @@ const DataBrowser: React.FC = () => {
   // preferredSourceByPath.get(path) returns undefined instead of the
   // sentinel '*' that signals fan-out.
   useEffect(() => {
+    // Prune is only meaningful in "Priority filtered" mode: the user
+    // wants one row per path matching the engine's current winner, and
+    // stale per-source rows from earlier (when a different source
+    // briefly won) need to disappear. In "All sources" mode every
+    // cached source is intentional — pruning would make non-winning
+    // rows briefly appear and disappear as livePreferredSources
+    // re-emits, producing the visible flicker the user reported.
+    if (!sourceFilter) return
     if (!sourcePrioritiesLoaded) return
     if (liveWinnerByPath.size === 0) return
     const data = getSignalkData()
@@ -468,6 +476,7 @@ const DataBrowser: React.FC = () => {
       }
     }
   }, [
+    sourceFilter,
     sourcePrioritiesLoaded,
     liveWinnerByPath,
     preferredSourceByPath,
