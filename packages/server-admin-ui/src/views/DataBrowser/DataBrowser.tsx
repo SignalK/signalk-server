@@ -454,6 +454,11 @@ const DataBrowser: React.FC = () => {
     if (!sourceFilter) return
     if (!sourcePrioritiesLoaded) return
     if (liveWinnerByPath.size === 0) return
+    // Defer pruning until rawSourcesData has loaded — without it,
+    // canonicaliseSourceRef returns the raw $source unchanged while
+    // livePreferredSources is already canonical, so the comparison
+    // below would always fail and the winning row would be deleted.
+    if (!rawSourcesData) return
     // Coalesce bursts of LIVEPREFERREDSOURCES updates into one prune pass
     // per animation frame — on a busy server winners can re-emit dozens
     // of times per second and the inner Object.keys traversal is O(paths).
@@ -493,11 +498,13 @@ const DataBrowser: React.FC = () => {
 
   const liveWinnerForCurrentContext: Map<string, string> = useMemo(() => {
     if (context === 'all') {
-      // Flatten across contexts — when displaying everything we still
-      // only care about path → source for badge/dedup purposes.
+      // Flatten across contexts but keep context in the key — two
+      // vessels with the same path can have different winners, so a
+      // path-only key would silently overwrite one with the other.
+      // DataRow rebuilds the same composite key when showContext is on.
       const flat = new Map<string, string>()
-      for (const perCtx of liveWinnerByPath.values()) {
-        for (const [path, src] of perCtx) flat.set(path, src)
+      for (const [ctx, perCtx] of liveWinnerByPath) {
+        for (const [path, src] of perCtx) flat.set(`${ctx}\0${path}`, src)
       }
       return flat
     }

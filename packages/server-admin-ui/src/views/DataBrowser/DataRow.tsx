@@ -184,11 +184,15 @@ function DataRow({
   // the same identity rule the priority engine uses. Fan-out paths
   // intentionally deliver every source — no row is "the preferred",
   // so the badge would just oscillate between rows on each delta.
+  // Across-context view ("All") flattens into a single map keyed by
+  // `${context}\0${path}` — without the context two vessels with the
+  // same path would resolve to whichever winner was iterated last.
+  const preferredKey = showContext ? `${realContext}\0${path}` : path
   const isPreferred =
     !!preferredSourceByPath &&
     !!path &&
     !fanOutPaths?.has(path) &&
-    preferredSourceByPath.get(path) ===
+    preferredSourceByPath.get(preferredKey) ===
       canonicaliseSourceRef(source, sourcesData)
 
   return (

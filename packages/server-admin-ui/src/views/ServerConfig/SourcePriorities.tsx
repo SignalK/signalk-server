@@ -583,11 +583,16 @@ const SourcePriorities: React.FC = () => {
         .map((p, i) => {
           const raw = Number(p.timeout)
           const coerced = Number.isFinite(raw) ? raw : 0
+          // Disabled (-1) wins at every rank: forcing the rank-1 row to
+          // 0 would silently re-enable a source the user explicitly
+          // turned off. Otherwise the rank-1 row carries no fallback
+          // window of its own; subsequent rows fall back after their
+          // configured timeout, defaulting to pendingFallbackMs.
           const timeout =
-            i === 0
-              ? 0
-              : coerced === -1
-                ? -1
+            coerced === -1
+              ? -1
+              : i === 0
+                ? 0
                 : coerced > 0
                   ? coerced
                   : pendingFallbackMs

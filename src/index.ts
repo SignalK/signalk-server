@@ -108,6 +108,9 @@ class Server {
     WithProviderStatistics & {
       apis?: Array<SignalKApiId>
     }
+  // Pending sourceRef migration timers; cleared on stop() so a deferred
+  // migration scheduled before a restart cannot fire on a torn-down app.
+  pendingSourceRefMigrations?: Set<NodeJS.Timeout>
 
   constructor(opts: { securityConfig: SecurityConfig }) {
     checkNodeVersion()
@@ -370,12 +373,16 @@ class Server {
     // 10s is well within an admin-attention window and well past the
     // worst-case bus settling time observed on busy fleets.
     const SOURCE_REF_MIGRATION_DELAY_MS = 10_000
+    const pendingSourceRefMigrations = new Set<NodeJS.Timeout>()
+    this.pendingSourceRefMigrations = pendingSourceRefMigrations
     app.on(
       'sourceRefChanged',
       ({ oldRef, newRef }: { oldRef: string; newRef: string }) => {
-        setTimeout(() => {
+        const handle = setTimeout(() => {
+          pendingSourceRefMigrations.delete(handle)
           migrateSourceRef(app, oldRef, newRef)
         }, SOURCE_REF_MIGRATION_DELAY_MS)
+        pendingSourceRefMigrations.add(handle)
       }
     )
 
@@ -708,6 +715,13 @@ class Server {
       this.app.intervals.forEach((interval) => {
         clearInterval(interval)
       })
+
+      if (this.pendingSourceRefMigrations) {
+        for (const handle of this.pendingSourceRefMigrations) {
+          clearTimeout(handle)
+        }
+        this.pendingSourceRefMigrations.clear()
+      }
 
       this.app.providers.forEach((providerHolder) => {
         providerHolder.pipeElements[0].end()

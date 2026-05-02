@@ -12,8 +12,9 @@ interface N2KFilter {
   pgn: string
   /**
    * Client-only stable id for React keys. Not persisted to the server —
-   * stripped before save in BasicProvider. Without this, deleting a row
-   * with index-based keys would shuffle subsequent rows' input state.
+   * stripped by stripFilterKeys() in ProvidersConfiguration before save.
+   * Without this, deleting a row with index-based keys would shuffle
+   * subsequent rows' input state.
    */
   _key?: string
 }
