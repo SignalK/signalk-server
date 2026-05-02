@@ -1103,15 +1103,20 @@ export class CourseApi {
     return result
   }
 
-  private getRoutePointName(rte: Route, index: number, reverse: boolean | null) {
-    const {coordinatesMeta} = rte.feature.properties as Record<string, {name: string}>
+  private getRoutePointName(
+    rte: Route,
+    index: number,
+    reverse: boolean | null
+  ) {
+    const { coordinatesMeta } = rte.feature.properties as Record<
+      string,
+      { name: string }
+    >
     if (!Array.isArray(coordinatesMeta)) {
       return ''
     }
     const meta = reverse
-      ? coordinatesMeta[
-          coordinatesMeta.length - (index + 1)
-        ]
+      ? coordinatesMeta[coordinatesMeta.length - (index + 1)]
       : coordinatesMeta[index]
 
     return meta?.name ?? ''
