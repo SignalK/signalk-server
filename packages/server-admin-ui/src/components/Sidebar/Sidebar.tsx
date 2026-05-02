@@ -9,7 +9,6 @@ import {
   useLoginStatus,
   useMultiSourcePaths,
   useReconciledGroups,
-  usePriorityGroups,
   useSourcePriorities,
   usePriorityOverrides,
   useActiveConflictCount
@@ -59,7 +58,6 @@ export default function Sidebar({ location }: SidebarProps) {
 
   const multiSourcePaths = useMultiSourcePaths()
   const reconciled = useReconciledGroups()
-  const priorityGroupsData = usePriorityGroups()
   const sourcePrioritiesData = useSourcePriorities()
   const priorityOverridesData = usePriorityOverrides()
 

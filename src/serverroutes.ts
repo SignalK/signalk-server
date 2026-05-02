@@ -1616,6 +1616,7 @@ module.exports = function (
       updatedSettings.priorityGroups = validation.value as Array<{
         id: string
         sources: string[]
+        inactive?: boolean
       }>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       writeSettingsFile(app, updatedSettings, (err: any) => {

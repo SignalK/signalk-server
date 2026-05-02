@@ -674,7 +674,8 @@ const SourcePriorities: React.FC = () => {
       setGroupsSaved()
       setSaved()
       setSourcePriorities(payload.overrides)
-    } catch {
+    } catch (err) {
+      console.error('Failed to save priorities:', err)
       setGroupsSaveFailed()
       setSaveFailed()
       setTimeout(() => clearSaveFailed(), 5000)
