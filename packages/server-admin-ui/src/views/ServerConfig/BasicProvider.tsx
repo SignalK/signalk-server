@@ -94,6 +94,7 @@ interface TextInputProps {
   value: string | number | undefined
   helpText?: string
   onChange: OnChangeHandler
+  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void
 }
 
 interface TextAreaInputProps {
@@ -252,7 +253,14 @@ export default function BasicProvider({
   )
 }
 
-function TextInput({ name, title, value, helpText, onChange }: TextInputProps) {
+function TextInput({
+  name,
+  title,
+  value,
+  helpText,
+  onChange,
+  onBlur
+}: TextInputProps) {
   return (
     <Form.Group as={Row} className="mb-3">
       <Col md="3">
@@ -265,6 +273,7 @@ function TextInput({ name, title, value, helpText, onChange }: TextInputProps) {
           name={name}
           value={value ?? ''}
           onChange={(event) => onChange(event)}
+          onBlur={onBlur}
         />
         {helpText && <Form.Text muted>{helpText}</Form.Text>}
       </Col>
@@ -1227,6 +1236,22 @@ function HostInput({
   value: ProviderOptions
   onChange: OnChangeHandler
 }) {
+  // Trim whitespace on blur. Pasted hostnames sometimes carry a
+  // leading or trailing space that breaks DNS resolution downstream
+  // (`getaddrinfo ENOTFOUND  1.2.3.4`) without any user-visible
+  // explanation. Trimming on blur (rather than on every keystroke)
+  // keeps the typing experience normal.
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    const trimmed = event.target.value.trim()
+    if (trimmed === event.target.value) return
+    onChange({
+      target: {
+        name: 'options.host',
+        value: trimmed,
+        type: 'text'
+      }
+    })
+  }
   return (
     <TextInput
       title="Host"
@@ -1234,6 +1259,7 @@ function HostInput({
       helpText="Example: localhost"
       value={value.host}
       onChange={onChange}
+      onBlur={handleBlur}
     />
   )
 }
