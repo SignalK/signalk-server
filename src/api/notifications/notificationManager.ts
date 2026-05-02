@@ -144,7 +144,9 @@ export class NotificationManager {
     if (!alarm) {
       throw new Error('Notification not found!')
     }
-
+    if (!options) {
+      throw new Error('Notification options not supplied!')
+    }
     const { state, message, data } = options
     const stateChanged = alarm.value.state !== state
 
