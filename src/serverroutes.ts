@@ -1453,6 +1453,18 @@ module.exports = function (
   // this call and silently bypassed auth.
   app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/priorities`)
 
+  // Re-emit the reconciled groups view after any priority config change.
+  // The server's getReconciledGroups() runs the saved-vs-live matching;
+  // without re-emitting, the client keeps a stale `reconciled` array
+  // whose `matchedSavedId` was computed before the save, leaving the
+  // freshly-saved group looking unmatched (Unranked badge).
+  function emitReconciledGroups(): void {
+    app.emit('serverevent', {
+      type: 'RECONCILEDGROUPS',
+      data: app.deltaCache?.getReconciledGroups?.() ?? []
+    })
+  }
+
   app.delete(
     `${SERVERROUTESPREFIX}/priorities`,
     async (_req: Request, res: Response) => {
@@ -1476,6 +1488,7 @@ module.exports = function (
           type: 'PRIORITYDEFAULTS',
           data: {}
         })
+        emitReconciledGroups()
         res.json({ result: 'ok' })
       } catch (err) {
         console.error('Failed to reset priorities:', err)
@@ -1571,6 +1584,7 @@ module.exports = function (
           type: 'PRIORITYDEFAULTS',
           data: defaults
         })
+        emitReconciledGroups()
         res.json({ result: 'ok' })
       }
     })
@@ -1616,6 +1630,7 @@ module.exports = function (
             type: 'PRIORITYGROUPS',
             data: validation.value
           })
+          emitReconciledGroups()
           res.json({ result: 'ok' })
         }
       })
@@ -1668,6 +1683,7 @@ module.exports = function (
             type: 'PRIORITYOVERRIDES',
             data: overridesNumeric
           })
+          emitReconciledGroups()
           res.json({ result: 'ok' })
         }
       })
