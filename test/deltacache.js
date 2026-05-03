@@ -273,8 +273,14 @@ describe('Deltacache', () => {
       })
   })
 
-  it('getCachedDeltas returns only preferred source per path', function () {
-    // getCachedDeltas should return one delta per path (the preferred source)
+  it('getCachedDeltas fans out unrouted multi-source paths', function () {
+    // With no priority configuration, every cached source is delivered
+    // — preferredSources stays empty for unrouted paths so the
+    // bootstrap snapshot mirrors what the live unfiltered stream
+    // produces. (Earlier the test asserted last-writer-wins dedup,
+    // but that was an artefact of preferredSources being written
+    // before the engine's routesPath gate was wired up; the gate
+    // now correctly skips paths the user hasn't priorited.)
     const selfContext = 'vessels.' + theServer.app.selfId
     const cachedDeltas = theServer.app.deltaCache.getCachedDeltas(
       (d) => d.context === selfContext,
@@ -285,10 +291,9 @@ describe('Deltacache', () => {
         d.updates[0].values &&
         d.updates[0].values[0].path === 'navigation.magneticVariation'
     )
-    // Should return exactly one delta for this path (the preferred source)
-    magVarDeltas.length.should.equal(1)
-    // gps.backup wrote last and is the preferred source
-    magVarDeltas[0].updates[0].$source.should.equal('gps.backup')
+    magVarDeltas.length.should.equal(2)
+    const sources = magVarDeltas.map((d) => d.updates[0].$source).sort()
+    sources.should.deep.equal(['gps.backup', 'gps.primary'])
   })
 
   it('buildFull includes all sources in values object', function () {
