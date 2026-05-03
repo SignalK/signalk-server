@@ -269,7 +269,12 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
   const { timeRangeParams, errors } = parseTimeRangeParams(query)
 
   const context = query.context as Context | undefined
-  const resolution = getMaybeNumber(query.resolution)
+  let resolution: number | undefined
+  try {
+    resolution = parseResolution(query.resolution)
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : 'Invalid resolution')
+  }
 
   const paths = query.paths as string
   if (!paths) {
@@ -299,6 +304,39 @@ const getMaybeNumber = (value: unknown): number | undefined => {
   if (typeof value === 'string') return Number(value)
   if (typeof value === 'number') return value
   return undefined
+}
+
+// Maps the single-letter unit suffix in a resolution time expression to seconds.
+const RESOLUTION_UNIT_SECONDS: Record<string, number> = {
+  s: 1,
+  m: 60,
+  h: 3_600,
+  d: 86_400
+}
+
+// Matches resolution time expressions per the History API spec, e.g.
+// '1s' -> 1, '15m' -> 900, '2h' -> 7200, '1d' -> 86400.
+const RESOLUTION_TIME_EXPRESSION = /^(\d+)([smhd])$/
+
+// Parses the `resolution` query parameter into seconds.
+// Accepts a number (already in seconds), a numeric string, or a time
+// expression of the form `<integer><unit>` where unit is s|m|h|d.
+// Returns undefined when the parameter is absent.
+// Exported for unit testing.
+export const parseResolution = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined
+  if (typeof value === 'number') return value
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  const match = RESOLUTION_TIME_EXPRESSION.exec(trimmed)
+  if (match) {
+    return Number(match[1]) * RESOLUTION_UNIT_SECONDS[match[2]]
+  }
+  const asNumber = Number(trimmed)
+  if (!Number.isNaN(asNumber)) return asNumber
+  throw new Error(
+    `resolution parameter must be a number of seconds or a time expression like '1s', '1m', '1h', '1d'`
+  )
 }
 
 const splitPathExpression = (pathExpression: string): PathSpec => {
