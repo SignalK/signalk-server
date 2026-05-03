@@ -301,23 +301,33 @@ const getMaybeNumber = (value: unknown): number | undefined => {
   return undefined
 }
 
-const splitPathExpression = (pathExpression: string): PathSpec => {
+// Parses a path expression into a PathSpec.
+// Input examples and what they parse into:
+//   'navigation.speedOverGround'         -> { path, aggregate: 'average', parameter: [] }
+//   'navigation.speedOverGround:max'     -> { path, aggregate: 'max',     parameter: [] }
+//   'navigation.speedOverGround:sma:5'   -> { path, aggregate: 'sma',     parameter: ['5'] }
+//   'navigation.position'                -> { path, aggregate: 'first',   parameter: [] }
+//   'navigation.position:last'           -> { path, aggregate: 'last',    parameter: [] }
+//
+// `navigation.position` is object-valued (lat/lon), so numeric aggregates
+// like `average` are not meaningful. When the caller does not specify an
+// aggregate, we default to `first` instead of the usual `average`. An
+// explicit aggregate is always honored so callers can still ask for
+// `last` or `middle_index` when that matches their intent.
+export const splitPathExpression = (pathExpression: string): PathSpec => {
   const parts = pathExpression.split(':')
-  let aggregateMethod = (parts[1] || 'average') as AggregateMethod
-  if (parts[0] === 'navigation.position') {
-    aggregateMethod = 'first' as AggregateMethod
-  }
+  const aggregateMethod = (parts[1] ||
+    (parts[0] === 'navigation.position'
+      ? 'first'
+      : 'average')) as AggregateMethod
 
-  // Extract all parameters from parts[2] onwards
   const parameters: string[] = parts.slice(2).filter((p) => p.length > 0)
 
-  const pathSpec: PathSpec = {
+  return {
     path: parts[0] as Path,
     aggregate: aggregateMethod,
     parameter: parameters
   }
-
-  return pathSpec
 }
 
 const parseTimeRangeParams = (query: Record<string, unknown>) => {
