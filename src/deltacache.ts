@@ -690,6 +690,55 @@ export default class DeltaCache {
    * the persisted view in lets the priorities page render the user's
    * intent stably across power cycles.
    */
+  /**
+   * Return every (path, publishers[]) pair the cache has seen for the
+   * self vessel, regardless of publisher count. Used to seed the
+   * priority engine's `seenPublishersByPath` so routesPath flips on
+   * for already-contended paths immediately at boot, instead of
+   * flickering "no priority configured" warnings until live deltas
+   * land. Refs are returned in canonical (canName) form to match the
+   * engine's identity rule.
+   */
+  getSelfPathPublishers(): Record<string, string[]> {
+    const selfParts = this.app.selfContext.split('.')
+    let selfBranch: any = this.cache
+    for (const part of selfParts) {
+      if (!selfBranch || !selfBranch[part]) return {}
+      selfBranch = selfBranch[part]
+    }
+    const srcToCanonical = buildSrcToCanonicalMap(
+      (this.app.signalk as any)?.sources
+    )
+    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const out: Record<string, string[]> = {}
+    const walk = (node: any, pathParts: string[]) => {
+      for (const key of Object.keys(node)) {
+        if (key === 'meta') continue
+        const child = node[key]
+        if (!child || typeof child !== 'object') continue
+        if (child.path !== undefined && child.value !== undefined) {
+          if (pathParts[0] === 'notifications') return
+          const sources = Object.keys(node).filter((k) => {
+            const v = node[k]
+            return (
+              v &&
+              typeof v === 'object' &&
+              v.path !== undefined &&
+              v.value !== undefined
+            )
+          })
+          if (sources.length > 0) {
+            out[pathParts.join('.')] = [...new Set(sources.map(canonical))]
+          }
+          return
+        }
+        walk(child, [...pathParts, key])
+      }
+    }
+    walk(selfBranch, [])
+    return out
+  }
+
   getMultiSourcePaths(): Record<string, string[]> {
     const selfParts = this.app.selfContext.split('.')
     let selfBranch: any = this.cache

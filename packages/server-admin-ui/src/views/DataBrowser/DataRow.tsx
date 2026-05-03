@@ -28,6 +28,15 @@ interface DataRowProps {
   sourceCountsByPath: Map<string, number>
   sourcesData: SourcesData | null
   configuredPriorityPaths: Set<string>
+  /**
+   * Paths the priority engine is currently routing for this context
+   * (i.e. has a live winner for). Includes paths covered by group
+   * rankings, not just path-level overrides.
+   * configuredPriorityPaths only tracks the latter, so it would emit
+   * a "no priority configured" warning for group-routed paths even
+   * though the engine is honouring them.
+   */
+  routedPaths?: Set<string>
   preferredSourceByPath?: Map<string, string>
   /**
    * Paths the user has flagged for fan-out (sentinel '*' override).
@@ -80,6 +89,7 @@ function DataRow({
   sourceCountsByPath,
   sourcesData,
   configuredPriorityPaths,
+  routedPaths,
   preferredSourceByPath,
   fanOutPaths
 }: DataRowProps) {
@@ -252,21 +262,23 @@ function DataRow({
         </CopyToClipboardWithFade>{' '}
         {data.pgn && <span>&nbsp;{data.pgn}</span>}
         {data.sentence && <span>&nbsp;{data.sentence}</span>}
-        {sourceCount > 1 && !configuredPriorityPaths.has(path) && (
-          <a
-            href={`#/data/priorities?path=${encodeURIComponent(path)}`}
-            style={{
-              marginLeft: '4px',
-              fontSize: '0.7em',
-              color: 'var(--bs-danger, #d9534f)',
-              fontWeight: 600,
-              textDecoration: 'none'
-            }}
-            title={`${sourceCount} sources — no priority configured. Click to configure.`}
-          >
-            &#9888; 1/{sourceCount}
-          </a>
-        )}
+        {sourceCount > 1 &&
+          !configuredPriorityPaths.has(path) &&
+          !routedPaths?.has(path) && (
+            <a
+              href={`#/data/priorities?path=${encodeURIComponent(path)}`}
+              style={{
+                marginLeft: '4px',
+                fontSize: '0.7em',
+                color: 'var(--bs-danger, #d9534f)',
+                fontWeight: 600,
+                textDecoration: 'none'
+              }}
+              title={`${sourceCount} sources — no priority configured. Click to configure.`}
+            >
+              &#9888; 1/{sourceCount}
+            </a>
+          )}
       </div>
     </div>
   )

@@ -24,6 +24,19 @@ export interface PriorityResolutionConfig {
   fallbackMs?: number
   unknownSourceTimeout?: number
   canonicalise?: CanonicaliseSourceRef
+  /**
+   * Optional initial state for the per-path "publishers seen" map and
+   * the per-path "claimed-by-group" map. Used at engine init to
+   * recover the routing state across server restarts: walking the
+   * already-loaded delta cache surfaces every publisher that has
+   * historically emitted each path, which lets routesPath flip on
+   * immediately for paths that already have ≥2 publishers — instead
+   * of the admin UI flashing a "no priority configured" warning for
+   * a few seconds while the engine waits for live deltas to arrive.
+   * Each ref must already be in canonical (canName) form; the engine
+   * does not re-canonicalise the seed.
+   */
+  seenPublishersByPath?: Record<string, string[]>
 }
 
 // An NMEA 2000 CAN Name is a 64-bit identifier rendered as 16 hex
@@ -282,6 +295,44 @@ export const getToPreferredDelta = (
   // unconfigured source publishing a group-covered path would always
   // bypass priority filtering, defeating the user's saved ranking.
   const pathToGroupId = new Map<string, string>()
+  // Per-path set of distinct publisher identities the engine has
+  // seen. Used by routesPath to gate the "this path is contested"
+  // signal on ≥2 publishers — single-publisher paths shouldn't
+  // surface a "Preferred" badge in the admin UI even though the
+  // engine internally claims the path for the group (the claim is
+  // there to keep an unconfigured second publisher in line, not to
+  // declare the engine has made a decision).
+  const pathSeenPublishers = new Map<string, Set<string>>()
+  // Seed from the caller's snapshot (typically derived from the
+  // delta cache loaded from disk). Without this, every server
+  // restart leaves routesPath returning false for every path until
+  // a second publisher's first delta lands — which can take seconds
+  // for slow PGNs and surfaces as a transient "no priority
+  // configured" warning across the admin UI. Pre-claim every path
+  // that already had ≥2 known publishers.
+  const seed = config.seenPublishersByPath
+  if (seed) {
+    for (const path of Object.keys(seed)) {
+      const refs = seed[path]
+      if (!refs || refs.length === 0) continue
+      const identities = new Set<string>()
+      for (const ref of refs) {
+        identities.add(sourceRefIdentity(canonicalise(ref)))
+      }
+      pathSeenPublishers.set(path, identities)
+      if (identities.size >= 2) {
+        // Find which group (if any) owns this path via one of its
+        // sources, so routesPath flips on at boot.
+        for (const id of identities) {
+          const groupId = sourceToGroupId.get(id)
+          if (groupId) {
+            pathToGroupId.set(path, groupId)
+            break
+          }
+        }
+      }
+    }
+  }
 
   const contextPathTimestamps = new Map<Context, PathLatestTimestamps>()
 
@@ -343,6 +394,15 @@ export const getToPreferredDelta = (
     path: Path,
     canonicalSource: SourceRef
   ): SourcePrecedences | null => {
+    // Track distinct publishers per path. Used by routesPath to
+    // suppress the Preferred badge for single-publisher paths.
+    let publishers = pathSeenPublishers.get(path)
+    if (!publishers) {
+      publishers = new Set<string>()
+      pathSeenPublishers.set(path, publishers)
+    }
+    publishers.add(sourceRefIdentity(canonicalSource))
+
     const override = overridePrecedences.get(path)
     if (override) return override
     const groupId = sourceToGroupId.get(sourceRefIdentity(canonicalSource))
@@ -449,15 +509,22 @@ export const getToPreferredDelta = (
   // deltacache can decide whether a given (path, sourceRef) tuple is
   // routed by the engine — i.e. whether updating preferredSources for
   // it would mean anything to the admin UI's Priority-filtered view.
-  // Pass-through paths (no override, source not in any active group)
-  // return false so onValue can skip the write and let the UI render
-  // every source's row.
-  const routesPath = (path: string, sourceRef: string): boolean => {
+  // Pass-through paths return false so onValue skips the write and
+  // the UI renders every source's row without a Preferred badge.
+  //
+  // The check is path-driven, NOT source-driven, AND requires ≥2
+  // publishers seen on the path. A saved group's ranking applies to
+  // the group's path list, not to every path the group's sources
+  // happen to publish; a single-publisher path has no contention to
+  // resolve, so tagging the lone source as "Preferred" would imply a
+  // decision the engine never made. The 2-publisher gate filters
+  // those out — the engine still tracks the path internally so a
+  // late-arriving second publisher gets correctly demoted.
+  const routesPath = (path: string, _sourceRef: string): boolean => {
     if (overridePrecedences.has(path as Path)) return true
-    if (sourceToGroupId.has(sourceRefIdentity(canonicalise(sourceRef)))) {
-      return true
-    }
-    return pathToGroupId.has(path as Path)
+    if (!pathToGroupId.has(path as Path)) return false
+    const publishers = pathSeenPublishers.get(path)
+    return !!publishers && publishers.size >= 2
   }
 
   const fn = ((delta: any, now: Date, selfContext: string) => {

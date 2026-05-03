@@ -348,11 +348,25 @@ class Server {
       try {
         cachedCanonicalSnapshot = null
         const s = app.config.settings
+        // Seed the engine's per-path publisher tracking from the
+        // already-loaded delta cache. After a server restart, the
+        // cache holds every source the disk-persisted snapshot knows
+        // about, but the engine's in-memory tracking is empty —
+        // routesPath would return false for every path until two
+        // distinct publishers' first live deltas arrive, and the
+        // admin UI would briefly flash "no priority configured"
+        // warnings on every multi-publisher path. Seeding closes
+        // that window without persisting the engine's tracking
+        // state separately on disk.
+        const seenPublishersByPath = app.deltaCache?.getSelfPathPublishers
+          ? app.deltaCache.getSelfPathPublishers()
+          : undefined
         toPreferredDelta = getToPreferredDelta({
           groups: s.priorityGroups ?? [],
           overrides: s.priorityOverrides ?? {},
           fallbackMs: s.priorityDefaults?.fallbackMs,
-          canonicalise: canonicaliseSourceRef
+          canonicalise: canonicaliseSourceRef,
+          seenPublishersByPath
         })
         // Inject the engine's routes-this-path predicate into the
         // delta cache so onValue can avoid recording a "preferred"
@@ -523,6 +537,12 @@ class Server {
     )
     app.subscriptionmanager = new SubscriptionManager(app)
     app.deltaCache = new DeltaCache(app, app.streambundle)
+    // Re-build the engine now that the delta cache is constructed
+    // and has loaded its on-disk snapshot. The first call above ran
+    // before app.deltaCache existed (so seenPublishersByPath was
+    // undefined); rebuilding here lets the engine pick up the seed
+    // and flip routesPath on for already-contended paths at boot.
+    app.activateSourcePriorities()
 
     app.getHello = () => ({
       name: app.config.name,

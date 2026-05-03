@@ -142,7 +142,6 @@ const DataBrowser: React.FC = () => {
   const updatePath = useStore((s) => s.updatePath)
   const updateMeta = useStore((s) => s.updateMeta)
   const getPathData = useStore((s) => s.getPathData)
-  const removePath = useStore((s) => s.removePath)
 
   const unitPrefsLoaded = useUnitPrefsLoaded()
   const fetchUnitPreferences = useStore((s) => s.fetchUnitPreferences)
@@ -430,71 +429,15 @@ const DataBrowser: React.FC = () => {
     return out
   }, [livePreferredSourcesRaw, skSelf])
 
-  // Drop cached entries whose $source no longer matches the engine's
-  // current preferred source for the path. Without this the cached
-  // dump keeps showing a deprioritized source after the engine has
-  // switched the winner. Sourced from livePreferredSources (the engine's
-  // actual per-path winner) so paths covered by a group ranking — not
-  // just explicit overrides — get pruned too. Fan-out paths
-  // (priorityOverrides[*] = '*') are skipped: every source is
-  // intentionally delivered, so there's no winner to prune to.
-  //
-  // Gated on sourcePrioritiesLoaded — pruning before the saved-overrides
-  // map has arrived would mistakenly evict fan-out rows because
-  // preferredSourceByPath.get(path) returns undefined instead of the
-  // sentinel '*' that signals fan-out.
-  useEffect(() => {
-    // Prune is only meaningful in "Priority filtered" mode: the user
-    // wants one row per path matching the engine's current winner, and
-    // stale per-source rows from earlier (when a different source
-    // briefly won) need to disappear. In "All sources" mode every
-    // cached source is intentional — pruning would make non-winning
-    // rows briefly appear and disappear as livePreferredSources
-    // re-emits, producing the visible flicker the user reported.
-    if (!sourceFilter) return
-    if (!sourcePrioritiesLoaded) return
-    if (liveWinnerByPath.size === 0) return
-    // Defer pruning until rawSourcesData has loaded — without it,
-    // canonicaliseSourceRef returns the raw $source unchanged while
-    // livePreferredSources is already canonical, so the comparison
-    // below would always fail and the winning row would be deleted.
-    if (!rawSourcesData) return
-    // Coalesce bursts of LIVEPREFERREDSOURCES updates into one prune pass
-    // per animation frame — on a busy server winners can re-emit dozens
-    // of times per second and the inner Object.keys traversal is O(paths).
-    const handle = requestAnimationFrame(() => {
-      const data = getSignalkData()
-      for (const ctx of Object.keys(data)) {
-        const contextData = data[ctx]
-        const winnersForCtx =
-          liveWinnerByPath.get(ctx) ??
-          (skSelf && ctx === skSelf ? liveWinnerByPath.get('self') : undefined)
-        if (!winnersForCtx || winnersForCtx.size === 0) continue
-        for (const key of Object.keys(contextData)) {
-          const path = getPathFromKey(key)
-          const preferred = winnersForCtx.get(path)
-          if (!preferred) continue
-          // Fan-out paths from priorityOverrides accept every source by
-          // design — never prune them. The override map gives the cheapest
-          // signal: an entry of '*' means fan-out.
-          if (preferredSourceByPath.get(path) === '*') continue
-          const src = contextData[key]?.$source
-          if (src && canonicaliseSourceRef(src, rawSourcesData) !== preferred) {
-            removePath(ctx, key)
-          }
-        }
-      }
-    })
-    return () => cancelAnimationFrame(handle)
-  }, [
-    sourceFilter,
-    sourcePrioritiesLoaded,
-    liveWinnerByPath,
-    preferredSourceByPath,
-    removePath,
-    rawSourcesData,
-    skSelf
-  ])
+  // Note: an earlier version of this file pruned signalkData entries
+  // whose $source didn't match the engine's current winner, gated on
+  // "Priority filtered" mode. That was destructive — switching back
+  // to "All sources" had no rows for the loser sources because they
+  // had been deleted from the local mirror, and a stale source whose
+  // upstream had stopped publishing could never be recovered. The
+  // dedup loop in filteredPathKeys already handles the visible-row
+  // selection per mode, so the local mirror is kept complete and the
+  // mode switch is purely a render-time filter.
 
   const liveWinnerForCurrentContext: Map<string, string> = useMemo(() => {
     if (context === 'all') {
@@ -504,12 +447,44 @@ const DataBrowser: React.FC = () => {
       // DataRow rebuilds the same composite key when showContext is on.
       const flat = new Map<string, string>()
       for (const [ctx, perCtx] of liveWinnerByPath) {
-        for (const [path, src] of perCtx) flat.set(`${ctx}\0${path}`, src)
+        for (const [path, src] of perCtx) {
+          flat.set(`${ctx}\0${path}`, src)
+          // Also publish under the alternate context key so DataRow's
+          // preferredKey lookup hits regardless of whether the row
+          // resolved its context via skSelf collapsing or the full
+          // UUID. Otherwise the badge stays dark for self-vessel rows
+          // when one side keyed self by uuid and the other by 'self'.
+          if (ctx === 'self' && skSelf) {
+            flat.set(`${skSelf}\0${path}`, src)
+          } else if (skSelf && ctx === skSelf) {
+            flat.set(`self\0${path}`, src)
+          }
+        }
       }
       return flat
     }
-    return liveWinnerByPath.get(context) ?? new Map<string, string>()
-  }, [liveWinnerByPath, context])
+    // The map is keyed by `'self'` once skSelf is known, but can
+    // also carry the full vessel UUID — for example when a
+    // LIVEPREFERREDSOURCES event lands before the WS hello has
+    // populated skSelf. Try both so the badge / dedup never go dark
+    // because of that race.
+    const direct = liveWinnerByPath.get(context)
+    if (direct && direct.size > 0) return direct
+    if (context === 'self' && skSelf) {
+      const byUuid = liveWinnerByPath.get(skSelf)
+      if (byUuid) return byUuid
+    }
+    return direct ?? new Map<string, string>()
+  }, [liveWinnerByPath, context, skSelf])
+
+  // Set of paths the priority engine is actively routing for the
+  // current context — i.e. paths where there is a live winner. Used
+  // by DataRow to suppress the "no priority configured" warning when
+  // a group ranking covers the path (configuredPriorityPaths only
+  // tracks path-level overrides, not group rankings).
+  const routedPaths: Set<string> = useMemo(() => {
+    return new Set(liveWinnerForCurrentContext.keys())
+  }, [liveWinnerForCurrentContext])
 
   const filteredPathKeys: string[] = useMemo(() => {
     const currentData = dataVersion >= 0 ? getSignalkData() : {}
@@ -589,9 +564,15 @@ const DataBrowser: React.FC = () => {
         }
         const ctxPrefix = nullIdx >= 0 ? compositeKey.slice(0, nullIdx) : ''
         const dedupKey = ctxPrefix ? `${ctxPrefix}\0${path}` : path
+        // In "all" mode the per-row prefix is the full vessel UUID,
+        // but liveWinnerByPath may have collapsed self under 'self'.
+        // Try the UUID first, then 'self' when the row matches skSelf.
         const liveWinner =
           context === 'all'
-            ? (liveWinnerByPath.get(ctxPrefix)?.get(path) ?? null)
+            ? (liveWinnerByPath.get(ctxPrefix)?.get(path) ??
+              (skSelf && ctxPrefix === skSelf
+                ? (liveWinnerByPath.get('self')?.get(path) ?? null)
+                : null))
             : (liveWinnerForCurrentContext.get(path) ?? null)
         // No live winner means the engine is not filtering this path
         // (no override, source not in any active group). Show every row.
@@ -680,6 +661,7 @@ const DataBrowser: React.FC = () => {
     preferredSourceByPath,
     liveWinnerByPath,
     liveWinnerForCurrentContext,
+    skSelf,
     collapsedSources,
     rawSourcesData
   ])
@@ -906,6 +888,7 @@ const DataBrowser: React.FC = () => {
                   showContext={showContext}
                   sourcesData={rawSourcesData}
                   configuredPriorityPaths={configuredPriorityPaths}
+                  routedPaths={routedPaths}
                   preferredSourceByPath={
                     !sourceFilter ? liveWinnerForCurrentContext : undefined
                   }

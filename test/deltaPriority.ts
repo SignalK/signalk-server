@@ -1027,13 +1027,42 @@ describe('toPreferredDelta.routesPath', () => {
     )
   })
 
-  it('returns true for a source in an active group, regardless of path', () => {
+  it('returns false for a single-publisher path even when source is in an active group', () => {
     const fn = getToPreferredDelta({
       groups: [{ id: 'g', sources: ['foo.A'], inactive: false }]
     })
-    // Source is in an active group — its first delta on any path
-    // claims that path for the group, so the routing predicate
-    // returns true up front.
+    // Drive a delta from foo.A — the engine claims the path
+    // internally but only one publisher has been seen, so the
+    // routing predicate stays false. Otherwise the admin UI would
+    // tag the lone publisher as "Preferred" even though no priority
+    // decision was made.
+    fn(
+      makeDelta('foo.A', 'environment.outside.temperature', 1),
+      new Date(),
+      'self'
+    )
+    fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(
+      false
+    )
+  })
+
+  it('returns true once a second distinct publisher has emitted the path', () => {
+    const fn = getToPreferredDelta({
+      groups: [{ id: 'g', sources: ['foo.A', 'foo.B'], inactive: false }]
+    })
+    fn(
+      makeDelta('foo.A', 'environment.outside.temperature', 1),
+      new Date(),
+      'self'
+    )
+    fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(
+      false
+    )
+    fn(
+      makeDelta('foo.B', 'environment.outside.temperature', 2),
+      new Date(),
+      'self'
+    )
     fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(true)
   })
 
@@ -1047,18 +1076,29 @@ describe('toPreferredDelta.routesPath', () => {
     )
   })
 
-  it('after a path is claimed by an active group, every source on that path counts as routed', () => {
+  it('an unconfigured second publisher on a group-claimed path also counts toward the routedPaths gate', () => {
     const fn = getToPreferredDelta({
       groups: [{ id: 'g', sources: ['foo.A'], inactive: false }]
     })
-    // Drive a delta from foo.A to claim the path for group g.
+    // First delta from foo.A — group claims the path internally but
+    // routesPath stays false (single publisher).
     fn(
       makeDelta('foo.A', 'environment.outside.temperature', 1),
       new Date(),
       'self'
     )
-    // Now bar.B (no group) on the same path should be routed —
-    // the engine will compare it against group g's ranking.
+    fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(
+      false
+    )
+    // Second publisher (an unconfigured plugin) emits the same path —
+    // now there's contention, the engine demotes the unknown source,
+    // and routesPath flips on so the admin UI tags the active winner.
+    fn(
+      makeDelta('bar.B', 'environment.outside.temperature', 2),
+      new Date(),
+      'self'
+    )
+    fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(true)
     fn.routesPath('environment.outside.temperature', 'bar.B').should.equal(true)
   })
 })

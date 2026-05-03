@@ -16,6 +16,7 @@ interface VirtualizedDataTableProps {
   showContext: boolean
   sourcesData: SourcesData | null
   configuredPriorityPaths: Set<string>
+  routedPaths?: Set<string>
   preferredSourceByPath?: Map<string, string>
   fanOutPaths?: Set<string>
   collapsedSources?: Set<string>
@@ -30,6 +31,7 @@ function VirtualizedDataTable({
   showContext,
   sourcesData,
   configuredPriorityPaths,
+  routedPaths,
   preferredSourceByPath,
   fanOutPaths,
   collapsedSources,
@@ -126,6 +128,7 @@ function VirtualizedDataTable({
               sourceCountsByPath={sourceCountsByPath}
               sourcesData={sourcesData}
               configuredPriorityPaths={configuredPriorityPaths}
+              routedPaths={routedPaths}
               preferredSourceByPath={preferredSourceByPath}
               fanOutPaths={fanOutPaths}
             />
