@@ -1155,6 +1155,18 @@ const InlineInstanceCell: React.FC<{
     if (!canSave) return
     const num = Number(editValue)
     setIsSaving(true)
+    // Local short-circuit so a poll already scheduled by setTimeout
+    // when this attempt finishes (success or failure) doesn't run
+    // another redundant /sources fetch and re-set state. isMountedRef
+    // catches the unmount case but not the still-mounted "we're
+    // already done" case.
+    let finished = false
+    const finish = (result: 'ok' | 'fail') => {
+      finished = true
+      setSaveResult(result)
+      setIsSaving(false)
+      setIsEditing(false)
+    }
     fetch(`${window.serverRoutesPrefix}/n2kConfigDevice`, {
       method: 'POST',
       credentials: 'include',
@@ -1170,41 +1182,33 @@ const InlineInstanceCell: React.FC<{
         // Poll sources API to verify the device accepted the change
         const deadline = Date.now() + VERIFY_TIMEOUT_MS
         const poll = () => {
-          if (!isMountedRef.current) return
+          if (!isMountedRef.current || finished) return
           fetch('/signalk/v1/api/sources', { credentials: 'include' })
             .then((r) => r.json())
             .then((data) => {
-              if (!isMountedRef.current) return
+              if (!isMountedRef.current || finished) return
               useStore.getState().setSourcesData(data)
               const updated = extractN2kDevices(data).find(
                 (d) => d.sourceRef === device.sourceRef
               )
               if (updated && updated[field] === num) {
-                setSaveResult('ok')
-                setIsSaving(false)
-                setIsEditing(false)
+                finish('ok')
               } else if (Date.now() < deadline) {
                 setTimeout(poll, VERIFY_INTERVAL_MS)
               } else {
-                setSaveResult('fail')
-                setIsSaving(false)
-                setIsEditing(false)
+                finish('fail')
               }
             })
             .catch(() => {
-              if (!isMountedRef.current) return
-              setSaveResult('fail')
-              setIsSaving(false)
-              setIsEditing(false)
+              if (!isMountedRef.current || finished) return
+              finish('fail')
             })
         }
         setTimeout(poll, VERIFY_INTERVAL_MS)
       })
       .catch(() => {
-        if (!isMountedRef.current) return
-        setSaveResult('fail')
-        setIsSaving(false)
-        setIsEditing(false)
+        if (!isMountedRef.current || finished) return
+        finish('fail')
       })
   }
 

@@ -14,8 +14,19 @@ function TimestampCell({ timestamp, isPaused, className }: TimestampCellProps) {
   // to zero once and never flash again.
   const [pulseKey, setPulseKey] = useState(0)
   const [animate, setAnimate] = useState(false)
+  // Holds the in-flight fade-out timer so we can clear it on every
+  // re-run, including the changed=false branch where the previous
+  // useEffect cleanup doesn't get a fresh closure.
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    // Always cancel any pending fade-out before deciding what this
+    // render should do — pause + unpause races would otherwise leave
+    // a stale setTimeout firing setAnimate(false) seconds later.
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
     // Track the latest timestamp regardless of pause state — otherwise
     // unpausing after a few updates would compare the new timestamp
     // against the value at pause time and either flash spuriously or
@@ -31,8 +42,16 @@ function TimestampCell({ timestamp, isPaused, className }: TimestampCellProps) {
     if (changed) {
       setPulseKey((k) => k + 1)
       setAnimate(true)
-      const timer = setTimeout(() => setAnimate(false), 15000)
-      return () => clearTimeout(timer)
+      timerRef.current = setTimeout(() => {
+        setAnimate(false)
+        timerRef.current = null
+      }, 15000)
+    }
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
     }
   }, [timestamp, isPaused])
 

@@ -490,21 +490,36 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
       group.id,
       group.sources.filter((src) => src !== sourceRef)
     )
-    // Prune the source from any path-level override that references it.
-    // Walk the array back-to-front so a deletePath on an empty override
-    // does not shift indices of overrides we haven't visited yet.
-    for (let i = sourcePriorities.length - 1; i >= 0; i--) {
-      const pp = sourcePriorities[i]
+    // Plan the per-path mutations first against the render-time
+    // snapshot, then apply them by resolving each path's current index
+    // from the live store right before the call. Walking the snapshot
+    // back-to-front and trusting indices to stay valid breaks the
+    // moment a deletePath triggers a re-render mid-loop or another
+    // tab races a delete in.
+    const pathsToDelete: string[] = []
+    const pathsToUpdate: Array<{
+      path: string
+      remaining: { sourceRef: string; timeout: string | number }[]
+    }> = []
+    for (const pp of sourcePriorities) {
       if (!groupPathSet.has(pp.path)) continue
       if (!overridePaths.has(pp.path)) continue
       if (!pp.priorities.some((p) => p.sourceRef === sourceRef)) continue
       const remaining = pp.priorities.filter((p) => p.sourceRef !== sourceRef)
       if (remaining.length === 0) {
-        removePriorityOverride(pp.path)
-        deletePath(i)
+        pathsToDelete.push(pp.path)
       } else {
-        setPathPriorities(pp.path, remaining)
+        pathsToUpdate.push({ path: pp.path, remaining })
       }
+    }
+    for (const { path, remaining } of pathsToUpdate) {
+      setPathPriorities(path, remaining)
+    }
+    for (const path of pathsToDelete) {
+      removePriorityOverride(path)
+      const live = useStore.getState().sourcePrioritiesData.sourcePriorities
+      const idx = live.findIndex((pp) => pp.path === path)
+      if (idx !== -1) deletePath(idx)
     }
     if (selectedSource === sourceRef) setSelectedSource(null)
   }

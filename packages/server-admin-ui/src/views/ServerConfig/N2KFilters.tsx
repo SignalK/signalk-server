@@ -26,6 +26,9 @@ const newKey = () => `n2kf-${++filterKeyCounter}`
 // and cache by object identity so the same filter object keeps its key
 // across re-renders and re-derivations of the filters array.
 const keyByFilter = new WeakMap<N2KFilter, string>()
+// Stable reference for the no-filters case so useMemo below isn't
+// invalidated on every render when value.options.filters is undefined.
+const EMPTY_FILTERS: N2KFilter[] = []
 const ensureKey = (filter: N2KFilter): N2KFilter => {
   if (filter._key) return filter
   let key = keyByFilter.get(filter)
@@ -65,7 +68,7 @@ interface N2KFiltersProps {
 }
 
 export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
-  const rawFilters = value.options.filters ?? []
+  const rawFilters = value.options.filters ?? EMPTY_FILTERS
   const filters = useMemo(() => rawFilters.map(ensureKey), [rawFilters])
 
   const handleFilterFieldChange = (

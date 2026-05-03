@@ -349,7 +349,8 @@ module.exports = (app: N2kDiscoveryApp) => {
         const online =
           lastSeen !== undefined && now - lastSeen < ONLINE_THRESHOLD_MS
         const dotIdx = sourceRef.indexOf('.')
-        const providerId = dotIdx === -1 ? sourceRef : sourceRef.slice(0, dotIdx)
+        const providerId =
+          dotIdx === -1 ? sourceRef : sourceRef.slice(0, dotIdx)
         const src = dotIdx === -1 ? '' : sourceRef.slice(dotIdx + 1)
         statuses.push({ sourceRef, providerId, src, online, lastSeen })
       }
