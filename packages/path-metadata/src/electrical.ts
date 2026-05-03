@@ -232,8 +232,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'Hz'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/reactivePower': {
-    description: 'Data should be of type number.',
-    units: 'W'
+    description: 'Reactive power, in volt-amperes reactive.',
+    units: 'VAR'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/powerFactor': {
     description: 'Data should be of type number.'
@@ -613,8 +613,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'Hz'
   },
   '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/reactivePower': {
-    description: 'Data should be of type number.',
-    units: 'W'
+    description: 'Reactive power, in volt-amperes reactive.',
+    units: 'VAR'
   },
   '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/powerFactor': {
     description: 'Data should be of type number.'

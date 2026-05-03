@@ -6,7 +6,7 @@ export const sensorsMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/sensors/RegExp': {
     description:
-      'This regex pattern is used for validation UUID identifier for the sensor'
+      "This regex pattern is used for validating the sensor's UUID identifier."
   },
   '/vessels/*/sensors/RegExp/name': {
     description: 'The common name of the sensor'

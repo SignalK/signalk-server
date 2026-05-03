@@ -37,9 +37,9 @@ export function hasIdentifiableSource(update: RemoteUpdate): boolean {
   const source = update.source
   if (!source) return false
   return (
-    typeof source.canName === 'string' ||
+    (typeof source.canName === 'string' && source.canName.length > 0) ||
     source.src !== undefined ||
-    typeof source.talker === 'string' ||
+    (typeof source.talker === 'string' && source.talker.length > 0) ||
     (typeof source.label === 'string' && source.label.length > 0)
   )
 }
