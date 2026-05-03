@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useId, useMemo, useRef } from 'react'
 import Badge from 'react-bootstrap/Badge'
 import Form from 'react-bootstrap/Form'
 import Table from 'react-bootstrap/Table'
@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowUp } from '@fortawesome/free-solid-svg-icons/faArrowUp'
 import { faArrowDown } from '@fortawesome/free-solid-svg-icons/faArrowDown'
 import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
-import Creatable from 'react-select/creatable'
+import Select from 'react-select'
 import { useStore, useSourceStatus, useSourceStatusLoaded } from '../../store'
 import { type SourcesData } from '../../utils/sourceLabels'
 import { DEFAULT_FALLBACK_MS } from '../../utils/sourceGroups'
@@ -64,6 +64,13 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
   const deletePriority = useStore((s) => s.deletePriority)
   const movePriority = useStore((s) => s.movePriority)
   const setPathPriorities = useStore((s) => s.setPathPriorities)
+
+  // pathIndex is render-local; in grouped overrides multiple editors
+  // can render with the same index, which would collide on the
+  // pg-fanout-* DOM id and let one card's label toggle another's
+  // checkbox. useId gives us a process-stable unique prefix per
+  // editor instance.
+  const fanOutId = useId()
 
   // pathIndex passed in via props is the index in sourcePriorities[] at
   // render time. It goes stale the moment another override is deleted
@@ -157,7 +164,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
   const fanOutControl = (
     <Form.Check
       type="checkbox"
-      id={`pg-fanout-${pathIndex}`}
+      id={`pg-fanout-${fanOutId}`}
       label="Fan out — deliver every source's value (skip priority filtering)"
       checked={fanOut}
       disabled={isSaving}
@@ -213,13 +220,19 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                 <td data-th="Source">
                   <div className="d-flex align-items-center gap-2">
                     <div style={{ flex: 1 }}>
-                      <Creatable
+                      <Select
                         menuPortalTarget={document.body}
                         options={availableOptions}
-                        value={{
-                          value: sourceRef,
-                          label: getDisplayName(sourceRef, sourcesData)
-                        }}
+                        value={
+                          sourceRef
+                            ? {
+                                value: sourceRef,
+                                label: getDisplayName(sourceRef, sourcesData)
+                              }
+                            : null
+                        }
+                        placeholder="Pick a source…"
+                        isClearable={false}
                         onChange={(e) => {
                           safeChange(index, e?.value || '', timeout)
                         }}

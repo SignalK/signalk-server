@@ -124,6 +124,13 @@ export interface AppSliceActions {
     pgnDataInstances?: Record<string, Record<string, number[]>>
     pgnSourceKeys?: Record<string, Record<string, string[]>>
     discoveredAddresses?: number[]
+    sourceStatuses?: {
+      sourceRef?: string
+      providerId: string
+      src: string
+      online: boolean
+      lastSeen?: number
+    }[]
   }) => void
   setMultiSourcePaths: (paths: Record<string, string[]>) => void
   setReconciledGroups: (
@@ -305,11 +312,23 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
   },
 
   setN2kDeviceStatus: (status) => {
+    // Hydrate sourceStatus from the bootstrap response too. Without
+    // this the Discovery / priorities UI sits in its "unknown" state
+    // for every source until the first SOURCESTATUS WS tick happens
+    // to arrive — long enough to look broken on a fresh page load.
+    const sourceStatus: Record<string, { online: boolean; lastSeen?: number }> =
+      {}
+    for (const s of status.sourceStatuses ?? []) {
+      const key = s.sourceRef ?? `${s.providerId}.${s.src}`
+      sourceStatus[key] = { online: s.online, lastSeen: s.lastSeen }
+    }
     set({
       pgnDataInstances: status.pgnDataInstances ?? {},
       pgnSourceKeys: status.pgnSourceKeys ?? {},
       discoveredAddresses: status.discoveredAddresses ?? [],
-      n2kDeviceStatusLoaded: true
+      n2kDeviceStatusLoaded: true,
+      sourceStatus,
+      sourceStatusLoaded: true
     })
   },
 
@@ -336,26 +355,25 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
   },
 
   setSourceStatus: (statuses) => {
-    set((state) => {
-      // Merge rather than replace. The server emits a full snapshot on
-      // every transition, but its sourceMeta map can transiently lose a
-      // sourceRef across an upstream reconnect — the snapshot would
-      // then omit that source entirely, and a replace-based slice
-      // would silently drop the entry. The PriorityGroupCard treats
-      // a missing entry as Offline, leaving the source stuck Offline
-      // until the next transition that happens to mention it.
-      const sourceStatus = { ...state.sourceStatus }
-      for (const s of statuses) {
-        // Prefer the canonical sourceRef field; fall back to providerId+src
-        // for older server payloads that didn't include it.
-        const key = s.sourceRef ?? `${s.providerId}.${s.src}`
-        sourceStatus[key] = {
-          online: s.online,
-          lastSeen: s.lastSeen
-        }
+    // Replace rather than merge. The server emits a full snapshot on
+    // every transition; merging would preserve refs the server has
+    // intentionally removed (e.g. via /n2kRemoveSource or a device
+    // reset), leaving deleted devices permanently online/offline in
+    // the client store. With buildSourceStatuses now also surfacing
+    // frame-only devices (via frameLastSeenBySrc), the snapshot is
+    // authoritative — a sourceRef that disappears really is gone.
+    const sourceStatus: Record<string, { online: boolean; lastSeen?: number }> =
+      {}
+    for (const s of statuses) {
+      // Prefer the canonical sourceRef field; fall back to providerId+src
+      // for older server payloads that didn't include it.
+      const key = s.sourceRef ?? `${s.providerId}.${s.src}`
+      sourceStatus[key] = {
+        online: s.online,
+        lastSeen: s.lastSeen
       }
-      return { sourceStatus, sourceStatusLoaded: true }
-    })
+    }
+    set({ sourceStatus, sourceStatusLoaded: true })
   },
 
   setDebugSettings: (settings) => {
