@@ -200,11 +200,22 @@ const buildGroupPrecedences = (
   return { sourceToGroupId, groupPrecedences }
 }
 
-export type ToPreferredDelta = (
+export type ToPreferredDelta = ((
   delta: any,
   now: Date,
   selfContext: string
-) => any
+) => any) & {
+  /**
+   * Returns true when the engine actively filters this (path, sourceRef)
+   * tuple — i.e. there is a non-dormant path-level override OR the
+   * source belongs to an active group. Used by the deltacache to gate
+   * `preferredSources` writes: a path the engine doesn't route should
+   * not produce a "live preferred winner" entry, otherwise the admin-UI
+   * Data Browser's Priority-filtered view would suppress the other
+   * sources on a path that's actually pass-through.
+   */
+  routesPath: (path: string, sourceRef: string) => boolean
+}
 
 /**
  * Translate a raw `$source` (e.g. `can0.4`) into its canonical form
@@ -231,7 +242,10 @@ export const getToPreferredDelta = (
   const hasActiveGroups = groups.some((g) => !g.inactive)
   if (!hasOverrides && !hasActiveGroups) {
     debug('No priorities data')
-    return (delta: any, _now: Date, _selfContext: string) => delta
+    const passthrough = ((delta: any, _now: Date, _selfContext: string) =>
+      delta) as ToPreferredDelta
+    passthrough.routesPath = () => false
+    return passthrough
   }
 
   // Drop overrides whose every ranked source belongs to a group the
@@ -431,7 +445,22 @@ export const getToPreferredDelta = (
     return isPreferred
   }
 
-  return (delta: any, now: Date, selfContext: string) => {
+  // Mirror of the per-delta resolvePrecedences gate, exposed so the
+  // deltacache can decide whether a given (path, sourceRef) tuple is
+  // routed by the engine — i.e. whether updating preferredSources for
+  // it would mean anything to the admin UI's Priority-filtered view.
+  // Pass-through paths (no override, source not in any active group)
+  // return false so onValue can skip the write and let the UI render
+  // every source's row.
+  const routesPath = (path: string, sourceRef: string): boolean => {
+    if (overridePrecedences.has(path as Path)) return true
+    if (sourceToGroupId.has(sourceRefIdentity(canonicalise(sourceRef)))) {
+      return true
+    }
+    return pathToGroupId.has(path as Path)
+  }
+
+  const fn = ((delta: any, now: Date, selfContext: string) => {
     if (delta.context === selfContext) {
       const millis = now.getTime()
       delta.updates &&
@@ -497,5 +526,7 @@ export const getToPreferredDelta = (
         })
     }
     return delta
-  }
+  }) as ToPreferredDelta
+  fn.routesPath = routesPath
+  return fn
 }

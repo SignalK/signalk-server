@@ -360,11 +360,27 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
   // Server emits only the paths whose winner CHANGED since the last
   // tick, so we merge over the existing snapshot instead of replacing.
   // The full snapshot is loaded once via REST at startup.
+  // Empty-string values are tombstones: the server signalled that the
+  // entry was deleted (e.g. its parent group was deactivated and the
+  // path is now pass-through). Without this the stale winner would
+  // persist in the merged map and the Data Browser's "Priority
+  // filtered" view would keep suppressing every other source on that
+  // path.
   mergeLivePreferredSources: (changes) => {
-    set((state) => ({
-      livePreferredSources: { ...state.livePreferredSources, ...changes },
-      livePreferredSourcesLoaded: true
-    }))
+    set((state) => {
+      const next = { ...state.livePreferredSources }
+      for (const [key, ref] of Object.entries(changes)) {
+        if (ref === '') {
+          delete next[key]
+        } else {
+          next[key] = ref
+        }
+      }
+      return {
+        livePreferredSources: next,
+        livePreferredSourcesLoaded: true
+      }
+    })
   },
 
   setSourceStatus: (statuses) => {

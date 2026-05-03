@@ -44,11 +44,7 @@ import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache, { buildSrcToCanonicalMap } from './deltacache'
 import DeltaChain from './deltachain'
-import {
-  getToPreferredDelta,
-  isOverrideDormantUnderGroups,
-  ToPreferredDelta
-} from './deltaPriority'
+import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
 import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
@@ -317,7 +313,13 @@ class Server {
       delete app.historyProvider
     }
 
-    let toPreferredDelta: ToPreferredDelta = () => undefined
+    // Initial passthrough — replaced by activateSourcePriorities() once
+    // the engine is built. Keeps the type-shape compatible with the
+    // routesPath property toPreferredDelta carries.
+    const initialPassthrough = ((delta: any) =>
+      delta) as unknown as ToPreferredDelta
+    initialPassthrough.routesPath = () => false
+    let toPreferredDelta: ToPreferredDelta = initialPassthrough
     // Translate `<label>.<numeric>` deltas to their `<label>.<canName>`
     // form so a saved canName-form ranking matches incoming refs from
     // providers that have useCanName off. The cache is keyed by the
@@ -352,24 +354,19 @@ class Server {
           fallbackMs: s.priorityDefaults?.fallbackMs,
           canonicalise: canonicaliseSourceRef
         })
-        // Drop preferredSources entries for paths that no longer have
-        // an explicit override. Group-covered paths are kept so a path
-        // whose only ranking came from group resolution doesn't lose
-        // its winner from the bootstrap snapshot. The next delta will
-        // re-evaluate via the engine anyway. Overrides whose every
-        // ranked source is in an inactive group are treated as dormant
-        // (same rule the engine applies on the per-delta path) so the
-        // snapshot stays in sync with what gets routed.
-        const overrides = s.priorityOverrides ?? {}
-        const groups = s.priorityGroups ?? []
-        const activeOverridePaths = new Set<string>()
-        for (const path of Object.keys(overrides)) {
-          if (isOverrideDormantUnderGroups(overrides[path], groups)) continue
-          activeOverridePaths.add(path)
-        }
-        app.deltaCache?.resetPreferredSourcesNotIn?.(activeOverridePaths, {
-          keepGroupCovered: true
-        })
+        // Inject the engine's routes-this-path predicate into the
+        // delta cache so onValue can avoid recording a "preferred"
+        // winner for pass-through paths (no override, source not in
+        // any active group, dormant override). Otherwise the admin
+        // UI's Priority-filtered view would suppress every other
+        // source on a path the engine isn't actually filtering.
+        // setRoutesPathPredicate handles the bootstrap-snapshot
+        // cleanup: it walks preferredSources and drops every entry
+        // the new predicate no longer routes. Replaces the older
+        // resetPreferredSourcesNotIn call which only knew about
+        // overrides + group membership and not about path-claim
+        // state inside the engine closure.
+        app.deltaCache?.setRoutesPathPredicate?.(toPreferredDelta.routesPath)
       } catch (e) {
         console.error('getToPreferredDelta failed:', e)
       }

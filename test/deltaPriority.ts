@@ -989,3 +989,76 @@ describe('engine integration: dormant overrides bypass priority filtering', () =
     )
   })
 })
+
+describe('toPreferredDelta.routesPath', () => {
+  it('returns false when no overrides and no active groups', () => {
+    const fn = getToPreferredDelta({})
+    fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(
+      false
+    )
+  })
+
+  it('returns true for a path with an explicit (non-dormant) override', () => {
+    const fn = getToPreferredDelta({
+      overrides: {
+        'environment.outside.temperature': [
+          { sourceRef: 'foo.A' as SourceRef, timeout: 0 }
+        ]
+      }
+    })
+    fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(true)
+    // Even an unranked source touching the same path still counts as
+    // routed — the engine will evaluate the override against it.
+    fn.routesPath('environment.outside.temperature', 'bar.B').should.equal(true)
+  })
+
+  it('returns false for a path whose override is dormant under an inactive group', () => {
+    const fn = getToPreferredDelta({
+      overrides: {
+        'environment.outside.temperature': [
+          { sourceRef: 'foo.A' as SourceRef, timeout: 0 },
+          { sourceRef: 'foo.B' as SourceRef, timeout: 15000 }
+        ]
+      },
+      groups: [{ id: 'g', sources: ['foo.A', 'foo.B'], inactive: true }]
+    })
+    fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(
+      false
+    )
+  })
+
+  it('returns true for a source in an active group, regardless of path', () => {
+    const fn = getToPreferredDelta({
+      groups: [{ id: 'g', sources: ['foo.A'], inactive: false }]
+    })
+    // Source is in an active group — its first delta on any path
+    // claims that path for the group, so the routing predicate
+    // returns true up front.
+    fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(true)
+  })
+
+  it('returns false for a source in an inactive group on an unrouted path', () => {
+    const fn = getToPreferredDelta({
+      groups: [{ id: 'g', sources: ['foo.A'], inactive: true }]
+    })
+    // No override, source's group inactive — pass-through.
+    fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(
+      false
+    )
+  })
+
+  it('after a path is claimed by an active group, every source on that path counts as routed', () => {
+    const fn = getToPreferredDelta({
+      groups: [{ id: 'g', sources: ['foo.A'], inactive: false }]
+    })
+    // Drive a delta from foo.A to claim the path for group g.
+    fn(
+      makeDelta('foo.A', 'environment.outside.temperature', 1),
+      new Date(),
+      'self'
+    )
+    // Now bar.B (no group) on the same path should be routed —
+    // the engine will compare it against group g's ranking.
+    fn.routesPath('environment.outside.temperature', 'bar.B').should.equal(true)
+  })
+})

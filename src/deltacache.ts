@@ -101,6 +101,16 @@ export default class DeltaCache {
 
   private subscribedPaths = new Set<string>()
 
+  // Predicate the engine fills in via setRoutesPathPredicate. When set,
+  // onValue uses it to decide whether updating preferredSources for an
+  // incoming (path, sourceRef) means anything to the admin UI — for
+  // pass-through paths (no override, source not in any active group)
+  // we deliberately skip the write so the Data Browser's "Priority
+  // filtered" view doesn't suppress every other source on a path that
+  // the engine isn't actually filtering.
+  private routesPath: ((path: string, sourceRef: string) => boolean) | null =
+    null
+
   constructor(app: SignalKServer, streambundle: StreamBundle) {
     this.app = app
     streambundle.keys.onValue((key) => {
@@ -184,14 +194,29 @@ export default class DeltaCache {
       // like-for-like with the saved priorities.json. Falls through to
       // the raw ref when no canName is known (cold boot, non-N2K).
       const canonicalRef = this.canonicaliseSourceRef(sourceRef) as SourceRef
-      const prevSource = this.preferredSources.get(prefKey)
-      this.preferredSources.set(prefKey, canonicalRef)
-      // Only mark the path dirty for the LIVEPREFERRED stream when the
-      // winning source actually changed — otherwise every accepted
-      // delta would queue a redundant emit.
-      if (prevSource !== canonicalRef) {
-        this.livePreferredDirtyPaths.add(prefKey)
-        this.scheduleLivePreferredEmit()
+      // Skip the preferred-source bookkeeping when the engine isn't
+      // routing this path — e.g. no override, source not in any active
+      // group, or an override gone dormant because its parent group
+      // was deactivated. Otherwise onValue would record a "winner"
+      // for a pass-through path and the admin UI's Priority-filtered
+      // view would suppress the other sources on that path.
+      if (this.routesPath && !this.routesPath(msg.path, sourceRef)) {
+        const prevSource = this.preferredSources.get(prefKey)
+        if (prevSource !== undefined) {
+          this.preferredSources.delete(prefKey)
+          this.livePreferredDirtyPaths.add(prefKey)
+          this.scheduleLivePreferredEmit()
+        }
+      } else {
+        const prevSource = this.preferredSources.get(prefKey)
+        this.preferredSources.set(prefKey, canonicalRef)
+        // Only mark the path dirty for the LIVEPREFERRED stream when
+        // the winning source actually changed — otherwise every
+        // accepted delta would queue a redundant emit.
+        if (prevSource !== canonicalRef) {
+          this.livePreferredDirtyPaths.add(prefKey)
+          this.scheduleLivePreferredEmit()
+        }
       }
     } else if (msg.value) {
       _.keys(msg.value).forEach((key) => {
@@ -221,10 +246,16 @@ export default class DeltaCache {
       this.livePreferredEmitTimer = null
       const dirty = this.livePreferredDirtyPaths
       this.livePreferredDirtyPaths = new Set()
+      // Empty string is a tombstone: a path whose preferred entry was
+      // dropped server-side (priority engine rebuilt with that path
+      // pass-through, source removed, etc). Without an explicit
+      // signal the client's mergeLivePreferredSources would keep the
+      // stale winner forever and the Data Browser's Priority-filtered
+      // view would suppress every other source on that path.
       const data: Record<string, string> = {}
       for (const key of dirty) {
         const sourceRef = this.preferredSources.get(key)
-        if (sourceRef) data[key] = sourceRef
+        data[key] = sourceRef ?? ''
       }
       if (Object.keys(data).length === 0) return
       ;(this.app as any).emit('serverevent', {
@@ -270,6 +301,35 @@ export default class DeltaCache {
    * replacement from the remaining leaf entries so filterDeltasToPreferred
    * doesn't fall back to whatever Object.keys iterates first.
    */
+  /**
+   * Inject the engine's "is this (path, sourceRef) routed?" predicate
+   * so onValue can avoid recording a preferred winner for paths the
+   * engine isn't filtering. Called from activateSourcePriorities each
+   * time the engine is rebuilt; pass null to drop the gate.
+   */
+  setRoutesPathPredicate(
+    fn: ((path: string, sourceRef: string) => boolean) | null
+  ): void {
+    this.routesPath = fn
+    // A previously-routed path may have just become pass-through. Drop
+    // every entry the new predicate no longer routes so the bootstrap
+    // snapshot and the LIVEPREFERRED stream stay in sync with what
+    // the engine will actually enforce going forward.
+    if (!fn) return
+    let preferredChanged = false
+    for (const [key, ref] of this.preferredSources) {
+      const nullIdx = key.indexOf('\0')
+      const path = nullIdx === -1 ? '' : key.slice(nullIdx + 1)
+      if (fn(path, ref)) continue
+      this.preferredSources.delete(key)
+      this.livePreferredDirtyPaths.add(key)
+      preferredChanged = true
+    }
+    if (preferredChanged) {
+      this.scheduleLivePreferredEmit()
+    }
+  }
+
   removeSource(sourceRef: SourceRef) {
     const removeFromNode = (node: any): void => {
       for (const key of Object.keys(node)) {
@@ -313,59 +373,6 @@ export default class DeltaCache {
       this.scheduleLivePreferredEmit()
     }
     this.emitMultiSourcePaths()
-  }
-
-  /**
-   * Drop preferredSources entries whose path is no longer covered by an
-   * active source-priority config. Without this, the bootstrap snapshot
-   * served by getCachedDeltas('preferred') keeps returning the
-   * formerly-preferred source for paths whose group has just been
-   * deactivated — until a different source's delta happens to overwrite
-   * the cache entry. Called from activateSourcePriorities() after the
-   * priority engine is rebuilt so the snapshot stays in sync with what
-   * the engine will actually enforce.
-   *
-   * `keepGroupCovered`: when set, a cached entry is preserved if the
-   * current preferred source is in any active priorityGroup. This is
-   * needed under the group-aware engine: a path can have no explicit
-   * override yet still be covered by a group's ranking, so dropping
-   * it would briefly orphan the bootstrap snapshot until the next
-   * delta re-populates the cache.
-   */
-  resetPreferredSourcesNotIn(
-    activePaths: Set<string>,
-    opts: { keepGroupCovered?: boolean } = {}
-  ): void {
-    let groupedSources: Set<string> | null = null
-    if (opts.keepGroupCovered) {
-      groupedSources = new Set<string>()
-      const groups = (this.app.config as any).settings?.priorityGroups as
-        | Array<{ sources?: string[]; inactive?: boolean }>
-        | undefined
-      if (Array.isArray(groups)) {
-        for (const g of groups) {
-          if (g?.inactive) continue
-          if (!Array.isArray(g?.sources)) continue
-          for (const s of g.sources) groupedSources.add(s)
-        }
-      }
-    }
-    let preferredChanged = false
-    for (const [key, ref] of this.preferredSources) {
-      const nullIdx = key.indexOf('\0')
-      const path = nullIdx === -1 ? '' : key.slice(nullIdx + 1)
-      if (activePaths.has(path)) continue
-      if (groupedSources && groupedSources.has(ref)) continue
-      this.preferredSources.delete(key)
-      // Same reasoning as removeSource: without dirtying the key the
-      // admin UI keeps the now-orphaned winner until another delta
-      // touches the path.
-      this.livePreferredDirtyPaths.add(key)
-      preferredChanged = true
-    }
-    if (preferredChanged) {
-      this.scheduleLivePreferredEmit()
-    }
   }
 
   private pickReplacementSource(
