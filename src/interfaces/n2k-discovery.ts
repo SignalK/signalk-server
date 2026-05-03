@@ -298,6 +298,26 @@ module.exports = (app: N2kDiscoveryApp) => {
     return undefined
   }
 
+  // Find the providerId (connection label) that owns a given N2K bus
+  // address by scanning app.signalk.sources for a connection whose
+  // numeric sub-key matches. Returns undefined when no connection
+  // claims the address (e.g. address only seen at frame level, never
+  // mapped through the N2K → SK pipeline yet).
+  function findProviderIdForAddress(addr: number): string | undefined {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sources = (app.signalk as any)?.sources
+    if (!sources || typeof sources !== 'object') return undefined
+    const addrStr = String(addr)
+    for (const providerId of Object.keys(sources)) {
+      const conn = sources[providerId]
+      if (!conn || typeof conn !== 'object') continue
+      if (Object.prototype.hasOwnProperty.call(conn, addrStr)) {
+        return providerId
+      }
+    }
+    return undefined
+  }
+
   function buildSourceStatuses(): SourceStatus[] {
     const now = Date.now()
     const statuses: SourceStatus[] = []
@@ -305,31 +325,54 @@ module.exports = (app: N2kDiscoveryApp) => {
     const sourceMeta = (app.signalk as any)?.sourceMeta as
       | Record<string, { lastSeen?: number }>
       | undefined
-    if (!sourceMeta) return statuses
     // sourceMeta is the canonical per-source freshness map. Its keys are
     // already in `sourceRef` form (e.g. "can0.44", "0183-1.II",
     // "derived-data") matching getSourceId(). Walk it directly so we
     // cover N2K, NMEA0183 and $source-only (plugin) sources alike.
-    for (const sourceRef of Object.keys(sourceMeta)) {
-      const metaLastSeen = sourceMeta[sourceRef]?.lastSeen
-      // For N2K sources, also check when we last saw any parsed frame
-      // for this device's bus address. Devices that emit only meta
-      // PGNs (Address Claim, Product Info, Heartbeat) — or whose data
-      // PGNs aren't mapped to Signal K — would otherwise age out of
-      // sourceMeta and look Offline despite being on the bus.
-      const srcAddr = resolveSrcAddress(sourceRef)
-      const frameLastSeen =
-        srcAddr !== undefined ? frameLastSeenBySrc.get(srcAddr) : undefined
-      const lastSeen =
-        metaLastSeen !== undefined && frameLastSeen !== undefined
-          ? Math.max(metaLastSeen, frameLastSeen)
-          : (metaLastSeen ?? frameLastSeen)
-      const online =
-        lastSeen !== undefined && now - lastSeen < ONLINE_THRESHOLD_MS
-      const dotIdx = sourceRef.indexOf('.')
-      const providerId = dotIdx === -1 ? sourceRef : sourceRef.slice(0, dotIdx)
-      const src = dotIdx === -1 ? '' : sourceRef.slice(dotIdx + 1)
-      statuses.push({ sourceRef, providerId, src, online, lastSeen })
+    const seenAddresses = new Set<number>()
+    if (sourceMeta) {
+      for (const sourceRef of Object.keys(sourceMeta)) {
+        const metaLastSeen = sourceMeta[sourceRef]?.lastSeen
+        // For N2K sources, also check when we last saw any parsed frame
+        // for this device's bus address. Devices that emit only meta
+        // PGNs (Address Claim, Product Info, Heartbeat) — or whose data
+        // PGNs aren't mapped to Signal K — would otherwise age out of
+        // sourceMeta and look Offline despite being on the bus.
+        const srcAddr = resolveSrcAddress(sourceRef)
+        if (srcAddr !== undefined) seenAddresses.add(srcAddr)
+        const frameLastSeen =
+          srcAddr !== undefined ? frameLastSeenBySrc.get(srcAddr) : undefined
+        const lastSeen =
+          metaLastSeen !== undefined && frameLastSeen !== undefined
+            ? Math.max(metaLastSeen, frameLastSeen)
+            : (metaLastSeen ?? frameLastSeen)
+        const online =
+          lastSeen !== undefined && now - lastSeen < ONLINE_THRESHOLD_MS
+        const dotIdx = sourceRef.indexOf('.')
+        const providerId = dotIdx === -1 ? sourceRef : sourceRef.slice(0, dotIdx)
+        const src = dotIdx === -1 ? '' : sourceRef.slice(dotIdx + 1)
+        statuses.push({ sourceRef, providerId, src, online, lastSeen })
+      }
+    }
+    // Pick up devices we have seen frames for but that never landed in
+    // sourceMeta (e.g. only Address Claim / Product Info, or data PGNs
+    // not yet mapped to Signal K paths). Without this pass, the bus-
+    // freshness tracking added above produces no externally visible
+    // status for those devices.
+    for (const [srcAddr, frameLastSeen] of frameLastSeenBySrc) {
+      if (seenAddresses.has(srcAddr)) continue
+      const providerId = findProviderIdForAddress(srcAddr)
+      if (providerId === undefined) continue
+      const src = String(srcAddr)
+      const sourceRef = `${providerId}.${src}`
+      const online = now - frameLastSeen < ONLINE_THRESHOLD_MS
+      statuses.push({
+        sourceRef,
+        providerId,
+        src,
+        online,
+        lastSeen: frameLastSeen
+      })
     }
     return statuses
   }
@@ -921,6 +964,38 @@ module.exports = (app: N2kDiscoveryApp) => {
         }
         for (const ref of allRefs) {
           onlineStates.delete(ref)
+        }
+
+        // Prune the live Signal K tree too — without this the deleted
+        // device keeps appearing in /signalk/v1/api/sources until the
+        // server restarts (resetN2kDevices does the same prune).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sources = (app.signalk as any)?.sources
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sourceMeta = (app.signalk as any)?.sourceMeta
+        if (sources?.[connection]) {
+          const labelNode = sources[connection]
+          for (const addr of addressesToRemove) {
+            const subKey = String(addr)
+            if (Object.prototype.hasOwnProperty.call(labelNode, subKey)) {
+              delete labelNode[subKey]
+            }
+          }
+          // Drop the connection wrapper if no devices remain so the
+          // sources tree doesn't accumulate empty providers.
+          const remaining = Object.keys(labelNode).filter(
+            (k) => k !== 'type' && k !== 'label'
+          )
+          if (remaining.length === 0) {
+            delete sources[connection]
+          }
+        }
+        if (sourceMeta) {
+          for (const ref of allRefs) {
+            if (Object.prototype.hasOwnProperty.call(sourceMeta, ref)) {
+              delete sourceMeta[ref]
+            }
+          }
         }
 
         // Clean up source aliases (in-memory; persisted below)
