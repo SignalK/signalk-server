@@ -28,7 +28,14 @@ class GranularSubscriptionManager {
   }
 
   setSourcePolicy(policy: 'preferred' | 'all'): void {
+    if (this.sourcePolicy === policy) return
     this.sourcePolicy = policy
+    // The user just flipped the toggle — re-issue discovery so the
+    // server starts honouring the new policy immediately, instead of
+    // waiting for an unrelated path change to trigger resubscription.
+    if (this.ready && this.webSocket) {
+      this.startDiscovery()
+    }
   }
 
   startDiscovery(): void {

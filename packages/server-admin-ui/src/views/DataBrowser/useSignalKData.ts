@@ -195,7 +195,14 @@ export function useSignalKData() {
           }
         })
 
-        if ((isNew || (context && context === key)) && !hasData) {
+        // 'all' mode shows every context, so any update to an existing
+        // path counts as data — without this the UI stays in its
+        // "no data yet" state until a brand-new path arrives, even
+        // though valid traffic is flowing.
+        if (
+          (isNew || context === 'all' || (context && context === key)) &&
+          !hasData
+        ) {
           setHasData(true)
         }
       }

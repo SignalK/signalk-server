@@ -519,13 +519,13 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
       return
     }
     addPriorityOverride(path)
-    // Seed the new override with the reverse of the group order so it is
-    // immediately visible in the overrides list and matches the common
-    // intent ("prefer the other source on this one path").
+    // Seed the new override using the existing group order so the
+    // current winner does not silently flip on the moment the user
+    // clicks "Override this path". Reordering is the next deliberate
+    // action the user takes — they pick the rank-1 source explicitly.
     const publishers = new Set(multiSourcePaths[path] ?? [])
     const groupOrderForPath = group.sources.filter((src) => publishers.has(src))
-    const reversed = [...groupOrderForPath].reverse()
-    const priorities = reversed.map((sourceRef, i) => ({
+    const priorities = groupOrderForPath.map((sourceRef, i) => ({
       sourceRef,
       timeout: i === 0 ? 0 : fallbackMs
     }))

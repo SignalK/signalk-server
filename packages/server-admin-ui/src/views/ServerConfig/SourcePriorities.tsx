@@ -480,7 +480,16 @@ const SourcePriorities: React.FC = () => {
     if (!alreadyExists) {
       changePath(sourcePriorities.length, pathParam)
     }
-    setSearchParams({}, { replace: true })
+    // Drop only the consumed `path` param so any future URL-backed state
+    // on this page survives the deep-link entry.
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('path')
+        return next
+      },
+      { replace: true }
+    )
   }, [pathParam, sourcePriorities, changePath, setSearchParams])
 
   useEffect(() => {

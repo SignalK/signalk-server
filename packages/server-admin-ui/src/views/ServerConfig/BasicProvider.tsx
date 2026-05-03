@@ -1052,6 +1052,11 @@ function normalizeTalkerGroupName(name: string) {
   return name.trim().toLowerCase()
 }
 
+// NMEA 0183 talker IDs are exactly two uppercase ASCII letters
+// (e.g. GP, II, EC). Anything else is a typo that would silently
+// fail to match incoming sentences, so drop it at edit time.
+const TALKER_ID = /^[A-Z]{2}$/
+
 function entriesToTalkerGroups(
   entries: TalkerGroup[]
 ): Record<string, string[]> {
@@ -1062,7 +1067,7 @@ function entriesToTalkerGroups(
     const talkers = entry.talkers
       .split(',')
       .map((t) => t.trim().toUpperCase())
-      .filter((t) => t.length > 0)
+      .filter((t) => TALKER_ID.test(t))
     result[name] = [...new Set([...(result[name] ?? []), ...talkers])]
   }
   return result

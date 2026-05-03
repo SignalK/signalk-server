@@ -69,11 +69,29 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
   // render time. It goes stale the moment another override is deleted
   // — the next click on this card would otherwise reach into the wrong
   // row. Resolve the current index from path at click time so the slice
-  // action always operates on the right entry.
-  const resolvePathIndex = (): number => {
+  // action always operates on the right entry. Returns null when the
+  // path has been removed (concurrent delete in another tab) so callers
+  // can no-op rather than mutate an unrelated row.
+  const resolvePathIndex = (): number | null => {
     const arr = useStore.getState().sourcePrioritiesData.sourcePriorities
     const i = arr.findIndex((p) => p.path === path)
-    return i === -1 ? pathIndex : i
+    return i === -1 ? null : i
+  }
+  const safeChange = (
+    rowIdx: number,
+    sourceRef: string,
+    timeout: number | string
+  ) => {
+    const idx = resolvePathIndex()
+    if (idx !== null) changePriority(idx, rowIdx, sourceRef, timeout)
+  }
+  const safeMove = (rowIdx: number, dir: -1 | 1) => {
+    const idx = resolvePathIndex()
+    if (idx !== null) movePriority(idx, rowIdx, dir)
+  }
+  const safeDelete = (rowIdx: number) => {
+    const idx = resolvePathIndex()
+    if (idx !== null) deletePriority(idx, rowIdx)
   }
   const sourceStatus = useSourceStatus()
   const sourceStatusLoaded = useSourceStatusLoaded()
@@ -180,6 +198,12 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
               (o) => o.value === sourceRef || !selectedRefs.has(o.value)
             )
             const isDisabled = Number(timeout) === -1
+            // The auto-appended unassigned row is just a "pick a source"
+            // affordance — it has no real data yet, so don't render the
+            // controls that would materialise it as an invalid entry
+            // (empty sourceRef + active timeout / enabled toggle would
+            // both block the Save via hasIncompleteEntries).
+            const isPlaceholder = !sourceRef
             // sourceRef is stable across renders even when rows reorder; the
             // index suffix lets multiple unassigned rows coexist.
             const rowKey = sourceRef || `unassigned-${index}`
@@ -197,12 +221,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                           label: getDisplayName(sourceRef, sourcesData)
                         }}
                         onChange={(e) => {
-                          changePriority(
-                            resolvePathIndex(),
-                            index,
-                            e?.value || '',
-                            timeout
-                          )
+                          safeChange(index, e?.value || '', timeout)
                         }}
                       />
                     </div>
@@ -228,7 +247,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                   </div>
                 </td>
                 <td data-th="Fallback after (ms)">
-                  {index === 0 && !isDisabled ? (
+                  {isPlaceholder ? null : index === 0 && !isDisabled ? (
                     <span className="text-muted small">preferred</span>
                   ) : (
                     <Form.Control
@@ -236,51 +255,43 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       name="timeout"
                       disabled={isDisabled}
                       onChange={(e) =>
-                        changePriority(
-                          resolvePathIndex(),
-                          index,
-                          sourceRef,
-                          e.target.value
-                        )
+                        safeChange(index, sourceRef, e.target.value)
                       }
                       value={isDisabled ? '' : timeout}
                     />
                   )}
                 </td>
                 <td data-th="Enabled" className="text-center">
-                  <Form.Check
-                    type="checkbox"
-                    checked={!isDisabled}
-                    aria-label={`Enable source ${sourceRef || 'row ' + (index + 1)}`}
-                    onChange={(e) => {
-                      let nextTimeout: number
-                      if (e.target.checked) {
-                        // Rank-1 always has timeout 0; lower-ranked rows
-                        // restore their previous enabled timeout if we
-                        // remember it, otherwise fall back to the
-                        // configured default.
-                        if (index === 0) {
-                          nextTimeout = 0
+                  {isPlaceholder ? null : (
+                    <Form.Check
+                      type="checkbox"
+                      checked={!isDisabled}
+                      aria-label={`Enable source ${sourceRef || 'row ' + (index + 1)}`}
+                      onChange={(e) => {
+                        let nextTimeout: number
+                        if (e.target.checked) {
+                          // Rank-1 always has timeout 0; lower-ranked rows
+                          // restore their previous enabled timeout if we
+                          // remember it, otherwise fall back to the
+                          // configured default.
+                          if (index === 0) {
+                            nextTimeout = 0
+                          } else {
+                            const remembered = lastEnabledTimeout.current.get(
+                              `${sourceRef}|${index}`
+                            )
+                            nextTimeout =
+                              typeof remembered === 'number' && remembered > 0
+                                ? remembered
+                                : DEFAULT_FALLBACK_MS
+                          }
                         } else {
-                          const remembered = lastEnabledTimeout.current.get(
-                            `${sourceRef}|${index}`
-                          )
-                          nextTimeout =
-                            typeof remembered === 'number' && remembered > 0
-                              ? remembered
-                              : DEFAULT_FALLBACK_MS
+                          nextTimeout = -1
                         }
-                      } else {
-                        nextTimeout = -1
-                      }
-                      changePriority(
-                        resolvePathIndex(),
-                        index,
-                        sourceRef,
-                        nextTimeout
-                      )
-                    }}
-                  />
+                        safeChange(index, sourceRef, nextTimeout)
+                      }}
+                    />
+                  )}
                 </td>
                 <td data-th="Order">
                   {index > 0 && index < priorities.length && (
@@ -288,9 +299,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       type="button"
                       aria-label={`Move row ${index + 1} up`}
                       disabled={isSaving}
-                      onClick={() =>
-                        movePriority(resolvePathIndex(), index, -1)
-                      }
+                      onClick={() => safeMove(index, -1)}
                     >
                       <FontAwesomeIcon icon={faArrowUp} />
                     </button>
@@ -300,7 +309,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       type="button"
                       aria-label={`Move row ${index + 1} down`}
                       disabled={isSaving}
-                      onClick={() => movePriority(resolvePathIndex(), index, 1)}
+                      onClick={() => safeMove(index, 1)}
                     >
                       <FontAwesomeIcon icon={faArrowDown} />
                     </button>
@@ -319,7 +328,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                         cursor: isSaving ? 'not-allowed' : 'pointer',
                         color: 'inherit'
                       }}
-                      onClick={() => deletePriority(resolvePathIndex(), index)}
+                      onClick={() => safeDelete(index)}
                     >
                       <FontAwesomeIcon icon={faTrash} />
                     </button>
