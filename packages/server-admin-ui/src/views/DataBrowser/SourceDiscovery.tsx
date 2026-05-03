@@ -29,8 +29,7 @@ import {
   useSourceStatus,
   useSourceStatusLoaded,
   usePgnDataInstances,
-  usePgnSourceKeys,
-  useN2kDeviceStatusLoaded
+  usePgnSourceKeys
 } from '../../store'
 import SourceLabel from './SourceLabel'
 
@@ -94,7 +93,6 @@ const SourceDiscovery: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false)
   const pgnDataInstances = usePgnDataInstances()
   const pgnSourceKeys = usePgnSourceKeys()
-  const n2kDeviceStatusLoaded = useN2kDeviceStatusLoaded()
   const setN2kDeviceStatus = useStore((s) => s.setN2kDeviceStatus)
 
   useEffect(() => {
@@ -216,11 +214,10 @@ const SourceDiscovery: React.FC = () => {
     [conflicts, ignoredConflicts]
   )
 
-  const setActiveConflictCount = useStore((s) => s.setActiveConflictCount)
-  useEffect(() => {
-    if (!n2kDeviceStatusLoaded) return
-    setActiveConflictCount(activeConflicts.length)
-  }, [activeConflicts.length, n2kDeviceStatusLoaded, setActiveConflictCount])
+  // activeConflictCount is now derived globally in store/index.ts so
+  // the sidebar badge stays current even when SourceDiscovery is not
+  // mounted. The local activeConflicts memo above is still used to
+  // render the in-page list.
 
   const ignoredConflictList = useMemo(
     () =>

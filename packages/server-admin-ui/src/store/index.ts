@@ -14,6 +14,11 @@ import {
   createUnitPreferencesSlice,
   type UnitPreferencesSlice
 } from './slices/unitPreferencesSlice'
+import {
+  conflictKey,
+  detectInstanceConflicts,
+  extractN2kDevices
+} from '../utils/sourceLabels'
 
 export type { AppSlice } from './slices/appSlice'
 export type {
@@ -39,6 +44,56 @@ export const useStore = create<SignalKStore>()(
     ...createPrioritiesSlice(...args),
     ...createUnitPreferencesSlice(...args)
   }))
+)
+
+// Keep activeConflictCount up to date globally so the sidebar badge
+// reflects bus-level instance conflicts even when the user is not on
+// the SourceDiscovery view. Previously this counter was only written
+// by an effect inside SourceDiscovery, so the badge would freeze the
+// moment the user navigated away.
+useStore.subscribe(
+  (s) => ({
+    sourcesData: s.sourcesData,
+    pgnDataInstances: s.pgnDataInstances,
+    pgnSourceKeys: s.pgnSourceKeys,
+    ignoredInstanceConflicts: s.ignoredInstanceConflicts,
+    n2kDeviceStatusLoaded: s.n2kDeviceStatusLoaded
+  }),
+  ({
+    sourcesData,
+    pgnDataInstances,
+    pgnSourceKeys,
+    ignoredInstanceConflicts,
+    n2kDeviceStatusLoaded
+  }) => {
+    // Skip until the bootstrap response has been processed — pre-load
+    // the count would briefly read 0 against an empty pgnSourceKeys
+    // and make the badge flicker on every full reload.
+    if (!n2kDeviceStatusLoaded) return
+    const devices = sourcesData ? extractN2kDevices(sourcesData) : []
+    const conflicts = detectInstanceConflicts(
+      devices,
+      pgnDataInstances,
+      pgnSourceKeys
+    )
+    const active = conflicts.filter(
+      (c) =>
+        !ignoredInstanceConflicts[
+          conflictKey(c.deviceA.sourceRef, c.deviceB.sourceRef)
+        ]
+    ).length
+    if (useStore.getState().activeConflictCount !== active) {
+      useStore.getState().setActiveConflictCount(active)
+    }
+  },
+  {
+    equalityFn: (a, b) =>
+      a.sourcesData === b.sourcesData &&
+      a.pgnDataInstances === b.pgnDataInstances &&
+      a.pgnSourceKeys === b.pgnSourceKeys &&
+      a.ignoredInstanceConflicts === b.ignoredInstanceConflicts &&
+      a.n2kDeviceStatusLoaded === b.n2kDeviceStatusLoaded
+  }
 )
 
 export { useShallow }
