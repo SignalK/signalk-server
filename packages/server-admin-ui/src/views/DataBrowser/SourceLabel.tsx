@@ -40,6 +40,11 @@ const SourceLabel: React.FC<SourceLabelProps> = ({
     if (editValue !== currentAlias) {
       setAlias(sourceRef, editValue)
     }
+    // Press-Enter calls this directly and then setIsEditing(false)
+    // unmounts the input, which fires onBlur and re-enters handleSave.
+    // Re-using the cancel ref short-circuits that second pass before
+    // it can re-dispatch setAlias against not-yet-updated state.
+    isCancelRef.current = true
     setIsEditing(false)
   }
 

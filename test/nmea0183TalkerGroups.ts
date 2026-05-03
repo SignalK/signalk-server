@@ -149,5 +149,7 @@ describe('NMEA0183 talker group integration', () => {
     const source = deltas[0].updates[0].$source
     expect(source).to.be.a('string')
     expect(source).to.include('GP')
+
+    ws.close()
   })
 })

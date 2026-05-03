@@ -12,16 +12,20 @@ export function getSourceId(source: any): SourceRef {
     return 'no_source' as SourceRef
   }
   // A source missing `label` would otherwise yield "undefined.<x>",
-  // which then leaks into priority configuration and ACL checks.
-  // Fall back through canName/src so the ref is at least identifiable.
-  const label = source.label || source.canName || source.src || 'unknown_source'
+  // which then leaks into priority configuration and ACL checks. Fall
+  // back per branch so a missing label doesn't double the suffix
+  // (e.g. canName.canName) — pick a label that's distinct from the
+  // suffix the branch will emit.
   if (source.canName) {
+    const label = source.label || source.src || 'unknown_source'
     return `${label}.${source.canName}` as SourceRef
   }
   if (source.src !== undefined && source.src !== null) {
+    const label = source.label || source.canName || 'unknown_source'
     return `${label}.${source.src}` as SourceRef
   }
   if (typeof source === 'object') {
+    const label = source.label || 'unknown_source'
     return `${label}${source.talker ? '.' + source.talker : '.XX'}` as SourceRef
   }
   // source is actually a $source string

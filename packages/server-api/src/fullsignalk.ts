@@ -148,14 +148,18 @@ function findContext(
   root: AnyObject,
   contextPath: string
 ): AnyObject | undefined {
+  // Reject contexts without an identity segment up front. Otherwise
+  // the setNestedValue below would seed an empty entry like
+  // root.vessels = {} that no caller can ever reach via a normal
+  // identity-prefixed lookup, leaving an orphan key in the tree.
+  const identity = contextPath.split('.')[1]
+  if (!identity) {
+    return undefined
+  }
   let context = getNestedValue(root, contextPath) as AnyObject | undefined
   if (!context) {
     context = {}
     setNestedValue(root, contextPath, context)
-  }
-  const identity = contextPath.split('.')[1]
-  if (!identity) {
-    return undefined
   }
   fillIdentityField(context, identity)
   return context
