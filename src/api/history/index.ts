@@ -300,12 +300,6 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
   return parsed
 }
 
-const getMaybeNumber = (value: unknown): number | undefined => {
-  if (typeof value === 'string') return Number(value)
-  if (typeof value === 'number') return value
-  return undefined
-}
-
 // Maps the single-letter unit suffix in a resolution time expression to seconds.
 const RESOLUTION_UNIT_SECONDS: Record<string, number> = {
   s: 1,
@@ -358,7 +352,8 @@ const splitPathExpression = (pathExpression: string): PathSpec => {
   return pathSpec
 }
 
-const parseTimeRangeParams = (query: Record<string, unknown>) => {
+// Exported for unit testing.
+export const parseTimeRangeParams = (query: Record<string, unknown>) => {
   const errors: string[] = []
 
   const fromStr = query.from as string | undefined
@@ -374,18 +369,22 @@ const parseTimeRangeParams = (query: Record<string, unknown>) => {
   }
 
   const durationStr = query.duration as string | undefined
-  const durationNum = getMaybeNumber(query.duration)
   let duration: Temporal.Duration | undefined
   if (durationStr) {
     try {
       duration = Temporal.Duration.from(durationStr)
-    } catch (error) {
-      errors.push(
-        `duration parameter must be a valid ISO 8601 duration string: ${error instanceof Error ? error.message : 'Invalid format'}`
-      )
+    } catch {
+      // Strict non-negative decimal integer only: rule out negatives, hex
+      // (0x10), exponential (9e2), surrounding whitespace, and fractional
+      // forms that Number() would otherwise silently accept.
+      if (/^\d+$/.test(durationStr)) {
+        duration = Temporal.Duration.from({ seconds: Number(durationStr) })
+      } else {
+        errors.push(
+          `duration parameter must be an ISO 8601 duration string (e.g. 'PT15M') or an integer number of seconds`
+        )
+      }
     }
-  } else if (durationNum !== undefined) {
-    duration = Temporal.Duration.from({ milliseconds: durationNum })
   }
 
   if (!from && !duration) {
