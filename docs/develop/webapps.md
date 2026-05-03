@@ -266,6 +266,26 @@ As the cookie is set to be [`HttpOnly`](https://developer.mozilla.org/en-US/docs
 
 Additionally the server sets cookie `skLoginInfo` when the user logs in and removes it when the user logs out. A webapp can poll for changes of this cookie to be notified of the browser's cookie based login status.
 
+### Redirecting unauthenticated users to login
+
+A webapp that requires an authenticated user can hand off sign-in to the server. Send the browser to the admin UI's login page with a `redirect` query parameter pointing back at the webapp:
+
+```js
+const here =
+  window.location.pathname + window.location.search + window.location.hash
+window.location.href = '/admin/#/login?redirect=' + encodeURIComponent(here)
+```
+
+After a successful form login or OIDC sign-in the browser is sent back to that URL. The session cookie is in place by then, so the webapp's subsequent requests are authenticated.
+
+The `redirect` value must be a same-origin relative URL: it must start with `/` (but not `//`), contain no backslashes or control characters, and not point at the admin login route itself. Invalid values are silently ignored and the user lands on the dashboard after login.
+
+For OIDC-only deployments, a webapp can skip the admin UI and link directly to the OIDC endpoint, which accepts the same parameter:
+
+```text
+/signalk/v1/auth/oidc/login?redirect=/your/path
+```
+
 For **token based sessions** a webapp may manage the authentication token itself. It must include it explicitly in fetch call headers.
 As JavaScript has no access to headers but cookies are included automatically by browsers when opening WebSocket connections the server will use the server-set, HttpOnly cookie. Normally browsers do not allow shadowing the server-set cookie with a new value. The only option for WebSocket connections is using a query parameter to override the cookie with a token.
 
