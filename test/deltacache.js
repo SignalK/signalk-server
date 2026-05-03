@@ -422,4 +422,107 @@ describe('Deltacache', () => {
         delete settings.priorityGroups
       })
   })
+
+  it('getReconciledGroups attaches a source to at most one group', function () {
+    // Reproduces the "Saving priorities settings failed!" bug: when
+    // a new source publishes BOTH a path covered by a saved group
+    // (so it gets added as a newcomer) AND a path published by other
+    // unsaved sources (so it would otherwise also surface as part of
+    // an "unsaved residue" connected component), the source must end
+    // up in only one reconciled group. Otherwise the save validator
+    // — which forbids the same source in two active groups — rejects
+    // the payload and the user can't save.
+    const PATH_GROUPED = 'environment.depth.shared'
+    const PATH_RESIDUE = 'environment.depth.residueOnly'
+    const settings = theServer.app.config.settings
+    settings.priorityGroups = [
+      {
+        id: 'savedGroup',
+        sources: ['savedA', 'savedB']
+      }
+    ]
+    return doSendADelta({
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: 'savedA',
+          timestamp: '2024-02-01T10:00:00.000Z',
+          values: [{ path: PATH_GROUPED, value: 1 }]
+        }
+      ]
+    })
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'savedB',
+              timestamp: '2024-02-01T10:00:01.000Z',
+              values: [{ path: PATH_GROUPED, value: 2 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'newcomerX',
+              timestamp: '2024-02-01T10:00:02.000Z',
+              values: [{ path: PATH_GROUPED, value: 3 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'newcomerX',
+              timestamp: '2024-02-01T10:00:03.000Z',
+              values: [{ path: PATH_RESIDUE, value: 4 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'unattachedY',
+              timestamp: '2024-02-01T10:00:04.000Z',
+              values: [{ path: PATH_RESIDUE, value: 5 }]
+            }
+          ]
+        })
+      )
+      .then(() => {
+        const reconciled = theServer.app.deltaCache.getReconciledGroups()
+        const sourceToGroupCount = new Map()
+        for (const g of reconciled) {
+          for (const s of g.sources) {
+            sourceToGroupCount.set(s, (sourceToGroupCount.get(s) || 0) + 1)
+          }
+        }
+        const dups = [...sourceToGroupCount.entries()].filter(([, n]) => n > 1)
+        dups.should.deep.equal([])
+        // newcomerX was claimed by savedGroup as a newcomer; the
+        // residue branch must NOT also create a card containing it.
+        const newcomerInSaved = reconciled.find(
+          (g) =>
+            g.matchedSavedId === 'savedGroup' && g.sources.includes('newcomerX')
+        )
+        newcomerInSaved.should.not.equal(undefined)
+        const newcomerInResidue = reconciled.find(
+          (g) => g.matchedSavedId === null && g.sources.includes('newcomerX')
+        )
+        ;(newcomerInResidue === undefined).should.equal(true)
+      })
+      .finally(() => {
+        delete settings.priorityGroups
+      })
+  })
 })

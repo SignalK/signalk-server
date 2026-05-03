@@ -998,6 +998,17 @@ export default class DeltaCache {
       newcomerSources: string[]
     }> = []
 
+    // Sources that are attached to a saved group — either as an
+    // original member (sg.sources) or as a newcomer added on this
+    // pass below. Used by the residue branch to avoid emitting an
+    // "Unranked Unsaved" card for a source that's already shown as
+    // a newcomer of some saved group; otherwise the same source ends
+    // up in two groups in the reconciled view, the validator on
+    // PUT /skServer/priorities (a source may belong to ≤1 active
+    // group) rejects the save, and the user sees "Saving priorities
+    // settings failed!" on a perfectly-good config.
+    const claimedByAnySavedGroup = new Set<string>(sourceToSavedGroup.keys())
+
     if (Array.isArray(savedGroups)) {
       for (const sg of savedGroups) {
         const savedSet = new Set(sg.sources)
@@ -1033,6 +1044,7 @@ export default class DeltaCache {
             const claimedBy = sourceToSavedGroup.get(ref)
             if (claimedBy && claimedBy.id !== sg.id) continue
             newcomers.add(ref)
+            claimedByAnySavedGroup.add(ref)
           }
         }
         const newcomerList = [...newcomers].sort()
@@ -1049,12 +1061,13 @@ export default class DeltaCache {
     }
 
     // Discovery for unsaved residue: connected-components on paths
-    // whose live publishers are all unsaved.
+    // whose live publishers are all unattached to a saved group
+    // (neither original members nor newcomers added above).
     const residue: Record<string, string[]> = {}
     for (const [path, refs] of Object.entries(livePublishers)) {
       if (refs.size < 2) continue
       const arr = [...refs]
-      if (arr.every((r) => !sourceToSavedGroup.has(r))) {
+      if (arr.every((r) => !claimedByAnySavedGroup.has(r))) {
         residue[path] = arr
       }
     }
