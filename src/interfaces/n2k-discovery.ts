@@ -805,6 +805,10 @@ module.exports = (app: N2kDiscoveryApp) => {
               if (!Number.isNaN(addrNum)) {
                 knownAddresses.delete(addrNum)
                 discoveredAddresses.delete(addrNum)
+                // Drop the per-address last-seen so a different device
+                // claiming this bus address later does not inherit a
+                // stale online-since timestamp.
+                frameLastSeenBySrc.delete(addrNum)
               }
               delete labelNode[subKey]
               if (sourceMeta) {
@@ -906,10 +910,17 @@ module.exports = (app: N2kDiscoveryApp) => {
           app.deltaCache.removeSourceDelta(key)
         }
 
-        // Remove from all address-keyed maps
+        // Remove from all address-keyed maps. Mirror the cleanup
+        // resetN2kDevices does so a removed device cannot leave behind
+        // stale online status or last-seen timestamps that a future
+        // device claiming the same address would inherit.
         for (const addr of addressesToRemove) {
           knownAddresses.delete(addr)
           discoveredAddresses.delete(addr)
+          frameLastSeenBySrc.delete(addr)
+        }
+        for (const ref of allRefs) {
+          onlineStates.delete(ref)
         }
 
         // Clean up source aliases (in-memory; persisted below)

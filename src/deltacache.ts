@@ -288,6 +288,7 @@ export default class DeltaCache {
     // canonicalised on write, so compare in the same form whether the
     // caller passed a raw or canonical ref.
     const canonicalTarget = this.canonicaliseSourceRef(sourceRef) as SourceRef
+    let preferredChanged = false
     for (const [key, ref] of this.preferredSources) {
       if (ref !== canonicalTarget) continue
       const nullIdx = key.indexOf('\0')
@@ -302,6 +303,14 @@ export default class DeltaCache {
       } else {
         this.preferredSources.delete(key)
       }
+      // Without queuing the dirty key, the admin UI keeps showing the
+      // removed source as the winner until an unrelated delta happens
+      // to refresh that path.
+      this.livePreferredDirtyPaths.add(key)
+      preferredChanged = true
+    }
+    if (preferredChanged) {
+      this.scheduleLivePreferredEmit()
     }
     this.emitMultiSourcePaths()
   }
@@ -341,12 +350,21 @@ export default class DeltaCache {
         }
       }
     }
+    let preferredChanged = false
     for (const [key, ref] of this.preferredSources) {
       const nullIdx = key.indexOf('\0')
       const path = nullIdx === -1 ? '' : key.slice(nullIdx + 1)
       if (activePaths.has(path)) continue
       if (groupedSources && groupedSources.has(ref)) continue
       this.preferredSources.delete(key)
+      // Same reasoning as removeSource: without dirtying the key the
+      // admin UI keeps the now-orphaned winner until another delta
+      // touches the path.
+      this.livePreferredDirtyPaths.add(key)
+      preferredChanged = true
+    }
+    if (preferredChanged) {
+      this.scheduleLivePreferredEmit()
     }
   }
 
@@ -433,10 +451,16 @@ export default class DeltaCache {
         const isNewSource = !leaf[sourceRef]
         leaf[sourceRef] = msg
         // Populate preferredSources so getCachedDeltas('preferred')
-        // works correctly after restart/replay
+        // works correctly after restart/replay. Store the canonical
+        // (canName) form to match onValue's writes; otherwise winners
+        // would drift to numeric addresses across replays and stop
+        // matching saved group membership.
         const prefKey = delta.context + '\0' + pathValue.path
         if (!this.preferredSources.has(prefKey)) {
-          this.preferredSources.set(prefKey, sourceRef)
+          this.preferredSources.set(
+            prefKey,
+            this.canonicaliseSourceRef(sourceRef) as SourceRef
+          )
         }
 
         if (isNewSource) {
