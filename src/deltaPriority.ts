@@ -59,6 +59,60 @@ export function isFanOutPriorities(
 }
 
 /**
+ * An override is dormant when every one of its ranked sources belongs
+ * to a group that the user has marked inactive. The principle: an
+ * override only filters if at least one of its sources can win, and a
+ * source from an inactive group is treated as ineligible. Sources that
+ * belong to no group, or to an active one, keep the override alive.
+ *
+ * Used by both the server engine (to bypass dormant overrides during
+ * delta routing) and by the admin-UI (to render dormant overrides as
+ * visually disabled and exclude them from the attention-count badge),
+ * so the truth derived from `(overrides, groups)` stays consistent on
+ * both sides without an explicit flag being pushed across the wire.
+ *
+ * The fan-out sentinel never goes dormant — it has no real source to
+ * map onto a group.
+ */
+export function isOverrideDormantUnderGroups(
+  override: SourcePriority[] | undefined,
+  groups: PriorityGroupConfig[] | undefined
+): boolean {
+  if (!Array.isArray(override) || override.length === 0) return false
+  if (isFanOutPriorities(override)) return false
+  if (!Array.isArray(groups) || groups.length === 0) return false
+  // Build a quick lookup of source-identity → "the group that owns it
+  // is inactive". Active groups (or "no group at all") leave the
+  // identity off the map and keep the override eligible.
+  const inactiveSourceIdentities = new Set<string>()
+  const allClaimedIdentities = new Set<string>()
+  for (const g of groups) {
+    if (!Array.isArray(g?.sources)) continue
+    for (const s of g.sources) {
+      const id = sourceRefIdentity(s)
+      allClaimedIdentities.add(id)
+      if (g.inactive) {
+        inactiveSourceIdentities.add(id)
+      } else {
+        // An active group's claim wins on overlap — drop any prior
+        // inactive claim for the same identity. Mirrors the
+        // first-active-wins rule the engine enforces elsewhere.
+        inactiveSourceIdentities.delete(id)
+      }
+    }
+  }
+  for (const entry of override) {
+    if (!entry?.sourceRef) continue
+    const id = sourceRefIdentity(entry.sourceRef)
+    // Source belongs to no group at all → keeps the override alive.
+    if (!allClaimedIdentities.has(id)) return false
+    // Source belongs to an active group → keeps it alive.
+    if (!inactiveSourceIdentities.has(id)) return false
+  }
+  return true
+}
+
+/**
  * Device identity for transport-agnostic matching. Returns the CAN Name
  * if the sourceRef encodes one; otherwise the sourceRef itself is
  * returned so exact-match semantics are preserved for non-N2K sources.
@@ -180,15 +234,27 @@ export const getToPreferredDelta = (
     return (delta: any, _now: Date, _selfContext: string) => delta
   }
 
+  // Drop overrides whose every ranked source belongs to a group the
+  // user has marked inactive — the override is dormant in that case
+  // and should not filter incoming deltas. Restoring the group flips
+  // the override back on without the user having to re-author it.
+  const activeOverrides: SourcePrioritiesData = {}
+  for (const path of Object.keys(overrides)) {
+    if (isOverrideDormantUnderGroups(overrides[path], groups)) continue
+    activeOverrides[path] = overrides[path]
+  }
+
   // Paths with a single sentinel-source entry bypass priority filtering
   // entirely — every source's value is delivered unchanged. Used when
   // the user wants to compare or aggregate readings across sources
   // (e.g. satellitesInView from multiple GPSes) while still honouring
   // priorities on the rest of the group.
   const fanOutPaths = new Set<string>(
-    Object.keys(overrides).filter((p) => isFanOutPriorities(overrides[p]))
+    Object.keys(activeOverrides).filter((p) =>
+      isFanOutPriorities(activeOverrides[p])
+    )
   )
-  const overridePrecedences = buildOverridePrecedences(overrides)
+  const overridePrecedences = buildOverridePrecedences(activeOverrides)
   const { sourceToGroupId, groupPrecedences } = buildGroupPrecedences(
     groups,
     fallbackMs

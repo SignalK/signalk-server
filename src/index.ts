@@ -44,7 +44,11 @@ import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache, { buildSrcToCanonicalMap } from './deltacache'
 import DeltaChain from './deltachain'
-import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
+import {
+  getToPreferredDelta,
+  isOverrideDormantUnderGroups,
+  ToPreferredDelta
+} from './deltaPriority'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
 import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
@@ -352,10 +356,17 @@ class Server {
         // an explicit override. Group-covered paths are kept so a path
         // whose only ranking came from group resolution doesn't lose
         // its winner from the bootstrap snapshot. The next delta will
-        // re-evaluate via the engine anyway.
-        const activeOverridePaths = new Set<string>(
-          Object.keys(s.priorityOverrides ?? {})
-        )
+        // re-evaluate via the engine anyway. Overrides whose every
+        // ranked source is in an inactive group are treated as dormant
+        // (same rule the engine applies on the per-delta path) so the
+        // snapshot stays in sync with what gets routed.
+        const overrides = s.priorityOverrides ?? {}
+        const groups = s.priorityGroups ?? []
+        const activeOverridePaths = new Set<string>()
+        for (const path of Object.keys(overrides)) {
+          if (isOverrideDormantUnderGroups(overrides[path], groups)) continue
+          activeOverridePaths.add(path)
+        }
         app.deltaCache?.resetPreferredSourcesNotIn?.(activeOverridePaths, {
           keepGroupCovered: true
         })

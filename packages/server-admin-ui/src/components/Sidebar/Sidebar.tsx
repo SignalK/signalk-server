@@ -11,9 +11,11 @@ import {
   useReconciledGroups,
   useSourcePriorities,
   usePriorityOverrides,
+  usePriorityGroups,
   useActiveConflictCount
 } from '../../store'
 import classNames from 'classnames'
+import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
 import './Sidebar.css'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
@@ -60,6 +62,7 @@ export default function Sidebar({ location }: SidebarProps) {
   const reconciled = useReconciledGroups()
   const sourcePrioritiesData = useSourcePriorities()
   const priorityOverridesData = usePriorityOverrides()
+  const priorityGroupsData = usePriorityGroups()
 
   // Two reasons a group needs the user's attention:
   //   1. it has no saved ranking yet ("Unranked"), or
@@ -96,6 +99,7 @@ export default function Sidebar({ location }: SidebarProps) {
       for (const p of g.paths) groupSourcesByPath.set(p, sourceSet)
     }
 
+    const groups = priorityGroupsData?.groups ?? []
     let count = 0
     for (const pp of sourcePrioritiesData.sourcePriorities) {
       if (!overrideSet.has(pp.path)) continue
@@ -104,6 +108,11 @@ export default function Sidebar({ location }: SidebarProps) {
       if (pp.priorities.length === 1 && pp.priorities[0].sourceRef === '*') {
         continue
       }
+      // Dormant overrides (every source belongs to a deactivated
+      // group) are skipped: the engine isn't applying them, so the
+      // user doesn't need to be nagged about a missing publisher
+      // that wouldn't have been routed anyway.
+      if (isOverrideDormantUnderGroups(pp.priorities, groups)) continue
       const allPublishers = multiSourcePaths[pp.path]
       if (!allPublishers || allPublishers.length === 0) continue
       const restrict = groupSourcesByPath.get(pp.path)
@@ -122,6 +131,7 @@ export default function Sidebar({ location }: SidebarProps) {
     multiSourcePaths,
     sourcePrioritiesData,
     priorityOverridesData,
+    priorityGroupsData,
     reconciled
   ])
 

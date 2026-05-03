@@ -621,7 +621,15 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
             </Badge>
           )}
           {group.inactive && (
-            <Badge bg="secondary" className="ms-2">
+            <Badge
+              bg="secondary"
+              className="ms-2"
+              title={
+                overrideRows.length > 0
+                  ? `Group is deactivated. ${overrideRows.length} path override${overrideRows.length === 1 ? ' is' : 's are'} dormant — they keep their saved ranking and will resume when the group is reactivated.`
+                  : 'Group is deactivated.'
+              }
+            >
               Inactive
             </Badge>
           )}
@@ -634,8 +642,8 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
           className="pg-card-save"
           title={
             group.inactive
-              ? 'Resume enforcement using the saved ranking'
-              : 'Keep the ranking but stop enforcing it (paths in this group accept all sources)'
+              ? 'Resume enforcement using the saved ranking and reactivate any path overrides that belong to this group'
+              : 'Keep the ranking but stop enforcing it. Path overrides whose sources all belong to this group go dormant too — every source on those paths is accepted again.'
           }
         >
           {group.inactive ? 'Activate' : 'Deactivate'}

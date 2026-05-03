@@ -2,6 +2,7 @@ import { SourceRef } from '@signalk/server-api'
 import assert from 'assert'
 import {
   getToPreferredDelta,
+  isOverrideDormantUnderGroups,
   PriorityGroupConfig,
   SourcePrioritiesData
 } from '../src/deltaPriority'
@@ -837,5 +838,154 @@ describe('group-aware resolution', () => {
       'self'
     )
     assert(accepted(r), 'derived-data passthrough on uncovered path')
+  })
+})
+
+describe('isOverrideDormantUnderGroups', () => {
+  it('returns false when no groups exist', () => {
+    isOverrideDormantUnderGroups(
+      [{ sourceRef: 'foo.A' as SourceRef, timeout: 0 }],
+      []
+    ).should.equal(false)
+  })
+
+  it('returns false when override is empty', () => {
+    isOverrideDormantUnderGroups(
+      [],
+      [{ id: 'g', sources: ['foo.A'], inactive: true }]
+    ).should.equal(false)
+  })
+
+  it('returns false for fan-out overrides', () => {
+    isOverrideDormantUnderGroups(
+      [{ sourceRef: '*' as SourceRef, timeout: 0 }],
+      [{ id: 'g', sources: ['foo.A'], inactive: true }]
+    ).should.equal(false)
+  })
+
+  it('returns true when every override source is in an inactive group', () => {
+    isOverrideDormantUnderGroups(
+      [
+        { sourceRef: 'foo.A' as SourceRef, timeout: 0 },
+        { sourceRef: 'foo.B' as SourceRef, timeout: 15000 }
+      ],
+      [{ id: 'g', sources: ['foo.A', 'foo.B'], inactive: true }]
+    ).should.equal(true)
+  })
+
+  it('returns false when at least one source is in an active group', () => {
+    isOverrideDormantUnderGroups(
+      [
+        { sourceRef: 'foo.A' as SourceRef, timeout: 0 },
+        { sourceRef: 'bar.A' as SourceRef, timeout: 15000 }
+      ],
+      [
+        { id: 'g1', sources: ['foo.A'], inactive: true },
+        { id: 'g2', sources: ['bar.A'], inactive: false }
+      ]
+    ).should.equal(false)
+  })
+
+  it('returns false when at least one source belongs to no group', () => {
+    isOverrideDormantUnderGroups(
+      [
+        { sourceRef: 'foo.A' as SourceRef, timeout: 0 },
+        { sourceRef: 'plugin.derived' as SourceRef, timeout: 15000 }
+      ],
+      [{ id: 'g', sources: ['foo.A'], inactive: true }]
+    ).should.equal(false)
+  })
+
+  it('matches sources by canName identity (transport-agnostic)', () => {
+    // Override stored in canName form, group also in canName form
+    // — both resolve to the same identity even if they came from
+    // different transports.
+    isOverrideDormantUnderGroups(
+      [{ sourceRef: 'YDEN02.c0788c00e7e04312' as SourceRef, timeout: 0 }],
+      [
+        {
+          id: 'g',
+          sources: ['canhat.c0788c00e7e04312'],
+          inactive: true
+        }
+      ]
+    ).should.equal(true)
+  })
+
+  it('an active group claim wins on overlap', () => {
+    // If the same canName is in both an inactive and an active group
+    // (which the engine's first-active-wins rule prefers), the
+    // override is NOT dormant.
+    isOverrideDormantUnderGroups(
+      [{ sourceRef: 'YDEN02.c0788c00e7e04312' as SourceRef, timeout: 0 }],
+      [
+        {
+          id: 'g-inactive',
+          sources: ['YDEN02.c0788c00e7e04312'],
+          inactive: true
+        },
+        {
+          id: 'g-active',
+          sources: ['canhat.c0788c00e7e04312'],
+          inactive: false
+        }
+      ]
+    ).should.equal(false)
+  })
+})
+
+describe('engine integration: dormant overrides bypass priority filtering', () => {
+  it('an override whose sources all belong to an inactive group is bypassed', () => {
+    const overrides: SourcePrioritiesData = {
+      'environment.outside.temperature': [
+        { sourceRef: 'gps.A' as SourceRef, timeout: 0 },
+        { sourceRef: 'gps.B' as SourceRef, timeout: 15000 }
+      ]
+    }
+    const groups: PriorityGroupConfig[] = [
+      { id: 'g', sources: ['gps.A', 'gps.B'], inactive: true }
+    ]
+    const toPreferredDelta = getToPreferredDelta({ overrides, groups })
+
+    const r = toPreferredDelta(
+      makeDelta('gps.B', 'environment.outside.temperature', 17),
+      new Date(),
+      'self'
+    )
+    assert(
+      accepted(r),
+      'rank-2 source should pass through when its override is dormant'
+    )
+  })
+
+  it('keeps the override active when at least one source has no group', () => {
+    const overrides: SourcePrioritiesData = {
+      'environment.outside.temperature': [
+        { sourceRef: 'gps.A' as SourceRef, timeout: 0 },
+        { sourceRef: 'plugin.derived' as SourceRef, timeout: 15000 }
+      ]
+    }
+    const groups: PriorityGroupConfig[] = [
+      { id: 'g', sources: ['gps.A'], inactive: true }
+    ]
+    const toPreferredDelta = getToPreferredDelta({ overrides, groups })
+
+    // gps.A is rank 1 — let it claim "latest". Then plugin.derived
+    // (rank 2 with timeout 15s) should be rejected since gps.A is
+    // still fresh and the override is NOT dormant.
+    toPreferredDelta(
+      makeDelta('gps.A', 'environment.outside.temperature', 18),
+      new Date(),
+      'self'
+    )
+    const r = toPreferredDelta(
+      makeDelta('plugin.derived', 'environment.outside.temperature', 17),
+      new Date(),
+      'self'
+    )
+    assert(
+      !accepted(r),
+      'rank-2 source should be rejected — override is alive because plugin.derived has no group'
+    )
   })
 })
