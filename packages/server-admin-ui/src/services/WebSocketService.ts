@@ -303,6 +303,19 @@ export class WebSocketService {
             (data ?? []) as Parameters<SignalKStore['setSourceStatus']>[0]
           )
         break
+      case 'N2KDEVICESTATUS':
+        // Server pushes the same payload shape as GET /n2kDeviceStatus
+        // whenever pgnDataInstances / pgnSourceKeys actually change.
+        // Without this the conflict-detection badge in SourceDiscovery
+        // is frozen at page-mount state — devices that start or stop
+        // publishing a path don't flip the conflict state until the
+        // user reloads the page.
+        useStore
+          .getState()
+          .setN2kDeviceStatus(
+            (data ?? {}) as Parameters<SignalKStore['setN2kDeviceStatus']>[0]
+          )
+        break
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break

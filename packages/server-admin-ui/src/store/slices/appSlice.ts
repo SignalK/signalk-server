@@ -312,24 +312,37 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
   },
 
   setN2kDeviceStatus: (status) => {
-    // Hydrate sourceStatus from the bootstrap response too. Without
-    // this the Discovery / priorities UI sits in its "unknown" state
-    // for every source until the first SOURCESTATUS WS tick happens
-    // to arrive — long enough to look broken on a fresh page load.
-    const sourceStatus: Record<string, { online: boolean; lastSeen?: number }> =
-      {}
-    for (const s of status.sourceStatuses ?? []) {
-      const key = s.sourceRef ?? `${s.providerId}.${s.src}`
-      sourceStatus[key] = { online: s.online, lastSeen: s.lastSeen }
-    }
-    set({
+    // The bootstrap GET /n2kDeviceStatus carries sourceStatuses; the
+    // WS-pushed N2KDEVICESTATUS event omits it (SOURCESTATUS is its
+    // own channel). Only refresh sourceStatus when the field is
+    // actually present — otherwise we'd flash every source to
+    // "unknown" on every WS push.
+    const patch: Partial<{
+      pgnDataInstances: Record<string, Record<string, number[]>>
+      pgnSourceKeys: Record<string, Record<string, string[]>>
+      discoveredAddresses: number[]
+      n2kDeviceStatusLoaded: boolean
+      sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
+      sourceStatusLoaded: boolean
+    }> = {
       pgnDataInstances: status.pgnDataInstances ?? {},
       pgnSourceKeys: status.pgnSourceKeys ?? {},
       discoveredAddresses: status.discoveredAddresses ?? [],
-      n2kDeviceStatusLoaded: true,
-      sourceStatus,
-      sourceStatusLoaded: true
-    })
+      n2kDeviceStatusLoaded: true
+    }
+    if (status.sourceStatuses) {
+      const sourceStatus: Record<
+        string,
+        { online: boolean; lastSeen?: number }
+      > = {}
+      for (const s of status.sourceStatuses) {
+        const key = s.sourceRef ?? `${s.providerId}.${s.src}`
+        sourceStatus[key] = { online: s.online, lastSeen: s.lastSeen }
+      }
+      patch.sourceStatus = sourceStatus
+      patch.sourceStatusLoaded = true
+    }
+    set(patch)
   },
 
   setMultiSourcePaths: (multiSourcePaths) => {

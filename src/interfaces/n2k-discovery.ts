@@ -264,6 +264,13 @@ module.exports = (app: N2kDiscoveryApp) => {
   // First tick always emits a full snapshot so admin-ui clients get
   // initial state via lastServerEvents bootstrap on connect.
   let firstStatusEmit = true
+  // Same idea for the N2K device-status payload (pgnDataInstances /
+  // pgnSourceKeys). Fingerprint of the last emitted payload so we
+  // re-emit only when the tree-derived inputs actually changed —
+  // otherwise every tick would push ~10 KB to every admin client for
+  // no UI benefit.
+  let lastDeviceStatusFingerprint: string | undefined
+  let firstDeviceStatusEmit = true
   const api = new Interface()
 
   // Look up the numeric bus address that currently corresponds to the
@@ -430,6 +437,38 @@ module.exports = (app: N2kDiscoveryApp) => {
     }
   }
 
+  // Push pgnDataInstances + pgnSourceKeys to admin-ui clients when the
+  // tree-derived inputs change. Without this the conflict-detection
+  // badge in SourceDiscovery only updates on full page reload, even
+  // when a device starts or stops publishing a path that overlaps
+  // another device's path on the same (connection, deviceInstance).
+  // Same data and security model as the GET /n2kDeviceStatus bootstrap
+  // — already-public via that endpoint, so emitting on serverevent
+  // doesn't widen the surface.
+  function checkDeviceStatus(): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const selfTree = (app.signalk as any)?.self
+    const pgnDataInstances = buildPgnDataInstancesFromTree(selfTree)
+    const pgnSourceKeys = buildPgnSourceKeysFromTree(selfTree)
+    // Stable JSON: tree walkers already produce sorted maps/arrays,
+    // so JSON.stringify is a deterministic fingerprint and we don't
+    // need to canonicalise further.
+    const fingerprint = JSON.stringify({ pgnDataInstances, pgnSourceKeys })
+    if (!firstDeviceStatusEmit && fingerprint === lastDeviceStatusFingerprint) {
+      return
+    }
+    firstDeviceStatusEmit = false
+    lastDeviceStatusFingerprint = fingerprint
+    app.emit('serverevent', {
+      type: 'N2KDEVICESTATUS',
+      data: {
+        pgnDataInstances,
+        pgnSourceKeys,
+        discoveredAddresses: Array.from(discoveredAddresses)
+      }
+    })
+  }
+
   const n2kListener = (pgn: unknown) => {
     const n2k = pgn as N2kPGN
     if (typeof n2k.src === 'number' && n2k.src >= 0 && n2k.src < 254) {
@@ -489,7 +528,10 @@ module.exports = (app: N2kDiscoveryApp) => {
     app.on('N2KAnalyzerOut', n2kListener)
     app.on('nmea2000OutAvailable', n2kOutListener)
     app.on('sourceRefChanged', sourceRefChangedListener)
-    statusTickInterval = setInterval(checkSourceStatus, STATUS_TICK_MS)
+    statusTickInterval = setInterval(() => {
+      checkSourceStatus()
+      checkDeviceStatus()
+    }, STATUS_TICK_MS)
 
     app.securityStrategy.addAdminMiddleware(
       `${SERVERROUTESPREFIX}/n2kConfigDevice`
@@ -871,6 +913,11 @@ module.exports = (app: N2kDiscoveryApp) => {
           type: 'SOURCESTATUS',
           data: buildSourceStatuses()
         })
+        // Force the device-status payload to re-emit on the next tick
+        // even if the fingerprint happens to match — the user just took
+        // an action that they expect to see reflected immediately.
+        firstDeviceStatusEmit = true
+        checkDeviceStatus()
 
         debug('Reset N2K devices: removed %d stale entries', removedRefs.length)
         res.json({
@@ -1034,6 +1081,13 @@ module.exports = (app: N2kDiscoveryApp) => {
             )
           }
         }
+
+        // Force the device-status payload to re-emit on the next tick
+        // so the admin-ui clears the removed device from conflict
+        // detection / discovery views without waiting for a timing
+        // accident.
+        firstDeviceStatusEmit = true
+        checkDeviceStatus()
 
         const respondOk = () => {
           debug(
