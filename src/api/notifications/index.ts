@@ -24,8 +24,7 @@ import {
 } from './notificationManager'
 
 export interface NotificationApplication
-  extends
-    IRouter,
+  extends IRouter,
     ConfigApp,
     WithConfig,
     WithSecurityStrategy,

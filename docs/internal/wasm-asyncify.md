@@ -21,11 +21,13 @@ Asyncify uses a state machine with three states:
 ### Components
 
 1. **FetchHandler** (`as-fetch/bindings.raw.esm.js`)
+
    - Manages Asyncify state transitions
    - Handles HTTP requests via browser/Node.js fetch API
    - Calls main function callback when async operations complete
 
 2. **WASM Runtime** (`src/wasm/wasm-runtime.ts`)
+
    - Initializes FetchHandler with resume callback
    - Detects Asyncify state after plugin_start()
    - Waits for async operations to complete before returning

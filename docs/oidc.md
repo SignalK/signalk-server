@@ -150,12 +150,14 @@ SIGNALK_OIDC_GROUPS_ATTRIBUTE=cognito:groups
 ### Keycloak
 
 1. Create a new client in your realm:
+
    - **Client ID**: `signalk-server`
    - **Client Protocol**: `openid-connect`
    - **Access Type**: `confidential`
    - **Valid Redirect URIs**: `https://your-server:3000/signalk/v1/auth/oidc/callback`
 
 2. Add a groups mapper:
+
    - Go to **Clients > signalk-server > Mappers**
    - Click **Create**
    - **Name**: `groups`
@@ -175,6 +177,7 @@ SIGNALK_OIDC_GROUPS_ATTRIBUTE=cognito:groups
 ### Authentik
 
 1. Create a new OAuth2/OIDC Provider:
+
    - **Name**: `Signal K Server`
    - **Client Type**: `Confidential`
    - **Redirect URIs**: `https://your-server:3000/signalk/v1/auth/oidc/callback`
@@ -247,6 +250,7 @@ SIGNALK_OIDC_GROUPS_ATTRIBUTE=cognito:groups
 ### Auth0
 
 1. Create a new Regular Web Application:
+
    - **Allowed Callback URLs**: `https://your-server:3000/signalk/v1/auth/oidc/callback`
 
 2. Add a custom rule to include groups (Actions > Flows > Login):
