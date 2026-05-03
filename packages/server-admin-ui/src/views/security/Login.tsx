@@ -25,6 +25,7 @@ import { useLoginStatus } from '../../store'
 import { loginAction as performLogin } from '../../actions'
 import Dashboard from '../Dashboard/Dashboard'
 import EnableSecurity from './EnableSecurity'
+import { appendRedirectParam, isSafeRedirect } from './loginRedirect'
 
 // HashRouter puts query params in the hash fragment
 const getHashParams = (): URLSearchParams => {
@@ -34,6 +35,11 @@ const getHashParams = (): URLSearchParams => {
     return new URLSearchParams()
   }
   return new URLSearchParams(hash.substring(queryIndex + 1))
+}
+
+const getRedirectTarget = (): string | null => {
+  const raw = getHashParams().get('redirect')
+  return isSafeRedirect(raw) ? raw : null
 }
 
 interface LoginState {
@@ -58,6 +64,12 @@ export default function Login() {
   >(
     async () => {
       const error = await performLogin(username, password, rememberMe)
+      if (!error) {
+        const target = getRedirectTarget()
+        if (target) {
+          window.location.href = target
+        }
+      }
       return { error }
     },
     { error: initialOidcError }
@@ -93,7 +105,10 @@ export default function Login() {
       shouldAutoLogin && (isFirstRenderRef.current || statusChanged)
 
     if (shouldRedirect) {
-      window.location.href = loginStatus.oidcLoginUrl as string
+      window.location.href = appendRedirectParam(
+        loginStatus.oidcLoginUrl as string,
+        getRedirectTarget()
+      )
     }
 
     prevLoginStatusRef.current = loginStatus.status
@@ -226,8 +241,10 @@ export default function Login() {
                           <Col className="text-center">
                             <Button
                               onClick={() => {
-                                window.location.href =
-                                  loginStatus.oidcLoginUrl as string
+                                window.location.href = appendRedirectParam(
+                                  loginStatus.oidcLoginUrl as string,
+                                  getRedirectTarget()
+                                )
                               }}
                               variant="secondary"
                               className="px-4"
