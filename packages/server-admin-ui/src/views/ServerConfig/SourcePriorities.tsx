@@ -340,6 +340,9 @@ const SourcePriorities: React.FC = () => {
   const setGroupsSaveFailed = useStore((s) => s.setGroupsSaveFailed)
   const setSourcePriorities = useStore((s) => s.setSourcePriorities)
   const setGroupInactive = useStore((s) => s.setGroupInactive)
+  const suppressedNewcomersByGroup = useStore(
+    (s) => s.suppressedNewcomersByGroup
+  )
   const setPriorityDefaults = useStore((s) => s.setPriorityDefaults)
   const changePath = useStore((s) => s.changePath)
   const deletePath = useStore((s) => s.deletePath)
@@ -438,16 +441,30 @@ const SourcePriorities: React.FC = () => {
         !saved && g.matchedSavedId === null ? savedById.get(g.id) : undefined
       const inactive = saved?.inactive ?? stub?.inactive ?? false
       if (!saved) return { ...g, inactive }
+      // editedOrder respects the user's local edit; newcomers come
+      // straight from the server's live-publisher view (not derived
+      // from `g.sources \ editedOrder`). Otherwise trashing a source
+      // the user just removed would re-promote it as a newcomer,
+      // since g.sources still echoes sg.sources from the on-disk
+      // config until the user clicks Save.
       const liveSet = new Set(g.sources)
       const editedOrder = saved.sources.filter((src) => liveSet.has(src))
-      const newcomers = g.sources.filter((src) => !editedOrder.includes(src))
+      const editedSet = new Set(editedOrder)
+      const suppressed = new Set(suppressedNewcomersByGroup[g.id] ?? [])
+      const newcomers = g.newcomerSources.filter(
+        (src) => !editedSet.has(src) && !suppressed.has(src)
+      )
       return {
         ...g,
+        // Hide suppressed newcomers from the ordering reported back
+        // to the rest of the page, too — otherwise the dirty-by-group
+        // calculation and buildSavePayload below would still see them.
+        newcomerSources: newcomers,
         sources: [...editedOrder, ...newcomers],
         inactive
       }
     })
-  }, [reconciled, savedGroups])
+  }, [reconciled, savedGroups, suppressedNewcomersByGroup])
 
   // Ungrouped overrides: paths in sourcePriorities whose path is not in any
   // derived group's path list. These include plugin-only paths or paths with

@@ -36,6 +36,7 @@ import { getWebSocketService } from '../../hooks/useWebSocket'
 import type { ReconciledGroup } from '../../utils/sourceGroups'
 import {
   canonicaliseSourceRef,
+  isN2kSource,
   isPluginSource,
   type SourcesData
 } from '../../utils/sourceLabels'
@@ -321,6 +322,7 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
   const addPriorityOverride = useStore((s) => s.addPriorityOverride)
   const removePriorityOverride = useStore((s) => s.removePriorityOverride)
   const deletePath = useStore((s) => s.deletePath)
+  const suppressNewcomerInGroup = useStore((s) => s.suppressNewcomerInGroup)
   const sourceStatus = useSourceStatus()
   const livePreferredSourcesRaw = useLivePreferredSources()
   const sourceStatusLoaded = useSourceStatusLoaded()
@@ -486,9 +488,43 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
         'source for good) to drop it permanently.'
     )
     if (!ok) return
+    // Always evict server-side, regardless of saved-vs-newcomer
+    // status. The user's intent is "this source is gone", and a
+    // saved-but-Offline source whose cache leaves are still around
+    // (because deltacache holds the LAST seen value indefinitely)
+    // would otherwise reappear in the Data Browser, in newcomer lists
+    // after re-Save, and in any other consumer that walks the cache.
+    // Pick the endpoint by source type so an N2K device also gets
+    // its bus-address state cleared. Also suppress the entry in the
+    // local store so the row disappears instantly — without this the
+    // dnd list briefly bounces while the eviction round-trips.
+    suppressNewcomerInGroup(group.id, sourceRef)
+    const endpoint = isN2kSource(sourceRef, sourcesData)
+      ? 'n2kRemoveSource'
+      : 'removeSource'
+    void fetch(
+      `${window.serverRoutesPrefix}/${endpoint}?sourceRef=${encodeURIComponent(sourceRef)}`,
+      { method: 'DELETE', credentials: 'include' }
+    ).catch((err) => {
+      console.warn(`Failed to evict source ${sourceRef}:`, err)
+    })
+    // Read sources from the LIVE store, not the render-time `group.sources`
+    // prop. Two trash clicks in quick succession would otherwise resolve
+    // the second one against a snapshot that still contains the source
+    // the first click just removed — setGroupSources would then write
+    // back the older source list and undo the prior deletion. When the
+    // store has no entry yet (group never edited locally), fall back to
+    // the SAVED-only subset of the displayed list — using the displayed
+    // list directly would silently promote every visible newcomer to a
+    // saved member on the next setGroupSources call.
+    const liveGroups = useStore.getState().priorityGroupsData.groups
+    const newcomerLookup = new Set(group.newcomerSources)
+    const liveSources =
+      liveGroups.find((g) => g.id === group.id)?.sources ??
+      group.sources.filter((src) => !newcomerLookup.has(src))
     setGroupSources(
       group.id,
-      group.sources.filter((src) => src !== sourceRef)
+      liveSources.filter((src) => src !== sourceRef)
     )
     // Plan the per-path mutations first against the render-time
     // snapshot, then apply them by resolving each path's current index
@@ -753,11 +789,22 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                                 ? !statusEntry.online
                                 : true
                             const isPlugin = isPluginSource(src)
-                            // Only offer removal when the source is
-                            // plainly not contributing right now: the
-                            // Offline badge has fired. Drag-rank stays
-                            // the right tool for online sources.
-                            const canRemove = isOffline
+                            const isNewcomer = newcomerSet.has(src)
+                            // Offer removal when the source is plainly
+                            // not contributing right now (Offline badge
+                            // fired) — drag-rank is the right tool for
+                            // online sources we actually want to keep.
+                            // Also offer it for newcomers: by
+                            // definition the user has not added the
+                            // source to the saved ranking. If they
+                            // already trashed it once and the
+                            // reconciler re-promoted it (because the
+                            // source is still publishing into the
+                            // cache), they need a second click to make
+                            // the deletion stick across the next
+                            // reconcile, or to drop it again after
+                            // saving.
+                            const canRemove = isOffline || isNewcomer
                             const displayLabel = getDisplayName(
                               src,
                               sourcesData

@@ -28,6 +28,28 @@ export interface PrioritiesSliceState {
   priorityGroupsData: PriorityGroupsData
   priorityDefaultsData: PriorityDefaultsData
   priorityOverridesData: PriorityOverridesData
+  // Per-group suppression of newcomer sources the user just trashed.
+  // The eviction fetch is async and the upstream stream may re-push
+  // deltas during the gap, so without this override a trashed row
+  // visibly bounces back to the bottom of the dnd list. Keyed by
+  // group id (server's reconciled id), value is the canonical
+  // sourceRefs to hide.
+  //
+  // Lifecycle is a two-step gate:
+  //   1. trash click → suppressNewcomerInGroup adds the ref here.
+  //   2. Save round-trip (setPriorityGroupsFromServer) marks the
+  //      ref as retiring (mirrored into retiringNewcomersByGroup).
+  //   3. Next RECONCILEDGROUPS where the server no longer reports the
+  //      ref as a newcomer for that group → both entries are dropped
+  //      (clearRetiredSuppressions). The ref is then a fresh
+  //      newcomer the next time the source appears.
+  // Without the retiring step, a server "absence" reconcile that
+  // races a re-push from upstream would re-promote the ref before
+  // Save lands. Without auto-clearing on confirmed absence, the user
+  // can never re-discover a source they trashed earlier in the
+  // session.
+  suppressedNewcomersByGroup: Record<string, string[]>
+  retiringNewcomersByGroup: Record<string, string[]>
 }
 
 export interface PrioritiesSliceActions {
@@ -52,6 +74,10 @@ export interface PrioritiesSliceActions {
   reorderGroupSources: (groupId: string, from: number, to: number) => void
   setGroupSources: (groupId: string, sources: string[]) => void
   setGroupInactive: (groupId: string, inactive: boolean) => void
+  suppressNewcomerInGroup: (groupId: string, sourceRef: string) => void
+  clearRetiredSuppressions: (
+    newcomerSourcesByGroup: Record<string, string[]>
+  ) => void
   setGroupsSaving: () => void
   setGroupsSaved: () => void
   setGroupsSaveFailed: () => void
@@ -93,7 +119,9 @@ const initialPrioritiesState: PrioritiesSliceState = {
       dirty: false,
       timeoutsOk: true
     }
-  }
+  },
+  suppressedNewcomersByGroup: {},
+  retiringNewcomersByGroup: {}
 }
 
 export const createPrioritiesSlice: StateCreator<
@@ -349,10 +377,25 @@ export const createPrioritiesSlice: StateCreator<
   },
 
   setPriorityGroupsFromServer: (groups) => {
-    set({
-      priorityGroupsData: {
-        groups,
-        saveState: { dirty: false, timeoutsOk: true }
+    set((state) => {
+      // Mark every currently-suppressed ref as retiring. Step 2 of
+      // the two-step gate: now that the saved config has been
+      // accepted by the server, a subsequent reconcile that no
+      // longer lists the ref as a newcomer means the source is
+      // genuinely gone and the suppression can retire. See
+      // clearRetiredSuppressions for the matching drop.
+      const retiringNewcomersByGroup: Record<string, string[]> = {}
+      for (const [groupId, refs] of Object.entries(
+        state.suppressedNewcomersByGroup
+      )) {
+        if (refs.length > 0) retiringNewcomersByGroup[groupId] = [...refs]
+      }
+      return {
+        priorityGroupsData: {
+          groups,
+          saveState: { dirty: false, timeoutsOk: true }
+        },
+        retiringNewcomersByGroup
       }
     })
   },
@@ -436,6 +479,64 @@ export const createPrioritiesSlice: StateCreator<
           groups,
           saveState: { ...state.priorityGroupsData.saveState, dirty: true }
         }
+      }
+    })
+  },
+
+  suppressNewcomerInGroup: (groupId, sourceRef) => {
+    set((state) => {
+      const existing = state.suppressedNewcomersByGroup[groupId] ?? []
+      if (existing.includes(sourceRef)) return state
+      return {
+        suppressedNewcomersByGroup: {
+          ...state.suppressedNewcomersByGroup,
+          [groupId]: [...existing, sourceRef]
+        }
+      }
+    })
+  },
+
+  clearRetiredSuppressions: (newcomerSourcesByGroup) => {
+    set((state) => {
+      // Step 3 of the two-step gate. For each (groupId, ref) marked
+      // as retiring, drop both the suppression and the retiring
+      // marker once the server confirms the ref is no longer a
+      // newcomer for that group. A ref that's still in newcomers
+      // stays suppressed (upstream re-pushed during the Save gap);
+      // it'll retire on the next reconcile that genuinely shows
+      // absence. After retirement the ref has no client-side memory
+      // — when the source reappears it's a fresh newcomer.
+      const retiring = state.retiringNewcomersByGroup
+      if (Object.keys(retiring).length === 0) return state
+      let changed = false
+      const nextSuppressed: Record<string, string[]> = {
+        ...state.suppressedNewcomersByGroup
+      }
+      const nextRetiring: Record<string, string[]> = { ...retiring }
+      for (const [groupId, refs] of Object.entries(retiring)) {
+        const stillNewcomers = new Set(newcomerSourcesByGroup[groupId] ?? [])
+        const stillRetiring = refs.filter((ref) => stillNewcomers.has(ref))
+        const toClear = refs.filter((ref) => !stillNewcomers.has(ref))
+        if (toClear.length === 0) continue
+        changed = true
+        if (stillRetiring.length > 0) {
+          nextRetiring[groupId] = stillRetiring
+        } else {
+          delete nextRetiring[groupId]
+        }
+        const cleared = (nextSuppressed[groupId] ?? []).filter(
+          (ref) => !toClear.includes(ref)
+        )
+        if (cleared.length > 0) {
+          nextSuppressed[groupId] = cleared
+        } else {
+          delete nextSuppressed[groupId]
+        }
+      }
+      if (!changed) return state
+      return {
+        suppressedNewcomersByGroup: nextSuppressed,
+        retiringNewcomersByGroup: nextRetiring
       }
     })
   },

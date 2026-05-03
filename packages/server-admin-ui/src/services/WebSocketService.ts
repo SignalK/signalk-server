@@ -296,6 +296,17 @@ export class WebSocketService {
           .getState()
           .mergeLivePreferredSources((data ?? {}) as Record<string, string>)
         break
+      case 'SOURCEEVICTED': {
+        // Server cleared a source from its cache (priority-group trash
+        // / N2K device removal). Drop matching leaves from this
+        // client's signalkData mirror so the Data Browser stops
+        // showing zombie rows for the evicted source.
+        const payload = (data ?? {}) as { sourceRef?: string }
+        if (payload.sourceRef) {
+          useStore.getState().evictSource(payload.sourceRef)
+        }
+        break
+      }
       case 'SOURCESTATUS':
         useStore
           .getState()

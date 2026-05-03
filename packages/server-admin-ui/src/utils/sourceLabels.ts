@@ -179,6 +179,24 @@ export function isPluginSource(sourceRef: string): boolean {
   return sourceRef.length > 0 && sourceRef.indexOf('.') === -1
 }
 
+/**
+ * True when the sourceRef resolves to an NMEA2000 device in the live
+ * sources tree. The check looks for an n2k payload (set only for
+ * N2K-derived devices), so NMEA0183 talkers and plugin sources return
+ * false even if their refs share the `${connection}.${suffix}` shape.
+ *
+ * Used by the priority-group trash action to pick between the
+ * N2K-specific eviction endpoint (which also walks bus-address state)
+ * and the generic remover for non-N2K sources.
+ */
+export function isN2kSource(
+  sourceRef: string,
+  sourcesData: SourcesData | null
+): boolean {
+  if (!sourcesData) return false
+  return getDeviceInfo(sourceRef, sourcesData) !== null
+}
+
 export interface N2kDeviceEntry extends N2kDeviceInfo {
   sourceRef: string
   connection: string

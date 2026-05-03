@@ -48,6 +48,7 @@ export interface DataSliceActions {
   getPath$SourceKeys: (context: string) => string[]
   getContexts: () => string[]
   removePath: (context: string, path$SourceKey: string) => void
+  evictSource: (sourceRef: string) => void
   clearData: () => void
 }
 
@@ -135,6 +136,41 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
       const { [path$SourceKey]: _, ...rest } = contextData
       return {
         signalkData: { ...state.signalkData, [context]: rest },
+        dataVersion: state.dataVersion + 1
+      }
+    })
+  },
+
+  evictSource: (sourceRef) => {
+    set((state) => {
+      // Drop every leaf this client cached for the evicted sourceRef.
+      // Triggered by the server's SOURCEEVICTED event after the trash
+      // action clears the source-side cache. Keys are `path$source`,
+      // so a sourceRef match shows up as a `$<ref>` suffix.
+      const suffix = `$${sourceRef}`
+      let changed = false
+      const next: typeof state.signalkData = {}
+      for (const ctx of Object.keys(state.signalkData)) {
+        const contextData = state.signalkData[ctx]
+        const keptEntries: [string, PathData][] = []
+        let ctxChanged = false
+        for (const key of Object.keys(contextData)) {
+          if (key.endsWith(suffix)) {
+            ctxChanged = true
+            changed = true
+            continue
+          }
+          keptEntries.push([key, contextData[key]])
+        }
+        if (ctxChanged) {
+          next[ctx] = Object.fromEntries(keptEntries)
+        } else {
+          next[ctx] = contextData
+        }
+      }
+      if (!changed) return state
+      return {
+        signalkData: next,
         dataVersion: state.dataVersion + 1
       }
     })

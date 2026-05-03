@@ -216,7 +216,8 @@ const initialAppState: AppSliceState = {
 }
 
 export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
-  set
+  set,
+  get
 ) => ({
   ...initialAppState,
 
@@ -351,6 +352,19 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setReconciledGroups: (reconciledGroups) => {
     set({ reconciledGroups })
+    // Hand the per-group newcomer lists to the priorities slice so
+    // any post-Save retiring suppressions can drop. Done after the
+    // reconciled state is committed so a subsequent re-render sees
+    // both the new reconciled view and the cleaned suppression set.
+    const newcomersByGroup: Record<string, string[]> = {}
+    for (const g of reconciledGroups) {
+      newcomersByGroup[g.id] = g.newcomerSources
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const clear = (get() as any).clearRetiredSuppressions as
+      | ((s: Record<string, string[]>) => void)
+      | undefined
+    clear?.(newcomersByGroup)
   },
 
   setLivePreferredSources: (livePreferredSources) => {

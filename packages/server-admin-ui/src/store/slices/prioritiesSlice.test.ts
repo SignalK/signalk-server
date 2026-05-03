@@ -361,7 +361,9 @@ describe('priorityGroups slice', () => {
       priorityGroupsData: {
         groups: [],
         saveState: { dirty: false, timeoutsOk: true }
-      }
+      },
+      suppressedNewcomersByGroup: {},
+      retiringNewcomersByGroup: {}
     })
   })
 
@@ -433,5 +435,106 @@ describe('priorityGroups slice', () => {
     expect(useStore.getState().priorityGroupsData.saveState.saveFailed).toBe(
       false
     )
+  })
+
+  it('suppressNewcomerInGroup adds the source ref under the group id', () => {
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.II')
+    expect(useStore.getState().suppressedNewcomersByGroup).toEqual({
+      g1: ['u0183.II']
+    })
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.GP')
+    expect(useStore.getState().suppressedNewcomersByGroup.g1).toEqual([
+      'u0183.II',
+      'u0183.GP'
+    ])
+  })
+
+  it('suppressNewcomerInGroup is idempotent', () => {
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.II')
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.II')
+    expect(useStore.getState().suppressedNewcomersByGroup.g1).toEqual([
+      'u0183.II'
+    ])
+  })
+
+  it('setPriorityGroupsFromServer keeps suppression but marks it retiring', () => {
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.II')
+    useStore
+      .getState()
+      .setPriorityGroupsFromServer([
+        { id: 'g1', sources: ['a'], inactive: false }
+      ])
+    expect(useStore.getState().suppressedNewcomersByGroup.g1).toEqual([
+      'u0183.II'
+    ])
+    expect(useStore.getState().retiringNewcomersByGroup.g1).toEqual([
+      'u0183.II'
+    ])
+  })
+
+  it('pre-Save absence reconciles do not retire suppression', () => {
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.II')
+    // Eviction lands before Save; reconcile shows no newcomer. Without
+    // the retiring marker, suppression stays — otherwise an upstream
+    // re-push between this event and Save would re-promote the row.
+    useStore.getState().setReconciledGroups([
+      {
+        id: 'g1',
+        matchedSavedId: 'g1',
+        sources: ['a'],
+        paths: [],
+        newcomerSources: []
+      }
+    ])
+    expect(useStore.getState().suppressedNewcomersByGroup.g1).toEqual([
+      'u0183.II'
+    ])
+  })
+
+  it('post-Save absence reconcile retires suppression', () => {
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.II')
+    useStore
+      .getState()
+      .setPriorityGroupsFromServer([
+        { id: 'g1', sources: ['a'], inactive: false }
+      ])
+    useStore.getState().setReconciledGroups([
+      {
+        id: 'g1',
+        matchedSavedId: 'g1',
+        sources: ['a'],
+        paths: [],
+        newcomerSources: []
+      }
+    ])
+    expect(useStore.getState().suppressedNewcomersByGroup).toEqual({})
+    expect(useStore.getState().retiringNewcomersByGroup).toEqual({})
+  })
+
+  it('post-Save reconcile that still lists the ref keeps suppression', () => {
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.II')
+    useStore
+      .getState()
+      .setPriorityGroupsFromServer([
+        { id: 'g1', sources: ['a'], inactive: false }
+      ])
+    // Upstream re-pushed a delta between Save and this reconcile —
+    // suppression stays until a later reconcile genuinely reports
+    // absence.
+    useStore.getState().setReconciledGroups([
+      {
+        id: 'g1',
+        matchedSavedId: 'g1',
+        sources: ['a', 'u0183.II'],
+        paths: [],
+        newcomerSources: ['u0183.II']
+      }
+    ])
+    expect(useStore.getState().suppressedNewcomersByGroup.g1).toEqual([
+      'u0183.II'
+    ])
+    expect(useStore.getState().retiringNewcomersByGroup.g1).toEqual([
+      'u0183.II'
+    ])
   })
 })

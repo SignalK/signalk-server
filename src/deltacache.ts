@@ -344,6 +344,26 @@ export default class DeltaCache {
       }
     }
     removeFromNode(this.cache)
+    // The FullSignalK tree (app.signalk.root) is a parallel
+    // representation written to by addDelta. The Data Browser, REST
+    // /signalk/v1/api, and the WS subscription replay all read from
+    // it. Without pruning here, evicted sources keep showing fresh
+    // timestamps in the UI even though deltacache is empty —
+    // because cached values keep being served from this tree.
+    pruneSourceFromFullSignalK(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.app.signalk as any)?.root,
+      sourceRef
+    )
+    // Tell WS clients (notably the admin-ui Data Browser) to drop
+    // every leaf they have for this source. Without this signal the
+    // client's signalkData mirror keeps showing stale values until
+    // the next reconnect, because the Signal K WS protocol only
+    // streams new values and has no native delete primitive.
+    ;(this.app as any).emit('serverevent', {
+      type: 'SOURCEEVICTED',
+      data: { sourceRef }
+    })
     // preferredSources stores canonical (canName) refs since onValue
     // canonicalised on write, so compare in the same form whether the
     // caller passed a raw or canonical ref.
@@ -1213,4 +1233,92 @@ function getLeafObject(
     current = current[p]
   }
   return current
+}
+
+/**
+ * Walk a FullSignalK root and drop every value-leaf entry the given
+ * sourceRef contributed. The tree shape is one of:
+ *
+ *   leaf = { value, $source, timestamp, ... }                 (singleton)
+ *   leaf = { value?, values: { <sourceRef>: { value, ... } } } (multi-source)
+ *
+ * For singletons whose `$source` matches, the whole leaf is cleared.
+ * For multi-source leaves, just the matching `values[sourceRef]` entry
+ * is removed; if it was the current top-level winner, fold a remaining
+ * sibling up. Without this companion to deltaCache.removeSource, the
+ * REST and WS-replay views keep serving stale values for the evicted
+ * source even though the deltacache is empty.
+ */
+function pruneSourceFromFullSignalK(root: any, sourceRef: string): void {
+  if (!root || typeof root !== 'object') return
+  const visit = (node: any): void => {
+    if (!node || typeof node !== 'object') return
+    if (Array.isArray(node)) return
+    // Multi-source leaf: { values: { <sourceRef>: {...}, ... }, ... }
+    if (node.values && typeof node.values === 'object') {
+      if (node.values[sourceRef] !== undefined) {
+        delete node.values[sourceRef]
+        const remainingRefs = Object.keys(node.values)
+        // If the singleton-form fields point at the source we just
+        // removed, replace them with another remaining source so the
+        // leaf stays consistent — otherwise downstream readers see a
+        // stale $source that no longer exists in `values`.
+        if (node['$source'] === sourceRef) {
+          if (remainingRefs.length > 0) {
+            const survivor = remainingRefs[0]!
+            const survivorLeaf = node.values[survivor]
+            if (survivorLeaf && typeof survivorLeaf === 'object') {
+              if ('value' in survivorLeaf) node.value = survivorLeaf.value
+              node['$source'] = survivor
+              if (survivorLeaf.timestamp) {
+                node.timestamp = survivorLeaf.timestamp
+              }
+            }
+          } else {
+            delete node.value
+            delete node['$source']
+            delete node.timestamp
+            delete node.values
+          }
+        } else if (remainingRefs.length === 0) {
+          delete node.values
+        }
+      }
+    }
+    // Singleton-form leaf with no `values` map: drop it outright if
+    // the lone source is the one we're evicting.
+    if (
+      node['$source'] === sourceRef &&
+      node.value !== undefined &&
+      !node.values
+    ) {
+      delete node.value
+      delete node['$source']
+      delete node.timestamp
+    }
+    for (const key of Object.keys(node)) {
+      // Skip leaf-internal fields and the source-meta tree (cleaned
+      // separately by removeSourceDelta and the route handler).
+      if (
+        key === 'value' ||
+        key === 'values' ||
+        key === '$source' ||
+        key === 'timestamp' ||
+        key === 'meta' ||
+        key === 'pgn' ||
+        key === 'sentence'
+      ) {
+        continue
+      }
+      visit(node[key])
+    }
+  }
+  // Skip the top-level "sources" subtree — that's handled by the
+  // caller (n2k-discovery and the generic removeSource endpoint
+  // already prune sources[connection][addr] explicitly). Walking it
+  // here would also race the caller's prune logic.
+  for (const key of Object.keys(root)) {
+    if (key === 'sources') continue
+    visit(root[key])
+  }
 }

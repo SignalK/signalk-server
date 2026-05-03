@@ -263,8 +263,7 @@ interface ScriptsApp {
 }
 
 interface App
-  extends
-    ScriptsApp,
+  extends ScriptsApp,
     WithSecurityStrategy,
     ConfigApp,
     IRouter,
@@ -1425,6 +1424,226 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/eventsRoutingData`,
     (req: Request, res: Response) => {
       res.json(app.wrappedEmitter.getEventRoutingData())
+    }
+  )
+
+  // Generic source removal for non-N2K providers (NMEA0183 talkers,
+  // plugins, derived sources). N2K sources go through n2kRemoveSource
+  // because that endpoint also walks bus-address state. Without this
+  // endpoint, the priority-group trash icon for a still-publishing
+  // 0183 or plugin source can't actually evict it from the cache —
+  // the reconciler keeps re-promoting it as a newcomer on the next
+  // delta.
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/removeSource`)
+  // Diagnostic: how visible is a sourceRef across the server's caches?
+  // Called by the priority-page trash flow to verify that an eviction
+  // actually removed every leaf, and on demand from a developer
+  // browser to locate which tree is holding a zombie source.
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/cacheInspect`)
+  app.get(
+    `${SERVERROUTESPREFIX}/cacheInspect`,
+    (req: Request, res: Response) => {
+      const sourceRef = req.query.sourceRef as string | undefined
+      if (!sourceRef) {
+        res.status(400).json({
+          state: 'FAILED',
+          statusCode: 400,
+          message: 'sourceRef query parameter required'
+        })
+        return
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cache = (app.deltaCache as any).cache
+      const cachePaths: string[] = []
+      const walk = (
+        node: Record<string, unknown> | unknown,
+        prefix: string[]
+      ): void => {
+        if (!node || typeof node !== 'object') return
+        for (const key of Object.keys(node as Record<string, unknown>)) {
+          if (key === 'meta') continue
+          const child = (node as Record<string, unknown>)[key]
+          if (!child || typeof child !== 'object') continue
+          const c = child as Record<string, unknown>
+          if (c.path !== undefined && c.value !== undefined) {
+            if (key === sourceRef) cachePaths.push(prefix.join('.'))
+          } else {
+            walk(c, [...prefix, key])
+          }
+        }
+      }
+      walk(cache, [])
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const root = (app.signalk as any)?.root
+      const fullSignalKPaths: string[] = []
+      const walkFull = (
+        node: Record<string, unknown> | unknown,
+        prefix: string[]
+      ): void => {
+        if (!node || typeof node !== 'object') return
+        const n = node as Record<string, unknown>
+        if (n.values && typeof n.values === 'object') {
+          if ((n.values as Record<string, unknown>)[sourceRef] !== undefined) {
+            fullSignalKPaths.push(prefix.join('.'))
+          }
+        }
+        if (n['$source'] === sourceRef && n.value !== undefined && !n.values) {
+          fullSignalKPaths.push(prefix.join('.'))
+        }
+        for (const key of Object.keys(n)) {
+          if (
+            key === 'value' ||
+            key === 'values' ||
+            key === '$source' ||
+            key === 'timestamp' ||
+            key === 'meta' ||
+            key === 'pgn' ||
+            key === 'sentence' ||
+            key === 'sources'
+          ) {
+            continue
+          }
+          walkFull(n[key], [...prefix, key])
+        }
+      }
+      walkFull(root, [])
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sourceMeta = (app.signalk as any)?.sourceMeta
+      const inSourceMeta =
+        !!sourceMeta &&
+        Object.prototype.hasOwnProperty.call(sourceMeta, sourceRef)
+
+      const inSourceDeltas = Object.prototype.hasOwnProperty.call(
+        app.deltaCache.sourceDeltas,
+        sourceRef
+      )
+
+      res.json({
+        sourceRef,
+        deltaCachePaths: cachePaths,
+        fullSignalKPaths,
+        inSourceMeta,
+        inSourceDeltas,
+        clean:
+          cachePaths.length === 0 &&
+          fullSignalKPaths.length === 0 &&
+          !inSourceMeta &&
+          !inSourceDeltas
+      })
+    }
+  )
+
+  app.delete(
+    `${SERVERROUTESPREFIX}/removeSource`,
+    async (req: Request, res: Response) => {
+      const sourceRef = req.query.sourceRef as string | undefined
+      if (!sourceRef) {
+        res.status(400).json({
+          state: 'FAILED',
+          statusCode: 400,
+          message: 'sourceRef query parameter required'
+        })
+        return
+      }
+
+      // The persisted sourceDeltas snapshot is only populated by the
+      // N2K parser; NMEA0183 talkers and plugin sources stream into
+      // `cache` and `sourceMeta` without ever landing there. So check
+      // every place the source could be visible — otherwise the
+      // common case (0183 talker) 404s and the priority-group trash
+      // can't evict it.
+      const dotIdx = sourceRef.indexOf('.')
+      const connection = dotIdx === -1 ? sourceRef : sourceRef.slice(0, dotIdx)
+      const addr = dotIdx === -1 ? '' : sourceRef.slice(dotIdx + 1)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sources = (app.signalk as any)?.sources as
+        | Record<string, Record<string, unknown>>
+        | undefined
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sourceMeta = (app.signalk as any)?.sourceMeta as
+        | Record<string, unknown>
+        | undefined
+      const inSourceDeltas = Object.prototype.hasOwnProperty.call(
+        app.deltaCache.sourceDeltas,
+        sourceRef
+      )
+      const inSourceMeta =
+        !!sourceMeta &&
+        Object.prototype.hasOwnProperty.call(sourceMeta, sourceRef)
+      const inSourcesTree =
+        !!sources?.[connection] &&
+        addr !== '' &&
+        Object.prototype.hasOwnProperty.call(sources[connection], addr)
+
+      if (!inSourceDeltas && !inSourceMeta && !inSourcesTree) {
+        res.status(404).json({
+          state: 'FAILED',
+          statusCode: 404,
+          message: `Source ${sourceRef} not found`
+        })
+        return
+      }
+
+      // removeSourceDelta also handles the sourceDeltas-empty case via
+      // removeSource, but only if there's a key to delete from. Call
+      // both so the cache leaf and the sources tree both get pruned
+      // regardless of which path the source took on the way in.
+      if (inSourceDeltas) {
+        app.deltaCache.removeSourceDelta(sourceRef)
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        app.deltaCache.removeSource(sourceRef as any)
+        if (sources?.[connection] && addr !== '') {
+          delete sources[connection][addr]
+          const remaining = Object.keys(sources[connection]).filter(
+            (k) => k !== 'type' && k !== 'label'
+          )
+          if (remaining.length === 0) {
+            delete sources[connection]
+          }
+        }
+      }
+
+      if (inSourceMeta && sourceMeta) {
+        delete sourceMeta[sourceRef]
+      }
+
+      const aliases = app.config.settings.sourceAliases
+      let aliasChanged = false
+      if (aliases && sourceRef in aliases) {
+        delete aliases[sourceRef]
+        aliasChanged = true
+      }
+
+      const respondOk = () => {
+        res.json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: `Removed source ${sourceRef}`
+        })
+      }
+
+      if (aliasChanged && aliases) {
+        writeSettingsFile(app, app.config.settings, (err: Error) => {
+          if (err) {
+            res.status(500).json({
+              state: 'FAILED',
+              statusCode: 500,
+              message: `Removed source ${sourceRef} from cache, but failed to persist alias cleanup`
+            })
+            return
+          }
+          app.emit('serverAdminEvent', {
+            type: 'SOURCEALIASES',
+            data: aliases
+          })
+          respondOk()
+        })
+      } else {
+        respondOk()
+      }
     }
   )
 
