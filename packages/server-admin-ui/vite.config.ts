@@ -129,8 +129,21 @@ export default defineConfig({
     outDir: 'public',
     sourcemap: true,
     target: 'es2023',
-    assetsInlineLimit: 0, // Prevent inlining assets to allow server-side logo override
-    cssCodeSplit: false // Generate single CSS file to ensure it's always loaded
+    assetsInlineLimit: 0,
+    cssCodeSplit: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (
+            /[\\/]node_modules[\\/](mathjs|decimal\.js|typed-function|complex\.js|fraction\.js|seedrandom|escape-latex|javascript-natural-sort)[\\/]/.test(
+              id
+            )
+          ) {
+            return 'vendor-mathjs'
+          }
+        }
+      }
+    }
   },
   resolve: {
     alias: {

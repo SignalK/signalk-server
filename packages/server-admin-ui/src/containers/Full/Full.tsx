@@ -1,4 +1,10 @@
-import React, { useEffect, Component, ReactNode, ComponentType } from 'react'
+import React, {
+  Suspense,
+  useEffect,
+  Component,
+  ReactNode,
+  ComponentType
+} from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Container from 'react-bootstrap/Container'
 import { useLoginStatus, type LoginStatus } from '../../store'
@@ -13,21 +19,49 @@ import Embedded from '../../views/Webapps/Embedded'
 import EmbeddedDocs from '../../views/Webapps/EmbeddedDocs'
 import EmbeddedAsyncApi from '../../views/Webapps/EmbeddedAsyncApi'
 import Webapps from '../../views/Webapps/Webapps'
-import DataBrowser from '../../views/DataBrowser/DataBrowser'
-import Playground from '../../views/Playground'
-import Apps from '../../views/appstore/Apps/Apps'
-import Configuration from '../../views/Configuration/Configuration'
 import Login from '../../views/security/Login'
-import SecuritySettings from '../../views/security/Settings'
-import Users from '../../views/security/Users'
-import Devices from '../../views/security/Devices'
 import Register from '../../views/security/Register'
-import AccessRequests from '../../views/security/AccessRequests'
-import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
-import Settings from '../../views/ServerConfig/Settings'
-import BackupRestore from '../../views/ServerConfig/BackupRestore'
-import ServerLog from '../../views/ServerConfig/ServerLog'
-import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
+
+// One retry covers transient network blips; persistent failures (e.g. stale
+// chunk hashes after a redeploy) fall through to the ErrorBoundary, which
+// triggers a one-shot reload.
+function lazyWithRetry<T extends ComponentType<unknown>>(
+  importer: () => Promise<{ default: T }>
+) {
+  return React.lazy(() => importer().catch(() => importer()))
+}
+
+const DataBrowser = lazyWithRetry(
+  () => import('../../views/DataBrowser/DataBrowser')
+)
+const Playground = lazyWithRetry(() => import('../../views/Playground'))
+const Apps = lazyWithRetry(() => import('../../views/appstore/Apps/Apps'))
+const Configuration = lazyWithRetry(
+  () => import('../../views/Configuration/Configuration')
+)
+const Settings = lazyWithRetry(
+  () => import('../../views/ServerConfig/Settings')
+)
+const BackupRestore = lazyWithRetry(
+  () => import('../../views/ServerConfig/BackupRestore')
+)
+const ProvidersConfiguration = lazyWithRetry(
+  () => import('../../views/ServerConfig/ProvidersConfiguration')
+)
+const ServerLog = lazyWithRetry(
+  () => import('../../views/ServerConfig/ServerLog')
+)
+const ServerUpdate = lazyWithRetry(
+  () => import('../../views/ServerConfig/ServerUpdate')
+)
+const SecuritySettings = lazyWithRetry(
+  () => import('../../views/security/Settings')
+)
+const Users = lazyWithRetry(() => import('../../views/security/Users'))
+const Devices = lazyWithRetry(() => import('../../views/security/Devices'))
+const AccessRequests = lazyWithRetry(
+  () => import('../../views/security/AccessRequests')
+)
 
 import { fetchAllData } from '../../actions'
 
@@ -38,6 +72,17 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean
   error: Error | null
+}
+
+const CHUNK_RELOAD_FLAG = 'signalk:chunkReloaded'
+
+function isChunkLoadError(error: Error): boolean {
+  return (
+    error.name === 'ChunkLoadError' ||
+    /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
+      error.message
+    )
+  )
 }
 
 // Must be a class component — React error boundaries don't support hooks
@@ -52,6 +97,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    // Hashed chunk filenames change on redeploy; an open tab will fail to
+    // fetch its old chunks. Reload once to pick up the new index, but guard
+    // against loops if the failure is caused by something else.
+    if (isChunkLoadError(error) && !sessionStorage.getItem(CHUNK_RELOAD_FLAG)) {
+      sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1')
+      window.location.reload()
+      return
+    }
     console.error('ErrorBoundary caught an error:', error, errorInfo)
   }
 
@@ -93,6 +146,16 @@ function loginRequired(
   )
 }
 
+function LoadingSpinner() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  )
+}
+
 function ProtectedRoute({
   component: ComponentToRender,
   supportsReadOnly = false
@@ -114,6 +177,7 @@ export default function Full() {
   const location = useLocation()
 
   useEffect(() => {
+    sessionStorage.removeItem(CHUNK_RELOAD_FLAG)
     fetchAllData()
   }, [])
 
@@ -130,89 +194,96 @@ export default function Full() {
         <Sidebar location={location} />
         <main className="main">
           <Container fluid style={suppressPadding}>
-            <Routes>
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute component={Dashboard} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/webapps"
-                element={
-                  <ProtectedRoute component={Webapps} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/e/:moduleId"
-                element={
-                  <ProtectedRoute component={Embedded} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/databrowser"
-                element={
-                  <ProtectedRoute component={DataBrowser} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/serverConfiguration/datafiddler"
-                element={
-                  <ProtectedRoute component={Playground} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/appstore/*"
-                element={<ProtectedRoute component={Apps} />}
-              />
-              <Route
-                path="/serverConfiguration/plugins/:pluginid"
-                element={<ProtectedRoute component={Configuration} />}
-              />
-              <Route
-                path="/serverConfiguration/settings"
-                element={<ProtectedRoute component={Settings} />}
-              />
-              <Route
-                path="/serverConfiguration/backuprestore"
-                element={<ProtectedRoute component={BackupRestore} />}
-              />
-              <Route
-                path="/serverConfiguration/connections/:providerId"
-                element={<ProtectedRoute component={ProvidersConfiguration} />}
-              />
-              <Route
-                path="/serverConfiguration/log"
-                element={
-                  <ProtectedRoute component={ServerLog} supportsReadOnly />
-                }
-              />
-              <Route
-                path="/serverConfiguration/update"
-                element={<ProtectedRoute component={ServerUpdate} />}
-              />
-              <Route
-                path="/security/settings"
-                element={<ProtectedRoute component={SecuritySettings} />}
-              />
-              <Route
-                path="/security/users"
-                element={<ProtectedRoute component={Users} />}
-              />
-              <Route
-                path="/security/devices"
-                element={<ProtectedRoute component={Devices} />}
-              />
-              <Route
-                path="/security/access/requests"
-                element={<ProtectedRoute component={AccessRequests} />}
-              />
-              <Route path="/asyncapi" element={<EmbeddedAsyncApi />} />
-              <Route path="/documentation/*" element={<EmbeddedDocs />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute component={Dashboard} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/webapps"
+                  element={
+                    <ProtectedRoute component={Webapps} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/e/:moduleId"
+                  element={
+                    <ProtectedRoute component={Embedded} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/databrowser"
+                  element={
+                    <ProtectedRoute component={DataBrowser} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/serverConfiguration/datafiddler"
+                  element={
+                    <ProtectedRoute component={Playground} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/appstore/*"
+                  element={<ProtectedRoute component={Apps} />}
+                />
+                <Route
+                  path="/serverConfiguration/plugins/:pluginid"
+                  element={<ProtectedRoute component={Configuration} />}
+                />
+                <Route
+                  path="/serverConfiguration/settings"
+                  element={<ProtectedRoute component={Settings} />}
+                />
+                <Route
+                  path="/serverConfiguration/backuprestore"
+                  element={<ProtectedRoute component={BackupRestore} />}
+                />
+                <Route
+                  path="/serverConfiguration/connections/:providerId"
+                  element={
+                    <ProtectedRoute component={ProvidersConfiguration} />
+                  }
+                />
+                <Route
+                  path="/serverConfiguration/log"
+                  element={
+                    <ProtectedRoute component={ServerLog} supportsReadOnly />
+                  }
+                />
+                <Route
+                  path="/serverConfiguration/update"
+                  element={<ProtectedRoute component={ServerUpdate} />}
+                />
+                <Route
+                  path="/security/settings"
+                  element={<ProtectedRoute component={SecuritySettings} />}
+                />
+                <Route
+                  path="/security/users"
+                  element={<ProtectedRoute component={Users} />}
+                />
+                <Route
+                  path="/security/devices"
+                  element={<ProtectedRoute component={Devices} />}
+                />
+                <Route
+                  path="/security/access/requests"
+                  element={<ProtectedRoute component={AccessRequests} />}
+                />
+                <Route path="/asyncapi" element={<EmbeddedAsyncApi />} />
+                <Route path="/documentation/*" element={<EmbeddedDocs />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route
+                  path="/"
+                  element={<Navigate to="/dashboard" replace />}
+                />
+              </Routes>
+            </Suspense>
           </Container>
         </main>
         <Aside />
