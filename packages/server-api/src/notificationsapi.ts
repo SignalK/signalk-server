@@ -22,7 +22,7 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.getId('9922c05a-2813-4995-ab72-33f8f2246ff7')
+   * app.notifications.getId('9922c05a-2813-4995-ab72-33f8f2246ff7')
    * ```
    */
   getId(id: NotificationId): AlarmProperties | undefined
@@ -36,7 +36,7 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.getPath('notifications.server.newVersion')
+   * app.notifications.getPath('notifications.server.newVersion')
    * ```
    */
   getPath(path: Path): Record<NotificationId, AlarmProperties>
@@ -48,7 +48,7 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.list()
+   * app.notifications.list()
    * ```
    */
   list(): Record<NotificationId, AlarmProperties>
@@ -63,7 +63,7 @@ export interface NotificationsApi {
    *
    * @example Raise notification with minimum information
    * ```typescript
-   * app.notificationsApi.raise({
+   * app.notifications.raise({
    *  state: 'warn',
    *  message: 'Port engine temperature is higher than normal.'
    * })
@@ -73,7 +73,7 @@ export interface NotificationsApi {
    *
    *@example Raise notification specifying the path
    * ```typescript
-   * app.notificationsApi.raise({
+   * app.notifications.raise({
    *  state: 'warn',
    *  message: 'Port engine temperature is higher than normal.',
    *  path: 'propulsion.port.temperature'
@@ -82,7 +82,7 @@ export interface NotificationsApi {
    *
    * @example Raise notification specifying the path and append notification id
    * ```typescript
-   * app.notificationsApi.raise({
+   * app.notifications.raise({
    *  state: 'warn',
    *  message: 'Port engine temperature is higher than normal.',
    *  path: 'propulsion.port.temperature',
@@ -105,14 +105,14 @@ export interface NotificationsApi {
    *
    * @example Raise MOB with default message ('Person Overboard!')
    * ```typescript
-   * app.notificationsApi.mob()
+   * app.notifications.mob()
    *
    * // path = `notifications.mob.{notificationId}`
    * ```
    *
    * @example Raise MOB with specified message
    * ```typescript
-   * app.notificationsApi.mob('Crew member overboard!')
+   * app.notifications.mob('Crew member overboard!')
    * ```
    *
    */
@@ -128,7 +128,7 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.update(
+   * app.notifications.update(
    *  '9922c05a-2813-4995-ab72-33f8f2246ff7',
    *  {
    *    state: 'alarm',
@@ -152,7 +152,7 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.silence('9922c05a-2813-4995-ab72-33f8f2246ff7')
+   * app.notifications.silence('9922c05a-2813-4995-ab72-33f8f2246ff7')
    * ```
    */
   silence(id: NotificationId): void
@@ -164,7 +164,7 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.silenceAll()
+   * app.notifications.silenceAll()
    * ```
    */
   silenceAll(): void
@@ -181,7 +181,7 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.acknowledge('9922c05a-2813-4995-ab72-33f8f2246ff7')
+   * app.notifications.acknowledge('9922c05a-2813-4995-ab72-33f8f2246ff7')
    * ```
    */
   acknowledge(id: NotificationId): void
@@ -193,7 +193,7 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.acknowledgeAll()
+   * app.notifications.acknowledgeAll()
    * ```
    */
   acknowledgeAll(): void
@@ -209,7 +209,7 @@ export interface NotificationsApi {
    *
    * @example
    * ```typescript
-   * app.notificationsApi.clear('9922c05a-2813-4995-ab72-33f8f2246ff7')
+   * app.notifications.clear('9922c05a-2813-4995-ab72-33f8f2246ff7')
    * ```
    *
    */
@@ -218,11 +218,11 @@ export interface NotificationsApi {
 
 /** @category  Notifications API */
 export interface WithNotificationsApi {
-  notificationsApi: NotificationsApi
+  notifications: NotificationsApi
 }
 
 /**
- * @category  Notifications API
+ * @category Notifications API
  * @property state - Alarm State value to apply
  * @property message - Message to display or speak
  * @property context - Context to assign to the Notification (default = `self`)

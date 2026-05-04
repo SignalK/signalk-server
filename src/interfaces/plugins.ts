@@ -707,7 +707,7 @@ module.exports = (theApp: any) => {
       return courseApi.activeRoute(dest)
     }
 
-    appCopy.notificationsApi = {
+    appCopy.notifications = {
       list: () => app.notificationApi.list(),
       getId: (id: NotificationId) => app.notificationApi.getId(id),
       getPath: (path: Path) => app.notificationApi.getPath(path),
