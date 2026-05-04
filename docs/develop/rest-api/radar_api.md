@@ -689,7 +689,7 @@ https://signalk.org/specification/1.5.0/doc/streaming_api.html
 In short:
 
 - By default you are described to all paths
-- Query parameters `subscribe=none` can be used to start without any subscriptions and `sendCachedValues=false` to disable sending all currently cached values.
+- Query parameters `subscribe=none` can be used to start without any subscriptions and `sendCachedValues=false` to disable sending all currently cached values. `sourcePolicy=all` opts the connection into deltas from every source rather than the priority-resolved preferred-only default — see [Source Policy](../plugins/deltas.md#source-policy).
 - Subscriptions and desubscriptions can be made for paths. You can use '\*' for all radars
   including radars still to be discovered.
 - When first connected all radar meta data will be sent.

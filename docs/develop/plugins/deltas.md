@@ -166,9 +166,22 @@ let localSubscription = {
 
 Use `sourcePolicy: 'all'` when your plugin needs to see data from every source — for example, a display that compares readings from multiple sensors, or a data logger that records all sources.
 
-WebSocket clients can also set this via the connection URL query parameter: `?sourcePolicy=all` or `?sourcePolicy=preferred`.
-
 **Note:** `sourcePolicy` is honoured only when subscribing through `app.subscriptionmanager.subscribe()` — the recommended API documented above. Plugins that read directly from `app.streambundle` (`getBus()`, `getSelfStream()`) always receive the preferred-only stream and have no way to opt into all sources; new plugins should prefer `subscriptionmanager.subscribe()`.
+
+#### WebSocket connection query parameter
+
+WebSocket clients can apply the same policy to the entire connection by setting the `sourcePolicy` query parameter on the streaming endpoint:
+
+```
+ws://localhost:3000/signalk/v1/stream?subscribe=self&sourcePolicy=all
+```
+
+| Query value             | Behaviour                                                              |
+| ----------------------- | ---------------------------------------------------------------------- |
+| _(omitted)_/`preferred` | Connection delivers preferred-only deltas (default)                    |
+| `all`                   | Connection delivers deltas from every source, regardless of priorities |
+
+The query-string default applies to the bootstrap cache replay and to per-message subscriptions that don't carry their own `sourcePolicy`. A subscribe message can still override it on a per-call basis by including `sourcePolicy` in the message body.
 
 ## Sending Deltas
 
