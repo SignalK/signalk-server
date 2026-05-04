@@ -20,19 +20,15 @@ export interface BackpressureTransport {
   destroy(): void
 }
 
-export interface BackpressureOptions {
-  enterThreshold: number
-  exitThreshold: number
-  maxBufferSize: number
-  maxBufferCheckTime: number
-  beforeWrite?: (delta: Delta) => void
-}
-
 export interface BackpressureThresholds {
   enterThreshold: number
   exitThreshold: number
   maxBufferSize: number
   maxBufferCheckTime: number
+}
+
+export interface BackpressureOptions extends BackpressureThresholds {
+  beforeWrite?: (delta: Delta) => void
 }
 
 export function parseBackpressureThresholds(configFallbacks?: {
@@ -60,13 +56,19 @@ export class BackpressureManager {
   private active = false
   private readonly accumulator: Map<string, AccumulatedItem> = new Map()
   private since: number | null = null
-  private bufferSizeExceeded: number | undefined = undefined
-  private readonly transport: BackpressureTransport
-  private readonly options: BackpressureOptions
+  private bufferSizeExceeded?: number
 
-  constructor(transport: BackpressureTransport, options: BackpressureOptions) {
-    this.transport = transport
-    this.options = options
+  constructor(
+    private readonly transport: BackpressureTransport,
+    private readonly options: BackpressureOptions
+  ) {}
+
+  get isActive(): boolean {
+    return this.active
+  }
+
+  get accumulatorSize(): number {
+    return this.accumulator.size
   }
 
   onDrain(): void {
@@ -103,8 +105,8 @@ export class BackpressureManager {
     const duration = this.since ? Date.now() - this.since : 0
     const deltas = buildFlushDeltas(this.accumulator, duration)
     for (const delta of deltas) {
-      this.options.beforeWrite?.(delta as Delta)
-      this.transport.write(delta as Delta)
+      this.options.beforeWrite?.(delta)
+      this.transport.write(delta)
     }
     this.accumulator.clear()
     this.active = false
@@ -145,13 +147,5 @@ export class BackpressureManager {
     this.active = false
     this.since = null
     this.bufferSizeExceeded = undefined
-  }
-
-  get isActive(): boolean {
-    return this.active
-  }
-
-  get accumulatorSize(): number {
-    return this.accumulator.size
   }
 }
