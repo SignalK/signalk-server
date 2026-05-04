@@ -167,5 +167,31 @@ describe('History API v2', () => {
       body.should.have.property('error')
       body.error.should.contain('paths')
     })
+
+    it('accepts an ISO 8601 duration string', async function () {
+      const res = await fetch(
+        `${api}/history/values?paths=navigation.position&duration=PT15M`
+      )
+      res.status.should.equal(200)
+    })
+
+    it('accepts an integer number of seconds for duration', async function () {
+      const res = await fetch(
+        `${api}/history/values?paths=navigation.position&duration=900`
+      )
+      res.status.should.equal(200)
+    })
+
+    it('returns 400 for an unparseable duration', async function () {
+      const res = await fetch(
+        `${api}/history/values?paths=navigation.position&duration=not-a-duration`
+      )
+      res.status.should.equal(400)
+      const body = await res.json()
+      // Match against the specific error from the parser, not just any
+      // mention of "duration", to avoid false greens from unrelated
+      // validators that also mention the word.
+      body.error.should.contain('ISO 8601')
+    })
   })
 })
