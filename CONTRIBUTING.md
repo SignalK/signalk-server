@@ -79,7 +79,6 @@ Before you submit your Pull Request (PR) consider the following guidelines:
    - Create separate PRs for separate things - don't cram unrelated things to one PR, even if you have done them together. If you put multiple changes in one PR and one gets stalled or rejected we could still possibly merge the other one. If changes in one depend on the other one state that in PR description. You can think in terms of release notes: if the changes would be two entries in the changelog they should be separate PRs.
 1. Commit your changes using a descriptive commit message that follows the
    [conventions outlined here](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits). Whilst we are not 100% strict about this, it really helps when reviewing the PR and in making the commit history readable. The TL;DR of it is below.
-
    - The subject line should be in the format `<type>: <subject>`, where `<type>` should be one of:
      - feat (feature)
      - fix (bug fix)
@@ -100,15 +99,12 @@ Before you submit your Pull Request (PR) consider the following guidelines:
    - Subject, Body and Footer are separated by a blank line.
 
 1. Format and lint your code
-
    - run `npm run format` to format and [lint](<https://en.wikipedia.org/wiki/Lint_(software)>) your code.
 
 1. Push your branch to GitHub:
-
    - `git push origin my-fix-branch`
 
 1. In GitHub, create a pull request.
-
    - Use the same guidelines as commit messages to write the PR title and description.
    - The server's release notes are automatically generated from PR titles, so think about how you can make them **descriptive, informative and easy to understand**. Ask yourself: "If I only knew the title would I understand what the PR does?".
    - The description should tell how the change affects the server's behavior and motivation for doing the change.
@@ -117,7 +113,6 @@ Before you submit your Pull Request (PR) consider the following guidelines:
    - Don't include too much detail, like the exact changed lines or a version you tested the change with unless there is specific reason to do so. If the change is not directly related to a version adding a version is misleading. Git shows what's changed and extra content in PR description is just double work for maintainers to read, unless there is something that rquires attention.
 
 1. Wait for labeling and review
-
    - PRs are automatically reviewed by [CodeRabbit](https://coderabbit.ai/). Address any comments it raises. Once you are done addressing CodeRabbit's feedback, add a comment **"Ready for human review"** to signal that the PR is ready for maintainer review.
    - The maintainers will apply a label to the PR. The label is used to group PRs, mainly to distinguish fixes and new features.
    - If we require changes to your PR we expect you to:

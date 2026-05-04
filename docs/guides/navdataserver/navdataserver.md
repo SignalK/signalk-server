@@ -57,7 +57,6 @@ _Note: If the **Restart** button is not displayed in the upper right of screen, 
 
 - In the Admin UI, select _Server -> Plugin Config_ from the menu.
 - Locate `signalk-to-nmea0183` plugin.
-
   1. Ensure it is enabled
   2. Check ALL the boxes to transmit all NMEA0183 sentence types
   3. Leave the transmission interval (throttle) at 0
@@ -66,7 +65,6 @@ _Note: If the **Restart** button is not displayed in the upper right of screen, 
     <img src="./sk2nmea0183.png" width="450px" />
 
 - Locate `signalk-n2kais-to-nmea0183` plugin. This plugin transmits all the AIS targets.
-
   1. Ensure it is enabled
   2. Enter _nmea0183out_ in the **NMEA 0183 Out Events** field.
   3. Click the **Submit** button to save the configuration.

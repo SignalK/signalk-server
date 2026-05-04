@@ -350,11 +350,7 @@ export default class DeltaCache {
     // it. Without pruning here, evicted sources keep showing fresh
     // timestamps in the UI even though deltacache is empty —
     // because cached values keep being served from this tree.
-    pruneSourceFromFullSignalK(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (this.app.signalk as any)?.root,
-      sourceRef
-    )
+    pruneSourceFromFullSignalK((this.app.signalk as any)?.root, sourceRef)
     // Tell WS clients (notably the admin-ui Data Browser) to drop
     // every leaf they have for this source. Without this signal the
     // client's signalkData mirror keeps showing stale values until

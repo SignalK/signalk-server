@@ -195,14 +195,12 @@ After installing your plugin, verify it appears in the Admin UI:
 1. **Navigate to Plugin Configuration**: Open the Admin UI at `http://your-server:3000/admin/` and go to **Server → Plugin Config**
 
 2. **Check Plugin List**: Your WASM plugin should appear in the list with:
-
    - Plugin name (from `name()` export)
    - Version (from `package.json`)
    - Enable/Disable toggle
    - Configuration form (based on `schema()` export)
 
 3. **Verify Configuration Persistence**:
-
    - Configuration is saved to `~/.signalk/plugin-config-data/your-plugin-id.json`
    - Changes are applied immediately (plugin restarts automatically)
    - The file structure is:
