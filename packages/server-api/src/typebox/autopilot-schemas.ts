@@ -18,6 +18,7 @@ export const AutopilotStateDefSchema = Type.Object(
   },
   { $id: 'AutopilotStateDef' }
 )
+export type AutopilotStateDef = Static<typeof AutopilotStateDefSchema>
 
 /** Autopilot action definition */
 export const AutopilotActionDefSchema = Type.Object(
@@ -39,6 +40,7 @@ export const AutopilotActionDefSchema = Type.Object(
   },
   { $id: 'AutopilotActionDef' }
 )
+export type AutopilotActionDef = Static<typeof AutopilotActionDefSchema>
 
 /** Autopilot options — available states, modes, and actions */
 export const AutopilotOptionsSchema = Type.Object(
@@ -59,6 +61,7 @@ export const AutopilotOptionsSchema = Type.Object(
     description: 'Available autopilot states, modes, and actions'
   }
 )
+export type AutopilotOptions = Static<typeof AutopilotOptionsSchema>
 
 /** Autopilot info — full state of an autopilot device */
 export const AutopilotInfoSchema = Type.Object(
@@ -84,7 +87,7 @@ export const AutopilotInfoSchema = Type.Object(
     description: 'Full state of an autopilot device'
   }
 )
-export type AutopilotInfoType = Static<typeof AutopilotInfoSchema>
+export type AutopilotInfo = Static<typeof AutopilotInfoSchema>
 
 /** Angle input — value with optional units (deg or rad) */
 export const AngleInputSchema = Type.Object(

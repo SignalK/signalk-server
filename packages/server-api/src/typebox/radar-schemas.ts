@@ -16,7 +16,7 @@ export const RadarStatusSchema = Type.Union(
     description: 'Current operational status of the radar'
   }
 )
-export type RadarStatusSchemaType = Static<typeof RadarStatusSchema>
+export type RadarStatus = Static<typeof RadarStatusSchema>
 
 export const RadarControlValueSchema = Type.Object(
   {
@@ -33,7 +33,7 @@ export const RadarControlValueSchema = Type.Object(
     description: 'A radar control with auto mode and a numeric value'
   }
 )
-export type RadarControlValueSchemaType = Static<typeof RadarControlValueSchema>
+export type RadarControlValue = Static<typeof RadarControlValueSchema>
 
 export const RadarControlsSchema = Type.Object(
   {
@@ -67,7 +67,7 @@ export const RadarControlsSchema = Type.Object(
       'Current control settings for a radar. Additional radar-specific controls beyond gain/sea/rain may be present.'
   }
 )
-export type RadarControlsSchemaType = Static<typeof RadarControlsSchema>
+export type RadarControls = Static<typeof RadarControlsSchema>
 
 export const RadarInfoSchema = Type.Object(
   {
@@ -100,4 +100,4 @@ export const RadarInfoSchema = Type.Object(
     description: 'Information about a radar device'
   }
 )
-export type RadarInfoSchemaType = Static<typeof RadarInfoSchema>
+export type RadarInfo = Static<typeof RadarInfoSchema>
