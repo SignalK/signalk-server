@@ -130,6 +130,16 @@ const DataBrowser: React.FC = () => {
   const [collapsedSources, setCollapsedSources] = useState<Set<string>>(
     () => new Set()
   )
+  // Debounce + dedupe for source-info refetches triggered by deltas
+  // whose $source isn't yet in our local sourcesData mirror. Coalesces
+  // bursts of new-source events (e.g. when a remote SK upstream
+  // finishes its discovery sweep and starts emitting fresh metadata
+  // for many devices at once) into one /signalk/v1/api/sources fetch.
+  const sourcesRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
+  const lastSourcesRefetchAtRef = useRef<number>(0)
+  const rawSourcesDataRef = useRef<SourcesData | null>(null)
 
   const deferredSearch = useDeferredValue(search)
   const isSearchStale = search !== deferredSearch
@@ -179,6 +189,65 @@ const DataBrowser: React.FC = () => {
     return (await response.json()) as SourcesData
   }, [])
 
+  // Trigger a debounced /signalk/v1/api/sources refetch. Used when the
+  // delta stream surfaces a $source we don't yet have device-info for
+  // — typical for a Signal K WS upstream that finishes its discovery
+  // sweep after this client has already mounted. The 1.5s debounce
+  // collapses bursts of fresh sources into one fetch, and a 5s floor
+  // between fetches keeps a bus full of fast-arriving canName flips
+  // from hammering the REST endpoint.
+  const scheduleSourcesRefetch = useCallback(() => {
+    if (sourcesRefetchTimerRef.current) return
+    const sinceLast = Date.now() - lastSourcesRefetchAtRef.current
+    const delay = sinceLast < 5000 ? 5000 - sinceLast + 1500 : 1500
+    sourcesRefetchTimerRef.current = setTimeout(() => {
+      sourcesRefetchTimerRef.current = null
+      lastSourcesRefetchAtRef.current = Date.now()
+      loadSources()
+        .then((sourcesData) => {
+          if (isMountedRef.current) {
+            setRawSourcesData(sourcesData)
+          }
+        })
+        .catch((err) =>
+          console.warn('Delta-triggered sources refetch failed:', err)
+        )
+    }, delay)
+  }, [loadSources])
+
+  // Decide whether an incoming delta carries a $source we don't have
+  // device-info for in our local sourcesData mirror. Two checks:
+  //   - the connection.address entry exists at all,
+  //   - if it does, it has manufacturer / model / serial filled in
+  //     (the fields the WS upstream's discovery sweep eventually
+  //     populates server-side and forwards on the next data delta
+  //     for this source).
+  // A miss on either count schedules a refetch so the admin UI's
+  // labels / Source-Discovery page catch up without a manual reload.
+  const needsSourcesRefetch = useCallback(
+    (sourceRef: string | undefined): boolean => {
+      if (!sourceRef) return false
+      const dotIdx = sourceRef.indexOf('.')
+      if (dotIdx === -1) return false
+      const conn = sourceRef.slice(0, dotIdx)
+      const addr = sourceRef.slice(dotIdx + 1)
+      const tree = rawSourcesDataRef.current
+      if (!tree) return false
+      const connNode = tree[conn] as Record<string, unknown> | undefined
+      if (!connNode) return true
+      const dev = connNode[addr] as
+        | { n2k?: { manufacturerCode?: string; modelId?: string } }
+        | undefined
+      if (!dev) return true
+      // For non-N2K sources (no n2k subtree), there's nothing to
+      // populate later — don't bother refetching. For N2K, refetch
+      // until we've got both manufacturer and model.
+      if (!dev.n2k) return false
+      return !dev.n2k.manufacturerCode && !dev.n2k.modelId
+    },
+    []
+  )
+
   const handleMessage = useCallback(
     (msg: unknown) => {
       if (pause) {
@@ -199,6 +268,9 @@ const DataBrowser: React.FC = () => {
         let isNew = false
 
         deltaMsg.updates.forEach((update) => {
+          if (update.$source && needsSourcesRefetch(update.$source as string)) {
+            scheduleSourcesRefetch()
+          }
           if (update.values) {
             const pgn =
               update.source && update.source.pgn && `(${update.source.pgn})`
@@ -261,7 +333,16 @@ const DataBrowser: React.FC = () => {
         }
       }
     },
-    [pause, context, hasData, updatePath, updateMeta, getPathData]
+    [
+      pause,
+      context,
+      hasData,
+      updatePath,
+      updateMeta,
+      getPathData,
+      needsSourcesRefetch,
+      scheduleSourcesRefetch
+    ]
   )
 
   useDeltaMessages(handleMessage)
@@ -307,6 +388,13 @@ const DataBrowser: React.FC = () => {
     }
   }, [pause, webSocket, isConnected, skSelf, sourceFilter])
 
+  // Mirror rawSourcesData into a ref so the WS delta handler can
+  // check "do we already know this $source?" without re-binding via a
+  // dep change every time sourcesData updates.
+  useEffect(() => {
+    rawSourcesDataRef.current = rawSourcesData
+  }, [rawSourcesData])
+
   useEffect(() => {
     isMountedRef.current = true
 
@@ -324,6 +412,10 @@ const DataBrowser: React.FC = () => {
 
     return () => {
       isMountedRef.current = false
+      if (sourcesRefetchTimerRef.current) {
+        clearTimeout(sourcesRefetchTimerRef.current)
+        sourcesRefetchTimerRef.current = null
+      }
     }
   }, [loadSources, unitPrefsLoaded, fetchUnitPreferences])
 
