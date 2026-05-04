@@ -644,12 +644,20 @@ module.exports = (theApp: any) => {
             app.setPluginError(plugin.id, `Runtime error: ${message}`)
           }
         }
+        // Honour command.sourcePolicy so a plugin can opt into the
+        // unfiltered stream (every source) instead of the priority-resolved
+        // preferred-only default. Without this, plugins whose use case is
+        // per-source — historians writing all sources, calibrators pinning
+        // a specific device — silently never see non-preferred deltas
+        // because plugin subscriptions read streambundle.buses (the
+        // post-toPreferredDelta bus). Same plumbing the WS interface uses.
         app.subscriptionmanager.subscribe(
           command,
           unsubscribes,
           errorCallback,
           safeCallback,
-          user
+          user,
+          command.sourcePolicy
         )
       },
       unsubscribe: (msg: UnsubscribeMessage, unsubscribes: Unsubscribes) => {
