@@ -37,8 +37,7 @@ interface WithServer {
  * Application interface for binary stream initialization
  */
 interface StreamApplication
-  extends WithServer,
-    Omit<WithSecurityStrategy, 'securityStrategy'> {
+  extends WithServer, Omit<WithSecurityStrategy, 'securityStrategy'> {
   securityStrategy: WebSocketSecurityStrategy
 }
 

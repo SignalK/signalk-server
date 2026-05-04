@@ -14,9 +14,7 @@ const RADAR_API_PATH = `/signalk/v2/api/vessels/self/radars`
 const TWO_PI = 2 * Math.PI
 
 interface RadarApplication
-  extends WithSecurityStrategy,
-    SignalKMessageHub,
-    IRouter {}
+  extends WithSecurityStrategy, SignalKMessageHub, IRouter {}
 
 export class RadarApi {
   private radarProviders: Map<string, radar.RadarProvider> = new Map()

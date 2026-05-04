@@ -32,10 +32,7 @@ interface DefaultProviders {
 }
 
 interface ResourceApplication
-  extends IRouter,
-    WithConfig,
-    WithSecurityStrategy,
-    SignalKMessageHub {}
+  extends IRouter, WithConfig, WithSecurityStrategy, SignalKMessageHub {}
 
 interface ResourceSettings {
   defaultProviders: DefaultProviders
