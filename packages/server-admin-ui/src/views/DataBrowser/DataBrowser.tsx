@@ -38,7 +38,8 @@ import {
   useConfiguredPriorityPaths,
   usePreferredSourceByPath,
   useLivePreferredSources,
-  useSourcePrioritiesLoaded
+  useSourcePrioritiesLoaded,
+  useDiscoveredAddresses
 } from '../../store'
 
 const getSignalkData = () => useStore.getState().signalkData
@@ -149,6 +150,7 @@ const DataBrowser: React.FC = () => {
   const preferredSourceByPath = usePreferredSourceByPath()
   const livePreferredSourcesRaw = useLivePreferredSources()
   const sourcePrioritiesLoaded = useSourcePrioritiesLoaded()
+  const discoveredAddresses = useDiscoveredAddresses()
 
   // Paths the user has flagged for fan-out (sentinel '*' override).
   // Used to suppress the "Preferred" badge — a fan-out path delivers
@@ -324,6 +326,30 @@ const DataBrowser: React.FC = () => {
       isMountedRef.current = false
     }
   }, [loadSources, unitPrefsLoaded, fetchUnitPreferences])
+
+  // Re-fetch sourcesData whenever the N2K discovery surface changes.
+  // /signalk/v1/api/sources is fetched once on mount; without this
+  // hook a page loaded before discovery completes shows only canName
+  // labels and never recovers, because the WS delta stream doesn't
+  // ship the manufacturer/model/serial fields. discoveredAddresses
+  // is pushed via N2KDEVICESTATUS — its array reference changes
+  // every time the device set updates, so this effect fires exactly
+  // when fresh metadata is likely available on the REST endpoint.
+  useEffect(() => {
+    if (pause) return
+    if (!discoveredAddresses || discoveredAddresses.length === 0) return
+    let cancelled = false
+    loadSources()
+      .then((sourcesData) => {
+        if (!cancelled && isMountedRef.current) {
+          setRawSourcesData(sourcesData)
+        }
+      })
+      .catch((err) => console.warn('Failed to refresh sources:', err))
+    return () => {
+      cancelled = true
+    }
+  }, [discoveredAddresses, loadSources, pause])
 
   const contextOptions: SelectOption[] = useMemo(() => {
     const currentData = getSignalkData()
