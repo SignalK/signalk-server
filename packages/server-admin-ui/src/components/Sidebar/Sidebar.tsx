@@ -200,18 +200,18 @@ export default function Sidebar({ location }: SidebarProps) {
         url: '/data/connections/-'
       })
     }
-    dataChildren.push({
-      name: 'NMEA Discovery',
-      url: '/data/sources',
-      badge:
-        conflictCount > 0
-          ? { variant: 'warning', text: `${conflictCount}` }
-          : null
-    })
     const prioritiesAttentionCount =
       unconfiguredPriorityCount + overridesWithMissingSourcesCount
     if (isAdmin) {
       dataChildren.push(
+        {
+          name: 'NMEA Discovery',
+          url: '/data/sources',
+          badge:
+            conflictCount > 0
+              ? { variant: 'warning', text: `${conflictCount}` }
+              : null
+        },
         {
           name: 'Priorities',
           url: '/data/priorities',
@@ -240,8 +240,9 @@ export default function Sidebar({ location }: SidebarProps) {
         icon: 'icon-grid'
       },
       ((): NavItemData => {
-        const dataBadgeCount =
-          (isAdmin ? prioritiesAttentionCount : 0) + conflictCount
+        const dataBadgeCount = isAdmin
+          ? prioritiesAttentionCount + conflictCount
+          : 0
         return {
           name: 'Data',
           url: '/data',

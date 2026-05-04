@@ -169,12 +169,7 @@ export default function Full() {
               />
               <Route
                 path="/data/sources"
-                element={
-                  <ProtectedRoute
-                    component={SourceDiscovery}
-                    supportsReadOnly
-                  />
-                }
+                element={<ProtectedRoute component={SourceDiscovery} />}
               />
               <Route
                 path="/data/priorities"

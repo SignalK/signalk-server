@@ -459,7 +459,14 @@ module.exports = (app: N2kDiscoveryApp) => {
     }
     firstDeviceStatusEmit = false
     lastDeviceStatusFingerprint = fingerprint
-    app.emit('serverevent', {
+    // serverAdminEvent (not serverevent): N2K device status exposes
+    // bus-topology metadata (manufacturer/model identities, observed
+    // PGN instance values) that the existing /skServer/n2kDeviceStatus
+    // REST handler also gates with addAdminMiddleware. Using the
+    // admin-only WS channel keeps the two paths consistent — without
+    // this, anonymous read users with serverevents=all received the
+    // same payload the REST endpoint denies them.
+    app.emit('serverAdminEvent', {
       type: 'N2KDEVICESTATUS',
       data: {
         pgnDataInstances,
