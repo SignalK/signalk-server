@@ -17,6 +17,8 @@
 import {
   StreamBundle as IStreamBundle,
   Delta,
+  hasMeta,
+  hasValues,
   NormalizedDelta,
   Path,
   Update,
@@ -55,36 +57,41 @@ export class StreamBundle implements IStreamBundle {
   pushDelta(delta: Delta) {
     try {
       if (delta.updates) {
-        delta.updates.forEach((update) => {
-          const base = {
-            context: delta.context!, // TSTODO: make optional/required match
-            source: update.source,
-            $source: update.$source!, // TSTODO: make optional/required match
-            timestamp: update.timestamp! // TSTODO: make optional/required match
-          }
+        // TSTODO: context/$source/timestamp optionality on Delta/Update does not match NormalizedDelta
+        const context = delta.context!
+        for (const update of delta.updates) {
+          const source = update.source
+          const $source = update.$source!
+          const timestamp = update.timestamp!
 
-          if ('meta' in update) {
-            update.meta.forEach((meta) => {
+          if (hasMeta(update)) {
+            for (const meta of update.meta) {
               this.push(meta.path, {
-                ...base,
+                context,
+                source,
+                $source,
+                timestamp,
                 path: meta.path,
                 value: meta.value,
                 isMeta: true
               })
-            })
+            }
           }
 
-          if ('values' in update) {
-            update.values.forEach((pathValue) => {
+          if (hasValues(update)) {
+            for (const pathValue of update.values) {
               this.push(pathValue.path, {
-                ...base,
+                context,
+                source,
+                $source,
+                timestamp,
                 path: pathValue.path,
                 value: pathValue.value,
                 isMeta: false
               })
-            })
+            }
           }
-        })
+        }
       }
     } catch (e) {
       console.error(e)
@@ -100,9 +107,7 @@ export class StreamBundle implements IStreamBundle {
         this.selfMetaBus.push(normalizedDelta)
       }
     }
-    if (!this.availableSelfPaths[path]) {
-      this.availableSelfPaths[path] = true
-    }
+    this.availableSelfPaths[path] = true
     this.getBus().push(normalizedDelta)
     this.getBus(path).push(normalizedDelta)
     if (isSelf) {
