@@ -25,8 +25,12 @@ let customDefinitions: UnitDefinitions
 let activePreset: Preset
 let config: UnitPreferencesConfig
 let defaultCategories: { [path: string]: string } = {}
+let defaultCategoryWildcards: Array<{ regex: RegExp; category: string }> = []
 let baseUnitToCategoriesCache: { [baseUnit: string]: string[] } | null = null
+let mergedDefinitionsCache: UnitDefinitions | null = null
+let categoriesCache: CategoryMap | null = null
 const userPreferencesCache = new Map<string, UserUnitPreferences | null>()
+const presetByNameCache = new Map<string, Preset | null>()
 let applicationDataPath: string = ''
 let configUnitprefsDir: string = ''
 
@@ -169,6 +173,7 @@ export function loadAll(): void {
       }
     }
   }
+  rebuildDefaultCategoryWildcards()
 
   // Load default primary categories (read-only, from package)
   const primaryCatPath = path.join(
@@ -183,10 +188,33 @@ export function loadAll(): void {
 
   // Invalidate caches
   baseUnitToCategoriesCache = null
+  mergedDefinitionsCache = null
+  categoriesCache = null
   userPreferencesCache.clear()
+  presetByNameCache.clear()
 
   // Load active preset
   loadActivePreset()
+}
+
+// Wildcard '*' matches a single signalk path segment (no dots).
+// Example: 'electrical.batteries.*.voltage' matches 'electrical.batteries.house.voltage'
+// but not 'electrical.batteries.house.voltage.value'.
+function rebuildDefaultCategoryWildcards(): void {
+  defaultCategoryWildcards = []
+  for (const [pattern, category] of Object.entries(defaultCategories)) {
+    if (pattern.includes('*')) {
+      const regex = new RegExp(
+        '^' +
+          pattern
+            .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
+            .replace(/\./g, '\\.')
+            .replace(/\*/g, '[^.]+') +
+          '$'
+      )
+      defaultCategoryWildcards.push({ regex, category })
+    }
+  }
 }
 
 function loadActivePreset(): void {
@@ -225,14 +253,19 @@ function loadActivePreset(): void {
   )
 }
 
+// The returned object is shared and must be treated as read-only by callers.
+// Invalidated by loadAll(), reloadCustomCategories().
 export function getCategories(): CategoryMap {
-  // Return merged categories (core + custom)
+  if (categoriesCache) {
+    return categoriesCache
+  }
   const merged = { ...categories }
   merged.categoryToBaseUnit = {
     ...categories.categoryToBaseUnit,
     ...customCategories
   }
-  return merged
+  categoriesCache = merged
+  return categoriesCache
 }
 export function getCustomCategories(): { [category: string]: string } {
   return customCategories
@@ -251,6 +284,7 @@ export function getConfig(): UnitPreferencesConfig {
 }
 
 export function reloadPreset(): void {
+  presetByNameCache.clear()
   // Re-read config from config dir
   const cfgPath = configUnitprefsDir
     ? path.join(configUnitprefsDir, 'config.json')
@@ -261,7 +295,19 @@ export function reloadPreset(): void {
   loadActivePreset()
 }
 
+// Drop a single preset (or all) from the cache. Call after writing or
+// deleting a custom preset file directly so subsequent loads see the new
+// content.
+export function invalidatePresetCache(presetName?: string): void {
+  if (presetName === undefined) {
+    presetByNameCache.clear()
+  } else {
+    presetByNameCache.delete(presetName)
+  }
+}
+
 export function reloadCustomDefinitions(): void {
+  mergedDefinitionsCache = null
   const customPath = configUnitprefsDir
     ? path.join(configUnitprefsDir, 'custom-units-definitions.json')
     : path.join(PACKAGE_UNITPREFS_DIR, 'custom-units-definitions.json')
@@ -274,6 +320,7 @@ export function reloadCustomDefinitions(): void {
 
 export function reloadCustomCategories(): void {
   baseUnitToCategoriesCache = null
+  categoriesCache = null
   const customCatPath = configUnitprefsDir
     ? path.join(configUnitprefsDir, 'custom-categories.json')
     : path.join(PACKAGE_UNITPREFS_DIR, 'custom-categories.json')
@@ -284,7 +331,12 @@ export function reloadCustomCategories(): void {
   }
 }
 
+// The returned object is shared and must be treated as read-only by callers.
+// Invalidated by loadAll(), reloadCustomDefinitions().
 export function getMergedDefinitions(): UnitDefinitions {
+  if (mergedDefinitionsCache) {
+    return mergedDefinitionsCache
+  }
   // Custom definitions override standard
   const merged: UnitDefinitions = structuredClone(standardDefinitions)
   for (const [siUnit, def] of Object.entries(customDefinitions)) {
@@ -297,7 +349,8 @@ export function getMergedDefinitions(): UnitDefinitions {
       }
     }
   }
-  return merged
+  mergedDefinitionsCache = merged
+  return mergedDefinitionsCache
 }
 
 export function getDefaultCategory(
@@ -309,20 +362,9 @@ export function getDefaultCategory(
     return defaultCategories[signalkPath]
   }
 
-  for (const [pattern, category] of Object.entries(defaultCategories)) {
-    if (pattern.includes('*')) {
-      // '*' matches a single path segment, not dots
-      const regex = new RegExp(
-        '^' +
-          pattern
-            .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
-            .replace(/\./g, '\\.')
-            .replace(/\*/g, '[^.]+') +
-          '$'
-      )
-      if (regex.test(signalkPath)) {
-        return category
-      }
+  for (const { regex, category } of defaultCategoryWildcards) {
+    if (regex.test(signalkPath)) {
+      return category
     }
   }
 
@@ -419,11 +461,26 @@ export function saveUserPreferences(
   userPreferencesCache.set(username, structuredClone(prefs))
 }
 
+// Cached results are shared and must be treated as read-only by callers.
+// Invalidated by loadAll(), reloadPreset(), invalidatePresetCache().
 function loadPresetByName(presetName: string): Preset | null {
+  // Reject malformed names before touching the cache so attacker-controlled
+  // values from user prefs cannot grow the Map with junk keys.
   if (!/^[a-zA-Z0-9_-]+$/.test(presetName)) {
     return null
   }
 
+  const cached = presetByNameCache.get(presetName)
+  if (cached !== undefined) {
+    return cached
+  }
+
+  const preset = readPresetFromDisk(presetName)
+  presetByNameCache.set(presetName, preset)
+  return preset
+}
+
+function readPresetFromDisk(presetName: string): Preset | null {
   // Check custom presets in config dir first
   if (configUnitprefsDir) {
     const customPresetPath = path.join(

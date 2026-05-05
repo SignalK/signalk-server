@@ -3,6 +3,7 @@ export {
   reloadPreset,
   reloadCustomDefinitions,
   reloadCustomCategories,
+  invalidatePresetCache,
   getConfig,
   getMergedDefinitions,
   getCategories,
