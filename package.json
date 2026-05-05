@@ -76,7 +76,7 @@
     "@assemblyscript/loader": "^0.28.9",
     "@signalk/course-provider": "^1.2.7",
     "@signalk/n2k-signalk": ">=4.1.0-beta",
-    "@signalk/nmea0183-signalk": "^3.0.0",
+    "@signalk/nmea0183-signalk": "^3.19.1",
     "@signalk/resources-provider": "^1.5.1",
     "@signalk/server-admin-ui": "2.26.x",
     "@signalk/server-api": "^2.24.0",
