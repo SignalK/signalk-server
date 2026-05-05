@@ -16,8 +16,12 @@
  */
 
 import fs from 'fs'
-import _ from 'lodash'
 import { atomicWriteFileSync, atomicWriteFile } from './atomicWrite'
+
+function pull<T>(arr: T[], item: T): void {
+  const index = arr.indexOf(item)
+  if (index >= 0) arr.splice(index, 1)
+}
 
 const VALUES = 'values'
 const META = 'meta'
@@ -34,7 +38,7 @@ class DeltaEditor {
     const data = fs.readFileSync(filename, 'utf8')
     const deltas = JSON.parse(data)
 
-    if (!_.isArray(deltas)) {
+    if (!Array.isArray(deltas)) {
       throw new Error(`${filename} should contain an array of deltas`)
     }
     this.deltas = deltas
@@ -50,7 +54,7 @@ class DeltaEditor {
   }
 
   setValue(context: string, path: string, value: any) {
-    if (_.isUndefined(value)) {
+    if (value === undefined) {
       return this.removeValue(context, path)
     }
 
@@ -97,16 +101,16 @@ class DeltaEditor {
       if (deltaInfo && deltaInfo.kp) {
         delete deltaInfo.kp.value[path]
 
-        if (_.keys(deltaInfo.kp.value).length === 0) {
-          _.pull(this.deltas, deltaInfo.delta)
+        if (Object.keys(deltaInfo.kp.value).length === 0) {
+          pull(this.deltas, deltaInfo.delta)
         }
       }
     } else {
       const deltaInfo = getDelta(this.deltas, context, path, VALUES)
       if (deltaInfo && deltaInfo.kp) {
-        _.pull(deltaInfo.delta.updates[0].values, deltaInfo.kp)
+        pull(deltaInfo.delta.updates[0].values, deltaInfo.kp)
         if (deltaInfo.delta.updates[0].values.length === 0) {
-          _.pull(this.deltas, deltaInfo.delta)
+          pull(this.deltas, deltaInfo.delta)
         }
       }
     }
@@ -119,9 +123,9 @@ class DeltaEditor {
   removeMeta(context: string, path: string) {
     const deltaInfo = getDelta(this.deltas, context, path, META)
     if (deltaInfo && deltaInfo.kp) {
-      _.pull(deltaInfo.delta.updates[0].meta, deltaInfo.kp)
+      pull(deltaInfo.delta.updates[0].meta, deltaInfo.kp)
       if (deltaInfo.delta.updates[0].meta.length === 0) {
-        _.pull(this.deltas, deltaInfo.delta)
+        pull(this.deltas, deltaInfo.delta)
       }
     }
   }
