@@ -600,6 +600,78 @@ describe('Subscriptions', (_) => {
       })
   })
 
+  it('relativePosition subscription without position errors', function () {
+    let wsPromiser
+
+    return serverP
+      .then(() => {
+        wsPromiser = new WsPromiser(
+          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none'
+        )
+        return wsPromiser.nextMsg()
+      })
+      .then(() => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          wsPromiser.send({
+            context: {
+              radius: 1
+            },
+            subscribe: [
+              {
+                path: 'navigation.position'
+              }
+            ]
+          })
+        ])
+      })
+      .then(([response]) => {
+        assert.equal(
+          '"Please specify a radius and position for relativePosition"',
+          response
+        )
+      })
+  })
+
+  it('subscription with invalid policy errors', function () {
+    let self, wsPromiser
+
+    return serverP
+      .then(() => {
+        wsPromiser = new WsPromiser(
+          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none'
+        )
+        return wsPromiser.nextMsg()
+      })
+      .then((wsHello) => {
+        self = JSON.parse(wsHello).self
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getDelta({ context: self }), deltaUrl)
+        ])
+      })
+      .then(() => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          wsPromiser.send({
+            context: '*',
+            subscribe: [
+              {
+                path: 'navigation.courseOverGroundTrue',
+                policy: 'invalid'
+              }
+            ]
+          })
+        ])
+      })
+      .then(([response]) => {
+        assert.equal(
+          "\"Only 'instant' and 'fixed' policies supported, ignoring policy invalid\"",
+          response
+        )
+      })
+  })
+
   it('JSON subscription with string period works', async function () {
     await serverP
     const wsPromiser = new WsPromiser(
