@@ -29,12 +29,14 @@ import {
 } from '@signalk/server-api'
 import * as Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
-import _, { forOwn, get, isString } from 'lodash'
+import _ from 'lodash'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
 import { StreamBundle, toDelta } from './streambundle'
 import { ContextMatcher } from './types'
 const debug = createDebug('signalk-server:subscriptionmanager')
+
+const VALID_POLICIES: ReadonlySet<string> = new Set(['instant', 'fixed'])
 
 interface BusesMap {
   [path: Path]: Bacon.Bus<NormalizedDelta>
@@ -100,14 +102,12 @@ class SubscriptionManager implements ISubscriptionManager {
     if (command.announceNewPaths) {
       const announcedPaths = new Set<string>()
 
-      // 1. Announce ALL existing paths matching context (send cached deltas once)
       const existingDeltas = this.app.deltaCache.getCachedDeltas(
         contextFilter,
         user
       )
       if (existingDeltas) {
         existingDeltas.forEach((delta: any) => {
-          // Track which paths we've announced
           delta.updates?.forEach((update: any) => {
             update.values?.forEach((vp: any) => {
               if (vp.path) {
@@ -119,27 +119,24 @@ class SubscriptionManager implements ISubscriptionManager {
         })
       }
 
-      // 2. Listen for NEW paths appearing later and announce once
       unsubscribes.push(
         this.streambundle.keys.onValue((path: string) => {
           if (announcedPaths.has(path)) {
-            return // Already announced this path
+            return
           }
           announcedPaths.add(path)
 
-          // Subscribe to the bus to get the first value for this new path
-          // We can't rely on deltaCache here because it might not have
-          // received the value yet (race condition with keys.onValue)
+          // deltaCache may not yet hold the value when keys.onValue fires,
+          // so subscribe to the bus directly for the first value.
           const bus = this.streambundle.getBus(path as Path)
           const unsubscribeBus = bus
             .filter(contextFilter)
-            .take(1) // Only take the first value
+            .take(1)
             .map(toDelta)
             .onValue((delta: any) => {
               callback(delta)
             })
 
-          // Add to unsubscribes so it gets cleaned up
           unsubscribes.push(unsubscribeBus)
         })
       )
@@ -150,13 +147,11 @@ class SubscriptionManager implements ISubscriptionManager {
     if (
       msg.unsubscribe &&
       msg.context === '*' &&
-      msg.unsubscribe &&
       msg.unsubscribe.length === 1 &&
       msg.unsubscribe[0].path === '*'
     ) {
       debug('Unsubscribe all')
       unsubscribes.forEach((unsubscribe) => unsubscribe())
-      // clear unsubscribes
       unsubscribes.length = 0
     } else {
       throw new Error(
@@ -175,10 +170,10 @@ function handleSubscribeRows(
   buses: BusesMap,
   filter: ContextMatcher,
   callback: SubscribeCallback,
-  errorCallback: any,
+  errorCallback: (err: unknown) => void,
   user?: string
 ) {
-  rows.reduce((acc, subscribeRow) => {
+  for (const subscribeRow of rows) {
     if (subscribeRow.path !== undefined) {
       handleSubscribeRow(
         app,
@@ -191,8 +186,7 @@ function handleSubscribeRows(
         user
       )
     }
-    return acc
-  }, unsubscribes)
+  }
 }
 
 interface App {
@@ -206,76 +200,73 @@ function handleSubscribeRow(
   buses: BusesMap,
   filter: ContextMatcher,
   callback: SubscribeCallback,
-  errorCallback: any,
+  errorCallback: (err: unknown) => void,
   user?: string
 ) {
   const matcher = pathMatcher(subscribeRow.path)
-  // iterate over all the buses, checking if we want to subscribe to its values
-  forOwn(buses, (bus, key) => {
-    if (matcher(key)) {
-      debug('Subscribing to key ' + key)
-      let filteredBus: Bacon.EventStream<NormalizedDelta> = bus.filter(filter)
-      if (subscribeRow.minPeriod) {
-        if (subscribeRow.policy && subscribeRow.policy !== 'instant') {
-          errorCallback(
-            `minPeriod assumes policy 'instant', ignoring policy ${subscribeRow.policy}`
-          )
-        }
-        const minPeriodValue = Number(subscribeRow.minPeriod)
-        debug('minPeriod:' + subscribeRow.minPeriod)
-        if (isNaN(minPeriodValue)) {
-          errorCallback(
-            `invalid minPeriod value '${subscribeRow.minPeriod}', ignoring`
-          )
-        } else if (key !== '') {
-          // we can not apply minPeriod for empty path subscriptions
-          debug('debouncing')
-          filteredBus = filteredBus.debounceImmediate(minPeriodValue)
-        }
-      } else if (
-        subscribeRow.period ||
-        (subscribeRow.policy && subscribeRow.policy === 'fixed')
-      ) {
-        if (subscribeRow.policy && subscribeRow.policy !== 'fixed') {
-          errorCallback(
-            `period assumes policy 'fixed', ignoring policy ${subscribeRow.policy}`
-          )
-        } else if (key !== '') {
-          // we can not apply period for empty path subscriptions
-          const interval = Number(subscribeRow.period) || 1000
-          filteredBus = filteredBus
-            .bufferWithTime(interval)
-            .flatMapLatest((bufferedValues: any) => {
-              const uniqueValues = _(bufferedValues)
-                .reverse()
-                .uniqBy(
-                  (value) =>
-                    value.context + ':' + value.$source + ':' + value.path
-                )
-                .value()
-              return Bacon.fromArray(uniqueValues)
-            })
-        }
-      }
-      if (subscribeRow.format && subscribeRow.format !== 'delta') {
-        errorCallback('Only delta format supported, using it')
-      }
-      if (
-        subscribeRow.policy &&
-        !['instant', 'fixed'].some((s) => s === subscribeRow.policy)
-      ) {
+  for (const key in buses) {
+    if (!matcher(key)) {
+      continue
+    }
+    const bus = buses[key as Path]
+    debug.enabled && debug('Subscribing to key ' + key)
+    let filteredBus: Bacon.EventStream<NormalizedDelta> = bus.filter(filter)
+    if (subscribeRow.minPeriod) {
+      if (subscribeRow.policy && subscribeRow.policy !== 'instant') {
         errorCallback(
-          `Only 'instant' and 'fixed' policies supported, ignoring policy ${subscribeRow.policy}`
+          `minPeriod assumes policy 'instant', ignoring policy ${subscribeRow.policy}`
         )
       }
-      unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
-
-      const latest = app.deltaCache.getCachedDeltas(filter, user, key)
-      if (latest) {
-        latest.forEach(callback)
+      const minPeriodValue = Number(subscribeRow.minPeriod)
+      debug.enabled && debug('minPeriod:' + subscribeRow.minPeriod)
+      if (isNaN(minPeriodValue)) {
+        errorCallback(
+          `invalid minPeriod value '${subscribeRow.minPeriod}', ignoring`
+        )
+      } else if (key !== '') {
+        // minPeriod can not apply to empty-path subscriptions
+        debug('debouncing')
+        filteredBus = filteredBus.debounceImmediate(minPeriodValue)
+      }
+    } else if (
+      subscribeRow.period ||
+      (subscribeRow.policy && subscribeRow.policy === 'fixed')
+    ) {
+      if (subscribeRow.policy && subscribeRow.policy !== 'fixed') {
+        errorCallback(
+          `period assumes policy 'fixed', ignoring policy ${subscribeRow.policy}`
+        )
+      } else if (key !== '') {
+        const interval = Number(subscribeRow.period) || 1000
+        filteredBus = filteredBus
+          .bufferWithTime(interval)
+          .flatMapLatest((bufferedValues: any) => {
+            const uniqueValues = _(bufferedValues)
+              .reverse()
+              .uniqBy(
+                (value) =>
+                  value.context + ':' + value.$source + ':' + value.path
+              )
+              .value()
+            return Bacon.fromArray(uniqueValues)
+          })
       }
     }
-  })
+    if (subscribeRow.format && subscribeRow.format !== 'delta') {
+      errorCallback('Only delta format supported, using it')
+    }
+    if (subscribeRow.policy && !VALID_POLICIES.has(subscribeRow.policy)) {
+      errorCallback(
+        `Only 'instant' and 'fixed' policies supported, ignoring policy ${subscribeRow.policy}`
+      )
+    }
+    unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
+
+    const latest = app.deltaCache.getCachedDeltas(filter, user, key)
+    if (latest) {
+      latest.forEach(callback)
+    }
+  }
 }
 
 function pathMatcher(path: string = '*') {
@@ -291,11 +282,11 @@ function contextMatcher(
   selfContext: string,
   app: any,
   subscribeCommand: SubscribeMessage,
-  errorCallback: any
+  errorCallback: (err: unknown) => void
 ): ContextMatcher {
   debug.enabled && debug('subscribeCommand:' + JSON.stringify(subscribeCommand))
   if (subscribeCommand.context) {
-    if (isString(subscribeCommand.context)) {
+    if (typeof subscribeCommand.context === 'string') {
       const pattern = subscribeCommand.context
         .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
         .replace(/\./g, '\\.')
@@ -307,10 +298,11 @@ function contextMatcher(
           subscribeCommand.context === 'self') &&
           normalizedDeltaData.context === selfContext)
     } else if ('radius' in subscribeCommand.context) {
+      const origin = subscribeCommand.context
       if (
-        !get(subscribeCommand.context, 'radius') ||
-        !get(subscribeCommand.context, 'position.latitude') ||
-        !get(subscribeCommand.context, 'position.longitude')
+        !origin.radius ||
+        !origin.position?.latitude ||
+        !origin.position?.longitude
       ) {
         errorCallback(
           'Please specify a radius and position for relativePosition'
@@ -318,11 +310,7 @@ function contextMatcher(
         return () => false
       }
       return (normalizedDeltaData: WithContext) =>
-        checkPosition(
-          app,
-          subscribeCommand.context as RelativePositionOrigin,
-          normalizedDeltaData
-        )
+        checkPosition(app, origin, normalizedDeltaData)
     }
   }
   return () => true
@@ -333,8 +321,8 @@ function checkPosition(
   origin: RelativePositionOrigin,
   normalizedDelta: WithContext
 ): boolean {
-  const vessel = get(app.signalk.root, normalizedDelta.context)
-  const position = get(vessel, 'navigation.position')
+  const vessel = _.get(app.signalk.root, normalizedDelta.context)
+  const position = vessel?.navigation?.position
 
   return (
     position &&
