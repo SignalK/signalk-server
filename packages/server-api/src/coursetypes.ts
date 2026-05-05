@@ -36,6 +36,7 @@ export interface NextPreviousPoint {
   href?: string
   type: CoursePointType
   position: Position
+  name?: string
 }
 
 /** @category Course API */
