@@ -1,0 +1,29 @@
+name: Thank issue reporters
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  thank:
+    runs-on: ubuntu-latest
+    if: >
+      github.event.issue.state_reason == 'completed' &&
+      github.event.issue.user.type != 'Bot' &&
+      github.event.issue.user.login != 'tkurki'
+    steps:
+      - name: Post thank-you comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+        run: |
+          {
+            printf 'Thanks for taking the time to report this, @%s! 🙏\n\n' "$AUTHOR"
+            printf 'SignalK is built and maintained by volunteers in their spare time. If the project has been useful to you, please consider [becoming a sponsor on Open Collective](https://opencollective.com/signalk) — even a small recurring contribution helps keep things healthy and sustainable.\n\n'
+            printf 'Fair winds! ⛵\n'
+          } > /tmp/body.md
+          gh issue comment "$ISSUE_URL" --body-file /tmp/body.md
