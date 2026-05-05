@@ -24,14 +24,11 @@ const {
   getDefaultCategory
 } = require('../unitpreferences')
 
-// Enhance metadata response with displayUnits from unit preferences
 function enhanceMetadataResponse(metadata, signalkPath, username) {
   if (!metadata) return metadata
 
-  // Check if displayUnits.category exists in stored metadata
   let storedDisplayUnits = metadata.displayUnits
 
-  // If no category set, try to get default category for this path
   if (!storedDisplayUnits?.category && signalkPath) {
     const defaultCategory = getDefaultCategory(
       signalkPath,
@@ -173,7 +170,7 @@ module.exports = function (app) {
       })
 
       app.get(apiPathPrefix + '*', function (req, res, next) {
-        let path = String(req.path).replace(apiPathPrefix, '')
+        let path = req.path.replace(apiPathPrefix, '')
 
         if (path === 'self') {
           return res.json(`vessels.${app.selfId}`)
@@ -186,23 +183,19 @@ module.exports = function (app) {
           return
         }
 
-        // GET /vessels/<id>/meta — return all metadata for a vessel
+        // GET /vessels/<id>/meta: return all metadata for a vessel
         if (path.length === 3 && path[0] === 'vessels' && path[2] === 'meta') {
           const vesselId = path[1] === 'self' ? app.selfId : path[1]
-          const vesselPath = ['vessels', vesselId]
-          let full
-          if (app.securityStrategy.anyACLs()) {
-            full = app.deltaCache.buildFull(req.skPrincipal, vesselPath)
-          } else {
-            full = app.signalk.retrieve()
-          }
+          const full = app.securityStrategy.anyACLs()
+            ? app.deltaCache.buildFull(req.skPrincipal, ['vessels', vesselId])
+            : app.signalk.retrieve()
           const vessel = full?.vessels?.[vesselId]
           if (vessel) {
             const result = {}
             const username = req.skPrincipal?.identifier
             collectMeta(vessel, [], result)
-            for (const [skPath, meta] of Object.entries(result)) {
-              enhanceMetadataResponse(meta, skPath, username)
+            for (const skPath in result) {
+              enhanceMetadataResponse(result[skPath], skPath, username)
             }
             res.json(result)
           } else {
@@ -216,9 +209,7 @@ module.exports = function (app) {
           const meta = getMetadata(metaPath)
 
           if (meta) {
-            // Deep clone to avoid mutating the cached metadata object
             const metaCopy = structuredClone(meta)
-            // Extract signalk path (remove vessels.self prefix)
             const signalkPath = metaPath.replace(/^vessels\.[^.]+\./, '')
             const username = req.skPrincipal?.identifier
             res.json(enhanceMetadataResponse(metaCopy, signalkPath, username))
@@ -226,8 +217,8 @@ module.exports = function (app) {
           }
         }
         if (path.length > 5 && path[path.length - 2] === 'meta') {
-          let meta = getMetadata(path.slice(0, path.length - 2).join('.'))
-          let value = meta && meta[path[path.length - 1]]
+          const meta = getMetadata(path.slice(0, path.length - 2).join('.'))
+          const value = meta && meta[path[path.length - 1]]
           if (value) {
             res.json(value)
             return
@@ -237,54 +228,39 @@ module.exports = function (app) {
         path = path.map((p) => (p === 'self' ? app.selfId : p))
 
         function sendResult(last, aPath) {
-          if (last) {
-            const traversedPath = []
-            for (const i in aPath) {
-              const p = aPath[i]
-
-              if (typeof last[p] !== 'undefined') {
-                traversedPath.push(p)
-                last = last[p]
-              } else {
-                next()
-                return
-              }
-            }
-
-            // Inject displayUnits into meta objects throughout the tree.
-            // Strip the vessels.<id> prefix to get signalk-relative paths.
-            if (
-              traversedPath[0] === 'vessels' ||
-              aPath[0] === 'vessels' ||
-              aPath.length === 0
-            ) {
-              const username = req.skPrincipal?.identifier
-              let baseParts = traversedPath.slice()
-              // Remove vessels.<id> prefix if present
-              if (baseParts[0] === 'vessels' && baseParts.length >= 2) {
-                baseParts = baseParts.slice(2)
-              }
-              enhanceTreeMetadata(last, baseParts, username)
-            }
-          } else {
+          if (!last) {
             next()
             return
+          }
+          for (const p of aPath) {
+            if (typeof last[p] !== 'undefined') {
+              last = last[p]
+            } else {
+              next()
+              return
+            }
+          }
+
+          if (aPath[0] === 'vessels' || aPath.length === 0) {
+            const username = req.skPrincipal?.identifier
+            // Strip vessels.<id> prefix so paths are signalk-relative for displayUnits lookup
+            const baseParts =
+              aPath[0] === 'vessels' && aPath.length >= 2
+                ? aPath.slice(2)
+                : aPath.slice()
+            enhanceTreeMetadata(last, baseParts, username)
           }
 
           return res.json(last)
         }
 
-        if (path[0] && path[0] === 'snapshot') {
+        if (path[0] === 'snapshot') {
           return snapshotHandler(path.slice(1), req, res, next)
-        } else {
-          let last
-          if (app.securityStrategy.anyACLs()) {
-            last = app.deltaCache.buildFull(req.skPrincipal, path)
-          } else {
-            last = app.signalk.retrieve()
-          }
-          sendResult(last, path)
         }
+        const last = app.securityStrategy.anyACLs()
+          ? app.deltaCache.buildFull(req.skPrincipal, path)
+          : app.signalk.retrieve()
+        sendResult(last, path)
       })
 
       app.get(pathPrefix, function (req, res) {
@@ -295,8 +271,7 @@ module.exports = function (app) {
         let wsProtocol = 'ws://'
         if (
           app.config.settings.ssl ||
-          (req.headers['x-forwarded-proto'] &&
-            req.headers['x-forwarded-proto'] === 'https')
+          req.headers['x-forwarded-proto'] === 'https'
         ) {
           httpProtocol = 'https://'
           wsProtocol = 'wss://'
@@ -308,7 +283,7 @@ module.exports = function (app) {
           'signalk-ws': wsProtocol + host + streamPath
         }
 
-        if (app.interfaces.tcp && app.interfaces.tcp.data) {
+        if (app.interfaces.tcp?.data) {
           services['signalk-tcp'] =
             `tcp://${splitHost[0]}:${app.interfaces.tcp.data.port}`
         }
@@ -324,7 +299,7 @@ module.exports = function (app) {
         })
       })
 
-      if (app.historyProvider && app.historyProvider.registerHistoryApiRoute) {
+      if (app.historyProvider?.registerHistoryApiRoute) {
         debug('Adding history api route')
         const historyApiRouter = express.Router()
         app.historyProvider.registerHistoryApiRoute(historyApiRouter)
