@@ -36,7 +36,10 @@ import {
   SubscribeCallback,
   SubscribeMessage,
   Unsubscribes,
-  UnsubscribeMessage
+  UnsubscribeMessage,
+  NotificationId,
+  AlarmRaiseOptions,
+  AlarmUpdateOptions
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -703,6 +706,22 @@ module.exports = (theApp: any) => {
     appCopy.activateRoute = (dest: RouteDestination | null) => {
       return courseApi.activeRoute(dest)
     }
+
+    appCopy.notifications = {
+      list: () => app.notificationApi.list(),
+      getId: (id: NotificationId) => app.notificationApi.getId(id),
+      getPath: (path: Path) => app.notificationApi.getPath(path),
+      raise: (options: AlarmRaiseOptions) => app.notificationApi.raise(options),
+      mob: (message?: string) => app.notificationApi.mob(message),
+      update: (id: NotificationId, options: AlarmUpdateOptions) =>
+        app.notificationApi.update(id, options),
+      clear: (id: NotificationId) => app.notificationApi.clear(id),
+      silence: (id: NotificationId) => app.notificationApi.silence(id),
+      silenceAll: () => app.notificationApi.silenceAll(),
+      acknowledge: (id: NotificationId) => app.notificationApi.acknowledge(id),
+      acknowledgeAll: () => app.notificationApi.acknowledgeAll()
+    }
+    delete (appCopy as any).notificationApi // expose only the plugin-specific methods
 
     try {
       const moduleDir = path.join(location, packageName)

@@ -10,8 +10,11 @@ import {
   SKVersion,
   SourceRef,
   Update,
-  AlarmOptions,
-  NotificationId
+  AlarmProperties,
+  NotificationId,
+  AlarmRaiseOptions,
+  AlarmUpdateOptions,
+  Path
 } from '@signalk/server-api'
 import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
@@ -121,19 +124,23 @@ export class NotificationApi {
     // Return list of notifications
     this.app.get(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path}`)
-      res.status(200).json(this.listNotifications())
+      res.status(200).json(this.list())
     })
 
-    // fetch
+    // Retrieve notification entry
     this.app.get(
       `${NOTI_API_PATH}/:id`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
-        const n = this.getNotification(req.params.id)
-        if (n) {
-          res.status(200).json(n)
+        if (uuid.validate(req.params.id)) {
+          const n = this.getId(req.params.id as NotificationId)
+          if (n) {
+            res.status(200).json(n)
+          } else {
+            res.status(404).json(Responses.notFound)
+          }
         } else {
-          res.status(200).json(Responses.notFound)
+          res.status(400).json(Responses.invalid)
         }
       }
     )
@@ -162,8 +169,12 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          this.silenceNotification(req.params.id)
-          res.status(200).json(Responses.ok)
+          if (uuid.validate(req.params.id)) {
+            this.silence(req.params.id as NotificationId)
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
         } catch (err) {
           res.status(400).json({
             state: 'FAILED',
@@ -198,8 +209,12 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          this.acknowledgeNotification(req.params.id)
-          res.status(200).json(Responses.ok)
+          if (uuid.validate(req.params.id)) {
+            this.acknowledge(req.params.id as NotificationId)
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
         } catch (err) {
           res.status(400).json({
             state: 'FAILED',
@@ -216,8 +231,12 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          this.clearNotification(req.params.id)
-          res.status(200).json(Responses.ok)
+          if (uuid.validate(req.params.id)) {
+            this.clear(req.params.id as NotificationId)
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
         } catch (err) {
           res.status(400).json({
             state: 'FAILED',
@@ -230,9 +249,9 @@ export class NotificationApi {
 
     // raise
     this.app.post(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
-      debug(`** ${req.method} ${req.path} ${req.body}`)
+      debug(`** ${req.method} ${req.path}`)
       try {
-        const id = this.notificationManager.raise(req.body)
+        const id = this.raise(req.body)
         res.status(200).json(Object.assign({}, Responses.ok, { id: id }))
       } catch (err) {
         res.status(400).json({
@@ -247,10 +266,14 @@ export class NotificationApi {
     this.app.put(
       `${NOTI_API_PATH}/:id`,
       async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path} ${req.body}`)
+        debug(`** ${req.method} ${req.path}`)
         try {
-          this.updateNotification(req.params.id, req.body)
-          res.status(200).json(Responses.ok)
+          if (uuid.validate(req.params.id)) {
+            this.update(req.params.id as NotificationId, req.body)
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
         } catch (err) {
           res.status(400).json({
             state: 'FAILED',
@@ -265,9 +288,9 @@ export class NotificationApi {
     this.app.post(
       `${NOTI_API_PATH}/mob`,
       async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path} ${req.body}`)
+        debug(`** ${req.method} ${req.path}`)
         try {
-          const id = this.notificationManager.mob(req.body)
+          const id = this.mob(req.body?.message)
           res.status(200).json(Object.assign({}, Responses.ok, { id: id }))
         } catch (err) {
           res.status(400).json({
@@ -282,43 +305,47 @@ export class NotificationApi {
 
   //** Plugin Interface Methods */
 
-  listNotifications() {
+  list(): Record<NotificationId, AlarmProperties> {
     return this.notificationManager.list
   }
 
-  getNotification(id: string) {
-    return this.notificationManager.get(id as NotificationId)
+  getId(id: NotificationId): AlarmProperties | undefined {
+    return this.notificationManager.get(id)
   }
 
-  silenceNotification(id: string) {
-    this.notificationManager.silence(id as NotificationId)
+  getPath(path: Path): Record<NotificationId, AlarmProperties> {
+    return this.notificationManager.getPath(path)
   }
 
-  silenceAll() {
+  silence(id: NotificationId): void {
+    this.notificationManager.silence(id)
+  }
+
+  silenceAll(): void {
     this.notificationManager.silenceAll()
   }
 
-  acknowledgeNotification(id: string) {
-    this.notificationManager.acknowledge(id as NotificationId)
+  acknowledge(id: NotificationId): void {
+    this.notificationManager.acknowledge(id)
   }
 
-  acknowledgeAll() {
+  acknowledgeAll(): void {
     this.notificationManager.acknowledgeAll()
   }
 
-  clearNotification(id: string) {
-    this.notificationManager.clear(id as NotificationId)
+  clear(id: NotificationId): void {
+    this.notificationManager.clear(id)
   }
 
-  raiseNotification(options: AlarmOptions) {
+  raise(options: AlarmRaiseOptions): NotificationId {
     return this.notificationManager.raise(options)
   }
 
-  updateNotification(id: string, options: AlarmOptions) {
-    this.notificationManager.update(id as NotificationId, options)
+  update(id: NotificationId, options: AlarmUpdateOptions): void {
+    this.notificationManager.update(id, options)
   }
 
-  mob(message: string) {
-    return this.notificationManager.mob({ message: message })
+  mob(message?: string): NotificationId {
+    return this.notificationManager.mob(message)
   }
 }

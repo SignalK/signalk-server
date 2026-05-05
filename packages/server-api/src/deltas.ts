@@ -102,6 +102,7 @@ export interface Notification {
   position?: Position
   createdAt?: Timestamp
   id?: string
+  data?: Record<string, Value>
 }
 
 // MetaMessage

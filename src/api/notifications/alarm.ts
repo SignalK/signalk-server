@@ -11,15 +11,9 @@ import {
   SourceRef,
   Timestamp,
   Update,
-  Value
+  AlarmProperties
 } from '@signalk/server-api'
 import { buildKey } from './notificationManager'
-
-export interface AlarmProperties {
-  context: Context
-  path: Path
-  value: Value
-}
 
 export class Alarm {
   private external = false // true when alarm was created from delta
@@ -45,10 +39,6 @@ export class Alarm {
     status: this.status
   }
 
-  /**
-   * Alarm Object
-   * @param notificationId Notification identifier
-   */
   constructor(notificationId?: NotificationId) {
     if (notificationId) {
       this.timeStamp()
@@ -60,8 +50,6 @@ export class Alarm {
 
   /**
    * Extract and populate attributes from update and context
-   * @param update Update object
-   * @param context Context value
    */
   private parseDelta(update: Update, context: Context) {
     this.context = context
@@ -91,7 +79,7 @@ export class Alarm {
       }
     } else if (this.status.silenced) {
       if (this.value.state !== 'emergency') {
-        this.value.method = this.value.method.filter((i) => i !== 'sound')
+        this.value.method = this.value.method?.filter((i) => i !== 'sound')
       }
     }
   }
@@ -103,8 +91,6 @@ export class Alarm {
 
   /**
    * Create / update alarm from incoming update and context
-   * @param update Update object
-   * @param context Context value
    */
   public syncFromNotificationUpdate(update: Update, context: Context) {
     this.external = true
@@ -140,6 +126,10 @@ export class Alarm {
     this.alignAlarmMethod()
   }
 
+  public setContext(context: Context) {
+    this.context = context
+  }
+
   /**
    * Returns true if Alarm is external (generated from incoming Delta message)
    */
@@ -149,7 +139,6 @@ export class Alarm {
 
   /**
    * Generates and returns the delta payload for use with `handleMessage()`
-   * @returns Delta message payload
    */
   get delta(): Delta {
     if (hasValues(this.update)) {
@@ -167,7 +156,7 @@ export class Alarm {
       ]
     }
     const d: Delta = { updates: [this.update] }
-    if (this.external) {
+    if (this.context) {
       d.context = this.context
     }
     return d
@@ -191,7 +180,6 @@ export class Alarm {
 
   /**
    * Sets the path associated with the alarm.
-   * @param id If supplied, the identifier will be appended to the notification path.
    */
   public setPath(path: Path, id?: string) {
     if (path) {
@@ -202,7 +190,6 @@ export class Alarm {
     }
   }
 
-  /** Silence Alarm */
   public silence() {
     if (!this.status.canSilence) {
       throw new Error('Alarm cannot be silenced!')
@@ -218,7 +205,6 @@ export class Alarm {
     this.timeStamp()
   }
 
-  /** Acknowledge Alarm */
   public acknowledge() {
     if (!this.status.canAcknowledge) {
       throw new Error('Alarm cannot be acknowledged!')
@@ -231,9 +217,6 @@ export class Alarm {
     this.timeStamp()
   }
 
-  /**
-   * Clears the Alarm by setting state = normal and resetting status.
-   */
   public clear() {
     if (!this.status.canClear) {
       throw new Error('Alarm cannot be cleared!')
