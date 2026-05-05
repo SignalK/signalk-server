@@ -18,7 +18,6 @@
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:deltacache')
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
-import _, { isUndefined } from 'lodash'
 import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
 import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
@@ -80,10 +79,8 @@ export default class DeltaCache {
   }
 
   onValue(msg: NormalizedDelta) {
-    // debug(`onValue ${JSON.stringify(msg)}`)
-
+    // meta is managed by FullSignalK
     if (msg.isMeta) {
-      // ignore meta data since it's getting managed by FullSignalK
       return
     }
 
@@ -97,12 +94,12 @@ export default class DeltaCache {
     if (msg.path.length !== 0) {
       leaf[sourceRef] = msg
     } else if (msg.value) {
-      _.keys(msg.value).forEach((key) => {
+      for (const key of Object.keys(msg.value)) {
         if (!leaf[key]) {
           leaf[key] = {}
         }
         leaf[key][sourceRef] = msg
-      })
+      }
     }
     this.lastModifieds[msg.context] = Date.now()
   }
@@ -155,7 +152,7 @@ export default class DeltaCache {
     const signalk = new FullSignalK(this.app.selfId, this.app.selfType)
 
     const addDelta = signalk.addDelta.bind(signalk)
-    _.values(this.sourceDeltas).forEach(addDelta)
+    Object.values(this.sourceDeltas).forEach(addDelta)
 
     return signalk.retrieve().sources
   }
@@ -170,7 +167,7 @@ export default class DeltaCache {
     const addDelta = signalk.addDelta.bind(signalk)
 
     if (includeSources) {
-      _.values(this.sourceDeltas).forEach(addDelta)
+      Object.values(this.sourceDeltas).forEach(addDelta)
     }
 
     if (deltas && deltas.length) {
@@ -184,38 +181,31 @@ export default class DeltaCache {
   }
 
   getCachedDeltas(contextFilter: ContextMatcher, user?: string, key?: string) {
-    const contexts: Context[] = []
-    _.keys(this.cache).forEach((type) => {
-      _.keys(this.cache[type]).forEach((id) => {
+    const keyParts = key ? key.split('.') : undefined
+    const deltas: NormalizedDelta[] = []
+    for (const type of Object.keys(this.cache)) {
+      const typeBranch = this.cache[type]
+      for (const id of Object.keys(typeBranch)) {
         const context = `${type}.${id}` as Context
-        if (contextFilter({ context })) {
-          contexts.push(this.cache[type][id])
+        if (!contextFilter({ context })) {
+          continue
         }
-      })
-    })
-
-    const deltas = contexts.reduce(
-      (acc: NormalizedDelta[], context: Context) => {
-        let deltasToProcess
-
-        if (key) {
-          deltasToProcess = _.get(context, key)
+        const contextBranch = typeBranch[id]
+        if (keyParts) {
+          const leaf = getLeafObject(contextBranch, keyParts, false)
+          if (!leaf) continue
+          for (const akey of Object.keys(leaf)) {
+            if (akey !== 'meta') {
+              deltas.push(leaf[akey])
+            }
+          }
         } else {
-          deltasToProcess = findDeltas(context)
+          for (const delta of findDeltas(contextBranch)) {
+            deltas.push(delta)
+          }
         }
-        if (deltasToProcess) {
-          acc = acc.concat(
-            _.values(
-              _.pickBy(deltasToProcess, (val, akey) => {
-                return akey !== 'meta'
-              })
-            )
-          )
-        }
-        return acc
-      },
-      []
-    )
+      }
+    }
 
     // ISO 8601 Zulu timestamps (as produced by new Date().toISOString() in
     // handleMessage) are lexicographically sortable, so we can avoid
@@ -234,7 +224,7 @@ export default class DeltaCache {
   }
 }
 
-function pathToProcessForFull(pathArray: any[]) {
+function pathToProcessForFull(pathArray: string[]) {
   if (pathArray.length > 0 && pathArray[0] === 'sources') {
     return []
   }
@@ -243,9 +233,9 @@ function pathToProcessForFull(pathArray: any[]) {
 
 function pickDeltasFromBranch(acc: any[], obj: any) {
   if (typeof obj === 'object') {
-    if (isUndefined(obj.path) || isUndefined(obj.value)) {
+    if (obj.path === undefined || obj.value === undefined) {
       // not a delta, so process possible children
-      _.values(obj).reduce(pickDeltasFromBranch, acc)
+      Object.values(obj).reduce(pickDeltasFromBranch, acc)
     } else {
       acc.push(obj)
     }
@@ -254,7 +244,7 @@ function pickDeltasFromBranch(acc: any[], obj: any) {
 }
 
 function findDeltas(branchOrLeaf: any) {
-  return _.values(branchOrLeaf).reduce(pickDeltasFromBranch, [])
+  return Object.values(branchOrLeaf).reduce(pickDeltasFromBranch, [])
 }
 
 function ensureHasDollarSource(normalizedDelta: NormalizedDelta): SourceRef {
@@ -276,7 +266,7 @@ function getLeafObject(
 
   for (let i = 0; i < contextAndPathParts.length; i++) {
     const p = contextAndPathParts[i]
-    if (isUndefined(current[p])) {
+    if (current[p] === undefined) {
       if (createIfMissing) {
         current[p] = {}
       } else {
