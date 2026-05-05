@@ -20,6 +20,7 @@ import https from 'https'
 import { Client } from '@signalk/client'
 import { getMetadata } from '@signalk/signalk-schema'
 import { CreateDebug, DebugLogger } from './types'
+import { stampRemoteUpdates, RemoteUpdate } from './remote-deltas'
 
 interface MdnsWsOptions {
   app: {
@@ -45,7 +46,7 @@ interface MdnsWsOptions {
 
 interface DeltaMessage {
   context?: string
-  updates?: Array<{ $source?: string; [key: string]: unknown }>
+  updates?: RemoteUpdate[]
 }
 
 export default class MdnsWs extends Transform {
@@ -253,10 +254,10 @@ export default class MdnsWs extends Transform {
         if (this.dataDebug.enabled) {
           this.dataDebug(JSON.stringify(data))
         }
-        data.updates.forEach((update) => {
-          update['$source'] =
-            `${this.options.providerId}.${client.options.hostname}:${client.options.port}.${update['$source'] ?? '-'}`
-        })
+        stampRemoteUpdates(
+          data.updates,
+          `${this.options.providerId}.${client.options.hostname}:${client.options.port}`
+        )
       }
 
       this.push(data)

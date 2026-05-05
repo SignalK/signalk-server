@@ -38,6 +38,8 @@ import {
   writeDefaultsFile,
   writeSettingsFile
 } from './config/config'
+import { resetPriorities } from './config/priorities-file'
+import { buildDeviceIdentities } from './deviceIdentities'
 import { SERVERROUTESPREFIX } from './constants'
 import { handleAdminUICORSOrigin } from './cors'
 import { createDebug, listKnownDebugs } from './debug'
@@ -58,15 +60,145 @@ import {
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
-import { getAISShipTypeName } from '@signalk/signalk-schema'
+import { getAISShipTypeName, metadataRegistry } from '@signalk/path-metadata'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
 import { execSync } from 'child_process'
 import { recommendedVersion as recommendedNodeVersion } from './version'
+import { Type } from '@sinclair/typebox'
+import { Value } from '@sinclair/typebox/value'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
+
+// Schemas for the atomic priorities payload and its sub-documents. These are
+// the same shapes the delta engine and the persisted settings.json already
+// expect; the schemas exist so bad admin requests cannot poison settings.json
+// with the wrong types.
+const priorityEntrySchema = Type.Object({
+  sourceRef: Type.String({ minLength: 1 }),
+  // String form is accepted because the admin UI sometimes round-trips
+  // numbers through input fields, but the value must still parse as a
+  // (possibly negative) integer — anything else would corrupt the
+  // priority engine when it does Number(timeout).
+  timeout: Type.Union([Type.Number(), Type.String({ pattern: '^-?\\d+$' })])
+})
+
+const priorityOverridesSchema = Type.Record(
+  Type.String(),
+  Type.Array(priorityEntrySchema)
+)
+
+const priorityGroupSchema = Type.Object({
+  id: Type.String({ minLength: 1 }),
+  sources: Type.Array(Type.String({ minLength: 1 })),
+  inactive: Type.Optional(Type.Boolean())
+})
+
+const priorityGroupsSchema = Type.Array(priorityGroupSchema)
+
+const priorityDefaultsSchema = Type.Object({
+  fallbackMs: Type.Optional(Type.Number({ exclusiveMinimum: 0 }))
+})
+
+const prioritiesPayloadSchema = Type.Object({
+  groups: priorityGroupsSchema,
+  overrides: priorityOverridesSchema,
+  defaults: priorityDefaultsSchema
+})
+
+type PrioritiesPayload = {
+  groups: Array<{ id: string; sources: string[]; inactive?: boolean }>
+  overrides: Record<
+    string,
+    Array<{ sourceRef: string; timeout: number | string }>
+  >
+  defaults: { fallbackMs?: number }
+}
+
+// Coerce numeric-string `timeout` values to numbers in-place. The schema
+// accepts both shapes for round-tripping through the admin-ui form, but
+// downstream consumers (the priority engine, settings.json) expect a
+// number — leaving a string here makes typeof checks downstream
+// silently misbehave.
+function normaliseSourcePriorityTimeouts(
+  priorities: Record<
+    string,
+    Array<{ sourceRef: string; timeout: number | string }>
+  >
+): void {
+  for (const entries of Object.values(priorities)) {
+    for (const entry of entries) {
+      if (typeof entry.timeout === 'string') {
+        entry.timeout = Number(entry.timeout)
+      }
+    }
+  }
+}
+
+function validatePrioritiesPayload(
+  body: unknown
+): { ok: true; value: PrioritiesPayload } | { ok: false; error: string } {
+  if (!Value.Check(prioritiesPayloadSchema, body)) {
+    const first = Value.Errors(prioritiesPayloadSchema, body).First()
+    return {
+      ok: false,
+      error: first
+        ? `Invalid priorities payload at ${first.path}: ${first.message}`
+        : 'Invalid priorities payload'
+    }
+  }
+  const value = body as PrioritiesPayload
+  // Reject duplicate sourceRefs across active groups. The engine resolves
+  // a source's group with first-found-wins, but the connected-component
+  // construction on the client should never produce overlap; defending
+  // here stops a hand-edited or out-of-sync payload from poisoning the
+  // engine's source→group map.
+  const seen = new Map<string, string>()
+  for (const g of value.groups) {
+    if (g.inactive) continue
+    for (const src of g.sources) {
+      const prev = seen.get(src)
+      if (prev && prev !== g.id) {
+        return {
+          ok: false,
+          error: `Source ${src} appears in groups ${prev} and ${g.id}; a source may belong to at most one active group.`
+        }
+      }
+      seen.set(src, g.id)
+    }
+  }
+  normaliseSourcePriorityTimeouts(value.overrides)
+  return { ok: true, value }
+}
+
+const sourceAliasesSchema = Type.Record(
+  Type.String(),
+  Type.String({ minLength: 1 })
+)
+
+const ignoredInstanceConflictsSchema = Type.Record(
+  Type.String(),
+  Type.String({ minLength: 1 })
+)
+
+function validateAgainst(
+  schema: Parameters<typeof Value.Check>[0],
+  body: unknown,
+  name: string
+): { ok: true; value: unknown } | { ok: false; error: string } {
+  if (!Value.Check(schema, body)) {
+    const first = Value.Errors(schema, body).First()
+    return {
+      ok: false,
+      error: first
+        ? `Invalid ${name} payload at ${first.path}: ${first.message}`
+        : `Invalid ${name} payload`
+    }
+  }
+  return { ok: true, value: body }
+}
 const ncp = ncpI.ncp
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
@@ -1234,6 +1366,58 @@ module.exports = function (
     }
   )
 
+  app.get(`${SERVERROUTESPREFIX}/paths`, (_req: Request, res: Response) => {
+    res.json(metadataRegistry.getAllMetadata())
+  })
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/multiSourcePaths`
+  )
+  app.get(
+    `${SERVERROUTESPREFIX}/multiSourcePaths`,
+    (req: Request, res: Response) => {
+      res.json(app.deltaCache.getMultiSourcePaths())
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/reconciledGroups`
+  )
+  // Reconciled priority groups for the admin UI. Saved groups are
+  // authoritative (composition driven by priorityGroups, not by
+  // current cache flux); unsaved sources fall through to connected-
+  // components discovery.
+  app.get(
+    `${SERVERROUTESPREFIX}/reconciledGroups`,
+    (req: Request, res: Response) => {
+      res.json(app.deltaCache.getReconciledGroups())
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/livePreferredSources`
+  )
+  // The currently-winning source per path according to the priority
+  // engine — distinct from priorityOverrides (the saved configuration).
+  // Used by the admin-ui to label and dedup against the actual live
+  // winner instead of the rank-1 source from config.
+  app.get(
+    `${SERVERROUTESPREFIX}/livePreferredSources`,
+    (_req: Request, res: Response) => {
+      res.json(app.deltaCache.getLivePreferredSources())
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/deviceIdentities`
+  )
+  app.get(
+    `${SERVERROUTESPREFIX}/deviceIdentities`,
+    (_req: Request, res: Response) => {
+      res.json(buildDeviceIdentities(app.signalk.sources))
+    }
+  )
+
   app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/eventsRoutingData`
   )
@@ -1241,6 +1425,226 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/eventsRoutingData`,
     (req: Request, res: Response) => {
       res.json(app.wrappedEmitter.getEventRoutingData())
+    }
+  )
+
+  // Generic source removal for non-N2K providers (NMEA0183 talkers,
+  // plugins, derived sources). N2K sources go through n2kRemoveSource
+  // because that endpoint also walks bus-address state. Without this
+  // endpoint, the priority-group trash icon for a still-publishing
+  // 0183 or plugin source can't actually evict it from the cache —
+  // the reconciler keeps re-promoting it as a newcomer on the next
+  // delta.
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/removeSource`)
+  // Diagnostic: how visible is a sourceRef across the server's caches?
+  // Called by the priority-page trash flow to verify that an eviction
+  // actually removed every leaf, and on demand from a developer
+  // browser to locate which tree is holding a zombie source.
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/cacheInspect`)
+  app.get(
+    `${SERVERROUTESPREFIX}/cacheInspect`,
+    (req: Request, res: Response) => {
+      const sourceRef = req.query.sourceRef as string | undefined
+      if (!sourceRef) {
+        res.status(400).json({
+          state: 'FAILED',
+          statusCode: 400,
+          message: 'sourceRef query parameter required'
+        })
+        return
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cache = (app.deltaCache as any).cache
+      const cachePaths: string[] = []
+      const walk = (
+        node: Record<string, unknown> | unknown,
+        prefix: string[]
+      ): void => {
+        if (!node || typeof node !== 'object') return
+        for (const key of Object.keys(node as Record<string, unknown>)) {
+          if (key === 'meta') continue
+          const child = (node as Record<string, unknown>)[key]
+          if (!child || typeof child !== 'object') continue
+          const c = child as Record<string, unknown>
+          if (c.path !== undefined && c.value !== undefined) {
+            if (key === sourceRef) cachePaths.push(prefix.join('.'))
+          } else {
+            walk(c, [...prefix, key])
+          }
+        }
+      }
+      walk(cache, [])
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const root = (app.signalk as any)?.root
+      const fullSignalKPaths: string[] = []
+      const walkFull = (
+        node: Record<string, unknown> | unknown,
+        prefix: string[]
+      ): void => {
+        if (!node || typeof node !== 'object') return
+        const n = node as Record<string, unknown>
+        if (n.values && typeof n.values === 'object') {
+          if ((n.values as Record<string, unknown>)[sourceRef] !== undefined) {
+            fullSignalKPaths.push(prefix.join('.'))
+          }
+        }
+        if (n['$source'] === sourceRef && n.value !== undefined && !n.values) {
+          fullSignalKPaths.push(prefix.join('.'))
+        }
+        for (const key of Object.keys(n)) {
+          if (
+            key === 'value' ||
+            key === 'values' ||
+            key === '$source' ||
+            key === 'timestamp' ||
+            key === 'meta' ||
+            key === 'pgn' ||
+            key === 'sentence' ||
+            key === 'sources'
+          ) {
+            continue
+          }
+          walkFull(n[key], [...prefix, key])
+        }
+      }
+      walkFull(root, [])
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sourceMeta = (app.signalk as any)?.sourceMeta
+      const inSourceMeta =
+        !!sourceMeta &&
+        Object.prototype.hasOwnProperty.call(sourceMeta, sourceRef)
+
+      const inSourceDeltas = Object.prototype.hasOwnProperty.call(
+        app.deltaCache.sourceDeltas,
+        sourceRef
+      )
+
+      res.json({
+        sourceRef,
+        deltaCachePaths: cachePaths,
+        fullSignalKPaths,
+        inSourceMeta,
+        inSourceDeltas,
+        clean:
+          cachePaths.length === 0 &&
+          fullSignalKPaths.length === 0 &&
+          !inSourceMeta &&
+          !inSourceDeltas
+      })
+    }
+  )
+
+  app.delete(
+    `${SERVERROUTESPREFIX}/removeSource`,
+    async (req: Request, res: Response) => {
+      const sourceRef = req.query.sourceRef as string | undefined
+      if (!sourceRef) {
+        res.status(400).json({
+          state: 'FAILED',
+          statusCode: 400,
+          message: 'sourceRef query parameter required'
+        })
+        return
+      }
+
+      // The persisted sourceDeltas snapshot is only populated by the
+      // N2K parser; NMEA0183 talkers and plugin sources stream into
+      // `cache` and `sourceMeta` without ever landing there. So check
+      // every place the source could be visible — otherwise the
+      // common case (0183 talker) 404s and the priority-group trash
+      // can't evict it.
+      const dotIdx = sourceRef.indexOf('.')
+      const connection = dotIdx === -1 ? sourceRef : sourceRef.slice(0, dotIdx)
+      const addr = dotIdx === -1 ? '' : sourceRef.slice(dotIdx + 1)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sources = (app.signalk as any)?.sources as
+        | Record<string, Record<string, unknown>>
+        | undefined
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sourceMeta = (app.signalk as any)?.sourceMeta as
+        | Record<string, unknown>
+        | undefined
+      const inSourceDeltas = Object.prototype.hasOwnProperty.call(
+        app.deltaCache.sourceDeltas,
+        sourceRef
+      )
+      const inSourceMeta =
+        !!sourceMeta &&
+        Object.prototype.hasOwnProperty.call(sourceMeta, sourceRef)
+      const inSourcesTree =
+        !!sources?.[connection] &&
+        addr !== '' &&
+        Object.prototype.hasOwnProperty.call(sources[connection], addr)
+
+      if (!inSourceDeltas && !inSourceMeta && !inSourcesTree) {
+        res.status(404).json({
+          state: 'FAILED',
+          statusCode: 404,
+          message: `Source ${sourceRef} not found`
+        })
+        return
+      }
+
+      // removeSourceDelta also handles the sourceDeltas-empty case via
+      // removeSource, but only if there's a key to delete from. Call
+      // both so the cache leaf and the sources tree both get pruned
+      // regardless of which path the source took on the way in.
+      if (inSourceDeltas) {
+        app.deltaCache.removeSourceDelta(sourceRef)
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        app.deltaCache.removeSource(sourceRef as any)
+        if (sources?.[connection] && addr !== '') {
+          delete sources[connection][addr]
+          const remaining = Object.keys(sources[connection]).filter(
+            (k) => k !== 'type' && k !== 'label'
+          )
+          if (remaining.length === 0) {
+            delete sources[connection]
+          }
+        }
+      }
+
+      if (inSourceMeta && sourceMeta) {
+        delete sourceMeta[sourceRef]
+      }
+
+      const aliases = app.config.settings.sourceAliases
+      let aliasChanged = false
+      if (aliases && sourceRef in aliases) {
+        delete aliases[sourceRef]
+        aliasChanged = true
+      }
+
+      const respondOk = () => {
+        res.json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: `Removed source ${sourceRef}`
+        })
+      }
+
+      if (aliasChanged && aliases) {
+        writeSettingsFile(app, app.config.settings, (err: Error) => {
+          if (err) {
+            res.status(500).json({
+              state: 'FAILED',
+              statusCode: 500,
+              message: `Removed source ${sourceRef} from cache, but failed to persist alias cleanup`
+            })
+            return
+          }
+          app.emit('serverAdminEvent', {
+            type: 'SOURCEALIASES',
+            data: aliases
+          })
+          respondOk()
+        })
+      } else {
+        respondOk()
+      }
     }
   )
 
@@ -1262,31 +1666,337 @@ module.exports = function (
     }
   )
 
-  app.securityStrategy.addAdminWriteMiddleware(
-    `${SERVERROUTESPREFIX}/sourcePriorities`
+  // /priorities admin middleware: registered up front so every method
+  // (DELETE, GET, PUT) below it picks up auth. Express applies a
+  // middleware to routes registered AFTER the middleware call, so the
+  // ordering matters — historically the DELETE was registered before
+  // this call and silently bypassed auth.
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/priorities`)
+
+  // Re-emit the reconciled groups view after any priority config change.
+  // The server's getReconciledGroups() runs the saved-vs-live matching;
+  // without re-emitting, the client keeps a stale `reconciled` array
+  // whose `matchedSavedId` was computed before the save, leaving the
+  // freshly-saved group looking unmatched (Unranked badge).
+  function emitReconciledGroups(): void {
+    app.emit('serverevent', {
+      type: 'RECONCILEDGROUPS',
+      data: app.deltaCache?.getReconciledGroups?.() ?? []
+    })
+  }
+
+  app.delete(
+    `${SERVERROUTESPREFIX}/priorities`,
+    async (_req: Request, res: Response) => {
+      try {
+        await resetPriorities(app)
+        app.activateSourcePriorities()
+        // Broadcast fresh empty state so admin-ui store mirrors disk.
+        app.emit('serverevent', {
+          type: 'PRIORITYOVERRIDES',
+          data: {}
+        })
+        app.emit('serverAdminEvent', {
+          type: 'SOURCEALIASES',
+          data: {}
+        })
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYGROUPS',
+          data: []
+        })
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYDEFAULTS',
+          data: {}
+        })
+        emitReconciledGroups()
+        res.json({ result: 'ok' })
+      } catch (err) {
+        console.error('Failed to reset priorities:', err)
+        res.status(500).send('Failed to reset priorities')
+      }
+    }
   )
 
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/sourceAliases`)
+
   app.get(
-    `${SERVERROUTESPREFIX}/sourcePriorities`,
+    `${SERVERROUTESPREFIX}/sourceAliases`,
     (req: Request, res: Response) => {
-      res.json(app.config.settings.sourcePriorities || {})
+      res.json(app.config.settings.sourceAliases || {})
     }
   )
 
   app.put(
-    `${SERVERROUTESPREFIX}/sourcePriorities`,
+    `${SERVERROUTESPREFIX}/sourceAliases`,
     (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        sourceAliasesSchema,
+        req.body,
+        'sourceAliases'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
       const updatedSettings = structuredClone(app.config.settings)
-      updatedSettings.sourcePriorities = req.body
+      updatedSettings.sourceAliases = validation.value as Record<string, string>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, updatedSettings, (err: any) => {
+        if (err) {
+          res.status(500).send('Unable to save sourceAliases in settings file')
+        } else {
+          app.config.settings = updatedSettings
+          app.emit('serverAdminEvent', {
+            type: 'SOURCEALIASES',
+            data: validation.value
+          })
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  // Atomic priorities endpoint: writes priorityGroups, priorityOverrides and
+  // priorityDefaults in a single settings-file write so clients cannot end up
+  // with mismatched ranking vs. overrides vs. default fallback. The two
+  // per-field endpoints below remain for plugins/scripts that touch a single
+  // surface directly. (Auth middleware was registered above the DELETE
+  // handler so all methods on this path are protected.)
+
+  app.get(`${SERVERROUTESPREFIX}/priorities`, (req: Request, res: Response) => {
+    res.json({
+      groups: app.config.settings.priorityGroups || [],
+      overrides: app.config.settings.priorityOverrides || {},
+      defaults: app.config.settings.priorityDefaults || {}
+    })
+  })
+
+  app.put(`${SERVERROUTESPREFIX}/priorities`, (req: Request, res: Response) => {
+    const validation = validatePrioritiesPayload(req.body)
+    if (!validation.ok) {
+      return res.status(400).send(validation.error)
+    }
+    const { groups, overrides, defaults } = validation.value
+    // overrides has been normalised to numbers by validatePrioritiesPayload.
+    const overridesNumeric = overrides as Record<
+      string,
+      Array<{ sourceRef: string; timeout: number }>
+    >
+    const updatedSettings = structuredClone(app.config.settings)
+    updatedSettings.priorityGroups = groups
+    updatedSettings.priorityOverrides = overridesNumeric
+    updatedSettings.priorityDefaults = defaults
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    writeSettingsFile(app, updatedSettings, (err: any) => {
+      if (err) {
+        res.status(500).send('Unable to save priorities in settings file')
+      } else {
+        app.config.settings = updatedSettings
+        app.activateSourcePriorities()
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYGROUPS',
+          data: groups
+        })
+        app.emit('serverevent', {
+          type: 'PRIORITYOVERRIDES',
+          data: overrides
+        })
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYDEFAULTS',
+          data: defaults
+        })
+        emitReconciledGroups()
+        res.json({ result: 'ok' })
+      }
+    })
+  })
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/priorityGroups`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/priorityGroups`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.priorityGroups || [])
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/priorityGroups`,
+    (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        priorityGroupsSchema,
+        req.body,
+        'priorityGroups'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.priorityGroups = validation.value as Array<{
+        id: string
+        sources: string[]
+        inactive?: boolean
+      }>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, updatedSettings, (err: any) => {
+        if (err) {
+          res.status(500).send('Unable to save priorityGroups in settings file')
+        } else {
+          app.config.settings = updatedSettings
+          // Group changes affect engine resolution: a source's group
+          // membership determines which ranking applies to its deltas.
+          app.activateSourcePriorities()
+          app.emit('serverAdminEvent', {
+            type: 'PRIORITYGROUPS',
+            data: validation.value
+          })
+          emitReconciledGroups()
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/priorityOverrides`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/priorityOverrides`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.priorityOverrides || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/priorityOverrides`,
+    (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        priorityOverridesSchema,
+        req.body,
+        'priorityOverrides'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const overrides = validation.value as Record<
+        string,
+        Array<{ sourceRef: string; timeout: number | string }>
+      >
+      normaliseSourcePriorityTimeouts(overrides)
+      const overridesNumeric = overrides as unknown as Record<
+        string,
+        Array<{ sourceRef: string; timeout: number }>
+      >
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.priorityOverrides = overridesNumeric
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       writeSettingsFile(app, updatedSettings, (err: any) => {
         if (err) {
           res
             .status(500)
-            .send('Unable to save to sourcePrefences in settings file')
+            .send('Unable to save priorityOverrides in settings file')
         } else {
           app.config.settings = updatedSettings
           app.activateSourcePriorities()
+          app.emit('serverevent', {
+            type: 'PRIORITYOVERRIDES',
+            data: overridesNumeric
+          })
+          emitReconciledGroups()
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/priorityDefaults`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/priorityDefaults`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.priorityDefaults || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/priorityDefaults`,
+    (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        priorityDefaultsSchema,
+        req.body,
+        'priorityDefaults'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.priorityDefaults = validation.value as {
+        fallbackMs?: number
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, updatedSettings, (err: any) => {
+        if (err) {
+          res
+            .status(500)
+            .send('Unable to save priorityDefaults in settings file')
+        } else {
+          app.config.settings = updatedSettings
+          app.emit('serverAdminEvent', {
+            type: 'PRIORITYDEFAULTS',
+            data: validation.value
+          })
+          res.json({ result: 'ok' })
+        }
+      })
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.ignoredInstanceConflicts || {})
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`,
+    (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        ignoredInstanceConflictsSchema,
+        req.body,
+        'ignoredInstanceConflicts'
+      )
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const updatedSettings = structuredClone(app.config.settings)
+      updatedSettings.ignoredInstanceConflicts = validation.value as Record<
+        string,
+        string
+      >
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeSettingsFile(app, updatedSettings, (err: any) => {
+        if (err) {
+          res
+            .status(500)
+            .send('Unable to save ignoredInstanceConflicts in settings file')
+        } else {
+          app.config.settings = updatedSettings
+          // Match the broadcast pattern used by /sourceAliases and the
+          // priority-related routes so admin-ui subscribers can pick up
+          // changes live without a refetch.
+          app.emit('serverAdminEvent', {
+            type: 'IGNOREDINSTANCECONFLICTS',
+            data: validation.value
+          })
           res.json({ result: 'ok' })
         }
       })

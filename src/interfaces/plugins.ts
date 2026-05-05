@@ -69,7 +69,7 @@ const put = require('../put')
 const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 import { queryRequest } from '../requestResponse'
-import { getMetadata } from '@signalk/signalk-schema'
+import { getMetadata } from '@signalk/path-metadata'
 import { HistoryProvider } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
@@ -506,6 +506,9 @@ module.exports = (theApp: any) => {
     result.then(() => {
       theApp.setPluginStatus(plugin.id, 'Stopped')
       debug('Stopped plugin ' + plugin.name)
+      if (theApp.deltaCache) {
+        theApp.deltaCache.removeSource(plugin.id)
+      }
     })
     return result
   }
@@ -641,12 +644,20 @@ module.exports = (theApp: any) => {
             app.setPluginError(plugin.id, `Runtime error: ${message}`)
           }
         }
+        // Honour command.sourcePolicy so a plugin can opt into the
+        // unfiltered stream (every source) instead of the priority-resolved
+        // preferred-only default. Without this, plugins whose use case is
+        // per-source — historians writing all sources, calibrators pinning
+        // a specific device — silently never see non-preferred deltas
+        // because plugin subscriptions read streambundle.buses (the
+        // post-toPreferredDelta bus). Same plumbing the WS interface uses.
         app.subscriptionmanager.subscribe(
           command,
           unsubscribes,
           errorCallback,
           safeCallback,
-          user
+          user,
+          command.sourcePolicy
         )
       },
       unsubscribe: (msg: UnsubscribeMessage, unsubscribes: Unsubscribes) => {

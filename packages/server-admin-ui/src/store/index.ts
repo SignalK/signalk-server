@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
@@ -13,6 +14,11 @@ import {
   createUnitPreferencesSlice,
   type UnitPreferencesSlice
 } from './slices/unitPreferencesSlice'
+import {
+  conflictKey,
+  detectInstanceConflicts,
+  extractN2kDevices
+} from '../utils/sourceLabels'
 
 export type { AppSlice } from './slices/appSlice'
 export type {
@@ -38,6 +44,56 @@ export const useStore = create<SignalKStore>()(
     ...createPrioritiesSlice(...args),
     ...createUnitPreferencesSlice(...args)
   }))
+)
+
+// Keep activeConflictCount up to date globally so the sidebar badge
+// reflects bus-level instance conflicts even when the user is not on
+// the SourceDiscovery view. Previously this counter was only written
+// by an effect inside SourceDiscovery, so the badge would freeze the
+// moment the user navigated away.
+useStore.subscribe(
+  (s) => ({
+    sourcesData: s.sourcesData,
+    pgnDataInstances: s.pgnDataInstances,
+    pgnSourceKeys: s.pgnSourceKeys,
+    ignoredInstanceConflicts: s.ignoredInstanceConflicts,
+    n2kDeviceStatusLoaded: s.n2kDeviceStatusLoaded
+  }),
+  ({
+    sourcesData,
+    pgnDataInstances,
+    pgnSourceKeys,
+    ignoredInstanceConflicts,
+    n2kDeviceStatusLoaded
+  }) => {
+    // Skip until the bootstrap response has been processed — pre-load
+    // the count would briefly read 0 against an empty pgnSourceKeys
+    // and make the badge flicker on every full reload.
+    if (!n2kDeviceStatusLoaded) return
+    const devices = sourcesData ? extractN2kDevices(sourcesData) : []
+    const conflicts = detectInstanceConflicts(
+      devices,
+      pgnDataInstances,
+      pgnSourceKeys
+    )
+    const active = conflicts.filter(
+      (c) =>
+        !ignoredInstanceConflicts[
+          conflictKey(c.deviceA.sourceRef, c.deviceB.sourceRef)
+        ]
+    ).length
+    if (useStore.getState().activeConflictCount !== active) {
+      useStore.getState().setActiveConflictCount(active)
+    }
+  },
+  {
+    equalityFn: (a, b) =>
+      a.sourcesData === b.sourcesData &&
+      a.pgnDataInstances === b.pgnDataInstances &&
+      a.pgnSourceKeys === b.pgnSourceKeys &&
+      a.ignoredInstanceConflicts === b.ignoredInstanceConflicts &&
+      a.n2kDeviceStatusLoaded === b.n2kDeviceStatusLoaded
+  }
 )
 
 export { useShallow }
@@ -91,6 +147,18 @@ export function useDataVersion() {
 
 export function useSourcePriorities() {
   return useStore((s) => s.sourcePrioritiesData)
+}
+
+export function usePriorityGroups() {
+  return useStore((s) => s.priorityGroupsData)
+}
+
+export function usePriorityDefaults() {
+  return useStore((s) => s.priorityDefaultsData)
+}
+
+export function usePriorityOverrides() {
+  return useStore((s) => s.priorityOverridesData)
 }
 
 export function useWebapps() {
@@ -163,6 +231,131 @@ export function useUnitPrefsLoaded() {
 
 export function useUnitCategories() {
   return useStore((s) => s.categories)
+}
+
+export function useSourcesData() {
+  return useStore((s) => s.sourcesData)
+}
+
+export function useSourceAliasesData() {
+  return useStore((s) => s.sourceAliases)
+}
+
+export function useIgnoredInstanceConflicts() {
+  return useStore((s) => s.ignoredInstanceConflicts)
+}
+
+export function useActiveConflictCount() {
+  return useStore((s) => s.activeConflictCount)
+}
+
+export function usePgnDataInstances() {
+  return useStore((s) => s.pgnDataInstances)
+}
+
+export function usePgnSourceKeys() {
+  return useStore((s) => s.pgnSourceKeys)
+}
+
+export function useDiscoveredAddresses() {
+  return useStore((s) => s.discoveredAddresses)
+}
+
+export function useN2kDeviceStatusLoaded() {
+  return useStore((s) => s.n2kDeviceStatusLoaded)
+}
+
+export function useMultiSourcePaths() {
+  return useStore((s) => s.multiSourcePaths)
+}
+
+export function useReconciledGroups() {
+  return useStore((s) => s.reconciledGroups)
+}
+
+export function useSourcePrioritiesLoaded() {
+  return useStore((s) => s.sourcePrioritiesLoaded)
+}
+
+export function useLivePreferredSources() {
+  return useStore((s) => s.livePreferredSources)
+}
+
+export function useLivePreferredSourcesLoaded() {
+  return useStore((s) => s.livePreferredSourcesLoaded)
+}
+
+export function useSourceStatus() {
+  return useStore((s) => s.sourceStatus)
+}
+
+export function useSourceStatusLoaded() {
+  return useStore((s) => s.sourceStatusLoaded)
+}
+
+export function useConfiguredPriorityPaths(): Set<string> {
+  // Select a primitive string so zustand can compare by ===.
+  // useShallow doesn't work with Set (Object.keys returns [] for Sets).
+  const joined = useStore((s) => {
+    const result: string[] = []
+    for (const pp of s.sourcePrioritiesData.sourcePriorities) {
+      if (pp.path) result.push(pp.path)
+    }
+    return result.sort().join('\0')
+  })
+  return useMemo(() => new Set(joined ? joined.split('\0') : []), [joined])
+}
+
+/**
+ * Returns a Map from path → Set of configured sourceRefs for that path,
+ * as configured via path-level source priorities.
+ */
+export function useConfiguredSourcesByPath(): Map<string, Set<string>> {
+  const serialized = useStore((s) => {
+    const entries: string[] = []
+    for (const pp of s.sourcePrioritiesData.sourcePriorities) {
+      if (pp.path) {
+        const pathRefs = pp.priorities.map((p) => p.sourceRef)
+        // \x1F (ASCII unit separator) keeps path and refs apart even if a
+        // sourceRef ever contains a tab; \0 still separates entries.
+        entries.push(`${pp.path}\x1F${pathRefs.join(',')}`)
+      }
+    }
+    return entries.sort().join('\0')
+  })
+  return useMemo(() => {
+    const map = new Map<string, Set<string>>()
+    if (!serialized) return map
+    for (const entry of serialized.split('\0')) {
+      const [path, refs] = entry.split('\x1F')
+      map.set(path, new Set(refs ? refs.split(',').filter(Boolean) : []))
+    }
+    return map
+  }, [serialized])
+}
+
+/**
+ * Returns a Map from path → preferred (first) sourceRef for that path.
+ */
+export function usePreferredSourceByPath(): Map<string, string> {
+  const serialized = useStore((s) => {
+    const entries: string[] = []
+    for (const pp of s.sourcePrioritiesData.sourcePriorities) {
+      if (pp.path && pp.priorities.length > 0 && pp.priorities[0].sourceRef) {
+        entries.push(`${pp.path}\x1F${pp.priorities[0].sourceRef}`)
+      }
+    }
+    return entries.sort().join('\0')
+  })
+  return useMemo(() => {
+    const map = new Map<string, string>()
+    if (!serialized) return map
+    for (const entry of serialized.split('\0')) {
+      const [path, ref] = entry.split('\x1F')
+      if (path && ref) map.set(path, ref)
+    }
+    return map
+  }, [serialized])
 }
 
 export * from './types'

@@ -244,19 +244,97 @@ export class WebSocketService {
           discoveredProviders: data
         } as Partial<SignalKStore>)
         break
+      case 'PRIORITYOVERRIDES': {
+        const overrides = (data ?? {}) as Record<
+          string,
+          { sourceRef: string; timeout: string | number }[]
+        >
+        const store = useStore.getState()
+        store.setSourcePrioritiesFromServer(overrides)
+        // Override-paths list is implicit in the per-path map under the
+        // group-aware engine: every path with an entry is an override.
+        store.setPriorityOverridesFromServer(Object.keys(overrides))
+        break
+      }
+      case 'PRIORITYGROUPS':
+        useStore
+          .getState()
+          .setPriorityGroupsFromServer(
+            (data ?? []) as unknown as Parameters<
+              SignalKStore['setPriorityGroupsFromServer']
+            >[0]
+          )
+        break
+      case 'PRIORITYDEFAULTS':
+        useStore
+          .getState()
+          .setPriorityDefaultsFromServer(
+            (data ?? {}) as Parameters<
+              SignalKStore['setPriorityDefaultsFromServer']
+            >[0]
+          )
+        break
+      case 'SOURCEALIASES':
+        useStore
+          .getState()
+          .setSourceAliases((data ?? {}) as Record<string, string>)
+        break
+      case 'MULTISOURCEPATHS':
+        useStore
+          .getState()
+          .setMultiSourcePaths((data ?? {}) as Record<string, string[]>)
+        break
+      case 'RECONCILEDGROUPS':
+        useStore
+          .getState()
+          .setReconciledGroups(
+            (data ?? []) as Parameters<SignalKStore['setReconciledGroups']>[0]
+          )
+        break
+      case 'LIVEPREFERREDSOURCES':
+        useStore
+          .getState()
+          .mergeLivePreferredSources((data ?? {}) as Record<string, string>)
+        break
+      case 'SOURCEEVICTED': {
+        // Server cleared a source from its cache (priority-group trash
+        // / N2K device removal). Drop matching leaves from this
+        // client's signalkData mirror so the Data Browser stops
+        // showing zombie rows for the evicted source.
+        const payload = (data ?? {}) as { sourceRef?: string }
+        if (payload.sourceRef) {
+          useStore.getState().evictSource(payload.sourceRef)
+        }
+        break
+      }
+      case 'SOURCESTATUS':
+        useStore
+          .getState()
+          .setSourceStatus(
+            (data ?? []) as Parameters<SignalKStore['setSourceStatus']>[0]
+          )
+        break
+      case 'N2KDEVICESTATUS':
+        // Server pushes the same payload shape as GET /n2kDeviceStatus
+        // whenever pgnDataInstances / pgnSourceKeys actually change.
+        // Without this the conflict-detection badge in SourceDiscovery
+        // is frozen at page-mount state — devices that start or stop
+        // publishing a path don't flip the conflict state until the
+        // user reloads the page.
+        useStore
+          .getState()
+          .setN2kDeviceStatus(
+            (data ?? {}) as Parameters<SignalKStore['setN2kDeviceStatus']>[0]
+          )
+        break
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break
       case 'VESSEL_INFO':
         useStore
           .getState()
-          .setVesselInfo(data as Parameters<SignalKStore['setVesselInfo']>[0])
-        break
-      case 'SOURCEPRIORITIES':
-        useStore
-          .getState()
-          .setSourcePriorities(
-            data as Parameters<SignalKStore['setSourcePriorities']>[0]
+          .setVesselInfo(
+            (data ?? {}) as Parameters<SignalKStore['setVesselInfo']>[0]
           )
         break
       case 'RECEIVE_APPSTORE_LIST':

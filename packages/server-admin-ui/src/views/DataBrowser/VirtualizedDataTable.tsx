@@ -1,30 +1,26 @@
-import {
-  useRef,
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-  ChangeEvent
-} from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import DataRow from './DataRow'
+import SourceGroupHeader from './SourceGroupHeader'
+import { getPathFromKey } from './pathUtils'
 import granularSubscriptionManager from './GranularSubscriptionManager'
+import type { SourcesData } from '../../utils/sourceLabels'
 import './VirtualTable.css'
 
-interface VisibleItem {
-  index: number
-  path$SourceKey: string
-}
+const HEADER_PREFIX = '__header__\0'
 
 interface VirtualizedDataTableProps {
   path$SourceKeys: string[]
   context: string
   raw: boolean
   isPaused: boolean
-  onToggleSource: (source: string) => void
-  selectedSources: Set<string>
-  onToggleSourceFilter: (event: ChangeEvent<HTMLInputElement>) => void
-  sourceFilterActive: boolean
   showContext: boolean
+  sourcesData: SourcesData | null
+  configuredPriorityPaths: Set<string>
+  routedPaths?: Set<string>
+  preferredSourceByPath?: Map<string, string>
+  fanOutPaths?: Set<string>
+  collapsedSources?: Set<string>
+  onToggleSourceCollapse?: (sourceRef: string) => void
 }
 
 function VirtualizedDataTable({
@@ -32,139 +28,48 @@ function VirtualizedDataTable({
   context,
   raw,
   isPaused,
-  onToggleSource,
-  selectedSources,
-  onToggleSourceFilter,
-  sourceFilterActive,
-  showContext
+  showContext,
+  sourcesData,
+  configuredPriorityPaths,
+  routedPaths,
+  preferredSourceByPath,
+  fanOutPaths,
+  collapsedSources,
+  onToggleSourceCollapse
 }: VirtualizedDataTableProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [isNarrowScreen, setIsNarrowScreen] = useState(
-    typeof window !== 'undefined' && window.innerWidth <= 768
+  const sourceCountsByPath = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const key of path$SourceKeys) {
+      if (key.startsWith(HEADER_PREFIX)) continue
+      const nullIdx = key.indexOf('\0')
+      const pathKey = nullIdx >= 0 ? key.slice(nullIdx + 1) : key
+      const path = getPathFromKey(pathKey)
+      counts.set(path, (counts.get(path) || 0) + 1)
+    }
+    return counts
+  }, [path$SourceKeys])
+
+  const dataKeys = useMemo(
+    () => path$SourceKeys.filter((k) => !k.startsWith(HEADER_PREFIX)),
+    [path$SourceKeys]
   )
 
-  const rowHeight = raw ? 150 : isNarrowScreen ? 120 : 40
-  const overscan = raw ? 5 : isNarrowScreen ? 5 : 15
-
-  const computeInitialRange = useCallback(() => {
-    const visibleCount =
-      Math.ceil(window.innerHeight / rowHeight) + overscan * 2
-    return { start: 0, end: Math.min(path$SourceKeys.length - 1, visibleCount) }
-  }, [path$SourceKeys.length, rowHeight, overscan])
-
-  const [visibleRange, setVisibleRange] = useState(computeInitialRange)
-
-  useEffect(() => {
-    const checkWidth = () => setIsNarrowScreen(window.innerWidth <= 768)
-    window.addEventListener('resize', checkWidth)
-    return () => window.removeEventListener('resize', checkWidth)
-  }, [])
-
-  const computeVisibleRange = useCallback(() => {
-    if (!containerRef.current) return null
-
-    const rect = containerRef.current.getBoundingClientRect()
-    const containerTop = rect.top
-    const viewportHeight = window.innerHeight
-
-    let startOffset = 0
-    if (containerTop < 0) {
-      startOffset = Math.abs(containerTop)
-    }
-
-    const startIndex = Math.max(
-      0,
-      Math.floor(startOffset / rowHeight) - overscan
-    )
-    const visibleCount = Math.ceil(viewportHeight / rowHeight) + overscan * 2
-    const endIndex = Math.min(
-      path$SourceKeys.length - 1,
-      startIndex + visibleCount
-    )
-
-    return { start: startIndex, end: endIndex, visibleCount }
-  }, [path$SourceKeys.length, rowHeight, overscan])
-
-  useEffect(() => {
-    let ticking = false
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const computed = computeVisibleRange()
-          if (computed) {
-            setVisibleRange((prev) => {
-              const atStart = computed.start === 0
-              const atEnd = computed.end >= path$SourceKeys.length - 1
-              const significantChange =
-                Math.abs(prev.start - computed.start) > 2 ||
-                Math.abs(prev.end - computed.end) > 2
-              const listGrew =
-                prev.end < computed.end &&
-                prev.end === prev.start + computed.visibleCount - 1
-
-              if (atStart || atEnd || significantChange || listGrew) {
-                return { start: computed.start, end: computed.end }
-              }
-              return prev
-            })
-          }
-          ticking = false
-        })
-        ticking = true
-      }
-    }
-
-    handleScroll()
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', handleScroll, { passive: true })
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-    }
-  }, [computeVisibleRange, path$SourceKeys.length])
-
-  const spacerBeforeHeight = raw ? 0 : visibleRange.start * rowHeight
-  const spacerAfterHeight = raw
-    ? 0
-    : Math.max(0, (path$SourceKeys.length - visibleRange.end - 1) * rowHeight)
-
-  // Raw mode: render all rows, content-visibility handles off-screen skipping.
-  const visibleItems: VisibleItem[] = useMemo(() => {
-    if (raw) {
-      return path$SourceKeys.map((path$SourceKey, i) => ({
-        index: i,
-        path$SourceKey
-      }))
-    }
-    const end = Math.min(visibleRange.end + 1, path$SourceKeys.length)
-    return path$SourceKeys
-      .slice(visibleRange.start, end)
-      .map((path$SourceKey, i) => ({
-        index: visibleRange.start + i,
-        path$SourceKey
-      }))
-  }, [raw, visibleRange.start, visibleRange.end, path$SourceKeys])
+  // Track whether the table has ever seen data. Without this, an initial
+  // render with dataKeys=[] would immediately unsubscribe and the very
+  // first delta for a path would never arrive. We only pass an empty list
+  // through after we've had at least one non-empty request — meaning the
+  // user genuinely filtered every path out.
+  const hadDataRef = useRef(false)
 
   useEffect(() => {
     if (isPaused) return
-    if (visibleItems.length === 0) return
-
-    const visiblePath$SourceKeys = visibleItems.map(
-      (item) => item.path$SourceKey
-    )
-    granularSubscriptionManager.requestPaths(
-      visiblePath$SourceKeys,
-      path$SourceKeys
-    )
-  }, [
-    visibleRange.start,
-    visibleRange.end,
-    path$SourceKeys,
-    isPaused,
-    visibleItems
-  ])
+    if (dataKeys.length > 0) {
+      hadDataRef.current = true
+      granularSubscriptionManager.requestPaths(dataKeys)
+    } else if (hadDataRef.current) {
+      granularSubscriptionManager.requestPaths([])
+    }
+  }, [dataKeys, isPaused])
 
   if (path$SourceKeys.length === 0) {
     return (
@@ -179,7 +84,6 @@ function VirtualizedDataTable({
   return (
     <div
       className="virtual-table"
-      ref={containerRef}
       data-show-context={showContext ? 'true' : undefined}
     >
       <div className="virtual-table-header">
@@ -189,70 +93,50 @@ function VirtualizedDataTable({
         )}
         <div className="virtual-table-header-cell">Value</div>
         <div className="virtual-table-header-cell">Timestamp</div>
-        <div className="virtual-table-header-cell">
-          <label
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              margin: 0,
-              cursor: 'pointer'
-            }}
-          >
-            <input
-              type="checkbox"
-              onChange={onToggleSourceFilter}
-              checked={sourceFilterActive}
-              disabled={selectedSources.size === 0}
-              title={
-                selectedSources.size === 0
-                  ? 'Check a source in the list to filter by source'
-                  : sourceFilterActive
-                    ? 'Uncheck to deactivate source filtering'
-                    : 'Check to activate source filtering'
-              }
-              style={{
-                marginRight: '5px',
-                verticalAlign: 'middle'
-              }}
-            />
-            Source
-          </label>
-        </div>
+        <div className="virtual-table-header-cell">Source</div>
       </div>
 
       <div className="virtual-table-body">
-        {spacerBeforeHeight > 0 && (
-          <div style={{ height: spacerBeforeHeight }} />
-        )}
-
-        {visibleItems.map((item) => (
-          <DataRow
-            key={item.path$SourceKey}
-            path$SourceKey={item.path$SourceKey}
-            context={context}
-            index={item.index}
-            raw={raw}
-            isPaused={isPaused}
-            onToggleSource={onToggleSource}
-            selectedSources={selectedSources}
-            showContext={showContext}
-          />
-        ))}
-
-        {spacerAfterHeight > 0 && <div style={{ height: spacerAfterHeight }} />}
+        {path$SourceKeys.map((key, index) => {
+          if (key.startsWith(HEADER_PREFIX)) {
+            const rest = key.slice(HEADER_PREFIX.length)
+            const sepIdx = rest.indexOf('\0')
+            const sourceRef = sepIdx >= 0 ? rest.slice(0, sepIdx) : rest
+            const pathCount =
+              sepIdx >= 0 ? parseInt(rest.slice(sepIdx + 1), 10) || 0 : 0
+            return (
+              <SourceGroupHeader
+                key={key}
+                sourceRef={sourceRef}
+                pathCount={pathCount}
+                sourcesData={sourcesData}
+                showContext={showContext}
+                isCollapsed={collapsedSources?.has(sourceRef) ?? false}
+                onToggle={onToggleSourceCollapse}
+              />
+            )
+          }
+          return (
+            <DataRow
+              key={key}
+              path$SourceKey={key}
+              context={context}
+              index={index}
+              raw={raw}
+              isPaused={isPaused}
+              showContext={showContext}
+              sourceCountsByPath={sourceCountsByPath}
+              sourcesData={sourcesData}
+              configuredPriorityPaths={configuredPriorityPaths}
+              routedPaths={routedPaths}
+              preferredSourceByPath={preferredSourceByPath}
+              fanOutPaths={fanOutPaths}
+            />
+          )
+        })}
       </div>
 
-      <div className="virtual-table-info">
-        {raw ? (
-          <>Showing {path$SourceKeys.length} paths</>
-        ) : (
-          <>
-            Showing {visibleItems.length} of {path$SourceKeys.length} paths
-            (rows {visibleRange.start + 1}-
-            {Math.min(visibleRange.end + 1, path$SourceKeys.length)})
-          </>
-        )}
-      </div>
+      <div className="virtual-table-info">Showing {dataKeys.length} paths</div>
     </div>
   )
 }

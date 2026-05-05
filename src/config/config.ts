@@ -30,6 +30,12 @@ import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
 import { atomicWriteFile } from '../atomicWrite'
 import {
+  loadPrioritiesIntoSettings,
+  migratePrioritiesIntoSeparateFile,
+  splitPrioritiesFromSettings,
+  writePrioritiesFile
+} from './priorities-file'
+import {
   loadAll as loadUnitPreferences,
   setApplicationDataPath
 } from '../unitpreferences'
@@ -84,7 +90,39 @@ export interface Config {
     logCountToKeep?: number
     enablePluginLogging?: boolean
     loggingDirectory?: string
-    sourcePriorities?: any
+    /** Per-path explicit overrides. The engine consults this map first;
+     * if a path has an entry here, that ranking is used. Includes the
+     * fan-out sentinel `[{ sourceRef: '*', timeout: 0 }]` for paths the
+     * user has marked as "deliver every source's value". Paths with no
+     * entry here fall through to group resolution (see priorityGroups). */
+    priorityOverrides?: Record<
+      string,
+      Array<{ sourceRef: string; timeout: number }>
+    >
+
+    /** Ordered list of sources per priority group. The engine resolves
+     * a path's ranking dynamically: if a delta's source is in an active
+     * group, the group's ordering applies to the path. */
+    priorityGroups?: Array<{
+      id: string
+      sources: string[]
+      /** When true, the group is excluded from engine resolution —
+       * paths whose only ranking would have come from this group accept
+       * all sources first-come-first-served. Lets a user temporarily
+       * disable a ranking without losing the order they configured. */
+      inactive?: boolean
+    }>
+
+    /** Global default fallback in ms applied to ranks below rank-1
+     * when the engine derives a path's ranking from a group. Per-path
+     * overrides can still specify their own timeouts. */
+    priorityDefaults?: { fallbackMs?: number }
+
+    /** Map of sourceRef → user-defined display alias for that source */
+    sourceAliases?: Record<string, string>
+    /** Map of "sourceRefA+sourceRefB" (sorted) → ISO timestamp when the
+     * conflict was dismissed by the user */
+    ignoredInstanceConflicts?: Record<string, string>
     trustProxy?: boolean | string | number
     courseApi?: {
       apiOnly?: boolean
@@ -459,16 +497,48 @@ function readSettingsFile(app: ConfigApp) {
   if (_.isUndefined(app.config.settings.interfaces)) {
     app.config.settings.interfaces = {}
   }
+  loadPrioritiesIntoSettings(app)
+  const migrated = migratePrioritiesIntoSeparateFile(app)
+  if (migrated && !disableWriteSettings) {
+    // Persist settings.json without the priority keys so it stays clean.
+    atomicWriteFile(
+      getSettingsFilename(app),
+      JSON.stringify(app.config.settings, null, 2)
+    ).catch((e) => {
+      console.error(
+        'Failed to strip migrated priority keys from settings.json:',
+        e
+      )
+    })
+  }
 }
 
 export function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
-  if (!disableWriteSettings) {
-    atomicWriteFile(getSettingsFilename(app), JSON.stringify(settings, null, 2))
-      .then(() => cb())
-      .catch(cb)
-  } else {
+  if (disableWriteSettings) {
     cb()
+    return
   }
+  const { settingsWithoutPriorities, priorities } =
+    splitPrioritiesFromSettings(settings)
+  // Always overwrite priorities.json — when the user resets all priority
+  // state, the in-memory `priorities` is `{}` and the file must be cleared
+  // too, otherwise stale entries from a previous save reload on next start.
+  //
+  // Sequence the writes (priorities first, then settings) so that if the
+  // priorities write fails, settings.json is left untouched — on restart
+  // the loader still has legacy priority keys to fold back in. If the
+  // settings write fails after priorities succeeded, only the
+  // non-priority slice is stale, which is the safer half: the engine
+  // keeps using the just-saved priorities.json on next load.
+  writePrioritiesFile(app, priorities)
+    .then(() =>
+      atomicWriteFile(
+        getSettingsFilename(app),
+        JSON.stringify(settingsWithoutPriorities, null, 2)
+      )
+    )
+    .then(() => cb())
+    .catch(cb)
 }
 
 function getSettingsFilename(app: ConfigApp) {

@@ -264,4 +264,52 @@ describe('dataSlice', () => {
       expect(useStore.getState().dataVersion).toBe(0)
     })
   })
+
+  describe('evictSource', () => {
+    it('removes every leaf whose key ends with $sourceRef across contexts', () => {
+      useStore
+        .getState()
+        .updatePath('vessels.self', 'navigation.log$u0183.II', {
+          path: 'navigation.log',
+          $source: 'u0183.II',
+          value: 10
+        })
+      useStore
+        .getState()
+        .updatePath('vessels.self', 'navigation.log$u0183.GP', {
+          path: 'navigation.log',
+          $source: 'u0183.GP',
+          value: 11
+        })
+      useStore.getState().updatePath('vessels.other', 'electrical.x$u0183.II', {
+        path: 'electrical.x',
+        $source: 'u0183.II',
+        value: 1
+      })
+      const before = useStore.getState().dataVersion
+
+      useStore.getState().evictSource('u0183.II')
+
+      const data = useStore.getState().signalkData
+      expect(Object.keys(data['vessels.self'])).toEqual([
+        'navigation.log$u0183.GP'
+      ])
+      expect(data['vessels.other']).toEqual({})
+      expect(useStore.getState().dataVersion).toBe(before + 1)
+    })
+
+    it('is a no-op when no leaves match', () => {
+      useStore
+        .getState()
+        .updatePath('vessels.self', 'navigation.log$u0183.II', {
+          path: 'navigation.log',
+          $source: 'u0183.II',
+          value: 10
+        })
+      const before = useStore.getState()
+      useStore.getState().evictSource('does-not-exist')
+      expect(useStore.getState().signalkData).toBe(before.signalkData)
+      expect(useStore.getState().dataVersion).toBe(before.dataVersion)
+    })
+  })
 })

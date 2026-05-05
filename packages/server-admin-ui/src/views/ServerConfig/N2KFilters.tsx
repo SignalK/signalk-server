@@ -1,4 +1,4 @@
-import { ChangeEvent } from 'react'
+import { ChangeEvent, useMemo } from 'react'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Form from 'react-bootstrap/Form'
@@ -10,6 +10,33 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
 interface N2KFilter {
   source: string
   pgn: string
+  /**
+   * Client-only stable id for React keys. Not persisted to the server —
+   * stripped by stripFilterKeys() in ProvidersConfiguration before save.
+   * Without this, deleting a row with index-based keys would shuffle
+   * subsequent rows' input state.
+   */
+  _key?: string
+}
+
+let filterKeyCounter = 0
+const newKey = () => `n2kf-${++filterKeyCounter}`
+
+// Filters loaded from the server arrive without _key. Assign keys lazily
+// and cache by object identity so the same filter object keeps its key
+// across re-renders and re-derivations of the filters array.
+const keyByFilter = new WeakMap<N2KFilter, string>()
+// Stable reference for the no-filters case so useMemo below isn't
+// invalidated on every render when value.options.filters is undefined.
+const EMPTY_FILTERS: N2KFilter[] = []
+const ensureKey = (filter: N2KFilter): N2KFilter => {
+  if (filter._key) return filter
+  let key = keyByFilter.get(filter)
+  if (!key) {
+    key = newKey()
+    keyByFilter.set(filter, key)
+  }
+  return { ...filter, _key: key }
 }
 
 interface ProviderOptions {
@@ -29,12 +56,20 @@ interface N2KFiltersProps {
   onChange: (
     event:
       | ChangeEvent<HTMLInputElement>
-      | { target: { name: string; value: unknown; type?: string } }
+      | {
+          target: {
+            name: string
+            value: unknown
+            type?: string
+            checked?: boolean
+          }
+        }
   ) => void
 }
 
 export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
-  const filters = value.options.filters ?? []
+  const rawFilters = value.options.filters ?? EMPTY_FILTERS
+  const filters = useMemo(() => rawFilters.map(ensureKey), [rawFilters])
 
   const handleFilterFieldChange = (
     index: number,
@@ -60,13 +95,15 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
     onChange({
       target: {
         name: 'options.filtersEnabled',
-        value: event.target.checked
+        value: event.target.checked,
+        checked: event.target.checked,
+        type: 'checkbox'
       }
     })
   }
 
   const handleAddFilter = () => {
-    const updatedFilters = [...filters, { source: '', pgn: '' }]
+    const updatedFilters = [...filters, { source: '', pgn: '', _key: newKey() }]
     onChange({
       target: { name: 'options.filters', value: updatedFilters }
     })
@@ -112,7 +149,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
               <tbody>
                 {filters.map((filter, index) => {
                   return (
-                    <tr key={index}>
+                    <tr key={filter._key ?? index}>
                       <td>
                         <Form.Control
                           type="text"

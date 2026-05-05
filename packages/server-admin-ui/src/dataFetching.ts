@@ -55,6 +55,26 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/signalk', state.setServerSpecification, ''),
     fetchAndSet('/security/access/requests', state.setAccessRequests),
     fetchAndSet('/security/devices', state.setDevices),
-    fetchAndSet('/nodeInfo', state.setNodeInfo)
+    fetchAndSet('/nodeInfo', state.setNodeInfo),
+    fetchAndSet('/signalk/v1/api/sources', state.setSourcesData, ''),
+    fetchAndSet<{
+      groups: Parameters<typeof state.setPriorityGroupsFromServer>[0]
+      overrides: Parameters<typeof state.setSourcePrioritiesFromServer>[0]
+      defaults: Parameters<typeof state.setPriorityDefaultsFromServer>[0]
+    }>('/priorities', (data) => {
+      state.setPriorityGroupsFromServer(data.groups || [])
+      const overrides = data.overrides || {}
+      state.setSourcePrioritiesFromServer(overrides)
+      // Override-paths list is implicit in the per-path map under the
+      // group-aware engine: every path with an entry is an override.
+      state.setPriorityOverridesFromServer(Object.keys(overrides))
+      state.setPriorityDefaultsFromServer(data.defaults || {})
+    }),
+    fetchAndSet('/sourceAliases', state.setSourceAliases),
+    fetchAndSet('/ignoredInstanceConflicts', state.setIgnoredInstanceConflicts),
+    fetchAndSet('/n2kDeviceStatus', state.setN2kDeviceStatus),
+    fetchAndSet('/livePreferredSources', state.setLivePreferredSources),
+    fetchAndSet('/multiSourcePaths', state.setMultiSourcePaths),
+    fetchAndSet('/reconciledGroups', state.setReconciledGroups)
   ])
 }
