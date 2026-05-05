@@ -1,6 +1,5 @@
 import { Request, Response, Application } from 'express'
 import { Context, Path, SourceRef } from '@signalk/server-api'
-import { get as _get, set as _set } from 'lodash'
 import { createDebug } from './debug'
 import {
   createRequest,
@@ -58,6 +57,9 @@ const pathPrefix = '/signalk'
 const versionPrefix = '/v1'
 const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
 
+const TRAILING_SLASH = /\/$/
+const SLASH_GLOBAL = /\//g
+
 type ActionCallback = (reply: ActionResult) => void
 
 interface ActionResult {
@@ -98,6 +100,8 @@ interface SkRequest extends Request {
   }
 }
 
+type ReplyWithAction = Reply & { action?: { href: string } }
+
 const actionHandlers: ActionHandlers = {}
 let putMetaHandler: ActionHandler
 let deleteMetaHandler: DeleteHandler
@@ -107,39 +111,158 @@ let putNotificationHandler: (
   value: unknown
 ) => ActionResult
 
+function parseRequestPath(
+  reqPath: string
+): { context: string; skpath: string } | null {
+  const cleaned = String(reqPath)
+    .replace(apiPathPrefix, '')
+    .replace(TRAILING_SLASH, '')
+    .replace(SLASH_GLOBAL, '.')
+
+  if (cleaned.length === 0) {
+    return null
+  }
+
+  const parts = cleaned.split('.')
+  if (parts.length < 3) {
+    return null
+  }
+
+  return {
+    context: `${parts[0]}.${parts[1]}`,
+    skpath: parts.slice(2).join('.')
+  }
+}
+
+function isMetaPath(parts: string[]): boolean {
+  if (parts.length < 2) {
+    return false
+  }
+  return (
+    parts[parts.length - 1] === 'meta' || parts[parts.length - 2] === 'meta'
+  )
+}
+
+function fixReply(reply: ActionResult): void {
+  if (reply.state === 'FAILURE') {
+    reply.state = 'COMPLETED'
+    reply.statusCode = 502
+  } else if (reply.state === 'SUCCESS') {
+    reply.state = 'COMPLETED'
+    reply.statusCode = 200
+  }
+}
+
+function getByDottedPath(
+  obj: Record<string, unknown> | undefined,
+  dotted: string
+): unknown {
+  if (obj === undefined || obj === null) {
+    return undefined
+  }
+  let current: unknown = obj
+  for (const segment of dotted.split('.')) {
+    if (current === null || current === undefined) {
+      return undefined
+    }
+    current = (current as Record<string, unknown>)[segment]
+  }
+  return current
+}
+
+function setByDottedPath(
+  obj: Record<string, unknown>,
+  dotted: string,
+  value: unknown
+): void {
+  const segments = dotted.split('.')
+  const last = segments.length - 1
+  let current: Record<string, unknown> = obj
+  for (let i = 0; i < last; i++) {
+    const key = segments[i]
+    const next = current[key]
+    if (next === null || typeof next !== 'object') {
+      current[key] = {}
+    }
+    current = current[key] as Record<string, unknown>
+  }
+  current[segments[last]] = value
+}
+
+function respondToParsedRequest(res: Response, promise: Promise<Reply>): void {
+  promise
+    .then((reply) => {
+      res.status(reply.statusCode)
+      res.json(reply)
+    })
+    .catch((err) => {
+      console.error(err)
+      res.status(500).send(err.message)
+    })
+}
+
+function finalizeReply(
+  request: { requestId: string },
+  result: ActionResult,
+  applyFix: boolean,
+  resolve: (reply: Reply) => void,
+  reject: (err: Error) => void
+): void {
+  if (applyFix) {
+    fixReply(result)
+  }
+  updateRequest(request.requestId, result.state as RequestState, result)
+    .then((reply) => {
+      if (reply.state === 'PENDING') {
+        ;(reply as ReplyWithAction).action = { href: reply.href }
+      }
+      resolve(reply)
+    })
+    .catch(reject)
+}
+
+function handleActionResult(
+  request: { requestId: string },
+  actionResult: ActionResult | void | Promise<ActionResult | void>,
+  applyFix: boolean,
+  resolve: (reply: Reply) => void,
+  reject: (err: Error) => void
+): void {
+  Promise.resolve(actionResult)
+    .then((result) => {
+      if (debug.enabled) {
+        debug('got result: %j', result)
+      }
+      finalizeReply(request, result!, applyFix, resolve, reject)
+    })
+    .catch((err) => {
+      updateRequest(request.requestId, 'COMPLETED', {
+        statusCode: 500,
+        message: err.message
+      })
+        .then(resolve)
+        .catch(reject)
+    })
+}
+
 export function start(app: PutApp): void {
   app.registerActionHandler = registerActionHandler
   app.deRegisterActionHandler = deRegisterActionHandler
 
   app.delete(apiPathPrefix + '*', function (req: SkRequest, res: Response) {
-    let path = String(req.path).replace(apiPathPrefix, '')
-
-    path = path.replace(/\/$/, '').replace(/\//g, '.')
-
-    const parts = path.length > 0 ? path.split('.') : []
-
-    if (parts.length < 3) {
+    const parsed = parseRequestPath(req.path)
+    if (!parsed) {
       res.status(400).send('invalid path')
       return
     }
 
-    const context = `${parts[0]}.${parts[1]}`
-    const skpath = parts.slice(2).join('.')
-
-    deletePath(app, context, skpath, req)
-      .then((reply) => {
-        res.status(reply.statusCode)
-        res.json(reply)
-      })
-      .catch((err) => {
-        console.error(err)
-        res.status(500).send(err.message)
-      })
+    respondToParsedRequest(
+      res,
+      deletePath(app, parsed.context, parsed.skpath, req)
+    )
   })
 
   app.put(apiPathPrefix + '*', function (req: SkRequest, res: Response) {
-    let path = String(req.path).replace(apiPathPrefix, '')
-
     const value = req.body as PutBody
 
     if (value.value === undefined) {
@@ -147,27 +270,16 @@ export function start(app: PutApp): void {
       return
     }
 
-    path = path.replace(/\/$/, '').replace(/\//g, '.')
-
-    const parts = path.length > 0 ? path.split('.') : []
-
-    if (parts.length < 3) {
+    const parsed = parseRequestPath(req.path)
+    if (!parsed) {
       res.status(400).send('invalid path')
       return
     }
 
-    const context = `${parts[0]}.${parts[1]}`
-    const skpath = parts.slice(2).join('.')
-
-    putPath(app, context, skpath, value, req)
-      .then((reply) => {
-        res.status(reply.statusCode)
-        res.json(reply)
-      })
-      .catch((err) => {
-        console.error(err)
-        res.status(500).send(err.message)
-      })
+    respondToParsedRequest(
+      res,
+      putPath(app, parsed.context, parsed.skpath, value, req)
+    )
   })
 
   putMetaHandler = (context, path, value, cb) => {
@@ -187,7 +299,6 @@ export function start(app: PutApp): void {
       metaPath = parts.slice(0, parts.length - 1).join('.')
     }
 
-    // Validate displayUnits.category if present
     const displayUnits = metaValue.displayUnits as
       | { category?: string }
       | undefined
@@ -206,15 +317,15 @@ export function start(app: PutApp): void {
       )
       if (validationError) {
         return {
-          state: 'COMPLETED' as RequestState,
+          state: 'COMPLETED',
           statusCode: 400,
           message: validationError
         }
       }
     }
 
-    // set empty zones array explicitly to null
-    for (const prop in metaValue) {
+    // Empty zones array is persisted as null so consumers see a cleared value.
+    for (const prop of Object.keys(metaValue)) {
       if (
         Array.isArray(metaValue[prop]) &&
         (metaValue[prop] as unknown[]).length === 0
@@ -273,7 +384,7 @@ export function start(app: PutApp): void {
       }
 
       const pathWithContext = context + '.' + path
-      _set(data, pathWithContext, value)
+      setByDottedPath(data, pathWithContext, value)
 
       skConfig.writeDefaultsFile(
         app as unknown as ConfigApp,
@@ -313,7 +424,7 @@ export function start(app: PutApp): void {
         ...app.config.baseDeltaEditor.getMeta(context, metaPath)
       }
 
-      if (typeof metaValue[name] === 'undefined') {
+      if (metaValue[name] === undefined) {
         return { state: 'COMPLETED', statusCode: 404 }
       }
 
@@ -343,9 +454,9 @@ export function start(app: PutApp): void {
         return { state: 'COMPLETED', statusCode: 404 }
       }
 
-      Object.keys(metaValue).forEach((key) => {
+      for (const key of Object.keys(metaValue)) {
         delete full_meta[key]
-      })
+      }
 
       app.config.baseDeltaEditor.removeMeta(context, metaPath)
     }
@@ -421,59 +532,30 @@ export function deletePath(
         }
 
         const parts = path.split('.')
-        let handler: DeleteHandler | undefined
+        const handler = isMetaPath(parts) ? deleteMetaHandler : undefined
 
-        if (
-          (parts.length > 1 && parts[parts.length - 1] === 'meta') ||
-          (parts.length > 1 && parts[parts.length - 2] === 'meta')
-        ) {
-          handler = deleteMetaHandler
-        }
-
-        if (handler) {
-          const actionResult = handler(context, path, (reply) => {
-            debug('got result: %j', reply)
-            updateRequest(request.requestId, reply.state as RequestState, reply)
-              .then(() => undefined)
-              .catch((err) => {
-                console.error(err)
-              })
-          })
-
-          Promise.resolve(actionResult)
-            .then((result) => {
-              debug('got result: %j', result)
-              updateRequest(
-                request.requestId,
-                result!.state as RequestState,
-                result!
-              )
-                .then((reply) => {
-                  if (reply.state === 'PENDING') {
-                    ;(reply as Reply & { action?: { href: string } }).action = {
-                      href: reply.href
-                    }
-                  }
-                  resolve(reply)
-                })
-                .catch(reject)
-            })
-            .catch((err) => {
-              updateRequest(request.requestId, 'COMPLETED', {
-                statusCode: 500,
-                message: err.message
-              })
-                .then(resolve)
-                .catch(reject)
-            })
-        } else {
+        if (!handler) {
           updateRequest(request.requestId, 'COMPLETED', {
             statusCode: 405,
             message: `DELETE not supported for ${path}`
           })
             .then(resolve)
             .catch(reject)
+          return
         }
+
+        const actionResult = handler(context, path, (reply) => {
+          if (debug.enabled) {
+            debug('got result: %j', reply)
+          }
+          updateRequest(request.requestId, reply.state as RequestState, reply)
+            .then(() => undefined)
+            .catch((err) => {
+              console.error(err)
+            })
+        })
+
+        handleActionResult(request, actionResult, false, resolve, reject)
       })
       .catch(reject)
   })
@@ -515,33 +597,33 @@ export function putPath(
           return
         }
 
-        let handler: ActionHandler | undefined
         const parts = path.split('.')
+        let handler: ActionHandler | undefined
 
-        if (
-          (parts.length > 1 && parts[parts.length - 1] === 'meta') ||
-          (parts.length > 1 && parts[parts.length - 2] === 'meta')
-        ) {
+        if (isMetaPath(parts)) {
           handler = putMetaHandler
         } else {
           const handlers = actionHandlers[context]
             ? actionHandlers[context][path]
             : null
 
-          if (handlers && Object.keys(handlers).length > 0) {
-            if (body.source) {
-              handler = handlers[body.source]
-            } else if (Object.keys(handlers).length === 1) {
-              handler = Object.values(handlers)[0]
-            } else {
-              updateRequest(request.requestId, 'COMPLETED', {
-                statusCode: 400,
-                message:
-                  'there are multiple sources for the given path, but no source was specified in the request'
-              })
-                .then(resolve)
-                .catch(reject)
-              return
+          if (handlers) {
+            const sources = Object.keys(handlers)
+            if (sources.length > 0) {
+              if (body.source) {
+                handler = handlers[body.source]
+              } else if (sources.length === 1) {
+                handler = handlers[sources[0]]
+              } else {
+                updateRequest(request.requestId, 'COMPLETED', {
+                  statusCode: 400,
+                  message:
+                    'there are multiple sources for the given path, but no source was specified in the request'
+                })
+                  .then(resolve)
+                  .catch(reject)
+                return
+              }
             }
           }
 
@@ -551,18 +633,10 @@ export function putPath(
         }
 
         if (handler) {
-          function fixReply(reply: ActionResult): void {
-            if (reply.state === 'FAILURE') {
-              reply.state = 'COMPLETED'
-              reply.statusCode = 502
-            } else if (reply.state === 'SUCCESS') {
-              reply.state = 'COMPLETED'
-              reply.statusCode = 200
-            }
-          }
-
           const actionResult = handler(context, path, body.value, (reply) => {
-            debug('got result: %j', reply)
+            if (debug.enabled) {
+              debug('got result: %j', reply)
+            }
             fixReply(reply)
             updateRequest(request.requestId, reply.state as RequestState, reply)
               .then(() => undefined)
@@ -571,34 +645,11 @@ export function putPath(
               })
           })
 
-          Promise.resolve(actionResult)
-            .then((result) => {
-              debug('got result: %j', result)
-              fixReply(result!)
-              updateRequest(
-                request.requestId,
-                result!.state as RequestState,
-                result!
-              )
-                .then((reply) => {
-                  if (reply.state === 'PENDING') {
-                    ;(reply as Reply & { action?: { href: string } }).action = {
-                      href: reply.href
-                    }
-                  }
-                  resolve(reply)
-                })
-                .catch(reject)
-            })
-            .catch((err) => {
-              updateRequest(request.requestId, 'COMPLETED', {
-                statusCode: 500,
-                message: err.message
-              })
-                .then(resolve)
-                .catch(reject)
-            })
-        } else if (
+          handleActionResult(request, actionResult, true, resolve, reject)
+          return
+        }
+
+        if (
           app.interfaces.ws &&
           app.interfaces.ws.canHandlePut(path, body.source)
         ) {
@@ -612,14 +663,15 @@ export function putPath(
             )
             .then(resolve)
             .catch(reject)
-        } else {
-          updateRequest(request.requestId, 'COMPLETED', {
-            statusCode: 405,
-            message: `PUT not supported for ${path}`
-          })
-            .then(resolve)
-            .catch(reject)
+          return
         }
+
+        updateRequest(request.requestId, 'COMPLETED', {
+          statusCode: 405,
+          message: `PUT not supported for ${path}`
+        })
+          .then(resolve)
+          .catch(reject)
       })
       .catch(reject)
   })
@@ -631,7 +683,9 @@ export function registerActionHandler(
   source: string,
   callback: ActionHandler
 ): () => void {
-  debug(`registered action handler for ${context} ${path} ${source}`)
+  if (debug.enabled) {
+    debug(`registered action handler for ${context} ${path} ${source}`)
+  }
 
   if (actionHandlers[context] === undefined) {
     actionHandlers[context] = {}
@@ -657,7 +711,9 @@ export function deRegisterActionHandler(
     actionHandlers[context][path][source] === callback
   ) {
     delete actionHandlers[context][path][source]
-    debug(`de-registered action handler for ${context} ${path} ${source}`)
+    if (debug.enabled) {
+      debug(`de-registered action handler for ${context} ${path} ${source}`)
+    }
   }
 }
 
@@ -671,7 +727,10 @@ function putNotification(
   const notifPath = parts.slice(0, parts.length - 1).join('.')
   const key = parts[parts.length - 1]
 
-  const existing = _get(app.signalk.self, notifPath) as
+  const existing = getByDottedPath(
+    app.signalk.self as unknown as Record<string, unknown>,
+    notifPath
+  ) as
     | { value: Record<string, unknown>; $source: string; timestamp?: string }
     | undefined
 
@@ -686,7 +745,7 @@ function putNotification(
   existing.value[key] = value
   existing.timestamp = new Date().toISOString()
 
-  const delta = {
+  app.handleMessage('server', {
     updates: [
       {
         $source: existing.$source as SourceRef,
@@ -698,8 +757,7 @@ function putNotification(
         ]
       }
     ]
-  }
-  app.handleMessage('server', delta)
+  })
 
   return { state: 'COMPLETED', statusCode: 200 }
 }
