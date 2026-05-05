@@ -1,4 +1,5 @@
 # Template - PLEASE READ
+
 <!--
 Before opening this PR, please consider:
 
@@ -11,11 +12,11 @@ Before opening this PR, please consider:
   (include before/after numbers).
 - Refactors, style changes, and "improvements" without a concrete
   problem being solved are likely to be closed.
-- Js conversion to ts are in general welcome, but if the queue is long 
+- JS-to-TS conversions are generally welcome, but if the queue is long,
   they will often go stale before getting attention.
 
 If you cannot articulate what real problem this solves for users,
-it probably should not be a PR at this time. 
+it probably should not be a PR at this time.
 -->
 
 ## What problem does this solve?
