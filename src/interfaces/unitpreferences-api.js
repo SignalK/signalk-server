@@ -134,6 +134,7 @@ const {
   reloadPreset,
   reloadCustomDefinitions,
   reloadCustomCategories,
+  invalidatePresetCache,
   getDefaultCategory,
   getBaseUnitToCategories,
   getCategoryForBaseUnit,
@@ -402,6 +403,7 @@ module.exports = function (app) {
 
       const presetPath = path.join(customDir, `${presetName}.json`)
       atomicWriteFileSync(presetPath, JSON.stringify(req.body, null, 2))
+      invalidatePresetCache(presetName)
       res.json({ success: true })
     } catch (err) {
       debug('Error saving custom preset:', err)
@@ -431,6 +433,7 @@ module.exports = function (app) {
       }
 
       fs.unlinkSync(presetPath)
+      invalidatePresetCache(presetName)
       res.json({ success: true })
     } catch (err) {
       debug('Error deleting preset:', err)
@@ -601,6 +604,7 @@ module.exports = function (app) {
         // Save the preset
         const presetPath = path.join(customDir, `${presetName}.json`)
         atomicWriteFileSync(presetPath, JSON.stringify(preset, null, 2))
+        invalidatePresetCache(presetName)
 
         debug(`Custom preset uploaded: ${presetName}`)
         sendResponse(200, {
