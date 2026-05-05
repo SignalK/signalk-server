@@ -537,7 +537,27 @@ function wsInterface(app: WsApp): WsApi {
             })
           }
 
-          let onChange = (delta: Delta) => {
+          const selfOnly = isSelfSubscription(spark.query)
+          const subscribeNone = spark.query.subscribe === 'none'
+          const canVerify = app.securityStrategy.canAuthorizeWS()
+
+          const onChange: (delta: Delta) => void = (delta: Delta) => {
+            if (canVerify) {
+              try {
+                app.securityStrategy.verifyWS(spark.request)
+              } catch (error) {
+                handleVerifyWSError(spark, error as Error)
+                return
+              }
+            }
+            if (subscribeNone) return
+            if (
+              selfOnly &&
+              delta.context &&
+              delta.context !== app.selfContext
+            ) {
+              return
+            }
             const filtered = app.securityStrategy.filterReadDelta(
               spark.request.skPrincipal,
               delta
@@ -628,21 +648,6 @@ function wsInterface(app: WsApp): WsApi {
               })
             })
           })
-
-          if (isSelfSubscription(spark.query)) {
-            const realOnChange = onChange
-            onChange = function (msg: Delta) {
-              if (!msg.context || msg.context === app.selfContext) {
-                realOnChange(msg)
-              }
-            }
-          }
-
-          if (spark.query.subscribe === 'none') {
-            onChange = () => undefined
-          }
-
-          onChange = wrapWithVerifyWS(app.securityStrategy, spark, onChange)
 
           const sparkIp = spark.request._resolvedIp
 
@@ -934,40 +939,37 @@ function processUpdates(
   }
   app.handleMessage(spark.request.source || 'ws', msg)
 
-  msg.updates?.forEach((update) => {
-    if (hasValues(update)) {
-      let source = update.$source
-      if (!source && update.source) {
-        source = getSourceId(update.source)
-      }
-
-      if (source) {
-        update.values.forEach((valuePath) => {
-          if (!pathSources[valuePath.path]) {
-            pathSources[valuePath.path] = {}
-          }
-          if (
-            !pathSources[valuePath.path][source!] ||
-            pathSources[valuePath.path][source!] !== spark
-          ) {
-            if (pathSources[valuePath.path][source!]) {
-              console.log(
-                `WARNING: got a new ws client for path ${valuePath.path} source ${source}`
-              )
-            }
-            debug(
-              'registered spark for source %s path %s = %s',
-              source,
-              valuePath.path,
-              spark.id
-            )
-
-            pathSources[valuePath.path][source!] = spark
-          }
-        })
-      }
+  if (!msg.updates) return
+  for (const update of msg.updates) {
+    if (!hasValues(update)) continue
+    let source = update.$source
+    if (!source && update.source) {
+      source = getSourceId(update.source)
     }
-  })
+    if (!source) continue
+
+    for (const valuePath of update.values) {
+      const path = valuePath.path
+      let sourcesForPath = pathSources[path]
+      if (!sourcesForPath) {
+        sourcesForPath = pathSources[path] = {}
+      }
+      const existing = sourcesForPath[source]
+      if (existing === spark) continue
+      if (existing) {
+        console.log(
+          `WARNING: got a new ws client for path ${path} source ${source}`
+        )
+      }
+      debug(
+        'registered spark for source %s path %s = %s',
+        source,
+        path,
+        spark.id
+      )
+      sourcesForPath[source] = spark
+    }
+  }
 }
 
 let canonical_meta_contextpath_values: Record<
@@ -1014,7 +1016,6 @@ function handleValuesMeta(
           unknown
         > | null
         if (meta) {
-          // Clone and enhance metadata with displayUnits formulas
           const metaClone = structuredClone(meta) as Record<string, unknown>
           let storedDisplayUnits = metaClone.displayUnits as
             | Record<string, unknown>
@@ -1151,6 +1152,19 @@ function processUnsubscribe(
 const isSelfSubscription = (query: Spark['query']): boolean =>
   !query.subscribe || query.subscribe === 'self'
 
+function handleVerifyWSError(spark: Spark, error: Error): void {
+  if (!spark.skPendingAccessRequest) {
+    spark.end('{message: "Connection disconnected by security constraint"}', {
+      reconnect: true
+    })
+  }
+  const identifier =
+    spark.request.skPrincipal?.identifier ||
+    spark.request.connection.remoteAddress ||
+    'unknown'
+  console.error(`WebSocket security error for ${identifier}: ${error.message}`)
+}
+
 function wrapWithVerifyWS(
   securityStrategy: SecurityStrategy,
   spark: Spark,
@@ -1162,25 +1176,11 @@ function wrapWithVerifyWS(
   return (msg: Delta) => {
     try {
       securityStrategy.verifyWS(spark.request)
-      theFunction(msg)
     } catch (error) {
-      if (!spark.skPendingAccessRequest) {
-        spark.end(
-          '{message: "Connection disconnected by security constraint"}',
-          {
-            reconnect: true
-          }
-        )
-      }
-      const identifier =
-        spark.request.skPrincipal?.identifier ||
-        spark.request.connection.remoteAddress ||
-        'unknown'
-      console.error(
-        `WebSocket security error for ${identifier}: ${(error as Error).message}`
-      )
+      handleVerifyWSError(spark, error as Error)
       return
     }
+    theFunction(msg)
   }
 }
 
@@ -1249,39 +1249,31 @@ function handleRealtimeConnection(
       const ev = event as { username?: string } | null
       if (ev?.username && ev.username !== username) return
 
-      const allPaths = app.streambundle.getAvailablePaths()
-      const meta = allPaths.reduce(
-        (
-          acc: Array<{ path: string; value: Record<string, unknown> }>,
-          path: string
-        ) => {
-          const fullPath = 'vessels.self.' + path
-          const pathMeta =
-            (getMetadata(fullPath) as Record<string, unknown>) || {}
-          const storedDU = pathMeta.displayUnits as
-            | DisplayUnitsMetadata
-            | undefined
-          const category =
-            storedDU?.category ||
-            getDefaultCategory(
-              path,
-              pathMeta.units as string | undefined,
-              username
-            )
-          if (category) {
-            const displayUnits = resolveDisplayUnits(
-              { ...storedDU, category },
-              pathMeta.units as string | undefined,
-              username
-            )
-            if (displayUnits) {
-              acc.push({ path, value: { ...pathMeta, displayUnits } })
-            }
-          }
-          return acc
-        },
-        []
-      )
+      const meta: Array<{ path: string; value: Record<string, unknown> }> = []
+      for (const path of app.streambundle.getAvailablePaths()) {
+        const fullPath = 'vessels.self.' + path
+        const pathMeta =
+          (getMetadata(fullPath) as Record<string, unknown>) || {}
+        const storedDU = pathMeta.displayUnits as
+          | DisplayUnitsMetadata
+          | undefined
+        const category =
+          storedDU?.category ||
+          getDefaultCategory(
+            path,
+            pathMeta.units as string | undefined,
+            username
+          )
+        if (!category) continue
+        const displayUnits = resolveDisplayUnits(
+          { ...storedDU, category },
+          pathMeta.units as string | undefined,
+          username
+        )
+        if (displayUnits) {
+          meta.push({ path, value: { ...pathMeta, displayUnits } })
+        }
+      }
 
       if (meta.length > 0) {
         const timestamp = new Date().toISOString()
