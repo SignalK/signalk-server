@@ -555,6 +555,25 @@ function PluginConfigCard({
     (plugin.data.configuration === null ||
       plugin.data.configuration === undefined)
 
+  const providerStatus = useStore((state) => state.providerStatus) as Array<{
+    id: string
+    type?: string
+    message?: string
+    lastError?: string
+    lastErrorTimeStamp?: string
+  }>
+  const pluginStatus = providerStatus?.find((s) => s.id === plugin.id)
+  const statusClasses: Record<string, string> = {
+    status: 'text-success',
+    warning: 'text-warning',
+    error: 'text-danger'
+  }
+  const statusClass = statusClasses[pluginStatus?.type || ''] || ''
+  const lastError =
+    pluginStatus?.lastError && pluginStatus.lastError !== pluginStatus.message
+      ? `${pluginStatus.lastErrorTimeStamp}: ${pluginStatus.lastError}`
+      : ''
+
   return (
     <div>
       {showSaveSuccess && (
@@ -601,84 +620,115 @@ function PluginConfigCard({
             </Row>
           )}
           {!configurationRequired && (
-            <Row>
-              <Col lg={4} className={'mt-2 mt-lg-0'}>
-                <Form.Label
-                  style={labelStyle}
-                  className="switch switch-text switch-primary"
-                >
-                  <input
-                    type="checkbox"
-                    name="enabled"
-                    className="switch-input"
-                    onChange={() => handleToggle('enabled')}
-                    checked={optimisticData.enabled}
-                  />
-                  <span className="switch-label" data-on="Yes" data-off="No" />
-                  <span className="switch-handle" />
-                </Form.Label>
-                <span className="ms-1">Enabled</span>
-              </Col>
-              <Col lg={4} className={'mt-2 mt-lg-0'}>
-                <Form.Label
-                  style={labelStyle}
-                  className="switch switch-text switch-primary"
-                >
-                  <input
-                    type="checkbox"
-                    name="enableLogging"
-                    className="switch-input"
-                    onChange={() => handleToggle('enableLogging')}
-                    checked={optimisticData.enableLogging}
-                  />
-                  <span className="switch-label" data-on="Yes" data-off="No" />
-                  <span className="switch-handle" />
-                </Form.Label>
-                <span className="ms-1">Data logging</span>
-                {optimisticData.enableLogging && (
-                  <OverlayTrigger
-                    placement="bottom"
-                    overlay={
-                      <Tooltip>
-                        Creates hourly log files that can consume significant
-                        disk space
-                      </Tooltip>
-                    }
+            <>
+              <Row>
+                <Col lg={4} className={'mt-2 mt-lg-0'}>
+                  <Form.Label
+                    style={labelStyle}
+                    className="switch switch-text switch-primary"
                   >
+                    <input
+                      type="checkbox"
+                      name="enabled"
+                      className="switch-input"
+                      onChange={() => handleToggle('enabled')}
+                      checked={optimisticData.enabled}
+                    />
                     <span
-                      className="text-warning ms-1"
-                      style={{ cursor: 'pointer' }}
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Form.Label>
+                  <span className="ms-1">Enabled</span>
+                </Col>
+                <Col lg={4} className={'mt-2 mt-lg-0'}>
+                  <Form.Label
+                    style={labelStyle}
+                    className="switch switch-text switch-primary"
+                  >
+                    <input
+                      type="checkbox"
+                      name="enableLogging"
+                      className="switch-input"
+                      onChange={() => handleToggle('enableLogging')}
+                      checked={optimisticData.enableLogging}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Form.Label>
+                  <span className="ms-1">Data logging</span>
+                  {optimisticData.enableLogging && (
+                    <OverlayTrigger
+                      placement="bottom"
+                      overlay={
+                        <Tooltip>
+                          Creates hourly log files that can consume significant
+                          disk space
+                        </Tooltip>
+                      }
                     >
-                      <FontAwesomeIcon icon={faTriangleExclamation} />
-                    </span>
-                  </OverlayTrigger>
-                )}
-              </Col>
-              <Col lg={4} className={'mt-2 mt-lg-0'}>
-                <Form.Label
-                  style={labelStyle}
-                  className="switch switch-text switch-primary"
-                >
-                  <input
-                    type="checkbox"
-                    name="enableDebug"
-                    className="switch-input"
-                    onChange={() => handleToggle('enableDebug')}
-                    checked={optimisticData.enableDebug}
-                  />
-                  <span className="switch-label" data-on="Yes" data-off="No" />
-                  <span className="switch-handle" />
-                </Form.Label>
-                <span className="ms-1">
-                  Enable debug{' '}
-                  {optimisticData.enableDebug ? (
-                    <a href="#/serverConfiguration/log">log</a>
-                  ) : (
-                    'log'
+                      <span
+                        className="text-warning ms-1"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <FontAwesomeIcon icon={faTriangleExclamation} />
+                      </span>
+                    </OverlayTrigger>
                   )}
-                </span>
-              </Col>
-            </Row>
+                </Col>
+                <Col lg={4} className={'mt-2 mt-lg-0'}>
+                  <Form.Label
+                    style={labelStyle}
+                    className="switch switch-text switch-primary"
+                  >
+                    <input
+                      type="checkbox"
+                      name="enableDebug"
+                      className="switch-input"
+                      onChange={() => handleToggle('enableDebug')}
+                      checked={optimisticData.enableDebug}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Form.Label>
+                  <span className="ms-1">
+                    Enable debug{' '}
+                    {optimisticData.enableDebug ? (
+                      <a href="#/serverConfiguration/log">log</a>
+                    ) : (
+                      'log'
+                    )}
+                  </span>
+                </Col>
+              </Row>
+              {optimisticData.enabled && (
+                <Row className="mt-2">
+                  <Col>
+                    <small>
+                      <strong>Status:</strong>{' '}
+                      <span className={statusClass}>
+                        {pluginStatus?.message || 'Started'}
+                      </span>
+                    </small>
+                    {lastError && (
+                      <small className="d-block text-danger">
+                        <strong>Last error:</strong> {lastError}
+                      </small>
+                    )}
+                  </Col>
+                </Row>
+              )}
+            </>
           )}
         </Card.Header>
         <Card.Body>
