@@ -6,6 +6,13 @@ const {
   buildFlushDeltas
 } = require('../dist/LatestValuesAccumulator')
 
+function findAccumulatedItem(accumulator, context, path, source) {
+  return Array.from(accumulator.values()).find(
+    (item) =>
+      item.context === context && item.path === path && item.$source === source
+  )
+}
+
 describe('LatestValuesAccumulator', function () {
   describe('accumulateLatestValue', function () {
     it('should accumulate a single value', function () {
@@ -29,10 +36,13 @@ describe('LatestValuesAccumulator', function () {
       accumulateLatestValue(accumulator, delta)
 
       expect(accumulator.size).to.equal(1)
-      const key =
-        'vessels.urn:mrn:imo:mmsi:123456789:navigation.position:n2k.115'
-      expect(accumulator.has(key)).to.be.true
-      const item = accumulator.get(key)
+      const item = findAccumulatedItem(
+        accumulator,
+        'vessels.urn:mrn:imo:mmsi:123456789',
+        'navigation.position',
+        'n2k.115'
+      )
+      expect(item).to.exist
       expect(item.context).to.equal('vessels.urn:mrn:imo:mmsi:123456789')
       expect(item.path).to.equal('navigation.position')
       expect(item.value).to.deep.equal({ latitude: 60.0, longitude: 25.0 })
@@ -66,8 +76,11 @@ describe('LatestValuesAccumulator', function () {
       accumulateLatestValue(accumulator, delta2)
 
       expect(accumulator.size).to.equal(1)
-      const item = accumulator.get(
-        'vessels.self:navigation.speedOverGround:gps'
+      const item = findAccumulatedItem(
+        accumulator,
+        'vessels.self',
+        'navigation.speedOverGround',
+        'gps'
       )
       expect(item.value).to.equal(5.5)
       expect(item.timestamp).to.equal('2024-01-15T10:30:01.000Z')
@@ -101,10 +114,20 @@ describe('LatestValuesAccumulator', function () {
 
       expect(accumulator.size).to.equal(2)
       expect(
-        accumulator.get('vessels.self:navigation.speedOverGround:gps1').value
+        findAccumulatedItem(
+          accumulator,
+          'vessels.self',
+          'navigation.speedOverGround',
+          'gps1'
+        ).value
       ).to.equal(5.0)
       expect(
-        accumulator.get('vessels.self:navigation.speedOverGround:gps2').value
+        findAccumulatedItem(
+          accumulator,
+          'vessels.self',
+          'navigation.speedOverGround',
+          'gps2'
+        ).value
       ).to.equal(5.2)
     })
 
@@ -128,11 +151,20 @@ describe('LatestValuesAccumulator', function () {
 
       expect(accumulator.size).to.equal(2)
       expect(
-        accumulator.get('vessels.self:navigation.speedOverGround:gps').value
+        findAccumulatedItem(
+          accumulator,
+          'vessels.self',
+          'navigation.speedOverGround',
+          'gps'
+        ).value
       ).to.equal(5.0)
       expect(
-        accumulator.get('vessels.self:navigation.courseOverGroundTrue:gps')
-          .value
+        findAccumulatedItem(
+          accumulator,
+          'vessels.self',
+          'navigation.courseOverGroundTrue',
+          'gps'
+        ).value
       ).to.equal(1.57)
     })
 
@@ -190,8 +222,14 @@ describe('LatestValuesAccumulator', function () {
       accumulateLatestValue(accumulator, delta)
 
       expect(accumulator.size).to.equal(1)
-      expect(accumulator.has('vessels.self:navigation.speedOverGround:unknown'))
-        .to.be.true
+      expect(
+        findAccumulatedItem(
+          accumulator,
+          'vessels.self',
+          'navigation.speedOverGround',
+          undefined
+        )
+      ).to.exist
     })
 
     it('should handle delta without updates', function () {
