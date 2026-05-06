@@ -44,6 +44,7 @@ import { createDebug } from './debug'
 import DeltaCache from './deltacache'
 import DeltaChain from './deltachain'
 import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
+import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
 import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
@@ -349,7 +350,9 @@ class Server {
         if (data.updates.length < 1) return
 
         try {
-          let delta = filterStaticSelfData(data, app.selfContext)
+          // data.updates was just rebuilt above, so the resulting Partial<Delta>
+          // is in practice a full Delta by the time it reaches the chain.
+          let delta = filterStaticSelfData(data, app.selfContext) as Delta
           delta = toPreferredDelta(delta, now, app.selfContext)
 
           if (skVersion === SKVersion.v1) {
@@ -811,73 +814,4 @@ function isValidUpdate(update: unknown): update is Partial<Update> {
     return false
   }
   return true
-}
-
-function filterStaticSelfData(delta: any, selfContext: string) {
-  if (delta.context === selfContext) {
-    delta.updates &&
-      delta.updates.forEach((update: any) => {
-        if ('values' in update && update['$source'] !== 'defaults') {
-          update.values = update.values.reduce((acc: any, pathValue: any) => {
-            const nvp = filterSelfDataKP(pathValue)
-            if (nvp) {
-              acc.push(nvp)
-            }
-            return acc
-          }, [])
-          if (update.values.length === 0) {
-            delete update.values
-          }
-        }
-      })
-  }
-  return delta
-}
-
-function filterSelfDataKP(pathValue: any) {
-  const deepKeys: { [key: string]: string[] } = {
-    '': ['name', 'mmsi']
-  }
-
-  const filteredPaths: string[] = [
-    'design.aisShipType',
-    'design.beam',
-    'design.length',
-    'design.draft',
-    'sensors.gps.fromBow',
-    'sensors.gps.fromCenter'
-  ]
-
-  const deep = deepKeys[pathValue.path]
-
-  const filterValues = (obj: any, items: string[]) => {
-    const res: { [key: string]: any } = {}
-    Object.keys(obj).forEach((k) => {
-      if (!items.includes(k)) {
-        res[k] = obj[k]
-      }
-    })
-    return res
-  }
-
-  if (deep !== undefined) {
-    if (Object.keys(pathValue.value).some((k) => deep.includes(k))) {
-      pathValue.value = filterValues(pathValue.value, deep)
-    }
-    if (pathValue.path === '' && pathValue.value.communication !== undefined) {
-      pathValue.value.communication = filterValues(
-        pathValue.value.communication,
-        ['callsignVhf']
-      )
-      if (Object.keys(pathValue.value.communication).length === 0) {
-        delete pathValue.value.communication
-      }
-    }
-    if (Object.keys(pathValue.value).length === 0) {
-      return null
-    }
-  } else if (filteredPaths.includes(pathValue.path)) {
-    return null
-  }
-  return pathValue
 }
