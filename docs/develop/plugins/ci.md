@@ -174,3 +174,7 @@ test-cerbo-hardware:
     - run: npm ci
     - run: npm test
 ```
+
+## See also
+
+- [Releases and Changelogs](./release.md) — once CI passes, automate the release cut and publish step.

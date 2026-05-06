@@ -79,3 +79,5 @@ To do this, in a terminal session from within the folder containing `package.jso
 ```shell
 npm publish
 ```
+
+For automated releases with GitHub-generated changelogs and npm provenance, see [Releases and Changelogs](./release.md).

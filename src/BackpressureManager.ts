@@ -94,7 +94,7 @@ export class BackpressureManager {
       this.options.beforeWrite?.(delta)
       this.transport.write(delta)
     }
-    this.assertBufferSize()
+    this.assertBufferSize(bufferLength)
   }
 
   flush(): void {
@@ -116,9 +116,9 @@ export class BackpressureManager {
     )
   }
 
-  assertBufferSize(): void {
+  assertBufferSize(knownBufferLength?: number): void {
     if (this.options.maxBufferSize === 0) return
-    const bufferLength = this.transport.getBufferLength()
+    const bufferLength = knownBufferLength ?? this.transport.getBufferLength()
     if (bufferLength > this.options.maxBufferSize) {
       if (!this.bufferSizeExceeded) {
         console.warn(

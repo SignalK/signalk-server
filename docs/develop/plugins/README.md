@@ -13,6 +13,7 @@ children:
   - custom_renderers.md
   - publishing.md
   - ci.md
+  - release.md
 ---
 
 # Server plugins

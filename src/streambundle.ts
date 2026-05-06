@@ -54,37 +54,46 @@ export class StreamBundle implements IStreamBundle {
 
   pushDelta(delta: Delta) {
     try {
-      if (delta.updates) {
-        delta.updates.forEach((update) => {
-          const base = {
-            context: delta.context!, // TSTODO: make optional/required match
-            source: update.source,
-            $source: update.$source!, // TSTODO: make optional/required match
-            timestamp: update.timestamp! // TSTODO: make optional/required match
-          }
+      if (!delta.updates) {
+        return
+      }
+      // TSTODO: the ! coercions below cover optional fields that are required
+      // here; tighten the Delta types when possible.
+      const context = delta.context!
+      for (const update of delta.updates) {
+        const source = update.source
+        const $source = update.$source!
+        const timestamp = update.timestamp!
 
-          if ('meta' in update) {
-            update.meta.forEach((meta) => {
-              this.push(meta.path, {
-                ...base,
-                path: meta.path,
-                value: meta.value,
-                isMeta: true
-              })
+        if ('meta' in update) {
+          for (const meta of update.meta) {
+            // Build the NormalizedDelta in its final shape with a stable key
+            // order across both branches so V8 can reuse one hidden class.
+            this.push(meta.path, {
+              context,
+              source,
+              $source,
+              timestamp,
+              path: meta.path,
+              value: meta.value,
+              isMeta: true
             })
           }
+        }
 
-          if ('values' in update) {
-            update.values.forEach((pathValue) => {
-              this.push(pathValue.path, {
-                ...base,
-                path: pathValue.path,
-                value: pathValue.value,
-                isMeta: false
-              })
+        if ('values' in update) {
+          for (const pathValue of update.values) {
+            this.push(pathValue.path, {
+              context,
+              source,
+              $source,
+              timestamp,
+              path: pathValue.path,
+              value: pathValue.value,
+              isMeta: false
             })
           }
-        })
+        }
       }
     } catch (e) {
       console.error(e)

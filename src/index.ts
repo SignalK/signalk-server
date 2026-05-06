@@ -703,9 +703,49 @@ async function startInterfaces(
 ) {
   debug.enabled &&
     debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
+  const argv = (app as unknown as ConfigApp).argv
+  const noPlugins = argv?.plugins === false
+  const noWebapps = argv?.webapps === false
+  type StartupCollections = {
+    plugins: unknown[]
+    pluginsMap: Record<string, unknown>
+    getPluginsList: (enabled?: boolean) => Promise<unknown[]>
+    webapps: unknown[]
+    addons: unknown[]
+    embeddablewebapps: unknown[]
+    pluginconfigurators: unknown[]
+  }
+  const startupApp = app as unknown as StartupCollections
+  if (noPlugins) {
+    console.log('Plugins disabled by --no-plugins; skipping plugin loading')
+    startupApp.plugins = []
+    startupApp.pluginsMap = {}
+    startupApp.getPluginsList = async () => []
+  }
+  if (noWebapps) {
+    console.log('Webapps disabled by --no-webapps; skipping webapp loading')
+    startupApp.webapps = []
+    startupApp.addons = []
+    startupApp.embeddablewebapps = []
+    startupApp.pluginconfigurators = []
+  }
+  const skippedInterfaces = new Set<string>()
+  if (noPlugins) {
+    skippedInterfaces.add('plugins').add('wasm')
+  }
+  if (noWebapps) {
+    skippedInterfaces.add('webapps').add('mfd_webapp')
+  }
   const availableInterfaces = require('./interfaces')
   return await Promise.all(
     Object.keys(availableInterfaces).map(async (name) => {
+      if (skippedInterfaces.has(name)) {
+        debug.enabled &&
+          debug(
+            `Not loading interface '${name}' (disabled by command line flag)`
+          )
+        return
+      }
       const theInterface = availableInterfaces[name]
       if (
         _.isUndefined(app.config.settings.interfaces) ||

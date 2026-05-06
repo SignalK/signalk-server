@@ -2,7 +2,6 @@
 import { defineConfig } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
-import { federation } from '@module-federation/vite'
 
 import '@signalk/server-admin-ui-dependencies'
 
@@ -71,8 +70,6 @@ function stripSvgFonts() {
   }
 }
 
-const isTest = process.env.VITEST === 'true'
-
 export default defineConfig({
   base: './',
   publicDir: 'public_src',
@@ -82,29 +79,7 @@ export default defineConfig({
     react(),
     babel({
       presets: [reactCompilerPreset()]
-    }),
-    // Module Federation runtime injects http: imports incompatible with
-    // Node.js ESM loader, so skip it during vitest runs.
-    ...(!isTest
-      ? [
-          federation({
-            name: 'adminUI',
-            filename: 'remoteEntry.js',
-            remotes: {},
-            dts: false,
-            shared: {
-              react: {
-                singleton: true,
-                requiredVersion: '^19.0.0'
-              },
-              'react-dom': {
-                singleton: true,
-                requiredVersion: '^19.0.0'
-              }
-            }
-          })
-        ]
-      : [])
+    })
   ],
   css: {
     preprocessorOptions: {
@@ -159,7 +134,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      path: false,
+      path: 'path-browserify',
       events: 'events',
       buffer: 'buffer'
     }

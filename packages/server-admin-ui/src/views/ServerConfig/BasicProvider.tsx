@@ -23,6 +23,7 @@ interface ProviderOptions {
   mfgCode?: string
   useCanName?: boolean
   useCamelCompat?: boolean
+  createDevice?: boolean
   sendNetworkStats?: boolean
   noDataReceivedTimeout?: string
   remoteSelf?: string
@@ -1151,6 +1152,44 @@ function UseCanNameInput({
   )
 }
 
+function CreateDeviceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-createDevice">
+          Act as N2K device (createDevice)
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Label className="switch switch-text switch-primary">
+          <input
+            type="checkbox"
+            id="provider-createDevice"
+            name="options.createDevice"
+            className="switch-input"
+            onChange={(event) => onChange(event)}
+            checked={value.createDevice === true}
+          />
+          <span className="switch-label" data-on="Yes" data-off="No" />
+          <span className="switch-handle" />
+        </Form.Label>
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        Claim an N2K address and participate actively on the bus. Recommended
+        for Yacht Devices gateways — when off, the gateway may drop ISO Requests
+        for PGN 60928 / 126996 / 126998 and device identity (model, software
+        version, serial) stays incomplete.
+      </Col>
+    </Form.Group>
+  )
+}
+
 function CamelCaseCompatInput({
   value,
   onChange
@@ -1340,6 +1379,10 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       {value.options.type !== undefined &&
         value.options.type.indexOf('canboatjs') !== -1 && (
           <CamelCaseCompatInput value={value.options} onChange={onChange} />
+        )}
+      {value.options.type !== undefined &&
+        /^ydwg02/.test(value.options.type) && (
+          <CreateDeviceInput value={value.options} onChange={onChange} />
         )}
     </div>
   )

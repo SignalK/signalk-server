@@ -8,14 +8,16 @@ Signal K Server provides the following command line options and environment vari
 
 ## Command line options
 
-| Option                   | Description                                                                                                                                                                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-s`                     | Override path to the settings file. _(same as `SIGNALK_NODE_SETTINGS` environment variable)_                                                                                                                                 |
-| `-c`                     | Override the path to find server configuration. _(same as `SIGNALK_NODE_CONFIG_DIR` environment variable)_                                                                                                                   |
-| `--sample-nmea0183-data` | Starts signalk-server with sample NMEA0183 data.                                                                                                                                                                             |
-| `--sample-n2k-data`      | Starts signalk-server with sample NMEA2000 data.                                                                                                                                                                             |
-| `--override-timestamps`  | Override timestamps in the sample NMEA2000 data with current date and time. Doesn't apply nor makes a difference to NMEA0183 sample data.                                                                                    |
-| `--securityenabled`      | Enable security. For a fresh install this makes the Admin UI force the user to create an admin account before he/she can continue further into the UI. See [Security](../security.md#enabling-security) for further details. |
+| Option                   | Description                                                                                                                                                                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-s`                     | Override path to the settings file. _(same as `SIGNALK_NODE_SETTINGS` environment variable)_                                                                                                                                       |
+| `-c`                     | Override the path to find server configuration. _(same as `SIGNALK_NODE_CONFIG_DIR` environment variable)_                                                                                                                         |
+| `--sample-nmea0183-data` | Starts signalk-server with sample NMEA0183 data.                                                                                                                                                                                   |
+| `--sample-n2k-data`      | Starts signalk-server with sample NMEA2000 data.                                                                                                                                                                                   |
+| `--override-timestamps`  | Override timestamps in the sample NMEA2000 data with current date and time. Doesn't apply nor makes a difference to NMEA0183 sample data.                                                                                          |
+| `--securityenabled`      | Enable security. For a fresh install this makes the Admin UI force the user to create an admin account before he/she can continue further into the UI. See [Security](../security.md#enabling-security) for further details.       |
+| `--no-plugins`           | Start the server without loading any plugins (Node.js or WASM). Useful for debugging, recovering from a misbehaving plugin, or running a stripped-down server. The Admin UI will not show a plugin list while this flag is active. |
+| `--no-webapps`           | Start the server without serving any webapps (regular, embeddable, or MFD). The core Admin UI is still served. Useful when running the server purely as a data backend or for diagnosing webapp issues.                            |
 
 ## Environment variables
 

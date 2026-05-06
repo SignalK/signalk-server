@@ -167,5 +167,21 @@ describe('History API v2', () => {
       body.should.have.property('error')
       body.error.should.contain('paths')
     })
+
+    it('accepts a time expression resolution like 1m', async function () {
+      const res = await fetch(
+        `${api}/history/values?paths=navigation.position&from=${FROM}&to=${TO}&resolution=1m`
+      )
+      res.status.should.equal(200)
+    })
+
+    it('returns 400 for unparseable resolution', async function () {
+      const res = await fetch(
+        `${api}/history/values?paths=navigation.position&from=${FROM}&to=${TO}&resolution=1y`
+      )
+      res.status.should.equal(400)
+      const body = await res.json()
+      body.error.should.contain('resolution')
+    })
   })
 })

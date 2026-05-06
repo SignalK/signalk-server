@@ -58,10 +58,17 @@ declare module '@signalk/client' {
     rejectUnauthorized?: boolean
     wsKeepaliveInterval?: number
   }
+  interface Connection {
+    send(payload: string): Promise<void>
+    setAuthenticated(token: string, method: string): void
+    disconnect(): void
+  }
   class Client extends EventEmitter {
     options: ClientOptions
+    connection: Connection | null
     constructor(options: ClientOptions)
     connect(): Promise<void>
+    disconnect(returnPromise?: boolean): Client | Promise<Client>
     subscribe(subscription: object, id: string): void
     API(): Promise<{
       get(path: string): Promise<string>

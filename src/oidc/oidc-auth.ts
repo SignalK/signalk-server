@@ -366,6 +366,10 @@ export function registerOIDCRoutes(
         }
 
         const oidcConfig = deps.getOIDCConfig()
+        if (!isOIDCEnabled(oidcConfig)) {
+          redirectWithError('OIDC is not configured')
+          return
+        }
         const metadata = await getDiscoveryDocument(oidcConfig.issuer)
 
         // Exchange code for tokens
