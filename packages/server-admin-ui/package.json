@@ -78,7 +78,7 @@
     "sass": "^1.81.0",
     "simple-line-icons": "^2.5.5",
     "typescript": "^5.7.2",
-    "vite": "^8.0.3",
+    "vite": "8.0.8",
     "vitest": "^4.1.2"
   },
   "scripts": {

@@ -1,0 +1,1758 @@
+# SignalK Plugin CI - Reusable Workflow
+#
+# This workflow lives in the SignalK/signalk-server repository.
+# Plugin developers reference it with a single line in their own workflow.
+#
+# Platforms tested:
+#   - Linux x64    (Node 22, 24)
+#   - Linux arm64  (Node 22, 24) — Raspberry Pi 4/5
+#   - macOS        (Node 22, 24)
+#   - Windows      (Node 22, 24)
+#   - armv7/armhf  (Node 20 — matches Venus OS 3.70 on Cerbo GX)
+#                    Runs under QEMU emulation with python3, make, g++
+#
+# Usage in your plugin repo:
+#   See docs/develop/plugins/examples/plugin-caller-example.yml
+
+name: SignalK Plugin CI
+
+on:
+  workflow_call:
+    inputs:
+      # ── Test configuration ──────────────────────────────────
+      test-command:
+        description: 'Command to run tests (default: npm test)'
+        type: string
+        default: 'npm test'
+      build-command:
+        description: 'Command to build the plugin (default: npm run build --if-present)'
+        type: string
+        default: 'npm run build --if-present'
+      format-check-command:
+        description: 'Command to verify formatting (e.g. "npm run prettier:check" or "npx biome check ."). Blocking when set, skipped when empty.'
+        type: string
+        default: ''
+      coverage-command:
+        description: 'Command that runs tests with coverage (e.g. "npm run coverage"). When set, replaces the standard test run and its output is appended to the job step summary.'
+        type: string
+        default: ''
+      node-versions:
+        description: 'JSON array of Node versions for desktop platforms (default: ["22", "24"])'
+        type: string
+        default: '["22", "24"]'
+
+      # ── armv7 / Cerbo GX options ────────────────────────────
+      enable-armv7:
+        description: 'Run armv7 (Cerbo GX) tests via QEMU emulation'
+        type: boolean
+        default: true
+
+      # ── SignalK integration test ────────────────────────────
+      enable-signalk-integration:
+        description: 'Start a SignalK server and install the plugin for integration testing'
+        type: boolean
+        default: false
+      signalk-server-versions:
+        description: 'JSON array of signalk-server versions to fan the integration test out over (e.g. ''["2.23.0", "latest"]'')'
+        type: string
+        default: '["latest"]'
+
+# Least-privilege token for the jobs in this reusable workflow. We only
+# read the caller's repository — install, build, and test steps never
+# need to write to GitHub resources.
+permissions:
+  contents: read
+
+jobs:
+  # ════════════════════════════════════════════════════════════
+  #  Desktop platforms matrix: Linux x64, Linux arm64, macOS, Windows
+  # ════════════════════════════════════════════════════════════
+  desktop:
+    name: >-
+      ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
+          matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
+          matrix.os == 'macos-latest' && 'macOS' ||
+          matrix.os == 'windows-latest' && 'Windows' ||
+          matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        node: ${{ fromJson(inputs.node-versions) }}
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Validate plugin package.json
+        id: validate-pkg
+        shell: bash
+        run: |
+          cat << 'VALIDATE' > /tmp/validate-pkg.js
+          const pkg = require(process.cwd() + '/package.json');
+          const fs = require('fs');
+          const path = require('path');
+          let errors = [];
+          let warnings = [];
+
+          // Required: signalk-node-server-plugin keyword
+          if (!pkg.keywords || !pkg.keywords.includes('signalk-node-server-plugin')) {
+            errors.push('Missing required keyword: signalk-node-server-plugin');
+          }
+
+          // Required: main or exports field
+          if (!pkg.main && !pkg.exports) {
+            errors.push('Missing main or exports field');
+          }
+
+          // Version must be valid semver — npm normalizes invalid versions in
+          // the registry but the installed package.json retains the original,
+          // which breaks semver comparisons in the appstore
+          const SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
+          if (!pkg.version) {
+            errors.push('Missing "version" field in package.json');
+          } else if (!SEMVER_RE.test(pkg.version)) {
+            errors.push('Invalid semver version "' + pkg.version + '" in package.json — see https://semver.org');
+          }
+
+          // Scan source files for hardcoded home directory paths
+          const srcFiles = [];
+          function collectFiles(dir, exts) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.name === 'node_modules' || entry.name === '.git') continue;
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) { collectFiles(full, exts); continue; }
+              if (exts.some(e => entry.name.endsWith(e))) srcFiles.push(full);
+            }
+          }
+          collectFiles('.', ['.js', '.ts', '.mjs', '.cjs', '.sh']);
+
+          const hardcodedPathRe = /["'`]\/home\/[a-zA-Z][a-zA-Z0-9_-]*\//g;
+          for (const file of srcFiles) {
+            const content = fs.readFileSync(file, 'utf8');
+            const matches = content.match(hardcodedPathRe);
+            if (matches) {
+              const relFile = path.relative('.', file);
+              errors.push(relFile + ' contains hardcoded home directory path: ' + matches[0]);
+            }
+          }
+
+          // Warn about install-time scripts that won't run under the App
+          // Store's --ignore-scripts install. 'prepare' is intentionally
+          // excluded — it's the standard TypeScript publish-build hook.
+          const riskyScripts = ['preinstall', 'postinstall', 'install'];
+          for (const s of riskyScripts) {
+            if (pkg.scripts && pkg.scripts[s]) {
+              warnings.push('package.json has a "' + s + '" script: ' + pkg.scripts[s]);
+              warnings.push('Note: SignalK App Store uses --ignore-scripts, so "' + s + '" will NOT run on install');
+            }
+          }
+
+          // engines.node
+          if (!pkg.engines || !pkg.engines.node) {
+            warnings.push('No "engines.node" field in package.json — plugins should declare their minimum Node.js version');
+          }
+
+          // ESM-only plugins can't be loaded by the server's require() call
+          if (pkg.type === 'module') {
+            warnings.push('package.json has "type": "module" — SignalK server loads plugins with require(). ESM-only plugins may fail to load.');
+          }
+
+          // baconjs is provided by the server — plugins must not bundle their own copy
+          if (pkg.dependencies && pkg.dependencies.baconjs) {
+            const baconRange = pkg.dependencies.baconjs;
+            // Accept shorthand ranges ("^3", "3", "3.x") as well as full semver.
+            // Only warn when we confidently parse a leading major < 3 — dist-tags,
+            // git specs, and other non-numeric ranges are left alone.
+            const baconMatch = baconRange.match(/^\s*[~^]?(\d+)(?:[.\s]|$)/);
+            if (baconMatch) {
+              const baconMajor = parseInt(baconMatch[1], 10);
+              if (baconMajor < 3) {
+                warnings.push(
+                  'Plugin bundles baconjs ' + baconRange + ' in dependencies. ' +
+                  'The Signal K server provides baconjs >= 3.x and forces all plugins to use its copy. ' +
+                  'Bundling an older version will be ignored at runtime and wastes install size. ' +
+                  'Remove baconjs from dependencies or update to ^3.0.0 and use the server-provided instance'
+                );
+              }
+            }
+          }
+
+          // React 19 required for plugins with embedded webapps (Module Federation)
+          const webappKeywords = ['signalk-plugin-configurator', 'signalk-embeddable-webapp', 'signalk-webapp'];
+          const matchedWebappKeywords = pkg.keywords ? webappKeywords.filter(kw => pkg.keywords.includes(kw)) : [];
+          if (matchedWebappKeywords.length > 0) {
+            const allDeps = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.peerDependencies };
+            const reactRange = allDeps.react;
+            if (reactRange) {
+              // Accept shorthand ranges ("^18", "18", "18.x") as well as full semver.
+              // Matches the baconjs check above — only warn when a leading major
+              // parses confidently. Dist-tags and git specs are left alone.
+              const versionMatch = reactRange.match(/^\s*[~^]?(\d+)(?:[.\s]|$)/);
+              if (versionMatch) {
+                const major = parseInt(versionMatch[1], 10);
+                if (major < 19) {
+                  warnings.push(
+                    'Plugin has webapp keyword (' + matchedWebappKeywords.join(', ') +
+                    ') but declares react ' + reactRange + ' (major version ' + major + '). ' +
+                    'The Signal K admin UI requires React >= 19 for Module Federation compatibility. ' +
+                    'Update your react and react-dom dependencies to ^19.0.0'
+                  );
+                }
+              }
+            }
+          }
+
+          warnings.forEach(w => console.log('::warning::' + w));
+          if (errors.length > 0) {
+            errors.forEach(e => console.log('::error::' + e));
+            process.exit(1);
+          }
+          console.log('Plugin package.json validation passed');
+          VALIDATE
+          node /tmp/validate-pkg.js
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "No package-lock.json found — using npm install instead of npm ci"
+            npm install
+          fi
+        shell: bash
+
+      - name: Build
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+        shell: bash
+        run: eval "$BUILD_CMD"
+
+      - name: Validate plugin entry point
+        id: validate-entry
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'ENTRYPOINT' > /tmp/validate-entry.js
+          const path = require('path');
+          const pkg = require(process.cwd() + '/package.json');
+          // Resolve the plugin's CommonJS entry point, honoring conditional
+          // exports like { ".": { "require": "./cjs/index.cjs" } } that
+          // modern TypeScript templates emit. Falls back to 'index.js'.
+          function resolveEntry(p, fallback) {
+            if (p && p.main) return p.main;
+            const e = p && p.exports;
+            if (typeof e === 'string') return e;
+            if (e && typeof e === 'object') {
+              const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+              if (typeof root === 'string') return root;
+              if (root && typeof root === 'object') {
+                for (const k of ['require', 'node', 'default', 'import']) {
+                  if (typeof root[k] === 'string') return root[k];
+                }
+              }
+            }
+            return fallback;
+          }
+          const entry = resolveEntry(pkg, 'index.js');
+          try {
+            const mod = require(path.resolve(entry));
+            const pluginConstructor = mod.default || mod;
+            if (typeof pluginConstructor !== 'function') {
+              console.log('::error::Plugin entry point does not export a function (got ' + typeof pluginConstructor + ')');
+              process.exit(1);
+            }
+            console.log('Plugin exports a valid constructor function (' + entry + ')');
+          } catch (e) {
+            console.log('::error::Failed to load plugin entry point (' + entry + '): ' + e.message);
+            process.exit(1);
+          }
+          process.exit(0);
+          ENTRYPOINT
+          node /tmp/validate-entry.js
+
+      - name: Validate plugin.schema() if defined
+        id: validate-schema
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'SCHEMACHECK' > /tmp/check-schema.js
+          const path = require('path');
+          const pkg = require(process.cwd() + '/package.json');
+          // See validate-entry.js for the rationale — object/conditional
+          // exports must be resolved, not flattened to 'index.js'.
+          function resolveEntry(p, fallback) {
+            if (p && p.main) return p.main;
+            const e = p && p.exports;
+            if (typeof e === 'string') return e;
+            if (e && typeof e === 'object') {
+              const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+              if (typeof root === 'string') return root;
+              if (root && typeof root === 'object') {
+                for (const k of ['require', 'node', 'default', 'import']) {
+                  if (typeof root[k] === 'string') return root[k];
+                }
+              }
+            }
+            return fallback;
+          }
+          const entry = resolveEntry(pkg, 'index.js');
+
+          let mod;
+          try {
+            mod = require(path.resolve(entry));
+          } catch (e) {
+            // Entry point already validated in previous step — skip schema check
+            console.log('Could not load plugin — skipping schema check');
+            process.exit(0);
+          }
+
+          const ctor = mod.default || mod;
+          if (typeof ctor !== 'function') {
+            process.exit(0);
+          }
+
+          // Minimal mock — only needs to survive the constructor
+          const mockApp = {
+            config: { configPath: '/tmp', version: '0.0.0' },
+            selfContext: 'vessels.urn:mrn:signalk:uuid:test',
+            getPath: () => '',
+            getSelfPath: () => undefined,
+            getMetadata: () => undefined,
+            getDataDirPath: () => '/tmp',
+            readPluginOptions: () => ({}),
+            savePluginOptions: (config, cb) => { if (cb) cb(null); },
+            handleMessage: () => {},
+            debug: () => {},
+            error: () => {},
+            setPluginStatus: () => {},
+            setPluginError: () => {},
+            reportError: () => {},
+            on: () => ({ unsubscribe: () => {} }),
+            registerPutHandler: () => {},
+            registerDeltaInputHandler: () => () => {},
+            subscriptionmanager: { subscribe: () => ({ unsubscribe: () => {} }) },
+            streambundle: { getSelfBus: () => ({ onValue: () => ({ unsubscribe: () => {} }) }) },
+            signalk: { self: 'vessels.urn:mrn:signalk:uuid:test', retrieve: () => ({}) }
+          };
+
+          let plugin;
+          try {
+            plugin = ctor(mockApp);
+          } catch (e) {
+            // Constructor needs a real app — we test lifecycle separately
+            console.log('Plugin constructor needs server context — skipping schema check');
+            process.exit(0);
+          }
+
+          // plugin.schema can be a function or a plain object (both are valid)
+          if (!plugin || (typeof plugin.schema !== 'function' && typeof plugin.schema !== 'object') || plugin.schema === null) {
+            console.log('Plugin does not define schema — nothing to check');
+            process.exit(0);
+          }
+
+          const schemaIsFunction = typeof plugin.schema === 'function';
+          const label = schemaIsFunction ? 'plugin.schema()' : 'plugin.schema';
+          let schema;
+
+          if (schemaIsFunction) {
+            // A throwing schema() crashes the server's plugin config UI
+            try {
+              schema = plugin.schema();
+            } catch (e) {
+              console.log('::error::' + label + ' threw an error: ' + e.message);
+              console.log('::error::This will crash the SignalK server when it tries to render the plugin config UI.');
+              process.exit(1);
+            }
+          } else {
+            schema = plugin.schema;
+          }
+
+          // Validate it returned something useful
+          if (schema === null || schema === undefined) {
+            console.log('::warning::' + label + ' returned ' + schema + ' — consider returning a valid JSON Schema object');
+            process.exit(0);
+          }
+
+          if (typeof schema !== 'object') {
+            console.log('::error::' + label + ' returned ' + typeof schema + ' instead of a JSON Schema object');
+            process.exit(1);
+          }
+
+          // Basic JSON Schema structure check (rjsf compatibility)
+          if (!schema.type && !schema.properties && !schema.oneOf && !schema.anyOf) {
+            console.log('::warning::' + label + ' has no type, properties, oneOf, or anyOf — is this a valid JSON Schema?');
+          }
+
+          // Check for JSON-hostile values that would be silently dropped or
+          // replaced by JSON.stringify. Circular refs throw from stringify;
+          // functions/symbols/undefined properties do not — walk the tree
+          // explicitly so authors get a useful error instead of data loss.
+          const jsonIssues = [];
+          const seen = new WeakSet();
+          function walk(node, path) {
+            if (node === null) return;
+            const t = typeof node;
+            if (t === 'function' || t === 'symbol') {
+              jsonIssues.push(path + ' is a ' + t + ' — JSON.stringify will drop it');
+              return;
+            }
+            if (t !== 'object') return;
+            if (seen.has(node)) {
+              jsonIssues.push(path + ' is a circular reference');
+              return;
+            }
+            seen.add(node);
+            if (Array.isArray(node)) {
+              node.forEach((v, i) => walk(v, path + '[' + i + ']'));
+              return;
+            }
+            for (const k of Object.keys(node)) {
+              const v = node[k];
+              if (v === undefined) {
+                jsonIssues.push(path + '.' + k + ' is undefined — JSON.stringify will drop this property');
+                continue;
+              }
+              walk(v, path + '.' + k);
+            }
+          }
+          walk(schema, 'schema');
+
+          if (jsonIssues.length > 0) {
+            jsonIssues.forEach(m => console.log('::error::' + label + ': ' + m));
+            console.log('::error::The server stores the schema as JSON — non-serializable members cause silent data loss.');
+            process.exit(1);
+          }
+
+          console.log(label + ' is a valid JSON Schema object');
+          process.exit(0);
+          SCHEMACHECK
+          node /tmp/check-schema.js
+
+      - name: Test plugin stop()/start() lifecycle
+        id: lifecycle-check
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'LIFECYCLE' > /tmp/check-lifecycle.js
+          const path = require('path');
+          const pkg = require(process.cwd() + '/package.json');
+          // See validate-entry.js for the rationale — object/conditional
+          // exports must be resolved, not flattened to 'index.js'.
+          function resolveEntry(p, fallback) {
+            if (p && p.main) return p.main;
+            const e = p && p.exports;
+            if (typeof e === 'string') return e;
+            if (e && typeof e === 'object') {
+              const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+              if (typeof root === 'string') return root;
+              if (root && typeof root === 'object') {
+                for (const k of ['require', 'node', 'default', 'import']) {
+                  if (typeof root[k] === 'string') return root[k];
+                }
+              }
+            }
+            return fallback;
+          }
+          const entry = resolveEntry(pkg, 'index.js');
+
+          let mod;
+          try {
+            mod = require(path.resolve(entry));
+          } catch (e) {
+            console.log('Could not load plugin — skipping lifecycle check');
+            process.exit(0);
+          }
+
+          const ctor = mod.default || mod;
+          if (typeof ctor !== 'function') {
+            process.exit(0);
+          }
+
+          // ── Delta validation helpers ──────────────────────────
+          const deltaWarnings = [];
+          const deltaErrors = [];
+          // Each dot-separated segment must start with a letter and may contain
+          // letters, digits, or hyphens — hyphens appear in plugin-chosen ids
+          // (e.g. electrical.batteries.house-bank).
+          const pathRe = /^[a-zA-Z][a-zA-Z0-9-]*(\.[a-zA-Z][a-zA-Z0-9-]*)*$/;
+
+          function validateDelta(id, data) {
+            if (!data || typeof data !== 'object') {
+              deltaErrors.push('handleMessage() called with non-object data: ' + typeof data);
+              return;
+            }
+            if (!data.updates) {
+              deltaErrors.push('handleMessage() called without updates field');
+              return;
+            }
+            if (!Array.isArray(data.updates)) {
+              deltaErrors.push('handleMessage() updates is ' + typeof data.updates + ' — must be an array');
+              return;
+            }
+            if (data.updates.length === 0) {
+              deltaWarnings.push('handleMessage() called with empty updates array');
+              return;
+            }
+            for (const update of data.updates) {
+              if (!update || typeof update !== 'object') {
+                deltaErrors.push('updates[] contains non-object: ' + typeof update);
+                continue;
+              }
+              const hasValues = 'values' in update;
+              const hasMeta = 'meta' in update;
+              if (!hasValues && !hasMeta) {
+                deltaErrors.push('update has neither values nor meta — server will silently discard it');
+              }
+              if (hasValues && !Array.isArray(update.values)) {
+                deltaErrors.push('update.values is ' + typeof update.values + ' — must be an array (server silently discards non-arrays)');
+              }
+              if (hasMeta && !Array.isArray(update.meta)) {
+                deltaErrors.push('update.meta is ' + typeof update.meta + ' — must be an array');
+              }
+              const items = [
+                ...(Array.isArray(update.values) ? update.values : []),
+                ...(Array.isArray(update.meta) ? update.meta : [])
+              ];
+              for (const item of items) {
+                if (!item || typeof item !== 'object') continue;
+                if (typeof item.path !== 'string') {
+                  deltaErrors.push('path is ' + typeof item.path + ' — must be a string');
+                } else if (item.path !== '' && !pathRe.test(item.path)) {
+                  deltaWarnings.push('path "' + item.path + '" has unusual format — expected dotted alphanumeric (e.g. navigation.position)');
+                }
+              }
+            }
+          }
+
+          // ── Mock app with delta capture ─────────────────────────
+          const mockApp = {
+            // ── Server configuration ──────────────────────────────
+            config: { configPath: '/tmp', version: '0.0.0' },
+            selfType: 'uuid',
+            selfId: 'urn:mrn:signalk:uuid:test',
+            selfContext: 'vessels.urn:mrn:signalk:uuid:test',
+
+            // ── Data model ────────────────────────────────────────
+            getPath: (p) => undefined,
+            getSelfPath: (p) => undefined,
+            getMetadata: (p) => undefined,
+            handleMessage: (id, data) => validateDelta(id, data),
+            putSelfPath: (aPath, value, cb) => { if (cb) cb({ state: 'COMPLETED', statusCode: 200 }); return Promise.resolve(); },
+            putPath: (aPath, value, cb) => { if (cb) cb({ state: 'COMPLETED', statusCode: 200 }); return Promise.resolve(); },
+            queryRequest: () => Promise.resolve({}),
+            streambundle: { getSelfBus: () => ({ onValue: () => ({ unsubscribe: () => {} }) }) },
+            subscriptionmanager: { subscribe: () => ({ unsubscribe: () => {} }) },
+            signalk: { self: 'vessels.urn:mrn:signalk:uuid:test', retrieve: () => ({}) },
+            registerDeltaInputHandler: (handler) => {
+              // Check the handler calls next() with a simple test
+              let nextCalled = false;
+              try {
+                handler({ updates: [{ values: [{ path: 'test.ci.probe', value: 0 }] }] }, (d) => { nextCalled = true; });
+              } catch (e) { /* handler may need real delta — skip check */ nextCalled = true; }
+              if (!nextCalled) {
+                deltaWarnings.push('registerDeltaInputHandler: handler did not call next() — this will silently drop deltas from all other plugins/sources');
+              }
+              return () => {};
+            },
+
+            // ── Plugin configuration ──────────────────────────────
+            readPluginOptions: () => ({}),
+            savePluginOptions: (configuration, cb) => { if (cb) cb(null); },
+            getDataDirPath: () => '/tmp',
+
+            // ── Status and debugging ──────────────────────────────
+            debug: () => {},
+            error: () => {},
+            setPluginStatus: (msg) => console.log('  status: ' + msg),
+            setPluginError: (msg) => console.log('  error: ' + msg),
+            reportError: () => {},
+            reportOutputMessages: () => {},
+
+            // ── PUT / action handlers ─────────────────────────────
+            registerPutHandler: () => {},
+            registerActionHandler: () => {},
+
+            // ── Event system ──────────────────────────────────────
+            on: () => ({ unsubscribe: () => {} }),
+            emit: () => {},
+            emitPropertyValue: () => {},
+            onPropertyValues: () => () => {},
+
+            // ── Provider registrations (no-op in CI) ──────────────
+            registerResourceProvider: () => {},
+            registerAutopilotProvider: () => {},
+            registerWeatherProvider: () => {},
+            registerHistoryProvider: () => {},
+            registerHistoryApiProvider: () => {},
+
+            // ── API access (no-op stubs) ──────────────────────────
+            getFeatures: () => Promise.resolve({ apis: [], plugins: [] }),
+            getCourse: () => Promise.resolve({}),
+            clearDestination: () => Promise.resolve(),
+            setDestination: () => Promise.resolve(),
+            activateRoute: () => Promise.resolve(),
+            getSerialPorts: () => Promise.resolve({ byId: [], byPath: [], byOpenPlotter: [], serialports: [] }),
+          };
+
+          let plugin;
+          try {
+            plugin = ctor(mockApp);
+          } catch (e) {
+            console.log('Plugin constructor requires server context — skipping lifecycle check');
+            process.exit(0);
+          }
+
+          if (!plugin || typeof plugin.start !== 'function' || typeof plugin.stop !== 'function') {
+            console.log('Plugin does not have start()/stop() — skipping lifecycle check');
+            process.exit(0);
+          }
+
+          // The server calls registerWithRouter() before start() if defined
+          if (typeof plugin.registerWithRouter === 'function') {
+            const noOp = () => mockRouter;
+            const mockRouter = { get: noOp, post: noOp, put: noOp, delete: noOp, patch: noOp, use: noOp, all: noOp, route: noOp, param: noOp };
+            try {
+              plugin.registerWithRouter(mockRouter);
+              console.log('registerWithRouter() — ok');
+            } catch (e) {
+              const msg = e.message || String(e);
+              console.log('::warning::registerWithRouter() threw: ' + msg);
+            }
+          }
+
+          // Detect errors caused by missing CI mock methods vs real plugin bugs
+          function isMockGap(msg) {
+            return /\w+ is not a function/.test(msg) || /Cannot read propert/.test(msg);
+          }
+
+          // Wrap in an async IIFE so that Promise-returning start()/stop()
+          // hooks surface rejections via await — a sync try/catch around
+          // `plugin.start({})` would silently swallow them.
+          (async () => {
+          try {
+            await Promise.resolve(plugin.start({}));
+            console.log('start({}) — ok');
+          } catch (e) {
+            const msg = e.message || String(e);
+            console.log('::warning::plugin.start({}) threw: ' + msg);
+            if (isMockGap(msg)) {
+              console.log('::warning::This looks like a missing CI mock method, not a plugin bug. Please report at https://github.com/SignalK/signalk-server/issues');
+            } else {
+              console.log('::warning::Plugins should handle empty/default configuration gracefully.');
+            }
+            process.exit(0);
+          }
+
+          try {
+            await Promise.resolve(plugin.stop());
+            console.log('stop() — ok');
+          } catch (e) {
+            const msg = e.message || String(e);
+            if (isMockGap(msg)) {
+              console.log('::warning::plugin.stop() threw: ' + msg);
+              console.log('::warning::This looks like a missing CI mock method, not a plugin bug. Please report at https://github.com/SignalK/signalk-server/issues');
+              // Don't fail the build for mock gaps
+            } else {
+              console.log('::error::plugin.stop() threw: ' + msg);
+              console.log('::error::This causes the server to leak resources when the plugin is disabled or restarted.');
+              process.exit(1);
+            }
+          }
+
+          // Restart: the server calls stop() then start() when config changes
+          try {
+            await Promise.resolve(plugin.start({}));
+            console.log('start({}) again — ok (restart works)');
+          } catch (e) {
+            const msg = e.message || String(e);
+            if (isMockGap(msg)) {
+              console.log('::warning::plugin.start({}) threw on restart: ' + msg);
+              console.log('::warning::This looks like a missing CI mock method, not a plugin bug. Please report at https://github.com/SignalK/signalk-server/issues');
+              process.exit(0);
+            }
+            console.log('::error::plugin.start({}) threw on second call: ' + msg);
+            console.log('::error::Plugins must support restart (stop then start). This fails when users toggle the plugin in the server UI.');
+            process.exit(1);
+          }
+
+          try { await Promise.resolve(plugin.stop()); } catch (e) { /* ignore */ }
+
+          // ── Report delta validation results ─────────────────────
+          if (deltaWarnings.length > 0 || deltaErrors.length > 0) {
+            console.log('');
+            console.log('Delta validation (from deltas emitted during start):');
+          }
+          deltaWarnings.forEach(w => console.log('::warning::Delta: ' + w));
+          deltaErrors.forEach(e => console.log('::error::Delta: ' + e));
+          if (deltaErrors.length > 0) {
+            console.log('');
+            console.log('Malformed deltas are silently discarded by the server —');
+            console.log('the plugin appears to work but data never reaches consumers.');
+            process.exit(1);
+          }
+
+          console.log('Plugin lifecycle (start/stop/restart) is clean');
+          process.exit(0);
+          })().catch(e => {
+            console.log('::error::Unexpected error during lifecycle check: ' + (e && e.message || String(e)));
+            process.exit(1);
+          });
+          LIFECYCLE
+          node /tmp/check-lifecycle.js
+
+      - name: Scan for deprecated and misused SignalK APIs
+        id: deprecated-api
+        shell: bash
+        run: |
+          cat << 'APISCAN' > /tmp/check-api-usage.js
+          const fs = require('fs');
+          const path = require('path');
+
+          // ── Deprecated APIs (warnings) ──────────────────────────
+          const deprecated = [
+            {
+              pattern: /\bsetProviderStatus\s*\(/g,
+              message: 'setProviderStatus() is deprecated — use setPluginStatus() instead',
+            },
+            {
+              pattern: /\bsetProviderError\s*\(/g,
+              message: 'setProviderError() is deprecated — use setPluginError() instead',
+            },
+          ];
+
+          // ── Informational notices ────────────────────────────────
+          // Not errors or warnings — just pointers to newer alternatives
+          const informational = [
+            {
+              pattern: /\bregisterHistoryProvider\s*\(/g,
+              message: 'registerHistoryProvider() is the v1 history API (playback/snapshots). For time-series history, see registerHistoryApiProvider() (v2 History API)',
+            },
+          ];
+
+          // ── API misuse (errors) ─────────────────────────────────
+          // These access internal server properties not exposed to plugins
+          const misuse = [
+            {
+              pattern: /\bapp\.server\b/g,
+              message: 'app.server is an internal property — not part of the plugin API',
+            },
+            {
+              pattern: /\bapp\.deltaCache\b/g,
+              message: 'app.deltaCache is internal — use app.getPath() instead',
+            },
+            {
+              pattern: /\bapp\.pluginsMap\b/g,
+              message: 'app.pluginsMap is internal — not part of the plugin API',
+            },
+            {
+              pattern: /\bhistoryApiHttpRegistry\b/g,
+              message: 'historyApiHttpRegistry is internal (explicitly hidden from plugins) — use app.registerHistoryApiProvider()',
+            },
+          ];
+
+          // ── Route registration anti-pattern (warnings) ──────────
+          // Plugins should use registerWithRouter(router) not direct app.get/post
+          const routeAntiPatterns = [
+            {
+              pattern: /\bapp\.(get|post|put|delete|patch|use)\s*\(\s*['"`\/]/g,
+              message: 'Direct Express route on app object — use registerWithRouter(router) or signalKApiRoutes(router) instead',
+            },
+          ];
+
+          // ── File storage anti-patterns (warnings) ───────────────
+          // Plugins should use app.getDataDirPath() for data files,
+          // not write to __dirname (node_modules), process.cwd() (server dir),
+          // or access app.config.configPath directly
+          const fileStorageAntiPatterns = [
+            {
+              pattern: /\b(writeFileSync|writeFile|mkdirSync|mkdir|appendFileSync|createWriteStream)\b[^)]*\b__dirname\b/g,
+              message: 'Writing files relative to __dirname — this writes into node_modules. Use app.getDataDirPath() instead',
+            },
+            {
+              pattern: /\b(writeFileSync|writeFile|mkdirSync|mkdir|appendFileSync|createWriteStream)\b[^)]*\bprocess\.cwd\(\)/g,
+              message: 'Writing files relative to process.cwd() — this writes into the server directory. Use app.getDataDirPath() instead',
+            },
+            {
+              pattern: /\bapp\.config\.configPath\b/g,
+              message: 'Direct access to app.config.configPath — use app.getDataDirPath() for plugin data or app.savePluginOptions() for config',
+            },
+          ];
+
+          // ── Security anti-patterns (warnings) ─────────────────────
+          // Plugin routes via registerWithRouter() are automatically admin-protected.
+          // PUT handlers via registerPutHandler() have built-in permission checks.
+          // Plugins should NOT implement their own auth logic or access security internals.
+          const securityAntiPatterns = [
+            {
+              pattern: /\bapp\.securityStrategy\b/g,
+              message: 'Direct access to app.securityStrategy — this is a server internal. Plugin routes via registerWithRouter() are already admin-protected; PUT handlers via registerPutHandler() have built-in permission checks',
+            },
+            {
+              pattern: /\bisDummy\s*\(\)/g,
+              message: 'Checking isDummy() to branch security logic — plugins should not change behavior based on security mode. Use the built-in route protection instead',
+            },
+            {
+              pattern: /\breq\.skPrincipal\b/g,
+              message: 'Manual req.skPrincipal inspection — plugin routes under /plugins/* are already admin-only. If you need user identity, use req.skPrincipal.identifier but do not implement your own permission checks',
+            },
+            {
+              pattern: /\baddAdminWriteMiddleware\b/g,
+              message: 'addAdminWriteMiddleware is a server internal — plugin routes via registerWithRouter() are already admin-protected',
+            },
+            {
+              pattern: /\baddWriteMiddleware\b/g,
+              message: 'addWriteMiddleware is a server internal — use registerPutHandler() for write operations with built-in permission checks',
+            },
+          ];
+
+          const srcFiles = [];
+          function collectFiles(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') continue;
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) { collectFiles(full); continue; }
+              if (/\.(js|ts|mjs|cjs)$/.test(entry.name)) srcFiles.push(full);
+            }
+          }
+          collectFiles('.');
+
+          const notices = [];
+          const warnings = [];
+          const errors = [];
+
+          for (const file of srcFiles) {
+            const content = fs.readFileSync(file, 'utf8');
+            const lines = content.split('\n');
+            const relFile = path.relative('.', file);
+
+            // Strip comments before scanning so commented-out examples (either
+            // "// app.server" or "/* app.server */" forms, on their own line
+            // or inline with real code) do not trigger API misuse warnings.
+            // String literals are not parsed — a comment-like sequence inside
+            // a string is still treated as a comment, an accepted false-pos.
+            const codeLines = new Array(lines.length);
+            let inBlock = false;
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+              let out = '';
+              let pos = 0;
+              while (pos < line.length) {
+                if (inBlock) {
+                  const end = line.indexOf('*/', pos);
+                  if (end === -1) { pos = line.length; break; }
+                  inBlock = false;
+                  pos = end + 2;
+                } else if (line.startsWith('//', pos)) {
+                  break; // rest of line is a // comment
+                } else if (line.startsWith('/*', pos)) {
+                  inBlock = true;
+                  pos += 2;
+                } else {
+                  out += line[pos];
+                  pos += 1;
+                }
+              }
+              codeLines[i] = out;
+            }
+
+            function scanPatterns(patterns, target) {
+              for (const pat of patterns) {
+                for (let i = 0; i < lines.length; i++) {
+                  if (!codeLines[i]) continue;
+                  if (pat.pattern.test(codeLines[i])) {
+                    target.push(relFile + ':' + (i + 1) + ' — ' + pat.message);
+                  }
+                  pat.pattern.lastIndex = 0;
+                }
+              }
+            }
+
+            scanPatterns(informational, notices);
+            scanPatterns(deprecated, warnings);
+            scanPatterns(misuse, errors);
+            scanPatterns(routeAntiPatterns, warnings);
+            scanPatterns(fileStorageAntiPatterns, warnings);
+            scanPatterns(securityAntiPatterns, warnings);
+          }
+
+          // ── Node built-in module version checks ────────────────
+          // Some node: built-in modules require specific Node versions.
+          // If a plugin uses them but engines.node allows older versions, it will crash.
+          const pkg = require(path.resolve('package.json'));
+          const enginesNode = pkg.engines && pkg.engines.node;
+
+          // Extract minimum Node version from engines.node (e.g. ">=18", ">=18.0.0", "^20", "18.x")
+          function parseMinNodeVersion(range) {
+            if (!range) return null;
+            const m = range.match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+            if (!m) return null;
+            return [parseInt(m[1], 10), parseInt(m[2] || '0', 10), parseInt(m[3] || '0', 10)];
+          }
+
+          function versionLt(a, b) {
+            // a, b are [major, minor, patch] arrays
+            for (let i = 0; i < 3; i++) {
+              if (a[i] < b[i]) return true;
+              if (a[i] > b[i]) return false;
+            }
+            return false;
+          }
+
+          const nodeBuiltinVersionReqs = [
+            { pattern: /\brequire\s*\(\s*['"]node:sqlite['"]\s*\)|from\s+['"]node:sqlite['"]/g, module: 'node:sqlite', minVersion: [22, 5, 0] },
+            { pattern: /\brequire\s*\(\s*['"]node:test['"]\s*\)|from\s+['"]node:test['"]/g, module: 'node:test', minVersion: [18, 0, 0], testOnly: true },
+          ];
+
+          for (const file of srcFiles) {
+            const content = fs.readFileSync(file, 'utf8');
+            const relFile = path.relative('.', file);
+            for (const check of nodeBuiltinVersionReqs) {
+              check.pattern.lastIndex = 0;
+              if (!check.pattern.test(content)) { check.pattern.lastIndex = 0; continue; }
+              check.pattern.lastIndex = 0;
+
+              // Skip test-only modules in test files
+              if (check.testOnly && /\b(test|spec|__tests__)\b/i.test(relFile)) continue;
+
+              // If the file has try/catch or .catch() around the import, it handles
+              // the module being unavailable gracefully (e.g. dynamic import with fallback).
+              // Downgrade to warning instead of error.
+              const hasTryCatch = /try\s*\{[\s\S]*?\brequire\s*\(\s*['"]node:(sqlite|test)['"]\s*\)[\s\S]*?\}\s*catch/g.test(content) ||
+                /import\s*\(\s*['"]node:(sqlite|test)['"]\s*\)/.test(content);
+
+              const minVerStr = check.minVersion.join('.');
+
+              if (!enginesNode) {
+                // No engines.node at all — always an error. The plugin MUST declare
+                // its minimum Node version so servers and users know the requirement.
+                errors.push(relFile + ' — uses ' + check.module + ' (requires Node >= ' + minVerStr + ') but package.json has no engines.node field. Add engines.node to declare the minimum version.');
+              } else {
+                const minDeclared = parseMinNodeVersion(enginesNode);
+                if (minDeclared && versionLt(minDeclared, check.minVersion)) {
+                  // engines.node is set but allows older versions. If the plugin handles
+                  // the module being unavailable (dynamic import with fallback), downgrade
+                  // to warning — the plugin works in degraded mode on older Node.
+                  const target = hasTryCatch ? warnings : errors;
+                  const suffix = hasTryCatch ? ' (dynamic import with fallback detected — verify graceful degradation)' : '';
+                  target.push(relFile + ' — uses ' + check.module + ' (requires Node >= ' + minVerStr + ') but engines.node "' + enginesNode + '" allows Node ' + minDeclared.join('.') + suffix);
+                }
+              }
+            }
+          }
+
+          if (notices.length === 0 && warnings.length === 0 && errors.length === 0) {
+            console.log('No deprecated or misused API patterns found');
+          }
+          notices.forEach(n => console.log('::notice::' + n));
+          warnings.forEach(w => console.log('::warning::' + w));
+          errors.forEach(e => console.log('::error::' + e));
+
+          if (errors.length > 0) {
+            console.log('');
+            console.log('Found ' + errors.length + ' API misuse(s). These access internal server');
+            console.log('properties that are not part of the plugin API and may break');
+            console.log('without notice in future server updates.');
+            console.log('');
+            console.log('See: https://signalk.org/signalk-server/develop/plugins/server_api.html');
+            process.exit(1);
+          }
+          process.exit(0);
+          APISCAN
+          node /tmp/check-api-usage.js
+
+      - name: Verify npm pack includes all required files
+        id: pack-check
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cat << 'PACKCHECK' > /tmp/check-pack.js
+          const { execSync } = require('child_process');
+          const pkg = require(process.cwd() + '/package.json');
+          const path = require('path');
+
+          // See validate-entry.js for the rationale. Null fallback: if the
+          // plugin declares no main/exports, there is nothing to check.
+          function resolveEntry(p, fallback) {
+            if (p && p.main) return p.main;
+            const e = p && p.exports;
+            if (typeof e === 'string') return e;
+            if (e && typeof e === 'object') {
+              const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+              if (typeof root === 'string') return root;
+              if (root && typeof root === 'object') {
+                for (const k of ['require', 'node', 'default', 'import']) {
+                  if (typeof root[k] === 'string') return root[k];
+                }
+              }
+            }
+            return fallback;
+          }
+
+          // Get list of files that npm pack would include
+          // --ignore-scripts: don't re-run prepack (we already built in a prior step)
+          // stdio pipe suppresses stderr cross-platform (2>/dev/null breaks on Windows)
+          let packOutput;
+          try {
+            packOutput = execSync('npm pack --dry-run --json --ignore-scripts', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+          } catch (e) {
+            packOutput = e.stdout || '';
+          }
+          let files;
+          try {
+            const parsed = JSON.parse(packOutput);
+            files = parsed[0].files.map(f => f.path);
+          } catch (e) {
+            // Fallback: parse non-JSON dry-run output
+            let raw;
+            try {
+              raw = execSync('npm pack --dry-run --ignore-scripts', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+            } catch (e2) {
+              raw = e2.stdout || '';
+            }
+            files = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('npm') && !l.startsWith('Tarball'));
+          }
+
+          const errors = [];
+          const warnings = [];
+
+          // Check main entry point is included
+          const main = resolveEntry(pkg, null);
+          if (main && !files.includes(main) && !files.includes(main.replace(/^\.\//, ''))) {
+            errors.push('"main" field points to ' + main + ' but this file is NOT in the npm package.');
+            errors.push('The plugin will be broken when installed from npm. Add it to "files" in package.json or remove it from .npmignore.');
+          }
+
+          // Check exports map entries
+          if (pkg.exports && typeof pkg.exports === 'object') {
+            function checkExports(obj, prefix) {
+              for (const [key, val] of Object.entries(obj)) {
+                if (typeof val === 'string') {
+                  const clean = val.replace(/^\.\//, '');
+                  if (!files.includes(clean) && !files.includes(val)) {
+                    errors.push('"exports" entry ' + prefix + key + ' points to ' + val + ' but it is NOT in the npm package.');
+                  }
+                } else if (typeof val === 'object') {
+                  checkExports(val, prefix + key + '.');
+                }
+              }
+            }
+            checkExports(pkg.exports, '');
+          }
+
+          // Check for schema.json if plugin defines schema()
+          if (files.some(f => /schema\.json/i.test(f))) {
+            console.log('schema.json found in package — good');
+          }
+
+          // Warn if dist/ or lib/ referenced but not included
+          if (main && (main.startsWith('dist/') || main.startsWith('lib/'))) {
+            const dir = main.split('/')[0];
+            if (!files.some(f => f.startsWith(dir + '/'))) {
+              errors.push('"main" references ' + dir + '/ directory but no files from it are in the package. Did you forget to build, or need to add "' + dir + '" to the "files" array in package.json?');
+            }
+          }
+
+          warnings.forEach(w => console.log('::warning::' + w));
+          if (errors.length > 0) {
+            errors.forEach(e => console.log('::error::' + e));
+            process.exit(1);
+          }
+          console.log('All entry points are included in the npm package');
+          process.exit(0);
+          PACKCHECK
+          node /tmp/check-pack.js
+
+      - name: Check ES2023 compatibility (Cerbo GX / Node 20)
+        id: es-check
+        if: always() && steps.pack-check.outcome != 'skipped'
+        shell: bash
+        run: |
+          # Cerbo GX (Venus OS) runs Node 20 which supports ES2023 syntax.
+          # Plugins using ES2024+ syntax (RegExp v flag, import attributes)
+          # will crash with SyntaxError on Node 20.
+          # Only check server-side JS (dist/, lib/, main entry) — skip public/
+          # which is frontend code running in browsers.
+          FILES=""
+          for dir in dist lib; do
+            if [ -d "$dir" ]; then
+              for ext in js cjs mjs; do
+                if find "$dir" -name "*.$ext" -print -quit 2>/dev/null | grep -q .; then
+                  FILES="$FILES $dir/**/*.$ext"
+                fi
+              done
+            fi
+          done
+
+          MAIN=$(node -e "
+            const pkg = require('./package.json');
+            function resolveEntry(p, fallback) {
+              if (p && p.main) return p.main;
+              const e = p && p.exports;
+              if (typeof e === 'string') return e;
+              if (e && typeof e === 'object') {
+                const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
+                if (typeof root === 'string') return root;
+                if (root && typeof root === 'object') {
+                  for (const k of ['require', 'node', 'default', 'import']) {
+                    if (typeof root[k] === 'string') return root[k];
+                  }
+                }
+              }
+              return fallback;
+            }
+            const main = resolveEntry(pkg, null);
+            if (main) console.log(main);
+          " 2>/dev/null)
+          if [ -n "$MAIN" ] && [ -f "$MAIN" ] && [ -z "$FILES" ]; then
+            FILES="$MAIN"
+          fi
+
+          if [ -z "$FILES" ]; then
+            echo "No built JS files found to check"
+            exit 0
+          fi
+
+          echo "Checking ES2023 compatibility: $FILES"
+          if ! npx --yes es-check@8 es2023 $FILES 2>&1; then
+            echo ""
+            echo "::warning::Plugin uses ES2024+ syntax not supported by Node 20 (Cerbo GX / Venus OS). Consider targeting ES2023 in your TypeScript/build config or tsconfig.json to maintain Cerbo GX compatibility."
+          fi
+
+      - name: Simulate App Store install (--ignore-scripts)
+        id: appstore-check
+        shell: bash
+        env:
+          APPSTORE_DIR: ${{ runner.temp }}/appstore-test
+        run: |
+          # SignalK server installs plugins with --ignore-scripts (src/modules.ts:223)
+          # This means native addons (better-sqlite3, serialport, etc.) are NOT compiled.
+          # This test catches plugins that will break when installed via the App Store.
+          echo "Simulating SignalK App Store install (npm install --ignore-scripts)..."
+          PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP")
+
+          mkdir -p "$APPSTORE_DIR"
+          cd "$APPSTORE_DIR"
+          npm init -y > /dev/null 2>&1
+          npm install --ignore-scripts "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")" 2>&1
+
+          # Scan for native addon dependencies (binding.gyp = needs compilation)
+          # Uses Node.js for cross-platform compatibility (works on Linux, macOS, Windows)
+          cat << 'CHECKSCRIPT' > "$RUNNER_TEMP/check-native.js"
+          const fs = require('fs');
+          const path = require('path');
+          const nmDir = path.join(process.env.APPSTORE_DIR, 'node_modules');
+          const nativeModules = [];
+
+          function findNativeModules(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir)) {
+              if (entry === '.package-lock.json') continue;
+              const full = path.join(dir, entry);
+              if (entry.startsWith('@')) {
+                findNativeModules(full);
+                continue;
+              }
+              if (fs.existsSync(path.join(full, 'binding.gyp'))) {
+                nativeModules.push(entry);
+              }
+              const nested = path.join(full, 'node_modules');
+              if (fs.existsSync(nested)) findNativeModules(nested);
+            }
+          }
+
+          findNativeModules(nmDir);
+
+          if (nativeModules.length === 0) {
+            console.log('No native addons found — App Store install is safe');
+            process.exit(0);
+          }
+
+          // Classify native modules as required vs optional using the lockfile
+          const optionalSet = new Set();
+          const lockPath = path.join(nmDir, '.package-lock.json');
+          if (fs.existsSync(lockPath)) {
+            try {
+              const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+              for (const [key, meta] of Object.entries(lock.packages || {})) {
+                if (meta.optional) optionalSet.add(path.basename(key));
+              }
+            } catch (e) { /* ignore parse errors — treat all as required */ }
+          }
+
+          const requiredNative = nativeModules.filter(m => !optionalSet.has(m));
+          const optionalNative = nativeModules.filter(m => optionalSet.has(m));
+
+          if (optionalNative.length > 0) {
+            console.log('::warning::Optional native addons found: ' + optionalNative.join(', ') + '. App Store uses --ignore-scripts so these will not be compiled. The parent package declares them optional, so the plugin may still work — verify it works without them.');
+          }
+
+          if (requiredNative.length > 0) {
+            console.log('::error::Plugin depends on native addons: ' + requiredNative.join(', ') + '. App Store uses --ignore-scripts — native addons will NOT be compiled and the plugin will CRASH at runtime.');
+            console.log('');
+            console.log('Use alternatives that do not require native compilation, e.g.:');
+            console.log('  - node:sqlite (built into Node >= 22) instead of better-sqlite3');
+            console.log('  - Pure JavaScript packages instead of native addons');
+            process.exit(1);
+          }
+
+          process.exit(0);
+          CHECKSCRIPT
+          node "$RUNNER_TEMP/check-native.js"
+
+      - name: Lint (if available)
+        run: npm run lint --if-present
+        continue-on-error: true
+
+      - name: Check formatting
+        if: ${{ inputs.format-check-command != '' }}
+        env:
+          FORMAT_CMD: ${{ inputs.format-check-command }}
+        shell: bash
+        run: eval "$FORMAT_CMD"
+
+      - name: Run tests with coverage
+        if: ${{ inputs.coverage-command != '' }}
+        id: coverage
+        env:
+          COVERAGE_CMD: ${{ inputs.coverage-command }}
+        shell: bash
+        run: |
+          set -eo pipefail
+          eval "$COVERAGE_CMD" | tee "$RUNNER_TEMP/coverage.log"
+          {
+            echo '## Test coverage (Node ${{ matrix.node }} / ${{ runner.os }})'
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/coverage.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run tests
+        if: ${{ inputs.coverage-command == '' }}
+        id: tests
+        env:
+          TEST_CMD: ${{ inputs.test-command }}
+        shell: bash
+        run: |
+          # Detect if the plugin has a real test script
+          HAS_TESTS=$(node -e "
+            const pkg = require('./package.json');
+            const test = pkg.scripts && pkg.scripts.test;
+            // npm init sets test to 'echo \"Error: no test specified\" && exit 1'
+            if (!test || test.includes('no test specified')) {
+              process.exit(1);
+            }
+          " && echo "yes" || echo "no")
+
+          if [ "$HAS_TESTS" = "yes" ]; then
+            eval "$TEST_CMD"
+          else
+            echo "::notice::No test script defined — skipping tests"
+          fi
+
+      - name: Check for untracked files after build/test
+        id: stray-files
+        shell: bash
+        run: |
+          # Plugins should not leave stray files in the repo after install/build/test.
+          UNTRACKED=$(git ls-files --others --exclude-standard -- ':!node_modules' ':!.npm')
+          if [ -n "$UNTRACKED" ]; then
+            echo "::warning::Build/test left untracked files in the repository:"
+            echo "$UNTRACKED" | while read -r f; do echo "  $f"; done
+            echo ""
+            echo "These files would pollute the signalk-server git directory when"
+            echo "the plugin is installed. Add them to .gitignore or fix the build"
+            echo "to write output into node_modules or a temp directory."
+          fi
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        env:
+          VALIDATE_PKG: ${{ steps.validate-pkg.outcome }}
+          VALIDATE_ENTRY: ${{ steps.validate-entry.outcome }}
+          VALIDATE_SCHEMA: ${{ steps.validate-schema.outcome }}
+          LIFECYCLE_CHECK: ${{ steps.lifecycle-check.outcome }}
+          DEPRECATED_API: ${{ steps.deprecated-api.outcome }}
+          PACK_CHECK: ${{ steps.pack-check.outcome }}
+          APPSTORE_CHECK: ${{ steps.appstore-check.outcome }}
+          # When coverage-command is set, steps.tests is skipped and the
+          # coverage step runs instead — surface whichever actually ran.
+          TESTS: ${{ inputs.coverage-command != '' && steps.coverage.outcome || steps.tests.outcome }}
+          STRAY_FILES: ${{ steps.stray-files.outcome }}
+          ES_CHECK: ${{ steps.es-check.outcome }}
+          OS_NAME: >-
+            ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
+                matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
+                matrix.os == 'macos-latest' && 'macOS' ||
+                matrix.os == 'windows-latest' && 'Windows' ||
+                matrix.os }}
+          NODE_VER: ${{ matrix.node }}
+        run: |
+          icon() {
+            case "$1" in
+              success)  echo "pass" ;;
+              failure)  echo "FAIL" ;;
+              skipped)  echo "skip" ;;
+              *)        echo "—" ;;
+            esac
+          }
+
+          PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
+          PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
+
+          {
+            echo "### $OS_NAME / Node $NODE_VER — $PLUGIN_NAME@$PLUGIN_VER"
+            echo ""
+            echo "| Check | Result |"
+            echo "|-------|--------|"
+            echo "| package.json valid | $(icon "$VALIDATE_PKG") |"
+            echo "| Entry point exports function | $(icon "$VALIDATE_ENTRY") |"
+            echo "| plugin.schema() valid | $(icon "$VALIDATE_SCHEMA") |"
+            echo "| start/stop/restart lifecycle | $(icon "$LIFECYCLE_CHECK") |"
+            echo "| API usage (no deprecated/internal) | $(icon "$DEPRECATED_API") |"
+            echo "| npm pack includes all files | $(icon "$PACK_CHECK") |"
+            echo "| App Store compatible (no native addons) | $(icon "$APPSTORE_CHECK") |"
+            echo "| Tests / coverage | $(icon "$TESTS") |"
+            echo "| ES2023 compatible (Cerbo GX / Node 20) | $(icon "$ES_CHECK") |"
+            echo "| No stray files after build | $(icon "$STRAY_FILES") |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.os }}-node${{ matrix.node }}
+          path: |
+            test-results/
+            coverage/
+            junit*.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ════════════════════════════════════════════════════════════
+  #  armv7 — Cerbo GX / Raspberry Pi (32-bit ARM via QEMU)
+  # ════════════════════════════════════════════════════════════
+  armv7:
+    name: armv7 (Cerbo GX) / Node 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ inputs.enable-armv7 }}
+    # Expose the test-step outcome so ci-status can distinguish a step
+    # failure (advisory) from the job itself completing.
+    outputs:
+      advisory-outcome: ${{ steps.armv7-test.outcome }}
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU for ARM emulation
+        # Advisory: a QEMU setup failure must not block the workflow — the
+        # armv7 test step handles its own failure via continue-on-error, and
+        # if QEMU truly didn't initialize, docker run will fail there instead.
+        continue-on-error: true
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: linux/arm/v7
+
+      - name: Cache npm for armv7
+        uses: actions/cache@v5
+        with:
+          path: /tmp/.npm-armv7-cache
+          key: armv7-npm-${{ hashFiles('**/package-lock.json', '**/package.json') }}
+          restore-keys: |
+            armv7-npm-
+
+      - name: Test on armv7 via QEMU
+        id: armv7-test
+        # Advisory: do not fail the workflow when armv7 tests fail. The
+        # outcome is captured via the job output above and surfaced in the
+        # ci-status summary.
+        continue-on-error: true
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+          TEST_CMD: ${{ inputs.test-command }}
+        run: |
+          docker run --rm --platform linux/arm/v7 \
+            -v "${{ github.workspace }}:/plugin" \
+            -v "/tmp/.npm-armv7-cache:/root/.npm" \
+            -w /plugin \
+            -e BUILD_CMD \
+            -e TEST_CMD \
+            node:20-bookworm-slim \
+            bash -c '
+              set -e
+              echo "── System info ──"
+              echo "arch: $(uname -m)  node: $(node -v)  npm: $(npm -v)"
+              echo "── Installing build tools (python3, make, g++) ──"
+              apt-get update -qq && apt-get install -y -qq python3 make g++ > /dev/null 2>&1
+              echo "── Installing dependencies ──"
+              if [ -f package-lock.json ]; then
+                npm ci --ignore-scripts
+              else
+                npm install --ignore-scripts
+              fi
+              npm rebuild
+              echo "── Building ──"
+              eval "$BUILD_CMD"
+
+              echo "── Checking for native addons ──"
+              node -e "
+                const fs = require(\"fs\"), path = require(\"path\");
+                const nm = [];
+                function scan(dir) {
+                  if (!fs.existsSync(dir)) return;
+                  for (const e of fs.readdirSync(dir)) {
+                    if (e === \".package-lock.json\") continue;
+                    const f = path.join(dir, e);
+                    if (e.startsWith(\"@\")) { scan(f); continue; }
+                    if (fs.existsSync(path.join(f, \"binding.gyp\"))) nm.push(e);
+                    const n = path.join(f, \"node_modules\");
+                    if (fs.existsSync(n)) scan(n);
+                  }
+                }
+                scan(\"./node_modules\");
+                if (nm.length === 0) { console.log(\"No native addons\"); process.exit(0); }
+                console.log(\"Native addons compiled for armv7: \" + nm.join(\", \"));
+              "
+
+              echo "── Running tests ──"
+              HAS_TESTS=$(node -e "
+                const pkg = require(\"./package.json\");
+                const test = pkg.scripts && pkg.scripts.test;
+                if (!test || test.includes(\"no test specified\")) process.exit(1);
+              " && echo "yes" || echo "no")
+              if [ "$HAS_TESTS" = "yes" ]; then
+                eval "$TEST_CMD"
+              else
+                echo "::notice::No test script defined — skipping tests"
+              fi
+            '
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        run: |
+          PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
+          PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
+          # Use the test-step outcome, not job.status — the job itself
+          # succeeds (continue-on-error) even when the step fails.
+          RESULT="${{ steps.armv7-test.outcome }}"
+
+          {
+            echo "### armv7 (Cerbo GX) / Node 20 — ${PLUGIN_NAME}@${PLUGIN_VER}"
+            echo ""
+            echo "**Environment**: Venus OS 3.70 emulation (QEMU armv7, Debian Bookworm, python3, make, g++)"
+            echo ""
+            if [[ "$RESULT" == "success" ]]; then
+              echo "Install, build, and tests completed successfully under armv7 emulation."
+            else
+              echo "The armv7 job **failed**. Your plugin may not work on 32-bit ARM devices (Cerbo GX, Raspberry Pi OS 32-bit)."
+            fi
+            echo ""
+            echo "> This test is **advisory and non-blocking** — armv7 failures do not fail the overall CI."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ════════════════════════════════════════════════════════════
+  #  Optional: SignalK server integration test
+  # ════════════════════════════════════════════════════════════
+  signalk-integration:
+    name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ inputs.enable-signalk-integration }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ${{ fromJson(inputs.node-versions) }}
+        signalk-server-version: ${{ fromJson(inputs.signalk-server-versions) }}
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Install SignalK server ${{ matrix.signalk-server-version }}
+        run: |
+          mkdir -p /tmp/sk-test
+          cd /tmp/sk-test
+          npm init -y
+          npm install signalk-server@${{ matrix.signalk-server-version }}
+
+      - name: Build plugin
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+          eval "$BUILD_CMD"
+
+      - name: Install plugin into SignalK
+        run: |
+          # Pack the plugin and install it into the test server. Use basename
+          # defensively: some npm versions emit a path-prefixed tarball name.
+          PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination /tmp)
+          cd /tmp/sk-test
+          npm install "/tmp/$(basename "$PLUGIN_TGZ")"
+
+      - name: Configure plugin to auto-start
+        run: |
+          cd /tmp/sk-test
+          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/package.json').name)")
+
+          # Derive plugin ID the same way signalk-server does (src/pluginid.ts)
+          PLUGIN_ID=$(node -e "
+            const name = process.argv[1];
+            console.log(name.replace(/@/g, '_').replace(/\//g, '_'));
+          " "$PLUGIN_PKG_NAME")
+
+          echo "Plugin package: $PLUGIN_PKG_NAME"
+          echo "Plugin ID:      $PLUGIN_ID"
+
+          mkdir -p plugin-config-data
+          echo '{"enabled": true, "configuration": {}}' > "plugin-config-data/${PLUGIN_ID}.json"
+
+      - name: Start SignalK server and verify plugin
+        env:
+          SIGNALK_URL: 'http://localhost:3000'
+        run: |
+          cd /tmp/sk-test
+          export SIGNALK_NODE_CONFIG_DIR=/tmp/sk-test
+
+          # Start server with both NMEA 0183 and N2K sample data so plugins
+          # have a rich data environment (navigation, wind, depth, temperature, etc.)
+          # --override-timestamps keeps N2K data current instead of stale
+          npx signalk-server --sample-nmea0183-data --sample-n2k-data --override-timestamps -p 3000 &
+          SK_PID=$!
+          # Ensure the background server is killed on any exit path — step
+          # failure, early return from a check, or normal completion. Without
+          # this a failing `npm run test:integration` would leak the process.
+          trap 'kill $SK_PID 2>/dev/null || true' EXIT
+
+          # Wait for server to be ready (max 90 seconds)
+          echo "Waiting for SignalK server..."
+          READY=false
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:3000/signalk/v1/api/ > /dev/null 2>&1; then
+              READY=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$READY" != "true" ]; then
+            echo "::error::SignalK server failed to start within 90 seconds"
+            exit 1
+          fi
+          echo "SignalK server is ready (PID $SK_PID)"
+
+          # Verify plugin is loaded
+          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/package.json').name)")
+          PLUGINS_JSON=$(curl -sf http://localhost:3000/skServer/plugins)
+
+          echo "Loaded plugins:"
+          echo "$PLUGINS_JSON" | jq -r '.[] | "  - \(.packageName // .id) (\(.state // "unknown"))"'
+
+          # Assert our plugin is in the list
+          if ! echo "$PLUGINS_JSON" | jq -e ".[] | select(.packageName == \"$PLUGIN_PKG_NAME\")" > /dev/null 2>&1; then
+            echo "::error::Plugin '$PLUGIN_PKG_NAME' not found in loaded plugins"
+            echo "$PLUGINS_JSON" | jq .
+            exit 1
+          fi
+          echo "Plugin '$PLUGIN_PKG_NAME' is loaded"
+
+          # Verify provider API registrations
+          # If the plugin registers as a provider (history, resources, etc.),
+          # check that the corresponding server endpoints actually respond.
+          # This catches the case where a plugin calls registerHistoryApiProvider()
+          # but the endpoint still returns 501 (broken registration), or where a
+          # webapp/plugin depends on an API that no installed provider serves.
+          echo ""
+          echo "Checking provider API registrations..."
+
+          PROVIDER_ERRORS=0
+
+          # History API v2 — check if plugin registered as a history provider
+          HISTORY_PROVIDERS=$(curl -sf http://localhost:3000/signalk/v2/api/history/_providers || echo "{}")
+          if echo "$HISTORY_PROVIDERS" | jq -e 'keys | length > 0' > /dev/null 2>&1; then
+            echo "History API v2: provider(s) registered"
+            echo "$HISTORY_PROVIDERS" | jq -r 'to_entries[] | "  - \(.key)\(if .value.isDefault then " (default)" else "" end)"'
+
+            # Verify the values endpoint responds (not 501)
+            FROM=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-1d +%Y-%m-%dT%H:%M:%SZ)
+            TO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            # No -f: we need to capture 4xx/5xx codes (notably 501) instead of
+            # exiting early with an empty HISTORY_STATUS.
+            HISTORY_STATUS=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:3000/signalk/v2/api/history/values?paths=navigation.position&from=${FROM}&to=${TO}&resolution=60" || echo "000")
+            if [ "$HISTORY_STATUS" = "501" ]; then
+              echo "::error::History API v2: provider registered but /history/values returns 501 (no provider configured)"
+              PROVIDER_ERRORS=$((PROVIDER_ERRORS + 1))
+            elif [ "$HISTORY_STATUS" = "200" ]; then
+              echo "History API v2: /history/values responds OK"
+            else
+              echo "::warning::History API v2: /history/values returned HTTP $HISTORY_STATUS"
+            fi
+          else
+            echo "History API v2: no providers registered (OK — plugin does not provide history)"
+          fi
+
+          if [ "$PROVIDER_ERRORS" -gt 0 ]; then
+            echo ""
+            echo "::error::Provider API verification found $PROVIDER_ERRORS error(s)"
+            exit 1
+          fi
+
+          # Run integration tests from the plugin repo if they exist
+          cd "${{ github.workspace }}"
+          HAS_INTEGRATION=$(node -e "
+            const pkg = require('./package.json');
+            if (pkg.scripts && pkg.scripts['test:integration']) process.exit(0);
+            process.exit(1);
+          " && echo "yes" || echo "no")
+
+          if [ "$HAS_INTEGRATION" = "yes" ]; then
+            echo "Running integration tests..."
+            SIGNALK_URL=http://localhost:3000 npm run test:integration
+          else
+            echo "::notice::No test:integration script found — skipping"
+          fi
+          # Server cleanup is handled by the EXIT trap set above.
+
+  # ════════════════════════════════════════════════════════════
+  #  Summary — collect all results
+  # ════════════════════════════════════════════════════════════
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs: [desktop, armv7, signalk-integration]
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: package.json
+
+      - name: Write CI summary report
+        env:
+          DESKTOP_RESULT: ${{ needs.desktop.result }}
+          # Prefer the armv7 test-step outcome when the job ran — it records
+          # whether the advisory tests actually passed. Falls back to
+          # needs.armv7.result when the job was skipped/cancelled and no
+          # step outcome exists.
+          ARMV7_RESULT: ${{ needs.armv7.outputs.advisory-outcome || needs.armv7.result }}
+          INTEGRATION_RESULT: ${{ needs.signalk-integration.result }}
+        shell: bash
+        run: |
+          icon() {
+            case "$1" in
+              success)  echo "pass" ;;
+              failure)  echo "FAIL" ;;
+              skipped)  echo "skip" ;;
+              cancelled) echo "cancel" ;;
+              *)        echo "—" ;;
+            esac
+          }
+
+          PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
+          PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
+
+          OVERALL="pass"
+          if [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
+            OVERALL="FAIL"
+          fi
+
+          {
+            echo "## SignalK Plugin CI Report"
+            echo ""
+            echo "**Plugin**: \`$PLUGIN_NAME@$PLUGIN_VER\`"
+            echo "**Result**: $OVERALL"
+            echo ""
+            echo "### Platform results"
+            echo ""
+            echo "| Job | Result | Notes |"
+            echo "|-----|--------|-------|"
+            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24 |"
+            echo "| armv7 — Cerbo GX (QEMU) | $(icon "$ARMV7_RESULT") | Node 20 (Venus OS 3.70) — advisory, non-blocking |"
+            if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
+              echo "| SignalK integration | $(icon "$INTEGRATION_RESULT") | Server install + plugin load |"
+            fi
+            echo ""
+            echo "### What was checked"
+            echo ""
+            echo "Every desktop job validates:"
+            echo "- **package.json** — \`signalk-node-server-plugin\` keyword, \`main\`/\`exports\` field, \`engines.node\`"
+            echo "- **Entry point** — Plugin exports a constructor function"
+            echo "- **plugin.schema()** — Returns valid JSON Schema without crashing"
+            echo "- **Lifecycle** — start()/stop()/restart cycle works without errors"
+            echo "- **API usage** — No deprecated (\`setProviderStatus\`), internal (\`app.server\`), file storage, or security anti-patterns"
+            echo "- **Node built-in modules** — \`node:sqlite\` requires \`engines.node >= 22.5.0\` declared in package.json"
+            echo "- **npm pack** — All files referenced by \`main\`/\`exports\` are included in the package"
+            echo "- **App Store install** — No native addons that break with \`--ignore-scripts\`"
+            echo "- **Hardcoded paths** — No \`/home/user/...\` literals in source files"
+            echo "- **ES2023 compatibility** — Built JS checked for Cerbo GX (Node 20) syntax compatibility"
+            echo "- **baconjs** — Plugins must not bundle their own baconjs; the server provides >= 3.x"
+            echo "- **React version** — Plugins with webapp keywords must use React >= 19 for Module Federation compatibility"
+            echo "- **Stray files** — Build/test does not leave untracked files in the repo"
+            echo ""
+            echo "See the individual job summaries above for per-platform details."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$INTEGRATION_RESULT" == "skipped" ]]; then
+            {
+              echo ""
+              echo "> **Tip**: You can also test your plugin against a running Signal K server."
+              echo "> Add \`enable-signalk-integration: true\` to your workflow. [Learn more](https://signalk.org/signalk-server/develop/plugins/ci.html#integration-tests)"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [[ "$ARMV7_RESULT" == "failure" ]]; then
+            {
+              echo ""
+              echo "> **Note**: armv7 (Cerbo GX) failed but this is non-blocking."
+              echo "> Your plugin may not work on 32-bit ARM devices (Cerbo GX, Raspberry Pi OS 32-bit)."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo ""
+          echo "Desktop:              $DESKTOP_RESULT"
+          echo "armv7 (Cerbo GX):     $ARMV7_RESULT"
+          echo "SignalK integration:  $INTEGRATION_RESULT"
+
+          # Desktop is mandatory
+          if [[ "$DESKTOP_RESULT" == "failure" ]]; then
+            echo "::error::Desktop tests failed"
+            exit 1
+          fi
+
+          # armv7 is advisory (non-blocking)
+          case "$ARMV7_RESULT" in
+            failure) echo "::warning::armv7 (Cerbo GX) tests failed — plugin may not work on 32-bit ARM devices" ;;
+            skipped) echo "armv7 tests were skipped" ;;
+          esac
+
+          # Integration is mandatory if enabled
+          if [[ "$INTEGRATION_RESULT" == "failure" ]]; then
+            echo "::error::SignalK integration tests failed"
+            exit 1
+          fi
+
+          echo "All checks passed!"

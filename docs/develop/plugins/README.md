@@ -12,6 +12,7 @@ children:
   - weather_provider_plugins.md
   - custom_renderers.md
   - publishing.md
+  - ci.md
 ---
 
 # Server plugins
