@@ -16,10 +16,13 @@ import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import Table from 'react-bootstrap/Table'
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
+import Tooltip from 'react-bootstrap/Tooltip'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
 import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
+import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 import { useStore } from '../../store'
 
@@ -633,10 +636,22 @@ function PluginConfigCard({
                 </Form.Label>
                 <span className="ms-1">Data logging</span>
                 {optimisticData.enableLogging && (
-                  <Form.Text className="text-warning d-block">
-                    Creates hourly log files that can consume significant disk
-                    space
-                  </Form.Text>
+                  <OverlayTrigger
+                    placement="bottom"
+                    overlay={
+                      <Tooltip>
+                        Creates hourly log files that can consume significant
+                        disk space
+                      </Tooltip>
+                    }
+                  >
+                    <span
+                      className="text-warning ms-1"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <FontAwesomeIcon icon={faTriangleExclamation} />
+                    </span>
+                  </OverlayTrigger>
                 )}
               </Col>
               <Col lg={4} className={'mt-2 mt-lg-0'}>

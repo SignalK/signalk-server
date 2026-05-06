@@ -9,7 +9,11 @@ import {
 import Button from 'react-bootstrap/Button'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Row from 'react-bootstrap/Row'
+import Tooltip from 'react-bootstrap/Tooltip'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import N2KFilters from './N2KFilters'
 
 interface ProviderOptions {
@@ -683,9 +687,18 @@ function LoggingInput({ value, onChange }: LoggingInputProps) {
           <span className="switch-handle" />
         </Form.Label>
         {value.logging && (
-          <Form.Text className="text-warning">
-            Creates hourly log files that can consume significant disk space
-          </Form.Text>
+          <OverlayTrigger
+            placement="bottom"
+            overlay={
+              <Tooltip>
+                Creates hourly log files that can consume significant disk space
+              </Tooltip>
+            }
+          >
+            <span className="text-warning ms-1" style={{ cursor: 'pointer' }}>
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+            </span>
+          </OverlayTrigger>
         )}
       </Col>
     </Form.Group>
