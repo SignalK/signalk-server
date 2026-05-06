@@ -669,7 +669,14 @@ function PluginConfigCard({
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
                 </Form.Label>
-                <span className="ms-1">Enable debug log</span>
+                <span className="ms-1">
+                  Enable debug{' '}
+                  {optimisticData.enableDebug ? (
+                    <a href="#/serverConfiguration/log">log</a>
+                  ) : (
+                    'log'
+                  )}
+                </span>
               </Col>
             </Row>
           )}
