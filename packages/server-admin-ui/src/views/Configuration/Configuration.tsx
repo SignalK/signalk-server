@@ -23,6 +23,7 @@ import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify
 import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
 import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons/faCircleInfo'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 import { useStore } from '../../store'
 
@@ -604,14 +605,21 @@ function PluginConfigCard({
                   icon={faGear}
                   style={{ marginRight: '10px' }}
                 />
-                Configure: {plugin.name}
+                {plugin.packageName}
+                {plugin.description && (
+                  <OverlayTrigger
+                    placement="bottom"
+                    overlay={<Tooltip>{plugin.description}</Tooltip>}
+                  >
+                    <span
+                      className="text-muted ms-1"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <FontAwesomeIcon icon={faCircleInfo} />
+                    </span>
+                  </OverlayTrigger>
+                )}
               </h5>
-              <small className="text-muted">{plugin.packageName}</small>
-              {plugin.description && (
-                <p className="text-muted mb-0 mt-1">
-                  <small>{plugin.description}</small>
-                </p>
-              )}
             </Col>
           </Row>
           {configurationRequired && (
