@@ -537,7 +537,27 @@ function wsInterface(app: WsApp): WsApi {
             })
           }
 
-          let onChange = (delta: Delta) => {
+          const selfOnly = isSelfSubscription(spark.query)
+          const subscribeNone = spark.query.subscribe === 'none'
+          const canVerify = app.securityStrategy.canAuthorizeWS()
+
+          const onChange: (delta: Delta) => void = (delta: Delta) => {
+            if (canVerify) {
+              try {
+                app.securityStrategy.verifyWS(spark.request)
+              } catch (error) {
+                handleVerifyWSError(spark, error as Error)
+                return
+              }
+            }
+            if (subscribeNone) return
+            if (
+              selfOnly &&
+              delta.context &&
+              delta.context !== app.selfContext
+            ) {
+              return
+            }
             const filtered = app.securityStrategy.filterReadDelta(
               spark.request.skPrincipal,
               delta
@@ -628,21 +648,6 @@ function wsInterface(app: WsApp): WsApi {
               })
             })
           })
-
-          if (isSelfSubscription(spark.query)) {
-            const realOnChange = onChange
-            onChange = function (msg: Delta) {
-              if (!msg.context || msg.context === app.selfContext) {
-                realOnChange(msg)
-              }
-            }
-          }
-
-          if (spark.query.subscribe === 'none') {
-            onChange = () => undefined
-          }
-
-          onChange = wrapWithVerifyWS(app.securityStrategy, spark, onChange)
 
           const sparkIp = spark.request._resolvedIp
 
@@ -1151,6 +1156,19 @@ function processUnsubscribe(
 const isSelfSubscription = (query: Spark['query']): boolean =>
   !query.subscribe || query.subscribe === 'self'
 
+function handleVerifyWSError(spark: Spark, error: Error): void {
+  if (!spark.skPendingAccessRequest) {
+    spark.end('{message: "Connection disconnected by security constraint"}', {
+      reconnect: true
+    })
+  }
+  const identifier =
+    spark.request.skPrincipal?.identifier ||
+    spark.request.connection.remoteAddress ||
+    'unknown'
+  console.error(`WebSocket security error for ${identifier}: ${error.message}`)
+}
+
 function wrapWithVerifyWS(
   securityStrategy: SecurityStrategy,
   spark: Spark,
@@ -1164,21 +1182,7 @@ function wrapWithVerifyWS(
       securityStrategy.verifyWS(spark.request)
       theFunction(msg)
     } catch (error) {
-      if (!spark.skPendingAccessRequest) {
-        spark.end(
-          '{message: "Connection disconnected by security constraint"}',
-          {
-            reconnect: true
-          }
-        )
-      }
-      const identifier =
-        spark.request.skPrincipal?.identifier ||
-        spark.request.connection.remoteAddress ||
-        'unknown'
-      console.error(
-        `WebSocket security error for ${identifier}: ${(error as Error).message}`
-      )
+      handleVerifyWSError(spark, error as Error)
       return
     }
   }
