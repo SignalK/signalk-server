@@ -96,7 +96,17 @@ export class Alarm {
     this.external = true
     this.status.canClear = false
 
+    const prevState = this.value?.state
+
     this.parseDelta(update, context)
+
+    if (
+      prevState === ALARM_STATE.normal &&
+      this.value.state !== ALARM_STATE.normal
+    ) {
+      this.status.acknowledged = false
+      this.status.silenced = false
+    }
 
     if (
       !this.status.acknowledged &&
