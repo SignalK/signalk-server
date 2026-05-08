@@ -129,7 +129,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:${{ matrix.arch }}-${{ matrix.os_label }}-${{ matrix.node }}
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:${{ matrix.arch }}-${{ matrix.os_label }}-${{ matrix.node }}-${{ github.run_id }}
           build-args: |
             NODE=${{ matrix.node }}
 
@@ -156,8 +156,8 @@ jobs:
           tags: |
             ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:latest-${{ matrix.os_label }}-${{ matrix.node }}
           sources: |
-            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:amd-${{ matrix.os_label }}-${{ matrix.node }}
-            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:arm-${{ matrix.os_label }}-${{ matrix.node }}
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:amd-${{ matrix.os_label }}-${{ matrix.node }}-${{ github.run_id }}
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:arm-${{ matrix.os_label }}-${{ matrix.node }}-${{ github.run_id }}
 
   copy-to-dockerhub:
     name: Copy ${{ matrix.os_label }} node-${{ matrix.node }} to Docker Hub
@@ -205,5 +205,5 @@ jobs:
           packages: signalk-server-base
           delete-untagged: true
           delete-tags: |
-            amd-*,arm-*
+            *-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
