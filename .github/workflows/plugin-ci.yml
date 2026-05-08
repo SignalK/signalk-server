@@ -161,10 +161,10 @@ jobs:
             warnings.push('No "engines.node" field in package.json — plugins should declare their minimum Node.js version');
           }
 
-          // ESM-only plugins can't be loaded by the server's require() call
-          if (pkg.type === 'module') {
-            warnings.push('package.json has "type": "module" — SignalK server loads plugins with require(). ESM-only plugins may fail to load.');
-          }
+          // ESM plugins are loaded via dynamic import() since #1913
+          // (April 2025); on Node 20.19+ / 22 the require() path also
+          // succeeds via native ESM-from-CJS interop (see modules.ts
+          // requireUserPlugin). No warning needed for "type": "module".
 
           // baconjs is provided by the server — plugins must not bundle their own copy
           if (pkg.dependencies && pkg.dependencies.baconjs) {
