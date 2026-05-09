@@ -148,6 +148,35 @@ _Example response:_
 }
 ```
 
+## Inheriting the Admin UI's styling
+
+Standalone webapps that want to match the Admin UI's look-and-feel can load its compiled stylesheet. The Admin UI is built with Vite and emits content-hashed filenames (e.g. `style-__hQMaH5.css`) that change on every rebuild, so the path can't be hardcoded.
+
+`GET /admin-ui/manifest.json` returns the current asset URLs:
+
+```json
+{
+  "stylesheets": ["/admin/assets/style-__hQMaH5.css"],
+  "scripts": [],
+  "modules": ["/admin/assets/index-BzRlmq2e.js"]
+}
+```
+
+The webapp fetches the manifest at load time, then injects the stylesheet URL into its own `<head>`:
+
+```javascript
+const res = await fetch('/admin-ui/manifest.json')
+const manifest = await res.json()
+for (const href of manifest.stylesheets) {
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = href
+  document.head.appendChild(link)
+}
+```
+
+The endpoint is cache-busted on every Admin UI rebuild via `mtime` so a second fetch after a rebuild returns the new URLs.
+
 ## Embedded Components and Admin UI / Server interfaces
 
 Embedded components are implemented using [Module Federation](https://module-federation.io/) and [React Code Splitting](https://react.dev/reference/react/lazy).

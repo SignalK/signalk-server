@@ -154,6 +154,45 @@ interface ModuleInfo {
   type?: string
 }
 
+interface AdminUiManifest {
+  stylesheets: string[]
+  scripts: string[]
+  modules: string[]
+}
+
+// Pull stylesheet and script URLs out of the admin UI index.html that
+// Vite emits. Content-hashed filenames change on every admin UI build,
+// so this is the contract third-party webapps use to resolve the
+// current URLs without scraping the document.
+function parseAdminUiManifest(html: string): AdminUiManifest {
+  const stylesheets: string[] = []
+  const scripts: string[] = []
+  const modules: string[] = []
+  const linkRe = /<link\b[^>]*rel\s*=\s*["']stylesheet["'][^>]*>/gi
+  const scriptRe = /<script\b[^>]*>/gi
+  const hrefRe = /href\s*=\s*["']([^"']+)["']/i
+  const srcRe = /src\s*=\s*["']([^"']+)["']/i
+  const typeModuleRe = /type\s*=\s*["']module["']/i
+  const toAbsolute = (raw: string): string => {
+    if (raw.startsWith('/') || /^https?:\/\//i.test(raw)) return raw
+    if (raw.startsWith('./')) return '/admin/' + raw.slice(2)
+    return '/admin/' + raw
+  }
+  let m: RegExpExecArray | null
+  while ((m = linkRe.exec(html)) !== null) {
+    const href = m[0].match(hrefRe)?.[1]
+    if (href) stylesheets.push(toAbsolute(href))
+  }
+  while ((m = scriptRe.exec(html)) !== null) {
+    const tag = m[0]
+    const src = tag.match(srcRe)?.[1]
+    if (!src) continue
+    if (typeModuleRe.test(tag)) modules.push(toAbsolute(src))
+    else scripts.push(toAbsolute(src))
+  }
+  return { stylesheets, scripts, modules }
+}
+
 module.exports = function (
   app: App,
   saveSecurityConfig: SecurityConfigSaver,
@@ -303,6 +342,41 @@ module.exports = function (
   })
 
   app.use('/admin', express.static(adminUiPath))
+
+  // Stable handle for third-party webapps that want to inherit the
+  // Admin UI's styling. The Vite-built admin bundle uses content-hashed
+  // filenames (e.g. style-Dxyz1234.css) that change on every rebuild,
+  // so a third party can't hardcode the URL or bundle it. Exposing a
+  // tiny manifest endpoint lets them resolve the current paths once at
+  // load time and inject the stylesheet/script links themselves.
+  let cachedAdminManifest:
+    | { mtimeMs: number; payload: AdminUiManifest }
+    | undefined
+  app.get('/admin-ui/manifest.json', async (_: Request, res: Response) => {
+    setNoCache(res)
+    const indexPath = path.join(adminUiPath, 'index.html')
+    let stat: fs.Stats
+    try {
+      stat = await fs.promises.stat(indexPath)
+    } catch {
+      res.status(503).json({ error: 'admin UI not available' })
+      return
+    }
+    if (!cachedAdminManifest || cachedAdminManifest.mtimeMs !== stat.mtimeMs) {
+      try {
+        const html = await fs.promises.readFile(indexPath, 'utf-8')
+        cachedAdminManifest = {
+          mtimeMs: stat.mtimeMs,
+          payload: parseAdminUiManifest(html)
+        }
+      } catch (err) {
+        console.error('Failed to read admin UI index:', err)
+        res.status(500).json({ error: 'failed to read admin UI index' })
+        return
+      }
+    }
+    res.json(cachedAdminManifest.payload)
+  })
 
   app.get('/', (req: Request, res: Response) => {
     let landingPage = '/admin/'
