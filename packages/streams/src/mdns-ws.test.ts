@@ -8,6 +8,7 @@ interface DeltaChunk {
   updates?: Array<{
     values?: Array<{ path: string }>
     $source?: string
+    source?: { label?: string; [key: string]: unknown }
   }>
 }
 
@@ -268,9 +269,15 @@ describe('MdnsWs', () => {
                         )
                         if (delta) {
                           writable.off('data-received', onData)
-                          expect(
-                            (delta as DeltaChunk).updates![0]!['$source']
-                          ).to.include('test-mdns')
+                          // Updates that already carry source identity
+                          // (here `source.label === 'test'`) are passed
+                          // through unchanged; stamping the local
+                          // providerId would overwrite the upstream
+                          // server's identity. handleMessage on the
+                          // receiving side will derive $source from the
+                          // remote source object.
+                          const update = (delta as DeltaChunk).updates![0]!
+                          expect(update.source?.label).to.equal('test')
                           done()
                         }
                       }
@@ -330,9 +337,11 @@ describe('MdnsWs', () => {
         )
         if (delta) {
           writable.off('data-received', onData)
-          expect((delta as DeltaChunk).updates![0]!['$source']).to.include(
-            'test-mdns'
-          )
+          // Remote update arrives with `source: { label: 'test' }` —
+          // identity is intact, so the provider does not stamp a local
+          // $source over it (transport-agnostic source identity).
+          const update = (delta as DeltaChunk).updates![0]!
+          expect(update.source?.label).to.equal('test')
           done()
         }
       }
