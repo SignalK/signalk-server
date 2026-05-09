@@ -23,6 +23,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",
+    "@signalk/path-metadata": "*",
     "@sinclair/typebox": "^0.34.0",
     "baconjs": "^3.0.0"
   },
