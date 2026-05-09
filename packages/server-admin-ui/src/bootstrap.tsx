@@ -12,6 +12,15 @@ import '../scss/core/_dropdown-menu-right.scss'
 import Full from './containers/Full/Full'
 import { WebSocketProvider } from './contexts/WebSocketContext'
 
+declare global {
+  interface Window {
+    __SK_REACT__?: typeof React
+    __SK_REACT_DOM__?: typeof ReactDOM
+    __SK_REACT_DOM_CLIENT__?: typeof ReactDOMClient
+    __SK_REACT_JSX_RUNTIME__?: typeof ReactJSXRuntime
+  }
+}
+
 window.serverRoutesPrefix = '/skServer'
 
 // Plugin federation: expose this host's React/ReactDOM on window so
@@ -19,13 +28,11 @@ window.serverRoutesPrefix = '/skServer'
 // instance. Without this, a plugin bundle that imports its own React
 // has its own dispatcher and `useState` reads null when called inside
 // the host's render tree (the dispatcher is set on the host's React,
-// not the plugin's). PR #2552 documented this contract for ESM
-// federation.
-const w = window as unknown as Record<string, unknown>
-w.__SK_REACT__ = React
-w.__SK_REACT_DOM__ = ReactDOM
-w.__SK_REACT_DOM_CLIENT__ = ReactDOMClient
-w.__SK_REACT_JSX_RUNTIME__ = ReactJSXRuntime
+// not the plugin's).
+window.__SK_REACT__ = React
+window.__SK_REACT_DOM__ = ReactDOM
+window.__SK_REACT_DOM_CLIENT__ = ReactDOMClient
+window.__SK_REACT_JSX_RUNTIME__ = ReactJSXRuntime
 
 const container = document.getElementById('root')!
 const root = createRoot(container)
