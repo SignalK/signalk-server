@@ -248,7 +248,7 @@ export class CourseApi {
                   longitude: r.feature.geometry.coordinates[0]
                 }
                 if (this.courseInfo.nextPoint?.href) {
-                  this.courseInfo.nextPoint.name = r.name ?? ''
+                  this.courseInfo.nextPoint.name = r.name ?? 'WP1'
                 }
                 this.emitCourseInfo()
               }
@@ -921,7 +921,8 @@ export class CourseApi {
         if (position && position.value) {
           newCourse.previousPoint = {
             position: position.value,
-            type: VesselPosition
+            type: VesselPosition,
+            name: `VP`
           }
         } else {
           throw new Error(`Error: Unable to retrieve vessel position!`)
@@ -983,7 +984,7 @@ export class CourseApi {
               },
               href: dest.href,
               type: (r.type as CoursePointType) ?? 'Waypoint',
-              name: r.name ?? ''
+              name: r.name ?? 'WP1'
             }
             newCourse.activeRoute = null
           } else {
@@ -999,7 +1000,8 @@ export class CourseApi {
       if (this.isValidPosition(dest.position)) {
         newCourse.nextPoint = {
           position: dest.position,
-          type: Location
+          type: Location,
+          name: 'DP'
         }
       } else {
         throw new Error(`Error: position is not valid`)
@@ -1017,7 +1019,8 @@ export class CourseApi {
       if (position && position.value) {
         newCourse.previousPoint = {
           position: position.value,
-          type: VesselPosition
+          type: VesselPosition,
+          name: 'VP'
         }
       } else {
         throw new Error(
@@ -1119,7 +1122,7 @@ export class CourseApi {
       ? coordinatesMeta[coordinatesMeta.length - (index + 1)]
       : coordinatesMeta[index]
 
-    return meta?.name ?? ''
+    return meta?.name ?? `WP${index + 1}`
   }
 
   private getRoutePoints(rte: any) {
