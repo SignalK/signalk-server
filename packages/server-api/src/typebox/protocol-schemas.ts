@@ -355,6 +355,8 @@ export const SourceSchema = Type.Object(
 )
 export type Source = Static<typeof SourceSchema>
 
+// @see specification/schemas/groups/notifications.json#/definitions/notification
+
 /**
  * Notification payload — state, method, message, and optional position/status.
  */

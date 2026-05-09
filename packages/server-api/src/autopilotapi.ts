@@ -1,4 +1,10 @@
 import { Value } from './deltas'
+import type {
+  AutopilotStateDef,
+  AutopilotActionDef,
+  AutopilotOptions,
+  AutopilotInfo
+} from './typebox/autopilot-schemas'
 
 /**
  * Valid autopilot delta path names.
@@ -436,33 +442,13 @@ export interface AutopilotProvider {
 }
 
 /** @category  Autopilot API  */
-export interface AutopilotStateDef {
-  name: string // autopilot state
-  engaged: boolean // true if state indicates actively steering
-}
-
+export type { AutopilotStateDef }
 /** @category  Autopilot API  */
-export interface AutopilotActionDef {
-  id: 'dodge' | 'tack' | 'gybe' | 'courseCurrentPoint' | 'courseNextPoint'
-  name: string // display name
-  available: boolean // true if can be used in current AP mode of operation
-}
-
+export type { AutopilotActionDef }
 /** @category  Autopilot API  */
-export interface AutopilotOptions {
-  states: AutopilotStateDef[]
-  modes: string[]
-  actions: AutopilotActionDef[]
-}
-
+export type { AutopilotOptions }
 /** @category  Autopilot API  */
-export interface AutopilotInfo {
-  options: AutopilotOptions
-  target: number | null
-  mode: string | null
-  state: string | null
-  engaged: boolean
-}
+export type { AutopilotInfo }
 
 /**
  * @hidden visible through ServerAPI
