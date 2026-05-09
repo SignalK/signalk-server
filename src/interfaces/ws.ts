@@ -18,7 +18,7 @@ import { Server } from 'http'
 import { Socket } from 'net'
 import Primus from 'primus'
 import WebSocket from 'ws'
-import { getSourceId, getMetadata } from '@signalk/signalk-schema'
+import { getMetadata } from '@signalk/path-metadata'
 import {
   requestAccess,
   InvalidTokenError,
@@ -28,6 +28,7 @@ import {
   LoginRateLimiter,
   LOGIN_RATE_LIMIT_MESSAGE
 } from '../login-rate-limiter'
+import { getSourceId } from '@signalk/server-api'
 import { WithConfig } from '../app'
 import {
   findRequest,
@@ -73,6 +74,8 @@ interface SignalKSparkRequest {
   _resolvedIp: string
 }
 
+type SourcePolicy = 'preferred' | 'all'
+
 interface Spark {
   id: string
   query: {
@@ -83,9 +86,11 @@ interface Spark {
     serverevents?: string
     events?: string
     sendCachedValues?: string
+    sourcePolicy?: SourcePolicy
   }
   request: SignalKSparkRequest
   sendMetaDeltas: boolean
+  sourcePolicy: SourcePolicy
   sentMetaData: Record<string, boolean>
   backpressureManager?: BackpressureManager
   skPendingAccessRequest?: boolean
@@ -115,6 +120,7 @@ interface WsMessage {
   state?: string
   statusCode?: number
   message?: string
+  sourcePolicy?: SourcePolicy
 }
 
 interface WsRequestReply extends UpdateOptions {
@@ -189,7 +195,8 @@ interface SubscriptionManager {
     unsubscribes: Array<() => void>,
     write: (data: unknown) => void,
     onChange: (delta: Delta) => void,
-    principal?: SkPrincipal
+    principal?: SkPrincipal,
+    sourcePolicy?: string
   ) => void
   unsubscribe: (msg: WsMessage, unsubscribes: Array<() => void>) => void
 }
@@ -219,7 +226,9 @@ interface WithContext {
 interface DeltaCache {
   getCachedDeltas: (
     filter: (delta: WithContext) => boolean,
-    principal?: SkPrincipal
+    principal?: SkPrincipal,
+    context?: string,
+    sourcePolicy?: string
   ) => Delta[]
 }
 
@@ -500,6 +509,7 @@ function wsInterface(app: WsApp): WsApi {
           )
 
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
+          spark.sourcePolicy = spark.query.sourcePolicy || 'preferred'
           spark.sentMetaData = {}
 
           spark.backpressureManager = new BackpressureManager(
@@ -1107,6 +1117,12 @@ function processSubscribe(
       spark.logUnsubscribe = startServerLog(app, spark)
     }
   } else {
+    // Per-message sourcePolicy is honoured: subscriptionmanager.subscribe
+    // attaches its own listener on the chosen bus (filtered or unfiltered)
+    // for each subscribe call, independent of the connection-wide delta
+    // listener attached in handleRealtimeConnection. Falling back to the
+    // spark-level policy keeps the URL-query default working for clients
+    // that never send a per-message override.
     app.subscriptionmanager.subscribe(
       msg,
       unsubscribes,
@@ -1119,7 +1135,8 @@ function processSubscribe(
         if (!filtered) return
         spark.backpressureManager!.send(filtered)
       },
-      spark.request.skPrincipal
+      spark.request.skPrincipal,
+      msg.sourcePolicy ?? spark.sourcePolicy
     )
   }
 }
@@ -1143,7 +1160,9 @@ function processUnsubscribe(
       }
     } else {
       app.subscriptionmanager.unsubscribe(msg, unsubscribes)
-      app.signalk.removeListener('delta', onChange)
+      const deltaEvent =
+        spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
+      app.signalk.removeListener(deltaEvent, onChange)
       spark.sentMetaData = {}
     }
   } catch (e) {
@@ -1242,9 +1261,10 @@ function handleRealtimeConnection(
 ): void {
   sendHello(app, {}, spark)
 
-  app.signalk.on('delta', onChange)
+  const deltaEvent = spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
+  app.signalk.on(deltaEvent, onChange)
   spark.onDisconnects.push(() => {
-    app.signalk.removeListener('delta', onChange)
+    app.signalk.removeListener(deltaEvent, onChange)
   })
 
   if (spark.sendMetaDeltas) {
@@ -1350,7 +1370,12 @@ function sendLatestDeltas(
   }
 
   deltaCache
-    .getCachedDeltas(deltaFilter, spark.request.skPrincipal)
+    .getCachedDeltas(
+      deltaFilter,
+      spark.request.skPrincipal,
+      undefined,
+      spark.sourcePolicy
+    )
     .forEach((delta) => {
       sendMetaData(app, spark, delta)
       spark.write(delta)
