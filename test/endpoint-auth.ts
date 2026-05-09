@@ -47,7 +47,7 @@ describe('Endpoint authentication', function () {
         ? authHeaders(token)
         : { 'Content-Type': 'application/json' }
     }
-    if (body) {
+    if (body && method !== 'GET' && method !== 'HEAD') {
       options.body = JSON.stringify(body)
     }
     const result = await fetch(`${url}${path}`, options)
@@ -58,7 +58,32 @@ describe('Endpoint authentication', function () {
     const endpoints: Array<{ method: string; path: string; body: object }> = [
       {
         method: 'PUT',
-        path: '/skServer/sourcePriorities',
+        path: '/skServer/priorityOverrides',
+        body: {}
+      },
+      {
+        method: 'GET',
+        path: '/skServer/priorityOverrides',
+        body: {}
+      },
+      {
+        method: 'GET',
+        path: '/skServer/priorityGroups',
+        body: {}
+      },
+      {
+        method: 'GET',
+        path: '/skServer/priorityDefaults',
+        body: {}
+      },
+      {
+        method: 'GET',
+        path: '/skServer/sourceAliases',
+        body: {}
+      },
+      {
+        method: 'GET',
+        path: '/skServer/ignoredInstanceConflicts',
         body: {}
       },
       {
@@ -71,6 +96,11 @@ describe('Endpoint authentication', function () {
         method: 'POST',
         path: '/skServer/rememberDebug',
         body: { value: 'test:*' }
+      },
+      {
+        method: 'DELETE',
+        path: '/skServer/removeSource?sourceRef=test',
+        body: {}
       }
     ]
 
