@@ -130,7 +130,6 @@ describe('runDiscovery', () => {
 
     delete require.cache[discoveryModulePath]
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { runDiscovery } = require('../dist/discovery.js') as DiscoveryModule
 
     const app: App = {
