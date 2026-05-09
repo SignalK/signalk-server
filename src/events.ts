@@ -74,8 +74,28 @@ export function startServerEvents(
     })
   }
   spark.write({
-    type: 'SOURCEPRIORITIES',
-    data: app.config.settings.sourcePriorities || {}
+    type: 'PRIORITYOVERRIDES',
+    data: app.config.settings.priorityOverrides || {}
+  })
+  spark.write({
+    type: 'SOURCEALIASES',
+    data: app.config.settings.sourceAliases || {}
+  })
+  spark.write({
+    type: 'PRIORITYGROUPS',
+    data: app.config.settings.priorityGroups || []
+  })
+  spark.write({
+    type: 'PRIORITYDEFAULTS',
+    data: app.config.settings.priorityDefaults || {}
+  })
+  spark.write({
+    type: 'MULTISOURCEPATHS',
+    data: app.deltaCache?.getMultiSourcePaths?.() || {}
+  })
+  spark.write({
+    type: 'RECONCILEDGROUPS',
+    data: app.deltaCache?.getReconciledGroups?.() || []
   })
 }
 
