@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
+import Badge from 'react-bootstrap/Badge'
 import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
+import SourceLabel from './SourceLabel'
 import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
 import {
   usePresetDetails,
@@ -11,6 +13,10 @@ import {
 import type { PathData, MetaData } from '../../store'
 import { convertValue } from '../../utils/unitConversion'
 import type { DefaultCategories } from '../../store/slices/unitPreferencesSlice'
+import {
+  canonicaliseSourceRef,
+  type SourcesData
+} from '../../utils/sourceLabels'
 
 interface DataRowProps {
   path$SourceKey: string
@@ -18,9 +24,33 @@ interface DataRowProps {
   index: number
   raw: boolean
   isPaused: boolean
-  onToggleSource: (source: string) => void
-  selectedSources: Set<string>
   showContext: boolean
+  /**
+   * True when the user is in 'Priority filtered' mode. Switches the
+   * X/Y badge from informational ("you have N sources") in 'All
+   * sources' mode to a "no priority configured" warning in
+   * 'Priority filtered' mode.
+   */
+  sourceFilter: boolean
+  sourceCountsByPath: Map<string, number>
+  sourcesData: SourcesData | null
+  configuredPriorityPaths: Set<string>
+  /**
+   * Paths the priority engine is currently routing for this context
+   * (i.e. has a live winner for). Includes paths covered by group
+   * rankings, not just path-level overrides.
+   * configuredPriorityPaths only tracks the latter, so it would emit
+   * a "no priority configured" warning for group-routed paths even
+   * though the engine is honouring them.
+   */
+  routedPaths?: Set<string>
+  preferredSourceByPath?: Map<string, string>
+  /**
+   * Paths the user has flagged for fan-out (sentinel '*' override).
+   * The "Preferred" badge is suppressed for these because every source
+   * is intentionally delivered — no row is "the" winner.
+   */
+  fanOutPaths?: Set<string>
 }
 
 interface ValueRendererProps {
@@ -62,9 +92,14 @@ function DataRow({
   index,
   raw,
   isPaused,
-  onToggleSource,
-  selectedSources,
-  showContext
+  showContext,
+  sourceFilter,
+  sourceCountsByPath,
+  sourcesData,
+  configuredPriorityPaths,
+  routedPaths,
+  preferredSourceByPath,
+  fanOutPaths
 }: DataRowProps) {
   // When showContext is true, path$SourceKey is a composite key: context\0realKey
   const nullIdx = showContext ? path$SourceKey.indexOf('\0') : -1
@@ -160,6 +195,28 @@ function DataRow({
   const path = data.path ?? ''
   const source = data.$source ?? ''
   const timestamp = data.timestamp ?? ''
+  // The count map is keyed per (context, path) in ALL mode and per
+  // bare path in single-context mode; rebuild the same key shape here
+  // so a self-vessel row's "X/Y" reflects only the self-vessel's
+  // sources, not AIS or other-vessel rows that share the path.
+  const countKey = showContext ? `${realContext}\0${path}` : path
+  const sourceCount = path ? sourceCountsByPath.get(countKey) || 1 : 1
+  // Server emits livePreferredSources in canonical (canName) form, but
+  // delta `$source` may be numeric when the provider has useCanName off.
+  // Canonicalise the row's source before comparing so the badge follows
+  // the same identity rule the priority engine uses. Fan-out paths
+  // intentionally deliver every source — no row is "the preferred",
+  // so the badge would just oscillate between rows on each delta.
+  // Across-context view ("All") flattens into a single map keyed by
+  // `${context}\0${path}` — without the context two vessels with the
+  // same path would resolve to whichever winner was iterated last.
+  const preferredKey = showContext ? `${realContext}\0${path}` : path
+  const isPreferred =
+    !!preferredSourceByPath &&
+    !!path &&
+    !fanOutPaths?.has(path) &&
+    preferredSourceByPath.get(preferredKey) ===
+      canonicaliseSourceRef(source, sourcesData)
 
   return (
     <div
@@ -194,23 +251,81 @@ function DataRow({
       <TimestampCell timestamp={timestamp} isPaused={isPaused} />
 
       <div className="virtual-table-cell source-cell" data-label="Source">
-        <label style={{ display: 'inline', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            onChange={() => onToggleSource(source)}
-            checked={selectedSources.has(source)}
-            aria-label={`Select source ${source}`}
-            style={{
-              marginRight: '5px',
-              verticalAlign: 'middle'
-            }}
-          />
-        </label>
+        {isPreferred && (
+          <Badge
+            bg="success"
+            title="Preferred source"
+            style={{ marginRight: '4px', fontSize: '0.7em' }}
+          >
+            Preferred
+          </Badge>
+        )}
+        {fanOutPaths?.has(path) && (
+          <Badge
+            bg="info"
+            title="Fan-out path — every source's value is delivered, no priority filtering"
+            style={{ marginRight: '4px', fontSize: '0.7em' }}
+          >
+            Fan-out
+          </Badge>
+        )}
         <CopyToClipboardWithFade text={source}>
-          {source} <span className="copy-icon" aria-hidden="true" />
+          <SourceLabel sourceRef={source} sourcesData={sourcesData} />{' '}
+          <span className="copy-icon" aria-hidden="true" />
         </CopyToClipboardWithFade>{' '}
         {data.pgn && <span>&nbsp;{data.pgn}</span>}
         {data.sentence && <span>&nbsp;{data.sentence}</span>}
+        {(() => {
+          // X/Y badge — only meaningful for self-vessel rows where the
+          // priority engine actually applies, never for notifications.
+          if (realContext !== 'self') return null
+          if (path === 'notifications' || path.startsWith('notifications.')) {
+            return null
+          }
+          if (sourceCount <= 1) return null
+          // 'Priority filtered' mode: red warning, only on paths the
+          // user hasn't configured AND the engine isn't routing
+          // (no override, no group claim). Means "you should set a
+          // priority for this path".
+          if (sourceFilter) {
+            if (configuredPriorityPaths.has(path)) return null
+            if (routedPaths?.has(path)) return null
+            return (
+              <a
+                href={`#/data/priorities?path=${encodeURIComponent(path)}`}
+                style={{
+                  marginLeft: '4px',
+                  fontSize: '0.7em',
+                  color: 'var(--bs-danger, #d9534f)',
+                  fontWeight: 600,
+                  textDecoration: 'none'
+                }}
+                title={`${sourceCount} sources — no priority configured. Click to configure.`}
+              >
+                &#9888; 1/{sourceCount}
+              </a>
+            )
+          }
+          // 'All sources' mode: neutral informational count. Tells the
+          // user "this path has N sources and you're seeing all of
+          // them." Click still routes to the priorities page so the
+          // user can act if they want.
+          return (
+            <a
+              href={`#/data/priorities?path=${encodeURIComponent(path)}`}
+              style={{
+                marginLeft: '4px',
+                fontSize: '0.7em',
+                color: 'var(--bs-secondary-color, #6c757d)',
+                fontWeight: 500,
+                textDecoration: 'none'
+              }}
+              title={`${sourceCount} sources publish this path`}
+            >
+              1/{sourceCount}
+            </a>
+          )
+        })()}
       </div>
     </div>
   )
