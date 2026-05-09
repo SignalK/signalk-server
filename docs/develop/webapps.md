@@ -181,11 +181,38 @@ The server also supports ESM containers produced by Vite, Rollup, esbuild, or an
 
 ```javascript
 // vite.config.js
+import path from 'node:path'
+import url from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { federation } from '@module-federation/vite'
 
+const here = path.dirname(url.fileURLToPath(import.meta.url))
+
 export default defineConfig({
+  // Resolve `import 'react'` to a tiny shim that re-exports the host
+  // Admin UI's React instance from window.__SK_REACT__. See "Sharing
+  // React with the host" below for why and a sample shim.
+  resolve: {
+    alias: [
+      {
+        find: /^react\/jsx-(dev-)?runtime$/,
+        replacement: path.resolve(here, 'host-shim/react-jsx-runtime.js')
+      },
+      {
+        find: 'react-dom/client',
+        replacement: path.resolve(here, 'host-shim/react-dom-client.js')
+      },
+      {
+        find: /^react-dom$/,
+        replacement: path.resolve(here, 'host-shim/react-dom.js')
+      },
+      {
+        find: /^react$/,
+        replacement: path.resolve(here, 'host-shim/react.js')
+      }
+    ]
+  },
   plugins: [
     react(),
     federation({
@@ -194,10 +221,9 @@ export default defineConfig({
       exposes: {
         './PluginConfigurationPanel': './src/PluginConfigurationPanel.tsx'
       },
-      shared: {
-        react: { singleton: true, requiredVersion: false },
-        'react-dom': { singleton: true, requiredVersion: false }
-      }
+      // No `shared` declaration: React/ReactDOM come from the host via
+      // resolve.alias above and aren't part of federation share scope.
+      shared: {}
     })
   ],
   define: {
@@ -205,7 +231,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'public',
-    emptyOutDir: false
+    emptyOutDir: true
   }
 })
 ```
@@ -218,11 +244,52 @@ The Admin UI detects ESM containers automatically via dynamic `import()` when th
 
 ### React Version Compatibility
 
-The Admin UI uses **React 19** with shared dependencies via Module Federation. Your embedded webapp should:
+The Admin UI uses **React 19** with functional components and hooks. Your embedded webapp should:
 
-1. **Share React as a singleton** - Configure Module Federation to use the host's React instance with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the current configuration.
+1. **Share React with the host (see below)** — webpack-built plugins do this through Module Federation's share scope; ESM-built plugins use the host React globals exposed on `window`.
+2. **Use functional components** — class components still work, but the host is built around hooks and functional components.
 
-2. **Use functional components** - The Admin UI is built with functional components and React hooks. While class components still work, functional components are recommended for consistency.
+#### Sharing React with the host
+
+A plugin component that ends up bundling its own React instance will throw `Cannot read properties of null (reading 'useState')` when its hooks run inside the host's render tree: hooks read from React's internal dispatcher, which the host activated on _its_ React, not the plugin's. The plugin must use the host's React.
+
+**Webpack (`var` library)** — webpack-MF's runtime hooks into the host's share scope automatically when you declare React as a singleton:
+
+```javascript
+shared: {
+  react: { singleton: true, requiredVersion: '^19' },
+  'react-dom': { singleton: true, requiredVersion: '^19' }
+}
+```
+
+**ESM bundlers (Vite/Rollup/esbuild)** — the host exposes React on `window` so any ESM plugin can read it without going through federation share scope:
+
+| Global                            | Module              |
+| --------------------------------- | ------------------- |
+| `window.__SK_REACT__`             | `react`             |
+| `window.__SK_REACT_DOM__`         | `react-dom`         |
+| `window.__SK_REACT_DOM_CLIENT__`  | `react-dom/client`  |
+| `window.__SK_REACT_JSX_RUNTIME__` | `react/jsx-runtime` |
+
+Resolve plugin imports to a small shim that re-exports the corresponding global. Sample `host-shim/react.js`:
+
+```javascript
+const host = globalThis.__SK_REACT__
+if (!host) {
+  throw new Error(
+    'host signalk-server admin UI did not expose React on window.__SK_REACT__'
+  )
+}
+export default host.default ?? host
+export const useState = host.useState
+export const useEffect = host.useEffect
+export const useCallback = host.useCallback
+// ...re-export every named React API your plugin uses
+```
+
+The `vite.config.js` example above wires `resolve.alias` so the plugin's `import React, { useState } from 'react'` resolves to your shim instead of bundling a second React copy. Because nothing is in the federation share scope, no `shared:` config is needed.
+
+This contract was introduced as a follow-up to the ESM module federation support in #2552.
 
 See the Calibration plugin for an example. It is probably easier to start with an existing plugin and modify it to suit your needs. Don't forget to change the module id and name in package.json!
 
