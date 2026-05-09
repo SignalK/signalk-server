@@ -130,7 +130,8 @@ export default defineConfig({
     sourcemap: true,
     target: 'es2023',
     assetsInlineLimit: 0, // Prevent inlining assets to allow server-side logo override
-    cssCodeSplit: false // Generate single CSS file to ensure it's always loaded
+    cssCodeSplit: false, // Generate single CSS file to ensure it's always loaded
+    manifest: true // Emit .vite/manifest.json so plugins can resolve hashed asset URLs
   },
   resolve: {
     alias: {
