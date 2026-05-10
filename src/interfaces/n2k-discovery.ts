@@ -25,14 +25,11 @@ import {
   buildPgnDataInstancesFromTree,
   buildPgnSourceKeysFromTree
 } from '../n2k-discovery-instances'
+import { isDeviceStale, ONLINE_THRESHOLD_MS } from '../n2k-discovery-staleness'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
 const REQUEST_INTERVAL_MS = 500
-// 90s threshold: covers Maretron-class devices that send Heartbeat (PGN
-// 126993) only every 60s, plus margin for occasional jitter. Anything
-// shorter risks flapping for slow-cycle PGNs.
-const ONLINE_THRESHOLD_MS = 90_000
 const STATUS_TICK_MS = 5_000
 
 // The app object at runtime is SignalKServer + IRouter + EventEmitter.
@@ -861,9 +858,16 @@ module.exports = (app: N2kDiscoveryApp) => {
               const sub = labelNode[subKey]
               if (!sub || typeof sub !== 'object' || !sub.n2k) continue
               const metaKey = `${providerId}.${subKey}`
-              const lastSeen = sourceMeta?.[metaKey]?.lastSeen
-              const stale =
-                lastSeen === undefined || now - lastSeen >= ONLINE_THRESHOLD_MS
+              // Fold in both freshness signals so the predicate matches
+              // the Online badge in buildSourceStatuses.
+              const srcAddr = resolveSrcAddress(metaKey)
+              const stale = isDeviceStale(
+                sourceMeta?.[metaKey]?.lastSeen,
+                srcAddr !== undefined
+                  ? frameLastSeenBySrc.get(srcAddr)
+                  : undefined,
+                now
+              )
               if (!stale) continue
 
               const ref = `${providerId}.${subKey}`
