@@ -29,7 +29,9 @@ import {
   useSourceStatus,
   useSourceStatusLoaded,
   usePgnDataInstances,
-  usePgnSourceKeys
+  usePgnSourceKeys,
+  useN2kOutAvailable,
+  useN2kDeviceStatusLoaded
 } from '../../store'
 import SourceLabel from './SourceLabel'
 
@@ -94,6 +96,8 @@ const SourceDiscovery: React.FC = () => {
   const pgnDataInstances = usePgnDataInstances()
   const pgnSourceKeys = usePgnSourceKeys()
   const setN2kDeviceStatus = useStore((s) => s.setN2kDeviceStatus)
+  const n2kOutAvailable = useN2kOutAvailable()
+  const n2kDeviceStatusLoaded = useN2kDeviceStatusLoaded()
 
   useEffect(() => {
     fetch(`${window.serverRoutesPrefix}/providers`, {
@@ -453,6 +457,24 @@ const SourceDiscovery: React.FC = () => {
           through a remote SignalK server connection. Device configuration
           (instance changes, installation descriptions) requires a direct CAN
           bus connection. Configure these devices on the remote server.
+        </Alert>
+      )}
+      {n2kDeviceStatusLoaded && !n2kOutAvailable && hasDirectN2k && (
+        <Alert
+          variant="warning"
+          style={{ fontSize: '0.9rem', marginBottom: '16px' }}
+        >
+          <FontAwesomeIcon icon={faInfoCircle} /> The server can't currently
+          send ISO Requests on the N2K bus. <strong>Discover Devices</strong>,
+          instance edits and the automatic identity refresh are unavailable.
+          This usually means the N2K connection hasn't completed address claim
+          yet (give it ~5 s after boot) — or, for Yacht Devices YDEN / YDWG
+          gateways over TCP, that <em>Act as N2K device</em> is off on the
+          connection.{' '}
+          <a href="./#/data/connections/-" className="text-decoration-none">
+            Open Connections
+          </a>{' '}
+          to check.
         </Alert>
       )}
       {devices.length > 0 &&

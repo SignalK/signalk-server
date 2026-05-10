@@ -94,6 +94,15 @@ export interface AppSliceState {
   pgnDataInstances: Record<string, Record<string, number[]>>
   pgnSourceKeys: Record<string, Record<string, string[]>>
   discoveredAddresses: number[]
+  /**
+   * True when at least one N2K connection has signalled it can send
+   * ISO Requests on the bus (canboatjs `nmea2000OutAvailable`).
+   * Discovery, instance edits and auto-rediscovery all need this.
+   * False until the first qualifying connection completes its
+   * Address Claim (~5 s after boot for active gateways) or when no
+   * N2K connection is configured.
+   */
+  n2kOutAvailable: boolean
   n2kDeviceStatusLoaded: boolean
   sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
   sourceStatusLoaded: boolean
@@ -124,6 +133,7 @@ export interface AppSliceActions {
     pgnDataInstances?: Record<string, Record<string, number[]>>
     pgnSourceKeys?: Record<string, Record<string, string[]>>
     discoveredAddresses?: number[]
+    n2kOutAvailable?: boolean
     sourceStatuses?: {
       sourceRef?: string
       providerId: string
@@ -210,6 +220,7 @@ const initialAppState: AppSliceState = {
   pgnDataInstances: {},
   pgnSourceKeys: {},
   discoveredAddresses: [],
+  n2kOutAvailable: false,
   n2kDeviceStatusLoaded: false,
   sourceStatus: {},
   sourceStatusLoaded: false
@@ -322,6 +333,7 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
       pgnDataInstances: Record<string, Record<string, number[]>>
       pgnSourceKeys: Record<string, Record<string, string[]>>
       discoveredAddresses: number[]
+      n2kOutAvailable: boolean
       n2kDeviceStatusLoaded: boolean
       sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
       sourceStatusLoaded: boolean
@@ -329,6 +341,7 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
       pgnDataInstances: status.pgnDataInstances ?? {},
       pgnSourceKeys: status.pgnSourceKeys ?? {},
       discoveredAddresses: status.discoveredAddresses ?? [],
+      n2kOutAvailable: status.n2kOutAvailable ?? false,
       n2kDeviceStatusLoaded: true
     }
     if (status.sourceStatuses) {

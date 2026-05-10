@@ -517,7 +517,11 @@ module.exports = (app: N2kDiscoveryApp) => {
     // Stable JSON: tree walkers already produce sorted maps/arrays,
     // so JSON.stringify is a deterministic fingerprint and we don't
     // need to canonicalise further.
-    const fingerprint = JSON.stringify({ pgnDataInstances, pgnSourceKeys })
+    const fingerprint = JSON.stringify({
+      pgnDataInstances,
+      pgnSourceKeys,
+      n2kOutAvailable
+    })
     if (!firstDeviceStatusEmit && fingerprint === lastDeviceStatusFingerprint) {
       return
     }
@@ -535,7 +539,8 @@ module.exports = (app: N2kDiscoveryApp) => {
       data: {
         pgnDataInstances,
         pgnSourceKeys,
-        discoveredAddresses: Array.from(discoveredAddresses)
+        discoveredAddresses: Array.from(discoveredAddresses),
+        n2kOutAvailable
       }
     })
   }

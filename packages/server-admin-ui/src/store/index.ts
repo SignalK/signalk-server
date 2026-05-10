@@ -260,6 +260,10 @@ export function useDiscoveredAddresses() {
   return useStore((s) => s.discoveredAddresses)
 }
 
+export function useN2kOutAvailable() {
+  return useStore((s) => s.n2kOutAvailable)
+}
+
 export function useN2kDeviceStatusLoaded() {
   return useStore((s) => s.n2kDeviceStatusLoaded)
 }
