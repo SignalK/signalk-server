@@ -1630,10 +1630,6 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         /^ydwg02/.test(value.options.type) && (
           <CreateDeviceInput value={value.options} onChange={onChange} />
         )}
-      {value.options.type !== undefined &&
-        /^ydwg02/.test(value.options.type) && (
-          <CreateDeviceInput value={value.options} onChange={onChange} />
-        )}
     </div>
   )
 }
