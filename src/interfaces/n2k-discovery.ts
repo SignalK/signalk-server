@@ -182,19 +182,13 @@ const DISCOVERY_PGNS = [60928, 126996, 126998] as const
 function requestProductInfo(
   app: N2kDiscoveryApp,
   knownAddresses: Set<number>,
-  pendingTimers: Set<ReturnType<typeof setTimeout>>,
-  discoveredAddresses?: Set<number>
+  pendingTimers: Set<ReturnType<typeof setTimeout>>
 ): number {
   // Cancel any in-flight requests from a previous sweep
   for (const timer of pendingTimers) {
     clearTimeout(timer)
   }
   pendingTimers.clear()
-
-  // Reset discovery tracking so only fresh responses are counted
-  if (discoveredAddresses) {
-    discoveredAddresses.clear()
-  }
 
   const addrs = Array.from(knownAddresses)
   debug(
@@ -478,8 +472,16 @@ module.exports = (app: N2kDiscoveryApp) => {
     if (typeof n2k.src === 'number' && n2k.src >= 0 && n2k.src < 254) {
       knownAddresses.add(n2k.src)
       frameLastSeenBySrc.set(n2k.src, Date.now())
-      // Track discovery responses (Address Claim + Product Info)
-      if (n2k.pgn === 60928 || n2k.pgn === 126996) {
+      // Track discovery responses. Any of the three discovery PGNs
+      // (Address Claim, Product Information, Configuration Information)
+      // counts as proof we identified the device — the sweep requests
+      // all three and a device that answers any of them has revealed
+      // itself.
+      if (
+        n2k.pgn === 60928 ||
+        n2k.pgn === 126996 ||
+        n2k.pgn === 126998
+      ) {
         discoveredAddresses.add(n2k.src)
       }
     }
@@ -501,31 +503,35 @@ module.exports = (app: N2kDiscoveryApp) => {
 
   const n2kOutListener = () => {
     n2kOutAvailable = true
+    // discoveredAddresses is initialised empty at module scope and
+    // then accumulates for the lifetime of the gateway connection.
+    // We don't clear it here because nmea2000OutAvailable can fire
+    // again after a gateway reconnect; wiping the set would briefly
+    // un-identify every device on the bus until the next sweep
+    // re-populates it. Explicit user actions (Reset Stale,
+    // n2kRemoveSource) and sourceRefChanged are the only places
+    // that drop entries.
+    //
     // Multiple sweeps because some gateways — notably Yacht Devices
     // YDEN / YDWG — silently drop discovery requests (PGN 60928 /
     // 126996 / 126998) under bus load. A 36-device bus takes ~54s per
     // sweep with 500 ms pacing, so we schedule 5 s, 3 min and 10 min
     // for drop-prone setups. Users can still trigger a manual sweep
     // from the Discovery page.
-    const sweepAfter = (delayMs: number, resetTracking: boolean) => {
+    const sweepAfter = (delayMs: number) => {
       const timer = setTimeout(() => {
         sweepTimers.delete(timer)
         debug(
           'Auto-requesting identity from %d N2K devices',
           knownAddresses.size
         )
-        requestProductInfo(
-          app,
-          knownAddresses,
-          pendingTimers,
-          resetTracking ? discoveredAddresses : undefined
-        )
+        requestProductInfo(app, knownAddresses, pendingTimers)
       }, delayMs)
       sweepTimers.add(timer)
     }
-    sweepAfter(5_000, true)
-    sweepAfter(180_000, false)
-    sweepAfter(600_000, false)
+    sweepAfter(5_000)
+    sweepAfter(180_000)
+    sweepAfter(600_000)
   }
 
   api.start = () => {
@@ -564,11 +570,13 @@ module.exports = (app: N2kDiscoveryApp) => {
           })
           return
         }
+        // Manual re-discovery accumulates into discoveredAddresses;
+        // we don't clear, because a device that answered the first
+        // sweep but is silent during this one is still on the bus.
         const deviceCount = requestProductInfo(
           app,
           knownAddresses,
-          pendingTimers,
-          discoveredAddresses
+          pendingTimers
         )
         const estimatedMs =
           deviceCount * REQUEST_INTERVAL_MS * DISCOVERY_PGNS.length
