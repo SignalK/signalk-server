@@ -79,7 +79,7 @@
     "@signalk/n2k-signalk": ">=4.1.0-beta",
     "@signalk/nmea0183-signalk": "^3.19.1",
     "@signalk/resources-provider": "^1.5.1",
-    "@signalk/server-admin-ui": "2.26.x",
+    "@signalk/server-admin-ui": "2.27.x",
     "@signalk/server-api": "^2.24.0",
     "@signalk/signalk-schema": "^1.7.1",
     "@signalk/streams": "6.4.x",
