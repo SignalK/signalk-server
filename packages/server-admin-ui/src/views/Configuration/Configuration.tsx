@@ -610,13 +610,15 @@ function PluginConfigCard({
                   <OverlayTrigger
                     placement="bottom"
                     overlay={<Tooltip>{plugin.description}</Tooltip>}
+                    trigger={['hover', 'focus']}
                   >
-                    <span
-                      className="text-muted ms-1"
-                      style={{ cursor: 'pointer' }}
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 ms-1 text-muted align-baseline"
+                      aria-label="Plugin description"
                     >
                       <FontAwesomeIcon icon={faCircleInfo} />
-                    </span>
+                    </button>
                   </OverlayTrigger>
                 )}
               </h5>
