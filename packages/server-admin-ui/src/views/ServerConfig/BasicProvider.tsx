@@ -1198,10 +1198,12 @@ function CreateDeviceInput({
         </Form.Label>
       </Col>
       <Col xs="7" md="6" className="form-text text-muted small">
-        Claim an N2K address and participate actively on the bus. Recommended
-        for Yacht Devices gateways — when off, the gateway may drop ISO Requests
-        for PGN 60928 / 126996 / 126998 and device identity (model, software
-        version, serial) stays incomplete.
+        Claim an N2K address and participate actively on the bus. When off, the
+        server stays receive-only on this connection: it can read frames but
+        cannot send ISO Requests, so Device Discovery and PGN 126208 instance
+        edits are unavailable, and identity fields (model, software version,
+        serial) stay incomplete. Recommended on unless another node on the same
+        bus is already claiming addresses on your behalf.
       </Col>
     </Form.Group>
   )
@@ -1398,7 +1400,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           <CamelCaseCompatInput value={value.options} onChange={onChange} />
         )}
       {value.options.type !== undefined &&
-        /^ydwg02/.test(value.options.type) && (
+        (/^ydwg02/.test(value.options.type) ||
+          value.options.type === 'canbus-canboatjs') && (
           <CreateDeviceInput value={value.options} onChange={onChange} />
         )}
     </div>
