@@ -62,8 +62,13 @@ export interface ServerSpecification {
 
 export interface ProviderStatus {
   id: string
+  type?: 'status' | 'warning' | 'error'
+  statusType?: string
+  message?: string
+  lastError?: string
+  lastErrorTimeStamp?: string
+  timeStamp?: string
   enabled?: boolean
-  [key: string]: unknown
 }
 
 export interface AccessRequest {
