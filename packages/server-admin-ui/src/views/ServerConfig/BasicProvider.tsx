@@ -695,9 +695,13 @@ function LoggingInput({ value, onChange }: LoggingInputProps) {
               </Tooltip>
             }
           >
-            <span className="text-warning ms-1" style={{ cursor: 'pointer' }}>
+            <button
+              type="button"
+              className="btn btn-link p-0 text-warning ms-1 align-baseline"
+              aria-label="Hourly logs disk space warning"
+            >
               <FontAwesomeIcon icon={faTriangleExclamation} />
-            </span>
+            </button>
           </OverlayTrigger>
         )}
       </Col>
