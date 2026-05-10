@@ -1,5 +1,12 @@
-import { useMemo, Suspense, createElement, ComponentType } from 'react'
+import {
+  useEffect,
+  useMemo,
+  Suspense,
+  createElement,
+  ComponentType
+} from 'react'
 import { useWebapps, useAddons } from '../../store'
+import { fetchWebapps } from '../../actions'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
 import { ADDON_PANEL, toLazyDynamicComponent } from './dynamicutilities'
@@ -27,6 +34,10 @@ interface AddonPanelProps {
 export default function Webapps() {
   const webapps = useWebapps() as WebAppInfo[]
   const addons = useAddons() as AddonModule[]
+
+  useEffect(() => {
+    fetchWebapps()
+  }, [])
 
   const addonComponents = useMemo(
     () =>

@@ -21,6 +21,7 @@ import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify
 import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
 import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
+import { useStore } from '../../store'
 
 interface PluginSchema {
   properties?: Record<string, unknown>
@@ -46,6 +47,7 @@ interface Plugin {
   uiSchema?: Record<string, unknown>
   statusMessage?: string
   data: PluginData
+  bundled?: boolean
   [key: string]: unknown
 }
 
@@ -104,11 +106,15 @@ export default function PluginConfigurationList() {
           (plugin.data.configuration === null ||
             plugin.data.configuration === undefined)
 
+        const isUnconfigured = !plugin.bundled && configurationRequired
+
         switch (filter) {
           case 'enabled':
-            return !configurationRequired && plugin.data.enabled
+            return !isUnconfigured && plugin.data.enabled
           case 'disabled':
-            return configurationRequired || !plugin.data.enabled
+            return !isUnconfigured && !plugin.data.enabled
+          case 'unconfigured':
+            return isUnconfigured
           default:
             return true
         }
@@ -209,7 +215,13 @@ export default function PluginConfigurationList() {
       const plugin = plugins.find((p) => p.id === pluginId)
 
       if (plugin) {
-        selectPlugin(plugin)
+        const currentlySelected =
+          selectedPlugin && selectedPlugin.id === plugin.id
+        if (currentlySelected) {
+          selectPlugin(null)
+        } else {
+          selectPlugin(plugin)
+        }
       }
     },
     [plugins, selectPlugin]
@@ -239,6 +251,7 @@ export default function PluginConfigurationList() {
         if (pluginIndex !== -1) {
           newPlugins[pluginIndex] = { ...newPlugins[pluginIndex], data }
         }
+        useStore.getState().setPlugins(newPlugins)
         return newPlugins
       })
 
@@ -292,6 +305,7 @@ export default function PluginConfigurationList() {
         }
 
         setPlugins(fetchedPlugins)
+        useStore.getState().setPlugins(fetchedPlugins)
         setSelectedPlugin(initialSelectedPlugin)
         setWasmEnabled(wasmInterfaceEnabled)
 
@@ -309,6 +323,24 @@ export default function PluginConfigurationList() {
 
     fetchData()
   }, [params.pluginid, scrollToSelectedPlugin])
+
+  useEffect(() => {
+    const unsubscribe = useStore.subscribe(
+      (state) => state.plugins,
+      (storePlugins) => {
+        if (storePlugins.length > 0) {
+          setPlugins(storePlugins as Plugin[])
+          setSelectedPlugin((prev) => {
+            if (!prev) return null
+            return (
+              (storePlugins.find((p) => p.id === prev.id) as Plugin) || null
+            )
+          })
+        }
+      }
+    )
+    return unsubscribe
+  }, [])
 
   const pluginList = getFilteredPlugins()
   const selectedPluginId = selectedPlugin ? selectedPlugin.id : null
@@ -352,6 +384,7 @@ export default function PluginConfigurationList() {
                   <option value="all">All Plugins</option>
                   <option value="enabled">Enabled</option>
                   <option value="disabled">Disabled</option>
+                  <option value="unconfigured">Unconfigured</option>
                 </Form.Select>
               </Form.Group>
             </Form>
@@ -400,6 +433,9 @@ export default function PluginConfigurationList() {
                     if (wasmDisabledForPlugin) {
                       badgeClass = 'text-bg-danger'
                       badgeText = 'WASM disabled'
+                    } else if (!plugin.bundled && configurationRequired) {
+                      badgeClass = 'text-bg-warning'
+                      badgeText = 'Unconfigured'
                     } else if (plugin.data.enabled && !configurationRequired) {
                       badgeClass = 'text-bg-success'
                       badgeText = 'Enabled'
