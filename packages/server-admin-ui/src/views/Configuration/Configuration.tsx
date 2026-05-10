@@ -556,13 +556,7 @@ function PluginConfigCard({
     (plugin.data.configuration === null ||
       plugin.data.configuration === undefined)
 
-  const providerStatus = useStore((state) => state.providerStatus) as Array<{
-    id: string
-    type?: string
-    message?: string
-    lastError?: string
-    lastErrorTimeStamp?: string
-  }>
+  const providerStatus = useStore((state) => state.providerStatus)
   const pluginStatus = providerStatus?.find((s) => s.id === plugin.id)
   const statusClasses: Record<string, string> = {
     status: 'text-success',

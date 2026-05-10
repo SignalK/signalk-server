@@ -6,23 +6,13 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Table from 'react-bootstrap/Table'
 import { useServerStats, useWsStatus, useStore } from '../../store'
-import type { ProviderStatistics } from '../../store/types'
+import type { ProviderStatistics, ProviderStatus } from '../../store/types'
 import '../../fa-pulse.css'
-
-interface ProviderStatusItem {
-  id: string
-  type?: string
-  statusType?: string
-  message?: string
-  lastError?: string
-  lastErrorTimeStamp?: string
-}
 
 export default function Dashboard() {
   const serverStatistics = useServerStats()
   const websocketStatus = useWsStatus()
-  const providerStatus =
-    (useStore((state) => state.providerStatus) as ProviderStatusItem[]) || []
+  const providerStatus = useStore((state) => state.providerStatus) ?? []
   const navigate = useNavigate()
 
   const deltaRate = serverStatistics?.deltaRate ?? 0
@@ -131,7 +121,7 @@ export default function Dashboard() {
   }
 
   const renderStatus = (
-    status: ProviderStatusItem,
+    status: ProviderStatus,
     statusClass: string,
     lastError: string
   ): ReactNode => {
