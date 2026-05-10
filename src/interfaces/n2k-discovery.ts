@@ -31,6 +31,17 @@ const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
 const REQUEST_INTERVAL_MS = 500
 const STATUS_TICK_MS = 5_000
+// Delay before re-asking a device for identity after we observe a frame
+// from it without a known manufacturer in the live tree. Long enough
+// that the boot sweep has time to fire first; short enough that a
+// post-Reset Stale device repopulates within ~10s of the next data
+// frame instead of staying nameless until the user clicks Discover.
+const REDISCOVERY_DEBOUNCE_MS = 10_000
+// Minimum gap between consecutive auto re-discovery requests for the
+// same address. A device that genuinely refuses to answer
+// 60928/126996/126998 (some Maretron/older units) shouldn't be
+// hammered every 10s forever.
+const REDISCOVERY_COOLDOWN_MS = 5 * 60_000
 
 // The app object at runtime is SignalKServer + IRouter + EventEmitter.
 // SignalKServer doesn't include those, so pick the methods we need.
@@ -251,6 +262,16 @@ module.exports = (app: N2kDiscoveryApp) => {
   // "online" reflects "alive on the bus", not "currently producing
   // mappable Signal K values".
   const frameLastSeenBySrc = new Map<number, number>()
+  // Per-address bookkeeping for auto-rediscovery: when we observe a
+  // frame from an address that has no manufacturer/model populated in
+  // app.signalk.sources we schedule one debounced ISO Request burst.
+  // `rediscoveryTimers` holds the pending debounce timer per address
+  // (so a flurry of frames doesn't queue many bursts — only the most
+  // recent debounce fires). `rediscoveryLastAtBySrc` holds the
+  // timestamp of the last burst we actually fired, so we honour the
+  // cooldown for devices that genuinely won't answer.
+  const rediscoveryTimers = new Map<number, ReturnType<typeof setTimeout>>()
+  const rediscoveryLastAtBySrc = new Map<number, number>()
   let statusTickInterval: ReturnType<typeof setInterval> | undefined
   // First tick always emits a full snapshot so admin-ui clients get
   // initial state via lastServerEvents bootstrap on connect.
@@ -314,6 +335,58 @@ module.exports = (app: N2kDiscoveryApp) => {
       }
     }
     return undefined
+  }
+
+  // Has the device at this bus address been identified? "Identified"
+  // means manufacturerCode is populated in the live sources tree,
+  // which only happens once we've received and parsed PGN 60928
+  // (Address Claim) for the device. Used by the auto-rediscovery
+  // path to decide whether to ask the device for its identity.
+  function hasDeviceIdentity(addr: number): boolean {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sources = (app.signalk as any)?.sources
+    if (!sources || typeof sources !== 'object') return false
+    const addrStr = String(addr)
+    for (const providerId of Object.keys(sources)) {
+      const conn = sources[providerId]
+      if (!conn || typeof conn !== 'object') continue
+      const sub = conn[addrStr]
+      if (!sub || typeof sub !== 'object') continue
+      const n2k = sub.n2k
+      if (n2k && n2k.manufacturerCode !== undefined) return true
+    }
+    return false
+  }
+
+  // Schedule one ISO Request burst (60928 + 126996 + 126998) for the
+  // given bus address. Debounced per address: a flurry of frames
+  // collapses into a single burst, and bursts are gated by a
+  // cooldown so a device that refuses to answer isn't asked
+  // continuously. No-op when the gateway hasn't signalled it can
+  // send yet.
+  function scheduleRediscovery(addr: number): void {
+    if (!n2kOutAvailable) return
+    if (rediscoveryTimers.has(addr)) return
+    const now = Date.now()
+    const lastAt = rediscoveryLastAtBySrc.get(addr)
+    if (lastAt !== undefined && now - lastAt < REDISCOVERY_COOLDOWN_MS) {
+      return
+    }
+    const timer = setTimeout(() => {
+      rediscoveryTimers.delete(addr)
+      // Re-check identity at fire time — the boot sweep or another
+      // path may have populated it during the debounce window.
+      if (hasDeviceIdentity(addr)) return
+      rediscoveryLastAtBySrc.set(addr, Date.now())
+      DISCOVERY_PGNS.forEach((pgn, j) => {
+        schedulePendingRequest(
+          () => sendISORequest(app, addr, pgn),
+          j * REQUEST_INTERVAL_MS
+        )
+      })
+      debug('Auto-rediscovery: requesting identity from src %d', addr)
+    }, REDISCOVERY_DEBOUNCE_MS)
+    rediscoveryTimers.set(addr, timer)
   }
 
   function buildSourceStatuses(): SourceStatus[] {
@@ -477,12 +550,15 @@ module.exports = (app: N2kDiscoveryApp) => {
       // counts as proof we identified the device — the sweep requests
       // all three and a device that answers any of them has revealed
       // itself.
-      if (
-        n2k.pgn === 60928 ||
-        n2k.pgn === 126996 ||
-        n2k.pgn === 126998
-      ) {
+      if (n2k.pgn === 60928 || n2k.pgn === 126996 || n2k.pgn === 126998) {
         discoveredAddresses.add(n2k.src)
+      } else if (!hasDeviceIdentity(n2k.src)) {
+        // Frame from a device whose manufacturer/model never landed.
+        // Happens after Reset Stale wiped the leaf, or for devices
+        // (typical of battery monitors) whose only-on-request
+        // 60928/126996/126998 reply was missed by the boot sweep.
+        // Debounced + cooldown-gated so we don't spam the bus.
+        scheduleRediscovery(n2k.src)
       }
     }
   }
@@ -1630,6 +1706,11 @@ module.exports = (app: N2kDiscoveryApp) => {
       clearTimeout(timer)
     }
     requestTimers.clear()
+    for (const timer of rediscoveryTimers.values()) {
+      clearTimeout(timer)
+    }
+    rediscoveryTimers.clear()
+    rediscoveryLastAtBySrc.clear()
     if (statusTickInterval) {
       clearInterval(statusTickInterval)
       statusTickInterval = undefined
