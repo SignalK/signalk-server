@@ -161,10 +161,10 @@ jobs:
             warnings.push('No "engines.node" field in package.json — plugins should declare their minimum Node.js version');
           }
 
-          // ESM-only plugins can't be loaded by the server's require() call
-          if (pkg.type === 'module') {
-            warnings.push('package.json has "type": "module" — SignalK server loads plugins with require(). ESM-only plugins may fail to load.');
-          }
+          // ESM plugins are loaded via dynamic import() since #1913
+          // (April 2025); on Node 20.19+ / 22 the require() path also
+          // succeeds via native ESM-from-CJS interop (see modules.ts
+          // requireUserPlugin). No warning needed for "type": "module".
 
           // baconjs is provided by the server — plugins must not bundle their own copy
           if (pkg.dependencies && pkg.dependencies.baconjs) {
@@ -1068,6 +1068,26 @@ jobs:
           # Cerbo GX (Venus OS) runs Node 20 which supports ES2023 syntax.
           # Plugins using ES2024+ syntax (RegExp v flag, import attributes)
           # will crash with SyntaxError on Node 20.
+          #
+          # Skip the check when the plugin's package.json has explicitly
+          # opted out of Node 20 via engines.node >= 22.  Mirrors how the
+          # node:sqlite check above gates on engines.node — if a plugin
+          # has declared "I require Node 22+", warning about Cerbo GX
+          # (Node 20) compatibility is noise.
+          OPTED_OUT=$(node -e "
+            const pkg = require('./package.json');
+            const range = pkg.engines && pkg.engines.node;
+            if (!range) { console.log('no'); process.exit(0); }
+            const m = range.match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+            if (!m) { console.log('no'); process.exit(0); }
+            const major = parseInt(m[1], 10);
+            console.log(major >= 22 ? 'yes' : 'no');
+          " 2>/dev/null)
+          if [ "$OPTED_OUT" = "yes" ]; then
+            echo "Skipping ES2023 check: package.json engines.node opts out of Node 20 (Cerbo GX)."
+            exit 0
+          fi
+
           # Only check server-side JS (dist/, lib/, main entry) — skip public/
           # which is frontend code running in browsers.
           FILES=""
