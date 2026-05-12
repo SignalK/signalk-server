@@ -22,6 +22,7 @@ Additionally you can have your plugin appear within one or more AppStore categor
 - `signalk-category-utility`
 - `signalk-category-cloud`
 - `signalk-category-weather`
+- `signalk-category-database`
 - `signalk-category-deprecated`
 
 To have your plugin start automatically after being installed, without requiring any configuration via the **Plugin Config** screen add the following key to the `package.json` file:

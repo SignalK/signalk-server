@@ -79,7 +79,8 @@ const CAT_KEYWORDS_TO_NAMES: {
   'signalk-category-digital-switching': 'Digital Switching',
   'signalk-category-utility': 'Utility',
   'signalk-category-cloud': 'Cloud',
-  'signalk-category-weather': 'Weather'
+  'signalk-category-weather': 'Weather',
+  'signalk-category-database': 'Database & History'
 }
 
 const DEFAULT_MODULE_CAT_KEYWORDS: {
