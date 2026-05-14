@@ -4,6 +4,7 @@ chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
 const _ = require('lodash')
 import { startServer } from './ts-servertestutilities'
+import DeltaCache from '../src/deltacache'
 
 const testDelta = {
   context: 'vessels.self',
@@ -221,5 +222,83 @@ describe('Deltacache', () => {
       defaults: {},
       deltaFromHttp: {}
     })
+  })
+
+  it('getCachedDeltas with key returns only matching path', function () {
+    const deltas = theServer.app.deltaCache.getCachedDeltas(
+      () => true,
+      null,
+      'navigation.trip.log'
+    )
+    deltas.length.should.equal(1)
+    deltas[0].updates[0].values[0].path.should.equal('navigation.trip.log')
+    deltas[0].updates[0].values[0].value.should.equal(43374)
+  })
+
+  it('getCachedDeltas with non-existent key returns empty array', function () {
+    const deltas = theServer.app.deltaCache.getCachedDeltas(
+      () => true,
+      null,
+      'navigation.does.not.exist'
+    )
+    deltas.length.should.equal(0)
+  })
+})
+
+describe('DeltaCache unit', () => {
+  let cache
+
+  beforeEach(() => {
+    const fakeStreambundle = {
+      keys: { onValue: () => {} },
+      getBus: () => ({ onValue: () => {} })
+    }
+    const fakeApp = {
+      securityStrategy: {
+        filterReadDelta: (_user, delta) => delta,
+        shouldFilterDeltas: () => false
+      }
+    }
+    cache = new DeltaCache(fakeApp, fakeStreambundle)
+  })
+
+  it('getCachedDeltas with key returns deltas under that path after direct populate', () => {
+    cache.onValue({
+      context: 'vessels.urn:test',
+      path: 'navigation.position',
+      $source: 'unit-test',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      value: { latitude: 60.1, longitude: 24.9 }
+    })
+
+    const deltas = cache.getCachedDeltas(
+      () => true,
+      null,
+      'navigation.position'
+    )
+    deltas.length.should.equal(1)
+    deltas[0].context.should.equal('vessels.urn:test')
+    deltas[0].updates[0].values[0].path.should.equal('navigation.position')
+    deltas[0].updates[0].values[0].value.should.deep.equal({
+      latitude: 60.1,
+      longitude: 24.9
+    })
+  })
+
+  it('getCachedDeltas with non-existent key returns empty array', () => {
+    cache.onValue({
+      context: 'vessels.urn:test',
+      path: 'navigation.position',
+      $source: 'unit-test',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      value: { latitude: 60.1, longitude: 24.9 }
+    })
+
+    const deltas = cache.getCachedDeltas(
+      () => true,
+      null,
+      'navigation.speedOverGround'
+    )
+    deltas.length.should.equal(0)
   })
 })

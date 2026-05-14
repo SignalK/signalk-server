@@ -15,7 +15,6 @@
  * limitations under the License.
 */
 
-import { isUndefined, values } from 'lodash'
 import { EventEmitter } from 'node:events'
 
 const STATS_UPDATE_INTERVAL_SECONDS = 5
@@ -92,7 +91,7 @@ export function startDeltaStatistics(
 
 export function incDeltaStatistics(
   app: WithProviderStatistics,
-  providerId: any
+  providerId: string
 ) {
   app.deltaCount++
 
@@ -104,12 +103,12 @@ export function incDeltaStatistics(
 
 function updateProviderPeriodStats(app: any) {
   app.providers.forEach((provider: any) => {
-    if (isUndefined(app.providerStatistics[provider.id])) {
+    if (app.providerStatistics[provider.id] === undefined) {
       app.providerStatistics[provider.id] = new ProviderStats()
     }
   })
 
-  values(app.providerStatistics).forEach((stats: ProviderStats) => {
+  for (const stats of Object.values<ProviderStats>(app.providerStatistics)) {
     stats.deltaRate =
       (stats.deltaCount - stats.lastIntervalDeltaCount) /
       STATS_UPDATE_INTERVAL_SECONDS
@@ -118,5 +117,5 @@ function updateProviderPeriodStats(app: any) {
       (stats.writeCount - stats.lastIntervalWriteCount) /
       STATS_UPDATE_INTERVAL_SECONDS
     stats.lastIntervalWriteCount = stats.writeCount
-  })
+  }
 }
