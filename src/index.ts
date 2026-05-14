@@ -210,27 +210,48 @@ class Server {
       type: string,
       statusType = 'provider'
     ) {
-      if (!statusMessage) {
-        delete app.providerStatus[providerId]
-        return
-      }
-
       if (_.isUndefined(app.providerStatus[providerId])) {
         app.providerStatus[providerId] = {}
       }
       const status = app.providerStatus[providerId]
+      const now = new Date().toISOString()
+      if (!statusMessage) {
+        if (type === 'error' && status.lastStatus) {
+          status.type = 'status'
+          status.message = status.lastStatus
+          status.timeStamp = status.lastStatusTimeStamp || now
+        } else {
+          status.type = type
+          status.message = ''
+          status.timeStamp = now
+        }
+        status.id = providerId
+        status.statusType = statusType
+      } else {
+        if (status.type === 'error' && status.message !== statusMessage) {
+          status.lastError = status.message
+          status.lastErrorTimeStamp = status.timeStamp
+        }
+        if (
+          type === 'error' &&
+          status.type === 'status' &&
+          status.message
+        ) {
+          status.lastStatus = status.message
+          status.lastStatusTimeStamp = status.timeStamp
+        }
 
-      if (status.type === 'error' && status.message !== statusMessage) {
-        status.lastError = status.message
-        status.lastErrorTimeStamp = status.timeStamp
+        status.type = type
+        status.id = providerId
+        status.statusType = statusType
+        status.timeStamp = now
+        status.message = statusMessage
+
+        if (type === 'status') {
+          status.lastStatus = statusMessage
+          status.lastStatusTimeStamp = status.timeStamp
+        }
       }
-
-      status.type = type
-      status.id = providerId
-      status.statusType = statusType
-      status.timeStamp = new Date().toISOString()
-
-      status.message = statusMessage
 
       app.emit('serverevent', {
         type: 'PROVIDERSTATUS',
