@@ -232,11 +232,7 @@ class Server {
           status.lastError = status.message
           status.lastErrorTimeStamp = status.timeStamp
         }
-        if (
-          type === 'error' &&
-          status.type === 'status' &&
-          status.message
-        ) {
+        if (type === 'error' && status.type === 'status' && status.message) {
           status.lastStatus = status.message
           status.lastStatusTimeStamp = status.timeStamp
         }
