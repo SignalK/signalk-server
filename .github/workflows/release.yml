@@ -4,7 +4,22 @@ on:
   push:
     tags:
       - 'v*'
+  # Per-(OS x Node) checkboxes. The catalogue of available combinations
+  # lives in .github/build-matrix.json - the inputs below are generated from
+  # it by .github/scripts/sync-dispatch-inputs.mjs (CI keeps them in sync).
+  # Tag-triggered runs ignore inputs and use default_enabled from the JSON.
   workflow_dispatch:
+    inputs:
+      # >>> BEGIN auto-generated dispatch inputs (from build-matrix.json — run .github/scripts/sync-dispatch-inputs.mjs to update)
+      ubuntu_24_04_node_24:
+        description: 'Ubuntu 24.04 + Node 24.x'
+        type: boolean
+        default: true
+      alpine_node_24:
+        description: 'Alpine + Node 24'
+        type: boolean
+        default: true
+      # <<< END auto-generated dispatch inputs
 
 permissions:
   id-token: write # Required for OIDC

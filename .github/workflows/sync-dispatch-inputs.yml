@@ -1,0 +1,67 @@
+name: Sync workflow_dispatch inputs from build-matrix.json
+
+# Keeps the per-(OS x Node) checkboxes in the build workflows in lockstep with
+# .github/build-matrix.json so the JSON is the single source of truth.
+#
+#   PR          -> runs in --check mode and fails if the generated YAML differs.
+#                  Author must run the generator locally and push the result.
+#   push master -> regenerates the YAML and auto-commits with [skip ci] if it
+#                  drifted (e.g. after merging a PR that only edited the JSON).
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.github/build-matrix.json'
+      - '.github/scripts/sync-dispatch-inputs.mjs'
+      - '.github/workflows/sync-dispatch-inputs.yml'
+  pull_request:
+    paths:
+      - '.github/build-matrix.json'
+      - '.github/scripts/sync-dispatch-inputs.mjs'
+      - '.github/workflows/build-base-image.yml'
+      - '.github/workflows/build-docker.yml'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/sync-dispatch-inputs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.repository == 'SignalK/signalk-server'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
+      - name: Check (PR) or regenerate (push)
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            node .github/scripts/sync-dispatch-inputs.mjs --check
+          else
+            node .github/scripts/sync-dispatch-inputs.mjs
+          fi
+
+      - name: Commit regenerated YAML
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .github/workflows; then
+            echo "No drift — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/*.yml
+          git commit -m "chore: sync workflow_dispatch inputs from build-matrix.json [skip ci]"
+          git push

@@ -13,11 +13,12 @@ on:
       - '*'
       - '!v*'
   # Per-(OS x Node) checkboxes. The catalogue of available combinations
-  # lives in .github/build-matrix.json - add a row there, then add a
-  # matching input below. Input names must be: <os_id_with_-_and_._mapped_to__>_node_<node_id>.
+  # lives in .github/build-matrix.json - the inputs below are generated from
+  # it by .github/scripts/sync-dispatch-inputs.mjs (CI keeps them in sync).
   # Push / tag runs ignore inputs and use default_enabled from the JSON.
   workflow_dispatch:
     inputs:
+      # >>> BEGIN auto-generated dispatch inputs (from build-matrix.json — run .github/scripts/sync-dispatch-inputs.mjs to update)
       ubuntu_24_04_node_24:
         description: 'Ubuntu 24.04 + Node 24.x'
         type: boolean
@@ -26,6 +27,7 @@ on:
         description: 'Alpine + Node 24'
         type: boolean
         default: true
+      # <<< END auto-generated dispatch inputs
 
 env:
   GHCR_REGISTRY: ghcr.io
@@ -91,7 +93,7 @@ jobs:
             (if ($enabled | type) == "object" then $enabled else {} end) as $en
             | .os_variants as $os | .node_versions as $nodes
             | [ $os[] as $o | $nodes[] as $n |
-                (($o.id | gsub("[-.]"; "_")) + "_node_" + $n.id) as $key |
+                ((if $o.family == $o.id then "" else "\($o.family)_" end) + ($o.id | gsub("[-.]"; "_")) + "_node_" + $n.id) as $key |
                 {
                   enabled: ($en[$key] // (if ($o.default_enabled and $n.default_enabled) then "true" else "false" end)),
                   family:    $o.family,
