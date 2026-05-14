@@ -224,6 +224,8 @@ class Server {
           status.type = type
           status.message = ''
           status.timeStamp = now
+          status.lastStatus = ''
+          status.lastStatusTimeStamp = undefined
         }
         status.id = providerId
         status.statusType = statusType
