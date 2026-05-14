@@ -215,7 +215,20 @@ jobs:
           ' .github/build-matrix.json)
 
           # Variant matrix: one row per variant (used by manifest + copy jobs).
-          variant_matrix=$(echo "$variants" | jq -c '[ .[] | {os_label, node, suffix} ]')
+          # archs is derived from build_matrix so the manifest sources reflect
+          # the architectures actually built (respecting exclude_archs).
+          variant_matrix=$(jq -cn \
+            --argjson variants "$variants" \
+            --argjson build_matrix "$build_matrix" '
+            [ $variants[] as $v |
+              ($v + {
+                archs: [ $build_matrix[]
+                  | select(.os_label == $v.os_label and .node == $v.node)
+                  | .arch ]
+              })
+              | {os_label, node, suffix, archs}
+            ]
+          ')
 
           count=$(echo "$variants" | jq 'length')
           if [[ "$count" -gt 0 ]]; then
@@ -298,14 +311,31 @@ jobs:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
+      - name: Compute manifest sources
+        id: sources
+        env:
+          ARCHS_JSON: ${{ toJSON(matrix.archs) }}
+          SRC_PREFIX: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}
+          OS: ${{ matrix.os_label }}
+          NODE: ${{ matrix.node }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          srcs=$(jq -r \
+            --arg p "$SRC_PREFIX" --arg o "$OS" --arg n "$NODE" --arg r "$RUN_ID" \
+            '.[] | "\($p):\(.)-\($o)-\($n)-\($r)"' <<<"$ARCHS_JSON")
+          {
+            echo 'value<<EOF'
+            echo "$srcs"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
       - name: Create and push multi-arch manifest to GHCR
         uses: int128/docker-manifest-create-action@v2
         with:
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
           sources: |
-            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:amd-${{ matrix.os_label }}-${{ matrix.node }}-${{ github.run_id }}
-            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:arm-${{ matrix.os_label }}-${{ matrix.node }}-${{ github.run_id }}
+            ${{ steps.sources.outputs.value }}
       - name: Save tags to file
         run: |
           mkdir -p /tmp/tags
@@ -363,7 +393,7 @@ jobs:
   housekeeping:
     name: Housekeeping
     needs: [copy-to-dockerhub]
-    if: ${{ always() && needs.copy-to-dockerhub.result == 'success' }}
+    if: ${{ !cancelled() && needs.copy-to-dockerhub.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       packages: write

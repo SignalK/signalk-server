@@ -138,11 +138,12 @@ jobs:
                   | select(.os_label == $v.os_label and .node == $v.node)
                   | .arch ]
               })
+              | select(.archs | length > 0)
               | {os_label, node, suffix, archs}
             ]
           ')
 
-          count=$(echo "$variants" | jq 'length')
+          count=$(echo "$variant_matrix" | jq 'length')
           if [[ "$count" -gt 0 ]]; then
             echo "any_enabled=true" >> "$GITHUB_OUTPUT"
           else
@@ -211,6 +212,7 @@ jobs:
             ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=sha
           flavor: |
             suffix=${{ matrix.suffix }}

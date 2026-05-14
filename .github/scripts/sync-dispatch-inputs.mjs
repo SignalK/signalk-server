@@ -7,6 +7,9 @@
 // Usage:
 //   node .github/scripts/sync-dispatch-inputs.mjs            regenerate in place
 //   node .github/scripts/sync-dispatch-inputs.mjs --check    exit 1 if any drift
+//
+// Exit codes: 0 = success / up-to-date, 1 = drift detected (--check only),
+//             2 = BEGIN/END markers missing or malformed in a workflow.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
