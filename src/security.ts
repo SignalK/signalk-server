@@ -298,7 +298,12 @@ export function getSecurityConfig(
       const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
       return JSON.parse(optionsAsString)
     } catch (e: any) {
-      if (e.code !== 'ENOENT' || !app.securityStrategy?.isDummy()) {
+      // Suppress the ENOENT noise when security is off. The strategy may be
+      // undefined here because setupCors() reads the security config before
+      // startSecurity() installs the dummy strategy — treat that as dummy.
+      const hasRealSecurity =
+        app.securityStrategy && !app.securityStrategy.isDummy()
+      if (e.code !== 'ENOENT' || hasRealSecurity) {
         console.error(
           'Could not parse security config at %s: %s',
           pathForSecurityConfig(app),
