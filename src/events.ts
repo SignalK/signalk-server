@@ -190,8 +190,13 @@ export function wrapEmitter(targetEmitter: EventEmitter): WrappedEmitter {
 
   let emittedCount = 0
 
-  function safeEmit(this: any, eventName: string, ...args: any[]): boolean {
-    if (eventName !== 'serverlog') {
+  function safeEmit(
+    this: any,
+    eventName: string,
+    originalEventName: string,
+    ...args: any[]
+  ): boolean {
+    if (originalEventName !== 'serverlog') {
       let eventDebug = eventDebugs[eventName]
       if (!eventDebug) {
         eventDebugs[eventName] = eventDebug = createDebug(
@@ -265,8 +270,8 @@ export function wrapEmitter(targetEmitter: EventEmitter): WrappedEmitter {
       emittersForEvent[emitterId] = 0
     }
     emittersForEvent[emitterId]++
-    safeEmit(`${emitterId}:${eventName}`, ...args)
-    return safeEmit(eventName, ...args)
+    safeEmit(`${emitterId}:${eventName}`, eventName, ...args)
+    return safeEmit(eventName, eventName, ...args)
   }
 
   const addListenerWithId = function (
