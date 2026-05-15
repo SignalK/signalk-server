@@ -171,7 +171,11 @@ export function wrapEmitter(targetEmitter: EventEmitter): WrappedEmitter {
   let emittedCount = 0
 
   function safeEmit(this: any, eventName: string, ...args: any[]): boolean {
-    if (eventName !== 'serverlog') {
+    // Skip debug output for serverlog (and its `<emitterId>:serverlog` form).
+    // The logging layer hooks stdout.write to re-emit it as a serverlog event,
+    // so emitting debug here would write to stdout and recurse until the
+    // call stack overflows whenever DEBUG matches signalk-server:events:*.
+    if (eventName !== 'serverlog' && !eventName.endsWith(':serverlog')) {
       let eventDebug = eventDebugs[eventName]
       if (!eventDebug) {
         eventDebugs[eventName] = eventDebug = createDebug(
