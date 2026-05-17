@@ -125,4 +125,35 @@ describe('Server', function () {
         treeAfterOtherSourceDelta.should.be.validSignalK
       })
   }).timeout(4000)
+
+  it('preserves a schema-conformant upstream label', function () {
+    const host = 'http://localhost:' + port
+    const deltaUrl = host + '/signalk/v1/api/_test/delta'
+    const restUrl = host + '/signalk/v1/api/'
+
+    const forwarded = {
+      context: 'vessels.' + uuid,
+      updates: [
+        {
+          source: {
+            label: 'canhat',
+            type: 'NMEA2000',
+            canName: 'c0788c00e7e04312',
+            src: '43',
+            pgn: 129025
+          },
+          values: [{ path: 'navigation.position', value: { latitude: 1 } }]
+        }
+      ]
+    }
+
+    return sendDelta(forwarded, deltaUrl)
+      .then(() => fetch(restUrl).then((r) => r.json()))
+      .then((tree) => {
+        tree.vessels[uuid].should.have.nested.property(
+          'navigation.position.$source',
+          'canhat.c0788c00e7e04312'
+        )
+      })
+  }).timeout(4000)
 })

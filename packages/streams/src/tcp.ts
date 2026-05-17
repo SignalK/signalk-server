@@ -36,7 +36,15 @@ export default class TcpStream extends Transform {
 
   constructor(options: TcpOptions) {
     super()
-    this.options = options
+    // Trim whitespace off host: a stray space pasted into the admin UI
+    // would otherwise produce a confusing "getaddrinfo ENOTFOUND
+    // <space>1.2.3.4" failure even though the IP is reachable. Numeric
+    // port stays as-is — the form already coerces it.
+    this.options = {
+      ...options,
+      host:
+        typeof options.host === 'string' ? options.host.trim() : options.host
+    }
     const parsedTimeout = Number.parseInt(
       (this.options.noDataReceivedTimeout + '').trim()
     )

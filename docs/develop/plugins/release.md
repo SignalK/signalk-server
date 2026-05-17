@@ -4,7 +4,7 @@ title: Releases and Changelogs
 
 # Releases and Changelogs for Plugins
 
-When a user updates a plugin through the AppStore, they currently see only the new version number — nothing about what changed. This page describes a light-touch convention that makes per-release notes available to tools (a future AppStore, Dependabot, npm's package page) and to humans browsing your repository.
+When a user updates a plugin through the AppStore, they see only the new version number — nothing about what changed. This page describes a light-touch convention that makes per-release notes available to tools (a future AppStore, Dependabot, npm's package page) and to humans browsing your repository.
 
 The recommendation is deliberately tool-agnostic. Pick whichever of the established approaches below fits your workflow; what matters is the **output shape**, not how you produce it.
 

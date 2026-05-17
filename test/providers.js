@@ -166,6 +166,96 @@ describe('Providers', (_) => {
       '/dev/usb0'
     )
   })
+
+  it('Clearing talkerGroups via PUT actually removes them', async function () {
+    // First save: provider with a talkerGroups entry.
+    let res = await fetch(`${url}/skServer/providers/testProvider`, {
+      method: 'put',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: 'testProvider',
+        enabled: false,
+        type: 'simple',
+        options: {
+          type: 'NMEA0183',
+          device: '/dev/usb0',
+          talkerGroups: { gps: ['GP', 'GL'] }
+        }
+      })
+    })
+    res.status.should.equal(200)
+    let saved = server.app.config.settings.pipedProviders.find(
+      (p) => p.id === 'testProvider'
+    )
+    saved.pipeElements[0].options.subOptions.talkerGroups.should.deep.equal({
+      gps: ['GP', 'GL']
+    })
+
+    // Second save: provider with talkerGroups omitted (regression: this
+    // is what the admin UI used to send when the user deleted the last
+    // entry — the merge kept the previous saved groups).
+    res = await fetch(`${url}/skServer/providers/testProvider`, {
+      method: 'put',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: 'testProvider',
+        enabled: false,
+        type: 'simple',
+        options: {
+          type: 'NMEA0183',
+          device: '/dev/usb0'
+        }
+      })
+    })
+    res.status.should.equal(200)
+    saved = server.app.config.settings.pipedProviders.find(
+      (p) => p.id === 'testProvider'
+    )
+    // eslint-disable-next-line chai/no-unused-expressions
+    chai.expect(saved.pipeElements[0].options.subOptions.talkerGroups).to.be
+      .undefined
+  })
+
+  it('Empty talkerGroups object via PUT clears them', async function () {
+    // Reset with a populated entry first.
+    let res = await fetch(`${url}/skServer/providers/testProvider`, {
+      method: 'put',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: 'testProvider',
+        enabled: false,
+        type: 'simple',
+        options: {
+          type: 'NMEA0183',
+          device: '/dev/usb0',
+          talkerGroups: { gps: ['GP'] }
+        }
+      })
+    })
+    res.status.should.equal(200)
+
+    // Send an empty talkerGroups object — what the fixed admin UI submits
+    // when the user deletes the last entry.
+    res = await fetch(`${url}/skServer/providers/testProvider`, {
+      method: 'put',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: 'testProvider',
+        enabled: false,
+        type: 'simple',
+        options: {
+          type: 'NMEA0183',
+          device: '/dev/usb0',
+          talkerGroups: {}
+        }
+      })
+    })
+    res.status.should.equal(200)
+    const saved = server.app.config.settings.pipedProviders.find(
+      (p) => p.id === 'testProvider'
+    )
+    saved.pipeElements[0].options.subOptions.talkerGroups.should.deep.equal({})
+  })
 })
 
 function checkExistingProvider(existing) {

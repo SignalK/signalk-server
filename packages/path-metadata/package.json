@@ -1,0 +1,24 @@
+{
+  "name": "@signalk/path-metadata",
+  "version": "0.1.0",
+  "description": "Signal K path metadata registry — well-known path descriptions, units, and enums",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "watch": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "prettier": "prettier --write .",
+    "lint": "eslint --fix",
+    "format": "npm run prettier && npm run lint",
+    "test": "mocha 'src/**/*.test.ts'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SignalK/signalk-server.git"
+  },
+  "license": "Apache-2.0"
+}

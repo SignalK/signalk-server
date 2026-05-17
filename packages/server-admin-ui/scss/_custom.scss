@@ -291,3 +291,540 @@ form.rjsf {
     border-left: 0;
   }
 }
+
+// Priority Groups
+.pg-help-toggle {
+  padding: 0;
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.pg-default-fallback {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.375rem;
+  background: rgba(var(--bs-primary-rgb), 0.03);
+
+  .pg-default-fallback-input {
+    max-width: 140px;
+  }
+}
+
+.pg-card {
+  margin-bottom: 0.75rem;
+  border-left: 4px solid var(--bs-primary);
+
+  &.pg-card-unranked {
+    border-left-color: var(--bs-warning);
+  }
+
+  &.pg-card-dirty {
+    border-left-color: #fb923c;
+  }
+}
+
+.pg-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+.pg-card-header-toggle {
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  text-align: left;
+  color: inherit;
+
+  &:hover {
+    color: var(--bs-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    border-radius: 0.25rem;
+  }
+}
+
+.pg-card-save {
+  white-space: nowrap;
+}
+
+.pg-card-body {
+  padding-top: 0;
+}
+
+.pg-unranked-hint {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  background: rgba(var(--bs-warning-rgb), 0.12);
+  border: 1px solid rgba(var(--bs-warning-rgb), 0.3);
+  font-size: 0.875rem;
+  color: #7a4f00;
+}
+
+.pg-three-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pg-col {
+  min-width: 0;
+}
+
+.pg-col-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--bs-secondary-color, #6c757d);
+  margin-bottom: 0.5rem;
+}
+
+// Sources column
+.pg-source-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.pg-source-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  background: var(--bs-body-bg);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.375rem;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    opacity 0.15s ease;
+
+  &.is-highlighted {
+    border-color: var(--bs-primary);
+    background: rgba(var(--bs-primary-rgb), 0.06);
+  }
+}
+
+.pg-drag-handle {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: var(--bs-secondary-color, #6c757d);
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    border-radius: 0.25rem;
+  }
+}
+
+.pg-source-select {
+  background: none;
+  border: none;
+  padding: 0.15rem 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  border-radius: 0.25rem;
+
+  &:hover {
+    background: rgba(var(--bs-primary-rgb), 0.05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bs-primary);
+  }
+}
+
+.pg-rank {
+  font-weight: 600;
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+.pg-source-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.pg-source-label {
+  font-family: var(--bs-font-monospace);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pg-source-canname {
+  font-family: var(--bs-font-monospace);
+  font-size: 0.7rem;
+  // Long hex CAN Names have no breakable character; allow mid-string
+  // wrapping only when the line truly cannot fit. overflow-wrap defers
+  // to whitespace and grapheme boundaries first, so on desktop the
+  // canName stays on one line.
+  overflow-wrap: anywhere;
+}
+
+// On narrow viewports the (Manufacturer) hint and "wins X/Y" stats
+// compete with the name column for width. The name column already
+// shows manufacturer + model on line 1 and the canName on line 2, so
+// the hint is redundant and the stats are demoted to the second line
+// after the canName.
+// Source row metadata always stacks vertically: rank + primary label on
+// line 1, canName under it (already column-stacked inside .pg-source-name),
+// then device label / each badge / wins X/Y each on their own line. Inline
+// rendering on wide screens looked good only at the extremes — between ~900
+// and ~1700px the canName cascaded to one char per line because the device
+// label / Offline badge / stats competed with .pg-source-name for line 1.
+// flex-basis: 100% forces each meta child onto its own row; max-width:
+// fit-content keeps badges pill-sized instead of stretching to full width.
+.pg-source-select {
+  flex-wrap: wrap;
+  row-gap: 0.2rem;
+  align-items: flex-start;
+
+  .pg-source-name {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  // The meta block (device label, badges, stats) lives in its own
+  // wrapper so it can claim the full second row of the source button
+  // and lay its children out independently of the rank/name row.
+  .pg-source-meta {
+    flex: 0 0 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+
+    .pg-device-label,
+    .pg-source-stats,
+    .badge {
+      margin-left: 0 !important;
+    }
+  }
+}
+
+@media (max-width: 575.98px) {
+  .pg-device-label {
+    display: none;
+  }
+
+  // Source-priorities edit table — collapse to a card layout per row so
+  // the Source dropdown can use full width and the trash stays inline
+  // with the dropdown instead of falling off-screen behind the table's
+  // horizontal overflow.
+  .pg-prefs-table {
+    thead {
+      display: none;
+    }
+    tbody,
+    tr,
+    td {
+      display: block;
+      width: 100%;
+    }
+    tr {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas:
+        'rank source actions'
+        'fallback fallback fallback'
+        'enabled order order';
+      column-gap: 0.5rem;
+      row-gap: 0.35rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    td {
+      padding: 0;
+      border: none;
+      &::before {
+        content: attr(data-th);
+        display: block;
+        font-size: 0.7rem;
+        color: var(--bs-secondary-color, #6c757d);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        margin-bottom: 0.1rem;
+      }
+      &[data-th='']::before {
+        display: none;
+      }
+    }
+    td:nth-child(1) {
+      grid-area: rank;
+      align-self: center;
+      &::before {
+        display: none;
+      }
+    }
+    td:nth-child(2) {
+      grid-area: source;
+    }
+    td:nth-child(3) {
+      grid-area: fallback;
+    }
+    td:nth-child(4) {
+      grid-area: enabled;
+      text-align: left !important;
+    }
+    td:nth-child(5) {
+      grid-area: order;
+    }
+    td:nth-child(6) {
+      grid-area: actions;
+      align-self: end;
+      justify-self: end;
+    }
+  }
+
+  // Path rows in the middle column: let the path wrap and demote the
+  // publisher count + PGN labels to a second line so the full path is
+  // never truncated on portrait phone.
+  // Specificity bumped via .pg-path-row to win over the unscoped
+  // desktop rule that appears later in the source order.
+  .pg-path-row .pg-path-row-button {
+    flex-wrap: wrap;
+    code {
+      flex-basis: 100%;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  // Override row header: path on its own line, PGN labels + trash on
+  // the second line right-aligned. Without this, `navigation.magneti…`
+  // ellipsis-truncates and the trash floats off the right edge of the
+  // viewport. !important is needed because the equally-specific desktop
+  // rule appears later in source order.
+  .pg-override-row .pg-override-path {
+    flex-wrap: wrap;
+    .pg-override-path-code {
+      flex-basis: 100% !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere;
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+    .pg-path-kinds {
+      margin-left: 0 !important;
+    }
+  }
+}
+
+.pg-source-stats {
+  white-space: nowrap;
+}
+
+.pg-source-remove {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  color: var(--bs-danger);
+  border-radius: 0.25rem;
+
+  &:hover {
+    background: rgba(var(--bs-danger-rgb), 0.12);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bs-danger);
+  }
+}
+
+// Paths column
+.pg-path-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pg-path-row {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    opacity 0.15s ease;
+
+  &.is-override {
+    background: rgba(13, 110, 253, 0.06);
+    border-color: rgba(13, 110, 253, 0.4);
+  }
+
+  &.is-highlighted {
+    border-color: var(--bs-primary);
+    background: rgba(var(--bs-primary-rgb), 0.1);
+  }
+}
+
+.pg-path-row-button {
+  background: none;
+  border: none;
+  padding: 0.3rem 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  border-radius: 0.25rem;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bs-primary);
+  }
+
+  code {
+    font-size: 0.8rem;
+    color: inherit;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.pg-path-actions {
+  margin-top: 0.5rem;
+}
+
+.pg-path-publishers {
+  font-size: 0.65rem;
+  font-family: var(--bs-font-monospace);
+  color: var(--bs-secondary-color, #6c757d);
+  background: rgba(0, 0, 0, 0.04);
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  // A path that isn't published by every source in the group gets a slightly
+  // darker neutral tint so partial coverage is visible without implying a
+  // warning.
+  &.is-partial {
+    color: #495057;
+    background: rgba(0, 0, 0, 0.08);
+  }
+}
+
+.pg-path-kinds {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.pg-path-kind {
+  font-size: 0.65rem;
+  font-family: var(--bs-font-monospace);
+  color: var(--bs-secondary-color, #6c757d);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+}
+
+// Overrides column
+.pg-overrides-empty {
+  padding: 0.5rem 0;
+}
+
+.pg-overrides-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pg-override-row {
+  padding: 0.5rem 0.5rem 0.25rem;
+  border: 1px solid rgba(13, 110, 253, 0.35);
+  border-radius: 0.375rem;
+  background: rgba(13, 110, 253, 0.04);
+  transition: box-shadow 0.15s ease;
+
+  &.is-focused {
+    box-shadow: 0 0 0 2px rgba(var(--bs-primary-rgb), 0.35);
+  }
+
+  .pg-override-path {
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+
+    .pg-override-path-code {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+.pg-override-missing {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  color: #7a4f00;
+  background: rgba(var(--bs-warning-rgb), 0.18);
+  border: 1px solid rgba(var(--bs-warning-rgb), 0.45);
+  border-radius: 0.25rem;
+
+  .pg-override-fix {
+    white-space: nowrap;
+  }
+}
+
+.pg-override-delete {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  color: var(--bs-danger);
+  border-radius: 0.25rem;
+
+  &:hover {
+    background: rgba(var(--bs-danger-rgb), 0.12);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bs-danger);
+  }
+}

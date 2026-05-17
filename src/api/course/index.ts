@@ -6,9 +6,8 @@ import { IRouter, Request, Response } from 'express'
 import _ from 'lodash'
 
 import { SignalKMessageHub, WithConfig } from '../../app'
-import { Context, Path } from '@signalk/server-api'
+import { Context, Path, getSourceId } from '@signalk/server-api'
 import { WithSecurityStrategy } from '../../security'
-import { getSourceId } from '@signalk/signalk-schema'
 
 import {
   GeoJsonPoint,

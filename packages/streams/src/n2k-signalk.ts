@@ -72,7 +72,7 @@ interface Delta {
 }
 
 interface SourceMeta {
-  unknowCanName?: boolean
+  unknownCanName?: boolean
   [key: string]: unknown
 }
 
@@ -118,8 +118,37 @@ export default class N2kToSignalK extends Transform {
       'n2kSourceMetadata',
       (n2k: N2kMessage, meta: Record<string, unknown>) => {
         const src = Number(n2k.src)
+        // Reject the null address (254) — see _transform for the reasoning.
+        // Address Claim (PGN 60928) from an unclaimed device arrives with
+        // src=254; the claim itself updates the internal canboatjs mapping
+        // but we don't want to surface a "254" identity in the server tree.
+        if (src === 254) return
         const existing = this.sourceMeta[src] ?? {}
+        const prevCanName =
+          typeof existing.canName === 'string' ? existing.canName : undefined
+        const newCanName =
+          typeof meta.canName === 'string'
+            ? (meta.canName as string)
+            : undefined
         this.sourceMeta[src] = { ...existing, ...meta }
+        // When a CAN Name resolves for the first time (or replaces a
+        // previously stamped "unknown") and useCanName is active, deltas
+        // that have already flowed as "<providerId>.<src>" need to
+        // migrate to "<providerId>.<canName>". Without this, persisted
+        // sourcePriorities / sourceAliases / priorityGroups stay bound
+        // to the address form, and the data-browser carries two rows
+        // per device until restart.
+        if (
+          this.options.useCanName &&
+          newCanName &&
+          newCanName !== prevCanName
+        ) {
+          // n2k.src is a bus address (0–253) and newCanName is a 16-hex
+          // string, so the two refs always differ when we reach here.
+          const oldRef = `${this.options.providerId}.${n2k.src}`
+          const newRef = `${this.options.providerId}.${newCanName}`
+          this.app.emit('sourceRefChanged', { oldRef, newRef, src })
+        }
         const delta = {
           context: this.app.selfContext,
           updates: [
@@ -154,7 +183,7 @@ export default class N2kToSignalK extends Transform {
           const srcNum = Number(src)
           const meta = this.sourceMeta[srcNum]
           if (meta) {
-            meta.unknowCanName = true
+            meta.unknownCanName = true
           }
         }
       }
@@ -168,6 +197,10 @@ export default class N2kToSignalK extends Transform {
         if (this.sourceMeta[srcNum]) {
           delete this.sourceMeta[srcNum]
         }
+        // Notify server so persistent settings can be migrated
+        const oldRef = `${this.options.providerId}.${from}`
+        const newRef = `${this.options.providerId}.${to}`
+        this.app.emit('sourceRefChanged', { oldRef, newRef, src: srcNum })
       }
     )
 
@@ -203,6 +236,16 @@ export default class N2kToSignalK extends Transform {
     done: TransformCallback
   ): void {
     try {
+      // NMEA 2000 reserves address 254 as the "null address" — a device
+      // sends with 254 before it has claimed its real address via PGN
+      // 60928. Frames carrying 254 therefore have no stable identity;
+      // passing them on as deltas creates phantom "can0.254" rows in the
+      // Data Browser, priority groups, and NMEA Discovery. Drop them.
+      if (Number(chunk.src) === 254) {
+        done()
+        return
+      }
+
       const delta = this.n2kMapper.toDelta(chunk) as unknown as
         | Delta
         | undefined
@@ -228,7 +271,7 @@ export default class N2kToSignalK extends Transform {
         if (
           this.options.useCanName &&
           !canName &&
-          !this.sourceMeta[src]?.unknowCanName
+          !this.sourceMeta[src]?.unknownCanName
         ) {
           done()
           return

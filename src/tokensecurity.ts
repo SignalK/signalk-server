@@ -18,8 +18,8 @@ import { Request, Response, NextFunction, IRouter } from 'express'
 import jwt, { SignOptions } from 'jsonwebtoken'
 import _ from 'lodash'
 import bcrypt from 'bcryptjs'
-import { getSourceId } from '@signalk/signalk-schema'
 import {
+  getSourceId,
   Delta,
   Update,
   hasValues,
@@ -891,6 +891,7 @@ function tokenSecurityFactory(
     app.use(aPath, http_authorize(false))
     app.put(aPath, adminAuthenticationMiddleware(false))
     app.post(aPath, adminAuthenticationMiddleware(false))
+    app.delete(aPath, adminAuthenticationMiddleware(false))
   }
 
   strategy.addWriteMiddleware = function (aPath: string): void {

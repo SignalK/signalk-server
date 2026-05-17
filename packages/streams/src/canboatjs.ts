@@ -28,7 +28,7 @@ export default class CanboatJs extends Transform {
 
     const opts = {
       ...options,
-      useCamelCompat: options.useCamelCompat ?? true
+      useCamelCompat: options.useCamelCompat ?? false
     }
     this.fromPgn = new FromPgn(opts)
     const createDebug = options.createDebug ?? require('debug')

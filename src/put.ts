@@ -10,7 +10,7 @@ import {
 } from './requestResponse'
 import * as skConfig from './config/config'
 import { ConfigApp } from './config/config'
-import { getMetadata } from '@signalk/signalk-schema'
+import { getMetadata } from '@signalk/path-metadata'
 import { validateCategoryAssignment } from './unitpreferences'
 import { WithSecurityStrategy } from './security'
 
