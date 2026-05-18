@@ -75,6 +75,7 @@ export interface PrioritiesSliceActions {
   setGroupSources: (groupId: string, sources: string[]) => void
   setGroupInactive: (groupId: string, inactive: boolean) => void
   suppressNewcomerInGroup: (groupId: string, sourceRef: string) => void
+  unsuppressNewcomerInGroup: (groupId: string, sourceRef: string) => void
   clearRetiredSuppressions: (
     newcomerSourcesByGroup: Record<string, string[]>
   ) => void
@@ -493,6 +494,21 @@ export const createPrioritiesSlice: StateCreator<
           [groupId]: [...existing, sourceRef]
         }
       }
+    })
+  },
+
+  unsuppressNewcomerInGroup: (groupId, sourceRef) => {
+    set((state) => {
+      const existing = state.suppressedNewcomersByGroup[groupId] ?? []
+      if (!existing.includes(sourceRef)) return state
+      const filtered = existing.filter((ref) => ref !== sourceRef)
+      const next = { ...state.suppressedNewcomersByGroup }
+      if (filtered.length > 0) {
+        next[groupId] = filtered
+      } else {
+        delete next[groupId]
+      }
+      return { suppressedNewcomersByGroup: next }
     })
   },
 

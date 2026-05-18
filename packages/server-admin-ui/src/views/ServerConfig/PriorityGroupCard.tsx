@@ -30,7 +30,8 @@ import {
   useStore,
   useSourceStatus,
   useSourceStatusLoaded,
-  useLivePreferredSources
+  useLivePreferredSources,
+  useLoginStatus
 } from '../../store'
 import { getWebSocketService } from '../../hooks/useWebSocket'
 import type { ReconciledGroup } from '../../utils/sourceGroups'
@@ -323,9 +324,18 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
   const removePriorityOverride = useStore((s) => s.removePriorityOverride)
   const deletePath = useStore((s) => s.deletePath)
   const suppressNewcomerInGroup = useStore((s) => s.suppressNewcomerInGroup)
+  const unsuppressNewcomerInGroup = useStore((s) => s.unsuppressNewcomerInGroup)
   const sourceStatus = useSourceStatus()
   const livePreferredSourcesRaw = useLivePreferredSources()
   const sourceStatusLoaded = useSourceStatusLoaded()
+  const loginStatus = useLoginStatus()
+  // Both removeSource and n2kRemoveSource sit behind addAdminMiddleware.
+  // A non-admin click silently 401s — the trash icon would appear, the
+  // confirm dialog would fire, the local store would optimistically
+  // drop the row, the server would reject the DELETE, and on the next
+  // reconcile the source would reappear with no visible explanation.
+  const isAdmin =
+    !loginStatus.authenticationRequired || loginStatus.userLevel === 'admin'
   const { getDisplayName, getDisplayParts } = useSourceAliases()
 
   const [expanded, setExpanded] = useState(false)
@@ -498,16 +508,6 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
     // its bus-address state cleared. Also suppress the entry in the
     // local store so the row disappears instantly — without this the
     // dnd list briefly bounces while the eviction round-trips.
-    suppressNewcomerInGroup(group.id, sourceRef)
-    const endpoint = isN2kSource(sourceRef, sourcesData)
-      ? 'n2kRemoveSource'
-      : 'removeSource'
-    void fetch(
-      `${window.serverRoutesPrefix}/${endpoint}?sourceRef=${encodeURIComponent(sourceRef)}`,
-      { method: 'DELETE', credentials: 'include' }
-    ).catch((err) => {
-      console.warn(`Failed to evict source ${sourceRef}:`, err)
-    })
     // Read sources from the LIVE store, not the render-time `group.sources`
     // prop. Two trash clicks in quick succession would otherwise resolve
     // the second one against a snapshot that still contains the source
@@ -522,10 +522,47 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
     const liveSources =
       liveGroups.find((g) => g.id === group.id)?.sources ??
       group.sources.filter((src) => !newcomerLookup.has(src))
+    // Apply the optimistic local edits so the row disappears instantly
+    // — without this the dnd list briefly bounces while the eviction
+    // round-trips. Captured liveSources lets us revert if the server
+    // rejects the DELETE (most commonly 401 on a non-admin session).
+    suppressNewcomerInGroup(group.id, sourceRef)
     setGroupSources(
       group.id,
       liveSources.filter((src) => src !== sourceRef)
     )
+    const endpoint = isN2kSource(sourceRef, sourcesData)
+      ? 'n2kRemoveSource'
+      : 'removeSource'
+    const revertOptimistic = () => {
+      setGroupSources(group.id, liveSources)
+      unsuppressNewcomerInGroup(group.id, sourceRef)
+    }
+    void fetch(
+      `${window.serverRoutesPrefix}/${endpoint}?sourceRef=${encodeURIComponent(sourceRef)}`,
+      { method: 'DELETE', credentials: 'include' }
+    )
+      .then((res) => {
+        // 401/403/404/5xx don't throw — without an explicit check the
+        // user sees the row briefly disappear (optimistic local edit)
+        // and then reappear on the next reconcile with no clue why.
+        // Most common cause is a non-admin session: addAdminMiddleware
+        // rejects the DELETE with 401.
+        if (res.ok) return
+        const detail =
+          res.status === 401 || res.status === 403
+            ? 'admin permission required'
+            : `server returned ${res.status}`
+        revertOptimistic()
+        window.alert(`Could not remove ${label}: ${detail}.`)
+      })
+      .catch((err) => {
+        console.warn(`Failed to evict source ${sourceRef}:`, err)
+        revertOptimistic()
+        window.alert(
+          `Could not remove ${label}: network error. See console for details.`
+        )
+      })
     // Plan the per-path mutations first against the render-time
     // snapshot, then apply them by resolving each path's current index
     // from the live store right before the call. Walking the snapshot
@@ -797,11 +834,14 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                             // never added it to the saved ranking), and
                             // the missing-after-loaded case (saved ref
                             // the server no longer tracks — the only
-                            // way to clean it out of the group).
+                            // way to clean it out of the group). Gated
+                            // on isAdmin since both removeSource and
+                            // n2kRemoveSource sit behind admin auth.
                             const isMissingFromStatus =
                               sourceStatusLoaded && !statusEntry
                             const canRemove =
-                              isOffline || isNewcomer || isMissingFromStatus
+                              isAdmin &&
+                              (isOffline || isNewcomer || isMissingFromStatus)
                             const displayLabel = getDisplayName(
                               src,
                               sourcesData

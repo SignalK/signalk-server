@@ -457,6 +457,23 @@ describe('priorityGroups slice', () => {
     ])
   })
 
+  it('unsuppressNewcomerInGroup removes a single ref and prunes empty groups', () => {
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.II')
+    useStore.getState().suppressNewcomerInGroup('g1', 'u0183.GP')
+    useStore.getState().unsuppressNewcomerInGroup('g1', 'u0183.II')
+    expect(useStore.getState().suppressedNewcomersByGroup.g1).toEqual([
+      'u0183.GP'
+    ])
+    useStore.getState().unsuppressNewcomerInGroup('g1', 'u0183.GP')
+    expect(useStore.getState().suppressedNewcomersByGroup).toEqual({})
+  })
+
+  it('unsuppressNewcomerInGroup is a no-op for unknown refs', () => {
+    const before = useStore.getState().suppressedNewcomersByGroup
+    useStore.getState().unsuppressNewcomerInGroup('g1', 'missing')
+    expect(useStore.getState().suppressedNewcomersByGroup).toBe(before)
+  })
+
   it('setPriorityGroupsFromServer keeps suppression but marks it retiring', () => {
     useStore.getState().suppressNewcomerInGroup('g1', 'u0183.II')
     useStore
