@@ -286,7 +286,7 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
   }
 
   const pathExpressions = ((query.paths as string) || '')
-    .replace(/[^0-9a-z.,:]/gi, '')
+    .replace(/[^0-9a-z.,_:]/gi, '')
     .split(',')
   const pathSpecs: PathSpec[] = pathExpressions.map(splitPathExpression)
 
