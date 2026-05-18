@@ -773,38 +773,35 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                               : undefined
                             const deviceLabel =
                               identity?.modelId ?? identity?.manufacturerCode
-                            // Offline either means the server explicitly
-                            // reports the source down, or — once the
-                            // status snapshot has loaded — that the
-                            // source has been silent since boot. The
-                            // slice merges incoming snapshots, so an
-                            // entry that was once present can never
-                            // disappear due to transient upstream
-                            // reconnect drift; missing-after-loaded
-                            // therefore means "never seen this session".
+                            // Badge only when the server positively reports
+                            // the source offline. The slice replaces (not
+                            // merges) on each SOURCESTATUS snapshot, so a
+                            // missing entry is "unknown" — it could mean
+                            // the server intentionally removed the ref
+                            // (n2kRemoveSource, device reset) or that the
+                            // ref never landed in sourceMeta this session
+                            // — but it is not evidence of an offline
+                            // device. Showing Offline for absence brings
+                            // back the stale-badge problem 48c133d2 fixed.
                             const statusEntry = sourceStatus[src]
-                            const isOffline = !sourceStatusLoaded
-                              ? false
-                              : statusEntry
+                            const isOffline =
+                              sourceStatusLoaded && statusEntry
                                 ? !statusEntry.online
-                                : true
+                                : false
                             const isPlugin = isPluginSource(src)
                             const isNewcomer = newcomerSet.has(src)
-                            // Offer removal when the source is plainly
-                            // not contributing right now (Offline badge
-                            // fired) — drag-rank is the right tool for
-                            // online sources we actually want to keep.
-                            // Also offer it for newcomers: by
-                            // definition the user has not added the
-                            // source to the saved ranking. If they
-                            // already trashed it once and the
-                            // reconciler re-promoted it (because the
-                            // source is still publishing into the
-                            // cache), they need a second click to make
-                            // the deletion stick across the next
-                            // reconcile, or to drop it again after
-                            // saving.
-                            const canRemove = isOffline || isNewcomer
+                            // Deletion is broader than the badge: offer
+                            // the trash for any source that is plainly
+                            // not contributing right now. That's the
+                            // Offline case, the newcomer case (user
+                            // never added it to the saved ranking), and
+                            // the missing-after-loaded case (saved ref
+                            // the server no longer tracks — the only
+                            // way to clean it out of the group).
+                            const isMissingFromStatus =
+                              sourceStatusLoaded && !statusEntry
+                            const canRemove =
+                              isOffline || isNewcomer || isMissingFromStatus
                             const displayLabel = getDisplayName(
                               src,
                               sourcesData
