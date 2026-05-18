@@ -25,6 +25,13 @@ export type NormalizedMetaDelta = NormalizedBaseDelta & {
 /** @hidden */
 export type NormalizedValueDelta = NormalizedBaseDelta & {
   value: Value
+  /**
+   * Optional staleness-state container preserved through the cache so
+   * replayed deltas (and the HTTP API snapshot built from the cache)
+   * surface the server's `state.timedOut` flag, matching what a live WS
+   * client received in the original delta.
+   */
+  state?: PathValueState
   isMeta: false
 }
 

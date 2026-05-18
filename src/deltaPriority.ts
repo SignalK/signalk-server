@@ -228,6 +228,19 @@ export type ToPreferredDelta = ((
    * sources on a path that's actually pass-through.
    */
   routesPath: (path: string, sourceRef: string) => boolean
+  /**
+   * Returns the longest failover timeout (ms) across every source ranked
+   * for this path — either by a path-level override, or by the group
+   * that currently claims the path. Returns 0 when neither applies.
+   *
+   * Consumed by the staleness enforcer to floor an effective timeout at
+   * `max(staleness, failover)`, so a stale-data signal cannot fire
+   * inside an active failover window and race a backup source's
+   * takeover with a spurious null emission. The unknown-source timeout
+   * is deliberately excluded — folding it in would push the floor onto
+   * every unconfigured path.
+   */
+  getMaxFailoverTimeoutMs: (path: string) => number
 }
 
 /**
@@ -258,6 +271,7 @@ export const getToPreferredDelta = (
     const passthrough = ((delta: any, _now: Date, _selfContext: string) =>
       delta) as ToPreferredDelta
     passthrough.routesPath = () => false
+    passthrough.getMaxFailoverTimeoutMs = () => 0
     return passthrough
   }
 
@@ -527,6 +541,32 @@ export const getToPreferredDelta = (
     return !!publishers && publishers.size >= 2
   }
 
+  // Helper for the staleness enforcer (src/staleness.ts). Returns the
+  // largest timeout (in ms) ranked for this path — across either the
+  // path-level override or the claiming group's ordering. A path with
+  // no override and no group claim returns 0 (no failover window).
+  //
+  // Override entries are stored under their identity form (`canName`
+  // suffix when available) so a 16-hex CAN-Name override on a path
+  // matches the same way the per-delta resolver does. Group precedences
+  // already use canonical identity.
+  const maxTimeoutOfMap = (precedences: SourcePrecedences): number => {
+    let max = 0
+    for (const v of precedences.values()) {
+      if (v.timeout > max) max = v.timeout
+    }
+    return max
+  }
+  const getMaxFailoverTimeoutMs = (path: string): number => {
+    const o = overridePrecedences.get(path as Path)
+    if (o) return maxTimeoutOfMap(o)
+    const gid = pathToGroupId.get(path as Path)
+    if (!gid) return 0
+    const g = groupPrecedences.get(gid)
+    if (!g) return 0
+    return maxTimeoutOfMap(g)
+  }
+
   const fn = ((delta: any, now: Date, selfContext: string) => {
     if (delta.context === selfContext) {
       const millis = now.getTime()
@@ -595,5 +635,6 @@ export const getToPreferredDelta = (
     return delta
   }) as ToPreferredDelta
   fn.routesPath = routesPath
+  fn.getMaxFailoverTimeoutMs = getMaxFailoverTimeoutMs
   return fn
 }

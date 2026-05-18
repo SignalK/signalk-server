@@ -65,6 +65,7 @@ import { WithProviderStatistics } from './deltastats'
 import { buildProviderTalkerLookups } from './nmea0183TalkerGroups'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
+import { StalenessEnforcer } from './staleness'
 import { Zones } from './zones'
 import checkNodeVersion from './version'
 import helmet from 'helmet'
@@ -320,6 +321,7 @@ class Server {
     const initialPassthrough = ((delta: any) =>
       delta) as unknown as ToPreferredDelta
     initialPassthrough.routesPath = () => false
+    initialPassthrough.getMaxFailoverTimeoutMs = () => 0
     let toPreferredDelta: ToPreferredDelta = initialPassthrough
     // Translate `<label>.<numeric>` deltas to their `<label>.<canName>`
     // form so a saved canName-form ranking matches incoming refs from
@@ -386,6 +388,12 @@ class Server {
         console.error('getToPreferredDelta failed:', e)
       }
     }
+    // Indirection through the live closure so the staleness enforcer
+    // always reads the engine that activateSourcePriorities last built —
+    // a hot-reload of priorities replaces the closure without the
+    // enforcer needing to re-subscribe.
+    app.getMaxFailoverTimeoutMs = (path: string): number =>
+      toPreferredDelta.getMaxFailoverTimeoutMs(path)
     app.activateSourcePriorities()
 
     // Defer migration so that the moved device's own re-arbitration
@@ -592,6 +600,10 @@ class Server {
         60 * 1000
       )
     )
+    if (app.config.settings.enforceDataTimeouts !== false) {
+      app.stalenessEnforcer = new StalenessEnforcer(app)
+      app.stalenessEnforcer.start()
+    }
     app.intervals.push(
       setInterval(() => {
         app.emit('serverevent', {
@@ -746,6 +758,8 @@ class Server {
       this.app.intervals.forEach((interval) => {
         clearInterval(interval)
       })
+
+      this.app.stalenessEnforcer?.stop()
 
       if (this.pendingSourceRefMigrations) {
         for (const handle of this.pendingSourceRefMigrations) {

@@ -79,6 +79,7 @@ interface DeltaMessage {
     values?: Array<{
       path: string
       value: unknown
+      state?: PathData['state']
     }>
     meta?: Array<{
       path: string
@@ -313,7 +314,8 @@ const DataBrowser: React.FC = () => {
                   value: vp.value,
                   pgn: pgn || undefined,
                   sentence: sentence || undefined,
-                  timestamp: formattedTimestamp
+                  timestamp: formattedTimestamp,
+                  state: vp.state
                 }
                 const wasNew = !getPathData(key, path$SourceKey)
                 updatePath(key, path$SourceKey, pathData)

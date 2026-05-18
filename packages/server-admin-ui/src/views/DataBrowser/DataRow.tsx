@@ -246,11 +246,33 @@ function DataRow({
           convertedValue={convertedValue}
           convertedUnit={convertedUnit}
         />
+        {data.state?.timedOut && data.state.lastValue !== undefined && (
+          <div
+            className="text-muted"
+            style={{ fontSize: '0.85em', marginTop: '2px' }}
+            title={`Last good value at ${data.state.lastValue.timestamp}`}
+          >
+            last:{' '}
+            <DefaultValueRenderer
+              value={data.state.lastValue.value}
+              units={units}
+            />
+          </div>
+        )}
       </div>
 
       <TimestampCell timestamp={timestamp} isPaused={isPaused} />
 
       <div className="virtual-table-cell source-cell" data-label="Source">
+        {data.state?.timedOut && (
+          <Badge
+            bg="warning"
+            title="Server-side staleness enforcement marked this path+source as timed out"
+            style={{ marginRight: '4px', fontSize: '0.7em' }}
+          >
+            Stale
+          </Badge>
+        )}
         {isPreferred && (
           <Badge
             bg="success"
