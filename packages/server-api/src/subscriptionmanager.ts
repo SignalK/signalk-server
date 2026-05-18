@@ -1,5 +1,5 @@
 import { RelativePositionOrigin } from '.'
-import { Context, Delta, Path } from './deltas'
+import { Context, Delta, Path, SourceRef } from './deltas'
 
 /** @category Server API  */
 export interface SubscriptionManager {
@@ -51,6 +51,40 @@ export interface SubscribeMessage {
    * - `all`: all sources for every path, useful for source comparison and diagnostics
    */
   sourcePolicy?: 'preferred' | 'all'
+
+  /**
+   * Drop the listed source refs from the candidate set used by the
+   * priority cascade. The subscription still receives the
+   * priority-resolved single winner per path, just computed over the
+   * remaining sources. Use this to let a derived-data plugin subscribe
+   * to upstream sources with the user's priority ranking applied,
+   * without seeing its own output in the cascade.
+   *
+   * Effective only when `sourcePolicy` is `'preferred'` (the default).
+   * Ignored under `sourcePolicy: 'all'`, which already bypasses
+   * priority resolution.
+   *
+   * When combined with `excludeSelf`, the union of both sets is
+   * excluded.
+   */
+  excludeSources?: SourceRef[]
+
+  /**
+   * Plugin-API shorthand for `excludeSources: [<this plugin's id>]`.
+   * Resolved on the server side, so plugins don't need to know their
+   * own id. Useful for plugins that publish on the same path they
+   * consume — without the exclude their own output would dominate the
+   * priority cascade and they'd never see any other source.
+   *
+   * Only meaningful for subscriptions made through
+   * `app.subscriptionmanager.subscribe()` from inside a plugin. On
+   * WebSocket subscriptions there is no plugin identity to resolve
+   * against, and `excludeSelf` is ignored — WebSocket clients should
+   * use the explicit `excludeSources` form.
+   *
+   * Effective only when `sourcePolicy` is `'preferred'` (the default).
+   */
+  excludeSelf?: boolean
 }
 
 /** @inline

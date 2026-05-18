@@ -107,6 +107,27 @@ function backwardsCompat(url: string) {
   return [`${SERVERROUTESPREFIX}${url}`, url]
 }
 
+// Resolve excludeSelf:true to the plugin's id and union it with any
+// explicit excludeSources. Returns undefined when neither field is
+// set so the existing "no excludes" fast path in subscriptionmanager
+// is preserved.
+function mergeExcludeSelf(
+  excludeSources: SourceRef[] | undefined,
+  excludeSelf: boolean | undefined,
+  pluginId: string
+): SourceRef[] | undefined {
+  const hasList = Array.isArray(excludeSources) && excludeSources.length > 0
+  if (!hasList && !excludeSelf) return undefined
+  const merged = new Set<string>()
+  if (hasList) {
+    for (const ref of excludeSources!) {
+      if (typeof ref === 'string' && ref.length > 0) merged.add(ref)
+    }
+  }
+  if (excludeSelf) merged.add(pluginId)
+  return merged.size > 0 ? (Array.from(merged) as SourceRef[]) : undefined
+}
+
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
   const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
@@ -671,13 +692,25 @@ module.exports = (theApp: any) => {
         // a specific device — silently never see non-preferred deltas
         // because plugin subscriptions read streambundle.buses (the
         // post-toPreferredDelta bus). Same plumbing the WS interface uses.
+        //
+        // Resolve excludeSelf: true to [plugin.id] here so the engine
+        // downstream only ever sees excludeSources. Plugins emitting
+        // multiple labels (e.g. "myplugin.windFromPolars") should set
+        // excludeSources explicitly; excludeSelf is the simple case
+        // where the plugin's $source is plugin.id verbatim.
+        const excludeSources = mergeExcludeSelf(
+          command.excludeSources,
+          command.excludeSelf,
+          plugin.id
+        )
         app.subscriptionmanager.subscribe(
           command,
           unsubscribes,
           errorCallback,
           safeCallback,
           user,
-          command.sourcePolicy
+          command.sourcePolicy,
+          excludeSources
         )
       },
       unsubscribe: (msg: UnsubscribeMessage, unsubscribes: Unsubscribes) => {
