@@ -1102,3 +1102,117 @@ describe('toPreferredDelta.routesPath', () => {
     fn.routesPath('environment.outside.temperature', 'bar.B').should.equal(true)
   })
 })
+
+describe('excludeIdentities', () => {
+  const PATH = 'environment.wind.speedApparent'
+
+  function emit(
+    engine: ReturnType<typeof getToPreferredDelta>,
+    sourceRef: string,
+    value: number,
+    at: number
+  ) {
+    return engine(makeDelta(sourceRef, PATH, value), new Date(at), 'self')
+  }
+
+  it('drops deltas from an excluded source', () => {
+    const fn = getToPreferredDelta({
+      excludeIdentities: new Set(['c'])
+    })
+    accepted(emit(fn, 'c', 1, 0)).should.equal(false)
+    accepted(emit(fn, 'a', 2, 1)).should.equal(true)
+  })
+
+  it('runs the priority cascade across the remaining sources', () => {
+    // User ranking: c > b > a. Plugin owns c and excludes it, so the
+    // engine should hand it b while b publishes and fall back to a
+    // after b's fallback timeout.
+    const overrides: SourcePrioritiesData = {
+      [PATH]: [
+        { sourceRef: 'c' as SourceRef, timeout: 0 },
+        { sourceRef: 'b' as SourceRef, timeout: 100 },
+        { sourceRef: 'a' as SourceRef, timeout: 200 }
+      ]
+    }
+    const fn = getToPreferredDelta({
+      overrides,
+      excludeIdentities: new Set(['c'])
+    })
+    // a emits first and is the only candidate; accepted.
+    accepted(emit(fn, 'a', 1, 0)).should.equal(true)
+    // b emits — outranks a and is accepted immediately.
+    accepted(emit(fn, 'b', 2, 1)).should.equal(true)
+    // While b keeps winning, a is suppressed (lower rank, within a's
+    // own takeover window — a's timeout=200 governs the gap a must
+    // wait before it can displace the higher-ranked winner).
+    accepted(emit(fn, 'a', 3, 50)).should.equal(false)
+    // b goes silent past a's timeout (200ms). a finally takes over.
+    accepted(emit(fn, 'a', 4, 250)).should.equal(true)
+    // b returns — outranks a and is accepted immediately (timeout
+    // governs the lower-ranked source's takeover wait, not the
+    // higher-ranked source's re-entry).
+    accepted(emit(fn, 'b', 5, 260)).should.equal(true)
+  })
+
+  it('an excluded source never wins even when ranked highest', () => {
+    const overrides: SourcePrioritiesData = {
+      [PATH]: [
+        { sourceRef: 'c' as SourceRef, timeout: 0 },
+        { sourceRef: 'b' as SourceRef, timeout: 100 }
+      ]
+    }
+    const fn = getToPreferredDelta({
+      overrides,
+      excludeIdentities: new Set(['c'])
+    })
+    // c is rank 1 but excluded: every emission from c is dropped.
+    accepted(emit(fn, 'c', 1, 0)).should.equal(false)
+    accepted(emit(fn, 'c', 2, 50)).should.equal(false)
+    // b emits — accepted because c is invisible to the engine.
+    accepted(emit(fn, 'b', 3, 100)).should.equal(true)
+    // c keeps publishing but stays excluded.
+    accepted(emit(fn, 'c', 4, 150)).should.equal(false)
+    accepted(emit(fn, 'b', 5, 200)).should.equal(true)
+  })
+
+  it('excluded source emissions do not pollute pathSeenPublishers', () => {
+    // A path with only one real publisher should report routesPath=false
+    // (single-publisher paths never get a Preferred badge). An excluded
+    // source's emissions should not count toward the publisher gate.
+    const fn = getToPreferredDelta({
+      groups: [{ id: 'g', sources: ['real-source'], inactive: false }],
+      excludeIdentities: new Set(['excluded-plugin'])
+    })
+    // Excluded source publishes first — should be invisible to the
+    // engine including routesPath bookkeeping.
+    emit(fn, 'excluded-plugin', 1, 0)
+    fn.routesPath(PATH, 'real-source').should.equal(false)
+    // Real source publishes — group claims the path but only one
+    // publisher is known, so routesPath stays false.
+    emit(fn, 'real-source', 2, 1)
+    fn.routesPath(PATH, 'real-source').should.equal(false)
+    // Excluded plugin emits again — must not count as a second
+    // publisher even though it shares the path.
+    emit(fn, 'excluded-plugin', 3, 2)
+    fn.routesPath(PATH, 'real-source').should.equal(false)
+  })
+
+  it('exclusion applies on non-self contexts too', () => {
+    // A plugin subscribed with context:"*" must not see its own output
+    // even when the delta is for another vessel.
+    const fn = getToPreferredDelta({
+      excludeIdentities: new Set(['c'])
+    })
+    const otherVesselDelta = {
+      context: 'vessels.urn:mrn:imo:mmsi:123',
+      updates: [
+        {
+          $source: 'c',
+          values: [{ path: PATH, value: 5 }]
+        }
+      ]
+    }
+    const result = fn(otherVesselDelta, new Date(), 'self')
+    result.updates[0].values.length.should.equal(0)
+  })
+})

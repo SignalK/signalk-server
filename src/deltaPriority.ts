@@ -37,6 +37,19 @@ export interface PriorityResolutionConfig {
    * does not re-canonicalise the seed.
    */
   seenPublishersByPath?: Record<string, string[]>
+  /**
+   * Source identities to drop from the candidate set entirely.
+   * Keys are sourceRefIdentity() outputs (the CAN Name when present,
+   * otherwise the raw sourceRef) — the caller pre-canonicalises so the
+   * per-delta path doesn't pay for the lookup. A delta whose source
+   * matches an excluded identity is filtered out before any precedence
+   * check runs and leaves no trace in pathSeenPublishers /
+   * pathToGroupId; the engine behaves as if the source never emitted.
+   * Used by per-subscription engines to let a derived-data plugin
+   * apply the user's source ranking to upstream sources without seeing
+   * its own output in the cascade.
+   */
+  excludeIdentities?: Set<string>
 }
 
 // An NMEA 2000 CAN Name is a 64-bit identifier rendered as 16 hex
@@ -250,10 +263,12 @@ export const getToPreferredDelta = (
   const fallbackMs = config.fallbackMs ?? DEFAULT_FALLBACK_MS
   const unknownSourceTimeout = config.unknownSourceTimeout ?? 10000
   const canonicalise = config.canonicalise ?? identityCanonicaliser
+  const excludeIdentities = config.excludeIdentities
+  const hasExcludes = !!excludeIdentities && excludeIdentities.size > 0
 
   const hasOverrides = Object.keys(overrides).length > 0
   const hasActiveGroups = groups.some((g) => !g.inactive)
-  if (!hasOverrides && !hasActiveGroups) {
+  if (!hasOverrides && !hasActiveGroups && !hasExcludes) {
     debug('No priorities data')
     const passthrough = ((delta: any, _now: Date, _selfContext: string) =>
       delta) as ToPreferredDelta
@@ -528,6 +543,20 @@ export const getToPreferredDelta = (
   }
 
   const fn = ((delta: any, now: Date, selfContext: string) => {
+    // Excludes act on every context (a plugin subscribed with
+    // context:'*' still doesn't want its own output back), so run the
+    // identity check before the self-context guard that gates the
+    // priority cascade.
+    if (hasExcludes && delta.updates) {
+      for (const update of delta.updates) {
+        if ('values' in update && update.values && update.values.length > 0) {
+          const canonicalSource = canonicalise(update.$source) as SourceRef
+          if (excludeIdentities!.has(sourceRefIdentity(canonicalSource))) {
+            update.values = []
+          }
+        }
+      }
+    }
     if (delta.context === selfContext) {
       const millis = now.getTime()
       delta.updates &&

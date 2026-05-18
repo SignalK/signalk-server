@@ -121,6 +121,8 @@ interface WsMessage {
   statusCode?: number
   message?: string
   sourcePolicy?: SourcePolicy
+  excludeSources?: string[]
+  excludeSelf?: boolean
 }
 
 interface WsRequestReply extends UpdateOptions {
@@ -196,7 +198,8 @@ interface SubscriptionManager {
     write: (data: unknown) => void,
     onChange: (delta: Delta) => void,
     principal?: SkPrincipal,
-    sourcePolicy?: string
+    sourcePolicy?: string,
+    excludeSources?: string[]
   ) => void
   unsubscribe: (msg: WsMessage, unsubscribes: Array<() => void>) => void
 }
@@ -1123,6 +1126,16 @@ function processSubscribe(
     // listener attached in handleRealtimeConnection. Falling back to the
     // spark-level policy keeps the URL-query default working for clients
     // that never send a per-message override.
+    //
+    // excludeSelf is only meaningful for plugin subscriptions (where
+    // the server can resolve it to the plugin's id); WebSocket clients
+    // have no identity to resolve against, so it's logged and ignored.
+    // Explicit excludeSources is forwarded as-is.
+    if (msg.excludeSelf) {
+      debug(
+        'WebSocket subscribe ignores excludeSelf: there is no plugin identity to resolve; use excludeSources instead'
+      )
+    }
     app.subscriptionmanager.subscribe(
       msg,
       unsubscribes,
@@ -1136,7 +1149,10 @@ function processSubscribe(
         spark.backpressureManager!.send(filtered)
       },
       spark.request.skPrincipal,
-      msg.sourcePolicy ?? spark.sourcePolicy
+      msg.sourcePolicy ?? spark.sourcePolicy,
+      Array.isArray(msg.excludeSources) && msg.excludeSources.length > 0
+        ? msg.excludeSources
+        : undefined
     )
   }
 }

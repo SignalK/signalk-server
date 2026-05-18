@@ -183,6 +183,44 @@ ws://localhost:3000/signalk/v1/stream?subscribe=self&sourcePolicy=all
 
 The query-string default applies to the bootstrap cache replay and to per-message subscriptions that don't carry their own `sourcePolicy`. A subscribe message can still override it on a per-call basis by including `sourcePolicy` in the message body.
 
+#### Excluding Sources: `excludeSources` / `excludeSelf`
+
+A derived-data plugin often consumes one or more upstream sources for a path and publishes an improved value on the same path under its own label. With the user's [source priority](../../setup/source-priority.md) ranking the plugin's output above the upstream sources, downstream consumers get the improved value. But the plugin itself cannot just subscribe with `sourcePolicy: 'preferred'` — that returns the priority winner, which is the plugin's own output, creating a feedback loop. Subscribing with `sourcePolicy: 'all'` avoids the loop but loses the priority cascade across the upstream sources.
+
+`excludeSources` removes the listed source refs from the priority cascade's candidate set. The subscription still receives a single priority-resolved value per path; the cascade just runs without the excluded sources, with the same fallback semantics the user configured.
+
+```javascript
+let localSubscription = {
+  context: 'vessels.self',
+  excludeSelf: true,
+  subscribe: [
+    {
+      path: 'environment.wind.speedTrue'
+    }
+  ]
+}
+```
+
+With user ranking `myPlugin > sourceB > sourceA`:
+
+| Bus state                                  | Delivered to plugin |
+| ------------------------------------------ | ------------------- |
+| `sourceB` publishing                       | `sourceB`           |
+| `sourceB` silent past its fallback timeout | `sourceA`           |
+| `sourceB` resumes                          | `sourceB`           |
+| `myPlugin` (own output)                    | _(never delivered)_ |
+
+| Field                      | Behaviour                                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `excludeSources: string[]` | Drop these `$source` refs from the cascade. Explicit form; works in both plugin and WebSocket subscriptions.               |
+| `excludeSelf: true`        | Plugin-only shorthand. The server resolves it to `[plugin.id]`. Combine with `excludeSources` to add explicit refs on top. |
+
+Both fields take effect only when `sourcePolicy` is `'preferred'` (the default). Under `sourcePolicy: 'all'` they are ignored — `'all'` already bypasses the priority cascade and partial filtering would be surprising.
+
+`excludeSelf` resolves to the plugin's id only — a single ref, not a prefix match. A plugin that publishes under additional labels (e.g. `myPlugin.windFromPolars`) should use the explicit `excludeSources` form to list every ref it produces.
+
+WebSocket subscriptions can use `excludeSources` directly. `excludeSelf` is meaningless for them (there is no plugin identity to resolve against) and is silently ignored — WebSocket clients should always use the explicit form.
+
 ## Sending Deltas
 
 A SignalK plugin can not only read deltas, but can also send them. This is done using the `handleMessage()` API method and supplying:

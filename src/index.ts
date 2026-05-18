@@ -44,7 +44,11 @@ import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache, { buildSrcToCanonicalMap } from './deltacache'
 import DeltaChain from './deltachain'
-import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
+import {
+  getToPreferredDelta,
+  sourceRefIdentity,
+  ToPreferredDelta
+} from './deltaPriority'
 import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
@@ -387,6 +391,39 @@ class Server {
       }
     }
     app.activateSourcePriorities()
+
+    // Build a per-subscription priority engine that runs the user's
+    // ranking with a sourceRef exclusion mask. Used by
+    // SubscribeMessage.excludeSources / excludeSelf: a derived-data
+    // plugin that publishes on the same path it consumes can still
+    // receive the priority cascade across the upstream sources
+    // without seeing its own output in the candidate set.
+    //
+    // Reads groups / overrides / fallbackMs from the live settings
+    // each time so a per-subscription engine reflects whatever the
+    // user has currently saved, and shares the canonicaliseSourceRef
+    // closure so canName matching behaves the same as the global
+    // engine. Seeding seenPublishersByPath is not needed — the
+    // resulting engine is consumed by a single subscriber callback
+    // and never feeds routesPath consumers.
+    app.buildSubscriptionEngine = (
+      excludeSourceRefs: string[]
+    ): ToPreferredDelta => {
+      const excludeIdentities = new Set<string>()
+      for (const ref of excludeSourceRefs) {
+        if (typeof ref === 'string' && ref.length > 0) {
+          excludeIdentities.add(sourceRefIdentity(canonicaliseSourceRef(ref)))
+        }
+      }
+      const s = app.config.settings
+      return getToPreferredDelta({
+        groups: s.priorityGroups ?? [],
+        overrides: s.priorityOverrides ?? {},
+        fallbackMs: s.priorityDefaults?.fallbackMs,
+        canonicalise: canonicaliseSourceRef,
+        excludeIdentities
+      })
+    }
 
     // Defer migration so that the moved device's own re-arbitration
     // address claim has time to land in app.signalk.sources first.
