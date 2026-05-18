@@ -27,9 +27,9 @@
 
 ## Adding things
 
-- **New OS:** append a row to `os_variants`. Run `node .github/scripts/sync-dispatch-inputs.mjs` to regenerate the `workflow_dispatch.inputs` blocks in the three workflows (the sync workflow enforces this in CI).
-- **New Node major:** append a row to `node_versions`. Same: re-run the sync script.
-- **New arch:** append a row to `architectures`. No script regen needed — arches aren't part of the dispatch input UI.
+- **New OS:** append a row to `os_variants` and manually add a corresponding `workflow_dispatch` input to `build-base-image.yml`, `build-docker.yml`, and `release.yml`.
+- **New Node major:** append a row to `node_versions` and add inputs to the same three workflows.
+- **New arch:** append a row to `architectures`. No workflow input changes needed — arches aren't part of the dispatch input UI.
 
 ## Behavior
 

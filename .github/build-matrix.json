@@ -1,5 +1,5 @@
 {
-  "_comment": "Source of truth for the OS x Node x Arch combinations the Docker workflows build. See .github/docs/build-matrix.md for field definitions, naming conventions, and how to add new rows.",
+  "_comment": "Source of truth for the OS x Node x Arch combinations the Docker workflows build. See .github/docs/build-matrix.md for field definitions, naming conventions, and how to add new rows. When adding variants, also add a workflow_dispatch input to the three Docker workflows.",
   "architectures": [
     { "id": "amd", "vm": "ubuntu-latest", "platform": "linux/amd64" },
     { "id": "arm", "vm": "ubuntu-24.04-arm", "platform": "linux/arm64" }
