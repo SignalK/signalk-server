@@ -94,11 +94,12 @@ jobs:
                   | select(.os_label == $v.os_label and .node == $v.node)
                   | .arch ]
               })
+              | select(.archs | length > 0)
               | {os_label, node, archs}
             ]
           ')
 
-          count=$(echo "$variants" | jq 'length')
+          count=$(echo "$variant_matrix" | jq 'length')
           if [[ "$count" -gt 0 ]]; then
             echo "any_enabled=true" >> "$GITHUB_OUTPUT"
           else

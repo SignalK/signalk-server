@@ -156,7 +156,7 @@ jobs:
   prepare:
     name: Prepare matrices
     needs: [build_and_publish]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
@@ -167,18 +167,25 @@ jobs:
         uses: actions/checkout@v6
       - name: Compute matrices
         id: matrix
+        env:
+          # Tag pushes leave inputs empty -> fall back to default_enabled in build-matrix.json.
+          ENABLED_JSON: ${{ toJSON(github.event.inputs) }}
         run: |
           set -euo pipefail
 
           # Cross-product os_variants x node_versions from .github/build-matrix.json,
-          # filtering by default_enabled. The release manifest tag convention puts
-          # ubuntu on the bare semver tags (v2.21.3, latest, v2, v2.21) and adds
-          # '-<family>' for non-ubuntu variants (v2.21.3-alpine, latest-alpine).
-          variants=$(jq -c '
-            .os_variants as $os | .node_versions as $nodes
+          # then filter by the per-row dispatch checkbox (or by default_enabled
+          # for tag runs). The release manifest tag convention puts ubuntu on the
+          # bare semver tags (v2.21.3, latest, v2, v2.21) and adds '-<family>' for
+          # non-ubuntu variants (v2.21.3-alpine, latest-alpine).
+          variants=$(jq -c \
+            --argjson enabled "${ENABLED_JSON:-null}" '
+            (if ($enabled | type) == "object" then $enabled else {} end) as $en
+            | .os_variants as $os | .node_versions as $nodes
             | [ $os[] as $o | $nodes[] as $n |
+                ((if $o.family == $o.id then "" else "\($o.family)_" end) + ($o.id | gsub("[-.]"; "_")) + "_node_" + $n.id) as $key |
                 {
-                  enabled: (if ($o.default_enabled and $n.default_enabled) then "true" else "false" end),
+                  enabled: ($en[$key] // (if ($o.default_enabled and $n.default_enabled) then "true" else "false" end)),
                   family:    $o.family,
                   os_label:  $o.os_arg,
                   node:      (if $o.family == "ubuntu" then "\($n.id).x" else $n.id end),
@@ -220,11 +227,12 @@ jobs:
                   | select(.os_label == $v.os_label and .node == $v.node)
                   | .arch ]
               })
+              | select(.archs | length > 0)
               | {os_label, node, suffix, archs}
             ]
           ')
 
-          count=$(echo "$variants" | jq 'length')
+          count=$(echo "$variant_matrix" | jq 'length')
           if [[ "$count" -gt 0 ]]; then
             echo "any_enabled=true" >> "$GITHUB_OUTPUT"
           else
