@@ -1,4 +1,10 @@
-import React, { useMemo, useCallback, MouseEvent, ReactNode } from 'react'
+import React, {
+  useMemo,
+  useCallback,
+  useEffect,
+  MouseEvent,
+  ReactNode
+} from 'react'
 import { NavLink, Location } from 'react-router-dom'
 import Badge from 'react-bootstrap/Badge'
 import Nav from 'react-bootstrap/Nav'
@@ -14,7 +20,10 @@ import {
   useSourcePriorities,
   usePriorityOverrides,
   usePriorityGroups,
-  useActiveConflictCount
+  useActiveConflictCount,
+  useExpandedNavGroups,
+  useToggleNavGroup,
+  useSetNavGroupExpanded
 } from '../../store'
 import classNames from 'classnames'
 import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
@@ -60,6 +69,9 @@ export default function Sidebar({ location }: SidebarProps) {
   const loginStatus = useLoginStatus()
   const plugins = usePlugins()
   const conflictCount = useActiveConflictCount()
+  const expandedNavGroups = useExpandedNavGroups()
+  const toggleNavGroup = useToggleNavGroup()
+  const setNavGroupExpanded = useSetNavGroupExpanded()
 
   const multiSourcePaths = useMultiSourcePaths()
   const reconciled = useReconciledGroups()
@@ -414,21 +426,45 @@ export default function Sidebar({ location }: SidebarProps) {
     overridesWithMissingSourcesCount
   ])
 
-  const handleClick = useCallback((e: MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault()
-    ;(e.target as HTMLElement).parentElement?.classList.toggle('open')
-  }, [])
+  // Persist a group as expanded the first time the user navigates into
+  // it. After this, the group stays open even when the route moves out
+  // of the group — the user can collapse it explicitly via the toggle.
+  useEffect(() => {
+    for (const item of items) {
+      if (!item.children?.length) continue
+      const routeMatch = item.children.some(
+        (child) => child.url && location.pathname.indexOf(child.url) > -1
+      )
+      if (routeMatch && expandedNavGroups[item.name] !== true) {
+        setNavGroupExpanded(item.name, true)
+      }
+    }
+  }, [items, location.pathname, expandedNavGroups, setNavGroupExpanded])
 
+  const handleDropdownClick = useCallback(
+    (name: string) => (e: MouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault()
+      toggleNavGroup(name)
+    },
+    [toggleNavGroup]
+  )
+
+  // A dropdown is "open" when either the current route lives inside it
+  // (so the user can see where they are) or the user has expanded it
+  // explicitly. The expanded preference persists in localStorage so the
+  // group stays open after navigating away.
   const activeRoute = useCallback(
-    (routeName: string, children?: NavItemData[]) => {
-      const isActive = children?.length
-        ? children.some(
+    (item: NavItemData) => {
+      const routeName = item.url || ''
+      const routeMatch = item.children?.length
+        ? item.children.some(
             (child) => child.url && location.pathname.indexOf(child.url) > -1
           )
         : location.pathname.indexOf(routeName) > -1
-      return isActive ? 'nav-item nav-dropdown open' : 'nav-item nav-dropdown'
+      const isOpen = routeMatch || expandedNavGroups[item.name] === true
+      return isOpen ? 'nav-item nav-dropdown open' : 'nav-item nav-dropdown'
     },
-    [location.pathname]
+    [location.pathname, expandedNavGroups]
   )
 
   const renderBadge = (badgeData?: BadgeData | null): ReactNode => {
@@ -539,11 +575,11 @@ export default function Sidebar({ location }: SidebarProps) {
 
   const navDropdown = (item: NavItemData, key: number): ReactNode => {
     return (
-      <li key={key} className={activeRoute(item.url || '', item.children)}>
+      <li key={key} className={activeRoute(item)}>
         <a
           className="nav-link nav-dropdown-toggle"
           href="#"
-          onClick={handleClick}
+          onClick={handleDropdownClick(item.name)}
         >
           {renderIcon(item.icon)}
           {item.name}

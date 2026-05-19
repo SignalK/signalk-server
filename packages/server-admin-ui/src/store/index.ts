@@ -362,3 +362,10 @@ export function usePreferredSourceByPath(): Map<string, string> {
 }
 
 export * from './types'
+
+export {
+  useUiPrefs,
+  useExpandedNavGroups,
+  useToggleNavGroup,
+  useSetNavGroupExpanded
+} from './slices/uiSlice'
