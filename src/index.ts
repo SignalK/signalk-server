@@ -600,9 +600,12 @@ class Server {
         60 * 1000
       )
     )
+    // Instantiate the enforcer here so deltaCache hooks can fire onIncoming
+    // immediately. The timer is started only after server.listen succeeds —
+    // a startup failure between this point and `app.started = true` would
+    // otherwise leave an orphan interval ticking against a half-built app.
     if (app.config.settings.enforceDataTimeouts !== false) {
       app.stalenessEnforcer = new StalenessEnforcer(app)
-      app.stalenessEnforcer.start()
     }
     app.intervals.push(
       setInterval(() => {
@@ -691,6 +694,7 @@ class Server {
             'signalk-server running at 0.0.0.0:' + primaryPort.toString() + '\n'
           )
           app.started = true
+          app.stalenessEnforcer?.start()
           resolve(self)
         })
         const secondaryPort = getSecondaryPort(app)

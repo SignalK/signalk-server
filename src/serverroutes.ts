@@ -181,6 +181,9 @@ function validatePrioritiesPayload(
 const MAX_DEFAULT_TIMEOUT_SECONDS = 24 * 60 * 60
 const MIN_STALE_CHECK_INTERVAL_MS = 100
 const MAX_STALE_CHECK_INTERVAL_MS = 60 * 1000
+const MIN_AUTO_TIMEOUT_SAMPLES = 2
+const MAX_AUTO_TIMEOUT_SAMPLES = 1000
+const MAX_AUTO_TIMEOUT_WARMUP_SECONDS = 3600
 
 const stalenessSettingsSchema = Type.Object({
   enforceDataTimeouts: Type.Optional(Type.Boolean()),
@@ -193,6 +196,15 @@ const stalenessSettingsSchema = Type.Object({
       minimum: MIN_STALE_CHECK_INTERVAL_MS,
       maximum: MAX_STALE_CHECK_INTERVAL_MS
     })
+  ),
+  autoTimeoutSamples: Type.Optional(
+    Type.Integer({
+      minimum: MIN_AUTO_TIMEOUT_SAMPLES,
+      maximum: MAX_AUTO_TIMEOUT_SAMPLES
+    })
+  ),
+  autoTimeoutWarmupSeconds: Type.Optional(
+    Type.Integer({ minimum: 0, maximum: MAX_AUTO_TIMEOUT_WARMUP_SECONDS })
   )
 })
 
@@ -1198,6 +1210,14 @@ module.exports = function (
       }
       if (!isUndefined(s.staleCheckIntervalMs)) {
         updatedSettings.staleCheckIntervalMs = Number(s.staleCheckIntervalMs)
+      }
+      if (!isUndefined(s.autoTimeoutSamples)) {
+        updatedSettings.autoTimeoutSamples = Number(s.autoTimeoutSamples)
+      }
+      if (!isUndefined(s.autoTimeoutWarmupSeconds)) {
+        updatedSettings.autoTimeoutWarmupSeconds = Number(
+          s.autoTimeoutWarmupSeconds
+        )
       }
     }
 

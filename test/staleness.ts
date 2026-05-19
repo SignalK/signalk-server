@@ -63,18 +63,19 @@ const makeMockApp = (opts: MockOptions = {}): MockApp => {
     deltaCache: { cache: {} },
     getMaxFailoverTimeoutMs: (path: string) => failoverFloorByPath[path] ?? 0,
     handleMessage: (providerId: string, delta: Partial<Delta>) => {
-      const update = delta.updates?.[0]
-      if (!update || !hasValues(update)) return
-      const v = update.values[0]
-      if (!v) return
-      captured.push({
-        providerId,
-        context: delta.context,
-        $source: update.$source,
-        path: v.path,
-        value: v.value,
-        state: v.state
-      })
+      for (const update of delta.updates ?? []) {
+        if (!hasValues(update)) continue
+        for (const v of update.values) {
+          captured.push({
+            providerId,
+            context: delta.context,
+            $source: update.$source,
+            path: v.path,
+            value: v.value,
+            state: v.state
+          })
+        }
+      }
     },
     captured
   }
@@ -469,5 +470,152 @@ describe('StalenessEnforcer', () => {
     const enforcer = makeEnforcer(app)
     runTick(enforcer)
     expect(app.captured).to.have.lengthOf(0)
+  })
+
+  describe('meta.timeout: "auto"', () => {
+    // `recordAutoSample` and `tick` both read `Date.now()`; the tests drive
+    // a virtual clock so 5×-median derivation can be exercised without
+    // sleeping past the warm-up window in real time.
+    let realDateNow: () => number
+    let virtualNow = 0
+    beforeEach(() => {
+      realDateNow = Date.now
+      virtualNow = 1_700_000_000_000 // arbitrary fixed epoch ms
+      Date.now = () => virtualNow
+    })
+    afterEach(() => {
+      Date.now = realDateNow
+    })
+    const advance = (ms: number) => {
+      virtualNow += ms
+    }
+
+    it('falls back to the global default during the warm-up window', () => {
+      const app = makeMockApp({
+        defaultTimeout: 60,
+        metaByPath: { 'environment.wind.speedTrue': { timeout: 'auto' } }
+      })
+      const enforcer = makeEnforcer(app)
+      // Three samples landed; warm-up requires the ring to be full OR the
+      // warmup window to elapse. With samples=10 and 30s warm-up, neither
+      // is met after 3 quick deltas.
+      enforcer.onIncoming(SELF_CONTEXT, 'environment.wind.speedTrue', 'wind.1')
+      advance(1000)
+      enforcer.onIncoming(SELF_CONTEXT, 'environment.wind.speedTrue', 'wind.1')
+      advance(1000)
+      enforcer.onIncoming(SELF_CONTEXT, 'environment.wind.speedTrue', 'wind.1')
+      // Seed a cache leaf last seen 30s ago. With auto still warming up,
+      // the default 60s rules → no emission.
+      seedLeaf(
+        app,
+        SELF_CONTEXT,
+        'environment.wind.speedTrue',
+        'wind.1',
+        new Date(virtualNow - 30_000).toISOString(),
+        2.5
+      )
+      runTick(enforcer)
+      expect(app.captured).to.have.lengthOf(0)
+    })
+
+    it('derives 5x median interval once the sample ring fills', () => {
+      const app = makeMockApp({
+        defaultTimeout: 60,
+        metaByPath: { 'environment.wind.speedTrue': { timeout: 'auto' } }
+      })
+      const enforcer = makeEnforcer(app)
+      // 11 deltas at 1s intervals: median inter-arrival = 1s, derived
+      // timeout = 5s, clamped above the 2s floor.
+      for (let i = 0; i < 11; i++) {
+        enforcer.onIncoming(
+          SELF_CONTEXT,
+          'environment.wind.speedTrue',
+          'wind.1'
+        )
+        advance(1000)
+      }
+      // Seed a stale-by-3s leaf; should NOT fire (3s < 5s derived).
+      seedLeaf(
+        app,
+        SELF_CONTEXT,
+        'environment.wind.speedTrue',
+        'wind.1',
+        new Date(virtualNow - 3_000).toISOString(),
+        2.5
+      )
+      runTick(enforcer)
+      expect(app.captured).to.have.lengthOf(0)
+
+      // Seed a stale-by-6s leaf; should fire (6s > 5s derived).
+      seedLeaf(
+        app,
+        SELF_CONTEXT,
+        'environment.wind.speedTrue',
+        'wind.1',
+        new Date(virtualNow - 6_000).toISOString(),
+        2.5
+      )
+      runTick(enforcer)
+      expect(app.captured).to.have.lengthOf(1)
+    })
+
+    it('clamps the derived timeout to the 2..300s envelope', () => {
+      const app = makeMockApp({
+        defaultTimeout: 60,
+        metaByPath: { 'environment.wind.speedTrue': { timeout: 'auto' } }
+      })
+      const enforcer = makeEnforcer(app)
+      // 11 deltas at 100ms — derived would be 500ms, clamped up to 2s.
+      for (let i = 0; i < 11; i++) {
+        enforcer.onIncoming(
+          SELF_CONTEXT,
+          'environment.wind.speedTrue',
+          'wind.1'
+        )
+        advance(100)
+      }
+      seedLeaf(
+        app,
+        SELF_CONTEXT,
+        'environment.wind.speedTrue',
+        'wind.1',
+        new Date(virtualNow - 1500).toISOString(),
+        2.5
+      )
+      runTick(enforcer)
+      // 1.5s elapsed since last delta; clamped floor of 2s means no fire.
+      expect(app.captured).to.have.lengthOf(0)
+    })
+
+    it('clears the sampler when the context is evicted', () => {
+      const app = makeMockApp({
+        defaultTimeout: 60,
+        metaByPath: { 'environment.wind.speedTrue': { timeout: 'auto' } }
+      })
+      const enforcer = makeEnforcer(app)
+      for (let i = 0; i < 11; i++) {
+        enforcer.onIncoming(
+          SELF_CONTEXT,
+          'environment.wind.speedTrue',
+          'wind.1'
+        )
+        advance(1000)
+      }
+      enforcer.onContextRemoved(SELF_CONTEXT)
+      // After eviction the sampler is gone; an immediate stale check on
+      // the same path+source falls back to the default 60s and does not
+      // fire for a leaf that's only 6s stale (which would have fired
+      // pre-eviction once the derived 5s window was exceeded).
+      seedLeaf(
+        app,
+        SELF_CONTEXT,
+        'environment.wind.speedTrue',
+        'wind.1',
+        new Date(virtualNow - 6_000).toISOString(),
+        2.5
+      )
+      runTick(enforcer)
+      expect(app.captured).to.have.lengthOf(0)
+    })
   })
 })

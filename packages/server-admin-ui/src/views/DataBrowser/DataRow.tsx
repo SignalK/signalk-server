@@ -192,6 +192,31 @@ function DataRow({
     }
   }
 
+  // The last good value displayed under a timed-out row gets the same
+  // unit conversion as the current value, so a user who reads SOG in
+  // knots doesn't suddenly see m/s in the "last:" line.
+  let lastConvertedValue: number | null = null
+  let lastConvertedUnit: string | null = null
+  if (
+    data.state?.timedOut &&
+    data.state.lastValue !== undefined &&
+    category &&
+    typeof data.state.lastValue.value === 'number'
+  ) {
+    const converted = convertValue(
+      data.state.lastValue.value,
+      units,
+      category,
+      presetDetails,
+      unitDefinitions,
+      displayUnits
+    )
+    if (converted && converted.unit !== units) {
+      lastConvertedValue = converted.value
+      lastConvertedUnit = converted.unit
+    }
+  }
+
   const path = data.path ?? ''
   const source = data.$source ?? ''
   const timestamp = data.timestamp ?? ''
@@ -256,6 +281,8 @@ function DataRow({
             <DefaultValueRenderer
               value={data.state.lastValue.value}
               units={units}
+              convertedValue={lastConvertedValue}
+              convertedUnit={lastConvertedUnit}
             />
           </div>
         )}

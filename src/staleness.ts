@@ -22,6 +22,30 @@ const NOTIFICATIONS_ROOT = 'notifications'
 const DEFAULT_TIMEOUT_SECONDS = 60
 const DEFAULT_CHECK_INTERVAL_MS = 1000
 const NEVER_TIMEOUT = 0
+// `timeout: 'auto'` derives the effective timeout from observed delta
+// arrival rates. The constants below match the RFC v7 contract: a
+// warm-up window seeded with `defaultTimeout`, a sample ring of fixed
+// depth, an envelope of 5× the median inter-arrival, and a clamp that
+// keeps a chatty source from being shadowed by jitter and a slow
+// source from waiting unboundedly.
+const DEFAULT_AUTO_SAMPLES = 10
+const DEFAULT_AUTO_WARMUP_SECONDS = 30
+const AUTO_INTERVAL_MULTIPLIER = 5
+const AUTO_MIN_TIMEOUT_MS = 2 * 1000
+const AUTO_MAX_TIMEOUT_MS = 300 * 1000
+
+interface AutoSampler {
+  // Ring buffer of inter-arrival intervals in ms. The 0-th entry holds
+  // the most recent interval; older intervals shift toward the end.
+  intervals: number[]
+  // Number of intervals recorded so far (capped at intervals.length).
+  count: number
+  // Timestamp of the most recent delta for this key.
+  lastTs: number
+  // Wall-clock ms at which the warm-up window ends; until then the
+  // global default is used as a safe upper bound.
+  warmupExpiresAt: number
+}
 
 type App = ServerApp & WithConfig & SignalKMessageHub
 
@@ -103,9 +127,12 @@ const resolveStreamTypeFromDefaults = (
 export class StalenessEnforcer {
   private readonly app: App
   private readonly timedOut = new Set<string>()
+  private readonly autoSamplers = new Map<string, AutoSampler>()
   private readonly defaultTimeoutMs: number
   private readonly intervalMs: number
   private readonly useDefaults: boolean
+  private readonly autoSamplesSize: number
+  private readonly autoWarmupMs: number
   private timer: ReturnType<typeof setInterval> | null = null
 
   constructor(app: App) {
@@ -114,17 +141,22 @@ export class StalenessEnforcer {
     this.defaultTimeoutMs = (s.defaultTimeout ?? DEFAULT_TIMEOUT_SECONDS) * 1000
     this.intervalMs = s.staleCheckIntervalMs ?? DEFAULT_CHECK_INTERVAL_MS
     this.useDefaults = s.useDefaultTimeouts !== false
+    this.autoSamplesSize = s.autoTimeoutSamples ?? DEFAULT_AUTO_SAMPLES
+    this.autoWarmupMs =
+      (s.autoTimeoutWarmupSeconds ?? DEFAULT_AUTO_WARMUP_SECONDS) * 1000
   }
 
   start(): void {
     if (this.timer) return
     this.timer = setInterval(this.tick.bind(this), this.intervalMs)
-    debug(
-      'staleness enforcement on (defaultTimeout=%ds, interval=%dms, useDefaults=%s)',
-      this.defaultTimeoutMs / 1000,
-      this.intervalMs,
-      this.useDefaults
-    )
+    if (debug.enabled) {
+      debug(
+        'staleness enforcement on (defaultTimeout=%ds, interval=%dms, useDefaults=%s)',
+        this.defaultTimeoutMs / 1000,
+        this.intervalMs,
+        this.useDefaults
+      )
+    }
   }
 
   stop(): void {
@@ -135,12 +167,58 @@ export class StalenessEnforcer {
 
   /**
    * Recovery hook. Called from DeltaCache.onValue on every accepted delta.
-   * O(1) — a single Set.delete. Holds no shape-allocation cost on the
-   * per-delta hot path.
+   * O(1) for the recovery-set delete; the auto sampler add is also O(1)
+   * (ring write, no reallocation). Both are on the per-delta hot path.
    */
   onIncoming(context: string, path: string, sourceRef: string): void {
-    if (this.timedOut.size === 0) return
-    this.timedOut.delete(makeKey(context, path, sourceRef))
+    const key = makeKey(context, path, sourceRef)
+    if (this.timedOut.size > 0) this.timedOut.delete(key)
+    this.recordAutoSample(key)
+  }
+
+  private recordAutoSample(key: string): void {
+    const now = Date.now()
+    let s = this.autoSamplers.get(key)
+    if (!s) {
+      s = {
+        intervals: new Array<number>(this.autoSamplesSize).fill(0),
+        count: 0,
+        lastTs: now,
+        warmupExpiresAt: now + this.autoWarmupMs
+      }
+      this.autoSamplers.set(key, s)
+      return
+    }
+    const interval = now - s.lastTs
+    s.lastTs = now
+    if (interval <= 0) return
+    // Shift in place: index 0 is most recent. This is allocation-free.
+    for (let i = s.intervals.length - 1; i > 0; i--) {
+      s.intervals[i] = s.intervals[i - 1]
+    }
+    s.intervals[0] = interval
+    if (s.count < s.intervals.length) s.count++
+  }
+
+  /**
+   * Derive an effective timeout (ms) from observed delta arrival rates.
+   * Returns null while still in warm-up so the caller falls back to the
+   * global default. Once warm, returns 5× the median inter-arrival,
+   * clamped to AUTO_MIN_TIMEOUT_MS..AUTO_MAX_TIMEOUT_MS.
+   */
+  private deriveAutoTimeoutMs(key: string): number | null {
+    const s = this.autoSamplers.get(key)
+    if (!s) return null
+    if (s.count < s.intervals.length && Date.now() < s.warmupExpiresAt) {
+      return null
+    }
+    if (s.count === 0) return null
+    const sorted = s.intervals.slice(0, s.count).sort((a, b) => a - b)
+    const median = sorted[Math.floor(sorted.length / 2)]
+    const ms = median * AUTO_INTERVAL_MULTIPLIER
+    if (ms < AUTO_MIN_TIMEOUT_MS) return AUTO_MIN_TIMEOUT_MS
+    if (ms > AUTO_MAX_TIMEOUT_MS) return AUTO_MAX_TIMEOUT_MS
+    return ms
   }
 
   /**
@@ -149,10 +227,16 @@ export class StalenessEnforcer {
    * the cache entries they refer to.
    */
   onContextRemoved(context: string): void {
-    if (this.timedOut.size === 0) return
     const prefix = context + '\0'
-    for (const k of this.timedOut) {
-      if (k.startsWith(prefix)) this.timedOut.delete(k)
+    if (this.timedOut.size > 0) {
+      for (const k of this.timedOut) {
+        if (k.startsWith(prefix)) this.timedOut.delete(k)
+      }
+    }
+    if (this.autoSamplers.size > 0) {
+      for (const k of this.autoSamplers.keys()) {
+        if (k.startsWith(prefix)) this.autoSamplers.delete(k)
+      }
     }
   }
 
@@ -207,7 +291,6 @@ export class StalenessEnforcer {
     if (baseTimeoutMs === NEVER_TIMEOUT) return
 
     const failoverMs = this.getFailoverFloorMs(path)
-    const effectiveMs = Math.max(baseTimeoutMs, failoverMs)
 
     for (const srcRef of Object.keys(leafGroup)) {
       const leaf = leafGroup[srcRef]
@@ -224,14 +307,37 @@ export class StalenessEnforcer {
       // dereferences a string and addValue's leaf.meta assignment fails.
       const valueType = typeof leaf.value
       if (valueType === 'string' || valueType === 'boolean') continue
+      const key = makeKey(context, path, srcRef)
+      // The base timeout depends on the source for `meta.timeout: 'auto'`
+      // — different sources of the same path can have different update
+      // rates (e.g. a 5 Hz NMEA 2000 GPS vs a 1 Hz NMEA 0183 GPS).
+      const perSrcBaseMs = this.applyAutoFallback(baseTimeoutMs, meta, key)
+      if (perSrcBaseMs === NEVER_TIMEOUT) continue
+      const perSrcEffectiveMs = Math.max(perSrcBaseMs, failoverMs)
       const ts = Date.parse(leaf.timestamp)
       if (Number.isNaN(ts)) continue
-      if (now - ts <= effectiveMs) continue
-      const key = makeKey(context, path, srcRef)
+      if (now - ts <= perSrcEffectiveMs) continue
       if (this.timedOut.has(key)) continue
       this.timedOut.add(key)
       this.emit(context as Context, path as Path, srcRef as SourceRef, leaf)
     }
+  }
+
+  /**
+   * Resolves `meta.timeout: 'auto'` to a per-source derived timeout when
+   * the auto sampler has warmed up; falls back to the previously-computed
+   * `baseTimeoutMs` (numeric meta / schema / global default) otherwise.
+   * Pure: extracted so the per-source branch in `checkLeafGroup` stays a
+   * single readable expression.
+   */
+  private applyAutoFallback(
+    baseTimeoutMs: number,
+    meta: MetaValue | undefined,
+    key: string
+  ): number {
+    if (meta?.timeout !== 'auto') return baseTimeoutMs
+    const derived = this.deriveAutoTimeoutMs(key)
+    return derived ?? baseTimeoutMs
   }
 
   private resolveStreamType(
@@ -244,6 +350,11 @@ export class StalenessEnforcer {
     return 'streaming'
   }
 
+  // Resolves the base timeout (ms) ignoring `meta.timeout: 'auto'` —
+  // that branch is resolved later in `applyAutoFallback` once we have
+  // the source ref. The numeric and schema fallbacks here are the
+  // warm-up ceiling for an 'auto' path that has not yet collected
+  // enough samples to derive a per-source value.
   private resolveBaseTimeoutMs(
     context: string,
     path: string,
@@ -253,8 +364,6 @@ export class StalenessEnforcer {
     if (typeof explicit === 'number') {
       return explicit > 0 ? explicit * 1000 : NEVER_TIMEOUT
     }
-    // 'auto' deferred to a follow-up PR; fall through to the global
-    // default so the path is still monitored.
     const schemaMeta = lookupSchemaMeta(context, path)
     if (typeof schemaMeta?.timeout === 'number') {
       return schemaMeta.timeout > 0 ? schemaMeta.timeout * 1000 : NEVER_TIMEOUT

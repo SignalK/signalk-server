@@ -104,6 +104,12 @@ export interface Config {
     defaultTimeout?: number
     /** Enforcer poll interval in ms. Default 1000. */
     staleCheckIntervalMs?: number
+    /** Ring-buffer depth for `meta.timeout: 'auto'` inter-arrival sampling.
+     * Default 10. */
+    autoTimeoutSamples?: number
+    /** Warm-up window (seconds) for `meta.timeout: 'auto'` before the
+     * sampler's derived timeout takes effect. Default 30. */
+    autoTimeoutWarmupSeconds?: number
     /** Per-path explicit overrides. The engine consults this map first;
      * if a path has an entry here, that ranking is used. Includes the
      * fan-out sentinel `[{ sourceRef: '*', timeout: 0 }]` for paths the
