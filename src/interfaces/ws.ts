@@ -18,28 +18,34 @@ import { Server } from 'http'
 import { Socket } from 'net'
 import Primus from 'primus'
 import WebSocket from 'ws'
-import { getSourceId, getMetadata } from '@signalk/signalk-schema'
+import { getMetadata } from '@signalk/path-metadata'
 import {
   requestAccess,
   InvalidTokenError,
   WithSecurityStrategy
 } from '../security'
+import {
+  LoginRateLimiter,
+  LOGIN_RATE_LIMIT_MESSAGE
+} from '../login-rate-limiter'
+import { getSourceId } from '@signalk/server-api'
 import { WithConfig } from '../app'
 import {
   findRequest,
   updateRequest,
   queryRequest,
-  Reply
+  Reply,
+  RequestState,
+  UpdateOptions
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
 import {
-  AccumulatedItem,
-  accumulateLatestValue,
-  buildFlushDeltas
-} from '../LatestValuesAccumulator'
+  BackpressureManager,
+  parseBackpressureThresholds
+} from '../BackpressureManager'
 import { getExternalPort } from '../ports'
 import {
   resolveDisplayUnits,
@@ -50,19 +56,6 @@ import { Delta, hasValues } from '@signalk/server-api'
 
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
-
-const BACKPRESSURE_ENTER_THRESHOLD = process.env.BACKPRESSURE_ENTER
-  ? parseInt(process.env.BACKPRESSURE_ENTER, 10)
-  : 512 * 1024
-const BACKPRESSURE_EXIT_THRESHOLD = process.env.BACKPRESSURE_EXIT
-  ? parseInt(process.env.BACKPRESSURE_EXIT, 10)
-  : 1024
-
-interface BackpressureState {
-  active: boolean
-  accumulator: Map<string, AccumulatedItem>
-  since: number | null
-}
 
 interface SkPrincipal {
   identifier: string
@@ -75,9 +68,13 @@ interface SignalKSparkRequest {
   cookies?: Record<string, string>
   headers: Record<string, string | string[] | undefined>
   query?: Record<string, string>
-  socket: Socket & { bufferSize: number }
+  socket: Socket
   connection: { remoteAddress: string }
+  /** Resolved client IP, accounting for trustProxy / X-Forwarded-For */
+  _resolvedIp: string
 }
+
+type SourcePolicy = 'preferred' | 'all'
 
 interface Spark {
   id: string
@@ -89,14 +86,15 @@ interface Spark {
     serverevents?: string
     events?: string
     sendCachedValues?: string
+    sourcePolicy?: SourcePolicy
   }
   request: SignalKSparkRequest
   sendMetaDeltas: boolean
+  sourcePolicy: SourcePolicy
   sentMetaData: Record<string, boolean>
-  backpressure: BackpressureState
+  backpressureManager?: BackpressureManager
   skPendingAccessRequest?: boolean
   logUnsubscribe?: () => void
-  bufferSizeExceeded?: number
   onDisconnects: Array<() => void>
   hasServerEvents?: boolean
   isHistory?: boolean
@@ -109,7 +107,6 @@ interface Spark {
 }
 
 interface WsMessage {
-  token?: string
   updates?: Delta['updates']
   subscribe?: Array<{ path: string }> | string
   unsubscribe?: Array<{ path: string }>
@@ -123,6 +120,45 @@ interface WsMessage {
   state?: string
   statusCode?: number
   message?: string
+  sourcePolicy?: SourcePolicy
+}
+
+interface WsRequestReply extends UpdateOptions {
+  requestId: string
+  state: RequestState | null
+}
+
+function isWsRequestReply(msg: unknown): msg is WsRequestReply {
+  if (!msg || typeof msg !== 'object') {
+    return false
+  }
+
+  const candidate = msg as Record<string, unknown>
+  const state = candidate.state
+
+  return (
+    typeof candidate.requestId === 'string' &&
+    (state === 'PENDING' || state === 'COMPLETED' || state === null)
+  )
+}
+
+function normalizeStatusCode(statusCode: unknown): number | null {
+  return typeof statusCode === 'number' && Number.isFinite(statusCode)
+    ? statusCode
+    : null
+}
+
+function normalizeMessage(message: unknown): string | null {
+  return typeof message === 'string' ? message : null
+}
+
+function normalizePercentComplete(percentComplete: unknown): number | null {
+  return typeof percentComplete === 'number' &&
+    Number.isFinite(percentComplete) &&
+    percentComplete >= 0 &&
+    percentComplete <= 100
+    ? percentComplete
+    : null
 }
 
 interface PathSources {
@@ -150,6 +186,7 @@ interface SecurityStrategy {
     timeToLive?: number | null
   }>
   isDummy: () => boolean
+  loginRateLimiter?: LoginRateLimiter
 }
 
 interface SubscriptionManager {
@@ -158,7 +195,8 @@ interface SubscriptionManager {
     unsubscribes: Array<() => void>,
     write: (data: unknown) => void,
     onChange: (delta: Delta) => void,
-    principal?: SkPrincipal
+    principal?: SkPrincipal,
+    sourcePolicy?: string
   ) => void
   unsubscribe: (msg: WsMessage, unsubscribes: Array<() => void>) => void
 }
@@ -188,7 +226,9 @@ interface WithContext {
 interface DeltaCache {
   getCachedDeltas: (
     filter: (delta: WithContext) => boolean,
-    principal?: SkPrincipal
+    principal?: SkPrincipal,
+    context?: string,
+    sourcePolicy?: string
   ) => Delta[]
 }
 
@@ -249,15 +289,30 @@ interface WsApi {
   stop: () => void
 }
 
+const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
+
 function wsInterface(app: WsApp): WsApi {
+  const maxWsConnectionsPerIp = parseInt(
+    process.env.MAX_WS_CONNECTIONS_PER_IP ??
+      String(DEFAULT_MAX_WS_CONNECTIONS_PER_IP),
+    10
+  )
+
+  const backpressureThresholds = parseBackpressureThresholds({
+    maxSendBufferSize: app.config.maxSendBufferSize,
+    maxSendBufferCheckTime: app.config.maxSendBufferCheckTime
+  })
   debug(
-    'Backpressure thresholds: enter=%d, exit=%d',
-    BACKPRESSURE_ENTER_THRESHOLD,
-    BACKPRESSURE_EXIT_THRESHOLD
+    'Backpressure thresholds: enter=%d, exit=%d, max=%d, maxTime=%d',
+    backpressureThresholds.enterThreshold,
+    backpressureThresholds.exitThreshold,
+    backpressureThresholds.maxBufferSize,
+    backpressureThresholds.maxBufferCheckTime
   )
 
   let primuses: Primus[] = []
   const pathSources: PathSources = {}
+  const ipConnectionCounts = new Map<string, number>()
 
   const api: WsApi = {
     mdns: {
@@ -318,13 +373,30 @@ function wsInterface(app: WsApp): WsApi {
             return
           }
 
-          const listener = (msg: WsMessage) => {
-            if (msg.requestId === requestId) {
-              updateRequest(
-                requestId,
-                msg.state as 'PENDING' | 'COMPLETED' | null,
-                msg
-              )
+          const listener = (msg: unknown) => {
+            let parsedMsg = msg
+            if (typeof parsedMsg === 'string' || Buffer.isBuffer(parsedMsg)) {
+              try {
+                parsedMsg = JSON.parse(String(parsedMsg))
+              } catch (_err) {
+                return
+              }
+            }
+
+            if (
+              isWsRequestReply(parsedMsg) &&
+              parsedMsg.requestId === requestId
+            ) {
+              const updateOptions: UpdateOptions = {
+                statusCode: normalizeStatusCode(parsedMsg.statusCode),
+                data: parsedMsg.data ?? null,
+                message: normalizeMessage(parsedMsg.message),
+                percentComplete: normalizePercentComplete(
+                  parsedMsg.percentComplete
+                )
+              }
+
+              updateRequest(requestId, parsedMsg.state, updateOptions)
                 .then((reply) => {
                   if (reply.state !== 'PENDING') {
                     spark!.removeListener(
@@ -394,8 +466,6 @@ function wsInterface(app: WsApp): WsApi {
         }
       ]
 
-      const assertBufferSize = getAssertBufferSize(app.config)
-
       primuses = allWsOptions.map((primusOptions) => {
         const primus = new Primus(app.server as Server, primusOptions)
 
@@ -416,11 +486,16 @@ function wsInterface(app: WsApp): WsApi {
           primus.once('close', () => clearInterval(interval))
         }
 
-        if (app.securityStrategy.canAuthorizeWS()) {
-          primus.authorize(
-            createPrimusAuthorize(app.securityStrategy.authorizeWS)
+        primus.authorize(
+          createPrimusAuthorize(
+            app.securityStrategy.canAuthorizeWS()
+              ? app.securityStrategy.authorizeWS
+              : undefined,
+            ipConnectionCounts,
+            maxWsConnectionsPerIp,
+            app.config.settings.trustProxy
           )
-        }
+        )
 
         primus.on('connection', function (primusSpark: unknown) {
           const spark = primusSpark as Spark
@@ -430,30 +505,39 @@ function wsInterface(app: WsApp): WsApi {
           }
 
           debugConnection(
-            `${spark.id} connected ${JSON.stringify(spark.query)} ${
-              spark.request.connection.remoteAddress
-            }:${principalId}`
+            `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'})`
           )
 
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
+          spark.sourcePolicy = spark.query.sourcePolicy || 'preferred'
           spark.sentMetaData = {}
 
-          spark.backpressure = {
-            active: false,
-            accumulator: new Map(),
-            since: null
-          }
+          spark.backpressureManager = new BackpressureManager(
+            {
+              get id() {
+                return spark.id
+              },
+              getBufferLength() {
+                return spark.request.socket.writableLength
+              },
+              write(delta) {
+                spark.write(delta)
+              },
+              destroy() {
+                spark.end({
+                  errorMessage:
+                    'Server outgoing buffer overflow, terminating connection'
+                })
+              }
+            },
+            {
+              ...backpressureThresholds,
+              beforeWrite: (delta) => sendMetaData(app, spark, delta)
+            }
+          )
 
           spark.request.socket.on('drain', () => {
-            if (
-              spark.backpressure.active &&
-              spark.backpressure.accumulator.size > 0
-            ) {
-              const bufferSize = spark.request.socket.bufferSize
-              if (bufferSize <= BACKPRESSURE_EXIT_THRESHOLD) {
-                flushAccumulator(app, spark)
-              }
-            }
+            spark.backpressureManager!.onDrain()
           })
 
           if (wsPingInterval) {
@@ -463,32 +547,33 @@ function wsInterface(app: WsApp): WsApi {
             })
           }
 
-          let onChange = (delta: Delta) => {
+          const selfOnly = isSelfSubscription(spark.query)
+          const subscribeNone = spark.query.subscribe === 'none'
+          const canVerify = app.securityStrategy.canAuthorizeWS()
+
+          const onChange: (delta: Delta) => void = (delta: Delta) => {
+            if (canVerify) {
+              try {
+                app.securityStrategy.verifyWS(spark.request)
+              } catch (error) {
+                handleVerifyWSError(spark, error as Error)
+                return
+              }
+            }
+            if (subscribeNone) return
+            if (
+              selfOnly &&
+              delta.context &&
+              delta.context !== app.selfContext
+            ) {
+              return
+            }
             const filtered = app.securityStrategy.filterReadDelta(
               spark.request.skPrincipal,
               delta
             )
             if (filtered === null) return
-
-            const bufferSize = spark.request.socket.bufferSize
-
-            if (bufferSize > BACKPRESSURE_ENTER_THRESHOLD) {
-              if (!spark.backpressure.active) {
-                spark.backpressure.active = true
-                spark.backpressure.since = Date.now()
-                debug(
-                  'Entering backpressure mode for spark %s (buffer: %d)',
-                  spark.id,
-                  bufferSize
-                )
-              }
-              accumulateLatestValue(spark.backpressure.accumulator, filtered)
-            } else {
-              sendMetaData(app, spark, filtered)
-              spark.write(filtered)
-            }
-
-            assertBufferSize(spark)
+            spark.backpressureManager!.send(filtered)
           }
 
           const unsubscribes: Array<() => void> = []
@@ -507,25 +592,19 @@ function wsInterface(app: WsApp): WsApi {
                 debug('Failed to parse message: ' + (e as Error).message)
                 return
               }
-              debug('<' + JSON.stringify(parsedMsg))
+              // Guard to avoid JSON.stringify on every inbound message
+              // when the debug namespace is disabled — the argument to
+              // debug() would otherwise be eagerly evaluated for each
+              // message. Pattern mirrors tcp.ts:169/181.
+              debug.enabled && debug('<' + JSON.stringify(parsedMsg))
 
               try {
-                if (parsedMsg.token) {
-                  spark.request.token = parsedMsg.token
-                }
-
                 if (parsedMsg.updates) {
                   processUpdates(app, pathSources, spark, parsedMsg)
                 }
 
                 if (parsedMsg.subscribe) {
-                  processSubscribe(
-                    app,
-                    unsubscribes,
-                    spark,
-                    assertBufferSize,
-                    parsedMsg
-                  )
+                  processSubscribe(app, unsubscribes, spark, parsedMsg)
                 }
 
                 if (parsedMsg.unsubscribe) {
@@ -565,9 +644,7 @@ function wsInterface(app: WsApp): WsApi {
 
           spark.on('end', function () {
             debugConnection(
-              `${spark.id} end ${JSON.stringify(spark.query)} ${
-                spark.request.connection.remoteAddress
-              }:${principalId}`
+              `${spark.id} end ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId}`
             )
 
             unsubscribes.forEach((unsubscribe) => unsubscribe())
@@ -582,22 +659,19 @@ function wsInterface(app: WsApp): WsApi {
             })
           })
 
-          if (isSelfSubscription(spark.query)) {
-            const realOnChange = onChange
-            onChange = function (msg: Delta) {
-              if (!msg.context || msg.context === app.selfContext) {
-                realOnChange(msg)
+          const sparkIp = spark.request._resolvedIp
+
+          spark.onDisconnects = [
+            () => spark.backpressureManager?.clear(),
+            () => {
+              const count = ipConnectionCounts.get(sparkIp)
+              if (count !== undefined && count > 1) {
+                ipConnectionCounts.set(sparkIp, count - 1)
+              } else {
+                ipConnectionCounts.delete(sparkIp)
               }
             }
-          }
-
-          if (spark.query.subscribe === 'none') {
-            onChange = () => undefined
-          }
-
-          onChange = wrapWithVerifyWS(app.securityStrategy, spark, onChange)
-
-          spark.onDisconnects = []
+          ]
 
           if (primusOptions.isPlayback) {
             if (!spark.query.startTime) {
@@ -707,13 +781,7 @@ function wsInterface(app: WsApp): WsApi {
         message: 'A request has already been submitted'
       })
     } else {
-      const forwardedFor = spark.request.headers['x-forwarded-for']
-      const clientIp =
-        (app.config.settings.trustProxy &&
-          app.config.settings.trustProxy !== 'false' &&
-          typeof forwardedFor === 'string' &&
-          forwardedFor) ||
-        spark.request.connection.remoteAddress
+      const clientIp = spark.request._resolvedIp
       requestAccess(
         app as unknown as WithSecurityStrategy & WithConfig,
         msg,
@@ -751,6 +819,20 @@ function wsInterface(app: WsApp): WsApi {
   }
 
   function processLoginRequest(app: WsApp, spark: Spark, msg: WsMessage): void {
+    const rateLimiter = app.securityStrategy.loginRateLimiter
+    if (rateLimiter) {
+      const { allowed } = rateLimiter.check(spark.request._resolvedIp)
+      if (!allowed) {
+        spark.write({
+          requestId: msg.requestId,
+          state: 'COMPLETED',
+          statusCode: 429,
+          message: LOGIN_RATE_LIMIT_MESSAGE
+        })
+        return
+      }
+    }
+
     app.securityStrategy
       .login(msg.login!.username, msg.login!.password)
       .then((reply) => {
@@ -783,13 +865,46 @@ function wsInterface(app: WsApp): WsApi {
 }
 
 function createPrimusAuthorize(
-  authorizeWS: (req: SignalKSparkRequest) => void
+  authorizeWS: ((req: SignalKSparkRequest) => void) | undefined,
+  ipConnectionCounts: Map<string, number>,
+  maxConnectionsPerIp: number,
+  trustProxy: boolean | string | undefined
 ): (req: unknown, authorized: (err?: Error) => void) => void {
   return function (
     primusReq: unknown,
     authorized: (err?: Error) => void
   ): void {
     const req = primusReq as SignalKSparkRequest
+
+    const forwardedFor = req.headers['x-forwarded-for']
+    const firstForwardedIp =
+      trustProxy && trustProxy !== 'false' && typeof forwardedFor === 'string'
+        ? forwardedFor.split(',')[0].trim()
+        : undefined
+    req._resolvedIp = firstForwardedIp || req.connection.remoteAddress
+    const ip = req._resolvedIp
+    if ((ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp) {
+      debug(`IP ${ip} exceeded max connections (${maxConnectionsPerIp})`)
+      const err = Object.assign(
+        new Error(
+          JSON.stringify({
+            error:
+              'Too many concurrent websocket connections from same IP address'
+          })
+        ),
+        { statusCode: 429 }
+      )
+      authorized(err)
+      return
+    }
+
+    ipConnectionCounts.set(ip, (ipConnectionCounts.get(ip) ?? 0) + 1)
+
+    if (!authorizeWS) {
+      authorized()
+      return
+    }
+
     try {
       const cookieHeader = req.headers.cookie
       if (typeof cookieHeader === 'string') {
@@ -915,20 +1030,22 @@ function handleValuesMeta(
         > | null
         if (meta) {
           // Clone and enhance metadata with displayUnits formulas
-          const metaClone: Record<string, unknown> = JSON.parse(
-            JSON.stringify(meta)
-          )
+          const metaClone = structuredClone(meta) as Record<string, unknown>
           let storedDisplayUnits = metaClone.displayUnits as
             | Record<string, unknown>
             | undefined
+          const username = this.spark.request.skPrincipal?.identifier
           if (!storedDisplayUnits?.category && path) {
-            const defaultCategory = getDefaultCategory(path)
+            const defaultCategory = getDefaultCategory(
+              path,
+              metaClone.units as string | undefined,
+              username
+            )
             if (defaultCategory) {
               storedDisplayUnits = { category: defaultCategory }
             }
           }
           if (storedDisplayUnits?.category) {
-            const username = this.spark.request.skPrincipal?.identifier
             const enhanced = resolveDisplayUnits(
               storedDisplayUnits as {
                 category: string
@@ -989,7 +1106,6 @@ function processSubscribe(
   app: WsApp,
   unsubscribes: Array<() => void>,
   spark: Spark,
-  assertBufferSize: (spark: Spark) => void,
   msg: WsMessage
 ): void {
   if (
@@ -1001,6 +1117,12 @@ function processSubscribe(
       spark.logUnsubscribe = startServerLog(app, spark)
     }
   } else {
+    // Per-message sourcePolicy is honoured: subscriptionmanager.subscribe
+    // attaches its own listener on the chosen bus (filtered or unfiltered)
+    // for each subscribe call, independent of the connection-wide delta
+    // listener attached in handleRealtimeConnection. Falling back to the
+    // spark-level policy keeps the URL-query default working for clients
+    // that never send a per-message override.
     app.subscriptionmanager.subscribe(
       msg,
       unsubscribes,
@@ -1011,28 +1133,10 @@ function processSubscribe(
           message
         )
         if (!filtered) return
-
-        const bufferSize = spark.request.socket.bufferSize
-
-        if (bufferSize > BACKPRESSURE_ENTER_THRESHOLD) {
-          if (!spark.backpressure.active) {
-            spark.backpressure.active = true
-            spark.backpressure.since = Date.now()
-            debug(
-              'Entering backpressure mode for spark %s (buffer: %d)',
-              spark.id,
-              bufferSize
-            )
-          }
-          accumulateLatestValue(spark.backpressure.accumulator, filtered)
-        } else {
-          sendMetaData(app, spark, filtered)
-          spark.write(filtered)
-        }
-
-        assertBufferSize(spark)
+        spark.backpressureManager!.send(filtered)
       },
-      spark.request.skPrincipal
+      spark.request.skPrincipal,
+      msg.sourcePolicy ?? spark.sourcePolicy
     )
   }
 }
@@ -1056,11 +1160,13 @@ function processUnsubscribe(
       }
     } else {
       app.subscriptionmanager.unsubscribe(msg, unsubscribes)
-      app.signalk.removeListener('delta', onChange)
+      const deltaEvent =
+        spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
+      app.signalk.removeListener(deltaEvent, onChange)
       spark.sentMetaData = {}
     }
   } catch (e) {
-    console.log((e as Error).message)
+    console.log(e)
     spark.write((e as Error).message)
     spark.end()
   }
@@ -1068,6 +1174,19 @@ function processUnsubscribe(
 
 const isSelfSubscription = (query: Spark['query']): boolean =>
   !query.subscribe || query.subscribe === 'self'
+
+function handleVerifyWSError(spark: Spark, error: Error): void {
+  if (!spark.skPendingAccessRequest) {
+    spark.end('{message: "Connection disconnected by security constraint"}', {
+      reconnect: true
+    })
+  }
+  const identifier =
+    spark.request.skPrincipal?.identifier ||
+    spark.request.connection.remoteAddress ||
+    'unknown'
+  console.error(`WebSocket security error for ${identifier}: ${error.message}`)
+}
 
 function wrapWithVerifyWS(
   securityStrategy: SecurityStrategy,
@@ -1082,21 +1201,7 @@ function wrapWithVerifyWS(
       securityStrategy.verifyWS(spark.request)
       theFunction(msg)
     } catch (error) {
-      if (!spark.skPendingAccessRequest) {
-        spark.end(
-          '{message: "Connection disconnected by security constraint"}',
-          {
-            reconnect: true
-          }
-        )
-      }
-      const identifier =
-        spark.request.skPrincipal?.identifier ||
-        spark.request.connection.remoteAddress ||
-        'unknown'
-      console.error(
-        `WebSocket security error for ${identifier}: ${(error as Error).message}`
-      )
+      handleVerifyWSError(spark, error as Error)
       return
     }
   }
@@ -1156,9 +1261,10 @@ function handleRealtimeConnection(
 ): void {
   sendHello(app, {}, spark)
 
-  app.signalk.on('delta', onChange)
+  const deltaEvent = spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
+  app.signalk.on(deltaEvent, onChange)
   spark.onDisconnects.push(() => {
-    app.signalk.removeListener('delta', onChange)
+    app.signalk.removeListener(deltaEvent, onChange)
   })
 
   if (spark.sendMetaDeltas) {
@@ -1179,7 +1285,13 @@ function handleRealtimeConnection(
           const storedDU = pathMeta.displayUnits as
             | DisplayUnitsMetadata
             | undefined
-          const category = storedDU?.category || getDefaultCategory(path)
+          const category =
+            storedDU?.category ||
+            getDefaultCategory(
+              path,
+              pathMeta.units as string | undefined,
+              username
+            )
           if (category) {
             const displayUnits = resolveDisplayUnits(
               { ...storedDU, category },
@@ -1258,7 +1370,12 @@ function sendLatestDeltas(
   }
 
   deltaCache
-    .getCachedDeltas(deltaFilter, spark.request.skPrincipal)
+    .getCachedDeltas(
+      deltaFilter,
+      spark.request.skPrincipal,
+      undefined,
+      spark.sourcePolicy
+    )
     .forEach((delta) => {
       sendMetaData(app, spark, delta)
       spark.write(delta)
@@ -1283,63 +1400,6 @@ function startServerLog(app: WsApp, spark: Spark): () => void {
   })
   return () => {
     app.removeListener('serverlog', onServerLogEvent as (data: unknown) => void)
-  }
-}
-
-function flushAccumulator(app: WsApp, spark: Spark): void {
-  const map = spark.backpressure.accumulator
-  if (map.size === 0) return
-
-  const countBefore = map.size
-  const duration = spark.backpressure.since
-    ? Date.now() - spark.backpressure.since
-    : 0
-
-  const deltas = buildFlushDeltas(map, duration)
-  for (const delta of deltas) {
-    sendMetaData(app, spark, delta as Delta)
-    spark.write(delta)
-  }
-
-  map.clear()
-  spark.backpressure.active = false
-  spark.backpressure.since = null
-  debug('Flushed %d accumulated values for spark %s', countBefore, spark.id)
-}
-
-function getAssertBufferSize(config: WsAppConfig): (spark: Spark) => void {
-  const MAXSENDBUFFERSIZE = process.env.MAXSENDBUFFERSIZE
-    ? parseInt(process.env.MAXSENDBUFFERSIZE, 10)
-    : config.maxSendBufferSize || 4 * 512 * 1024
-  const MAXSENDBUFFERCHECKTIME = process.env.MAXSENDBUFFERCHECKTIME
-    ? parseInt(process.env.MAXSENDBUFFERCHECKTIME, 10)
-    : config.maxSendBufferCheckTime || 30 * 1000
-  debug(`MAXSENDBUFFERSIZE:${MAXSENDBUFFERSIZE}`)
-
-  if (MAXSENDBUFFERSIZE === 0) {
-    return () => undefined
-  }
-
-  return (spark: Spark) => {
-    if (spark.request.socket.bufferSize > MAXSENDBUFFERSIZE) {
-      if (!spark.bufferSizeExceeded) {
-        console.warn(
-          `${spark.id} outgoing buffer > max:${spark.request.socket.bufferSize}`
-        )
-        spark.bufferSizeExceeded = Date.now()
-      }
-      if (Date.now() - spark.bufferSizeExceeded > MAXSENDBUFFERCHECKTIME) {
-        spark.end({
-          errorMessage:
-            'Server outgoing buffer overflow, terminating connection'
-        })
-        console.error(
-          'Send buffer overflow, terminating connection ' + spark.id
-        )
-      }
-    } else {
-      spark.bufferSizeExceeded = undefined
-    }
   }
 }
 

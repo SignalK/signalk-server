@@ -512,13 +512,14 @@ export function setupWasmPluginRoutes(
   router.post('/config', async (req: Request, res: Response) => {
     try {
       debug(`POST /config received for WASM plugin: ${plugin.id}`)
-      debug(`Request body: ${JSON.stringify(req.body)}`)
+      debug.enabled && debug(`Request body: ${JSON.stringify(req.body)}`)
 
       const newConfig = req.body
 
-      debug(
-        `Current plugin state - enabled: ${plugin.enabled}, enableDebug: ${plugin.enableDebug}, configuration: ${JSON.stringify(plugin.configuration)}`
-      )
+      debug.enabled &&
+        debug(
+          `Current plugin state - enabled: ${plugin.enabled}, enableDebug: ${plugin.enableDebug}, configuration: ${JSON.stringify(plugin.configuration)}`
+        )
 
       // Update enableDebug FIRST (before saving config)
       if (typeof newConfig.enableDebug === 'boolean') {
@@ -538,9 +539,10 @@ export function setupWasmPluginRoutes(
       }
 
       // Update plugin configuration and save everything to disk
-      debug(
-        `Calling updateWasmPluginConfig with: ${JSON.stringify(newConfig.configuration)}`
-      )
+      debug.enabled &&
+        debug(
+          `Calling updateWasmPluginConfig with: ${JSON.stringify(newConfig.configuration)}`
+        )
       await updateWasmPluginConfig(
         app,
         plugin.id,

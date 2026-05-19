@@ -18,6 +18,8 @@ export * from './subscriptionmanager'
 export * as history from './history'
 /** @category Notifications API */
 export * from './notificationsapi'
+export { FullSignalK, SourceMetaEntry } from './fullsignalk'
+export { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
 
 /** @category  Server API */
 export interface Position {

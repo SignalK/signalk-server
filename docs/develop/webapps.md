@@ -148,6 +148,40 @@ _Example response:_
 }
 ```
 
+## Inheriting the Admin UI's Styling
+
+Standalone webapps that want to match the Admin UI's look-and-feel can load its compiled stylesheet. The Admin UI is built with Vite and emits content-hashed filenames (e.g. `style-__hQMaH5.css`) that change on every rebuild, so the path can't be hardcoded.
+
+`GET /admin/.vite/manifest.json` returns the standard [Vite manifest](https://vite.dev/config/build-options#build-manifest):
+
+```json
+{
+  "index.html": {
+    "file": "assets/index-BzRlmq2e.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "css": ["assets/style-__hQMaH5.css"]
+  }
+}
+```
+
+The webapp fetches the manifest at load time, collects CSS files from all entry points, then injects the stylesheet URLs into its own `<head>`:
+
+```javascript
+const res = await fetch('/admin/.vite/manifest.json')
+const manifest = await res.json()
+for (const entry of Object.values(manifest)) {
+  if (!entry.isEntry) continue
+  for (const css of entry.css ?? []) {
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = '/admin/' + css
+    document.head.appendChild(link)
+  }
+}
+```
+
 ## Embedded Components and Admin UI / Server interfaces
 
 Embedded components are implemented using [Module Federation](https://module-federation.io/) and [React Code Splitting](https://react.dev/reference/react/lazy).
@@ -160,19 +194,53 @@ You need to configure your build tool (Webpack or Vite) to create the necessary 
 - plugin configuration form: `./PluginConfigurationPanel`
 - embedded component: `./AddonPanel`
 
-The ModuleFederationPlugin library name must match the package name and be a "safe" name for a module like in `library: { type: 'var', name: packageJson.name.replace(/[-@/]/g, '_') },`
-
 The exposed modules need to `export default` a React component. Functional components with hooks are recommended. The server dependencies like `reactstrap` can and should be used. Add `@signalk/server-admin-ui-dependencies` as a dependency to the webapp, it defines the dependencies used by the server admin UI.
+
+### Webpack (var library)
+
+With Webpack's ModuleFederationPlugin, use `library.type: 'var'` with a safe module name derived from the package name:
+
+```javascript
+library: { type: 'var', name: packageJson.name.replace(/[-@/]/g, '_') },
+```
+
+The server loads these via a classic `<script>` tag which places the container on the `window` object.
+
+### Vite / ESM bundlers
+
+The server also supports ESM containers produced by Vite, Rollup, esbuild, or any bundler that outputs `export { init, get }`. Set `"type": "module"` in the plugin's `package.json` and the server emits `<script type="module">` for the container; the Admin UI loads it via dynamic `import()` when the expected name is not present on `window`.
+
+If the plugin's server-side code remains CommonJS (`module.exports`), give `"main"` a `.cjs` extension so Node.js still loads it as CommonJS under the module-typed package.
 
 ### React Version Compatibility
 
-The Admin UI uses **React 19** with shared dependencies via Module Federation. Your embedded webapp should:
+The Admin UI uses **React 19** with functional components and hooks. Your plugin must use the host's React instance — bundling a second copy yields `Cannot read properties of null (reading 'useState')` when the plugin's hooks read a dispatcher that the host activated on its React, not the plugin's.
 
-1. **Share React as a singleton** - Configure Module Federation to use the host's React instance with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the current configuration.
+#### Sharing React with the host
 
-2. **Use functional components** - The Admin UI is built with functional components and React hooks. While class components still work, functional components are recommended for consistency.
+**Webpack (`var` library)** — webpack-MF's runtime hooks into the host's share scope automatically when you declare React as a singleton:
 
-See the Calibration plugin for an example. It is probably easier to start with an existing plugin and modify it to suit your needs. Don't forget to change the module id and name in package.json!
+```javascript
+shared: {
+  react: { singleton: true, requiredVersion: '^19' },
+  'react-dom': { singleton: true, requiredVersion: '^19' }
+}
+```
+
+**ESM bundlers** — the host exposes the following on `window` before render:
+
+| Global                            | Module              |
+| --------------------------------- | ------------------- |
+| `window.__SK_REACT__`             | `react`             |
+| `window.__SK_REACT_DOM__`         | `react-dom`         |
+| `window.__SK_REACT_DOM_CLIENT__`  | `react-dom/client`  |
+| `window.__SK_REACT_JSX_RUNTIME__` | `react/jsx-runtime` |
+
+Resolve the plugin's `react`/`react-dom`/`react/jsx-runtime` imports to small shims that re-export from these globals (e.g. via Vite's `resolve.alias` to a per-module file that does `const host = globalThis.__SK_REACT__; export default host.default ?? host; export const useState = host.useState; ...`). With imports redirected to the host, no federation `shared` declaration is needed.
+
+For a working `@module-federation/vite` setup including the alias wiring and shim files, see the [signalk-container plugin](https://github.com/dirkwa/signalk-container).
+
+See the Calibration plugin for an existing webpack-based example to start from. It is probably easier to start with an existing plugin and modify it to suit your needs. Don't forget to change the module id and name in package.json!
 
 ## WebApp / Component and Admin UI / Server interfaces
 
@@ -213,6 +281,26 @@ The login endpoint has an optional `rememberMe` request parameter. By default, w
 As the cookie is set to be [`HttpOnly`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#security) webapp JavaScript has no access to it. Including it in server requests and persisting its value is managed by the browser, governed by the `Set-Cookie` headers sent by the server.
 
 Additionally the server sets cookie `skLoginInfo` when the user logs in and removes it when the user logs out. A webapp can poll for changes of this cookie to be notified of the browser's cookie based login status.
+
+### Redirecting unauthenticated users to login
+
+A webapp that requires an authenticated user can hand off sign-in to the server. Send the browser to the admin UI's login page with a `redirect` query parameter pointing back at the webapp:
+
+```js
+const here =
+  window.location.pathname + window.location.search + window.location.hash
+window.location.href = '/admin/#/login?redirect=' + encodeURIComponent(here)
+```
+
+After a successful form login or OIDC sign-in the browser is sent back to that URL. The session cookie is in place by then, so the webapp's subsequent requests are authenticated.
+
+The `redirect` value must be a same-origin relative URL: it must start with `/` (but not `//`), contain no backslashes or control characters, and not point at the admin login route itself. Invalid values are silently ignored and the user lands on the dashboard after login.
+
+For OIDC-only deployments, a webapp can skip the admin UI and link directly to the OIDC endpoint, which accepts the same parameter:
+
+```text
+/signalk/v1/auth/oidc/login?redirect=/your/path
+```
 
 For **token based sessions** a webapp may manage the authentication token itself. It must include it explicitly in fetch call headers.
 As JavaScript has no access to headers but cookies are included automatically by browsers when opening WebSocket connections the server will use the server-set, HttpOnly cookie. Normally browsers do not allow shadowing the server-set cookie with a new value. The only option for WebSocket connections is using a query parameter to override the cookie with a token.

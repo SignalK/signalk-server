@@ -36,7 +36,7 @@ ST_BAUD = 4800
 # detect version of gpiod,
 gpiod_v = int(gpiod.__version__.split(".")[0])
 if gpiod_v != 1 and gpiod_v !=2:
-    print("Error: gpiod version {} is not supported".format(gpiod.__version__))
+    print("Error: gpiod version {} is not supported".format(gpiod.__version__), file=sys.stderr)
     sys.exit()
 
 # detect gpiochip, based on model of Raspberry Pi
@@ -60,7 +60,7 @@ elif "Pi 5" in model:
                         gpio_chip = info.name
                         break
 else:
-    print("Warning: Use of {} is untested".format(model))
+    print("Warning: Use of {} is untested".format(model), file=sys.stderr)
     gpio_chip = "gpiochip0"
 
 class st1rx:
@@ -92,7 +92,7 @@ class st1rx:
             chip = gpiod.Chip(gpio_chip)
             self.line = chip.get_line(pin)
             if self.line is None:
-                print("Error connecting to pin ", pin)
+                print("Error connecting to pin ", pin, file=sys.stderr)
                 return False
             self.line.request(
                 consumer="ST1RX",
@@ -164,8 +164,8 @@ class st1rx:
                         if level == 0:
                             sb = True
                         else:
-                            # not a start bit, return None
-                            print("not a start bit")
+                            # not a start bit, drop byte (normal on noisy bus)
+                            print("# not a start bit")
                             return
                     elif b < bits:
                         # store data bits
@@ -176,8 +176,8 @@ class st1rx:
                         if level == 1:
                             stop -= 1
                         else:
-                            # invalid stop bit
-                            print("invalid stop bits")
+                            # invalid stop bit, drop byte (normal on noisy bus)
+                            print("# invalid stop bits")
                             return
                     sample_ns += fullbit_ns
                     remaining_ns -= fullbit_ns
@@ -196,8 +196,8 @@ class st1rx:
             else:
                 # timeout is end of frame
                 if level == 0:
-                    # invalid idle state at end of frame
-                    print("invalid idle state")
+                    # invalid idle state at end of frame, drop byte (normal on noisy bus)
+                    print("# invalid idle state")
                     return
                 # add remaining bits to byte
                 while b < bits:
@@ -209,8 +209,8 @@ class st1rx:
         if stop == 0 and b == bits:
             return data
         else:
-            # missing stop or data bits
-            print("missing stop or data bits")
+            # missing stop or data bits, drop byte (normal on noisy bus)
+            print("# missing stop or data bits")
             return
 
     def read_gpiod2(self):
@@ -259,8 +259,8 @@ class st1rx:
                         if level == 0:
                             sb = True
                         else:
-                            # not a start bit, return None
-                            print("not a start bit")
+                            # not a start bit, drop byte (normal on noisy bus)
+                            print("# not a start bit")
                             return
                     elif b < bits:
                         # store data bits
@@ -271,8 +271,8 @@ class st1rx:
                         if level == 1:
                             stop -= 1
                         else:
-                            # invalid stop bit
-                            print("invalid stop bits")
+                            # invalid stop bit, drop byte (normal on noisy bus)
+                            print("# invalid stop bits")
                             return
                     sample_ns += fullbit_ns
                     remaining_ns -= fullbit_ns
@@ -291,8 +291,8 @@ class st1rx:
             else:
                 # timeout is end of frame
                 if level == 0:
-                    # invalid idle state at end of frame
-                    print("invalid idle state")
+                    # invalid idle state at end of frame, drop byte (normal on noisy bus)
+                    print("# invalid idle state")
                     return
                 # add remaining bits to byte
                 while b < bits:
@@ -304,13 +304,13 @@ class st1rx:
         if stop == 0 and b == bits:
             return data
         else:
-            # missing stop or data bits
-            print("missing stop or data bits")
+            # missing stop or data bits, drop byte (normal on noisy bus)
+            print("# missing stop or data bits")
             return
 
     def read(self):
         if self.line is None:
-            print("Error: no pin connected")
+            print("Error: no pin connected", file=sys.stderr)
             return
         if gpiod_v == 1:
             return self.read_gpiod1()
@@ -335,7 +335,7 @@ if __name__ == "__main__":
     try:
         st = st1rx()
         if st.open(pin=gpio, invert=pol) == False:
-            print("Error: Failed to open Seatalk1 pin")
+            print("Error: Failed to open Seatalk1 pin", file=sys.stderr)
             sys.exit()
 
         st_msg = ""
@@ -360,11 +360,10 @@ if __name__ == "__main__":
                 if st_start == True:
                     st_msg += ",{:02X}".format(d & 0xff)
     except Exception as e:
-        print(e)
+        print(e, file=sys.stderr)
     except KeyboardInterrupt:
         pass
     st.close()
-    print("exit")
 `
 
 interface GpiodSeatalkOptions {

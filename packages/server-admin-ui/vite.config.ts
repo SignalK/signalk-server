@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { federation } from '@module-federation/vite'
+import react, { reactCompilerPreset } from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
 
 import '@signalk/server-admin-ui-dependencies'
 
@@ -70,51 +70,16 @@ function stripSvgFonts() {
   }
 }
 
-const isTest = process.env.VITEST === 'true'
-
 export default defineConfig({
   base: './',
   publicDir: 'public_src',
-  // Module Federation requires top-level await (ES2023)
-  esbuild: {
-    target: 'es2023'
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'es2023'
-    }
-  },
   plugins: [
     replaceAddonScripts(),
     stripSvgFonts(),
-    react({
-      babel: {
-        plugins: [['babel-plugin-react-compiler', {}]],
-        presets: [['@babel/preset-react', { runtime: 'automatic' }]]
-      }
-    }),
-    // Module Federation runtime injects http: imports incompatible with
-    // Node.js ESM loader, so skip it during vitest runs.
-    ...(!isTest
-      ? [
-          federation({
-            name: 'adminUI',
-            filename: 'remoteEntry.js',
-            remotes: {},
-            dts: false,
-            shared: {
-              react: {
-                singleton: true,
-                requiredVersion: '^19.0.0'
-              },
-              'react-dom': {
-                singleton: true,
-                requiredVersion: '^19.0.0'
-              }
-            }
-          })
-        ]
-      : [])
+    react(),
+    babel({
+      presets: [reactCompilerPreset()]
+    })
   ],
   css: {
     preprocessorOptions: {
@@ -165,11 +130,12 @@ export default defineConfig({
     sourcemap: true,
     target: 'es2023',
     assetsInlineLimit: 0, // Prevent inlining assets to allow server-side logo override
-    cssCodeSplit: false // Generate single CSS file to ensure it's always loaded
+    cssCodeSplit: false, // Generate single CSS file to ensure it's always loaded
+    manifest: true // Emit .vite/manifest.json so plugins can resolve hashed asset URLs
   },
   resolve: {
     alias: {
-      path: false,
+      path: 'path-browserify',
       events: 'events',
       buffer: 'buffer'
     }

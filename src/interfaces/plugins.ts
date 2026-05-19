@@ -72,7 +72,7 @@ const put = require('../put')
 const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 import { queryRequest } from '../requestResponse'
-import { getMetadata } from '@signalk/signalk-schema'
+import { getMetadata } from '@signalk/path-metadata'
 import { HistoryProvider } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
@@ -112,6 +112,7 @@ function backwardsCompat(url: string) {
 
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
+  const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
   return {
     async start() {
       ensureExists(path.join(theApp.config.configPath, PLUGIN_CONFIG_DATA_DIR))
@@ -152,6 +153,20 @@ module.exports = (theApp: any) => {
     )
   }
 
+  function emitPluginsChanged() {
+    getPluginResponseInfos()
+      .then((plugins) => {
+        theApp.emit('serverevent', {
+          type: 'PLUGINS_CHANGED',
+          from: 'signalk-server',
+          data: plugins
+        })
+      })
+      .catch((err) => {
+        console.error('Failed to emit PLUGINS_CHANGED:', err)
+      })
+  }
+
   function getPluginsList(enabled?: boolean) {
     return getPluginResponseInfos().then((pa) => {
       const res = pa.map((p: any) => {
@@ -171,6 +186,10 @@ module.exports = (theApp: any) => {
         })
       }
     })
+  }
+
+  function isBundledPlugin(plugin: PluginInfo) {
+    return plugin.packageLocation === appNodeModules
   }
 
   function getPluginResponseInfo(plugin: PluginInfo, providerStatus: any) {
@@ -237,7 +256,8 @@ module.exports = (theApp: any) => {
             uiSchema,
             state: plugin.state,
             data,
-            type: plugin.type // Include type to identify WASM plugins in Admin UI
+            type: plugin.type, // Include type to identify WASM plugins in Admin UI
+            bundled: isBundledPlugin(plugin)
           })
         })
         .catch((err) => {
@@ -509,6 +529,9 @@ module.exports = (theApp: any) => {
     result.then(() => {
       theApp.setPluginStatus(plugin.id, 'Stopped')
       debug('Stopped plugin ' + plugin.name)
+      if (theApp.deltaCache) {
+        theApp.deltaCache.removeSource(plugin.id)
+      }
     })
     return result
   }
@@ -644,12 +667,20 @@ module.exports = (theApp: any) => {
             app.setPluginError(plugin.id, `Runtime error: ${message}`)
           }
         }
+        // Honour command.sourcePolicy so a plugin can opt into the
+        // unfiltered stream (every source) instead of the priority-resolved
+        // preferred-only default. Without this, plugins whose use case is
+        // per-source — historians writing all sources, calibrators pinning
+        // a specific device — silently never see non-preferred deltas
+        // because plugin subscriptions read streambundle.buses (the
+        // post-toPreferredDelta bus). Same plumbing the WS interface uses.
         app.subscriptionmanager.subscribe(
           command,
           unsubscribes,
           errorCallback,
           safeCallback,
-          user
+          user,
+          command.sourcePolicy
         )
       },
       unsubscribe: (msg: UnsubscribeMessage, unsubscribes: Unsubscribes) => {
@@ -804,9 +835,8 @@ module.exports = (theApp: any) => {
           console.error(err)
         } else {
           stopPlugin(plugin).then(() => {
-            return Promise.resolve(
-              doPluginStart(app, plugin, location, newConfiguration, restart)
-            )
+            doPluginStart(app, plugin, location, newConfiguration, restart)
+            emitPluginsChanged()
           })
         }
       })
@@ -878,6 +908,7 @@ module.exports = (theApp: any) => {
           if (options.enabled) {
             doPluginStart(app, plugin, location, options.configuration, restart)
           }
+          emitPluginsChanged()
         })
       })
     })

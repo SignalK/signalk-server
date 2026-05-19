@@ -79,7 +79,8 @@ const CAT_KEYWORDS_TO_NAMES: {
   'signalk-category-digital-switching': 'Digital Switching',
   'signalk-category-utility': 'Utility',
   'signalk-category-cloud': 'Cloud',
-  'signalk-category-weather': 'Weather'
+  'signalk-category-weather': 'Weather',
+  'signalk-category-database': 'Database & History'
 }
 
 const DEFAULT_MODULE_CAT_KEYWORDS: {
@@ -147,8 +148,13 @@ const DEFAULT_MODULE_CAT_KEYWORDS: {
   'signalk-tide-watch': ['signalk-category-weather'],
   '@signalk/udp-nmea-plugin': ['signalk-category-nmea-0183'],
   'signalk-to-batch-format': ['signalk-category-utility'],
-  'signalk-to-influxdb': ['signalk-category-utility'],
-  'signalk-to-timestream': ['signalk-category-cloud'],
+  'signalk-to-influxdb2': ['signalk-category-database'],
+  'signalk-parquet': ['signalk-category-database'],
+  'signalk-questdb': ['signalk-category-database'],
+  'signalk-to-timestream': [
+    'signalk-category-cloud',
+    'signalk-category-database'
+  ],
   'signalk-from-batch-format': ['signalk-category-utility'],
   'signalk-sunphases': ['signalk-category-weather'],
   '@codekilo/regexp-jexl-reader': ['signalk-category-nmea-0183'],
@@ -189,7 +195,7 @@ const DEFAULT_MODULE_CAT_KEYWORDS: {
   'signalk-maretron-proprietary': ['signalk-category-nmea-2000'],
   'signalk-healthcheck': ['signalk-category-utility'],
   'signalk-pebble-mydata': ['signalk-category-hardware'],
-  'signalk-to-influxdb-v2-buffering': ['signalk-category-utility'],
+  'signalk-to-influxdb-v2-buffering': ['signalk-category-database'],
   'signalk-saillogger': ['signalk-category-cloud'],
   'signalk-fusion-stereo': ['signalk-category-hardware'],
   'signalk-nextion': ['signalk-category-hardware'],

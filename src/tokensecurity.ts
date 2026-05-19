@@ -18,8 +18,8 @@ import { Request, Response, NextFunction, IRouter } from 'express'
 import jwt, { SignOptions } from 'jsonwebtoken'
 import _ from 'lodash'
 import bcrypt from 'bcryptjs'
-import { getSourceId } from '@signalk/signalk-schema'
 import {
+  getSourceId,
   Delta,
   Update,
   hasValues,
@@ -28,12 +28,15 @@ import {
   Path
 } from '@signalk/server-api'
 import ms, { StringValue } from 'ms'
-import rateLimit from 'express-rate-limit'
 import bodyParser from 'body-parser'
 import cookieParser from 'cookie-parser'
 import { createHash, randomBytes } from 'crypto'
 
 import { createDebug } from './debug'
+import {
+  createLoginRateLimiter,
+  LOGIN_RATE_LIMIT_MESSAGE
+} from './login-rate-limiter'
 import {
   InvalidTokenError,
   SecurityConfig,
@@ -45,7 +48,6 @@ import {
   LoginStatusResponse,
   saveSecurityConfig,
   RequestStatusData,
-  getRateLimitValidationOptions,
   ACL,
   SecurityStrategy,
   isOIDCUserIdentifier
@@ -68,7 +70,9 @@ import {
   ExternalUserService,
   ExternalUser,
   ProviderUserLookup,
-  PartialOIDCConfig
+  PartialOIDCConfig,
+  OIDCError,
+  OIDC_DEFAULTS
 } from './oidc'
 import { SERVERROUTESPREFIX } from './constants'
 import { ICallback } from './types'
@@ -412,19 +416,34 @@ function tokenSecurityFactory(
   }
   strategy.getConfiguration = getConfiguration
 
-  // Parse and cache OIDC configuration
+  // Parse and cache OIDC configuration eagerly so that invalid config
+  // is detected at startup rather than on first request (see #2594)
   let cachedOIDCConfig: OIDCConfig | null = null
-  function getOIDCConfig(): OIDCConfig {
-    if (!cachedOIDCConfig) {
+  function parseAndCacheOIDCConfig(): void {
+    try {
       cachedOIDCConfig = parseOIDCConfig(options)
+    } catch (err) {
+      if (err instanceof OIDCError) {
+        console.error(`OIDC configuration error [${err.code}]: ${err.message}`)
+        console.error(
+          'OIDC will be disabled. Fix the configuration and restart.'
+        )
+      } else {
+        console.error('Unexpected error parsing OIDC configuration:', err)
+        console.error('OIDC will be disabled.')
+      }
+      cachedOIDCConfig = { ...OIDC_DEFAULTS, enabled: false } as OIDCConfig
     }
-    return cachedOIDCConfig
+  }
+  parseAndCacheOIDCConfig()
+
+  function getOIDCConfig(): OIDCConfig {
+    return cachedOIDCConfig!
   }
 
-  // Update OIDC configuration in memory and clear cache
   function updateOIDCConfig(newOidcConfig: PartialOIDCConfig): void {
     options.oidc = newOidcConfig as SecurityConfig['oidc']
-    cachedOIDCConfig = null // Clear cache so it gets re-parsed
+    parseAndCacheOIDCConfig()
   }
   strategy.updateOIDCConfig = updateOIDCConfig
 
@@ -606,15 +625,18 @@ function tokenSecurityFactory(
       }
     }
 
-    const loginLimiter = rateLimit({
-      windowMs: loginWindowMs,
-      max: loginMax,
-      message: {
-        message:
-          'Too many login attempts from this IP, please try again after 10 minutes'
-      },
-      validate: getRateLimitValidationOptions(app)
-    })
+    const loginRateLimiter = createLoginRateLimiter(loginWindowMs, loginMax)
+    strategy.loginRateLimiter = loginRateLimiter
+
+    const loginLimiter = (req: Request, res: Response, next: NextFunction) => {
+      const { allowed, retryAfterMs } = loginRateLimiter.check(req.ip ?? '')
+      if (!allowed) {
+        res.set('Retry-After', String(Math.ceil(retryAfterMs / 1000)))
+        res.status(429).json({ message: LOGIN_RATE_LIMIT_MESSAGE })
+        return
+      }
+      next()
+    }
 
     app.use(bodyParser.urlencoded({ extended: true }))
 
@@ -809,7 +831,8 @@ function tokenSecurityFactory(
             if (!isNever(theExpiration)) {
               jwtOptions.expiresIn = theExpiration as StringValue
             }
-            debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
+            debug.enabled &&
+              debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
             try {
               const token = jwt.sign(
                 payload,
@@ -868,6 +891,7 @@ function tokenSecurityFactory(
     app.use(aPath, http_authorize(false))
     app.put(aPath, adminAuthenticationMiddleware(false))
     app.post(aPath, adminAuthenticationMiddleware(false))
+    app.delete(aPath, adminAuthenticationMiddleware(false))
   }
 
   strategy.addWriteMiddleware = function (aPath: string): void {
@@ -960,6 +984,7 @@ function tokenSecurityFactory(
     newConfig.devices = aConfig.devices
     newConfig.secretKey = aConfig.secretKey
     options = newConfig as TokenSecurityOptions
+    parseAndCacheOIDCConfig()
     return newConfig
   }
 
@@ -1185,6 +1210,13 @@ function tokenSecurityFactory(
 
         if (hasValues(update)) {
           return update.values.find((valuePath) => {
+            if (
+              valuePath === null ||
+              valuePath === undefined ||
+              typeof valuePath.path !== 'string'
+            ) {
+              return true
+            }
             return (
               strategy.checkACL(
                 skReq.skPrincipal!.identifier,
@@ -1197,6 +1229,13 @@ function tokenSecurityFactory(
           })
         } else if (hasMeta(update)) {
           return update.meta.find((metaPath) => {
+            if (
+              metaPath === null ||
+              metaPath === undefined ||
+              typeof metaPath.path !== 'string'
+            ) {
+              return true
+            }
             return (
               strategy.checkACL(
                 skReq.skPrincipal!.identifier,
@@ -1439,7 +1478,10 @@ function tokenSecurityFactory(
     }
 
     const acl = configuration.acls.find((theAcl) => {
-      const pattern = theAcl.context.replace(/\./g, '\\.').replace(/\*/g, '.*')
+      const pattern = theAcl.context
+        .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
+        .replace(/\./g, '\\.')
+        .replace(/\*/g, '.*')
       const matcher = new RegExp('^' + pattern + '$')
       return matcher.test(context)
     })
@@ -1450,13 +1492,19 @@ function tokenSecurityFactory(
 
         if (p.paths) {
           perms = p.paths.find((aPath) => {
-            const pattern = aPath.replace(/\./g, '\\.').replace(/\*/g, '.*')
+            const pattern = aPath
+              .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
+              .replace(/\./g, '\\.')
+              .replace(/\*/g, '.*')
             const matcher = new RegExp('^' + pattern + '$')
             return matcher.test(thePath)
           })
         } else if (p.sources) {
           perms = p.sources.find((s) => {
-            const pattern = s.replace(/\./g, '\\.').replace(/\*/g, '.*')
+            const pattern = s
+              .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
+              .replace(/\./g, '\\.')
+              .replace(/\*/g, '.*')
             const matcher = new RegExp('^' + pattern + '$')
             return matcher.test(source)
           })
@@ -1534,6 +1582,27 @@ function tokenSecurityFactory(
     return principal
   }
 
+  function sanitizeLogField(value: unknown): string {
+    return typeof value === 'string'
+      ? value.replace(/[\r\n\t]/g, ' ').slice(0, 128)
+      : 'unknown'
+  }
+
+  function logUnknownUser(jwtPayload: JWTPayload): void {
+    const identity = sanitizeLogField(jwtPayload.id ?? jwtPayload.device)
+    console.warn(`unknown user: ${identity}`)
+  }
+
+  function logBadToken(token: string, path: string, err: Error): void {
+    // jwt.decode returns null instead of throwing when the token is malformed
+    const payload = jwt.decode(token) as JWTPayload | null
+    const id = sanitizeLogField(payload?.id)
+    const device = sanitizeLogField(payload?.device)
+    console.warn(
+      `bad token: ${err.message} (user: ${id}, device: ${device}, path: ${path})`
+    )
+  }
+
   function http_authorize(
     redirect: boolean,
     forLoginStatus?: boolean
@@ -1589,16 +1658,19 @@ function tokenSecurityFactory(
                 next()
                 return
               } else {
-                const jwtPayload = decoded as JWTPayload
-                debug('unknown user: ' + (jwtPayload.id || jwtPayload.device))
+                logUnknownUser(decoded as JWTPayload)
               }
             } else {
-              debug(`bad token: ${err.message} ${req.path}`)
+              logBadToken(token, req.path, err)
             }
 
             // Token was provided but is invalid/revoked — always reject.
             // allow_readonly only applies when no token is provided at all.
-            res.clearCookie('JAUTHENTICATION')
+            console.warn(
+              'force clearing invalid/revoked auth cookie for %s',
+              req.path
+            )
+            clearSessionCookie(res)
             if (forLoginStatus) {
               skReq.skIsAuthenticated = false
               return next()

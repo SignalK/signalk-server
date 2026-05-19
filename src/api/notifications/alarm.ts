@@ -165,8 +165,13 @@ export class Alarm {
         }
       ]
     }
-    const d: Delta = { updates: [this.update] }
-    if (this.context) {
+
+    // Strip the original source metadata so handleMessage does not
+    // create a phantom N2K device entry under the notificationApi label.
+    // The $source field is sufficient for delta routing.
+    const { source: _source, ...updateWithoutSource } = this.update
+    const d: Delta = { updates: [updateWithoutSource as Update] }
+    if (this.external) {
       d.context = this.context
     }
     return d

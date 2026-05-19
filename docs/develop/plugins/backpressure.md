@@ -1,14 +1,14 @@
 ---
-title: WebSocket Backpressure
+title: Connection Backpressure
 ---
 
-# WebSocket Backpressure
+# Connection Backpressure
 
-Signal K Server includes automatic backpressure handling to gracefully manage slow client connections. This document explains how to detect and handle backpressure events in your webapp or plugin.
+Signal K Server includes automatic backpressure handling to gracefully manage slow client connections on WebSocket, Signal K TCP (port 8375), and NMEA TCP (port 10110) interfaces. This document explains how to detect and handle backpressure events in your webapp or plugin.
 
 ## Overview
 
-When a client's WebSocket connection can't keep up with the data rate, the server enters "backpressure mode" for that connection:
+When a client connection can't keep up with the data rate, the server enters "backpressure mode" for that connection:
 
 1. Instead of queuing more data (which would consume server memory), the server keeps only the **latest value** for each path
 2. When the client catches up, accumulated values are sent in a single delta with a `$backpressure` indicator
@@ -81,10 +81,21 @@ Backpressure flush delta:
 | `$backpressure.accumulated` | number | Number of unique context:path:$source combinations that were accumulated |
 | `$backpressure.duration`    | number | Milliseconds the server was in backpressure mode for this client         |
 
+## Connection Types
+
+| Interface                | Strategy           | Details                                                                                                                     |
+| ------------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| WebSocket (Primus)       | Accumulate + flush | Keeps latest value per path, flushes with `$backpressure` indicator when client catches up                                  |
+| Signal K TCP (port 8375) | Accumulate + flush | Same behavior as WebSocket for subscription deltas                                                                          |
+| NMEA TCP (port 10110)    | Drop + disconnect  | NMEA sentences are stateless; sentences are dropped for slow clients, connection terminated if buffer stays over hard limit |
+| TCP client (outbound)    | Drop               | Outbound writes are skipped when the remote server's buffer is full                                                         |
+
+WebSocket, Signal K TCP, and NMEA TCP connections share the configurable thresholds `BACKPRESSURE_ENTER`, `MAXSENDBUFFERSIZE`, and `MAXSENDBUFFERCHECKTIME`. The TCP client (outbound) uses only `BACKPRESSURE_ENTER` for write gating.
+
 ## Important Notes
 
 - **Values are correct** - the delta contains the latest values, only intermediate updates were dropped
-- **Per-connection** - backpressure is specific to each WebSocket connection, not server-wide
+- **Per-connection** - backpressure is specific to each connection, not server-wide
 - **Automatic recovery** - the server exits backpressure mode as soon as the client catches up
 - **Consider reducing scope** - if backpressure is frequent, consider using granular subscriptions to reduce data volume
 

@@ -6,9 +6,8 @@ import { IRouter, Request, Response } from 'express'
 import _ from 'lodash'
 
 import { SignalKMessageHub, WithConfig } from '../../app'
-import { Context, Path } from '@signalk/server-api'
+import { Context, Path, getSourceId } from '@signalk/server-api'
 import { WithSecurityStrategy } from '../../security'
-import { getSourceId } from '@signalk/signalk-schema'
 
 import {
   GeoJsonPoint,
@@ -938,7 +937,7 @@ export class CourseApi {
     if ('href' in dest) {
       const typedHref = this.parseHref(dest.href)
       if (typedHref) {
-        debug(`fetching ${JSON.stringify(typedHref)}`)
+        debug.enabled && debug(`fetching ${JSON.stringify(typedHref)}`)
         // fetch waypoint resource details
         try {
           const r = (await this.resourcesApi.getResource(

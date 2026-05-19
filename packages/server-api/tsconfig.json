@@ -8,5 +8,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["./src/**/*"]
+  "include": ["./src/**/*"],
+  "exclude": ["./src/**/*.test.ts"],
+  "references": [{ "path": "../path-metadata" }]
 }

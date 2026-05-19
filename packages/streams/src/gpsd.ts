@@ -77,7 +77,9 @@ export default class Gpsd extends Transform {
       })
       .on('reconnect', (n: number, delay: number) => {
         const msg = `Reconnect ${label} retry ${n} delay ${delay}`
-        this.options.app.setProviderError(this.options.providerId, msg)
+        if (n > 0) {
+          this.options.app.setProviderError(this.options.providerId, msg)
+        }
         this.debug(msg)
       })
       .on('disconnect', () => {

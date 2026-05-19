@@ -198,7 +198,7 @@ export class HistoryApiHttpRegistry {
           if (errors.length > 0) {
             throw new Error(`Validation errors: ${errors.join(', ')}`)
           }
-          debug(JSON.stringify(timeRangeParams, null, 2))
+          debug.enabled && debug(JSON.stringify(timeRangeParams, null, 2))
           return provider.getContexts(timeRangeParams)
         },
         res
@@ -213,7 +213,7 @@ export class HistoryApiHttpRegistry {
           if (errors.length > 0) {
             throw new Error(`Validation errors: ${errors.join(', ')}`)
           }
-          debug(JSON.stringify(timeRangeParams, null, 2))
+          debug.enabled && debug(JSON.stringify(timeRangeParams, null, 2))
           return provider.getPaths(timeRangeParams)
         },
         res
@@ -269,7 +269,12 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
   const { timeRangeParams, errors } = parseTimeRangeParams(query)
 
   const context = query.context as Context | undefined
-  const resolution = getMaybeNumber(query.resolution)
+  let resolution: number | undefined
+  try {
+    resolution = parseResolution(query.resolution)
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : 'Invalid resolution')
+  }
 
   const paths = query.paths as string
   if (!paths) {
@@ -281,7 +286,7 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
   }
 
   const pathExpressions = ((query.paths as string) || '')
-    .replace(/[^0-9a-z.,:]/gi, '')
+    .replace(/[^0-9a-z.,_:]/gi, '')
     .split(',')
   const pathSpecs: PathSpec[] = pathExpressions.map(splitPathExpression)
 
@@ -291,36 +296,74 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
     resolution,
     pathSpecs
   }
-  debug(JSON.stringify(parsed, null, 2))
+  debug.enabled && debug(JSON.stringify(parsed, null, 2))
   return parsed
 }
 
-const getMaybeNumber = (value: unknown): number | undefined => {
-  if (typeof value === 'string') return Number(value)
-  if (typeof value === 'number') return value
-  return undefined
+// Maps the single-letter unit suffix in a resolution time expression to seconds.
+const RESOLUTION_UNIT_SECONDS: Record<string, number> = {
+  s: 1,
+  m: 60,
+  h: 3_600,
+  d: 86_400
 }
 
-const splitPathExpression = (pathExpression: string): PathSpec => {
-  const parts = pathExpression.split(':')
-  let aggregateMethod = (parts[1] || 'average') as AggregateMethod
-  if (parts[0] === 'navigation.position') {
-    aggregateMethod = 'first' as AggregateMethod
-  }
+// Matches resolution time expressions per the History API spec, e.g.
+// '1s' -> 1, '15m' -> 900, '2h' -> 7200, '1d' -> 86400.
+const RESOLUTION_TIME_EXPRESSION = /^(\d+)([smhd])$/
 
-  // Extract all parameters from parts[2] onwards
+// Parses the `resolution` query parameter into seconds.
+// Accepts a number (already in seconds), a numeric string, or a time
+// expression of the form `<integer><unit>` where unit is s|m|h|d.
+// Returns undefined when the parameter is absent.
+// Exported for unit testing.
+export const parseResolution = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined
+  if (typeof value === 'number') return value
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  const match = RESOLUTION_TIME_EXPRESSION.exec(trimmed)
+  if (match) {
+    return Number(match[1]) * RESOLUTION_UNIT_SECONDS[match[2]]
+  }
+  const asNumber = Number(trimmed)
+  if (!Number.isNaN(asNumber)) return asNumber
+  throw new Error(
+    `resolution parameter must be a number of seconds or a time expression like '1s', '1m', '1h', '1d'`
+  )
+}
+
+// Parses a path expression into a PathSpec.
+// Input examples and what they parse into:
+//   'navigation.speedOverGround'         -> { path, aggregate: 'average', parameter: [] }
+//   'navigation.speedOverGround:max'     -> { path, aggregate: 'max',     parameter: [] }
+//   'navigation.speedOverGround:sma:5'   -> { path, aggregate: 'sma',     parameter: ['5'] }
+//   'navigation.position'                -> { path, aggregate: 'first',   parameter: [] }
+//   'navigation.position:last'           -> { path, aggregate: 'last',    parameter: [] }
+//
+// `navigation.position` is object-valued (lat/lon), so numeric aggregates
+// like `average` are not meaningful. When the caller does not specify an
+// aggregate, we default to `first` instead of the usual `average`. An
+// explicit aggregate is always honored so callers can still ask for
+// `last` or `middle_index` when that matches their intent.
+export const splitPathExpression = (pathExpression: string): PathSpec => {
+  const parts = pathExpression.split(':')
+  const aggregateMethod = (parts[1] ||
+    (parts[0] === 'navigation.position'
+      ? 'first'
+      : 'average')) as AggregateMethod
+
   const parameters: string[] = parts.slice(2).filter((p) => p.length > 0)
 
-  const pathSpec: PathSpec = {
+  return {
     path: parts[0] as Path,
     aggregate: aggregateMethod,
     parameter: parameters
   }
-
-  return pathSpec
 }
 
-const parseTimeRangeParams = (query: Record<string, unknown>) => {
+// Exported for unit testing.
+export const parseTimeRangeParams = (query: Record<string, unknown>) => {
   const errors: string[] = []
 
   const fromStr = query.from as string | undefined
@@ -336,18 +379,22 @@ const parseTimeRangeParams = (query: Record<string, unknown>) => {
   }
 
   const durationStr = query.duration as string | undefined
-  const durationNum = getMaybeNumber(query.duration)
   let duration: Temporal.Duration | undefined
   if (durationStr) {
     try {
       duration = Temporal.Duration.from(durationStr)
-    } catch (error) {
-      errors.push(
-        `duration parameter must be a valid ISO 8601 duration string: ${error instanceof Error ? error.message : 'Invalid format'}`
-      )
+    } catch {
+      // Strict non-negative decimal integer only: rule out negatives, hex
+      // (0x10), exponential (9e2), surrounding whitespace, and fractional
+      // forms that Number() would otherwise silently accept.
+      if (/^\d+$/.test(durationStr)) {
+        duration = Temporal.Duration.from({ seconds: Number(durationStr) })
+      } else {
+        errors.push(
+          `duration parameter must be an ISO 8601 duration string (e.g. 'PT15M') or an integer number of seconds`
+        )
+      }
     }
-  } else if (durationNum !== undefined) {
-    duration = Temporal.Duration.from({ milliseconds: durationNum })
   }
 
   if (!from && !duration) {

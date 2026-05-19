@@ -16,12 +16,16 @@ import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import Table from 'react-bootstrap/Table'
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
+import Tooltip from 'react-bootstrap/Tooltip'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
 import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
+import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons/faCircleInfo'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
+import { useStore } from '../../store'
 
 interface PluginSchema {
   properties?: Record<string, unknown>
@@ -47,6 +51,7 @@ interface Plugin {
   uiSchema?: Record<string, unknown>
   statusMessage?: string
   data: PluginData
+  bundled?: boolean
   [key: string]: unknown
 }
 
@@ -73,6 +78,7 @@ export default function PluginConfigurationList() {
   const [isFiltering, startFilterTransition] = useTransition()
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
+  const configCardRef = useRef<HTMLDivElement>(null)
 
   const searchPlugins = useCallback(
     (pluginList: Plugin[], searchString: string): Plugin[] => {
@@ -104,11 +110,15 @@ export default function PluginConfigurationList() {
           (plugin.data.configuration === null ||
             plugin.data.configuration === undefined)
 
+        const isUnconfigured = !plugin.bundled && configurationRequired
+
         switch (filter) {
           case 'enabled':
-            return !configurationRequired && plugin.data.enabled
+            return !isUnconfigured && plugin.data.enabled
           case 'disabled':
-            return configurationRequired || !plugin.data.enabled
+            return !isUnconfigured && !plugin.data.enabled
+          case 'unconfigured':
+            return isUnconfigured
           default:
             return true
         }
@@ -153,18 +163,36 @@ export default function PluginConfigurationList() {
     }
   }, [])
 
-  const selectPlugin = useCallback((plugin: Plugin | null) => {
-    const selectedPluginId = plugin ? plugin.id : null
-
-    // Keep URL static for best performance
-    if (selectedPluginId) {
-      localStorage.setItem(openPluginStorageKey, selectedPluginId)
-      setSelectedPlugin(plugin)
-    } else {
-      localStorage.removeItem(openPluginStorageKey)
-      setSelectedPlugin(null)
-    }
+  const scrollToConfigCard = useCallback(() => {
+    if (!configCardRef.current) return
+    requestAnimationFrame(() => {
+      if (!configCardRef.current) return
+      const rect = configCardRef.current.getBoundingClientRect()
+      const navbarHeight =
+        document.querySelector('.app-header')?.getBoundingClientRect().height ??
+        55
+      window.scrollBy({
+        top: rect.top - navbarHeight,
+        behavior: 'smooth'
+      })
+    })
   }, [])
+
+  const selectPlugin = useCallback(
+    (plugin: Plugin | null) => {
+      const selectedPluginId = plugin ? plugin.id : null
+
+      if (selectedPluginId) {
+        localStorage.setItem(openPluginStorageKey, selectedPluginId)
+        setSelectedPlugin(plugin)
+        requestAnimationFrame(() => scrollToConfigCard())
+      } else {
+        localStorage.removeItem(openPluginStorageKey)
+        setSelectedPlugin(null)
+      }
+    },
+    [scrollToConfigCard]
+  )
 
   const handleSearch = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value
@@ -193,10 +221,14 @@ export default function PluginConfigurationList() {
       if (plugin) {
         const currentlySelected =
           selectedPlugin && selectedPlugin.id === plugin.id
-        selectPlugin(currentlySelected ? null : plugin)
+        if (currentlySelected) {
+          selectPlugin(null)
+        } else {
+          selectPlugin(plugin)
+        }
       }
     },
-    [plugins, selectedPlugin, selectPlugin]
+    [plugins, selectPlugin]
   )
 
   const saveData = useCallback(
@@ -223,6 +255,7 @@ export default function PluginConfigurationList() {
         if (pluginIndex !== -1) {
           newPlugins[pluginIndex] = { ...newPlugins[pluginIndex], data }
         }
+        useStore.getState().setPlugins(newPlugins)
         return newPlugins
       })
 
@@ -276,6 +309,7 @@ export default function PluginConfigurationList() {
         }
 
         setPlugins(fetchedPlugins)
+        useStore.getState().setPlugins(fetchedPlugins)
         setSelectedPlugin(initialSelectedPlugin)
         setWasmEnabled(wasmInterfaceEnabled)
 
@@ -294,164 +328,185 @@ export default function PluginConfigurationList() {
     fetchData()
   }, [params.pluginid, scrollToSelectedPlugin])
 
+  useEffect(() => {
+    const unsubscribe = useStore.subscribe(
+      (state) => state.plugins,
+      (storePlugins) => {
+        if (storePlugins.length > 0) {
+          setPlugins(storePlugins as Plugin[])
+          setSelectedPlugin((prev) => {
+            if (!prev) return null
+            return (
+              (storePlugins.find((p) => p.id === prev.id) as Plugin) || null
+            )
+          })
+        }
+      }
+    )
+    return unsubscribe
+  }, [])
+
   const pluginList = getFilteredPlugins()
   const selectedPluginId = selectedPlugin ? selectedPlugin.id : null
 
   return (
-    <div>
-      <Card>
-        <Card.Header>
-          <FontAwesomeIcon icon={faAlignJustify} />{' '}
-          <strong>Plugin Configuration</strong>
-        </Card.Header>
-        <Card.Body>
-          <Form
-            action=""
-            method="post"
-            encType="multipart/form-data"
-            className="form-horizontal"
-            onSubmit={(e: FormEvent) => {
-              e.preventDefault()
-            }}
-          >
-            <Form.Group as={Row}>
-              <Col xs="3" md="1" className={'col-form-label'}>
-                <Form.Label htmlFor="search">Search</Form.Label>
-              </Col>
-              <Col xs="12" md="4">
+    <Row className="plugin-config-row g-0">
+      <Col xl={6}>
+        <Card>
+          <Card.Header>
+            <FontAwesomeIcon icon={faAlignJustify} />{' '}
+            <strong>Plugin Configuration</strong>
+          </Card.Header>
+          <Card.Body>
+            <Form
+              action=""
+              method="post"
+              encType="multipart/form-data"
+              className="form-horizontal"
+              onSubmit={(e: FormEvent) => {
+                e.preventDefault()
+              }}
+            >
+              <Form.Group className="mb-2">
                 <Form.Control
                   type="text"
                   name="search"
                   id="search"
                   onChange={handleSearch}
                   value={search}
-                  placeholder="Search plugins..."
+                  placeholder="Filter installed plugins..."
                 />
-              </Col>
-              <Col xs="3" md="2" className={'col-form-label'}>
-                <Form.Label htmlFor="statusFilter">Filter by Status</Form.Label>
-              </Col>
-              <Col xs="12" md="3">
+              </Form.Group>
+              <Form.Group className="mb-2">
                 <Form.Select
                   name="statusFilter"
                   id="statusFilter"
                   onChange={handleStatusFilter}
                   value={statusFilter}
+                  size="sm"
                 >
                   <option value="all">All Plugins</option>
                   <option value="enabled">Enabled</option>
                   <option value="disabled">Disabled</option>
+                  <option value="unconfigured">Unconfigured</option>
                 </Form.Select>
-              </Col>
-            </Form.Group>
-          </Form>
+              </Form.Group>
+            </Form>
 
-          <div
-            ref={tableContainerRef}
-            style={{
-              maxHeight: '400px',
-              overflowY: 'auto',
-              border: '1px solid #dee2e6',
-              opacity: isFiltering ? 0.7 : 1,
-              transition: 'opacity 0.2s'
-            }}
-          >
-            <Table responsive bordered striped size="sm" hover className="mb-0">
-              <thead
-                style={{
-                  position: 'sticky',
-                  top: 0,
-                  backgroundColor: '#f8f9fa',
-                  zIndex: 1
-                }}
-              >
-                <tr>
-                  <th style={{ width: '30%' }}>Plugin Name</th>
-                  <th style={{ width: '15%' }}>Status</th>
-                  <th style={{ width: '55%' }}>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pluginList.map((plugin) => {
-                  const isSelected = selectedPluginId === plugin.id
-                  const configurationRequired =
-                    plugin.schema &&
-                    plugin.schema.properties &&
-                    Object.keys(plugin.schema?.properties).length !== 0 &&
-                    (plugin.data.configuration === null ||
-                      plugin.data.configuration === undefined)
+            <div
+              ref={tableContainerRef}
+              className="plugin-list-container"
+              style={{
+                border: '1px solid #dee2e6',
+                opacity: isFiltering ? 0.7 : 1,
+                transition: 'opacity 0.2s'
+              }}
+            >
+              <Table responsive bordered size="sm" hover className="mb-0">
+                <thead
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    backgroundColor: '#f8f9fa',
+                    zIndex: 1
+                  }}
+                >
+                  <tr>
+                    <th>Plugin Name</th>
+                    <th style={{ width: '1%', whiteSpace: 'nowrap' }}>
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pluginList.map((plugin) => {
+                    const isSelected = selectedPluginId === plugin.id
+                    const configurationRequired =
+                      plugin.schema &&
+                      plugin.schema.properties &&
+                      Object.keys(plugin.schema?.properties).length !== 0 &&
+                      (plugin.data.configuration === null ||
+                        plugin.data.configuration === undefined)
 
-                  const isWasmPlugin = plugin.type === 'wasm'
-                  const wasmDisabledForPlugin = isWasmPlugin && !wasmEnabled
+                    const isWasmPlugin = plugin.type === 'wasm'
+                    const wasmDisabledForPlugin = isWasmPlugin && !wasmEnabled
 
-                  let badgeClass = 'text-bg-secondary'
-                  let badgeText = 'Disabled'
+                    let badgeClass = 'text-bg-secondary'
+                    let badgeText = 'Disabled'
 
-                  if (wasmDisabledForPlugin) {
-                    badgeClass = 'text-bg-danger'
-                    badgeText = 'WASM disabled'
-                  } else if (plugin.data.enabled && !configurationRequired) {
-                    badgeClass = 'text-bg-success'
-                    badgeText = 'Enabled'
-                  }
+                    if (wasmDisabledForPlugin) {
+                      badgeClass = 'text-bg-danger'
+                      badgeText = 'WASM disabled'
+                    } else if (!plugin.bundled && configurationRequired) {
+                      badgeClass = 'text-bg-warning'
+                      badgeText = 'Unconfigured'
+                    } else if (plugin.data.enabled && !configurationRequired) {
+                      badgeClass = 'text-bg-success'
+                      badgeText = 'Enabled'
+                    }
 
-                  return (
-                    <tr
-                      key={plugin.id}
-                      data-plugin-id={plugin.id}
-                      onClick={handlePluginClick}
-                      style={{ cursor: 'pointer' }}
-                      className={isSelected ? 'table-active' : ''}
-                    >
-                      <td>
-                        <strong>{plugin.name}</strong>
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center justify-content-between">
+                    return (
+                      <tr
+                        key={plugin.id}
+                        data-plugin-id={plugin.id}
+                        onClick={handlePluginClick}
+                        style={{ cursor: 'pointer' }}
+                        className={isSelected ? 'table-active' : ''}
+                      >
+                        <td>
+                          {isSelected ? (
+                            <strong>
+                              <FontAwesomeIcon icon={faGear} className="me-1" />
+                              {plugin.name}
+                            </strong>
+                          ) : (
+                            plugin.name
+                          )}
+                        </td>
+                        <td>
                           <div className={`badge ${badgeClass}`}>
                             {badgeText}
                           </div>
-                          <FontAwesomeIcon
-                            icon={faGear}
-                            className="text-muted"
-                            style={{ fontSize: '16px' }}
-                            title="Click to configure"
-                          />
-                        </div>
-                      </td>
-                      <td>
-                        <small>
-                          {plugin.description || 'No description available'}
-                        </small>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </Table>
-          </div>
-        </Card.Body>
-      </Card>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </Table>
+            </div>
+          </Card.Body>
+        </Card>
+      </Col>
 
-      {selectedPlugin && (
-        <PluginConfigCard
-          plugin={selectedPlugin}
-          isConfigurator={isConfigurator(selectedPlugin)}
-          saveData={(data: PluginData) => {
-            // Only auto-enable on first-ever configuration save
-            // Check if plugin was never configured before (no enabled state set)
-            // This allows plugins that are already enabled/disabled to be toggled
-            if (
-              selectedPlugin.data.enabled === undefined &&
-              data.enabled === undefined
-            ) {
-              data.enabled = true
-            }
-            return saveData(selectedPlugin.id, data)
-          }}
-        />
-      )}
-    </div>
+      <Col xl={6} ref={configCardRef}>
+        {selectedPlugin && (
+          <PluginConfigCard
+            plugin={selectedPlugin}
+            isConfigurator={isConfigurator(selectedPlugin)}
+            saveData={(data: PluginData) => {
+              if (
+                selectedPlugin.data.enabled === undefined &&
+                data.enabled === undefined
+              ) {
+                data.enabled = true
+              }
+              return saveData(selectedPlugin.id, data)
+            }}
+          />
+        )}
+        {!selectedPlugin && (
+          <Card className="mt-3 mt-xl-0">
+            <Card.Body className="text-center text-muted py-5">
+              <FontAwesomeIcon
+                icon={faGear}
+                style={{ fontSize: '48px', opacity: 0.3 }}
+              />
+              <p className="mt-3">Select a plugin in the list to configure</p>
+            </Card.Body>
+          </Card>
+        )}
+      </Col>
+    </Row>
   )
 }
 
@@ -467,10 +522,7 @@ function PluginConfigCard({
   saveData
 }: PluginConfigCardProps) {
   const [showSaveSuccess, setShowSaveSuccess] = useState(false)
-  const configCardRef = useRef<HTMLDivElement>(null)
 
-  // useOptimistic with simple replacement - the updater ignores current state
-  // since each optimistic update contains the complete new state
   const [optimisticData, setOptimisticData] = useOptimistic<
     PluginData,
     PluginData
@@ -480,7 +532,7 @@ function PluginConfigCard({
     setShowSaveSuccess(true)
     setTimeout(() => {
       setShowSaveSuccess(false)
-    }, 3000) // Hide after 3 seconds
+    }, 3000)
   }, [])
 
   const handleToggle = useCallback(
@@ -504,6 +556,19 @@ function PluginConfigCard({
     (plugin.data.configuration === null ||
       plugin.data.configuration === undefined)
 
+  const providerStatus = useStore((state) => state.providerStatus)
+  const pluginStatus = providerStatus?.find((s) => s.id === plugin.id)
+  const statusClasses: Record<string, string> = {
+    status: 'text-success',
+    warning: 'text-warning',
+    error: 'text-danger'
+  }
+  const statusClass = statusClasses[pluginStatus?.type || ''] || ''
+  const lastError =
+    pluginStatus?.lastError && pluginStatus.lastError !== pluginStatus.message
+      ? `${pluginStatus.lastErrorTimeStamp}: ${pluginStatus.lastError}`
+      : ''
+
   return (
     <div>
       {showSaveSuccess && (
@@ -525,7 +590,7 @@ function PluginConfigCard({
           </div>
         </div>
       )}
-      <Card className="mt-3 plugin-config-card" ref={configCardRef}>
+      <Card className="mt-3 mt-xl-0 plugin-config-card">
         <Card.Header id="plugin-config-header">
           <Row className="mb-2">
             <Col className={'align-self-center'}>
@@ -534,124 +599,155 @@ function PluginConfigCard({
                   icon={faGear}
                   style={{ marginRight: '10px' }}
                 />
-                Configure: {plugin.name}
+                {plugin.packageName}
+                {plugin.description && (
+                  <OverlayTrigger
+                    placement="bottom"
+                    overlay={<Tooltip>{plugin.description}</Tooltip>}
+                    trigger={['hover', 'focus']}
+                  >
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 ms-1 text-muted align-baseline"
+                      aria-label="Plugin description"
+                    >
+                      <FontAwesomeIcon icon={faCircleInfo} />
+                    </button>
+                  </OverlayTrigger>
+                )}
               </h5>
-              <small className="text-muted">{plugin.packageName}</small>
             </Col>
           </Row>
-          {!configurationRequired && (
+          {configurationRequired && (
             <Row>
-              <Col lg={4} className={'mt-2 mt-lg-0'}>
-                <Form.Label
-                  style={labelStyle}
-                  className="switch switch-text switch-primary"
-                >
-                  <input
-                    type="checkbox"
-                    name="enabled"
-                    className="switch-input"
-                    onChange={() => handleToggle('enabled')}
-                    checked={optimisticData.enabled}
-                  />
-                  <span className="switch-label" data-on="Yes" data-off="No" />
-                  <span className="switch-handle" />
-                </Form.Label>
-                <span className="ms-1">Enabled</span>
-              </Col>
-              <Col lg={4} className={'mt-2 mt-lg-0'}>
-                <Form.Label
-                  style={labelStyle}
-                  className="switch switch-text switch-primary"
-                >
-                  <input
-                    type="checkbox"
-                    name="enableLogging"
-                    className="switch-input"
-                    onChange={() => handleToggle('enableLogging')}
-                    checked={optimisticData.enableLogging}
-                  />
-                  <span className="switch-label" data-on="Yes" data-off="No" />
-                  <span className="switch-handle" />
-                </Form.Label>
-                <span className="ms-1">Data logging</span>
-                {optimisticData.enableLogging && (
-                  <Form.Text className="text-warning d-block">
-                    Creates hourly log files that can consume significant disk
-                    space
-                  </Form.Text>
-                )}
-              </Col>
-              <Col lg={4} className={'mt-2 mt-lg-0'}>
-                <Form.Label
-                  style={labelStyle}
-                  className="switch switch-text switch-primary"
-                >
-                  <input
-                    type="checkbox"
-                    name="enableDebug"
-                    className="switch-input"
-                    onChange={() => handleToggle('enableDebug')}
-                    checked={optimisticData.enableDebug}
-                  />
-                  <span className="switch-label" data-on="Yes" data-off="No" />
-                  <span className="switch-handle" />
-                </Form.Label>
-                <span className="ms-1">Enable debug log</span>
-              </Col>
+              <Col>Save configuration to enable this plugin</Col>
             </Row>
+          )}
+          {!configurationRequired && (
+            <>
+              <Row>
+                <Col lg={4} className={'mt-2 mt-lg-0'}>
+                  <Form.Label
+                    style={labelStyle}
+                    className="switch switch-text switch-primary"
+                  >
+                    <input
+                      type="checkbox"
+                      name="enabled"
+                      className="switch-input"
+                      onChange={() => handleToggle('enabled')}
+                      checked={optimisticData.enabled}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Form.Label>
+                  <span className="ms-1">Enabled</span>
+                </Col>
+                <Col lg={4} className={'mt-2 mt-lg-0'}>
+                  <Form.Label
+                    style={labelStyle}
+                    className="switch switch-text switch-primary"
+                  >
+                    <input
+                      type="checkbox"
+                      name="enableLogging"
+                      className="switch-input"
+                      onChange={() => handleToggle('enableLogging')}
+                      checked={optimisticData.enableLogging}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Form.Label>
+                  <span className="ms-1">Data logging</span>
+                  {optimisticData.enableLogging && (
+                    <OverlayTrigger
+                      placement="bottom"
+                      overlay={
+                        <Tooltip>
+                          Creates hourly log files that can consume significant
+                          disk space
+                        </Tooltip>
+                      }
+                    >
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 text-warning ms-1 align-baseline"
+                        aria-label="Hourly logs disk space warning"
+                      >
+                        <FontAwesomeIcon icon={faTriangleExclamation} />
+                      </button>
+                    </OverlayTrigger>
+                  )}
+                </Col>
+                <Col lg={4} className={'mt-2 mt-lg-0'}>
+                  <Form.Label
+                    style={labelStyle}
+                    className="switch switch-text switch-primary"
+                  >
+                    <input
+                      type="checkbox"
+                      name="enableDebug"
+                      className="switch-input"
+                      onChange={() => handleToggle('enableDebug')}
+                      checked={optimisticData.enableDebug}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Form.Label>
+                  <span className="ms-1">
+                    Enable debug{' '}
+                    {optimisticData.enableDebug ? (
+                      <a href="#/serverConfiguration/log">log</a>
+                    ) : (
+                      'log'
+                    )}
+                  </span>
+                </Col>
+              </Row>
+              {optimisticData.enabled && (
+                <Row className="mt-2">
+                  <Col>
+                    <small>
+                      <strong>Status:</strong>{' '}
+                      <span className={statusClass}>
+                        {pluginStatus?.message || 'Started'}
+                      </span>
+                    </small>
+                    {lastError && (
+                      <small className="d-block text-danger">
+                        <strong>Last error:</strong> {lastError}
+                      </small>
+                    )}
+                  </Col>
+                </Row>
+              )}
+            </>
           )}
         </Card.Header>
         <Card.Body>
           {!isConfigurator && (
-            <div>
-              <PluginConfigurationForm
-                plugin={plugin}
-                onSubmit={(data: PluginData) => {
-                  saveData(data)
-                    .then(() => {
-                      showSuccessMessage()
-                    })
-                    .catch(() => {
-                      // Error is already handled in saveData with alert
-                    })
-                }}
-              />
-              {/* Sticky submit button */}
-              <div
-                style={{
-                  position: 'fixed',
-                  bottom: '20px',
-                  right: '20px',
-                  zIndex: 1000,
-                  backgroundColor: '#fff',
-                  padding: '10px',
-                  borderRadius: '5px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                  border: '1px solid #dee2e6'
-                }}
-              >
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    // Find and trigger the form's submit button
-                    const formSubmitBtn = document.querySelector(
-                      '.plugin-config-card form button[type="submit"]'
-                    ) as HTMLButtonElement | null
-                    if (formSubmitBtn) {
-                      formSubmitBtn.click()
-                    }
-                  }}
-                  style={{ minWidth: '140px' }}
-                >
-                  <FontAwesomeIcon
-                    icon={faFloppyDisk}
-                    style={{ marginRight: '8px' }}
-                  />
-                  Save Configuration
-                </button>
-              </div>
-            </div>
+            <PluginConfigurationForm
+              plugin={plugin}
+              onSubmit={(data: PluginData) => {
+                saveData(data)
+                  .then(() => {
+                    showSuccessMessage()
+                  })
+                  .catch(() => {})
+              }}
+            />
           )}
           {isConfigurator && (
             <EmbeddedPluginConfigurationForm

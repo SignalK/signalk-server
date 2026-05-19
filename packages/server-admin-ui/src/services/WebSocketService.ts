@@ -1,4 +1,5 @@
-import type { SignalKStore } from '../store'
+import { useStore, type SignalKStore } from '../store'
+import { fetchAllData } from '../dataFetching'
 
 export type WebSocketStatus =
   | 'initial'
@@ -66,10 +67,8 @@ export class WebSocketService {
       this.updateState({ status: 'open', ws })
 
       if (isReconnect) {
-        import('../actions').then(({ fetchAllData }) => fetchAllData())
-        import('../store').then(({ useStore }) =>
-          useStore.getState().setRestarting(false)
-        )
+        fetchAllData()
+        useStore.getState().setRestarting(false)
       }
     }
 
@@ -225,17 +224,15 @@ export class WebSocketService {
           }
         }))
         break
-      case 'LOG':
-        // Dynamic import avoids circular dependency with store
-        import('../store').then(({ useStore }) => {
-          const logData = msg.data as {
-            isError?: boolean
-            ts: string
-            row: string
-          }
-          useStore.getState().addLogEntry(logData)
-        })
+      case 'LOG': {
+        const logData = msg.data as {
+          isError?: boolean
+          ts: string
+          row: string
+        }
+        useStore.getState().addLogEntry(logData)
         break
+      }
       case 'ACCESS_REQUEST':
         this.zustandSetState({ accessRequests: data } as Partial<SignalKStore>)
         break
@@ -247,33 +244,116 @@ export class WebSocketService {
           discoveredProviders: data
         } as Partial<SignalKStore>)
         break
+      case 'PRIORITYOVERRIDES': {
+        const overrides = (data ?? {}) as Record<
+          string,
+          { sourceRef: string; timeout: string | number }[]
+        >
+        const store = useStore.getState()
+        store.setSourcePrioritiesFromServer(overrides)
+        // Override-paths list is implicit in the per-path map under the
+        // group-aware engine: every path with an entry is an override.
+        store.setPriorityOverridesFromServer(Object.keys(overrides))
+        break
+      }
+      case 'PRIORITYGROUPS':
+        useStore
+          .getState()
+          .setPriorityGroupsFromServer(
+            (data ?? []) as unknown as Parameters<
+              SignalKStore['setPriorityGroupsFromServer']
+            >[0]
+          )
+        break
+      case 'PRIORITYDEFAULTS':
+        useStore
+          .getState()
+          .setPriorityDefaultsFromServer(
+            (data ?? {}) as Parameters<
+              SignalKStore['setPriorityDefaultsFromServer']
+            >[0]
+          )
+        break
+      case 'SOURCEALIASES':
+        useStore
+          .getState()
+          .setSourceAliases((data ?? {}) as Record<string, string>)
+        break
+      case 'MULTISOURCEPATHS':
+        useStore
+          .getState()
+          .setMultiSourcePaths((data ?? {}) as Record<string, string[]>)
+        break
+      case 'RECONCILEDGROUPS':
+        useStore
+          .getState()
+          .setReconciledGroups(
+            (data ?? []) as Parameters<SignalKStore['setReconciledGroups']>[0]
+          )
+        break
+      case 'LIVEPREFERREDSOURCES':
+        useStore
+          .getState()
+          .mergeLivePreferredSources((data ?? {}) as Record<string, string>)
+        break
+      case 'SOURCEEVICTED': {
+        // Server cleared a source from its cache (priority-group trash
+        // / N2K device removal). Drop matching leaves from this
+        // client's signalkData mirror so the Data Browser stops
+        // showing zombie rows for the evicted source.
+        const payload = (data ?? {}) as { sourceRef?: string }
+        if (payload.sourceRef) {
+          useStore.getState().evictSource(payload.sourceRef)
+        }
+        break
+      }
+      case 'SOURCESTATUS':
+        useStore
+          .getState()
+          .setSourceStatus(
+            (data ?? []) as Parameters<SignalKStore['setSourceStatus']>[0]
+          )
+        break
+      case 'N2KDEVICESTATUS':
+        // Server pushes the same payload shape as GET /n2kDeviceStatus
+        // whenever pgnDataInstances / pgnSourceKeys actually change.
+        // Without this the conflict-detection badge in SourceDiscovery
+        // is frozen at page-mount state — devices that start or stop
+        // publishing a path don't flip the conflict state until the
+        // user reloads the page.
+        useStore
+          .getState()
+          .setN2kDeviceStatus(
+            (data ?? {}) as Parameters<SignalKStore['setN2kDeviceStatus']>[0]
+          )
+        break
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break
       case 'VESSEL_INFO':
-        import('../store').then(({ useStore }) => {
-          useStore
-            .getState()
-            .setVesselInfo(data as Parameters<SignalKStore['setVesselInfo']>[0])
-        })
+        useStore
+          .getState()
+          .setVesselInfo(
+            (data ?? {}) as Parameters<SignalKStore['setVesselInfo']>[0]
+          )
         break
       case 'SOURCEPRIORITIES':
-        import('../store').then(({ useStore }) => {
-          useStore
-            .getState()
-            .setSourcePriorities(
-              data as Parameters<SignalKStore['setSourcePriorities']>[0]
-            )
-        })
+        useStore
+          .getState()
+          .setSourcePriorities(
+            data as Parameters<SignalKStore['setSourcePriorities']>[0]
+          )
         break
       case 'RECEIVE_APPSTORE_LIST':
       case 'APP_STORE_CHANGED':
-        // Dynamic import avoids circular dependency with store
-        import('../store').then(({ useStore }) => {
-          useStore
-            .getState()
-            .setAppStore(data as Parameters<SignalKStore['setAppStore']>[0])
-        })
+        useStore
+          .getState()
+          .setAppStore(data as Parameters<SignalKStore['setAppStore']>[0])
+        break
+      case 'PLUGINS_CHANGED':
+        useStore
+          .getState()
+          .setPlugins(data as Parameters<SignalKStore['setPlugins']>[0])
         break
       default:
         console.debug('Unhandled server event:', eventType)

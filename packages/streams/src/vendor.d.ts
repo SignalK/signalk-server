@@ -45,10 +45,6 @@ declare module '@signalk/nmea0183-signalk' {
   export = Parser
 }
 
-declare module '@signalk/nmea0183-utilities' {
-  export function appendChecksum(sentence: string): string
-}
-
 declare module '@signalk/client' {
   import { EventEmitter } from 'events'
   interface ClientOptions {
@@ -62,10 +58,17 @@ declare module '@signalk/client' {
     rejectUnauthorized?: boolean
     wsKeepaliveInterval?: number
   }
+  interface Connection {
+    send(payload: string): Promise<void>
+    setAuthenticated(token: string, method: string): void
+    disconnect(): void
+  }
   class Client extends EventEmitter {
     options: ClientOptions
+    connection: Connection | null
     constructor(options: ClientOptions)
     connect(): Promise<void>
+    disconnect(returnPromise?: boolean): Client | Promise<Client>
     subscribe(subscription: object, id: string): void
     API(): Promise<{
       get(path: string): Promise<string>

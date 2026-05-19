@@ -4,6 +4,15 @@ import path from 'path'
 import { rimraf } from 'rimraf'
 import { startServer } from './ts-servertestutilities'
 import { WsPromiser, serverTestConfigDirectory } from './servertestutilities'
+// Import from dist, not src: the running server loads the dist build and we
+// need the same module instance (and its initialized applicationDataPath).
+import {
+  getActivePresetForUser,
+  getDefaultCategory,
+  invalidatePresetCache,
+  loadUserPreferences,
+  saveUserPreferences
+} from '../dist/unitpreferences/loader'
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
@@ -224,6 +233,161 @@ describe('Unit Preferences', function () {
     })
   })
 
+  describe('Cache invalidation', function () {
+    afterEach(async function () {
+      await fetch(`${host}/signalk/v1/unitpreferences/custom-definitions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+      await fetch(`${host}/signalk/v1/unitpreferences/custom-categories`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+    })
+
+    it('GET /definitions reflects custom definitions after PUT', async function () {
+      // Prime the merged-definitions cache
+      let res = await fetch(`${host}/signalk/v1/unitpreferences/definitions`)
+      const before = await res.json()
+      expect(before['m/s'].conversions).to.not.have.property('cacheTest')
+
+      res = await fetch(
+        `${host}/signalk/v1/unitpreferences/custom-definitions`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            'm/s': {
+              conversions: {
+                cacheTest: {
+                  formula: 'value * 2',
+                  inverseFormula: 'value / 2',
+                  symbol: 'ct'
+                }
+              }
+            }
+          })
+        }
+      )
+      expect(res.status).to.equal(200)
+
+      res = await fetch(`${host}/signalk/v1/unitpreferences/definitions`)
+      const after = await res.json()
+      expect(after['m/s'].conversions).to.have.property('cacheTest')
+      expect(after['m/s'].conversions.cacheTest.symbol).to.equal('ct')
+    })
+
+    it('GET /categories reflects custom categories after PUT', async function () {
+      let res = await fetch(`${host}/signalk/v1/unitpreferences/categories`)
+      const before = await res.json()
+      expect(before.categoryToBaseUnit).to.not.have.property(
+        'cacheTestCategory'
+      )
+
+      res = await fetch(
+        `${host}/signalk/v1/unitpreferences/custom-categories`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cacheTestCategory: 'm/s' })
+        }
+      )
+      expect(res.status).to.equal(200)
+
+      res = await fetch(`${host}/signalk/v1/unitpreferences/categories`)
+      const after = await res.json()
+      expect(after.categoryToBaseUnit).to.have.property(
+        'cacheTestCategory',
+        'm/s'
+      )
+    })
+
+    it('invalidatePresetCache forces re-read of a custom preset on disk', async function () {
+      const TEST_USER = 'cache-test-user'
+      const presetName = 'invalidate-test-preset'
+      const customDir = path.join(
+        serverTestConfigDirectory(),
+        'unitpreferences',
+        'presets',
+        'custom'
+      )
+      const presetPath = path.join(customDir, `${presetName}.json`)
+      const userDir = path.join(
+        serverTestConfigDirectory(),
+        'applicationData',
+        'users',
+        TEST_USER
+      )
+
+      try {
+        fs.mkdirSync(customDir, { recursive: true })
+
+        fs.writeFileSync(
+          presetPath,
+          JSON.stringify({
+            version: '1.0.0',
+            name: 'v1',
+            categories: {
+              speed: { baseUnit: 'm/s', targetUnit: 'kn' }
+            }
+          })
+        )
+        saveUserPreferences(TEST_USER, { activePreset: presetName })
+
+        // Prime the cache.
+        const primed = getActivePresetForUser(TEST_USER)
+        expect(primed.name).to.equal('v1')
+
+        // Overwrite on disk; without invalidation the cache should still win.
+        fs.writeFileSync(
+          presetPath,
+          JSON.stringify({
+            version: '1.0.0',
+            name: 'v2',
+            categories: {
+              speed: { baseUnit: 'm/s', targetUnit: 'mph' }
+            }
+          })
+        )
+        const stillCached = getActivePresetForUser(TEST_USER)
+        expect(stillCached.name).to.equal('v1')
+
+        // Invalidate, then the next read picks up the new file.
+        invalidatePresetCache(presetName)
+        const refreshed = getActivePresetForUser(TEST_USER)
+        expect(refreshed.name).to.equal('v2')
+      } finally {
+        if (fs.existsSync(presetPath)) fs.unlinkSync(presetPath)
+        invalidatePresetCache(presetName)
+        await rimraf(userDir)
+      }
+    })
+  })
+
+  describe('Default category wildcard matching', function () {
+    it('matches single-segment wildcard patterns', function () {
+      expect(getDefaultCategory('propulsion.engine1.temperature')).to.equal(
+        'temperature'
+      )
+      expect(getDefaultCategory('electrical.batteries.house.voltage')).to.equal(
+        'voltage'
+      )
+      expect(getDefaultCategory('propulsion.port.oilPressure')).to.equal(
+        'pressure'
+      )
+    })
+
+    it('does not let wildcard span path segments', function () {
+      // 'propulsion.*.temperature' must not match a deeper path; '*' is one
+      // segment, not greedy across dots.
+      expect(
+        getDefaultCategory('propulsion.engine1.temperature.value')
+      ).to.equal(null)
+    })
+  })
+
   describe('WebSocket meta enrichment', function () {
     it('sends displayUnits in meta deltas for new paths', async function () {
       const ws = new WsPromiser(
@@ -336,6 +500,97 @@ describe('Unit Preferences', function () {
       })
 
       ws.ws.close()
+    })
+  })
+
+  describe('Primary Categories API', function () {
+    it('GET returns ambiguousUnits and effectivePrimary', async function () {
+      const res = await fetch(
+        `${host}/signalk/v1/unitpreferences/primary-categories`
+      )
+      expect(res.status).to.equal(200)
+
+      const body = await res.json()
+      expect(body).to.have.property('ambiguousUnits')
+      expect(body).to.have.property('effectivePrimary')
+
+      for (const [baseUnit, cats] of Object.entries(body.ambiguousUnits)) {
+        expect(cats).to.be.an('array')
+        expect((cats as string[]).length).to.be.greaterThan(1)
+        expect(cats as string[]).to.include(body.effectivePrimary[baseUnit])
+      }
+    })
+
+    it('GET effectivePrimary falls back to system default for `m`', async function () {
+      const res = await fetch(
+        `${host}/signalk/v1/unitpreferences/primary-categories`
+      )
+      const body = await res.json()
+      // unitpreferences/primary-categories.json maps 'm' -> 'distance'
+      if (body.ambiguousUnits.m) {
+        expect(body.effectivePrimary.m).to.equal('distance')
+      }
+    })
+
+    it('PUT without authentication returns 401', async function () {
+      const res = await fetch(
+        `${host}/signalk/v1/unitpreferences/primary-categories`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ m: 'depth' })
+        }
+      )
+      expect(res.status).to.equal(401)
+      const body = await res.json()
+      expect(body.error).to.equal('Authentication required')
+    })
+  })
+
+  describe('User preferences loader', function () {
+    const TEST_USER = 'unitprefs-test-user'
+    const usersDir = path.join(
+      serverTestConfigDirectory(),
+      'applicationData',
+      'users'
+    )
+    const testUserDir = path.join(usersDir, TEST_USER)
+
+    afterEach(async function () {
+      await rimraf(testUserDir)
+    })
+
+    it('returns null for unknown user', function () {
+      const prefs = loadUserPreferences('nonexistent-user-xyz')
+      expect(prefs).to.equal(null)
+    })
+
+    it('round-trips saved preferences', function () {
+      saveUserPreferences(TEST_USER, { primaryCategories: { m: 'depth' } })
+      const loaded = loadUserPreferences(TEST_USER)
+      expect(loaded).to.deep.equal({ primaryCategories: { m: 'depth' } })
+    })
+
+    it('returns a clone so callers cannot mutate the cache', function () {
+      saveUserPreferences(TEST_USER, { primaryCategories: { m: 'depth' } })
+      const first = loadUserPreferences(TEST_USER)
+      expect(first).to.not.equal(null)
+      // Mutate the returned object
+      first!.primaryCategories!.m = 'mutated'
+      const second = loadUserPreferences(TEST_USER)
+      expect(second!.primaryCategories!.m).to.equal('depth')
+    })
+
+    it('rejects invalid usernames', function () {
+      expect(() =>
+        saveUserPreferences('..', { primaryCategories: {} })
+      ).to.throw(/Invalid username/)
+      expect(() =>
+        saveUserPreferences('.', { primaryCategories: {} })
+      ).to.throw(/Invalid username/)
+      expect(() =>
+        saveUserPreferences('a/b', { primaryCategories: {} })
+      ).to.throw(/Invalid username/)
     })
   })
 })

@@ -17,7 +17,8 @@ export const validate = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any
   ): void => {
-    debug(`Validating ${type} ${method} ${JSON.stringify(value)}`)
+    debug.enabled &&
+      debug(`Validating ${type} ${method} ${JSON.stringify(value)}`)
     const endpoint =
       API_SCHEMA[`${RESOURCES_API_PATH}/${type as string}${id ? '/:id' : ''}`][
         method.toLowerCase()
@@ -41,9 +42,10 @@ export const validate = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any
   ): void => {
-    debug(
-      `*** Validating query params for ${type} ${method} ${JSON.stringify(value)}`
-    )
+    debug.enabled &&
+      debug(
+        `*** Validating query params for ${type} ${method} ${JSON.stringify(value)}`
+      )
     const endpoint =
       API_SCHEMA[`${RESOURCES_API_PATH}/${type as string}${id ? '/:id' : ''}`][
         method.toLowerCase()
