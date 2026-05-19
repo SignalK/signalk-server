@@ -1111,7 +1111,7 @@ export class CourseApi {
     index: number,
     reverse: boolean | null
   ) {
-    const { coordinatesMeta } = rte.feature.properties as Record<
+    const { coordinatesMeta } = (rte.feature.properties ?? {}) as Record<
       string,
       { name: string }
     >
