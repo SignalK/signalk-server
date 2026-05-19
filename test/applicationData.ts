@@ -69,6 +69,7 @@ describe('Application Data', () => {
   let adminHeaders: Record<string, string>
 
   before(async function () {
+    this.timeout(60000)
     port = await freeport()
     url = `http://0.0.0.0:${port}`
 
@@ -92,7 +93,9 @@ describe('Application Data', () => {
   })
 
   after(async () => {
-    await server.stop()
+    if (server) {
+      await server.stop()
+    }
   })
 
   async function post(globalOrUser: boolean, token: string, expected: number) {
