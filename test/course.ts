@@ -304,7 +304,7 @@ describe('Course Api', () => {
             longitude: 3.3452
           },
           type: 'RoutePoint',
-          name: 'WP1'
+          name: ''
         }
       },
       {
@@ -351,7 +351,7 @@ describe('Course Api', () => {
           latitude: points.feature.geometry.coordinates[0][1]
         },
         type: 'RoutePoint',
-        name: 'WP1'
+        name: ''
       },
       previousPoint: {
         type: 'VesselPosition',
