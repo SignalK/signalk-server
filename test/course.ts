@@ -37,7 +37,8 @@ describe('Course Api', () => {
             latitude: -35.5,
             longitude: 138.7
           },
-          type: 'Location'
+          type: 'Location',
+          name: 'DP'
         }
       },
       {
@@ -47,7 +48,8 @@ describe('Course Api', () => {
             latitude: -35.45,
             longitude: 138
           },
-          type: 'VesselPosition'
+          type: 'VesselPosition',
+          name: 'VP'
         }
       }
     ]
@@ -64,11 +66,13 @@ describe('Course Api', () => {
       activeRoute: null,
       nextPoint: {
         type: 'Location',
-        position: { latitude: -35.5, longitude: 138.7 }
+        position: { latitude: -35.5, longitude: 138.7 },
+        name: 'DP'
       },
       previousPoint: {
         type: 'VesselPosition',
-        position: { latitude: -35.45, longitude: 138 }
+        position: { latitude: -35.45, longitude: 138 },
+        name: 'VP'
       }
     })
 
@@ -93,7 +97,8 @@ describe('Course Api', () => {
     const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(4))
     deltaHasPathValue(v2courseDelta, 'navigation.course.nextPoint', {
       position: validDestinationPosition,
-      type: 'Location'
+      type: 'Location',
+      name: 'DP'
     })
 
     await selfPut('navigation/course/destination', {
@@ -160,14 +165,16 @@ describe('Course Api', () => {
         value: {
           href: `/resources/waypoints/${id}`,
           position: { latitude: 60.1699, longitude: 24.9384 },
-          type: 'Waypoint'
+          type: 'Waypoint',
+          name: 'WP1'
         }
       },
       {
         path: 'navigation.course.previousPoint',
         value: {
           position: { latitude: -35.45, longitude: 138 },
-          type: 'VesselPosition'
+          type: 'VesselPosition',
+          name: 'VP'
         }
       }
     ]
@@ -194,11 +201,13 @@ describe('Course Api', () => {
         position: {
           longitude: destination.feature.geometry.coordinates[0],
           latitude: destination.feature.geometry.coordinates[1]
-        }
+        },
+        name: 'WP1'
       },
       previousPoint: {
         type: 'VesselPosition',
-        position: vesselPosition
+        position: vesselPosition,
+        name: 'VP'
       }
     })
 
@@ -294,7 +303,8 @@ describe('Course Api', () => {
             latitude: 65.4567,
             longitude: 3.3452
           },
-          type: 'RoutePoint'
+          type: 'RoutePoint',
+          name: ''
         }
       },
       {
@@ -308,7 +318,8 @@ describe('Course Api', () => {
             latitude: -35.45,
             longitude: 138
           },
-          type: 'VesselPosition'
+          type: 'VesselPosition',
+          name: 'VP'
         }
       }
     ]
@@ -339,11 +350,13 @@ describe('Course Api', () => {
           longitude: points.feature.geometry.coordinates[0][0],
           latitude: points.feature.geometry.coordinates[0][1]
         },
-        type: 'RoutePoint'
+        type: 'RoutePoint',
+        name: ''
       },
       previousPoint: {
         type: 'VesselPosition',
-        position: vesselPosition
+        position: vesselPosition,
+        name: 'VP'
       }
     })
 
