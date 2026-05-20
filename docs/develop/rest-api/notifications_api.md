@@ -59,6 +59,7 @@ The following attributes can be applied when a notification is raised using the 
 
 - `createdAt` - Timestamp indicating when the notification was raised
 - `position` - Position associated with the notification _(i.e. vessel position when notification was raised)_
+- `data` - Additional data associated with the notification in key | value pairs
 
 _Example_
 
@@ -79,6 +80,9 @@ _Example_
   "position": {
     "latitude": 57.73241514375983,
     "longitude": 11.66365146637231
+  },
+  "data": {
+    "crewId": "c67345"
   }
 }
 ```
