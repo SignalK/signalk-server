@@ -350,6 +350,12 @@ function nmea2000input(
       }),
       new W2k01Ctor(subOptions, 'actisense', 'w2k-1-out')
     ]
+  } else if (subOptions.type === 'n2k-ip-gateway-canboatjs') {
+    const canboatjs = require('@canboat/canboatjs') as {
+      N2kIpGateway: unknown
+    }
+    const N2kIpGatewayCtor = canboatjs.N2kIpGateway as unknown as CanboatCtor
+    return [new N2kIpGatewayCtor(subOptions)]
   } else if (subOptions.type === 'navlink2-udp-canboatjs') {
     return [
       new Udp(subOptions as SubOptions & { port: number }),
@@ -579,7 +585,8 @@ export default class Simple extends Transform {
         opts.subOptions.type === 'ngt-1-canboatjs' ||
         opts.subOptions.type === 'canbus-canboatjs' ||
         opts.subOptions.type === 'w2k-1-n2k-actisense-canboatjs' ||
-        opts.subOptions.type === 'w2k-1-n2k-ascii-canboatjs'
+        opts.subOptions.type === 'w2k-1-n2k-ascii-canboatjs' ||
+        opts.subOptions.type === 'n2k-ip-gateway-canboatjs'
       ) {
         mappingType = 'NMEA2000JS'
       } else if (

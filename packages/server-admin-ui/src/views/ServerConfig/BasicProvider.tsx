@@ -1523,6 +1523,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
               Yacht Devices RAW USB (canboatjs)
             </option>
             <option value="canbus-canboatjs">Canbus (canboatjs)</option>
+            <option value="n2k-ip-gateway-canboatjs">
+              N2K IP Gateway (canboatjs)
+            </option>
             <option value="w2k-1-n2k-ascii-canboatjs">
               W2K-1 N2K ASCII (canboatjs)
             </option>
@@ -1617,6 +1620,42 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             value={value.options}
             onChange={onChange}
           />
+        </div>
+      )}
+      {value.options.type === 'n2k-ip-gateway-canboatjs' && (
+        <div>
+          <HostInput value={value.options} onChange={onChange} />
+          <PortInput value={value.options} onChange={onChange} />
+          <Form.Group as={Row} className="mb-2">
+            <Col xs="12" md="3">
+              <Form.Label htmlFor="n2k-ip-gateway-format">
+                Text Format
+              </Form.Label>
+            </Col>
+            <Col xs="12" md="3">
+              <Form.Select
+                id="n2k-ip-gateway-format"
+                name="options.format"
+                value={value.options.format || 'candump3'}
+                onChange={(event) => onChange(event)}
+              >
+                <option value="candump3">candump3 (default)</option>
+                <option value="candump2">candump2</option>
+                <option value="candump1">candump1</option>
+                <option value="ydraw">YDRAW</option>
+                <option value="actisense">Actisense (comma)</option>
+                <option value="actisense-n2k-ascii">Actisense N2K ASCII</option>
+                <option value="pcdin">PCDIN</option>
+              </Form.Select>
+            </Col>
+          </Form.Group>
+          <div className="text-muted small mt-1 mb-2">
+            Generic source for IP-based N2K gateways that stream raw CAN
+            frames over TCP in one of canboatjs's supported text formats.
+            Default port 2599, default format candump3, default
+            actAsCanDevice true (server claims an N2K address and
+            participates as a node).
+          </div>
         </div>
       )}
       {value.options.type !== undefined &&
