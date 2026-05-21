@@ -8,7 +8,8 @@ const {
   getLatestServerVersion,
   importOrRequire,
   runNpm,
-  getPluginDataSize
+  getPluginDataSize,
+  getAuthor
 } = require('../dist/modules')
 
 describe('modulesWithKeyword', () => {
@@ -372,5 +373,32 @@ describe('getPluginDataSize', () => {
     chai.expect(result.hasData).to.equal(true)
     chai.expect(result.fileCount).to.equal(1)
     chai.expect(result.totalBytes).to.be.greaterThan(0)
+  })
+})
+
+describe('getAuthor', () => {
+  it('reads a string author from package.json', () => {
+    chai
+      .expect(getAuthor({ author: 'Alice <a@example.com>' }))
+      .to.equal('Alice <a@example.com>')
+  })
+
+  it('reads an object author.name from package.json', () => {
+    chai.expect(getAuthor({ author: { name: 'Bob' } })).to.equal('Bob')
+  })
+
+  it('returns empty string when package.json has no author', () => {
+    chai.expect(getAuthor({})).to.equal('')
+  })
+
+  it('ignores npm maintainers and publisher (not package.json author)', () => {
+    chai
+      .expect(
+        getAuthor({
+          maintainers: [{ username: 'tkurki' }],
+          publisher: { username: 'tkurki' }
+        })
+      )
+      .to.equal('')
   })
 })
