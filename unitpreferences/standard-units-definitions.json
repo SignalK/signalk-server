@@ -875,5 +875,64 @@
         "longName": "ISO-8601 (UTC) format"
       }
     }
+  },
+  "B": {
+    "longName": "bytes",
+    "conversions": {
+      "B": {
+        "formula": "value * 1",
+        "inverseFormula": "value * 1",
+        "symbol": "B",
+        "longName": "bytes"
+      },
+      "KB": {
+        "formula": "value / 1000",
+        "inverseFormula": "value * 1000",
+        "symbol": "KB",
+        "longName": "kilobytes"
+      },
+      "MB": {
+        "formula": "value / 1000000",
+        "inverseFormula": "value * 1000000",
+        "symbol": "MB",
+        "longName": "megabytes"
+      },
+      "GB": {
+        "formula": "value / 1000000000",
+        "inverseFormula": "value * 1000000000",
+        "symbol": "GB",
+        "longName": "gigabytes"
+      },
+      "TB": {
+        "formula": "value / 1000000000000",
+        "inverseFormula": "value * 1000000000000",
+        "symbol": "TB",
+        "longName": "terabytes"
+      },
+      "KiB": {
+        "formula": "value / 1024",
+        "inverseFormula": "value * 1024",
+        "symbol": "KiB",
+        "longName": "kibibytes"
+      },
+      "MiB": {
+        "formula": "value / 1048576",
+        "inverseFormula": "value * 1048576",
+        "symbol": "MiB",
+        "longName": "mebibytes"
+      },
+      "GiB": {
+        "formula": "value / 1073741824",
+        "inverseFormula": "value * 1073741824",
+        "symbol": "GiB",
+        "longName": "gibibytes"
+      },
+      "TiB": {
+        "formula": "value / 1099511627776",
+        "inverseFormula": "value * 1099511627776",
+        "symbol": "TiB",
+        "longName": "tebibytes"
+      }
+    }
   }
 }

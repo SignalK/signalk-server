@@ -118,6 +118,11 @@
       "baseUnit": "bool",
       "targetUnit": "bool",
       "displayFormat": "boolean"
+    },
+    "dataSize": {
+      "baseUnit": "B",
+      "targetUnit": "MB",
+      "displayFormat": "0.0"
     }
   }
 }

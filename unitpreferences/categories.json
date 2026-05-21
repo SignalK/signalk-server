@@ -24,7 +24,8 @@
     "dateTime": "RFC 3339 (UTC)",
     "epoch": "Epoch Seconds",
     "unitless": "tr",
-    "boolean": "bool"
+    "boolean": "bool",
+    "dataSize": "B"
   },
   "coreCategories": [
     "speed",
@@ -51,6 +52,7 @@
     "dateTime",
     "epoch",
     "unitless",
-    "boolean"
+    "boolean",
+    "dataSize"
   ]
 }
