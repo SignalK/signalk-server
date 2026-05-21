@@ -221,12 +221,27 @@ jobs:
           node /tmp/validate-pkg.js
 
       - name: Install dependencies
+        # Retry once on transient failure. npm install / npm ci occasionally
+        # exits 127 from Git Bash on Windows + Node 24 (child-process PATH
+        # resolution race); a clean retry usually succeeds.
         run: |
+          npm_install_with_retry() {
+            local cmd="$1"
+            local attempts=2
+            for i in $(seq 1 $attempts); do
+              if $cmd; then return 0; fi
+              if [ "$i" -lt "$attempts" ]; then
+                echo "::warning::$cmd failed (attempt $i/$attempts), retrying in 5s..."
+                sleep 5
+              fi
+            done
+            return 1
+          }
           if [ -f package-lock.json ]; then
-            npm ci
+            npm_install_with_retry "npm ci"
           else
             echo "No package-lock.json found — using npm install instead of npm ci"
-            npm install
+            npm_install_with_retry "npm install"
           fi
         shell: bash
 
