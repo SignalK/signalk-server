@@ -1477,6 +1477,44 @@ function CreateDeviceInput({
   )
 }
 
+// NMEA 2000 PGN 60928 instance-field widths. canboatjs validates these
+// server-side and falls back to 0 for anything out of range, but we
+// still clamp here so settings.json never persists a value the user
+// typed that the bus can't actually carry.
+const MIN_DEVICE_INSTANCE = 0
+const MAX_DEVICE_INSTANCE = 255
+const MIN_SYSTEM_INSTANCE = 0
+const MAX_SYSTEM_INSTANCE = 15
+
+function clampedInstanceChange(
+  event: ChangeEvent<HTMLInputElement>,
+  onChange: OnChangeHandler,
+  min: number,
+  max: number
+) {
+  // Empty input clears the field so it falls back to the default. Any
+  // non-numeric input mirrors that — we'd rather store nothing than
+  // `NaN` or a string the server has to coerce.
+  const raw = event.target.value
+  if (raw === '') {
+    onChange({
+      target: { name: event.target.name, value: '', type: 'number' }
+    })
+    return
+  }
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed)) {
+    onChange({
+      target: { name: event.target.name, value: '', type: 'number' }
+    })
+    return
+  }
+  const clamped = Math.min(max, Math.max(min, Math.trunc(parsed)))
+  onChange({
+    target: { name: event.target.name, value: clamped, type: 'number' }
+  })
+}
+
 function DeviceInstanceInput({
   value,
   onChange
@@ -1495,20 +1533,28 @@ function DeviceInstanceInput({
         <Form.Control
           id="provider-deviceInstance"
           type="number"
-          min={0}
-          max={255}
+          min={MIN_DEVICE_INSTANCE}
+          max={MAX_DEVICE_INSTANCE}
           name="options.deviceInstance"
           value={
             typeof value.deviceInstance === 'number'
               ? value.deviceInstance
               : (value.deviceInstance ?? '')
           }
-          onChange={(event) => onChange(event)}
+          onChange={(event) =>
+            clampedInstanceChange(
+              event,
+              onChange,
+              MIN_DEVICE_INSTANCE,
+              MAX_DEVICE_INSTANCE
+            )
+          }
         />
       </Col>
       <Col xs="7" md="6" className="form-text text-muted small">
-        0–255. Identifies this signalk-server among multiple N2K nodes (split
-        into PGN 60928's lower 3 bits and upper 5 bits). Defaults to 0.
+        {MIN_DEVICE_INSTANCE}–{MAX_DEVICE_INSTANCE}. Identifies this
+        signalk-server among multiple N2K nodes (split into PGN 60928's lower 3
+        bits and upper 5 bits). Defaults to 0.
       </Col>
     </Form.Group>
   )
@@ -1532,19 +1578,27 @@ function SystemInstanceInput({
         <Form.Control
           id="provider-systemInstance"
           type="number"
-          min={0}
-          max={15}
+          min={MIN_SYSTEM_INSTANCE}
+          max={MAX_SYSTEM_INSTANCE}
           name="options.systemInstance"
           value={
             typeof value.systemInstance === 'number'
               ? value.systemInstance
               : (value.systemInstance ?? '')
           }
-          onChange={(event) => onChange(event)}
+          onChange={(event) =>
+            clampedInstanceChange(
+              event,
+              onChange,
+              MIN_SYSTEM_INSTANCE,
+              MAX_SYSTEM_INSTANCE
+            )
+          }
         />
       </Col>
       <Col xs="7" md="6" className="form-text text-muted small">
-        0–15. Defaults to 0; rarely changed.
+        {MIN_SYSTEM_INSTANCE}–{MAX_SYSTEM_INSTANCE}. Defaults to 0; rarely
+        changed.
       </Col>
     </Form.Group>
   )

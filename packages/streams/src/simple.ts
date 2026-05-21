@@ -352,7 +352,18 @@ function nmea2000input(
     ]
   } else if (subOptions.type === 'n2k-ip-gateway-canboatjs') {
     const canboatjs = require('@canboat/canboatjs') as {
-      N2kIpGateway: unknown
+      N2kIpGateway?: unknown
+    }
+    // N2kIpGateway lives in canboatjs only after the PR that introduced
+    // the 'n2k-ip-gateway-canboatjs' type — older installs (still on the
+    // ^3.3.0 floor) will resolve to undefined here and otherwise throw a
+    // cryptic "undefined is not a constructor". Give the user something
+    // they can act on.
+    if (typeof canboatjs.N2kIpGateway !== 'function') {
+      throw new Error(
+        "Provider type 'n2k-ip-gateway-canboatjs' requires @canboat/canboatjs " +
+          'with N2kIpGateway exported. Update the canboatjs dependency.'
+      )
     }
     const N2kIpGatewayCtor = canboatjs.N2kIpGateway as unknown as CanboatCtor
     return [new N2kIpGatewayCtor(subOptions)]
