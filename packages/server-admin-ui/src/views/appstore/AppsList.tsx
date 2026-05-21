@@ -1,65 +1,24 @@
 import { useState } from 'react'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import ListGroup from 'react-bootstrap/ListGroup'
-import ActionCellRenderer from './Grid/cell-renderers/ActionCellRenderer'
+import Row from 'react-bootstrap/Row'
+import Col from 'react-bootstrap/Col'
+import type { AppInfo } from '../../store/types'
+import PluginCard from './components/PluginCard'
+import PluginRow from './components/PluginRow'
 
-export interface AppData {
-  name: string
-  version?: string
-  installedVersion?: string
-  newVersion?: string
-  prereleaseVersion?: string
-  author?: string
-  updated?: string
-  description?: string
-  [key: string]: unknown
-}
+export type AppData = AppInfo
 
-export function AppListItem(app: AppData) {
-  return (
-    <ListGroup.Item className="p-3">
-      <div className="d-md-flex align-items-center flex-grow-1">
-        <div className="flex-grow-1 me-3">
-          <h5 className="text-dark mb-0">{app.name}</h5>
-          <div className="text-muted">
-            <span className="fw-bold">
-              v{app.installedVersion || app.version}{' '}
-            </span>
-            {app.newVersion && (
-              <>
-                <span className="text-secondary"> → </span>
-                <span className="fw-bold text-success fst-italic">
-                  v{app.newVersion}
-                </span>{' '}
-              </>
-            )}
-            released by
-            <span className="text-nowrap fw-bold"> {app.author}</span> on
-            <span className="text-nowrap">
-              {' '}
-              {app.updated?.substring(0, 10)}
-            </span>
-            {app.prereleaseVersion && (
-              <span className="badge text-bg-info ms-2">
-                pre-release: v{app.prereleaseVersion}
-              </span>
-            )}
-          </div>
-          <p className="text-pretty mb-0">{app.description}</p>
-        </div>
-        <div className="mt-3 mt-md-0">
-          <ActionCellRenderer data={app} />
-        </div>
-      </div>
-    </ListGroup.Item>
-  )
-}
+export type AppsViewMode = 'grid' | 'list'
 
 interface AppListProps {
   apps: AppData[]
+  viewMode?: AppsViewMode
 }
 
-export default function AppList({ apps: propsApps }: AppListProps) {
+export default function AppList({
+  apps: propsApps,
+  viewMode = 'list'
+}: AppListProps) {
   const [displayCount, setDisplayCount] = useState(20)
   const [prevAppsLength, setPrevAppsLength] = useState(propsApps.length)
 
@@ -74,8 +33,8 @@ export default function AppList({ apps: propsApps }: AppListProps) {
     setDisplayCount((prev) => prev + 20)
   }
 
-  return (
-    <ListGroup>
+  if (viewMode === 'grid') {
+    return (
       <InfiniteScroll
         dataLength={apps.length}
         next={loadMore}
@@ -83,10 +42,30 @@ export default function AppList({ apps: propsApps }: AppListProps) {
         loader={null}
         style={{ overflow: 'visible' }}
       >
-        {apps.map((app) => (
-          <AppListItem key={app.name} {...app} />
-        ))}
+        <Row className="g-3">
+          {apps.map((app) => (
+            <Col key={app.name} xs={12} md={6} xl={4}>
+              <PluginCard app={app} />
+            </Col>
+          ))}
+        </Row>
       </InfiniteScroll>
-    </ListGroup>
+    )
+  }
+
+  return (
+    <InfiniteScroll
+      dataLength={apps.length}
+      next={loadMore}
+      hasMore={apps.length !== propsApps.length}
+      loader={null}
+      style={{ overflow: 'visible' }}
+    >
+      <div className="plugin-list">
+        {apps.map((app) => (
+          <PluginRow key={app.name} app={app} />
+        ))}
+      </div>
+    </InfiniteScroll>
   )
 }
