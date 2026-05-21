@@ -290,18 +290,18 @@ export default function Sidebar({ location }: SidebarProps) {
       result.push(
         {
           name: 'Apps & Plugins',
-          url: '/plugins',
-          icon: 'icon-puzzle',
+          url: '/apps',
+          icon: 'icon-basket',
           badges: [updatesBadge, unconfiguredBadge],
           children: [
             {
-              name: 'Appstore',
-              url: '/appstore',
+              name: 'Store',
+              url: '/apps/store',
               badge: updatesBadge
             },
             {
-              name: 'Plugin Config',
-              url: '/serverConfiguration/plugins/-',
+              name: 'Configuration',
+              url: '/apps/configuration/-',
               badge: unconfiguredBadge
             }
           ]
