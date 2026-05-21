@@ -52,6 +52,12 @@ interface ProviderOptions {
   gpioInvert?: boolean
   filtersEnabled?: boolean
   filters?: Array<{ source: string; pgn: string }>
+  // PGN 60928 Address Claim instance fields. Forwarded to
+  // canboatjs N2kDevice; canboatjs splits deviceInstance into the
+  // lower 3 bits and upper 5 bits of PGN 60928.
+  deviceInstance?: number
+  systemInstance?: number
+  format?: string
   [key: string]: unknown
 }
 
@@ -1428,6 +1434,75 @@ function CreateDeviceInput({
   )
 }
 
+function DeviceInstanceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-deviceInstance">Device Instance</Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Control
+          id="provider-deviceInstance"
+          type="number"
+          min={0}
+          max={255}
+          name="options.deviceInstance"
+          value={
+            typeof value.deviceInstance === 'number'
+              ? value.deviceInstance
+              : value.deviceInstance ?? ''
+          }
+          onChange={(event) => onChange(event)}
+        />
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        0–255. Identifies this signalk-server among multiple N2K nodes (split
+        into PGN 60928's lower 3 bits and upper 5 bits). Defaults to 0.
+      </Col>
+    </Form.Group>
+  )
+}
+
+function SystemInstanceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-systemInstance">System Instance</Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Control
+          id="provider-systemInstance"
+          type="number"
+          min={0}
+          max={15}
+          name="options.systemInstance"
+          value={
+            typeof value.systemInstance === 'number'
+              ? value.systemInstance
+              : value.systemInstance ?? ''
+          }
+          onChange={(event) => onChange(event)}
+        />
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        0–15. Defaults to 0; rarely changed.
+      </Col>
+    </Form.Group>
+  )
+}
+
 function CamelCaseCompatInput({
   value,
   onChange
@@ -1662,6 +1737,14 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         value.options.type.indexOf('canboatjs') !== -1 && (
           <>
             <UseCanNameInput value={value.options} onChange={onChange} />
+            <DeviceInstanceInput
+              value={value.options}
+              onChange={onChange}
+            />
+            <SystemInstanceInput
+              value={value.options}
+              onChange={onChange}
+            />
             <CamelCaseCompatInput value={value.options} onChange={onChange} />
           </>
         )}
