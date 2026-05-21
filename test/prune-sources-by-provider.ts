@@ -1,22 +1,35 @@
 import { expect } from 'chai'
 import { collectProviderIds, pruneSourcesByProvider } from '../src/deltacache'
 
-// When a connection is deleted from settings.pipedProviders, its
-// devices used to remain in the Data Browser and skServer/deviceIdentities
-// after every restart, because loadSourcesCache() blindly re-hydrates
-// every key in ~/.signalk/sources-cache.json. The helper exercised here
-// is what makes the load drop entries belonging to providers that no
-// longer exist.
+// When a connection is deleted from (or disabled in) settings.pipedProviders,
+// its devices used to remain in the Data Browser and skServer/deviceIdentities
+// after every restart, because loadSourcesCache() blindly re-hydrates every
+// key in ~/.signalk/sources-cache.json. The helper exercised here is what
+// makes the load drop entries belonging to providers that no longer exist
+// or are no longer enabled.
 
 describe('collectProviderIds', function () {
-  it('returns the ids of every provider in pipedProviders', function () {
+  it('returns the ids of enabled providers', function () {
+    const ids = collectProviderIds([
+      { id: 'sensESP', enabled: true },
+      { id: 'NMEA0183' }
+    ])
+    expect(ids.size).to.equal(2)
+    expect(ids.has('sensESP')).to.equal(true)
+    expect(ids.has('NMEA0183')).to.equal(true)
+  })
+
+  it('skips providers with enabled: false', function () {
+    // A disabled provider has the same staleness shape as a deleted one:
+    // it stops producing fresh deltas, so its cached devices never get a
+    // fresh lastSeen and would otherwise linger forever.
     const ids = collectProviderIds([
       { id: 'sensESP', enabled: true },
       { id: 'YDEN02', enabled: false }
     ])
-    expect(ids.size).to.equal(2)
+    expect(ids.size).to.equal(1)
     expect(ids.has('sensESP')).to.equal(true)
-    expect(ids.has('YDEN02')).to.equal(true)
+    expect(ids.has('YDEN02')).to.equal(false)
   })
 
   it('returns an empty set when input is not an array', function () {
