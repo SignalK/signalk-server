@@ -1501,6 +1501,22 @@ jobs:
           npm init -y
           npm install signalk-server@${{ matrix.signalk-server-version }}
 
+      - name: Install plugins declared in signalk.requires
+        shell: bash
+        run: |
+          REQUIRES=$(jq -r '.signalk.requires // [] | .[]' "${{ github.workspace }}/package.json" 2>/dev/null || true)
+          if [ -z "$REQUIRES" ]; then
+            echo "No signalk.requires entries — skipping companion install."
+            exit 0
+          fi
+          cd /tmp/sk-test
+          while IFS= read -r pkg; do
+            [ -z "$pkg" ] && continue
+            echo "::group::npm install $pkg (signalk.requires)"
+            npm install "$pkg"
+            echo "::endgroup::"
+          done <<< "$REQUIRES"
+
       - name: Build plugin
         env:
           BUILD_CMD: ${{ inputs.build-command }}
