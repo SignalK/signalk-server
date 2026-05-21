@@ -1431,9 +1431,9 @@ function ActAsCanDeviceInput({
       </Col>
       <Col xs="7" md="6" className="form-text text-muted small">
         Claim an N2K address and participate actively on the bus (answer ISO
-        Requests for 60928 / 126996 / 126998, send heartbeat, accept
-        commands). Defaults to <strong>on</strong>; turn off to run as a
-        read-only listener.
+        Requests for 60928 / 126996 / 126998, send heartbeat, accept commands).
+        Defaults to <strong>on</strong>; turn off to run as a read-only
+        listener.
       </Col>
     </Form.Group>
   )
@@ -1487,7 +1487,9 @@ function DeviceInstanceInput({
   return (
     <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
-        <Form.Label htmlFor="provider-deviceInstance">Device Instance</Form.Label>
+        <Form.Label htmlFor="provider-deviceInstance">
+          Device Instance
+        </Form.Label>
       </Col>
       <Col xs="2" md="3">
         <Form.Control
@@ -1499,7 +1501,7 @@ function DeviceInstanceInput({
           value={
             typeof value.deviceInstance === 'number'
               ? value.deviceInstance
-              : value.deviceInstance ?? ''
+              : (value.deviceInstance ?? '')
           }
           onChange={(event) => onChange(event)}
         />
@@ -1522,7 +1524,9 @@ function SystemInstanceInput({
   return (
     <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
-        <Form.Label htmlFor="provider-systemInstance">System Instance</Form.Label>
+        <Form.Label htmlFor="provider-systemInstance">
+          System Instance
+        </Form.Label>
       </Col>
       <Col xs="2" md="3">
         <Form.Control
@@ -1534,7 +1538,7 @@ function SystemInstanceInput({
           value={
             typeof value.systemInstance === 'number'
               ? value.systemInstance
-              : value.systemInstance ?? ''
+              : (value.systemInstance ?? '')
           }
           onChange={(event) => onChange(event)}
         />
@@ -1769,9 +1773,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           </Form.Group>
           <ActAsCanDeviceInput value={value.options} onChange={onChange} />
           <div className="text-muted small mt-1 mb-2">
-            Generic source for IP-based N2K gateways that stream raw CAN
-            frames over TCP in one of canboatjs's supported text formats.
-            Default port 2599, default format candump3.
+            Generic source for IP-based N2K gateways that stream raw CAN frames
+            over TCP in one of canboatjs's supported text formats. Default port
+            2599, default format candump3.
           </div>
         </div>
       )}
@@ -1779,14 +1783,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         value.options.type.indexOf('canboatjs') !== -1 && (
           <>
             <UseCanNameInput value={value.options} onChange={onChange} />
-            <DeviceInstanceInput
-              value={value.options}
-              onChange={onChange}
-            />
-            <SystemInstanceInput
-              value={value.options}
-              onChange={onChange}
-            />
+            <DeviceInstanceInput value={value.options} onChange={onChange} />
+            <SystemInstanceInput value={value.options} onChange={onChange} />
             <CamelCaseCompatInput value={value.options} onChange={onChange} />
           </>
         )}
