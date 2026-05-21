@@ -57,6 +57,8 @@ interface ProviderOptions {
   // lower 3 bits and upper 5 bits of PGN 60928.
   deviceInstance?: number
   systemInstance?: number
+  // N2kIpGateway-specific.
+  actAsCanDevice?: boolean
   format?: string
   [key: string]: unknown
 }
@@ -1396,6 +1398,47 @@ function UseCanNameInput({
   )
 }
 
+function ActAsCanDeviceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  // Default to true when the field is unset so the switch reflects the
+  // gateway's actual runtime default (matches N2kIpGateway constructor).
+  const checked = value.actAsCanDevice !== false
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-actAsCanDevice">
+          Act as N2K device
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Label className="switch switch-text switch-primary">
+          <input
+            type="checkbox"
+            id="provider-actAsCanDevice"
+            name="options.actAsCanDevice"
+            className="switch-input"
+            onChange={(event) => onChange(event)}
+            checked={checked}
+          />
+          <span className="switch-label" data-on="Yes" data-off="No" />
+          <span className="switch-handle" />
+        </Form.Label>
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        Claim an N2K address and participate actively on the bus (answer ISO
+        Requests for 60928 / 126996 / 126998, send heartbeat, accept
+        commands). Defaults to <strong>on</strong>; turn off to run as a
+        read-only listener.
+      </Col>
+    </Form.Group>
+  )
+}
+
 function CreateDeviceInput({
   value,
   onChange
@@ -1724,12 +1767,11 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
               </Form.Select>
             </Col>
           </Form.Group>
+          <ActAsCanDeviceInput value={value.options} onChange={onChange} />
           <div className="text-muted small mt-1 mb-2">
             Generic source for IP-based N2K gateways that stream raw CAN
             frames over TCP in one of canboatjs's supported text formats.
-            Default port 2599, default format candump3, default
-            actAsCanDevice true (server claims an N2K address and
-            participates as a node).
+            Default port 2599, default format candump3.
           </div>
         </div>
       )}
