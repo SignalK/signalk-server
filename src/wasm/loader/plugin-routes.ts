@@ -441,9 +441,11 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
           // Send body - try to parse as JSON if it's a string, otherwise send as-is
           let body = response.body
           if (typeof body === 'string') {
-            // Check if Content-Type is JSON
-            const contentType = response.headers?.['Content-Type'] || ''
-            if (contentType.includes('application/json')) {
+            const contentType = res.getHeader('content-type')
+            if (
+              typeof contentType === 'string' &&
+              contentType.includes('application/json')
+            ) {
               try {
                 // Try to parse the string as JSON - if it's double-escaped, this will fix it
                 body = JSON.parse(body)
