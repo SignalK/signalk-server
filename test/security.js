@@ -213,6 +213,28 @@ describe('Security', () => {
     limitedUserToken.length.should.equal(149)
   })
 
+  it('login with Content-Type charset parameter returns JSON', async function () {
+    // Clients like .NET StringContent, Java HttpClient and Python
+    // requests(json=...) send "application/json; charset=utf-8".
+    // The server must treat that the same as "application/json"
+    // and return the JSON token body rather than redirecting.
+    const result = await fetch(`${url}/signalk/v1/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: JSON.stringify({
+        username: WRITE_USER_NAME,
+        password: WRITE_USER_PASSWORD
+      }),
+      redirect: 'manual'
+    })
+    result.status.should.equal(200)
+    const json = await result.json()
+    json.should.have.property('token')
+    json.token.length.should.be.greaterThan(0)
+  })
+
   it('websocket login works', async function () {
     const ws = new WebSocket(
       `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`

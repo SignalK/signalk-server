@@ -664,14 +664,14 @@ function tokenSecurityFactory(
 
         login(name, password, remember)
           .then((reply) => {
-            const requestType = req.get('Content-Type')
+            const wantsJson = req.is('application/json')
 
             if (reply.statusCode === 200 && reply.token && reply.user) {
               setSessionCookie(res, req, reply.token, reply.user, {
                 rememberMe: remember
               })
 
-              if (requestType === 'application/json') {
+              if (wantsJson) {
                 res.json({
                   timeToLive: reply.timeToLive,
                   token: reply.token
@@ -680,7 +680,7 @@ function tokenSecurityFactory(
                 res.redirect(getSafeDestination(req.body.destination))
               }
             } else {
-              if (requestType === 'application/json') {
+              if (wantsJson) {
                 res.status(reply.statusCode).send(reply)
               } else {
                 res.status(reply.statusCode).send(reply.message)
