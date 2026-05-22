@@ -52,6 +52,14 @@ interface ProviderOptions {
   gpioInvert?: boolean
   filtersEnabled?: boolean
   filters?: Array<{ source: string; pgn: string }>
+  // PGN 60928 Address Claim instance fields. Forwarded to
+  // canboatjs N2kDevice; canboatjs splits deviceInstance into the
+  // lower 3 bits and upper 5 bits of PGN 60928.
+  deviceInstance?: number
+  systemInstance?: number
+  // N2kIpGateway-specific.
+  actAsCanDevice?: boolean
+  format?: string
   [key: string]: unknown
 }
 
@@ -1390,6 +1398,47 @@ function UseCanNameInput({
   )
 }
 
+function ActAsCanDeviceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  // Default to true when the field is unset so the switch reflects the
+  // gateway's actual runtime default (matches N2kIpGateway constructor).
+  const checked = value.actAsCanDevice !== false
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-actAsCanDevice">
+          Act as N2K device
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Label className="switch switch-text switch-primary">
+          <input
+            type="checkbox"
+            id="provider-actAsCanDevice"
+            name="options.actAsCanDevice"
+            className="switch-input"
+            onChange={(event) => onChange(event)}
+            checked={checked}
+          />
+          <span className="switch-label" data-on="Yes" data-off="No" />
+          <span className="switch-handle" />
+        </Form.Label>
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        Claim an N2K address and participate actively on the bus (answer ISO
+        Requests for 60928 / 126996 / 126998, send heartbeat, accept commands).
+        Defaults to <strong>on</strong>; turn off to run as a read-only
+        listener.
+      </Col>
+    </Form.Group>
+  )
+}
+
 function CreateDeviceInput({
   value,
   onChange
@@ -1423,6 +1472,133 @@ function CreateDeviceInput({
         for Yacht Devices gateways — when off, the gateway may drop ISO Requests
         for PGN 60928 / 126996 / 126998 and device identity (model, software
         version, serial) stays incomplete.
+      </Col>
+    </Form.Group>
+  )
+}
+
+// NMEA 2000 PGN 60928 instance-field widths. canboatjs validates these
+// server-side and falls back to 0 for anything out of range, but we
+// still clamp here so settings.json never persists a value the user
+// typed that the bus can't actually carry.
+const MIN_DEVICE_INSTANCE = 0
+const MAX_DEVICE_INSTANCE = 255
+const MIN_SYSTEM_INSTANCE = 0
+const MAX_SYSTEM_INSTANCE = 15
+
+function clampedInstanceChange(
+  event: ChangeEvent<HTMLInputElement>,
+  onChange: OnChangeHandler,
+  min: number,
+  max: number
+) {
+  // Empty input clears the field so it falls back to the default. Any
+  // non-numeric input mirrors that — we'd rather store nothing than
+  // `NaN` or a string the server has to coerce.
+  const raw = event.target.value
+  if (raw === '') {
+    onChange({
+      target: { name: event.target.name, value: '', type: 'number' }
+    })
+    return
+  }
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed)) {
+    onChange({
+      target: { name: event.target.name, value: '', type: 'number' }
+    })
+    return
+  }
+  const clamped = Math.min(max, Math.max(min, Math.trunc(parsed)))
+  onChange({
+    target: { name: event.target.name, value: clamped, type: 'number' }
+  })
+}
+
+function DeviceInstanceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-deviceInstance">
+          Device Instance
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Control
+          id="provider-deviceInstance"
+          type="number"
+          min={MIN_DEVICE_INSTANCE}
+          max={MAX_DEVICE_INSTANCE}
+          name="options.deviceInstance"
+          value={
+            typeof value.deviceInstance === 'number'
+              ? value.deviceInstance
+              : (value.deviceInstance ?? '')
+          }
+          onChange={(event) =>
+            clampedInstanceChange(
+              event,
+              onChange,
+              MIN_DEVICE_INSTANCE,
+              MAX_DEVICE_INSTANCE
+            )
+          }
+        />
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        {MIN_DEVICE_INSTANCE}–{MAX_DEVICE_INSTANCE}. Identifies this
+        signalk-server among multiple N2K nodes (split into PGN 60928's lower 3
+        bits and upper 5 bits). Defaults to 0.
+      </Col>
+    </Form.Group>
+  )
+}
+
+function SystemInstanceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-systemInstance">
+          System Instance
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Control
+          id="provider-systemInstance"
+          type="number"
+          min={MIN_SYSTEM_INSTANCE}
+          max={MAX_SYSTEM_INSTANCE}
+          name="options.systemInstance"
+          value={
+            typeof value.systemInstance === 'number'
+              ? value.systemInstance
+              : (value.systemInstance ?? '')
+          }
+          onChange={(event) =>
+            clampedInstanceChange(
+              event,
+              onChange,
+              MIN_SYSTEM_INSTANCE,
+              MAX_SYSTEM_INSTANCE
+            )
+          }
+        />
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        {MIN_SYSTEM_INSTANCE}–{MAX_SYSTEM_INSTANCE}. Defaults to 0; rarely
+        changed.
       </Col>
     </Form.Group>
   )
@@ -1523,6 +1699,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
               Yacht Devices RAW USB (canboatjs)
             </option>
             <option value="canbus-canboatjs">Canbus (canboatjs)</option>
+            <option value="n2k-ip-gateway-canboatjs">
+              N2K IP Gateway (canboatjs)
+            </option>
             <option value="w2k-1-n2k-ascii-canboatjs">
               W2K-1 N2K ASCII (canboatjs)
             </option>
@@ -1619,10 +1798,47 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           />
         </div>
       )}
+      {value.options.type === 'n2k-ip-gateway-canboatjs' && (
+        <div>
+          <HostInput value={value.options} onChange={onChange} />
+          <PortInput value={value.options} onChange={onChange} />
+          <Form.Group as={Row} className="mb-2">
+            <Col xs="12" md="3">
+              <Form.Label htmlFor="n2k-ip-gateway-format">
+                Text Format
+              </Form.Label>
+            </Col>
+            <Col xs="12" md="3">
+              <Form.Select
+                id="n2k-ip-gateway-format"
+                name="options.format"
+                value={value.options.format || 'candump3'}
+                onChange={(event) => onChange(event)}
+              >
+                <option value="candump3">candump3 (default)</option>
+                <option value="candump2">candump2</option>
+                <option value="candump1">candump1</option>
+                <option value="ydraw">YDRAW</option>
+                <option value="actisense">Actisense (comma)</option>
+                <option value="actisense-n2k-ascii">Actisense N2K ASCII</option>
+                <option value="pcdin">PCDIN</option>
+              </Form.Select>
+            </Col>
+          </Form.Group>
+          <ActAsCanDeviceInput value={value.options} onChange={onChange} />
+          <div className="text-muted small mt-1 mb-2">
+            Generic source for IP-based N2K gateways that stream raw CAN frames
+            over TCP in one of canboatjs's supported text formats. Default port
+            2599, default format candump3.
+          </div>
+        </div>
+      )}
       {value.options.type !== undefined &&
         value.options.type.indexOf('canboatjs') !== -1 && (
           <>
             <UseCanNameInput value={value.options} onChange={onChange} />
+            <DeviceInstanceInput value={value.options} onChange={onChange} />
+            <SystemInstanceInput value={value.options} onChange={onChange} />
             <CamelCaseCompatInput value={value.options} onChange={onChange} />
           </>
         )}
