@@ -228,7 +228,7 @@ export default function PluginConfigurationList() {
         }
       }
     },
-    [plugins, selectPlugin]
+    [plugins, selectPlugin, selectedPlugin]
   )
 
   const saveData = useCallback(
