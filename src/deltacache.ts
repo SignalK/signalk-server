@@ -72,6 +72,56 @@ export function buildSrcToCanonicalMap(sources: unknown): Map<string, string> {
   return out
 }
 
+/**
+ * Collect the IDs of providers in `settings.pipedProviders` that are
+ * currently enabled. Skips entries with `enabled: false` (matching the
+ * convention in `pipedproviders.ts`: undefined is treated as enabled).
+ *
+ * Returns an empty Set when the settings tree is missing or empty —
+ * callers must skip the prune in that case so a fresh install (or a
+ * settings file we can't read) doesn't wipe out the entire cache.
+ */
+export function collectProviderIds(pipedProviders: unknown): Set<string> {
+  const out = new Set<string>()
+  if (!Array.isArray(pipedProviders)) return out
+  for (const p of pipedProviders) {
+    if (p && typeof p === 'object') {
+      const enabled = (p as { enabled?: unknown }).enabled
+      if (enabled === false) continue
+      const id = (p as { id?: unknown }).id
+      if (typeof id === 'string' && id.length > 0) {
+        out.add(id)
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * Remove cache entries whose `<providerId>.<rest>` key prefix is not in
+ * `knownProviderIds`. Mutates the input object and returns the number
+ * of entries removed.
+ *
+ * If `knownProviderIds` is empty, leaves the cache untouched so a
+ * misread settings file can't drop the user's whole history.
+ */
+export function pruneSourcesByProvider(
+  cached: Record<string, unknown>,
+  knownProviderIds: Set<string>
+): number {
+  if (knownProviderIds.size === 0) return 0
+  let dropped = 0
+  for (const key of Object.keys(cached)) {
+    const dotIdx = key.indexOf('.')
+    const providerId = dotIdx > 0 ? key.slice(0, dotIdx) : key
+    if (!knownProviderIds.has(providerId)) {
+      delete cached[key]
+      dropped++
+    }
+  }
+  return dropped
+}
+
 export default class DeltaCache {
   cache: StringKeyed = {}
   lastModifieds: StringKeyed = {}
@@ -576,6 +626,24 @@ export default class DeltaCache {
       const data = readFileSync(cachePath, 'utf-8')
       const cached = JSON.parse(data)
       if (cached && typeof cached === 'object') {
+        // Prune cached entries whose provider has been removed from (or
+        // disabled in) settings.pipedProviders. Without this, deleting,
+        // renaming, or disabling a connection leaves its devices stuck
+        // in the Data Browser and skServer/deviceIdentities forever —
+        // they get hydrated from sources-cache.json on every restart,
+        // never get a fresh `lastSeen` because the producer is gone,
+        // and survive because Reset Stale only runs on user click.
+        const knownProviderIds = collectProviderIds(
+          (this.app as any)?.config?.settings?.pipedProviders
+        )
+        const droppedCount = pruneSourcesByProvider(cached, knownProviderIds)
+        if (droppedCount > 0) {
+          debug(
+            'Pruned %d cache entries from removed or disabled providers',
+            droppedCount
+          )
+        }
+
         // Deduplicate by canName: when the same device appears under
         // multiple addresses (e.g. from address 254 claim cycling),
         // keep only the entry with the lower non-254 address.
