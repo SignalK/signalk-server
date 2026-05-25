@@ -87,6 +87,12 @@ describe('runDiscovery', () => {
   it('does not stop a browser twice after an internal error stop', () => {
     const scheduledCallbacks: Array<() => void> = []
 
+    const makeFakeTimeoutHandle = (): ReturnType<typeof setTimeout> => {
+      const handle = originalSetTimeout(() => {}, 0)
+      clearTimeout(handle)
+      return handle
+    }
+
     global.setTimeout = ((...args: unknown[]) => {
       const callback = args[0]
 
@@ -94,7 +100,7 @@ describe('runDiscovery', () => {
         scheduledCallbacks.push(callback as () => void)
       }
 
-      return 0 as unknown as ReturnType<typeof setTimeout>
+      return makeFakeTimeoutHandle()
     }) as unknown as typeof setTimeout
 
     Module._load = ((request, parent, isMain) => {
