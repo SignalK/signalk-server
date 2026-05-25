@@ -60,6 +60,8 @@ interface ProviderOptions {
   // N2kIpGateway-specific.
   actAsCanDevice?: boolean
   format?: string
+  // Maretron IPG 100 — optional CONNECT password.
+  password?: string
   [key: string]: unknown
 }
 
@@ -1708,6 +1710,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             <option value="w2k-1-n2k-actisense-canboatjs">
               W2K-1 N2K ACTISENSE (canboatjs)
             </option>
+            <option value="maretron-ipg-canboatjs">
+              Maretron IPG 100 (canboatjs)
+            </option>
             <option value="canbus" disabled={!hasAnalyzer}>
               Canbus (canboat)
             </option>
@@ -1833,12 +1838,50 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           </div>
         </div>
       )}
+      {value.options.type === 'maretron-ipg-canboatjs' && (
+        <div>
+          <HostInput value={value.options} onChange={onChange} />
+          <PortInput value={value.options} onChange={onChange} />
+          <Form.Group as={Row} className="mb-3">
+            <Col md="3">
+              <Form.Label htmlFor="options.password">Password</Form.Label>
+            </Col>
+            <Col xs="12" md="3">
+              <Form.Control
+                type="password"
+                id="options.password"
+                name="options.password"
+                value={value.options.password ?? ''}
+                onChange={(event) => onChange(event)}
+              />
+              <Form.Text muted>
+                Optional password for the IPG 100. Leave empty if none is
+                configured.
+              </Form.Text>
+            </Col>
+          </Form.Group>
+          <div className="text-muted small mt-1 mb-2">
+            Maretron IPG 100 Ethernet gateway. Default TCP port 6543. Uses
+            Maretron&apos;s 0xA5-framed binary protocol (handled by canboatjs).
+          </div>
+        </div>
+      )}
       {value.options.type !== undefined &&
         value.options.type.indexOf('canboatjs') !== -1 && (
           <>
-            <UseCanNameInput value={value.options} onChange={onChange} />
-            <DeviceInstanceInput value={value.options} onChange={onChange} />
-            <SystemInstanceInput value={value.options} onChange={onChange} />
+            {value.options.type !== 'maretron-ipg-canboatjs' && (
+              <>
+                <UseCanNameInput value={value.options} onChange={onChange} />
+                <DeviceInstanceInput
+                  value={value.options}
+                  onChange={onChange}
+                />
+                <SystemInstanceInput
+                  value={value.options}
+                  onChange={onChange}
+                />
+              </>
+            )}
             <CamelCaseCompatInput value={value.options} onChange={onChange} />
           </>
         )}

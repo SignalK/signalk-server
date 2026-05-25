@@ -367,6 +367,18 @@ function nmea2000input(
     }
     const N2kIpGatewayCtor = canboatjs.N2kIpGateway as unknown as CanboatCtor
     return [new N2kIpGatewayCtor(subOptions)]
+  } else if (subOptions.type === 'maretron-ipg-canboatjs') {
+    const canboatjs = require('@canboat/canboatjs') as {
+      MaretronIPG?: unknown
+    }
+    if (typeof canboatjs.MaretronIPG !== 'function') {
+      throw new Error(
+        "Provider type 'maretron-ipg-canboatjs' requires @canboat/canboatjs " +
+          'with MaretronIPG exported. Update the canboatjs dependency.'
+      )
+    }
+    const MaretronIPGCtor = canboatjs.MaretronIPG as unknown as CanboatCtor
+    return [new MaretronIPGCtor({ ...subOptions, useCanName: true })]
   } else if (subOptions.type === 'navlink2-udp-canboatjs') {
     return [
       new Udp(subOptions as SubOptions & { port: number }),
@@ -597,7 +609,8 @@ export default class Simple extends Transform {
         opts.subOptions.type === 'canbus-canboatjs' ||
         opts.subOptions.type === 'w2k-1-n2k-actisense-canboatjs' ||
         opts.subOptions.type === 'w2k-1-n2k-ascii-canboatjs' ||
-        opts.subOptions.type === 'n2k-ip-gateway-canboatjs'
+        opts.subOptions.type === 'n2k-ip-gateway-canboatjs' ||
+        opts.subOptions.type === 'maretron-ipg-canboatjs'
       ) {
         mappingType = 'NMEA2000JS'
       } else if (
