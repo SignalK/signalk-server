@@ -1,6 +1,5 @@
 import { expect } from 'chai'
 import { EventEmitter } from 'node:events'
-import { createRequire } from 'node:module'
 
 type LoadFn = (
   request: string,
@@ -21,7 +20,7 @@ type DiscoveryModule = {
   runDiscovery: (app: App) => void
 }
 
-const require = createRequire(import.meta.url)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const Module = require('node:module') as typeof import('node:module') & {
   _load: LoadFn
 }
@@ -92,10 +91,10 @@ describe('runDiscovery', () => {
       const callback = args[0]
 
       if (typeof callback === 'function') {
-        scheduledCallbacks.push(callback)
+        scheduledCallbacks.push(callback as () => void)
       }
 
-      return 0 as ReturnType<typeof setTimeout>
+      return 0 as unknown as ReturnType<typeof setTimeout>
     }) as unknown as typeof setTimeout
 
     Module._load = ((request, parent, isMain) => {
@@ -130,6 +129,7 @@ describe('runDiscovery', () => {
 
     delete require.cache[discoveryModulePath]
 
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { runDiscovery } = require('../dist/discovery.js') as DiscoveryModule
 
     const app: App = {
