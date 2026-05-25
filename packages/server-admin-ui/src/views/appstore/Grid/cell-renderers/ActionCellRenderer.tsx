@@ -211,9 +211,20 @@ export default function ActionCellRenderer({
       status = 'Installed'
     }
 
+    const isTerminalFailure = !progress && app.installFailed
+    const isTerminalSuccess = !progress && !app.installFailed
+    const statusClasses = [
+      'progress__status',
+      'p-1',
+      isTerminalSuccess ? 'bg-success-subtle text-success-emphasis' : '',
+      isTerminalFailure ? 'bg-danger-subtle text-danger-emphasis' : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+
     content = (
       <div className="progress__wrapper">
-        <div className="progress__status p-1">{status}</div>
+        <div className={statusClasses}>{status}</div>
         {progress}
       </div>
     )
@@ -242,7 +253,7 @@ export default function ActionCellRenderer({
               )
             ) : app.isPlugin ? (
               <NavLink
-                to={`/serverConfiguration/plugins/${app.id}`}
+                to={`/apps/configuration/${app.id}`}
                 role="button"
                 className="btn btn-light text-start"
               >
@@ -278,7 +289,7 @@ export default function ActionCellRenderer({
           <Dropdown.Menu align="end">
             {app.installed && app.newVersion && (
               <NavLink
-                to={`/serverConfiguration/plugins/${app.id}`}
+                to={`/apps/configuration/${app.id}`}
                 className="dropdown-item"
               >
                 <FontAwesomeIcon className="me-2" icon={faGear} /> Configure

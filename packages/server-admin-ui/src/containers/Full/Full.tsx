@@ -1,5 +1,11 @@
 import React, { useEffect, Component, ReactNode, ComponentType } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import {
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useParams
+} from 'react-router-dom'
 import Container from 'react-bootstrap/Container'
 import { useLoginStatus, type LoginStatus } from '../../store'
 
@@ -19,6 +25,7 @@ import SourceDiscovery from '../../views/DataBrowser/SourceDiscovery'
 import SourcePriorityPage from '../../views/DataBrowser/SourcePriorityPage'
 import Playground from '../../views/Playground'
 import Apps from '../../views/appstore/Apps/Apps'
+import DetailView from '../../views/appstore/Detail/DetailView'
 import Configuration from '../../views/Configuration/Configuration'
 import Login from '../../views/security/Login'
 import SecuritySettings from '../../views/security/Settings'
@@ -115,6 +122,49 @@ function ProtectedRoute({
   )
 }
 
+function LegacyAppstorePluginRedirect() {
+  const { name } = useParams<{ name: string }>()
+  const location = useLocation()
+  return (
+    <Navigate
+      to={`/apps/store/plugin/${encodeURIComponent(name || '')}${location.search}${location.hash}`}
+      replace
+    />
+  )
+}
+
+function LegacyAppstoreRedirect() {
+  // Preserve the splat after /appstore/ so deep-links like
+  // /appstore/updates redirect to /apps/store/updates rather than
+  // dropping back to the root list.
+  const params = useParams<{ '*': string }>()
+  const location = useLocation()
+  const rest = params['*']
+  const suffix = rest ? `/${rest}` : ''
+  return (
+    <Navigate
+      to={`/apps/store${suffix}${location.search}${location.hash}`}
+      replace
+    />
+  )
+}
+
+function LegacyPluginConfigRedirect() {
+  const { pluginid } = useParams<{ pluginid: string }>()
+  const location = useLocation()
+  // No id in the legacy URL → fall back to the store rather than
+  // /apps/configuration/- which would 404 the configuration view.
+  if (!pluginid) {
+    return <Navigate to="/apps/store" replace />
+  }
+  return (
+    <Navigate
+      to={`/apps/configuration/${encodeURIComponent(pluginid)}${location.search}${location.hash}`}
+      replace
+    />
+  )
+}
+
 export default function Full() {
   const location = useLocation()
 
@@ -199,12 +249,26 @@ export default function Full() {
                 element={<Navigate to="/data/fiddler" replace />}
               />
               <Route
-                path="/appstore/*"
+                path="/apps/store/plugin/:name"
+                element={<ProtectedRoute component={DetailView} />}
+              />
+              <Route
+                path="/apps/store/*"
                 element={<ProtectedRoute component={Apps} />}
               />
               <Route
-                path="/serverConfiguration/plugins/:pluginid"
+                path="/apps/configuration/:pluginid"
                 element={<ProtectedRoute component={Configuration} />}
+              />
+              <Route path="/appstore" element={<LegacyAppstoreRedirect />} />
+              <Route
+                path="/appstore/plugin/:name"
+                element={<LegacyAppstorePluginRedirect />}
+              />
+              <Route path="/appstore/*" element={<LegacyAppstoreRedirect />} />
+              <Route
+                path="/serverConfiguration/plugins/:pluginid"
+                element={<LegacyPluginConfigRedirect />}
               />
               <Route
                 path="/serverConfiguration/settings"

@@ -25,14 +25,13 @@ import type { SourcesData } from '../../utils/sourceLabels'
 const convert = new Convert()
 let logEntryCount = 0
 
-function nameCollator<T extends { name: string }>(left: T, right: T): number {
-  if (left.name < right.name) {
-    return -1
-  }
-  if (left.name > right.name) {
-    return 1
-  }
-  return 0
+function nameCollator<T extends { name: string; displayName?: string }>(
+  left: T,
+  right: T
+): number {
+  const a = left.displayName || left.name
+  const b = right.displayName || right.name
+  return a.localeCompare(b, undefined, { sensitivity: 'base' })
 }
 
 export interface AppSliceState {

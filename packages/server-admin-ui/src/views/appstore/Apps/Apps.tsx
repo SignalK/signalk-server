@@ -1,56 +1,57 @@
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons/faMagnifyingGlass'
+import { faTableCells } from '@fortawesome/free-solid-svg-icons/faTableCells'
+import { faList } from '@fortawesome/free-solid-svg-icons/faList'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import React, { useState, useCallback, useMemo, useDeferredValue } from 'react'
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useDeferredValue
+} from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAppStore } from '../../../store'
+import { fetchAppStore } from '../../../dataFetching'
 import Button from 'react-bootstrap/Button'
+import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Card from 'react-bootstrap/Card'
 import Form from 'react-bootstrap/Form'
-import AppsList from '../AppsList'
+import type {
+  AppInfo,
+  AppStoreState,
+  InstallingApp
+} from '../../../store/types'
+import AppsList, { AppsViewMode } from '../AppsList'
 import WarningBox from './WarningBox'
+import DeprecatedToggle from '../components/DeprecatedToggle'
 
 import '../appStore.scss'
 
-interface InstallingApp {
-  name: string
-  isWaiting?: boolean
-  isInstalling?: boolean
-}
+type SortMode = 'recent' | 'name' | 'score'
 
-interface AppInfo {
-  name: string
-  description?: string
-  version: string
-  installedVersion?: string
-  installed?: boolean
-  installing?: boolean
-  newVersion?: string
-  prereleaseVersion?: string
-  updated?: string
-  categories: string[]
-  [key: string]: unknown
-}
+const VIEW_MODE_KEY = 'signalk.appstore.viewMode'
+const SHOW_DEPRECATED_KEY = 'signalk.appstore.showDeprecated'
+const SORT_MODE_KEY = 'signalk.appstore.sortMode'
 
-interface AppStore {
-  storeAvailable: boolean
-  available: AppInfo[]
-  installed: AppInfo[]
-  installing: InstallingApp[]
-  updates: AppInfo[]
-  categories?: string[]
-}
-
-const installingCount = (appStore: AppStore): number => {
+const installingCount = (appStore: AppStoreState): number => {
   return appStore.installing.filter((app) => {
-    return app.isWaiting || app.isInstalling
+    const i = app as InstallingApp
+    return i.isWaiting || i.isInstalling
   }).length
 }
 
 const selectedViewToFilter = (
   selectedView: string,
-  appStore: AppStore
+  appStore: AppStoreState
 ): ((app: AppInfo) => boolean) => {
   if (selectedView === 'Installed') {
-    return (app) => !!app.installedVersion || !!app.installing
+    // app.installed is the synthetic flag projected from
+    // appStore.installed; check it first so entries whose
+    // installedVersion metadata hasn't loaded yet still appear.
+    return (app) =>
+      !!app.installed ||
+      !!(app.installedVersion as string | undefined) ||
+      !!app.installing
   } else if (selectedView === 'Updates') {
     return (app) => updateAvailable(app, appStore)
   } else if (selectedView === 'Installing') {
@@ -59,7 +60,7 @@ const selectedViewToFilter = (
   return () => true
 }
 
-const updateAvailable = (app: AppInfo, appStore: AppStore): boolean => {
+const updateAvailable = (app: AppInfo, appStore: AppStoreState): boolean => {
   return !!(
     app.installedVersion &&
     app.version !== app.installedVersion &&
@@ -67,11 +68,92 @@ const updateAvailable = (app: AppInfo, appStore: AppStore): boolean => {
   )
 }
 
+// localStorage.getItem() can throw in restricted-storage contexts (Safari
+// private mode, browsers with site-data blocked) the same way setItem can,
+// so reads need the same try/catch the writes already use — otherwise the
+// component fails to render at all.
+function readBool(key: string, fallback: boolean): boolean {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const raw = window.localStorage?.getItem(key)
+    if (raw === null || raw === undefined) return fallback
+    return raw === 'true'
+  } catch {
+    return fallback
+  }
+}
+
+function readString<T extends string>(
+  key: string,
+  allowed: T[],
+  fallback: T
+): T {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const raw = window.localStorage?.getItem(key)
+    if (raw && (allowed as string[]).includes(raw)) return raw as T
+    return fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writeString(key: string, value: string) {
+  try {
+    window.localStorage?.setItem(key, value)
+  } catch {
+    // localStorage unavailable (private mode); silently ignore.
+  }
+}
+
 const Apps: React.FC = () => {
-  const appStore = useAppStore() as AppStore
+  const appStore = useAppStore() as AppStoreState
+  const [searchParams, setSearchParams] = useSearchParams()
   const [view, setSelectedView] = useState('All')
   const [category, setSelectedCategory] = useState('All')
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => searchParams.get('q') || '')
+
+  // When the URL ?q= changes (e.g. user clicked an author link from the
+  // detail page or another card), reflect it back into the search box.
+  useEffect(() => {
+    const q = searchParams.get('q') || ''
+    setSearch((current) => (current === q ? current : q))
+  }, [searchParams])
+
+  // Re-fetch the App Store list on mount. The server's npm-metadata
+  // hydrator and icon probe populate signalk.appIcon / displayName
+  // asynchronously after the first /appstore/available call, so the
+  // initial app-load response often misses icons for plugins whose npm
+  // search payload lacked the signalk.* field. Re-fetching here picks
+  // up those hydrated values when the user returns from the detail page
+  // (where active probing forces the hydration to complete).
+  useEffect(() => {
+    fetchAppStore()
+  }, [])
+  const [viewMode, setViewModeState] = useState<AppsViewMode>(
+    readString<AppsViewMode>(VIEW_MODE_KEY, ['grid', 'list'], 'grid')
+  )
+  const [sortMode, setSortModeState] = useState<SortMode>(
+    readString<SortMode>(SORT_MODE_KEY, ['recent', 'name', 'score'], 'recent')
+  )
+  const [showDeprecated, setShowDeprecatedState] = useState<boolean>(
+    readBool(SHOW_DEPRECATED_KEY, false)
+  )
+
+  const setViewMode = useCallback((next: AppsViewMode) => {
+    setViewModeState(next)
+    writeString(VIEW_MODE_KEY, next)
+  }, [])
+
+  const setSortMode = useCallback((next: SortMode) => {
+    setSortModeState(next)
+    writeString(SORT_MODE_KEY, next)
+  }, [])
+
+  const setShowDeprecated = useCallback((next: boolean) => {
+    setShowDeprecatedState(next)
+    writeString(SHOW_DEPRECATED_KEY, String(next))
+  }, [])
 
   const deferredSearch = useDeferredValue(search)
   const isSearchStale = search !== deferredSearch
@@ -97,39 +179,79 @@ const Apps: React.FC = () => {
 
     appStore.installing.forEach((app) => {
       if (allApps[app.name]) {
-        allApps[app.name] = { ...allApps[app.name], ...app, installing: true }
+        // Only carry the install-state flags forward; the rest of
+        // app.installing entries are not AppInfo-shaped, so spreading
+        // them into AppInfo via `as unknown as` would erase real fields.
+        allApps[app.name] = {
+          ...allApps[app.name],
+          installing: true,
+          isInstalling: app.isInstalling,
+          isWaiting: app.isWaiting,
+          isRemoving: app.isRemoving,
+          isRemove: app.isRemove,
+          installFailed: app.installFailed
+        }
       }
     })
 
-    return Object.values(allApps).sort(
-      (a, b) =>
-        new Date(b.updated || 0).getTime() - new Date(a.updated || 0).getTime()
-    )
-  }, [appStore])
+    const list = Object.values(allApps)
+    const sorted = [...list]
+    if (sortMode === 'name') {
+      const sortKey = (a: AppInfo) => a.displayName || a.name
+      sorted.sort((a, b) =>
+        sortKey(a).localeCompare(sortKey(b), undefined, { sensitivity: 'base' })
+      )
+    } else if (sortMode === 'score') {
+      const score = (a: AppInfo) =>
+        (a.indicators as { score?: number } | undefined)?.score ?? -1
+      sorted.sort((a, b) => score(b) - score(a))
+    } else {
+      // Apps without an `updated` field sort to the bottom of
+      // "recently updated" via the epoch fallback — older than any
+      // real release date.
+      const updatedAt = (a: AppInfo) =>
+        typeof a.updated === 'string' ? Date.parse(a.updated) || 0 : 0
+      sorted.sort((a, b) => updatedAt(b) - updatedAt(a))
+    }
+    return sorted
+  }, [appStore, sortMode])
+
+  const hiddenDeprecatedCount = useMemo(() => {
+    if (showDeprecated) return 0
+    return deriveAppList().filter((a) => a.deprecated && !a.installedVersion)
+      .length
+  }, [deriveAppList, showDeprecated])
 
   const rowData = useMemo(() => {
     const selectedViewFilter = selectedViewToFilter(view, appStore)
     const selectedCategoryFilter =
       category === 'All'
         ? () => true
-        : (app: AppInfo) => app.categories?.includes(category)
+        : (app: AppInfo) => app.categories?.includes(category) ?? false
     const textSearchFilter =
       deferredSearch === ''
         ? () => true
         : (app: AppInfo) => {
             const lower = deferredSearch.toLowerCase()
-            return (
-              app.name.toLowerCase().indexOf(lower) >= 0 ||
+            return (app.name.toLowerCase().includes(lower) ||
+              (app.displayName &&
+                app.displayName.toLowerCase().includes(lower)) ||
               (app.description &&
-                app.description.toLowerCase().indexOf(lower) >= 0)
-            )
+                app.description.toLowerCase().includes(lower)) ||
+              (app.author &&
+                (app.author as string)
+                  .toLowerCase()
+                  .includes(lower))) as boolean
           }
+    const deprecatedFilter = (app: AppInfo) =>
+      showDeprecated || !app.deprecated || !!app.installedVersion
 
     return deriveAppList()
       .filter(selectedViewFilter)
       .filter(selectedCategoryFilter)
       .filter(textSearchFilter)
-  }, [appStore, view, category, deferredSearch, deriveAppList])
+      .filter(deprecatedFilter)
+  }, [appStore, view, category, deferredSearch, deriveAppList, showDeprecated])
 
   const handleUpdateAll = useCallback(() => {
     if (confirm(`Are you sure you want to install all updates?`)) {
@@ -144,12 +266,32 @@ const Apps: React.FC = () => {
           )
         }
       }
+      setSelectedView('Installing')
     }
   }, [rowData])
 
+  // Once everything queued on the Installs & Removes tab has finished,
+  // jump back to Installed so the user lands on the result. Stay put
+  // when at least one install failed so the red "Install failed" pill
+  // remains in view until the user navigates away themselves.
+  const busyCount = installingCount(appStore)
+  const hasFailure = appStore.installing.some(
+    (app) => (app as InstallingApp).installFailed
+  )
+  useEffect(() => {
+    if (
+      view === 'Installing' &&
+      busyCount === 0 &&
+      !hasFailure &&
+      appStore.installing.length > 0
+    ) {
+      setSelectedView('Installed')
+    }
+  }, [view, busyCount, hasFailure, appStore.installing.length])
+
   let warning: string | undefined
   if (appStore.storeAvailable === false) {
-    warning = `You probably don't have Internet connectivity and Appstore can not be reached.`
+    warning = `You probably don't have Internet connectivity and Appstore can not be reached. Showing cached and installed data.`
   } else if (appStore.installing.length > 0) {
     warning =
       'Please restart the server after installing, updating or deleting a plugin'
@@ -212,10 +354,45 @@ const Apps: React.FC = () => {
 
           <div className="action__container">
             {view === 'Updates' && appStore.updates.length > 0 ? (
-              <Button variant="success" onClick={handleUpdateAll}>
+              <Button
+                variant="success"
+                onClick={handleUpdateAll}
+                className="text-nowrap"
+              >
                 Update all
               </Button>
             ) : undefined}
+
+            <Form.Select
+              size="sm"
+              className="appstore__sort"
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              aria-label="Sort order"
+            >
+              <option value="recent">Recently updated</option>
+              <option value="name">Name</option>
+              <option value="score">Indicator score</option>
+            </Form.Select>
+
+            <ButtonGroup aria-label="View mode" size="sm">
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'light'}
+                onClick={() => setViewMode('grid')}
+                aria-label="Grid view"
+                aria-pressed={viewMode === 'grid'}
+              >
+                <FontAwesomeIcon icon={faTableCells} />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'light'}
+                onClick={() => setViewMode('list')}
+                aria-label="List view"
+                aria-pressed={viewMode === 'list'}
+              >
+                <FontAwesomeIcon icon={faList} />
+              </Button>
+            </ButtonGroup>
 
             <div className="search">
               <label htmlFor="search-text-box" className="visually-hidden">
@@ -231,7 +408,11 @@ const Apps: React.FC = () => {
                 placeholder="Search ..."
                 autoComplete="off"
                 onInput={(e) => {
-                  setSearch((e.target as HTMLInputElement).value)
+                  const next = (e.target as HTMLInputElement).value
+                  setSearch(next)
+                  // Mirror to URL so reload preserves the query and an
+                  // author-link navigation from elsewhere round-trips.
+                  setSearchParams(next ? { q: next } : {}, { replace: true })
                 }}
                 value={search}
               />
@@ -251,6 +432,11 @@ const Apps: React.FC = () => {
               </Button>
             ))}
           </section>
+          <DeprecatedToggle
+            count={hiddenDeprecatedCount}
+            enabled={showDeprecated}
+            onChange={setShowDeprecated}
+          />
           <section className="appstore__grid">
             <div
               style={{
@@ -259,7 +445,7 @@ const Apps: React.FC = () => {
                 transition: 'opacity 0.2s'
               }}
             >
-              <AppsList apps={rowData} />
+              <AppsList apps={rowData} viewMode={viewMode} />
             </div>
           </section>
         </Card.Body>

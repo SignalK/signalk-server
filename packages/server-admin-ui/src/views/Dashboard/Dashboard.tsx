@@ -130,9 +130,10 @@ export default function Dashboard() {
         key={status.id}
         onClick={() => {
           navigate(
-            '/serverConfiguration/' +
-              (status.statusType === 'plugin' ? 'plugins/' : 'connections/') +
-              status.id
+            status.statusType === 'plugin'
+              ? '/apps/configuration/' + encodeURIComponent(status.id)
+              : '/serverConfiguration/connections/' +
+                  encodeURIComponent(status.id)
           )
         }}
       >
@@ -289,7 +290,7 @@ export default function Dashboard() {
 }
 
 function pluginNameLink(id: string): ReactNode {
-  return <a href={'#/serverConfiguration/plugins/' + id}>{id}</a>
+  return <a href={'#/apps/configuration/' + encodeURIComponent(id)}>{id}</a>
 }
 
 function providerIdLink(id: string): ReactNode {
@@ -298,6 +299,10 @@ function providerIdLink(id: string): ReactNode {
   } else if (id.startsWith('ws.')) {
     return <a href={'#/security/devices'}>{id}</a>
   } else {
-    return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
+    return (
+      <a href={'#/serverConfiguration/connections/' + encodeURIComponent(id)}>
+        {id}
+      </a>
+    )
   }
 }

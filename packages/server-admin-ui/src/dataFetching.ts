@@ -25,6 +25,26 @@ export async function fetchLoginStatus(): Promise<void> {
   }
 }
 
+// Re-fetch the App Store list. The server's background metadata
+// hydrator populates signalk.appIcon / displayName for plugins whose
+// npm search response lacks them, so the first /appstore/available
+// after app load can be missing icons that become available a few
+// seconds later. Re-fetching when the user lands on /apps/store
+// surfaces those hydrated icons without needing a full page reload.
+export async function fetchAppStore(): Promise<void> {
+  try {
+    const response = await authFetch(
+      `${window.serverRoutesPrefix}/appstore/available`
+    )
+    if (response.status === 200) {
+      const data = await response.json()
+      useStore.getState().setAppStore(data)
+    }
+  } catch (error) {
+    console.error('Failed to fetch /appstore/available:', error)
+  }
+}
+
 export async function fetchAllData(): Promise<void> {
   const fetchAndSet = async <T>(
     endpoint: string,

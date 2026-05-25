@@ -80,6 +80,8 @@ export interface Package {
   publisher?: {
     username: string
   }
+  maintainers?: Array<{ username?: string; email?: string }>
+  author?: string | { name?: string; email?: string; url?: string }
   dependencies: { [key: string]: any }
   version: string
   description: string
@@ -546,9 +548,13 @@ export function checkForNewServerVersion(
 }
 
 export function getAuthor(thePackage: Package): string {
-  return `${thePackage.publisher?.username}${
-    thePackage.name.startsWith('@signalk/') ? ' (Signal K team)' : ''
-  }`
+  // Only use package.json's author field. npm maintainers and publisher
+  // are publish-access identities (and OIDC sets publisher to "GitHub
+  // Actions"), so falling back to them surfaces whoever happens to hold
+  // publish rights as the "author" — not who wrote the package.
+  const authorField = thePackage.author
+  if (typeof authorField === 'string') return authorField
+  return authorField?.name ?? ''
 }
 
 export function getKeywords(thePackage: NpmPackageData): string[] {

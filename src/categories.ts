@@ -19,9 +19,24 @@ const debug = createDebug('signalk:categories')
 
 import { getKeywords, NpmPackageData } from './modules'
 
-const NEW_CATEGORY = 'New/Updated'
-
 const CAT_DEPRECATED = 'signalk-category-deprecated'
+
+const RECENT_DAYS = 30
+const RECENT_MS = RECENT_DAYS * 24 * 3600 * 1000
+
+// "Recently updated" recency flag, derived from the npm package date so
+// the New/Updated badge in the UI agrees with the "Recently updated"
+// sort. Single source of truth for both the list endpoint and the
+// detail endpoint.
+export function isRecent(dateString: string | undefined): boolean {
+  if (!dateString) return false
+  const t = new Date(dateString).getTime()
+  if (!Number.isFinite(t)) return false
+  const delta = Date.now() - t
+  // A future timestamp (delta < 0) would otherwise stay 'recent' for
+  // 30 days past that future date — guard against it explicitly.
+  return delta >= 0 && delta < RECENT_MS
+}
 
 const isDeprecated = (packageName: string) =>
   DEFAULT_MODULE_CAT_KEYWORDS[packageName] &&
@@ -43,18 +58,6 @@ function getCategories(thePackage: NpmPackageData): string[] {
   const categoryNames = categoryKeywords.map(
     (category) => CAT_KEYWORDS_TO_NAMES[category]
   )
-
-  if (categoryNames.length === 0) {
-    categoryNames.push('Uncategorized')
-  }
-
-  if (thePackage.date) {
-    const pDate = new Date(thePackage.date)
-    if ((Date.now() - pDate.getTime()) / (1000 * 3600 * 24) < 30) {
-      // updated less than 30 days ago
-      categoryNames.push(NEW_CATEGORY)
-    }
-  }
 
   debug('%s categories: %j', thePackage.name, categoryNames)
   return categoryNames
@@ -298,5 +301,6 @@ const DEFAULT_MODULE_CAT_KEYWORDS: {
 
 module.exports = {
   getCategories,
-  getAvailableCategories
+  getAvailableCategories,
+  isRecent
 }
