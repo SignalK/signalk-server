@@ -22,7 +22,9 @@ import {
   useSourcePriorities,
   usePriorityOverrides,
   usePriorityGroups,
-  useActiveConflictCount
+  useActiveConflictCount,
+  useGpsSensorsData,
+  usePositionSources
 } from '../../store'
 import classNames from 'classnames'
 import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
@@ -156,6 +158,20 @@ export default function Sidebar({ location }: SidebarProps) {
     (d) => d.tokenExpiry && d.tokenExpiry * 1000 < nowMs
   ).length
 
+  const gpsSensorsData = useGpsSensorsData()
+  const positionSources = usePositionSources()
+
+  const unconfiguredGpsCount = useMemo(() => {
+    const configuredRefs = new Set(
+      gpsSensorsData.sensors
+        .filter(
+          (s) => s.sourceRef && s.fromBow !== null && s.fromCenter !== null
+        )
+        .map((s) => s.sourceRef)
+    )
+    return positionSources.filter((ref) => !configuredRefs.has(ref)).length
+  }, [positionSources, gpsSensorsData])
+
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
     let updatesBadge: BadgeData | null = null
@@ -266,7 +282,14 @@ export default function Sidebar({ location }: SidebarProps) {
                 }
               : null
         },
-        { name: 'Unit Preferences', url: '/data/units' },
+        {
+          name: 'Preferences',
+          url: '/data/preferences',
+          badge:
+            unconfiguredGpsCount > 0
+              ? { variant: 'warning', text: `${unconfiguredGpsCount}` }
+              : null
+        },
         { name: 'Fiddler', url: '/data/fiddler' }
       )
     }
@@ -284,7 +307,7 @@ export default function Sidebar({ location }: SidebarProps) {
       },
       ((): NavItemData => {
         const dataBadgeCount = isAdmin
-          ? prioritiesAttentionCount + conflictCount
+          ? prioritiesAttentionCount + conflictCount + unconfiguredGpsCount
           : 0
         return {
           name: 'Data',
@@ -424,7 +447,8 @@ export default function Sidebar({ location }: SidebarProps) {
     plugins,
     conflictCount,
     unconfiguredPriorityCount,
-    overridesWithMissingSourcesCount
+    overridesWithMissingSourcesCount,
+    unconfiguredGpsCount
   ])
 
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(

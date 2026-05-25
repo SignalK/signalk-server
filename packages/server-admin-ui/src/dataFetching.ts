@@ -122,6 +122,8 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/n2kDeviceStatus', state.setN2kDeviceStatus),
     fetchAndSet('/livePreferredSources', state.setLivePreferredSources),
     fetchAndSet('/multiSourcePaths', state.setMultiSourcePaths),
-    fetchAndSet('/reconciledGroups', state.setReconciledGroups)
+    fetchAndSet('/reconciledGroups', state.setReconciledGroups),
+    fetchAndSet('/gpsSensors', state.setGpsSensors),
+    fetchAndSet('/positionSources', state.setPositionSources)
   ])
 }

@@ -108,6 +108,91 @@ const prioritiesPayloadSchema = Type.Object({
   defaults: priorityDefaultsSchema
 })
 
+// Schema for the PUT /skServer/gpsSensors body. Each sensor has a stable
+// id, a sourceRef that may be empty for not-yet-linked rows, and nullable
+// numeric offsets — Number coercion happens in the route handler so the
+// schema mirrors what the admin UI POSTs (numbers or null), not the
+// post-coercion shape.
+// sensorId is interpolated into `sensors.gps.${sensorId}.fromBow/fromCenter`
+// — anything containing `.` would split the path and corrupt the SK tree
+// shape exposed to external consumers, so the schema rejects it up front.
+const gpsSensorSchema = Type.Object({
+  sensorId: Type.String({ minLength: 1, pattern: '^[^.]+$' }),
+  sourceRef: Type.String(),
+  fromBow: Type.Union([Type.Number(), Type.Null()]),
+  fromCenter: Type.Union([Type.Number(), Type.Null()])
+})
+const gpsSensorsPayloadSchema = Type.Array(gpsSensorSchema)
+
+type GpsSensorsPayload = Array<{
+  sensorId: string
+  sourceRef: string
+  fromBow: number | null
+  fromCenter: number | null
+}>
+
+function validateGpsSensorsPayload(
+  body: unknown
+): { ok: true; value: GpsSensorsPayload } | { ok: false; error: string } {
+  if (!Value.Check(gpsSensorsPayloadSchema, body)) {
+    const first = Value.Errors(gpsSensorsPayloadSchema, body).First()
+    return {
+      ok: false,
+      error: first
+        ? `Invalid gpsSensors payload at ${first.path}: ${first.message}`
+        : 'Invalid gpsSensors payload'
+    }
+  }
+  const value = body as GpsSensorsPayload
+  // Duplicate sensorIds would silently clobber sensors.gps.<id> entries
+  // in the data model on PUT; reject before we mutate anything. Duplicate
+  // non-empty sourceRefs would create an ambiguous source→sensor mapping.
+  const seenIds = new Set<string>()
+  const seenSources = new Set<string>()
+  for (const s of value) {
+    if (seenIds.has(s.sensorId)) {
+      return { ok: false, error: `Duplicate sensorId "${s.sensorId}"` }
+    }
+    seenIds.add(s.sensorId)
+    if (s.sourceRef.length > 0) {
+      if (seenSources.has(s.sourceRef)) {
+        return { ok: false, error: `Duplicate sourceRef "${s.sourceRef}"` }
+      }
+      seenSources.add(s.sourceRef)
+    }
+  }
+  return { ok: true, value }
+}
+
+// Reject offsets that would place an antenna outside the configured hull.
+// Skipped silently when the relevant dimension is unset — the user might
+// just not have filled in length/beam yet, and we'd rather let them save
+// reasonable offsets than block on missing vessel metadata.
+function validateGpsSensorBounds(
+  sensors: GpsSensorsPayload,
+  lengthOverall: number | undefined,
+  beam: number | undefined
+): string | null {
+  for (const s of sensors) {
+    if (
+      s.fromBow !== null &&
+      lengthOverall !== undefined &&
+      (s.fromBow < 0 || s.fromBow > lengthOverall)
+    ) {
+      return `fromBow ${s.fromBow} out of range 0..${lengthOverall} for sensor "${s.sensorId}"`
+    }
+    if (
+      s.fromCenter !== null &&
+      beam !== undefined &&
+      Math.abs(s.fromCenter) > beam / 2
+    ) {
+      const half = beam / 2
+      return `fromCenter ${s.fromCenter} out of range -${half}..${half} for sensor "${s.sensorId}"`
+    }
+  }
+  return null
+}
+
 type PrioritiesPayload = {
   groups: Array<{ id: string; sources: string[]; inactive?: boolean }>
   overrides: Record<
@@ -284,6 +369,24 @@ interface App
 interface ModuleInfo {
   name: string
   type?: string
+}
+
+// Module-level mutex that serializes every settings.json mutation routed
+// through `withSettingsWriteLock`. Without it, a clone-then-write handler
+// can snapshot `app.config.settings` *before* another handler's rollback
+// and then commit the rejected state back to disk after rollback ran.
+// This PR opts the gpsSensors flow into the lock; other handlers in this
+// file still write `app.config.settings` directly and will be migrated in
+// follow-up PRs (one logical change per PR).
+let settingsWriteLock: Promise<void> = Promise.resolve()
+function withSettingsWriteLock(fn: () => Promise<void>): Promise<void> {
+  const previous = settingsWriteLock
+  const next = previous.then(fn, fn)
+  // Swallow any rejection on the chain so a thrown handler doesn't wedge
+  // later requests; individual callers are still responsible for sending
+  // their own error responses.
+  settingsWriteLock = next.catch(() => undefined)
+  return next
 }
 
 module.exports = function (
@@ -1183,8 +1286,16 @@ module.exports = function (
       length: length && length.overall,
       beam: de.getSelfValue('design.beam'),
       height: de.getSelfValue('design.airHeight'),
-      gpsFromBow: de.getSelfValue('sensors.gps.fromBow'),
-      gpsFromCenter: de.getSelfValue('sensors.gps.fromCenter'),
+      // Only fall back to the legacy single-GPS values when no sensor row
+      // exists at all. An explicit `null` on a configured row means "not
+      // set yet" — surfacing the stale legacy value there would mislead
+      // older /vessel clients about the antenna position.
+      gpsFromBow: app.config.settings.gpsSensors?.[0]
+        ? app.config.settings.gpsSensors[0].fromBow
+        : de.getSelfValue('sensors.gps.fromBow'),
+      gpsFromCenter: app.config.settings.gpsSensors?.[0]
+        ? app.config.settings.gpsSensors[0].fromCenter
+        : de.getSelfValue('sensors.gps.fromCenter'),
       aisShipType: type && type.id,
       callsignVhf: communication && communication.callsignVhf
     }
@@ -2004,6 +2115,181 @@ module.exports = function (
   )
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/debug`)
+
+  // Register middleware before the routes so every method picks up auth.
+  // Match the /priorities pattern: source topology and saved GPS antenna
+  // offsets are admin-only across the board.
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/positionSources`
+  )
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/gpsSensors`)
+
+  app.get(
+    `${SERVERROUTESPREFIX}/positionSources`,
+    (req: Request, res: Response) => {
+      // Use the same freshness-filtered + sorted set the POSITION_SOURCES
+      // event emits, so a cold page-load matches the next websocket update.
+      res.json(app.deltaCache.getActivePositionSources())
+    }
+  )
+
+  app.get(`${SERVERROUTESPREFIX}/gpsSensors`, (req: Request, res: Response) => {
+    res.json(app.config.settings.gpsSensors || [])
+  })
+
+  // `previous` is snapshotted inside the lock so a later request sees the
+  // outcome of any earlier in-flight settings write, not the state at
+  // handler entry. The lock is shared with any other handler that opts
+  // into `withSettingsWriteLock` so cross-route races on settings.json
+  // can't reintroduce a rolled-back payload.
+  function applyGpsSensorsAtomic(
+    next: GpsSensorsPayload | undefined,
+    eventData: unknown,
+    res: Response
+  ): void {
+    withSettingsWriteLock(
+      () =>
+        new Promise<void>((resolve) => {
+          const previous = app.config.settings.gpsSensors ?? []
+          runApplyGpsSensorsAtomic(previous, next, eventData, res, resolve)
+        })
+    )
+  }
+
+  function runApplyGpsSensorsAtomic(
+    previous: GpsSensorsPayload,
+    next: GpsSensorsPayload | undefined,
+    eventData: unknown,
+    res: Response,
+    done: () => void
+  ): void {
+    const de = app.config.baseDeltaEditor
+    const restorePrevious = () => {
+      // Strip the half-applied "next" state from baseDeltaEditor before
+      // re-applying the previous one — otherwise sensors that were only in
+      // `next` would survive the rollback.
+      for (const s of next ?? []) {
+        de.removeSelfValue(`sensors.gps.${s.sensorId}.fromBow`)
+        de.removeSelfValue(`sensors.gps.${s.sensorId}.fromCenter`)
+      }
+      for (const s of previous) {
+        de.setSelfValue(
+          `sensors.gps.${s.sensorId}.fromBow`,
+          s.fromBow !== null ? Number(s.fromBow) : undefined
+        )
+        de.setSelfValue(
+          `sensors.gps.${s.sensorId}.fromCenter`,
+          s.fromCenter !== null ? Number(s.fromCenter) : undefined
+        )
+      }
+      if (next !== undefined && previous.length === 0) {
+        delete app.config.settings.gpsSensors
+      } else {
+        app.config.settings.gpsSensors = previous
+      }
+      sendBaseDeltas(app)
+    }
+    if (next === undefined) {
+      // DELETE: remove every previous entry first, then drop the settings.
+      for (const s of previous) {
+        de.removeSelfValue(`sensors.gps.${s.sensorId}.fromBow`)
+        de.removeSelfValue(`sensors.gps.${s.sensorId}.fromCenter`)
+      }
+      delete app.config.settings.gpsSensors
+    } else {
+      // PUT: clear keys for sensors that disappeared, then write the new
+      // payload so the SK data model only carries paths backed by a row.
+      const nextIds = new Set(next.map((s) => s.sensorId))
+      for (const s of previous) {
+        if (!nextIds.has(s.sensorId)) {
+          de.removeSelfValue(`sensors.gps.${s.sensorId}.fromBow`)
+          de.removeSelfValue(`sensors.gps.${s.sensorId}.fromCenter`)
+        }
+      }
+      app.config.settings.gpsSensors = next
+      for (const s of next) {
+        de.setSelfValue(
+          `sensors.gps.${s.sensorId}.fromBow`,
+          s.fromBow !== null ? Number(s.fromBow) : undefined
+        )
+        de.setSelfValue(
+          `sensors.gps.${s.sensorId}.fromCenter`,
+          s.fromCenter !== null ? Number(s.fromCenter) : undefined
+        )
+      }
+    }
+    sendBaseDeltas(app)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    writeSettingsFile(app, app.config.settings, (err: any) => {
+      if (err) {
+        restorePrevious()
+        res.status(500).send('Unable to save gpsSensors in settings file')
+        done()
+        return
+      }
+      writeBaseDeltasFile(app)
+        .then(() => {
+          app.emit('serverevent', { type: 'GPS_SENSORS', data: eventData })
+          res.json({ result: 'ok' })
+          done()
+        })
+        .catch(() => {
+          // settings.json is already on disk with the new payload but the
+          // base-deltas write failed — restore in-memory state first, then
+          // re-write settings.json so disk and memory agree on a restart.
+          restorePrevious()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          writeSettingsFile(app, app.config.settings, (rollbackErr: any) => {
+            if (rollbackErr) {
+              res
+                .status(500)
+                .send(
+                  'gpsSensors base-delta write failed and rolling back settings.json also failed; restart server to recover'
+                )
+              done()
+              return
+            }
+            res.status(500).send('Unable to save gpsSensors base deltas')
+            done()
+          })
+        })
+    })
+  }
+
+  app.put(`${SERVERROUTESPREFIX}/gpsSensors`, (req: Request, res: Response) => {
+    const validation = validateGpsSensorsPayload(req.body)
+    if (!validation.ok) {
+      res.status(400).send(validation.error)
+      return
+    }
+    const sensors = validation.value
+    const de = app.config.baseDeltaEditor
+    const length = de.getSelfValue('design.length') as
+      | { overall?: number }
+      | number
+      | undefined
+    const lengthOverall =
+      typeof length === 'object' && length !== null
+        ? length.overall
+        : typeof length === 'number'
+          ? length
+          : undefined
+    const beamRaw = de.getSelfValue('design.beam')
+    const beam = typeof beamRaw === 'number' ? beamRaw : undefined
+    const boundsError = validateGpsSensorBounds(sensors, lengthOverall, beam)
+    if (boundsError) {
+      res.status(400).send(boundsError)
+      return
+    }
+    applyGpsSensorsAtomic(sensors, sensors, res)
+  })
+
+  app.delete(
+    `${SERVERROUTESPREFIX}/gpsSensors`,
+    (_req: Request, res: Response) => {
+      applyGpsSensorsAtomic(undefined, [], res)
+    }
+  )
 
   app.post(`${SERVERROUTESPREFIX}/debug`, (req: Request, res: Response) => {
     if (!app.logging.enableDebug(req.body.value)) {

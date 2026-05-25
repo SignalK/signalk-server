@@ -15,6 +15,10 @@ import {
   type UnitPreferencesSlice
 } from './slices/unitPreferencesSlice'
 import {
+  createGpsPositionSlice,
+  type GpsPositionSlice
+} from './slices/gpsPositionSlice'
+import {
   conflictKey,
   detectInstanceConflicts,
   extractN2kDevices
@@ -29,12 +33,14 @@ export type {
 export type { DataSlice, PathData, MetaData } from './slices/dataSlice'
 export type { PrioritiesSlice } from './slices/prioritiesSlice'
 export type { UnitPreferencesSlice } from './slices/unitPreferencesSlice'
+export type { GpsPositionSlice } from './slices/gpsPositionSlice'
 
 export type SignalKStore = AppSlice &
   WsSlice &
   DataSlice &
   PrioritiesSlice &
-  UnitPreferencesSlice
+  UnitPreferencesSlice &
+  GpsPositionSlice
 
 export const useStore = create<SignalKStore>()(
   subscribeWithSelector((...args) => ({
@@ -42,7 +48,8 @@ export const useStore = create<SignalKStore>()(
     ...createWsSlice(...args),
     ...createDataSlice(...args),
     ...createPrioritiesSlice(...args),
-    ...createUnitPreferencesSlice(...args)
+    ...createUnitPreferencesSlice(...args),
+    ...createGpsPositionSlice(...args)
   }))
 )
 
@@ -363,6 +370,14 @@ export function usePreferredSourceByPath(): Map<string, string> {
     }
     return map
   }, [serialized])
+}
+
+export function useGpsSensorsData() {
+  return useStore((s) => s.gpsSensorsData)
+}
+
+export function usePositionSources() {
+  return useStore((s) => s.positionSources)
 }
 
 export * from './types'
