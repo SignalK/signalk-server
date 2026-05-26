@@ -869,8 +869,16 @@ const SourcePriorities: React.FC = () => {
           )}
 
           {displayed.map((group) => (
+            // Key by matchedSavedId when the group is persisted, falling
+            // back to a path-set fingerprint for unsaved residue groups.
+            // The reconciled id for an unsaved group is sortedSources.join(''),
+            // which flips every time a source joins or leaves the
+            // connected component; using it as a React key unmounts the
+            // card mid-drag and dnd-kit's onDragEnd loses its `over`
+            // target so a reorder silently does nothing. Path-set is the
+            // stable structural identity of the group.
             <PriorityGroupCard
-              key={group.id}
+              key={group.matchedSavedId ?? [...group.paths].sort().join('|')}
               group={group}
               hasLocalEdit={savedIds.has(group.id)}
               multiSourcePaths={multiSourcePaths}

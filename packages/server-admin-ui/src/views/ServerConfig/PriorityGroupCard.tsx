@@ -621,13 +621,24 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
     setSelectedPath(path)
   }
 
+  // Stable reference for the items dnd-kit's SortableContext registers.
+  // group.sources is a fresh array on every RECONCILEDGROUPS push even
+  // when the contents are unchanged; without this memo dnd-kit's
+  // internal registry sees the items reference flicker between drag
+  // start and drag end and onDragEnd's `over` can land on a stale node.
+  const stableSources = useMemo(
+    () => group.sources,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [group.sources.join('|')]
+  )
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const from = group.sources.indexOf(String(active.id))
-    const to = group.sources.indexOf(String(over.id))
+    const from = stableSources.indexOf(String(active.id))
+    const to = stableSources.indexOf(String(over.id))
     if (from === -1 || to === -1 || from === to) return
-    const sources = [...group.sources]
+    const sources = [...stableSources]
     const [moved] = sources.splice(from, 1)
     sources.splice(to, 0, moved)
     setGroupSources(group.id, sources)
@@ -787,7 +798,7 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                       onDragEnd={handleDragEnd}
                     >
                       <SortableContext
-                        items={group.sources}
+                        items={stableSources}
                         strategy={verticalListSortingStrategy}
                       >
                         <ul className="pg-source-list">
