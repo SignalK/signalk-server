@@ -33,6 +33,7 @@ import {
   Update,
   WithFeatures
 } from '@signalk/server-api'
+import { randomUUID } from 'crypto'
 import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
@@ -547,12 +548,14 @@ class Server {
     // and flip routesPath on for already-contended paths at boot.
     app.activateSourcePriorities()
 
+    const bootId = randomUUID()
     app.getHello = () => ({
       name: app.config.name,
       version: app.config.version,
       self: `vessels.${app.selfId}`,
       roles: ['master', 'main'],
-      timestamp: new Date()
+      timestamp: new Date(),
+      bootId
     })
 
     app.isNmea2000OutAvailable = false

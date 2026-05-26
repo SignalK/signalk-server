@@ -8,6 +8,13 @@ export interface HelloMessage {
   self: string
   roles: string[]
   timestamp: Date
+  /**
+   * Stable identifier for the server process. Regenerated each boot so
+   * clients reconnecting after a restart can detect that server-side
+   * state (delta cache, source registry) has been wiped and drop their
+   * own mirrors of paths the new boot may never re-publish.
+   */
+  bootId: string
 }
 
 export type ICallback<T> = (error?: Error | null, result?: T) => void
