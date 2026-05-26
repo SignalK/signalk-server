@@ -430,17 +430,28 @@ const SourcePriorities: React.FC = () => {
   const displayed = useMemo(() => {
     const savedById = new Map(savedGroups.map((g) => [g.id, g]))
     return reconciled.map((g) => {
+      // Stable identity for the group: persisted saved id when present,
+      // otherwise a path-set fingerprint. The reconciled live id for an
+      // unsaved group is sortedSources.join(''), which flips whenever a
+      // source joins or leaves the connected component; using it as the
+      // storage key for local edits would orphan a pending drag the
+      // moment a newcomer arrives. The path-set is the structural
+      // identity reconcile uses to define a group cluster and is stable
+      // across source flux.
+      const effectiveId = g.matchedSavedId ?? [...g.paths].sort().join('|')
       const saved =
         g.matchedSavedId !== null ? savedById.get(g.matchedSavedId) : undefined
-      // For an unranked group the user might still have toggled
-      // Deactivate, which writes a stub saved entry under the live id
-      // (sources: [], inactive: true). reconcileGroups can't match that
-      // to anything via overlap, so fall back to a direct live-id
-      // lookup to surface the pending inactive state.
+      // Unsaved group with a pending local edit: the user has dragged
+      // (setGroupSources) or toggled Deactivate (setGroupInactive). Both
+      // write under effectiveId via the callbacks below, so the lookup
+      // also goes via effectiveId.
       const stub =
-        !saved && g.matchedSavedId === null ? savedById.get(g.id) : undefined
+        !saved && g.matchedSavedId === null
+          ? savedById.get(effectiveId)
+          : undefined
       const inactive = saved?.inactive ?? stub?.inactive ?? false
-      if (!saved) return { ...g, inactive }
+      const editSource = saved ?? stub
+      if (!editSource) return { ...g, id: effectiveId, inactive }
       // editedOrder respects the user's local edit; newcomers come
       // straight from the server's live-publisher view (not derived
       // from `g.sources \ editedOrder`). Otherwise trashing a source
@@ -448,14 +459,15 @@ const SourcePriorities: React.FC = () => {
       // since g.sources still echoes sg.sources from the on-disk
       // config until the user clicks Save.
       const liveSet = new Set(g.sources)
-      const editedOrder = saved.sources.filter((src) => liveSet.has(src))
+      const editedOrder = editSource.sources.filter((src) => liveSet.has(src))
       const editedSet = new Set(editedOrder)
-      const suppressed = new Set(suppressedNewcomersByGroup[g.id] ?? [])
+      const suppressed = new Set(suppressedNewcomersByGroup[effectiveId] ?? [])
       const newcomers = g.newcomerSources.filter(
         (src) => !editedSet.has(src) && !suppressed.has(src)
       )
       return {
         ...g,
+        id: effectiveId,
         // Hide suppressed newcomers from the ordering reported back
         // to the rest of the page, too — otherwise the dirty-by-group
         // calculation and buildSavePayload below would still see them.
@@ -869,16 +881,12 @@ const SourcePriorities: React.FC = () => {
           )}
 
           {displayed.map((group) => (
-            // Key by matchedSavedId when the group is persisted, falling
-            // back to a path-set fingerprint for unsaved residue groups.
-            // The reconciled id for an unsaved group is sortedSources.join(''),
-            // which flips every time a source joins or leaves the
-            // connected component; using it as a React key unmounts the
-            // card mid-drag and dnd-kit's onDragEnd loses its `over`
-            // target so a reorder silently does nothing. Path-set is the
-            // stable structural identity of the group.
+            // group.id is normalised in the displayed memo: matchedSavedId
+            // when persisted, path-set fingerprint otherwise. That gives a
+            // single stable identity for the React key, slice writes
+            // (setGroupSources, setGroupInactive), and savedById lookups.
             <PriorityGroupCard
-              key={group.matchedSavedId ?? [...group.paths].sort().join('|')}
+              key={group.id}
               group={group}
               hasLocalEdit={savedIds.has(group.id)}
               multiSourcePaths={multiSourcePaths}
