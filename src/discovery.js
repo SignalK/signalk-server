@@ -205,8 +205,14 @@ module.exports.runDiscovery = function (app) {
 
       browser.on('serviceUp', function onServiceUp(data) {
         try {
+          // Suppress the local server's own advertisement. data.addresses
+          // can contain a mix of IPv4 and IPv6 entries (including
+          // loopback) depending on the underlying mDNS responder, so a
+          // single address from the list is not enough — any local match
+          // anywhere in the list means this is our own service.
+          const addresses = Array.isArray(data.addresses) ? data.addresses : []
           if (
-            !isLocalIP(data.addresses[0]) &&
+            !addresses.some(isOwnAddress) &&
             data.type &&
             data.type.name === 'signalk-' + wsType &&
             !findWSProvider(data.addresses[0], wsType, data.host, data.port)
@@ -264,15 +270,19 @@ module.exports.runDiscovery = function (app) {
     }
   }
 
-  function isLocalIP(IP) {
+  // True when `addr` is an address bound to one of our own interfaces,
+  // covering IPv4 (including 127.0.0.0/8), IPv6 (including ::1 and
+  // link-local fe80::*), and the zone-ID suffix mDNS responders append
+  // to link-local IPv6 (e.g. 'fe80::1%eth0'). Used to filter the local
+  // server's own mDNS advertisement out of discovery results.
+  function isOwnAddress(addr) {
+    if (typeof addr !== 'string' || addr.length === 0) return false
+    const normalized = addr.replace(/%.*$/, '').toLowerCase()
     const nets = networkInterfaces()
-
     for (const name of Object.keys(nets)) {
-      for (const net of nets[name]) {
-        if (net.family === 'IPv4' && !net.internal) {
-          if (net.address === IP) {
-            return true
-          }
+      for (const net of nets[name] || []) {
+        if (net.address && net.address.toLowerCase() === normalized) {
+          return true
         }
       }
     }
