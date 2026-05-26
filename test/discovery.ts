@@ -174,8 +174,6 @@ describe('runDiscovery', () => {
     }>
   }
 
-  // Build a discovery run with controllable networkInterfaces and an
-  // app emit spy, then return the FakeBrowser the assertions can drive.
   function runDiscoveryWith(interfaces: Record<string, unknown[]>): {
     wsBrowser: FakeBrowser
     discovered: DiscoveredPayload[]
@@ -270,6 +268,19 @@ describe('runDiscovery', () => {
       expect(discovered[0].pipeElements[0].options.subOptions.host).to.equal(
         'remote.local'
       )
+    })
+
+    it('does not emit when the addresses list is empty or missing', () => {
+      const { wsBrowser, discovered } = runDiscoveryWith({
+        eth0: [{ family: 'IPv4', internal: false, address: '192.168.1.50' }]
+      })
+      serviceUp(wsBrowser, [])
+      wsBrowser.emit('serviceUp', {
+        host: 'remote.local',
+        port: 3000,
+        type: { name: 'signalk-ws' }
+      })
+      expect(discovered).to.have.length(0)
     })
   })
 })

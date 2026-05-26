@@ -211,14 +211,16 @@ module.exports.runDiscovery = function (app) {
           // single address from the list is not enough — any local match
           // anywhere in the list means this is our own service.
           const addresses = Array.isArray(data.addresses) ? data.addresses : []
+          const primaryAddress = addresses[0]
           if (
+            primaryAddress &&
             !addresses.some(isOwnAddress) &&
             data.type &&
             data.type.name === 'signalk-' + wsType &&
-            !findWSProvider(data.addresses[0], wsType, data.host, data.port)
+            !findWSProvider(primaryAddress, wsType, data.host, data.port)
           ) {
             debug('discoverSignalkWs found data[' + wsType + ']:', data)
-            const providerId = `${wsType}-${data.host}:${data.port} (${data.addresses[0]})`
+            const providerId = `${wsType}-${data.host}:${data.port} (${primaryAddress})`
             app.emit('discovered', {
               id: providerId,
               enabled: false,
@@ -231,7 +233,7 @@ module.exports.runDiscovery = function (app) {
                       type: wsType,
                       host: data.host,
                       port: data.port,
-                      address: data.addresses[0],
+                      address: primaryAddress,
                       providerId
                     },
                     providerId
