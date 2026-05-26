@@ -314,6 +314,12 @@ describe('Subscriptions', (_) => {
         })
       })
       .then(() => {
+        // Give the server a tick to process the WS subscribe before the
+        // POST races it on a separate connection — otherwise the delta can
+        // be ingested under the default (self) subscription.
+        return new Promise((resolve) => setTimeout(resolve, 30))
+      })
+      .then(() => {
         return Promise.all([
           wsPromiser.nextMsg(),
           sendDelta(
