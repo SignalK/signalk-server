@@ -382,6 +382,89 @@ form.rjsf {
   min-width: 0;
 }
 
+// The path-overrides column hosts a 5-column table with a long
+// "Fallback after (ms)" header. On wide viewports the surrounding
+// 3-column card grid leaves the column too narrow for the header to
+// stay on one line and for the Source dropdown to keep enough room.
+// Promote the column to a container and reuse the same card layout
+// the @media (max-width: 575.98px) block uses, but trigger it on the
+// column's own width so it kicks in whenever the column is below the
+// table's comfortable minimum, independent of viewport.
+.pg-col-overrides {
+  container-type: inline-size;
+}
+
+@mixin pg-prefs-table-card-layout {
+  thead {
+    display: none;
+  }
+  tbody,
+  tr,
+  td {
+    display: block;
+    width: 100%;
+  }
+  tr {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      'rank source actions'
+      'fallback fallback fallback'
+      'enabled order order';
+    column-gap: 0.5rem;
+    row-gap: 0.35rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  td {
+    padding: 0;
+    border: none;
+    &::before {
+      content: attr(data-th);
+      display: block;
+      font-size: 0.7rem;
+      color: var(--bs-secondary-color, #6c757d);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.1rem;
+    }
+    &[data-th='']::before {
+      display: none;
+    }
+  }
+  td:nth-child(1) {
+    grid-area: rank;
+    align-self: center;
+    &::before {
+      display: none;
+    }
+  }
+  td:nth-child(2) {
+    grid-area: source;
+  }
+  td:nth-child(3) {
+    grid-area: fallback;
+  }
+  td:nth-child(4) {
+    grid-area: enabled;
+    text-align: left !important;
+  }
+  td:nth-child(5) {
+    grid-area: order;
+  }
+  td:nth-child(6) {
+    grid-area: actions;
+    align-self: end;
+    justify-self: end;
+  }
+}
+
+@container (max-width: 500px) {
+  .pg-col-overrides .pg-prefs-table {
+    @include pg-prefs-table-card-layout;
+  }
+}
+
 .pg-col-title {
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -540,68 +623,7 @@ form.rjsf {
   // with the dropdown instead of falling off-screen behind the table's
   // horizontal overflow.
   .pg-prefs-table {
-    thead {
-      display: none;
-    }
-    tbody,
-    tr,
-    td {
-      display: block;
-      width: 100%;
-    }
-    tr {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      grid-template-areas:
-        'rank source actions'
-        'fallback fallback fallback'
-        'enabled order order';
-      column-gap: 0.5rem;
-      row-gap: 0.35rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    }
-    td {
-      padding: 0;
-      border: none;
-      &::before {
-        content: attr(data-th);
-        display: block;
-        font-size: 0.7rem;
-        color: var(--bs-secondary-color, #6c757d);
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-        margin-bottom: 0.1rem;
-      }
-      &[data-th='']::before {
-        display: none;
-      }
-    }
-    td:nth-child(1) {
-      grid-area: rank;
-      align-self: center;
-      &::before {
-        display: none;
-      }
-    }
-    td:nth-child(2) {
-      grid-area: source;
-    }
-    td:nth-child(3) {
-      grid-area: fallback;
-    }
-    td:nth-child(4) {
-      grid-area: enabled;
-      text-align: left !important;
-    }
-    td:nth-child(5) {
-      grid-area: order;
-    }
-    td:nth-child(6) {
-      grid-area: actions;
-      align-self: end;
-      justify-self: end;
-    }
+    @include pg-prefs-table-card-layout;
   }
 
   // Path rows in the middle column: let the path wrap and demote the
