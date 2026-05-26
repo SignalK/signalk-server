@@ -63,10 +63,15 @@
       -webkit-appearance: none;
     }
 
+    // Match the sidebar background so the scrollbar track does not
+    // surface as a visibly-lighter vertical strip whenever the menu
+    // overflows (typically once the Data submenu is expanded). The
+    // thumb is still rendered darker, so the scroll affordance is
+    // preserved while the empty trough disappears.
     &::-webkit-scrollbar-track {
-      background-color: color.adjust($sidebar-bg, $lightness: 5%);
-      border-right: 1px solid color.adjust($sidebar-bg, $lightness: -5%);
-      border-left: 1px solid color.adjust($sidebar-bg, $lightness: -5%);
+      background-color: $sidebar-bg;
+      border-right: 1px solid $sidebar-bg;
+      border-left: 1px solid $sidebar-bg;
     }
 
     &::-webkit-scrollbar-thumb {
