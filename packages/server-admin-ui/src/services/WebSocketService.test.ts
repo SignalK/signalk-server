@@ -1,19 +1,41 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { WebSocketService } from './WebSocketService'
 import { useStore } from '../store'
 import type { PathData } from '../store'
 
-// Reach into the service to drive the hello-message path without
-// opening a real WebSocket. handleMessage is private, so cast through
-// an interface that exposes just what these tests need.
-interface ServiceWithHandle {
-  handleMessage(msg: unknown): void
+// A minimal stand-in for the global WebSocket used by WebSocketService:
+// captures the most recent instance so the test can fire onopen/onmessage
+// to drive the public connect()/handleMessage path without a real socket.
+class FakeWebSocket {
+  static instances: FakeWebSocket[] = []
+  static lastInstance(): FakeWebSocket {
+    return FakeWebSocket.instances[FakeWebSocket.instances.length - 1]
+  }
+  static OPEN = 1
+
+  readyState = 0
+  onopen: (() => void) | null = null
+  onmessage: ((ev: MessageEvent) => void) | null = null
+  onclose: (() => void) | null = null
+  onerror: (() => void) | null = null
+
+  constructor() {
+    FakeWebSocket.instances.push(this)
+  }
+
+  receive(payload: unknown): void {
+    this.onmessage?.({ data: JSON.stringify(payload) } as MessageEvent)
+  }
+
+  open(): void {
+    this.readyState = FakeWebSocket.OPEN
+    this.onopen?.()
+  }
+
+  close(): void {}
 }
 
-const dispatchHello = (
-  service: WebSocketService,
-  bootId: string | undefined
-): void => {
+const helloMessage = (bootId: string | undefined): Record<string, unknown> => {
   const msg: Record<string, unknown> = {
     name: 'signalk-server',
     version: '0.0.0-test',
@@ -22,7 +44,7 @@ const dispatchHello = (
     timestamp: new Date().toISOString()
   }
   if (bootId !== undefined) msg.bootId = bootId
-  ;(service as unknown as ServiceWithHandle).handleMessage(msg)
+  return msg
 }
 
 const seedPath = (path: string): void => {
@@ -35,14 +57,23 @@ const seedPath = (path: string): void => {
 }
 
 describe('WebSocketService bootId tracking', () => {
+  let service: WebSocketService
+  let ws: FakeWebSocket
+
   beforeEach(() => {
+    // setup.ts's beforeAll installs a different WebSocket stub; reinstall
+    // FakeWebSocket here so connect() captures *our* instance.
+    vi.stubGlobal('WebSocket', FakeWebSocket)
+    FakeWebSocket.instances = []
     useStore.getState().clearData()
+    service = new WebSocketService()
+    service.connect()
+    ws = FakeWebSocket.lastInstance()
   })
 
   it('records bootId on first hello without clearing data', () => {
-    const service = new WebSocketService()
     seedPath('navigation.speedOverGround')
-    dispatchHello(service, 'boot-1')
+    ws.receive(helloMessage('boot-1'))
 
     expect(
       Object.keys(useStore.getState().signalkData.self ?? {})
@@ -50,24 +81,22 @@ describe('WebSocketService bootId tracking', () => {
   })
 
   it('clears signalkData when a subsequent hello carries a new bootId', () => {
-    const service = new WebSocketService()
-    dispatchHello(service, 'boot-1')
+    ws.receive(helloMessage('boot-1'))
     seedPath('navigation.speedOverGround')
     expect(
       Object.keys(useStore.getState().signalkData.self ?? {})
     ).toHaveLength(1)
 
-    dispatchHello(service, 'boot-2')
+    ws.receive(helloMessage('boot-2'))
 
     expect(useStore.getState().signalkData).toEqual({})
   })
 
   it('does not clear signalkData when the bootId is unchanged', () => {
-    const service = new WebSocketService()
-    dispatchHello(service, 'boot-1')
+    ws.receive(helloMessage('boot-1'))
     seedPath('navigation.speedOverGround')
 
-    dispatchHello(service, 'boot-1')
+    ws.receive(helloMessage('boot-1'))
 
     expect(
       Object.keys(useStore.getState().signalkData.self ?? {})
@@ -75,11 +104,10 @@ describe('WebSocketService bootId tracking', () => {
   })
 
   it('does not clear signalkData when the hello has no bootId', () => {
-    const service = new WebSocketService()
-    dispatchHello(service, 'boot-1')
+    ws.receive(helloMessage('boot-1'))
     seedPath('navigation.speedOverGround')
 
-    dispatchHello(service, undefined)
+    ws.receive(helloMessage(undefined))
 
     expect(
       Object.keys(useStore.getState().signalkData.self ?? {})
