@@ -1,0 +1,42 @@
+# Marks issues labeled "awaiting response" as stale after 30 days of inactivity
+# and closes them 30 days after that (60 days total). Issues labeled
+# "good first task" or "help wanted" are exempt. Pull requests are never
+# touched. The workflow runs daily and can also be triggered manually.
+name: Stale issues
+
+on:
+  schedule:
+    - cron: '17 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: stale
+  cancel-in-progress: false
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/stale@v10
+        with:
+          days-before-issue-stale: 30
+          days-before-issue-close: 30
+          stale-issue-label: 'stale'
+          any-of-issue-labels: 'awaiting response'
+          exempt-issue-labels: 'good first task,help wanted'
+          stale-issue-message: >
+            This issue is marked as awaiting a response from the reporter and
+            has had no activity for 30 days. It will be closed in another 30
+            days if there is no further update. If the issue is still
+            relevant, please reply with any missing information.
+          close-issue-message: >
+            Closing this issue because it has been stale for 60 days without
+            a response. Please reopen if this is still relevant.
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          operations-per-run: 100
