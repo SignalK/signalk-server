@@ -548,14 +548,14 @@ class Server {
     // and flip routesPath on for already-contended paths at boot.
     app.activateSourcePriorities()
 
-    const bootId = randomUUID()
+    const serverStartId = randomUUID()
     app.getHello = () => ({
       name: app.config.name,
       version: app.config.version,
       self: `vessels.${app.selfId}`,
       roles: ['master', 'main'],
       timestamp: new Date(),
-      bootId
+      serverStartId
     })
 
     app.isNmea2000OutAvailable = false

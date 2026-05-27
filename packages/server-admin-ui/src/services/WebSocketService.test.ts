@@ -35,7 +35,9 @@ class FakeWebSocket {
   close(): void {}
 }
 
-const helloMessage = (bootId: string | undefined): Record<string, unknown> => {
+const helloMessage = (
+  serverStartId: string | undefined
+): Record<string, unknown> => {
   const msg: Record<string, unknown> = {
     name: 'signalk-server',
     version: '0.0.0-test',
@@ -43,7 +45,7 @@ const helloMessage = (bootId: string | undefined): Record<string, unknown> => {
     roles: ['master', 'main'],
     timestamp: new Date().toISOString()
   }
-  if (bootId !== undefined) msg.bootId = bootId
+  if (serverStartId !== undefined) msg.serverStartId = serverStartId
   return msg
 }
 
@@ -56,7 +58,7 @@ const seedPath = (path: string): void => {
   useStore.getState().updatePath('self', `${path}$nmea0183.0`, data)
 }
 
-describe('WebSocketService bootId tracking', () => {
+describe('WebSocketService serverStartId tracking', () => {
   let service: WebSocketService
   let ws: FakeWebSocket
 
@@ -71,40 +73,40 @@ describe('WebSocketService bootId tracking', () => {
     ws = FakeWebSocket.lastInstance()
   })
 
-  it('records bootId on first hello without clearing data', () => {
+  it('records serverStartId on first hello without clearing data', () => {
     seedPath('navigation.speedOverGround')
-    ws.receive(helloMessage('boot-1'))
+    ws.receive(helloMessage('start-1'))
 
     expect(
       Object.keys(useStore.getState().signalkData.self ?? {})
     ).toHaveLength(1)
   })
 
-  it('clears signalkData when a subsequent hello carries a new bootId', () => {
-    ws.receive(helloMessage('boot-1'))
+  it('clears signalkData when a subsequent hello carries a new serverStartId', () => {
+    ws.receive(helloMessage('start-1'))
     seedPath('navigation.speedOverGround')
     expect(
       Object.keys(useStore.getState().signalkData.self ?? {})
     ).toHaveLength(1)
 
-    ws.receive(helloMessage('boot-2'))
+    ws.receive(helloMessage('start-2'))
 
     expect(useStore.getState().signalkData).toEqual({})
   })
 
-  it('does not clear signalkData when the bootId is unchanged', () => {
-    ws.receive(helloMessage('boot-1'))
+  it('does not clear signalkData when the serverStartId is unchanged', () => {
+    ws.receive(helloMessage('start-1'))
     seedPath('navigation.speedOverGround')
 
-    ws.receive(helloMessage('boot-1'))
+    ws.receive(helloMessage('start-1'))
 
     expect(
       Object.keys(useStore.getState().signalkData.self ?? {})
     ).toHaveLength(1)
   })
 
-  it('does not clear signalkData when the hello has no bootId', () => {
-    ws.receive(helloMessage('boot-1'))
+  it('does not clear signalkData when the hello has no serverStartId', () => {
+    ws.receive(helloMessage('start-1'))
     seedPath('navigation.speedOverGround')
 
     ws.receive(helloMessage(undefined))
