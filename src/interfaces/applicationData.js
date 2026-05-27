@@ -22,6 +22,7 @@ const fs = require('fs')
 const path = require('path')
 const jsonpatch = require('json-patch')
 const semver = require('semver')
+const { invalidateUserPreferencesCache } = require('../unitpreferences')
 
 const prefix = '/signalk/v1/applicationData'
 
@@ -209,8 +210,10 @@ module.exports = function (app) {
         }
 
         await saveApplicationData(req, appid, version, isUser, applicationData)
-        // Emit event when user's unit preferences change
         if (isUser && appid === 'unitpreferences') {
+          // This write bypasses saveUserPreferences; invalidate the
+          // loader's cache so the unitpreferencesChanged listener re-reads.
+          invalidateUserPreferencesCache(req.skPrincipal.identifier)
           app.emit('unitpreferencesChanged', {
             type: 'user',
             username: req.skPrincipal.identifier

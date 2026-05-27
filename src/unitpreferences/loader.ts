@@ -306,6 +306,16 @@ export function invalidatePresetCache(presetName?: string): void {
   }
 }
 
+// Drop a single user (or all) from the user-prefs cache. Use when prefs are
+// written via a path that bypasses saveUserPreferences.
+export function invalidateUserPreferencesCache(username?: string): void {
+  if (username === undefined) {
+    userPreferencesCache.clear()
+  } else {
+    userPreferencesCache.delete(username)
+  }
+}
+
 export function reloadCustomDefinitions(): void {
   mergedDefinitionsCache = null
   const customPath = configUnitprefsDir
