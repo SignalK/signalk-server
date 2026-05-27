@@ -193,11 +193,15 @@ describe('runDiscovery', () => {
       return originalLoad(request, parent, isMain)
     }) as LoadFn
 
-    global.setTimeout = ((..._args: unknown[]) =>
-      0 as ReturnType<typeof setTimeout>) as unknown as typeof setTimeout
+    global.setTimeout = ((..._args: unknown[]) => {
+      const handle = originalSetTimeout(() => {}, 0)
+      clearTimeout(handle)
+      return handle
+    }) as unknown as typeof setTimeout
 
     delete require.cache[discoveryModulePath]
 
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { runDiscovery } = require('../dist/discovery.js') as DiscoveryModule
     const discovered: DiscoveredPayload[] = []
     const app: App = {
