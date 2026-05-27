@@ -10,6 +10,7 @@ import {
   getActivePresetForUser,
   getDefaultCategory,
   invalidatePresetCache,
+  invalidateUserPreferencesCache,
   loadUserPreferences,
   saveUserPreferences
 } from '../dist/unitpreferences/loader'
@@ -361,6 +362,58 @@ describe('Unit Preferences', function () {
       } finally {
         if (fs.existsSync(presetPath)) fs.unlinkSync(presetPath)
         invalidatePresetCache(presetName)
+        await rimraf(userDir)
+      }
+    })
+
+    it('invalidateUserPreferencesCache forces re-read of user prefs on disk', async function () {
+      // Guards the applicationData write path: that endpoint writes the user
+      // prefs file directly without going through saveUserPreferences, so it
+      // must call invalidateUserPreferencesCache or the cache stays stale and
+      // unitpreferencesChanged listeners re-push the old displayUnits.
+      const TEST_USER = 'user-prefs-cache-invalidate-test'
+      const userPrefsPath = path.join(
+        serverTestConfigDirectory(),
+        'applicationData',
+        'users',
+        TEST_USER,
+        'unitpreferences',
+        '1.0.0.json'
+      )
+      const userDir = path.join(
+        serverTestConfigDirectory(),
+        'applicationData',
+        'users',
+        TEST_USER
+      )
+
+      try {
+        // Prime the cache via the save path (writes to disk + caches).
+        saveUserPreferences(TEST_USER, {
+          primaryCategories: { m: 'depth' }
+        })
+        expect(
+          loadUserPreferences(TEST_USER)?.primaryCategories?.m
+        ).to.equal('depth')
+
+        // Overwrite on disk directly (mimics the applicationData write path).
+        fs.writeFileSync(
+          userPrefsPath,
+          JSON.stringify({ primaryCategories: { m: 'distance' } })
+        )
+
+        // Without invalidation the cache still wins.
+        expect(
+          loadUserPreferences(TEST_USER)?.primaryCategories?.m
+        ).to.equal('depth')
+
+        // Invalidate, then the next read picks up the new file.
+        invalidateUserPreferencesCache(TEST_USER)
+        expect(
+          loadUserPreferences(TEST_USER)?.primaryCategories?.m
+        ).to.equal('distance')
+      } finally {
+        invalidateUserPreferencesCache(TEST_USER)
         await rimraf(userDir)
       }
     })

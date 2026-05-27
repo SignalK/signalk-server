@@ -4,6 +4,7 @@ export {
   reloadCustomDefinitions,
   reloadCustomCategories,
   invalidatePresetCache,
+  invalidateUserPreferencesCache,
   getConfig,
   getMergedDefinitions,
   getCategories,
