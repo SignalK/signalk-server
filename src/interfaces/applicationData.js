@@ -22,7 +22,13 @@ const fs = require('fs')
 const path = require('path')
 const jsonpatch = require('json-patch')
 const semver = require('semver')
-const { invalidateUserPreferencesCache } = require('../unitpreferences')
+const { saveUserPreferences } = require('../unitpreferences')
+
+// User unit-preferences are versioned by the loader, not by the URL: the
+// loader always reads the canonical file. Reject writes to any other version
+// so clients don't silently land on disk where the loader will never look.
+const UNITPREFS_APPID = 'unitpreferences'
+const UNITPREFS_VERSION = '1.0.0'
 
 const prefix = '/signalk/v1/applicationData'
 
@@ -186,11 +192,32 @@ module.exports = function (app) {
       return
     }
 
-    const filePath = pathForApplicationData(req, appid, version, isUser)
+    // Case-insensitive match: filesystems like APFS/NTFS would let a
+    // /UNITPREFERENCES write hit the same file as /unitpreferences.
+    const isUnitprefs = isUser && appid.toLowerCase() === UNITPREFS_APPID
+    if (isUnitprefs && version !== UNITPREFS_VERSION) {
+      res
+        .status(400)
+        .send(`unit preferences only support version ${UNITPREFS_VERSION}`)
+      return
+    }
+
+    const filePath = pathForApplicationData(
+      req,
+      isUnitprefs ? UNITPREFS_APPID : appid,
+      version,
+      isUser
+    )
 
     try {
+      let unitprefsChangedUsername = null
       await withFileLock(filePath, async () => {
-        let applicationData = readApplicationData(req, appid, version, isUser)
+        let applicationData = readApplicationData(
+          req,
+          isUnitprefs ? UNITPREFS_APPID : appid,
+          version,
+          isUser
+        )
 
         if (req.params[0] && req.params[0].length !== 0) {
           const dataPath = req.params[0].replace(/\//g, '.')
@@ -209,18 +236,32 @@ module.exports = function (app) {
           applicationData = req.body
         }
 
-        await saveApplicationData(req, appid, version, isUser, applicationData)
-        if (isUser && appid === 'unitpreferences') {
-          // This write bypasses saveUserPreferences; invalidate the
-          // loader's cache so the unitpreferencesChanged listener re-reads.
-          invalidateUserPreferencesCache(req.skPrincipal.identifier)
-          app.emit('unitpreferencesChanged', {
-            type: 'user',
-            username: req.skPrincipal.identifier
-          })
+        if (isUnitprefs) {
+          // Route through saveUserPreferences so the loader's cache stays
+          // coherent (it sets the cache as part of the write).
+          saveUserPreferences(req.skPrincipal.identifier, applicationData)
+          unitprefsChangedUsername = req.skPrincipal.identifier
+        } else {
+          await saveApplicationData(
+            req,
+            appid,
+            version,
+            isUser,
+            applicationData
+          )
         }
         res.json('ApplicationData saved')
       })
+      if (unitprefsChangedUsername) {
+        // Emit outside the lock: listeners can do per-spark fanout that we
+        // don't want serialized behind the file lock.
+        setImmediate(() => {
+          app.emit('unitpreferencesChanged', {
+            type: 'user',
+            username: unitprefsChangedUsername
+          })
+        })
+      }
     } catch (err) {
       console.log(err)
       res.status(500).send(err.message)
