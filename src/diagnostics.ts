@@ -23,6 +23,7 @@ export const TRACKED_PACKAGES = [
   '@canboat/ts-pgns',
   '@signalk/n2k-signalk',
   '@signalk/nmea0183-signalk',
+  '@signalk/path-metadata',
   '@signalk/server-admin-ui',
   '@signalk/server-api',
   '@signalk/streams',
