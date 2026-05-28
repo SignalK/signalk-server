@@ -27,6 +27,7 @@ import {
   RouteDestination,
   WeatherProvider,
   WeatherApi,
+  BLEProvider,
   Value,
   MetaValue,
   SignalKApiId,
@@ -54,6 +55,7 @@ import { deprecate } from 'util'
 import _ from 'lodash'
 import path from 'path'
 import { AutopilotApi } from '../api/autopilot'
+import { BLEApi } from '../api/ble'
 import { CourseApi } from '../api/course'
 import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
@@ -606,6 +608,7 @@ module.exports = (theApp: any) => {
         app.resourcesApi.unRegister(plugin.id)
         app.autopilotApi.unRegister(plugin.id)
         app.weatherApi.unRegister(plugin.id)
+        app.bleApi.unRegister(plugin.id)
       })
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
@@ -875,6 +878,12 @@ module.exports = (theApp: any) => {
     ) => {
       autopilotApi.apUpdate(plugin.id, deviceId, apInfo)
     }
+
+    const bleApi: BLEApi = app.bleApi
+    appCopy.registerBLEProvider = (provider: BLEProvider) => {
+      bleApi.register(plugin.id, provider)
+    }
+    appCopy.bleApi = bleApi
 
     const courseApi: CourseApi = app.courseApi
     appCopy.getCourse = () => {

@@ -177,6 +177,11 @@ export interface Config {
     notifications?: {
       manageNotifications?: boolean
     }
+    bleApi?: {
+      localBluetoothManaged?: boolean
+      localAdapters?: string[]
+      localMaxGATTSlots?: number
+    }
   }
   defaults: object
 }
