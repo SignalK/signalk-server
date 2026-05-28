@@ -11,6 +11,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 
 import VesselConfiguration from './VesselConfiguration'
 import Logging from './Logging'
+import { useStore } from '../../store'
 
 interface ServerSettingsData {
   hasData?: boolean
@@ -125,11 +126,11 @@ const ServerSettings: React.FC = () => {
       },
       body: JSON.stringify(settings),
       credentials: 'include'
+    }).then((response) => {
+      if (response.ok) {
+        useStore.getState().setRestartRequired(true)
+      }
     })
-      .then((response) => response.text())
-      .then((response) => {
-        alert(response)
-      })
   }, [settings])
 
   const fieldColWidthMd = 10

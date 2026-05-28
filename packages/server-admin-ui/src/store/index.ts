@@ -192,6 +192,10 @@ export function useRestarting() {
   return useStore((s) => s.restarting)
 }
 
+export function useRestartRequired() {
+  return useStore((s) => s.restartRequired)
+}
+
 export function useNodeInfo() {
   return useStore((s) => s.nodeInfo)
 }

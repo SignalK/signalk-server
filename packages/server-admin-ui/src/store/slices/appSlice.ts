@@ -42,6 +42,7 @@ export interface AppSliceState {
   loginStatus: LoginStatus
   serverSpecification: ServerSpecification
   restarting: boolean
+  restartRequired: boolean
   accessRequests: AccessRequest[]
   devices: DeviceInfo[]
   discoveredProviders: DiscoveredProvider[]
@@ -117,6 +118,7 @@ export interface AppSliceActions {
   setServerStatistics: (stats: ServerStatistics) => void
   setProviderStatus: (status: ProviderStatus[]) => void
   setRestarting: (restarting: boolean) => void
+  setRestartRequired: (restartRequired: boolean) => void
   setAccessRequests: (requests: AccessRequest[]) => void
   setDevices: (devices: DeviceInfo[]) => void
   setDiscoveredProviders: (providers: DiscoveredProvider[]) => void
@@ -192,6 +194,7 @@ const initialAppState: AppSliceState = {
   loginStatus: {},
   serverSpecification: {},
   restarting: false,
+  restartRequired: false,
   accessRequests: [],
   devices: [],
   discoveredProviders: [],
@@ -273,6 +276,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setRestarting: (restarting) => {
     set({ restarting })
+  },
+
+  setRestartRequired: (restartRequired) => {
+    set({ restartRequired })
   },
 
   setAccessRequests: (accessRequests) => {

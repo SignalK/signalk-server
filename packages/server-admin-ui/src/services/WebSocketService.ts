@@ -69,6 +69,7 @@ export class WebSocketService {
       if (isReconnect) {
         fetchAllData()
         useStore.getState().setRestarting(false)
+        useStore.getState().setRestartRequired(false)
       }
     }
 
