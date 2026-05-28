@@ -5,6 +5,7 @@ import {
   PropertyValuesEmitter,
   ResourceProviderRegistry,
   WeatherProviderRegistry,
+  BLEProviderRegistry,
   Delta,
   WithResourcesApi,
   WithNotificationsApi
@@ -39,6 +40,7 @@ export interface ServerAPI
     WeatherProviderRegistry,
     RadarProviderRegistry,
     WithRadarApi,
+    BLEProviderRegistry,
     WithHistoryApi,
     HistoryProviderRegistry,
     WithFeatures,
