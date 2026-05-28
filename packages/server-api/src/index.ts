@@ -11,11 +11,18 @@ export * from './mmsi/mmsi'
 export * from './propertyvalues'
 export * from './brand'
 export * from './weatherapi'
+export * from './bleapi'
 export * as radar from './radarapi'
 export * from './streambundle'
 export * from './subscriptionmanager'
 /** @category History API */
 export * as history from './history'
+/**
+ * TypeBox schemas — the source of truth for OpenAPI generation and
+ * runtime validation across the v2 APIs.
+ * @category Schemas
+ */
+export * as typebox from './typebox'
 /** @category Notifications API */
 export * from './notificationsapi'
 export { FullSignalK, SourceMetaEntry } from './fullsignalk'
