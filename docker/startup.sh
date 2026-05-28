@@ -40,6 +40,11 @@ fi
 # Set IS_IN_DOCKER for Admin UI (disables "Update Server" button in container)
 export IS_IN_DOCKER=true
 
+# The server is installed locally (not at a system path), so enable the
+# update check explicitly. This restores the footer "new version
+# available" notice; the self-update button stays hidden via IS_IN_DOCKER.
+export SIGNALK_SERVER_IS_UPDATABLE=true
+
 # Check if host D-Bus socket is mounted (rootless container scenario)
 # If mounted, we use the host's D-Bus/Avahi instead of starting our own
 if [ -S /run/dbus/system_bus_socket ] && dbus-send --system --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames >/dev/null 2>&1; then
