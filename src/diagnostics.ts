@@ -26,8 +26,7 @@ export const TRACKED_PACKAGES = [
   '@signalk/path-metadata',
   '@signalk/server-admin-ui',
   '@signalk/server-api',
-  '@signalk/streams',
-  'bonjour-service'
+  '@signalk/streams'
 ] as const
 
 export interface InstalledPackage {
@@ -68,8 +67,8 @@ function readVersionAt(pkgJsonPath: string): string | undefined {
 // of only `baseDir/node_modules` misses dependencies npm has *hoisted*
 // to an ancestor `node_modules`: in the production image signalk-server
 // runs from `…/node_modules/signalk-server`, so `appPath` is that nested
-// dir, but `@canboat/*` and `bonjour-service` are hoisted one level up to
-// the outer `node_modules`. Without the walk they'd be silently dropped.
+// dir, but `@canboat/*` is hoisted one level up to the outer
+// `node_modules`. Without the walk they'd be silently dropped.
 function findPackageVersion(
   baseDir: string,
   packageName: string

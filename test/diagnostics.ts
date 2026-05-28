@@ -33,7 +33,7 @@ describe('getDiagnostics', () => {
   it('returns versions for tracked packages that are installed', () => {
     const nodeModules = path.join(tmpDir, 'node_modules')
     writeFakePackage(nodeModules, '@canboat/canboatjs', '3.18.0')
-    writeFakePackage(nodeModules, 'bonjour-service', '1.3.1')
+    writeFakePackage(nodeModules, '@canboat/ts-pgns', '1.11.0')
 
     const config = {
       appPath: tmpDir,
@@ -43,7 +43,7 @@ describe('getDiagnostics', () => {
     const result = getDiagnostics(config)
     chai.expect(result.packages).to.deep.include.members([
       { name: '@canboat/canboatjs', version: '3.18.0' },
-      { name: 'bonjour-service', version: '1.3.1' }
+      { name: '@canboat/ts-pgns', version: '1.11.0' }
     ])
   })
 
@@ -72,10 +72,10 @@ describe('getDiagnostics', () => {
     try {
       writeFakePackage(
         path.join(appPath, 'node_modules'),
-        'bonjour-service',
+        '@canboat/ts-pgns',
         '1.0.0'
       )
-      writeFakePackage(userInstall, 'bonjour-service', '1.3.1')
+      writeFakePackage(userInstall, '@canboat/ts-pgns', '1.3.1')
 
       const config = {
         appPath,
@@ -83,9 +83,9 @@ describe('getDiagnostics', () => {
       }
 
       const result = getDiagnostics(config)
-      const entry = result.packages.find((p) => p.name === 'bonjour-service')
+      const entry = result.packages.find((p) => p.name === '@canboat/ts-pgns')
       chai.expect(entry).to.deep.equal({
-        name: 'bonjour-service',
+        name: '@canboat/ts-pgns',
         version: '1.3.1'
       })
     } finally {
@@ -96,8 +96,8 @@ describe('getDiagnostics', () => {
   it('finds a dependency hoisted to an ancestor node_modules', () => {
     // Mirrors the production image: signalk-server runs from a nested
     // `.../node_modules/signalk-server` dir (appPath), but npm hoists
-    // @canboat/* and bonjour-service to the outer node_modules one level
-    // up. A flat lookup of appPath/node_modules misses them.
+    // @canboat/* to the outer node_modules one level up. A flat lookup
+    // of appPath/node_modules misses them.
     const outerNodeModules = path.join(tmpDir, 'node_modules')
     const appPath = path.join(outerNodeModules, 'signalk-server')
     fs.mkdirSync(path.join(appPath, 'node_modules'), { recursive: true })
