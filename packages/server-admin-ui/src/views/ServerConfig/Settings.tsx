@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import Badge from 'react-bootstrap/Badge'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -413,10 +412,7 @@ const ServerSettings: React.FC = () => {
         <Card.Footer>
           <Button size="sm" variant="primary" onClick={handleSaveSettings}>
             <FontAwesomeIcon icon={faFloppyDisk} /> Save
-          </Button>{' '}
-          <Badge bg="danger" className="float-end">
-            Restart Required
-          </Badge>
+          </Button>
         </Card.Footer>
       </Card>
     </div>
