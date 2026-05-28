@@ -267,7 +267,8 @@ export default function Sidebar({ location }: SidebarProps) {
               : null
         },
         { name: 'Unit Preferences', url: '/data/units' },
-        { name: 'Fiddler', url: '/data/fiddler' }
+        { name: 'Fiddler', url: '/data/fiddler' },
+        { name: 'BLE Manager', url: '/data/blemanager' }
       )
     }
 
