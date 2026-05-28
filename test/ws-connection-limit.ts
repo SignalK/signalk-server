@@ -1,4 +1,5 @@
 import chai from 'chai'
+import http from 'http'
 import WebSocket from 'ws'
 import { freeport } from './ts-servertestutilities'
 import { startServerP } from './servertestutilities'
@@ -52,6 +53,17 @@ function openWsExpect429(
   })
 }
 
+function getHttpStatus(url: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, (res) => {
+      res.resume()
+      res.once('end', () => resolve(res.statusCode!))
+    })
+
+    req.once('error', reject)
+  })
+}
+
 describe('WebSocket per-IP connection limit', function () {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let server: any
@@ -72,11 +84,23 @@ describe('WebSocket per-IP connection limit', function () {
     await server.stop()
   })
 
+  it('does not count non-upgrade HTTP probes against the connection limit', async function () {
+    const httpUrl = wsUrl.replace(/^ws:/, 'http:')
+    for (let i = 0; i < MAX + 1; i++) {
+      ;(await getHttpStatus(httpUrl)).should.equal(426)
+    }
+  })
+
   it(`allows up to ${MAX} concurrent connections from the same IP`, async function () {
     for (let i = 0; i < MAX; i++) {
       const ws = await openWs(wsUrl)
       openSockets.push(ws)
     }
+  })
+
+  it('does not reject non-upgrade HTTP probes while websocket connections are at the limit', async function () {
+    const httpUrl = wsUrl.replace(/^ws:/, 'http:')
+    ;(await getHttpStatus(httpUrl)).should.equal(426)
   })
 
   it('rejects the next connection with HTTP 429 and a JSON error payload', async function () {

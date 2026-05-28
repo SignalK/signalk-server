@@ -886,22 +886,26 @@ function createPrimusAuthorize(
         : undefined
     req._resolvedIp = firstForwardedIp || req.connection.remoteAddress
     const ip = req._resolvedIp
-    if ((ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp) {
-      debug(`IP ${ip} exceeded max connections (${maxConnectionsPerIp})`)
-      const err = Object.assign(
-        new Error(
-          JSON.stringify({
-            error:
-              'Too many concurrent websocket connections from same IP address'
-          })
-        ),
-        { statusCode: 429 }
-      )
-      authorized(err)
-      return
-    }
+    const isWebSocketUpgrade =
+      String(req.headers.upgrade || '').toLowerCase() === 'websocket'
+    if (isWebSocketUpgrade) {
+      if ((ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp) {
+        debug(`IP ${ip} exceeded max connections (${maxConnectionsPerIp})`)
+        const err = Object.assign(
+          new Error(
+            JSON.stringify({
+              error:
+                'Too many concurrent websocket connections from same IP address'
+            })
+          ),
+          { statusCode: 429 }
+        )
+        authorized(err)
+        return
+      }
 
-    ipConnectionCounts.set(ip, (ipConnectionCounts.get(ip) ?? 0) + 1)
+      ipConnectionCounts.set(ip, (ipConnectionCounts.get(ip) ?? 0) + 1)
+    }
 
     if (!authorizeWS) {
       authorized()
