@@ -16,6 +16,11 @@ import {
 } from '../../store'
 import { logoutAction, restartAction } from '../../actions'
 
+// Header banners are absolutely positioned just below the navbar. The
+// stacked offset places a second banner below the first when both show.
+const BANNER_TOP = '55px'
+const BANNER_TOP_STACKED = '100px'
+
 export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
@@ -77,7 +82,7 @@ export default function Header() {
           className="restart-required-warning"
           style={{
             position: 'absolute',
-            top: '55px',
+            top: BANNER_TOP,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1050,
@@ -101,7 +106,7 @@ export default function Header() {
           className="backpressure-warning"
           style={{
             position: 'absolute',
-            top: showRestartBanner ? '100px' : '55px',
+            top: showRestartBanner ? BANNER_TOP_STACKED : BANNER_TOP,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1050,

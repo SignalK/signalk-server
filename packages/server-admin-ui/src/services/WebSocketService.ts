@@ -68,8 +68,15 @@ export class WebSocketService {
 
       if (isReconnect) {
         fetchAllData()
-        useStore.getState().setRestarting(false)
-        useStore.getState().setRestartRequired(false)
+        const store = useStore.getState()
+        const wasRestarting = store.restarting
+        store.setRestarting(false)
+        // Only clear the settings restart banner when this reconnect
+        // followed an actual restart; a transient disconnect must not
+        // hide a still-pending restart reminder.
+        if (wasRestarting) {
+          store.setRestartRequired(false)
+        }
       }
     }
 
