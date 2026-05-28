@@ -57,6 +57,18 @@ import { Delta, hasValues } from '@signalk/server-api'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 
+function decrementIpCount(
+  ipConnectionCounts: Map<string, number>,
+  ip: string
+): void {
+  const count = ipConnectionCounts.get(ip)
+  if (count !== undefined && count > 1) {
+    ipConnectionCounts.set(ip, count - 1)
+  } else {
+    ipConnectionCounts.delete(ip)
+  }
+}
+
 interface SkPrincipal {
   identifier: string
 }
@@ -666,14 +678,7 @@ function wsInterface(app: WsApp): WsApi {
 
           spark.onDisconnects = [
             () => spark.backpressureManager?.clear(),
-            () => {
-              const count = ipConnectionCounts.get(sparkIp)
-              if (count !== undefined && count > 1) {
-                ipConnectionCounts.set(sparkIp, count - 1)
-              } else {
-                ipConnectionCounts.delete(sparkIp)
-              }
-            }
+            () => decrementIpCount(ipConnectionCounts, sparkIp)
           ]
 
           if (primusOptions.isPlayback) {
@@ -888,9 +893,10 @@ function createPrimusAuthorize(
     const ip = req._resolvedIp
     const isWebSocketUpgrade =
       String(req.headers.upgrade || '').toLowerCase() === 'websocket'
+    let countedIpConnection = false
     if (isWebSocketUpgrade) {
       if ((ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp) {
-        debug(`IP ${ip} exceeded max connections (${maxConnectionsPerIp})`)
+        debug('IP %s exceeded max connections (%d)', ip, maxConnectionsPerIp)
         const err = Object.assign(
           new Error(
             JSON.stringify({
@@ -905,6 +911,7 @@ function createPrimusAuthorize(
       }
 
       ipConnectionCounts.set(ip, (ipConnectionCounts.get(ip) ?? 0) + 1)
+      countedIpConnection = true
     }
 
     if (!authorizeWS) {
@@ -932,6 +939,9 @@ function createPrimusAuthorize(
         error instanceof JsonWebTokenError ||
         error instanceof TokenExpiredError
       ) {
+        if (countedIpConnection) {
+          decrementIpCount(ipConnectionCounts, ip)
+        }
         authorized(error as Error)
       } else {
         authorized()
