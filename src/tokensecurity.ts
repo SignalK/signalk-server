@@ -28,7 +28,6 @@ import {
   Path
 } from '@signalk/server-api'
 import ms, { StringValue } from 'ms'
-import bodyParser from 'body-parser'
 import cookieParser from 'cookie-parser'
 import { createHash, randomBytes } from 'crypto'
 
@@ -637,8 +636,6 @@ function tokenSecurityFactory(
       }
       next()
     }
-
-    app.use(bodyParser.urlencoded({ extended: true }))
 
     app.use(cookieParser())
 

@@ -93,6 +93,34 @@ describe('Demo plugin ', () => {
     await server.stop()
   })
 
+  it('parses urlencoded POST bodies on plugin routes without security', async () => {
+    process.env.SIGNALK_NODE_CONFIG_DIR = require('path').join(
+      __dirname,
+      'plugin-test-config'
+    )
+
+    const port = await freeport()
+    const server = new Server({
+      config: { settings: { port } }
+    })
+    await server.start()
+
+    const response = await fetch(
+      `http://0.0.0.0:${port}/skServer/plugins/testplugin/echoBody`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: 'value=hello'
+      }
+    )
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), { value: 'hello' })
+
+    await server.stop()
+  })
+
   it('loads ESM plugins', async () => {
     process.env.SIGNALK_NODE_CONFIG_DIR = require('path').join(
       __dirname,
