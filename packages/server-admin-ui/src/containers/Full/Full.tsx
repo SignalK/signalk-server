@@ -102,6 +102,9 @@ const AccessRequests = lazyWithRetry(
 const PathReference = lazyWithRetry(
   () => import('../../views/PathReference/PathReference')
 )
+const BLEManager = lazyWithRetry(
+  () => import('../../views/ServerConfig/BLEManager')
+)
 
 import { fetchAllData } from '../../actions'
 
@@ -399,6 +402,10 @@ export default function Full() {
                 <Route
                   path="/serverConfiguration/update"
                   element={<ProtectedRoute component={ServerUpdate} />}
+                />
+                <Route
+                  path="/data/blemanager"
+                  element={<ProtectedRoute component={BLEManager} />}
                 />
                 <Route
                   path="/security/settings"
