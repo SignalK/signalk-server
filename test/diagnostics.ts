@@ -93,6 +93,33 @@ describe('getDiagnostics', () => {
     }
   })
 
+  it('finds a dependency hoisted to an ancestor node_modules', () => {
+    // Mirrors the production image: signalk-server runs from a nested
+    // `.../node_modules/signalk-server` dir (appPath), but npm hoists
+    // @canboat/* and bonjour-service to the outer node_modules one level
+    // up. A flat lookup of appPath/node_modules misses them.
+    const outerNodeModules = path.join(tmpDir, 'node_modules')
+    const appPath = path.join(outerNodeModules, 'signalk-server')
+    fs.mkdirSync(path.join(appPath, 'node_modules'), { recursive: true })
+
+    // Hoisted to the outer node_modules, not under appPath.
+    writeFakePackage(outerNodeModules, '@canboat/canboatjs', '3.19.0')
+    // Co-located with the app, under appPath/node_modules.
+    writeFakePackage(
+      path.join(appPath, 'node_modules'),
+      '@signalk/streams',
+      '6.6.0'
+    )
+
+    const config = { appPath, configPath: appPath }
+
+    const result = getDiagnostics(config)
+    chai.expect(result.packages).to.deep.include.members([
+      { name: '@canboat/canboatjs', version: '3.19.0' },
+      { name: '@signalk/streams', version: '6.6.0' }
+    ])
+  })
+
   it('handles malformed package.json without throwing', () => {
     const nodeModules = path.join(tmpDir, 'node_modules')
     const pkgDir = path.join(nodeModules, '@canboat/canboatjs')

@@ -45,38 +45,66 @@ interface PackageJson {
   version?: unknown
 }
 
-function readPackageVersion(
-  searchDirs: string[],
-  packageName: string
-): string | undefined {
-  for (const dir of searchDirs) {
-    const pkgPath = path.join(dir, packageName, 'package.json')
-    if (!fs.existsSync(pkgPath)) {
-      continue
+function readVersionAt(pkgJsonPath: string): string | undefined {
+  if (!fs.existsSync(pkgJsonPath)) {
+    return undefined
+  }
+  try {
+    const raw = fs.readFileSync(pkgJsonPath, 'utf8')
+    const parsed = JSON.parse(raw) as PackageJson
+    if (typeof parsed.version === 'string') {
+      return parsed.version
     }
-    try {
-      const raw = fs.readFileSync(pkgPath, 'utf8')
-      const parsed = JSON.parse(raw) as PackageJson
-      if (typeof parsed.version === 'string') {
-        return parsed.version
-      }
-    } catch (err) {
-      debug.enabled &&
-        debug(`failed reading ${pkgPath}: ${(err as Error).message}`)
-    }
+  } catch (err) {
+    debug.enabled &&
+      debug(`failed reading ${pkgJsonPath}: ${(err as Error).message}`)
   }
   return undefined
 }
 
+// Resolve a package's version starting from `baseDir`, walking up the
+// directory tree and checking `<ancestor>/node_modules/<pkg>/package.json`
+// at each level — the same lookup Node's own resolver does. A flat check
+// of only `baseDir/node_modules` misses dependencies npm has *hoisted*
+// to an ancestor `node_modules`: in the production image signalk-server
+// runs from `…/node_modules/signalk-server`, so `appPath` is that nested
+// dir, but `@canboat/*` and `bonjour-service` are hoisted one level up to
+// the outer `node_modules`. Without the walk they'd be silently dropped.
+function findPackageVersion(
+  baseDir: string,
+  packageName: string
+): string | undefined {
+  let dir = path.resolve(baseDir)
+  for (;;) {
+    const version = readVersionAt(
+      path.join(dir, 'node_modules', packageName, 'package.json')
+    )
+    if (version !== undefined) {
+      return version
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir) {
+      return undefined
+    }
+    dir = parent
+  }
+}
+
 export function getDiagnostics(config: DiagnosticsConfig): Diagnostics {
   const { appPath, configPath } = config
-  const searchDirs = (
-    appPath === configPath ? [appPath] : [configPath, appPath]
-  ).map((p) => path.join(p, 'node_modules'))
+  // configPath first so an operator's appstore-installed copy wins over a
+  // version bundled in the app image; dedupe when they coincide.
+  const baseDirs = appPath === configPath ? [appPath] : [configPath, appPath]
 
   const packages: InstalledPackage[] = []
   for (const name of TRACKED_PACKAGES) {
-    const version = readPackageVersion(searchDirs, name)
+    let version: string | undefined
+    for (const base of baseDirs) {
+      version = findPackageVersion(base, name)
+      if (version !== undefined) {
+        break
+      }
+    }
     if (version !== undefined) {
       packages.push({ name, version })
     }
