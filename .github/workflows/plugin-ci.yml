@@ -1506,7 +1506,6 @@ jobs:
         run: |
           REQUIRES=$(jq -r '.signalk.requires // [] | .[]' "${{ github.workspace }}/package.json" 2>/dev/null || true)
           if [ -z "$REQUIRES" ]; then
-            echo "No signalk.requires entries — skipping companion install."
             exit 0
           fi
           cd /tmp/sk-test
