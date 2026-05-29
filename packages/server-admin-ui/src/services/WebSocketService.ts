@@ -39,6 +39,11 @@ export class WebSocketService {
   private maxReconnectAttempts = Infinity
   private reconnectInterval = 5000
   private zustandSetState: ZustandStateSetter | null = null
+  // Last hello.serverStartId we saw, used to detect that the server has
+  // been restarted between connections. On change, the client's
+  // signalkData mirror is wiped so paths the new server instance no
+  // longer publishes don't linger as ghost rows in the Data Browser.
+  private lastServerStartId: string | null = null
 
   setZustandState(setState: ZustandStateSetter): void {
     this.zustandSetState = setState
@@ -187,8 +192,25 @@ export class WebSocketService {
       return
     }
 
-    // Hello message — extract skSelf
+    // Hello message — extract skSelf and check for server restart
     if (msg.name) {
+      const serverStartId =
+        typeof msg.serverStartId === 'string' ? msg.serverStartId : null
+      // A different serverStartId than last seen means the server
+      // process has restarted; the new instance has none of the old
+      // delta cache, so wipe our mirror to drop paths it will never
+      // re-publish. First hello on a freshly-loaded page just records
+      // the id (no clear, there is nothing cached yet).
+      if (
+        serverStartId &&
+        this.lastServerStartId &&
+        serverStartId !== this.lastServerStartId
+      ) {
+        useStore.getState().clearData()
+      }
+      if (serverStartId) {
+        this.lastServerStartId = serverStartId
+      }
       this.updateState({ skSelf: msg.self as string })
       return
     }
