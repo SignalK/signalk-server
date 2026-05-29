@@ -29,7 +29,7 @@ describe('Plugin urlencoded POST bodies without security', () => {
     await server.start()
     try {
       const response = await fetch(
-        `http://0.0.0.0:${port}/skServer/plugins/testplugin/echoBody`,
+        `http://127.0.0.1:${port}/skServer/plugins/testplugin/echoBody`,
         {
           method: 'POST',
           headers: {
