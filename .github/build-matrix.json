@@ -1,0 +1,26 @@
+{
+  "_comment": "Source of truth for the OS x Node x Arch combinations the Docker workflows build. See .github/docs/build-matrix.md for field definitions, naming conventions, and how to add new rows. When adding variants, also add a workflow_dispatch input to the three Docker workflows.",
+  "architectures": [
+    { "id": "amd", "vm": "ubuntu-latest", "platform": "linux/amd64" },
+    { "id": "arm", "vm": "ubuntu-24.04-arm", "platform": "linux/arm64" }
+  ],
+  "os_variants": [
+    {
+      "id": "24.04",
+      "family": "ubuntu",
+      "os_arg": "24.04",
+      "dockerfile_base": "./docker/Dockerfile_base_24.04",
+      "default_enabled": true
+    },
+    {
+      "id": "alpine",
+      "family": "alpine",
+      "os_arg": "alpine",
+      "dockerfile_base": "./docker/Dockerfile_base_alpine",
+      "default_enabled": true
+    }
+  ],
+  "node_versions": [
+    { "id": "24", "default_enabled": true, "extra_platforms": {} }
+  ]
+}
