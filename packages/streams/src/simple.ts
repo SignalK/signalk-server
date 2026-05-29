@@ -287,6 +287,21 @@ function nmea2000input(
       }),
       new Liner(subOptions)
     ]
+  } else if (subOptions.type === 'canboat-csv-canboatjs') {
+    // canboat-pipeline's CSV R/W port (default 2603). Bidirectional:
+    // we read PLAIN/FAST lines and forward outbound PGNs over the
+    // same socket.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const CanboatCsv = require('./canboat-csv') as {
+      default: new (options: object) => PipeElement
+    }
+    const Ctor = CanboatCsv.default ?? CanboatCsv
+    return [
+      new (Ctor as new (options: object) => PipeElement)(
+        subOptions as SubOptions & { host: string; port: number }
+      ),
+      new Liner(subOptions)
+    ]
   } else if (subOptions.type === 'w2k-1-n2k-ascii-canboatjs') {
     return [
       new Tcp({ ...subOptions, outEvent: 'w2k-1-out' } as SubOptions & {
