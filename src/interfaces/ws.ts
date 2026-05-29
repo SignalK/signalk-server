@@ -57,6 +57,25 @@ import { Delta, hasValues } from '@signalk/server-api'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 
+function incrementIpCount(
+  ipConnectionCounts: Map<string, number>,
+  ip: string
+): void {
+  ipConnectionCounts.set(ip, (ipConnectionCounts.get(ip) ?? 0) + 1)
+}
+
+function decrementIpCount(
+  ipConnectionCounts: Map<string, number>,
+  ip: string
+): void {
+  const count = ipConnectionCounts.get(ip)
+  if (count !== undefined && count > 1) {
+    ipConnectionCounts.set(ip, count - 1)
+  } else {
+    ipConnectionCounts.delete(ip)
+  }
+}
+
 interface SkPrincipal {
   identifier: string
 }
@@ -502,6 +521,9 @@ function wsInterface(app: WsApp): WsApi {
 
         primus.on('connection', function (primusSpark: unknown) {
           const spark = primusSpark as Spark
+          const sparkIp = spark.request._resolvedIp
+          incrementIpCount(ipConnectionCounts, sparkIp)
+
           let principalId: string | undefined
           if (spark.request.skPrincipal) {
             principalId = spark.request.skPrincipal.identifier
@@ -662,18 +684,9 @@ function wsInterface(app: WsApp): WsApi {
             })
           })
 
-          const sparkIp = spark.request._resolvedIp
-
           spark.onDisconnects = [
             () => spark.backpressureManager?.clear(),
-            () => {
-              const count = ipConnectionCounts.get(sparkIp)
-              if (count !== undefined && count > 1) {
-                ipConnectionCounts.set(sparkIp, count - 1)
-              } else {
-                ipConnectionCounts.delete(sparkIp)
-              }
-            }
+            () => decrementIpCount(ipConnectionCounts, sparkIp)
           ]
 
           if (primusOptions.isPlayback) {
@@ -886,8 +899,13 @@ function createPrimusAuthorize(
         : undefined
     req._resolvedIp = firstForwardedIp || req.connection.remoteAddress
     const ip = req._resolvedIp
-    if ((ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp) {
-      debug(`IP ${ip} exceeded max connections (${maxConnectionsPerIp})`)
+    const isWebSocketUpgrade =
+      String(req.headers.upgrade || '').toLowerCase() === 'websocket'
+    if (
+      isWebSocketUpgrade &&
+      (ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp
+    ) {
+      debug('IP %s exceeded max connections (%d)', ip, maxConnectionsPerIp)
       const err = Object.assign(
         new Error(
           JSON.stringify({
@@ -900,8 +918,6 @@ function createPrimusAuthorize(
       authorized(err)
       return
     }
-
-    ipConnectionCounts.set(ip, (ipConnectionCounts.get(ip) ?? 0) + 1)
 
     if (!authorizeWS) {
       authorized()
