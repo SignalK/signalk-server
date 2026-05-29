@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import Badge from 'react-bootstrap/Badge'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -11,6 +10,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 
 import VesselConfiguration from './VesselConfiguration'
 import Logging from './Logging'
+import { useStore } from '../../store'
 
 interface ServerSettingsData {
   hasData?: boolean
@@ -125,11 +125,11 @@ const ServerSettings: React.FC = () => {
       },
       body: JSON.stringify(settings),
       credentials: 'include'
+    }).then((response) => {
+      if (response.ok) {
+        useStore.getState().setRestartRequired(true)
+      }
     })
-      .then((response) => response.text())
-      .then((response) => {
-        alert(response)
-      })
   }, [settings])
 
   const fieldColWidthMd = 10
@@ -412,10 +412,7 @@ const ServerSettings: React.FC = () => {
         <Card.Footer>
           <Button size="sm" variant="primary" onClick={handleSaveSettings}>
             <FontAwesomeIcon icon={faFloppyDisk} /> Save
-          </Button>{' '}
-          <Badge bg="danger" className="float-end">
-            Restart Required
-          </Badge>
+          </Button>
         </Card.Footer>
       </Card>
     </div>
