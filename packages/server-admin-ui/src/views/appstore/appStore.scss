@@ -401,13 +401,15 @@
   transition: background 0.1s;
   padding: 8px 12px;
 
-  // Narrow layout (< md): two visual lines.
-  // Line 1: icon + title/badges/desc on the left, action button on the right
-  // Line 2: author / category / version indented under the title
+  // Narrow layout (< md): three visual lines.
+  // Line 1: icon + title/desc on the left, action button on the right
+  // Line 2: tags indented under the title
+  // Line 3: author / category / version indented under the title
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-areas:
     'title   action'
+    'tags    tags'
     'meta    meta';
   column-gap: 12px;
   row-gap: 4px;
@@ -441,6 +443,18 @@
   margin-left: 40px;
 }
 
+.plugin-row__tags {
+  grid-area: tags;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+
+  // Line up under the title text: 28px icon + 12px column gap = 40px.
+  margin-left: 40px;
+}
+
 .plugin-row__action-slot {
   grid-area: action;
   min-width: 160px;
@@ -449,16 +463,20 @@
 }
 
 // md+ (>= 768px): collapse to a single dense row for classic desktop
-// density. Same grid, just one template row with three columns.
+// density. Same grid, just one template row with four columns.
 @media (min-width: 768px) {
   .plugin-row {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas: 'title meta action';
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-areas: 'title tags meta action';
     padding: 6px 12px;
     row-gap: 0;
   }
   .plugin-row__meta {
     margin-left: 0;
+  }
+  .plugin-row__tags {
+    margin-left: 0;
+    flex-wrap: nowrap;
   }
 }
 

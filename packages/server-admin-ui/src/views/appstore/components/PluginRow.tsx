@@ -12,6 +12,18 @@ interface PluginRowProps {
   detailLinkBase?: string
 }
 
+const formatVersionLabel = (app: AppInfo): string => {
+  if (
+    app.installedVersion &&
+    app.newVersion &&
+    app.installedVersion !== app.newVersion
+  ) {
+    return `v${app.installedVersion} → v${app.newVersion}`
+  }
+  const version = app.installedVersion || app.version
+  return version ? `v${version}` : '—'
+}
+
 const PluginRow: React.FC<PluginRowProps> = ({
   app,
   detailLinkBase = '/apps/store/plugin'
@@ -50,27 +62,29 @@ const PluginRow: React.FC<PluginRowProps> = ({
             >
               {app.displayName || app.name}
             </NavLink>
-            <RecencyBadge recent={app.recent} className="plugin-row__badge" />
-            <UpdateAvailableBadge
-              installedVersion={app.installedVersion}
-              newVersion={app.newVersion}
-              className="plugin-row__badge"
-            />
-            {app.official && (
-              <Badge bg="primary" className="plugin-row__badge">
-                OFFICIAL
-              </Badge>
-            )}
-            {showDeprecated && (
-              <Badge bg="danger" className="plugin-row__badge">
-                DEPRECATED
-              </Badge>
-            )}
             <span className="text-muted small text-truncate plugin-row__desc">
               {app.description}
             </span>
           </div>
         </div>
+      </div>
+      <div className="plugin-row__tags">
+        <RecencyBadge recent={app.recent} className="plugin-row__badge" />
+        <UpdateAvailableBadge
+          installedVersion={app.installedVersion}
+          newVersion={app.newVersion}
+          className="plugin-row__badge"
+        />
+        {app.official && (
+          <Badge bg="primary" className="plugin-row__badge">
+            OFFICIAL
+          </Badge>
+        )}
+        {showDeprecated && (
+          <Badge bg="danger" className="plugin-row__badge">
+            DEPRECATED
+          </Badge>
+        )}
       </div>
       <div className="plugin-row__meta">
         {app.author ? (
@@ -89,9 +103,7 @@ const PluginRow: React.FC<PluginRowProps> = ({
           {app.categories?.[0] ?? null}
         </div>
         <div className="text-muted small font-monospace text-nowrap">
-          {app.installedVersion || app.version
-            ? `v${app.installedVersion || app.version}`
-            : '—'}
+          {formatVersionLabel(app)}
         </div>
       </div>
       <div className="plugin-row__action-slot">
