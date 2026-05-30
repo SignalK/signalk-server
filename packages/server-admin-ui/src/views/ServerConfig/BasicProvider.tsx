@@ -1869,19 +1869,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       {value.options.type !== undefined &&
         value.options.type.indexOf('canboatjs') !== -1 && (
           <>
-            {value.options.type !== 'maretron-ipg-canboatjs' && (
-              <>
-                <UseCanNameInput value={value.options} onChange={onChange} />
-                <DeviceInstanceInput
-                  value={value.options}
-                  onChange={onChange}
-                />
-                <SystemInstanceInput
-                  value={value.options}
-                  onChange={onChange}
-                />
-              </>
-            )}
+            <UseCanNameInput value={value.options} onChange={onChange} />
+            <DeviceInstanceInput value={value.options} onChange={onChange} />
+            <SystemInstanceInput value={value.options} onChange={onChange} />
             <CamelCaseCompatInput value={value.options} onChange={onChange} />
           </>
         )}

@@ -361,7 +361,7 @@ function nmea2000input(
       MaretronIPG: unknown
     }
     const MaretronIPGCtor = canboatjs.MaretronIPG as unknown as CanboatCtor
-    return [new MaretronIPGCtor({ ...subOptions, useCanName: true })]
+    return [new MaretronIPGCtor(subOptions)]
   } else if (subOptions.type === 'navlink2-udp-canboatjs') {
     return [
       new Udp(subOptions as SubOptions & { port: number }),
