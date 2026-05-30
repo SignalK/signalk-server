@@ -113,9 +113,10 @@ const prioritiesPayloadSchema = Type.Object({
 // numeric offsets — Number coercion happens in the route handler so the
 // schema mirrors what the admin UI POSTs (numbers or null), not the
 // post-coercion shape.
-// sensorId is interpolated into `sensors.gps.${sensorId}.fromBow/fromCenter`
-// — anything containing `.` would split the path and corrupt the SK tree
-// shape exposed to external consumers, so the schema rejects it up front.
+// sensorId is the key the corrector reports back in meta.gpsOffsetCorrection
+// and the historical (pre-corrector) base-delta sweep key; reject anything
+// containing `.` so the legacy cleanup paths cannot be tricked into
+// removing keys outside `sensors.gps.<sensorId>.*`.
 const gpsSensorSchema = Type.Object({
   sensorId: Type.String({ minLength: 1, pattern: '^[^.]+$' }),
   sourceRef: Type.String(),
@@ -375,9 +376,9 @@ interface ModuleInfo {
 // through `withSettingsWriteLock`. Without it, a clone-then-write handler
 // can snapshot `app.config.settings` *before* another handler's rollback
 // and then commit the rejected state back to disk after rollback ran.
-// This PR opts the gpsSensors flow into the lock; other handlers in this
-// file still write `app.config.settings` directly and will be migrated in
-// follow-up PRs (one logical change per PR).
+// Only the routes that opt in (currently the gpsSensors flow) are
+// serialized — direct writers to `app.config.settings` remain a known
+// race window relative to those routes.
 let settingsWriteLock: Promise<void> = Promise.resolve()
 function withSettingsWriteLock(fn: () => Promise<void>): Promise<void> {
   const previous = settingsWriteLock
@@ -1276,20 +1277,36 @@ module.exports = function (
     const de = app.config.baseDeltaEditor
     const communication = de.getSelfValue('communication')
     const draft = de.getSelfValue('design.draft')
-    const length = de.getSelfValue('design.length')
+    // Mirror the PUT /skServer/gpsSensors handler's normalisation: design.length
+    // may be stored as { overall } or as a plain number, and older /vessel
+    // clients expect a number. Returning undefined for the plain-number case
+    // made the GPS preferences page treat dimensions as unset.
+    const length = de.getSelfValue('design.length') as
+      | { overall?: number }
+      | number
+      | undefined
+    const lengthOverall =
+      typeof length === 'number'
+        ? length
+        : length && typeof length === 'object'
+          ? length.overall
+          : undefined
     const type = de.getSelfValue('design.aisShipType')
     const json = {
       name: app.config.vesselName,
       mmsi: app.config.vesselMMSI,
       uuid: app.config.vesselUUID,
       draft: draft && draft.maximum,
-      length: length && length.overall,
+      length: lengthOverall,
       beam: de.getSelfValue('design.beam'),
       height: de.getSelfValue('design.airHeight'),
-      // Only fall back to the legacy single-GPS values when no sensor row
-      // exists at all. An explicit `null` on a configured row means "not
-      // set yet" — surfacing the stale legacy value there would mislead
-      // older /vessel clients about the antenna position.
+      // Older /vessel clients read gpsFromBow/gpsFromCenter; surface the
+      // first configured sensor row so the legacy shape stays meaningful.
+      // The server consumes the same data from settings.gpsSensors to
+      // rewrite navigation.position at the Common Coordinate Reference
+      // Point (vessel center on the centerline). An explicit `null` on
+      // a configured row means "not set yet" — fall back to the legacy
+      // single-GPS base-delta only when there is no sensor row at all.
       gpsFromBow: app.config.settings.gpsSensors?.[0]
         ? app.config.settings.gpsSensors[0].fromBow
         : de.getSelfValue('sensors.gps.fromBow'),
@@ -2164,61 +2181,50 @@ module.exports = function (
     done: () => void
   ): void {
     const de = app.config.baseDeltaEditor
+    // Sweep any pre-1.x sensors.gps.<sensorId>.fromBow/fromCenter entries
+    // out of the base-delta store on every write. Earlier iterations of
+    // this PR mirrored offsets into the data model under instance-keyed
+    // paths; the corrector now reads from settings.gpsSensors directly,
+    // and the per-sensor data-model entries were retired because Signal K
+    // is moving away from instance-in-path.
+    //
+    // FullSignalK has no per-path tombstone API: removing from the base-delta
+    // store stops the values from being re-emitted at startup, but any
+    // entries already in `app.signalk.self` from a previous run persist
+    // until the next restart. The handler reports that a restart is
+    // required via legacyPathsCleared in the response so the admin UI
+    // can surface the restart banner only when this actually happened.
+    const legacyPathsCleared = (rows: GpsSensorsPayload): boolean => {
+      let cleared = false
+      for (const s of rows) {
+        const fromBowPath = `sensors.gps.${s.sensorId}.fromBow`
+        const fromCenterPath = `sensors.gps.${s.sensorId}.fromCenter`
+        if (de.getSelfValue(fromBowPath) !== undefined) {
+          de.removeSelfValue(fromBowPath)
+          cleared = true
+        }
+        if (de.getSelfValue(fromCenterPath) !== undefined) {
+          de.removeSelfValue(fromCenterPath)
+          cleared = true
+        }
+      }
+      return cleared
+    }
     const restorePrevious = () => {
-      // Strip the half-applied "next" state from baseDeltaEditor before
-      // re-applying the previous one — otherwise sensors that were only in
-      // `next` would survive the rollback.
-      for (const s of next ?? []) {
-        de.removeSelfValue(`sensors.gps.${s.sensorId}.fromBow`)
-        de.removeSelfValue(`sensors.gps.${s.sensorId}.fromCenter`)
-      }
-      for (const s of previous) {
-        de.setSelfValue(
-          `sensors.gps.${s.sensorId}.fromBow`,
-          s.fromBow !== null ? Number(s.fromBow) : undefined
-        )
-        de.setSelfValue(
-          `sensors.gps.${s.sensorId}.fromCenter`,
-          s.fromCenter !== null ? Number(s.fromCenter) : undefined
-        )
-      }
       if (next !== undefined && previous.length === 0) {
         delete app.config.settings.gpsSensors
       } else {
         app.config.settings.gpsSensors = previous
       }
-      sendBaseDeltas(app)
     }
+    let restartRequired = false
     if (next === undefined) {
-      // DELETE: remove every previous entry first, then drop the settings.
-      for (const s of previous) {
-        de.removeSelfValue(`sensors.gps.${s.sensorId}.fromBow`)
-        de.removeSelfValue(`sensors.gps.${s.sensorId}.fromCenter`)
-      }
+      restartRequired = legacyPathsCleared(previous)
       delete app.config.settings.gpsSensors
     } else {
-      // PUT: clear keys for sensors that disappeared, then write the new
-      // payload so the SK data model only carries paths backed by a row.
-      const nextIds = new Set(next.map((s) => s.sensorId))
-      for (const s of previous) {
-        if (!nextIds.has(s.sensorId)) {
-          de.removeSelfValue(`sensors.gps.${s.sensorId}.fromBow`)
-          de.removeSelfValue(`sensors.gps.${s.sensorId}.fromCenter`)
-        }
-      }
+      restartRequired = legacyPathsCleared(previous)
       app.config.settings.gpsSensors = next
-      for (const s of next) {
-        de.setSelfValue(
-          `sensors.gps.${s.sensorId}.fromBow`,
-          s.fromBow !== null ? Number(s.fromBow) : undefined
-        )
-        de.setSelfValue(
-          `sensors.gps.${s.sensorId}.fromCenter`,
-          s.fromCenter !== null ? Number(s.fromCenter) : undefined
-        )
-      }
     }
-    sendBaseDeltas(app)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeSettingsFile(app, app.config.settings, (err: any) => {
       if (err) {
@@ -2230,7 +2236,7 @@ module.exports = function (
       writeBaseDeltasFile(app)
         .then(() => {
           app.emit('serverevent', { type: 'GPS_SENSORS', data: eventData })
-          res.json({ result: 'ok' })
+          res.json({ result: 'ok', restartRequired })
           done()
         })
         .catch(() => {
@@ -2268,14 +2274,24 @@ module.exports = function (
       | { overall?: number }
       | number
       | undefined
-    const lengthOverall =
+    const lengthOverallRaw =
       typeof length === 'object' && length !== null
         ? length.overall
         : typeof length === 'number'
           ? length
           : undefined
     const beamRaw = de.getSelfValue('design.beam')
-    const beam = typeof beamRaw === 'number' ? beamRaw : undefined
+    // Non-positive hull dimensions came from a stale or hand-edited
+    // base-delta and would make every offset out of range, blocking the
+    // user from saving an otherwise-valid sensor row. Treat them as
+    // unavailable so bounds-checking is skipped just like when the
+    // dimension was never set.
+    const lengthOverall =
+      typeof lengthOverallRaw === 'number' && lengthOverallRaw > 0
+        ? lengthOverallRaw
+        : undefined
+    const beam =
+      typeof beamRaw === 'number' && beamRaw > 0 ? beamRaw : undefined
     const boundsError = validateGpsSensorBounds(sensors, lengthOverall, beam)
     if (boundsError) {
       res.status(400).send(boundsError)

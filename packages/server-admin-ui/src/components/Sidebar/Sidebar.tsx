@@ -162,12 +162,13 @@ export default function Sidebar({ location }: SidebarProps) {
   const positionSources = usePositionSources()
 
   const unconfiguredGpsCount = useMemo(() => {
+    // Match the Preferences page's notion of "configured": a sensor row
+    // exists for the source. Whether offsets are filled in is a separate
+    // question (null offsets are treated as zero by the server's
+    // lever-arm corrector); the badge is for "detected source has no
+    // row at all", which is the actionable case.
     const configuredRefs = new Set(
-      gpsSensorsData.sensors
-        .filter(
-          (s) => s.sourceRef && s.fromBow !== null && s.fromCenter !== null
-        )
-        .map((s) => s.sourceRef)
+      gpsSensorsData.sensors.filter((s) => s.sourceRef).map((s) => s.sourceRef)
     )
     return positionSources.filter((ref) => !configuredRefs.has(ref)).length
   }, [positionSources, gpsSensorsData])

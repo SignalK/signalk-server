@@ -148,6 +148,17 @@ const GpsPositionSettings: React.FC = () => {
           }
         )
         if (response.ok) {
+          // The server clears any legacy sensors.gps.<id>.fromBow/fromCenter
+          // base-delta entries on every save, but FullSignalK retains the
+          // already-emitted values in `signalk.self` until the next
+          // restart. The server signals `restartRequired: true` only when
+          // such entries were actually swept on this save.
+          const body = (await response.json().catch(() => ({}))) as {
+            restartRequired?: boolean
+          }
+          if (body.restartRequired) {
+            useStore.getState().setRestartRequired(true)
+          }
           setGpsSaved()
           return
         }
@@ -176,9 +187,9 @@ const GpsPositionSettings: React.FC = () => {
   const handleReset = useCallback(async () => {
     const confirmed = window.confirm(
       'Reset all GPS antenna positions?\n\n' +
-        'This removes every configured sensor row and the corresponding ' +
-        'sensors.gps.<id> entries from the Signal K data model. ' +
-        'Detected sources will reappear as "unconfigured" rows.'
+        'This removes every configured sensor row. The server stops ' +
+        'applying lever-arm correction to navigation.position and detected ' +
+        'sources will reappear as "unconfigured" rows.'
     )
     if (!confirmed) return
     setResetBusy(true)
@@ -189,7 +200,16 @@ const GpsPositionSettings: React.FC = () => {
         credentials: 'include'
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      // Same restart-banner trigger as the PUT path: only when legacy
+      // base-delta entries were swept by this DELETE.
+      const body = (await res.json().catch(() => ({}))) as {
+        restartRequired?: boolean
+      }
+      if (body.restartRequired) {
+        useStore.getState().setRestartRequired(true)
+      }
       useStore.getState().setGpsSensors([])
+      setDrafts({})
     } catch (e) {
       setResetError(`Reset failed: ${(e as Error).message}`)
     } finally {
@@ -197,18 +217,36 @@ const GpsPositionSettings: React.FC = () => {
     }
   }, [])
 
+  // Clear in-flight draft strings keyed by sourceRef. Drafts hold partial
+  // user input like "-" or "-2." so the typed value survives null commits
+  // mid-edit; without this clear, a stale draft would shadow the fresh
+  // store value if the same sourceRef came back into the table.
+  const clearDraftsForSource = useCallback(
+    (sourceRef: string) => {
+      setDrafts((d) => {
+        const next = { ...d }
+        delete next[draftKey(sourceRef, 'fromBow')]
+        delete next[draftKey(sourceRef, 'fromCenter')]
+        return next
+      })
+    },
+    [draftKey]
+  )
+
   const handleConfigure = useCallback(
     (sourceRef: string) => {
+      clearDraftsForSource(sourceRef)
       addGpsSensor(sourceRef)
     },
-    [addGpsSensor]
+    [addGpsSensor, clearDraftsForSource]
   )
 
   const handleRemove = useCallback(
-    (index: number) => {
+    (index: number, sourceRef: string) => {
+      clearDraftsForSource(sourceRef)
       removeGpsSensor(index)
     },
-    [removeGpsSensor]
+    [removeGpsSensor, clearDraftsForSource]
   )
 
   const handleFieldChange = useCallback(
@@ -267,7 +305,7 @@ const GpsPositionSettings: React.FC = () => {
           variant="outline-danger"
           onClick={handleReset}
           disabled={resetBusy}
-          title="Remove all GPS sensor rows and clear sensors.gps.<id> from the SK data model"
+          title="Remove all GPS sensor rows; the server will stop applying lever-arm correction to navigation.position"
         >
           {resetBusy ? 'Resetting…' : 'Reset all GPS sensors'}
         </Button>
@@ -475,8 +513,9 @@ const GpsPositionSettings: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline-danger"
-                          onClick={() => handleRemove(row.index)}
+                          onClick={() => handleRemove(row.index, row.sourceRef)}
                           title="Remove this sensor configuration"
+                          aria-label={`Remove sensor configuration for ${row.sensor?.sensorId || row.sourceRef}`}
                         >
                           <FontAwesomeIcon icon={faTrash} />
                         </Button>

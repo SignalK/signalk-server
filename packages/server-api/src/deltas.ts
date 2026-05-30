@@ -134,6 +134,21 @@ export interface MetaValue {
     inverseFormula: string
     symbol: string
   }
+  gpsOffsetCorrection?: GpsOffsetCorrection
+}
+
+// Provenance attached to navigation.position deltas the server has
+// corrected for GPS antenna lever-arm offsets. Preserves the raw
+// measurement and the inputs that produced the corrected value so
+// history consumers can reconstruct the antenna's track.
+/** @category Server API */
+export interface GpsOffsetCorrection {
+  sensorId: string
+  fromBow: number
+  fromCenter: number
+  lengthOverall: number
+  headingTrue: number
+  rawValue: Position
 }
 
 // Notification attribute types
