@@ -15,12 +15,16 @@ interface ZipOptions {
 /**
  * Send a zip file as a download response.
  * Replacement for express-easy-zip using archiver directly.
+ *
+ * Note: `filename` is used verbatim in the Content-Disposition header, so the
+ * caller is responsible for including any desired extension. This function
+ * intentionally does not append `.zip`.
  */
 export function sendZip(res: Response, options: ZipOptions): void {
   const { files, filename } = options
 
   res.setHeader('Content-Type', 'application/zip')
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}.zip"`)
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
 
   const archive = archiver('zip', {
     zlib: { level: 9 }

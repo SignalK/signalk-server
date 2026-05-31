@@ -2199,7 +2199,10 @@ module.exports = function (
           { filename }
         ) => {
           try {
-            if (!filename.endsWith('.backup')) {
+            if (
+              !filename.endsWith('.backup') &&
+              !filename.endsWith('.backup.zip')
+            ) {
               res
                 .status(400)
                 .send('the backup file does not have the .backup extension')
