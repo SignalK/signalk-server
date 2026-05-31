@@ -214,8 +214,12 @@ describe('leverArm.correctPosition', function () {
       20,
       (3 * Math.PI) / 2
     )
-    expect(out.longitude).to.be.greaterThan(-180)
-    expect(out.longitude).to.be.lessThan(0) // wrapped to near -180
+    const rawLon = 179.99999 + ((10 / R) * 180) / Math.PI
+    const expectedLon = ((((rawLon + 180) % 360) + 360) % 360) - 180
+    expect(out.longitude).to.be.closeTo(expectedLon, 1e-9)
+    // Sanity: the wrap really did cross the antimeridian (raw > 180).
+    expect(rawLon).to.be.greaterThan(180)
+    expect(expectedLon).to.be.lessThan(0)
   })
 
   it('wraps longitude across the antimeridian (westward)', function () {
@@ -228,8 +232,12 @@ describe('leverArm.correctPosition', function () {
       20,
       Math.PI / 2
     )
-    expect(out.longitude).to.be.lessThan(180)
-    expect(out.longitude).to.be.greaterThan(0) // wrapped to near +180
+    const rawLon = -179.99999 + ((-10 / R) * 180) / Math.PI
+    const expectedLon = ((((rawLon + 180) % 360) + 360) % 360) - 180
+    expect(out.longitude).to.be.closeTo(expectedLon, 1e-9)
+    // Sanity: the wrap really did cross the antimeridian (raw < -180).
+    expect(rawLon).to.be.lessThan(-180)
+    expect(expectedLon).to.be.greaterThan(0)
   })
 })
 
