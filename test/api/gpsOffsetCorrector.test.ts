@@ -202,6 +202,35 @@ describe('leverArm.correctPosition', function () {
     const expectedDLon = ((-10 / (R * Math.cos(latRad))) * 180) / Math.PI
     expect(out.longitude).to.be.closeTo(170 + expectedDLon, 1e-9)
   })
+
+  it('wraps longitude across the antimeridian (eastward)', function () {
+    // Antenna just west of +180 longitude at the equator, vessel pointing
+    // west (heading 3pi/2). At the bow with length=20 the CCRP sits 10m
+    // east of the antenna. The raw sum 179.9999... + 10/R*180/pi exceeds
+    // +180 and must wrap to a small negative longitude near -180.
+    const out = correctPosition(
+      { latitude: 0, longitude: 179.99999 },
+      { fromBow: 0, fromCenter: 0 },
+      20,
+      (3 * Math.PI) / 2
+    )
+    expect(out.longitude).to.be.greaterThan(-180)
+    expect(out.longitude).to.be.lessThan(0) // wrapped to near -180
+  })
+
+  it('wraps longitude across the antimeridian (westward)', function () {
+    // Mirror case: antenna just east of -180 longitude, heading east
+    // (pi/2). At the bow the CCRP is 10m west; raw sum drops below
+    // -180 and must wrap up to a value near +180.
+    const out = correctPosition(
+      { latitude: 0, longitude: -179.99999 },
+      { fromBow: 0, fromCenter: 0 },
+      20,
+      Math.PI / 2
+    )
+    expect(out.longitude).to.be.lessThan(180)
+    expect(out.longitude).to.be.greaterThan(0) // wrapped to near +180
+  })
 })
 
 describe('GpsOffsetCorrector handler', function () {
@@ -393,6 +422,42 @@ describe('GpsOffsetCorrector handler', function () {
     }
     expect(update.values[0].value.latitude).to.equal(60)
     expect(update.meta).to.equal(undefined)
+  })
+
+  it('accepts plain-number design.length.value (legacy SK shape)', async function () {
+    // design.length.value may be stored as either { overall: N } (new
+    // shape) or a bare number (legacy single-value shape). The corrector
+    // must handle both so users with older defaults files still get
+    // lever-arm correction without rewriting their base deltas.
+    const { app, process } = makeApp({
+      selfPaths: {
+        'design.length.value': 20,
+        'navigation.headingTrue.value': 0
+      },
+      gpsSensors: [
+        { sensorId: 'gps1', sourceRef: 'n2k.0.5', fromBow: 0, fromCenter: 0 }
+      ]
+    })
+    const corrector = new GpsOffsetCorrector(app)
+    await corrector.start()
+    const delta = positionDelta({
+      sourceRef: 'n2k.0.5',
+      latitude: 60,
+      longitude: 24
+    })
+    const out = process(delta)
+    const update = out.updates[0] as never as {
+      values: { value: { latitude: number; longitude: number } }[]
+      meta: {
+        value: { gpsOffsetCorrection: { lengthOverall: number } }
+      }[]
+    }
+    const expectedDLat = ((-10 / R) * 180) / Math.PI
+    expect(update.values[0].value.latitude).to.be.closeTo(
+      60 + expectedDLat,
+      1e-9
+    )
+    expect(update.meta[0].value.gpsOffsetCorrection.lengthOverall).to.equal(20)
   })
 
   it('falls back to headingMagnetic + magneticVariation when headingTrue is unset', async function () {

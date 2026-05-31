@@ -69,9 +69,15 @@ export function correctPosition(
   const latRad = antenna.latitude * DEG_TO_RAD
   const dLat = (north / EARTH_RADIUS_M) * RAD_TO_DEG
   const dLon = (east / (EARTH_RADIUS_M * Math.cos(latRad))) * RAD_TO_DEG
+  // Wrap longitude into [-180, 180] so a small east/west correction
+  // applied near the antimeridian doesn't emit an out-of-range value
+  // (e.g. 180.0001) that downstream consumers reject. The double mod
+  // handles negative inputs in JavaScript's truncated-mod semantics.
+  const rawLon = antenna.longitude + dLon
+  const longitude = ((((rawLon + 180) % 360) + 360) % 360) - 180
   return {
     latitude: antenna.latitude + dLat,
-    longitude: antenna.longitude + dLon,
+    longitude,
     altitude: antenna.altitude
   }
 }
