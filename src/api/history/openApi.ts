@@ -129,9 +129,9 @@ historyApiDoc.paths = {
           name: 'paths',
           in: 'query',
           description:
-            "Comma separated list of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index' | 'sma' | 'ema'. The 'sma' (simple moving average) and 'ema' (exponential moving average) methods accept an optional numeric parameter separated by colon: for sma it is the number of samples, for ema it is the alpha value (0-1). If not provided, implementations should use sensible defaults.",
+            "Comma separated list of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon, and optional source reference separated by a pipe (|). Aggregation methods: 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index' | 'sma' | 'ema'. The 'sma' (simple moving average) and 'ema' (exponential moving average) methods accept an optional numeric parameter separated by colon: for sma it is the number of samples, for ema it is the alpha value (0-1). If not provided, implementations should use sensible defaults. The source reference after | filters data to that specific source.",
           example:
-            'navigation.speedOverGround:sma:5,navigation.speedThroughWater:max',
+            'navigation.speedOverGround:sma:5|n2k-on-ve.can0.115,navigation.speedThroughWater:max',
           schema: { type: 'string' },
           required: true
         },
@@ -197,6 +197,11 @@ historyApiDoc.paths = {
                         method: {
                           type: 'string',
                           description: 'Aggregation method'
+                        },
+                        sourceRef: {
+                          type: 'string',
+                          description:
+                            'Source reference, present when the query specified a source filter for this path'
                         }
                       }
                     }

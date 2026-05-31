@@ -16,7 +16,7 @@ import {
 } from '@signalk/server-api/history'
 import { IRouter } from 'express'
 import { Temporal } from '@js-temporal/polyfill'
-import { Context, Path } from '@signalk/server-api'
+import { Context, Path, SourceRef } from '@signalk/server-api'
 import { createDebug } from '../../debug'
 import { Request, Response } from 'express'
 import { WithSecurityStrategy } from '../../security'
@@ -286,7 +286,7 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
   }
 
   const pathExpressions = ((query.paths as string) || '')
-    .replace(/[^0-9a-z.,_:]/gi, '')
+    .replace(/[^0-9a-z.,_:|]/gi, '')
     .split(',')
   const pathSpecs: PathSpec[] = pathExpressions.map(splitPathExpression)
 
@@ -335,11 +335,15 @@ export const parseResolution = (value: unknown): number | undefined => {
 
 // Parses a path expression into a PathSpec.
 // Input examples and what they parse into:
-//   'navigation.speedOverGround'         -> { path, aggregate: 'average', parameter: [] }
-//   'navigation.speedOverGround:max'     -> { path, aggregate: 'max',     parameter: [] }
-//   'navigation.speedOverGround:sma:5'   -> { path, aggregate: 'sma',     parameter: ['5'] }
-//   'navigation.position'                -> { path, aggregate: 'first',   parameter: [] }
-//   'navigation.position:last'           -> { path, aggregate: 'last',    parameter: [] }
+//   'navigation.speedOverGround'                    -> { path, aggregate: 'average', parameter: [] }
+//   'navigation.speedOverGround:max'                -> { path, aggregate: 'max',     parameter: [] }
+//   'navigation.speedOverGround:sma:5'              -> { path, aggregate: 'sma',     parameter: ['5'] }
+//   'navigation.speedOverGround|n2k-on-ve.can0.115' -> { path, aggregate: 'average', parameter: [], sourceRef }
+//   'navigation.speedOverGround:max|n2k-on-ve.can0.115' -> { path, aggregate: 'max', parameter: [], sourceRef }
+//   'navigation.position'                           -> { path, aggregate: 'first',   parameter: [] }
+//   'navigation.position:last'                      -> { path, aggregate: 'last',    parameter: [] }
+//
+// The `|` separator is used to specify a sourceRef after the path and aggregate.
 //
 // `navigation.position` is object-valued (lat/lon), so numeric aggregates
 // like `average` are not meaningful. When the caller does not specify an
@@ -347,7 +351,17 @@ export const parseResolution = (value: unknown): number | undefined => {
 // explicit aggregate is always honored so callers can still ask for
 // `last` or `middle_index` when that matches their intent.
 export const splitPathExpression = (pathExpression: string): PathSpec => {
-  const parts = pathExpression.split(':')
+  const pipeIdx = pathExpression.indexOf('|')
+  let sourceRef: SourceRef | undefined
+  let expr: string
+  if (pipeIdx >= 0) {
+    sourceRef = pathExpression.substring(pipeIdx + 1) as SourceRef
+    expr = pathExpression.substring(0, pipeIdx)
+  } else {
+    expr = pathExpression
+  }
+
+  const parts = expr.split(':')
   const aggregateMethod = (parts[1] ||
     (parts[0] === 'navigation.position'
       ? 'first'
@@ -355,11 +369,15 @@ export const splitPathExpression = (pathExpression: string): PathSpec => {
 
   const parameters: string[] = parts.slice(2).filter((p) => p.length > 0)
 
-  return {
+  const spec: PathSpec = {
     path: parts[0] as Path,
     aggregate: aggregateMethod,
     parameter: parameters
   }
+  if (sourceRef) {
+    spec.sourceRef = sourceRef
+  }
+  return spec
 }
 
 // Exported for unit testing.
