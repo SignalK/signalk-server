@@ -143,6 +143,7 @@ class Server {
       })
     )
     app.use(bodyParser.json({ limit: FILEUPLOADSIZELIMIT }))
+    app.use(bodyParser.urlencoded({ extended: true }))
 
     this.app = app
     app.started = false
