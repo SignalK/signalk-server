@@ -1,18 +1,51 @@
 import chai from 'chai'
 import jwt from 'jsonwebtoken'
 import type { StringValue } from 'ms'
+import net from 'net'
 import path from 'path'
 import { rimraf } from 'rimraf'
 import { freeport } from './ts-servertestutilities'
 import {
   startServerP,
   getAdminToken,
-  getReadOnlyToken
+  getReadOnlyToken,
+  serverTestConfigDirectory
 } from './servertestutilities'
 
 const expect = chai.expect
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ;(chai as any).Should()
+
+// Send a raw HTTP request so a literal '..' in the target reaches the server
+// un-normalized; well-behaved clients (fetch/http) collapse it before sending.
+function rawGetStatus(
+  host: string,
+  port: number,
+  target: string
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const socket = net.connect(port, host, () => {
+      socket.write(
+        `GET ${target} HTTP/1.1\r\nHost: ${host}\r\nConnection: close\r\n\r\n`
+      )
+    })
+    let response = ''
+    socket.on('data', (chunk) => {
+      response += chunk
+    })
+    socket.on('end', () => {
+      const match = response.match(/^HTTP\/1\.\d (\d{3})/)
+      if (match) {
+        resolve(Number(match[1]))
+      } else {
+        reject(
+          new Error(`No status line in response: ${response.slice(0, 80)}`)
+        )
+      }
+    })
+    socket.on('error', reject)
+  })
+}
 
 describe('Device Manager', function () {
   let url: string
@@ -62,6 +95,13 @@ describe('Device Manager', function () {
   })
 
   describe('?token= HTTP auth', function () {
+    afterEach(function () {
+      const config = server.app.securityStrategy.securityConfig
+      config.devices = (config.devices || []).filter(
+        (d: { clientId: string }) => d.clientId !== 'token-auth-test-device'
+      )
+    })
+
     it('authenticates via query parameter', async function () {
       const result = await fetch(
         `${url}/skServer/loginStatus?token=${adminToken}`
@@ -99,10 +139,6 @@ describe('Device Manager', function () {
       const body = await result.json()
       expect(body.status).to.equal('loggedIn')
       expect(body.userLevel).to.equal('readonly')
-
-      config.devices = config.devices.filter(
-        (d: { clientId: string }) => d.clientId !== 'token-auth-test-device'
-      )
     })
   })
 
@@ -361,7 +397,7 @@ describe('Device Manager', function () {
       expect(location).to.include(`token=${redirectDeviceToken}`)
     })
 
-    it('does not redirect device without dashboard', async function () {
+    it('redirects device without dashboard to default location', async function () {
       const createResult = await fetch(`${url}/skServer/security/devices`, {
         method: 'POST',
         headers: adminHeaders(),
@@ -380,7 +416,7 @@ describe('Device Manager', function () {
       expect(location).to.not.include('freeboard')
     })
 
-    it('does not redirect user tokens', async function () {
+    it('redirects user tokens to default location', async function () {
       const result = await fetch(`${url}/?token=${adminToken}`, {
         redirect: 'manual'
       })
@@ -422,11 +458,7 @@ describe('Device Manager', function () {
 
     beforeEach(async function () {
       await rimraf(
-        path.join(
-          process.env.SIGNALK_NODE_CONFIG_DIR as string,
-          'applicationData',
-          'devices'
-        )
+        path.join(serverTestConfigDirectory(), 'applicationData', 'devices')
       )
     })
 
@@ -436,10 +468,7 @@ describe('Device Manager', function () {
         `${url}/signalk/v1/applicationData/device/${deviceClientId}/testapp/1.0.0`,
         {
           method: 'POST',
-          headers: {
-            ...tokenHeaders(deviceToken),
-            'Content-Type': 'application/json'
-          },
+          headers: tokenHeaders(deviceToken),
           body: JSON.stringify(data)
         }
       )
@@ -468,7 +497,7 @@ describe('Device Manager', function () {
         `${url}/signalk/v1/applicationData/device/${deviceClientId}/testapp/1.0.0`,
         {
           method: 'POST',
-          headers: { ...adminHeaders(), 'Content-Type': 'application/json' },
+          headers: adminHeaders(),
           body: JSON.stringify(data)
         }
       )
@@ -554,6 +583,38 @@ describe('Device Manager', function () {
         { method: 'POST', headers: { 'Content-Type': 'application/json' } }
       )
       expect(result.status).to.equal(401)
+
+      config.devices = config.devices.filter(
+        (d: { clientId: string }) => d.clientId !== clientId
+      )
+    })
+
+    it('does not let a path traversal widen a wildcard permission', async function () {
+      const config = server.app.securityStrategy.securityConfig
+      config.devices = config.devices || []
+      const clientId = 'route-perm-traversal-device'
+      config.devices.push({
+        clientId,
+        permissions: 'readonly',
+        config: {},
+        description: 'traversal device',
+        requestedPermissions: ''
+      })
+
+      server.app.securityStrategy.registerPluginRoutePermissions(
+        'test-plugin-traversal',
+        [{ method: 'GET', path: '/public/*', permission: 'readonly' }]
+      )
+
+      const roToken = createDeviceToken(clientId)
+
+      const { hostname, port } = new URL(url)
+      const status = await rawGetStatus(
+        hostname,
+        Number(port),
+        `/plugins/test-plugin-traversal/public/../admin?token=${roToken}`
+      )
+      expect(status).to.equal(401)
 
       config.devices = config.devices.filter(
         (d: { clientId: string }) => d.clientId !== clientId
