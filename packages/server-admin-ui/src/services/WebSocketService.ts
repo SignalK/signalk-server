@@ -174,9 +174,12 @@ export class WebSocketService {
     }
     handlers.add(handler)
     return () => {
-      handlers!.delete(handler)
-      if (handlers!.size === 0) {
-        this.serverEventHandlers.delete(eventType)
+      const current = this.serverEventHandlers.get(eventType)
+      if (current) {
+        current.delete(handler)
+        if (current.size === 0) {
+          this.serverEventHandlers.delete(eventType)
+        }
       }
     }
   }
