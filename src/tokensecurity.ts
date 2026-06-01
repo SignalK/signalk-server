@@ -603,6 +603,21 @@ function tokenSecurityFactory(
     }
   }
 
+  // Resolve '.'/'..'/empty segments so a traversal in the request path cannot
+  // widen a wildcard route-permission match (e.g. /a/b/../admin vs /a/b/*).
+  function normalizeRoutePath(segments: string[]): string {
+    const resolved: string[] = []
+    for (const segment of segments) {
+      if (segment === '' || segment === '.') continue
+      if (segment === '..') {
+        resolved.pop()
+        continue
+      }
+      resolved.push(segment)
+    }
+    return '/' + resolved.join('/')
+  }
+
   function pluginRoutePermissionMiddleware(): (
     req: Request,
     res: Response,
@@ -621,7 +636,7 @@ function tokenSecurityFactory(
       if (pluginId) {
         const permissions = pluginRoutePermissions.get(pluginId)
         if (permissions) {
-          const routePath = '/' + parts.slice(2).join('/')
+          const routePath = normalizeRoutePath(parts.slice(2))
           const method = req.method.toUpperCase()
           const match = permissions.find((p) => {
             const methodMatch =
