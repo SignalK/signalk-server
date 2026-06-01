@@ -344,6 +344,18 @@ export default function Devices() {
     return `${window.location.origin}/?token=${token}`
   }
 
+  // navigator.clipboard is undefined outside secure contexts (plain-HTTP LAN),
+  // where writeText would throw synchronously before any .catch().
+  const copyTokenUrl = (token: string) => {
+    if (!navigator.clipboard) {
+      alert('Clipboard unavailable (requires HTTPS)')
+      return
+    }
+    navigator.clipboard
+      .writeText(getTokenUrl(token))
+      .catch(() => alert('Failed to copy to clipboard'))
+  }
+
   const displays = devices.filter((d) => getDeviceCategory(d) === 'display')
   const sensors = devices.filter((d) => getDeviceCategory(d) === 'sensor')
   const servers = devices.filter((d) => getDeviceCategory(d) === 'server')
@@ -384,11 +396,7 @@ export default function Devices() {
                 <Button
                   size="sm"
                   variant="outline-success"
-                  onClick={() => {
-                    navigator.clipboard
-                      .writeText(getTokenUrl(createdToken.token))
-                      .catch(() => alert('Failed to copy to clipboard'))
-                  }}
+                  onClick={() => copyTokenUrl(createdToken.token)}
                 >
                   Copy URL
                 </Button>{' '}
@@ -652,11 +660,7 @@ export default function Devices() {
                         <Button
                           size="sm"
                           variant="outline-success"
-                          onClick={() => {
-                            navigator.clipboard
-                              .writeText(getTokenUrl(deviceToken))
-                              .catch(() => alert('Failed to copy to clipboard'))
-                          }}
+                          onClick={() => copyTokenUrl(deviceToken)}
                         >
                           Copy URL
                         </Button>
