@@ -1126,11 +1126,14 @@ export default class DeltaCache {
             if (claimedBy && claimedBy.id !== sg.id) continue
             newcomers.add(ref)
             claimedByAnySavedGroup.add(ref)
-            // Claim the newcomer for this group so a later saved group that
+            // Claim the newcomer for this group so a later active group that
             // also has it as a live publisher skips it at the guard above;
-            // otherwise the source lands in two groups and the PUT
-            // /skServer/priorities validator rejects the save.
-            sourceToSavedGroup.set(ref, sg)
+            // otherwise the source lands in two active groups and the PUT
+            // /skServer/priorities validator rejects the save. Only active
+            // groups claim: the validator ignores inactive groups, so an
+            // inactive claim gives no benefit and would wrongly suppress the
+            // newcomer on a later active group's card.
+            if (!sg.inactive) sourceToSavedGroup.set(ref, sg)
           }
         }
         const newcomerList = [...newcomers].sort()
