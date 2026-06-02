@@ -539,4 +539,115 @@ describe('Deltacache', () => {
         delete settings.priorityGroups
       })
   })
+
+  it('getReconciledGroups does not add the same newcomer to two active saved groups', function () {
+    // A live publisher that fans out across paths owned by TWO different
+    // saved groups must not be added as a newcomer to both. Before the
+    // fix, the second group's newcomer loop saw the source as unclaimed
+    // (sourceToSavedGroup was never updated when the first group claimed
+    // it) and added it again, so the PUT /skServer/priorities validator
+    // — a source may belong to at most one active group — rejected the
+    // save and the user saw "Saving priorities settings failed!".
+    const PATH_A = 'environment.depth.groupA'
+    const PATH_B = 'environment.depth.groupB'
+    const settings = theServer.app.config.settings
+    settings.priorityGroups = [
+      {
+        id: 'groupA',
+        sources: ['savedA1', 'savedA2']
+      },
+      {
+        id: 'groupB',
+        sources: ['savedB1', 'savedB2']
+      }
+    ]
+    return doSendADelta({
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: 'savedA1',
+          timestamp: '2024-03-01T10:00:00.000Z',
+          values: [{ path: PATH_A, value: 1 }]
+        }
+      ]
+    })
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'savedA2',
+              timestamp: '2024-03-01T10:00:01.000Z',
+              values: [{ path: PATH_A, value: 2 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'savedB1',
+              timestamp: '2024-03-01T10:00:02.000Z',
+              values: [{ path: PATH_B, value: 3 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'savedB2',
+              timestamp: '2024-03-01T10:00:03.000Z',
+              values: [{ path: PATH_B, value: 4 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'newcomerDual',
+              timestamp: '2024-03-01T10:00:04.000Z',
+              values: [{ path: PATH_A, value: 5 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: 'newcomerDual',
+              timestamp: '2024-03-01T10:00:05.000Z',
+              values: [{ path: PATH_B, value: 6 }]
+            }
+          ]
+        })
+      )
+      .then(() => {
+        const reconciled = theServer.app.deltaCache.getReconciledGroups()
+        const sourceToGroupCount = new Map()
+        for (const g of reconciled) {
+          for (const s of g.sources) {
+            sourceToGroupCount.set(s, (sourceToGroupCount.get(s) || 0) + 1)
+          }
+        }
+        const dups = [...sourceToGroupCount.entries()].filter(([, n]) => n > 1)
+        dups.should.deep.equal([])
+        const groupsWithNewcomer = reconciled.filter((g) =>
+          g.sources.includes('newcomerDual')
+        )
+        groupsWithNewcomer.length.should.equal(1)
+      })
+      .finally(() => {
+        delete settings.priorityGroups
+      })
+  })
 })

@@ -1126,6 +1126,11 @@ export default class DeltaCache {
             if (claimedBy && claimedBy.id !== sg.id) continue
             newcomers.add(ref)
             claimedByAnySavedGroup.add(ref)
+            // Claim the newcomer for this group so a later saved group that
+            // also has it as a live publisher skips it at the guard above;
+            // otherwise the source lands in two groups and the PUT
+            // /skServer/priorities validator rejects the save.
+            sourceToSavedGroup.set(ref, sg)
           }
         }
         const newcomerList = [...newcomers].sort()
