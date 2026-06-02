@@ -1,6 +1,6 @@
 # Docker build matrix
 
-`.github/build-matrix.json` is the single source of truth for the OS × Node × Arch combinations the Docker workflows build. The three Docker workflows — `build-base-image.yml`, `build-docker.yml` and `release.yml` — read it in their `prepare` job to derive the actual build / manifest / copy matrices.
+`.github/build-matrix.json` is the single source of truth for the OS × Node × Arch (× Edition) combinations the Docker workflows build. The three Docker workflows — `build-base-image.yml`, `build-docker.yml` and `release.yml` — read it in their `prepare` job to derive the actual build / manifest / copy matrices. `build-base-image.yml` builds only the OS × Node × Arch base images and ignores `editions`; `build-docker.yml` and `release.yml` also cross-product `editions` to produce the full and core application images.
 
 ## Top-level fields
 
@@ -19,10 +19,14 @@
   - `default_enabled` — see above.
   - `extra_platforms` — optional `{ <arch.id>: <platform string> }` appended to that arch's base platform for this Node major.
   - `exclude_archs` — optional `[<arch.id>, …]` listing archs that should not be built for this Node major.
+- `editions` — list of image editions (used by `build-docker.yml` and `release.yml` only). Each entry:
+  - `id` — edition identifier (e.g. `full`, `core`). Used in job display names and passed as the `EDITION` build-arg to a single Dockerfile (`./docker/Dockerfile` for dev, `./docker/Dockerfile_rel` for release), which branches on it internally.
+  - `tag_suffix` — appended to every image tag for this edition (e.g. `-core`). Empty for the default edition.
+  - `default_enabled` — whether this edition is built. Editions are **not** `workflow_dispatch` inputs; they always follow this flag (the per-`(OS × Node)` dispatch checkbox enables the row, and each enabled edition within it is built when its own `default_enabled` is `true`).
 
 ## Naming conventions
 
-- **Image tags.** For the ubuntu family the node label is rendered as `<node>.x` (e.g. `24.x`); for other families it is `<node>` (e.g. `24`). Arch suffix (`amd`, `arm`) comes from `architectures[].id`.
+- **Image tags.** For the ubuntu family the node label is rendered as `<node>.x` (e.g. `24.x`); for other families it is `<node>` (e.g. `24`). Arch suffix (`amd`, `arm`) comes from `architectures[].id`. The edition `tag_suffix` (e.g. `-core`) is appended last, so the core variant rolls up as `latest-core` / `latest-alpine-core` and pins as `X.Y.Z-core` / `X.Y.Z-alpine-core`.
 - **Dispatch input names.** `<family>_<id_with_-_and_._mapped_to__>_node_<node_id>` when `family != id`, otherwise `<id>_node_<node_id>`. Examples: `ubuntu_24_04_node_24`, `alpine_node_24`. The leading `<family>_` segment exists because GitHub Actions input names must start with a letter — `24_04_…` would be rejected.
 
 ## Adding things
@@ -30,7 +34,8 @@
 - **New OS:** append a row to `os_variants` and manually add a corresponding `workflow_dispatch` input to `build-base-image.yml`, `build-docker.yml`, and `release.yml`.
 - **New Node major:** append a row to `node_versions` and add inputs to the same three workflows.
 - **New arch:** append a row to `architectures`. No workflow input changes needed — arches aren't part of the dispatch input UI.
+- **New edition:** append a row to `editions` with its `tag_suffix`, and add a matching `case` branch keyed on `EDITION` in `./docker/Dockerfile` (dev) and `./docker/Dockerfile_rel` (release). No workflow input changes needed — editions aren't part of the dispatch input UI.
 
 ## Behavior
 
-Scheduled / push / tag runs ignore `workflow_dispatch` inputs and use `default_enabled` from the JSON. On `workflow_dispatch`, the per-`(OS × Node)` checkbox overrides `default_enabled` for that row.
+Scheduled / push / tag runs ignore `workflow_dispatch` inputs and use `default_enabled` from the JSON. On `workflow_dispatch`, the per-`(OS × Node)` checkbox overrides `default_enabled` for that row; editions are never dispatch-controlled and always follow their own `default_enabled`.
