@@ -221,6 +221,19 @@ Both fields take effect only when `sourcePolicy` is `'preferred'` (the default).
 
 WebSocket subscriptions can use `excludeSources` directly. `excludeSelf` is meaningless for them (there is no plugin identity to resolve against) and is silently ignored — WebSocket clients should always use the explicit form.
 
+The match is on the `$source` of the deltas your plugin emits, and `excludeSelf` resolves to your bare `plugin.id`. So your emitted deltas must carry `$source === plugin.id` for the exclusion to apply. The simplest way is to emit with **no** `source` object at all — the server then sets `$source` to your `plugin.id`:
+
+```javascript
+app.handleMessage(plugin.id, {
+  context: 'vessels.self',
+  updates: [
+    { values: [{ path: 'environment.wind.speedTrue', value: corrected }] }
+  ]
+})
+```
+
+If you do supply a `source` object, set its `$source` to your `plugin.id` explicitly so it matches. (See [Sending Deltas](#sending-deltas) below.)
+
 ## Sending Deltas
 
 A SignalK plugin can not only read deltas, but can also send them. This is done using the `handleMessage()` API method and supplying:
@@ -248,6 +261,58 @@ app.handleMessage(
   },
   'v1'
 )
+```
+
+## Correction and transform plugins
+
+A common pattern is a plugin that reads an upstream value on a path, applies a correction or transform, and publishes an improved value on the **same** path under its own label — a speed-through-water heel correction, a calibration offset, and so on. The user then ranks the plugin's output above the raw source in [source priority](../../setup/source-priority.md), so downstream consumers get the corrected value.
+
+For this pattern, **subscribe with `excludeSelf`** as described in [Excluding Sources](#excluding-sources-excludesources--excludeself). Do **not** use `registerDeltaInputHandler`:
+
+- Delta input handlers run **after** source-priority filtering. Once the user ranks your output above the raw source, the priority filter removes the raw source's value before your handler sees it. Your handler stops being triggered, your corrected value goes stale and falls back to the raw source, the raw source flows again, your handler fires once — and the path oscillates.
+- An `excludeSelf` subscription reads every source on the path regardless of ranking (so the raw source always reaches you) while masking out your own output (so you don't re-process it). The user's priority ranking still decides which value is canonical for everyone else.
+
+A complete heel-correction example:
+
+```javascript
+let unsubscribes = []
+
+plugin.start = () => {
+  app.subscriptionmanager.subscribe(
+    {
+      context: 'vessels.self',
+      excludeSelf: true,
+      subscribe: [{ path: 'navigation.speedThroughWater' }]
+    },
+    unsubscribes,
+    (err) => app.setPluginError(err),
+    (delta) => {
+      delta.updates.forEach((u) => {
+        u.values.forEach((pv) => {
+          if (pv.path !== 'navigation.speedThroughWater') return
+          const corrected = applyHeelCorrection(pv.value)
+          // No source object: $source defaults to plugin.id, so the
+          // excludeSelf subscription masks this delta and does not loop.
+          app.handleMessage(plugin.id, {
+            context: 'vessels.self',
+            updates: [
+              {
+                values: [
+                  { path: 'navigation.speedThroughWater', value: corrected }
+                ]
+              }
+            ]
+          })
+        })
+      })
+    }
+  )
+}
+
+plugin.stop = () => {
+  unsubscribes.forEach((f) => f())
+  unsubscribes = []
+}
 ```
 
 ## Sending NMEA 2000 data from a plugin
