@@ -83,11 +83,14 @@ function toMatchKey(key: string): string {
 
 // Strip the context root + identity (first two dot segments) so a lookup
 // resolves the same meta under ANY context, yielding the '/*/<tail>' shape
-// the re-keyed matcher expects. Callers only ever pass context-prefixed
-// paths (vessels.self.<path>, <context>.<identity>.<path>); resources are
-// served by ResourceProvider and never reach getMetadata (rest.js next()s
-// on the 'resources' prefix before any getMetadata call), so the
-// unconditional two-segment strip is safe.
+// the re-keyed matcher expects. This is the FIRST of getMetadata's two
+// lookup stages and assumes a context-prefixed path
+// (vessels.self.<path>, <context>.<identity>.<path>) — the common case.
+// It is not safe for every input: a bare singleton or short-segment path
+// (self, version, meteo.environment.outside.temperature) has no context
+// root + identity to strip, so the two-segment slice produces a '/*/...'
+// form that matches nothing. getMetadata falls back to a literal-path
+// lookup for those, so this strip does not need to handle them.
 function toLookupPath(path: string): string {
   return '/*/' + path.split('.').slice(2).join('/')
 }
