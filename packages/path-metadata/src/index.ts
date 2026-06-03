@@ -157,8 +157,13 @@ export class MetadataRegistry {
     if (parts.length < 3) {
       return undefined
     }
-    // Use wildcard key so all identities share the same cloned entry
-    const key = `/${parts[0]}/*/${parts.slice(2).join('/')}`
+    // Key runtime meta by path alone: a wildcard stands in for both the
+    // context root and the identity, so meta registered for a path under
+    // one context (e.g. 'meteo') is found by a value at the same path
+    // under any context (e.g. 'vessels'). Metadata describes the path
+    // semantics, not the vessel — mirroring how the spec entries are
+    // shared across contexts by expandContextPrefixes.
+    const key = `/*/*/${parts.slice(2).join('/')}`
 
     // Check for existing wildcard entry first
     if (this.allMetadata[key]) {
@@ -211,9 +216,11 @@ export class MetadataRegistry {
     if (!path) {
       return
     }
-    // Use wildcard key pattern so lookups with any identity match
-    const root = context.split('.')[0]
-    const key = `/${root}/*/${path.replace(/\./g, '/')}`
+    // Key by path alone (wildcard for both context root and identity) so
+    // meta registered under one context (e.g. 'meteo', as the FreeboardSK
+    // plugin does) is resolvable by a value at the same path under any
+    // context (e.g. 'vessels' for an AIS target). See internalGetMetadata.
+    const key = `/*/*/${path.replace(/\./g, '/')}`
     const existing = this.allMetadata[key]
     if (existing) {
       Object.assign(existing, meta)
@@ -222,7 +229,15 @@ export class MetadataRegistry {
 
     // Seed from the matching spec template, if any, so untouched fields
     // like units / enum survive when a plugin only updates description.
-    const seed = this.getMetadata(`${context}.${path}`)
+    // The /*/*/ key is shared across all context roots, so fall back to
+    // the vessel spec template when the registering context (e.g. 'meteo')
+    // has no spec entry of its own. Without this, a foreign-context meta
+    // that only sets `description` would store a /*/*/ entry with no
+    // `units`, and its front-of-array regex would shadow the /vessels/*/
+    // spec wildcard and strip units from the same path under every context.
+    const seed =
+      this.getMetadata(`${context}.${path}`) ??
+      this.getMetadata(`vessels.*.${path}`)
     const entry: PathMetadataEntry = { description: '' }
     if (seed) Object.assign(entry, seed)
     Object.assign(entry, meta)

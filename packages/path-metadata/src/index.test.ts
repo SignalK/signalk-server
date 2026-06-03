@@ -89,4 +89,80 @@ describe('getMetadata', () => {
       )
     })
   })
+
+  describe('runtime meta is resolvable across contexts (path-keyed)', () => {
+    // Regression: the FreeboardSK server plugin registers environment-path
+    // metas under context 'meteo', but values for the same path can arrive
+    // under a different context — e.g. an AIS target under vessels.<mmsi>.
+    // Metadata describes the path, not the vessel, so it must resolve
+    // regardless of which context registered it.
+    it('meta added under "meteo" resolves for a value under "vessels"', () => {
+      metadataRegistry.addMetaData('meteo', 'environment.water.level', {
+        units: 'm',
+        description: 'Water level.'
+      })
+
+      // via getMetadata (used by the WS meta channel and /paths)
+      const viaGet = getMetadata(
+        'vessels.urn:mrn:imo:mmsi:123456789.environment.water.level'
+      )
+      expect(viaGet).to.not.equal(undefined)
+      expect((viaGet as { units?: string }).units).to.equal('m')
+      expect((viaGet as { description?: string }).description).to.equal(
+        'Water level.'
+      )
+
+      // via internalGetMetadata (used by FullSignalK on the first value)
+      const viaInternal = metadataRegistry.internalGetMetadata(
+        'vessels.urn:mrn:imo:mmsi:123456789.environment.water.level'
+      )
+      expect(viaInternal).to.not.equal(undefined)
+      expect((viaInternal as { units?: string }).units).to.equal('m')
+    })
+
+    it('also resolves under the original "meteo" context', () => {
+      metadataRegistry.addMetaData('meteo', 'environment.water.level', {
+        units: 'm',
+        description: 'Water level.'
+      })
+      const meta = getMetadata(
+        'meteo.urn:mrn:signalk:uuid:abc.environment.water.level'
+      )
+      expect((meta as { units?: string }).units).to.equal('m')
+    })
+
+    it('does not bleed onto a different path', () => {
+      metadataRegistry.addMetaData('meteo', 'environment.water.level', {
+        units: 'm',
+        description: 'Water level.'
+      })
+      // A different path under the same context root is unaffected.
+      expect(
+        getMetadata('vessels.self.environment.depth.belowTransducer')
+      ).to.not.have.property('description', 'Water level.')
+      // A truncated path (bare water.level) must not match the full path.
+      expect(getMetadata('vessels.self.water.level')).to.equal(undefined)
+    })
+
+    it('a description-only foreign-context meta keeps the spec units', () => {
+      // The path-keyed /*/*/ entry sits at the front of the lookup array,
+      // so a foreign-context (e.g. 'meteo') meta that only sets description
+      // must still seed from the vessel spec template — otherwise it would
+      // shadow the /vessels/*/ spec wildcard and strip the spec units from
+      // the same path under every context.
+      metadataRegistry.addMetaData(
+        'meteo',
+        'electrical.batteries.0.capacity.stateOfCharge',
+        { description: 'state of charge (from meteo plugin)' }
+      )
+      const meta = getMetadata(
+        self('electrical.batteries.0.capacity.stateOfCharge')
+      )
+      expect(meta).to.not.equal(undefined)
+      expect((meta as { units?: string }).units).to.equal('ratio')
+      expect((meta as { description?: string }).description).to.equal(
+        'state of charge (from meteo plugin)'
+      )
+    })
+  })
 })
