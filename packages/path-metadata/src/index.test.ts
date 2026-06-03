@@ -89,4 +89,78 @@ describe('getMetadata', () => {
       )
     })
   })
+
+  // Metadata is a PATH-keyed, context-INDEPENDENT namespace: a path's
+  // units/description are the same under any context root. The seed is
+  // authored as /vessels/*/<path> but must resolve under meteo.<id>,
+  // aircraft.<id>, an arbitrary root, etc.
+  describe('metadata resolves independently of the context root', () => {
+    it('resolves the same spec meta under a non-vessel context', () => {
+      const meteo = getMetadata(
+        'meteo.urn:mrn:imo:mmsi:002320001.environment.outside.temperature'
+      )
+      expect((meteo as { units?: string })?.units).to.equal('K')
+      const aircraft = getMetadata(
+        'aircraft.self.environment.outside.temperature'
+      )
+      expect((aircraft as { units?: string })?.units).to.equal('K')
+    })
+
+    it('resolves spec meta under an entirely arbitrary context root', () => {
+      const meta = getMetadata('foobar.self.environment.outside.temperature')
+      expect((meta as { units?: string })?.units).to.equal('K')
+    })
+
+    it('addMetaData under one context is visible under another', () => {
+      metadataRegistry.addMetaData(
+        'meteo.x',
+        'environment.outside.temperature',
+        { description: 'from meteo' }
+      )
+      const meta = getMetadata(self('environment.outside.temperature'))
+      expect((meta as { description?: string }).description).to.equal(
+        'from meteo'
+      )
+      // The spec unit survives because the plugin only set description.
+      expect((meta as { units?: string }).units).to.equal('K')
+    })
+
+    it('addMetaData ignores the context root for keying', () => {
+      // Identity-less context root only — must still populate the path for
+      // every context.
+      metadataRegistry.addMetaData('meteo', 'plugin.only.path', { units: 'C' })
+      const meta = getMetadata(self('plugin.only.path'))
+      expect((meta as { units?: string }).units).to.equal('C')
+    })
+
+    it('internalGetMetadata shares one clone across contexts', () => {
+      const a = metadataRegistry.internalGetMetadata(
+        'vessels.self.navigation.speedOverGround'
+      )
+      const b = metadataRegistry.internalGetMetadata(
+        'meteo.x.navigation.speedOverGround'
+      )
+      expect(a).to.not.equal(undefined)
+      expect(a).to.equal(b)
+    })
+  })
+
+  describe('the /paths view (getAllMetadata) keeps its on-disk shape', () => {
+    it('exposes only authored seed keys, not runtime adds', () => {
+      const all = metadataRegistry.getAllMetadata()
+      // Authored shape PathReference.tsx filters on is unchanged.
+      expect(all).to.have.property('/vessels/*/environment/outside/temperature')
+      expect(all).to.have.property('/self')
+      expect(all).to.have.property('/version')
+
+      // Runtime adds land in the separate runtimeClones map and must NOT
+      // leak into /paths under any key.
+      metadataRegistry.addMetaData('vessels.self', 'plugin.runtime.path', {
+        units: 'V'
+      })
+      const after = metadataRegistry.getAllMetadata()
+      expect(after).to.not.have.property('/*/plugin/runtime/path')
+      expect(after).to.not.have.property('/vessels/*/plugin/runtime/path')
+    })
+  })
 })
