@@ -180,7 +180,15 @@ export class MetadataRegistry {
    * Returns the metadata entry or undefined if no match.
    */
   getMetadata(path: string): PathMetadataEntry | undefined {
-    return this.getMetadataForLookupPath(toLookupPath(path))
+    // Context-independent lookup first (strip context root + identity).
+    // Fall back to the literal path so non-context root entries — /self,
+    // /version — still resolve when looked up bare; those keys are not
+    // '/<root>/*/<tail>'-shaped, so they never participate in the
+    // path-only matcher.
+    return (
+      this.getMetadataForLookupPath(toLookupPath(path)) ??
+      this.getMetadataForLookupPath('/' + path.replace(/\./g, '/'))
+    )
   }
 
   // Match an already-normalized '/*/<tail>' lookup path against the regex
@@ -233,9 +241,12 @@ export class MetadataRegistry {
     // silently change every other path that matches the same wildcard.
     const cloned: PathMetadataEntry = structuredClone(result.metadata)
     this.runtimeClones[key] = cloned
-    // Escape special chars first, then replace wildcard
+    // Escape special chars first, then replace wildcard. Front of the
+    // array so this per-path clone wins over the generic spec wildcard —
+    // and so a later addMetaData that merges into this same clone (e.g. a
+    // PUT meta displayUnits override) is found ahead of the spec entry.
     const escaped = key.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    this.regexEntries.push({
+    this.regexEntries.unshift({
       pattern: new RegExp(`^${escaped.replace(/\*/g, '[^/]+')}$`),
       key,
       metadata: cloned

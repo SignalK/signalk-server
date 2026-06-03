@@ -163,4 +163,42 @@ describe('getMetadata', () => {
       expect(after).to.not.have.property('/vessels/*/plugin/runtime/path')
     })
   })
+
+  describe('non-context root entries still resolve when looked up bare', () => {
+    // /self and /version are not '/<root>/*/<path>'-shaped, so the path-only
+    // matcher cannot reach them. getMetadata falls back to a literal lookup
+    // so a bare 'self'/'version' still resolves (as on the old schema).
+    it('resolves /self and /version by their literal key', () => {
+      expect(getMetadata('self')).to.not.equal(undefined)
+      expect(getMetadata('version')).to.not.equal(undefined)
+    })
+  })
+
+  describe('a per-path runtime clone wins over the generic spec wildcard', () => {
+    // A value delta clones the spec entry (internalGetMetadata); a later
+    // PUT meta override merges into that same clone (addMetaData). The
+    // clone's regex must sit ahead of the spec wildcard so getMetadata
+    // returns the override, not the untouched spec entry. Regression for
+    // the unit-preferences displayUnits override.
+    it('returns a later addMetaData override after an earlier value clone', () => {
+      const p = 'vessels.self.navigation.speedOverGround'
+      // value delta path: clone the spec entry first
+      metadataRegistry.internalGetMetadata(p)
+      // PUT meta path: merge an override into the same path
+      metadataRegistry.addMetaData(
+        'vessels.self',
+        'navigation.speedOverGround',
+        {
+          displayUnits: { category: 'speed', targetUnit: 'km/h' }
+        }
+      )
+      const meta = getMetadata(p) as {
+        units?: string
+        displayUnits?: { targetUnit?: string }
+      }
+      expect(meta.displayUnits?.targetUnit).to.equal('km/h')
+      // The spec unit is preserved through the merge.
+      expect(meta.units).to.equal('m/s')
+    })
+  })
 })
