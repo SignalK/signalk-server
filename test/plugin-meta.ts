@@ -117,4 +117,47 @@ describe('Plugin meta deltas', function () {
       expect(res.status).to.equal(404)
     }
   })
+
+  it('meta registered under a context without an identity reaches values under its identified context', async function () {
+    // Some plugins (e.g. FreeboardSK) register metadata for a path under
+    // the bare context root, with no identity segment (context: 'meteo').
+    // findContext rejects identity-less contexts to avoid orphan tree
+    // entries, but that also dropped the meta delta entirely — so a value
+    // arriving under the identified context (meteo.<id>) lost its meta.
+    const id = 'urn:mrn:imo:mmsi:002655619:837976'
+    await sendADelta({
+      context: 'meteo',
+      updates: [
+        {
+          $source: 'freeboard-sk',
+          timestamp: '2026-04-24T00:00:03.000Z',
+          meta: [
+            {
+              path: 'environment.water.level',
+              value: { units: 'm', description: 'Water level.' }
+            }
+          ]
+        }
+      ]
+    })
+    await sendADelta({
+      context: `meteo.${id}`,
+      updates: [
+        {
+          $source: 'ais.AI',
+          timestamp: '2026-04-24T00:00:04.000Z',
+          values: [{ path: 'environment.water.level', value: 0.63 }]
+        }
+      ]
+    })
+    await new Promise((r) => setTimeout(r, 80))
+
+    const res = await fetch(
+      `${host}/signalk/v1/api/meteo/${id}/environment/water/level/meta`
+    )
+    expect(res.status).to.equal(200)
+    const meta = await res.json()
+    expect(meta.units).to.equal('m')
+    expect(meta.description).to.equal('Water level.')
+  })
 })

@@ -354,6 +354,26 @@ export class FullSignalK extends EventEmitter {
     if (context) {
       this.addUpdates(context, delta.context, delta.updates)
       this.updateLastModified(delta.context)
+    } else if (delta.context && delta.updates) {
+      // A context without an identity segment (e.g. the bare `meteo`
+      // context some plugins use to register metadata) is rejected by
+      // findContext to avoid seeding an orphan tree entry. Meta updates
+      // only populate the global metadataRegistry — keyed by contextPath,
+      // never written onto the tree — so they carry no orphan risk and
+      // must still be applied; otherwise that metadata is silently lost.
+      // Value updates are intentionally not applied here: they would seed
+      // the orphan tree entry findContext exists to prevent.
+      for (const update of delta.updates) {
+        if (update.meta) {
+          addMetas(
+            this.root,
+            delta.context,
+            update.source || update['$source'],
+            update.timestamp,
+            update.meta
+          )
+        }
+      }
     }
   }
 
