@@ -232,7 +232,7 @@ app.handleMessage(plugin.id, {
 })
 ```
 
-If you do supply a `source` object, set its `$source` to your `plugin.id` explicitly so it matches. (See [Sending Deltas](#sending-deltas) below.)
+If you do supply a `source` object, also set a top-level `$source: plugin.id` on the update — the server keeps an explicit `$source` and only derives one from the `source` object when it is absent, so this guarantees the match. (See [Sending Deltas](#sending-deltas) below.)
 
 ## Sending Deltas
 
