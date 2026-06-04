@@ -617,6 +617,13 @@ jobs:
           }
 
           // ── Mock app with delta capture ─────────────────────────
+          // The real server app extends EventEmitter, so plugins that
+          // app.on(...) in start() and app.removeListener(...) in stop()
+          // rely on the full emitter surface. Back the mock with a real
+          // emitter so register/remove stay mutually consistent.
+          const { EventEmitter } = require('node:events');
+          const mockEmitter = new EventEmitter();
+          mockEmitter.setMaxListeners(0);
           const mockApp = {
             // ── Server configuration ──────────────────────────────
             config: { configPath: '/tmp', version: '0.0.0' },
@@ -665,8 +672,15 @@ jobs:
             registerActionHandler: () => {},
 
             // ── Event system ──────────────────────────────────────
-            on: () => ({ unsubscribe: () => {} }),
-            emit: () => {},
+            // Delegate to a real EventEmitter so on()/once()/addListener()
+            // and removeListener()/removeAllListeners() share one registry,
+            // matching the server app (which extends EventEmitter).
+            on: (...args) => mockEmitter.on(...args),
+            addListener: (...args) => mockEmitter.addListener(...args),
+            once: (...args) => mockEmitter.once(...args),
+            removeListener: (...args) => mockEmitter.removeListener(...args),
+            removeAllListeners: (...args) => mockEmitter.removeAllListeners(...args),
+            emit: (...args) => mockEmitter.emit(...args),
             emitPropertyValue: () => {},
             onPropertyValues: () => () => {},
 
