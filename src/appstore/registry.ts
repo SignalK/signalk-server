@@ -18,7 +18,7 @@ import { type IndicatorCheck, PluginCiSchema } from './schemas'
 
 const debug = createDebug('signalk-server:appstore:registry')
 
-const DEFAULT_REGISTRY_BASE = 'https://dirkwa.github.io/signalk-plugin-registry'
+const DEFAULT_REGISTRY_BASE = 'https://signalk.org/signalk-plugin-registry'
 const INDEX_TTL_MS = 60 * 60 * 1000 // 1 hour
 const PLUGIN_TTL_MS = 6 * 60 * 60 * 1000 // 6 hours
 const FETCH_TIMEOUT_MS = 20_000
