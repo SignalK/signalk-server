@@ -8,10 +8,14 @@ RUN userdel -r ubuntu \
 
 COPY docker/avahi/avahi-dbus.conf docker/bluez/bluezuser.conf /etc/dbus-1/system.d/
 
+# Default podman service destination → host docker/podman socket when bind-mounted.
+COPY docker/containers.conf /etc/containers/containers.conf
+
 RUN apt-get update \
   && apt-get -y install --no-install-recommends git \
   python3 python3-venv python3-pip build-essential avahi-daemon libnss-mdns \
   sysstat procps nano curl libcap2-bin sudo dbus bluez \
+  jq uidmap fuse-overlayfs \
   && groupadd -r docker -g 991 \
   && groupadd -r i2c -g 990 \
   && groupadd -r spi -g 989 \
@@ -30,4 +34,28 @@ RUN curl -fsSL https://deb.nodesource.com/setup_$NODE | bash - \
   && npm config set fetch-retry-maxtimeout 120000 \
   && npm cache clean -f \
   && npm install npm@latest -g \
+  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Container runtime CLIs for plugins that orchestrate sibling containers
+# (e.g. signalk-container, signalk-questdb, signalk-grafana). The `docker`
+# group + `node` group membership are already configured above; this layer
+# adds the matching client binaries. Sockets are still expected to be bind-
+# mounted from the host (/var/run/docker.sock or /run/user/<uid>/podman/podman.sock).
+#
+# uidmap (installed above) provides newuidmap/newgidmap so podman's in-container
+# rootless fallback path does not abort with "newuidmap: not found"; fuse-overlayfs
+# is insurance for hosts whose backing filesystem refuses kernel overlayfs, where
+# podman would otherwise drop to the unusably slow vfs driver.
+#
+# docker-ce-cli is fetched from Docker's official APT repo (Ubuntu's main
+# repo only ships docker.io, which pulls in the daemon — unwanted here).
+RUN apt-get update \
+  && apt-get -y install --no-install-recommends podman \
+  && install -m 0755 -d /etc/apt/keyrings \
+  && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
+  && chmod a+r /etc/apt/keyrings/docker.asc \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+       > /etc/apt/sources.list.d/docker.list \
+  && apt-get update \
+  && apt-get -y install --no-install-recommends docker-ce-cli \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

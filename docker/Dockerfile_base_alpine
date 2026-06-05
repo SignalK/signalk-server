@@ -3,14 +3,24 @@ FROM node:${NODE}-alpine
 
 COPY docker/avahi/avahi-dbus.conf docker/bluez/bluezuser.conf /etc/dbus-1/system.d/
 
+# Default podman service destination → host docker/podman socket when bind-mounted.
+COPY docker/containers.conf /etc/containers/containers.conf
+
 RUN deluser node 2>/dev/null || true && \
     delgroup node 2>/dev/null || true
 
+# Container runtime CLI for plugins that orchestrate sibling containers
+# (signalk-container, signalk-questdb, signalk-grafana). Alpine has no
+# docker-ce-cli (Docker's APT repo is Debian/Ubuntu only); podman speaks the
+# Docker API over a bind-mounted host socket. shadow-subids provides
+# newuidmap/newgidmap for podman's in-container rootless fallback path;
+# fuse-overlayfs is insurance for hosts whose kernel overlayfs is refused.
 RUN apk add --no-cache \
     sudo git bash \
     python3 py3-virtualenv py3-pip build-base \
     avahi avahi-compat-libdns_sd \
     procps-ng nano curl libcap-setcap dbus bluez \
+    jq podman fuse-overlayfs shadow-subids \
  && addgroup -g 991 -S docker \
  && addgroup -g 990 -S i2c \
  && addgroup -g 989 -S spi \
