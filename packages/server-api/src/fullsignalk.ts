@@ -292,17 +292,47 @@ function addValues(
 }
 
 function addMeta(
-  _context: AnyObject,
+  context: AnyObject,
   contextPath: string,
   _source: AnyObject | string,
   _timestamp: string,
-  pathValue: AnyObject
+  pathValue: AnyObject,
+  applyToTree: boolean
 ): void {
   if (pathValue.path === undefined || pathValue.value === undefined) {
     console.error('Illegal value in delta:' + JSON.stringify(pathValue))
     return
   }
   metadataRegistry.addMetaData(contextPath, pathValue.path, pathValue.value)
+  if (applyToTree) {
+    mergeLeafMeta(context, pathValue.path, pathValue.value)
+  }
+}
+
+// Merge metadata onto an existing value-bearing leaf so a meta delta that
+// arrives after the value (e.g. an N2K device echoes a path a plugin also
+// owns and the plugin registers supportsPut afterwards) still reaches the
+// leaf. Only existing value leaves are updated: a meta-only path is left to
+// the registry alone, so no phantom tree node is created that DELETE-meta
+// could not later clear. The new fields win, mirroring last-writer-wins.
+function mergeLeafMeta(
+  context: AnyObject,
+  path: string,
+  meta: AnyObject
+): void {
+  if (path.length === 0) {
+    return
+  }
+  let node = context
+  for (const part of path.split('.')) {
+    node = node[part]
+    if (!node) {
+      return
+    }
+  }
+  if (node.value !== undefined) {
+    node.meta = { ...node.meta, ...meta }
+  }
 }
 
 function addMetas(
@@ -310,10 +340,11 @@ function addMetas(
   contextPath: string,
   source: AnyObject | string,
   timestamp: string,
-  metas: AnyObject[]
+  metas: AnyObject[],
+  applyToTree: boolean
 ): void {
   for (const meta of metas) {
-    addMeta(context, contextPath, source, timestamp, meta)
+    addMeta(context, contextPath, source, timestamp, meta, applyToTree)
   }
 }
 
@@ -386,7 +417,8 @@ export class FullSignalK extends EventEmitter {
             delta.context,
             update.source || update['$source'],
             update.timestamp,
-            update.meta
+            update.meta,
+            false
           )
         }
       }
@@ -470,7 +502,8 @@ export class FullSignalK extends EventEmitter {
         contextPath,
         update.source || update['$source'],
         update.timestamp,
-        update.meta
+        update.meta,
+        true
       )
     }
   }
