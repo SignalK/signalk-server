@@ -295,7 +295,11 @@ export function load(app: ConfigApp) {
 }
 
 function checkPackageVersion(name: string, pkg: any, appPath: string) {
-  const expected = pkg.dependencies[name]
+  const isOptional = Boolean(pkg.optionalDependencies?.[name])
+  const expected = pkg.dependencies?.[name] ?? pkg.optionalDependencies?.[name]
+  if (!expected) {
+    return
+  }
   let modulePackageJsonPath = path.join(
     appPath,
     'node_modules',
@@ -304,6 +308,10 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
   )
   if (!fs.existsSync(modulePackageJsonPath)) {
     modulePackageJsonPath = path.join(appPath, '..', name, 'package.json')
+  }
+  if (!fs.existsSync(modulePackageJsonPath) && isOptional) {
+    // Optional package not installed (e.g. core image with --omit=optional).
+    return
   }
   const installed = require(modulePackageJsonPath)
 
