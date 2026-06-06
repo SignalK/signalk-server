@@ -37,6 +37,12 @@ function tabIsActive(name: RegExp | string): boolean {
 describe('Apps auto-jump on install completion', () => {
   beforeEach(() => {
     setAppStore(emptyStore)
+    // View/search now live in the store (singleton across tests), so reset
+    // them between cases or a tab switched in one test leaks into the next.
+    act(() => {
+      useStore.getState().setAppstoreView('All')
+      useStore.getState().setAppstoreSearch('')
+    })
   })
 
   function renderApps() {
@@ -155,5 +161,61 @@ describe('Apps auto-jump on install completion', () => {
 
     expect(tabIsActive(/^All$/)).toBe(true)
     expect(tabIsActive(/^Installed$/)).toBe(false)
+  })
+})
+
+describe('Apps view/search state survives the detail round trip', () => {
+  beforeEach(() => {
+    setAppStore(emptyStore)
+    act(() => {
+      useStore.getState().setAppstoreView('All')
+      useStore.getState().setAppstoreSearch('')
+    })
+  })
+
+  function renderApps() {
+    return render(
+      <MemoryRouter>
+        <Apps />
+      </MemoryRouter>
+    )
+  }
+
+  it('restores the selected view after an unmount/remount', async () => {
+    const user = userEvent.setup()
+    setAppStore({
+      ...emptyStore,
+      installed: [
+        { name: 'plugin-a', installedVersion: '1.0.0', version: '1.0.0' }
+      ]
+    })
+    const { unmount } = renderApps()
+
+    await user.click(screen.getByRole('button', { name: /^Installed$/ }))
+    expect(tabIsActive(/^Installed$/)).toBe(true)
+
+    // Opening a plugin detail page unmounts Apps; returning remounts it.
+    unmount()
+    renderApps()
+
+    expect(tabIsActive(/^Installed$/)).toBe(true)
+    expect(tabIsActive(/^All$/)).toBe(false)
+  })
+
+  it('restores the search term after an unmount/remount', async () => {
+    const user = userEvent.setup()
+    const { unmount } = renderApps()
+
+    await user.type(screen.getByRole('textbox', { name: /Search/ }), 'anchor')
+    expect(screen.getByRole('textbox', { name: /Search/ })).toHaveValue(
+      'anchor'
+    )
+
+    unmount()
+    renderApps()
+
+    expect(screen.getByRole('textbox', { name: /Search/ })).toHaveValue(
+      'anchor'
+    )
   })
 })
