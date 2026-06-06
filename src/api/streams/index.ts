@@ -7,6 +7,7 @@
 
 import Debug from 'debug'
 import WebSocket from 'ws'
+import cookie from 'cookie'
 import { IncomingMessage } from 'http'
 import { Duplex } from 'stream'
 import { Server as HttpServer } from 'http'
@@ -42,10 +43,17 @@ interface StreamApplication
 }
 
 /**
- * Extended request with SignalK principal attached by security middleware
+ * Extended request with SignalK principal attached by security middleware.
+ * `cookies` / `query` are populated here before authentication: WebSocket
+ * upgrade requests bypass the Express middleware chain, so unlike normal
+ * HTTP requests they arrive with neither parsed. authorizeWS() reads the
+ * token from query → header → cookie, so both must be filled in for cookie-
+ * and query-token auth to work.
  */
 interface AuthenticatedRequest extends IncomingMessage {
   skPrincipal?: StreamPrincipal
+  cookies?: Record<string, string>
+  query?: Record<string, string>
 }
 
 /**
@@ -109,6 +117,18 @@ export function initializeBinaryStreams(app: StreamApplication): void {
         // Authenticate the request (if security is enabled)
         let principal: StreamPrincipal = { identifier: 'unknown' }
         const authRequest = request as AuthenticatedRequest
+
+        // Upgrade requests skip Express, so parse the cookie header and query
+        // string onto the request the way the middleware chain would. Without
+        // this authorizeWS() finds no token and rejects every browser
+        // connection — the HttpOnly JAUTHENTICATION cookie the browser sends
+        // on a same-origin upgrade would otherwise be ignored. Mirrors the
+        // v1 stream path in interfaces/ws.ts.
+        const cookieHeader = request.headers.cookie
+        if (typeof cookieHeader === 'string') {
+          authRequest.cookies = cookie.parse(cookieHeader)
+        }
+        authRequest.query = Object.fromEntries(url.searchParams)
 
         // Check if security is enabled
         if (
