@@ -159,13 +159,23 @@ export interface ServerAPI
    *
    * `app.debug()` can take any type and will serialize it before outputting.
    *
+   * Use `app.debug.enabled` to guard expensive log arguments so they are not
+   * computed when the debug name is disabled:
+   *
+   * ```ts
+   * if (app.debug.enabled) app.debug('state: ' + JSON.stringify(big))
+   * ```
+   *
    * > [!note]
    * > Do not use `debug` from the debug module directly! Using `app.debug()` provided by the server ensures that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.
    *
    * @category Status and Debugging
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  debug(msg: any, ...args: any[]): void
+  debug: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (msg: any, ...args: any[]): void
+    enabled: boolean
+  }
 
   /**
    * Register a function to intercept all delta messages _before_ they are processed by the server.
