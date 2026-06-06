@@ -1,3 +1,4 @@
+import type { Debugger } from 'debug'
 import {
   SKVersion,
   AutopilotProviderRegistry,
@@ -154,8 +155,9 @@ export interface ServerAPI
   /**
    * Log debug messages.
    *
-   * This function exposes the `debug` method from the [debug module](https://www.npmjs.com/package/debug).
-   * The npm module name is used as the debug name.
+   * This is a `debug` instance from the [debug module](https://www.npmjs.com/package/debug),
+   * created with the npm module name as the debug name, so instance properties
+   * such as `app.debug.enabled` are available for gating expensive log statements.
    *
    * `app.debug()` can take any type and will serialize it before outputting.
    *
@@ -164,8 +166,7 @@ export interface ServerAPI
    *
    * @category Status and Debugging
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  debug(msg: any, ...args: any[]): void
+  debug: Debugger
 
   /**
    * Register a function to intercept all delta messages _before_ they are processed by the server.
