@@ -469,9 +469,9 @@ function contextMatcher(
           normalizedDeltaData.context === selfContext)
     } else if ('radius' in subscribeCommand.context) {
       if (
-        !get(subscribeCommand.context, 'radius') ||
-        !get(subscribeCommand.context, 'position.latitude') ||
-        !get(subscribeCommand.context, 'position.longitude')
+        !Number.isFinite(get(subscribeCommand.context, 'radius')) ||
+        !Number.isFinite(get(subscribeCommand.context, 'position.latitude')) ||
+        !Number.isFinite(get(subscribeCommand.context, 'position.longitude'))
       ) {
         errorCallback(
           'Please specify a radius and position for relativePosition'
@@ -500,8 +500,8 @@ function checkPosition(
   return (
     position &&
     position.value &&
-    position.value.latitude &&
-    position.value.longitude &&
+    Number.isFinite(position.value.latitude) &&
+    Number.isFinite(position.value.longitude) &&
     isPointWithinRadius(position.value, origin.position, origin.radius)
   )
 }
