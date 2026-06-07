@@ -42,10 +42,13 @@ export const AlarmSchema = Type.Object(
     method: AlarmMethodArraySchema,
     message: Type.String({ description: 'Message to display or speak' }),
     status: Type.Optional(AlarmStatusSchema),
-    id: Type.String({
-      description: 'Notification Identifier',
-      example: '8dac314c-ef20-4e6f-9098-db64ce20e117'
-    }),
+    id: Type.Optional(
+      Type.String({
+        description:
+          'Notification Identifier. Always present when core notification management is enabled; otherwise present only when supplied by the notification source.',
+        example: '8dac314c-ef20-4e6f-9098-db64ce20e117'
+      })
+    ),
     position: Type.Optional(Type.Union([PositionSchema, Type.Null()])),
     createdAt: Type.Optional(IsoTimeSchema),
     data: Type.Optional(Type.Record(Type.String(), Type.Unknown()))
