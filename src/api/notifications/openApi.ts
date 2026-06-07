@@ -123,6 +123,24 @@ const notificationsApiDoc = {
           }
         }
       },
+      '501Disabled': {
+        description:
+          'Core notification management is disabled (`notifications.manageNotifications = false`). All identifier-addressed and bulk operations respond with `501`, including requests with a malformed identifier.',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              description: 'Request error response',
+              properties: {
+                state: { type: 'string', enum: ['FAILED'] },
+                statusCode: { type: 'number', enum: [501] },
+                message: { type: 'string' }
+              },
+              required: ['state', 'statusCode', 'message']
+            }
+          }
+        }
+      },
       ErrorResponse: {
         description: 'Failed operation',
         content: {
@@ -156,7 +174,8 @@ const notificationsApiDoc = {
       get: {
         tags: ['Operations'],
         summary: 'List notifications.',
-        description: 'Returns a list of notifications.',
+        description:
+          'Returns a list of notifications. When core notification management is disabled (`notifications.manageNotifications = false`), entries are read from the data model for the `self` context only: values carry no server-assigned `id` or `status`, and keys are the source-supplied `value.id` when present, otherwise the notification path.',
         responses: {
           '200': { $ref: '#/components/responses/NotificationList' },
           default: { $ref: '#/components/responses/ErrorResponse' }
@@ -166,7 +185,7 @@ const notificationsApiDoc = {
         tags: ['Operations'],
         summary: 'Raise notification.',
         description:
-          'Raises a notification and sets `ALARM_METHOD` based on the supplied `state`.',
+          'Raises a notification and sets `ALARM_METHOD` based on the supplied `state`. When core notification management is disabled (`notifications.manageNotifications = false`), `path` is required, `context` is ignored (the notification is emitted for the self context), and the returned `id` is embedded in the emitted value but not tracked by the server.',
         requestBody: {
           description: 'Alarm Options',
           required: true,
@@ -194,6 +213,7 @@ const notificationsApiDoc = {
         responses: {
           '200': { $ref: '#/components/responses/Notification' },
           '404': { $ref: '#/components/responses/404NotFound' },
+          '501': { $ref: '#/components/responses/501Disabled' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       },
@@ -216,6 +236,7 @@ const notificationsApiDoc = {
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
           '404': { $ref: '#/components/responses/404NotFound' },
+          '501': { $ref: '#/components/responses/501Disabled' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       },
@@ -227,6 +248,7 @@ const notificationsApiDoc = {
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
           '404': { $ref: '#/components/responses/404NotFound' },
+          '501': { $ref: '#/components/responses/501Disabled' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }
@@ -268,6 +290,7 @@ const notificationsApiDoc = {
           'Removes `sound` from the ALARM METHOD of all notifications and sets `status.silenced = true`.',
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
+          '501': { $ref: '#/components/responses/501Disabled' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }
@@ -280,6 +303,7 @@ const notificationsApiDoc = {
           'Removes both `visual` and `sound` from the ALARM METHOD of all notifications and sets `status.acknowledged = true`.',
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
+          '501': { $ref: '#/components/responses/501Disabled' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }
@@ -293,6 +317,7 @@ const notificationsApiDoc = {
           'Removes `sound` from the notification ALARM METHOD and sets `status.silenced = true`.',
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
+          '501': { $ref: '#/components/responses/501Disabled' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }
@@ -306,6 +331,7 @@ const notificationsApiDoc = {
           'Acknowledge alarm by setting `status.acknowledged = true` and removing `sound` from ALARM METHOD.',
         responses: {
           '200': { $ref: '#/components/responses/200Ok' },
+          '501': { $ref: '#/components/responses/501Disabled' },
           default: { $ref: '#/components/responses/ErrorResponse' }
         }
       }

@@ -20,7 +20,7 @@ const emptyConfigDirectory = () =>
       .map((dir) => rimraf(dir).then(() => console.error(dir)))
   )
 
-export const startServer = async () => {
+export const startServer = async (extraSettings: object = {}) => {
   const port = await freeport()
   const host = 'http://localhost:' + port
   const sendDeltaUrl = host + '/signalk/v1/api/_test/delta'
@@ -32,7 +32,8 @@ export const startServer = async () => {
     settings: {
       interfaces: {
         plugins: true
-      }
+      },
+      ...extraSettings
     }
   })
   return {

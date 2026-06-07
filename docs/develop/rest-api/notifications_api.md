@@ -598,3 +598,20 @@ Updates notification `state` & `status` properties as follows:
 | Source | Condition         | State    | silenced | acknowledged |
 | ------ | ----------------- | -------- | -------- | ------------ |
 | API    | `canClear = true` | `normal` | false    | false        |
+
+## Disabling Core Notification Management
+
+By default the server manages the lifecycle of all notifications as described
+above. Setting `notifications.manageNotifications` to `false` in the server
+settings (Server -> Settings in the admin UI, restart required) takes the core
+notification manager out of the notification path so an external handler can
+own the lifecycle instead. `notifications.*` deltas then flow to the data
+model unmodified — no server-assigned `id` or `status` is embedded in values.
+
+With management disabled the API surface stays mounted but behaves as follows:
+
+| Operation                                                                                                | Behavior when disabled                                                                                                                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /notifications`                                                                                     | Served from the data model (`self` context only). Keys are the source-supplied `value.id` when present, otherwise the notification path. No `status` enrichment.                                                                                         |
+| `POST /notifications` (raise), `POST /notifications/mob`                                                 | Emit the notification delta directly. `path` is required for raise (no `notifications.{id}` fallback) and `context` is ignored. The returned `id` is embedded in the emitted value but not tracked by the server.                                        |
+| `GET/PUT/DELETE /notifications/{id}`, `{id}/silence`, `{id}/acknowledge`, `silenceAll`, `acknowledgeAll` | Respond `501` with `{"state": "FAILED", "statusCode": 501, "message": ...}`. The matching `app.notifications.*` plugin methods throw `NotificationManagerDisabledError` (identify via `instanceof` or `error.code === 'NOTIFICATION_MANAGER_DISABLED'`). |
