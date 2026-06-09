@@ -221,7 +221,7 @@ Resolution order:
 3. If none found, display a fallback symbol.
 
 If more than one external provider defines the same local id, the result is
-ambiguous and the provider should reject the lookup with an error. Consumers
+ambiguous and consumers may choose their own method of resolving. Consumers
 should store qualified references (`namespace:id`) to avoid this ambiguity.
 
 ### Qualified reference — `mycustom:dive-site`
