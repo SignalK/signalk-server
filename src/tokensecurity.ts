@@ -804,8 +804,13 @@ function tokenSecurityFactory(
         return
       }
 
+      // Trim to match the stored username, which addUser trims on
+      // registration, so a stray space typed into the login box still logs in.
+      const trimmedName = name.trim()
       const configuration = getConfiguration()
-      const user = configuration.users.find((aUser) => aUser.username === name)
+      const user = configuration.users.find(
+        (aUser) => aUser.username === trimmedName
+      )
 
       // Always run bcrypt.compare to prevent timing attacks that reveal
       // whether a username exists. Use a dummy hash if user not found.
@@ -1018,13 +1023,30 @@ function tokenSecurityFactory(
   ): void {
     assertConfigImmutability()
 
-    if (theConfig.users?.find((u) => u.username === user.userId)) {
+    // userId arrives from request bodies, so guard the type before trimming
+    // to keep malformed input on the callback error path rather than throwing.
+    if (typeof user.userId !== 'string') {
+      callback(new Error('Username is required'))
+      return
+    }
+
+    // Trim so a stray leading/trailing space (browser autofill, paste,
+    // mobile autocapitalize) doesn't get baked into the stored username,
+    // which would then never match the trimmed value typed at login.
+    const username = user.userId.trim()
+
+    if (username.length === 0) {
+      callback(new Error('Username cannot be empty'))
+      return
+    }
+
+    if (theConfig.users?.find((u) => u.username === username)) {
       callback(new Error('User already exists'))
       return
     }
 
     const newUser: User = {
-      username: user.userId,
+      username,
       type: user.type
     }
 
