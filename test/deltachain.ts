@@ -68,4 +68,22 @@ describe('DeltaChain', function () {
     expect(seen).to.deep.equal(['after'])
     expect(dispatched).to.deep.equal([msg])
   })
+
+  it('does not continue twice when a handler calls next and then throws', function () {
+    const { dispatched, dispatch } = collector()
+    const chain = new DeltaChain()
+    const seen: string[] = []
+    chain.register((msg, next) => {
+      next(msg)
+      throw new Error('boom after next')
+    })
+    chain.register((msg, next) => {
+      seen.push('after')
+      next(msg)
+    })
+    const msg = delta('a')
+    chain.process(msg, dispatch, now, SKVersion.v1)
+    expect(seen).to.deep.equal(['after'])
+    expect(dispatched).to.deep.equal([msg])
+  })
 })

@@ -35,14 +35,21 @@ export default class DeltaChain {
     // Isolate handlers: a plugin's delta input handler that throws must not
     // abort the chain, or the delta (and any later handler's work, including
     // metadata registration) is silently dropped for every input. Log and
-    // pass the unmodified delta to the next handler.
+    // pass the unmodified delta to the next handler. `continued` guards
+    // against advancing twice when a handler calls next() and then throws.
+    let continued = false
+    const next = (nextMsg: Delta) => {
+      if (continued) {
+        return
+      }
+      continued = true
+      this.doProcess(index + 1, nextMsg, dispatch, now, version)
+    }
     try {
-      this.chain[index](msg, (forwarded: Delta) =>
-        this.doProcess(index + 1, forwarded, dispatch, now, version)
-      )
+      this.chain[index](msg, next)
     } catch (err) {
       console.error('Delta input handler threw, skipping it:', err)
-      this.doProcess(index + 1, msg, dispatch, now, version)
+      next(msg)
     }
   }
 
