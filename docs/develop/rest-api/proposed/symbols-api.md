@@ -25,43 +25,50 @@ the collection is accessible at:
 
 ## Symbol Identity
 
-Each symbol has two identity fields:
-
-- **`id`** — the local symbol id, e.g. `dive-site`.
-- **`namespace`** — a provider-chosen vocabulary label, e.g. `user` or `mycustom`.
-
-The canonical consumer reference combines them:
+Each symbol has an immutable **`uuid`** that identifies it for its whole life,
+plus one or more **aliases** — the consumer-facing references other apps use to
+match it. An alias is a `<namespace>:<id>` pair:
 
 ```text
 <namespace>:<id>
 ```
 
-Examples:
+The `namespace` is a vendor/vocabulary label; the `id` is the local symbol id. A
+single symbol may carry several aliases so it can be matched by different
+chartplotters, for example:
 
 ```text
-user:dive-site
-mycustom:dive-site
+custom:dive-flag
+fsk:dive-site
+garmin:Diver Down Flag 1
+opencpn:scuba
 ```
 
-The namespace value `default` is reserved for symbols built into the consuming
+Suggested namespace vocabulary:
+
+| namespace     | Meaning                                             |
+| ------------- | --------------------------------------------------- |
+| `custom`      | A user-defined symbol (the default for new symbols) |
+| `fsk`         | Freeboard-SK built-in icon ids                      |
+| `garmin`      | Garmin GPX `<sym>` names                            |
+| `opencpn`     | OpenCPN symbol names                                |
+| `s57`         | An S-57 marker                                      |
+| `<plugin-id>` | Symbols used directly by a specific plugin          |
+
+The namespace `default` is reserved for symbols built into the consuming
 application (e.g. `default:dive-site` means "use this app's built-in dive-site
-icon"). External providers must not use the `default` namespace.
+icon"). Providers must not use `default` as an alias namespace.
 
-`namespace` is symbol payload metadata and is intentionally separate from the
-Signal K `$source` response field. `$source` identifies the provider plugin;
-`namespace` identifies the symbol vocabulary for consumer lookup and collision
-resolution.
+`uuid` and `alias` are symbol payload metadata, separate from the Signal K
+`$source` response field (which identifies the provider plugin).
 
-**Namespace rules:**
+**Alias rules:**
 
-- Required, must not be blank.
-- Must match `[A-Za-z0-9_]+` (no colon — `:` is the namespace/id separator).
-- Must not be `default` (reserved for application built-ins).
-
-**Local id rules:**
-
-- Required, must not be blank.
-- Must not contain `:`.
+- At least one alias is required per symbol.
+- `namespace` must match `[A-Za-z0-9_]+` (no `:`) and must not be `default`.
+- `id` must not contain `:`.
+- Each `namespace:id` is globally unique within a provider — an alias maps to
+  exactly one symbol.
 
 ---
 
@@ -73,19 +80,19 @@ resolution.
 HTTP GET "/signalk/v2/api/resources/symbols"
 ```
 
-Returns an object keyed by canonical `namespace:id`:
+Returns an object keyed by each symbol's immutable `uuid`:
 
 ```JSON
 {
-  "user:dive-site": {
-    "id": "dive-site",
-    "namespace": "user",
+  "b3f1c2a0-1e4d-4a6b-9c2f-0a1b2c3d4e5f": {
+    "uuid": "b3f1c2a0-1e4d-4a6b-9c2f-0a1b2c3d4e5f",
+    "alias": ["custom:dive-flag", "fsk:dive-site", "garmin:Diver Down Flag 1"],
     "$source": "signalk-symbol-manager",
     "timestamp": "2026-06-05T12:30:00.000Z",
     "name": "Dive Site",
     "description": "A custom dive site marker.",
     "mediaType": "image/svg+xml",
-    "url": "/signalk/symbol-manager/symbols/dive-site.svg",
+    "url": "/signalk/symbol-manager/symbols/b3f1c2a0-1e4d-4a6b-9c2f-0a1b2c3d4e5f.svg",
     "roles": ["note", "waypoint", "map-marker"],
     "tags": ["diving"],
     "scale": 0.65,
@@ -93,14 +100,14 @@ Returns an object keyed by canonical `namespace:id`:
     "gpxType": "Waypoint",
     "gpxSym": "Diver Down Flag 1"
   },
-  "user:anchorage": {
-    "id": "anchorage",
-    "namespace": "user",
+  "9a8b7c6d-5e4f-4012-8a9b-c0d1e2f30415": {
+    "uuid": "9a8b7c6d-5e4f-4012-8a9b-c0d1e2f30415",
+    "alias": ["custom:anchorage"],
     "$source": "signalk-symbol-manager",
     "timestamp": "2026-06-04T09:00:00.000Z",
     "name": "Anchorage",
     "mediaType": "image/svg+xml",
-    "url": "/signalk/symbol-manager/symbols/anchorage.svg",
+    "url": "/signalk/symbol-manager/symbols/9a8b7c6d-5e4f-4012-8a9b-c0d1e2f30415.svg",
     "roles": ["map-marker"],
     "tags": [],
     "scale": 0.65,
@@ -111,14 +118,20 @@ Returns an object keyed by canonical `namespace:id`:
 
 ### Retrieve a single symbol
 
-By canonical `namespace:id`:
+By `uuid`:
 
 ```typescript
-HTTP GET "/signalk/v2/api/resources/symbols/user:dive-site"
+HTTP GET "/signalk/v2/api/resources/symbols/b3f1c2a0-1e4d-4a6b-9c2f-0a1b2c3d4e5f"
 ```
 
-By unqualified local id (succeeds only when exactly one symbol with that id
-exists across all namespaces — see _Symbol Resolution_ below):
+By a qualified alias `namespace:id`:
+
+```typescript
+HTTP GET "/signalk/v2/api/resources/symbols/fsk:dive-site"
+```
+
+By unqualified local id (succeeds only when exactly one symbol carries an alias
+with that id — see _Symbol Resolution_ below):
 
 ```typescript
 HTTP GET "/signalk/v2/api/resources/symbols/dive-site"
@@ -132,8 +145,8 @@ Each symbol entry in the collection contains:
 
 | Field         | Required | Description                                                              |
 | ------------- | -------- | ------------------------------------------------------------------------ |
-| `id`          | ✓        | Local symbol id, e.g. `dive-site`                                        |
-| `namespace`   | ✓        | Symbol namespace, e.g. `user`                                            |
+| `uuid`        | ✓        | Immutable symbol identifier                                              |
+| `alias`       | ✓        | Array of one or more canonical `namespace:id` references                |
 | `name`        | ✓        | Human-readable name                                                      |
 | `mediaType`   | ✓        | Asset media type — `image/svg+xml`                                       |
 | `url`         | ✓        | URL of the primary symbol asset                                          |
@@ -147,7 +160,7 @@ Each symbol entry in the collection contains:
 | `gpxType`     |          | Mapping to a GPX waypoint `<type>` value (see _GPX mapping_ below)       |
 | `gpxSym`      |          | Mapping to a GPX waypoint `<sym>` value (see _GPX mapping_ below)        |
 
-The object key in the collection must equal `` `${namespace}:${id}` ``.
+The object key in the collection must equal the symbol's `uuid`.
 
 ### Roles
 
@@ -210,29 +223,42 @@ The following fields are intentionally omitted from this specification:
 
 ## Symbol Resolution
 
-Consumers should support both unqualified and qualified symbol references.
+A symbol is matched through its aliases. A reference is one of: a `uuid`, a
+qualified alias (`namespace:id`), or an unqualified local id.
+
+### Qualified reference — `fsk:dive-site`
+
+Resolve to the symbol that carries that exact alias. If none, providers should return a 404 error. Consumers should display a fallback symbol. Do not silently substitute a different alias's symbol.
 
 ### Unqualified reference — `dive-site`
 
-Resolution order:
-
-1. Search enabled external symbol providers for a symbol whose local `id` matches.
-2. If none found, search the consumer's built-in/default symbols.
-3. If none found, display a fallback symbol.
-
-If more than one external provider defines the same local id, the result is
-ambiguous and consumers may choose their own method of resolving. Consumers
-should store qualified references (`namespace:id`) to avoid this ambiguity.
-
-### Qualified reference — `mycustom:dive-site`
-
-Resolve only within the named namespace. If unavailable, show a fallback — do
-not silently substitute a different namespace's symbol.
+Resolve to the symbol carrying an alias with that `id`. If more than one symbol
+carries an alias with the same id, the reference is ambiguous; consumers should
+prefer a qualified alias to avoid this. Providers should throw a 400 error.
 
 ### Explicit default reference — `default:dive-site`
 
 Resolve only within the consumer's built-in symbols, ignoring all external
-providers.
+providers.  Providers should never store a symbol with the namespace `default`
+
+### Consumer override by vendor code
+
+A consumer only adopts the alias namespaces meaningful to it:
+
+- **Its own vendor namespace** (e.g. `fsk` for Freeboard-SK) — a symbol whose
+  alias is `<vendor>:<built-in-id>` **replaces** that consumer's built-in icon
+  of the same id. For example, Freeboard replaces its `marina` icon only when a
+  symbol carries an `fsk:marina` alias.
+- **`custom`** — a symbol with a `custom:<id>` alias is offered as an additional
+  user-defined symbol.
+- **All other namespaces are ignored** by that consumer (they exist for other
+  apps).
+- **`default`** stays reserved for the consumer's own built-in, even when an
+  override exists.
+
+A single symbol may carry several of these aliases at once (e.g. both
+`custom:dive-flag` and `fsk:dive-site`), so it can be both a named user symbol
+and a built-in override.
 
 ---
 
@@ -244,23 +270,17 @@ A symbol-aware consumer can interpret existing fields such as
 Preferred reference form (string):
 
 ```text
-user:dive-site
+custom:dive-flag
 ```
 
-Object form (optional equivalent):
+When a user selects an external provider's symbol, consumers persist a qualified
+alias (`namespace:id`) so the reference stays stable.
 
-```JSON
-{ "namespace": "user", "id": "dive-site" }
-```
-
-When a user selects an external provider's symbol, consumers should persist
-the qualified `namespace:id` form so the reference remains stable if another
-provider later defines the same local id.
-
-When a user selects one of the consumer app's own built-in symbols from a
-picker, the consumer should persist the **unqualified** id (not `default:id`),
-so a future external provider can override it by matching that id. Only persist
-`default:id` when the user explicitly requests the built-in/default namespace.
+When a user selects one of the consumer app's own built-in icons from a picker,
+the consumer persists the **unqualified** id (not `default:id`), so a future
+external symbol can override it (by carrying the consumer's vendor alias for that
+id). The consumer persists `default:id` only when the user explicitly chooses
+the built-in despite an override existing.
 
 ---
 
@@ -272,8 +292,8 @@ A plugin registers as a symbol provider using the existing Resource Provider API
 app.registerResourceProvider({
   type: 'symbols',
   methods: {
-    listResources, // return all symbols keyed by namespace:id
-    getResource, // return one symbol by canonical or unqualified id
+    listResources, // return all symbols keyed by uuid
+    getResource, // return one symbol by uuid, alias, or unqualified id
     setResource, // may reject for read-only providers
     deleteResource // may reject for read-only providers
   }
@@ -285,10 +305,11 @@ them — a read-only provider may reject `setResource` and `deleteResource`.
 
 The provider should:
 
-- Return collection entries keyed by canonical `namespace:id`.
-- Accept canonical `namespace:id` for single-resource lookups.
-- For unqualified id lookups, succeed only when exactly one symbol with that id
-  exists; reject ambiguous lookups.
+- Return collection entries keyed by each symbol's `uuid`.
+- Accept a `uuid`, a qualified alias `namespace:id`, or an unqualified local id
+  for single-resource lookups.
+- For unqualified id lookups, succeed only when exactly one symbol carries an
+  alias with that id; reject ambiguous lookups.
 - Serve SVG assets at a URL accessible to read-only consumers. Note: the Signal
   K server gates every `/plugins/*` route behind admin authentication regardless
   of `allow_readonly`. A provider that wants its asset `url` to be loadable by
@@ -304,7 +325,9 @@ The provider should:
 A consumer application may:
 
 - Fetch `/signalk/v2/api/resources/symbols` during startup.
-- Build a local index by `namespace:id` and by local id.
+- Build a local index from each symbol's `alias` array (by `namespace:id` and by
+  local id), adopting only the alias namespaces meaningful to it (its own vendor
+  code for built-in overrides, `custom` for user symbols) and ignoring the rest.
 - Register compatible SVG assets with its icon and/or map rendering system.
 - Use `scale` and `anchor` when rendering symbols as map markers.
 - Filter icon selectors by `roles` by default, with a "show all" option.
