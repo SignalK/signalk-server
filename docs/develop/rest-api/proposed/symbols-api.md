@@ -65,7 +65,7 @@ icon"). Providers must not use `default` as an alias namespace.
 **Alias rules:**
 
 - At least one alias is required per symbol.
-- `namespace` must match `[A-Za-z0-9_]+` (no `:`) and must not be `default`.
+- `namespace` must match `[A-Za-z0-9_-]+` (no `:`) and must not be `default`.
 - `id` must not contain `:`.
 - Each `namespace:id` is globally unique within a provider — an alias maps to
   exactly one symbol.
