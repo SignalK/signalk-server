@@ -14,6 +14,7 @@ import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons/faAr
 import { faLink } from '@fortawesome/free-solid-svg-icons/faLink'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import { urlToWebapp } from '../../../Webapps/Webapp'
+import InstallLogModal from '../../components/InstallLogModal'
 import semver from 'semver'
 
 interface PluginDataSize {
@@ -66,6 +67,7 @@ export default function ActionCellRenderer({
   const [dataSize, setDataSize] = useState<PluginDataSize | null>(null)
   const [loadingDataSize, setLoadingDataSize] = useState(false)
   const [removeError, setRemoveError] = useState<string | null>(null)
+  const [showLogModal, setShowLogModal] = useState(false)
 
   const handleInstallClick = () => {
     fetch(
@@ -224,7 +226,18 @@ export default function ActionCellRenderer({
 
     content = (
       <div className="progress__wrapper">
-        <div className={statusClasses}>{status}</div>
+        {isTerminalFailure ? (
+          <button
+            type="button"
+            className={`${statusClasses} border-0 w-100`}
+            onClick={() => setShowLogModal(true)}
+            title="Show the npm log for this failure"
+          >
+            {status} — view log
+          </button>
+        ) : (
+          <div className={statusClasses}>{status}</div>
+        )}
         {progress}
       </div>
     )
@@ -332,6 +345,11 @@ export default function ActionCellRenderer({
   return (
     <div className="cell__renderer cell-action">
       <div>{content}</div>
+      <InstallLogModal
+        appName={app.name}
+        show={showLogModal}
+        onClose={() => setShowLogModal(false)}
+      />
       {/* Versions Modal */}
       <Modal
         show={showVersionsModal}
