@@ -238,6 +238,7 @@
 .plugin-card .card-body,
 .plugin-card .card-footer {
   position: relative;
+
   // No z-index here: a z-index would create a stacking context that
   // traps the clickable children (author button, failed-install pill)
   // below the stretched link no matter their own z-index, so the link
@@ -302,7 +303,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid currentColor;
+    outline: 2px solid currentcolor;
     outline-offset: 2px;
   }
 }
