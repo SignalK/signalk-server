@@ -2,6 +2,48 @@ import { expect } from 'chai'
 import { FullSignalK } from './fullsignalk'
 
 describe('FullSignalK', function () {
+  afterEach(function () {
+    // Guard against a regression leaking prototype pollution into sibling tests.
+    delete (Object.prototype as Record<string, unknown>).polluted
+  })
+
+  it('does not pollute Object.prototype via a __proto__ path segment', function () {
+    const delta = {
+      updates: [
+        {
+          source: { label: 'evil', type: 'NMEA0183' },
+          timestamp: '2014-08-15T19:03:21.532Z',
+          values: [{ path: 'navigation.__proto__.polluted', value: 'pwned' }]
+        }
+      ],
+      context: 'vessels.foo'
+    }
+    const fullSignalK = new FullSignalK()
+    fullSignalK.addDelta(delta)
+    expect(({} as Record<string, unknown>).polluted).to.equal(undefined)
+  })
+
+  it('does not pollute via a constructor path segment', function () {
+    const delta = {
+      updates: [
+        {
+          source: { label: 'evil', type: 'NMEA0183' },
+          timestamp: '2014-08-15T19:03:21.532Z',
+          values: [
+            {
+              path: 'navigation.constructor.prototype.polluted',
+              value: 'pwned'
+            }
+          ]
+        }
+      ],
+      context: 'vessels.foo'
+    }
+    const fullSignalK = new FullSignalK()
+    fullSignalK.addDelta(delta)
+    expect(({} as Record<string, unknown>).polluted).to.equal(undefined)
+  })
+
   it('Delta with object value should produce full tree leaf without the .value', function () {
     const delta = {
       updates: [
