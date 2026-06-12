@@ -22,6 +22,11 @@ import { metadataRegistry } from '@signalk/path-metadata'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObject = Record<string, any>
 
+// A delta path segment of __proto__ / constructor / prototype would let the
+// tree walk in addValue reach and mutate Object.prototype process-wide (#2768).
+// None of these are valid Signal K path segments, so such deltas are dropped.
+const FORBIDDEN_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
 export interface SourceMetaEntry {
   lastSeen: number
   pgnInstances?: Record<string, number[]>
@@ -197,6 +202,17 @@ function addValue(
     return
   } else {
     const splitPath: string[] = pathValue.path.split('.')
+    for (const pathPart of splitPath) {
+      if (FORBIDDEN_PATH_KEYS.has(pathPart)) {
+        console.error(
+          'Delta path contains forbidden segment "' +
+            pathPart +
+            '" in ' +
+            JSON.stringify(pathValue)
+        )
+        return
+      }
+    }
     valueLeaf = splitPath.reduce(
       (previous: AnyObject, pathPart: string, i: number) => {
         if (!previous[pathPart]) {
