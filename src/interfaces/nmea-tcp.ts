@@ -38,6 +38,7 @@ interface NmeaTcpApp extends SignalKServer {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   emit(event: string, ...args: any[]): boolean
   on(event: string, listener: (...args: string[]) => void): this
+  removeListener(event: string, listener: (...args: string[]) => void): this
 }
 
 module.exports = (app: NmeaTcpApp) => {
@@ -46,6 +47,7 @@ module.exports = (app: NmeaTcpApp) => {
   const bufferExceededSince: Record<number, number | undefined> = {}
   let idSequence = 0
   let server: Server | null = null
+  let sendListener: ((data: string) => void) | null = null
   const port = Number(process.env.NMEA0183PORT) || 10110
   const api = new Interface()
 
@@ -108,6 +110,7 @@ module.exports = (app: NmeaTcpApp) => {
         }
       })
     }
+    sendListener = send
     app.signalk.on('nmea0183', send)
     app.on('nmea0183out', send)
     server.on('listening', () =>
@@ -120,6 +123,11 @@ module.exports = (app: NmeaTcpApp) => {
   }
 
   api.stop = () => {
+    if (sendListener) {
+      app.signalk.removeListener('nmea0183', sendListener)
+      app.removeListener('nmea0183out', sendListener)
+      sendListener = null
+    }
     if (server) {
       server.close()
       server = null
