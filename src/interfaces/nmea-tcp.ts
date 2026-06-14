@@ -73,7 +73,7 @@ module.exports = (app: NmeaTcpApp) => {
         delete bufferExceededSince[socket.id!]
       })
     })
-    const send = (data: string) => {
+    sendListener = (data: string) => {
       Object.values(openSockets).forEach((socket) => {
         try {
           if (socket.writableLength > BUFFER_LIMIT) {
@@ -110,9 +110,8 @@ module.exports = (app: NmeaTcpApp) => {
         }
       })
     }
-    sendListener = send
-    app.signalk.on('nmea0183', send)
-    app.on('nmea0183out', send)
+    app.signalk.on('nmea0183', sendListener)
+    app.on('nmea0183out', sendListener)
     server.on('listening', () =>
       debug('NMEA0183 tcp server listening on ' + port)
     )
