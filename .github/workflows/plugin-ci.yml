@@ -1275,8 +1275,17 @@ jobs:
             exit 0
           fi
 
+          # ESM packages need es-check in module mode; otherwise top-level
+          # import/export parse as a script and falsely report ES2024+ syntax.
+          # es-check does not infer this from package.json "type", so pass it.
+          MODULE_FLAG=""
+          if [ "$(node -p "require('./package.json').type === 'module' ? 'y' : 'n'" 2>/dev/null)" = "y" ]; then
+            MODULE_FLAG="--module"
+            echo "Detected ESM package (type: module) — running es-check in module mode."
+          fi
+
           echo "Checking ES2023 compatibility: $FILES"
-          if ! npx --yes es-check@8 es2023 $FILES 2>&1; then
+          if ! npx --yes es-check@8 es2023 $MODULE_FLAG $FILES 2>&1; then
             echo ""
             echo "::warning::Plugin uses ES2024+ syntax not supported by Node 20 (Cerbo GX / Venus OS). Consider targeting ES2023 in your TypeScript/build config or tsconfig.json to maintain Cerbo GX compatibility."
           fi
