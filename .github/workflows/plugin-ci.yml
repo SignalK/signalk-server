@@ -1291,7 +1291,11 @@ jobs:
           # This means native addons (better-sqlite3, serialport, etc.) are NOT compiled.
           # This test catches plugins that will break when installed via the App Store.
           echo "Simulating SignalK App Store install (npm install --ignore-scripts)..."
-          PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP")
+          # Read the tarball name from --json: a plugin "prepare" script (e.g. tsc)
+          # prints a lifecycle banner to stdout that would pollute a bare
+          # $(npm pack) capture (npm < 11 runs prepare here despite --ignore-scripts).
+          PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP" \
+            | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
 
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
@@ -1675,9 +1679,11 @@ jobs:
 
       - name: Install plugin into SignalK
         run: |
-          # Pack the plugin and install it into the test server. Use basename
-          # defensively: some npm versions emit a path-prefixed tarball name.
-          PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination /tmp)
+          # Pack the plugin and install it into the test server. Read the tarball
+          # name from --json so a plugin "prepare" lifecycle banner on stdout can't
+          # corrupt it (npm < 11 runs prepare here despite --ignore-scripts).
+          PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination /tmp \
+            | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
           cd /tmp/sk-test
           npm install "/tmp/$(basename "$PLUGIN_TGZ")"
 
