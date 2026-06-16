@@ -83,7 +83,7 @@
     "@signalk/resources-provider": "^1.5.1",
     "@signalk/server-api": "^2.25.0",
     "@signalk/signalk-schema": "1.0.x",
-    "@signalk/streams": "6.6.x",
+    "@signalk/streams": "6.7.x",
     "api-schema-builder": "^2.0.11",
     "archiver": "^7.0.1",
     "as-fetch": "^2.1.4",
