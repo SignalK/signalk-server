@@ -238,18 +238,20 @@
 .plugin-card .card-body,
 .plugin-card .card-footer {
   position: relative;
-  // Keep the visible content above the overlay so text selection and
-  // hover styles still work; the link still receives clicks because
-  // these elements don't intercept them on their own.
-  z-index: 0;
+
+  // No z-index here: a z-index would create a stacking context that
+  // traps the clickable children (author button, failed-install pill)
+  // below the stretched link no matter their own z-index, so the link
+  // would intercept their clicks.
   pointer-events: none;
 }
 
 // Re-enable pointer events on the controls that need to be clickable
-// in their own right (currently just the author filter button — the
-// chevron, state pill, and badges are decorative and the link below
-// them handles the click).
-.plugin-card .plugin-card__author-button {
+// in their own right (the author filter button and the failed-install
+// pill that opens the npm log — the chevron, other state pills, and
+// badges are decorative and the link below them handles the click).
+.plugin-card .plugin-card__author-button,
+.plugin-card .plugin-card__state-pill-button {
   position: relative;
   z-index: 2;
   pointer-events: auto;
@@ -288,6 +290,21 @@
   &--failed {
     background: #f8d7da;
     color: #721c24;
+  }
+}
+
+.plugin-card__state-pill-button {
+  border: none;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid currentcolor;
+    outline-offset: 2px;
   }
 }
 

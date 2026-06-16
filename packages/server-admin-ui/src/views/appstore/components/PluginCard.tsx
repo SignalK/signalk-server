@@ -6,6 +6,7 @@ import ProgressBar from 'react-bootstrap/ProgressBar'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronRight } from '@fortawesome/free-solid-svg-icons/faChevronRight'
 import type { AppInfo } from '../../../store/types'
+import InstallLogModal from './InstallLogModal'
 import PluginIcon from './PluginIcon'
 import RecencyBadge from './RecencyBadge'
 import ScoreRing from './ScoreRing'
@@ -26,9 +27,10 @@ function isFiniteNumber(v: unknown): v is number {
 
 interface StatePillProps {
   app: AppInfo
+  onFailedClick: () => void
 }
 
-const StatePill: React.FC<StatePillProps> = ({ app }) => {
+const StatePill: React.FC<StatePillProps> = ({ app, onFailedClick }) => {
   if (app.installing) {
     if (app.isInstalling || app.isWaiting || app.isRemoving) {
       const label = app.isRemoving
@@ -44,9 +46,17 @@ const StatePill: React.FC<StatePillProps> = ({ app }) => {
     }
     if (app.installFailed) {
       return (
-        <span className="plugin-card__state-pill plugin-card__state-pill--failed">
+        <button
+          type="button"
+          className="plugin-card__state-pill plugin-card__state-pill--failed plugin-card__state-pill-button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onFailedClick()
+          }}
+          title="Show the npm log for this failure"
+        >
           Install failed
-        </span>
+        </button>
       )
     }
   }
@@ -79,6 +89,7 @@ const PluginCard: React.FC<PluginCardProps> = ({
   detailLinkBase = '/apps/store/plugin'
 }) => {
   const navigate = useNavigate()
+  const [showLogModal, setShowLogModal] = React.useState(false)
   const handleAuthorClick = (e: React.MouseEvent) => {
     if (!app.author) return
     e.preventDefault()
@@ -206,12 +217,17 @@ const PluginCard: React.FC<PluginCardProps> = ({
             </Badge>
           ))}
         </div>
-        <StatePill app={app} />
+        <StatePill app={app} onFailedClick={() => setShowLogModal(true)} />
         <FontAwesomeIcon
           icon={faChevronRight}
           className="plugin-card__chevron text-muted"
         />
       </Card.Footer>
+      <InstallLogModal
+        appName={app.name}
+        show={showLogModal}
+        onClose={() => setShowLogModal(false)}
+      />
       {isBusy && (
         <ProgressBar
           className="plugin-card__bottom-progress"
