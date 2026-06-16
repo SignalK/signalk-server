@@ -228,7 +228,12 @@ qualified alias (`namespace:id`), or an unqualified local id.
 
 ### Qualified reference — `fsk:dive-site`
 
-Resolve to the symbol that carries that exact alias. If none, providers should return a 404 error. Consumers should display a fallback symbol. Do not silently substitute a different alias's symbol.
+Resolve to the symbol that carries that exact alias, in **any** namespace. If
+none, providers should return a 404 error. Consumers should display a fallback
+symbol. Do not silently substitute a different alias's symbol. A consumer renders
+a resolvable qualified reference even when its namespace is not one the consumer
+adopts (see _Rendering versus adoption_ below), because the symbol asset is
+shared across apps.
 
 ### Unqualified reference — `dive-site`
 
@@ -241,18 +246,27 @@ prefer a qualified alias to avoid this. Providers should throw a 400 error.
 Resolve only within the consumer's built-in symbols, ignoring all external
 providers.  Providers should never store a symbol with the namespace `default`
 
-### Consumer override by vendor code
+### Rendering versus adoption
 
-A consumer only adopts the alias namespaces meaningful to it:
+Rendering and adoption are separate concerns. A consumer **renders** any
+qualified `namespace:id` reference it can resolve, in any namespace, because the
+symbol asset is shared across apps: a note or waypoint another app stored as
+`binnacle:dive-site` or `garmin:anchor` still draws. A consumer never drops a
+stored symbol just because another vendor wrote it.
+
+A consumer **adopts** only the namespaces meaningful to it. Adoption governs
+overrides and what the consumer's pickers offer, not whether a reference renders:
 
 - **Its own vendor namespace** (e.g. `fsk` for Freeboard-SK) — a symbol whose
   alias is `<vendor>:<built-in-id>` **replaces** that consumer's built-in icon
-  of the same id. For example, Freeboard replaces its `marina` icon only when a
-  symbol carries an `fsk:marina` alias.
+  of the same id, so a bare reference to that id renders the override. For
+  example, Freeboard replaces its `marina` icon only when a symbol carries an
+  `fsk:marina` alias.
 - **`custom`** — a symbol with a `custom:<id>` alias is offered as an additional
-  user-defined symbol.
-- **All other namespaces are ignored** by that consumer (they exist for other
-  apps).
+  user-defined symbol in the consumer's pickers.
+- **All other namespaces are not adopted**: they never override a built-in and
+  are never offered in a picker, but a stored reference to one still renders by
+  its exact alias.
 - **`default`** stays reserved for the consumer's own built-in, even when an
   override exists.
 
@@ -325,9 +339,12 @@ The provider should:
 A consumer application may:
 
 - Fetch `/signalk/v2/api/resources/symbols` during startup.
-- Build a local index from each symbol's `alias` array (by `namespace:id` and by
-  local id), adopting only the alias namespaces meaningful to it (its own vendor
-  code for built-in overrides, `custom` for user symbols) and ignoring the rest.
+- Build a local index of every alias by `namespace:id`, so any stored reference
+  renders regardless of namespace. Separately adopt only the namespaces
+  meaningful to it: its own vendor code (whose `<vendor>:<id>` aliases override
+  the built-in `<id>`, and so are also indexed by bare id) and `custom` (offered
+  as user symbols). Do not override a built-in or offer a picker entry from any
+  other namespace.
 - Register compatible SVG assets with its icon and/or map rendering system.
 - Use `scale` and `anchor` when rendering symbols as map markers.
 - Filter icon selectors by `roles` by default, with a "show all" option.
