@@ -17,6 +17,7 @@
  * limitations under the License.
 */
 
+import './networkConfig'
 import './baconjs-compat'
 import {
   Context,
