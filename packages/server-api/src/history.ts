@@ -1,4 +1,4 @@
-import { Context, Path, Timestamp } from '.'
+import { Context, Path, SourceRef, Timestamp } from '.'
 import { Temporal } from '@js-temporal/polyfill'
 
 /**
@@ -28,6 +28,7 @@ export type AggregateMethod =
 export type ValueList = {
   path: Path
   method: AggregateMethod
+  sourceRef?: SourceRef
 }[]
 
 /**
@@ -251,6 +252,7 @@ export interface PathSpec {
   path: Path
   aggregate: AggregateMethod
   parameter: string[]
+  sourceRef?: SourceRef
 }
 
 export type ValuesRequest = TimeRangeParams & {
