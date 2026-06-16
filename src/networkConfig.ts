@@ -25,7 +25,13 @@ import { Agent, setGlobalDispatcher } from 'undici'
 // timeout above it. The symptom is an app store that is intermittently
 // "offline". Raising the per-attempt timeout keeps the IPv6->IPv4
 // fallback while giving slow links room to complete the handshake.
-const CONNECT_ATTEMPT_TIMEOUT_MS = 5000
+//
+// This budget is only spent when an address stalls and Node falls back to
+// the next one; a reachable address completes its handshake well inside it
+// and the timer never fires. 1000 ms covers a bad satellite SYN round-trip
+// while keeping the worst-case failure (every address of a down host) an
+// order of magnitude shorter than a larger value would.
+const CONNECT_ATTEMPT_TIMEOUT_MS = 1000
 
 setGlobalDispatcher(
   new Agent({
