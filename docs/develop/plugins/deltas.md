@@ -267,13 +267,20 @@ app.handleMessage(
 
 ## Correction and transform plugins
 
-A common pattern is a plugin that reads an upstream value on a path, applies a correction or transform, and publishes an improved value on the **same** path under its own label — a speed-through-water heel correction, a calibration offset, and so on. The user then ranks the plugin's output above the raw source in [source priority](../../setup/source-priority.md), so downstream consumers get the corrected value.
+There are essentially two strategies a plugin can employ to change a value for a path:
+
+1. **Correct in place** when the value enters the server
+2. **Create a new value** with correction or transform and publish an improved value on the **same** path under its own label
+
+**In place strategy** is used when the new value is meant to replace the original value completely, for example applying a fixed offset to a heading to compensate for a sensor's mount position. This makes the original value unavailable for other consumers.
+
+With **new value strategy** both values are available, but using the source priority system the plugin's output can be prioritised over the original value. The user ranks the plugin's output above the raw source in [source priority](../../setup/source-priority.md), so downstream consumers get the corrected value and a user interface like a dashboard can display both if needed.
 
 A correction plugin needs its **input** at full rate, _independent_ of the priority ranking — you correct every reading from the upstream source, not just whichever one a cascade would currently prefer — while the user's ranking decides what _consumers_ see. Subscribe with **`sourcePolicy: 'all'`** and skip your own output in the callback:
 
 - `sourcePolicy: 'all'` delivers every source at full rate with no cascade on your input. Skip updates whose `$source` is your own `plugin.id` so you don't reprocess your output. The global priority cascade still applies to consumers, so the user's ranking of your output works as expected.
 
-Do **not** use `registerDeltaInputHandler` for this. An input handler is for modifying a delta in place as it passes through, not for republishing a value under your own source — a correction plugin emits its corrected value under its own `$source` and lets source priority choose between that and the raw source, which is a different shape from rewriting the incoming delta. Subscribe-and-emit keeps the raw and corrected values as two distinct sources the user can rank.
+Do **not** use `registerDeltaInputHandler` for **new value strategy**. An input handler is for modifying a delta in place as it passes through, not for republishing a value under your own source — a correction plugin emits its corrected value under its own `$source` and lets source priority choose between that and the raw source, which is a different shape from rewriting the incoming delta. Subscribe-and-emit keeps the raw and corrected values as two distinct sources the user can rank.
 
 `excludeSelf` (see [Excluding Sources](#excluding-sources-excludesources--excludeself)) is a different tool and **not** what you want for a full-rate correction. It runs the priority cascade on your input feed, so it delivers a single ranked-and-throttled upstream value rather than every reading: with the user ranking your plugin rank-0, the real source is held as a lower-ranked fallback and only reaches you after the fallback timeout. `excludeSelf` fits a plugin that wants _the preferred remaining upstream value_ (e.g. "show source B, fall back to A, never my own C"), not one that corrects each raw sample.
 
