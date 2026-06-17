@@ -7,6 +7,7 @@ import {
   canonicaliseSourceRef,
   detectInstanceConflicts,
   isProprietaryPGN,
+  isRemoveSourceFailure,
   type SourcesData,
   type N2kDeviceEntry
 } from './sourceLabels'
@@ -782,5 +783,34 @@ describe('isProprietaryPGN', () => {
 
   it('rejects non-numeric input', () => {
     expect(isProprietaryPGN('not-a-number')).toBe(false)
+  })
+})
+
+describe('isRemoveSourceFailure', () => {
+  it('treats a 2xx response as success', () => {
+    expect(isRemoveSourceFailure(200, true, false)).toBe(false)
+    expect(isRemoveSourceFailure(200, true, true)).toBe(false)
+  })
+
+  it('treats a 404 on a missing-from-status ref as success', () => {
+    // The stale-saved-ref case: a device that re-registered under a new
+    // transport leaves an old ref in the saved group. The server 404s
+    // because that ref is genuinely gone — which is exactly the outcome
+    // the user wanted, so the optimistic removal must stick.
+    expect(isRemoveSourceFailure(404, false, true)).toBe(false)
+  })
+
+  it('treats a 404 on a still-tracked ref as a failure', () => {
+    // Not missing from status: a 404 here is unexpected, so revert.
+    expect(isRemoveSourceFailure(404, false, false)).toBe(true)
+  })
+
+  it('treats auth and server errors as failures regardless of status flag', () => {
+    expect(isRemoveSourceFailure(401, false, true)).toBe(true)
+    expect(isRemoveSourceFailure(403, false, true)).toBe(true)
+    expect(isRemoveSourceFailure(500, false, true)).toBe(true)
+    expect(isRemoveSourceFailure(401, false, false)).toBe(true)
+    expect(isRemoveSourceFailure(403, false, false)).toBe(true)
+    expect(isRemoveSourceFailure(500, false, false)).toBe(true)
   })
 })

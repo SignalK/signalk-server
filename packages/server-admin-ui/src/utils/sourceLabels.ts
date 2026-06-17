@@ -446,3 +446,25 @@ export function detectInstanceConflicts(
 export function conflictKey(sourceRefA: string, sourceRefB: string): string {
   return [sourceRefA, sourceRefB].sort().join('+')
 }
+
+/**
+ * Classify a removeSource/n2kRemoveSource DELETE response so the trash flow
+ * knows whether to keep the optimistic removal or revert it.
+ *
+ * A 404 on a source the live status snapshot no longer reports
+ * (`isMissingFromStatus`) is the success case, not a failure: the server is
+ * confirming the source is already gone, so the saved-group ref is a stale
+ * leftover — a device that re-registered under a new transport (a renumbered
+ * ttyUSB port, a fresh canName). Keeping the removal lets the ref drop out of
+ * the group on Save; reverting would pin the zombie ref in place forever,
+ * since the DELETE can never succeed for a source the server doesn't have.
+ */
+export function isRemoveSourceFailure(
+  status: number,
+  ok: boolean,
+  isMissingFromStatus: boolean
+): boolean {
+  if (ok) return false
+  if (status === 404 && isMissingFromStatus) return false
+  return true
+}
