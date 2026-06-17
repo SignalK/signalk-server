@@ -42,7 +42,7 @@ RUN case "$EDITION" in \
   && if [ "$EDITION" = core ]; then \
        adminui_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@signalk/server-admin-ui']") \
        && serialport_spec=$(node -p "require('signalk-server/package.json').optionalDependencies.serialport") \
-       && npm install "@signalk/server-admin-ui@$adminui_spec" "serialport@$serialport_spec"; \
+       && npm install $npm_flags "@signalk/server-admin-ui@$adminui_spec" "serialport@$serialport_spec"; \
      fi \
   && mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
   && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \

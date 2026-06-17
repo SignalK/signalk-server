@@ -45,7 +45,7 @@ RUN case "$EDITION" in \
   && npm install "$server_tarball" --install-strategy=nested $npm_flags \
   && if [ "$EDITION" = core ]; then \
        serialport_spec=$(node -p "require('signalk-server/package.json').optionalDependencies.serialport") \
-       && npm install "serialport@$serialport_spec"; \
+       && npm install $npm_flags "serialport@$serialport_spec"; \
      fi \
   && if [ -d node_modules/@signalk ]; then \
        mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
