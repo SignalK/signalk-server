@@ -22,21 +22,17 @@ const radarApiDoc = {
   tags: [
     { name: 'Radars', description: 'Radar discovery and capabilities' },
     { name: 'Controls', description: 'Read and modify radar control settings' },
-    { name: 'Targets', description: 'ARPA target acquisition and tracking' },
-    {
-      name: 'Configuration',
-      description: 'Server and network configuration'
-    },
-    {
-      name: 'Stream',
-      description: 'Real-time WebSocket stream for control updates'
-    }
+    { name: 'Targets', description: 'ARPA target acquisition and tracking' }
   ],
   components: {
     schemas: {
       RadarInfo: {
         type: 'object',
         properties: {
+          id: {
+            type: 'string',
+            description: 'Radar identifier.'
+          },
           name: {
             type: 'string',
             description: 'User-defined name or auto-detected model name'
@@ -50,26 +46,19 @@ const radarApiDoc = {
             type: 'string',
             description: 'Radar model name if detected'
           },
-          spokeDataUrl: {
-            type: 'string',
-            description:
-              'WebSocket URL for receiving raw radar spoke data (binary)'
+          spokesPerRevolution: {
+            type: 'integer',
+            description: 'Number of spokes per full rotation'
           },
-          streamUrl: {
-            type: 'string',
-            description: 'WebSocket URL for Signal K control stream (JSON)'
-          },
-          radarIpAddress: {
-            type: 'string',
-            description: 'IP address of the radar unit on the network'
+          maxSpokeLength: {
+            type: 'integer',
+            description: 'Maximum number of samples per spoke'
           }
         },
         required: [
+          'id',
           'name',
-          'brand',
-          'spokeDataUrl',
-          'streamUrl',
-          'radarIpAddress'
+          'brand'
         ]
       },
       Capabilities: {
@@ -389,7 +378,7 @@ const radarApiDoc = {
     }
   },
   paths: {
-    '/signalk/v2/api/vessels/self/radars': {
+    '/': {
       get: {
         tags: ['Radars'],
         summary: 'List all active radars',
@@ -412,49 +401,27 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/interfaces': {
+    '/{radar_id}': {
       get: {
-        tags: ['Configuration'],
-        summary: 'List network interfaces',
+        tags: ['Radars'],
+        summary: 'Get radar information',
         description:
-          'Returns network interfaces and which radar brands are listening on each.',
+          'Returns static information about a radar.',
+        parameters: [radarIdParam],
         responses: {
           '200': {
-            description: 'Network interfaces with radar brands',
+            description: 'Radar information',
             content: {
               'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    brands: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Radar brands compiled into this server'
-                    },
-                    interfaces: {
-                      type: 'object',
-                      additionalProperties: {
-                        type: 'object',
-                        properties: {
-                          status: { type: 'string' },
-                          ip: { type: 'string' },
-                          netmask: { type: 'string' },
-                          listeners: {
-                            type: 'object',
-                            additionalProperties: { type: 'string' }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                schema: { $ref: '#/components/schemas/RadarInfo' }
               }
             }
-          }
+          },
+          '404': { description: 'Radar not found' }
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/capabilities': {
+    '/{radar_id}/capabilities': {
       get: {
         tags: ['Radars'],
         summary: 'Get radar capabilities',
@@ -474,7 +441,7 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/controls': {
+    '/{radar_id}/controls': {
       get: {
         tags: ['Controls'],
         summary: 'Get all control values',
@@ -499,7 +466,7 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/controls/{control_id}': {
+    '/controls/{control_id}': {
       get: {
         tags: ['Controls'],
         summary: 'Get a single control value',
@@ -556,7 +523,7 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/targets': {
+    '/{radar_id}/targets': {
       get: {
         tags: ['Targets'],
         summary: 'Get tracked targets',
@@ -611,7 +578,7 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/targets/{target_id}': {
+    '/{radar_id}/targets/{target_id}': {
       delete: {
         tags: ['Targets'],
         summary: 'Cancel target tracking',
