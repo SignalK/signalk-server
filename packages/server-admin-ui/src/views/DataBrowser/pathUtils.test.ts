@@ -37,4 +37,12 @@ describe('findContextName', () => {
   it('ignores a non-string name value', () => {
     expect(findContextName({ 'name$AIS.1': { value: 42 } })).toBeUndefined()
   })
+
+  it('skips a non-string name entry for a later valid one', () => {
+    const contextData = {
+      'name$AIS.1': { value: 42 },
+      'name$AIS.2': { value: 'Black Pearl' }
+    }
+    expect(findContextName(contextData)).toBe('Black Pearl')
+  })
 })
