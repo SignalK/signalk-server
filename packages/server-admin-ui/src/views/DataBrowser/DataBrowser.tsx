@@ -25,7 +25,7 @@ import {
   type SourcesData
 } from '../../utils/sourceLabels'
 import granularSubscriptionManager from './GranularSubscriptionManager'
-import { getPath$SourceKey, getPathFromKey } from './pathUtils'
+import { getPath$SourceKey, getPathFromKey, findContextName } from './pathUtils'
 import {
   useWebSocket,
   useDeltaMessages,
@@ -450,10 +450,7 @@ const DataBrowser: React.FC = () => {
     ]
 
     if (contextKeys.includes('self')) {
-      const contextData = currentData['self']?.['name'] as
-        | { value?: string }
-        | undefined
-      const contextName = contextData?.value
+      const contextName = findContextName(currentData['self'])
       options.push({
         value: 'self',
         label: `${contextName || ''} self`,
@@ -464,10 +461,7 @@ const DataBrowser: React.FC = () => {
     let isFirst = true
     contextKeys.forEach((key) => {
       if (key !== 'self') {
-        const contextData = currentData[key]?.['name'] as
-          | { value?: string }
-          | undefined
-        const contextName = contextData?.value
+        const contextName = findContextName(currentData[key])
         options.push({
           value: key,
           label: `${contextName || ''} ${key}`,
@@ -479,7 +473,9 @@ const DataBrowser: React.FC = () => {
     })
 
     return options
-  }, [contextKeys])
+    // dataVersion is included so the labels pick up a vessel's `name`
+    // leaf, which arrives in a delta after the context key first appears.
+  }, [contextKeys, dataVersion])
 
   useEffect(() => {
     subscribeToDataIfNeeded()
