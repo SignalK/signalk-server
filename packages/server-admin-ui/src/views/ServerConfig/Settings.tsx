@@ -29,6 +29,10 @@ interface ServerSettingsData {
   }
 }
 
+interface SecurityConfig {
+  allow_readonly?: boolean
+}
+
 const SettableInterfaces: Record<string, string> = {
   applicationData: 'Application Data Storage',
   logfiles: 'Data log files access',
@@ -67,7 +71,9 @@ const ServerSettings: React.FC = () => {
         credentials: 'include'
       })
         .then((response) => response.json())
-        .then((data) => setAllowReadonly(Boolean(data.allow_readonly)))
+        .then((data: SecurityConfig) =>
+          setAllowReadonly(Boolean(data.allow_readonly))
+        )
         .catch(() => undefined)
     }
   }, [loginStatus.authenticationRequired])
