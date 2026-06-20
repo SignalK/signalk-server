@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -10,7 +11,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 
 import VesselConfiguration from './VesselConfiguration'
 import Logging from './Logging'
-import { useStore } from '../../store'
+import { useStore, useLoginStatus } from '../../store'
 
 interface ServerSettingsData {
   hasData?: boolean
@@ -37,9 +38,14 @@ const SettableInterfaces: Record<string, string> = {
 }
 
 const ServerSettings: React.FC = () => {
+  const loginStatus = useLoginStatus()
   const [settings, setSettings] = useState<ServerSettingsData>({
     hasData: false
   })
+  // The Signal K over TCP interface only starts when anonymous readonly
+  // access is allowed (see src/interfaces/tcp.ts). Track that so the toggle
+  // can reflect when the port would not actually be available.
+  const [allowReadonly, setAllowReadonly] = useState(false)
 
   const fetchSettings = useCallback(() => {
     fetch(`${window.serverRoutesPrefix}/settings`, {
@@ -54,6 +60,22 @@ const ServerSettings: React.FC = () => {
   useEffect(() => {
     fetchSettings()
   }, [fetchSettings])
+
+  useEffect(() => {
+    if (loginStatus.authenticationRequired) {
+      fetch(`${window.serverRoutesPrefix}/security/config`, {
+        credentials: 'include'
+      })
+        .then((response) => response.json())
+        .then((data) => setAllowReadonly(Boolean(data.allow_readonly)))
+        .catch(() => undefined)
+    }
+  }, [loginStatus.authenticationRequired])
+
+  // When security is enabled but anonymous readonly access is off, the Signal K
+  // over TCP port is not opened by the server even if its toggle is on.
+  const tcpUnavailable =
+    loginStatus.authenticationRequired === true && !allowReadonly
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -252,28 +274,48 @@ const ServerSettings: React.FC = () => {
               </Col>
               <Col xs="12" md={fieldColWidthMd}>
                 {Object.keys(SettableInterfaces).map((name) => {
+                  const disabled = name === 'tcp' && tcpUnavailable
                   return (
-                    <div key={name} className="d-flex align-items-center mb-2">
-                      <Form.Label
-                        style={{ marginRight: '15px', marginBottom: 0 }}
-                        className="switch switch-text switch-primary"
+                    <div key={name} className="mb-2">
+                      <div
+                        className="d-flex align-items-center"
+                        style={{ opacity: disabled ? 0.5 : 1 }}
                       >
-                        <input
-                          type="checkbox"
-                          id={`interface-${name}`}
-                          name={name}
-                          className="switch-input"
-                          onChange={handleInterfaceChange}
-                          checked={settings.interfaces?.[name] || false}
-                        />
-                        <span
-                          className="switch-label"
-                          data-on="On"
-                          data-off="Off"
-                        />
-                        <span className="switch-handle" />
-                      </Form.Label>
-                      <span>{SettableInterfaces[name]}</span>
+                        <Form.Label
+                          style={{ marginRight: '15px', marginBottom: 0 }}
+                          className="switch switch-text switch-primary"
+                        >
+                          <input
+                            type="checkbox"
+                            id={`interface-${name}`}
+                            name={name}
+                            className="switch-input"
+                            onChange={handleInterfaceChange}
+                            checked={
+                              disabled
+                                ? false
+                                : settings.interfaces?.[name] || false
+                            }
+                            disabled={disabled}
+                          />
+                          <span
+                            className="switch-label"
+                            data-on="On"
+                            data-off="Off"
+                          />
+                          <span className="switch-handle" />
+                        </Form.Label>
+                        <span>{SettableInterfaces[name]}</span>
+                      </div>
+                      {disabled && (
+                        <Form.Text className="text-warning">
+                          Enable{' '}
+                          <Link to="/security/settings">
+                            Allow Readonly Access
+                          </Link>{' '}
+                          under Security → Settings to make this port available.
+                        </Form.Text>
+                      )}
                     </div>
                   )
                 })}
