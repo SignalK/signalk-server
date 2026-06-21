@@ -12,7 +12,7 @@
  * Bidirectional TCP provider for `canboat-pipeline`'s CSV R/W port.
  *
  * canboat-pipeline (https://github.com/canboat/canboat-rs) exposes
- * an "Actisense CSV" port (port 2603 by default) that streams every
+ * a "Canboat Raw CSV" port (port 2603 by default) that streams every
  * N2K frame as a canboat PLAIN/FAST line:
  *
  *   2026-05-29T19:16:04.826Z,2,127251,14,255,8,ff,5e,7d,00,00,ff,ff,ff
