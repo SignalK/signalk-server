@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import Alert from 'react-bootstrap/Alert'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -30,8 +31,12 @@ interface ServerSettingsData {
 }
 
 interface SecurityConfig {
-  allow_readonly?: boolean
+  allow_readonly: boolean
 }
+
+// Opacity applied to the interface row when its toggle is disabled.
+const DISABLED_ROW_OPACITY = 0.5
+const ENABLED_ROW_OPACITY = 1
 
 const SettableInterfaces: Record<string, string> = {
   applicationData: 'Application Data Storage',
@@ -48,8 +53,9 @@ const ServerSettings: React.FC = () => {
   })
   // The Signal K over TCP interface only starts when anonymous readonly
   // access is allowed (see src/interfaces/tcp.ts). Track that so the toggle
-  // can reflect when the port would not actually be available.
-  const [allowReadonly, setAllowReadonly] = useState(false)
+  // can reflect when the port would not actually be available. null = unknown
+  // (not yet fetched, fetch failed, or security disabled).
+  const [allowReadonly, setAllowReadonly] = useState<boolean | null>(null)
 
   const fetchSettings = useCallback(() => {
     fetch(`${window.serverRoutesPrefix}/settings`, {
@@ -70,18 +76,25 @@ const ServerSettings: React.FC = () => {
       fetch(`${window.serverRoutesPrefix}/security/config`, {
         credentials: 'include'
       })
-        .then((response) => response.json())
-        .then((data: SecurityConfig) =>
-          setAllowReadonly(Boolean(data.allow_readonly))
-        )
-        .catch(() => undefined)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Unable to load security config')
+          }
+          return response.json() as Promise<SecurityConfig>
+        })
+        .then((data) => setAllowReadonly(data.allow_readonly))
+        .catch(() => setAllowReadonly(null))
+    } else {
+      setAllowReadonly(null)
     }
   }, [loginStatus.authenticationRequired])
 
   // When security is enabled but anonymous readonly access is off, the Signal K
-  // over TCP port is not opened by the server even if its toggle is on.
+  // over TCP port is not opened by the server even if its toggle is on. Only
+  // warn when we know readonly is off (allowReadonly === false), not when the
+  // security config is still unknown.
   const tcpUnavailable =
-    loginStatus.authenticationRequired === true && !allowReadonly
+    loginStatus.authenticationRequired === true && allowReadonly === false
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,7 +298,11 @@ const ServerSettings: React.FC = () => {
                     <div key={name} className="mb-2">
                       <div
                         className="d-flex align-items-center"
-                        style={{ opacity: disabled ? 0.5 : 1 }}
+                        style={{
+                          opacity: disabled
+                            ? DISABLED_ROW_OPACITY
+                            : ENABLED_ROW_OPACITY
+                        }}
                       >
                         <Form.Label
                           style={{ marginRight: '15px', marginBottom: 0 }}
@@ -314,13 +331,19 @@ const ServerSettings: React.FC = () => {
                         <span>{SettableInterfaces[name]}</span>
                       </div>
                       {disabled && (
-                        <Form.Text className="text-warning">
-                          Enable{' '}
-                          <Link to="/security/settings">
-                            Allow Readonly Access
-                          </Link>{' '}
-                          under Security → Settings to make this port available.
-                        </Form.Text>
+                        <Alert
+                          variant="warning"
+                          className="mt-1 mb-0 py-1 px-2"
+                        >
+                          <small>
+                            Enable{' '}
+                            <Link to="/security/settings">
+                              Allow Readonly Access
+                            </Link>{' '}
+                            under Security → Settings to make this port
+                            available.
+                          </small>
+                        </Alert>
                       )}
                     </div>
                   )
