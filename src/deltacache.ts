@@ -29,6 +29,16 @@ import { isFanOutPriorities } from './deltaPriority'
 
 const SOURCES_CACHE_FILE = 'sources-cache.json'
 
+// Maximum time since a source's last accepted delta before it is considered
+// offline for POSITION_SOURCES purposes. Picked to be longer than typical
+// NMEA position update rates (1–10 Hz on N2K, 1 Hz on NMEA0183) but short
+// enough that a disconnected GPS flips to "offline" in the admin UI within
+// a minute, so users notice missing antennas before they navigate by them.
+const POSITION_SOURCE_TTL_MS = 60 * 1000
+// How often to re-evaluate POSITION_SOURCES so silent publishers fall off
+// even when no new delta arrives to trigger an emit.
+const POSITION_SOURCE_SWEEP_MS = 15 * 1000
+
 interface StringKeyed {
   [key: string]: any
 }
@@ -140,6 +150,7 @@ export default class DeltaCache {
   private lastEmittedMultiSourceCount = 0
   private livePreferredEmitTimer: ReturnType<typeof setTimeout> | null = null
   private livePreferredDirtyPaths: Set<string> = new Set()
+  private lastEmittedPositionSources: string[] = []
 
   // Cached `<label>.<src> → <label>.<canName>` translation, refreshed
   // whenever `app.signalk.sources` is replaced or sourceRefChanged
@@ -189,6 +200,12 @@ export default class DeltaCache {
       },
       5 * 60 * 1000
     )
+
+    // Re-evaluate POSITION_SOURCES on a timer so silent publishers age
+    // out even when no new delta arrives to trigger an emit. The change
+    // detection in emitPositionSources keeps the event off the bus when
+    // the resulting set hasn't shifted.
+    setInterval(() => this.emitPositionSources(), POSITION_SOURCE_SWEEP_MS)
   }
 
   getContextAndPathParts(msg: NormalizedDelta): string[] {
@@ -236,6 +253,7 @@ export default class DeltaCache {
     )
 
     if (msg.path.length !== 0) {
+      const isNewSource = !leaf[sourceRef]
       leaf[sourceRef] = msg
       const prefKey = msg.context + '\0' + msg.path
       // The priority engine matches by canonical (canName) form. Store
@@ -267,6 +285,9 @@ export default class DeltaCache {
           this.livePreferredDirtyPaths.add(prefKey)
           this.scheduleLivePreferredEmit()
         }
+      }
+      if (isNewSource && msg.path === 'navigation.position') {
+        this.scheduleMultiSourceEmit()
       }
     } else if (msg.value) {
       _.keys(msg.value).forEach((key) => {
@@ -341,6 +362,45 @@ export default class DeltaCache {
     })
     if (countChanged) {
       this.scheduleMultiSourceEmit()
+    }
+    this.emitPositionSources()
+  }
+
+  /**
+   * `getSourcesForPath('navigation.position')` filtered by per-source
+   * freshness so disconnected publishers fall off after the TTL. Shared
+   * between the live event emitter and the REST GET handler so a cold
+   * page-load sees the same set the websocket would deliver moments later.
+   */
+  getActivePositionSources(): string[] {
+    const sources = this.getSourcesForPath('navigation.position')
+    const sourceMeta = (this.app.signalk as any)?.sourceMeta as
+      | Record<string, { lastSeen?: number }>
+      | undefined
+    if (!sourceMeta) return sources.slice().sort()
+    const cutoff = Date.now() - POSITION_SOURCE_TTL_MS
+    return sources
+      .filter((ref) => {
+        const meta = sourceMeta[ref]
+        return meta?.lastSeen !== undefined && meta.lastSeen >= cutoff
+      })
+      .sort()
+  }
+
+  private emitPositionSources() {
+    const sorted = this.getActivePositionSources()
+    const changed =
+      sorted.length !== this.lastEmittedPositionSources.length ||
+      sorted.some((s, i) => s !== this.lastEmittedPositionSources[i])
+    if (changed) {
+      this.lastEmittedPositionSources = sorted
+      // Emit the sorted list so successive events have stable ordering;
+      // otherwise clients diffing payloads see spurious changes whenever
+      // the cache iteration order happens to swap two refs.
+      ;(this.app as any).emit('serverevent', {
+        type: 'POSITION_SOURCES',
+        data: sorted
+      })
     }
   }
 
@@ -554,17 +614,28 @@ export default class DeltaCache {
         }
 
         if (isNewSource) {
-          const sourceCount = Object.keys(leaf).filter((k) => {
-            const v = leaf[k]
-            return (
-              v &&
-              typeof v === 'object' &&
-              v.path !== undefined &&
-              v.value !== undefined
-            )
-          }).length
-          if (sourceCount >= 2) {
+          if (pathValue.path === 'navigation.position') {
             this.scheduleMultiSourceEmit()
+          } else {
+            // Count sources without allocating a new array on every delta:
+            // break out as soon as we have the two we need to decide the
+            // path is multi-source.
+            let sourceCount = 0
+            for (const k of Object.keys(leaf)) {
+              const v = leaf[k]
+              if (
+                v &&
+                typeof v === 'object' &&
+                v.path !== undefined &&
+                v.value !== undefined
+              ) {
+                sourceCount++
+                if (sourceCount >= 2) {
+                  this.scheduleMultiSourceEmit()
+                  break
+                }
+              }
+            }
           }
         }
       }
@@ -1205,6 +1276,39 @@ export default class DeltaCache {
     }
 
     return out.sort((a, b) => a.id.localeCompare(b.id))
+  }
+
+  /**
+   * Unlike getMultiSourcePaths, includes single-source paths too.
+   */
+  getSourcesForPath(path: string): string[] {
+    const selfParts = this.app.selfContext.split('.')
+    const pathParts = path.split('.')
+    const parts = [...selfParts, ...pathParts]
+
+    let node = this.cache
+    for (const part of parts) {
+      if (!node || !node[part]) return []
+      node = node[part]
+    }
+
+    // Canonicalise to canName form and dedupe: the cache may carry both
+    // `<label>.<src>` and `<label>.<canName>` entries for the same physical
+    // device during address-claim transitions, which would otherwise show
+    // up as two separate GPS sources in the admin UI.
+    const out = new Set<string>()
+    for (const k of Object.keys(node)) {
+      const v = node[k]
+      if (
+        v &&
+        typeof v === 'object' &&
+        v.path !== undefined &&
+        v.value !== undefined
+      ) {
+        out.add(this.canonicaliseSourceRef(k))
+      }
+    }
+    return [...out]
   }
 
   getSources() {

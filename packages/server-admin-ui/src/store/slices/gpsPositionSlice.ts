@@ -1,0 +1,192 @@
+import type { StateCreator } from 'zustand'
+import remove from 'lodash.remove'
+import type { GpsSensorConfig, GpsSensorsData } from '../types'
+
+export interface GpsPositionSliceState {
+  gpsSensorsData: GpsSensorsData
+  positionSources: string[]
+}
+
+export interface GpsPositionSliceActions {
+  setGpsSensors: (sensors: GpsSensorConfig[]) => void
+  setPositionSources: (sources: string[]) => void
+  updateGpsSensor: (index: number, updates: Partial<GpsSensorConfig>) => void
+  addGpsSensor: (sourceRef: string) => void
+  removeGpsSensor: (index: number) => void
+  setGpsSaving: () => void
+  setGpsSaved: () => void
+  setGpsSaveFailed: (message?: string) => void
+  clearGpsSaveFailed: () => void
+}
+
+export type GpsPositionSlice = GpsPositionSliceState & GpsPositionSliceActions
+
+function nextSensorId(sensors: GpsSensorConfig[]): string {
+  const existing = new Set(sensors.map((s) => s.sensorId))
+  for (let i = 1; ; i++) {
+    const id = `gps${i}`
+    if (!existing.has(id)) return id
+  }
+}
+
+const initialGpsPositionState: GpsPositionSliceState = {
+  gpsSensorsData: {
+    sensors: [],
+    saveState: {
+      dirty: false,
+      timeoutsOk: true
+    }
+  },
+  positionSources: []
+}
+
+export const createGpsPositionSlice: StateCreator<
+  GpsPositionSlice,
+  [],
+  [],
+  GpsPositionSlice
+> = (set) => ({
+  ...initialGpsPositionState,
+
+  setGpsSensors: (sensors) => {
+    set({
+      gpsSensorsData: {
+        sensors,
+        saveState: {
+          dirty: false,
+          timeoutsOk: true
+        }
+      }
+    })
+  },
+
+  setPositionSources: (positionSources) => {
+    set({ positionSources })
+  },
+
+  updateGpsSensor: (index, updates) => {
+    set((state) => {
+      const current = state.gpsSensorsData.sensors
+      if (index < 0 || index >= current.length) return state
+      if (
+        updates.sourceRef !== undefined &&
+        current.some((s, i) => i !== index && s.sourceRef === updates.sourceRef)
+      ) {
+        return state
+      }
+      if (
+        updates.sensorId !== undefined &&
+        current.some((s, i) => i !== index && s.sensorId === updates.sensorId)
+      ) {
+        return state
+      }
+      const sensors = [...current]
+      sensors[index] = { ...sensors[index], ...updates }
+      return {
+        gpsSensorsData: {
+          ...state.gpsSensorsData,
+          sensors,
+          saveState: { ...state.gpsSensorsData.saveState, dirty: true }
+        }
+      }
+    })
+  },
+
+  addGpsSensor: (sourceRef) => {
+    set((state) => {
+      if (
+        sourceRef &&
+        state.gpsSensorsData.sensors.some((s) => s.sourceRef === sourceRef)
+      ) {
+        return state
+      }
+      const sensors = [
+        ...state.gpsSensorsData.sensors,
+        {
+          sensorId: nextSensorId(state.gpsSensorsData.sensors),
+          sourceRef,
+          fromBow: null,
+          fromCenter: null
+        }
+      ]
+      return {
+        gpsSensorsData: {
+          ...state.gpsSensorsData,
+          sensors,
+          saveState: { ...state.gpsSensorsData.saveState, dirty: true }
+        }
+      }
+    })
+  },
+
+  removeGpsSensor: (index) => {
+    set((state) => {
+      const current = state.gpsSensorsData.sensors
+      if (index < 0 || index >= current.length) return state
+      const sensors = [...current]
+      remove(sensors, (_, i) => i === index)
+      return {
+        gpsSensorsData: {
+          ...state.gpsSensorsData,
+          sensors,
+          saveState: { ...state.gpsSensorsData.saveState, dirty: true }
+        }
+      }
+    })
+  },
+
+  setGpsSaving: () => {
+    set((state) => ({
+      gpsSensorsData: {
+        ...state.gpsSensorsData,
+        saveState: {
+          ...state.gpsSensorsData.saveState,
+          isSaving: true,
+          saveFailed: false
+        }
+      }
+    }))
+  },
+
+  setGpsSaved: () => {
+    set((state) => ({
+      gpsSensorsData: {
+        ...state.gpsSensorsData,
+        saveState: {
+          ...state.gpsSensorsData.saveState,
+          dirty: false,
+          isSaving: false,
+          saveFailed: false
+        },
+        saveError: undefined
+      }
+    }))
+  },
+
+  setGpsSaveFailed: (message?: string) => {
+    set((state) => ({
+      gpsSensorsData: {
+        ...state.gpsSensorsData,
+        saveState: {
+          ...state.gpsSensorsData.saveState,
+          isSaving: false,
+          saveFailed: true
+        },
+        saveError: message
+      }
+    }))
+  },
+
+  clearGpsSaveFailed: () => {
+    set((state) => ({
+      gpsSensorsData: {
+        ...state.gpsSensorsData,
+        saveState: {
+          ...state.gpsSensorsData.saveState,
+          saveFailed: false
+        },
+        saveError: undefined
+      }
+    }))
+  }
+})

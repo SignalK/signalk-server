@@ -22,7 +22,9 @@ import {
   useSourcePriorities,
   usePriorityOverrides,
   usePriorityGroups,
-  useActiveConflictCount
+  useActiveConflictCount,
+  useGpsSensorsData,
+  usePositionSources
 } from '../../store'
 import classNames from 'classnames'
 import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
@@ -156,6 +158,21 @@ export default function Sidebar({ location }: SidebarProps) {
     (d) => d.tokenExpiry && d.tokenExpiry * 1000 < nowMs
   ).length
 
+  const gpsSensorsData = useGpsSensorsData()
+  const positionSources = usePositionSources()
+
+  const unconfiguredGpsCount = useMemo(() => {
+    // Match the Preferences page's notion of "configured": a sensor row
+    // exists for the source. Whether offsets are filled in is a separate
+    // question (null offsets are treated as zero by the server's
+    // lever-arm corrector); the badge is for "detected source has no
+    // row at all", which is the actionable case.
+    const configuredRefs = new Set(
+      gpsSensorsData.sensors.filter((s) => s.sourceRef).map((s) => s.sourceRef)
+    )
+    return positionSources.filter((ref) => !configuredRefs.has(ref)).length
+  }, [positionSources, gpsSensorsData])
+
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
     let updatesBadge: BadgeData | null = null
@@ -266,7 +283,14 @@ export default function Sidebar({ location }: SidebarProps) {
                 }
               : null
         },
-        { name: 'Unit Preferences', url: '/data/units' },
+        {
+          name: 'Preferences',
+          url: '/data/preferences',
+          badge:
+            unconfiguredGpsCount > 0
+              ? { variant: 'warning', text: `${unconfiguredGpsCount}` }
+              : null
+        },
         { name: 'Fiddler', url: '/data/fiddler' }
       )
     }
@@ -284,7 +308,7 @@ export default function Sidebar({ location }: SidebarProps) {
       },
       ((): NavItemData => {
         const dataBadgeCount = isAdmin
-          ? prioritiesAttentionCount + conflictCount
+          ? prioritiesAttentionCount + conflictCount + unconfiguredGpsCount
           : 0
         return {
           name: 'Data',
@@ -424,7 +448,8 @@ export default function Sidebar({ location }: SidebarProps) {
     plugins,
     conflictCount,
     unconfiguredPriorityCount,
-    overridesWithMissingSourcesCount
+    overridesWithMissingSourcesCount,
+    unconfiguredGpsCount
   ])
 
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(

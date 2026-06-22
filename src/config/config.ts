@@ -123,6 +123,12 @@ export interface Config {
     /** Map of "sourceRefA+sourceRefB" (sorted) → ISO timestamp when the
      * conflict was dismissed by the user */
     ignoredInstanceConflicts?: Record<string, string>
+    gpsSensors?: {
+      sensorId: string
+      sourceRef: string
+      fromBow: number | null
+      fromCenter: number | null
+    }[]
     trustProxy?: boolean | string | number
     courseApi?: {
       apiOnly?: boolean
