@@ -71,7 +71,7 @@ jobs:
     name: >-
       ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
           matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
-          matrix.os == 'macos-latest' && 'macOS' ||
+          matrix.os == 'macos-15' && 'macOS' ||
           matrix.os == 'windows-latest' && 'Windows' ||
           matrix.os }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
@@ -79,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-latest]
         node: ${{ fromJson(inputs.node-versions) }}
     steps:
       - name: Checkout plugin
@@ -1460,7 +1460,7 @@ jobs:
           OS_NAME: >-
             ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
                 matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
-                matrix.os == 'macos-latest' && 'macOS' ||
+                matrix.os == 'macos-15' && 'macOS' ||
                 matrix.os == 'windows-latest' && 'Windows' ||
                 matrix.os }}
           NODE_VER: ${{ matrix.node }}
