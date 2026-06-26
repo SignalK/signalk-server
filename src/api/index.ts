@@ -10,6 +10,7 @@ import { RadarApi } from './radar'
 import { HistoryApiHttpRegistry } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 import { NotificationApi, NotificationApplication } from './notifications'
+import { CommunicationsApi, CommunicationsApplication } from './communications'
 import { binaryStreamManager, initializeBinaryStreams } from './streams'
 
 export interface ApiResponse {
@@ -101,6 +102,17 @@ export const startApis = (
   ;(app as any).notificationApi = notificationApi
   apiList.push('notifications')
 
+  const communicationsApi = new CommunicationsApi(
+    app as unknown as CommunicationsApplication
+  )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).communicationsApi = communicationsApi
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).logMessage = (
+    entry: Parameters<CommunicationsApi['logMessage']>[0]
+  ) => communicationsApi.logMessage(entry)
+  apiList.push('communications')
+
   Promise.all([
     resourcesApi.start(),
     courseApi.start(),
@@ -109,7 +121,8 @@ export const startApis = (
     autopilotApi.start(),
     radarApi.start(),
     historyApiHttpRegistry.start(),
-    notificationApi.start()
+    notificationApi.start(),
+    communicationsApi.start()
   ])
   return apiList
 }
