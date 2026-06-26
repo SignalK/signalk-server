@@ -55,11 +55,7 @@ const radarApiDoc = {
             description: 'Maximum number of samples per spoke'
           }
         },
-        required: [
-          'id',
-          'name',
-          'brand'
-        ]
+        required: ['id', 'name', 'brand']
       },
       Capabilities: {
         type: 'object',
@@ -405,8 +401,7 @@ const radarApiDoc = {
       get: {
         tags: ['Radars'],
         summary: 'Get radar information',
-        description:
-          'Returns static information about a radar.',
+        description: 'Returns static information about a radar.',
         parameters: [radarIdParam],
         responses: {
           '200': {
