@@ -1751,6 +1751,7 @@ module.exports = function (
           type: 'SOURCEALIASES',
           data: {}
         })
+        refreshSourceNames()
         app.emit('serverAdminEvent', {
           type: 'PRIORITYGROUPS',
           data: []
