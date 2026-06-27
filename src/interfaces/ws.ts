@@ -1051,8 +1051,7 @@ function handleValuesMeta(
           // Clone and enhance metadata with displayUnits formulas
           const metaClone = structuredClone(meta) as Record<string, unknown>
           let storedDisplayUnits = metaClone.displayUnits as
-            | Record<string, unknown>
-            | undefined
+            Record<string, unknown> | undefined
           const username = this.spark.request.skPrincipal?.identifier
           if (!storedDisplayUnits?.category && path) {
             const defaultCategory = getDefaultCategory(
@@ -1315,8 +1314,7 @@ function handleRealtimeConnection(
           const pathMeta =
             (getMetadata(fullPath) as Record<string, unknown>) || {}
           const storedDU = pathMeta.displayUnits as
-            | DisplayUnitsMetadata
-            | undefined
+            DisplayUnitsMetadata | undefined
           const category =
             storedDU?.category ||
             getDefaultCategory(

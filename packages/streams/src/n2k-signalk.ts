@@ -247,8 +247,7 @@ export default class N2kToSignalK extends Transform {
       }
 
       const delta = this.n2kMapper.toDelta(chunk) as unknown as
-        | Delta
-        | undefined
+        Delta | undefined
 
       const src = Number(chunk.src)
       if (!this.sourceMeta[src]) {

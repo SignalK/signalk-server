@@ -204,14 +204,11 @@ export default function Sidebar({ location }: SidebarProps) {
 
     const unconfiguredCount = plugins.filter((plugin: Plugin) => {
       const bundled = (plugin as Record<string, unknown>).bundled as
-        | boolean
-        | undefined
+        boolean | undefined
       const schema = (plugin as Record<string, unknown>).schema as
-        | { properties?: Record<string, unknown> }
-        | undefined
+        { properties?: Record<string, unknown> } | undefined
       const data = (plugin as Record<string, unknown>).data as
-        | { configuration?: unknown }
-        | undefined
+        { configuration?: unknown } | undefined
       return (
         !bundled &&
         schema?.properties &&

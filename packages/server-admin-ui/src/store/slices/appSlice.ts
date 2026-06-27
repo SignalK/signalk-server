@@ -395,8 +395,7 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const clear = (get() as any).clearRetiredSuppressions as
-      | ((s: Record<string, string[]>) => void)
-      | undefined
+      ((s: Record<string, string[]>) => void) | undefined
     clear?.(newcomersByGroup)
   },
 

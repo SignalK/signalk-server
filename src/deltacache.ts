@@ -509,8 +509,7 @@ export default class DeltaCache {
     // age out and badge Offline despite the cache holding fresh data
     // for it (admin Priority Groups view, see SOURCESTATUS).
     const sourceMeta = (this.app.signalk as any)?.sourceMeta as
-      | Record<string, { lastSeen: number }>
-      | undefined
+      Record<string, { lastSeen: number }> | undefined
     const now = Date.now()
     for (const update of delta.updates) {
       if (!('values' in update) || !update.values) continue
@@ -608,8 +607,7 @@ export default class DeltaCache {
   private getSourcesCachePath(): string | null {
     if (this.sourcesCachePath === null) {
       const configPath = (this.app.config as any).configPath as
-        | string
-        | undefined
+        string | undefined
       if (configPath) {
         this.sourcesCachePath = join(configPath, SOURCES_CACHE_FILE)
       }
@@ -881,8 +879,7 @@ export default class DeltaCache {
     }
 
     const persisted = (this.app.config as any).settings?.priorityOverrides as
-      | Record<string, Array<{ sourceRef?: string }>>
-      | undefined
+      Record<string, Array<{ sourceRef?: string }>> | undefined
     if (persisted) {
       for (const [path, entries] of Object.entries(persisted)) {
         if (!Array.isArray(entries)) continue
@@ -1023,8 +1020,7 @@ export default class DeltaCache {
     }
 
     const savedGroups = (this.app.config as any).settings?.priorityGroups as
-      | Array<{ id: string; sources: string[]; inactive?: boolean }>
-      | undefined
+      Array<{ id: string; sources: string[]; inactive?: boolean }> | undefined
 
     // Membership: which saved group claims each source? Inactive groups
     // still claim their sources for display purposes.

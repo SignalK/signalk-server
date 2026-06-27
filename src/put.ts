@@ -112,8 +112,7 @@ let putNotificationHandler: (
 // registry alone would leave the field stuck on the tree leaf.
 function removeLeafMetaField(app: PutApp, metaPath: string, name: string) {
   const leaf = _get(app.signalk.self, metaPath) as
-    | { meta?: Record<string, unknown> }
-    | undefined
+    { meta?: Record<string, unknown> } | undefined
   if (leaf?.meta) {
     delete leaf.meta[name]
   }
@@ -201,8 +200,7 @@ export function start(app: PutApp): void {
 
     // Validate displayUnits.category if present
     const displayUnits = metaValue.displayUnits as
-      | { category?: string }
-      | undefined
+      { category?: string } | undefined
     if (displayUnits?.category) {
       const schemaMeta = getMetadata('vessels.self.' + metaPath) as Record<
         string,

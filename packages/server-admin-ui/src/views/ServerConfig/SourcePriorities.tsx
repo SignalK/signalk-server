@@ -86,8 +86,7 @@ function extractPathSourceMeta(tree: unknown): SourceMetaMap {
     }
 
     const values = n.values as
-      | Record<string, Record<string, unknown>>
-      | undefined
+      Record<string, Record<string, unknown>> | undefined
     if (values && typeof values === 'object') {
       for (const [ref, entry] of Object.entries(values)) {
         if (!entry || typeof entry !== 'object') continue
