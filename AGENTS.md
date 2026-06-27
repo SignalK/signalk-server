@@ -43,6 +43,37 @@ Do not add error handling, fallbacks, or validation for scenarios that cannot ha
 - Unit tests for business logic; integration tests for boundaries
 - Aim for meaningful coverage, not arbitrary percentages
 
+## v2 API Conventions
+
+The v2 APIs (`src/api/<name>/`) follow the provider pattern (Course, Autopilot, Weather, Radar, Notifications, BLE). A new or modified API has several documentation surfaces; most are generated from one source, so keep that source authoritative and update the hand-written surface that drifts.
+
+### TypeBox is the single source of truth
+
+- Define every request/response data shape as a **TypeBox schema** in `packages/server-api/src/typebox/<name>-schemas.ts`, each with a unique `$id`. These schemas — not hand-written interfaces or hand-written OpenAPI — are the source of truth.
+- Derive the TypeScript types plugins program against from the schemas with `Static<typeof XSchema>`. Do not hand-maintain a parallel `interface` that duplicates a schema; the two will drift. Only types TypeBox cannot express (anything with methods — `XApi`, `XProvider`, connection handles) are hand-written interfaces.
+- Generate OpenAPI `components.schemas` from the schemas via `typeboxToOpenApiSchemas()` (`src/api/openApiSchemas.ts`) and reference them from paths with `$ref: '#/components/schemas/<id>'`. Do not inline data shapes into the OpenAPI doc.
+- Validate request input against the schemas with `Value.Check` / `Value.Errors` (from `@sinclair/typebox/value`) — bodies **and** path/query parameters. See `src/api/ble/index.ts` and `src/api/course/index.ts`.
+
+### Keep documentation surfaces in sync
+
+For one API, its shape is described in several places. When you change an API's shape, update each surface that is not auto-generated:
+
+| Surface                                                                                           | Source                                                         | Drift                        |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------- |
+| TypeBox schema (`packages/server-api/src/typebox/<name>-schemas.ts`)                              | authored                                                       | — (the source)               |
+| OpenAPI (`src/api/<name>/openApi.ts`, served at `/doc/openapi/`)                                  | generated from TypeBox; only the path/summary text is authored | low                          |
+| AsyncAPI for WebSocket channels (`src/api/<name>/asyncApi.ts`, served under `/skServer/asyncapi`) | references TypeBox schemas                                     | low                          |
+| TypeDoc types (served at `/documentation/`)                                                       | generated from `Static<>` types + JSDoc                        | —                            |
+| **Narrative markdown** (`docs/develop/rest-api/<name>_api.md`)                                    | **authored**                                                   | **high — update it by hand** |
+
+- Register each API's OpenAPI record in `src/api/swagger.ts` (`apiDocs`) and each AsyncAPI doc in the `asyncApiDocs` map.
+- `/admin/#/documentation/paths` is the live **Path Reference** (driven by the metadata registry), not the OpenAPI spec — an API-shape change does not flow through it.
+- **Avoid hard-coded values in markdown** (timeouts, limits) that will fall out of sync as the code changes; describe behaviour, not specific numbers.
+
+### TypeDoc treats warnings as errors
+
+`typedoc.json` sets `treatWarningsAsErrors: true`, so `npm run build:docs` (part of `build:all`) fails on any warning. The common trap: a documented type that references a symbol TypeDoc cannot reach (e.g. a `Static<typeof XSchema>` whose schema module is not exported from `packages/server-api/src/index.ts`) emits "referenced but not included in the documentation". Make the referenced schema reachable from the documented entry point (the typebox schemas are exported via `export * as typebox`). Run `npm run build:docs` before pushing.
+
 ## Performance
 
 Signal K Server runs on Raspberry Pi 3-5 hardware, often on battery power. CPU cycles cost watts. Treat the delta ingestion and fanout path as allocation-sensitive.
