@@ -26,7 +26,13 @@ jobs:
       - uses: SocketDev/action@v1
         with:
           mode: firewall-free
-      - run: sfw npm install
+      - name: Install dependencies
+        uses: nick-fields/retry@v4
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: sfw npm install
       - run: npm run build:all
 
       - name: resources-provider-plugin
