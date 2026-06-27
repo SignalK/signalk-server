@@ -40,8 +40,7 @@ export interface SourceDevice {
 
 export interface SourcesData {
   [connectionOrKey: string]:
-    | SourceDevice
-    | { type?: string; [key: string]: unknown }
+    SourceDevice | { type?: string; [key: string]: unknown }
 }
 
 /**
@@ -166,8 +165,7 @@ export function canonicaliseSourceRef(
   const parsed = parseSourceRef(sourceRef)
   if (!parsed) return sourceRef
   const conn = sourcesData[parsed.connection] as
-    | Record<string, unknown>
-    | undefined
+    Record<string, unknown> | undefined
   if (!conn || typeof conn !== 'object') return sourceRef
   const dev = conn[parsed.src] as SourceDevice | undefined
   if (!dev || typeof dev !== 'object') return sourceRef

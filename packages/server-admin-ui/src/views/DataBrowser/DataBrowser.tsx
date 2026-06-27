@@ -237,8 +237,7 @@ const DataBrowser: React.FC = () => {
       const connNode = tree[conn] as Record<string, unknown> | undefined
       if (!connNode) return true
       const dev = connNode[addr] as
-        | { n2k?: { manufacturerCode?: string; modelId?: string } }
-        | undefined
+        { n2k?: { manufacturerCode?: string; modelId?: string } } | undefined
       if (!dev) return true
       // For non-N2K sources (no n2k subtree), there's nothing to
       // populate later — don't bother refetching. For N2K, refetch
@@ -705,8 +704,7 @@ const DataBrowser: React.FC = () => {
           continue
         }
         const incomingData = currentData[ctxPrefix || context]?.[realKey] as
-          | PathData
-          | undefined
+          PathData | undefined
         // Server emits livePreferredSources in canonical (canName) form;
         // canonicalise the incoming raw $source before comparing so the
         // dedup decision matches the engine's identity rule.

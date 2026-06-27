@@ -1610,12 +1610,10 @@ module.exports = function (
       const addr = dotIdx === -1 ? '' : sourceRef.slice(dotIdx + 1)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sources = (app.signalk as any)?.sources as
-        | Record<string, Record<string, unknown>>
-        | undefined
+        Record<string, Record<string, unknown>> | undefined
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sourceMeta = (app.signalk as any)?.sourceMeta as
-        | Record<string, unknown>
-        | undefined
+        Record<string, unknown> | undefined
       const inSourceDeltas = Object.prototype.hasOwnProperty.call(
         app.deltaCache.sourceDeltas,
         sourceRef

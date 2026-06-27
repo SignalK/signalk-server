@@ -2,11 +2,7 @@ import { useStore, type SignalKStore } from '../store'
 import { fetchAllData } from '../dataFetching'
 
 export type WebSocketStatus =
-  | 'initial'
-  | 'connecting'
-  | 'open'
-  | 'closed'
-  | 'error'
+  'initial' | 'connecting' | 'open' | 'closed' | 'error'
 
 export type DeltaMessageHandler = (message: unknown) => void
 export type StatusChangeHandler = (status: WebSocketStatus) => void
@@ -20,8 +16,7 @@ interface WebSocketServiceState {
 type Listener = () => void
 type ZustandStateSetter = (
   partial:
-    | Partial<SignalKStore>
-    | ((state: SignalKStore) => Partial<SignalKStore>)
+    Partial<SignalKStore> | ((state: SignalKStore) => Partial<SignalKStore>)
 ) => void
 
 export class WebSocketService {
