@@ -252,14 +252,22 @@ jobs:
           function normaliseRelPath(p) {
             return p.replace(/^\.?\//, '');
           }
+          // existsSync returns true for directories too. The CDN serves
+          // files; pointing signalk.appIcon at a directory is just as
+          // broken as pointing it at a missing path.
+          function isFile(p) {
+            let stat;
+            try { stat = fs.statSync(p); } catch { stat = undefined; }
+            return !!stat && stat.isFile();
+          }
           function checkDeclaredPath(field, declared) {
             const rel = normaliseRelPath(declared);
-            // existsSync returns true for directories too. The CDN serves
-            // files; pointing signalk.appIcon at a directory is just as
-            // broken as pointing it at a missing path.
-            let stat;
-            try { stat = fs.statSync(rel); } catch { stat = undefined; }
-            if (!stat || !stat.isFile()) {
+            // The runtime webapp launcher mounts the package's public/ dir at
+            // its URL root, and the App Store icon probe tries public/ first,
+            // so an asset that only lives under public/ (commonly the build
+            // output) resolves fine at runtime. Accept either location here so
+            // this pre-build check does not warn about a path that works.
+            if (!isFile(rel) && !isFile('public/' + rel)) {
               warnings.push(
                 field + ' "' + declared + '" does not resolve to a file in the repo. ' +
                 'The App Store fetches assets from unpkg.com/{pkg}@{version}/{path} — ' +
