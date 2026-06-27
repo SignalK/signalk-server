@@ -1522,8 +1522,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: ${{ inputs.enable-armv7 }}
-    # Expose the test-step outcome so ci-status can distinguish a step
-    # failure (advisory) from the job itself completing.
+    # Advisory: armv7 is non-blocking. continue-on-error at the job level lets
+    # the job show its true red/green status in the GitHub UI while keeping the
+    # overall workflow check green so it never blocks a PR merge.
+    continue-on-error: true
     outputs:
       advisory-outcome: ${{ steps.armv7-test.outcome }}
     steps:
@@ -1532,8 +1534,8 @@ jobs:
 
       - name: Set up QEMU for ARM emulation
         # Advisory: a QEMU setup failure must not block the workflow — the
-        # armv7 test step handles its own failure via continue-on-error, and
-        # if QEMU truly didn't initialize, docker run will fail there instead.
+        # job-level continue-on-error handles this; if QEMU truly didn't
+        # initialize, docker run will fail there instead.
         continue-on-error: true
         uses: docker/setup-qemu-action@v4
         with:
@@ -1549,10 +1551,10 @@ jobs:
 
       - name: Test on armv7 via QEMU
         id: armv7-test
-        # Advisory: do not fail the workflow when armv7 tests fail. The
-        # outcome is captured via the job output above and surfaced in the
-        # ci-status summary.
-        continue-on-error: true
+        # The job-level continue-on-error keeps the workflow green; this step
+        # intentionally has no continue-on-error so that a failure shows the
+        # job as truly red rather than emitting a confusing red annotation
+        # under a green check.
         env:
           BUILD_CMD: ${{ inputs.build-command }}
           TEST_CMD: ${{ inputs.test-command }}
@@ -1619,8 +1621,8 @@ jobs:
         run: |
           PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
           PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
-          # Use the test-step outcome, not job.status — the job itself
-          # succeeds (continue-on-error) even when the step fails.
+          # Use the test-step outcome — the job-level continue-on-error means
+          # job.status is always success; the step outcome carries the true result.
           RESULT="${{ steps.armv7-test.outcome }}"
 
           {
