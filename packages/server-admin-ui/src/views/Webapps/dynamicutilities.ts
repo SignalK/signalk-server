@@ -102,22 +102,84 @@ const getShareScope = (): ShareScope => {
 const legacyReactContainers = new Set<string>()
 
 /**
- * Resolve a module's remoteEntry.js URL from the server-injected script
- * tags, bridging safe IDs (e.g. _canboat_visual_analyzer) back to the
- * original package name paths (e.g. /@canboat/visual-analyzer/).
+ * Resolve a module's server-injected remoteEntry.js script tag, bridging safe
+ * IDs (e.g. _canboat_visual_analyzer) back to the original package name paths
+ * (e.g. /@canboat/visual-analyzer/). The tag's `type` distinguishes Vite ESM
+ * remotes (`type="module"`) from classic webpack remotes.
  */
-const findRemoteEntryUrl = (moduleName: string): string | null => {
+const findRemoteEntryScript = (
+  moduleName: string
+): HTMLScriptElement | null => {
   const safeId = toSafeModuleId(moduleName)
-  const scripts = document.querySelectorAll('script[src$="/remoteEntry.js"]')
+  const scripts = document.querySelectorAll<HTMLScriptElement>(
+    'script[src$="/remoteEntry.js"]'
+  )
   for (const script of scripts) {
     const src = script.getAttribute('src')
     if (!src) continue
     const match = src.match(/^\/(.+)\/remoteEntry\.js$/)
     if (match && toSafeModuleId(match[1]) === safeId) {
-      return src
+      return script
     }
   }
   return null
+}
+
+const findRemoteEntryUrl = (moduleName: string): string | null =>
+  findRemoteEntryScript(moduleName)?.getAttribute('src') ?? null
+
+const scriptLoadPromises = new Map<string, Promise<void>>()
+
+const SCRIPT_LOAD_TIMEOUT_MS = 10000
+
+/**
+ * Await execution of an already-injected remoteEntry.js, deduped by URL.
+ *
+ * A classic (non-module) webpack remote registers its container on a window
+ * global synchronously when its script executes; it exposes no promise or
+ * onload hook of its own. The server already injects the
+ * `<script src=.../remoteEntry.js>` tag (undeferred), so toLazyDynamicComponent
+ * can run before that script has executed and read an absent global. Rather
+ * than append a second tag and redundantly execute the remote, find the
+ * existing tag and await its load/error event. The caller re-reads the global
+ * afterwards, which is the real readiness signal. The
+ * `ready` predicate short-circuits when the script has already executed (its
+ * past load event won't re-fire); a timeout otherwise bounds the wait so
+ * React.lazy can't hang if the event never fires.
+ */
+export const loadScriptOnce = (
+  url: string,
+  ready: () => boolean
+): Promise<void> => {
+  if (ready()) {
+    return Promise.resolve()
+  }
+
+  const cached = scriptLoadPromises.get(url)
+  if (cached) {
+    return cached
+  }
+
+  const promise = new Promise<void>((resolve) => {
+    const script = Array.from(
+      document.querySelectorAll<HTMLScriptElement>('script[src]')
+    ).find((s) => s.getAttribute('src') === url)
+    if (!script) {
+      resolve()
+      return
+    }
+
+    const timer = setTimeout(resolve, SCRIPT_LOAD_TIMEOUT_MS)
+    const done = () => {
+      clearTimeout(timer)
+      resolve()
+    }
+    script.addEventListener('load', done, { once: true })
+    script.addEventListener('error', done, { once: true })
+  })
+
+  scriptLoadPromises.set(url, promise)
+  return promise
 }
 
 const initializeContainer = async (
@@ -476,18 +538,34 @@ export const toLazyDynamicComponent = (
         | undefined
 
       if (container === undefined) {
-        const remoteEntryUrl = findRemoteEntryUrl(moduleName)
-        if (remoteEntryUrl) {
-          try {
-            const esmModule = await import(/* @vite-ignore */ remoteEntryUrl)
-            if (
-              typeof esmModule.get === 'function' &&
-              typeof esmModule.init === 'function'
-            ) {
-              container = esmModule as Container
+        const remoteEntryScript = findRemoteEntryScript(moduleName)
+        const remoteEntryUrl = remoteEntryScript?.getAttribute('src')
+        if (remoteEntryScript && remoteEntryUrl) {
+          const safeId = toSafeModuleId(moduleName)
+          if (remoteEntryScript.type === 'module') {
+            // Vite ESM remote: the container is the module's get/init exports.
+            try {
+              const esmModule = await import(/* @vite-ignore */ remoteEntryUrl)
+              if (
+                typeof esmModule.get === 'function' &&
+                typeof esmModule.init === 'function'
+              ) {
+                container = esmModule as Container
+              }
+            } catch (e) {
+              console.warn(`ESM import failed for ${moduleName}:`, e)
             }
-          } catch (e) {
-            console.warn(`ESM import failed for ${moduleName}:`, e)
+          } else {
+            // Classic (non-module) remote: its global registers synchronously
+            // when the already-injected script executes, but this loader may
+            // run first. Await that script's load, then re-read the global.
+            // import() is skipped — it can't yield a container here and only
+            // re-evaluates the bundle.
+            await loadScriptOnce(
+              remoteEntryUrl,
+              () => window[safeId] !== undefined
+            )
+            container = window[safeId] as Container | undefined
           }
         }
       }
