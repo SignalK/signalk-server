@@ -13,6 +13,7 @@ export default function Dashboard() {
   const serverStatistics = useServerStats()
   const websocketStatus = useWsStatus()
   const providerStatus = useStore((state) => state.providerStatus) ?? []
+  const sourceNames = useStore((state) => state.sourceNames)
   const navigate = useNavigate()
 
   const deltaRate = serverStatistics?.deltaRate ?? 0
@@ -79,7 +80,7 @@ export default function Dashboard() {
         <span className="title">
           {linkType === 'plugin'
             ? pluginNameLink(providerId)
-            : providerIdLink(providerId)}
+            : providerIdLink(providerId, sourceNames[providerId])}
         </span>
         {(providerStats.writeRate || 0) > 0 && (
           <span className="value" style={{ fontWeight: 'normal' }}>
@@ -140,7 +141,7 @@ export default function Dashboard() {
         <td>
           {status.statusType === 'plugin'
             ? pluginNameLink(status.id)
-            : providerIdLink(status.id)}
+            : providerIdLink(status.id, sourceNames[status.id])}
         </td>
         <td>
           <p className="text-danger">{lastError}</p>
@@ -293,11 +294,15 @@ function pluginNameLink(id: string): ReactNode {
   return <a href={'#/apps/configuration/' + encodeURIComponent(id)}>{id}</a>
 }
 
-function providerIdLink(id: string): ReactNode {
+function providerIdLink(id: string, displayName?: string): ReactNode {
   if (id === 'defaults') {
     return <a href={'#/serverConfiguration/settings'}>{id}</a>
   } else if (id.startsWith('ws.')) {
-    return <a href={'#/security/devices'}>{id}</a>
+    return (
+      <a href={'#/security/devices'} title={id}>
+        {displayName || id}
+      </a>
+    )
   } else {
     return (
       <a href={'#/serverConfiguration/connections/' + encodeURIComponent(id)}>

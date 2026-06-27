@@ -309,6 +309,11 @@ export class WebSocketService {
           .getState()
           .setSourceAliases((data ?? {}) as Record<string, string>)
         break
+      case 'SOURCENAMES':
+        useStore
+          .getState()
+          .setSourceNames((data ?? {}) as Record<string, string>)
+        break
       case 'MULTISOURCEPATHS':
         useStore
           .getState()
