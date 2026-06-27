@@ -545,6 +545,9 @@ module.exports = function (
             res.json('Unable to save configuration change')
             return
           }
+          // Full-config saves can change device descriptions, so refresh
+          // the cached source names like the device routes do.
+          refreshSourceNames()
           res.json('security config saved')
         })
       } else {
