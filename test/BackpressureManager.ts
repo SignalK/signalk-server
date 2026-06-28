@@ -104,6 +104,25 @@ describe('BackpressureManager', function () {
       expect(manager.accumulatorSize).to.equal(1)
     })
 
+    it('should keep accumulating while active even after buffer drops below enter threshold', function () {
+      const transport = createMockTransport(2000)
+      const manager = new BackpressureManager(transport, defaultOptions)
+
+      // Enter backpressure: first delta is accumulated, not written.
+      manager.send(createDelta('navigation.speedOverGround', 5.0))
+      expect(manager.isActive).to.be.true
+
+      // Buffer drains below enterThreshold but stays above exitThreshold, so
+      // we are still in backpressure and the accumulated delta is pending.
+      transport._bufferLength = 500
+      manager.send(createDelta('navigation.courseOverGroundTrue', 1.57))
+
+      // The newer delta must not be written ahead of the pending accumulated
+      // one - it has to keep accumulating until the next flush.
+      expect(transport._writes.length).to.equal(0)
+      expect(manager.accumulatorSize).to.equal(2)
+    })
+
     it('should keep only latest value per context:path:source', function () {
       const transport = createMockTransport(2000)
       const manager = new BackpressureManager(transport, defaultOptions)
