@@ -74,6 +74,26 @@ describe('CommunicationsApi ingestion', () => {
     assert.equal(got!.summary, 'routine call')
   })
 
+  it('clears the raised notification when persistence fails — no orphan', async () => {
+    let cleared: string | undefined
+    app.notificationApi.raise = () => 'fake-notification-id'
+    app.notificationApi.clear = (id: string) => {
+      cleared = id
+    }
+    api.stop() // close the store so append throws
+    await assert.rejects(() =>
+      api.logMessage({
+        type: 'dsc',
+        priority: 'distress',
+        sender: { mmsi: '316123456' },
+        summary: 'DSC distress alert: MMSI 316123456',
+        payload: { format: '12', category: 'distress' },
+        raw: '$CDDSC,12,...'
+      })
+    )
+    assert.equal(cleared, 'fake-notification-id')
+  })
+
   it('mirrors a combined ack+clear notification value onto both dispositions', async () => {
     const entry = await api.logMessage({
       type: 'dsc',
@@ -171,7 +191,6 @@ describe('Communications REST API', () => {
 
     server = await startServerP(port, false)
 
-    // Ingest two entries through the in-process door
     await server.app.logMessage({
       type: 'dsc',
       priority: 'distress',
@@ -197,7 +216,9 @@ describe('Communications REST API', () => {
   })
 
   after(async function () {
-    await server.stop()
+    if (server) {
+      await server.stop()
+    }
     // Clean up the DB so subsequent runs start fresh
     for (const f of [
       'communications.db',
@@ -244,6 +265,11 @@ describe('Communications REST API', () => {
     res.status.should.equal(404)
   })
 
+  it('GET /messages rejects a malformed time bound with 400', async () => {
+    const res = await fetch(`${apiBase}/messages?from=not-a-date`)
+    res.status.should.equal(400)
+  })
+
   it('raises a notification for an urgency call and mirrors ack onto disposition', async function () {
     this.timeout(15000)
     const entry = await server.app.logMessage({
@@ -256,14 +282,12 @@ describe('Communications REST API', () => {
     })
     entry.notificationId.should.be.a('string')
 
-    // acknowledge via the notifications REST API
     const base = apiBase.replace('/communications', '/notifications')
     const ackRes = await fetch(`${base}/${entry.notificationId}/acknowledge`, {
       method: 'POST'
     })
     ackRes.status.should.equal(200)
 
-    // disposition mirrors the ack
     const after = await waitForDisposition(
       `${apiBase}/messages/${entry.id}`,
       'acknowledgedAt'
@@ -295,14 +319,12 @@ describe('Communications REST API', () => {
     })
     entry.notificationId.should.be.a('string')
 
-    // clear via the notifications REST API (DELETE /signalk/v2/api/notifications/:id)
     const base = apiBase.replace('/communications', '/notifications')
     const clearRes = await fetch(`${base}/${entry.notificationId}`, {
       method: 'DELETE'
     })
     clearRes.status.should.equal(200)
 
-    // disposition mirrors the clear
     const after = await waitForDisposition(
       `${apiBase}/messages/${entry.id}`,
       'clearedAt'

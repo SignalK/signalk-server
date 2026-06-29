@@ -90,6 +90,20 @@ describe('SqliteMessageLogStore', () => {
     assert.equal(inRange.length, 1)
   })
 
+  it('query canonicalises offset bounds to UTC before comparing', async () => {
+    // stored canonical 10:00Z; a +02:00 lower bound of 09:00Z must include it,
+    // even though its raw string ("...T11:00...") sorts after "...T10:00...Z"
+    await store.append(mkInput({ receivedAt: '2026-06-01T10:00:00.000Z' }))
+    const inRange = await store.query({
+      from: '2026-06-01T11:00:00.000+02:00'
+    })
+    assert.equal(inRange.length, 1)
+  })
+
+  it('query rejects a malformed time bound', async () => {
+    await assert.rejects(() => store.query({ from: 'not-a-date' }))
+  })
+
   it('query orders by receivedAt and honours limit + order', async () => {
     await store.append(mkInput({ receivedAt: '2026-06-01T00:00:00.000Z' }))
     await store.append(mkInput({ receivedAt: '2026-06-02T00:00:00.000Z' }))

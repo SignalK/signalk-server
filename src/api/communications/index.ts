@@ -9,6 +9,7 @@ import {
   MessageLogEntryInput,
   MessageLogStore,
   MessagePriority,
+  NotificationId,
   NotificationsApi,
   Path,
   ServerAPI,
@@ -92,6 +93,7 @@ export class CommunicationsApi {
     debug.enabled &&
       debug(`logMessage type=${entry.type} priority=${entry.priority}`)
     let toStore = entry
+    let raisedId: NotificationId | undefined
     if (this.isActionable(entry.priority) && !entry.notificationId) {
       try {
         const options: AlarmRaiseOptions = {
@@ -101,13 +103,20 @@ export class CommunicationsApi {
           includePosition: true,
           includeCreatedAt: true
         }
-        const notificationId = this.app.notificationApi.raise(options)
-        toStore = { ...entry, notificationId }
+        raisedId = this.app.notificationApi.raise(options)
+        toStore = { ...entry, notificationId: raisedId }
       } catch (err) {
         debug(`notification raise failed: ${(err as Error).message}`)
       }
     }
-    const stored = await this.store.append(toStore)
+    let stored: MessageLogEntry
+    try {
+      stored = await this.store.append(toStore)
+    } catch (err) {
+      // Don't leave an active notification with no regulatory record behind it.
+      if (raisedId) this.app.notificationApi.clear(raisedId)
+      throw err
+    }
     if (stored.notificationId) {
       this.notiToEntry.set(stored.notificationId, stored.id)
     }
@@ -182,8 +191,16 @@ export class CommunicationsApi {
       `${COMMS_API_PATH}/messages`,
       async (req: Request, res: Response) => {
         debug.enabled && debug(`** ${req.method} ${req.path}`)
+        const query = this.parseQuery(req)
+        const badBound = [query.from, query.to].find(
+          (v) => v !== undefined && Number.isNaN(new Date(v).getTime())
+        )
+        if (badBound !== undefined) {
+          res.status(400).json(Responses.invalid)
+          return
+        }
         try {
-          const entries = await this.store.query(this.parseQuery(req))
+          const entries = await this.store.query(query)
           res.status(200).json(entries)
         } catch (err) {
           res.status(500).json({

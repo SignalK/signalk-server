@@ -8,7 +8,6 @@ import { createDebug } from '../../debug'
 
 const debug = createDebug('signalk-server:api:communications')
 
-/** DSC category -> message priority. distress/urgency/safety map 1:1; everything else is routine. */
 function priorityForCategory(category: DscCall['category']): MessagePriority {
   switch (category) {
     case 'distress':
@@ -22,7 +21,6 @@ function priorityForCategory(category: DscCall['category']): MessagePriority {
   }
 }
 
-/** Pure mapper: typed DSC call -> generic message envelope input. */
 export function dscToMessageInput(call: DscCall): MessageLogEntryInput {
   return {
     type: 'dsc',

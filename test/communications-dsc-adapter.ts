@@ -1,6 +1,9 @@
 import { strict as assert } from 'assert'
-import { dscToMessageInput } from '../src/api/communications/dscAdapter'
-import { DscCall } from '@signalk/server-api'
+import {
+  dscToMessageInput,
+  registerDscAdapter
+} from '../src/api/communications/dscAdapter'
+import { DscCall, MessageLogEntryInput } from '@signalk/server-api'
 
 function call(over: Partial<DscCall> = {}): DscCall {
   return {
@@ -55,5 +58,26 @@ describe('dscToMessageInput', () => {
     )
     assert.deepEqual(e.position, { latitude: 48.76, longitude: -123.1 })
     assert.deepEqual(e.subject, { mmsi: '316999000' })
+  })
+})
+
+describe('registerDscAdapter', () => {
+  it('forwards a mapped DSC call into app.logMessage', async () => {
+    const logged: MessageLogEntryInput[] = []
+    const handler = registerDscAdapter({
+      logMessage: async (e) => {
+        logged.push(e)
+        return undefined as never
+      }
+    })
+    await handler(call())
+    assert.equal(logged.length, 1)
+    assert.equal(logged[0].type, 'dsc')
+    assert.equal(logged[0].priority, 'distress')
+  })
+
+  it('drops the call when logMessage is unavailable', async () => {
+    const handler = registerDscAdapter({})
+    await assert.doesNotReject(() => handler(call()))
   })
 })

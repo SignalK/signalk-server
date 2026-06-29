@@ -32,6 +32,17 @@ function toCanonicalUtc(value: string | undefined): string {
   return new Date().toISOString()
 }
 
+// Query bounds are compared against the canonical received_at, so they must be
+// canonicalised the same way. Unlike append, a bad bound is a caller error, not
+// something to coerce to "now" — reject it rather than silently shifting the range.
+function toCanonicalBound(value: string): string {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Invalid time bound: ${value}`)
+  }
+  return parsed.toISOString()
+}
+
 interface Row {
   id: string
   type: string
@@ -57,7 +68,7 @@ export class SqliteMessageLogStore implements MessageLogStore {
   private closed = false
 
   constructor(dbFilePath: string) {
-    debug(`Opening message-log database at ${dbFilePath}`)
+    debug.enabled && debug(`Opening message-log database at ${dbFilePath}`)
     this.db = new DatabaseSync(dbFilePath)
     this.db.exec('PRAGMA journal_mode = WAL')
     this.db.exec('PRAGMA foreign_keys = ON')
@@ -158,11 +169,11 @@ export class SqliteMessageLogStore implements MessageLogStore {
     const params: Array<string | number> = []
     if (filter.from) {
       clauses.push('received_at >= ?')
-      params.push(filter.from)
+      params.push(toCanonicalBound(filter.from))
     }
     if (filter.to) {
       clauses.push('received_at <= ?')
-      params.push(filter.to)
+      params.push(toCanonicalBound(filter.to))
     }
     if (filter.type) {
       clauses.push('type = ?')
