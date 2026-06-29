@@ -17,8 +17,7 @@ describe('NotificationApi', () => {
     // Track handleMessage calls
     const handleMessageCalls: Delta[] = []
     let registeredHandler:
-      | ((delta: Delta, next: (delta: Delta) => void) => void)
-      | null = null
+      ((delta: Delta, next: (delta: Delta) => void) => void) | null = null
 
     // Mock app
     const mockApp = {
