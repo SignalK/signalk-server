@@ -50,8 +50,11 @@ same mechanism at different points on a spectrum.
 - A workflow that creates or curates resources (a dive-site logger that
   provides a custom resource type, drops symbols for it, and offers a panel to
   search and route to sites).
-- A background service that reacts to host events (route created, waypoint
-  added) and computes something.
+- A route tool that reshapes the route the user is editing (the `routes`
+  capability) — an auto-router that detours around land, a leg optimiser, a
+  "reverse this route" button.
+- A background service that reacts to host events (a route shown or edited,
+  config changed) and computes something.
 
 ### Poor candidates
 
@@ -264,6 +267,7 @@ required and optional capabilities and lists your contributions. A real one
 | `resources`         | Run resource queries (`resources.list`)                       |
 | `resources.filter`  | Push display filters (`resources.setFilter`)                  |
 | `map`               | Read/drive the map view (`map.*`)                             |
+| `routes`            | Read & edit the routes on the chart (`route.*`)               |
 | `units`             | Read the user's display-unit preferences (`units.get`)        |
 | `background.iframe` | Run a headless background runtime                             |
 
@@ -475,6 +479,77 @@ Points that generalise:
   `filters.changed` so an externally-cleared filter updates your UI.
 - **Guard optional capabilities** with `hasCapability` and carry on without
   them.
+
+## Example: editing a route
+
+The `routes` capability lets an extension read and rewrite the routes the user
+is actively working with — the one or two on the chart, never the whole stored
+catalogue. An auto-router is the motivating case: the user draws a route, the
+extension reshapes it (below, just *reversing* it as a stand-in for a real
+routing engine), and the user saves when happy. The host owns the chart, the
+edit buffer and the Save dialog; the extension only supplies geometry.
+
+```js
+import { connectExtension } from 'signalk-plotterext-bus/extension'
+
+const client = await connectExtension()
+
+// `routes` is optional — degrade gracefully if the host doesn't offer it.
+if (!client.hasCapability('routes')) {
+  document.body.textContent = 'This host does not support route editing.'
+}
+
+// Lock onto a route. The visible set is small; take the most recent (or, with
+// several, let the user pick). A routeId is an opaque handle — never parse it.
+async function pickRoute() {
+  const { routes } = await client.call('route.list')
+  return routes[routes.length - 1]?.routeId ?? null
+}
+
+let routeId = await pickRoute()
+
+// Re-read whenever a route changes — by us, by the user's own editing, or by
+// another extension. `route.dirty` is the catch-all "it changed, re-fetch"
+// signal; `route.visible` means a route entered the set.
+await client.subscribe(['route.**'], async (name) => {
+  if (name === 'route.visible') routeId = await pickRoute()
+  if (name === 'route.dirty' && routeId) {
+    render(await client.call('route.get', { routeId }))
+  }
+})
+if (routeId) render(await client.call('route.get', { routeId }))
+
+// The panel's one button: reshape the route. Hand the host a whole new point
+// list with `route.replace`; it re-renders the chart and marks the route
+// `dirty` (unsaved). Nothing is written to the server.
+async function reshape() {
+  if (!routeId) return
+  const { points } = await client.call('route.get', { routeId })
+  const reworked = points.slice().reverse() // ← a real routing engine goes here
+  await client.call('route.replace', { routeId, points: reworked })
+}
+
+// Save on demand: the host persists it through the user's session and (with
+// `dialog: true`) prompts for a name. The route stays on the chart, now saved.
+async function save() {
+  if (routeId) await client.call('route.save', { routeId, dialog: true })
+}
+```
+
+Points that generalise:
+
+- **You edit the visible set, not the catalogue.** `route.list` is the one or
+  two routes on the chart. Pull a stored route in with `route.show({ ref })`
+  first; to browse the whole catalogue, read `/resources/routes` directly.
+- **Geometry is staged, never written through.** `route.replace` changes the
+  in-memory route and marks it `dirty` — the chart updates, the server does not.
+  Only `route.save` persists, and a server-rejected save reports
+  `routes.saveFailed` (distinct from the user cancelling the dialog,
+  `routes.saveCancelled`).
+- **Re-read on `route.dirty`.** It fires for every change whoever made it, so a
+  single "on dirty, `route.get`" keeps you in sync without tracking who edited.
+- **`routeId` is an opaque handle**, distinct from the saved resource's `href`
+  (which `route.save` returns) — the two are not interchangeable.
 
 ## Background runtimes
 

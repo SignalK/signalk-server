@@ -27,9 +27,9 @@ the existing Signal K plugin/app-store flow.
 > implemented by the reference host (Freeboard-SK) and the reference
 > extensions (`signalk-instrument-widgets`, `signalk-poi-search`): widgets,
 > panels, toolbar buttons, state storage, Signal K data relay, unit
-> preferences, resource display filters, map control and headless
-> background runtimes. Manifest-declared filter chains and host-into-runtime
-> calls are out of scope for this version (see Non-Goals).
+> preferences, resource display filters, map control, live route editing
+> and headless background runtimes. Manifest-declared filter chains and
+> host-into-runtime calls are out of scope for this version (see Non-Goals).
 
 ---
 
@@ -121,6 +121,7 @@ extension id (the providing plugin's id is the recommended key):
 | `map`               | Host implements the `map.*` methods (view query and control).                                                                     |
 | `resources`         | Host implements `resources.list` (relayed resource queries).                                                                      |
 | `resources.filter`  | Host implements imperative resource display filters.                                                                              |
+| `routes`            | Host implements live route edit-buffer commands (`route.*`) and emits route lifecycle/mutation events.                            |
 | `ui`                | Host implements `ui.openPanel` / `ui.closePanel`.                                                                                 |
 
 The vocabulary is open-ended: future versions add ids (buttons, resource
@@ -235,8 +236,8 @@ are for.
 A runtime speaks the same bus protocol as widgets and panels; its handshake
 `context.kind` is `background`. It may call the host API — `state.*`
 (extension scope by default, as it has no widget instance), `signalk.*`,
-`resources.*` including `resources.setFilter`, `units.get`, `map.*`, and
-`ui.openPanel`/`ui.togglePanel`. It has no `ui.closePanel` or
+`resources.*` including `resources.setFilter`, `route.*`, `units.get`,
+`map.*`, and `ui.openPanel`/`ui.togglePanel`. It has no `ui.closePanel` or
 `ui.*ConfigPanel` (those are panel/widget affordances). The typical use is a
 client-side service that holds session state and keeps work alive so a panel
 can **close itself** (`ui.closePanel`) without losing that state, then
@@ -352,6 +353,7 @@ inside a routing envelope over `postMessage`**:
     "map",
     "resources",
     "resources.filter",
+    "routes",
     "background.iframe",
     "ui"
   ],
@@ -392,6 +394,14 @@ contract** — any conforming implementation interoperates.
 | `resources.list`        | `{ type, query? }`                             | resource collection        |
 | `resources.setFilter`   | `{ type, filter }`                             | `{}`                       |
 | `resources.clearFilter` | `{ type }`                                     | `{}`                       |
+| `route.list`            | —                                              | `{ routes }` (the visible set) |
+| `route.create`          | `{ points (≥2), name?, description? }`         | `{ routeId, rev }`         |
+| `route.show`            | `{ ref }` (stored route reference)             | `{ routeId, rev }`         |
+| `route.hide`            | `{ routeId }`                                  | `{}`                       |
+| `route.delete`          | `{ routeId }`                                  | `{}`                       |
+| `route.get`             | `{ routeId }`                                  | `{ routeId, name, description, rev, saved, dirty, points }` |
+| `route.replace`         | `{ routeId, points (≥2) }`                     | `{ rev }`                  |
+| `route.save`            | `{ routeId, name?, description?, dialog? }`    | `{ href, rev }`            |
 | `map.getView`           | —                                              | `{ center, zoom, bounds }` |
 | `map.center`            | `{ position: [lon, lat], zoom? }`              | `{}`                       |
 | `map.fitBounds`         | `{ bounds: [minLon, minLat, maxLon, maxLat] }` | `{}`                       |
@@ -408,7 +418,8 @@ they are not host-specific. Each is delivered only to contexts that have
 subscribed to its name via `events.subscribe` (so a context that never
 subscribes pays nothing). A host emits an event when the corresponding
 capability is supported: `state.changed` always; `sk.<path>` with
-`signalk.stream`; `filters.changed` with `resources.filter`. The
+`signalk.stream`; `filters.changed` with `resources.filter`; route events
+(`route.*`) with `routes`. The
 connection-level notifications `bus.ready` and `bus.handshake` (see
 Communication) are the only other host/extension events and are
 handled by the protocol layer, not subscribed to.
@@ -423,6 +434,25 @@ handled by the protocol layer, not subscribed to.
   a resource type was set (`active: true`) or cleared (`active: false`, e.g.
   the user dismissed the host's filter chip). Extensions should reflect a
   clear in their own UI/state.
+- `route.visible` — `{ routeId, rev, name, pointCount, saved, dirty }`: a route
+  entered the visible set (became rendered on the chart). A freshly drawn or
+  `route.create`d draft arrives `saved:false, dirty:true`; a stored route brought
+  into view (`route.show`, or the user displaying it) arrives `saved:true,
+  dirty:false`.
+- `route.dirty` — `{ routeId, rev, reason? }`: content changed — a reorder,
+  multi-point edit, metadata change, or whole-geometry replace. Sets
+  `dirty:true`; leaves `saved` unchanged. A subscriber should re-seed with
+  `route.get`. This is the conformance floor — see *Live routes*.
+- `route.saved` — `{ routeId, rev, href, name, saved, dirty }`: the route's
+  current state was persisted to the `routes` resource collection; arrives
+  `saved:true, dirty:false`. `href` is the stored resource id, and `name` is the
+  persisted name (which the host's save dialog may have just set — e.g. an
+  unnamed draft saved as "rt1"), so a follower can relabel without re-fetching.
+  The route stays visible and addressable under the same `routeId`.
+- `route.hidden` — `{ routeId, rev, saved }`: a route left the visible set.
+  `saved:true` — a stored route was made invisible (the resource is untouched and
+  can be shown again); `saved:false` — an unsaved draft was deleted (gone for
+  good). The umbrella name never overstates what happened.
 
 ### Resource queries and display filters
 
@@ -480,6 +510,130 @@ exists`. `contains` is case-insensitive substring for strings, membership
 The host tracks at most one filter per (extension, resource type); a new
 `setFilter` replaces it. Filters from multiple extensions compose by
 intersection. Filters are not persisted across host reloads.
+
+### Live routes
+
+The `routes` capability gives an extension read/write access to the routes the
+host currently has **visible on the chart**, plus a stream of lifecycle and
+mutation events. The visible set is small and practical — the one or two routes a
+user is actually working with — never the hundreds that may be stored on the
+server.
+
+**The visible set.** A host renders some routes on the chart: routes the user is
+drawing or modifying, routes an extension created, and stored routes the user has
+chosen to display. Every route in that set is addressable. Routes that exist only
+on the server (the stored catalog) are **not** — an extension that wants one
+browses the server's resources API directly (`GET /resources/routes` returns the
+whole catalog with full geometry) and asks the host to display it (`route.show`).
+
+**Addressing — opaque handles.** Each visible route has a host-assigned `routeId`
+that is **opaque**: the extension treats it as a token and never parses it. The
+host mints and decodes it (it may encode a stored resource id, an ephemeral draft
+id, or anything else — that is implementation, kept behind the handle). A
+`routeId` is stable for as long as the route stays visible. Every command and
+event names its `routeId`. `route.list` enumerates the visible set; a host that
+only ever shows one route at a time simply exposes one entry.
+
+**Two flags: `saved` and `dirty`.** Orthogonal, and both appear on `route.get`,
+`route.list`, and the lifecycle events:
+
+- `saved` — is the route backed by a persisted `routes` resource? A never-saved
+  draft is `false`; a stored route is `true`.
+- `dirty` — does the in-memory geometry differ from what is persisted (pending
+  unsaved changes)? A clean route is `false`; an edited one is `true`.
+
+  | `saved` | `dirty` | state |
+  | ------- | ------- | ----- |
+  | `false` | `true`  | a draft with content — needs saving to persist |
+  | `true`  | `false` | a clean stored route — matches the server |
+  | `true`  | `true`  | a stored route with unsaved edits |
+
+**Editing stages; it does not write through.** Manipulating a visible route —
+`route.replace`, or the user's own native editing — changes the in-memory route
+and emits `route.dirty` (setting `dirty:true`); it does **not** touch the server,
+and it leaves `saved` unchanged. The change is committed only by `route.save`, or
+discarded by the host's editing UI / `route.hide` (for a draft). This mirrors how
+a native editor already works — manipulate, then save or discard — and applies
+uniformly to drafts and stored routes.
+
+**Bringing routes in and out of view.** The function calls are deliberately the
+traditional **create / show / hide / delete**; the visibility/`saved`/`dirty`
+model lives in the *events* and route properties, not in the verbs.
+
+- `route.create({ points, name?, description? })` adds a new unsaved route to the
+  visible set (`saved:false`). `points` is **required and must hold at least two
+  waypoints** (a route needs a segment); fewer is rejected with
+  `routes.badRequest`. `description` is the route-level description (distinct from
+  a waypoint's per-point `description`) and round-trips through `route.get` and
+  `route.save`.
+- `route.show({ ref })` brings an existing **stored** route into the visible set
+  and returns its `routeId`, so the extension can read and edit it in place.
+- `route.hide({ routeId })` removes a route from the map. For a **stored** route
+  this just unchecks its visibility — the resource is untouched
+  (`route.hidden saved:true`). For an **unsaved** route it deletes it, since the
+  only store it has is the visibility buffer (`route.hidden saved:false`).
+- `route.delete({ routeId })` **permanently deletes a stored route** from the
+  resource collection. Deleting an *unsaved* route has the same effect as hiding
+  it (the draft is discarded). Either way the route leaves the visible set as
+  `route.hidden saved:false` (gone — no longer retrievable).
+
+So `hide` and `delete` both emit `route.hidden`; the event's `saved` flag tells a
+follower the outcome (`true` = still on the server, `false` = gone), while the
+*verb the extension called* carries the intent.
+
+**Points and geometry.** A route's points are an ordered list (0-based). A point
+is `{ position: [lon, lat, alt?], name?, description? }` — `name`/`description`
+map to a host's per-point metadata and round-trip through `route.get`,
+`route.replace`, and `route.save`. `route.create` and `route.replace` require at
+least two points and reject a malformed point (a non-numeric `position`, or
+non-string `name`/`description`) with `routes.badRequest`.
+
+**Revisions and mirroring.** Each route carries a monotonic `rev` that
+increments on every mutation. `route.get` and `route.list` report the current
+`rev`, and every mutation event and every mutating command result carries the
+post-change `rev`. In v1 the mutation signal is **`route.dirty`**: an extension
+mirrors a route by calling `route.get` whenever it sees `route.dirty` (or a `rev`
+gap). The protocol still offers a full snapshot (`route.get`) so the author never
+has to reconstruct state from a partial stream.
+
+**`route.dirty` is the conformance floor.** Every change to a visible route's
+content — a multi-point edit, a whole-geometry `route.replace` (e.g. an
+auto-router's), a metadata change, or the reference host's `Modify` flow (which
+hands back a whole coordinate array with no "which vertex moved") — emits
+`route.dirty`. A host emits `route.visible`, `route.hidden`, `route.saved`, and
+`route.dirty` — geometry is always edited as a whole (`route.replace` or the
+host's own native editing), so a single "on `route.dirty`, `route.get`" keeps a
+follower in sync without tracking who changed what.
+
+**Origin transparency.** Events are emitted for _every_ change regardless of
+origin — an extension command, the user's native editing, or another
+extension — so a follower stays consistent no matter who is driving. As with
+all host events, a context receives them only after `events.subscribe` (e.g.
+`{ patterns: ["route.**"] }`).
+
+**Saving.** `route.save` persists the route's current state to the `routes`
+resource collection through the user's authenticated session, returning the
+stored resource `href` and emitting `route.saved` (`saved:true, dirty:false`).
+The route **stays visible and addressable under the same `routeId`** — saving
+does not remove or invalidate it. For a never-saved draft this creates a new
+resource; for an already-stored route with pending edits it updates that
+resource. It is **headless by default** — saved with the supplied
+`name`/`description`, falling back to the route's current name. Pass
+`dialog: true` to have the host prompt for the name/description instead, its
+dialog prefilled from those params; the reference host (Freeboard-SK) opens its
+Route Details dialog, and a cancelled dialog rejects with `routes.saveCancelled`.
+
+Note the `routeId` is the host's **opaque handle**, distinct from the `href` of
+the saved resource (an `/resources/routes/<id>` reference returned by the save) —
+they are not interchangeable, and a saved route keeps the same `routeId` it had
+before the save.
+
+**Errors** use the standard `error.data.reason` convention: `routes.unknownId`
+(no such `routeId`), `routes.badRequest` (invalid params — e.g. `route.create`
+with fewer than two points, a non-numeric `position`, or non-string metadata),
+`routes.badRef` (`route.show` reference not found), `routes.saveFailed` (server
+rejected the persist — distinct from a user cancel), `routes.saveCancelled` (the
+user dismissed the save dialog), `routes.notSupported` (host lacks `routes`).
 
 ### State storage
 
@@ -593,7 +747,10 @@ adversarial boundary**:
   shared unit-aware configuration panel — and
   [`signalk-poi-search`](https://github.com/joelkoz/signalk-poi-search) — a
   toolbar button + keepAlive search panel + results widget exercising
-  resource queries, display filters and map control.
+  resource queries, display filters and map control — and
+  `signalk-auto-route` *(planned)* — a toolbar button + parameter panel +
+  server-side routing engine exercising the `routes` capability (land-avoidance
+  auto-routing over the host's live route buffer; see its own SPEC).
 - **Host**: Freeboard-SK (feature branch, in development) — anchor-area
   widget overlay, placement UI, state storage, multiplexed Signal K relay,
   toolbar buttons, panel drawer, filter chips, map control.
