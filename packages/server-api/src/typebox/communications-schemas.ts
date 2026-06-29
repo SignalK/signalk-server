@@ -5,6 +5,20 @@ export const MessageDispositionSchema = Type.Object({
   clearedAt: Type.Optional(Type.String({ format: 'date-time' }))
 })
 
+export const DscPayloadSchema = Type.Object({
+  format: Type.String(),
+  category: Type.Union([
+    Type.Literal('distress'),
+    Type.Literal('urgency'),
+    Type.Literal('safety'),
+    Type.Literal('routine'),
+    Type.Literal('unknown')
+  ]),
+  natureOfDistress: Type.Optional(Type.String()),
+  distressMmsi: Type.Optional(Type.String()),
+  reportedTime: Type.Optional(Type.String())
+})
+
 export const MessageLogEntrySchema = Type.Object({
   id: Type.String(),
   type: Type.Literal('dsc'),
@@ -31,7 +45,7 @@ export const MessageLogEntrySchema = Type.Object({
     })
   ),
   summary: Type.String(),
-  payload: Type.Unknown(),
+  payload: DscPayloadSchema,
   raw: Type.String(),
   notificationId: Type.Optional(Type.String()),
   disposition: MessageDispositionSchema

@@ -3,8 +3,7 @@ import { strict as assert } from 'assert'
 import {
   MessageLogEntry,
   MessageLogEntryInput,
-  MessageLogStore,
-  DscPayload
+  MessageLogStore
 } from './communications'
 
 describe('communications types', () => {
@@ -15,9 +14,10 @@ describe('communications types', () => {
       sender: { mmsi: '316123456' },
       summary: 'DSC distress alert: MMSI 316123456',
       payload: {
+        format: '12',
         category: 'distress',
         natureOfDistress: 'sinking'
-      } as DscPayload,
+      },
       raw: '$CDDSC,12,3161234560,...'
     }
     const entry: MessageLogEntry = {

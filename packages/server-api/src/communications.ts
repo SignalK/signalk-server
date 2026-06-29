@@ -28,9 +28,8 @@ export interface MessageDisposition {
   clearedAt?: string
 }
 
-/** What a producer submits to `app.logMessage()`. Server assigns id/receivedAt/disposition. */
-export interface MessageLogEntryInput {
-  type: MessageType
+/** Fields every message carries, regardless of `type`. */
+export interface MessageLogEntryCommon {
   /** ISO 8601; defaults to server receive time when omitted. */
   receivedAt?: string
   /** `$source` — connection/device. */
@@ -41,16 +40,24 @@ export interface MessageLogEntryInput {
   subject?: MessageSubject
   position?: MessagePosition
   summary: string
-  /** Type-specific structured data. For `dsc`, a {@link DscPayload}. */
-  payload: unknown
   /** Original sentence(s) / PGN text. */
   raw: string
   /** Link to a live notification, if one was raised. */
   notificationId?: string
 }
 
+/**
+ * What a producer submits to `app.logMessage()`. Server assigns
+ * id/receivedAt/disposition. Discriminated on `type` so each message type
+ * carries its own typed `payload`; new types add an arm without touching storage.
+ */
+export type MessageLogEntryInput = MessageLogEntryCommon & {
+  type: 'dsc'
+  payload: DscPayload
+}
+
 /** A persisted entry: the input plus server-assigned fields. */
-export interface MessageLogEntry extends MessageLogEntryInput {
+export type MessageLogEntry = MessageLogEntryInput & {
   id: string
   receivedAt: string
   disposition: MessageDisposition
