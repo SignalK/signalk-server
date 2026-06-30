@@ -840,6 +840,10 @@ module.exports = function (
       runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true',
       courseApi: {
         apiOnly: app.config.settings.courseApi?.apiOnly || false
+      },
+      notifications: {
+        manageNotifications:
+          app.config.settings.notifications?.manageNotifications ?? true
       }
     }
 
@@ -1166,6 +1170,12 @@ module.exports = function (
       const courseApi: { [index: string]: boolean | string | number } =
         updatedSettings.courseApi || (updatedSettings.courseApi = {})
       courseApi[name] = enabled
+    })
+
+    forIn(settings.notifications, (enabled, name) => {
+      const notifications: { [index: string]: boolean | string | number } =
+        updatedSettings.notifications || (updatedSettings.notifications = {})
+      notifications[name] = enabled
     })
 
     writeSettingsFile(app, updatedSettings, (err: Error) => {

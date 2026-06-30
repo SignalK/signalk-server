@@ -127,6 +127,9 @@ export interface Config {
     courseApi?: {
       apiOnly?: boolean
     }
+    notifications?: {
+      manageNotifications?: boolean
+    }
   }
   defaults: object
 }
