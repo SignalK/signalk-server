@@ -33,11 +33,11 @@
     "test": "npm run asbuild:debug"
   },
   "devDependencies": {
-    "assemblyscript": "^0.27.0"
+    "assemblyscript": "^0.27.37"
   },
   "dependencies": {
-    "as-wasi": "^0.6.0",
     "as-fetch": "^2.1.4",
+    "as-wasi": "^0.6.0",
     "assemblyscript-json": "^1.1.0"
   },
   "repository": {
