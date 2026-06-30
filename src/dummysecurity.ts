@@ -134,7 +134,21 @@ export default function () {
 
     configFromArguments: false,
     securityConfig: undefined,
-    requestAccess: () => undefined
+    requestAccess: (
+      _config: any,
+      _request: any,
+      _ip: any,
+      updateCb?: (result: any) => void
+    ) => {
+      const result = {
+        state: 'COMPLETED',
+        statusCode: 404,
+        message:
+          'Access requests not available. Server security may not be enabled.'
+      }
+      if (updateCb) updateCb(result)
+      return Promise.resolve(result)
+    }
   }
   //force cast via unknown so that we don't need to
   //implement all dummy methods that are never called
