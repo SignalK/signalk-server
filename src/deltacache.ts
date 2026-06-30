@@ -237,6 +237,7 @@ export default class DeltaCache {
 
     if (msg.path.length !== 0) {
       leaf[sourceRef] = msg
+      this.app.stalenessEnforcer?.onIncoming(msg.context, msg.path, sourceRef)
       const prefKey = msg.context + '\0' + msg.path
       // The priority engine matches by canonical (canName) form. Store
       // the same canonical ref in preferredSources so the livePreferred
@@ -530,6 +531,7 @@ export default class DeltaCache {
           timestamp: update.timestamp,
           path: pathValue.path,
           value: pathValue.value,
+          state: pathValue.state,
           isMeta: false
         } as NormalizedDelta
         const leaf = getLeafObject(
@@ -724,6 +726,7 @@ export default class DeltaCache {
     if (contextParts.length === 2) {
       delete this.cache[contextParts[0]][contextParts[1]]
     }
+    this.app.stalenessEnforcer?.onContextRemoved(contextKey)
   }
 
   pruneContexts(seconds: number) {

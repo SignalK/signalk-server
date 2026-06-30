@@ -277,6 +277,16 @@ function addValue(
     valueLeaf.timestamp = timestamp
     setMessage(valueLeaf, source)
   }
+  // Persist or clear the staleness state container so the HTTP API and
+  // the admin UI's initial snapshot reflect the same picture the
+  // streaming delta carried. A fresh delta (no `state`) clears any
+  // prior `state.timedOut` so a path that has recovered does not look
+  // permanently stale after a reload.
+  if (pathValue.state !== undefined) {
+    valueLeaf.state = pathValue.state
+  } else if ('state' in valueLeaf) {
+    delete valueLeaf.state
+  }
 }
 
 function addValues(

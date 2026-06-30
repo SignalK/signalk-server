@@ -182,6 +182,41 @@ function validatePrioritiesPayload(
   return { ok: true, value }
 }
 
+/**
+ * Validates the staleness-enforcer settings before they are merged into
+ * the live config. Numeric ranges follow the bounds the enforcer itself
+ * tolerates (see src/staleness.ts).
+ */
+const MAX_DEFAULT_TIMEOUT_SECONDS = 24 * 60 * 60
+const MIN_STALE_CHECK_INTERVAL_MS = 100
+const MAX_STALE_CHECK_INTERVAL_MS = 60 * 1000
+const MIN_AUTO_TIMEOUT_SAMPLES = 2
+const MAX_AUTO_TIMEOUT_SAMPLES = 1000
+const MAX_AUTO_TIMEOUT_WARMUP_SECONDS = 3600
+
+const stalenessSettingsSchema = Type.Object({
+  enforceDataTimeouts: Type.Optional(Type.Boolean()),
+  useDefaultTimeouts: Type.Optional(Type.Boolean()),
+  defaultTimeout: Type.Optional(
+    Type.Number({ minimum: 0, maximum: MAX_DEFAULT_TIMEOUT_SECONDS })
+  ),
+  staleCheckIntervalMs: Type.Optional(
+    Type.Integer({
+      minimum: MIN_STALE_CHECK_INTERVAL_MS,
+      maximum: MAX_STALE_CHECK_INTERVAL_MS
+    })
+  ),
+  autoTimeoutSamples: Type.Optional(
+    Type.Integer({
+      minimum: MIN_AUTO_TIMEOUT_SAMPLES,
+      maximum: MAX_AUTO_TIMEOUT_SAMPLES
+    })
+  ),
+  autoTimeoutWarmupSeconds: Type.Optional(
+    Type.Integer({ minimum: 0, maximum: MAX_AUTO_TIMEOUT_WARMUP_SECONDS })
+  )
+})
+
 const sourceAliasesSchema = Type.Record(
   Type.String(),
   Type.String({ minLength: 1 })
@@ -1160,6 +1195,39 @@ module.exports = function (
 
     if (!isUndefined(settings.logCountToKeep)) {
       updatedSettings.logCountToKeep = Number(settings.logCountToKeep)
+    }
+
+    if (settings.staleness !== undefined) {
+      const r = validateAgainst(
+        stalenessSettingsSchema,
+        settings.staleness,
+        'staleness'
+      )
+      if (!r.ok) {
+        res.status(400).type('text/plain').send(r.error)
+        return
+      }
+      const s = settings.staleness as Record<string, unknown>
+      if (!isUndefined(s.enforceDataTimeouts)) {
+        updatedSettings.enforceDataTimeouts = Boolean(s.enforceDataTimeouts)
+      }
+      if (!isUndefined(s.useDefaultTimeouts)) {
+        updatedSettings.useDefaultTimeouts = Boolean(s.useDefaultTimeouts)
+      }
+      if (!isUndefined(s.defaultTimeout)) {
+        updatedSettings.defaultTimeout = Number(s.defaultTimeout)
+      }
+      if (!isUndefined(s.staleCheckIntervalMs)) {
+        updatedSettings.staleCheckIntervalMs = Number(s.staleCheckIntervalMs)
+      }
+      if (!isUndefined(s.autoTimeoutSamples)) {
+        updatedSettings.autoTimeoutSamples = Number(s.autoTimeoutSamples)
+      }
+      if (!isUndefined(s.autoTimeoutWarmupSeconds)) {
+        updatedSettings.autoTimeoutWarmupSeconds = Number(
+          s.autoTimeoutWarmupSeconds
+        )
+      }
     }
 
     forIn(settings.courseApi, (enabled, name) => {

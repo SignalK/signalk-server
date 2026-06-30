@@ -1101,6 +1101,56 @@ describe('toPreferredDelta.routesPath', () => {
     fn.routesPath('environment.outside.temperature', 'foo.A').should.equal(true)
     fn.routesPath('environment.outside.temperature', 'bar.B').should.equal(true)
   })
+
+  describe('getMaxFailoverTimeoutMs', () => {
+    it('returns the largest timeout across a path override', () => {
+      const overrides: SourcePrioritiesData = {
+        'environment.wind.speedApparent': [
+          { sourceRef: 'a' as SourceRef, timeout: 0 },
+          { sourceRef: 'b' as SourceRef, timeout: 5000 },
+          { sourceRef: 'c' as SourceRef, timeout: 15000 }
+        ]
+      }
+      const fn = getToPreferredDelta({ overrides, unknownSourceTimeout: 200 })
+      fn.getMaxFailoverTimeoutMs('environment.wind.speedApparent').should.equal(
+        15000
+      )
+    })
+
+    it('returns fallbackMs for paths a group has claimed', () => {
+      const groups: PriorityGroupConfig[] = [
+        { id: 'g1', sources: ['foo.A', 'foo.B'] }
+      ]
+      const fn = getToPreferredDelta({ groups, fallbackMs: 7000 })
+      // Trigger the group claim by routing a delta through the engine.
+      fn(
+        makeDelta('foo.A', 'environment.wind.speedApparent', 1),
+        new Date(),
+        'self'
+      )
+      fn(
+        makeDelta('foo.B', 'environment.wind.speedApparent', 2),
+        new Date(),
+        'self'
+      )
+      fn.getMaxFailoverTimeoutMs('environment.wind.speedApparent').should.equal(
+        7000
+      )
+    })
+
+    it('returns 0 for unknown paths', () => {
+      const overrides: SourcePrioritiesData = {
+        'other.path': [{ sourceRef: 'a' as SourceRef, timeout: 9000 }]
+      }
+      const fn = getToPreferredDelta({ overrides })
+      fn.getMaxFailoverTimeoutMs('navigation.position').should.equal(0)
+    })
+
+    it('returns 0 from the passthrough engine when no priorities are configured', () => {
+      const fn = getToPreferredDelta({})
+      fn.getMaxFailoverTimeoutMs('any.path').should.equal(0)
+    })
+  })
 })
 
 describe('excludeIdentities', () => {
