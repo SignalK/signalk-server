@@ -245,33 +245,72 @@ class Server {
       type: string,
       statusType = 'provider'
     ) {
-      if (!statusMessage) {
-        delete app.providerStatus[providerId]
-        return
+      const status = (app.providerStatus[providerId] ??= {})
+      const now = new Date().toISOString()
+
+      if (statusMessage) {
+        applyMessage(status, type, statusMessage, now)
+      } else {
+        clearMessage(status, type, now)
       }
 
-      if (_.isUndefined(app.providerStatus[providerId])) {
-        app.providerStatus[providerId] = {}
-      }
-      const status = app.providerStatus[providerId]
-
-      if (status.type === 'error' && status.message !== statusMessage) {
-        status.lastError = status.message
-        status.lastErrorTimeStamp = status.timeStamp
-      }
-
-      status.type = type
       status.id = providerId
       status.statusType = statusType
-      status.timeStamp = new Date().toISOString()
-
-      status.message = statusMessage
 
       app.emit('serverevent', {
         type: 'PROVIDERSTATUS',
         from: 'signalk-server',
         data: app.getProviderStatus()
       })
+    }
+
+    function clearMessage(status: any, type: string, now: string) {
+      const canRestore = type === 'error' && status.lastStatus
+      if (canRestore) {
+        status.type = 'status'
+        status.message = status.lastStatus
+        status.timeStamp = status.lastStatusTimeStamp ?? now
+      } else {
+        status.type = type
+        status.message = ''
+        status.timeStamp = now
+        status.lastStatus = ''
+        status.lastStatusTimeStamp = undefined
+      }
+    }
+
+    function applyMessage(
+      status: any,
+      type: string,
+      message: string,
+      now: string
+    ) {
+      rememberPrevious(status, type, message)
+
+      status.type = type
+      status.message = message
+      status.timeStamp = now
+
+      if (type === 'status') {
+        status.lastStatus = message
+        status.lastStatusTimeStamp = now
+      }
+    }
+
+    function rememberPrevious(status: any, type: string, message: string) {
+      const replacingDifferentError =
+        status.type === 'error' && status.message !== message
+      if (replacingDifferentError) {
+        status.lastError = status.message
+        status.lastErrorTimeStamp = status.timeStamp
+      }
+
+      const errorOverridingStatus =
+        type === 'error' && status.type === 'status' && status.message
+      if (errorOverridingStatus) {
+        status.lastStatus = status.message
+        status.lastStatusTimeStamp = status.timeStamp
+      }
     }
 
     app.getProviderStatus = () => {
