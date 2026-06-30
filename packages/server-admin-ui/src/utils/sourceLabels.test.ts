@@ -141,6 +141,31 @@ describe('buildSourceLabel', () => {
   it('returns raw sourceRef for unknown connections', () => {
     expect(buildSourceLabel('UNKNOWN.1', sourcesData)).toBe('UNKNOWN.1')
   })
+
+  it('uses sourceNames for ws device sources', () => {
+    const sourceNames = {
+      'ws.3d3e48a1-1185-2fe3-c494-1c1a9ee6f41f': 'sensesp-engines'
+    }
+    expect(
+      buildSourceLabel(
+        'ws.3d3e48a1-1185-2fe3-c494-1c1a9ee6f41f',
+        sourcesData,
+        sourceNames
+      )
+    ).toBe('sensesp-engines (ws.3d3e48a1-1185-2fe3-c494-1c1a9ee6f41f)')
+  })
+
+  it('falls back to raw ref for ws sources missing from sourceNames', () => {
+    expect(buildSourceLabel('ws.unknown-device', sourcesData, {})).toBe(
+      'ws.unknown-device'
+    )
+  })
+
+  it('lets sourceNames override N2K-derived labels', () => {
+    expect(
+      buildSourceLabel('YDEN02.37', sourcesData, { 'YDEN02.37': 'My Charger' })
+    ).toBe('My Charger (YDEN02.37)')
+  })
 })
 
 describe('canonicaliseSourceRef', () => {

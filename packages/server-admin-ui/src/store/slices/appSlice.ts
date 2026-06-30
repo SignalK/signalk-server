@@ -58,6 +58,12 @@ export interface AppSliceState {
   sourcesData: SourcesData | null
   sourceAliases: Record<string, string>
   sourceAliasesLoaded: boolean
+  /**
+   * Merged human-readable names (ws device descriptions + manual aliases)
+   * served read-only to all clients via GET /sourceNames. Drives source
+   * labels for non-admin users, who cannot read the admin-only registry.
+   */
+  sourceNames: Record<string, string>
   multiSourcePaths: Record<string, string[]>
   /**
    * Reconciled priority groups: server-computed view of saved groups
@@ -138,6 +144,7 @@ export interface AppSliceActions {
   setBackpressureWarning: (warning: BackpressureWarning | null) => void
   setSourcesData: (data: SourcesData) => void
   setSourceAliases: (aliases: Record<string, string>) => void
+  setSourceNames: (names: Record<string, string>) => void
   setIgnoredInstanceConflicts: (conflicts: Record<string, string>) => void
   setActiveConflictCount: (count: number) => void
   setN2kDeviceStatus: (status: {
@@ -224,6 +231,7 @@ const initialAppState: AppSliceState = {
   sourcesData: null,
   sourceAliases: {},
   sourceAliasesLoaded: false,
+  sourceNames: {},
   multiSourcePaths: {},
   reconciledGroups: [],
   livePreferredSources: {},
@@ -333,6 +341,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setSourceAliases: (sourceAliases) => {
     set({ sourceAliases, sourceAliasesLoaded: true })
+  },
+
+  setSourceNames: (sourceNames) => {
+    set({ sourceNames })
   },
 
   setIgnoredInstanceConflicts: (ignoredInstanceConflicts) => {
