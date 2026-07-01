@@ -29,7 +29,7 @@ jobs:
     if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: '24.x'
@@ -174,7 +174,7 @@ jobs:
       any_enabled: ${{ steps.matrix.outputs.any_enabled }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Compute matrices
         id: matrix
         env:
@@ -274,7 +274,7 @@ jobs:
         include: ${{ fromJSON(needs.prepare.outputs.build_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Login to ghcr.io
@@ -310,7 +310,7 @@ jobs:
         include: ${{ fromJSON(needs.prepare.outputs.variant_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Docker meta
@@ -438,7 +438,7 @@ jobs:
     needs: copy-to-dockerhub
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Set TAG for build-arg

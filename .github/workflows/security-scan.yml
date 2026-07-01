@@ -28,7 +28,7 @@ jobs:
             image-tag: 'latest-alpine'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Run Trivy vulnerability scanner for Docker Image
         uses: aquasecurity/trivy-action@v0.36.0
         with:

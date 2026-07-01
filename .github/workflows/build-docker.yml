@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Node setup
         uses: actions/setup-node@v6
         with:
@@ -69,7 +69,7 @@ jobs:
       any_enabled: ${{ steps.matrix.outputs.any_enabled }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Compute matrices
         id: matrix
         env:
@@ -168,7 +168,7 @@ jobs:
         include: ${{ fromJSON(needs.prepare.outputs.build_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Login to ghcr.io
@@ -204,7 +204,7 @@ jobs:
         include: ${{ fromJSON(needs.prepare.outputs.variant_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Docker meta
@@ -310,7 +310,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout metrics branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: metrics
       - name: Record image sizes
