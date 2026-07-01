@@ -32,6 +32,15 @@ export type ValueList = {
 }[]
 
 /**
+ * Controls how history providers should handle multiple sources for the
+ * requested paths.
+ *
+ * - `preferred`: provider default / priority-resolved source handling
+ * - `all`: return values split by source, with `sourceRef` set in `values`
+ */
+export type HistorySourcePolicy = 'preferred' | 'all'
+
+/**
  * A row of historical data: first element is timestamp, followed by aggregated values.
  * Values can be primitives, objects (like navigation.position), or null depending on the path.
  */
@@ -104,6 +113,7 @@ export type TimeRangeQueryParams =
 export type ValuesRequestQueryParams = TimeRangeQueryParams & {
   context?: string
   resolution?: number
+  sourcePolicy?: HistorySourcePolicy
 }
 
 export type PathsRequestQueryParams = TimeRangeQueryParams
@@ -258,6 +268,7 @@ export interface PathSpec {
 export type ValuesRequest = TimeRangeParams & {
   context?: Context
   resolution?: number
+  sourcePolicy?: HistorySourcePolicy
   pathSpecs: PathSpec[]
 }
 
