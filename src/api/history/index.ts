@@ -9,6 +9,7 @@ import {
   PathSpec,
   PathsRequest,
   PathsResponse,
+  HistorySourcePolicy,
   TimeRangeParams,
   ValuesRequest,
   ValuesResponse,
@@ -281,6 +282,13 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
     errors.push('paths parameter is required and must be a string')
   }
 
+  let sourcePolicy: HistorySourcePolicy | undefined
+  try {
+    sourcePolicy = parseSourcePolicy(query.sourcePolicy)
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : 'Invalid sourcePolicy')
+  }
+
   if (errors.length > 0) {
     throw new Error(`Validation errors: ${errors.join(', ')}`)
   }
@@ -294,10 +302,17 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
     ...timeRangeParams,
     context,
     resolution,
+    sourcePolicy,
     pathSpecs
   }
   debug.enabled && debug(JSON.stringify(parsed, null, 2))
   return parsed
+}
+
+const parseSourcePolicy = (value: unknown): HistorySourcePolicy | undefined => {
+  if (value === undefined || value === null || value === '') return undefined
+  if (value === 'preferred' || value === 'all') return value
+  throw new Error("sourcePolicy parameter must be 'preferred' or 'all'")
 }
 
 // Maps the single-letter unit suffix in a resolution time expression to seconds.

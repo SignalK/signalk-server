@@ -150,6 +150,13 @@ historyApiDoc.paths = {
             "Length of data sample time window in seconds or as a time expression ('1s', '1m', '1h', '1d'). If resolution is not specified the server should provide data in a reasonable time resolution, depending on the time range in the request.",
           schema: { type: 'number', format: 'integer' }
         },
+        {
+          name: 'sourcePolicy',
+          in: 'query',
+          description:
+            "Controls how multiple historical sources are handled. With 'all', providers should return values split by source and include sourceRef in the values metadata. A sourceRef specified on an individual path remains an explicit filter; 'all' only expands paths that do not already specify a source.",
+          schema: { type: 'string', enum: ['preferred', 'all'] }
+        },
         { $ref: '#/components/parameters/ProviderIdQuery' }
       ],
       responses: {
