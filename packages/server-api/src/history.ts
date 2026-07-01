@@ -37,6 +37,9 @@ export type ValueList = {
  *
  * - `preferred`: provider default / priority-resolved source handling
  * - `all`: return values split by source, with `sourceRef` set in `values`
+ *
+ * A `sourceRef` specified on an individual path remains an explicit filter;
+ * `all` only expands paths that do not already specify a source.
  */
 export type HistorySourcePolicy = 'preferred' | 'all'
 
