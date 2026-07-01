@@ -30,7 +30,7 @@ jobs:
       any_enabled: ${{ steps.matrix.outputs.any_enabled }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Compute matrices
         id: matrix
         env:
@@ -121,7 +121,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.prepare.outputs.build_matrix) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
 
       - name: Login to ghcr.io
