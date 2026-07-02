@@ -683,8 +683,7 @@ module.exports = (theApp: any) => {
         }
 
         const displayUnits = fieldsToSet.displayUnits as
-          | { category?: string }
-          | undefined
+          { category?: string } | undefined
         if (displayUnits?.category) {
           const schemaMeta = getMetadata('vessels.self.' + skPath) as Record<
             string,
