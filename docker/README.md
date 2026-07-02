@@ -85,6 +85,19 @@ The server automatically detects which container runtime is being used (Docker, 
 
 Supported runtimes: `docker`, `podman`, `kubernetes`, `containerd`, `crio`, `lxc`
 
+## Resolving `.local` hostnames (mDNS)
+
+Some plugins reach devices by their `.local` (mDNS/Bonjour) hostname, e.g. `shelly-xxxx.local`. Inside the container this goes through `getaddrinfo()`, which needs a working mDNS resolver — the server's own mDNS advertisement does not help here.
+
+The image ships `avahi-daemon` + `libnss-mdns`. In **bridge networking** the container starts its own avahi and `.local` resolution works out of the box. But with **`network_mode: host` on a host that already runs avahi** (e.g. Raspberry Pi OS), the container cannot run a second responder — avahi detects the conflict and refuses, leaving no resolver, so `.local` lookups fail with `EAI_AGAIN` even though the host resolves the same name fine. The container logs a `WARNING` when this happens.
+
+The fix is to let the container use the **host's** avahi by mounting the host
+D-Bus (or avahi) socket — see the `volumes:` entry in the provided
+`docker-compose.yml`. `startup.sh` then detects the host avahi and uses it
+instead of starting its own, so there is no mDNS conflict on the host. (On
+rootless podman the socket's peer credentials must match the host user, which
+needs `--userns=keep-id`.)
+
 ## Release images
 
 Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs.

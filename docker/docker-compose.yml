@@ -18,6 +18,12 @@ services:
     #   ----------------------
     volumes:
       - /dev:/dev
+      # Use the host's avahi/D-Bus for mDNS, so the server and plugins can
+      # resolve other devices' .local hostnames (without it those lookups fail
+      # with EAI_AGAIN on a host that already runs avahi). This relies on
+      # network_mode: host above — comment it out if you switch to bridge mode
+      # or run on a host without avahi. See README for runtime details.
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro
     #      - $PWD/signalk_conf:/home/node/.signalk    # uncomment and make signalk_conf -folder where .signalk is bind mounted
     #   ----------------------
     #      - type: bind    # (1/3) uncomment these 3 lines to control startup.sh outside container

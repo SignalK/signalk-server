@@ -45,15 +45,98 @@ export IS_IN_DOCKER=true
 # available" notice; the self-update button stays hidden via IS_IN_DOCKER.
 export SIGNALK_SERVER_IS_UPDATABLE=true
 
-# Check if host D-Bus socket is mounted (rootless container scenario)
-# If mounted, we use the host's D-Bus/Avahi instead of starting our own
-if [ -S /run/dbus/system_bus_socket ] && dbus-send --system --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames >/dev/null 2>&1; then
-    echo "Using host D-Bus (socket mounted from host)"
+# mDNS / D-Bus setup.
+#
+# Use the HOST's avahi (and don't run our own responder) when it is reachable.
+# This is the right setup on a host that already runs avahi (e.g. Raspberry Pi
+# OS) under network_mode: host — the container resolves .local names via
+# libnss-mdns talking to the host avahi. Two ways the host avahi is exposed:
+#   - the host D-Bus system socket is mounted and answering
+#     (-v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro); common
+#     on Docker.
+#   - the host avahi socket is mounted (-v /run/avahi-daemon/socket:...);
+#     libnss-mdns talks to it directly. Common on rootless podman, where the
+#     D-Bus EXTERNAL handshake needs --userns=keep-id to match peer creds.
+#
+# Otherwise start our own D-Bus + Avahi. This is correct for bridge mode (an
+# isolated network namespace). Under network_mode: host on a host that already
+# runs avahi WITHOUT either socket mounted, our avahi-daemon detects the other
+# mDNS stack and exits or runs degraded — so .local lookups fail (EAI_AGAIN).
+# We detect that ("Detected another ... mDNS stack"), stop our daemon so we
+# don't degrade the host's mDNS, and tell the user how to fix it.
+if [ -S /run/dbus/system_bus_socket ]; then
+    # A host D-Bus socket is mounted — do not start our own D-Bus (that would
+    # restart against the mounted host socket). Use the host's avahi if it is
+    # registered on that bus; otherwise warn rather than silently leaving no
+    # resolver.
+    if dbus-send --system --reply-timeout=3000 --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames 2>/dev/null | grep -q org.freedesktop.Avahi; then
+        echo "Using host D-Bus (socket mounted from host)"
+    else
+        echo "WARNING: host D-Bus is mounted but Avahi is not registered on it,"
+        echo "so .local names will not resolve. Start avahi on the host, or"
+        echo "remove the host D-Bus mount to run a container-local responder."
+    fi
+elif [ -S /run/avahi-daemon/socket ]; then
+    echo "Using host Avahi (socket mounted from host)"
 else
     echo "Starting container D-Bus and Avahi services"
     service dbus restart
     /usr/sbin/avahi-daemon -k 2>/dev/null
-    /usr/sbin/avahi-daemon --no-drop-root &
+
+    # Stream avahi's log live through a FIFO (no temp file). avahi writes to the
+    # FIFO in the foreground; a background reader forwards each line to the
+    # container log and keeps draining for the daemon's whole life so avahi
+    # never blocks on a full pipe.
+    avahi_fifo=$(mktemp -u)
+    mkfifo "$avahi_fifo"
+    /usr/sbin/avahi-daemon --no-drop-root >"$avahi_fifo" 2>&1 &
+    avahi_pid=$!
+
+    # Under network_mode: host on a host that already runs avahi, ours detects
+    # the other responder ("Detected another ... mDNS stack") and exits or runs
+    # degraded, breaking .local lookups. On that marker we stop our daemon (so
+    # it doesn't degrade the host's mDNS) and print how to fix it.
+    (
+        # Open the read end (rendezvous unblocks avahi's write open), then
+        # unlink the FIFO name — the open fd keeps it alive, leaving nothing in
+        # /tmp.
+        exec 3<"$avahi_fifo"
+        rm -f "$avahi_fifo"
+        outcome="exited"
+        while IFS= read -r line <&3; do
+            printf '%s\n' "$line"
+            case "$line" in
+            *"Detected another"*)
+                outcome="conflict"
+                kill "$avahi_pid" 2>/dev/null
+                /usr/sbin/avahi-daemon -k 2>/dev/null
+                break
+                ;;
+            *"Server startup complete"*)
+                outcome="started"
+                # keep running to drain the log until avahi exits
+                ;;
+            esac
+        done
+
+        case "$outcome" in
+        conflict)
+            echo "WARNING: this host already runs an mDNS responder (avahi) and the"
+            echo "container shares its network (network_mode: host), so it cannot run"
+            echo "its own. .local name resolution will not work from inside the"
+            echo "container until you let it use the host's avahi:"
+            echo "  - Docker:         mount the host D-Bus system socket"
+            echo "                      -v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro"
+            echo "  - rootless podman: run with --userns=keep-id and mount the avahi"
+            echo "                    socket -v /run/avahi-daemon/socket:/run/avahi-daemon/socket"
+            ;;
+        exited)
+            echo "WARNING: avahi-daemon exited during startup; .local name resolution"
+            echo "may not work. Check the container logs for details."
+            ;;
+        esac
+    ) &
+
     service bluetooth restart
 fi
 
