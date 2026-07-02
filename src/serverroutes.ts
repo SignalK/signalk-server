@@ -16,6 +16,15 @@
 
 import * as http from 'http'
 import * as https from 'https'
+import { assertAllowedHost, ssrfSafeLookup } from './ssrfGuard'
+import {
+  CheckAccessRequestBody,
+  checkAccessRequestSchema,
+  RequestAccessBody,
+  requestAccessSchema,
+  TestConnectionBody,
+  testConnectionSchema
+} from './remoteConnectionSchemas'
 import bcrypt from 'bcryptjs'
 import busboy from 'busboy'
 import commandExists from 'command-exists'
@@ -1560,12 +1569,10 @@ module.exports = function (
       const addr = dotIdx === -1 ? '' : sourceRef.slice(dotIdx + 1)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sources = (app.signalk as any)?.sources as
-        | Record<string, Record<string, unknown>>
-        | undefined
+        Record<string, Record<string, unknown>> | undefined
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sourceMeta = (app.signalk as any)?.sourceMeta as
-        | Record<string, unknown>
-        | undefined
+        Record<string, unknown> | undefined
       const inSourceDeltas = Object.prototype.hasOwnProperty.call(
         app.deltaCache.sourceDeltas,
         sourceRef
@@ -2199,7 +2206,10 @@ module.exports = function (
           { filename }
         ) => {
           try {
-            if (!filename.endsWith('.backup')) {
+            if (
+              !filename.endsWith('.backup') &&
+              !filename.endsWith('.backup.zip')
+            ) {
               res
                 .status(400)
                 .send('the backup file does not have the .backup extension')
@@ -2344,23 +2354,24 @@ module.exports = function (
   app.post(
     `${SERVERROUTESPREFIX}/testSignalKConnection`,
     (req: Request, res: Response) => {
-      const { host, port, useTLS, token, selfsignedcert } = req.body
+      const validation = validateAgainst(
+        testConnectionSchema,
+        req.body,
+        'connection'
+      )
+      if (!validation.ok) {
+        return res.status(400).json({ success: false, error: validation.error })
+      }
+      const { host, port, useTLS, token, selfsignedcert } =
+        validation.value as TestConnectionBody
 
       makeRemoteRequest(host, port, useTLS, selfsignedcert, '/signalk')
         .then((discovery) => {
           if (discovery.status !== 200) {
-            return res.json({
-              success: false,
-              error: `Discovery failed: HTTP ${discovery.status}`
-            })
+            return res.json({ success: false, error: CONNECTION_FAILED })
           }
 
-          let server: Record<string, string> | undefined
-          try {
-            server = JSON.parse(discovery.data).server
-          } catch (_e) {
-            // ignore parse errors for server info
-          }
+          const server = pickServerInfo(discovery.data)
 
           if (!token) {
             return res.json({
@@ -2408,8 +2419,9 @@ module.exports = function (
             })
           })
         })
-        .catch((err: Error) => {
-          res.json({ success: false, error: err.message })
+        .catch((err: unknown) => {
+          debug(err)
+          res.json({ success: false, error: CONNECTION_FAILED })
         })
     }
   )
@@ -2417,8 +2429,16 @@ module.exports = function (
   app.post(
     `${SERVERROUTESPREFIX}/requestAccess`,
     (req: Request, res: Response) => {
+      const validation = validateAgainst(
+        requestAccessSchema,
+        req.body,
+        'access request'
+      )
+      if (!validation.ok) {
+        return res.status(400).json({ state: 'ERROR', error: validation.error })
+      }
       const { host, port, useTLS, selfsignedcert, clientId, description } =
-        req.body
+        validation.value as RequestAccessBody
 
       makeRemoteRequest(
         host,
@@ -2431,18 +2451,11 @@ module.exports = function (
         { clientId, description }
       )
         .then((result) => {
-          try {
-            const data = JSON.parse(result.data)
-            res.json(data)
-          } catch (_e) {
-            res.json({
-              state: 'ERROR',
-              error: `Unexpected response: HTTP ${result.status}`
-            })
-          }
+          res.json(pickAccessRequestReply(result.data))
         })
-        .catch((err: Error) => {
-          res.json({ state: 'ERROR', error: err.message })
+        .catch((err: unknown) => {
+          debug(err)
+          res.json({ state: 'ERROR', error: CONNECTION_FAILED })
         })
     }
   )
@@ -2450,7 +2463,16 @@ module.exports = function (
   app.post(
     `${SERVERROUTESPREFIX}/checkAccessRequest`,
     (req: Request, res: Response) => {
-      const { host, port, useTLS, selfsignedcert, requestId } = req.body
+      const validation = validateAgainst(
+        checkAccessRequestSchema,
+        req.body,
+        'access request'
+      )
+      if (!validation.ok) {
+        return res.status(400).json({ state: 'ERROR', error: validation.error })
+      }
+      const { host, port, useTLS, selfsignedcert, requestId } =
+        validation.value as CheckAccessRequestBody
 
       makeRemoteRequest(
         host,
@@ -2460,28 +2482,73 @@ module.exports = function (
         `/signalk/v1/requests/${requestId}`
       )
         .then((result) => {
-          try {
-            const data = JSON.parse(result.data)
-            res.json(data)
-          } catch (_e) {
-            res.json({
-              state: 'ERROR',
-              error: `Unexpected response: HTTP ${result.status}`
-            })
-          }
+          res.json(pickAccessRequestReply(result.data))
         })
-        .catch((err: Error) => {
-          res.json({ state: 'ERROR', error: err.message })
+        .catch((err: unknown) => {
+          debug(err)
+          res.json({ state: 'ERROR', error: CONNECTION_FAILED })
         })
     }
   )
 }
 
+// Generic message for any transport-level failure. Reusing one message for
+// refused, timed-out and blocked destinations stops these endpoints from being
+// used to probe internal network topology by error differentiation.
+const CONNECTION_FAILED = 'Could not connect to Signal K server'
+
+// Reflect only the server identity from a remote /signalk discovery response so
+// that an arbitrary HTTP service the request was pointed at cannot have its body
+// echoed back to the caller.
+function pickServerInfo(
+  data: string
+): { id: string; version: string } | undefined {
+  try {
+    const { server } = JSON.parse(data)
+    if (
+      server &&
+      typeof server.id === 'string' &&
+      typeof server.version === 'string'
+    ) {
+      return { id: server.id, version: server.version }
+    }
+  } catch (_e) {
+    // ignore parse errors
+  }
+  return undefined
+}
+
+// Reflect only the access-request fields the admin UI consumes, rather than
+// passing the remote response body through verbatim.
+function pickAccessRequestReply(data: string): Record<string, unknown> {
+  let parsed
+  try {
+    parsed = JSON.parse(data)
+  } catch (_e) {
+    return { state: 'ERROR', error: CONNECTION_FAILED }
+  }
+  if (!parsed || typeof parsed.state !== 'string') {
+    return { state: 'ERROR', error: CONNECTION_FAILED }
+  }
+  const reply: Record<string, unknown> = { state: parsed.state }
+  if (typeof parsed.requestId === 'string') {
+    reply.requestId = parsed.requestId
+  }
+  if (parsed.accessRequest) {
+    const { permission, token } = parsed.accessRequest
+    reply.accessRequest = {
+      permission: typeof permission === 'string' ? permission : undefined,
+      token: typeof token === 'string' ? token : undefined
+    }
+  }
+  return reply
+}
+
 function makeRemoteRequest(
   host: string,
-  port: number,
-  useTLS: boolean,
-  selfsignedcert: boolean,
+  port: number | string,
+  useTLS: boolean | undefined,
+  selfsignedcert: boolean | undefined,
   path: string,
   method?: string,
   headers?: Record<string, string>,
@@ -2489,6 +2556,12 @@ function makeRemoteRequest(
 ): Promise<{ status: number | undefined; data: string }> {
   const protocol = useTLS ? https : http
   return new Promise((resolve, reject) => {
+    try {
+      assertAllowedHost(host)
+    } catch (err) {
+      reject(err)
+      return
+    }
     const options = {
       hostname: host,
       port,
@@ -2498,7 +2571,8 @@ function makeRemoteRequest(
         ...(headers || {}),
         ...(body ? { 'Content-Type': 'application/json' } : {})
       },
-      rejectUnauthorized: !selfsignedcert
+      rejectUnauthorized: !selfsignedcert,
+      lookup: ssrfSafeLookup
     }
     const req = protocol.request(options, (response) => {
       let data = ''

@@ -171,6 +171,16 @@ export async function parseReleasesFeed(
   return entries.filter((e): e is GithubReleaseEntry => e !== undefined)
 }
 
+// github.com/<owner>/<repo>/releases.atom emits a synthetic entry for every
+// git tag, not just published Releases. A tag with no Release gets an
+// auto-generated body of exactly "Release <tag>" (or none). Those carry no
+// notes, so treat them as "not a real release" and let the caller fall back
+// to a published CHANGELOG.md.
+function isPublishedRelease(entry: GithubReleaseEntry): boolean {
+  const body = entry.bodyMarkdown.trim()
+  return body !== '' && body !== `Release ${entry.tag}`
+}
+
 export function renderReleasesAsChangelog(
   entries: GithubReleaseEntry[]
 ): string {
@@ -212,9 +222,16 @@ export function parseGithubSlug(url: string | undefined): RepoSlug | undefined {
 
 /**
  * Fetch and render a changelog from GitHub Releases for the given repo.
- * Returns Markdown when at least one release was found and parsed,
- * otherwise undefined. No GitHub token required — uses the public
- * releases.atom feed.
+ * Returns Markdown when at least one real release was found and parsed,
+ * otherwise undefined.
+ *
+ * Reads the public releases.atom feed rather than the /releases REST API on
+ * purpose: the feed is served off github.com and does not draw down the 60/hr
+ * unauthenticated REST budget. That budget is shared per source IP, so new
+ * users and boats on Starlink (which recycles IPs aggressively) could exhaust
+ * it before the App Store renders once. The cost is that the feed can't
+ * distinguish a published Release from a bare tag, so isPublishedRelease
+ * filters the placeholders out below.
  */
 export async function fetchReleasesMarkdown(
   owner: string,
@@ -222,7 +239,7 @@ export async function fetchReleasesMarkdown(
 ): Promise<string | undefined> {
   const xml = await fetchReleasesFeed(owner, repo)
   if (!xml) return undefined
-  const entries = await parseReleasesFeed(xml)
+  const entries = (await parseReleasesFeed(xml)).filter(isPublishedRelease)
   if (entries.length === 0) return undefined
   return renderReleasesAsChangelog(entries)
 }

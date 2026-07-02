@@ -5,6 +5,8 @@ import { faTableCells } from '@fortawesome/free-solid-svg-icons/faTableCells'
 import classNames from 'classnames'
 import { toSafeModuleId } from './dynamicutilities'
 
+const ICON_BOX_SIZE = '72px'
+
 interface SignalKInfo {
   displayName?: string
   appIcon?: string
@@ -45,11 +47,14 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
   )
   const header = webAppInfo?.signalk?.displayName || webAppInfo.name
   const url = urlToWebapp(webAppInfo)
+  const appIcon = webAppInfo?.signalk?.appIcon
   const hasDisplayName = !!webAppInfo?.signalk?.displayName
 
-  const blockIcon = function (appIcon: string | null = null) {
+  const blockIcon = function () {
+    // A real icon renders on a transparent box so the card shows through its
+    // transparent areas; the primary colour is reserved for the placeholder.
     const classes = classNames(
-      'bg-primary',
+      !appIcon && 'bg-primary',
       padding.icon,
       'font-2xl me-3 float-start'
     )
@@ -63,7 +68,7 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
       justifyContent: 'center'
     }
     if (appIcon) {
-      style.width = style.height = '72px'
+      style.width = style.height = ICON_BOX_SIZE
     }
     return (
       <span className={classes} style={style}>
@@ -76,7 +81,7 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
     <a href={url}>
       <Card>
         <Card.Body className={card.style} {...attributes}>
-          {blockIcon(webAppInfo?.signalk?.appIcon || null)}
+          {blockIcon()}
           <div className={lead.classes}>{header}</div>
           <div className="text-muted font-xs">{webAppInfo.description}</div>
         </Card.Body>

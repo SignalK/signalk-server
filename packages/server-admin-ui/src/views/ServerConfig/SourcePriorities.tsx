@@ -86,8 +86,7 @@ function extractPathSourceMeta(tree: unknown): SourceMetaMap {
     }
 
     const values = n.values as
-      | Record<string, Record<string, unknown>>
-      | undefined
+      Record<string, Record<string, unknown>> | undefined
     if (values && typeof values === 'object') {
       for (const [ref, entry] of Object.entries(values)) {
         if (!entry || typeof entry !== 'object') continue
@@ -659,6 +658,7 @@ const SourcePriorities: React.FC = () => {
 
   const [resetBusy, setResetBusy] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const handleReset = useCallback(async () => {
     const confirmed = window.confirm(
@@ -694,6 +694,7 @@ const SourcePriorities: React.FC = () => {
   const handleSave = useCallback(async () => {
     setGroupsSaving()
     setSaving()
+    setSaveError(null)
     const payload = buildSavePayload()
     try {
       const res = await fetch(`${window.serverRoutesPrefix}/priorities`, {
@@ -702,7 +703,13 @@ const SourcePriorities: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      if (!res.ok) throw new Error('save failed')
+      if (!res.ok) {
+        // The server rejects invalid payloads with a plain-text reason
+        // (e.g. a source assigned to two active groups). Surface it so
+        // the user can act on it instead of a generic failure.
+        const reason = (await res.text().catch(() => '')).trim()
+        throw new Error(reason || `save failed (HTTP ${res.status})`)
+      }
       // Reflect the save we just made in the local store before the
       // WS echo arrives. Otherwise savedGroups lags by one async tick
       // and dirty-detection flips on then off, which confuses the UI.
@@ -719,9 +726,13 @@ const SourcePriorities: React.FC = () => {
       setSourcePriorities(payload.overrides)
     } catch (err) {
       console.error('Failed to save priorities:', err)
+      setSaveError(err instanceof Error ? err.message : String(err))
       setGroupsSaveFailed()
       setSaveFailed()
-      setTimeout(() => clearSaveFailed(), 5000)
+      setTimeout(() => {
+        clearSaveFailed()
+        setSaveError(null)
+      }, 5000)
     }
   }, [
     buildSavePayload,
@@ -967,8 +978,12 @@ const SourcePriorities: React.FC = () => {
           >
             <FontAwesomeIcon icon={faFloppyDisk} /> Save all changes
           </Button>
-          {(saveState.saveFailed || groupsSaveState.saveFailed) &&
-            ' Saving priorities settings failed!'}
+          {(saveState.saveFailed || groupsSaveState.saveFailed) && (
+            <span style={{ paddingLeft: '10px' }}>
+              <Badge bg="danger">Error</Badge>{' '}
+              {saveError || 'Saving priorities settings failed.'}
+            </span>
+          )}
           {!saveState.timeoutsOk && (
             <span style={{ paddingLeft: '10px' }}>
               <Badge bg="danger">Error</Badge>

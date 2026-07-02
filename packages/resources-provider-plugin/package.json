@@ -36,12 +36,11 @@
   },
   "dependencies": {
     "@signalk/server-api": "^2.5.0",
-    "geojson-validation": "^0.2.0",
-    "geolib": "^3.3.3",
+    "geolib": "^3.3.14",
     "ngeohash": "^0.6.3"
   },
   "devDependencies": {
-    "@types/ngeohash": "^0.6.4"
+    "@types/ngeohash": "^0.6.8"
   },
   "signalk-plugin-enabled-by-default": true
 }

@@ -256,8 +256,7 @@ export function useSignalKData() {
 
     if (contextKeys.includes('self')) {
       const contextData = currentData['self']?.['name'] as
-        | { value?: string }
-        | undefined
+        { value?: string } | undefined
       const contextName = contextData?.value
       options.push({
         value: 'self',
@@ -270,8 +269,7 @@ export function useSignalKData() {
     contextKeys.forEach((key) => {
       if (key !== 'self') {
         const contextData = currentData[key]?.['name'] as
-          | { value?: string }
-          | undefined
+          { value?: string } | undefined
         const contextName = contextData?.value
         options.push({
           value: key,

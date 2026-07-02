@@ -20,13 +20,33 @@ FROM base AS tarballs_installed
 WORKDIR /home/node/signalk
 COPY --chown=node:node *.tgz .
 
-# Install all tarballs locally (not globally) to avoid permission issues
-# Install workspace packages first so they're available when installing signalk-server
-RUN npm init -y \
-  && workspace_tarballs=$(ls *.tgz 2>/dev/null | grep -v '^signalk-server-[0-9]' || true) \
+# EDITION selects the published variant: "full" bundles the optional webapps and
+# plugins; "core" installs the server with --omit=optional, leaving the server,
+# the admin UI, serialport, and required libraries. The admin UI ships in core
+# via its workspace tarball (kept in both editions below); serialport is an
+# external optional package, so core reinstalls it explicitly at the version the
+# server declares. Both stay in optionalDependencies but cannot be added back at
+# the .signalk layer, so the image must carry them.
+ARG EDITION=full
+
+# Install workspace tarballs locally (not globally) to avoid permission issues,
+# then install signalk-server. The grep excludes the top-level signalk-server
+# tarball (installed separately below); the admin UI tarball is intentionally
+# kept in both editions. The @signalk relocation is guarded on presence.
+RUN case "$EDITION" in \
+      full) npm_flags="" ;; \
+      core) npm_flags="--omit=optional" ;; \
+      *) echo "Unknown EDITION: $EDITION" >&2; exit 1 ;; \
+    esac \
+  && npm init -y \
+  && workspace_tarballs=$(ls *.tgz 2>/dev/null | grep -Ev '^signalk-server-[0-9]' || true) \
   && if [ -n "$workspace_tarballs" ]; then npm install $workspace_tarballs; fi \
   && server_tarball=$(ls signalk-server-[0-9]*.tgz) \
-  && npm install "$server_tarball" --install-strategy=nested \
+  && npm install "$server_tarball" --install-strategy=nested $npm_flags \
+  && if [ "$EDITION" = core ]; then \
+       serialport_spec=$(node -p "require('signalk-server/package.json').optionalDependencies.serialport") \
+       && npm install $npm_flags "serialport@$serialport_spec"; \
+     fi \
   && if [ -d node_modules/@signalk ]; then \
        mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
        && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \

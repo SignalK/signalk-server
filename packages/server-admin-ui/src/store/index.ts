@@ -120,6 +120,17 @@ export function useAppStore() {
   return useStore((s) => s.appStore)
 }
 
+export function useAppstoreFilter() {
+  return useStore(
+    useShallow((s) => ({
+      view: s.appstoreView,
+      search: s.appstoreSearch,
+      setView: s.setAppstoreView,
+      setSearch: s.setAppstoreSearch
+    }))
+  )
+}
+
 export function useServerStats() {
   return useStore((s) => s.serverStatistics)
 }

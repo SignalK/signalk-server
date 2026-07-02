@@ -7,10 +7,11 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useDeferredValue
 } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useAppStore } from '../../../store'
+import { useAppStore, useAppstoreFilter, useStore } from '../../../store'
 import { fetchAppStore } from '../../../dataFetching'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
@@ -109,16 +110,26 @@ function writeString(key: string, value: string) {
 const Apps: React.FC = () => {
   const appStore = useAppStore() as AppStoreState
   const [searchParams, setSearchParams] = useSearchParams()
-  const [view, setSelectedView] = useState('All')
+  // View and search live in the store so they survive the unmount/remount
+  // when the user opens a plugin detail page and returns via "Back to Store".
+  const {
+    view,
+    search,
+    setView: setSelectedView,
+    setSearch
+  } = useAppstoreFilter()
   const [category, setSelectedCategory] = useState('All')
-  const [search, setSearch] = useState(() => searchParams.get('q') || '')
 
-  // When the URL ?q= changes (e.g. user clicked an author link from the
-  // detail page or another card), reflect it back into the search box.
+  // An explicit ?q= in the URL (author link from a card/detail page, or a
+  // reloaded/bookmarked search) wins over the remembered store value. Runs
+  // only on URL changes; reads the current search from the store at call
+  // time so it does not also re-fire on every keystroke.
   useEffect(() => {
-    const q = searchParams.get('q') || ''
-    setSearch((current) => (current === q ? current : q))
-  }, [searchParams])
+    const q = searchParams.get('q')
+    if (q !== null && q !== useStore.getState().appstoreSearch) {
+      setSearch(q)
+    }
+  }, [searchParams, setSearch])
 
   // Re-fetch the App Store list on mount. The server's npm-metadata
   // hydrator and icon probe populate signalk.appIcon / displayName
@@ -268,26 +279,29 @@ const Apps: React.FC = () => {
       }
       setSelectedView('Installing')
     }
-  }, [rowData])
+  }, [rowData, setSelectedView])
 
-  // Once everything queued on the Installs & Removes tab has finished,
-  // jump back to Installed so the user lands on the result. Stay put
-  // when at least one install failed so the red "Install failed" pill
-  // remains in view until the user navigates away themselves.
+  // Auto-jump to Installed only on the busy→idle transition so the
+  // user lands on the result when a queued install/update finishes.
+  // appStore.installing is never cleared server-side (it drives the
+  // "Pending restart" warning), so we detect the transition via a
+  // ref rather than the array length. `view` is deliberately NOT a
+  // dep: making it one re-fires the effect when the user clicks
+  // back to "Installs & Removes" and traps them on "Installed".
+  // Suppressed on failure so the red "Install failed" pill stays
+  // in view until the user navigates away themselves.
   const busyCount = installingCount(appStore)
   const hasFailure = appStore.installing.some(
     (app) => (app as InstallingApp).installFailed
   )
+  const prevBusyCountRef = useRef(busyCount)
   useEffect(() => {
-    if (
-      view === 'Installing' &&
-      busyCount === 0 &&
-      !hasFailure &&
-      appStore.installing.length > 0
-    ) {
+    const prev = prevBusyCountRef.current
+    prevBusyCountRef.current = busyCount
+    if (prev > 0 && busyCount === 0 && !hasFailure) {
       setSelectedView('Installed')
     }
-  }, [view, busyCount, hasFailure, appStore.installing.length])
+  }, [busyCount, hasFailure, setSelectedView])
 
   let warning: string | undefined
   if (appStore.storeAvailable === false) {

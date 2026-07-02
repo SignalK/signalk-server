@@ -68,28 +68,70 @@ interface RegexEntry {
   metadata: PathMetadataEntry
 }
 
+// Metadata is a PATH-keyed, context-INDEPENDENT namespace: a path's units /
+// description are identical no matter which context root it appears under
+// (vessels.<id>, meteo.<id>, aircraft.<id>, a bare 'meteo', ...). The four
+// entity families share one data model, so their identity-scoped seed keys
+// (/vessels/*/<path> and the /aircraft|/aton|/sar expansions) reduce to a
+// single path-keyed matcher '/*/<path>'. Non-context keys (/self, /version,
+// the /resources/* tree) are not '/<root>/*/<path>'-shaped and pass through
+// unchanged, so they keep literal matching and cannot leak across roots.
+const CONTEXT_ROOT_PREFIX = /^\/(?:vessels|aircraft|aton|sar)\/\*\//
+function toMatchKey(key: string): string {
+  return key.replace(CONTEXT_ROOT_PREFIX, '/*/')
+}
+
+// Strip the context root + identity (first two dot segments) so a lookup
+// resolves the same meta under ANY context, yielding the '/*/<tail>' shape
+// the re-keyed matcher expects. This is the FIRST of getMetadata's two
+// lookup stages and assumes a context-prefixed path
+// (vessels.self.<path>, <context>.<identity>.<path>) — the common case.
+// It is not safe for every input: a bare singleton or short-segment path
+// (self, version, meteo.environment.outside.temperature) has no context
+// root + identity to strip, so the two-segment slice produces a '/*/...'
+// form that matches nothing. getMetadata falls back to a literal-path
+// lookup for those, so this strip does not need to handle them.
+function toLookupPath(path: string): string {
+  return '/*/' + path.split('.').slice(2).join('/')
+}
+
 function buildRegexArray(
   allEntries: Record<string, PathMetadataEntry>
 ): RegexEntry[] {
   const result: RegexEntry[] = []
+  const seen = new Set<string>()
   for (const [key, metadata] of Object.entries(allEntries)) {
-    // Convert path wildcards to regex: * → [^/]+ and RegExp → [^/]+
-    const pattern = key
-      .replace(/\*/g, '[^/]+')
-      .replace(/RegExp/g, '[^/]+')
-      .replace(/\(([^)]+)\)/g, '($1)') // preserve regex groups like (single)|([A-C])
     // Skip entries whose key ends in a bare wildcard. These are container
     // shapes (e.g. /vessels/*/electrical/ac/RegExp defines "an AC bus",
     // not "any child of electrical.ac"). Letting them match would attach
     // the container description to plugin-invented siblings — matches the
-    // old @signalk/signalk-schema behaviour.
+    // old @signalk/signalk-schema behaviour. Evaluated on the ORIGINAL key,
+    // before re-keying.
     if (key.endsWith('/*') || key.endsWith('/RegExp')) {
       continue
     }
+    // Re-key to the path-only matcher. The /aircraft|/aton|/sar expansions
+    // collapse onto the same '/*/<tail>' matcher as their /vessels/* source;
+    // the seen-Set drops the duplicates so the hot-path .find() stays short.
+    // Object.entries preserves insertion order and expandContextPrefixes
+    // emits the /vessels/* key before its expansions, so the first (and only
+    // retained) entry carries the /vessels/* metadata — identical object,
+    // so dropping the rest is harmless.
+    const matchKey = toMatchKey(key)
+    if (seen.has(matchKey)) {
+      continue
+    }
+    seen.add(matchKey)
+    // Convert path wildcards to regex on the re-keyed matcher:
+    // * → [^/]+ and RegExp → [^/]+
+    const pattern = matchKey
+      .replace(/\*/g, '[^/]+')
+      .replace(/RegExp/g, '[^/]+')
+      .replace(/\(([^)]+)\)/g, '($1)') // preserve regex groups like (single)|([A-C])
     try {
       result.push({
         pattern: new RegExp(`^${pattern}$`),
-        key,
+        key: matchKey,
         metadata
       })
     } catch (e) {
@@ -108,13 +150,20 @@ function buildRegexArray(
 }
 
 export class MetadataRegistry {
+  // allMetadata stays keyed by the original on-disk keys (/vessels/*/...,
+  // /resources/*, /self, /version) and backs getAllMetadata() -> /paths, so
+  // the endpoint and PathReference.tsx (which filters on '/vessels/*/') keep
+  // the exact same JSON shape. Runtime per-path clones live in a separate
+  // path-only map so they never reshape that /paths view.
   private allMetadata: Record<string, PathMetadataEntry>
+  private runtimeClones: Record<string, PathMetadataEntry>
   private regexEntries: RegexEntry[]
   private readonly seedEntries: Record<string, PathMetadataEntry>
 
   constructor(entries: Record<string, PathMetadataEntry>) {
     this.seedEntries = entries
     this.allMetadata = { ...entries }
+    this.runtimeClones = {}
     this.regexEntries = buildRegexArray(this.allMetadata)
   }
 
@@ -125,6 +174,7 @@ export class MetadataRegistry {
    */
   reset(): void {
     this.allMetadata = { ...this.seedEntries }
+    this.runtimeClones = {}
     this.regexEntries = buildRegexArray(this.allMetadata)
   }
 
@@ -133,7 +183,23 @@ export class MetadataRegistry {
    * Returns the metadata entry or undefined if no match.
    */
   getMetadata(path: string): PathMetadataEntry | undefined {
-    const slashPath = '/' + path.replace(/\./g, '/')
+    // Context-independent lookup first (strip context root + identity).
+    // Fall back to the literal path so non-context root entries — /self,
+    // /version — still resolve when looked up bare; those keys are not
+    // '/<root>/*/<tail>'-shaped, so they never participate in the
+    // path-only matcher.
+    return (
+      this.getMetadataForLookupPath(toLookupPath(path)) ??
+      this.getMetadataForLookupPath('/' + path.replace(/\./g, '/'))
+    )
+  }
+
+  // Match an already-normalized '/*/<tail>' lookup path against the regex
+  // array. Shared by getMetadata and addMetaData's seed lookup so the
+  // path-only normalization lives in exactly one place.
+  private getMetadataForLookupPath(
+    slashPath: string
+  ): PathMetadataEntry | undefined {
     const result = this.regexEntries.find((entry) =>
       entry.pattern.test(slashPath)
     )
@@ -149,26 +215,24 @@ export class MetadataRegistry {
    * so runtime metadata additions don't pollute the template.
    */
   internalGetMetadata(path: string): PathMetadataEntry | undefined {
-    const slashPath = '/' + path.replace(/\./g, '/')
     const parts = path.split('.')
     // Need at least context root + identity + one path segment to
     // produce a meaningful per-path key. Anything shorter would yield
-    // keys like "/vessels/*/" that match nothing.
+    // keys like "/*/" that match nothing.
     if (parts.length < 3) {
       return undefined
     }
-    // Use wildcard key so all identities share the same cloned entry
-    const key = `/${parts[0]}/*/${parts.slice(2).join('/')}`
+    // Key by PATH alone so a value first seen under any context
+    // (vessels.self, meteo.<id>, ...) shares one cloned per-path entry.
+    const key = `/*/${parts.slice(2).join('/')}`
 
-    // Check for existing wildcard entry first
-    if (this.allMetadata[key]) {
-      return this.allMetadata[key]
+    // Check for an existing per-path clone first
+    if (this.runtimeClones[key]) {
+      return this.runtimeClones[key]
     }
 
-    // Find via regex against the full path
-    const result = this.regexEntries.find((entry) =>
-      entry.pattern.test(slashPath)
-    )
+    // Find via regex against the path-only lookup form
+    const result = this.regexEntries.find((entry) => entry.pattern.test(key))
     if (!result || Object.keys(result.metadata).length === 0) {
       return undefined
     }
@@ -179,10 +243,13 @@ export class MetadataRegistry {
     // the template, so a plugin tweaking displayScale on one path would
     // silently change every other path that matches the same wildcard.
     const cloned: PathMetadataEntry = structuredClone(result.metadata)
-    this.allMetadata[key] = cloned
-    // Escape special chars first, then replace wildcard
+    this.runtimeClones[key] = cloned
+    // Escape special chars first, then replace wildcard. Front of the
+    // array so this per-path clone wins over the generic spec wildcard —
+    // and so a later addMetaData that merges into this same clone (e.g. a
+    // PUT meta displayUnits override) is found ahead of the spec entry.
     const escaped = key.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    this.regexEntries.push({
+    this.regexEntries.unshift({
       pattern: new RegExp(`^${escaped.replace(/\*/g, '[^/]+')}$`),
       key,
       metadata: cloned
@@ -202,33 +269,36 @@ export class MetadataRegistry {
    *    generic spec wildcard.
    */
   addMetaData(
-    context: string,
+    _context: string,
     path: string,
     meta: Record<string, unknown>
   ): void {
-    // An empty path would key the entry at "/vessels/*/" (no tail) and
-    // mask every per-vessel entry under the same context root.
+    // An empty path would key the entry at "/*/" (no tail) and mask every
+    // per-path entry. The context is intentionally ignored: metadata is a
+    // path-keyed, context-independent namespace, so a meta delta under ANY
+    // context (including an identity-less 'meteo') populates the path for
+    // all contexts.
     if (!path) {
       return
     }
-    // Use wildcard key pattern so lookups with any identity match
-    const root = context.split('.')[0]
-    const key = `/${root}/*/${path.replace(/\./g, '/')}`
-    const existing = this.allMetadata[key]
+    const key = `/*/${path.replace(/\./g, '/')}`
+    const existing = this.runtimeClones[key]
     if (existing) {
       Object.assign(existing, meta)
       return
     }
 
-    // Seed from the matching spec template, if any, so untouched fields
-    // like units / enum survive when a plugin only updates description.
-    const seed = this.getMetadata(`${context}.${path}`)
+    // Seed from the matching spec template by PATH, if any, so untouched
+    // fields like units / enum survive when a plugin only updates
+    // description. The key is already the normalized '/*/<tail>' form.
+    const seed = this.getMetadataForLookupPath(key)
     const entry: PathMetadataEntry = { description: '' }
     if (seed) Object.assign(entry, seed)
     Object.assign(entry, meta)
-    this.allMetadata[key] = entry
+    this.runtimeClones[key] = entry
 
-    // Escape special chars first, then replace wildcard
+    // Escape special chars first, then replace wildcard. The entry fronts
+    // the generic spec wildcard for EVERY context, not just one root.
     const escaped = key.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
     this.regexEntries.unshift({
       pattern: new RegExp(`^${escaped.replace(/\*/g, '[^/]+')}$`),

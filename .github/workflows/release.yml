@@ -29,7 +29,7 @@ jobs:
     if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: '24.x'
@@ -174,7 +174,7 @@ jobs:
       any_enabled: ${{ steps.matrix.outputs.any_enabled }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Compute matrices
         id: matrix
         env:
@@ -183,28 +183,35 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Cross-product os_variants x node_versions from .github/build-matrix.json,
-          # then filter by the per-row dispatch checkbox (or by default_enabled
-          # for tag runs). The release manifest tag convention puts ubuntu on the
-          # bare semver tags (v2.21.3, latest, v2, v2.21) and adds '-<family>' for
-          # non-ubuntu variants (v2.21.3-alpine, latest-alpine).
+          # Cross-product os_variants x node_versions x editions from
+          # .github/build-matrix.json, then filter by the per-row dispatch
+          # checkbox (or by default_enabled for tag runs); editions are not
+          # dispatch inputs and follow their own default_enabled. The release
+          # manifest tag convention puts ubuntu full on the bare semver tags
+          # (v2.21.3, latest, v2, v2.21) and adds '-<family>' for non-ubuntu
+          # variants (v2.21.3-alpine, latest-alpine); the edition tag_suffix
+          # ('' for full, '-core' for core) is appended (v2.21.3-core,
+          # latest-core, v2.21.3-alpine-core).
           variants=$(jq -c \
             --argjson enabled "${ENABLED_JSON:-null}" '
             (if ($enabled | type) == "object" then $enabled else {} end) as $en
-            | .os_variants as $os | .node_versions as $nodes
-            | [ $os[] as $o | $nodes[] as $n |
+            | .os_variants as $os | .node_versions as $nodes | .editions as $eds
+            | [ $os[] as $o | $nodes[] as $n | $eds[] as $e |
                 ((if $o.family == $o.id then "" else "\($o.family)_" end) + ($o.id | gsub("[-.]"; "_")) + "_node_" + $n.id) as $key |
                 {
                   enabled: ($en[$key] // (if ($o.default_enabled and $n.default_enabled) then "true" else "false" end)),
+                  ed_enabled: $e.default_enabled,
                   family:    $o.family,
                   os_label:  $o.os_arg,
                   node:      (if $o.family == "ubuntu" then "\($n.id).x" else $n.id end),
                   node_id:   $n.id,
-                  suffix:    (if $o.family == "ubuntu" then "" else "-\($o.family)" end)
+                  edition:   $e.id,
+                  tag_suffix: $e.tag_suffix,
+                  suffix:    ((if $o.family == "ubuntu" then "" else "-\($o.family)" end) + $e.tag_suffix)
                 }
               ]
-            | map(select(.enabled == "true"))
-            | map(del(.enabled))
+            | map(select(.enabled == "true" and .ed_enabled))
+            | map(del(.enabled) | del(.ed_enabled))
           ' .github/build-matrix.json)
 
           # Build matrix: cross-product variants x architectures.
@@ -225,20 +232,22 @@ jobs:
               ]
           ' .github/build-matrix.json)
 
-          # Variant matrix: one row per variant (used by manifest + copy jobs).
-          # archs is derived from build_matrix so the manifest sources reflect
-          # the architectures actually built (respecting exclude_archs).
+          # Variant matrix: one row per (OS x Node x Edition) variant (used by
+          # manifest + copy jobs). archs is derived from build_matrix so the
+          # manifest sources reflect the architectures actually built
+          # (respecting exclude_archs). tag_suffix discriminates editions that
+          # share the same OS x Node.
           variant_matrix=$(jq -cn \
             --argjson variants "$variants" \
             --argjson build_matrix "$build_matrix" '
             [ $variants[] as $v |
               ($v + {
                 archs: [ $build_matrix[]
-                  | select(.os_label == $v.os_label and .node == $v.node)
+                  | select(.os_label == $v.os_label and .node == $v.node and .edition == $v.edition)
                   | .arch ]
               })
               | select(.archs | length > 0)
-              | {os_label, node, suffix, archs}
+              | {os_label, node, edition, tag_suffix, suffix, archs}
             ]
           ')
 
@@ -255,7 +264,7 @@ jobs:
           echo "$variants" | jq
 
   build:
-    name: Build ${{ matrix.os_label }} node-${{ matrix.node }} ${{ matrix.arch }}
+    name: Build ${{ matrix.os_label }} node-${{ matrix.node }} ${{ matrix.edition }} ${{ matrix.arch }}
     needs: [prepare]
     if: needs.prepare.outputs.any_enabled == 'true'
     runs-on: ${{ matrix.vm }}
@@ -265,7 +274,7 @@ jobs:
         include: ${{ fromJSON(needs.prepare.outputs.build_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Login to ghcr.io
@@ -284,13 +293,14 @@ jobs:
           file: ./docker/Dockerfile_rel
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:${{ matrix.arch }}-${{ matrix.os_label }}-${{ matrix.node }}-${{ github.run_id }}
+          tags: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:${{ matrix.arch }}-${{ matrix.os_label }}-${{ matrix.node }}${{ matrix.tag_suffix }}-${{ github.run_id }}
           build-args: |
             TAG=${{ steps.vars.outputs.tag }}
             BASE_IMAGE=${{ matrix.os_label }}-${{ matrix.node }}
+            EDITION=${{ matrix.edition }}
 
   manifest:
-    name: Manifest ${{ matrix.os_label }} node-${{ matrix.node }}
+    name: Manifest ${{ matrix.os_label }} node-${{ matrix.node }} ${{ matrix.edition }}
     needs: [prepare, build]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
@@ -300,7 +310,7 @@ jobs:
         include: ${{ fromJSON(needs.prepare.outputs.variant_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Docker meta
@@ -330,12 +340,13 @@ jobs:
           SRC_PREFIX: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}
           OS: ${{ matrix.os_label }}
           NODE: ${{ matrix.node }}
+          TAG_SUFFIX: ${{ matrix.tag_suffix }}
           RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
           srcs=$(jq -r \
-            --arg p "$SRC_PREFIX" --arg o "$OS" --arg n "$NODE" --arg r "$RUN_ID" \
-            '.[] | "\($p):\(.)-\($o)-\($n)-\($r)"' <<<"$ARCHS_JSON")
+            --arg p "$SRC_PREFIX" --arg o "$OS" --arg n "$NODE" --arg ts "$TAG_SUFFIX" --arg r "$RUN_ID" \
+            '.[] | "\($p):\(.)-\($o)-\($n)\($ts)-\($r)"' <<<"$ARCHS_JSON")
           {
             echo 'value<<EOF'
             echo "$srcs"
@@ -351,16 +362,16 @@ jobs:
       - name: Save tags to file
         run: |
           mkdir -p /tmp/tags
-          echo "${{ steps.docker_meta.outputs.tags }}" > /tmp/tags/${{ matrix.node }}.txt
+          echo "${{ steps.docker_meta.outputs.tags }}" > /tmp/tags/${{ matrix.node }}${{ matrix.tag_suffix }}.txt
       - name: Upload tag artifact
         uses: actions/upload-artifact@v7
         with:
-          name: release-tag-${{ matrix.os_label }}-${{ matrix.node }}
-          path: /tmp/tags/${{ matrix.node }}.txt
+          name: release-tag-${{ matrix.os_label }}-${{ matrix.node }}${{ matrix.tag_suffix }}
+          path: /tmp/tags/${{ matrix.node }}${{ matrix.tag_suffix }}.txt
           retention-days: 1
 
   copy-to-dockerhub:
-    name: Copy ${{ matrix.os_label }} node-${{ matrix.node }} to Docker Hub
+    name: Copy ${{ matrix.os_label }} node-${{ matrix.node }} ${{ matrix.edition }} to Docker Hub
     needs: [prepare, manifest]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
@@ -372,7 +383,7 @@ jobs:
       - name: Download tag artifact
         uses: actions/download-artifact@v8
         with:
-          name: release-tag-${{ matrix.os_label }}-${{ matrix.node }}
+          name: release-tag-${{ matrix.os_label }}-${{ matrix.node }}${{ matrix.tag_suffix }}
           path: /tmp/tags
 
       - name: Install skopeo
@@ -390,7 +401,7 @@ jobs:
           HUB_PREFIX: docker.io/${{ env.DOCKER_HUB_REPO }}
         run: |
           set -euo pipefail
-          TAGS_FILE="/tmp/tags/${{ matrix.node }}.txt"
+          TAGS_FILE="/tmp/tags/${{ matrix.node }}${{ matrix.tag_suffix }}.txt"
           while IFS= read -r FULL_TAG || [ -n "${FULL_TAG:-}" ]; do
             [ -z "${FULL_TAG:-}" ] && continue
             TAG="${FULL_TAG##*:}"
@@ -427,7 +438,7 @@ jobs:
     needs: copy-to-dockerhub
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Set TAG for build-arg

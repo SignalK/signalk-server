@@ -22,8 +22,7 @@ describe('ExternalUserService', () => {
           const { sub, issuer } = lookup.criteria
           const user = users.find((u) => {
             const oidc = u.providerData as
-              | { sub: string; issuer: string }
-              | undefined
+              { sub: string; issuer: string } | undefined
             return oidc?.sub === sub && oidc?.issuer === issuer
           })
           return user || null

@@ -168,11 +168,12 @@ curl -X POST http://localhost:3000/plugins/_signalk_example-anchor-watch-rust/ap
 ```
 
 **Request Body:**
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `latitude` | number | Yes | Latitude in degrees (-90 to 90) |
-| `longitude` | number | Yes | Longitude in degrees (-180 to 180) |
-| `maxRadius` | number | No | Max swing radius in meters (default: 50) |
+
+| Field       | Type   | Required | Description                              |
+| ----------- | ------ | -------- | ---------------------------------------- |
+| `latitude`  | number | Yes      | Latitude in degrees (-90 to 90)          |
+| `longitude` | number | Yes      | Longitude in degrees (-180 to 180)       |
+| `maxRadius` | number | No       | Max swing radius in meters (default: 50) |
 
 **Response:**
 

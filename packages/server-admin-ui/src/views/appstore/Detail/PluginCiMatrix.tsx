@@ -12,12 +12,7 @@ export interface PluginCiJob {
   platform: string
   node: number
   conclusion:
-    | 'success'
-    | 'failure'
-    | 'skipped'
-    | 'cancelled'
-    | 'in_progress'
-    | null
+    'success' | 'failure' | 'skipped' | 'cancelled' | 'in_progress' | null
   server_version?: string
   job_url?: string
 }

@@ -295,7 +295,11 @@ export function load(app: ConfigApp) {
 }
 
 function checkPackageVersion(name: string, pkg: any, appPath: string) {
-  const expected = pkg.dependencies[name]
+  const isOptional = Boolean(pkg.optionalDependencies?.[name])
+  const expected = pkg.dependencies?.[name] ?? pkg.optionalDependencies?.[name]
+  if (!expected) {
+    return
+  }
   let modulePackageJsonPath = path.join(
     appPath,
     'node_modules',
@@ -304,6 +308,10 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
   )
   if (!fs.existsSync(modulePackageJsonPath)) {
     modulePackageJsonPath = path.join(appPath, '..', name, 'package.json')
+  }
+  if (!fs.existsSync(modulePackageJsonPath) && isOptional) {
+    // Optional package not installed (e.g. core image with --omit=optional).
+    return
   }
   const installed = require(modulePackageJsonPath)
 
@@ -593,6 +601,36 @@ function scanDefaults(deltaEditor: DeltaEditor, vpath: string, item: any) {
   })
 }
 
+// Walks an object emitted under a parent path and recursively sets a
+// leaf delta per terminal value (strings, numbers, booleans, arrays).
+// Used for legacy defaults.json shapes that nest bare values directly
+// (e.g. `communication: { callsignVhf: "OH..." }`) — scanDefaults only
+// reads `{ value: ... }` leaves so it silently drops bare values, and
+// emitting the whole object at the parent path leaks an out-of-date
+// snapshot of every child every time anyone GETs the parent.
+function emitBareLeafDeltas(
+  deltaEditor: DeltaEditor,
+  parentPath: string,
+  item: unknown
+) {
+  if (!_.isPlainObject(item)) return
+  const obj = item as Record<string, unknown>
+  for (const key of Object.keys(obj)) {
+    const value = obj[key]
+    const childPath = parentPath.length > 0 ? `${parentPath}.${key}` : key
+    if (_.isPlainObject(value)) {
+      // Skip {value:..., meta:...} shapes — scanDefaults already handled
+      // those in the main pass. Recurse into anything else to reach the
+      // bare leaves below.
+      const child = value as Record<string, unknown>
+      if ('value' in child || 'meta' in child) continue
+      emitBareLeafDeltas(deltaEditor, childPath, child)
+    } else if (value !== undefined && value !== null) {
+      deltaEditor.setSelfValue(childPath, value)
+    }
+  }
+}
+
 function convertOldDefaultsToDeltas(
   deltaEditor: DeltaEditor,
   defaults: object
@@ -609,7 +647,13 @@ function convertOldDefaultsToDeltas(
       }
     })
     if (self.communication) {
-      deltaEditor.setSelfValue('communication', self.communication)
+      // Legacy shape stores `communication.*` as bare values, not the
+      // `{ value: ... }` shape scanDefaults walks. Emit them as separate
+      // leaf deltas so they don't collide with paths the spec keeps
+      // under `communication` (e.g. communication.crewNames written by
+      // signalk-logbook), which a parent-path snapshot would otherwise
+      // serve as stale, defaults-sourced JSON in the Data Browser.
+      emitBareLeafDeltas(deltaEditor, 'communication', self.communication)
     }
   }
   return deltas

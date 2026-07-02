@@ -232,10 +232,7 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
     for (const endpoint of endpoints) {
       const { method, path: endpointPath, handler } = endpoint
       const routeMethod = method.toLowerCase() as
-        | 'get'
-        | 'post'
-        | 'put'
-        | 'delete'
+        'get' | 'post' | 'put' | 'delete'
 
       if (!['get', 'post', 'put', 'delete'].includes(routeMethod)) {
         debug(`Skipping unsupported method: ${method}`)

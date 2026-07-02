@@ -17,6 +17,7 @@
  * limitations under the License.
 */
 
+import './networkConfig'
 import './baconjs-compat'
 import {
   Context,
@@ -143,6 +144,7 @@ class Server {
       })
     )
     app.use(bodyParser.json({ limit: FILEUPLOADSIZELIMIT }))
+    app.use(bodyParser.urlencoded({ extended: true }))
 
     this.app = app
     app.started = false
@@ -175,10 +177,8 @@ class Server {
 
     app.propertyValues = new PropertyValues()
 
-    const deltachainV1 = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
-    const deltachainV2 = new DeltaChain((delta: Delta) =>
-      app.signalk.emit('delta', delta)
-    )
+    const deltachainV1 = new DeltaChain()
+    const deltachainV2 = new DeltaChain()
     app.registerDeltaInputHandler = (handler: DeltaInputHandler) => {
       const unRegisterHandlers = [
         deltachainV1.register(handler),
@@ -326,6 +326,25 @@ class Server {
       delta) as unknown as ToPreferredDelta
     initialPassthrough.routesPath = () => false
     let toPreferredDelta: ToPreferredDelta = initialPassthrough
+
+    // Terminal of the delta input handler chain: once every handler has
+    // run on the raw delta, cache it, fan it out unfiltered, apply
+    // source-priority filtering and dispatch the result. Defined once
+    // (not per delta) and reads `toPreferredDelta` through the closure so
+    // it picks up engine rebuilds. now / version are passed in by the
+    // chain so this stays a single hoisted function on the hot path.
+    const dispatchDelta = (handled: Delta, now: Date, version: SKVersion) => {
+      if (app.deltaCache) {
+        app.deltaCache.ingestDelta(handled)
+      }
+      app.signalk.emit('unfilteredDelta', cloneDelta(handled))
+      const preferred = toPreferredDelta(handled, now, app.selfContext)
+      if (version === SKVersion.v1) {
+        app.signalk.addDelta(preferred)
+      } else {
+        app.signalk.emit('delta', preferred)
+      }
+    }
     // Translate `<label>.<numeric>` deltas to their `<label>.<canName>`
     // form so a saved canName-form ranking matches incoming refs from
     // providers that have useCanName off. The cache is keyed by the
@@ -545,20 +564,17 @@ class Server {
         try {
           // data.updates was just rebuilt above, so the resulting Partial<Delta>
           // is in practice a full Delta by the time it reaches the chain.
-          let delta = filterStaticSelfData(data, app.selfContext) as Delta
-          if (app.deltaCache) {
-            app.deltaCache.ingestDelta(delta)
-          }
-          if (app.signalk.listenerCount('unfilteredDelta') > 0) {
-            app.signalk.emit('unfilteredDelta', cloneDelta(delta))
-          }
-          delta = toPreferredDelta(delta, now, app.selfContext)
+          const delta = filterStaticSelfData(data, app.selfContext) as Delta
 
-          if (skVersion === SKVersion.v1) {
-            deltachainV1.process(delta)
-          } else {
-            deltachainV2.process(delta)
-          }
+          // Input handlers intercept the raw delta first, per the
+          // registerDeltaInputHandler contract ("before they are
+          // processed by the server"). Whatever a handler passes to
+          // next() — modified or original — is what the cache, the
+          // unfiltered bus, source-priority filtering and the full
+          // model then see. A handler that never calls next() drops
+          // the delta here, before any of that runs.
+          const chain = skVersion === SKVersion.v1 ? deltachainV1 : deltachainV2
+          chain.process(delta, dispatchDelta, now, skVersion)
         } catch (err) {
           console.error(err)
         }

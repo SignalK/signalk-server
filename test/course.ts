@@ -5,7 +5,8 @@ import {
   deltaHasPathValue,
   startServer
 } from './ts-servertestutilities'
-import { CourseInfo } from '@signalk/server-api'
+import { CourseInfo, Position } from '@signalk/server-api'
+import { crossTrackDistance } from '../src/api/course/xteGeometry'
 chai.should()
 
 describe('Course Api', () => {
@@ -487,6 +488,139 @@ describe('Course Api', () => {
     data = (await selfGetJson('navigation/course')) as CourseInfo
     expect(data.previousPoint?.position?.latitude).to.equal(60.0)
     expect(data.previousPoint?.position?.longitude).to.equal(10.0)
+
+    stop()
+  })
+
+  it('clears an external course when navigation updates stop', async function () {
+    this.timeout(30000)
+
+    const { server, selfGetJson, sendDelta, stop } = await startServer()
+    const vesselPosition = { latitude: 43.02, longitude: 7.84 }
+    await sendDelta('navigation.position', vesselPosition)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const cmdSource = {
+      type: 'NMEA0183',
+      $source: 'nmea.external',
+      msg: 'RMB',
+      path: 'navigation.courseRhumbline.nextPoint.position'
+    }
+
+    await courseApi.parseStreamValue(cmdSource, {
+      latitude: 43.03,
+      longitude: 7.94
+    })
+
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.nextPoint?.position).to.deep.equal({
+      latitude: 43.03,
+      longitude: 7.94
+    })
+
+    courseApi.externalNavLastUpdate = Date.now() - 16000
+    courseApi.scheduleExternalNavigationTimeout()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    data.should.deep.equal({
+      startTime: null,
+      targetArrivalTime: null,
+      activeRoute: null,
+      arrivalCircle: 0,
+      nextPoint: null,
+      previousPoint: null
+    })
+
+    stop()
+  })
+
+  it('rebases external NMEA0183 previousPoint using Signal K XTE sign', async function () {
+    const { server, selfGetJson, sendDelta, stop } = await startServer()
+    const vesselPosition = { latitude: 43.02, longitude: 7.84 }
+    const destination = {
+      latitude: 43.03,
+      longitude: 7.94
+    }
+    const externalXte = 50
+    await sendDelta('navigation.position', vesselPosition)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const source = {
+      type: 'NMEA0183',
+      $source: 'nmea.external',
+      msg: 'RMB',
+      path: 'navigation.courseRhumbline.nextPoint.position'
+    }
+
+    await courseApi.parseStreamValue(source, destination)
+
+    courseApi.maybeRebaseExternalPreviousPoint(externalXte)
+    courseApi.maybeRebaseExternalPreviousPoint(externalXte)
+    courseApi.maybeRebaseExternalPreviousPoint(externalXte)
+
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint?.type).to.equal('VesselPosition')
+    expect(
+      crossTrackDistance(
+        vesselPosition,
+        data.previousPoint?.position as Position,
+        destination
+      )
+    ).to.be.closeTo(externalXte, 0.1)
+    expect(data.previousPoint?.position).to.not.deep.equal(vesselPosition)
+
+    stop()
+  })
+
+  it('uses external previousPoint position when provided', async function () {
+    const { server, selfGetJson, sendDelta, stop } = await startServer()
+    const vesselPosition = { latitude: 43.02, longitude: 7.84 }
+    const previousPoint = { latitude: 43.01, longitude: 7.75 }
+    const destination = {
+      latitude: 43.03,
+      longitude: 7.94
+    }
+    await sendDelta('navigation.position', vesselPosition)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const source = {
+      type: 'NMEA2000',
+      $source: 'n2k.external',
+      msg: '129285',
+      path: 'navigation.courseRhumbline.nextPoint.position'
+    }
+
+    await courseApi.parseStreamValue(source, destination)
+    await courseApi.parseStreamValue(
+      {
+        ...source,
+        path: 'navigation.courseRhumbline.previousPoint.position'
+      },
+      previousPoint
+    )
+
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint?.type).to.equal('RoutePoint')
+    expect(data.previousPoint?.position).to.deep.equal(previousPoint)
+
+    const externalXte = crossTrackDistance(
+      vesselPosition,
+      previousPoint,
+      destination
+    )
+    if (typeof externalXte !== 'number') {
+      throw new Error('Expected a finite external XTE')
+    }
+    courseApi.maybeRebaseExternalPreviousPoint(externalXte)
+    courseApi.maybeRebaseExternalPreviousPoint(externalXte)
+    courseApi.maybeRebaseExternalPreviousPoint(externalXte)
+
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint?.position).to.deep.equal(previousPoint)
 
     stop()
   })

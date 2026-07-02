@@ -18,6 +18,7 @@ const moment = require('moment')
 const path = require('path')
 const { getFullLogDir, listLogFiles } = require('@signalk/streams/logging')
 import { SERVERROUTESPREFIX } from '../constants'
+import { sendZip } from '../zip'
 
 module.exports = function (app) {
   return {
@@ -81,7 +82,7 @@ function mountApi(app) {
     const sanitizedBoatName = boatName.replace(/\W/g, '_')
     const zipFileName = `sk-logs-${sanitizedBoatName}-${moment().format('YYYY-MM-DD-HH-mm')}`
 
-    res.zip({
+    sendZip(res, {
       files: [{ path: getFullLogDir(app), name: zipFileName }],
       filename: zipFileName + '.zip'
     })

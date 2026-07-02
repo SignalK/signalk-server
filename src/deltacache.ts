@@ -509,8 +509,7 @@ export default class DeltaCache {
     // age out and badge Offline despite the cache holding fresh data
     // for it (admin Priority Groups view, see SOURCESTATUS).
     const sourceMeta = (this.app.signalk as any)?.sourceMeta as
-      | Record<string, { lastSeen: number }>
-      | undefined
+      Record<string, { lastSeen: number }> | undefined
     const now = Date.now()
     for (const update of delta.updates) {
       if (!('values' in update) || !update.values) continue
@@ -608,8 +607,7 @@ export default class DeltaCache {
   private getSourcesCachePath(): string | null {
     if (this.sourcesCachePath === null) {
       const configPath = (this.app.config as any).configPath as
-        | string
-        | undefined
+        string | undefined
       if (configPath) {
         this.sourcesCachePath = join(configPath, SOURCES_CACHE_FILE)
       }
@@ -787,10 +785,7 @@ export default class DeltaCache {
       if (!selfBranch || !selfBranch[part]) return {}
       selfBranch = selfBranch[part]
     }
-    const srcToCanonical = buildSrcToCanonicalMap(
-      (this.app.signalk as any)?.sources
-    )
-    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const canonical = this.reconcileCanonical()
     const out: Record<string, string[]> = {}
     const walk = (node: any, pathParts: string[]) => {
       for (const key of Object.keys(node)) {
@@ -831,10 +826,7 @@ export default class DeltaCache {
       selfBranch = selfBranch[part]
     }
 
-    const srcToCanonical = buildSrcToCanonicalMap(
-      (this.app.signalk as any)?.sources
-    )
-    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const canonical = this.reconcileCanonical()
 
     // Per-path canonical publishers observed in the cache, regardless
     // of publisher count. Multi-source paths drop in via the standard
@@ -881,8 +873,7 @@ export default class DeltaCache {
     }
 
     const persisted = (this.app.config as any).settings?.priorityOverrides as
-      | Record<string, Array<{ sourceRef?: string }>>
-      | undefined
+      Record<string, Array<{ sourceRef?: string }>> | undefined
     if (persisted) {
       for (const [path, entries] of Object.entries(persisted)) {
         if (!Array.isArray(entries)) continue
@@ -938,6 +929,58 @@ export default class DeltaCache {
   }
 
   /**
+   * Supplementary `<conn>.<src>` → `<conn>.<canName>` translation built
+   * from the per-source delta store. `buildSrcToCanonicalMap` goes blind
+   * when `app.signalk.sources` has no `n2k.canName` for a numeric src —
+   * the cold-boot / UDP-gateway late-join window the comment at the top
+   * of this file describes — but a metadata delta carrying the resolved
+   * canName may already sit in `sourceDeltas` keyed by the same numeric
+   * src. Recovering it here lets a device that left a stale numeric leaf
+   * AND a canName leaf in the cache collapse onto one ref, so the two
+   * forms of one physical device don't land in two reconciled groups and
+   * trip the "a source may belong to at most one active group" save
+   * validator.
+   *
+   * Each `sourceDeltas` entry carries exactly one canName, so the map is
+   * single-valued per key and never merges two physically-different
+   * devices. Keys are usually numeric-form (the `setSourceDelta` key,
+   * n2k-signalk.ts) but `loadSourcesCache` can hydrate canName-form keys
+   * from disk; those map onto themselves (a harmless identity), which
+   * leaves the ref unchanged.
+   */
+  private buildSourceDeltaCanonicalMap(): Map<string, string> {
+    const out = new Map<string, string>()
+    for (const [key, delta] of Object.entries(this.sourceDeltas)) {
+      const source = (delta as any)?.updates?.[0]?.source
+      const canName = source?.canName
+      if (typeof canName !== 'string' || canName.length === 0) continue
+      const label = source?.label
+      if (typeof label !== 'string' || label.length === 0) continue
+      out.set(key, `${label}.${canName}`)
+    }
+    return out
+  }
+
+  /**
+   * Source-ref canonicaliser shared by the three cache-walk callers
+   * (getReconciledGroups, getSelfPathPublishers, getMultiSourcePaths).
+   * Prefers the live sources tree, then falls back to the canName
+   * recovered from the source-delta store for numeric refs the tree
+   * hasn't resolved yet. Routing all three through one closure keeps the
+   * reconciled groups, the engine's seenPublishersByPath seed and the
+   * multi-source UI from disagreeing about a device's ref during the
+   * late-join window.
+   */
+  private reconcileCanonical(): (ref: string) => string {
+    const srcToCanonical = buildSrcToCanonicalMap(
+      (this.app.signalk as any)?.sources
+    )
+    const srcDeltaCanonical = this.buildSourceDeltaCanonicalMap()
+    return (ref: string): string =>
+      srcToCanonical.get(ref) ?? srcDeltaCanonical.get(ref) ?? ref
+  }
+
+  /**
    * Compute reconciled priority groups for the admin UI: saved groups
    * are authoritative (composition is fixed by priorityGroups, not by
    * who is currently live), unsaved sources fall through to connected-
@@ -968,10 +1011,7 @@ export default class DeltaCache {
       selfBranch = selfBranch[part]
     }
 
-    const srcToCanonical = buildSrcToCanonicalMap(
-      (this.app.signalk as any)?.sources
-    )
-    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const canonical = this.reconcileCanonical()
 
     // Walk once to populate two views: per-source path history, and
     // per-path live publisher set. The latter is the same set of edges
@@ -1023,8 +1063,7 @@ export default class DeltaCache {
     }
 
     const savedGroups = (this.app.config as any).settings?.priorityGroups as
-      | Array<{ id: string; sources: string[]; inactive?: boolean }>
-      | undefined
+      Array<{ id: string; sources: string[]; inactive?: boolean }> | undefined
 
     // Membership: which saved group claims each source? Inactive groups
     // still claim their sources for display purposes.
@@ -1126,6 +1165,14 @@ export default class DeltaCache {
             if (claimedBy && claimedBy.id !== sg.id) continue
             newcomers.add(ref)
             claimedByAnySavedGroup.add(ref)
+            // Claim the newcomer for this group so a later active group that
+            // also has it as a live publisher skips it at the guard above;
+            // otherwise the source lands in two active groups and the PUT
+            // /skServer/priorities validator rejects the save. Only active
+            // groups claim: the validator ignores inactive groups, so an
+            // inactive claim gives no benefit and would wrongly suppress the
+            // newcomer on a later active group's card.
+            if (!sg.inactive) sourceToSavedGroup.set(ref, sg)
           }
         }
         const newcomerList = [...newcomers].sort()

@@ -38,6 +38,7 @@ interface NmeaTcpApp extends SignalKServer {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   emit(event: string, ...args: any[]): boolean
   on(event: string, listener: (...args: string[]) => void): this
+  removeListener(event: string, listener: (...args: string[]) => void): this
 }
 
 module.exports = (app: NmeaTcpApp) => {
@@ -46,6 +47,7 @@ module.exports = (app: NmeaTcpApp) => {
   const bufferExceededSince: Record<number, number | undefined> = {}
   let idSequence = 0
   let server: Server | null = null
+  let sendListener: ((data: string) => void) | null = null
   const port = Number(process.env.NMEA0183PORT) || 10110
   const api = new Interface()
 
@@ -71,7 +73,7 @@ module.exports = (app: NmeaTcpApp) => {
         delete bufferExceededSince[socket.id!]
       })
     })
-    const send = (data: string) => {
+    sendListener = (data: string) => {
       Object.values(openSockets).forEach((socket) => {
         try {
           if (socket.writableLength > BUFFER_LIMIT) {
@@ -108,8 +110,8 @@ module.exports = (app: NmeaTcpApp) => {
         }
       })
     }
-    app.signalk.on('nmea0183', send)
-    app.on('nmea0183out', send)
+    app.signalk.on('nmea0183', sendListener)
+    app.on('nmea0183out', sendListener)
     server.on('listening', () =>
       debug('NMEA0183 tcp server listening on ' + port)
     )
@@ -120,6 +122,11 @@ module.exports = (app: NmeaTcpApp) => {
   }
 
   api.stop = () => {
+    if (sendListener) {
+      app.signalk.removeListener('nmea0183', sendListener)
+      app.removeListener('nmea0183out', sendListener)
+      sendListener = null
+    }
     if (server) {
       server.close()
       server = null

@@ -25,6 +25,15 @@ export function getSourceId(source: any): SourceRef {
     return `${label}.${source.src}` as SourceRef
   }
   if (typeof source === 'object') {
+    // A plugin source is fully identified by its label (the plugin id):
+    // there is no talker or device address to disambiguate, and the
+    // `.XX` fallback below would make $source `<pluginId>.XX`, which no
+    // longer matches the bare plugin id that `excludeSelf` resolves to —
+    // so a plugin emitting `source: { label, type: 'plugin' }` would see
+    // its own output back. Return the bare label for plugin sources.
+    if (source.type === 'plugin') {
+      return (source.label || 'unknown_source') as SourceRef
+    }
     const label = source.label || 'unknown_source'
     return `${label}${source.talker ? '.' + source.talker : '.XX'}` as SourceRef
   }

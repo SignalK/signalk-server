@@ -11,15 +11,15 @@
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",
   "optionalDependencies": {
-    "validate-peer-dependencies": "^1.1.0"
+    "validate-peer-dependencies": "^2.2.0"
   },
   "peerDependencies": {
-    "@fortawesome/fontawesome-free": "^5.15.1",
+    "@fortawesome/fontawesome-free": "^7.0.0",
     "bootstrap": "^5.3.3",
     "font-awesome": "^4.7.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "react-bootstrap": "^2.10.10",
+    "react-dom": "^19.0.0",
     "react-select": "^5.10.2",
     "simple-line-icons": "^2.5.5"
   }
