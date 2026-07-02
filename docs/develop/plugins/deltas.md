@@ -265,6 +265,31 @@ app.handleMessage(
 )
 ```
 
+## Setting Default Metadata
+
+Plugins can suggest default metadata for paths they publish using `setDefaultMetadata()`. This is useful for setting display units, descriptions, or other metadata that improves the user experience in the data browser without overwriting values the user has already configured.
+
+The method uses **per-field merge** semantics: it only sets metadata fields that don't already exist for the path. If a user has already set `displayName` for a path, the plugin can still set `displayUnits` on the same path without overwriting the user's choice.
+
+```javascript
+plugin.start = async (options) => {
+  // Suggest that energy paths display in Wh instead of the SI unit (J)
+  await app.setDefaultMetadata('electrical.batteries.house.energy', {
+    displayUnits: { category: 'energy', targetUnit: 'Wh' }
+  })
+
+  // Suggest display units and a description
+  await app.setDefaultMetadata('electrical.solar.panelPower', {
+    displayUnits: { category: 'power', targetUnit: 'W' },
+    description: 'Total solar panel output'
+  })
+}
+```
+
+The method is **idempotent**: on subsequent server starts, fields already persisted from a previous call will not be overwritten. It returns `true` if any new fields were applied, `false` if all fields already existed.
+
+The `displayUnits.category` is validated against the path's SI unit. If the category doesn't match, the method returns `false` and logs a debug message.
+
 ## Correction and transform plugins
 
 There are essentially two strategies a plugin can employ to change a value for a path:
