@@ -83,27 +83,23 @@ else
     service dbus restart
     /usr/sbin/avahi-daemon -k 2>/dev/null
 
-    # Watch avahi's startup output live through a FIFO instead of polling a temp
-    # file. avahi runs in the foreground (no -D) writing stdout+stderr into the
-    # FIFO; a background reader forwards each line to the container log in real
-    # time and keeps draining for the daemon's whole life so avahi never blocks
-    # on a full pipe once startup is done.
+    # Stream avahi's log live through a FIFO (no temp file). avahi writes to the
+    # FIFO in the foreground; a background reader forwards each line to the
+    # container log and keeps draining for the daemon's whole life so avahi
+    # never blocks on a full pipe.
     avahi_fifo=$(mktemp -u)
     mkfifo "$avahi_fifo"
     /usr/sbin/avahi-daemon --no-drop-root >"$avahi_fifo" 2>&1 &
     avahi_pid=$!
 
-    # Under network_mode: host on a host that already runs avahi, our
-    # avahi-daemon detects the other responder (it logs "Detected another ...
-    # mDNS stack") and then either exits or runs degraded — either way it
-    # registers wrong addresses and makes mDNS unreliable, and .local lookups
-    # from inside the container fail. Detect that marker, stop our daemon so we
-    # don't degrade the host's mDNS, and point the user at the fix.
+    # Under network_mode: host on a host that already runs avahi, ours detects
+    # the other responder ("Detected another ... mDNS stack") and exits or runs
+    # degraded, breaking .local lookups. On that marker we stop our daemon (so
+    # it doesn't degrade the host's mDNS) and print how to fix it.
     (
-        # Open the read end (this rendezvous unblocks avahi's write open), then
+        # Open the read end (rendezvous unblocks avahi's write open), then
         # unlink the FIFO name — the open fd keeps it alive, leaving nothing in
-        # /tmp. On a clean start the loop drains avahi's log until it exits; on
-        # a conflict it stops our daemon and prints the fix.
+        # /tmp.
         exec 3<"$avahi_fifo"
         rm -f "$avahi_fifo"
         outcome="exited"
@@ -118,6 +114,7 @@ else
                 ;;
             *"Server startup complete"*)
                 outcome="started"
+                # keep running to drain the log until avahi exits
                 ;;
             esac
         done
