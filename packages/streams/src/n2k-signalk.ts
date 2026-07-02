@@ -38,8 +38,23 @@ interface N2kToSignalKOptions {
   filters?: N2kFilter[]
   filtersEnabled?: boolean
   useCanName?: boolean
+  canNameWarmupMs?: number
   [key: string]: unknown
 }
+
+// When useCanName is on, a freshly seen NMEA 2000 device emits data frames
+// before its ISO Address Claim (PGN 60928) resolves, so the very first
+// deltas carry only the numeric src and no canName. Letting them through
+// stamps a numeric-form ref that the canName form then supersedes a beat
+// later, producing a transient duplicate device (the priority-reconcile
+// skew #2739 chased). Instead we hold src-only deltas back for a warmup
+// window, measured from the first frame seen, long enough for n2k-signalk's
+// broadcast metadata request cycle (PGN 59904 → 60928) to settle the canName
+// for devices that claim. After the window we let src-only deltas through
+// unchanged, so a controller/app node that never claims a canName (e.g.
+// Maretron N2KView, which re-broadcasts alarms but answers no ISO request
+// for its own address) still reports under its numeric ref.
+const CANNAME_WARMUP_MS = 10000
 
 interface N2kMessage {
   src: string | number
@@ -72,7 +87,6 @@ interface Delta {
 }
 
 interface SourceMeta {
-  unknownCanName?: boolean
   [key: string]: unknown
 }
 
@@ -91,10 +105,15 @@ export default class N2kToSignalK extends Transform {
   private readonly app: N2kToSignalKOptions['app']
   private readonly filters?: N2kFilter[]
   private readonly n2kMapper: N2kMapper & EventEmitter
+  private readonly canNameWarmupMs: number
+  // Set on the first frame; src-only deltas are held back until this time
+  // to give the canName time to resolve. Undefined until traffic starts.
+  private warmupUntil?: number
 
   constructor(options: N2kToSignalKOptions) {
     super({ objectMode: true })
     this.options = options
+    this.canNameWarmupMs = options.canNameWarmupMs ?? CANNAME_WARMUP_MS
     this.app = options.app
 
     if (options.filters && options.filtersEnabled) {
@@ -180,11 +199,6 @@ export default class N2kToSignalK extends Transform {
       (pgn: string | number, src: string | number) => {
         if (Number(pgn) === 60928) {
           console.warn(`n2k-signalk: unable to detect can name for src ${src}`)
-          const srcNum = Number(src)
-          const meta = this.sourceMeta[srcNum]
-          if (meta) {
-            meta.unknownCanName = true
-          }
         }
       }
     )
@@ -246,6 +260,10 @@ export default class N2kToSignalK extends Transform {
         return
       }
 
+      if (this.warmupUntil === undefined) {
+        this.warmupUntil = Date.now() + this.canNameWarmupMs
+      }
+
       const delta = this.n2kMapper.toDelta(chunk) as unknown as
         Delta | undefined
 
@@ -267,10 +285,14 @@ export default class N2kToSignalK extends Transform {
 
         const canName = firstUpdate.source.canName
 
+        // Hold src-only deltas back only during the warmup window, so the
+        // canName has a chance to resolve before any numeric-form ref is
+        // stamped. Once the window passes, a device that still has no
+        // canName (slow or never-claiming) reports under its numeric ref.
         if (
           this.options.useCanName &&
           !canName &&
-          !this.sourceMeta[src]?.unknownCanName
+          Date.now() < this.warmupUntil!
         ) {
           done()
           return

@@ -785,10 +785,7 @@ export default class DeltaCache {
       if (!selfBranch || !selfBranch[part]) return {}
       selfBranch = selfBranch[part]
     }
-    const srcToCanonical = buildSrcToCanonicalMap(
-      (this.app.signalk as any)?.sources
-    )
-    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const canonical = this.reconcileCanonical()
     const out: Record<string, string[]> = {}
     const walk = (node: any, pathParts: string[]) => {
       for (const key of Object.keys(node)) {
@@ -829,10 +826,7 @@ export default class DeltaCache {
       selfBranch = selfBranch[part]
     }
 
-    const srcToCanonical = buildSrcToCanonicalMap(
-      (this.app.signalk as any)?.sources
-    )
-    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const canonical = this.reconcileCanonical()
 
     // Per-path canonical publishers observed in the cache, regardless
     // of publisher count. Multi-source paths drop in via the standard
@@ -935,6 +929,58 @@ export default class DeltaCache {
   }
 
   /**
+   * Supplementary `<conn>.<src>` → `<conn>.<canName>` translation built
+   * from the per-source delta store. `buildSrcToCanonicalMap` goes blind
+   * when `app.signalk.sources` has no `n2k.canName` for a numeric src —
+   * the cold-boot / UDP-gateway late-join window the comment at the top
+   * of this file describes — but a metadata delta carrying the resolved
+   * canName may already sit in `sourceDeltas` keyed by the same numeric
+   * src. Recovering it here lets a device that left a stale numeric leaf
+   * AND a canName leaf in the cache collapse onto one ref, so the two
+   * forms of one physical device don't land in two reconciled groups and
+   * trip the "a source may belong to at most one active group" save
+   * validator.
+   *
+   * Each `sourceDeltas` entry carries exactly one canName, so the map is
+   * single-valued per key and never merges two physically-different
+   * devices. Keys are usually numeric-form (the `setSourceDelta` key,
+   * n2k-signalk.ts) but `loadSourcesCache` can hydrate canName-form keys
+   * from disk; those map onto themselves (a harmless identity), which
+   * leaves the ref unchanged.
+   */
+  private buildSourceDeltaCanonicalMap(): Map<string, string> {
+    const out = new Map<string, string>()
+    for (const [key, delta] of Object.entries(this.sourceDeltas)) {
+      const source = (delta as any)?.updates?.[0]?.source
+      const canName = source?.canName
+      if (typeof canName !== 'string' || canName.length === 0) continue
+      const label = source?.label
+      if (typeof label !== 'string' || label.length === 0) continue
+      out.set(key, `${label}.${canName}`)
+    }
+    return out
+  }
+
+  /**
+   * Source-ref canonicaliser shared by the three cache-walk callers
+   * (getReconciledGroups, getSelfPathPublishers, getMultiSourcePaths).
+   * Prefers the live sources tree, then falls back to the canName
+   * recovered from the source-delta store for numeric refs the tree
+   * hasn't resolved yet. Routing all three through one closure keeps the
+   * reconciled groups, the engine's seenPublishersByPath seed and the
+   * multi-source UI from disagreeing about a device's ref during the
+   * late-join window.
+   */
+  private reconcileCanonical(): (ref: string) => string {
+    const srcToCanonical = buildSrcToCanonicalMap(
+      (this.app.signalk as any)?.sources
+    )
+    const srcDeltaCanonical = this.buildSourceDeltaCanonicalMap()
+    return (ref: string): string =>
+      srcToCanonical.get(ref) ?? srcDeltaCanonical.get(ref) ?? ref
+  }
+
+  /**
    * Compute reconciled priority groups for the admin UI: saved groups
    * are authoritative (composition is fixed by priorityGroups, not by
    * who is currently live), unsaved sources fall through to connected-
@@ -965,10 +1011,7 @@ export default class DeltaCache {
       selfBranch = selfBranch[part]
     }
 
-    const srcToCanonical = buildSrcToCanonicalMap(
-      (this.app.signalk as any)?.sources
-    )
-    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const canonical = this.reconcileCanonical()
 
     // Walk once to populate two views: per-source path history, and
     // per-path live publisher set. The latter is the same set of edges
