@@ -83,7 +83,7 @@ jobs:
         node: ${{ fromJson(inputs.node-versions) }}
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v6
@@ -1530,7 +1530,7 @@ jobs:
       advisory-outcome: ${{ steps.armv7-test.outcome }}
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up QEMU for ARM emulation
         # Advisory: a QEMU setup failure must not block the workflow — the
@@ -1654,7 +1654,7 @@ jobs:
         signalk-server-version: ${{ fromJson(inputs.signalk-server-versions) }}
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v6
@@ -1840,7 +1840,7 @@ jobs:
     needs: [desktop, armv7, signalk-integration]
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           sparse-checkout: package.json
 
