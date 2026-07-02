@@ -61,7 +61,7 @@
     },
     "power": {
       "baseUnit": "W",
-      "targetUnit": "horsepower",
+      "targetUnit": "W",
       "displayFormat": "0.00"
     },
     "percentage": {
@@ -118,6 +118,11 @@
       "baseUnit": "bool",
       "targetUnit": "bool",
       "displayFormat": "boolean"
+    },
+    "dataSize": {
+      "baseUnit": "B",
+      "targetUnit": "MiB",
+      "displayFormat": "0.0"
     }
   }
 }

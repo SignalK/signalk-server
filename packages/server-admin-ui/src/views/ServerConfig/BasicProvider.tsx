@@ -9,7 +9,13 @@ import {
 import Button from 'react-bootstrap/Button'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Row from 'react-bootstrap/Row'
+import Tooltip from 'react-bootstrap/Tooltip'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
+import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
 import N2KFilters from './N2KFilters'
 
 interface ProviderOptions {
@@ -21,8 +27,9 @@ interface ProviderOptions {
   interface?: string
   uniqueNumber?: string
   mfgCode?: string
-  useCanName?: boolean
   useCamelCompat?: boolean
+  useCanName?: boolean
+  createDevice?: boolean
   sendNetworkStats?: boolean
   noDataReceivedTimeout?: string
   remoteSelf?: string
@@ -45,6 +52,16 @@ interface ProviderOptions {
   gpioInvert?: boolean
   filtersEnabled?: boolean
   filters?: Array<{ source: string; pgn: string }>
+  // PGN 60928 Address Claim instance fields. Forwarded to
+  // canboatjs N2kDevice; canboatjs splits deviceInstance into the
+  // lower 3 bits and upper 5 bits of PGN 60928.
+  deviceInstance?: number
+  systemInstance?: number
+  // N2kIpGateway-specific.
+  actAsCanDevice?: boolean
+  format?: string
+  // Maretron IPG 100 — optional CONNECT password.
+  password?: string
   [key: string]: unknown
 }
 
@@ -90,6 +107,7 @@ interface TextInputProps {
   value: string | number | undefined
   helpText?: string
   onChange: OnChangeHandler
+  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void
 }
 
 interface TextAreaInputProps {
@@ -167,6 +185,7 @@ export default function BasicProvider({
         <Col xs="6" md="3">
           {value.isNew ? (
             <Form.Select
+              id="select"
               value={value.type}
               name="type"
               onChange={(event) => onChange(event)}
@@ -211,6 +230,7 @@ export default function BasicProvider({
         <Col xs="12" md="3">
           <Form.Control
             type="text"
+            id="id"
             name="id"
             value={value.id}
             disabled={!value.isNew}
@@ -246,7 +266,14 @@ export default function BasicProvider({
   )
 }
 
-function TextInput({ name, title, value, helpText, onChange }: TextInputProps) {
+function TextInput({
+  name,
+  title,
+  value,
+  helpText,
+  onChange,
+  onBlur
+}: TextInputProps) {
   return (
     <Form.Group as={Row} className="mb-3">
       <Col md="3">
@@ -255,9 +282,11 @@ function TextInput({ name, title, value, helpText, onChange }: TextInputProps) {
       <Col xs="12" md="3">
         <Form.Control
           type="text"
+          id={name}
           name={name}
           value={value ?? ''}
           onChange={(event) => onChange(event)}
+          onBlur={onBlur}
         />
         {helpText && <Form.Text muted>{helpText}</Form.Text>}
       </Col>
@@ -281,6 +310,7 @@ function TextAreaInput({
       <Col xs="12" md="3">
         <Form.Control
           as="textarea"
+          id={name}
           name={name}
           value={value ?? ''}
           rows={rows}
@@ -682,9 +712,22 @@ function LoggingInput({ value, onChange }: LoggingInputProps) {
           <span className="switch-handle" />
         </Form.Label>
         {value.logging && (
-          <Form.Text className="text-warning">
-            Creates hourly log files that can consume significant disk space
-          </Form.Text>
+          <OverlayTrigger
+            placement="bottom"
+            overlay={
+              <Tooltip>
+                Creates hourly log files that can consume significant disk space
+              </Tooltip>
+            }
+          >
+            <button
+              type="button"
+              className="btn btn-link p-0 text-warning ms-1 align-baseline"
+              aria-label="Hourly logs disk space warning"
+            >
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+            </button>
+          </OverlayTrigger>
         )}
       </Col>
     </Form.Group>
@@ -875,6 +918,7 @@ function DataTypeInput({
       </Col>
       <Col xs="12" md="4">
         <Form.Select
+          id="dataType"
           value={value.options.dataType}
           name="options.dataType"
           onChange={(event) => onChange(event)}
@@ -1010,6 +1054,194 @@ function IgnoredSentences({
   )
 }
 
+interface TalkerGroup {
+  name: string
+  talkers: string
+}
+
+const GPS_PRESET: TalkerGroup = {
+  name: 'gps',
+  talkers: 'GP,GL,GA,GN,GB,BD'
+}
+
+function talkerGroupsToEntries(
+  groups: Record<string, string[]> | undefined
+): TalkerGroup[] {
+  if (!groups || typeof groups !== 'object') return []
+  return Object.entries(groups).map(([name, talkers]) => ({
+    name,
+    talkers: talkers.join(',')
+  }))
+}
+
+function normalizeTalkerGroupName(name: string) {
+  return name.trim().toLowerCase()
+}
+
+// NMEA 0183 talker IDs are exactly two uppercase ASCII letters
+// (e.g. GP, II, EC). Anything else is a typo that would silently
+// fail to match incoming sentences, so drop it at edit time.
+const TALKER_ID = /^[A-Z]{2}$/
+
+function entriesToTalkerGroups(
+  entries: TalkerGroup[]
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {}
+  for (const entry of entries) {
+    const name = normalizeTalkerGroupName(entry.name)
+    if (!name) continue
+    const talkers = entry.talkers
+      .split(',')
+      .map((t) => t.trim().toUpperCase())
+      .filter((t) => TALKER_ID.test(t))
+    result[name] = [...new Set([...(result[name] ?? []), ...talkers])]
+  }
+  return result
+}
+
+function TalkerGroups({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  const [entries, setEntries] = useState<TalkerGroup[]>(() =>
+    talkerGroupsToEntries(
+      value.talkerGroups as Record<string, string[]> | undefined
+    )
+  )
+
+  useEffect(() => {
+    setEntries(
+      talkerGroupsToEntries(
+        value.talkerGroups as Record<string, string[]> | undefined
+      )
+    )
+  }, [value.talkerGroups])
+
+  const persistEntries = (updated: TalkerGroup[]) => {
+    setEntries(updated)
+    const groups = entriesToTalkerGroups(updated)
+    // Always send the object (empty when the user removed every entry).
+    // Sending `undefined` would silently drop the key from JSON-encoded
+    // body, and the server's merge of source options would then keep
+    // the previously-saved groups — deletion would appear to save but
+    // change nothing on disk.
+    onChange({
+      target: {
+        name: 'options.talkerGroups',
+        value: groups
+      }
+    })
+  }
+
+  const handleFieldChange = (
+    index: number,
+    field: keyof TalkerGroup,
+    newValue: string
+  ) => {
+    const updated = entries.map((entry, i) =>
+      i === index ? { ...entry, [field]: newValue } : entry
+    )
+    persistEntries(updated)
+  }
+
+  const handleDelete = (index: number) => {
+    persistEntries(entries.filter((_, i) => i !== index))
+  }
+
+  const handleAdd = () => {
+    setEntries([...entries, { name: '', talkers: '' }])
+  }
+
+  const handleAddPreset = (preset: TalkerGroup) => {
+    const presetName = normalizeTalkerGroupName(preset.name)
+    if (entries.some((e) => normalizeTalkerGroupName(e.name) === presetName)) {
+      return
+    }
+    persistEntries([...entries, preset])
+  }
+
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col md="3">
+        <Form.Label>Talker Groups</Form.Label>
+        <Form.Text className="d-block text-muted">
+          Group talker IDs from the same device into a single source.
+        </Form.Text>
+      </Col>
+      <Col xs="12" md="9">
+        {entries.map((entry, index) => (
+          // eslint-disable-next-line @eslint-react/no-array-index-key
+          <Row key={index} className="mb-2 gx-2">
+            <Col xs="4">
+              <Form.Control
+                size="sm"
+                type="text"
+                placeholder="e.g. gps"
+                value={entry.name}
+                aria-label={`Talker group name ${index + 1}`}
+                onChange={(e) =>
+                  handleFieldChange(index, 'name', e.target.value)
+                }
+              />
+            </Col>
+            <Col>
+              <Form.Control
+                size="sm"
+                type="text"
+                placeholder="e.g. GP,GL,GA,GN"
+                value={entry.talkers}
+                aria-label={
+                  entry.name
+                    ? `Talker IDs for ${entry.name}`
+                    : `Talker IDs for group ${index + 1}`
+                }
+                onChange={(e) =>
+                  handleFieldChange(index, 'talkers', e.target.value)
+                }
+              />
+            </Col>
+            <Col xs="auto">
+              <Button
+                size="sm"
+                variant="link"
+                className="text-danger p-0"
+                onClick={() => handleDelete(index)}
+                aria-label={
+                  entry.name
+                    ? `Delete ${entry.name}`
+                    : `Delete talker group ${index + 1}`
+                }
+              >
+                <FontAwesomeIcon icon={faTrash} />
+              </Button>
+            </Col>
+          </Row>
+        ))}
+        <div className="mt-1">
+          <Button size="sm" variant="primary" onClick={handleAdd}>
+            <FontAwesomeIcon icon={faCirclePlus} /> Add
+          </Button>{' '}
+          <Button
+            size="sm"
+            variant="outline-secondary"
+            onClick={() => handleAddPreset(GPS_PRESET)}
+            disabled={entries.some(
+              (e) =>
+                normalizeTalkerGroupName(e.name) ===
+                normalizeTalkerGroupName(GPS_PRESET.name)
+            )}
+          >
+            + GPS Preset
+          </Button>
+        </div>
+      </Col>
+    </Form.Group>
+  )
+}
+
 function PortInput({
   value,
   onChange
@@ -1035,6 +1267,22 @@ function HostInput({
   value: ProviderOptions
   onChange: OnChangeHandler
 }) {
+  // Trim whitespace on blur. Pasted hostnames sometimes carry a
+  // leading or trailing space that breaks DNS resolution downstream
+  // (`getaddrinfo ENOTFOUND  1.2.3.4`) without any user-visible
+  // explanation. Trimming on blur (rather than on every keystroke)
+  // keeps the typing experience normal.
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    const trimmed = event.target.value.trim()
+    if (trimmed === event.target.value) return
+    onChange({
+      target: {
+        name: 'options.host',
+        value: trimmed,
+        type: 'text'
+      }
+    })
+  }
   return (
     <TextInput
       title="Host"
@@ -1042,6 +1290,7 @@ function HostInput({
       helpText="Example: localhost"
       value={value.host}
       onChange={onChange}
+      onBlur={handleBlur}
     />
   )
 }
@@ -1141,11 +1390,217 @@ function UseCanNameInput({
             name="options.useCanName"
             className="switch-input"
             onChange={(event) => onChange(event)}
-            checked={value.useCanName}
+            checked={value.useCanName === true}
           />
           <span className="switch-label" data-on="Yes" data-off="No" />
           <span className="switch-handle" />
         </Form.Label>
+      </Col>
+    </Form.Group>
+  )
+}
+
+function ActAsCanDeviceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  // Default to true when the field is unset so the switch reflects the
+  // gateway's actual runtime default (matches N2kIpGateway constructor).
+  const checked = value.actAsCanDevice !== false
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-actAsCanDevice">
+          Act as N2K device
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Label className="switch switch-text switch-primary">
+          <input
+            type="checkbox"
+            id="provider-actAsCanDevice"
+            name="options.actAsCanDevice"
+            className="switch-input"
+            onChange={(event) => onChange(event)}
+            checked={checked}
+          />
+          <span className="switch-label" data-on="Yes" data-off="No" />
+          <span className="switch-handle" />
+        </Form.Label>
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        Claim an N2K address and participate actively on the bus (answer ISO
+        Requests for 60928 / 126996 / 126998, send heartbeat, accept commands).
+        Defaults to <strong>on</strong>; turn off to run as a read-only
+        listener.
+      </Col>
+    </Form.Group>
+  )
+}
+
+function CreateDeviceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-createDevice">
+          Act as N2K device (createDevice)
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Label className="switch switch-text switch-primary">
+          <input
+            type="checkbox"
+            id="provider-createDevice"
+            name="options.createDevice"
+            className="switch-input"
+            onChange={(event) => onChange(event)}
+            checked={value.createDevice === true}
+          />
+          <span className="switch-label" data-on="Yes" data-off="No" />
+          <span className="switch-handle" />
+        </Form.Label>
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        Claim an N2K address and participate actively on the bus. Recommended
+        for Yacht Devices gateways — when off, the gateway may drop ISO Requests
+        for PGN 60928 / 126996 / 126998 and device identity (model, software
+        version, serial) stays incomplete.
+      </Col>
+    </Form.Group>
+  )
+}
+
+// NMEA 2000 PGN 60928 instance-field widths. canboatjs validates these
+// server-side and falls back to 0 for anything out of range, but we
+// still clamp here so settings.json never persists a value the user
+// typed that the bus can't actually carry.
+const MIN_DEVICE_INSTANCE = 0
+const MAX_DEVICE_INSTANCE = 255
+const MIN_SYSTEM_INSTANCE = 0
+const MAX_SYSTEM_INSTANCE = 15
+
+function clampedInstanceChange(
+  event: ChangeEvent<HTMLInputElement>,
+  onChange: OnChangeHandler,
+  min: number,
+  max: number
+) {
+  // Empty input clears the field so it falls back to the default. Any
+  // non-numeric input mirrors that — we'd rather store nothing than
+  // `NaN` or a string the server has to coerce.
+  const raw = event.target.value
+  if (raw === '') {
+    onChange({
+      target: { name: event.target.name, value: '', type: 'number' }
+    })
+    return
+  }
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed)) {
+    onChange({
+      target: { name: event.target.name, value: '', type: 'number' }
+    })
+    return
+  }
+  const clamped = Math.min(max, Math.max(min, Math.trunc(parsed)))
+  onChange({
+    target: { name: event.target.name, value: clamped, type: 'number' }
+  })
+}
+
+function DeviceInstanceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-deviceInstance">
+          Device Instance
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Control
+          id="provider-deviceInstance"
+          type="number"
+          min={MIN_DEVICE_INSTANCE}
+          max={MAX_DEVICE_INSTANCE}
+          name="options.deviceInstance"
+          value={
+            typeof value.deviceInstance === 'number'
+              ? value.deviceInstance
+              : (value.deviceInstance ?? '')
+          }
+          onChange={(event) =>
+            clampedInstanceChange(
+              event,
+              onChange,
+              MIN_DEVICE_INSTANCE,
+              MAX_DEVICE_INSTANCE
+            )
+          }
+        />
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        {MIN_DEVICE_INSTANCE}–{MAX_DEVICE_INSTANCE}. Identifies this
+        signalk-server among multiple N2K nodes (split into PGN 60928's lower 3
+        bits and upper 5 bits). Defaults to 0.
+      </Col>
+    </Form.Group>
+  )
+}
+
+function SystemInstanceInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-systemInstance">
+          System Instance
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Control
+          id="provider-systemInstance"
+          type="number"
+          min={MIN_SYSTEM_INSTANCE}
+          max={MAX_SYSTEM_INSTANCE}
+          name="options.systemInstance"
+          value={
+            typeof value.systemInstance === 'number'
+              ? value.systemInstance
+              : (value.systemInstance ?? '')
+          }
+          onChange={(event) =>
+            clampedInstanceChange(
+              event,
+              onChange,
+              MIN_SYSTEM_INSTANCE,
+              MAX_SYSTEM_INSTANCE
+            )
+          }
+        />
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        {MIN_SYSTEM_INSTANCE}–{MAX_SYSTEM_INSTANCE}. Defaults to 0; rarely
+        changed.
       </Col>
     </Form.Group>
   )
@@ -1162,7 +1617,7 @@ function CamelCaseCompatInput({
     <Form.Group as={Row} className="mb-3">
       <Col xs="3" md="3">
         <Form.Label htmlFor="provider-useCamelCompat">
-          CamcelCase Compat (for legacy N2K plugins)
+          CamelCase Compat (for legacy N2K plugins)
         </Form.Label>
       </Col>
       <Col xs="2" md="3">
@@ -1173,9 +1628,7 @@ function CamelCaseCompatInput({
             name="options.useCamelCompat"
             className="switch-input"
             onChange={(event) => onChange(event)}
-            checked={
-              value.useCamelCompat !== undefined ? value.useCamelCompat : true
-            }
+            checked={value.useCamelCompat === true}
           />
           <span className="switch-label" data-on="Yes" data-off="No" />
           <span className="switch-handle" />
@@ -1222,10 +1675,11 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
     <div>
       <Form.Group as={Row} className="mb-3">
         <Col md="3">
-          <Form.Label htmlFor="options.type">NMEA 2000 Source</Form.Label>
+          <Form.Label htmlFor="n2k-source-type">NMEA 2000 Source</Form.Label>
         </Col>
         <Col xs="12" md="3">
           <Form.Select
+            id="n2k-source-type"
             value={value.options.type || 'none'}
             name="options.type"
             onChange={(event) => onChange(event)}
@@ -1237,6 +1691,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             </option>
             <option value="ikonvert-canboatjs">iKonvert (canboatjs)</option>
             <option value="navlink2-tcp-canboatjs">NavLink2 (canboatjs)</option>
+            <option value="canboat-csv-canboatjs">
+              canboat-pipeline CSV R/W (canboatjs)
+            </option>
             <option value="ydwg02-canboatjs">
               Yacht Devices RAW TCP (canboatjs)
             </option>
@@ -1247,11 +1704,17 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
               Yacht Devices RAW USB (canboatjs)
             </option>
             <option value="canbus-canboatjs">Canbus (canboatjs)</option>
+            <option value="n2k-ip-gateway-canboatjs">
+              N2K IP Gateway (canboatjs)
+            </option>
             <option value="w2k-1-n2k-ascii-canboatjs">
               W2K-1 N2K ASCII (canboatjs)
             </option>
             <option value="w2k-1-n2k-actisense-canboatjs">
               W2K-1 N2K ACTISENSE (canboatjs)
+            </option>
+            <option value="maretron-ipg-canboatjs">
+              Maretron IPG 100 (canboatjs)
             </option>
             <option value="canbus" disabled={!hasAnalyzer}>
               Canbus (canboat)
@@ -1282,9 +1745,26 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
+          <div className="text-muted small mt-1 mb-2">
+            UDP is receive-only — N2K device discovery and PGN 126208 instance
+            edits are not available. Frames may also occasionally be attributed
+            to the gateway's own N2K address rather than the originating device,
+            producing ghost sources in Source Discovery and priority groups. Use
+            TCP if either matters for your setup.
+          </div>
         </div>
       )}
       {value.options.type === 'navlink2-tcp-canboatjs' && (
+        <div>
+          <HostInput value={value.options} onChange={onChange} />
+          <PortInput value={value.options} onChange={onChange} />
+          <NoDataReceivedTimeoutInput
+            value={value.options}
+            onChange={onChange}
+          />
+        </div>
+      )}
+      {value.options.type === 'canboat-csv-canboatjs' && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
@@ -1322,7 +1802,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       )}
       {(value.options.type === 'ngt-1-canboatjs' ||
         value.options.type === 'ikonvert-canboatjs' ||
-        value.options.type === 'navlink2-tcp-canboatjs') && (
+        value.options.type === 'navlink2-tcp-canboatjs' ||
+        value.options.type === 'canboat-csv-canboatjs') && (
         <CollectNetworkStatsInput value={value.options} onChange={onChange} />
       )}
       {(value.options.type === 'w2k-1-n2k-ascii-canboatjs' ||
@@ -1336,10 +1817,81 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           />
         </div>
       )}
-      <UseCanNameInput value={value.options} onChange={onChange} />
+      {value.options.type === 'n2k-ip-gateway-canboatjs' && (
+        <div>
+          <HostInput value={value.options} onChange={onChange} />
+          <PortInput value={value.options} onChange={onChange} />
+          <Form.Group as={Row} className="mb-2">
+            <Col xs="12" md="3">
+              <Form.Label htmlFor="n2k-ip-gateway-format">
+                Text Format
+              </Form.Label>
+            </Col>
+            <Col xs="12" md="3">
+              <Form.Select
+                id="n2k-ip-gateway-format"
+                name="options.format"
+                value={value.options.format || 'candump3'}
+                onChange={(event) => onChange(event)}
+              >
+                <option value="candump3">candump3 (default)</option>
+                <option value="candump2">candump2</option>
+                <option value="candump1">candump1</option>
+                <option value="ydraw">YDRAW</option>
+                <option value="actisense">Actisense (comma)</option>
+                <option value="actisense-n2k-ascii">Actisense N2K ASCII</option>
+                <option value="pcdin">PCDIN</option>
+              </Form.Select>
+            </Col>
+          </Form.Group>
+          <ActAsCanDeviceInput value={value.options} onChange={onChange} />
+          <div className="text-muted small mt-1 mb-2">
+            Generic source for IP-based N2K gateways that stream raw CAN frames
+            over TCP in one of canboatjs's supported text formats. Default port
+            2599, default format candump3.
+          </div>
+        </div>
+      )}
+      {value.options.type === 'maretron-ipg-canboatjs' && (
+        <div>
+          <HostInput value={value.options} onChange={onChange} />
+          <PortInput value={value.options} onChange={onChange} />
+          <Form.Group as={Row} className="mb-3">
+            <Col md="3">
+              <Form.Label htmlFor="options.password">Password</Form.Label>
+            </Col>
+            <Col xs="12" md="3">
+              <Form.Control
+                type="password"
+                id="options.password"
+                name="options.password"
+                value={value.options.password ?? ''}
+                onChange={(event) => onChange(event)}
+              />
+              <Form.Text muted>
+                Optional password for the IPG 100. Leave empty if none is
+                configured.
+              </Form.Text>
+            </Col>
+          </Form.Group>
+          <div className="text-muted small mt-1 mb-2">
+            Maretron IPG 100 Ethernet gateway. Default TCP port 6543. Uses
+            Maretron&apos;s 0xA5-framed binary protocol (handled by canboatjs).
+          </div>
+        </div>
+      )}
       {value.options.type !== undefined &&
         value.options.type.indexOf('canboatjs') !== -1 && (
-          <CamelCaseCompatInput value={value.options} onChange={onChange} />
+          <>
+            <UseCanNameInput value={value.options} onChange={onChange} />
+            <DeviceInstanceInput value={value.options} onChange={onChange} />
+            <SystemInstanceInput value={value.options} onChange={onChange} />
+            <CamelCaseCompatInput value={value.options} onChange={onChange} />
+          </>
+        )}
+      {value.options.type !== undefined &&
+        /^ydwg02/.test(value.options.type) && (
+          <CreateDeviceInput value={value.options} onChange={onChange} />
         )}
     </div>
   )
@@ -1350,10 +1902,13 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
     <div>
       <Form.Group as={Row} className="mb-3">
         <Col md="3">
-          <Form.Label htmlFor="options.type">NMEA 0183 Source</Form.Label>
+          <Form.Label htmlFor="nmea0183-source-type">
+            NMEA 0183 Source
+          </Form.Label>
         </Col>
         <Col xs="12" md="3">
           <Form.Select
+            id="nmea0183-source-type"
             value={value.options.type}
             name="options.type"
             onChange={(event) => onChange(event)}
@@ -1407,6 +1962,7 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
         onChange={onChange}
         helpText="NMEA0183 sentences to throw away from the input data. Example: RMC,ROT"
       />
+      <TalkerGroups value={value.options} onChange={onChange} />
     </div>
   )
 }
@@ -1416,10 +1972,11 @@ function SignalK({ value, onChange }: TypeComponentProps) {
     <div>
       <Form.Group as={Row} className="mb-3">
         <Col md="3">
-          <Form.Label htmlFor="options.type">SignalK Source</Form.Label>
+          <Form.Label htmlFor="signalk-source-type">SignalK Source</Form.Label>
         </Col>
         <Col xs="12" md="3">
           <Form.Select
+            id="signalk-source-type"
             value={value.options.type}
             name="options.type"
             onChange={(event) => onChange(event)}
@@ -1499,12 +2056,13 @@ function SignalK({ value, onChange }: TypeComponentProps) {
       {!value.options.useDiscovery && (
         <Form.Group as={Row} className="mb-3">
           <Col md="3">
-            <Form.Label htmlFor="options.type">
+            <Form.Label htmlFor="self-handling">
               &apos;self&apos; handling
             </Form.Label>
           </Col>
           <Col xs="12" md="3">
             <Form.Select
+              id="self-handling"
               value={value.options.selfHandling || 'useRemoteSelf'}
               name="options.selfHandling"
               onChange={(event) => onChange(event)}
@@ -1535,10 +2093,11 @@ function Seatalk({ value, onChange }: TypeComponentProps) {
     <span>
       <Form.Group as={Row} className="mb-3">
         <Col md="3">
-          <Form.Label htmlFor="options.type">GPIO Library</Form.Label>
+          <Form.Label htmlFor="seatalk-type">GPIO Library</Form.Label>
         </Col>
         <Col xs="12" md="3">
           <Form.Select
+            id="seatalk-type"
             value={value.options.type || 'none'}
             name="options.type"
             onChange={(event) => onChange(event)}

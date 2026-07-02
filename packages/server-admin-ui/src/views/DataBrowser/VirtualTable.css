@@ -55,12 +55,16 @@
     minmax(120px, 1.2fr);
   border-bottom: 1px solid var(--bs-border-color, #c2cfd6);
   font-size: 0.875rem;
-  contain: layout paint style;
+  content-visibility: auto;
+  /* `auto <length>` caches each row's last rendered height as the
+     placeholder, so tall rows (sky-plot SVG, expanded <details>, NMEA
+     labels wrapping 1 to 2 lines) stop swinging page height and
+     flickering the scrollbar on viewport entry. */
+  contain-intrinsic-block-size: auto 40px;
 }
 
 .virtual-table-row[data-raw-row='true'] {
-  content-visibility: auto;
-  contain-intrinsic-block-size: 150px;
+  contain-intrinsic-block-size: auto 150px;
 }
 
 .virtual-table-row:hover {
@@ -106,12 +110,11 @@
 }
 
 /* Timestamp animation */
-.virtual-table-cell.timestamp-updated {
+.virtual-table-cell.timestamp-cell {
   position: relative;
 }
 
-.virtual-table-cell.timestamp-updated::before {
-  content: '';
+.timestamp-updated-bar {
   position: absolute;
   left: 0;
   top: 0;
@@ -119,6 +122,7 @@
   width: 3px;
   background-color: var(--bs-success, #00cd79);
   animation: highlightFade 15s ease-out forwards;
+  pointer-events: none;
 }
 
 @keyframes highlightFade {
@@ -179,6 +183,10 @@
     display: block;
     padding: 0.5rem;
     border-bottom: 2px solid var(--bs-border-color, #c2cfd6);
+    /* Stacked-cell rows are roughly 3 to 4 times the desktop height
+       (path-cell plus four label-flex cells plus padding), so raise
+       the first-paint placeholder accordingly. */
+    contain-intrinsic-block-size: auto 150px;
   }
 
   .virtual-table-row.striped {
@@ -237,15 +245,11 @@
     position: static;
   }
 
-  .virtual-table-cell.timestamp-updated::before {
-    content: attr(data-label);
-    position: static;
-    width: 60px;
-    background-color: transparent;
-    animation: none;
+  .timestamp-updated-bar {
+    display: none;
   }
 
-  .virtual-table-row:has(.timestamp-updated) {
+  .virtual-table-row:has(.timestamp-updated-bar) {
     border-left: 3px solid var(--bs-success, #00cd79);
     animation: borderFade 15s ease-out forwards;
   }
@@ -315,5 +319,5 @@
 
 .virtual-table-meta-row {
   content-visibility: auto;
-  contain-intrinsic-block-size: 200px;
+  contain-intrinsic-block-size: auto 200px;
 }

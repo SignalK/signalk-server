@@ -129,6 +129,22 @@ function applyProviderSettings(
 
   Object.assign(options.subOptions, source.options)
 
+  // Keys that mean "the client owns the entire value, including emptiness".
+  // Object.assign cannot delete keys the client omitted, so a delete-all
+  // edit on a field like talkerGroups would keep the previous saved value.
+  // Replace these explicitly: if the client sent the key, write it; if not,
+  // drop it from the saved options.
+  const REPLACE_KEYS = ['talkerGroups']
+  for (const key of REPLACE_KEYS) {
+    if (key in source.options) {
+      ;(options.subOptions as Record<string, unknown>)[key] = (
+        source.options as Record<string, unknown>
+      )[key]
+    } else {
+      delete (options.subOptions as Record<string, unknown>)[key]
+    }
+  }
+
   return true
 }
 
@@ -149,6 +165,11 @@ module.exports = function (app: App) {
     const p = provider as PipedProvider
     if (p.enabled === undefined) {
       p.enabled = true
+    }
+    // mDNS browsers fire 'update' repeatedly for the same service, so
+    // the list would otherwise accumulate dozens of rows per remote.
+    if (app.discoveredProviders.some((existing) => existing.id === p.id)) {
+      return
     }
     app.discoveredProviders.push(p)
     app.emit('serverevent', {

@@ -34,6 +34,14 @@ const delta = {
   ]
 }
 
+function removeDisplayUnits(tree) {
+  const nav = tree.vessels[uuid].navigation
+  delete nav.trip.log.meta.displayUnits
+  delete nav.log.meta.displayUnits
+  delete nav.courseOverGroundTrue.meta.displayUnits
+  delete nav.speedOverGround.meta.displayUnits
+}
+
 describe('Server', function () {
   let server, port
 
@@ -68,6 +76,7 @@ describe('Server', function () {
           'deltaFromHttp.115'
         )
         delete treeAfterFirstDelta.vessels[uuid].navigation.course //FIXME until in schema
+        removeDisplayUnits(treeAfterFirstDelta)
         treeAfterFirstDelta.should.be.validSignalK
 
         delta.updates[0].values[0].value = 1
@@ -86,6 +95,7 @@ describe('Server', function () {
           'deltaFromHttp.115'
         )
         delete treeAfterSecondDelta.vessels[uuid].navigation.course //FIXME until in schema
+        removeDisplayUnits(treeAfterSecondDelta)
         treeAfterSecondDelta.should.be.validSignalK
 
         delta.updates[0].values[0].value = 2
@@ -111,7 +121,39 @@ describe('Server', function () {
           'deltaFromHttp.116'
         ].value.should.equal(2)
         delete treeAfterOtherSourceDelta.vessels[uuid].navigation.course //FIXME until in schema
+        removeDisplayUnits(treeAfterOtherSourceDelta)
         treeAfterOtherSourceDelta.should.be.validSignalK
+      })
+  }).timeout(4000)
+
+  it('preserves a schema-conformant upstream label', function () {
+    const host = 'http://localhost:' + port
+    const deltaUrl = host + '/signalk/v1/api/_test/delta'
+    const restUrl = host + '/signalk/v1/api/'
+
+    const forwarded = {
+      context: 'vessels.' + uuid,
+      updates: [
+        {
+          source: {
+            label: 'canhat',
+            type: 'NMEA2000',
+            canName: 'c0788c00e7e04312',
+            src: '43',
+            pgn: 129025
+          },
+          values: [{ path: 'navigation.position', value: { latitude: 1 } }]
+        }
+      ]
+    }
+
+    return sendDelta(forwarded, deltaUrl)
+      .then(() => fetch(restUrl).then((r) => r.json()))
+      .then((tree) => {
+        tree.vessels[uuid].should.have.nested.property(
+          'navigation.position.$source',
+          'canhat.c0788c00e7e04312'
+        )
       })
   }).timeout(4000)
 })

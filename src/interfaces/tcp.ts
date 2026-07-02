@@ -19,7 +19,13 @@ import split from 'split'
 import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { Unsubscribes } from '@signalk/server-api'
+import {
+  BackpressureManager,
+  parseBackpressureThresholds
+} from '../BackpressureManager'
 const debug = createDebug('signalk-server:interfaces:tcp:signalk')
+
+const thresholds = parseBackpressureThresholds()
 
 interface SocketWithId extends Socket {
   id?: number
@@ -39,11 +45,38 @@ module.exports = (app: SignalKServer) => {
       return
     }
     debug('Starting tcp interface')
+    debug(
+      'Backpressure thresholds: enter=%d, exit=%d, max=%d, maxTime=%d',
+      thresholds.enterThreshold,
+      thresholds.exitThreshold,
+      thresholds.maxBufferSize,
+      thresholds.maxBufferCheckTime
+    )
 
     server = createServer((socket: SocketWithId) => {
       socket.id = idSequence++
       socket.name = socket.remoteAddress + ':' + socket.remotePort
       debug('Connected:' + socket.id + ' ' + socket.name)
+
+      const manager = new BackpressureManager(
+        {
+          get id() {
+            return `TCP ${socket.name}`
+          },
+          getBufferLength() {
+            return socket.writableLength
+          },
+          write(delta) {
+            if (!socket.destroyed) {
+              socket.write(`${JSON.stringify(delta)}\r\n`)
+            }
+          },
+          destroy() {
+            socket.destroy()
+          }
+        },
+        thresholds
+      )
 
       socket.on('error', (err: Error) => {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
@@ -51,6 +84,8 @@ module.exports = (app: SignalKServer) => {
       socket.on('close', (hadError) => {
         debug('Close:' + hadError + ' ' + socket.id + ' ' + socket.name)
       })
+
+      socket.on('drain', () => manager.onDrain())
 
       const unsubscibes: Unsubscribes = []
       socket
@@ -60,18 +95,19 @@ module.exports = (app: SignalKServer) => {
               try {
                 return JSON.parse(s)
               } catch (e: any) {
-                console.log(e.message)
+                console.log(e)
               }
             }
           })
         )
-        .on('data', socketMessageHandler(app, socket, unsubscibes))
+        .on('data', socketMessageHandler(app, socket, unsubscibes, manager))
         .on('error', (err: Error) => {
           console.error(err)
         })
-      socket.on('end', () => {
+      socket.on('close', () => {
         unsubscibes.forEach((f) => f())
-        debug('Ended:' + socket.id + ' ' + socket.name)
+        manager.clear()
+        debug('Closed:' + socket.id + ' ' + socket.name)
       })
 
       socket.write(JSON.stringify(app.getHello()) + '\r\n')
@@ -115,7 +151,8 @@ module.exports = (app: SignalKServer) => {
 function socketMessageHandler(
   app: SignalKServer,
   socket: SocketWithId,
-  unsubscribes: Unsubscribes
+  unsubscribes: Unsubscribes,
+  manager: BackpressureManager
 ) {
   let lastUpdateErrorLogged = 0
   return (msg: any) => {
@@ -136,14 +173,16 @@ function socketMessageHandler(
         (err: any) => {
           console.error(`Subscribe  failed:${err}`)
         },
-        (aMsg: any) => socket.write(`${JSON.stringify(aMsg)}\r\n`)
+        (delta: any) => {
+          manager.send(delta)
+        }
       )
     } else if (msg.unsubscribe) {
       debug.enabled && debug(`unsubscribe:${JSON.stringify(msg)}`)
       try {
         app.subscriptionmanager.unsubscribe(msg, unsubscribes)
       } catch (e: any) {
-        console.error(e.message)
+        console.error(e)
         socket.write(JSON.stringify(e.message))
         socket.end(() => {
           console.error(`Closed ${socket.name}`)
@@ -152,3 +191,5 @@ function socketMessageHandler(
     }
   }
 }
+
+module.exports.socketMessageHandler = socketMessageHandler

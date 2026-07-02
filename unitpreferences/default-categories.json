@@ -80,9 +80,7 @@
         "navigation.courseGreatCircle.nextPoint.distance",
         "navigation.racing.distanceStartline",
         "navigation.racing.distanceLayline",
-        "navigation.closestApproach.distance",
-        "navigation.anchor.maxRadius",
-        "navigation.anchor.currentRadius"
+        "navigation.closestApproach.distance"
       ]
     },
     "length": {
@@ -97,7 +95,9 @@
         "design.draft.canoe",
         "design.airHeight",
         "design.rigging.mast.height",
-        "environment.heave"
+        "environment.heave",
+        "navigation.anchor.maxRadius",
+        "navigation.anchor.currentRadius"
       ]
     },
     "angle": {

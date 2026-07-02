@@ -19,9 +19,24 @@ const debug = createDebug('signalk:categories')
 
 import { getKeywords, NpmPackageData } from './modules'
 
-const NEW_CATEGORY = 'New/Updated'
-
 const CAT_DEPRECATED = 'signalk-category-deprecated'
+
+const RECENT_DAYS = 30
+const RECENT_MS = RECENT_DAYS * 24 * 3600 * 1000
+
+// "Recently updated" recency flag, derived from the npm package date so
+// the New/Updated badge in the UI agrees with the "Recently updated"
+// sort. Single source of truth for both the list endpoint and the
+// detail endpoint.
+export function isRecent(dateString: string | undefined): boolean {
+  if (!dateString) return false
+  const t = new Date(dateString).getTime()
+  if (!Number.isFinite(t)) return false
+  const delta = Date.now() - t
+  // A future timestamp (delta < 0) would otherwise stay 'recent' for
+  // 30 days past that future date — guard against it explicitly.
+  return delta >= 0 && delta < RECENT_MS
+}
 
 const isDeprecated = (packageName: string) =>
   DEFAULT_MODULE_CAT_KEYWORDS[packageName] &&
@@ -43,18 +58,6 @@ function getCategories(thePackage: NpmPackageData): string[] {
   const categoryNames = categoryKeywords.map(
     (category) => CAT_KEYWORDS_TO_NAMES[category]
   )
-
-  if (categoryNames.length === 0) {
-    categoryNames.push('Uncategorized')
-  }
-
-  if (thePackage.date) {
-    const pDate = new Date(thePackage.date)
-    if ((Date.now() - pDate.getTime()) / (1000 * 3600 * 24) < 30) {
-      // updated less than 30 days ago
-      categoryNames.push(NEW_CATEGORY)
-    }
-  }
 
   debug('%s categories: %j', thePackage.name, categoryNames)
   return categoryNames
@@ -79,7 +82,8 @@ const CAT_KEYWORDS_TO_NAMES: {
   'signalk-category-digital-switching': 'Digital Switching',
   'signalk-category-utility': 'Utility',
   'signalk-category-cloud': 'Cloud',
-  'signalk-category-weather': 'Weather'
+  'signalk-category-weather': 'Weather',
+  'signalk-category-database': 'Database & History'
 }
 
 const DEFAULT_MODULE_CAT_KEYWORDS: {
@@ -147,8 +151,13 @@ const DEFAULT_MODULE_CAT_KEYWORDS: {
   'signalk-tide-watch': ['signalk-category-weather'],
   '@signalk/udp-nmea-plugin': ['signalk-category-nmea-0183'],
   'signalk-to-batch-format': ['signalk-category-utility'],
-  'signalk-to-influxdb': ['signalk-category-utility'],
-  'signalk-to-timestream': ['signalk-category-cloud'],
+  'signalk-to-influxdb2': ['signalk-category-database'],
+  'signalk-parquet': ['signalk-category-database'],
+  'signalk-questdb': ['signalk-category-database'],
+  'signalk-to-timestream': [
+    'signalk-category-cloud',
+    'signalk-category-database'
+  ],
   'signalk-from-batch-format': ['signalk-category-utility'],
   'signalk-sunphases': ['signalk-category-weather'],
   '@codekilo/regexp-jexl-reader': ['signalk-category-nmea-0183'],
@@ -189,7 +198,7 @@ const DEFAULT_MODULE_CAT_KEYWORDS: {
   'signalk-maretron-proprietary': ['signalk-category-nmea-2000'],
   'signalk-healthcheck': ['signalk-category-utility'],
   'signalk-pebble-mydata': ['signalk-category-hardware'],
-  'signalk-to-influxdb-v2-buffering': ['signalk-category-utility'],
+  'signalk-to-influxdb-v2-buffering': ['signalk-category-database'],
   'signalk-saillogger': ['signalk-category-cloud'],
   'signalk-fusion-stereo': ['signalk-category-hardware'],
   'signalk-nextion': ['signalk-category-hardware'],
@@ -292,5 +301,6 @@ const DEFAULT_MODULE_CAT_KEYWORDS: {
 
 module.exports = {
   getCategories,
-  getAvailableCategories
+  getAvailableCategories,
+  isRecent
 }

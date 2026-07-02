@@ -39,6 +39,7 @@ interface OIDCConfig {
   issuer: string
   clientId: string
   clientSecretSet: boolean
+  redirectUri: string
   providerName: string
   defaultPermission: string
   autoCreateUsers: boolean
@@ -65,6 +66,7 @@ const OIDCSettings: React.FC = () => {
   const [clientId, setClientId] = useState('')
   const [clientSecret, setClientSecret] = useState('')
   const [clientSecretSet, setClientSecretSet] = useState(false)
+  const [redirectUri, setRedirectUri] = useState('')
   const [providerName, setProviderName] = useState('SSO Login')
   const [defaultPermission, setDefaultPermission] = useState('readonly')
   const [autoCreateUsers, setAutoCreateUsers] = useState(true)
@@ -87,6 +89,7 @@ const OIDCSettings: React.FC = () => {
         setClientId(data.clientId || '')
         setClientSecret('')
         setClientSecretSet(data.clientSecretSet || false)
+        setRedirectUri(data.redirectUri || '')
         setProviderName(data.providerName || 'SSO Login')
         setDefaultPermission(data.defaultPermission || 'readonly')
         setAutoCreateUsers(
@@ -127,6 +130,7 @@ const OIDCSettings: React.FC = () => {
       issuer,
       clientId,
       clientSecret,
+      redirectUri,
       providerName,
       defaultPermission,
       autoCreateUsers,
@@ -169,6 +173,7 @@ const OIDCSettings: React.FC = () => {
     issuer,
     clientId,
     clientSecret,
+    redirectUri,
     providerName,
     defaultPermission,
     autoCreateUsers,
@@ -408,6 +413,29 @@ const OIDCSettings: React.FC = () => {
                     <strong>Recommended:</strong> Set via environment variable{' '}
                     <code>SIGNALK_OIDC_CLIENT_SECRET</code> instead of storing
                     in configuration.
+                  </Form.Text>
+                </Col>
+              </Form.Group>
+
+              <Form.Group as={Row}>
+                <Col md="3">
+                  <Form.Label htmlFor="redirectUri">Redirect URI</Form.Label>
+                  {renderEnvBadge('redirectUri')}
+                </Col>
+                <Col xs="12" md="9">
+                  <Form.Control
+                    type="text"
+                    id="redirectUri"
+                    name="redirectUri"
+                    autoComplete="off"
+                    placeholder="https://your-server/signalk/v1/auth/oidc/callback"
+                    onChange={(e) => setRedirectUri(e.target.value)}
+                    value={redirectUri}
+                    disabled={isFieldDisabled('redirectUri')}
+                  />
+                  <Form.Text muted>
+                    The full public URL of the OIDC callback endpoint on this
+                    server. Must use https unless targeting localhost.
                   </Form.Text>
                 </Col>
               </Form.Group>

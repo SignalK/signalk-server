@@ -222,7 +222,8 @@ export const NextPreviousPointSchema = Type.Object(
         "Type of point. Known values: VesselPosition (vessel's current location), RoutePoint (a point on the active route), Location (an arbitrary geographic position).",
       examples: ['RoutePoint', 'Location', 'VesselPosition']
     }),
-    position: PositionSchema
+    position: PositionSchema,
+    name: Type.Optional(Type.String({ description: 'Waypoint name.' }))
   },
   { $id: 'NextPreviousPoint' }
 )

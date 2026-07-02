@@ -1,5 +1,11 @@
 import React, { useEffect, Component, ReactNode, ComponentType } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import {
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useParams
+} from 'react-router-dom'
 import Container from 'react-bootstrap/Container'
 import { useLoginStatus, type LoginStatus } from '../../store'
 
@@ -14,8 +20,12 @@ import EmbeddedDocs from '../../views/Webapps/EmbeddedDocs'
 import EmbeddedAsyncApi from '../../views/Webapps/EmbeddedAsyncApi'
 import Webapps from '../../views/Webapps/Webapps'
 import DataBrowser from '../../views/DataBrowser/DataBrowser'
+import MetaDataPage from '../../views/DataBrowser/MetaDataPage'
+import SourceDiscovery from '../../views/DataBrowser/SourceDiscovery'
+import SourcePriorityPage from '../../views/DataBrowser/SourcePriorityPage'
 import Playground from '../../views/Playground'
 import Apps from '../../views/appstore/Apps/Apps'
+import DetailView from '../../views/appstore/Detail/DetailView'
 import Configuration from '../../views/Configuration/Configuration'
 import Login from '../../views/security/Login'
 import SecuritySettings from '../../views/security/Settings'
@@ -25,9 +35,11 @@ import Register from '../../views/security/Register'
 import AccessRequests from '../../views/security/AccessRequests'
 import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
 import Settings from '../../views/ServerConfig/Settings'
+import UnitPreferencesSettings from '../../views/ServerConfig/UnitPreferencesSettings'
 import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
+import PathReference from '../../views/PathReference/PathReference'
 
 import { fetchAllData } from '../../actions'
 
@@ -110,6 +122,49 @@ function ProtectedRoute({
   )
 }
 
+function LegacyAppstorePluginRedirect() {
+  const { name } = useParams<{ name: string }>()
+  const location = useLocation()
+  return (
+    <Navigate
+      to={`/apps/store/plugin/${encodeURIComponent(name || '')}${location.search}${location.hash}`}
+      replace
+    />
+  )
+}
+
+function LegacyAppstoreRedirect() {
+  // Preserve the splat after /appstore/ so deep-links like
+  // /appstore/updates redirect to /apps/store/updates rather than
+  // dropping back to the root list.
+  const params = useParams<{ '*': string }>()
+  const location = useLocation()
+  const rest = params['*']
+  const suffix = rest ? `/${rest}` : ''
+  return (
+    <Navigate
+      to={`/apps/store${suffix}${location.search}${location.hash}`}
+      replace
+    />
+  )
+}
+
+function LegacyPluginConfigRedirect() {
+  const { pluginid } = useParams<{ pluginid: string }>()
+  const location = useLocation()
+  // No id in the legacy URL → fall back to the store rather than
+  // /apps/configuration/- which would 404 the configuration view.
+  if (!pluginid) {
+    return <Navigate to="/apps/store" replace />
+  }
+  return (
+    <Navigate
+      to={`/apps/configuration/${encodeURIComponent(pluginid)}${location.search}${location.hash}`}
+      replace
+    />
+  )
+}
+
 export default function Full() {
   const location = useLocation()
 
@@ -149,25 +204,71 @@ export default function Full() {
                   <ProtectedRoute component={Embedded} supportsReadOnly />
                 }
               />
+              {/* Data menu routes */}
               <Route
-                path="/databrowser"
+                path="/data/browser"
                 element={
                   <ProtectedRoute component={DataBrowser} supportsReadOnly />
                 }
               />
               <Route
-                path="/serverConfiguration/datafiddler"
+                path="/data/meta"
+                element={
+                  <ProtectedRoute component={MetaDataPage} supportsReadOnly />
+                }
+              />
+              <Route
+                path="/data/sources"
+                element={<ProtectedRoute component={SourceDiscovery} />}
+              />
+              <Route
+                path="/data/priorities"
+                element={<ProtectedRoute component={SourcePriorityPage} />}
+              />
+              <Route
+                path="/data/units"
+                element={<ProtectedRoute component={UnitPreferencesSettings} />}
+              />
+              <Route
+                path="/data/fiddler"
                 element={
                   <ProtectedRoute component={Playground} supportsReadOnly />
                 }
               />
               <Route
-                path="/appstore/*"
+                path="/data/connections/:providerId"
+                element={<ProtectedRoute component={ProvidersConfiguration} />}
+              />
+              {/* Backward-compatible redirects */}
+              <Route
+                path="/databrowser"
+                element={<Navigate to="/data/browser" replace />}
+              />
+              <Route
+                path="/serverConfiguration/datafiddler"
+                element={<Navigate to="/data/fiddler" replace />}
+              />
+              <Route
+                path="/apps/store/plugin/:name"
+                element={<ProtectedRoute component={DetailView} />}
+              />
+              <Route
+                path="/apps/store/*"
                 element={<ProtectedRoute component={Apps} />}
               />
               <Route
-                path="/serverConfiguration/plugins/:pluginid"
+                path="/apps/configuration/:pluginid"
                 element={<ProtectedRoute component={Configuration} />}
+              />
+              <Route path="/appstore" element={<LegacyAppstoreRedirect />} />
+              <Route
+                path="/appstore/plugin/:name"
+                element={<LegacyAppstorePluginRedirect />}
+              />
+              <Route path="/appstore/*" element={<LegacyAppstoreRedirect />} />
+              <Route
+                path="/serverConfiguration/plugins/:pluginid"
+                element={<LegacyPluginConfigRedirect />}
               />
               <Route
                 path="/serverConfiguration/settings"
@@ -208,6 +309,12 @@ export default function Full() {
                 element={<ProtectedRoute component={AccessRequests} />}
               />
               <Route path="/asyncapi" element={<EmbeddedAsyncApi />} />
+              <Route
+                path="/documentation/paths"
+                element={
+                  <ProtectedRoute component={PathReference} supportsReadOnly />
+                }
+              />
               <Route path="/documentation/*" element={<EmbeddedDocs />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

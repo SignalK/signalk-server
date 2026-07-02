@@ -1,20 +1,23 @@
 import { expect } from 'chai'
+import chai from 'chai'
 import { NotificationApi } from '../dist/api/notifications/index.js'
+import { startServer } from './ts-servertestutilities'
 import type {
   Delta,
   Context,
   Path,
   Timestamp,
-  SourceRef
+  SourceRef,
+  AlarmProperties
 } from '@signalk/server-api'
+chai.should()
 
 describe('NotificationApi', () => {
   it('registers as DeltaInputHandler and filters notifications correctly', async function () {
     // Track handleMessage calls
     const handleMessageCalls: Delta[] = []
     let registeredHandler:
-      | ((delta: Delta, next: (delta: Delta) => void) => void)
-      | null = null
+      ((delta: Delta, next: (delta: Delta) => void) => void) | null = null
 
     // Mock app
     const mockApp = {
@@ -159,5 +162,31 @@ describe('NotificationApi', () => {
       )
     }
     expect(mobNotificationUpdate).to.have.property('notificationId')
+  })
+
+  describe('MOB Notification', () => {
+    it('can raise and get an MOB notification', async function () {
+      const { createWsPromiser, get, post, stop } = await startServer()
+      try {
+        const wsPromiser = createWsPromiser()
+        await wsPromiser.nthMessage(1)
+
+        let response = await post(`/notifications/mob`, {})
+        const { id, statusCode } = (await response.json()) as {
+          id: string
+          statusCode: number
+        }
+        statusCode.should.equal(200)
+        const mobDelta = JSON.parse(await wsPromiser.nthMessage(2))
+        const { path, value } = mobDelta.updates[0].values[0]
+        path.should.equal(`notifications.mob.${id}`)
+        value.state.should.equal('emergency')
+        response = await get(`/notifications/${id}`)
+        const notiData = (await response.json()) as AlarmProperties
+        notiData.value.state.should.equal('emergency')
+      } finally {
+        stop()
+      }
+    })
   })
 })

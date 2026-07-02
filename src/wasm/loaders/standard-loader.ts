@@ -61,9 +61,10 @@ export async function loadStandardPlugin(
   const imports = WebAssembly.Module.imports(module)
   const moduleExports = WebAssembly.Module.exports(module)
   debug(`Module has ${imports.length} imports, ${moduleExports.length} exports`)
-  debug(
-    `Module imports: ${JSON.stringify(imports.map((i) => `${i.module}.${i.name}`).slice(0, 20))}`
-  )
+  debug.enabled &&
+    debug(
+      `Module imports: ${JSON.stringify(imports.map((i) => `${i.module}.${i.name}`).slice(0, 20))}`
+    )
 
   // Detect plugin type
   // Note: plugin_id is optional since ID can be derived from package.json name

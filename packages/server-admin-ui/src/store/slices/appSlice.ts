@@ -20,19 +20,21 @@ import type {
   LogState,
   NodeInfo
 } from '../types'
+import type { SourcesData } from '../../utils/sourceLabels'
 
 const convert = new Convert()
 let logEntryCount = 0
 
-function nameCollator<T extends { name: string }>(left: T, right: T): number {
-  if (left.name < right.name) {
-    return -1
-  }
-  if (left.name > right.name) {
-    return 1
-  }
-  return 0
+function nameCollator<T extends { name: string; displayName?: string }>(
+  left: T,
+  right: T
+): number {
+  const a = left.displayName || left.name
+  const b = right.displayName || right.name
+  return a.localeCompare(b, undefined, { sensitivity: 'base' })
 }
+
+export type AppstoreView = 'All' | 'Installed' | 'Updates' | 'Installing'
 
 export interface AppSliceState {
   plugins: Plugin[]
@@ -42,6 +44,7 @@ export interface AppSliceState {
   loginStatus: LoginStatus
   serverSpecification: ServerSpecification
   restarting: boolean
+  restartRequired: boolean
   accessRequests: AccessRequest[]
   devices: DeviceInfo[]
   discoveredProviders: DiscoveredProvider[]
@@ -52,6 +55,67 @@ export interface AppSliceState {
   serverStatistics: ServerStatistics | null
   providerStatus: ProviderStatus[]
   nodeInfo: NodeInfo
+  sourcesData: SourcesData | null
+  sourceAliases: Record<string, string>
+  sourceAliasesLoaded: boolean
+  multiSourcePaths: Record<string, string[]>
+  /**
+   * Reconciled priority groups: server-computed view of saved groups
+   * (composition fixed by priorityGroups) plus discovery groups for
+   * unsaved sources. Pushed via the RECONCILEDGROUPS server event;
+   * the priority groups page renders from this directly instead of
+   * recomputing from raw multiSourcePaths + saved.
+   */
+  reconciledGroups: Array<{
+    id: string
+    matchedSavedId: string | null
+    inactive?: boolean
+    sources: string[]
+    paths: string[]
+    newcomerSources: string[]
+  }>
+  /**
+   * Live "currently winning" source per path according to the server's
+   * priority engine. Keys are `${context}\0${path}`. Distinct from the
+   * saved priority configuration: this reflects what the engine is
+   * actually routing right now, including fallback to a lower-ranked
+   * source when the configured rank-1 has been silent past its
+   * timeout. Loaded once via REST and merged on each LIVEPREFERRED
+   * server event.
+   */
+  livePreferredSources: Record<string, string>
+  livePreferredSourcesLoaded: boolean
+  /**
+   * True once the saved priority overrides have been received from the
+   * server. The Data Browser uses this to gate cache pruning so the
+   * fan-out skip can rely on the saved overrides map being authoritative.
+   */
+  sourcePrioritiesLoaded: boolean
+  ignoredInstanceConflicts: Record<string, string>
+  activeConflictCount: number
+  pgnDataInstances: Record<string, Record<string, number[]>>
+  pgnSourceKeys: Record<string, Record<string, string[]>>
+  discoveredAddresses: number[]
+  /**
+   * True when at least one N2K connection has signalled it can send
+   * ISO Requests on the bus (canboatjs `nmea2000OutAvailable`).
+   * Discovery, instance edits and auto-rediscovery all need this.
+   * False until the first qualifying connection completes its
+   * Address Claim (~5 s after boot for active gateways) or when no
+   * N2K connection is configured.
+   */
+  n2kOutAvailable: boolean
+  n2kDeviceStatusLoaded: boolean
+  sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
+  sourceStatusLoaded: boolean
+  /**
+   * App Store list view filter (All/Installed/Updates/Installing) and search
+   * text. Held in the store rather than component state so they survive the
+   * unmount/remount when the user opens a plugin detail page and returns via
+   * "Back to Store".
+   */
+  appstoreView: AppstoreView
+  appstoreSearch: string
 }
 
 export interface AppSliceActions {
@@ -64,6 +128,7 @@ export interface AppSliceActions {
   setServerStatistics: (stats: ServerStatistics) => void
   setProviderStatus: (status: ProviderStatus[]) => void
   setRestarting: (restarting: boolean) => void
+  setRestartRequired: (restartRequired: boolean) => void
   setAccessRequests: (requests: AccessRequest[]) => void
   setDevices: (devices: DeviceInfo[]) => void
   setDiscoveredProviders: (providers: DiscoveredProvider[]) => void
@@ -71,6 +136,45 @@ export interface AppSliceActions {
   setVesselInfo: (info: VesselInfo) => void
   setNodeInfo: (info: NodeInfo) => void
   setBackpressureWarning: (warning: BackpressureWarning | null) => void
+  setSourcesData: (data: SourcesData) => void
+  setSourceAliases: (aliases: Record<string, string>) => void
+  setIgnoredInstanceConflicts: (conflicts: Record<string, string>) => void
+  setActiveConflictCount: (count: number) => void
+  setN2kDeviceStatus: (status: {
+    pgnDataInstances?: Record<string, Record<string, number[]>>
+    pgnSourceKeys?: Record<string, Record<string, string[]>>
+    discoveredAddresses?: number[]
+    n2kOutAvailable?: boolean
+    sourceStatuses?: {
+      sourceRef?: string
+      providerId: string
+      src: string
+      online: boolean
+      lastSeen?: number
+    }[]
+  }) => void
+  setMultiSourcePaths: (paths: Record<string, string[]>) => void
+  setReconciledGroups: (
+    groups: Array<{
+      id: string
+      matchedSavedId: string | null
+      inactive?: boolean
+      sources: string[]
+      paths: string[]
+      newcomerSources: string[]
+    }>
+  ) => void
+  setLivePreferredSources: (paths: Record<string, string>) => void
+  mergeLivePreferredSources: (paths: Record<string, string>) => void
+  setSourceStatus: (
+    statuses: {
+      sourceRef?: string
+      providerId: string
+      src: string
+      online: boolean
+      lastSeen?: number
+    }[]
+  ) => void
   setDebugSettings: (settings: {
     debugEnabled?: string
     rememberDebug?: boolean
@@ -83,6 +187,8 @@ export interface AppSliceActions {
       { sourceRef: string; timeout: string | number }[]
     >
   ) => void
+  setAppstoreView: (view: AppstoreView) => void
+  setAppstoreSearch: (search: string) => void
 }
 
 export type AppSlice = AppSliceState & AppSliceActions
@@ -100,6 +206,7 @@ const initialAppState: AppSliceState = {
   loginStatus: {},
   serverSpecification: {},
   restarting: false,
+  restartRequired: false,
   accessRequests: [],
   devices: [],
   discoveredProviders: [],
@@ -113,11 +220,31 @@ const initialAppState: AppSliceState = {
   backpressureWarning: null,
   serverStatistics: null,
   providerStatus: [],
-  nodeInfo: {}
+  nodeInfo: {},
+  sourcesData: null,
+  sourceAliases: {},
+  sourceAliasesLoaded: false,
+  multiSourcePaths: {},
+  reconciledGroups: [],
+  livePreferredSources: {},
+  livePreferredSourcesLoaded: false,
+  sourcePrioritiesLoaded: false,
+  ignoredInstanceConflicts: {},
+  activeConflictCount: 0,
+  pgnDataInstances: {},
+  pgnSourceKeys: {},
+  discoveredAddresses: [],
+  n2kOutAvailable: false,
+  n2kDeviceStatusLoaded: false,
+  sourceStatus: {},
+  sourceStatusLoaded: false,
+  appstoreView: 'All',
+  appstoreSearch: ''
 }
 
 export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
-  set
+  set,
+  get
 ) => ({
   ...initialAppState,
 
@@ -165,6 +292,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
     set({ restarting })
   },
 
+  setRestartRequired: (restartRequired) => {
+    set({ restartRequired })
+  },
+
   setAccessRequests: (accessRequests) => {
     set({ accessRequests })
   },
@@ -194,6 +325,130 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setBackpressureWarning: (backpressureWarning) => {
     set({ backpressureWarning })
+  },
+
+  setSourcesData: (sourcesData) => {
+    set({ sourcesData })
+  },
+
+  setSourceAliases: (sourceAliases) => {
+    set({ sourceAliases, sourceAliasesLoaded: true })
+  },
+
+  setIgnoredInstanceConflicts: (ignoredInstanceConflicts) => {
+    set({ ignoredInstanceConflicts })
+  },
+
+  setActiveConflictCount: (activeConflictCount) => {
+    set({ activeConflictCount })
+  },
+
+  setN2kDeviceStatus: (status) => {
+    // The bootstrap GET /n2kDeviceStatus carries sourceStatuses; the
+    // WS-pushed N2KDEVICESTATUS event omits it (SOURCESTATUS is its
+    // own channel). Only refresh sourceStatus when the field is
+    // actually present — otherwise we'd flash every source to
+    // "unknown" on every WS push.
+    const patch: Partial<{
+      pgnDataInstances: Record<string, Record<string, number[]>>
+      pgnSourceKeys: Record<string, Record<string, string[]>>
+      discoveredAddresses: number[]
+      n2kOutAvailable: boolean
+      n2kDeviceStatusLoaded: boolean
+      sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
+      sourceStatusLoaded: boolean
+    }> = {
+      pgnDataInstances: status.pgnDataInstances ?? {},
+      pgnSourceKeys: status.pgnSourceKeys ?? {},
+      discoveredAddresses: status.discoveredAddresses ?? [],
+      n2kOutAvailable: status.n2kOutAvailable ?? false,
+      n2kDeviceStatusLoaded: true
+    }
+    if (status.sourceStatuses) {
+      const sourceStatus: Record<
+        string,
+        { online: boolean; lastSeen?: number }
+      > = {}
+      for (const s of status.sourceStatuses) {
+        const key = s.sourceRef ?? `${s.providerId}.${s.src}`
+        sourceStatus[key] = { online: s.online, lastSeen: s.lastSeen }
+      }
+      patch.sourceStatus = sourceStatus
+      patch.sourceStatusLoaded = true
+    }
+    set(patch)
+  },
+
+  setMultiSourcePaths: (multiSourcePaths) => {
+    set({ multiSourcePaths })
+  },
+
+  setReconciledGroups: (reconciledGroups) => {
+    set({ reconciledGroups })
+    // Hand the per-group newcomer lists to the priorities slice so
+    // any post-Save retiring suppressions can drop. Done after the
+    // reconciled state is committed so a subsequent re-render sees
+    // both the new reconciled view and the cleaned suppression set.
+    const newcomersByGroup: Record<string, string[]> = {}
+    for (const g of reconciledGroups) {
+      newcomersByGroup[g.id] = g.newcomerSources
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const clear = (get() as any).clearRetiredSuppressions as
+      ((s: Record<string, string[]>) => void) | undefined
+    clear?.(newcomersByGroup)
+  },
+
+  setLivePreferredSources: (livePreferredSources) => {
+    set({ livePreferredSources, livePreferredSourcesLoaded: true })
+  },
+
+  // Server emits only the paths whose winner CHANGED since the last
+  // tick, so we merge over the existing snapshot instead of replacing.
+  // The full snapshot is loaded once via REST at startup.
+  // Empty-string values are tombstones: the server signalled that the
+  // entry was deleted (e.g. its parent group was deactivated and the
+  // path is now pass-through). Without this the stale winner would
+  // persist in the merged map and the Data Browser's "Priority
+  // filtered" view would keep suppressing every other source on that
+  // path.
+  mergeLivePreferredSources: (changes) => {
+    set((state) => {
+      const next = { ...state.livePreferredSources }
+      for (const [key, ref] of Object.entries(changes)) {
+        if (ref === '') {
+          delete next[key]
+        } else {
+          next[key] = ref
+        }
+      }
+      return {
+        livePreferredSources: next,
+        livePreferredSourcesLoaded: true
+      }
+    })
+  },
+
+  setSourceStatus: (statuses) => {
+    // Replace rather than merge. The server emits a full snapshot on
+    // every transition; merging would preserve refs the server has
+    // intentionally removed (e.g. via /n2kRemoveSource or a device
+    // reset), leaving deleted devices permanently online/offline in
+    // the client store. With buildSourceStatuses now also surfacing
+    // frame-only devices (via frameLastSeenBySrc), the snapshot is
+    // authoritative — a sourceRef that disappears really is gone.
+    const sourceStatus: Record<string, { online: boolean; lastSeen?: number }> =
+      {}
+    for (const s of statuses) {
+      // Prefer the canonical sourceRef field; fall back to providerId+src
+      // for older server payloads that didn't include it.
+      const key = s.sourceRef ?? `${s.providerId}.${s.src}`
+      sourceStatus[key] = {
+        online: s.online,
+        lastSeen: s.lastSeen
+      }
+    }
+    set({ sourceStatus, sourceStatusLoaded: true })
   },
 
   setDebugSettings: (settings) => {
@@ -238,7 +493,16 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
           dirty: false,
           timeoutsOk: true
         }
-      }
+      },
+      sourcePrioritiesLoaded: true
     }))
+  },
+
+  setAppstoreView: (appstoreView) => {
+    set({ appstoreView })
+  },
+
+  setAppstoreSearch: (appstoreSearch) => {
+    set({ appstoreSearch })
   }
 })

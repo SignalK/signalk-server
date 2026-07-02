@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────────
+# SignalK Plugin Dependabot Config
+#
+# Drop this file into your plugin repo at:
+#   .github/dependabot.yml
+#
+# Dependabot will then keep your npm dependencies and the
+# GitHub Actions used by your workflows (CI, release) up to date
+# by opening PRs on the schedule configured below.
+#
+# Non-breaking updates (minor + patch) are grouped into a single
+# PR per ecosystem to keep noise down. Major version bumps stay
+# as individual PRs because they usually deserve a closer look.
+#
+# Full reference:
+#   https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+# ─────────────────────────────────────────────────────────────
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        update-types:
+          - minor
+          - patch

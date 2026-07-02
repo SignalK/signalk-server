@@ -23,6 +23,8 @@ import { writeSettingsFile } from '../../config/config'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
+export const CHART_TILE_REGEX = /\/charts\/[^?]+\/\d+\/\d+\/\d+$/
+
 export const skUuid = () => `${uuidv4()}`
 
 interface DefaultProviders {
@@ -181,7 +183,8 @@ export class ResourcesApi {
     params: { [key: string]: any },
     providerId?: string
   ) {
-    debug(`** listResources(${resType}, ${JSON.stringify(params)})`)
+    debug.enabled &&
+      debug(`** listResources(${resType}, ${JSON.stringify(params)})`)
 
     const provider = this.checkForProvider(resType, providerId)
     debug(`** provider = ${provider}`)
@@ -197,7 +200,8 @@ export class ResourcesApi {
     data: { [key: string]: any },
     providerId?: string
   ) {
-    debug(`** setResource(${resType}, ${resId}, ${JSON.stringify(data)})`)
+    debug.enabled &&
+      debug(`** setResource(${resType}, ${resId}, ${JSON.stringify(data)})`)
 
     if (isSignalKResourceType(resType)) {
       let isValidId: boolean
@@ -358,7 +362,7 @@ export class ResourcesApi {
 
   /** Retrieve matching resources from ALL providers */
   private async listFromAll(resType: string, params: { [key: string]: any }) {
-    debug(`listFromAll(${resType}, ${JSON.stringify(params)})`)
+    debug.enabled && debug(`listFromAll(${resType}, ${JSON.stringify(params)})`)
 
     const result = {}
     if (!this.resProvider[resType]) {
@@ -599,7 +603,7 @@ export class ResourcesApi {
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** GET ${RESOURCES_API_PATH}/:resourceType/:resourceId/*`)
 
-        if (req.path.match(`/charts/(\\w*\\W*)+/[0-9]*/[0-9]*/[0-9]*`)) {
+        if (req.path.match(CHART_TILE_REGEX)) {
           debug('*** CHART TILE request -> next()')
           next()
           return

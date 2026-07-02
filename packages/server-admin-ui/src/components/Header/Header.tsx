@@ -11,15 +11,22 @@ import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTrian
 import {
   useLoginStatus,
   useRestarting,
+  useRestartRequired,
   useBackpressureWarning
 } from '../../store'
 import { logoutAction, restartAction } from '../../actions'
+
+// Header banners are absolutely positioned just below the navbar. The
+// stacked offset places a second banner below the first when both show.
+const BANNER_TOP = '55px'
+const BANNER_TOP_STACKED = '100px'
 
 export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
   const loginStatus = useLoginStatus()
   const restarting = useRestarting()
+  const restartRequired = useRestartRequired()
   const backpressureWarning = useBackpressureWarning()
 
   const handleSidebarHide = useCallback(() => {
@@ -62,15 +69,44 @@ export default function Header() {
     restartAction()
   }
 
+  const showRestartBanner =
+    restartRequired &&
+    loginStatus.status === 'loggedIn' &&
+    loginStatus.userLevel === 'admin'
+
   return (
     <header className="app-header navbar">
+      {showRestartBanner && (
+        <Alert
+          variant="warning"
+          className="restart-required-warning"
+          style={{
+            position: 'absolute',
+            top: BANNER_TOP,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1050,
+            margin: 0,
+            padding: '8px 16px',
+            fontSize: '14px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          }}
+        >
+          <FontAwesomeIcon icon={faTriangleExclamation} /> Server settings
+          changed –{' '}
+          <Alert.Link href="#/" onClick={handleRestart}>
+            restart the server
+          </Alert.Link>{' '}
+          for them to take effect.
+        </Alert>
+      )}
       {backpressureWarning && (
         <Alert
           variant="warning"
           className="backpressure-warning"
           style={{
             position: 'absolute',
-            top: '55px',
+            top: showRestartBanner ? BANNER_TOP_STACKED : BANNER_TOP,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1050,

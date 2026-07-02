@@ -1,0 +1,155 @@
+/// <reference types="vitest" />
+import { defineConfig } from 'vite'
+import react, { reactCompilerPreset } from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
+
+import '@signalk/server-admin-ui-dependencies'
+
+// %ADDONSCRIPTS% is replaced server-side at request time with actual addon script tags.
+function replaceAddonScripts() {
+  return {
+    name: 'replace-addon-scripts',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        if (process.env.NODE_ENV !== 'production') {
+          return html.replace(
+            '%ADDONSCRIPTS%',
+            '<!-- addon scripts not available in dev mode -->'
+          )
+        }
+        return html
+      }
+    }
+  }
+}
+
+// Strip obsolete SVG font references from @font-face declarations (~2.5MB savings)
+function stripSvgFonts() {
+  return {
+    name: 'strip-svg-fonts',
+    enforce: 'post',
+    transform(code, id) {
+      if (!id.includes('.css') && !id.includes('.scss')) {
+        return null
+      }
+      const svgFontRegex =
+        /,?\s*url\(['"]?[^'"()]+\.svg[^'"()]*['"]?\)\s*format\(['"]svg['"]\)/gi
+      if (svgFontRegex.test(code)) {
+        return {
+          code: code.replace(svgFontRegex, ''),
+          map: null
+        }
+      }
+      return null
+    },
+    generateBundle(options, bundle) {
+      for (const fileName of Object.keys(bundle)) {
+        const chunk = bundle[fileName]
+        if (chunk.type === 'asset' && fileName.endsWith('.css')) {
+          const svgFontRegex =
+            /,?\s*url\(['"]?[^'"()]+\.svg[^'"()]*['"]?\)\s*format\(['"]svg['"]\)/gi
+          if (
+            typeof chunk.source === 'string' &&
+            svgFontRegex.test(chunk.source)
+          ) {
+            chunk.source = chunk.source.replace(svgFontRegex, '')
+          }
+        }
+        if (
+          chunk.type === 'asset' &&
+          fileName.endsWith('.svg') &&
+          (fileName.includes('fontawesome') ||
+            fileName.includes('fa-') ||
+            fileName.includes('Simple-Line-Icons'))
+        ) {
+          delete bundle[fileName]
+        }
+      }
+    }
+  }
+}
+
+export default defineConfig({
+  base: './',
+  publicDir: 'public_src',
+  plugins: [
+    replaceAddonScripts(),
+    stripSvgFonts(),
+    react(),
+    babel({
+      presets: [reactCompilerPreset()]
+    })
+  ],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        quietDeps: true,
+        // Bootstrap 5 still uses @import internally
+        silenceDeprecations: ['import']
+      }
+    }
+  },
+  server: {
+    port: 5173,
+    host: 'localhost',
+    proxy: {
+      '/signalk': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true
+      },
+      '/skServer': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true
+      },
+      '/plugins': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      },
+      // Proxy scoped webapp packages (@signalk/*, etc.) but not Vite internals
+      '/@': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        bypass: (req) => {
+          if (
+            req.url.startsWith('/@vite') ||
+            req.url.startsWith('/@react-refresh') ||
+            req.url.startsWith('/@fs') ||
+            req.url.startsWith('/@id')
+          ) {
+            return req.url
+          }
+        }
+      }
+    }
+  },
+  build: {
+    outDir: 'public',
+    sourcemap: true,
+    target: 'es2023',
+    assetsInlineLimit: 0, // Prevent inlining assets to allow server-side logo override
+    cssCodeSplit: false, // Generate single CSS file to ensure it's always loaded
+    manifest: true // Emit .vite/manifest.json so plugins can resolve hashed asset URLs
+  },
+  resolve: {
+    alias: {
+      path: 'path-browserify',
+      events: 'events',
+      buffer: 'buffer'
+    }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/test/**', 'src/**/*.d.ts']
+    }
+  }
+})

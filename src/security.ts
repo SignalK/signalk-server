@@ -32,6 +32,7 @@ import { generate } from 'selfsigned'
 import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
+import { LoginRateLimiter } from './login-rate-limiter'
 import dummysecurity from './dummysecurity'
 import { ICallback } from './types'
 const debug = createDebug('signalk-server:security')
@@ -241,6 +242,9 @@ export interface SecurityStrategy {
     username: string,
     password: string
   ) => Promise<{ statusCode: number }>
+
+  /** Shared login rate limiter (optional - only available when token security is active) */
+  loginRateLimiter?: LoginRateLimiter
 }
 
 export class InvalidTokenError extends Error {
@@ -294,11 +298,18 @@ export function getSecurityConfig(
       const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
       return JSON.parse(optionsAsString)
     } catch (e: any) {
-      console.error(
-        'Could not parse security config at %s: %s',
-        pathForSecurityConfig(app),
-        e.message
-      )
+      // Suppress the ENOENT noise when security is off. The strategy may be
+      // undefined here because setupCors() reads the security config before
+      // startSecurity() installs the dummy strategy — treat that as dummy.
+      const hasRealSecurity =
+        app.securityStrategy && !app.securityStrategy.isDummy()
+      if (e.code !== 'ENOENT' || hasRealSecurity) {
+        console.error(
+          'Could not parse security config at %s: %s',
+          pathForSecurityConfig(app),
+          e.message
+        )
+      }
       return {}
     }
   }
@@ -369,7 +380,7 @@ export function getCertificateOptions(app: WithConfig, cb: any) {
     if (existsSync(chainFile)) {
       debug('Found ssl-chain.pem')
       ca = getCAChainArray(chainFile)
-      debug(JSON.stringify(ca, null, 2))
+      debug.enabled && debug(JSON.stringify(ca, null, 2))
     }
     debug(`Using certificate ssl-key.pem and ssl-cert.pem in ${certLocation}`)
     cb(null, {

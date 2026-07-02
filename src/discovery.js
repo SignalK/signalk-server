@@ -15,10 +15,12 @@
  */
 
 import { createDebug } from './debug'
+import { patchAstronautLabsMdns } from './mdnsPatch'
 const debug = createDebug('signalk-server:discovery')
 const canboatjs = require('@canboat/canboatjs')
 const dgram = require('dgram')
-const mdns = require('mdns-js')
+patchAstronautLabsMdns()
+const { Browser } = require('@astronautlabs/mdns')
 const { networkInterfaces } = require('os')
 
 module.exports.runDiscovery = function (app) {
@@ -196,28 +198,29 @@ module.exports.runDiscovery = function (app) {
 
   function discoverSignalkWs(wsType) {
     try {
-      mdns.excludeInterface('0.0.0.0')
-      var browser = mdns.createBrowser(mdns.tcp('signalk-' + wsType))
+      const browser = new Browser('_signalk-' + wsType + '._tcp')
+      let browserStopped = false
 
-      browser.on('ready', function onReady() {
-        try {
-          debug('looking for SignalK ' + wsType)
-          browser.discover()
-        } catch (err) {
-          debug('discoverSignalkWs:', err)
-        }
-      })
+      debug('looking for SignalK ' + wsType)
 
-      browser.on('update', function onUpdate(data) {
+      browser.on('serviceUp', function onServiceUp(data) {
         try {
+          // Suppress the local server's own advertisement. data.addresses
+          // can contain a mix of IPv4 and IPv6 entries (including
+          // loopback) depending on the underlying mDNS responder, so a
+          // single address from the list is not enough — any local match
+          // anywhere in the list means this is our own service.
+          const addresses = Array.isArray(data.addresses) ? data.addresses : []
+          const primaryAddress = addresses[0]
           if (
-            !isLocalIP(data.addresses[0]) &&
-            Array.isArray(data.type) &&
-            data.type[0].name === 'signalk-' + wsType &&
-            !findWSProvider(data.addresses[0], wsType, data.host, data.port)
+            primaryAddress &&
+            !addresses.some(isOwnAddress) &&
+            data.type &&
+            data.type.name === 'signalk-' + wsType &&
+            !findWSProvider(primaryAddress, wsType, data.host, data.port)
           ) {
             debug('discoverSignalkWs found data[' + wsType + ']:', data)
-            const providerId = `${wsType}-${data.host}:${data.port} (${data.addresses[0]})`
+            const providerId = `${wsType}-${data.host}:${data.port} (${primaryAddress})`
             app.emit('discovered', {
               id: providerId,
               enabled: false,
@@ -230,7 +233,7 @@ module.exports.runDiscovery = function (app) {
                       type: wsType,
                       host: data.host,
                       port: data.port,
-                      address: data.addresses[0],
+                      address: primaryAddress,
                       providerId
                     },
                     providerId
@@ -244,8 +247,20 @@ module.exports.runDiscovery = function (app) {
         }
       })
 
+      browser.on('error', (err) => {
+        browserStopped = true
+        debug('discoverSignalkWs:', err)
+      })
+
+      browser.start()
+
       setTimeout(() => {
         try {
+          if (browserStopped) {
+            return
+          }
+
+          browserStopped = true
           browser.stop()
           debug('discoverSignalkWs close')
         } catch (err) {
@@ -257,15 +272,19 @@ module.exports.runDiscovery = function (app) {
     }
   }
 
-  function isLocalIP(IP) {
+  // True when `addr` is an address bound to one of our own interfaces,
+  // covering IPv4 (including 127.0.0.0/8), IPv6 (including ::1 and
+  // link-local fe80::*), and the zone-ID suffix mDNS responders append
+  // to link-local IPv6 (e.g. 'fe80::1%eth0'). Used to filter the local
+  // server's own mDNS advertisement out of discovery results.
+  function isOwnAddress(addr) {
+    if (typeof addr !== 'string' || addr.length === 0) return false
+    const normalized = addr.replace(/%.*$/, '').toLowerCase()
     const nets = networkInterfaces()
-
     for (const name of Object.keys(nets)) {
-      for (const net of nets[name]) {
-        if (net.family === 'IPv4' && !net.internal) {
-          if (net.address === IP) {
-            return true
-          }
+      for (const net of nets[name] || []) {
+        if (net.address && net.address.toLowerCase() === normalized) {
+          return true
         }
       }
     }

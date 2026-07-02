@@ -7,12 +7,15 @@ const {
   checkForNewServerVersion,
   getLatestServerVersion,
   importOrRequire,
-  runNpm
+  runNpm,
+  getPluginDataSize,
+  getAuthor
 } = require('../dist/modules')
 
 describe('modulesWithKeyword', () => {
   it('returns a list of modules with one "installed" update in config dir', () => {
     const expectedModules = [
+      '@signalk/app-dock',
       '@signalk/instrumentpanel',
       '@signalk/freeboard-sk',
       '@signalk/server-admin-ui',
@@ -307,5 +310,95 @@ describe('runNpm version validation', () => {
 
   it('should reject plain git URL', () => {
     return testVersion('git+https://attacker.com/malicious-plugin.git', false)
+  })
+})
+
+describe('getPluginDataSize', () => {
+  let tempDir
+
+  beforeEach(() => {
+    tempDir = path.join(
+      require('os').tmpdir(),
+      '_skservertest_datasize' + Date.now()
+    )
+    fs.mkdirSync(tempDir, { recursive: true })
+  })
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  it('returns correct size for plugin with config and data files', async () => {
+    const configDataDir = path.join(tempDir, 'plugin-config-data')
+    fs.mkdirSync(configDataDir, { recursive: true })
+
+    const configContent = JSON.stringify({ enabled: true, configuration: {} })
+    fs.writeFileSync(
+      path.join(configDataDir, 'test-plugin.json'),
+      configContent
+    )
+
+    const dataDir = path.join(configDataDir, 'test-plugin')
+    fs.mkdirSync(dataDir, { recursive: true })
+    fs.writeFileSync(path.join(dataDir, 'data1.txt'), 'hello')
+    fs.writeFileSync(path.join(dataDir, 'data2.txt'), 'world')
+
+    const result = await getPluginDataSize(tempDir, 'test-plugin')
+
+    chai.expect(result.hasData).to.equal(true)
+    chai.expect(result.fileCount).to.equal(3) // config + 2 data files
+    chai.expect(result.totalBytes).to.be.greaterThan(0)
+  })
+
+  it('returns zero and hasData false for plugin with no data', async () => {
+    const result = await getPluginDataSize(tempDir, 'nonexistent-plugin')
+
+    chai.expect(result.hasData).to.equal(false)
+    chai.expect(result.fileCount).to.equal(0)
+    chai.expect(result.totalBytes).to.equal(0)
+  })
+
+  it('handles config file only without data directory', async () => {
+    const configDataDir = path.join(tempDir, 'plugin-config-data')
+    fs.mkdirSync(configDataDir, { recursive: true })
+
+    const configContent = JSON.stringify({ enabled: false })
+    fs.writeFileSync(
+      path.join(configDataDir, 'test-plugin.json'),
+      configContent
+    )
+
+    const result = await getPluginDataSize(tempDir, 'test-plugin')
+
+    chai.expect(result.hasData).to.equal(true)
+    chai.expect(result.fileCount).to.equal(1)
+    chai.expect(result.totalBytes).to.be.greaterThan(0)
+  })
+})
+
+describe('getAuthor', () => {
+  it('reads a string author from package.json', () => {
+    chai
+      .expect(getAuthor({ author: 'Alice <a@example.com>' }))
+      .to.equal('Alice <a@example.com>')
+  })
+
+  it('reads an object author.name from package.json', () => {
+    chai.expect(getAuthor({ author: { name: 'Bob' } })).to.equal('Bob')
+  })
+
+  it('returns empty string when package.json has no author', () => {
+    chai.expect(getAuthor({})).to.equal('')
+  })
+
+  it('ignores npm maintainers and publisher (not package.json author)', () => {
+    chai
+      .expect(
+        getAuthor({
+          maintainers: [{ username: 'tkurki' }],
+          publisher: { username: 'tkurki' }
+        })
+      )
+      .to.equal('')
   })
 })

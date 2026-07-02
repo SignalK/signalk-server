@@ -30,6 +30,12 @@ import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
 import { atomicWriteFile } from '../atomicWrite'
 import {
+  loadPrioritiesIntoSettings,
+  migratePrioritiesIntoSeparateFile,
+  splitPrioritiesFromSettings,
+  writePrioritiesFile
+} from './priorities-file'
+import {
   loadAll as loadUnitPreferences,
   setApplicationDataPath
 } from '../unitpreferences'
@@ -84,7 +90,39 @@ export interface Config {
     logCountToKeep?: number
     enablePluginLogging?: boolean
     loggingDirectory?: string
-    sourcePriorities?: any
+    /** Per-path explicit overrides. The engine consults this map first;
+     * if a path has an entry here, that ranking is used. Includes the
+     * fan-out sentinel `[{ sourceRef: '*', timeout: 0 }]` for paths the
+     * user has marked as "deliver every source's value". Paths with no
+     * entry here fall through to group resolution (see priorityGroups). */
+    priorityOverrides?: Record<
+      string,
+      Array<{ sourceRef: string; timeout: number }>
+    >
+
+    /** Ordered list of sources per priority group. The engine resolves
+     * a path's ranking dynamically: if a delta's source is in an active
+     * group, the group's ordering applies to the path. */
+    priorityGroups?: Array<{
+      id: string
+      sources: string[]
+      /** When true, the group is excluded from engine resolution —
+       * paths whose only ranking would have come from this group accept
+       * all sources first-come-first-served. Lets a user temporarily
+       * disable a ranking without losing the order they configured. */
+      inactive?: boolean
+    }>
+
+    /** Global default fallback in ms applied to ranks below rank-1
+     * when the engine derives a path's ranking from a group. Per-path
+     * overrides can still specify their own timeouts. */
+    priorityDefaults?: { fallbackMs?: number }
+
+    /** Map of sourceRef → user-defined display alias for that source */
+    sourceAliases?: Record<string, string>
+    /** Map of "sourceRefA+sourceRefB" (sorted) → ISO timestamp when the
+     * conflict was dismissed by the user */
+    ignoredInstanceConflicts?: Record<string, string>
     trustProxy?: boolean | string | number
     courseApi?: {
       apiOnly?: boolean
@@ -159,6 +197,19 @@ export function load(app: ConfigApp) {
     }
   }
   setSelfSettings(app)
+
+  // TRUST_PROXY env var overrides settings file — useful for container deployments
+  if (process.env.TRUST_PROXY !== undefined) {
+    const envVal = process.env.TRUST_PROXY
+    app.config.settings.trustProxy =
+      envVal === 'true'
+        ? true
+        : envVal === 'false'
+          ? false
+          : isNaN(Number(envVal))
+            ? envVal
+            : Number(envVal)
+  }
 
   // Load unit preferences
   try {
@@ -244,7 +295,11 @@ export function load(app: ConfigApp) {
 }
 
 function checkPackageVersion(name: string, pkg: any, appPath: string) {
-  const expected = pkg.dependencies[name]
+  const isOptional = Boolean(pkg.optionalDependencies?.[name])
+  const expected = pkg.dependencies?.[name] ?? pkg.optionalDependencies?.[name]
+  if (!expected) {
+    return
+  }
   let modulePackageJsonPath = path.join(
     appPath,
     'node_modules',
@@ -253,6 +308,10 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
   )
   if (!fs.existsSync(modulePackageJsonPath)) {
     modulePackageJsonPath = path.join(appPath, '..', name, 'package.json')
+  }
+  if (!fs.existsSync(modulePackageJsonPath) && isOptional) {
+    // Optional package not installed (e.g. core image with --omit=optional).
+    return
   }
   const installed = require(modulePackageJsonPath)
 
@@ -446,16 +505,48 @@ function readSettingsFile(app: ConfigApp) {
   if (_.isUndefined(app.config.settings.interfaces)) {
     app.config.settings.interfaces = {}
   }
+  loadPrioritiesIntoSettings(app)
+  const migrated = migratePrioritiesIntoSeparateFile(app)
+  if (migrated && !disableWriteSettings) {
+    // Persist settings.json without the priority keys so it stays clean.
+    atomicWriteFile(
+      getSettingsFilename(app),
+      JSON.stringify(app.config.settings, null, 2)
+    ).catch((e) => {
+      console.error(
+        'Failed to strip migrated priority keys from settings.json:',
+        e
+      )
+    })
+  }
 }
 
 export function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
-  if (!disableWriteSettings) {
-    atomicWriteFile(getSettingsFilename(app), JSON.stringify(settings, null, 2))
-      .then(() => cb())
-      .catch(cb)
-  } else {
+  if (disableWriteSettings) {
     cb()
+    return
   }
+  const { settingsWithoutPriorities, priorities } =
+    splitPrioritiesFromSettings(settings)
+  // Always overwrite priorities.json — when the user resets all priority
+  // state, the in-memory `priorities` is `{}` and the file must be cleared
+  // too, otherwise stale entries from a previous save reload on next start.
+  //
+  // Sequence the writes (priorities first, then settings) so that if the
+  // priorities write fails, settings.json is left untouched — on restart
+  // the loader still has legacy priority keys to fold back in. If the
+  // settings write fails after priorities succeeded, only the
+  // non-priority slice is stale, which is the safer half: the engine
+  // keeps using the just-saved priorities.json on next load.
+  writePrioritiesFile(app, priorities)
+    .then(() =>
+      atomicWriteFile(
+        getSettingsFilename(app),
+        JSON.stringify(settingsWithoutPriorities, null, 2)
+      )
+    )
+    .then(() => cb())
+    .catch(cb)
 }
 
 function getSettingsFilename(app: ConfigApp) {
@@ -510,6 +601,36 @@ function scanDefaults(deltaEditor: DeltaEditor, vpath: string, item: any) {
   })
 }
 
+// Walks an object emitted under a parent path and recursively sets a
+// leaf delta per terminal value (strings, numbers, booleans, arrays).
+// Used for legacy defaults.json shapes that nest bare values directly
+// (e.g. `communication: { callsignVhf: "OH..." }`) — scanDefaults only
+// reads `{ value: ... }` leaves so it silently drops bare values, and
+// emitting the whole object at the parent path leaks an out-of-date
+// snapshot of every child every time anyone GETs the parent.
+function emitBareLeafDeltas(
+  deltaEditor: DeltaEditor,
+  parentPath: string,
+  item: unknown
+) {
+  if (!_.isPlainObject(item)) return
+  const obj = item as Record<string, unknown>
+  for (const key of Object.keys(obj)) {
+    const value = obj[key]
+    const childPath = parentPath.length > 0 ? `${parentPath}.${key}` : key
+    if (_.isPlainObject(value)) {
+      // Skip {value:..., meta:...} shapes — scanDefaults already handled
+      // those in the main pass. Recurse into anything else to reach the
+      // bare leaves below.
+      const child = value as Record<string, unknown>
+      if ('value' in child || 'meta' in child) continue
+      emitBareLeafDeltas(deltaEditor, childPath, child)
+    } else if (value !== undefined && value !== null) {
+      deltaEditor.setSelfValue(childPath, value)
+    }
+  }
+}
+
 function convertOldDefaultsToDeltas(
   deltaEditor: DeltaEditor,
   defaults: object
@@ -526,7 +647,13 @@ function convertOldDefaultsToDeltas(
       }
     })
     if (self.communication) {
-      deltaEditor.setSelfValue('communication', self.communication)
+      // Legacy shape stores `communication.*` as bare values, not the
+      // `{ value: ... }` shape scanDefaults walks. Emit them as separate
+      // leaf deltas so they don't collide with paths the spec keeps
+      // under `communication` (e.g. communication.crewNames written by
+      // signalk-logbook), which a parent-path snapshot would otherwise
+      // serve as stale, defaults-sourced JSON in the Data Browser.
+      emitBareLeafDeltas(deltaEditor, 'communication', self.communication)
     }
   }
   return deltas

@@ -85,6 +85,10 @@ WsPromiser.prototype.onMessage = function (message) {
   this.nthMessagePromiser(++this.messageCount).resolve(msgStr)
 }
 
+WsPromiser.prototype.close = function () {
+  this.ws.close()
+}
+
 WsPromiser.prototype.send = function (message) {
   return new Promise((resolve) => {
     this.ws.send(JSON.stringify(message), () => resolve('sent'))

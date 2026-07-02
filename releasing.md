@@ -10,6 +10,7 @@ Npm Packages are:
 - @signalk/server-admin-ui
 - @signalk/server-api
 - @signalk/streams
+- @signalk/path-metadata
 - @signalk/resources-provider
 - signalk-server
 

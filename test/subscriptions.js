@@ -152,6 +152,34 @@ function getFarPosistionDelta() {
   return delta
 }
 
+function getZeroPositionDelta() {
+  const delta = {
+    updates: [
+      {
+        source: {
+          label: 'langford-canboatjs',
+          type: 'NMEA2000',
+          pgn: 129025,
+          src: '3'
+        },
+        timestamp: '2017-04-15T14:58:01.200Z',
+        values: [
+          {
+            path: 'navigation.position',
+            value: {
+              longitude: 0,
+              latitude: 0
+            }
+          }
+        ]
+      }
+    ],
+    context: 'vessels.zeroPosition'
+  }
+
+  return delta
+}
+
 function getNullPositionDelta(overwrite) {
   const delta = {
     updates: [
@@ -312,6 +340,12 @@ describe('Subscriptions', (_) => {
             }
           ]
         })
+      })
+      .then(() => {
+        // Give the server a tick to process the WS subscribe before the
+        // POST races it on a separate connection — otherwise the delta can
+        // be ingested under the default (self) subscription.
+        return new Promise((resolve) => setTimeout(resolve, 30))
       })
       .then(() => {
         return Promise.all([
@@ -495,6 +529,67 @@ describe('Subscriptions', (_) => {
         assert(delta.updates.length === 1, 'Receives just one update')
         assert(delta.updates[0].values.length === 1, 'Receives just one value')
         assert(delta.context === 'vessels.closeVessel')
+
+        return sendDelta(getFarPosistionDelta(), deltaUrl)
+      })
+      .then(() => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getFarPosistionDelta(), deltaUrl)
+        ])
+      })
+      .then((results) => {
+        assert(results[0] === 'timeout')
+      })
+  })
+
+  it('relativePosition subscription works at zero latitude/longitude', function () {
+    let wsPromiser
+
+    return serverP
+      .then((_) => {
+        wsPromiser = new WsPromiser(
+          'ws://localhost:' +
+            port +
+            '/signalk/v1/stream?subsribe=none&metaDeltas=none'
+        )
+        return wsPromiser.nextMsg()
+      })
+      .then(() => {
+        return wsPromiser.send({
+          context: {
+            radius: 1,
+            position: {
+              longitude: 0,
+              latitude: 0
+            }
+          },
+          subscribe: [
+            {
+              path: 'navigation.position'
+            }
+          ]
+        })
+      })
+      .then(() => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getZeroPositionDelta(), deltaUrl)
+        ])
+      })
+      .then(() => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getZeroPositionDelta(), deltaUrl)
+        ])
+      })
+      .then((results) => {
+        assert(results[0] !== 'timeout', 'Got timeout')
+        const delta = JSON.parse(results[0])
+
+        assert(delta.updates.length === 1, 'Receives just one update')
+        assert(delta.updates[0].values.length === 1, 'Receives just one value')
+        assert(delta.context === 'vessels.zeroPosition')
 
         return sendDelta(getFarPosistionDelta(), deltaUrl)
       })

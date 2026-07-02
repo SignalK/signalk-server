@@ -24,7 +24,7 @@ const ServerUpdate: React.FC = () => {
 
   const handleUpdate = useCallback(() => {
     if (confirm('Are you sure you want to update the server?')) {
-      navigate('/appstore/updates')
+      navigate('/apps/store')
       fetch(
         `${window.serverRoutesPrefix}/appstore/install/signalk-server/${appStore.serverUpdate}`,
         {

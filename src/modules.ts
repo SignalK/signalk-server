@@ -80,6 +80,8 @@ export interface Package {
   publisher?: {
     username: string
   }
+  maintainers?: Array<{ username?: string; email?: string }>
+  author?: string | { name?: string; email?: string; url?: string }
   dependencies: { [key: string]: any }
   version: string
   description: string
@@ -176,10 +178,11 @@ function removeModule(
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any,
-  pluginId?: string
+  pluginId?: string,
+  deleteData: boolean = false
 ) {
   runNpm(config, name, null, 'remove', onData, onErr, (code: number) => {
-    cleanupAfterRemove(config.configPath, name, pluginId)
+    cleanupAfterRemove(config.configPath, name, pluginId, deleteData)
     onClose(code)
   })
 }
@@ -187,7 +190,8 @@ function removeModule(
 function cleanupAfterRemove(
   configPath: string,
   packageName: string,
-  pluginId?: string
+  pluginId?: string,
+  deleteData: boolean = false
 ) {
   const moduleDir = path.join(configPath, 'node_modules', packageName)
   if (fs.existsSync(moduleDir)) {
@@ -225,7 +229,7 @@ function cleanupAfterRemove(
     }
   }
 
-  if (pluginId) {
+  if (pluginId && deleteData) {
     const configFile = pluginConfigPath(configPath, pluginId)
     if (fs.existsSync(configFile)) {
       try {
@@ -243,6 +247,63 @@ function cleanupAfterRemove(
       }
     }
   }
+}
+
+async function getPluginDataSize(
+  configPath: string,
+  pluginId: string
+): Promise<{ totalBytes: number; fileCount: number; hasData: boolean }> {
+  let totalBytes = 0
+  let fileCount = 0
+
+  const configFile = pluginConfigPath(configPath, pluginId)
+  try {
+    const stats = await fs.promises.lstat(configFile)
+    if (stats.isFile()) {
+      totalBytes += stats.size
+      fileCount++
+    }
+  } catch {
+    // file does not exist or inaccessible
+  }
+
+  const dataDir = pluginDataDir(configPath, pluginId)
+  try {
+    const dirStats = await fs.promises.lstat(dataDir)
+    if (dirStats.isDirectory()) {
+      const { default: getFolderSize } = await import('get-folder-size')
+      totalBytes += await getFolderSize.loose(dataDir)
+
+      async function countFiles(d: string): Promise<number> {
+        let entries: string[]
+        try {
+          entries = await fs.promises.readdir(d)
+        } catch {
+          return 0
+        }
+        let count = 0
+        for (const entry of entries) {
+          try {
+            const stats = await fs.promises.lstat(path.join(d, entry))
+            if (stats.isFile()) {
+              count++
+            } else if (stats.isDirectory()) {
+              count += await countFiles(path.join(d, entry))
+            }
+          } catch {
+            // entry removed or inaccessible between readdir and lstat
+          }
+        }
+        return count
+      }
+
+      fileCount += await countFiles(dataDir)
+    }
+  } catch {
+    // directory does not exist or inaccessible
+  }
+
+  return { totalBytes, fileCount, hasData: totalBytes > 0 }
 }
 
 export function restoreModules(
@@ -361,6 +422,9 @@ async function findModulesWithKeyword(
   return packages
 }
 
+const NPM_SEARCH_TIMEOUT_MS = 60_000
+const NPM_DIST_TAGS_TIMEOUT_MS = 20_000
+
 async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
   let fetchedCount = 0
   let toFetchCount = 1
@@ -371,7 +435,8 @@ async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
     const res = await fetch(
       `https://registry.npmjs.org/-/v1/search?size=250&from=${
         fetchedCount > 0 ? fetchedCount : 0
-      }&text=keywords:${keyword}`
+      }&text=keywords:${keyword}`,
+      { signal: AbortSignal.timeout(NPM_SEARCH_TIMEOUT_MS) }
     )
     if (!res.ok) {
       npmDebug(`npm search failed with status ${res.status}: ${res.statusText}`)
@@ -408,7 +473,8 @@ async function fetchDistTagsForPackages(
     const settled = await Promise.allSettled(
       batch.map(async (name) => {
         const res = await fetch(
-          `https://registry.npmjs.org/-/package/${name}/dist-tags`
+          `https://registry.npmjs.org/-/package/${name}/dist-tags`,
+          { signal: AbortSignal.timeout(NPM_DIST_TAGS_TIMEOUT_MS) }
         )
         if (!res.ok) return null
         const tags = (await res.json()) as NpmDistTags
@@ -428,7 +494,12 @@ async function fetchDistTagsForPackages(
 }
 
 function doFetchDistTags() {
-  return fetch('https://registry.npmjs.org/-/package/signalk-server/dist-tags')
+  return fetch(
+    'https://registry.npmjs.org/-/package/signalk-server/dist-tags',
+    {
+      signal: AbortSignal.timeout(NPM_DIST_TAGS_TIMEOUT_MS)
+    }
+  )
 }
 
 async function getLatestServerVersion(
@@ -477,9 +548,13 @@ export function checkForNewServerVersion(
 }
 
 export function getAuthor(thePackage: Package): string {
-  return `${thePackage.publisher?.username}${
-    thePackage.name.startsWith('@signalk/') ? ' (Signal K team)' : ''
-  }`
+  // Only use package.json's author field. npm maintainers and publisher
+  // are publish-access identities (and OIDC sets publisher to "GitHub
+  // Actions"), so falling back to them surfaces whoever happens to hold
+  // publish rights as the "author" — not who wrote the package.
+  const authorField = thePackage.author
+  if (typeof authorField === 'string') return authorField
+  return authorField?.name ?? ''
 }
 
 export function getKeywords(thePackage: NpmPackageData): string[] {
@@ -538,5 +613,6 @@ module.exports = {
   getKeywords,
   restoreModules,
   importOrRequire,
-  runNpm
+  runNpm,
+  getPluginDataSize
 }

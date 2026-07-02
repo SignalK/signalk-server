@@ -17,11 +17,14 @@
  * limitations under the License.
 */
 
+import './networkConfig'
 import './baconjs-compat'
 import {
   Context,
   Delta,
   DeltaInputHandler,
+  FullSignalK,
+  getSourceId,
   Path,
   PropertyValues,
   SKVersion,
@@ -31,7 +34,7 @@ import {
   Update,
   WithFeatures
 } from '@signalk/server-api'
-import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
+import { randomUUID } from 'crypto'
 import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
@@ -41,9 +44,14 @@ import { startApis } from './api'
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
-import DeltaCache from './deltacache'
+import DeltaCache, { buildSrcToCanonicalMap } from './deltacache'
 import DeltaChain from './deltachain'
-import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
+import {
+  getToPreferredDelta,
+  sourceRefIdentity,
+  ToPreferredDelta
+} from './deltaPriority'
+import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
 import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
@@ -60,6 +68,7 @@ import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
 import { WithProviderStatistics } from './deltastats'
+import { buildProviderTalkerLookups } from './nmea0183TalkerGroups'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
@@ -67,7 +76,32 @@ import checkNodeVersion from './version'
 import helmet from 'helmet'
 const debug = createDebug('signalk-server')
 
+import { migrateSourceRef } from './sourceref-migration'
 import { StreamBundle } from './streambundle'
+
+/**
+ * Shallow-clones a delta so that an `unfilteredDelta` consumer mutating a
+ * value or meta entry cannot corrupt the delta still travelling through
+ * the main pipeline. The top-level delta and the `updates`/`values`/`meta`
+ * arrays are copied; each value/meta entry is shallow-spread.
+ *
+ * **Contract:** consumers must not mutate nested objects within a `value`
+ * (e.g. `value.position.latitude = …`). Deep cloning would isolate those
+ * too but is too expensive on the per-delta hot path; if a consumer needs
+ * to mutate nested fields it must `structuredClone` the value itself.
+ */
+function cloneDelta(delta: any): any {
+  return {
+    ...delta,
+    updates: delta.updates?.map((update: any) => ({
+      ...update,
+      values: update.values
+        ? update.values.map((v: any) => ({ ...v }))
+        : update.values,
+      meta: update.meta ? update.meta.map((m: any) => ({ ...m })) : update.meta
+    }))
+  }
+}
 
 class Server {
   app: ServerApp &
@@ -81,6 +115,9 @@ class Server {
     WithProviderStatistics & {
       apis?: Array<SignalKApiId>
     }
+  // Pending sourceRef migration timers; cleared on stop() so a deferred
+  // migration scheduled before a restart cannot fire on a torn-down app.
+  pendingSourceRefMigrations?: Set<NodeJS.Timeout>
 
   constructor(opts: { securityConfig: SecurityConfig }) {
     checkNodeVersion()
@@ -107,6 +144,7 @@ class Server {
       })
     )
     app.use(bodyParser.json({ limit: FILEUPLOADSIZELIMIT }))
+    app.use(bodyParser.urlencoded({ extended: true }))
 
     this.app = app
     app.started = false
@@ -139,10 +177,8 @@ class Server {
 
     app.propertyValues = new PropertyValues()
 
-    const deltachainV1 = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
-    const deltachainV2 = new DeltaChain((delta: Delta) =>
-      app.signalk.emit('delta', delta)
-    )
+    const deltachainV1 = new DeltaChain()
+    const deltachainV2 = new DeltaChain()
     app.registerDeltaInputHandler = (handler: DeltaInputHandler) => {
       const unRegisterHandlers = [
         deltachainV1.register(handler),
@@ -283,17 +319,161 @@ class Server {
       delete app.historyProvider
     }
 
-    let toPreferredDelta: ToPreferredDelta = () => undefined
+    // Initial passthrough — replaced by activateSourcePriorities() once
+    // the engine is built. Keeps the type-shape compatible with the
+    // routesPath property toPreferredDelta carries.
+    const initialPassthrough = ((delta: any) =>
+      delta) as unknown as ToPreferredDelta
+    initialPassthrough.routesPath = () => false
+    let toPreferredDelta: ToPreferredDelta = initialPassthrough
+
+    // Terminal of the delta input handler chain: once every handler has
+    // run on the raw delta, cache it, fan it out unfiltered, apply
+    // source-priority filtering and dispatch the result. Defined once
+    // (not per delta) and reads `toPreferredDelta` through the closure so
+    // it picks up engine rebuilds. now / version are passed in by the
+    // chain so this stays a single hoisted function on the hot path.
+    const dispatchDelta = (handled: Delta, now: Date, version: SKVersion) => {
+      if (app.deltaCache) {
+        app.deltaCache.ingestDelta(handled)
+      }
+      app.signalk.emit('unfilteredDelta', cloneDelta(handled))
+      const preferred = toPreferredDelta(handled, now, app.selfContext)
+      if (version === SKVersion.v1) {
+        app.signalk.addDelta(preferred)
+      } else {
+        app.signalk.emit('delta', preferred)
+      }
+    }
+    // Translate `<label>.<numeric>` deltas to their `<label>.<canName>`
+    // form so a saved canName-form ranking matches incoming refs from
+    // providers that have useCanName off. The cache is keyed by the
+    // sources tree's last-mutation marker (Object reference comparison
+    // would suffice if signalk-schema replaced the object on every
+    // change, but it mutates in place, so we rebuild on each call and
+    // rely on Map construction being cheap for typical fleets).
+    let cachedCanonicalMap: Map<string, string> | null = null
+    let cachedCanonicalSnapshot: unknown = null
+    const canonicaliseSourceRef = (sourceRef: string): string => {
+      const sources = (app.signalk as any)?.sources
+      if (sources !== cachedCanonicalSnapshot || cachedCanonicalMap === null) {
+        cachedCanonicalSnapshot = sources
+        cachedCanonicalMap = buildSrcToCanonicalMap(sources)
+      }
+      return cachedCanonicalMap.get(sourceRef) ?? sourceRef
+    }
+    // Refresh the canonical cache whenever a new device is observed or
+    // a numeric-keyed source is replaced by a canName-keyed one. This
+    // covers the cold-boot window where an early delta arrives before
+    // the address claim and the engine briefly treats it as unknown.
+    app.on('sourceRefChanged', () => {
+      cachedCanonicalSnapshot = null
+    })
     app.activateSourcePriorities = () => {
       try {
-        toPreferredDelta = getToPreferredDelta(
-          app.config.settings.sourcePriorities
-        )
+        cachedCanonicalSnapshot = null
+        const s = app.config.settings
+        // Seed the engine's per-path publisher tracking from the
+        // already-loaded delta cache. After a server restart, the
+        // cache holds every source the disk-persisted snapshot knows
+        // about, but the engine's in-memory tracking is empty —
+        // routesPath would return false for every path until two
+        // distinct publishers' first live deltas arrive, and the
+        // admin UI would briefly flash "no priority configured"
+        // warnings on every multi-publisher path. Seeding closes
+        // that window without persisting the engine's tracking
+        // state separately on disk.
+        const seenPublishersByPath = app.deltaCache?.getSelfPathPublishers
+          ? app.deltaCache.getSelfPathPublishers()
+          : undefined
+        toPreferredDelta = getToPreferredDelta({
+          groups: s.priorityGroups ?? [],
+          overrides: s.priorityOverrides ?? {},
+          fallbackMs: s.priorityDefaults?.fallbackMs,
+          canonicalise: canonicaliseSourceRef,
+          seenPublishersByPath
+        })
+        // Inject the engine's routes-this-path predicate into the
+        // delta cache so onValue can avoid recording a "preferred"
+        // winner for pass-through paths (no override, source not in
+        // any active group, dormant override). Otherwise the admin
+        // UI's Priority-filtered view would suppress every other
+        // source on a path the engine isn't actually filtering.
+        // setRoutesPathPredicate handles the bootstrap-snapshot
+        // cleanup: it walks preferredSources and drops every entry
+        // the new predicate no longer routes. Replaces the older
+        // resetPreferredSourcesNotIn call which only knew about
+        // overrides + group membership and not about path-claim
+        // state inside the engine closure.
+        app.deltaCache?.setRoutesPathPredicate?.(toPreferredDelta.routesPath)
       } catch (e) {
-        console.error(`getToPreferredDelta failed: ${(e as any).message}`)
+        console.error('getToPreferredDelta failed:', e)
       }
     }
     app.activateSourcePriorities()
+
+    // Build a per-subscription priority engine that runs the user's
+    // ranking with a sourceRef exclusion mask. Used by
+    // SubscribeMessage.excludeSources / excludeSelf: a derived-data
+    // plugin that publishes on the same path it consumes can still
+    // receive the priority cascade across the upstream sources
+    // without seeing its own output in the candidate set.
+    //
+    // Reads groups / overrides / fallbackMs from the live settings
+    // each time so a per-subscription engine reflects whatever the
+    // user has currently saved, and shares the canonicaliseSourceRef
+    // closure so canName matching behaves the same as the global
+    // engine. Seeding seenPublishersByPath is not needed — the
+    // resulting engine is consumed by a single subscriber callback
+    // and never feeds routesPath consumers.
+    app.buildSubscriptionEngine = (
+      excludeSourceRefs: string[]
+    ): ToPreferredDelta => {
+      const excludeIdentities = new Set<string>()
+      for (const ref of excludeSourceRefs) {
+        if (typeof ref === 'string' && ref.length > 0) {
+          excludeIdentities.add(sourceRefIdentity(canonicaliseSourceRef(ref)))
+        }
+      }
+      const s = app.config.settings
+      return getToPreferredDelta({
+        groups: s.priorityGroups ?? [],
+        overrides: s.priorityOverrides ?? {},
+        fallbackMs: s.priorityDefaults?.fallbackMs,
+        canonicalise: canonicaliseSourceRef,
+        excludeIdentities
+      })
+    }
+
+    // Defer migration so that the moved device's own re-arbitration
+    // address claim has time to land in app.signalk.sources first.
+    // Without this delay, every legitimate address takeover would be
+    // misclassified as a reclaim by the takeover guard, since the
+    // arbitration loser only re-claims a fraction of a second later.
+    // 10s is well within an admin-attention window and well past the
+    // worst-case bus settling time observed on busy fleets.
+    const SOURCE_REF_MIGRATION_DELAY_MS = 10_000
+    const pendingSourceRefMigrations = new Set<NodeJS.Timeout>()
+    this.pendingSourceRefMigrations = pendingSourceRefMigrations
+    app.on(
+      'sourceRefChanged',
+      ({ oldRef, newRef }: { oldRef: string; newRef: string }) => {
+        const handle = setTimeout(() => {
+          pendingSourceRefMigrations.delete(handle)
+          migrateSourceRef(app, oldRef, newRef)
+        }, SOURCE_REF_MIGRATION_DELAY_MS)
+        pendingSourceRefMigrations.add(handle)
+      }
+    )
+
+    let providerTalkerLookups = buildProviderTalkerLookups(
+      app.config.settings.pipedProviders
+    )
+    app.on('pipedProvidersStarted', () => {
+      providerTalkerLookups = buildProviderTalkerLookups(
+        app.config.settings.pipedProviders
+      )
+    })
 
     app.handleMessage = (
       providerId: string,
@@ -309,13 +489,54 @@ class Server {
         ) {
           data.context = ('vessels.' + app.selfId) as Context
         }
+
         const now = new Date()
         data.updates = data.updates
           .map((update: Partial<Update>) => {
+            if (!isValidUpdate(update)) {
+              console.warn(
+                `Discarding update from ${providerId}: invalid values entry (null or missing path)`
+              )
+              return undefined
+            }
+
             if (typeof update.source !== 'undefined') {
-              update.source.label = providerId
+              // Respect an existing label if the upstream provider has
+              // already set one that is schema-conformant (no slashes
+              // or other special characters that would fail Signal K
+              // $source validation). Remote Signal K servers forward
+              // deltas that already carry their own label (e.g. canhat,
+              // ydwg02); preserving that lets the receiving server
+              // recognise the same physical device across transports.
+              // Native providers and providers that set illegal labels
+              // (e.g. a raw device path /dev/actisense) get normalised
+              // to providerId.
+              const existing = update.source.label
+              if (
+                typeof existing !== 'string' ||
+                existing.length === 0 ||
+                !/^[A-Za-z0-9-_.]+$/.test(existing)
+              ) {
+                update.source.label = providerId
+              }
               if (!update.$source) {
                 update.$source = getSourceId(update.source)
+              }
+              // Talker-group rewriting is a local-provider feature: only
+              // apply it when this provider actually owns the label.
+              if (
+                update.source.type === 'NMEA0183' &&
+                update.source.talker &&
+                update.source.label === providerId
+              ) {
+                const lookup = providerTalkerLookups.get(providerId)
+                if (lookup) {
+                  const groupName = lookup.get(update.source.talker)
+                  if (groupName) {
+                    update.$source = (providerId + '.' + groupName) as SourceRef
+                    update.source.talker = groupName
+                  }
+                }
               }
             } else {
               if (typeof update.$source === 'undefined') {
@@ -324,11 +545,6 @@ class Server {
             }
             if (!update.timestamp || app.config.overrideTimestampWithNow) {
               update.timestamp = now.toISOString() as Timestamp
-            }
-
-            if ('values' in update && !Array.isArray(update.values)) {
-              debug(`handleMessage: ignoring invalid values`, update.values)
-              delete update.values
             }
 
             if ('meta' in update && !Array.isArray(update.meta)) {
@@ -346,14 +562,19 @@ class Server {
         if (data.updates.length < 1) return
 
         try {
-          let delta = filterStaticSelfData(data, app.selfContext)
-          delta = toPreferredDelta(delta, now, app.selfContext)
+          // data.updates was just rebuilt above, so the resulting Partial<Delta>
+          // is in practice a full Delta by the time it reaches the chain.
+          const delta = filterStaticSelfData(data, app.selfContext) as Delta
 
-          if (skVersion === SKVersion.v1) {
-            deltachainV1.process(delta)
-          } else {
-            deltachainV2.process(delta)
-          }
+          // Input handlers intercept the raw delta first, per the
+          // registerDeltaInputHandler contract ("before they are
+          // processed by the server"). Whatever a handler passes to
+          // next() — modified or original — is what the cache, the
+          // unfiltered bus, source-priority filtering and the full
+          // model then see. A handler that never calls next() drops
+          // the delta here, before any of that runs.
+          const chain = skVersion === SKVersion.v1 ? deltachainV1 : deltachainV2
+          chain.process(delta, dispatchDelta, now, skVersion)
         } catch (err) {
           console.error(err)
         }
@@ -367,15 +588,27 @@ class Server {
       )
     )
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
+    app.signalk.on(
+      'unfilteredDelta',
+      app.streambundle.pushUnfilteredDelta.bind(app.streambundle)
+    )
     app.subscriptionmanager = new SubscriptionManager(app)
     app.deltaCache = new DeltaCache(app, app.streambundle)
+    // Re-build the engine now that the delta cache is constructed
+    // and has loaded its on-disk snapshot. The first call above ran
+    // before app.deltaCache existed (so seenPublishersByPath was
+    // undefined); rebuilding here lets the engine pick up the seed
+    // and flip routesPath on for already-contended paths at boot.
+    app.activateSourcePriorities()
 
+    const serverStartId = randomUUID()
     app.getHello = () => ({
       name: app.config.name,
       version: app.config.version,
       self: `vessels.${app.selfId}`,
       roles: ['master', 'main'],
-      timestamp: new Date()
+      timestamp: new Date(),
+      serverStartId
     })
 
     app.isNmea2000OutAvailable = false
@@ -570,6 +803,13 @@ class Server {
         clearInterval(interval)
       })
 
+      if (this.pendingSourceRefMigrations) {
+        for (const handle of this.pendingSourceRefMigrations) {
+          clearTimeout(handle)
+        }
+        this.pendingSourceRefMigrations.clear()
+      }
+
       this.app.providers.forEach((providerHolder) => {
         providerHolder.pipeElements[0].end()
       })
@@ -698,10 +938,51 @@ function startMdns(app: ServerApp & WithConfig) {
 async function startInterfaces(
   app: ServerApp & WithConfig & WithWrappedEmitter
 ) {
-  debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
+  debug.enabled &&
+    debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
+  const argv = (app as unknown as ConfigApp).argv
+  const noPlugins = argv?.plugins === false
+  const noWebapps = argv?.webapps === false
+  type StartupCollections = {
+    plugins: unknown[]
+    pluginsMap: Record<string, unknown>
+    getPluginsList: (enabled?: boolean) => Promise<unknown[]>
+    webapps: unknown[]
+    addons: unknown[]
+    embeddablewebapps: unknown[]
+    pluginconfigurators: unknown[]
+  }
+  const startupApp = app as unknown as StartupCollections
+  if (noPlugins) {
+    console.log('Plugins disabled by --no-plugins; skipping plugin loading')
+    startupApp.plugins = []
+    startupApp.pluginsMap = {}
+    startupApp.getPluginsList = async () => []
+  }
+  if (noWebapps) {
+    console.log('Webapps disabled by --no-webapps; skipping webapp loading')
+    startupApp.webapps = []
+    startupApp.addons = []
+    startupApp.embeddablewebapps = []
+    startupApp.pluginconfigurators = []
+  }
+  const skippedInterfaces = new Set<string>()
+  if (noPlugins) {
+    skippedInterfaces.add('plugins').add('wasm')
+  }
+  if (noWebapps) {
+    skippedInterfaces.add('webapps').add('mfd_webapp')
+  }
   const availableInterfaces = require('./interfaces')
   return await Promise.all(
     Object.keys(availableInterfaces).map(async (name) => {
+      if (skippedInterfaces.has(name)) {
+        debug.enabled &&
+          debug(
+            `Not loading interface '${name}' (disabled by command line flag)`
+          )
+        return
+      }
       const theInterface = availableInterfaces[name]
       if (
         _.isUndefined(app.config.settings.interfaces) ||
@@ -747,71 +1028,24 @@ async function startInterfaces(
   )
 }
 
-function filterStaticSelfData(delta: any, selfContext: string) {
-  if (delta.context === selfContext) {
-    delta.updates &&
-      delta.updates.forEach((update: any) => {
-        if ('values' in update && update['$source'] !== 'defaults') {
-          update.values = update.values.reduce((acc: any, pathValue: any) => {
-            const nvp = filterSelfDataKP(pathValue)
-            if (nvp) {
-              acc.push(nvp)
-            }
-            return acc
-          }, [])
-          if (update.values.length === 0) {
-            delete update.values
-          }
-        }
-      })
+function isValidUpdate(update: unknown): update is Partial<Update> {
+  if (update === null || typeof update !== 'object') {
+    return false
   }
-  return delta
-}
-
-function filterSelfDataKP(pathValue: any) {
-  const deepKeys: { [key: string]: string[] } = {
-    '': ['name', 'mmsi']
+  const values = (update as { values?: unknown }).values
+  if ('values' in update && !Array.isArray(values)) {
+    return false
   }
-
-  const filteredPaths: string[] = [
-    'design.aisShipType',
-    'design.beam',
-    'design.length',
-    'design.draft',
-    'sensors.gps.fromBow',
-    'sensors.gps.fromCenter'
-  ]
-
-  const deep = deepKeys[pathValue.path]
-
-  const filterValues = (obj: any, items: string[]) => {
-    const res: { [key: string]: any } = {}
-    Object.keys(obj).forEach((k) => {
-      if (!items.includes(k)) {
-        res[k] = obj[k]
-      }
-    })
-    return res
+  if (
+    Array.isArray(values) &&
+    values.some(
+      (v: unknown) =>
+        v === null ||
+        v === undefined ||
+        typeof (v as { path?: unknown }).path !== 'string'
+    )
+  ) {
+    return false
   }
-
-  if (deep !== undefined) {
-    if (Object.keys(pathValue.value).some((k) => deep.includes(k))) {
-      pathValue.value = filterValues(pathValue.value, deep)
-    }
-    if (pathValue.path === '' && pathValue.value.communication !== undefined) {
-      pathValue.value.communication = filterValues(
-        pathValue.value.communication,
-        ['callsignVhf']
-      )
-      if (Object.keys(pathValue.value.communication).length === 0) {
-        delete pathValue.value.communication
-      }
-    }
-    if (Object.keys(pathValue.value).length === 0) {
-      return null
-    }
-  } else if (filteredPaths.includes(pathValue.path)) {
-    return null
-  }
-  return pathValue
+  return true
 }

@@ -204,7 +204,7 @@ export async function findOrCreateOIDCUser(
       try {
         await deps.userService.updateUser(user.username, {
           type: mappedPermission,
-          providerData: oidcMetadata
+          providerData: { oidc: oidcMetadata }
         })
         // Update local reference for return
         user.type = mappedPermission
@@ -238,7 +238,7 @@ export async function findOrCreateOIDCUser(
   const newUser: ExternalUser = {
     username: finalUsername,
     type: mappedPermission,
-    providerData: oidcMetadata
+    providerData: { oidc: oidcMetadata }
   }
 
   debug(
@@ -366,6 +366,10 @@ export function registerOIDCRoutes(
         }
 
         const oidcConfig = deps.getOIDCConfig()
+        if (!isOIDCEnabled(oidcConfig)) {
+          redirectWithError('OIDC is not configured')
+          return
+        }
         const metadata = await getDiscoveryDocument(oidcConfig.issuer)
 
         // Exchange code for tokens

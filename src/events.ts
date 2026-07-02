@@ -74,8 +74,28 @@ export function startServerEvents(
     })
   }
   spark.write({
-    type: 'SOURCEPRIORITIES',
-    data: app.config.settings.sourcePriorities || {}
+    type: 'PRIORITYOVERRIDES',
+    data: app.config.settings.priorityOverrides || {}
+  })
+  spark.write({
+    type: 'SOURCEALIASES',
+    data: app.config.settings.sourceAliases || {}
+  })
+  spark.write({
+    type: 'PRIORITYGROUPS',
+    data: app.config.settings.priorityGroups || []
+  })
+  spark.write({
+    type: 'PRIORITYDEFAULTS',
+    data: app.config.settings.priorityDefaults || {}
+  })
+  spark.write({
+    type: 'MULTISOURCEPATHS',
+    data: app.deltaCache?.getMultiSourcePaths?.() || {}
+  })
+  spark.write({
+    type: 'RECONCILEDGROUPS',
+    data: app.deltaCache?.getReconciledGroups?.() || []
   })
 }
 
@@ -170,8 +190,13 @@ export function wrapEmitter(targetEmitter: EventEmitter): WrappedEmitter {
 
   let emittedCount = 0
 
-  function safeEmit(this: any, eventName: string, ...args: any[]): boolean {
-    if (eventName !== 'serverlog') {
+  function safeEmit(
+    this: any,
+    eventName: string,
+    originalEventName: string,
+    ...args: any[]
+  ): boolean {
+    if (originalEventName !== 'serverlog') {
       let eventDebug = eventDebugs[eventName]
       if (!eventDebug) {
         eventDebugs[eventName] = eventDebug = createDebug(
@@ -245,8 +270,8 @@ export function wrapEmitter(targetEmitter: EventEmitter): WrappedEmitter {
       emittersForEvent[emitterId] = 0
     }
     emittersForEvent[emitterId]++
-    safeEmit(`${emitterId}:${eventName}`, ...args)
-    return safeEmit(eventName, ...args)
+    safeEmit(`${emitterId}:${eventName}`, eventName, ...args)
+    return safeEmit(eventName, eventName, ...args)
   }
 
   const addListenerWithId = function (

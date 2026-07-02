@@ -35,9 +35,7 @@ interface PendingOption {
     | 'joinMulticast'
     | 'leaveMulticast'
   value:
-    | boolean
-    | number
-    | { multicastAddress: string; interfaceAddress?: string }
+    boolean | number | { multicastAddress: string; interfaceAddress?: string }
 }
 
 /**

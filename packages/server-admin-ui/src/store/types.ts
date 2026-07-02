@@ -14,6 +14,7 @@ export interface AppStoreState {
   installed: AppInfo[]
   available: AppInfo[]
   installing: InstallingApp[]
+  categories?: string[]
   storeAvailable?: boolean
   canUpdateServer?: boolean
   serverUpdate?: string
@@ -25,6 +26,26 @@ export interface AppInfo {
   version?: string
   description?: string
   author?: string
+  displayName?: string
+  appIcon?: string
+  installedIconUrl?: string
+  screenshots?: string[]
+  installedScreenshotUrls?: string[]
+  official?: boolean
+  deprecated?: boolean
+  githubUrl?: string
+  issuesUrl?: string
+  requires?: string[]
+  recommends?: string[]
+  categories?: string[]
+  recent?: boolean
+  installedVersion?: string
+  // Synthetic fields layered on by Apps.tsx when projecting the
+  // AppStore state into a single per-row record. Optional because they
+  // exist only after that projection runs.
+  newVersion?: string
+  installed?: boolean
+  updateDisabled?: boolean
   [key: string]: unknown
 }
 
@@ -62,8 +83,13 @@ export interface ServerSpecification {
 
 export interface ProviderStatus {
   id: string
+  type?: 'status' | 'warning' | 'error'
+  statusType?: string
+  message?: string
+  lastError?: string
+  lastErrorTimeStamp?: string
+  timeStamp?: string
   enabled?: boolean
-  [key: string]: unknown
 }
 
 export interface AccessRequest {
@@ -123,6 +149,35 @@ export interface SaveState {
 
 export interface SourcePrioritiesData {
   sourcePriorities: PathPriority[]
+  saveState: SaveState
+}
+
+export interface PriorityGroup {
+  id: string
+  sources: string[]
+  // When true, the saved ranking is preserved but not enforced — paths
+  // covered by this group fall back to first-come, first-served. Lets a
+  // user temporarily disable a ranking without losing the order they
+  // configured.
+  inactive?: boolean
+}
+
+export interface PriorityGroupsData {
+  groups: PriorityGroup[]
+  saveState: SaveState
+}
+
+export interface PriorityDefaults {
+  fallbackMs?: number
+}
+
+export interface PriorityDefaultsData {
+  defaults: PriorityDefaults
+  saveState: SaveState
+}
+
+export interface PriorityOverridesData {
+  paths: string[]
   saveState: SaveState
 }
 

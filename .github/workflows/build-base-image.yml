@@ -4,118 +4,204 @@ on:
   schedule:
     - cron: '0 0 * * 1'
   workflow_dispatch:
+    inputs:
+      ubuntu_24_04_node_24:
+        description: 'Ubuntu 24.04 + Node 24.x'
+        type: boolean
+        default: true
+      alpine_node_24:
+        description: 'Alpine + Node 24'
+        type: boolean
+        default: true
+
+env:
+  GHCR_REGISTRY: ghcr.io
+  GHCR_REPO: signalk/signalk-server-base
+  DOCKER_HUB_REPO: signalk/signalk-server-base
 
 jobs:
-  build-images:
+  prepare:
+    name: Prepare matrices
     if: github.repository == 'SignalK/signalk-server'
-    name: Ubuntu base image
-    strategy:
-      matrix:
-        os: [24.04, alpine]
-        node: [24.x]
-        vm: [ubuntu-latest, ubuntu-24.04-arm]
-        include:
-          - vm: ubuntu-latest
-            arch: amd
-            os: 24.04
-            node: 24.x
-            node_safe: 24.x
-            platform: linux/amd64
-          - vm: ubuntu-latest
-            arch: amd
-            os: alpine
-            node: 24.x
-            node_safe: 24
-            platform: linux/amd64
-          - vm: ubuntu-24.04-arm
-            arch: arm
-            os: 24.04
-            node: 24.x
-            node_safe: 24.x
-            platform: linux/arm64
-          - vm: ubuntu-24.04-arm
-            arch: arm
-            os: alpine
-            node: 24.x
-            node_safe: 24
-            platform: linux/arm64
-    runs-on: ${{ matrix.vm }}
+    runs-on: ubuntu-latest
+    outputs:
+      build_matrix: ${{ steps.matrix.outputs.build_matrix }}
+      variant_matrix: ${{ steps.matrix.outputs.variant_matrix }}
+      any_enabled: ${{ steps.matrix.outputs.any_enabled }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v3
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Compute matrices
+        id: matrix
+        env:
+          # Schedule runs leave inputs empty -> fall back to default_enabled in build-matrix.json.
+          ENABLED_JSON: ${{ toJSON(github.event.inputs) }}
+        run: |
+          set -euo pipefail
+
+          # Cross-product os_variants x node_versions from .github/build-matrix.json,
+          # then filter by the per-row dispatch checkbox (or by default_enabled
+          # for scheduled runs).
+          variants=$(jq -c \
+            --argjson enabled "${ENABLED_JSON:-null}" '
+            (if ($enabled | type) == "object" then $enabled else {} end) as $en
+            | .os_variants as $os | .node_versions as $nodes
+            | [ $os[] as $o | $nodes[] as $n |
+                ((if $o.family == $o.id then "" else "\($o.family)_" end) + ($o.id | gsub("[-.]"; "_")) + "_node_" + $n.id) as $key |
+                {
+                  enabled: ($en[$key] // (if ($o.default_enabled and $n.default_enabled) then "true" else "false" end)),
+                  family:     $o.family,
+                  os_label:   $o.os_arg,
+                  node:       (if $o.family == "ubuntu" then "\($n.id).x" else $n.id end),
+                  node_id:    $n.id,
+                  dockerfile: $o.dockerfile_base
+                }
+              ]
+            | map(select(.enabled == "true"))
+            | map(del(.enabled))
+          ' .github/build-matrix.json)
+
+          # Build matrix: cross-product variants x architectures.
+          # Per-node extra_platforms append to the arch's base platform.
+          # exclude_archs drops archs entirely for a given node.
+          # NB: arch suffix (id) is kept stable to match existing base image tags.
+          build_matrix=$(jq -c \
+            --argjson variants "$variants" '
+            (.node_versions | map({(.id): .}) | add) as $node_index
+            | .architectures as $archs
+            | [ $variants[] as $v |
+                $node_index[$v.node_id] as $n |
+                $archs[] as $a |
+                select(((($n.exclude_archs // []) | index($a.id)) | not)) |
+                (($n.extra_platforms // {})[$a.id] // "") as $extra |
+                ($v + {
+                  arch:     $a.id,
+                  vm:       $a.vm,
+                  platform: (if $extra == "" then $a.platform else "\($a.platform),\($extra)" end)
+                })
+              ]
+          ' .github/build-matrix.json)
+
+          # Variant matrix: one row per variant (used by manifest + copy jobs).
+          # archs is derived from build_matrix so the manifest sources reflect
+          # the architectures actually built (respecting exclude_archs).
+          variant_matrix=$(jq -cn \
+            --argjson variants "$variants" \
+            --argjson build_matrix "$build_matrix" '
+            [ $variants[] as $v |
+              ($v + {
+                archs: [ $build_matrix[]
+                  | select(.os_label == $v.os_label and .node == $v.node)
+                  | .arch ]
+              })
+              | select(.archs | length > 0)
+              | {os_label, node, archs}
+            ]
+          ')
+
+          count=$(echo "$variant_matrix" | jq 'length')
+          if [[ "$count" -gt 0 ]]; then
+            echo "any_enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "any_enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "build_matrix=$build_matrix" >> "$GITHUB_OUTPUT"
+          echo "variant_matrix=$variant_matrix" >> "$GITHUB_OUTPUT"
+
+          echo "Enabled variants:"
+          echo "$variants" | jq
+
+  build:
+    name: Build ${{ matrix.os_label }} node-${{ matrix.node }} ${{ matrix.arch }}
+    needs: [prepare]
+    if: needs.prepare.outputs.any_enabled == 'true'
+    runs-on: ${{ matrix.vm }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.build_matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
 
       - name: Login to ghcr.io
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
-          registry: ghcr.io
+          registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Build Ubuntu baseimages
-        uses: docker/build-push-action@v6
+      - name: Build base image
+        uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./docker/Dockerfile_base_${{ matrix.os }}
+          file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node_safe }}
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:${{ matrix.arch }}-${{ matrix.os_label }}-${{ matrix.node }}-${{ github.run_id }}
           build-args: |
-            NODE=${{ matrix.node_safe }}
+            NODE=${{ matrix.node }}
 
-  create-and-push-manifest:
-    needs: [build-images]
+  manifest:
+    name: Manifest ${{ matrix.os_label }} node-${{ matrix.node }}
+    needs: [prepare, build]
+    if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        os: [24.04, alpine]
-        node: [24.x]
-        include:
-          - os: 24.04
-            node: 24.x
-            node_safe: 24.x
-          - os: alpine
-            node: 24.x
-            node_safe: 24
-
+        include: ${{ fromJSON(needs.prepare.outputs.variant_matrix) }}
     steps:
       - name: Login to ghcr.io
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
-          registry: ghcr.io
+          registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
+
+      - name: Compute manifest sources
+        id: sources
+        env:
+          ARCHS_JSON: ${{ toJSON(matrix.archs) }}
+          SRC_PREFIX: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}
+          OS: ${{ matrix.os_label }}
+          NODE: ${{ matrix.node }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          srcs=$(jq -r \
+            --arg p "$SRC_PREFIX" --arg o "$OS" --arg n "$NODE" --arg r "$RUN_ID" \
+            '.[] | "\($p):\(.)-\($o)-\($n)-\($r)"' <<<"$ARCHS_JSON")
+          {
+            echo 'value<<EOF'
+            echo "$srcs"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create and push multi-arch manifest to GHCR
         uses: int128/docker-manifest-create-action@v2
         with:
           tags: |
-            ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node_safe }}
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:latest-${{ matrix.os_label }}-${{ matrix.node }}
           sources: |
-            ghcr.io/signalk/signalk-server-base:amd-${{ matrix.os }}-${{ matrix.node_safe }}
-            ghcr.io/signalk/signalk-server-base:arm-${{ matrix.os }}-${{ matrix.node_safe }}
+            ${{ steps.sources.outputs.value }}
 
   copy-to-dockerhub:
-    needs: create-and-push-manifest
+    name: Copy ${{ matrix.os_label }} node-${{ matrix.node }} to Docker Hub
+    needs: [prepare, manifest]
+    if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        os: [24.04, alpine]
-        node: [24.x]
-        include:
-          - os: 24.04
-            node: 24.x
-            node_safe: 24.x
-          - os: alpine
-            node: 24.x
-            node_safe: 24
-
+        include: ${{ fromJSON(needs.prepare.outputs.variant_matrix) }}
     steps:
       - name: Install skopeo
         run: |
           sudo apt-get update
           sudo apt-get install -y skopeo
-      - name: Copy images from GHCR to Docker Hub
+      - name: Copy GHCR -> Docker Hub
         shell: bash
         env:
           GHCR_USERNAME: ${{ github.actor }}
@@ -127,24 +213,25 @@ jobs:
           skopeo copy --all \
             --src-creds "${GHCR_USERNAME}:${GHCR_TOKEN}" \
             --dest-creds "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_ACCESS_TOKEN}" \
-            "docker://ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node_safe }}" \
-            "docker://docker.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node_safe }}"
+            "docker://${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:latest-${{ matrix.os_label }}-${{ matrix.node }}" \
+            "docker://docker.io/${{ env.DOCKER_HUB_REPO }}:latest-${{ matrix.os_label }}-${{ matrix.node }}"
 
   housekeeping:
+    name: Housekeeping
     needs: [copy-to-dockerhub]
+    if: ${{ always() && needs.copy-to-dockerhub.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
-
     steps:
       - name: Wait for GHCR indexing
         run: sleep 60
-      - name: Remove Docker Image from GHCR
+      - name: Remove intermediate per-arch images from GHCR
         continue-on-error: true
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
           packages: signalk-server-base
           delete-untagged: true
           delete-tags: |
-            amd-*,arm-*
-          token: ${{ secrets.GHCR_PAT }} # Need to have delete permission
+            *-${{ github.run_id }}
+          token: ${{ secrets.GHCR_PAT }}

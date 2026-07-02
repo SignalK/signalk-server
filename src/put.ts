@@ -10,7 +10,7 @@ import {
 } from './requestResponse'
 import * as skConfig from './config/config'
 import { ConfigApp } from './config/config'
-import { getMetadata } from '@signalk/signalk-schema'
+import { getMetadata } from '@signalk/path-metadata'
 import { validateCategoryAssignment } from './unitpreferences'
 import { WithSecurityStrategy } from './security'
 
@@ -107,6 +107,17 @@ let putNotificationHandler: (
   value: unknown
 ) => ActionResult
 
+// Drop a deleted metadata field from the live self leaf. Metadata is merged
+// onto value-bearing leaves in the full model, so deleting it from the
+// registry alone would leave the field stuck on the tree leaf.
+function removeLeafMetaField(app: PutApp, metaPath: string, name: string) {
+  const leaf = _get(app.signalk.self, metaPath) as
+    { meta?: Record<string, unknown> } | undefined
+  if (leaf?.meta) {
+    delete leaf.meta[name]
+  }
+}
+
 export function start(app: PutApp): void {
   app.registerActionHandler = registerActionHandler
   app.deRegisterActionHandler = deRegisterActionHandler
@@ -189,8 +200,7 @@ export function start(app: PutApp): void {
 
     // Validate displayUnits.category if present
     const displayUnits = metaValue.displayUnits as
-      | { category?: string }
-      | undefined
+      { category?: string } | undefined
     if (displayUnits?.category) {
       const schemaMeta = getMetadata('vessels.self.' + metaPath) as Record<
         string,
@@ -325,6 +335,8 @@ export function start(app: PutApp): void {
       >
       delete full_meta[name]
 
+      removeLeafMetaField(app, metaPath, name)
+
       app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
 
       if (Object.keys(metaValue).length === 0) {
@@ -345,6 +357,7 @@ export function start(app: PutApp): void {
 
       Object.keys(metaValue).forEach((key) => {
         delete full_meta[key]
+        removeLeafMetaField(app, metaPath, key)
       })
 
       app.config.baseDeltaEditor.removeMeta(context, metaPath)

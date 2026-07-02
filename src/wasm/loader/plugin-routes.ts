@@ -232,10 +232,7 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
     for (const endpoint of endpoints) {
       const { method, path: endpointPath, handler } = endpoint
       const routeMethod = method.toLowerCase() as
-        | 'get'
-        | 'post'
-        | 'put'
-        | 'delete'
+        'get' | 'post' | 'put' | 'delete'
 
       if (!['get', 'post', 'put', 'delete'].includes(routeMethod)) {
         debug(`Skipping unsupported method: ${method}`)
@@ -441,9 +438,11 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
           // Send body - try to parse as JSON if it's a string, otherwise send as-is
           let body = response.body
           if (typeof body === 'string') {
-            // Check if Content-Type is JSON
-            const contentType = response.headers?.['Content-Type'] || ''
-            if (contentType.includes('application/json')) {
+            const contentType = res.getHeader('content-type')
+            if (
+              typeof contentType === 'string' &&
+              contentType.includes('application/json')
+            ) {
               try {
                 // Try to parse the string as JSON - if it's double-escaped, this will fix it
                 body = JSON.parse(body)
@@ -512,13 +511,14 @@ export function setupWasmPluginRoutes(
   router.post('/config', async (req: Request, res: Response) => {
     try {
       debug(`POST /config received for WASM plugin: ${plugin.id}`)
-      debug(`Request body: ${JSON.stringify(req.body)}`)
+      debug.enabled && debug(`Request body: ${JSON.stringify(req.body)}`)
 
       const newConfig = req.body
 
-      debug(
-        `Current plugin state - enabled: ${plugin.enabled}, enableDebug: ${plugin.enableDebug}, configuration: ${JSON.stringify(plugin.configuration)}`
-      )
+      debug.enabled &&
+        debug(
+          `Current plugin state - enabled: ${plugin.enabled}, enableDebug: ${plugin.enableDebug}, configuration: ${JSON.stringify(plugin.configuration)}`
+        )
 
       // Update enableDebug FIRST (before saving config)
       if (typeof newConfig.enableDebug === 'boolean') {
@@ -538,9 +538,10 @@ export function setupWasmPluginRoutes(
       }
 
       // Update plugin configuration and save everything to disk
-      debug(
-        `Calling updateWasmPluginConfig with: ${JSON.stringify(newConfig.configuration)}`
-      )
+      debug.enabled &&
+        debug(
+          `Calling updateWasmPluginConfig with: ${JSON.stringify(newConfig.configuration)}`
+        )
       await updateWasmPluginConfig(
         app,
         plugin.id,

@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ServerAPI, WithContext } from '@signalk/server-api'
-import { FullSignalK } from '@signalk/signalk-schema'
+import { ServerAPI, WithContext, FullSignalK } from '@signalk/server-api'
 import { SecurityStrategy } from './security'
 
 export interface HelloMessage {
@@ -9,6 +8,13 @@ export interface HelloMessage {
   self: string
   roles: string[]
   timestamp: Date
+  /**
+   * Unique identifier for this server-process start. A fresh value each
+   * time the server starts lets reconnecting clients detect that
+   * server-side state (delta cache, source registry) has been wiped and
+   * drop their own mirrors of paths the new instance may never re-publish.
+   */
+  serverStartId: string
 }
 
 export type ICallback<T> = (error?: Error | null, result?: T) => void

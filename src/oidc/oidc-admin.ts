@@ -206,9 +206,16 @@ export function registerOIDCAdminRoutes(
         newOidcConfig.readwriteGroups = readwriteGroups
       }
 
-      // Preserve existing client secret if new one is empty
-      if (!newOidcConfig.clientSecret && config.oidc?.clientSecret) {
-        newOidcConfig.clientSecret = config.oidc.clientSecret
+      // Fill in values from existing config or environment variables
+      // for fields the form left empty (e.g., secrets set via env var)
+      const envConfig = parseEnvConfig()
+      if (!newOidcConfig.clientSecret) {
+        newOidcConfig.clientSecret =
+          config.oidc?.clientSecret || envConfig.clientSecret
+      }
+      if (!newOidcConfig.redirectUri) {
+        newOidcConfig.redirectUri =
+          config.oidc?.redirectUri || envConfig.redirectUri
       }
 
       // Validate the configuration
