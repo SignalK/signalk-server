@@ -1542,7 +1542,7 @@ jobs:
           platforms: linux/arm/v7
 
       - name: Cache npm for armv7
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: /tmp/.npm-armv7-cache
           key: armv7-npm-${{ hashFiles('**/package-lock.json', '**/package.json') }}
