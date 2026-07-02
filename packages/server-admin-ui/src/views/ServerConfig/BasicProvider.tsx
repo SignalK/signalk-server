@@ -1691,6 +1691,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             </option>
             <option value="ikonvert-canboatjs">iKonvert (canboatjs)</option>
             <option value="navlink2-tcp-canboatjs">NavLink2 (canboatjs)</option>
+            <option value="canboat-csv-canboatjs">
+              canboat-pipeline CSV R/W (canboatjs)
+            </option>
             <option value="ydwg02-canboatjs">
               Yacht Devices RAW TCP (canboatjs)
             </option>
@@ -1761,6 +1764,16 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           />
         </div>
       )}
+      {value.options.type === 'canboat-csv-canboatjs' && (
+        <div>
+          <HostInput value={value.options} onChange={onChange} />
+          <PortInput value={value.options} onChange={onChange} />
+          <NoDataReceivedTimeoutInput
+            value={value.options}
+            onChange={onChange}
+          />
+        </div>
+      )}
       {(value.options.type === 'canbus' ||
         value.options.type === 'canbus-canboatjs') && (
         <div>
@@ -1789,7 +1802,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       )}
       {(value.options.type === 'ngt-1-canboatjs' ||
         value.options.type === 'ikonvert-canboatjs' ||
-        value.options.type === 'navlink2-tcp-canboatjs') && (
+        value.options.type === 'navlink2-tcp-canboatjs' ||
+        value.options.type === 'canboat-csv-canboatjs') && (
         <CollectNetworkStatsInput value={value.options} onChange={onChange} />
       )}
       {(value.options.type === 'w2k-1-n2k-ascii-canboatjs' ||
