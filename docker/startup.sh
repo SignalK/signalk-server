@@ -82,42 +82,65 @@ else
     echo "Starting container D-Bus and Avahi services"
     service dbus restart
     /usr/sbin/avahi-daemon -k 2>/dev/null
-    avahi_log=$(mktemp)
-    /usr/sbin/avahi-daemon --no-drop-root >"$avahi_log" 2>&1 &
+
+    # Watch avahi's startup output live through a FIFO instead of polling a temp
+    # file. avahi runs in the foreground (no -D) writing stdout+stderr into the
+    # FIFO; a background reader forwards each line to the container log in real
+    # time and keeps draining for the daemon's whole life so avahi never blocks
+    # on a full pipe once startup is done.
+    avahi_fifo=$(mktemp -u)
+    mkfifo "$avahi_fifo"
+    /usr/sbin/avahi-daemon --no-drop-root >"$avahi_fifo" 2>&1 &
     avahi_pid=$!
-    service bluetooth restart
+
     # Under network_mode: host on a host that already runs avahi, our
     # avahi-daemon detects the other responder (it logs "Detected another ...
     # mDNS stack") and then either exits or runs degraded — either way it
     # registers wrong addresses and makes mDNS unreliable, and .local lookups
     # from inside the container fail. Detect that marker, stop our daemon so we
     # don't degrade the host's mDNS, and point the user at the fix.
-    # Poll briefly rather than a single fixed wait: the conflict line can take
-    # a moment to appear, and a clean start logs "Server startup complete".
-    i=0
-    while [ "$i" -lt 10 ]; do
-        grep -q "Detected another" "$avahi_log" 2>/dev/null && break
-        grep -q "Server startup complete" "$avahi_log" 2>/dev/null && break
-        ! kill -0 "$avahi_pid" 2>/dev/null && break
-        sleep 0.5
-        i=$((i + 1))
-    done
-    if grep -q "Detected another" "$avahi_log" 2>/dev/null; then
-        kill "$avahi_pid" 2>/dev/null
-        /usr/sbin/avahi-daemon -k 2>/dev/null
-        echo "WARNING: this host already runs an mDNS responder (avahi) and the"
-        echo "container shares its network (network_mode: host), so it cannot run"
-        echo "its own. .local name resolution will not work from inside the"
-        echo "container until you let it use the host's avahi:"
-        echo "  - Docker:         mount the host D-Bus system socket"
-        echo "                      -v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro"
-        echo "  - rootless podman: run with --userns=keep-id and mount the avahi"
-        echo "                    socket -v /run/avahi-daemon/socket:/run/avahi-daemon/socket"
-    elif ! kill -0 "$avahi_pid" 2>/dev/null; then
-        echo "WARNING: avahi-daemon exited during startup; .local name resolution"
-        echo "may not work. Check the container logs for details."
-    fi
-    rm -f "$avahi_log"
+    (
+        # Open the read end (this rendezvous unblocks avahi's write open), then
+        # unlink the FIFO name — the open fd keeps it alive, leaving nothing in
+        # /tmp. On a clean start the loop drains avahi's log until it exits; on
+        # a conflict it stops our daemon and prints the fix.
+        exec 3<"$avahi_fifo"
+        rm -f "$avahi_fifo"
+        outcome="exited"
+        while IFS= read -r line <&3; do
+            printf '%s\n' "$line"
+            case "$line" in
+            *"Detected another"*)
+                outcome="conflict"
+                kill "$avahi_pid" 2>/dev/null
+                /usr/sbin/avahi-daemon -k 2>/dev/null
+                break
+                ;;
+            *"Server startup complete"*)
+                outcome="started"
+                ;;
+            esac
+        done
+
+        case "$outcome" in
+        conflict)
+            echo "WARNING: this host already runs an mDNS responder (avahi) and the"
+            echo "container shares its network (network_mode: host), so it cannot run"
+            echo "its own. .local name resolution will not work from inside the"
+            echo "container until you let it use the host's avahi:"
+            echo "  - Docker:         mount the host D-Bus system socket"
+            echo "                      -v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro"
+            echo "  - rootless podman: run with --userns=keep-id and mount the avahi"
+            echo "                    socket -v /run/avahi-daemon/socket:/run/avahi-daemon/socket"
+            ;;
+        exited)
+            echo "WARNING: avahi-daemon exited during startup; .local name resolution"
+            echo "may not work. Check the container logs for details."
+            ;;
+        esac
+    ) &
+
+    service bluetooth restart
 fi
 
 exec /home/node/signalk/node_modules/signalk-server/bin/signalk-server --securityenabled "$@"
