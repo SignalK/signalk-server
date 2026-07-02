@@ -1,6 +1,6 @@
 {
   "name": "@signalk/assemblyscript-plugin-sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AssemblyScript SDK for developing Signal K WASM plugins",
   "main": "assembly/index.ts",
   "types": "index.d.ts",
