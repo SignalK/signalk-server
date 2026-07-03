@@ -223,18 +223,18 @@ module.exports = (theApp: any) => {
     )
   }
 
+  // Install the plugin upgrade dispatcher here, in the interface factory,
+  // rather than in start(). Factories run synchronously as the interface
+  // list is built, before any interface's start() is awaited — so the
+  // dispatcher is attached before the ws interface's start() creates Primus,
+  // which snapshots the server's existing 'upgrade' listeners. Doing this in
+  // start() would make correctness depend on start() completion order, which
+  // Promise.all does not guarantee.
+  installUpgradeListenerOnce()
+
   return {
     async start() {
       ensureExists(path.join(theApp.config.configPath, PLUGIN_CONFIG_DATA_DIR))
-
-      // Install the plugin upgrade dispatcher early — before the WS
-      // interface (Primus) attaches. Primus's transformer snapshots any
-      // pre-existing 'upgrade' listeners as previous::upgrade and forwards
-      // non-matching upgrades back to them; a listener installed after
-      // Primus never sees Primus's miss path. The interface loader runs
-      // 'plugins' (alphabetical) before 'ws', and theApp.server is already
-      // assigned by then.
-      installUpgradeListenerOnce()
 
       theApp.getPluginsList = async (enabled?: boolean) => {
         return await getPluginsList(enabled)
