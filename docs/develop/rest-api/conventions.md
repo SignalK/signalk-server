@@ -103,11 +103,11 @@ HTTP POST "/signalk/v2/api/resources/waypoints?provider=my-plugin-id"
 
 An API's data shapes are described by **TypeBox schemas**, which are the single source of truth. Each request / response shape is defined once in `packages/server-api/src/typebox/<name>-schemas.ts` and reused everywhere else:
 
-- The **OpenAPI** specification (`src/api/<name>/openApi.ts`, browsable at `/doc/openapi/`) is generated from the schemas — paths reference them, the shapes are not written out by hand.
+- The **OpenAPI** specifications (`src/api/<name>/openApi.ts`, browsable at `/doc/openapi/`) use data shapes from TypeBox schemas instead of manually created & updated literal descriptions, thus keeping OpenAPI and TypeBox in sync.
 - The **AsyncAPI** specification for any WebSocket channels (`src/api/<name>/asyncApi.ts`) references the same schemas.
 - Incoming request bodies and path / query parameters are **validated** against the schemas at runtime.
 - The TypeScript types that plugins program against are derived from the schemas, so they cannot drift from what the server validates.
 
-Because the OpenAPI and AsyncAPI specifications are generated, they stay in step with the schemas automatically. The one surface that is written by hand — and therefore the one to update whenever an API changes — is the **narrative documentation** for the API under `docs/develop/rest-api/`. Keep it describing current behaviour, and avoid hard-coding values (timeouts, limits) that will fall out of sync as the implementation evolves.
+Because the OpenAPI and AsyncAPI specifications use the schema objects directly at runtime, they stay in step with the schemas automatically. The one surface that is written by hand — and therefore the one to update whenever an API changes — is the **narrative documentation** for the API under `docs/develop/rest-api/`. Keep it describing current behaviour, and avoid hard-coding values (timeouts, limits) that will fall out of sync as the implementation evolves.
 
 ---

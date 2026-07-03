@@ -45,26 +45,26 @@ Do not add error handling, fallbacks, or validation for scenarios that cannot ha
 
 ## v2 API Conventions
 
-The v2 APIs (`src/api/<name>/`) follow the provider pattern (Course, Autopilot, Weather, Radar, Notifications, BLE). A new or modified API has several documentation surfaces; most are generated from one source, so keep that source authoritative and update the hand-written surface that drifts.
+The v2 APIs (`src/api/<name>/`) follow the provider pattern (Course, Autopilot, Weather, Radar, Notifications, BLE). A new or modified API has several documentation surfaces; most use the data shapes from one source, so keep that source authoritative and update the hand-written surface that drifts.
 
 ### TypeBox is the single source of truth
 
 - Define every request/response data shape as a **TypeBox schema** in `packages/server-api/src/typebox/<name>-schemas.ts`, each with a unique `$id`. These schemas — not hand-written interfaces or hand-written OpenAPI — are the source of truth.
 - Derive the TypeScript types plugins program against from the schemas with `Static<typeof XSchema>`. Do not hand-maintain a parallel `interface` that duplicates a schema; the two will drift. Only types TypeBox cannot express (anything with methods — `XApi`, `XProvider`, connection handles) are hand-written interfaces.
-- Generate OpenAPI `components.schemas` from the schemas via `typeboxToOpenApiSchemas()` (`src/api/openApiSchemas.ts`) and reference them from paths with `$ref: '#/components/schemas/<id>'`. Do not inline data shapes into the OpenAPI doc.
+- Create the OpenAPI `components.schemas` at runtime from the schemas via `typeboxToOpenApiSchemas()` (`src/api/openApiSchemas.ts`) and reference them from paths with `$ref: '#/components/schemas/<id>'`. Do not inline data shapes into the OpenAPI doc.
 - Validate request input against the schemas with `Value.Check` / `Value.Errors` (from `@sinclair/typebox/value`) — bodies **and** path/query parameters. See `src/api/ble/index.ts` and `src/api/course/index.ts`.
 
 ### Keep documentation surfaces in sync
 
-For one API, its shape is described in several places. When you change an API's shape, update each surface that is not auto-generated:
+For one API, its shape is described in several places. When you change an API's shape, update each hand-written surface — the others follow the schemas by themselves:
 
-| Surface                                                                                           | Source                                                         | Drift                        |
-| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------- |
-| TypeBox schema (`packages/server-api/src/typebox/<name>-schemas.ts`)                              | authored                                                       | — (the source)               |
-| OpenAPI (`src/api/<name>/openApi.ts`, served at `/doc/openapi/`)                                  | generated from TypeBox; only the path/summary text is authored | low                          |
-| AsyncAPI for WebSocket channels (`src/api/<name>/asyncApi.ts`, served under `/skServer/asyncapi`) | references TypeBox schemas                                     | low                          |
-| TypeDoc types (served at `/documentation/`)                                                       | generated from `Static<>` types + JSDoc                        | —                            |
-| **Narrative markdown** (`docs/develop/rest-api/<name>_api.md`)                                    | **authored**                                                   | **high — update it by hand** |
+| Surface                                                                                           | Source                                                              | Drift                        |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------- |
+| TypeBox schema (`packages/server-api/src/typebox/<name>-schemas.ts`)                              | authored                                                            | — (the source)               |
+| OpenAPI (`src/api/<name>/openApi.ts`, served at `/doc/openapi/`)                                  | uses TypeBox schema objects; only the path/summary text is authored | low                          |
+| AsyncAPI for WebSocket channels (`src/api/<name>/asyncApi.ts`, served under `/skServer/asyncapi`) | references TypeBox schemas                                          | low                          |
+| TypeDoc types (served at `/documentation/`)                                                       | generated from `Static<>` types + JSDoc                             | —                            |
+| **Narrative markdown** (`docs/develop/rest-api/<name>_api.md`)                                    | **authored**                                                        | **high — update it by hand** |
 
 - Register each API's OpenAPI record in `src/api/swagger.ts` (`apiDocs`) and each AsyncAPI doc in the `asyncApiDocs` map.
 - `/admin/#/documentation/paths` is the live **Path Reference** (driven by the metadata registry), not the OpenAPI spec — an API-shape change does not flow through it.
