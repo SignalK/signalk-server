@@ -62,6 +62,16 @@ docker run -d --init  --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.s
 
 This will run the server as background process and current directory as the settings directory. You will be prompted to create admin credentials the first time you you access the configuration admin web UI.
 
+## Playback of a raw log file
+
+You can launch an ephemeral container named `signalk-playback` that disables all configured data connections and plays back a single raw log file instead. Mount the directory containing the log file and pass it to `--data`:
+
+```
+docker run --init -it --rm --name signalk-playback --publish 3000:3000 -v $(pwd):/data --entrypoint /home/node/signalk/node_modules/.bin/signalk-server cr.signalk.io/signalk/signalk-server --data /data/skserver-raw_2025-02-10T11.log
+```
+
+Replace `skserver-raw_2025-02-10T11.log` with the name of your log file in the current directory. The server is available at http://localhost:3000. Because `--rm` is used, the container is removed automatically when it stops, leaving no persisted state.
+
 ## Docker Compose
 
 See `docker/docker-compose.yml` for reference / example if you want to use docker-compose.
