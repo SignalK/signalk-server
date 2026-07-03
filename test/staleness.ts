@@ -133,7 +133,7 @@ const NewEnforcer = StalenessEnforcer as unknown as EnforcerCtor
 const makeEnforcer = (app: MockApp): StalenessEnforcer => new NewEnforcer(app)
 
 describe('StalenessEnforcer', () => {
-  it('emits null with state.timedOut when a streaming path exceeds the global default', () => {
+  it('emits null with state.timedOut when a periodic path exceeds the global default', () => {
     const app = makeMockApp({ defaultTimeout: 60 })
     const ts = isoSecondsAgo(120)
     seedLeaf(app, SELF_CONTEXT, 'navigation.speedOverGround', 'gps.1', ts, 5.5)
@@ -220,7 +220,7 @@ describe('StalenessEnforcer', () => {
     expect(app.captured).to.have.lengthOf(0)
   })
 
-  it('skips paths classified streamType=event via shipped defaults', () => {
+  it('skips paths classified updateContract=event via shipped defaults', () => {
     const app = makeMockApp({ defaultTimeout: 60 })
     seedLeaf(
       app,
@@ -235,11 +235,11 @@ describe('StalenessEnforcer', () => {
     expect(app.captured).to.have.lengthOf(0)
   })
 
-  it('skips paths classified streamType=event via per-path meta', () => {
+  it('skips paths classified updateContract=event via per-path meta', () => {
     const app = makeMockApp({
       defaultTimeout: 60,
       metaByPath: {
-        'electrical.switches.lights': { streamType: 'event' }
+        'electrical.switches.lights': { updateContract: 'event' }
       }
     })
     seedLeaf(

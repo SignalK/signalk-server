@@ -235,14 +235,11 @@ export const MetaValueSchema = Type.Object(
         }
       )
     ),
-    streamType: Type.Optional(
-      Type.Union(
-        [Type.Literal('streaming'), Type.Literal('event'), Type.Literal('ais')],
-        {
-          description:
-            'Update contract for staleness enforcement: streaming (periodic, silence = failure), event (emits only on change, silence = unchanged), or ais (streaming but with expected gaps). Defaults to streaming when absent.'
-        }
-      )
+    updateContract: Type.Optional(
+      Type.Union([Type.Literal('periodic'), Type.Literal('event')], {
+        description:
+          'Update contract for staleness enforcement: periodic (regular updates, silence = failure) or event (emits only on change, silence = unchanged). Defaults to periodic when absent.'
+      })
     ),
     displayName: Type.Optional(
       Type.String({

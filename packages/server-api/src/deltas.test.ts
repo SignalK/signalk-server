@@ -80,21 +80,21 @@ const _typeCheckTimedOutDelta: Delta = {
 }
 void _typeCheckTimedOutDelta
 
-const _typeCheckStreamTypeMeta: Delta = {
+const _typeCheckUpdateContractMeta: Delta = {
   updates: [
     {
       meta: [
         {
           path: 'notifications.mob' as Path,
           value: {
-            streamType: 'event'
+            updateContract: 'event'
           }
         },
         {
           path: 'navigation.speedOverGround' as Path,
           value: {
             timeout: 'auto',
-            streamType: 'streaming'
+            updateContract: 'periodic'
           }
         },
         {
@@ -107,4 +107,4 @@ const _typeCheckStreamTypeMeta: Delta = {
     }
   ]
 }
-void _typeCheckStreamTypeMeta
+void _typeCheckUpdateContractMeta

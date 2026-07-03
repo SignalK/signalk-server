@@ -5,13 +5,13 @@ import {
   Path,
   PathValue,
   SourceRef,
-  StreamType,
+  UpdateContract,
   Timestamp
 } from '@signalk/server-api'
 
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { createDebug } from './debug'
-import streamTypeDefaults from './defaults/streamTypes.json'
+import updateContractDefaults from './defaults/updateContracts.json'
 
 const debug = createDebug('signalk-server:staleness')
 
@@ -75,20 +75,20 @@ const isCacheLeafEntry = (v: unknown): v is CacheLeafEntry =>
   typeof (v as { path?: unknown }).path === 'string' &&
   'value' in v
 
-type StreamTypeDefaults = ReadonlyArray<readonly [string, StreamType]>
+type UpdateContractDefaults = ReadonlyArray<readonly [string, UpdateContract]>
 
 /**
- * Build a longest-prefix-match table from the shipped streamTypes.json so a
+ * Build a longest-prefix-match table from the shipped updateContracts.json so a
  * single defaults lookup decides whether a path is event-driven without the
  * enforcer special-casing prefixes inline.
  */
-const buildStreamTypeDefaults = (
+const buildUpdateContractDefaults = (
   raw: Record<string, string>
-): StreamTypeDefaults => {
-  const entries: Array<[string, StreamType]> = []
+): UpdateContractDefaults => {
+  const entries: Array<[string, UpdateContract]> = []
   for (const prefix of Object.keys(raw)) {
     const t = raw[prefix]
-    if (t === 'streaming' || t === 'event' || t === 'ais') {
+    if (t === 'periodic' || t === 'event') {
       entries.push([prefix, t])
     }
   }
@@ -96,15 +96,15 @@ const buildStreamTypeDefaults = (
   return entries
 }
 
-const DEFAULT_STREAM_TYPES = buildStreamTypeDefaults(
-  streamTypeDefaults as Record<string, string>
+const DEFAULT_UPDATE_CONTRACTS = buildUpdateContractDefaults(
+  updateContractDefaults as Record<string, string>
 )
 
-const resolveStreamTypeFromDefaults = (
+const resolveUpdateContractFromDefaults = (
   path: string
-): StreamType | undefined => {
-  for (const [prefix, streamType] of DEFAULT_STREAM_TYPES) {
-    if (path === prefix || path.startsWith(prefix + '.')) return streamType
+): UpdateContract | undefined => {
+  for (const [prefix, updateContract] of DEFAULT_UPDATE_CONTRACTS) {
+    if (path === prefix || path.startsWith(prefix + '.')) return updateContract
   }
   return undefined
 }
@@ -284,8 +284,8 @@ export class StalenessEnforcer {
     }
 
     const meta = this.lookupMeta(context, path)
-    const streamType = this.resolveStreamType(path, meta)
-    if (streamType !== 'streaming') return
+    const updateContract = this.resolveUpdateContract(path, meta)
+    if (updateContract !== 'periodic') return
 
     const baseTimeoutMs = this.resolveBaseTimeoutMs(context, path, meta)
     if (baseTimeoutMs === NEVER_TIMEOUT) return
@@ -299,7 +299,7 @@ export class StalenessEnforcer {
       if (leaf.value === null) continue
       // String and boolean leaves are by Signal K convention identity
       // fields (uuid, mmsi, name, flag) or simple state flags — never
-      // streaming measurements. Emitting a null+timedOut delta for them
+      // periodic measurements. Emitting a null+timedOut delta for them
       // also crashes FullSignalK.addValue when the path collides with a
       // top-level identity scalar that fillIdentityField writes onto the
       // vessel context (e.g. `vessels.<id>.uuid = '<id>'`): the value
@@ -340,14 +340,14 @@ export class StalenessEnforcer {
     return derived ?? baseTimeoutMs
   }
 
-  private resolveStreamType(
+  private resolveUpdateContract(
     path: string,
     meta: MetaValue | undefined
-  ): StreamType {
-    if (meta?.streamType) return meta.streamType
-    const fromDefaults = resolveStreamTypeFromDefaults(path)
+  ): UpdateContract {
+    if (meta?.updateContract) return meta.updateContract
+    const fromDefaults = resolveUpdateContractFromDefaults(path)
     if (fromDefaults) return fromDefaults
-    return 'streaming'
+    return 'periodic'
   }
 
   // Resolves the base timeout (ms) ignoring `meta.timeout: 'auto'` —
@@ -452,8 +452,7 @@ const lookupSchemaMeta = (
 ): MetaValue | undefined => {
   const ctxPath = context.startsWith('vessels.') ? 'vessels.self' : context
   const full = getMetadata(ctxPath + '.' + path) as
-    | Record<string, unknown>
-    | undefined
+    Record<string, unknown> | undefined
   if (!full) return undefined
   const timeout = full.timeout
   if (typeof timeout !== 'number') return undefined

@@ -97,7 +97,7 @@ export interface Config {
     enforceDataTimeouts?: boolean
     /** When true, paths without an explicit numeric `meta.timeout`
      * fall back to `defaultTimeout` instead of being skipped. Default
-     * true; combined with `enforceDataTimeouts`, every streaming path
+     * true; combined with `enforceDataTimeouts`, every periodic path
      * on the self vessel is monitored out of the box. */
     useDefaultTimeouts?: boolean
     /** Global fallback timeout in seconds. Default 60. */

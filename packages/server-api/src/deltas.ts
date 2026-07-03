@@ -148,12 +148,12 @@ export interface Meta {
 
 /**
  * Update contract for a path. Determines whether the server's staleness
- * enforcer treats silence as a failure (`streaming`), as unchanged state
- * (`event`), or as an expected gap (`ais`).
+ * enforcer treats silence as a failure (`periodic`) or as unchanged state
+ * (`event`).
  *
  * @category Server API
  */
-export type StreamType = 'streaming' | 'event' | 'ais'
+export type UpdateContract = 'periodic' | 'event'
 
 // Meta payload
 /** @category Server API */
@@ -169,9 +169,9 @@ export interface MetaValue {
   timeout?: number | 'auto'
   /**
    * Declares the path's update contract for staleness enforcement.
-   * Defaults to `'streaming'` when absent.
+   * Defaults to `'periodic'` when absent.
    */
-  streamType?: StreamType
+  updateContract?: UpdateContract
   displayName?: string
   displayScale?: {
     lower: number
