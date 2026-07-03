@@ -5,6 +5,7 @@ children:
   - nmea.md
   - n2k-device-management.md
   - source-priority.md
+  - staleness.md
 ---
 
 # Configuring Signal K Server
