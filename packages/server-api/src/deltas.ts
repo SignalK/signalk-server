@@ -115,14 +115,14 @@ export interface PathValueState {
    * legitimately publishes `value: null` (e.g. an echosounder with no
    * bottom return) does not carry this flag.
    */
-  timedOut?: boolean
+  readonly timedOut?: boolean
   /**
    * The last good (non-null) value seen from the timed-out source and its
    * original timestamp. Absent if no good value was ever received.
    */
-  lastValue?: {
-    timestamp: Timestamp
-    value: Value
+  readonly lastValue?: {
+    readonly timestamp: Timestamp
+    readonly value: Value
   }
 }
 
