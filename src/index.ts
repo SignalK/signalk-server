@@ -606,6 +606,11 @@ class Server {
     // otherwise leave an orphan interval ticking against a half-built app.
     if (app.config.settings.enforceDataTimeouts !== false) {
       app.stalenessEnforcer = new StalenessEnforcer(app)
+    } else {
+      // Clear any instance from a previous start: reload() stops it but
+      // keeps the reference, and start() would otherwise revive it even
+      // though enforcement is now disabled.
+      app.stalenessEnforcer = undefined
     }
     app.intervals.push(
       setInterval(() => {
