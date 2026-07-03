@@ -28,13 +28,25 @@ import Webapps from '../../views/Webapps/Webapps'
 import Login from '../../views/security/Login'
 import Register from '../../views/security/Register'
 
+const CHUNK_RELOAD_FLAG = 'signalk:chunkReloaded'
+
 // One retry covers transient network blips; persistent failures (e.g. stale
 // chunk hashes after a redeploy) fall through to the ErrorBoundary, which
 // triggers a one-shot reload.
 function lazyWithRetry<T extends ComponentType<unknown>>(
   importer: () => Promise<{ default: T }>
 ) {
-  return React.lazy(() => importer().catch(() => importer()))
+  return React.lazy(() =>
+    importer()
+      .catch(() => importer())
+      .then((module) => {
+        // A successful chunk load proves the served bundle is consistent, so
+        // re-arm the one-shot reload for the next redeploy. Re-arming on
+        // mount instead would reload in a loop while chunks keep failing.
+        sessionStorage.removeItem(CHUNK_RELOAD_FLAG)
+        return module
+      })
+  )
 }
 
 const DataBrowser = lazyWithRetry(
@@ -98,12 +110,10 @@ interface ErrorBoundaryState {
   error: Error | null
 }
 
-const CHUNK_RELOAD_FLAG = 'signalk:chunkReloaded'
-
 function isChunkLoadError(error: Error): boolean {
   return (
     error.name === 'ChunkLoadError' ||
-    /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
+    /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(
       error.message
     )
   )
@@ -244,7 +254,6 @@ export default function Full() {
   const location = useLocation()
 
   useEffect(() => {
-    sessionStorage.removeItem(CHUNK_RELOAD_FLAG)
     fetchAllData()
   }, [])
 
