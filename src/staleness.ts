@@ -241,16 +241,24 @@ export class StalenessEnforcer {
   }
 
   private tick(): void {
-    const selfContext = this.app.selfContext
-    const cache = (this.app.deltaCache as unknown as { cache: CacheNode }).cache
-    const selfParts = selfContext.split('.')
-    let node: unknown = cache
-    for (const part of selfParts) {
+    // The tick runs on a bare interval: an exception escaping it would
+    // surface as an uncaught error and take the whole server down. A
+    // malformed cache entry must cost one skipped sweep, not the process.
+    try {
+      const selfContext = this.app.selfContext
+      const cache = (this.app.deltaCache as unknown as { cache: CacheNode })
+        .cache
+      const selfParts = selfContext.split('.')
+      let node: unknown = cache
+      for (const part of selfParts) {
+        if (!isObject(node)) return
+        node = node[part]
+      }
       if (!isObject(node)) return
-      node = node[part]
+      this.walk(node, [], selfContext, Date.now())
+    } catch (e) {
+      debug('staleness tick failed: %o', e)
     }
-    if (!isObject(node)) return
-    this.walk(node, [], selfContext, Date.now())
   }
 
   private walk(
