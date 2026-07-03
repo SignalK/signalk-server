@@ -117,7 +117,11 @@ describe('Security', () => {
       port,
       true,
       {
-        disableSchemaMetaDeltas: true
+        disableSchemaMetaDeltas: true,
+        // The staleness enforcer is on by default and emits null deltas
+        // for paths that go silent mid-suite, breaking assertions that
+        // expect websocket silence. This suite tests ACLs, not staleness.
+        settings: { enforceDataTimeouts: false }
       },
       securityConfig
     )
