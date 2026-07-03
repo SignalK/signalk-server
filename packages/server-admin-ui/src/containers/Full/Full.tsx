@@ -43,7 +43,11 @@ function lazyWithRetry<T extends ComponentType<unknown>>(
         // A successful chunk load proves the served bundle is consistent, so
         // re-arm the one-shot reload for the next redeploy. Re-arming on
         // mount instead would reload in a loop while chunks keep failing.
-        sessionStorage.removeItem(CHUNK_RELOAD_FLAG)
+        try {
+          sessionStorage.removeItem(CHUNK_RELOAD_FLAG)
+        } catch {
+          // Storage blocked — the chunk still loaded, so carry on.
+        }
         return module
       })
   )
@@ -134,10 +138,17 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     // Hashed chunk filenames change on redeploy; an open tab will fail to
     // fetch its old chunks. Reload once to pick up the new index, but guard
     // against loops if the failure is caused by something else.
-    if (isChunkLoadError(error) && !sessionStorage.getItem(CHUNK_RELOAD_FLAG)) {
-      sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1')
-      window.location.reload()
-      return
+    if (isChunkLoadError(error)) {
+      try {
+        if (!sessionStorage.getItem(CHUNK_RELOAD_FLAG)) {
+          sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1')
+          window.location.reload()
+          return
+        }
+      } catch {
+        // Storage blocked — without the one-shot flag a reload could loop,
+        // so fall through to the error panel instead.
+      }
     }
     console.error('ErrorBoundary caught an error:', error, errorInfo)
   }
