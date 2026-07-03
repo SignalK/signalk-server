@@ -70,6 +70,13 @@ function stripSvgFonts() {
   }
 }
 
+// mathjs and its runtime dependencies, split into a lazy vendor chunk.
+// Deliberately excludes @babel/runtime: it is shared with eagerly loaded
+// dependencies, so bundling it here would pull the whole chunk into the
+// initial load.
+const MATHJS_VENDOR_PATTERN =
+  /[\\/]node_modules[\\/](mathjs|decimal\.js|typed-function|complex\.js|fraction\.js|seedrandom|escape-latex|javascript-natural-sort)[\\/]/
+
 export default defineConfig({
   base: './',
   publicDir: 'public_src',
@@ -135,11 +142,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (
-            /[\\/]node_modules[\\/](mathjs|decimal\.js|typed-function|complex\.js|fraction\.js|seedrandom|escape-latex|javascript-natural-sort)[\\/]/.test(
-              id
-            )
-          ) {
+          if (MATHJS_VENDOR_PATTERN.test(id)) {
             return 'vendor-mathjs'
           }
         }
