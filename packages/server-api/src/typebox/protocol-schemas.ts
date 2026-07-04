@@ -199,6 +199,20 @@ export const EnhancedDisplayUnitsSchema = Type.Object(
 export type EnhancedDisplayUnits = Static<typeof EnhancedDisplayUnitsSchema>
 
 /**
+ * Update contract of a path: whether silence means failure (`periodic`)
+ * or unchanged state (`event`). Consumed by the staleness enforcer.
+ */
+export const UpdateContractSchema = Type.Union(
+  [Type.Literal('periodic'), Type.Literal('event')],
+  {
+    $id: 'UpdateContract',
+    description:
+      'Update contract for staleness enforcement: periodic (regular updates, silence = failure) or event (emits only on change, silence = unchanged). Defaults to periodic when absent.'
+  }
+)
+export type UpdateContract = Static<typeof UpdateContractSchema>
+
+/**
  * Metadata payload for a Signal K path.
  * Contains display hints, units, timeout, and alarm zones.
  */
@@ -235,12 +249,7 @@ export const MetaValueSchema = Type.Object(
         }
       )
     ),
-    updateContract: Type.Optional(
-      Type.Union([Type.Literal('periodic'), Type.Literal('event')], {
-        description:
-          'Update contract for staleness enforcement: periodic (regular updates, silence = failure) or event (emits only on change, silence = unchanged). Defaults to periodic when absent.'
-      })
-    ),
+    updateContract: Type.Optional(UpdateContractSchema),
     displayName: Type.Optional(
       Type.String({
         description: 'A human-readable display name for this path'

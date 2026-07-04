@@ -16,6 +16,7 @@
 
 import { EventEmitter } from 'events'
 import { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
+import { PathValueState } from './deltas'
 import { metadataRegistry } from '@signalk/path-metadata'
 
 /** @hidden */
@@ -120,7 +121,10 @@ function copyLeafValueToLeaf(fromLeaf: AnyObject, toLeaf: AnyObject): void {
 // on the per-source entry as well as the top-level leaf — otherwise a
 // fresh update from one source erases the only record that another
 // source timed out. A fresh delta (no `state`) clears any prior marker.
-function applyStateToLeaf(state: unknown, leaf: AnyObject): void {
+function applyStateToLeaf(
+  state: PathValueState | undefined,
+  leaf: AnyObject
+): void {
   if (state !== undefined) {
     leaf.state = state
   } else if ('state' in leaf) {
