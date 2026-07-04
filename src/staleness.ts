@@ -35,9 +35,11 @@ const AUTO_MIN_TIMEOUT_MS = 2 * 1000
 const AUTO_MAX_TIMEOUT_MS = 300 * 1000
 
 interface AutoSampler {
-  // Ring buffer of inter-arrival intervals in ms. The 0-th entry holds
-  // the most recent interval; older intervals shift toward the end.
+  // Fixed-size ring of inter-arrival intervals in ms. `head` marks the
+  // most recent write and wraps modulo the ring length; the median
+  // derivation reads the filled prefix, so write order is irrelevant.
   intervals: number[]
+  head: number
   // Number of intervals recorded so far (capped at intervals.length).
   count: number
   // Timestamp of the most recent delta for this key.
@@ -182,6 +184,7 @@ export class StalenessEnforcer {
     if (!s) {
       s = {
         intervals: new Array<number>(this.autoSamplesSize).fill(0),
+        head: -1,
         count: 0,
         lastTs: now,
         warmupExpiresAt: now + this.autoWarmupMs
@@ -192,11 +195,8 @@ export class StalenessEnforcer {
     const interval = now - s.lastTs
     s.lastTs = now
     if (interval <= 0) return
-    // Shift in place: index 0 is most recent. This is allocation-free.
-    for (let i = s.intervals.length - 1; i > 0; i--) {
-      s.intervals[i] = s.intervals[i - 1]
-    }
-    s.intervals[0] = interval
+    s.head = (s.head + 1) % s.intervals.length
+    s.intervals[s.head] = interval
     if (s.count < s.intervals.length) s.count++
   }
 
