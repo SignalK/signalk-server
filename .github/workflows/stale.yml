@@ -2,12 +2,21 @@
 # and closes them 30 days after that (60 days total). Issues labeled
 # "good first task" or "help wanted" are exempt. Pull requests are never
 # touched. The workflow runs daily and can also be triggered manually.
+#
+# Additionally, whenever the author of an issue or pull request comments, or
+# new commits are pushed to their pull request, the "awaiting response"
+# label is removed automatically so the item no longer counts as awaiting a
+# reply.
 name: Stale issues
 
 on:
   schedule:
     - cron: '17 1 * * *'
   workflow_dispatch:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [synchronize]
 
 permissions:
   contents: read
@@ -19,6 +28,7 @@ concurrency:
 
 jobs:
   stale:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -40,3 +50,40 @@ jobs:
           days-before-pr-stale: -1
           days-before-pr-close: -1
           operations-per-run: 100
+
+  remove-awaiting-response:
+    # When the author of the issue/PR comments, clear the awaiting response label.
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.comment.user.login == github.event.issue.user.login &&
+      contains(github.event.issue.labels.*.name, 'awaiting response')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              name: 'awaiting response'
+            })
+
+  remove-awaiting-response-pr:
+    # Any push to the PR clears the awaiting response label.
+    if: >
+      github.event_name == 'pull_request_target' &&
+      contains(github.event.pull_request.labels.*.name, 'awaiting response')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              name: 'awaiting response'
+            })
