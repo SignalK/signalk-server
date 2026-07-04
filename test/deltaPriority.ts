@@ -1117,6 +1117,21 @@ describe('toPreferredDelta.routesPath', () => {
       )
     })
 
+    it('excludes unknownSourceTimeout even when it exceeds the max', () => {
+      const overrides: SourcePrioritiesData = {
+        'environment.wind.speedApparent': [
+          { sourceRef: 'a' as SourceRef, timeout: 5000 }
+        ]
+      }
+      const fn = getToPreferredDelta({
+        overrides,
+        unknownSourceTimeout: 999999
+      })
+      fn.getMaxFailoverTimeoutMs('environment.wind.speedApparent').should.equal(
+        5000
+      )
+    })
+
     it('returns fallbackMs for paths a group has claimed', () => {
       const groups: PriorityGroupConfig[] = [
         { id: 'g1', sources: ['foo.A', 'foo.B'] }
