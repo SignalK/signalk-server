@@ -19,6 +19,7 @@ import {
   Delta,
   NormalizedDelta,
   Path,
+  PathValue,
   Update,
   Value,
   NormalizedMetaDelta
@@ -236,7 +237,7 @@ export class StreamBundle implements IStreamBundle {
 
 export function toDelta(normalizedDeltaData: NormalizedDelta): Delta {
   const type = normalizedDeltaData.isMeta ? 'meta' : 'values'
-  const pathValue: { path: Path; value: unknown; state?: unknown } = {
+  const pathValue: Pick<PathValue, 'path' | 'value' | 'state'> = {
     path: normalizedDeltaData.path,
     value: normalizedDeltaData.value
   }
