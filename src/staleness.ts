@@ -372,6 +372,14 @@ export class StalenessEnforcer {
     if (typeof explicit === 'number') {
       return explicit > 0 ? explicit * 1000 : NEVER_TIMEOUT
     }
+    if (explicit === 'auto') {
+      // 'auto' is an explicit per-path opt-in: it outranks spec-schema
+      // timeouts, and the useDefaultTimeouts toggle only gates paths
+      // with no timeout configuration of their own. The default here is
+      // just the ceiling until the sampler has warmed up;
+      // applyAutoFallback replaces it with the derived value.
+      return this.defaultTimeoutMs
+    }
     const schemaMeta = lookupSchemaMeta(context, path)
     if (typeof schemaMeta?.timeout === 'number') {
       return schemaMeta.timeout > 0 ? schemaMeta.timeout * 1000 : NEVER_TIMEOUT
