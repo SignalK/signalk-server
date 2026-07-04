@@ -235,6 +235,7 @@ export interface SecurityStrategy {
   addAdminWriteMiddleware: (path: string) => void
   addWriteMiddleware: (path: string) => void
 
+  /** Record non-admin access levels for plugin routes (optional - only available when token security is active) */
   registerPluginRoutePermissions?: (
     pluginId: string,
     permissions: RoutePermission[]

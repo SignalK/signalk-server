@@ -28,4 +28,4 @@ Save configuration data for a plugin. Stops and starts the plugin as a side effe
 
 ## Authentication
 
-All plugin routes under `/plugins/<pluginid>/` require admin authentication by default. Plugins can declare specific routes as accessible to `readwrite` or `readonly` users via the `getRoutePermissions()` method. See [Plugin development](../plugins/README.md) for details.
+All plugin routes under `/plugins/<pluginid>/` require admin authentication by default. Plugins can open specific routes up to `readwrite` or `readonly` users by registering them via `router.access(level)`. See [Plugin development](../plugins/README.md) for details.
