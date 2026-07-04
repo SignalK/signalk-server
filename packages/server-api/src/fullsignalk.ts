@@ -116,6 +116,18 @@ function copyLeafValueToLeaf(fromLeaf: AnyObject, toLeaf: AnyObject): void {
   }
 }
 
+// Staleness is tracked per path+source, so the state container must land
+// on the per-source entry as well as the top-level leaf — otherwise a
+// fresh update from one source erases the only record that another
+// source timed out. A fresh delta (no `state`) clears any prior marker.
+function applyStateToLeaf(state: unknown, leaf: AnyObject): void {
+  if (state !== undefined) {
+    leaf.state = state
+  } else if ('state' in leaf) {
+    delete leaf.state
+  }
+}
+
 function getNestedValue(obj: AnyObject, dotPath: string): unknown {
   const parts = dotPath.split('.')
   let cursor: unknown = obj
@@ -237,6 +249,7 @@ function addValue(
     assignValueToLeaf(pathValue.value, valueLeaf.values[sourceId])
     valueLeaf.values[sourceId].timestamp = timestamp
     setMessage(valueLeaf.values[sourceId], source)
+    applyStateToLeaf(pathValue.state, valueLeaf.values[sourceId])
   } else if (
     valueLeaf.value !== undefined &&
     valueLeaf['$source'] !== sourceId
@@ -253,6 +266,7 @@ function addValue(
     assignValueToLeaf(pathValue.value, valueLeaf.values[sourceId])
     valueLeaf.values[sourceId].timestamp = timestamp
     setMessage(valueLeaf.values[sourceId], source)
+    applyStateToLeaf(pathValue.state, valueLeaf.values[sourceId])
   }
 
   assignValueToLeaf(pathValue.value, valueLeaf)
@@ -263,14 +277,8 @@ function addValue(
   }
   // Persist or clear the staleness state container so the HTTP API and
   // the admin UI's initial snapshot reflect the same picture the
-  // streaming delta carried. A fresh delta (no `state`) clears any
-  // prior `state.timedOut` so a path that has recovered does not look
-  // permanently stale after a reload.
-  if (pathValue.state !== undefined) {
-    valueLeaf.state = pathValue.state
-  } else if ('state' in valueLeaf) {
-    delete valueLeaf.state
-  }
+  // streaming delta carried.
+  applyStateToLeaf(pathValue.state, valueLeaf)
 }
 
 function addValues(
