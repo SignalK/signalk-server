@@ -241,7 +241,7 @@ export default class DeltaCache {
       // here; letting it into onIncoming would record the timeout
       // duration itself as an inter-arrival sample (skewing 'auto'
       // derivation upward) and clear its own recovery marker.
-      if (msg.isMeta || !msg.state?.timedOut) {
+      if (!msg.state?.timedOut) {
         this.app.stalenessEnforcer?.onIncoming(msg.context, msg.path, sourceRef)
       }
       const prefKey = msg.context + '\0' + msg.path
