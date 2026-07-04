@@ -10,7 +10,7 @@ Enforcement is enabled by default and applies to `vessels.self` paths only.
 
 ## How It Works
 
-Once per second the server checks every monitored path+source pair against its effective timeout. Staleness is tracked per source: if two GPS units provide `navigation.position` and one goes silent, only that source's value times out.
+On a short, configurable interval the server checks every monitored path+source pair against its effective timeout. Staleness is tracked per source: if two GPS units provide `navigation.position` and one goes silent, only that source's value times out.
 
 When a pair exceeds its timeout, the server emits a single delta with `value: null` and a `state` container describing what happened:
 
@@ -43,7 +43,7 @@ Not all paths update periodically. Each path has an update contract, declared wi
 | `periodic` (default) | Regular updates expected; silence indicates a failure | Timed out when silent too long |
 | `event`              | Emits only on change; silence means unchanged         | Never timed out                |
 
-Well-known event-driven paths are pre-classified by the server, among them `notifications.*`, `navigation.anchor.*`, `navigation.course.*`, `navigation.home.*`, `design.*`, `communication.*` and identity fields such as `uuid`, `mmsi` and `name` — the authoritative list ships with the server in `src/defaults/updateContracts.json`. Notification lifecycles in particular are managed by plugins and people, never by timeout: an unacknowledged alarm is active, not stale.
+Well-known event-driven paths are pre-classified by the server: notifications, navigation intents such as the anchor position and the active course, and static design and identity data. The authoritative list ships with the server in `src/defaults/updateContracts.json`. Notification lifecycles in particular are managed by plugins and people, never by timeout: an unacknowledged alarm is active, not stale.
 
 To classify a custom path, set `updateContract` in the path's metadata (Data Browser meta editor or the meta API). An explicit `updateContract` always wins over the shipped classification.
 
@@ -52,9 +52,9 @@ To classify a custom path, set `updateContract` in the path's metadata (Data Bro
 For a `periodic` path, the effective timeout is resolved in this order:
 
 1. **Explicit `meta.timeout`** (seconds) set for the path. `0` means the path is never considered stale.
-2. **`meta.timeout: "auto"`** — the server learns the timeout from the observed update rate: five times the median interval of the last 10 updates, clamped between 2 and 300 seconds. During a 30-second warm-up the global default applies. A GPS updating every second times out after ~5 seconds; a tank level every 30 seconds after ~150 seconds.
+2. **`meta.timeout: "auto"`** — the server derives the timeout from the observed update rate of each path+source, applying a safety margin above the typical interval between updates, bounded so chatty sources stay responsive and slow ones are not flagged prematurely. Until enough updates have been observed, the global default acts as the ceiling; sampling depth and warm-up are tunable via the settings under Configuration below. A GPS updating every second ends up with a far tighter timeout than a tank level updating twice a minute.
 3. **Signal K specification defaults** for the path, where the specification defines a timeout.
-4. **Global default timeout** (60 seconds) when _Use default timeouts_ is enabled.
+4. **Global default timeout** (`defaultTimeout`) when _Use default timeouts_ is enabled.
 
 If none of these produce a timeout, the path is not monitored.
 
