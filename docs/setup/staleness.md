@@ -43,7 +43,7 @@ Not all paths update periodically. Each path has an update contract, declared wi
 | `periodic` (default) | Regular updates expected; silence indicates a failure | Timed out when silent too long |
 | `event`              | Emits only on change; silence means unchanged         | Never timed out                |
 
-Well-known event-driven paths are pre-classified by the server, among them `notifications.*`, `navigation.anchor.*`, `navigation.course.*`, `navigation.home.*`, `design.*`, `communication.*` and identity fields such as `uuid`, `mmsi` and `name`. Notification lifecycles in particular are managed by plugins and people, never by timeout: an unacknowledged alarm is active, not stale.
+Well-known event-driven paths are pre-classified by the server, among them `notifications.*`, `navigation.anchor.*`, `navigation.course.*`, `navigation.home.*`, `design.*`, `communication.*` and identity fields such as `uuid`, `mmsi` and `name` — the authoritative list ships with the server in `src/defaults/updateContracts.json`. Notification lifecycles in particular are managed by plugins and people, never by timeout: an unacknowledged alarm is active, not stale.
 
 To classify a custom path, set `updateContract` in the path's metadata (Data Browser meta editor or the meta API). An explicit `updateContract` always wins over the shipped classification.
 
