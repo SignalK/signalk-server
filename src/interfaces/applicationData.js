@@ -75,6 +75,11 @@ const userApplicationDataUrls = [
   `${prefix}/user/:appid/:version`
 ]
 
+const deviceApplicationDataUrls = [
+  `${prefix}/device/:deviceId/:appid/:version/*`,
+  `${prefix}/device/:deviceId/:appid/:version`
+]
+
 module.exports = function (app) {
   if (app.securityStrategy.isDummy()) {
     debug('ApplicationData disabled because security is off')
@@ -114,6 +119,40 @@ module.exports = function (app) {
     postApplicationData(req, res, false)
   })
 
+  function deviceAuthMiddleware(req, res, next) {
+    if (!req.skPrincipal) {
+      res.status(401).send('Unauthorized')
+      return
+    }
+    const isAdmin = req.skPrincipal.permissions === 'admin'
+    const isOwnDevice = req.skPrincipal.identifier === req.params.deviceId
+    if (!isAdmin && !isOwnDevice) {
+      res.status(403).send('Forbidden')
+      return
+    }
+    next()
+  }
+
+  deviceApplicationDataUrls.forEach((url) => {
+    app.use(url, deviceAuthMiddleware)
+  })
+
+  app.get(deviceApplicationDataUrls, (req, res) => {
+    getApplicationData(req, res, false, req.params.deviceId)
+  })
+
+  app.post(deviceApplicationDataUrls, (req, res) => {
+    postApplicationData(req, res, false, req.params.deviceId)
+  })
+
+  app.get(
+    `${prefix}/device/:deviceId/:appid`,
+    deviceAuthMiddleware,
+    (req, res) => {
+      listVersions(req, res, false, req.params.deviceId)
+    }
+  )
+
   app.get(`${prefix}/global/:appid`, (req, res) => {
     listVersions(req, res, false)
   })
@@ -122,7 +161,7 @@ module.exports = function (app) {
     listVersions(req, res, true)
   })
 
-  function listVersions(req, res, isUser) {
+  function listVersions(req, res, isUser, deviceId) {
     const appid = validateAppId(req.params.appid)
 
     if (!appid) {
@@ -130,12 +169,12 @@ module.exports = function (app) {
       return
     }
 
-    if (!validatePrincipal(req, isUser)) {
-      res.status(400).send('invalid user identifier')
+    if (!validatePrincipal(req, isUser, deviceId)) {
+      res.status(400).send('invalid user or device identifier')
       return
     }
 
-    const dir = dirForApplicationData(req, appid, isUser)
+    const dir = dirForApplicationData(req, appid, isUser, deviceId)
 
     if (!fs.existsSync(dir)) {
       res.sendStatus(404)
@@ -145,7 +184,7 @@ module.exports = function (app) {
     res.json(fs.readdirSync(dir).map((file) => file.slice(0, -5)))
   }
 
-  function getApplicationData(req, res, isUser) {
+  function getApplicationData(req, res, isUser, deviceId) {
     const appid = validateAppId(req.params.appid)
     const version = validateVersion(req.params.version)
 
@@ -159,12 +198,18 @@ module.exports = function (app) {
       return
     }
 
-    if (!validatePrincipal(req, isUser)) {
-      res.status(400).send('invalid user identifier')
+    if (!validatePrincipal(req, isUser, deviceId)) {
+      res.status(400).send('invalid user or device identifier')
       return
     }
 
-    let applicationData = readApplicationData(req, appid, version, isUser)
+    let applicationData = readApplicationData(
+      req,
+      appid,
+      version,
+      isUser,
+      deviceId
+    )
 
     let data = applicationData
     if (req.params[0] && req.params[0].length !== 0) {
@@ -188,7 +233,7 @@ module.exports = function (app) {
     res.json(data)
   }
 
-  async function postApplicationData(req, res, isUser) {
+  async function postApplicationData(req, res, isUser, deviceId) {
     const appid = validateAppId(req.params.appid)
     const version = validateVersion(req.params.version)
 
@@ -202,8 +247,8 @@ module.exports = function (app) {
       return
     }
 
-    if (!validatePrincipal(req, isUser)) {
-      res.status(400).send('invalid user identifier')
+    if (!validatePrincipal(req, isUser, deviceId)) {
+      res.status(400).send('invalid user or device identifier')
       return
     }
 
@@ -221,7 +266,8 @@ module.exports = function (app) {
       req,
       isUnitprefs ? UNITPREFS_APPID : appid,
       version,
-      isUser
+      isUser,
+      deviceId
     )
 
     try {
@@ -231,7 +277,8 @@ module.exports = function (app) {
           req,
           isUnitprefs ? UNITPREFS_APPID : appid,
           version,
-          isUser
+          isUser,
+          deviceId
         )
 
         if (req.params[0] && req.params[0].length !== 0) {
@@ -262,7 +309,8 @@ module.exports = function (app) {
             appid,
             version,
             isUser,
-            applicationData
+            applicationData,
+            deviceId
           )
         }
         res.json('ApplicationData saved')
@@ -283,11 +331,11 @@ module.exports = function (app) {
     }
   }
 
-  function readApplicationData(req, appid, version, isUser) {
+  function readApplicationData(req, appid, version, isUser, deviceId) {
     let applicationDataString = '{}'
     try {
       applicationDataString = fs.readFileSync(
-        pathForApplicationData(req, appid, version, isUser),
+        pathForApplicationData(req, appid, version, isUser, deviceId),
         'utf8'
       )
     } catch (_) {
@@ -297,7 +345,7 @@ module.exports = function (app) {
       const applicationData = JSON.parse(applicationDataString)
       return applicationData
     } catch (e) {
-      let filePath = dirForApplicationData(req, appid, isUser)
+      let filePath = dirForApplicationData(req, appid, isUser, deviceId)
       console.error(
         'Could not parse applicationData for "%s": %s',
         filePath,
@@ -327,7 +375,10 @@ module.exports = function (app) {
     )
   }
 
-  function validatePrincipal(req, isUser) {
+  function validatePrincipal(req, isUser, deviceId) {
+    if (deviceId !== undefined) {
+      return isSafePathSegment(deviceId)
+    }
     return !isUser || isSafePathSegment(req.skPrincipal?.identifier)
   }
 
@@ -340,35 +391,50 @@ module.exports = function (app) {
     return resolvedPath
   }
 
-  function dirForApplicationData(req, appid, isUser) {
+  function dirForApplicationData(req, appid, isUser, deviceId) {
     const applicationDataRoot = path.resolve(
       app.config.configPath,
       'applicationData'
     )
-    const location = isUser
-      ? resolveWithin(
-          path.join(applicationDataRoot, 'users'),
-          req.skPrincipal.identifier
-        )
-      : path.join(applicationDataRoot, 'global')
+    let location
+    if (deviceId !== undefined) {
+      location = resolveWithin(
+        path.join(applicationDataRoot, 'devices'),
+        deviceId
+      )
+    } else if (isUser) {
+      location = resolveWithin(
+        path.join(applicationDataRoot, 'users'),
+        req.skPrincipal.identifier
+      )
+    } else {
+      location = path.join(applicationDataRoot, 'global')
+    }
 
     return resolveWithin(location, appid)
   }
 
-  function pathForApplicationData(req, appid, version, isUser) {
+  function pathForApplicationData(req, appid, version, isUser, deviceId) {
     return resolveWithin(
-      dirForApplicationData(req, appid, isUser),
+      dirForApplicationData(req, appid, isUser, deviceId),
       `${version}.json`
     )
   }
 
-  async function saveApplicationData(req, appid, version, isUser, data) {
-    fs.mkdirSync(dirForApplicationData(req, appid, isUser), {
+  async function saveApplicationData(
+    req,
+    appid,
+    version,
+    isUser,
+    data,
+    deviceId
+  ) {
+    fs.mkdirSync(dirForApplicationData(req, appid, isUser, deviceId), {
       recursive: true
     })
 
     await atomicWriteFile(
-      pathForApplicationData(req, appid, version, isUser),
+      pathForApplicationData(req, appid, version, isUser, deviceId),
       JSON.stringify(data, null, 2)
     )
   }
