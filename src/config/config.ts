@@ -265,6 +265,44 @@ export function load(app: ConfigApp) {
     })
   }
 
+  if (app.argv.data) {
+    if (typeof app.argv.data !== 'string') {
+      console.error('--data requires a single raw log filename')
+      process.exit(1)
+    }
+    const filename = path.resolve(app.argv.data)
+    console.log(
+      `Disabling all data connections and playing back raw log ${filename}`
+    )
+    if (!app.argv['override-timestamps']) {
+      console.log(
+        'Add --override-timestamps to replace timestamps from the data log file with the current date and time.'
+      )
+    }
+    app.config.settings.pipedProviders.forEach((provider) => {
+      provider.enabled = false
+    })
+    const providerId = `fs-${Math.floor(Date.now() / 1000)}`
+    app.config.settings.pipedProviders.push({
+      id: providerId,
+      pipeElements: [
+        {
+          type: 'providers/simple',
+          options: {
+            logging: false,
+            type: 'FileStream',
+            subOptions: {
+              useCanName: true,
+              dataType: 'Multiplexed',
+              filename
+            }
+          }
+        }
+      ],
+      enabled: true
+    })
+  }
+
   if (app.argv['override-timestamps']) {
     app.config.overrideTimestampWithNow = true
   }
