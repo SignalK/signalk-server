@@ -45,7 +45,8 @@ import {
   AccessScopedRouter,
   PluginRouter,
   RouteAccessLevel,
-  RoutePermission
+  RoutePermission,
+  DeviceStateChangeEvent
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { IRouter, Request, RequestHandler, Response } from 'express'
@@ -947,6 +948,33 @@ module.exports = (theApp: any) => {
       return getPluginOptions(plugin.id)
     }
     appCopy.getDataDirPath = () => dirForPluginId(plugin.id)
+
+    appCopy.setDevicePluginData = (
+      clientId: string,
+      metadata: Record<string, unknown>
+    ) => {
+      if (app.deviceTracker) {
+        app.deviceTracker.setPluginData(plugin.id, clientId, metadata)
+      }
+    }
+    appCopy.getDevicePluginData = (
+      clientId: string
+    ): Record<string, unknown> | undefined => {
+      return app.deviceTracker?.getPluginData(plugin.id, clientId)
+    }
+    appCopy.onDeviceStateChange = (
+      callback: (event: DeviceStateChangeEvent) => void
+    ): (() => void) => {
+      if (app.deviceTracker) {
+        app.deviceTracker.on('deviceStateChange', callback)
+        const cleanup = () => {
+          app.deviceTracker?.removeListener('deviceStateChange', callback)
+        }
+        onStopHandlers[plugin.id].push(cleanup)
+        return cleanup
+      }
+      return () => {}
+    }
 
     appCopy.registerPutHandler = (context, aPath, callback, source) => {
       appCopy.handleMessage(plugin.id, {
