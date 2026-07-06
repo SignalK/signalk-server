@@ -866,6 +866,9 @@ module.exports = function (
       runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true',
       courseApi: {
         apiOnly: app.config.settings.courseApi?.apiOnly || false
+      },
+      staleness: {
+        enforceDataTimeouts: app.config.settings.enforceDataTimeouts !== false
       }
     }
 

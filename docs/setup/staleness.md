@@ -10,9 +10,9 @@ Enforcement is enabled by default and applies to `vessels.self` paths only.
 
 ## How It Works
 
-On a short, configurable interval the server checks every monitored path+source pair against its effective timeout. Staleness is tracked per source: if two GPS units provide `navigation.position` and one goes silent, only that source's value times out.
+On a short, configurable interval the server checks every monitored path+source pair against its effective timeout. Staleness is tracked per source: if two GPS units provide `navigation.position` and one goes silent, only the value from that source times out. The value from the still updating GPS unit works normally.
 
-When a pair exceeds its timeout, the server emits a single delta with `value: null` and a `state` container describing what happened:
+When a value from a source for a certain path is not getting updated for period that exceeds its timeout, the server emits a single delta with `value: null` and a `state` container describing what happened:
 
 ```json
 {
@@ -66,7 +66,7 @@ Timeout enforcement and notifications complement each other: when a sensor path 
 
 ## Configuration
 
-Enforcement is on by default. The following settings keys control it:
+Enforcement is on by default. The master switch is exposed in the Admin UI under **Server → Settings → Enforce Data Timeouts** — turn it off there if a source's data is being marked stale unexpectedly while troubleshooting. The following settings keys control it:
 
 | Setting                    | Default | Purpose                                                              |
 | -------------------------- | ------- | -------------------------------------------------------------------- |

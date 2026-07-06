@@ -26,6 +26,9 @@ interface ServerSettingsData {
   courseApi?: {
     apiOnly?: boolean
   }
+  staleness?: {
+    enforceDataTimeouts?: boolean
+  }
 }
 
 const SettableInterfaces: Record<string, string> = {
@@ -76,6 +79,23 @@ const ServerSettings: React.FC = () => {
         ...prev,
         courseApi: {
           ...prev.courseApi,
+          [event.target.name]: value
+        }
+      }))
+    },
+    []
+  )
+
+  const handleStalenessChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value =
+        event.target.type === 'checkbox'
+          ? event.target.checked
+          : event.target.value
+      setSettings((prev) => ({
+        ...prev,
+        staleness: {
+          ...prev.staleness,
           [event.target.name]: value
         }
       }))
@@ -404,6 +424,44 @@ const ServerSettings: React.FC = () => {
                 <Form.Text muted>
                   Accept course operations only via HTTP requests. Destination
                   data from NMEA sources is not used.
+                </Form.Text>
+              </Col>
+            </Form.Group>
+            <Form.Group as={Row}>
+              <Col md="2">
+                <Form.Label htmlFor="enforceDataTimeouts">
+                  Enforce Data Timeouts
+                </Form.Label>
+              </Col>
+              <Col xs="12" md={fieldColWidthMd}>
+                <div className="d-flex align-items-center mb-2">
+                  <Form.Label
+                    style={{ marginRight: '15px', marginBottom: 0 }}
+                    className="switch switch-text switch-primary"
+                  >
+                    <input
+                      type="checkbox"
+                      name="enforceDataTimeouts"
+                      id="enforceDataTimeouts"
+                      className="switch-input"
+                      onChange={handleStalenessChange}
+                      checked={
+                        settings.staleness?.enforceDataTimeouts !== false
+                      }
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="On"
+                      data-off="Off"
+                    />
+                    <span className="switch-handle" />
+                  </Form.Label>
+                </div>
+                <Form.Text muted>
+                  When a value on your own vessel stops updating past its
+                  timeout, mark it as stale so displays and alerting plugins can
+                  react. Turn this off if a source&apos;s data is being marked
+                  stale unexpectedly while troubleshooting.
                 </Form.Text>
               </Col>
             </Form.Group>
