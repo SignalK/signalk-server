@@ -10,6 +10,10 @@ import { RadarApi } from './radar'
 import { HistoryApiHttpRegistry } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 import { NotificationApi, NotificationApplication } from './notifications'
+import {
+  GnssOffsetCorrector,
+  GnssCorrectorApplication
+} from './gnssOffsetCorrector'
 import { binaryStreamManager, initializeBinaryStreams } from './streams'
 
 export interface ApiResponse {
@@ -101,6 +105,12 @@ export const startApis = (
   ;(app as any).notificationApi = notificationApi
   apiList.push('notifications')
 
+  const gnssOffsetCorrector = new GnssOffsetCorrector(
+    app as GnssCorrectorApplication
+  )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).gnssOffsetCorrector = gnssOffsetCorrector
+
   Promise.all([
     resourcesApi.start(),
     courseApi.start(),
@@ -109,7 +119,8 @@ export const startApis = (
     autopilotApi.start(),
     radarApi.start(),
     historyApiHttpRegistry.start(),
-    notificationApi.start()
+    notificationApi.start(),
+    gnssOffsetCorrector.start()
   ])
   return apiList
 }

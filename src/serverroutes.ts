@@ -117,6 +117,92 @@ const prioritiesPayloadSchema = Type.Object({
   defaults: priorityDefaultsSchema
 })
 
+// Schema for the PUT /skServer/gnssSensors body. Each sensor has a stable
+// id, a $source reference that may be empty for not-yet-linked rows, and
+// nullable numeric offsets — Number coercion happens in the route handler
+// so the schema mirrors what the admin UI POSTs (numbers or null), not the
+// post-coercion shape.
+// sensorId is the key the corrector reports back as $sensor in
+// meta.gnssOffsetCorrection and the historical (pre-corrector) base-delta
+// sweep key; reject anything containing `.` so the legacy cleanup paths
+// cannot be tricked into removing keys outside `sensors.gps.<sensorId>.*`.
+const gnssSensorSchema = Type.Object({
+  sensorId: Type.String({ minLength: 1, pattern: '^[^.]+$' }),
+  $source: Type.String(),
+  fromBow: Type.Union([Type.Number(), Type.Null()]),
+  fromCenter: Type.Union([Type.Number(), Type.Null()])
+})
+const gnssSensorsPayloadSchema = Type.Array(gnssSensorSchema)
+
+type GnssSensorsPayload = Array<{
+  sensorId: string
+  $source: string
+  fromBow: number | null
+  fromCenter: number | null
+}>
+
+function validateGnssSensorsPayload(
+  body: unknown
+): { ok: true; value: GnssSensorsPayload } | { ok: false; error: string } {
+  if (!Value.Check(gnssSensorsPayloadSchema, body)) {
+    const first = Value.Errors(gnssSensorsPayloadSchema, body).First()
+    return {
+      ok: false,
+      error: first
+        ? `Invalid gnssSensors payload at ${first.path}: ${first.message}`
+        : 'Invalid gnssSensors payload'
+    }
+  }
+  const value = body as GnssSensorsPayload
+  // Duplicate sensorIds would silently clobber sensors.gps.<id> entries
+  // in the data model on PUT; reject before we mutate anything. Duplicate
+  // non-empty $source values would create an ambiguous source→sensor mapping.
+  const seenIds = new Set<string>()
+  const seenSources = new Set<string>()
+  for (const s of value) {
+    if (seenIds.has(s.sensorId)) {
+      return { ok: false, error: `Duplicate sensorId "${s.sensorId}"` }
+    }
+    seenIds.add(s.sensorId)
+    if (s.$source.length > 0) {
+      if (seenSources.has(s.$source)) {
+        return { ok: false, error: `Duplicate $source "${s.$source}"` }
+      }
+      seenSources.add(s.$source)
+    }
+  }
+  return { ok: true, value }
+}
+
+// Reject offsets that would place an antenna outside the configured hull.
+// Skipped silently when the relevant dimension is unset — the user might
+// just not have filled in length/beam yet, and we'd rather let them save
+// reasonable offsets than block on missing vessel metadata.
+function validateGnssSensorBounds(
+  sensors: GnssSensorsPayload,
+  lengthOverall: number | undefined,
+  beam: number | undefined
+): string | null {
+  for (const s of sensors) {
+    if (
+      s.fromBow !== null &&
+      lengthOverall !== undefined &&
+      (s.fromBow < 0 || s.fromBow > lengthOverall)
+    ) {
+      return `fromBow ${s.fromBow} out of range 0..${lengthOverall} for sensor "${s.sensorId}"`
+    }
+    if (
+      s.fromCenter !== null &&
+      beam !== undefined &&
+      Math.abs(s.fromCenter) > beam / 2
+    ) {
+      const half = beam / 2
+      return `fromCenter ${s.fromCenter} out of range -${half}..${half} for sensor "${s.sensorId}"`
+    }
+  }
+  return null
+}
+
 type PrioritiesPayload = {
   groups: Array<{ id: string; sources: string[]; inactive?: boolean }>
   overrides: Record<
@@ -293,6 +379,24 @@ interface App
 interface ModuleInfo {
   name: string
   type?: string
+}
+
+// Module-level mutex that serializes every settings.json mutation routed
+// through `withSettingsWriteLock`. Without it, a clone-then-write handler
+// can snapshot `app.config.settings` *before* another handler's rollback
+// and then commit the rejected state back to disk after rollback ran.
+// Only the routes that opt in (currently the gnssSensors flow) are
+// serialized — direct writers to `app.config.settings` remain a known
+// race window relative to those routes.
+let settingsWriteLock: Promise<void> = Promise.resolve()
+function withSettingsWriteLock(fn: () => Promise<void>): Promise<void> {
+  const previous = settingsWriteLock
+  const next = previous.then(fn, fn)
+  // Swallow any rejection on the chain so a thrown handler doesn't wedge
+  // later requests; individual callers are still responsible for sending
+  // their own error responses.
+  settingsWriteLock = next.catch(() => undefined)
+  return next
 }
 
 module.exports = function (
@@ -1182,18 +1286,40 @@ module.exports = function (
     const de = app.config.baseDeltaEditor
     const communication = de.getSelfValue('communication')
     const draft = de.getSelfValue('design.draft')
-    const length = de.getSelfValue('design.length')
+    // Mirror the PUT /skServer/gnssSensors handler's normalisation: design.length
+    // may be stored as { overall } or as a plain number, and older /vessel
+    // clients expect a number. Returning undefined for the plain-number case
+    // made the GNSS preferences page treat dimensions as unset.
+    const length = de.getSelfValue('design.length') as
+      { overall?: number } | number | undefined
+    const lengthOverall =
+      typeof length === 'number'
+        ? length
+        : length && typeof length === 'object'
+          ? length.overall
+          : undefined
     const type = de.getSelfValue('design.aisShipType')
     const json = {
       name: app.config.vesselName,
       mmsi: app.config.vesselMMSI,
       uuid: app.config.vesselUUID,
       draft: draft && draft.maximum,
-      length: length && length.overall,
+      length: lengthOverall,
       beam: de.getSelfValue('design.beam'),
       height: de.getSelfValue('design.airHeight'),
-      gpsFromBow: de.getSelfValue('sensors.gps.fromBow'),
-      gpsFromCenter: de.getSelfValue('sensors.gps.fromCenter'),
+      // Older /vessel clients read gpsFromBow/gpsFromCenter; surface the
+      // first configured sensor row so the legacy shape stays meaningful.
+      // The server consumes the same data from settings.gnssSensors to
+      // rewrite navigation.position at the Common Coordinate Reference
+      // Point (vessel center on the centerline). An explicit `null` on
+      // a configured row means "not set yet" — fall back to the legacy
+      // single-GPS base-delta only when there is no sensor row at all.
+      gpsFromBow: app.config.settings.gnssSensors?.[0]
+        ? app.config.settings.gnssSensors[0].fromBow
+        : de.getSelfValue('sensors.gps.fromBow'),
+      gpsFromCenter: app.config.settings.gnssSensors?.[0]
+        ? app.config.settings.gnssSensors[0].fromCenter
+        : de.getSelfValue('sensors.gps.fromCenter'),
       aisShipType: type && type.id,
       callsignVhf: communication && communication.callsignVhf
     }
@@ -2011,6 +2137,190 @@ module.exports = function (
   )
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/debug`)
+
+  // Register middleware before the routes so every method picks up auth.
+  // Match the /priorities pattern: source topology and saved GNSS antenna
+  // offsets are admin-only across the board.
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/positionSources`
+  )
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/gnssSensors`)
+
+  app.get(
+    `${SERVERROUTESPREFIX}/positionSources`,
+    (req: Request, res: Response) => {
+      // Use the same freshness-filtered + sorted set the POSITION_SOURCES
+      // event emits, so a cold page-load matches the next websocket update.
+      res.json(app.deltaCache.getActivePositionSources())
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/gnssSensors`,
+    (req: Request, res: Response) => {
+      res.json(app.config.settings.gnssSensors || [])
+    }
+  )
+
+  // `previous` is snapshotted inside the lock so a later request sees the
+  // outcome of any earlier in-flight settings write, not the state at
+  // handler entry. The lock is shared with any other handler that opts
+  // into `withSettingsWriteLock` so cross-route races on settings.json
+  // can't reintroduce a rolled-back payload.
+  function applyGnssSensorsAtomic(
+    next: GnssSensorsPayload | undefined,
+    eventData: unknown,
+    res: Response
+  ): void {
+    withSettingsWriteLock(
+      () =>
+        new Promise<void>((resolve) => {
+          const previous = app.config.settings.gnssSensors ?? []
+          runApplyGnssSensorsAtomic(previous, next, eventData, res, resolve)
+        })
+    )
+  }
+
+  function runApplyGnssSensorsAtomic(
+    previous: GnssSensorsPayload,
+    next: GnssSensorsPayload | undefined,
+    eventData: unknown,
+    res: Response,
+    done: () => void
+  ): void {
+    const de = app.config.baseDeltaEditor
+    // Sweep any legacy sensors.gps.<sensorId>.fromBow/fromCenter entries
+    // out of the base-delta store on every write. The corrector reads
+    // offsets from settings.gnssSensors directly and no per-sensor
+    // data-model entries are published, so any that exist are stale
+    // leftovers.
+    //
+    // FullSignalK has no per-path tombstone API: removing from the base-delta
+    // store stops the values from being re-emitted at startup, but any
+    // entries already in `app.signalk.self` from a previous run persist
+    // until the next restart. The handler reports that a restart is
+    // required via legacyPathsCleared in the response so the admin UI
+    // can surface the restart banner only when this actually happened.
+    // Swept entries are kept so a failed write can put them back: the
+    // removals live in the same in-memory editor whose baseDeltas.json
+    // write failed (or never ran), and leaving them out would diverge
+    // the editor from what is on disk.
+    const sweptLegacyValues: Array<{ path: string; value: unknown }> = []
+    const legacyPathsCleared = (rows: GnssSensorsPayload): boolean => {
+      for (const s of rows) {
+        for (const path of [
+          `sensors.gps.${s.sensorId}.fromBow`,
+          `sensors.gps.${s.sensorId}.fromCenter`
+        ]) {
+          const value = de.getSelfValue(path)
+          if (value !== undefined) {
+            de.removeSelfValue(path)
+            sweptLegacyValues.push({ path, value })
+          }
+        }
+      }
+      return sweptLegacyValues.length > 0
+    }
+    const restorePrevious = () => {
+      for (const { path, value } of sweptLegacyValues) {
+        de.setSelfValue(path, value)
+      }
+      if (next !== undefined && previous.length === 0) {
+        delete app.config.settings.gnssSensors
+      } else {
+        app.config.settings.gnssSensors = previous
+      }
+    }
+    let restartRequired = false
+    if (next === undefined) {
+      restartRequired = legacyPathsCleared(previous)
+      delete app.config.settings.gnssSensors
+    } else {
+      restartRequired = legacyPathsCleared(previous)
+      app.config.settings.gnssSensors = next
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    writeSettingsFile(app, app.config.settings, (err: any) => {
+      if (err) {
+        restorePrevious()
+        res.status(500).send('Unable to save gnssSensors in settings file')
+        done()
+        return
+      }
+      writeBaseDeltasFile(app)
+        .then(() => {
+          app.emit('serverevent', { type: 'GNSS_SENSORS', data: eventData })
+          res.json({ result: 'ok', restartRequired })
+          done()
+        })
+        .catch(() => {
+          // settings.json is already on disk with the new payload but the
+          // base-deltas write failed — restore in-memory state first, then
+          // re-write settings.json so disk and memory agree on a restart.
+          restorePrevious()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          writeSettingsFile(app, app.config.settings, (rollbackErr: any) => {
+            if (rollbackErr) {
+              res
+                .status(500)
+                .send(
+                  'gnssSensors base-delta write failed and rolling back settings.json also failed; restart server to recover'
+                )
+              done()
+              return
+            }
+            res.status(500).send('Unable to save gnssSensors base deltas')
+            done()
+          })
+        })
+    })
+  }
+
+  app.put(
+    `${SERVERROUTESPREFIX}/gnssSensors`,
+    (req: Request, res: Response) => {
+      const validation = validateGnssSensorsPayload(req.body)
+      if (!validation.ok) {
+        res.status(400).send(validation.error)
+        return
+      }
+      const sensors = validation.value
+      const de = app.config.baseDeltaEditor
+      const length = de.getSelfValue('design.length') as
+        { overall?: number } | number | undefined
+      const lengthOverallRaw =
+        typeof length === 'object' && length !== null
+          ? length.overall
+          : typeof length === 'number'
+            ? length
+            : undefined
+      const beamRaw = de.getSelfValue('design.beam')
+      // Non-positive hull dimensions came from a stale or hand-edited
+      // base-delta and would make every offset out of range, blocking the
+      // user from saving an otherwise-valid sensor row. Treat them as
+      // unavailable so bounds-checking is skipped just like when the
+      // dimension was never set.
+      const lengthOverall =
+        typeof lengthOverallRaw === 'number' && lengthOverallRaw > 0
+          ? lengthOverallRaw
+          : undefined
+      const beam =
+        typeof beamRaw === 'number' && beamRaw > 0 ? beamRaw : undefined
+      const boundsError = validateGnssSensorBounds(sensors, lengthOverall, beam)
+      if (boundsError) {
+        res.status(400).send(boundsError)
+        return
+      }
+      applyGnssSensorsAtomic(sensors, sensors, res)
+    }
+  )
+
+  app.delete(
+    `${SERVERROUTESPREFIX}/gnssSensors`,
+    (_req: Request, res: Response) => {
+      applyGnssSensorsAtomic(undefined, [], res)
+    }
+  )
 
   app.post(`${SERVERROUTESPREFIX}/debug`, (req: Request, res: Response) => {
     if (!app.logging.enableDebug(req.body.value)) {

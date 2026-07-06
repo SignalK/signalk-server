@@ -22,7 +22,8 @@ import {
   useSourcePriorities,
   usePriorityOverrides,
   usePriorityGroups,
-  useActiveConflictCount
+  useActiveConflictCount,
+  useUnconfiguredGnssSources
 } from '../../store'
 import classNames from 'classnames'
 import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
@@ -156,6 +157,8 @@ export default function Sidebar({ location }: SidebarProps) {
     (d) => d.tokenExpiry && d.tokenExpiry * 1000 < nowMs
   ).length
 
+  const unconfiguredGnssCount = useUnconfiguredGnssSources().length
+
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
     let updatesBadge: BadgeData | null = null
@@ -263,7 +266,14 @@ export default function Sidebar({ location }: SidebarProps) {
                 }
               : null
         },
-        { name: 'Unit Preferences', url: '/data/units' },
+        {
+          name: 'Preferences',
+          url: '/data/preferences',
+          badge:
+            unconfiguredGnssCount > 0
+              ? { variant: 'warning', text: `${unconfiguredGnssCount}` }
+              : null
+        },
         { name: 'Fiddler', url: '/data/fiddler' }
       )
     }
@@ -281,7 +291,7 @@ export default function Sidebar({ location }: SidebarProps) {
       },
       ((): NavItemData => {
         const dataBadgeCount = isAdmin
-          ? prioritiesAttentionCount + conflictCount
+          ? prioritiesAttentionCount + conflictCount + unconfiguredGnssCount
           : 0
         return {
           name: 'Data',
@@ -421,7 +431,8 @@ export default function Sidebar({ location }: SidebarProps) {
     plugins,
     conflictCount,
     unconfiguredPriorityCount,
-    overridesWithMissingSourcesCount
+    overridesWithMissingSourcesCount,
+    unconfiguredGnssCount
   ])
 
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(

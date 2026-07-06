@@ -352,6 +352,24 @@ export class WebSocketService {
             (data ?? {}) as Parameters<SignalKStore['setN2kDeviceStatus']>[0]
           )
         break
+      case 'POSITION_SOURCES':
+        useStore
+          .getState()
+          .setPositionSources(
+            Array.isArray(data)
+              ? data.filter((item): item is string => typeof item === 'string')
+              : []
+          )
+        break
+      case 'GNSS_SENSORS':
+        useStore
+          .getState()
+          .setGnssSensors(
+            Array.isArray(data)
+              ? (data as Parameters<SignalKStore['setGnssSensors']>[0])
+              : []
+          )
+        break
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break

@@ -15,6 +15,10 @@ import {
   type UnitPreferencesSlice
 } from './slices/unitPreferencesSlice'
 import {
+  createGnssPositionSlice,
+  type GnssPositionSlice
+} from './slices/gnssPositionSlice'
+import {
   conflictKey,
   detectInstanceConflicts,
   extractN2kDevices
@@ -29,12 +33,14 @@ export type {
 export type { DataSlice, PathData, MetaData } from './slices/dataSlice'
 export type { PrioritiesSlice } from './slices/prioritiesSlice'
 export type { UnitPreferencesSlice } from './slices/unitPreferencesSlice'
+export type { GnssPositionSlice } from './slices/gnssPositionSlice'
 
 export type SignalKStore = AppSlice &
   WsSlice &
   DataSlice &
   PrioritiesSlice &
-  UnitPreferencesSlice
+  UnitPreferencesSlice &
+  GnssPositionSlice
 
 export const useStore = create<SignalKStore>()(
   subscribeWithSelector((...args) => ({
@@ -42,7 +48,8 @@ export const useStore = create<SignalKStore>()(
     ...createWsSlice(...args),
     ...createDataSlice(...args),
     ...createPrioritiesSlice(...args),
-    ...createUnitPreferencesSlice(...args)
+    ...createUnitPreferencesSlice(...args),
+    ...createGnssPositionSlice(...args)
   }))
 )
 
@@ -374,6 +381,30 @@ export function usePreferredSourceByPath(): Map<string, string> {
     }
     return map
   }, [serialized])
+}
+
+export function useGnssSensorsData() {
+  return useStore((s) => s.gnssSensorsData)
+}
+
+export function usePositionSources() {
+  return useStore((s) => s.positionSources)
+}
+
+// Detected navigation.position sources that have no sensor row yet.
+// The shared definition of "configured" — a row exists for the source,
+// regardless of whether its offsets are filled in (the corrector skips
+// rows with null offsets) — used by both the Preferences page rows and
+// the sidebar warning badge so the two cannot drift.
+export function useUnconfiguredGnssSources(): string[] {
+  const gnssSensorsData = useGnssSensorsData()
+  const positionSources = usePositionSources()
+  return useMemo(() => {
+    const configuredRefs = new Set(
+      gnssSensorsData.sensors.filter((s) => s.$source).map((s) => s.$source)
+    )
+    return positionSources.filter((ref) => !configuredRefs.has(ref))
+  }, [gnssSensorsData, positionSources])
 }
 
 export * from './types'

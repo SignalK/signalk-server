@@ -76,8 +76,8 @@ const Configuration = lazyWithRetry(
 const Settings = lazyWithRetry(
   () => import('../../views/ServerConfig/Settings')
 )
-const UnitPreferencesSettings = lazyWithRetry(
-  () => import('../../views/ServerConfig/UnitPreferencesSettings')
+const PreferencesPage = lazyWithRetry(
+  () => import('../../views/ServerConfig/PreferencesPage')
 )
 const BackupRestore = lazyWithRetry(
   () => import('../../views/ServerConfig/BackupRestore')
@@ -323,10 +323,8 @@ export default function Full() {
                   element={<ProtectedRoute component={SourcePriorityPage} />}
                 />
                 <Route
-                  path="/data/units"
-                  element={
-                    <ProtectedRoute component={UnitPreferencesSettings} />
-                  }
+                  path="/data/preferences"
+                  element={<ProtectedRoute component={PreferencesPage} />}
                 />
                 <Route
                   path="/data/fiddler"
@@ -344,6 +342,10 @@ export default function Full() {
                 <Route
                   path="/databrowser"
                   element={<Navigate to="/data/browser" replace />}
+                />
+                <Route
+                  path="/data/units"
+                  element={<Navigate to="/data/preferences" replace />}
                 />
                 <Route
                   path="/serverConfiguration/datafiddler"

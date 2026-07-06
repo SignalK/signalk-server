@@ -260,3 +260,16 @@ export interface CategoryInfo {
   baseUnit?: string
   [key: string]: unknown
 }
+
+export interface GnssSensorConfig {
+  sensorId: string
+  $source: string
+  fromBow: number | null
+  fromCenter: number | null
+}
+
+export interface GnssSensorsData {
+  sensors: GnssSensorConfig[]
+  saveState: SaveState
+  saveError?: string
+}
