@@ -11,6 +11,7 @@ describe('CanboatJs', () => {
     const app = createMockApp()
     const stream = new CanboatJs({
       app,
+      providerId: 'test-provider',
       createDebug: createDebugStub()
     })
 
@@ -23,9 +24,14 @@ describe('CanboatJs', () => {
 
     const results = await outputPromise
     expect(results).to.have.length(1)
-    const pgn = results[0] as { pgn: number; fields: { heading: number } }
+    const pgn = results[0] as {
+      pgn: number
+      fields: { heading: number }
+      providerId?: string
+    }
     expect(pgn.pgn).to.equal(127250)
     expect(pgn.fields.heading).to.be.a('number')
+    expect(pgn.providerId).to.equal('test-provider')
   })
 
   it('emits analyzerOutEvent on app for each parsed PGN', async () => {
@@ -53,6 +59,7 @@ describe('CanboatJs', () => {
     const app = createMockApp()
     const stream = new CanboatJs({
       app,
+      providerId: 'test-provider',
       createDebug: createDebugStub()
     })
 
@@ -67,8 +74,9 @@ describe('CanboatJs', () => {
 
     const results = await outputPromise
     expect(results).to.have.length(1)
-    const pgn = results[0] as { timestamp: string }
+    const pgn = results[0] as { timestamp: string; providerId?: string }
     expect(pgn.timestamp).to.equal('2025-06-15T12:00:00.000Z')
+    expect(pgn.providerId).to.equal('test-provider')
   })
 
   it('emits canboatjs:unparsed:data for unparseable input', async () => {
