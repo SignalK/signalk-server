@@ -342,6 +342,41 @@ describe('GnssOffsetCorrector handler', function () {
     )
   })
 
+  it('corrects when the config holds an alias and the delta the canonical ref', async function () {
+    // Reverse of the previous case: the row was saved while only the
+    // numeric-src alias was known; the device's canName has since
+    // resolved and deltas arrive canonicalised. rebuildLookup must
+    // canonicalise the configured ref so the row still matches.
+    const { app, process } = makeApp({
+      selfPaths: {
+        'design.length.value': { overall: 20 },
+        'navigation.headingTrue.value': 0
+      },
+      canonicalMap: { 'n2k.0.5': 'n2k.c032820059a81e3f' },
+      gnssCorrection: 'replace',
+      gnssSensors: [
+        { sensorId: 'gnss1', $source: 'n2k.0.5', fromBow: 0, fromCenter: 0 }
+      ]
+    })
+    const corrector = new GnssOffsetCorrector(app)
+    await corrector.start()
+
+    const out = process(
+      positionDelta({
+        $source: 'n2k.c032820059a81e3f',
+        latitude: 60,
+        longitude: 24
+      })
+    )
+
+    const update = out.updates[0] as never as {
+      values: { value: { latitude: number } }[]
+      meta: { value: { gnssOffsetCorrection: { $sensor: string } } }[]
+    }
+    expect(update.values[0].value.latitude).to.not.equal(60)
+    expect(update.meta[0].value.gnssOffsetCorrection.$sensor).to.equal('gnss1')
+  })
+
   it('passes through unchanged when $source is not configured', async function () {
     const { app, process } = makeApp({
       selfPaths: {

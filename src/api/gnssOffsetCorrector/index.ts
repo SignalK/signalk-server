@@ -89,6 +89,12 @@ export class GnssOffsetCorrector {
         this.rebuildLookup()
         this.warnedNoHeading.clear()
         this.warnedNoLength = false
+      } else if (e?.type === 'POSITION_SOURCES') {
+        // The alias -> canName mapping can resolve after the last
+        // config save (cold boot, late address claim). POSITION_SOURCES
+        // fires when that happens, so re-canonicalising here keeps the
+        // lookup keys aligned with incoming refs.
+        this.rebuildLookup()
       }
     })
     this.app.registerDeltaInputHandler(
@@ -121,7 +127,11 @@ export class GnssOffsetCorrector {
       ) {
         continue
       }
-      next.set(s.$source, {
+      // Key by the canonical form: a row saved while the device's CAN
+      // name was still unresolved holds the alias ref, while incoming
+      // deltas are canonicalised before the lookup in handleUpdate.
+      const canonical = this.app.deltaCache.canonicaliseSourceRef(s.$source)
+      next.set(canonical, {
         sensorId: s.sensorId,
         offset: {
           fromBow: s.fromBow,

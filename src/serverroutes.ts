@@ -50,6 +50,7 @@ import {
 import { resetPriorities } from './config/priorities-file'
 import { buildDeviceIdentities } from './deviceIdentities'
 import { SERVERROUTESPREFIX } from './constants'
+import type { GnssCorrectionMode } from './api/gnssOffsetCorrector'
 import { handleAdminUICORSOrigin } from './cors'
 import { createDebug, listKnownDebugs } from './debug'
 import { PluginManager } from './interfaces/plugins'
@@ -157,7 +158,6 @@ type GnssSensorsPayload = Array<{
   fromBow: number | null
   fromCenter: number | null
 }>
-type GnssCorrectionMode = 'off' | 'replace' | 'both'
 type GnssConfigPayload = {
   correction: GnssCorrectionMode
   sensors: GnssSensorsPayload
@@ -2204,7 +2204,18 @@ module.exports = function (
             correction: app.config.settings.gnssCorrection ?? 'off',
             sensors: app.config.settings.gnssSensors ?? []
           }
-          runApplyGnssSensorsAtomic(previous, next, eventData, res, resolve)
+          // A synchronous throw would otherwise reject the lock's
+          // promise unobserved and leave the request hanging; convert
+          // it into a 500 and always release the lock.
+          try {
+            runApplyGnssSensorsAtomic(previous, next, eventData, res, resolve)
+          } catch (err) {
+            console.error('Error applying gnssSensors:', err)
+            if (!res.headersSent) {
+              res.status(500).send('Internal error applying gnssSensors')
+            }
+            resolve()
+          }
         })
     )
   }
