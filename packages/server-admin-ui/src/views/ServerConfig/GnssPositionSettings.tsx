@@ -7,8 +7,6 @@ import Form from 'react-bootstrap/Form'
 import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
-import { faPlus } from '@fortawesome/free-solid-svg-icons/faPlus'
-import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faSatelliteDish } from '@fortawesome/free-solid-svg-icons/faSatelliteDish'
 import {
   useStore,
@@ -18,8 +16,31 @@ import {
   useSourcesData
 } from '../../store'
 import { useSourceAliases } from '../../hooks/useSourceAliases'
-import type { GnssSensorConfig } from '../../store/types'
+import type { GnssCorrectionMode, GnssSensorConfig } from '../../store/types'
+import { EMPTY_GNSS_CONFIG } from '../../store/slices/gnssPositionSlice'
 import BoatSchematicEditor from './BoatSchematicEditor'
+
+const CORRECTION_OPTIONS: {
+  value: GnssCorrectionMode
+  label: string
+  help: string
+}[] = [
+  {
+    value: 'off',
+    label: 'Store positions only',
+    help: 'Antenna positions are saved but navigation.position data is not modified.'
+  },
+  {
+    value: 'replace',
+    label: 'Correct position data',
+    help: 'navigation.position from configured antennas is corrected to the vessel reference point (CCRP); the raw antenna value is kept in the delta meta.'
+  },
+  {
+    value: 'both',
+    label: 'Original & corrected',
+    help: 'The original data is left untouched and the corrected position is additionally published under <sensor label>.ccrp, selectable via source priorities.'
+  }
+]
 
 interface VesselDimensions {
   length: number | null
@@ -39,6 +60,7 @@ const GnssPositionSettings: React.FC = () => {
   const updateGnssSensor = useStore((s) => s.updateGnssSensor)
   const addGnssSensor = useStore((s) => s.addGnssSensor)
   const removeGnssSensor = useStore((s) => s.removeGnssSensor)
+  const setGnssCorrection = useStore((s) => s.setGnssCorrection)
   const setGnssSaving = useStore((s) => s.setGnssSaving)
   const setGnssSaved = useStore((s) => s.setGnssSaved)
   const setGnssSaveFailed = useStore((s) => s.setGnssSaveFailed)
@@ -85,19 +107,26 @@ const GnssPositionSettings: React.FC = () => {
 
   useEffect(() => {
     fetch(`${window.serverRoutesPrefix}/vessel`, { credentials: 'include' })
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return (await r.json()) as { length?: unknown; beam?: unknown }
+      })
       .then((data) => {
         const length = Number(data.length)
         const beam = Number(data.beam)
         setVesselDimensions({
-          length: length > 0 ? length : null,
-          beam: beam > 0 ? beam : null
+          length: Number.isFinite(length) && length > 0 ? length : null,
+          beam: Number.isFinite(beam) && beam > 0 ? beam : null
         })
       })
-      .catch(() => {})
+      .catch((err) => {
+        // Dimensions only tighten input bounds and enable the schematic;
+        // the page works without them, so a failure is non-blocking.
+        console.warn('Failed to load vessel dimensions', err)
+      })
   }, [])
 
-  const { sensors, saveState } = gnssSensorsData
+  const { correction, sensors, saveState } = gnssSensorsData
 
   const mergedRows = useMemo(() => {
     const activeSourceRefs = new Set(positionSources)
@@ -105,7 +134,7 @@ const GnssPositionSettings: React.FC = () => {
       sensor: GnssSensorConfig | null
       $source: string
       index: number
-      status: 'configured' | 'unconfigured' | 'offline'
+      online: boolean
     }[] = []
 
     sensors.forEach((sensor, index) => {
@@ -113,20 +142,25 @@ const GnssPositionSettings: React.FC = () => {
         sensor,
         $source: sensor.$source,
         index,
-        status: activeSourceRefs.has(sensor.$source) ? 'configured' : 'offline'
+        online: activeSourceRefs.has(sensor.$source)
       })
     })
 
     unconfiguredSources.forEach((ref) => {
+      // Unconfigured rows come from the live positionSources set, so
+      // they are online by definition.
       rows.push({
         sensor: null,
         $source: ref,
         index: -1,
-        status: 'unconfigured'
+        online: true
       })
     })
 
-    return rows
+    // Stable ordering by source ref: a row keeps its place when it
+    // transitions between unconfigured and configured, so the input the
+    // user just focused does not jump elsewhere in the table.
+    return rows.sort((a, b) => a.$source.localeCompare(b.$source))
   }, [sensors, positionSources, unconfiguredSources])
 
   const handleSave = useCallback(
@@ -140,7 +174,7 @@ const GnssPositionSettings: React.FC = () => {
             method: 'PUT',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(sensors)
+            body: JSON.stringify({ correction, sensors })
           }
         )
         if (response.ok) {
@@ -172,6 +206,7 @@ const GnssPositionSettings: React.FC = () => {
       }
     },
     [
+      correction,
       sensors,
       setGnssSaving,
       setGnssSaved,
@@ -183,9 +218,9 @@ const GnssPositionSettings: React.FC = () => {
   const handleReset = useCallback(async () => {
     const confirmed = window.confirm(
       'Reset all GNSS antenna positions?\n\n' +
-        'This removes every configured sensor row. The server stops ' +
-        'applying lever-arm correction to navigation.position and detected ' +
-        'sources will reappear as "unconfigured" rows.'
+        'This removes every configured sensor row and turns lever-arm ' +
+        'correction off. Detected sources will reappear as ' +
+        '"unconfigured" rows.'
     )
     if (!confirmed) return
     setResetBusy(true)
@@ -206,7 +241,7 @@ const GnssPositionSettings: React.FC = () => {
       }
       // Force past the dirty guard: the server-side config is gone, so
       // there is nothing left for unsaved local edits to apply to.
-      useStore.getState().setGnssSensors([], true)
+      useStore.getState().setGnssSensors(EMPTY_GNSS_CONFIG, true)
       setDrafts({})
     } catch (e) {
       setResetError(`Reset failed: ${(e as Error).message}`)
@@ -272,9 +307,21 @@ const GnssPositionSettings: React.FC = () => {
         // just snaps back and the edit looks like it was swallowed.
         setGnssSaveFailed(`Sensor label "${value}" is already in use`)
         scheduleSaveErrorClear()
+      } else if (saveErrorTimerRef.current !== null) {
+        // A successful edit invalidates a still-visible duplicate-label
+        // error; clear it now instead of waiting for the 8s timer.
+        clearTimeout(saveErrorTimerRef.current)
+        saveErrorTimerRef.current = null
+        clearGnssSaveFailed()
       }
     },
-    [updateGnssSensor, draftKey, setGnssSaveFailed, scheduleSaveErrorClear]
+    [
+      updateGnssSensor,
+      draftKey,
+      setGnssSaveFailed,
+      scheduleSaveErrorClear,
+      clearGnssSaveFailed
+    ]
   )
 
   const handleFieldBlur = useCallback(
@@ -326,8 +373,28 @@ const GnssPositionSettings: React.FC = () => {
           Accurate antenna positions improve position data by accounting for the
           offset between GNSS receiver and vessel reference point. Positive
           &quot;From Center&quot; values indicate port, negative indicate
-          starboard (per Signal K specification).
+          starboard (per Signal K specification). Configure a detected source by
+          editing one of its fields.
         </Alert>
+
+        <Form.Group className="mb-3">
+          <Form.Label className="fw-bold">Lever-arm correction</Form.Label>
+          {CORRECTION_OPTIONS.map((opt) => (
+            <Form.Check
+              key={opt.value}
+              type="radio"
+              id={`gnss-correction-${opt.value}`}
+              name="gnss-correction"
+              checked={correction === opt.value}
+              onChange={() => setGnssCorrection(opt.value)}
+              label={
+                <>
+                  {opt.label} <small className="text-muted">— {opt.help}</small>
+                </>
+              }
+            />
+          ))}
+        </Form.Group>
 
         {mergedRows.length === 0 ? (
           <Alert variant="secondary">
@@ -349,23 +416,25 @@ const GnssPositionSettings: React.FC = () => {
             </thead>
             <tbody>
               {mergedRows.map((row) => {
-                const key = row.sensor
-                  ? `cfg-${row.$source}`
-                  : `det-${row.$source}`
                 const color =
                   row.sensor !== null
                     ? COLORS[row.index % COLORS.length]
                     : '#999'
-                const isOffline = row.status === 'offline'
-                const isUnconfigured = row.status === 'unconfigured'
+                const isUnconfigured = row.sensor === null
+                // Focusing any input of an unconfigured row starts its
+                // configuration: the row gets a sensor entry and the same
+                // input keeps focus, so "click and type" just works.
+                const configureOnFocus = isUnconfigured
+                  ? () => handleConfigure(row.$source)
+                  : undefined
 
                 return (
                   <tr
-                    key={key}
+                    key={row.$source}
                     className={
                       isUnconfigured
                         ? 'table-warning'
-                        : isOffline
+                        : !row.online
                           ? 'text-muted'
                           : ''
                     }
@@ -397,123 +466,108 @@ const GnssPositionSettings: React.FC = () => {
                       })()}
                     </td>
                     <td>
-                      {row.sensor ? (
-                        <Form.Control
-                          type="text"
-                          size="sm"
-                          value={row.sensor.sensorId}
-                          onChange={(e) =>
-                            handleFieldChange(
-                              row.index,
-                              row.$source,
-                              'sensorId',
-                              e.target.value
-                            )
-                          }
-                          style={{ width: 100 }}
-                        />
-                      ) : (
-                        '—'
-                      )}
+                      <Form.Control
+                        type="text"
+                        size="sm"
+                        aria-label={`Sensor label for ${row.$source}`}
+                        value={row.sensor ? row.sensor.sensorId : ''}
+                        placeholder="label"
+                        onFocus={configureOnFocus}
+                        onChange={(e) =>
+                          row.sensor &&
+                          handleFieldChange(
+                            row.index,
+                            row.$source,
+                            'sensorId',
+                            e.target.value
+                          )
+                        }
+                        style={{ width: 100 }}
+                      />
                     </td>
                     <td>
-                      {row.sensor ? (
-                        <Form.Control
-                          type="number"
-                          size="sm"
-                          step="0.1"
-                          min={vesselDimensions.length !== null ? 0 : undefined}
-                          max={vesselDimensions.length ?? undefined}
-                          value={
-                            drafts[draftKey(row.$source, 'fromBow')] ??
-                            (row.sensor.fromBow !== null
-                              ? row.sensor.fromBow
-                              : '')
-                          }
-                          onChange={(e) =>
-                            handleFieldChange(
-                              row.index,
-                              row.$source,
-                              'fromBow',
-                              e.target.value
-                            )
-                          }
-                          onBlur={() => handleFieldBlur(row.$source, 'fromBow')}
-                          style={{ width: 100 }}
-                        />
-                      ) : (
-                        '—'
-                      )}
+                      <Form.Control
+                        type="number"
+                        size="sm"
+                        aria-label={`From bow in meters for ${row.$source}`}
+                        step="0.1"
+                        min={vesselDimensions.length !== null ? 0 : undefined}
+                        max={vesselDimensions.length ?? undefined}
+                        value={
+                          drafts[draftKey(row.$source, 'fromBow')] ??
+                          (row.sensor && row.sensor.fromBow !== null
+                            ? row.sensor.fromBow
+                            : '')
+                        }
+                        onFocus={configureOnFocus}
+                        onChange={(e) =>
+                          row.sensor &&
+                          handleFieldChange(
+                            row.index,
+                            row.$source,
+                            'fromBow',
+                            e.target.value
+                          )
+                        }
+                        onBlur={() => handleFieldBlur(row.$source, 'fromBow')}
+                        style={{ width: 100 }}
+                      />
                     </td>
                     <td>
-                      {row.sensor ? (
-                        <Form.Control
-                          type="number"
-                          size="sm"
-                          step="0.1"
-                          min={
-                            vesselDimensions.beam !== null
-                              ? -vesselDimensions.beam / 2
-                              : undefined
-                          }
-                          max={
-                            vesselDimensions.beam !== null
-                              ? vesselDimensions.beam / 2
-                              : undefined
-                          }
-                          value={
-                            drafts[draftKey(row.$source, 'fromCenter')] ??
-                            (row.sensor.fromCenter !== null
-                              ? row.sensor.fromCenter
-                              : '')
-                          }
-                          onChange={(e) =>
-                            handleFieldChange(
-                              row.index,
-                              row.$source,
-                              'fromCenter',
-                              e.target.value
-                            )
-                          }
-                          onBlur={() =>
-                            handleFieldBlur(row.$source, 'fromCenter')
-                          }
-                          style={{ width: 100 }}
-                        />
-                      ) : (
-                        '—'
-                      )}
+                      <Form.Control
+                        type="number"
+                        size="sm"
+                        aria-label={`From center in meters for ${row.$source}`}
+                        step="0.1"
+                        min={
+                          vesselDimensions.beam !== null
+                            ? -vesselDimensions.beam / 2
+                            : undefined
+                        }
+                        max={
+                          vesselDimensions.beam !== null
+                            ? vesselDimensions.beam / 2
+                            : undefined
+                        }
+                        value={
+                          drafts[draftKey(row.$source, 'fromCenter')] ??
+                          (row.sensor && row.sensor.fromCenter !== null
+                            ? row.sensor.fromCenter
+                            : '')
+                        }
+                        onFocus={configureOnFocus}
+                        onChange={(e) =>
+                          row.sensor &&
+                          handleFieldChange(
+                            row.index,
+                            row.$source,
+                            'fromCenter',
+                            e.target.value
+                          )
+                        }
+                        onBlur={() =>
+                          handleFieldBlur(row.$source, 'fromCenter')
+                        }
+                        style={{ width: 100 }}
+                      />
                     </td>
                     <td>
-                      {isUnconfigured ? (
-                        <Badge bg="warning" text="dark">
-                          unconfigured
-                        </Badge>
-                      ) : isOffline ? (
-                        <Badge bg="secondary">offline</Badge>
-                      ) : (
+                      {row.online ? (
                         <Badge bg="success">online</Badge>
+                      ) : (
+                        <Badge bg="secondary">offline</Badge>
                       )}
                     </td>
                     <td>
-                      {isUnconfigured ? (
+                      {row.sensor && (
                         <Button
                           size="sm"
-                          variant="outline-primary"
-                          onClick={() => handleConfigure(row.$source)}
-                          title="Configure this GNSS source"
-                        >
-                          <FontAwesomeIcon icon={faPlus} /> Configure
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
+                          variant="outline-secondary"
                           onClick={() => handleRemove(row.index, row.$source)}
-                          title="Remove this sensor configuration"
-                          aria-label={`Remove sensor configuration for ${row.sensor?.sensorId || row.$source}`}
+                          title="Clear this sensor's antenna configuration"
+                          aria-label={`Clear antenna configuration for ${row.sensor.sensorId || row.$source}`}
                         >
-                          <FontAwesomeIcon icon={faTrash} />
+                          Clear
                         </Button>
                       )}
                     </td>

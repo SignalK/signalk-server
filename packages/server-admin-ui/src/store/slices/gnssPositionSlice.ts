@@ -1,5 +1,21 @@
 import type { StateCreator } from 'zustand'
-import type { GnssSensorConfig, GnssSensorsData } from '../types'
+import type {
+  GnssCorrectionMode,
+  GnssSensorConfig,
+  GnssSensorsData
+} from '../types'
+
+export interface GnssConfigPayload {
+  correction: GnssCorrectionMode
+  sensors: GnssSensorConfig[]
+}
+
+// Canonical empty server state, shared with every consumer that needs a
+// fallback so the default cannot drift.
+export const EMPTY_GNSS_CONFIG: GnssConfigPayload = {
+  correction: 'off',
+  sensors: []
+}
 
 export interface GnssPositionSliceState {
   gnssSensorsData: GnssSensorsData
@@ -7,11 +23,13 @@ export interface GnssPositionSliceState {
 }
 
 export interface GnssPositionSliceActions {
-  /** Replace the sensor rows with server state. Skipped while local
-   * edits are unsaved (dirty) so a live GNSS_SENSORS event from another
-   * session cannot clobber in-progress work; pass force to override
-   * (e.g. after a reset that just deleted the config server-side). */
-  setGnssSensors: (sensors: GnssSensorConfig[], force?: boolean) => void
+  /** Replace the correction mode + sensor rows with server state.
+   * Skipped while local edits are unsaved (dirty) so a live
+   * GNSS_SENSORS event from another session cannot clobber in-progress
+   * work; pass force to override (e.g. after a reset that just deleted
+   * the config server-side). */
+  setGnssSensors: (config: GnssConfigPayload, force?: boolean) => void
+  setGnssCorrection: (correction: GnssCorrectionMode) => void
   setPositionSources: (sources: string[]) => void
   /** Returns false when the edit was rejected (out-of-range index or a
    * duplicate sensorId/$source) so callers can surface the reason
@@ -41,6 +59,7 @@ function nextSensorId(sensors: GnssSensorConfig[]): string {
 
 const initialGnssPositionState: GnssPositionSliceState = {
   gnssSensorsData: {
+    correction: 'off',
     sensors: [],
     saveState: {
       dirty: false,
@@ -58,16 +77,30 @@ export const createGnssPositionSlice: StateCreator<
 > = (set) => ({
   ...initialGnssPositionState,
 
-  setGnssSensors: (sensors, force = false) => {
+  setGnssSensors: (config, force = false) => {
     set((state) => {
       if (!force && state.gnssSensorsData.saveState.dirty) return state
       return {
         gnssSensorsData: {
-          sensors,
+          correction: config.correction,
+          sensors: config.sensors,
           saveState: {
             dirty: false,
             timeoutsOk: true
           }
+        }
+      }
+    })
+  },
+
+  setGnssCorrection: (correction) => {
+    set((state) => {
+      if (state.gnssSensorsData.correction === correction) return state
+      return {
+        gnssSensorsData: {
+          ...state.gnssSensorsData,
+          correction,
+          saveState: { ...state.gnssSensorsData.saveState, dirty: true }
         }
       }
     })
@@ -158,7 +191,8 @@ export const createGnssPositionSlice: StateCreator<
           ...state.gnssSensorsData.saveState,
           isSaving: true,
           saveFailed: false
-        }
+        },
+        saveError: undefined
       }
     }))
   },

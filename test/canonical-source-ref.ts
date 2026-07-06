@@ -134,4 +134,23 @@ describe('DeltaCache.getActivePositionSources', function () {
     meta['YDEN02.226'].lastSeen = Date.now() - 10 * 60 * 1000
     expect(cache.getActivePositionSources()).to.deep.equal([])
   })
+
+  it('fails open (all sources) when sourceMeta is unavailable', function () {
+    // Without freshness data every known position source is reported —
+    // showing a possibly-stale source in the config UI beats hiding a
+    // live one.
+    const sources = {
+      YDEN02: {
+        type: 'NMEA2000',
+        '226': { n2k: { canName: 'c032820059a81e3f' } }
+      }
+    }
+    const cache = makeCache(sources, {})
+    cache.ingestDelta(positionDelta('YDEN02.226'))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(cache as any).app.signalk.sourceMeta = undefined
+    expect(cache.getActivePositionSources()).to.deep.equal([
+      'YDEN02.c032820059a81e3f'
+    ])
+  })
 })

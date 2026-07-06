@@ -6,6 +6,7 @@ import {
   GnssOffsetCorrection,
   Meta,
   Path,
+  PathValue,
   SourceRef,
   Update
 } from '@signalk/server-api'
@@ -24,33 +25,58 @@ export interface GnssCorrectorApplication
     WithSecurityStrategy,
     SignalKMessageHub {}
 
-const POSITION_PATH = 'navigation.position'
-const POSITION_META_PATH = POSITION_PATH as Path
+const POSITION_PATH = 'navigation.position' as Path
+const CORRECTOR_ID = 'gnssOffsetCorrector'
+// $source suffix for corrected positions published alongside the
+// original in 'both' mode. Also serves as the recursion guard: rows
+// bound to a *.ccrp ref are never used for correction.
+const CCRP_SOURCE_SUFFIX = '.ccrp'
+const MAX_CORRECTABLE_LATITUDE = 89.999999
+
+export type GnssCorrectionMode = 'off' | 'replace' | 'both'
 
 interface SensorEntry {
   sensorId: string
   offset: AntennaOffset
 }
 
+interface CorrectedValue {
+  corrected: Position
+  correction: GnssOffsetCorrection
+}
+
 // Server-side lever-arm correction for GNSS antenna offsets.
 //
-// Rewrites navigation.position deltas whose $source matches a configured
-// gnssSensors row, so downstream consumers (full data model, streambundle,
-// WebSocket subscribers, history-recording plugins) see the position at
-// the Common Coordinate Reference Point (CCRP) rather than at the antenna.
+// How configured offsets are applied is governed by
+// settings.gnssCorrection:
+//
+//   'off'     - (default) offsets are stored and documented but
+//               navigation.position data is not touched.
+//   'replace' - navigation.position deltas whose $source matches a
+//               configured gnssSensors row are rewritten in place, so
+//               downstream consumers (full data model, streambundle,
+//               WebSocket subscribers, history-recording plugins) see
+//               the position at the Common Coordinate Reference Point
+//               (CCRP) rather than at the antenna. The raw antenna
+//               value is preserved in the same update's meta entry
+//               under gnssOffsetCorrection.
+//   'both'    - the original delta passes through untouched and the
+//               corrected position is additionally published under
+//               `<sensorId>.ccrp`, so both positions coexist as
+//               separate sources on navigation.position and clients
+//               choose via source priorities.
 //
 // CCRP is defined as center-of-vessel on the centerline: body coordinates
 // (length/2, 0) measured from the bow. Derived from design.length.overall
 // (already in Server -> Settings -> Vessel Configuration). When length or
 // heading is unavailable, the delta passes through unmodified.
 //
-// The raw antenna value is preserved in the same update's meta entry under
-// gnssOffsetCorrection so history plugins can reconstruct the antenna's
-// track. app.deltaCache stores the raw per-source value because it ingests
+// app.deltaCache stores the raw per-source value because it ingests
 // before the chain runs - that is intentional and matches the Data Browser
 // expectation that the per-source view shows what each antenna reports.
 export class GnssOffsetCorrector {
   private lookup: Map<string, SensorEntry> = new Map()
+  private mode: GnssCorrectionMode = 'off'
   private warnedNoHeading: Set<string> = new Set()
   private warnedNoLength = false
 
@@ -73,6 +99,7 @@ export class GnssOffsetCorrector {
   }
 
   private rebuildLookup(): void {
+    this.mode = this.app.config.settings.gnssCorrection ?? 'off'
     const next = new Map<string, SensorEntry>()
     const sensors = this.app.config.settings.gnssSensors ?? []
     for (const s of sensors) {
@@ -82,8 +109,18 @@ export class GnssOffsetCorrector {
       //     geometry by coercing the missing axis to zero. Either case
       //     is user-error state from a partially-edited row, so we
       //     pass the delta through untouched.
+      // Rows bound to a *.ccrp ref are also skipped: correcting our own
+      // corrected output would recurse.
       if (!s.$source) continue
-      if (s.fromBow === null || s.fromCenter === null) continue
+      if (s.$source.endsWith(CCRP_SOURCE_SUFFIX)) continue
+      if (
+        s.fromBow === null ||
+        s.fromBow === undefined ||
+        s.fromCenter === null ||
+        s.fromCenter === undefined
+      ) {
+        continue
+      }
       next.set(s.$source, {
         sensorId: s.sensorId,
         offset: {
@@ -96,17 +133,40 @@ export class GnssOffsetCorrector {
   }
 
   private handle(delta: Delta): Delta {
+    if (this.mode === 'off') return delta
     if (this.lookup.size === 0) return delta
     if (delta.context !== this.app.selfContext) return delta
     if (!delta.updates) return delta
+    let emitted: Update[] | undefined
     for (const update of delta.updates) {
-      this.handleUpdate(update)
+      const emission = this.handleUpdate(update)
+      if (emission) {
+        emitted = emitted ?? []
+        emitted.push(emission)
+      }
+    }
+    if (emitted) {
+      // Publish outside the input-handler call stack: handleMessage runs
+      // the delta chain synchronously, and re-entering it here would let
+      // the corrected delta reach cache/streambundle before the original
+      // finishes its own pass.
+      const companions = emitted
+      setImmediate(() => {
+        this.app.handleMessage(CORRECTOR_ID, {
+          context: delta.context,
+          updates: companions
+        })
+      })
     }
     return delta
   }
 
-  private handleUpdate(update: Update): void {
-    if (!('values' in update) || !update.values) return
+  // In 'replace' mode the update is corrected in place and nothing is
+  // returned. In 'both' mode the update is left untouched and the
+  // corrected position is returned as a new update to publish under
+  // the sensor's *.ccrp source.
+  private handleUpdate(update: Update): Update | undefined {
+    if (!('values' in update) || !update.values) return undefined
     let posPv: { path: Path; value: Position } | undefined
     let entry: SensorEntry | undefined
     for (const pv of update.values) {
@@ -126,7 +186,49 @@ export class GnssOffsetCorrector {
         break
       }
     }
-    if (!posPv || !entry) return
+    if (!posPv || !entry) return undefined
+    const computed = this.computeCorrection(update, posPv.value, entry)
+    if (!computed) return undefined
+    const metaEntry: Meta = {
+      path: POSITION_PATH,
+      value: { gnssOffsetCorrection: computed.correction }
+    }
+    if (this.mode === 'both') {
+      const ccrpRef = `${entry.sensorId}${CCRP_SOURCE_SUFFIX}` as SourceRef
+      return {
+        $source: ccrpRef,
+        timestamp: update.timestamp,
+        values: [
+          { path: POSITION_PATH, value: computed.corrected } as PathValue
+        ],
+        meta: [metaEntry]
+      } as Update
+    }
+    posPv.value = computed.corrected
+    if ('meta' in update && Array.isArray(update.meta)) {
+      update.meta.push(metaEntry)
+    } else {
+      ;(update as Update & { meta: Meta[] }).meta = [metaEntry]
+    }
+    return undefined
+  }
+
+  private computeCorrection(
+    update: Update,
+    raw: Position,
+    entry: SensorEntry
+  ): CorrectedValue | undefined {
+    // Providers are external input: a malformed position (missing or
+    // non-finite coordinates) passes through untouched instead of being
+    // turned into NaN by the trigonometry.
+    if (!Number.isFinite(raw.latitude) || !Number.isFinite(raw.longitude)) {
+      return undefined
+    }
+    // The east/west metres-per-degree scale (cos latitude) vanishes at
+    // the poles; skip correction rather than emit a garbage longitude.
+    if (Math.abs(raw.latitude) > MAX_CORRECTABLE_LATITUDE) {
+      return undefined
+    }
     const lengthOverall = this.readLengthOverall()
     if (lengthOverall === undefined) {
       if (!this.warnedNoLength) {
@@ -136,7 +238,7 @@ export class GnssOffsetCorrector {
           )
         this.warnedNoLength = true
       }
-      return
+      return undefined
     }
     const headingTrue = this.readHeadingTrue()
     if (headingTrue === undefined) {
@@ -146,26 +248,18 @@ export class GnssOffsetCorrector {
           debug('skipping correction for %s: no heading available', src)
         this.warnedNoHeading.add(src)
       }
-      return
+      return undefined
     }
-    const raw = posPv.value
-    posPv.value = correctPosition(raw, entry.offset, lengthOverall, headingTrue)
-    const correction: GnssOffsetCorrection = {
-      $sensor: entry.sensorId,
-      fromBow: entry.offset.fromBow,
-      fromCenter: entry.offset.fromCenter,
-      lengthOverall,
-      headingTrue,
-      rawValue: raw
-    }
-    const metaEntry: Meta = {
-      path: POSITION_META_PATH,
-      value: { gnssOffsetCorrection: correction }
-    }
-    if ('meta' in update && Array.isArray(update.meta)) {
-      update.meta.push(metaEntry)
-    } else {
-      ;(update as Update & { meta: Meta[] }).meta = [metaEntry]
+    return {
+      corrected: correctPosition(raw, entry.offset, lengthOverall, headingTrue),
+      correction: {
+        $sensor: entry.sensorId,
+        fromBow: entry.offset.fromBow,
+        fromCenter: entry.offset.fromCenter,
+        lengthOverall,
+        headingTrue,
+        rawValue: raw
+      }
     }
   }
 

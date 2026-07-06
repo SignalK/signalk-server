@@ -268,7 +268,10 @@ export interface GnssSensorConfig {
   fromCenter: number | null
 }
 
+export type GnssCorrectionMode = 'off' | 'replace' | 'both'
+
 export interface GnssSensorsData {
+  correction: GnssCorrectionMode
   sensors: GnssSensorConfig[]
   saveState: SaveState
   saveError?: string

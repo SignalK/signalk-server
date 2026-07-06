@@ -403,7 +403,12 @@ export function useUnconfiguredGnssSources(): string[] {
     const configuredRefs = new Set(
       gnssSensorsData.sensors.filter((s) => s.$source).map((s) => s.$source)
     )
-    return positionSources.filter((ref) => !configuredRefs.has(ref))
+    // *.ccrp sources are the corrector's own output in 'both' mode —
+    // offering them as configurable antennas would invite correcting
+    // already-corrected data.
+    return positionSources.filter(
+      (ref) => !configuredRefs.has(ref) && !ref.endsWith('.ccrp')
+    )
   }, [gnssSensorsData, positionSources])
 }
 

@@ -103,7 +103,7 @@ const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
   const handlePointerDown = useCallback(
     (index: number) => (e: React.PointerEvent) => {
       e.preventDefault()
-      ;(e.target as SVGElement).setPointerCapture(e.pointerId)
+      ;(e.currentTarget as SVGElement).setPointerCapture(e.pointerId)
       setDragging(index)
     },
     []
@@ -137,7 +137,10 @@ const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
         style={{
           border: '1px solid #dee2e6',
           borderRadius: 4,
-          cursor: dragging !== null ? 'grabbing' : 'default'
+          cursor: dragging !== null ? 'grabbing' : 'default',
+          // Without this, touch drags fight the browser's scroll/zoom
+          // gestures and the marker sticks on tablets.
+          touchAction: 'none'
         }}
       >
         <path d={HULL_PATH} fill="#f8f9fa" stroke="#6c757d" strokeWidth={1.5} />
