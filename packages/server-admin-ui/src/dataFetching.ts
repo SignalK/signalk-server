@@ -1,4 +1,8 @@
 import { useStore } from './store'
+import {
+  GNSS_API_PATH,
+  sanitizeGnssConfig
+} from './store/slices/gnssPositionSlice'
 
 declare global {
   interface Window {
@@ -123,8 +127,8 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/multiSourcePaths', state.setMultiSourcePaths),
     fetchAndSet('/reconciledGroups', state.setReconciledGroups),
     fetchAndSet(
-      '/signalk/v2/api/vessels/self/sensors/gnss',
-      state.setGnssSensors,
+      GNSS_API_PATH,
+      (data: unknown) => state.setGnssSensors(sanitizeGnssConfig(data)),
       ''
     ),
     fetchAndSet('/positionSources', state.setPositionSources)

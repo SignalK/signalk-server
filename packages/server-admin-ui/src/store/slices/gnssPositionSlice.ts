@@ -1,20 +1,77 @@
 import type { StateCreator } from 'zustand'
 import type {
   GnssCorrectionMode,
+  GnssCorrectionStatus,
   GnssSensorConfig,
   GnssSensorsData
 } from '../types'
 
+// v2 sensors API endpoint for the GNSS config; single source of truth for
+// both the initial REST load (dataFetching) and the settings page.
+export const GNSS_API_PATH = '/signalk/v2/api/vessels/self/sensors/gnss'
+
 export interface GnssConfigPayload {
   correction: GnssCorrectionMode
   sensors: GnssSensorConfig[]
+  status?: GnssCorrectionStatus
 }
 
 // Canonical empty server state, shared with every consumer that needs a
-// fallback so the default cannot drift.
-export const EMPTY_GNSS_CONFIG: GnssConfigPayload = {
+// fallback so the default cannot drift. Frozen so a stray push/assign on a
+// consumer cannot corrupt the shared default for every other caller.
+export const EMPTY_GNSS_CONFIG: Readonly<GnssConfigPayload> = Object.freeze({
   correction: 'off',
-  sensors: []
+  // Freeze the array too: it is shared by reference into every
+  // setGnssSensors(EMPTY_GNSS_CONFIG) call, so a shallow freeze would still
+  // let a stray push/sort corrupt the shared default.
+  sensors: Object.freeze([]) as GnssSensorConfig[]
+})
+
+function isGnssCorrectionMode(v: unknown): v is GnssCorrectionMode {
+  return v === 'off' || v === 'replace' || v === 'both'
+}
+
+function isGnssCorrectionStatus(v: unknown): v is GnssCorrectionStatus {
+  if (typeof v !== 'object' || v === null) return false
+  const s = v as GnssCorrectionStatus
+  return (
+    isGnssCorrectionMode(s.mode) &&
+    typeof s.active === 'boolean' &&
+    (s.blocked === undefined ||
+      s.blocked === 'no-length' ||
+      s.blocked === 'no-heading')
+  )
+}
+
+function isGnssSensorConfig(v: unknown): v is GnssSensorConfig {
+  if (typeof v !== 'object' || v === null) return false
+  const s = v as GnssSensorConfig
+  return (
+    typeof s.sensorId === 'string' &&
+    typeof s.$source === 'string' &&
+    (s.fromBow === null || typeof s.fromBow === 'number') &&
+    (s.fromCenter === null || typeof s.fromCenter === 'number')
+  )
+}
+
+// Coerce an untrusted server payload (REST GET body or a GNSS_SENSORS
+// websocket event) into a valid config, falling back to the empty default
+// on any shape mismatch so both entry points validate the same way.
+export function sanitizeGnssConfig(data: unknown): GnssConfigPayload {
+  const payload = data as Partial<GnssConfigPayload> | undefined
+  if (
+    !payload ||
+    !isGnssCorrectionMode(payload.correction) ||
+    !Array.isArray(payload.sensors) ||
+    !payload.sensors.every(isGnssSensorConfig)
+  ) {
+    return EMPTY_GNSS_CONFIG
+  }
+  return {
+    correction: payload.correction,
+    sensors: payload.sensors,
+    status: isGnssCorrectionStatus(payload.status) ? payload.status : undefined
+  }
 }
 
 export interface GnssPositionSliceState {
@@ -84,6 +141,7 @@ export const createGnssPositionSlice: StateCreator<
         gnssSensorsData: {
           correction: config.correction,
           sensors: config.sensors,
+          status: config.status,
           saveState: {
             dirty: false,
             timeoutsOk: true

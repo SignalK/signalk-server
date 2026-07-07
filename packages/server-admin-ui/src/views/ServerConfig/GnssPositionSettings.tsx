@@ -17,7 +17,10 @@ import {
 } from '../../store'
 import { useSourceAliases } from '../../hooks/useSourceAliases'
 import type { GnssCorrectionMode, GnssSensorConfig } from '../../store/types'
-import { EMPTY_GNSS_CONFIG } from '../../store/slices/gnssPositionSlice'
+import {
+  EMPTY_GNSS_CONFIG,
+  GNSS_API_PATH
+} from '../../store/slices/gnssPositionSlice'
 import BoatSchematicEditor from './BoatSchematicEditor'
 
 const CORRECTION_OPTIONS: {
@@ -33,7 +36,7 @@ const CORRECTION_OPTIONS: {
   {
     value: 'replace',
     label: 'Correct position data',
-    help: 'navigation.position from configured antennas is corrected to the vessel reference point (CCRP); the raw antenna value is kept in the delta meta.'
+    help: 'navigation.position from configured antennas is corrected to the vessel reference point (CCRP). The raw antenna value is replaced; use "Original & corrected" to keep both.'
   },
   {
     value: 'both',
@@ -126,7 +129,16 @@ const GnssPositionSettings: React.FC = () => {
       })
   }, [])
 
-  const { correction, sensors, saveState } = gnssSensorsData
+  const { correction, sensors, saveState, status } = gnssSensorsData
+
+  // Lever-arm correction ('replace'/'both') needs the vessel length to
+  // locate the CCRP; without it the server cannot correct. Disable those
+  // choices and point the user at where length is set.
+  const lengthMissing = vesselDimensions.length === null
+  const VESSEL_SETTINGS_HASH = '#/serverConfiguration/settings'
+  // Save (PUT) and reset (DELETE) mutate the same GNSS config; disable both
+  // while either is in flight so they cannot race on response order.
+  const mutationBusy = saveState.isSaving || resetBusy
 
   const mergedRows = useMemo(() => {
     const activeSourceRefs = new Set(positionSources)
@@ -168,15 +180,12 @@ const GnssPositionSettings: React.FC = () => {
       e.preventDefault()
       setGnssSaving()
       try {
-        const response = await fetch(
-          `${window.serverRoutesPrefix}/gnssSensors`,
-          {
-            method: 'PUT',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ correction, sensors })
-          }
-        )
+        const response = await fetch(GNSS_API_PATH, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ correction, sensors })
+        })
         if (response.ok) {
           // The server clears any legacy sensors.gps.<id>.fromBow/fromCenter
           // base-delta entries on every save, but FullSignalK retains the
@@ -226,7 +235,7 @@ const GnssPositionSettings: React.FC = () => {
     setResetBusy(true)
     setResetError(null)
     try {
-      const res = await fetch(`${window.serverRoutesPrefix}/gnssSensors`, {
+      const res = await fetch(GNSS_API_PATH, {
         method: 'DELETE',
         credentials: 'include'
       })
@@ -352,7 +361,7 @@ const GnssPositionSettings: React.FC = () => {
           size="sm"
           variant="outline-danger"
           onClick={handleReset}
-          disabled={resetBusy}
+          disabled={mutationBusy}
           title="Remove all GNSS sensor rows; the server will stop applying lever-arm correction to navigation.position"
         >
           {resetBusy ? 'Resetting…' : 'Reset all GNSS sensors'}
@@ -379,21 +388,48 @@ const GnssPositionSettings: React.FC = () => {
 
         <Form.Group className="mb-3">
           <Form.Label className="fw-bold">Lever-arm correction</Form.Label>
-          {CORRECTION_OPTIONS.map((opt) => (
-            <Form.Check
-              key={opt.value}
-              type="radio"
-              id={`gnss-correction-${opt.value}`}
-              name="gnss-correction"
-              checked={correction === opt.value}
-              onChange={() => setGnssCorrection(opt.value)}
-              label={
-                <>
-                  {opt.label} <small className="text-muted">— {opt.help}</small>
-                </>
-              }
-            />
-          ))}
+          {CORRECTION_OPTIONS.map((opt) => {
+            // 'off' is always available; the correcting modes need length.
+            const requiresLength = opt.value !== 'off'
+            const disabled = requiresLength && lengthMissing
+            return (
+              <Form.Check
+                key={opt.value}
+                type="radio"
+                id={`gnss-correction-${opt.value}`}
+                name="gnss-correction"
+                checked={correction === opt.value}
+                disabled={disabled || mutationBusy}
+                onChange={() => setGnssCorrection(opt.value)}
+                label={
+                  <>
+                    {opt.label}{' '}
+                    <small className="text-muted">— {opt.help}</small>
+                  </>
+                }
+              />
+            )
+          })}
+          {/* Show the length warning from either the mount-time /vessel
+              snapshot or the live server status, so a length that goes
+              missing while the page is open still surfaces. */}
+          {(lengthMissing || status?.blocked === 'no-length') && (
+            <small className="d-block text-warning mt-1">
+              Position correction requires the vessel length.{' '}
+              <a href={VESSEL_SETTINGS_HASH}>Set it in Vessel Configuration</a>.
+            </small>
+          )}
+          {status && status.blocked === 'no-heading' && (
+            <small className="d-block text-warning mt-1">
+              Correction is enabled but inactive: no true heading is available.
+              It will resume automatically when heading data returns.
+            </small>
+          )}
+          {status && status.active && (
+            <small className="d-block text-success mt-1">
+              Correction is active.
+            </small>
+          )}
         </Form.Group>
 
         {mergedRows.length === 0 ? (
@@ -472,6 +508,7 @@ const GnssPositionSettings: React.FC = () => {
                         aria-label={`Sensor label for ${row.$source}`}
                         value={row.sensor ? row.sensor.sensorId : ''}
                         placeholder="label"
+                        disabled={mutationBusy}
                         onFocus={configureOnFocus}
                         onChange={(e) =>
                           row.sensor &&
@@ -499,6 +536,7 @@ const GnssPositionSettings: React.FC = () => {
                             ? row.sensor.fromBow
                             : '')
                         }
+                        disabled={mutationBusy}
                         onFocus={configureOnFocus}
                         onChange={(e) =>
                           row.sensor &&
@@ -535,6 +573,7 @@ const GnssPositionSettings: React.FC = () => {
                             ? row.sensor.fromCenter
                             : '')
                         }
+                        disabled={mutationBusy}
                         onFocus={configureOnFocus}
                         onChange={(e) =>
                           row.sensor &&
@@ -563,6 +602,7 @@ const GnssPositionSettings: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline-secondary"
+                          disabled={mutationBusy}
                           onClick={() => handleRemove(row.index, row.$source)}
                           title="Clear this sensor's antenna configuration"
                           aria-label={`Clear antenna configuration for ${row.sensor.sensorId || row.$source}`}
@@ -594,7 +634,7 @@ const GnssPositionSettings: React.FC = () => {
         <Button
           size="sm"
           variant="primary"
-          disabled={!saveState.dirty || saveState.isSaving}
+          disabled={!saveState.dirty || mutationBusy}
           onClick={handleSave}
         >
           <FontAwesomeIcon icon={faFloppyDisk} /> Save

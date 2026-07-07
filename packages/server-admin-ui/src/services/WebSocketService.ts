@@ -1,5 +1,5 @@
 import { useStore, type SignalKStore } from '../store'
-import { EMPTY_GNSS_CONFIG } from '../store/slices/gnssPositionSlice'
+import { sanitizeGnssConfig } from '../store/slices/gnssPositionSlice'
 import { fetchAllData } from '../dataFetching'
 
 export type WebSocketStatus =
@@ -363,19 +363,7 @@ export class WebSocketService {
           )
         break
       case 'GNSS_SENSORS': {
-        const payload = data as
-          Parameters<SignalKStore['setGnssSensors']>[0] | undefined
-        const validCorrection =
-          payload?.correction === 'off' ||
-          payload?.correction === 'replace' ||
-          payload?.correction === 'both'
-        useStore
-          .getState()
-          .setGnssSensors(
-            payload && validCorrection && Array.isArray(payload.sensors)
-              ? payload
-              : EMPTY_GNSS_CONFIG
-          )
+        useStore.getState().setGnssSensors(sanitizeGnssConfig(data))
         break
       }
       case 'RESTORESTATUS':

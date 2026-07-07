@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useStore } from '../index'
 import type { GnssSensorConfig } from '../types'
-import type { GnssConfigPayload } from './gnssPositionSlice'
+import {
+  EMPTY_GNSS_CONFIG,
+  sanitizeGnssConfig,
+  type GnssConfigPayload
+} from './gnssPositionSlice'
 
 function row(sensorId: string, $source: string): GnssSensorConfig {
   return { sensorId, $source, fromBow: null, fromCenter: null }
@@ -57,6 +61,20 @@ describe('gnssPositionSlice', () => {
       const data = useStore.getState().gnssSensorsData
       expect(data.sensors).toEqual([])
       expect(data.saveState.dirty).toBe(false)
+    })
+
+    it('stores the server correction status when present', () => {
+      useStore.getState().setGnssSensors({
+        correction: 'replace',
+        sensors: [],
+        status: { mode: 'replace', active: false, blocked: 'no-heading' }
+      })
+
+      expect(useStore.getState().gnssSensorsData.status).toEqual({
+        mode: 'replace',
+        active: false,
+        blocked: 'no-heading'
+      })
     })
   })
 
@@ -217,6 +235,75 @@ describe('gnssPositionSlice', () => {
       useStore.getState().removeGnssSensor(5)
 
       expect(useStore.getState().gnssSensorsData.sensors).toHaveLength(1)
+    })
+  })
+
+  describe('sanitizeGnssConfig', () => {
+    it('passes a well-formed payload through, keeping status', () => {
+      const payload = {
+        correction: 'replace',
+        sensors: [row('gnss1', 'n2k.0.5')],
+        status: { mode: 'replace' as const, active: true }
+      }
+      expect(sanitizeGnssConfig(payload)).toEqual(payload)
+    })
+
+    it('falls back to the empty default on a bad correction mode', () => {
+      expect(sanitizeGnssConfig({ correction: 'nonsense', sensors: [] })).toBe(
+        EMPTY_GNSS_CONFIG
+      )
+    })
+
+    it('falls back when sensors is not an array', () => {
+      expect(sanitizeGnssConfig({ correction: 'off', sensors: 'oops' })).toBe(
+        EMPTY_GNSS_CONFIG
+      )
+    })
+
+    it('falls back when a sensor element is malformed', () => {
+      expect(
+        sanitizeGnssConfig({
+          correction: 'off',
+          sensors: [{ sensorId: 'gnss1' }] // missing $source/offsets
+        })
+      ).toBe(EMPTY_GNSS_CONFIG)
+    })
+
+    it('drops a malformed status while keeping a valid payload', () => {
+      const result = sanitizeGnssConfig({
+        correction: 'replace',
+        sensors: [],
+        status: { mode: 'bogus', active: 'yes' }
+      })
+      expect(result.correction).toBe('replace')
+      expect(result.status).toBeUndefined()
+    })
+
+    it('drops a status with an invalid blocked value', () => {
+      const result = sanitizeGnssConfig({
+        correction: 'replace',
+        sensors: [],
+        status: { mode: 'replace', active: false, blocked: 'nope' }
+      })
+      expect(result.status).toBeUndefined()
+    })
+
+    it('keeps a status with a valid blocked value', () => {
+      const result = sanitizeGnssConfig({
+        correction: 'replace',
+        sensors: [],
+        status: { mode: 'replace', active: false, blocked: 'no-length' }
+      })
+      expect(result.status).toEqual({
+        mode: 'replace',
+        active: false,
+        blocked: 'no-length'
+      })
+    })
+
+    it('falls back on null/undefined input', () => {
+      expect(sanitizeGnssConfig(undefined)).toBe(EMPTY_GNSS_CONFIG)
+      expect(sanitizeGnssConfig(null)).toBe(EMPTY_GNSS_CONFIG)
     })
   })
 })
