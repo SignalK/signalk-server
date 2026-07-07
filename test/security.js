@@ -2,6 +2,7 @@ const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
 const { freeport } = require('./ts-servertestutilities')
+const path = require('path')
 const WebSocket = require('ws')
 const jwt = require('jsonwebtoken')
 const {
@@ -1187,10 +1188,16 @@ describe('Plugin route permissions', () => {
     port = await freeport()
     url = `http://0.0.0.0:${port}`
 
-    server = await startServerP(port, true, {
-      disableSchemaMetaDeltas: true,
-      settings: { interfaces: { plugins: true } }
-    })
+    server = await startServerP(
+      port,
+      true,
+      {
+        disableSchemaMetaDeltas: true,
+        settings: { interfaces: { plugins: true } }
+      },
+      undefined,
+      path.join(__dirname, 'plugin-test-config')
+    )
 
     readToken = await getReadOnlyToken(server)
     writeToken = await getWriteToken(server)
@@ -1198,7 +1205,9 @@ describe('Plugin route permissions', () => {
   })
 
   after(async function () {
-    await server.stop()
+    if (server) {
+      await server.stop()
+    }
     if (previousHttpRateLimits === undefined) {
       delete process.env.HTTP_RATE_LIMITS
     } else {
