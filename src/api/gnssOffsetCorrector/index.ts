@@ -1,15 +1,4 @@
-import { createDebug } from '../../debug'
-const debug = createDebug('signalk-server:api:gnssOffsetCorrector')
-
-import {
-  Delta,
-  GnssOffsetCorrection,
-  Meta,
-  Path,
-  PathValue,
-  SourceRef,
-  Update
-} from '@signalk/server-api'
+import { Delta, Path, PathValue, SourceRef, Update } from '@signalk/server-api'
 import { IRouter } from 'express'
 import { get as _get } from 'lodash'
 import { SignalKMessageHub, WithConfig } from '../../app'
@@ -32,17 +21,28 @@ const CORRECTOR_ID = 'gnssOffsetCorrector'
 // bound to a *.ccrp ref are never used for correction.
 const CCRP_SOURCE_SUFFIX = '.ccrp'
 const MAX_CORRECTABLE_LATITUDE = 89.999999
+// Raised when a correction mode is active and vessel length is set but no
+// true heading is available, so lever-arm correction cannot run. Cleared
+// when heading returns.
+const HEADING_NOTIFICATION_PATH =
+  'notifications.navigation.gnss.headingUnavailable' as Path
 
 export type GnssCorrectionMode = 'off' | 'replace' | 'both'
+
+// Snapshot of whether lever-arm correction can currently run, for the
+// sensors API GET response and the admin UI. `active` is true only when a
+// correction mode is selected and both required inputs (vessel length and
+// true heading) are available. `blocked` names the missing input so the UI
+// can prompt the user to supply it.
+export interface GnssCorrectionStatus {
+  mode: GnssCorrectionMode
+  active: boolean
+  blocked?: 'no-length' | 'no-heading'
+}
 
 interface SensorEntry {
   sensorId: string
   offset: AntennaOffset
-}
-
-interface CorrectedValue {
-  corrected: Position
-  correction: GnssOffsetCorrection
 }
 
 // Server-side lever-arm correction for GNSS antenna offsets.
@@ -57,9 +57,8 @@ interface CorrectedValue {
 //               downstream consumers (full data model, streambundle,
 //               WebSocket subscribers, history-recording plugins) see
 //               the position at the Common Coordinate Reference Point
-//               (CCRP) rather than at the antenna. The raw antenna
-//               value is preserved in the same update's meta entry
-//               under gnssOffsetCorrection.
+//               (CCRP) rather than at the antenna. The raw antenna value
+//               is not retained; use 'both' to keep both positions.
 //   'both'    - the original delta passes through untouched and the
 //               corrected position is additionally published under
 //               `<sensorId>.ccrp`, so both positions coexist as
@@ -77,8 +76,11 @@ interface CorrectedValue {
 export class GnssOffsetCorrector {
   private lookup: Map<string, SensorEntry> = new Map()
   private mode: GnssCorrectionMode = 'off'
-  private warnedNoHeading: Set<string> = new Set()
   private warnedNoLength = false
+  // True while the headingUnavailable notification is raised. Tracked so
+  // the notification is emitted only on transition (raise/clear), keeping
+  // the per-delta path free of a delta on every position message.
+  private headingNotificationActive = false
 
   constructor(private app: GnssCorrectorApplication) {}
 
@@ -87,8 +89,10 @@ export class GnssOffsetCorrector {
     this.app.on('serverevent', (e: { type?: string }) => {
       if (e?.type === 'GNSS_SENSORS') {
         this.rebuildLookup()
-        this.warnedNoHeading.clear()
         this.warnedNoLength = false
+        // Config changed (mode/sensors); clear any stale heading warning so
+        // the next correction attempt re-evaluates and re-raises if needed.
+        this.clearHeadingNotification()
       } else if (e?.type === 'POSITION_SOURCES') {
         // The alias -> canName mapping can resolve after the last
         // config save (cold boot, late address claim). POSITION_SOURCES
@@ -104,26 +108,41 @@ export class GnssOffsetCorrector {
     )
   }
 
+  // Report whether correction can currently run. When a mode is selected
+  // the missing input (if any) is surfaced so the sensors API and admin UI
+  // can tell the user why correction is inactive.
+  getStatus(): GnssCorrectionStatus {
+    if (this.mode === 'off') {
+      return { mode: 'off', active: false }
+    }
+    if (this.readLengthOverall() === undefined) {
+      return { mode: this.mode, active: false, blocked: 'no-length' }
+    }
+    if (this.readHeadingTrue() === undefined) {
+      return { mode: this.mode, active: false, blocked: 'no-heading' }
+    }
+    return { mode: this.mode, active: true }
+  }
+
   private rebuildLookup(): void {
     this.mode = this.app.config.settings.gnssCorrection ?? 'off'
     const next = new Map<string, SensorEntry>()
     const sensors = this.app.config.settings.gnssSensors ?? []
     for (const s of sensors) {
-      // Skip rows that cannot drive a correctness-preserving correction:
-      //   - empty $source would otherwise hijack every position delta;
-      //   - a half-filled offset (one axis still null) would fabricate
-      //     geometry by coercing the missing axis to zero. Either case
-      //     is user-error state from a partially-edited row, so we
-      //     pass the delta through untouched.
-      // Rows bound to a *.ccrp ref are also skipped: correcting our own
-      // corrected output would recurse.
+      // An empty $source would hijack every position delta; a *.ccrp ref
+      // would make the corrector correct its own output and recurse.
       if (!s.$source) continue
       if (s.$source.endsWith(CCRP_SOURCE_SUFFIX)) continue
+      // gnssSensors is config-backed input: a hand-edited or restored file
+      // can carry a half-filled row (null/undefined axis) or a non-finite
+      // value (NaN/Infinity). Either would fabricate geometry or produce a
+      // NaN position, so skip the row. The typeof checks also narrow away
+      // null/undefined for the offset assignment below.
       if (
-        s.fromBow === null ||
-        s.fromBow === undefined ||
-        s.fromCenter === null ||
-        s.fromCenter === undefined
+        typeof s.fromBow !== 'number' ||
+        !Number.isFinite(s.fromBow) ||
+        typeof s.fromCenter !== 'number' ||
+        !Number.isFinite(s.fromCenter)
       ) {
         continue
       }
@@ -197,37 +216,24 @@ export class GnssOffsetCorrector {
       }
     }
     if (!posPv || !entry) return undefined
-    const computed = this.computeCorrection(update, posPv.value, entry)
-    if (!computed) return undefined
-    const metaEntry: Meta = {
-      path: POSITION_PATH,
-      value: { gnssOffsetCorrection: computed.correction }
-    }
+    const corrected = this.computeCorrection(posPv.value, entry)
+    if (!corrected) return undefined
     if (this.mode === 'both') {
       const ccrpRef = `${entry.sensorId}${CCRP_SOURCE_SUFFIX}` as SourceRef
       return {
         $source: ccrpRef,
         timestamp: update.timestamp,
-        values: [
-          { path: POSITION_PATH, value: computed.corrected } as PathValue
-        ],
-        meta: [metaEntry]
+        values: [{ path: POSITION_PATH, value: corrected } as PathValue]
       } as Update
     }
-    posPv.value = computed.corrected
-    if ('meta' in update && Array.isArray(update.meta)) {
-      update.meta.push(metaEntry)
-    } else {
-      ;(update as Update & { meta: Meta[] }).meta = [metaEntry]
-    }
+    posPv.value = corrected
     return undefined
   }
 
   private computeCorrection(
-    update: Update,
     raw: Position,
     entry: SensorEntry
-  ): CorrectedValue | undefined {
+  ): Position | undefined {
     // Providers are external input: a malformed position (missing or
     // non-finite coordinates) passes through untouched instead of being
     // turned into NaN by the trigonometry.
@@ -242,35 +248,62 @@ export class GnssOffsetCorrector {
     const lengthOverall = this.readLengthOverall()
     if (lengthOverall === undefined) {
       if (!this.warnedNoLength) {
-        debug.enabled &&
-          debug(
-            'skipping correction: design.length.overall not configured; configure under Server > Settings > Vessel Configuration'
-          )
+        // User-actionable misconfiguration (a correction mode is on but the
+        // vessel length it needs is unset), so surface it at warn level
+        // rather than hiding it behind the debug flag. Warned once until the
+        // config changes to avoid flooding the log on the per-delta path.
+        console.warn(
+          'GNSS lever-arm correction skipped: design.length.overall not configured; set it under Server > Settings > Vessel Configuration'
+        )
         this.warnedNoLength = true
       }
       return undefined
     }
     const headingTrue = this.readHeadingTrue()
     if (headingTrue === undefined) {
-      const src = update.$source ?? ('unknown' as SourceRef)
-      if (!this.warnedNoHeading.has(src)) {
-        debug.enabled &&
-          debug('skipping correction for %s: no heading available', src)
-        this.warnedNoHeading.add(src)
-      }
+      // Length is set and a mode is active, so this is a real loss of a
+      // required input: raise a notification (once, on transition) so the
+      // user learns correction has stopped rather than silently getting
+      // uncorrected positions.
+      this.raiseHeadingNotification()
       return undefined
     }
-    return {
-      corrected: correctPosition(raw, entry.offset, lengthOverall, headingTrue),
-      correction: {
-        $sensor: entry.sensorId,
-        fromBow: entry.offset.fromBow,
-        fromCenter: entry.offset.fromCenter,
-        lengthOverall,
-        headingTrue,
-        rawValue: raw
-      }
-    }
+    // Heading is back; retract any outstanding notification.
+    this.clearHeadingNotification()
+    return correctPosition(raw, entry.offset, lengthOverall, headingTrue)
+  }
+
+  private raiseHeadingNotification(): void {
+    if (this.headingNotificationActive) return
+    this.headingNotificationActive = true
+    this.emitHeadingNotification(
+      'warn',
+      'GNSS lever-arm correction inactive: no true heading available'
+    )
+  }
+
+  private clearHeadingNotification(): void {
+    if (!this.headingNotificationActive) return
+    this.headingNotificationActive = false
+    this.emitHeadingNotification(
+      'normal',
+      'GNSS lever-arm correction resumed: true heading available'
+    )
+  }
+
+  private emitHeadingNotification(state: string, message: string): void {
+    this.app.handleMessage(CORRECTOR_ID, {
+      updates: [
+        {
+          values: [
+            {
+              path: HEADING_NOTIFICATION_PATH,
+              value: { state, method: ['visual'], message }
+            }
+          ]
+        }
+      ]
+    })
   }
 
   // Read directly from app.signalk.self the same way put.ts and the
@@ -280,17 +313,29 @@ export class GnssOffsetCorrector {
   private readLengthOverall(): number | undefined {
     const length = _get(this.app.signalk.self, 'design.length.value') as
       { overall?: number } | number | undefined
-    if (typeof length === 'number') return length
-    if (length && typeof length.overall === 'number') return length.overall
-    return undefined
+    const overall = typeof length === 'number' ? length : length?.overall
+    // A non-positive or non-finite length would place the CCRP nowhere
+    // sensible and feed correctPosition garbage; treat it as unavailable.
+    return typeof overall === 'number' &&
+      Number.isFinite(overall) &&
+      overall > 0
+      ? overall
+      : undefined
   }
 
   private readHeadingTrue(): number | undefined {
     const t = _get(this.app.signalk.self, 'navigation.headingTrue.value')
-    if (typeof t === 'number') return t
+    if (typeof t === 'number' && Number.isFinite(t)) return t
     const m = _get(this.app.signalk.self, 'navigation.headingMagnetic.value')
     const v = _get(this.app.signalk.self, 'navigation.magneticVariation.value')
-    if (typeof m === 'number' && typeof v === 'number') return m + v
+    if (
+      typeof m === 'number' &&
+      Number.isFinite(m) &&
+      typeof v === 'number' &&
+      Number.isFinite(v)
+    ) {
+      return m + v
+    }
     return undefined
   }
 }

@@ -134,22 +134,6 @@ export interface MetaValue {
     inverseFormula: string
     symbol: string
   }
-  gnssOffsetCorrection?: GnssOffsetCorrection
-}
-
-// Provenance attached to navigation.position deltas the server has
-// corrected for GNSS antenna lever-arm offsets. Preserves the raw
-// measurement and the inputs that produced the corrected value so
-// history consumers can reconstruct the antenna's track. $sensor
-// references the configured sensor row the offsets came from.
-/** @category Server API */
-export interface GnssOffsetCorrection {
-  $sensor: string
-  fromBow: number
-  fromCenter: number
-  lengthOverall: number
-  headingTrue: number
-  rawValue: Position
 }
 
 // Notification attribute types

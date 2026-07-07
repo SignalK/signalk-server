@@ -258,7 +258,7 @@ describe('leverArm.correctPosition', function () {
 })
 
 describe('GnssOffsetCorrector handler', function () {
-  it('rewrites navigation.position and adds meta when sensor matches', async function () {
+  it('rewrites navigation.position in place when sensor matches', async function () {
     const { app, process } = makeApp({
       selfPaths: {
         'design.length.value': { overall: 20 },
@@ -279,33 +279,15 @@ describe('GnssOffsetCorrector handler', function () {
     const out = process(delta)
     const update = out.updates[0] as never as {
       values: { value: { latitude: number; longitude: number } }[]
-      meta?: {
-        value: {
-          gnssOffsetCorrection?: {
-            $sensor: string
-            fromBow: number
-            fromCenter: number
-            lengthOverall: number
-            headingTrue: number
-            rawValue: { latitude: number; longitude: number }
-          }
-        }
-      }[]
+      meta?: unknown
     }
     const expectedDLat = ((-10 / R) * 180) / Math.PI
     expect(update.values[0].value.latitude).to.be.closeTo(
       60 + expectedDLat,
       1e-9
     )
-    expect(update.meta).to.have.length(1)
-    expect(update.meta![0].value.gnssOffsetCorrection).to.deep.equal({
-      $sensor: 'gnss1',
-      fromBow: 0,
-      fromCenter: 0,
-      lengthOverall: 20,
-      headingTrue: 0,
-      rawValue: { latitude: 60, longitude: 24, altitude: undefined }
-    })
+    // The correction no longer stamps provenance meta on the delta.
+    expect(update.meta).to.equal(undefined)
   })
 
   it('corrects deltas tagged with a numeric-src alias of the configured source', async function () {
@@ -330,15 +312,11 @@ describe('GnssOffsetCorrector handler', function () {
     )
     const update = out.updates[0] as never as {
       values: { value: { latitude: number } }[]
-      meta?: { value: { gnssOffsetCorrection?: { $sensor: string } } }[]
     }
     const expectedDLat = ((-10 / R) * 180) / Math.PI
     expect(update.values[0].value.latitude).to.be.closeTo(
       60 + expectedDLat,
       1e-9
-    )
-    expect(update.meta![0].value.gnssOffsetCorrection!.$sensor).to.equal(
-      'gnss1'
     )
   })
 
@@ -371,10 +349,8 @@ describe('GnssOffsetCorrector handler', function () {
 
     const update = out.updates[0] as never as {
       values: { value: { latitude: number } }[]
-      meta: { value: { gnssOffsetCorrection: { $sensor: string } } }[]
     }
     expect(update.values[0].value.latitude).to.not.equal(60)
-    expect(update.meta[0].value.gnssOffsetCorrection.$sensor).to.equal('gnss1')
   })
 
   it('passes through unchanged when $source is not configured', async function () {
@@ -548,16 +524,14 @@ describe('GnssOffsetCorrector handler', function () {
     const out = process(delta)
     const update = out.updates[0] as never as {
       values: { value: { latitude: number; longitude: number } }[]
-      meta: {
-        value: { gnssOffsetCorrection: { lengthOverall: number } }
-      }[]
     }
+    // A plain-number design.length.value of 20 puts the CCRP 10 m aft of
+    // the bow; the resulting latitude shift confirms the length was read.
     const expectedDLat = ((-10 / R) * 180) / Math.PI
     expect(update.values[0].value.latitude).to.be.closeTo(
       60 + expectedDLat,
       1e-9
     )
-    expect(update.meta[0].value.gnssOffsetCorrection.lengthOverall).to.equal(20)
   })
 
   it('falls back to headingMagnetic + magneticVariation when headingTrue is unset', async function () {
@@ -581,12 +555,23 @@ describe('GnssOffsetCorrector handler', function () {
     })
     const out = process(delta)
     const update = out.updates[0] as never as {
-      meta: {
-        value: { gnssOffsetCorrection: { headingTrue: number } }
-      }[]
+      values: { value: { latitude: number; longitude: number } }[]
     }
-    expect(update.meta[0].value.gnssOffsetCorrection.headingTrue).to.be.closeTo(
-      Math.PI / 2,
+    // headingMagnetic (π/2 - 0.1) + magneticVariation (0.1) = π/2. The
+    // corrected value must match correctPosition driven with that true
+    // heading, proving the fallback was used.
+    const expected = correctPosition(
+      { latitude: 60, longitude: 24 },
+      { fromBow: 0, fromCenter: 0 },
+      20,
+      Math.PI / 2
+    )
+    expect(update.values[0].value.latitude).to.be.closeTo(
+      expected.latitude,
+      1e-12
+    )
+    expect(update.values[0].value.longitude).to.be.closeTo(
+      expected.longitude,
       1e-12
     )
   })
@@ -696,7 +681,7 @@ describe('GnssOffsetCorrector handler', function () {
     )
   })
 
-  it('preserves the raw value object reference (does not mutate it in place)', async function () {
+  it('replaces the value with a new object rather than mutating the raw in place', async function () {
     const { app, process } = makeApp({
       selfPaths: {
         'design.length.value': { overall: 20 },
@@ -722,12 +707,10 @@ describe('GnssOffsetCorrector handler', function () {
     const out = process(delta)
     const update = out.updates[0] as never as {
       values: { value: object }[]
-      meta: { value: { gnssOffsetCorrection: { rawValue: object } } }[]
     }
-    // Corrected value is a new object.
+    // Corrected value is a fresh object; correctPosition does not write
+    // back into the provider's raw position object.
     expect(update.values[0].value).to.not.equal(rawObj)
-    // Raw value preserved by reference under meta.
-    expect(update.meta[0].value.gnssOffsetCorrection.rawValue).to.equal(rawObj)
   })
 })
 
@@ -804,7 +787,7 @@ describe('GnssOffsetCorrector correction modes', function () {
       $source: string
       timestamp: string
       values: { path: string; value: { latitude: number } }[]
-      meta: { value: { gnssOffsetCorrection: { $sensor: string } } }[]
+      meta?: unknown
     }
     expect(emittedUpdate.$source).to.equal('gnss1.ccrp')
     expect(emittedUpdate.timestamp).to.equal('2026-05-31T00:00:00.000Z')
@@ -819,12 +802,11 @@ describe('GnssOffsetCorrector correction modes', function () {
       expected.latitude,
       1e-12
     )
-    expect(emittedUpdate.meta[0].value.gnssOffsetCorrection.$sensor).to.equal(
-      'gnss1'
-    )
+    // The companion delta carries only the corrected value, no meta.
+    expect(emittedUpdate.meta).to.equal(undefined)
   })
 
-  it("mode 'both' emits nothing when heading is unavailable", async function () {
+  it("mode 'both' publishes no companion but raises a notification when heading is unavailable", async function () {
     const { app, process, emitted } = makeApp({
       selfPaths: { 'design.length.value': { overall: 20 } },
       gnssCorrection: 'both',
@@ -842,7 +824,16 @@ describe('GnssOffsetCorrector correction modes', function () {
       values: { value: { latitude: number } }[]
     }
     expect(update.values[0].value.latitude).to.equal(60)
-    expect(emitted).to.have.length(0)
+    // Only the headingUnavailable notification is emitted; no <sensor>.ccrp
+    // companion delta because correction could not run.
+    expect(emitted).to.have.length(1)
+    const notif = emitted[0].delta.updates![0] as never as {
+      values: { path: string; value: { state: string } }[]
+    }
+    expect(notif.values[0].path).to.equal(
+      'notifications.navigation.gnss.headingUnavailable'
+    )
+    expect(notif.values[0].value.state).to.equal('warn')
   })
 
   it('never corrects rows bound to a *.ccrp source (no recursion)', async function () {
@@ -923,5 +914,82 @@ describe('GnssOffsetCorrector correction modes', function () {
     expect(update.values[0].value.latitude).to.equal(90)
     expect(update.meta).to.equal(undefined)
     expect(emitted).to.have.length(0)
+  })
+})
+
+describe('GnssOffsetCorrector heading-unavailable notification', function () {
+  const NOTIF_PATH = 'notifications.navigation.gnss.headingUnavailable'
+  const SENSOR = {
+    sensorId: 'gnss1',
+    $source: 'n2k.0.5',
+    fromBow: 0,
+    fromCenter: 0
+  }
+  // Notifications are pushed via handleMessage, captured in `emitted`.
+  const notifs = (
+    emitted: Array<{ id: string; delta: Partial<Delta> }>
+  ): Array<{ path: string; value: { state: string } }> =>
+    emitted
+      .flatMap((e) => e.delta.updates ?? [])
+      .flatMap((u) => (u as { values?: unknown[] }).values ?? [])
+      .filter((v) => (v as { path: string }).path === NOTIF_PATH) as Array<{
+      path: string
+      value: { state: string }
+    }>
+
+  it('raises a warn notification once while heading stays unavailable', async function () {
+    const { app, process, emitted } = makeApp({
+      selfPaths: { 'design.length.value': { overall: 20 } },
+      gnssCorrection: 'replace',
+      gnssSensors: [SENSOR]
+    })
+    const corrector = new GnssOffsetCorrector(app)
+    await corrector.start()
+
+    for (let i = 0; i < 3; i++) {
+      process(
+        positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 })
+      )
+    }
+    const raised = notifs(emitted)
+    expect(raised).to.have.length(1)
+    expect(raised[0].value.state).to.equal('warn')
+  })
+
+  it('clears the notification with a normal state when heading returns', async function () {
+    const self = { 'design.length.value': { overall: 20 } } as Record<
+      string,
+      unknown
+    >
+    const { app, process, emitted } = makeApp({
+      selfPaths: self,
+      gnssCorrection: 'replace',
+      gnssSensors: [SENSOR]
+    })
+    const corrector = new GnssOffsetCorrector(app)
+    await corrector.start()
+
+    // No heading yet: raises the warning.
+    process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
+    // Heading appears (mutate the shared self tree the corrector reads).
+    ;(
+      app.signalk.self as { navigation?: { headingTrue?: { value: number } } }
+    ).navigation = { headingTrue: { value: 0 } }
+    process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
+
+    const seen = notifs(emitted)
+    expect(seen.map((n) => n.value.state)).to.deep.equal(['warn', 'normal'])
+  })
+
+  it('does not notify when correction is off even without heading', async function () {
+    const { app, process, emitted } = makeApp({
+      selfPaths: { 'design.length.value': { overall: 20 } },
+      gnssSensors: [SENSOR]
+    })
+    const corrector = new GnssOffsetCorrector(app)
+    await corrector.start()
+
+    process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
+    expect(notifs(emitted)).to.have.length(0)
   })
 })
