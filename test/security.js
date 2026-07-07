@@ -1229,6 +1229,13 @@ describe('Plugin route permissions', () => {
     result.status.should.equal(401)
   })
 
+  it('readonly user is denied undeclared plugin route', async function () {
+    const result = await fetch(`${url}/plugins/testplugin/demopluginGet`, {
+      headers: { Authorization: `Bearer ${readToken}` }
+    })
+    result.status.should.equal(401)
+  })
+
   it('readonly user can access route declared as readonly', async function () {
     const result = await fetch(`${url}/plugins/testplugin/readonlyData`, {
       headers: { Authorization: `Bearer ${readToken}` }
@@ -1277,5 +1284,17 @@ describe('Plugin route permissions', () => {
     result.status.should.equal(200)
     const body = await result.json()
     body.sensor.should.equal('temperature')
+  })
+
+  it('reserved config route cannot be downgraded via access()', async function () {
+    const asReadonly = await fetch(`${url}/plugins/testplugin/config`, {
+      headers: { Authorization: `Bearer ${readToken}` }
+    })
+    asReadonly.status.should.equal(401)
+
+    const asAdmin = await fetch(`${url}/plugins/testplugin/config`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    })
+    asAdmin.status.should.equal(200)
   })
 })
