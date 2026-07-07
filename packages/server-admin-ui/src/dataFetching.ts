@@ -122,7 +122,11 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/livePreferredSources', state.setLivePreferredSources),
     fetchAndSet('/multiSourcePaths', state.setMultiSourcePaths),
     fetchAndSet('/reconciledGroups', state.setReconciledGroups),
-    fetchAndSet('/gnssSensors', state.setGnssSensors),
+    fetchAndSet(
+      '/signalk/v2/api/vessels/self/sensors/gnss',
+      state.setGnssSensors,
+      ''
+    ),
     fetchAndSet('/positionSources', state.setPositionSources)
   ])
 }

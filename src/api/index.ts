@@ -14,6 +14,7 @@ import {
   GnssOffsetCorrector,
   GnssCorrectorApplication
 } from './gnssOffsetCorrector'
+import { SensorsApi, SensorsApplication } from './sensors'
 import { binaryStreamManager, initializeBinaryStreams } from './streams'
 
 export interface ApiResponse {
@@ -111,6 +112,11 @@ export const startApis = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).gnssOffsetCorrector = gnssOffsetCorrector
 
+  const sensorsApi = new SensorsApi(app as SensorsApplication)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).sensorsApi = sensorsApi
+  apiList.push('sensors')
+
   Promise.all([
     resourcesApi.start(),
     courseApi.start(),
@@ -120,7 +126,8 @@ export const startApis = (
     radarApi.start(),
     historyApiHttpRegistry.start(),
     notificationApi.start(),
-    gnssOffsetCorrector.start()
+    gnssOffsetCorrector.start(),
+    sensorsApi.start()
   ])
   return apiList
 }
