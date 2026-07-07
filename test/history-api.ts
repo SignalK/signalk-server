@@ -155,12 +155,12 @@ describe('History API v2', () => {
         {
           path: 'navigation.speedOverGround',
           method: 'average',
-          sourceRef: 'source.a'
+          $source: 'source.a'
         },
         {
           path: 'navigation.speedOverGround',
           method: 'average',
-          sourceRef: 'source.b'
+          $source: 'source.b'
         }
       ])
       body.data.should.deep.equal([['2025-01-01T12:00:00Z', 1.2, 2.4]])

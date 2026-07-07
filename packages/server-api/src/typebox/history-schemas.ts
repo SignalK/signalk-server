@@ -46,7 +46,7 @@ export const ValuesResponseSchema = Type.Object(
       Type.Object({
         path: Type.String({ description: 'Signal K path' }),
         method: Type.String({ description: 'Aggregation method' }),
-        sourceRef: Type.Optional(
+        $source: Type.Optional(
           Type.String({
             description:
               'Source reference for this value column, present when the values are source-specific'
