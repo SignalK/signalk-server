@@ -636,7 +636,8 @@ function tokenSecurityFactory(
       }
 
       const requestPath =
-        req.baseUrl.replace(/^\/skServer/, '') + req.path.replace(/\/$/, '')
+        req.baseUrl.replace(new RegExp(`^${SERVERROUTESPREFIX}`), '') +
+        req.path.replace(/\/$/, '')
 
       const match = pluginRoutePermissions.find(
         (entry) => entry.method === req.method && entry.regex.test(requestPath)

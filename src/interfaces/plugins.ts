@@ -625,6 +625,9 @@ module.exports = (theApp: any) => {
   // every route is reachable anyway.
   type PluginRouterRegistrationApp = {
     securityStrategy: {
+      // Optional because the dummy strategy (security disabled) does not
+      // implement it; the ?. call below is then a no-op, which is correct
+      // since every route is reachable when security is off.
       registerPluginRoutePermissions?: (
         pluginId: string,
         permissions: RoutePermission[]
