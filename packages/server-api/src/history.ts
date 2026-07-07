@@ -28,7 +28,7 @@ export type AggregateMethod =
 export type ValueList = {
   path: Path
   method: AggregateMethod
-  sourceRef?: SourceRef
+  $source?: SourceRef
 }[]
 
 /**
@@ -36,7 +36,7 @@ export type ValueList = {
  * requested paths.
  *
  * - `preferred`: provider default / priority-resolved source handling
- * - `all`: return values split by source, with `sourceRef` set in `values`
+ * - `all`: return values split by source, with `$source` set in `values`
  *
  * A `sourceRef` specified on an individual path remains an explicit filter;
  * `all` only expands paths that do not already specify a source.

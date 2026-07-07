@@ -154,7 +154,7 @@ historyApiDoc.paths = {
           name: 'sourcePolicy',
           in: 'query',
           description:
-            "Controls how multiple historical sources are handled. With 'all', providers should return values split by source and include sourceRef in the values metadata. A sourceRef specified on an individual path remains an explicit filter; 'all' only expands paths that do not already specify a source.",
+            "Controls how multiple historical sources are handled. With 'all', providers should return values split by source and include $source in the values metadata. A sourceRef specified on an individual path remains an explicit filter; 'all' only expands paths that do not already specify a source.",
           schema: { type: 'string', enum: ['preferred', 'all'] }
         },
         { $ref: '#/components/parameters/ProviderIdQuery' }
@@ -205,7 +205,7 @@ historyApiDoc.paths = {
                           type: 'string',
                           description: 'Aggregation method'
                         },
-                        sourceRef: {
+                        $source: {
                           type: 'string',
                           description:
                             'Source reference, present when the query specified a source filter for this path'
