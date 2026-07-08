@@ -41,10 +41,14 @@ import {
   UnsubscribeMessage,
   NotificationId,
   AlarmRaiseOptions,
-  AlarmUpdateOptions
+  AlarmUpdateOptions,
+  AccessScopedRouter,
+  PluginRouter,
+  RouteAccessLevel,
+  RoutePermission
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
-import express, { Request, Response } from 'express'
+import express, { IRouter, Request, RequestHandler, Response } from 'express'
 import fs from 'fs'
 import { deprecate } from 'util'
 import _ from 'lodash'
@@ -613,6 +617,56 @@ module.exports = (theApp: any) => {
     }
   }
 
+  // Adds access() to the plugin's router: routes registered through the
+  // returned registrar are recorded with the security strategy so the
+  // /plugins gate lets readwrite/readonly users through to them, while
+  // routes registered directly on the router keep the admin-only
+  // default. With security disabled there is no strategy registry and
+  // every route is reachable anyway.
+  type PluginRouterRegistrationApp = {
+    securityStrategy: {
+      // Optional because the dummy strategy (security disabled) does not
+      // implement it; the ?. call below is then a no-op, which is correct
+      // since every route is reachable when security is off.
+      registerPluginRoutePermissions?: (
+        pluginId: string,
+        permissions: RoutePermission[]
+      ) => void
+    }
+  }
+  function asPluginRouter(
+    app: PluginRouterRegistrationApp,
+    router: IRouter,
+    pluginId: string
+  ): PluginRouter {
+    const pluginRouter = router as PluginRouter
+    pluginRouter.access = (level: RouteAccessLevel): AccessScopedRouter => {
+      const register = (
+        method: RoutePermission['method'],
+        path: string,
+        handlers: RequestHandler[]
+      ): AccessScopedRouter => {
+        app.securityStrategy.registerPluginRoutePermissions?.(pluginId, [
+          { method, path, permission: level }
+        ])
+        router[method.toLowerCase() as Lowercase<RoutePermission['method']>](
+          path,
+          ...handlers
+        )
+        return registrar
+      }
+      const registrar: AccessScopedRouter = {
+        get: (path, ...handlers) => register('GET', path, handlers),
+        post: (path, ...handlers) => register('POST', path, handlers),
+        put: (path, ...handlers) => register('PUT', path, handlers),
+        patch: (path, ...handlers) => register('PATCH', path, handlers),
+        delete: (path, ...handlers) => register('DELETE', path, handlers)
+      }
+      return registrar
+    }
+    return pluginRouter
+  }
+
   async function doRegisterPlugin(
     app: any,
     packageName: string,
@@ -1018,7 +1072,7 @@ module.exports = (theApp: any) => {
     })
 
     if (typeof plugin.registerWithRouter === 'function') {
-      plugin.registerWithRouter(router)
+      plugin.registerWithRouter(asPluginRouter(app, router, plugin.id))
       if (typeof plugin.getOpenApi === 'function') {
         app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
       }

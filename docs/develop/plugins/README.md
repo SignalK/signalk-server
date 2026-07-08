@@ -277,6 +277,18 @@ plugin.registerWithRouter = (router) => {
 }
 ```
 
+By default all plugin routes require admin authentication. To allow `readwrite` or `readonly` users to access an endpoint, register it through `router.access(level)` instead of directly on the router. Supports Express-style parameterized paths. Routes registered without `access()` remain admin-only, and the reserved paths `/` and `/config` cannot be downgraded.
+
+_Example:_
+
+```javascript
+plugin.registerWithRouter = (router) => {
+  router.access('readonly').get('/data/:id', (req, res) => { ... })
+  router.access('readwrite').post('/data', (req, res) => { ... })
+  router.delete('/data/:id', (req, res) => { ... }) // no access() call — admin only
+}
+```
+
 - `getOpenApi()`: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OpenAPI definition available in the server Admin UI under `Documentation -> OpenAPI`.
 
 _Example:_

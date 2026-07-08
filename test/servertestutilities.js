@@ -127,7 +127,8 @@ module.exports = {
     port,
     enableSecurity,
     extraConfig = {},
-    securityConfig
+    securityConfig,
+    configDir = serverTestConfigDirectory()
   ) {
     const Server = require('../dist')
     // The requestResponse module stores requests in-memory at module scope.
@@ -153,7 +154,7 @@ module.exports = {
       }
     }
 
-    process.env.SIGNALK_NODE_CONFIG_DIR = serverTestConfigDirectory()
+    process.env.SIGNALK_NODE_CONFIG_DIR = configDir
     process.env.SIGNALK_DISABLE_SERVER_UPDATES = 'true'
 
     const server = new Server(props)
