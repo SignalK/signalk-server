@@ -1332,10 +1332,20 @@ export default class DeltaCache {
       (acc: NormalizedDelta[], context: Context) => {
         let deltasToProcess
 
-        if (key) {
-          deltasToProcess = _.get(context, key)
-        } else {
+        if (key === undefined) {
           deltasToProcess = findDeltas(context)
+        } else if (key === '') {
+          // An empty-path subscription targets values stored at the
+          // context root (e.g. mmsi, name), which live intermixed with
+          // nested path branches. Collect every cached delta and keep
+          // only those whose own path is empty. Testing `if (key)` here
+          // would treat '' as "no key" and leak every path into the
+          // bootstrap snapshot.
+          deltasToProcess = findDeltas(context).filter(
+            (delta: NormalizedDelta) => delta.path === ''
+          )
+        } else {
+          deltasToProcess = _.get(context, key)
         }
         if (deltasToProcess) {
           acc = acc.concat(
