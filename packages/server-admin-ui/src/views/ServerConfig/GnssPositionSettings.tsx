@@ -380,10 +380,11 @@ const GnssPositionSettings: React.FC = () => {
         <Alert variant="info" className="mb-3">
           Configure the physical location of each GNSS antenna on your vessel.
           Accurate antenna positions improve position data by accounting for the
-          offset between GNSS receiver and vessel reference point (CCRP: Consistent Common Reference Point). Positive
-          &quot;From Center&quot; values indicate port, negative indicate
-          starboard (per Signal K specification). Configure a detected source by
-          editing one of its fields.
+          offset between GNSS receiver and vessel reference point (CCRP:
+          Consistent Common Reference Point). Positive &quot;From Center&quot;
+          values indicate port, negative indicate starboard (per Signal K
+          specification). Configure a detected source by editing one of its
+          fields.
         </Alert>
 
         <Form.Group className="mb-3">
@@ -428,10 +429,11 @@ const GnssPositionSettings: React.FC = () => {
           )}
           {status && status.blocked === 'no-heading' && (
             <Alert variant="warning" className="mt-1 mb-0 py-1 px-2">
-            <small className="d-block mt-1">
-              Correction is enabled but inactive: no true heading is available.
-              It will resume automatically when heading data returns.
-            </small>
+              <small className="d-block mt-1">
+                Correction is enabled but inactive: no true heading is
+                available. It will resume automatically when heading data
+                returns.
+              </small>
             </Alert>
           )}
           {status && status.active && (
