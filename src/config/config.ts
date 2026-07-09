@@ -123,6 +123,18 @@ export interface Config {
     /** Map of "sourceRefA+sourceRefB" (sorted) → ISO timestamp when the
      * conflict was dismissed by the user */
     ignoredInstanceConflicts?: Record<string, string>
+    gnssSensors?: {
+      sensorId: string
+      $source: string
+      fromBow: number | null
+      fromCenter: number | null
+    }[]
+    /** How configured GNSS antenna offsets are applied to
+     * navigation.position: 'off' stores the geometry without touching
+     * data (default), 'replace' rewrites matching deltas to the CCRP,
+     * 'both' additionally publishes the corrected position under
+     * `<sensorId>.ccrp` while leaving the original untouched. */
+    gnssCorrection?: 'off' | 'replace' | 'both'
     trustProxy?: boolean | string | number
     courseApi?: {
       apiOnly?: boolean

@@ -260,3 +260,31 @@ export interface CategoryInfo {
   baseUnit?: string
   [key: string]: unknown
 }
+
+export interface GnssSensorConfig {
+  sensorId: string
+  $source: string
+  fromBow: number | null
+  fromCenter: number | null
+}
+
+export type GnssCorrectionMode = 'off' | 'replace' | 'both'
+
+// Whether vessel reference point correction can currently run, mirroring the
+// server's sensors API GET `status`. `active` is true only when a mode is
+// selected
+// and both vessel length and true heading are available; `blocked` names
+// the missing input otherwise.
+export interface GnssCorrectionStatus {
+  mode: GnssCorrectionMode
+  active: boolean
+  blocked?: 'no-length' | 'no-heading'
+}
+
+export interface GnssSensorsData {
+  correction: GnssCorrectionMode
+  sensors: GnssSensorConfig[]
+  status?: GnssCorrectionStatus
+  saveState: SaveState
+  saveError?: string
+}

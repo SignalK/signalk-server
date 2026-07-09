@@ -50,6 +50,7 @@ import {
 import { resetPriorities } from './config/priorities-file'
 import { buildDeviceIdentities } from './deviceIdentities'
 import { SERVERROUTESPREFIX } from './constants'
+import { readDesignLengthOverall } from './api/sensors/vesselDimensions'
 import { handleAdminUICORSOrigin } from './cors'
 import { createDebug, listKnownDebugs } from './debug'
 import { PluginManager } from './interfaces/plugins'
@@ -1182,18 +1183,32 @@ module.exports = function (
     const de = app.config.baseDeltaEditor
     const communication = de.getSelfValue('communication')
     const draft = de.getSelfValue('design.draft')
-    const length = de.getSelfValue('design.length')
+    // /vessel clients (including the GNSS preferences page) expect a number
+    // for both stored shapes of design.length; readDesignLengthOverall is
+    // the same normalisation the sensors API uses.
+    const lengthOverall = readDesignLengthOverall(de)
     const type = de.getSelfValue('design.aisShipType')
     const json = {
       name: app.config.vesselName,
       mmsi: app.config.vesselMMSI,
       uuid: app.config.vesselUUID,
       draft: draft && draft.maximum,
-      length: length && length.overall,
+      length: lengthOverall,
       beam: de.getSelfValue('design.beam'),
       height: de.getSelfValue('design.airHeight'),
-      gpsFromBow: de.getSelfValue('sensors.gps.fromBow'),
-      gpsFromCenter: de.getSelfValue('sensors.gps.fromCenter'),
+      // Older /vessel clients read gpsFromBow/gpsFromCenter; surface the
+      // first configured sensor row so the legacy shape stays meaningful.
+      // The server consumes the same data from settings.gnssSensors to
+      // rewrite navigation.position at the Consistent Common Reference
+      // Point (vessel center on the centerline). An explicit `null` on
+      // a configured row means "not set yet" — fall back to the legacy
+      // single-GPS base-delta only when there is no sensor row at all.
+      gpsFromBow: app.config.settings.gnssSensors?.[0]
+        ? app.config.settings.gnssSensors[0].fromBow
+        : de.getSelfValue('sensors.gps.fromBow'),
+      gpsFromCenter: app.config.settings.gnssSensors?.[0]
+        ? app.config.settings.gnssSensors[0].fromCenter
+        : de.getSelfValue('sensors.gps.fromCenter'),
       aisShipType: type && type.id,
       callsignVhf: communication && communication.callsignVhf
     }
@@ -2011,6 +2026,22 @@ module.exports = function (
   )
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/debug`)
+
+  // Register middleware before the routes so every method picks up auth.
+  // Match the /priorities pattern: source topology is admin-only across
+  // the board. (GNSS antenna config has moved to the v2 sensors API.)
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/positionSources`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/positionSources`,
+    (req: Request, res: Response) => {
+      // Use the same freshness-filtered + sorted set the POSITION_SOURCES
+      // event emits, so a cold page-load matches the next websocket update.
+      res.json(app.deltaCache.getActivePositionSources())
+    }
+  )
 
   app.post(`${SERVERROUTESPREFIX}/debug`, (req: Request, res: Response) => {
     if (!app.logging.enableDebug(req.body.value)) {

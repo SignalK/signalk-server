@@ -1,4 +1,8 @@
 import { useStore } from './store'
+import {
+  GNSS_API_PATH,
+  sanitizeGnssConfig
+} from './store/slices/gnssPositionSlice'
 
 declare global {
   interface Window {
@@ -121,6 +125,12 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/n2kDeviceStatus', state.setN2kDeviceStatus),
     fetchAndSet('/livePreferredSources', state.setLivePreferredSources),
     fetchAndSet('/multiSourcePaths', state.setMultiSourcePaths),
-    fetchAndSet('/reconciledGroups', state.setReconciledGroups)
+    fetchAndSet('/reconciledGroups', state.setReconciledGroups),
+    fetchAndSet(
+      GNSS_API_PATH,
+      (data: unknown) => state.setGnssSensors(sanitizeGnssConfig(data)),
+      ''
+    ),
+    fetchAndSet('/positionSources', state.setPositionSources)
   ])
 }
