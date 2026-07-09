@@ -30,17 +30,17 @@ const CORRECTION_OPTIONS: {
 }[] = [
   {
     value: 'off',
-    label: 'Store positions only',
+    label: 'No correction',
     help: 'Antenna positions are saved but navigation.position data is not modified.'
   },
   {
     value: 'replace',
-    label: 'Correct position data',
+    label: 'In place correction (replace original)',
     help: 'navigation.position from configured antennas is corrected to the vessel reference point (CCRP). The raw antenna value is replaced; use "Original & corrected" to keep both.'
   },
   {
     value: 'both',
-    label: 'Original & corrected',
+    label: 'Correction as copy (keep original)',
     help: 'The original data is left untouched and the corrected position is additionally published under <sensor label>.ccrp, selectable via source priorities.'
   }
 ]
@@ -414,16 +414,23 @@ const GnssPositionSettings: React.FC = () => {
               snapshot or the live server status, so a length that goes
               missing while the page is open still surfaces. */}
           {(lengthMissing || status?.blocked === 'no-length') && (
-            <small className="d-block text-warning mt-1">
-              Position correction requires the vessel length.{' '}
-              <a href={VESSEL_SETTINGS_HASH}>Set it in Vessel Configuration</a>.
-            </small>
+            <Alert variant="info" className="mt-1 mb-0 py-1 px-2">
+              <small className="d-block mt-1">
+                Position correction requires the vessel length.{' '}
+                <a href={VESSEL_SETTINGS_HASH}>
+                  Set it in Vessel Configuration
+                </a>
+                .
+              </small>
+            </Alert>
           )}
           {status && status.blocked === 'no-heading' && (
-            <small className="d-block text-warning mt-1">
+            <Alert variant="warning" className="mt-1 mb-0 py-1 px-2">
+            <small className="d-block mt-1">
               Correction is enabled but inactive: no true heading is available.
               It will resume automatically when heading data returns.
             </small>
+            </Alert>
           )}
           {status && status.active && (
             <small className="d-block text-success mt-1">
