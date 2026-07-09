@@ -1,6 +1,6 @@
 /**
  * Vessel reference point (CCRP) correction: translate a GNSS antenna's
- * reported position to the vessel's Common Coordinate Reference Point (CCRP).
+ * reported position to the vessel's Consistent Common Reference Point (CCRP).
  *
  * CCRP is defined as center-of-vessel on the longitudinal centerline,
  * i.e. midships at the centerline. This matches the NMEA 2000 / radar /

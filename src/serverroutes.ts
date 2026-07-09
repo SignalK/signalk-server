@@ -1199,7 +1199,7 @@ module.exports = function (
       // Older /vessel clients read gpsFromBow/gpsFromCenter; surface the
       // first configured sensor row so the legacy shape stays meaningful.
       // The server consumes the same data from settings.gnssSensors to
-      // rewrite navigation.position at the Common Coordinate Reference
+      // rewrite navigation.position at the Consistent Common Reference
       // Point (vessel center on the centerline). An explicit `null` on
       // a configured row means "not set yet" — fall back to the legacy
       // single-GPS base-delta only when there is no sensor row at all.

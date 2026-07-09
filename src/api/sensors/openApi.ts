@@ -22,7 +22,7 @@ export const sensorsApiDoc: any = {
     {
       name: 'gnss',
       description:
-        'Configuration of GNSS antenna positions and vessel reference point correction of navigation.position to the vessel Common Coordinate Reference Point (CCRP).'
+        'Configuration of GNSS antenna positions and vessel reference point correction of navigation.position to the vessel Consistent Common Reference Point (CCRP).'
     }
   ],
   components: {

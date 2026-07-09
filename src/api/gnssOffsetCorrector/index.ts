@@ -57,7 +57,7 @@ interface SensorEntry {
 //               configured gnssSensors row are rewritten in place, so
 //               downstream consumers (full data model, streambundle,
 //               WebSocket subscribers, history-recording plugins) see
-//               the position at the Common Coordinate Reference Point
+//               the position at the Consistent Common Reference Point
 //               (CCRP) rather than at the antenna. The raw antenna value
 //               is not retained; use 'both' to keep both positions.
 //   'both'    - the original delta passes through untouched and the
