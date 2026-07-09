@@ -36,12 +36,12 @@ const CORRECTION_OPTIONS: {
   {
     value: 'replace',
     label: 'In place correction (replace original)',
-    help: 'navigation.position from configured antennas is corrected to the vessel reference point (CCRP). The raw antenna value is replaced; use "Original & corrected" to keep both.'
+    help: 'navigation.position from configured antennas is corrected to the vessel reference point (CCRP). The raw antenna value is replaced'
   },
   {
     value: 'both',
     label: 'Correction as copy (keep original)',
-    help: 'The original data is left untouched and the corrected position is additionally published under <sensor label>.ccrp, selectable via source priorities.'
+    help: 'The original data is left untouched and the corrected position is additionally published under <sensor label>.ccrp source, selectable via source priorities.'
   }
 ]
 
@@ -131,9 +131,9 @@ const GnssPositionSettings: React.FC = () => {
 
   const { correction, sensors, saveState, status } = gnssSensorsData
 
-  // Lever-arm correction ('replace'/'both') needs the vessel length to
-  // locate the CCRP; without it the server cannot correct. Disable those
-  // choices and point the user at where length is set.
+  // Vessel reference point correction ('replace'/'both') needs the vessel
+  // length to locate the CCRP; without it the server cannot correct. Disable
+  // those choices and point the user at where length is set.
   const lengthMissing = vesselDimensions.length === null
   const VESSEL_SETTINGS_HASH = '#/serverConfiguration/settings'
   // Save (PUT) and reset (DELETE) mutate the same GNSS config; disable both
@@ -227,8 +227,8 @@ const GnssPositionSettings: React.FC = () => {
   const handleReset = useCallback(async () => {
     const confirmed = window.confirm(
       'Reset all GNSS antenna positions?\n\n' +
-        'This removes every configured sensor row and turns lever-arm ' +
-        'correction off. Detected sources will reappear as ' +
+        'This removes every configured sensor row and turns vessel reference ' +
+        'point correction off. Detected sources will reappear as ' +
         '"unconfigured" rows.'
     )
     if (!confirmed) return
@@ -362,7 +362,7 @@ const GnssPositionSettings: React.FC = () => {
           variant="outline-danger"
           onClick={handleReset}
           disabled={mutationBusy}
-          title="Remove all GNSS sensor rows; the server will stop applying lever-arm correction to navigation.position"
+          title="Remove all GNSS sensor rows; the server will stop applying vessel reference point correction to navigation.position"
         >
           {resetBusy ? 'Resetting…' : 'Reset all GNSS sensors'}
         </Button>
@@ -380,14 +380,16 @@ const GnssPositionSettings: React.FC = () => {
         <Alert variant="info" className="mb-3">
           Configure the physical location of each GNSS antenna on your vessel.
           Accurate antenna positions improve position data by accounting for the
-          offset between GNSS receiver and vessel reference point. Positive
+          offset between GNSS receiver and vessel reference point (CCRP: Consistent Common Reference Point). Positive
           &quot;From Center&quot; values indicate port, negative indicate
           starboard (per Signal K specification). Configure a detected source by
           editing one of its fields.
         </Alert>
 
         <Form.Group className="mb-3">
-          <Form.Label className="fw-bold">Lever-arm correction</Form.Label>
+          <Form.Label className="fw-bold">
+            Vessel reference point (CCRP) correction
+          </Form.Label>
           {CORRECTION_OPTIONS.map((opt) => {
             // 'off' is always available; the correcting modes need length.
             const requiresLength = opt.value !== 'off'

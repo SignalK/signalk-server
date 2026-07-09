@@ -22,15 +22,15 @@ const CORRECTOR_ID = 'gnssOffsetCorrector'
 const CCRP_SOURCE_SUFFIX = '.ccrp'
 const MAX_CORRECTABLE_LATITUDE = 89.999999
 // Raised when a correction mode is active and vessel length is set but no
-// true heading is available, so lever-arm correction cannot run. Cleared
-// when heading returns.
+// true heading is available, so vessel reference point correction cannot run.
+// Cleared when heading returns.
 const HEADING_NOTIFICATION_PATH =
   'notifications.navigation.gnss.headingUnavailable' as Path
 
 export type GnssCorrectionMode = 'off' | 'replace' | 'both'
 
-// Snapshot of whether lever-arm correction can currently run, for the
-// sensors API GET response and the admin UI. `active` is true only when a
+// Snapshot of whether vessel reference point correction can currently run, for
+// the sensors API GET response and the admin UI. `active` is true only when a
 // correction mode is selected and both required inputs (vessel length and
 // true heading) are available. `blocked` names the missing input so the UI
 // can prompt the user to supply it.
@@ -45,7 +45,8 @@ interface SensorEntry {
   offset: AntennaOffset
 }
 
-// Server-side lever-arm correction for GNSS antenna offsets.
+// Server-side vessel reference point (CCRP) correction for GNSS antenna
+// offsets.
 //
 // How configured offsets are applied is governed by
 // settings.gnssCorrection:
@@ -253,7 +254,7 @@ export class GnssOffsetCorrector {
         // rather than hiding it behind the debug flag. Warned once until the
         // config changes to avoid flooding the log on the per-delta path.
         console.warn(
-          'GNSS lever-arm correction skipped: design.length.overall not configured; set it under Server > Settings > Vessel Configuration'
+          'GNSS vessel reference point (CCRP) correction skipped: design.length.overall not configured; set it under Server > Settings > Vessel Configuration'
         )
         this.warnedNoLength = true
       }
@@ -278,7 +279,7 @@ export class GnssOffsetCorrector {
     this.headingNotificationActive = true
     this.emitHeadingNotification(
       'warn',
-      'GNSS lever-arm correction inactive: no true heading available'
+      'GNSS vessel reference point (CCRP) correction inactive: no true heading available'
     )
   }
 
@@ -287,7 +288,7 @@ export class GnssOffsetCorrector {
     this.headingNotificationActive = false
     this.emitHeadingNotification(
       'normal',
-      'GNSS lever-arm correction resumed: true heading available'
+      'GNSS vessel reference point (CCRP) correction resumed: true heading available'
     )
   }
 

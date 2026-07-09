@@ -503,7 +503,7 @@ describe('GnssOffsetCorrector handler', function () {
     // design.length.value may be stored as either { overall: N } (new
     // shape) or a bare number (legacy single-value shape). The corrector
     // must handle both so users with older defaults files still get
-    // lever-arm correction without rewriting their base deltas.
+    // vessel reference point correction without rewriting their base deltas.
     const { app, process } = makeApp({
       selfPaths: {
         'design.length.value': 20,

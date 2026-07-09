@@ -22,7 +22,7 @@ export const sensorsApiDoc: any = {
     {
       name: 'gnss',
       description:
-        'Configuration of GNSS antenna positions and lever-arm correction of navigation.position to the vessel Common Coordinate Reference Point (CCRP).'
+        'Configuration of GNSS antenna positions and vessel reference point correction of navigation.position to the vessel Common Coordinate Reference Point (CCRP).'
     }
   ],
   components: {
@@ -199,7 +199,7 @@ export const sensorsApiDoc: any = {
         tags: ['gnss'],
         summary: 'Clear GNSS antenna configuration',
         description:
-          'Removes all configured antennas and turns lever-arm correction off.',
+          'Removes all configured antennas and turns vessel reference point correction off.',
         responses: {
           '200': {
             description: 'Configuration cleared',

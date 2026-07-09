@@ -270,8 +270,9 @@ export interface GnssSensorConfig {
 
 export type GnssCorrectionMode = 'off' | 'replace' | 'both'
 
-// Whether lever-arm correction can currently run, mirroring the server's
-// sensors API GET `status`. `active` is true only when a mode is selected
+// Whether vessel reference point correction can currently run, mirroring the
+// server's sensors API GET `status`. `active` is true only when a mode is
+// selected
 // and both vessel length and true heading are available; `blocked` names
 // the missing input otherwise.
 export interface GnssCorrectionStatus {

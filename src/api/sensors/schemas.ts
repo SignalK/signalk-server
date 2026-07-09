@@ -17,8 +17,8 @@ const gnssSensorSchema = Type.Object(
   { additionalProperties: false }
 )
 const gnssSensorsSchema = Type.Array(gnssSensorSchema)
-// Lever-arm correction is opt-in: 'off' stores geometry only, 'replace'
-// rewrites matching navigation.position deltas to the CCRP, 'both'
+// Vessel reference point correction is opt-in: 'off' stores geometry only,
+// 'replace' rewrites matching navigation.position deltas to the CCRP, 'both'
 // publishes the corrected position under <sensorId>.ccrp alongside the
 // untouched original.
 const gnssCorrectionModeSchema = Type.Union([
