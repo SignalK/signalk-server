@@ -232,22 +232,57 @@ export class StreamBundle implements IStreamBundle {
   }
 }
 
+// The same NormalizedDelta is fanned out to multiple Bacon buses (allPathsBus,
+// the path-specific bus, the self equivalents) and from there to N subscriber
+// chains, each with its own .map(toDelta). Caching the produced Delta on the
+// source object lets all subscribers for one push share one allocation.
+//
+// The cached Delta is shared by reference across every subscriber for the
+// push, including third-party plugin callbacks. We freeze it (and the inner
+// Update / values / meta arrays + their single entry) so any consumer that
+// tries to mutate the structural wrapper throws loudly instead of silently
+// corrupting other subscribers' view. The leaf `value` and `source`
+// references are left thawed: both are owned by the upstream delta, not by
+// toDelta. `source` in particular is shared with every NormalizedDelta built
+// from the same upstream Update (via the `base` object in pushDelta) and
+// freezing it would freeze the upstream layer's own object. The
+// no-mutation contract for the cached Delta extends to these leaves.
+const cachedDeltaSlot = Symbol('toDeltaCache')
+
+interface MemoizedDelta {
+  [cachedDeltaSlot]?: Delta
+}
+
 export function toDelta(normalizedDeltaData: NormalizedDelta): Delta {
+  const cached = (normalizedDeltaData as MemoizedDelta)[cachedDeltaSlot]
+  if (cached !== undefined) {
+    return cached
+  }
+
   const type = normalizedDeltaData.isMeta ? 'meta' : 'values'
-  const update = {
+  const entry = Object.freeze({
+    path: normalizedDeltaData.path,
+    value: normalizedDeltaData.value
+  })
+  const items = Object.freeze([entry])
+  const update = Object.freeze({
     source: normalizedDeltaData.source,
     $source: normalizedDeltaData.$source,
     timestamp: normalizedDeltaData.timestamp,
-    [type]: [
-      {
-        path: normalizedDeltaData.path,
-        value: normalizedDeltaData.value
-      }
-    ]
-  } as Update
+    [type]: items
+  }) as Update
 
-  return {
+  const delta: Delta = Object.freeze({
     context: normalizedDeltaData.context,
-    updates: [update]
-  }
+    updates: Object.freeze([update]) as Update[]
+  })
+  // Non-enumerable so a future `{...nd}` or `Object.assign({}, nd)` on the
+  // NormalizedDelta does not carry the cached Delta into the copy.
+  Object.defineProperty(normalizedDeltaData, cachedDeltaSlot, {
+    value: delta,
+    writable: true,
+    configurable: true,
+    enumerable: false
+  })
+  return delta
 }
