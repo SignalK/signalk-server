@@ -15,6 +15,7 @@ import {
   GnssCorrectorApplication
 } from './gnssOffsetCorrector'
 import { SensorsApi, SensorsApplication } from './sensors'
+import { CommunicationsApi, CommunicationsApplication } from './communications'
 import { binaryStreamManager, initializeBinaryStreams } from './streams'
 
 export interface ApiResponse {
@@ -117,6 +118,17 @@ export const startApis = (
   ;(app as any).sensorsApi = sensorsApi
   apiList.push('sensors')
 
+  const communicationsApi = new CommunicationsApi(
+    app as unknown as CommunicationsApplication
+  )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).communicationsApi = communicationsApi
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).logMessage = (
+    entry: Parameters<CommunicationsApi['logMessage']>[0]
+  ) => communicationsApi.logMessage(entry)
+  apiList.push('communications')
+
   Promise.all([
     resourcesApi.start(),
     courseApi.start(),
@@ -127,7 +139,8 @@ export const startApis = (
     historyApiHttpRegistry.start(),
     notificationApi.start(),
     gnssOffsetCorrector.start(),
-    sensorsApi.start()
+    sensorsApi.start(),
+    communicationsApi.start()
   ])
   return apiList
 }
