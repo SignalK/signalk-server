@@ -882,7 +882,7 @@ module.exports = function (
           app.config.settings.notifications?.manageNotifications ?? true
       },
       staleness: {
-        enforceDataTimeouts: app.config.settings.enforceDataTimeouts !== false
+        enforceDataTimeouts: app.config.settings.enforceDataTimeouts === true
       }
     }
 

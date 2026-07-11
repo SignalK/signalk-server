@@ -660,7 +660,7 @@ class Server {
     // immediately. The timer is started only after server.listen succeeds —
     // a startup failure between this point and `app.started = true` would
     // otherwise leave an orphan interval ticking against a half-built app.
-    if (app.config.settings.enforceDataTimeouts !== false) {
+    if (app.config.settings.enforceDataTimeouts === true) {
       app.stalenessEnforcer = new StalenessEnforcer(app)
     } else {
       // Clear any instance from a previous start: reload() stops it but

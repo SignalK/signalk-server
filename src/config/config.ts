@@ -100,10 +100,7 @@ export interface Config {
     logCountToKeep?: number
     enablePluginLogging?: boolean
     loggingDirectory?: string
-    /** Master switch for the staleness enforcer. Default true.
-     * Emits a synthetic `value: null` delta with `state.timedOut: true`
-     * when a vessels.self.* path+source falls silent beyond its
-     * effective timeout. See src/staleness.ts. */
+    /** Master switch for the staleness enforcer */
     enforceDataTimeouts?: boolean
     /** When true, paths without an explicit numeric `meta.timeout`
      * fall back to `defaultTimeout` instead of being skipped. Default
