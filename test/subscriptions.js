@@ -437,11 +437,11 @@ describe('Subscriptions', (_) => {
     )
     assert(
       otherValues.some((vp) => typeof vp.value.mmsi === 'string'),
-      'Received othervessel value with mmsi'
+      'Expected othervessel value with mmsi, but none was found'
     )
     assert(
       otherValues.some((vp) => vp.value.name === 'SomeBoat'),
-      'Received othervessel value with correct name'
+      'Expected othervessel value with name SomeBoat, but none was found'
     )
   })
 
