@@ -25,19 +25,55 @@ import {
   SubscriptionOptions,
   UnsubscribeMessage,
   SubscribeCallback,
-  RelativePositionOrigin
+  RelativePositionOrigin,
+  Delta,
+  SourceRef
 } from '@signalk/server-api'
 import * as Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
+import { ToPreferredDelta } from './deltaPriority'
 import { StreamBundle, toDelta } from './streambundle'
 import { ContextMatcher } from './types'
 const debug = createDebug('signalk-server:subscriptionmanager')
 
 interface BusesMap {
   [path: Path]: Bacon.Bus<NormalizedDelta>
+}
+
+// Run a delta through a per-subscription priority engine and return
+// the filtered delta, or null if every update was emptied. The
+// engine mutates update.values in place (a clone is made first so
+// other subscribers/bridges sharing the source delta keep their copy
+// intact), then anything with no surviving values is dropped.
+function runPerSubEngine(
+  engine: ToPreferredDelta,
+  delta: Delta,
+  now: Date,
+  selfContext: string
+): Delta | null {
+  const cloned: Delta = {
+    context: delta.context,
+    updates: delta.updates.map((u: any) => {
+      if ('values' in u && Array.isArray(u.values)) {
+        return { ...u, values: u.values.slice() }
+      }
+      return { ...u }
+    })
+  }
+  const result = engine(cloned, now, selfContext)
+  if (!result || !result.updates) return null
+  const surviving = result.updates.filter((u: any) => {
+    if ('values' in u) {
+      return Array.isArray(u.values) && u.values.length > 0
+    }
+    // meta-updates and other shapes pass through unchanged
+    return true
+  })
+  if (surviving.length === 0) return null
+  return { ...result, updates: surviving }
 }
 
 class SubscriptionManager implements ISubscriptionManager {
@@ -56,7 +92,8 @@ class SubscriptionManager implements ISubscriptionManager {
     errorCallback: (err: unknown) => void,
     callback: SubscribeCallback,
     user?: string,
-    sourcePolicy?: 'preferred' | 'all'
+    sourcePolicy?: 'preferred' | 'all',
+    excludeSources?: SourceRef[]
   ) {
     const contextFilter = contextMatcher(
       this.selfContext,
@@ -64,7 +101,37 @@ class SubscriptionManager implements ISubscriptionManager {
       command,
       errorCallback
     )
-    const useUnfiltered = sourcePolicy === 'all'
+    // Exclude semantics only make sense under the priority cascade.
+    // Under sourcePolicy='all' the caller has opted into raw fan-out
+    // and partial filtering would be surprising — log and ignore.
+    // Sanitize at the boundary: a WebSocket message or plugin command
+    // can carry empty strings or non-string entries, and an array
+    // length > 0 of garbage shouldn't flip the subscription into
+    // per-engine mode.
+    const sanitizedExcludes = Array.isArray(excludeSources)
+      ? excludeSources.filter(
+          (ref): ref is SourceRef => typeof ref === 'string' && ref.length > 0
+        )
+      : []
+    const effectiveExcludes =
+      sourcePolicy === 'all' || sanitizedExcludes.length === 0
+        ? undefined
+        : sanitizedExcludes
+    if (sourcePolicy === 'all' && sanitizedExcludes.length > 0) {
+      debug(
+        "ignoring excludeSources under sourcePolicy:'all' — excludes only apply to 'preferred'"
+      )
+    }
+    // When the caller asks for exclude semantics, route through a
+    // per-subscription priority engine fed from the unfiltered bus
+    // (every source). Without excludes, keep the existing fast paths:
+    // 'preferred' reads from the pre-filtered global bus, 'all' from
+    // the unfiltered bus, neither needs a per-subscription engine.
+    const perSubEngine: ToPreferredDelta | null =
+      effectiveExcludes && this.app.buildSubscriptionEngine
+        ? this.app.buildSubscriptionEngine(effectiveExcludes)
+        : null
+    const useUnfiltered = sourcePolicy === 'all' || perSubEngine !== null
     const buses = useUnfiltered
       ? this.streambundle.unfilteredBuses
       : this.streambundle.buses
@@ -78,7 +145,9 @@ class SubscriptionManager implements ISubscriptionManager {
         callback,
         errorCallback,
         user,
-        sourcePolicy
+        sourcePolicy,
+        perSubEngine,
+        this.selfContext
       )
       // listen to new keys and then use the same logic to check if we
       // want to subscribe, passing in a map with just that single bus
@@ -97,7 +166,9 @@ class SubscriptionManager implements ISubscriptionManager {
             callback,
             errorCallback,
             user,
-            sourcePolicy
+            sourcePolicy,
+            perSubEngine,
+            this.selfContext
           )
         })
       )
@@ -110,23 +181,33 @@ class SubscriptionManager implements ISubscriptionManager {
       const announcedPaths = new Set<string>()
 
       // 1. Announce ALL existing paths matching context (send cached deltas once)
+      // With a per-subscription engine in play, fetch every cached
+      // source (sourcePolicy='all') and re-run the engine so the
+      // bootstrap snapshot honours the exclude mask the same way live
+      // deltas do. Without this, the announce-path replay would leak
+      // the excluded source on its very first emission.
       const existingDeltas = this.app.deltaCache.getCachedDeltas(
         contextFilter,
         user,
         undefined,
-        sourcePolicy
+        perSubEngine ? 'all' : sourcePolicy
       )
       if (existingDeltas) {
+        const now = new Date()
         existingDeltas.forEach((delta: any) => {
+          const filtered = perSubEngine
+            ? runPerSubEngine(perSubEngine, delta, now, this.selfContext)
+            : delta
+          if (!filtered) return
           // Track which paths we've announced
-          delta.updates?.forEach((update: any) => {
+          filtered.updates?.forEach((update: any) => {
             update.values?.forEach((vp: any) => {
               if (vp.path) {
                 announcedPaths.add(vp.path)
               }
             })
           })
-          callback(delta)
+          callback(filtered)
         })
       }
 
@@ -149,7 +230,17 @@ class SubscriptionManager implements ISubscriptionManager {
             .take(1) // Only take the first value
             .map(toDelta)
             .onValue((delta: any) => {
-              callback(delta)
+              if (perSubEngine) {
+                const filtered = runPerSubEngine(
+                  perSubEngine,
+                  delta,
+                  new Date(),
+                  this.selfContext
+                )
+                if (filtered) callback(filtered)
+              } else {
+                callback(delta)
+              }
             })
 
           // Add to unsubscribes so it gets cleaned up
@@ -190,7 +281,9 @@ function handleSubscribeRows(
   callback: SubscribeCallback,
   errorCallback: any,
   user?: string,
-  sourcePolicy?: 'preferred' | 'all'
+  sourcePolicy?: 'preferred' | 'all',
+  perSubEngine?: ToPreferredDelta | null,
+  selfContext?: string
 ) {
   rows.reduce((acc, subscribeRow) => {
     if (subscribeRow.path !== undefined) {
@@ -203,7 +296,9 @@ function handleSubscribeRows(
         callback,
         errorCallback,
         user,
-        sourcePolicy
+        sourcePolicy,
+        perSubEngine,
+        selfContext
       )
     }
     return acc
@@ -223,7 +318,9 @@ function handleSubscribeRow(
   callback: SubscribeCallback,
   errorCallback: any,
   user?: string,
-  sourcePolicy?: 'preferred' | 'all'
+  sourcePolicy?: 'preferred' | 'all',
+  perSubEngine?: ToPreferredDelta | null,
+  selfContext?: string
 ) {
   const matcher = pathMatcher(subscribeRow.path)
   // iterate over all the buses, checking if we want to subscribe to its values
@@ -284,16 +381,59 @@ function handleSubscribeRow(
           `Only 'instant' and 'fixed' policies supported, ignoring policy ${subscribeRow.policy}`
         )
       }
-      unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
+      // With a per-subscription priority engine in play, run each
+      // delta through the engine before delivering. The engine carries
+      // the user's saved priority groups/overrides minus the excluded
+      // sources, so the subscriber sees a single priority-resolved
+      // value per path with the cascade respected — the same shape
+      // the global preferred-only bus would deliver, but with the
+      // plugin's own (or otherwise excluded) sources removed from the
+      // candidate set.
+      if (perSubEngine) {
+        const engineStream = filteredBus
+          .map(toDelta)
+          .flatMap((delta: Delta) => {
+            const filtered = runPerSubEngine(
+              perSubEngine,
+              delta,
+              new Date(),
+              selfContext ?? ''
+            )
+            return filtered ? Bacon.once(filtered) : Bacon.never()
+          }) as Bacon.EventStream<Delta>
+        unsubscribes.push(engineStream.onValue(callback))
+      } else {
+        unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
+      }
 
+      // Bootstrap snapshot: fetch every source's last cached value
+      // (sourcePolicy='all') when a per-subscription engine owns this
+      // subscription, then replay through the engine so the snapshot
+      // honours the exclude mask. Without the override the snapshot
+      // would carry the global preferred winner — which may BE the
+      // excluded source — and the subscriber would see it once on
+      // startup.
       const latest = app.deltaCache.getCachedDeltas(
         filter,
         user,
         key,
-        sourcePolicy
+        perSubEngine ? 'all' : sourcePolicy
       )
       if (latest) {
-        latest.forEach(callback)
+        if (perSubEngine) {
+          const now = new Date()
+          for (const delta of latest) {
+            const filtered = runPerSubEngine(
+              perSubEngine,
+              delta,
+              now,
+              selfContext ?? ''
+            )
+            if (filtered) callback(filtered)
+          }
+        } else {
+          latest.forEach(callback)
+        }
       }
     }
   })
@@ -329,9 +469,9 @@ function contextMatcher(
           normalizedDeltaData.context === selfContext)
     } else if ('radius' in subscribeCommand.context) {
       if (
-        !get(subscribeCommand.context, 'radius') ||
-        !get(subscribeCommand.context, 'position.latitude') ||
-        !get(subscribeCommand.context, 'position.longitude')
+        !Number.isFinite(get(subscribeCommand.context, 'radius')) ||
+        !Number.isFinite(get(subscribeCommand.context, 'position.latitude')) ||
+        !Number.isFinite(get(subscribeCommand.context, 'position.longitude'))
       ) {
         errorCallback(
           'Please specify a radius and position for relativePosition'
@@ -360,8 +500,8 @@ function checkPosition(
   return (
     position &&
     position.value &&
-    position.value.latitude &&
-    position.value.longitude &&
+    Number.isFinite(position.value.latitude) &&
+    Number.isFinite(position.value.longitude) &&
     isPointWithinRadius(position.value, origin.position, origin.radius)
   )
 }

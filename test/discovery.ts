@@ -1,6 +1,5 @@
 import { expect } from 'chai'
 import { EventEmitter } from 'node:events'
-import { createRequire } from 'node:module'
 
 type LoadFn = (
   request: string,
@@ -21,7 +20,7 @@ type DiscoveryModule = {
   runDiscovery: (app: App) => void
 }
 
-const require = createRequire(import.meta.url)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const Module = require('node:module') as typeof import('node:module') & {
   _load: LoadFn
 }
@@ -88,14 +87,20 @@ describe('runDiscovery', () => {
   it('does not stop a browser twice after an internal error stop', () => {
     const scheduledCallbacks: Array<() => void> = []
 
+    const makeFakeTimeoutHandle = (): ReturnType<typeof setTimeout> => {
+      const handle = originalSetTimeout(() => {}, 0)
+      clearTimeout(handle)
+      return handle
+    }
+
     global.setTimeout = ((...args: unknown[]) => {
       const callback = args[0]
 
       if (typeof callback === 'function') {
-        scheduledCallbacks.push(callback)
+        scheduledCallbacks.push(callback as () => void)
       }
 
-      return 0 as ReturnType<typeof setTimeout>
+      return makeFakeTimeoutHandle()
     }) as unknown as typeof setTimeout
 
     Module._load = ((request, parent, isMain) => {
@@ -130,6 +135,7 @@ describe('runDiscovery', () => {
 
     delete require.cache[discoveryModulePath]
 
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { runDiscovery } = require('../dist/discovery.js') as DiscoveryModule
 
     const app: App = {
@@ -163,5 +169,128 @@ describe('runDiscovery', () => {
 
     expect(wsBrowser?.stopCallCount).to.equal(1)
     expect(wssBrowser?.stopCallCount).to.equal(1)
+  })
+
+  type DiscoveredPayload = {
+    id: string
+    pipeElements: Array<{
+      options: {
+        subOptions: { type: string; host: string; port: number }
+      }
+    }>
+  }
+
+  function runDiscoveryWith(interfaces: Record<string, unknown[]>): {
+    wsBrowser: FakeBrowser
+    discovered: DiscoveredPayload[]
+  } {
+    Module._load = ((request, parent, isMain) => {
+      if (request === '@astronautlabs/mdns') return { Browser: FakeBrowser }
+      if (request === '@canboat/canboatjs') return {}
+      if (request === 'dgram') return { createSocket: () => new FakeSocket() }
+      if (request === 'os') return { networkInterfaces: () => interfaces }
+      if (request === './mdnsPatch') return { patchAstronautLabsMdns: () => {} }
+      return originalLoad(request, parent, isMain)
+    }) as LoadFn
+
+    global.setTimeout = ((..._args: unknown[]) => {
+      const handle = originalSetTimeout(() => {}, 0)
+      clearTimeout(handle)
+      return handle
+    }) as unknown as typeof setTimeout
+
+    delete require.cache[discoveryModulePath]
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { runDiscovery } = require('../dist/discovery.js') as DiscoveryModule
+    const discovered: DiscoveredPayload[] = []
+    const app: App = {
+      config: { settings: { pipedProviders: [] } },
+      emit: (event, payload) => {
+        if (event === 'discovered')
+          discovered.push(payload as DiscoveredPayload)
+      }
+    }
+    runDiscovery(app)
+    const wsBrowser = FakeBrowser.instances.find(
+      (b) => b.serviceType === '_signalk-ws._tcp'
+    )
+    expect(wsBrowser).to.not.equal(undefined)
+    return { wsBrowser: wsBrowser as FakeBrowser, discovered }
+  }
+
+  const serviceUp = (browser: FakeBrowser, addresses: string[]) => {
+    browser.emit('serviceUp', {
+      addresses,
+      host: 'remote.local',
+      port: 3000,
+      type: { name: 'signalk-ws' }
+    })
+  }
+
+  describe('isOwnAddress filter', () => {
+    it('suppresses an advertisement whose address matches a local IPv4', () => {
+      const { wsBrowser, discovered } = runDiscoveryWith({
+        eth0: [{ family: 'IPv4', internal: false, address: '192.168.1.50' }]
+      })
+      serviceUp(wsBrowser, ['192.168.1.50'])
+      expect(discovered).to.have.length(0)
+    })
+
+    it('suppresses an advertisement on IPv4 loopback', () => {
+      const { wsBrowser, discovered } = runDiscoveryWith({
+        lo: [{ family: 'IPv4', internal: true, address: '127.0.0.1' }]
+      })
+      serviceUp(wsBrowser, ['127.0.0.1'])
+      expect(discovered).to.have.length(0)
+    })
+
+    it('suppresses an advertisement on IPv6 loopback', () => {
+      const { wsBrowser, discovered } = runDiscoveryWith({
+        lo: [{ family: 'IPv6', internal: true, address: '::1' }]
+      })
+      serviceUp(wsBrowser, ['::1'])
+      expect(discovered).to.have.length(0)
+    })
+
+    it('suppresses an advertisement on link-local IPv6 with zone id', () => {
+      const { wsBrowser, discovered } = runDiscoveryWith({
+        eth0: [{ family: 'IPv6', internal: false, address: 'fe80::1' }]
+      })
+      serviceUp(wsBrowser, ['fe80::1%eth0'])
+      expect(discovered).to.have.length(0)
+    })
+
+    it('suppresses when any address in the list is local', () => {
+      const { wsBrowser, discovered } = runDiscoveryWith({
+        eth0: [{ family: 'IPv4', internal: false, address: '192.168.1.50' }]
+      })
+      serviceUp(wsBrowser, ['10.0.0.5', '192.168.1.50'])
+      expect(discovered).to.have.length(0)
+    })
+
+    it('emits an advertisement whose addresses are all remote', () => {
+      const { wsBrowser, discovered } = runDiscoveryWith({
+        eth0: [{ family: 'IPv4', internal: false, address: '192.168.1.50' }]
+      })
+      serviceUp(wsBrowser, ['192.168.1.99'])
+      expect(discovered).to.have.length(1)
+      expect(discovered[0].pipeElements[0].options.subOptions.host).to.equal(
+        'remote.local'
+      )
+    })
+
+    it('does not emit when the addresses list is empty or missing', () => {
+      const { wsBrowser, discovered } = runDiscoveryWith({
+        eth0: [{ family: 'IPv4', internal: false, address: '192.168.1.50' }]
+      })
+      serviceUp(wsBrowser, [])
+      wsBrowser.emit('serviceUp', {
+        host: 'remote.local',
+        port: 3000,
+        type: { name: 'signalk-ws' }
+      })
+      expect(discovered).to.have.length(0)
+    })
   })
 })

@@ -1,5 +1,13 @@
-import React, { useMemo, useCallback, MouseEvent, ReactNode } from 'react'
-import { NavLink, Location } from 'react-router-dom'
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  MouseEvent,
+  ReactNode
+} from 'react'
+import { NavLink, Location, useNavigate } from 'react-router-dom'
 import Badge from 'react-bootstrap/Badge'
 import Nav from 'react-bootstrap/Nav'
 import {
@@ -14,7 +22,8 @@ import {
   useSourcePriorities,
   usePriorityOverrides,
   usePriorityGroups,
-  useActiveConflictCount
+  useActiveConflictCount,
+  useUnconfiguredGnssSources
 } from '../../store'
 import classNames from 'classnames'
 import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
@@ -49,11 +58,16 @@ interface NavItemData {
   props?: Record<string, unknown>
 }
 
+function pathMatchesChild(pathname: string, childUrl: string): boolean {
+  return pathname === childUrl || pathname.startsWith(childUrl + '/')
+}
+
 interface SidebarProps {
   location: Location
 }
 
 export default function Sidebar({ location }: SidebarProps) {
+  const navigate = useNavigate()
   const appStore = useAppStore()
   const accessRequests = useAccessRequests()
   const devices = useDevices()
@@ -143,6 +157,8 @@ export default function Sidebar({ location }: SidebarProps) {
     (d) => d.tokenExpiry && d.tokenExpiry * 1000 < nowMs
   ).length
 
+  const unconfiguredGnssCount = useUnconfiguredGnssSources().length
+
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
     let updatesBadge: BadgeData | null = null
@@ -191,14 +207,11 @@ export default function Sidebar({ location }: SidebarProps) {
 
     const unconfiguredCount = plugins.filter((plugin: Plugin) => {
       const bundled = (plugin as Record<string, unknown>).bundled as
-        | boolean
-        | undefined
+        boolean | undefined
       const schema = (plugin as Record<string, unknown>).schema as
-        | { properties?: Record<string, unknown> }
-        | undefined
+        { properties?: Record<string, unknown> } | undefined
       const data = (plugin as Record<string, unknown>).data as
-        | { configuration?: unknown }
-        | undefined
+        { configuration?: unknown } | undefined
       return (
         !bundled &&
         schema?.properties &&
@@ -253,7 +266,14 @@ export default function Sidebar({ location }: SidebarProps) {
                 }
               : null
         },
-        { name: 'Unit Preferences', url: '/data/units' },
+        {
+          name: 'Preferences',
+          url: '/data/preferences',
+          badge:
+            unconfiguredGnssCount > 0
+              ? { variant: 'warning', text: `${unconfiguredGnssCount}` }
+              : null
+        },
         { name: 'Fiddler', url: '/data/fiddler' }
       )
     }
@@ -271,7 +291,7 @@ export default function Sidebar({ location }: SidebarProps) {
       },
       ((): NavItemData => {
         const dataBadgeCount = isAdmin
-          ? prioritiesAttentionCount + conflictCount
+          ? prioritiesAttentionCount + conflictCount + unconfiguredGnssCount
           : 0
         return {
           name: 'Data',
@@ -411,24 +431,104 @@ export default function Sidebar({ location }: SidebarProps) {
     plugins,
     conflictCount,
     unconfiguredPriorityCount,
-    overridesWithMissingSourcesCount
+    overridesWithMissingSourcesCount,
+    unconfiguredGnssCount
   ])
 
-  const handleClick = useCallback((e: MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault()
-    ;(e.target as HTMLElement).parentElement?.classList.toggle('open')
-  }, [])
+  const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(
+    () => new Set<string>()
+  )
+
+  const lastPathnameRef = useRef<string | null>(null)
+
+  // Auto-open dropdown matching the current path (only on pathname changes)
+  useEffect(() => {
+    if (lastPathnameRef.current === location.pathname) return
+
+    const toOpen: string[] = []
+    for (const item of items) {
+      if (item.children?.length && item.url) {
+        const hasActiveChild = item.children.some(
+          (child) => child.url && pathMatchesChild(location.pathname, child.url)
+        )
+        if (hasActiveChild) {
+          toOpen.push(item.url)
+        }
+      }
+    }
+    if (toOpen.length > 0) {
+      setOpenDropdowns((prev) => {
+        if (toOpen.every((url) => prev.has(url))) return prev
+        const next = new Set(prev)
+        for (const url of toOpen) {
+          next.add(url)
+        }
+        return next
+      })
+    }
+    lastPathnameRef.current = location.pathname
+  }, [location.pathname, items])
+
+  const handleClick = useCallback(
+    (item: NavItemData) => (e: MouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault()
+      const itemUrl = item.url || ''
+      const wasOpen = openDropdowns.has(itemUrl)
+      setOpenDropdowns((prev) => {
+        const next = new Set(prev)
+        if (wasOpen) {
+          next.delete(itemUrl)
+        } else {
+          next.add(itemUrl)
+        }
+        return next
+      })
+      if (!wasOpen && item.children?.length && item.url) {
+        const storageKey = `admin.v1.sidebar.lastPage.${item.url}`
+        let lastPage: string | null = null
+        try {
+          lastPage = localStorage.getItem(storageKey)
+        } catch (e) {
+          console.warn('localStorage.getItem failed:', e)
+        }
+        const target =
+          lastPage && item.children.some((c) => c.url === lastPage)
+            ? lastPage
+            : item.children[0].url
+        if (target) {
+          navigate(target)
+        }
+      }
+    },
+    [navigate, openDropdowns]
+  )
+
+  useEffect(() => {
+    for (const item of items) {
+      if (item.children?.length && item.url) {
+        const matchedChild = item.children.find(
+          (child) => child.url && pathMatchesChild(location.pathname, child.url)
+        )
+        if (matchedChild?.url) {
+          try {
+            localStorage.setItem(
+              `admin.v1.sidebar.lastPage.${item.url}`,
+              matchedChild.url
+            )
+          } catch (e) {
+            console.warn('localStorage.setItem failed:', e)
+          }
+        }
+      }
+    }
+  }, [location.pathname, items])
 
   const activeRoute = useCallback(
-    (routeName: string, children?: NavItemData[]) => {
-      const isActive = children?.length
-        ? children.some(
-            (child) => child.url && location.pathname.indexOf(child.url) > -1
-          )
-        : location.pathname.indexOf(routeName) > -1
-      return isActive ? 'nav-item nav-dropdown open' : 'nav-item nav-dropdown'
+    (routeName: string) => {
+      const isOpen = openDropdowns.has(routeName)
+      return isOpen ? 'nav-item nav-dropdown open' : 'nav-item nav-dropdown'
     },
-    [location.pathname]
+    [openDropdowns]
   )
 
   const renderBadge = (badgeData?: BadgeData | null): ReactNode => {
@@ -539,11 +639,11 @@ export default function Sidebar({ location }: SidebarProps) {
 
   const navDropdown = (item: NavItemData, key: number): ReactNode => {
     return (
-      <li key={key} className={activeRoute(item.url || '', item.children)}>
+      <li key={key} className={activeRoute(item.url || '')}>
         <a
           className="nav-link nav-dropdown-toggle"
           href="#"
-          onClick={handleClick}
+          onClick={handleClick(item)}
         >
           {renderIcon(item.icon)}
           {item.name}

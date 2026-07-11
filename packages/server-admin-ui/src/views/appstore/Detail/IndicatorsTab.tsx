@@ -34,7 +34,7 @@ interface IndicatorsTabProps {
 // Public registry that publishes the per-plugin scoring data the
 // Indicators tab attributes. Defined here so the link can be updated
 // in one place if the registry ever moves.
-const PLUGIN_REGISTRY_URL = 'https://dirkwa.github.io/signalk-plugin-registry/'
+const PLUGIN_REGISTRY_URL = 'https://signalk.org/signalk-plugin-registry/'
 
 const statusToVariant: Record<Check['status'], string> = {
   ok: 'success',

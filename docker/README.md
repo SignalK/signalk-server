@@ -7,6 +7,8 @@ Release images:
 - cr.signalk.io/signalk/signalk-server:latest
 - cr.signalk.io/signalk/signalk-server:`<release tag>`, e.g. `v2.16.0`
 
+A slimmer **"core"** variant is published in parallel for deployments that don't need the bundled webapps and plugins (data forwarders, embedded integrations, custom-UI deployments, security-sensitive setups). See [Core image variant](#core-image-variant) below.
+
 ## Docker Images based on Ubuntu 24.04 LTS
 
 ### Node.js 22.x
@@ -60,6 +62,16 @@ docker run -d --init  --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.s
 
 This will run the server as background process and current directory as the settings directory. You will be prompted to create admin credentials the first time you you access the configuration admin web UI.
 
+## Playback of a raw log file
+
+You can launch an ephemeral container named `signalk-playback` that disables all configured data connections and plays back a single raw log file instead. Mount the directory containing the log file and pass it to `--data`:
+
+```
+docker run --init -it --rm --name signalk-playback --publish 3000:3000 -v $(pwd):/data --entrypoint /home/node/signalk/node_modules/.bin/signalk-server cr.signalk.io/signalk/signalk-server --data /data/skserver-raw_2025-02-10T11.log
+```
+
+Replace `skserver-raw_2025-02-10T11.log` with the name of your log file in the current directory. The server is available at http://localhost:3000. Because `--rm` is used, the container is removed automatically when it stops, leaving no persisted state.
+
 ## Docker Compose
 
 See `docker/docker-compose.yml` for reference / example if you want to use docker-compose.
@@ -83,9 +95,74 @@ The server automatically detects which container runtime is being used (Docker, 
 
 Supported runtimes: `docker`, `podman`, `kubernetes`, `containerd`, `crio`, `lxc`
 
+## Resolving `.local` hostnames (mDNS)
+
+Some plugins reach devices by their `.local` (mDNS/Bonjour) hostname, e.g. `shelly-xxxx.local`. Inside the container this goes through `getaddrinfo()`, which needs a working mDNS resolver — the server's own mDNS advertisement does not help here.
+
+The image ships `avahi-daemon` + `libnss-mdns`. In **bridge networking** the container starts its own avahi and `.local` resolution works out of the box. But with **`network_mode: host` on a host that already runs avahi** (e.g. Raspberry Pi OS), the container cannot run a second responder — avahi detects the conflict and refuses, leaving no resolver, so `.local` lookups fail with `EAI_AGAIN` even though the host resolves the same name fine. The container logs a `WARNING` when this happens.
+
+The fix is to let the container use the **host's** avahi by mounting the host
+D-Bus (or avahi) socket — see the `volumes:` entry in the provided
+`docker-compose.yml`. `startup.sh` then detects the host avahi and uses it
+instead of starting its own, so there is no mDNS conflict on the host. (On
+rootless podman the socket's peer credentials must match the host user, which
+needs `--userns=keep-id`.)
+
 ## Release images
 
 Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs.
+
+## Core image variant
+
+The **core** variant strips the bundled webapps and plugins from the image, keeping the Signal K server, the admin UI, serial-port support, and required libraries. Use it for a leaner image without the preinstalled webapps and plugins — for example, a deployment behind a curated set of apps, an embedded integration, or a security-sensitive setup that wants a smaller attack surface. The admin UI and its app store remain available, so webapps and plugins can be added on demand.
+
+### Tags
+
+| Variant | Ubuntu rolling | Alpine rolling        | Ubuntu pinned | Alpine pinned        |
+| ------- | -------------- | --------------------- | ------------- | -------------------- |
+| Full    | `:latest`      | `:latest-alpine`      | `:X.Y.Z`      | `:X.Y.Z-alpine`      |
+| Core    | `:latest-core` | `:latest-alpine-core` | `:X.Y.Z-core` | `:X.Y.Z-alpine-core` |
+
+The core `-core` suffix is appended after the full variant's tag, so core mirrors every full tag. Versioned core tags follow the existing major / major.minor pattern (`:v2-core`, `:v2.27-core`, plus `-alpine-core` siblings).
+
+### What's stripped
+
+The core image omits these packages — all declared in `package.json` `optionalDependencies` and discovered at runtime from `/home/node/.signalk`, so they can be reinstalled on demand (see below):
+
+- Webapps: `@signalk/freeboard-sk`, `@signalk/instrumentpanel`, `@mxtommy/kip`, `@signalk/app-dock`
+- Plugins and bridges: `@signalk/set-system-time`, `@signalk/signalk-to-nmea0183`, `@signalk/udp-nmea-plugin`, `signalk-n2kais-to-nmea0183`, `signalk-to-nmea2000`
+
+What the core image ships: the Signal K server, the admin UI (`@signalk/server-admin-ui`) and its app store, serial-port support (`serialport`), `@signalk/server-api`, `@signalk/streams`, `@signalk/signalk-schema`, `@signalk/course-provider`, `@signalk/resources-provider`, and the NMEA0183 / NMEA2000 parser libraries (`@signalk/nmea0183-signalk`, `@signalk/n2k-signalk`).
+
+The admin UI and `serialport` are themselves declared `optionalDependencies`, so `--omit=optional` strips them too — but the core image **reinstates** them, because neither can be added back at the config-directory layer: the server serves the admin UI from a fixed path inside its own install, and it `require`s `serialport` directly. (`serialport` stays optional rather than a hard dependency so direct npm installs degrade gracefully on platforms without prebuilt bindings.)
+
+### App store and plugin installation
+
+Because the admin UI ships in core, its **app store is available** — the omitted webapps and plugins can be reinstalled from the app store UI at runtime. For reproducible deployments you can also bake them into a derived image or install them ad-hoc:
+
+**Declarative — recommended for reproducible deployments**
+
+```Dockerfile
+FROM cr.signalk.io/signalk/signalk-server:core
+RUN npm install --prefix /home/node/.signalk @signalk/some-plugin
+```
+
+Build with `docker build -t my-signalk-core .` and run as you would the base core image.
+
+**Ad-hoc — for incremental experimentation**
+
+Mount `/home/node/.signalk` as a persistent volume, then `exec` into the running container to install:
+
+```sh
+docker exec my-container npm install --prefix /home/node/.signalk @signalk/some-plugin
+docker restart my-container
+```
+
+Both patterns install into the persisted config directory (`/home/node/.signalk`), which the server scans for modules carrying the `signalk-node-server-plugin` or `signalk-webapp` keyword.
+
+### Behavioral change for non-Docker consumers
+
+The bundled webapps, plugins, the admin UI, and `serialport` are all declared in `optionalDependencies`, not `dependencies`. **Default `npm install` is unaffected** because npm installs optional deps by default — the full Docker image and direct-from-npm installs ship them all. A consumer passing `npm install signalk-server --omit=optional` (CI pipelines, security-conscious deployments, distros) gets a minimal headless server: no admin UI, no serial-port support, and none of the bundled webapps or plugins. The core Docker image starts from that minimal set and adds back the admin UI and `serialport` — the two that can't be installed later at the config-directory layer. To get everything, drop the `--omit=optional` flag.
 
 ## Development images
 

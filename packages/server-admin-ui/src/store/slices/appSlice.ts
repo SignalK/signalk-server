@@ -34,6 +34,8 @@ function nameCollator<T extends { name: string; displayName?: string }>(
   return a.localeCompare(b, undefined, { sensitivity: 'base' })
 }
 
+export type AppstoreView = 'All' | 'Installed' | 'Updates' | 'Installing'
+
 export interface AppSliceState {
   plugins: Plugin[]
   webapps: Webapp[]
@@ -42,6 +44,7 @@ export interface AppSliceState {
   loginStatus: LoginStatus
   serverSpecification: ServerSpecification
   restarting: boolean
+  restartRequired: boolean
   accessRequests: AccessRequest[]
   devices: DeviceInfo[]
   discoveredProviders: DiscoveredProvider[]
@@ -105,6 +108,14 @@ export interface AppSliceState {
   n2kDeviceStatusLoaded: boolean
   sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
   sourceStatusLoaded: boolean
+  /**
+   * App Store list view filter (All/Installed/Updates/Installing) and search
+   * text. Held in the store rather than component state so they survive the
+   * unmount/remount when the user opens a plugin detail page and returns via
+   * "Back to Store".
+   */
+  appstoreView: AppstoreView
+  appstoreSearch: string
 }
 
 export interface AppSliceActions {
@@ -117,6 +128,7 @@ export interface AppSliceActions {
   setServerStatistics: (stats: ServerStatistics) => void
   setProviderStatus: (status: ProviderStatus[]) => void
   setRestarting: (restarting: boolean) => void
+  setRestartRequired: (restartRequired: boolean) => void
   setAccessRequests: (requests: AccessRequest[]) => void
   setDevices: (devices: DeviceInfo[]) => void
   setDiscoveredProviders: (providers: DiscoveredProvider[]) => void
@@ -175,6 +187,8 @@ export interface AppSliceActions {
       { sourceRef: string; timeout: string | number }[]
     >
   ) => void
+  setAppstoreView: (view: AppstoreView) => void
+  setAppstoreSearch: (search: string) => void
 }
 
 export type AppSlice = AppSliceState & AppSliceActions
@@ -192,6 +206,7 @@ const initialAppState: AppSliceState = {
   loginStatus: {},
   serverSpecification: {},
   restarting: false,
+  restartRequired: false,
   accessRequests: [],
   devices: [],
   discoveredProviders: [],
@@ -222,7 +237,9 @@ const initialAppState: AppSliceState = {
   n2kOutAvailable: false,
   n2kDeviceStatusLoaded: false,
   sourceStatus: {},
-  sourceStatusLoaded: false
+  sourceStatusLoaded: false,
+  appstoreView: 'All',
+  appstoreSearch: ''
 }
 
 export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
@@ -273,6 +290,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setRestarting: (restarting) => {
     set({ restarting })
+  },
+
+  setRestartRequired: (restartRequired) => {
+    set({ restartRequired })
   },
 
   setAccessRequests: (accessRequests) => {
@@ -374,8 +395,7 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const clear = (get() as any).clearRetiredSuppressions as
-      | ((s: Record<string, string[]>) => void)
-      | undefined
+      ((s: Record<string, string[]>) => void) | undefined
     clear?.(newcomersByGroup)
   },
 
@@ -476,5 +496,13 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
       },
       sourcePrioritiesLoaded: true
     }))
+  },
+
+  setAppstoreView: (appstoreView) => {
+    set({ appstoreView })
+  },
+
+  setAppstoreSearch: (appstoreSearch) => {
+    set({ appstoreSearch })
   }
 })

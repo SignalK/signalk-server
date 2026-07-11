@@ -60,6 +60,8 @@ interface ProviderOptions {
   // N2kIpGateway-specific.
   actAsCanDevice?: boolean
   format?: string
+  // Maretron IPG 100 — optional CONNECT password.
+  password?: string
   [key: string]: unknown
 }
 
@@ -1689,6 +1691,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             </option>
             <option value="ikonvert-canboatjs">iKonvert (canboatjs)</option>
             <option value="navlink2-tcp-canboatjs">NavLink2 (canboatjs)</option>
+            <option value="canboat-csv-canboatjs">
+              canboat-pipeline CSV R/W (canboatjs)
+            </option>
             <option value="ydwg02-canboatjs">
               Yacht Devices RAW TCP (canboatjs)
             </option>
@@ -1707,6 +1712,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             </option>
             <option value="w2k-1-n2k-actisense-canboatjs">
               W2K-1 N2K ACTISENSE (canboatjs)
+            </option>
+            <option value="maretron-ipg-canboatjs">
+              Maretron IPG 100 (canboatjs)
             </option>
             <option value="canbus" disabled={!hasAnalyzer}>
               Canbus (canboat)
@@ -1756,6 +1764,16 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           />
         </div>
       )}
+      {value.options.type === 'canboat-csv-canboatjs' && (
+        <div>
+          <HostInput value={value.options} onChange={onChange} />
+          <PortInput value={value.options} onChange={onChange} />
+          <NoDataReceivedTimeoutInput
+            value={value.options}
+            onChange={onChange}
+          />
+        </div>
+      )}
       {(value.options.type === 'canbus' ||
         value.options.type === 'canbus-canboatjs') && (
         <div>
@@ -1784,7 +1802,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       )}
       {(value.options.type === 'ngt-1-canboatjs' ||
         value.options.type === 'ikonvert-canboatjs' ||
-        value.options.type === 'navlink2-tcp-canboatjs') && (
+        value.options.type === 'navlink2-tcp-canboatjs' ||
+        value.options.type === 'canboat-csv-canboatjs') && (
         <CollectNetworkStatsInput value={value.options} onChange={onChange} />
       )}
       {(value.options.type === 'w2k-1-n2k-ascii-canboatjs' ||
@@ -1830,6 +1849,34 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             Generic source for IP-based N2K gateways that stream raw CAN frames
             over TCP in one of canboatjs's supported text formats. Default port
             2599, default format candump3.
+          </div>
+        </div>
+      )}
+      {value.options.type === 'maretron-ipg-canboatjs' && (
+        <div>
+          <HostInput value={value.options} onChange={onChange} />
+          <PortInput value={value.options} onChange={onChange} />
+          <Form.Group as={Row} className="mb-3">
+            <Col md="3">
+              <Form.Label htmlFor="options.password">Password</Form.Label>
+            </Col>
+            <Col xs="12" md="3">
+              <Form.Control
+                type="password"
+                id="options.password"
+                name="options.password"
+                value={value.options.password ?? ''}
+                onChange={(event) => onChange(event)}
+              />
+              <Form.Text muted>
+                Optional password for the IPG 100. Leave empty if none is
+                configured.
+              </Form.Text>
+            </Col>
+          </Form.Group>
+          <div className="text-muted small mt-1 mb-2">
+            Maretron IPG 100 Ethernet gateway. Default TCP port 6543. Uses
+            Maretron&apos;s 0xA5-framed binary protocol (handled by canboatjs).
           </div>
         </div>
       )}

@@ -125,6 +125,29 @@ class DeltaEditor {
       }
     }
   }
+
+  static computeDefaultFields(
+    existing: Record<string, unknown> | undefined | null,
+    value: Record<string, unknown>
+  ): {
+    hasNewFields: boolean
+    fieldsToSet: Record<string, unknown>
+    merged: Record<string, unknown>
+  } {
+    const fieldsToSet: Record<string, unknown> = {}
+    let hasNewFields = false
+    for (const key of Object.keys(value)) {
+      if (!existing || !(key in existing)) {
+        fieldsToSet[key] = value[key]
+        hasNewFields = true
+      }
+    }
+    return {
+      hasNewFields,
+      fieldsToSet,
+      merged: { ...existing, ...fieldsToSet }
+    }
+  }
 }
 
 function setDelta(

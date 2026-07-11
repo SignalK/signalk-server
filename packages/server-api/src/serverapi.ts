@@ -6,6 +6,7 @@ import {
   ResourceProviderRegistry,
   WeatherProviderRegistry,
   Delta,
+  MetaValue,
   WithResourcesApi,
   WithNotificationsApi
 } from '.'
@@ -101,6 +102,30 @@ export interface ServerAPI
   getMetadata(path: string): Metadata | undefined
 
   /**
+   * Suggest default metadata for a path. The server persists this metadata
+   * only for fields not already set by the user in baseDeltas.json.
+   *
+   * Use this to provide sensible defaults (e.g., displayUnits) for paths
+   * your plugin publishes, without overwriting user choices.
+   *
+   * Idempotent: on subsequent server starts, fields already persisted
+   * from a previous call will not be overwritten.
+   *
+   * @example
+   * ```javascript
+   * await app.setDefaultMetadata('electrical.batteries.house.energy', {
+   *   displayUnits: { category: 'energy', targetUnit: 'Wh' }
+   * })
+   * ```
+   *
+   * @param path - Signal K path (e.g., 'electrical.batteries.house.energy')
+   * @param value - Metadata fields to suggest
+   * @returns true if any new fields were applied, false if all fields already existed
+   * @category Data Model
+   */
+  setDefaultMetadata(path: string, value: MetaValue): Promise<boolean>
+
+  /**
    * Call the PUT handler for a path on the vessel's own context.
    * @param aPath - The path for the PUT request
    * @param value - The value to send in the PUT request
@@ -159,13 +184,23 @@ export interface ServerAPI
    *
    * `app.debug()` can take any type and will serialize it before outputting.
    *
+   * Use `app.debug.enabled` to guard expensive log arguments so they are not
+   * computed when the debug name is disabled:
+   *
+   * ```ts
+   * if (app.debug.enabled) app.debug('state: ' + JSON.stringify(big))
+   * ```
+   *
    * > [!note]
    * > Do not use `debug` from the debug module directly! Using `app.debug()` provided by the server ensures that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.
    *
    * @category Status and Debugging
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  debug(msg: any, ...args: any[]): void
+  debug: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (msg: any, ...args: any[]): void
+    enabled: boolean
+  }
 
   /**
    * Register a function to intercept all delta messages _before_ they are processed by the server.

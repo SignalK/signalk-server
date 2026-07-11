@@ -98,6 +98,7 @@ These prebuilt images for RaspberryPis take away most of the complexity involved
 You can run Signal K Server in Docker:
 
 - [Docker quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#quickstart)
+- For minimal deployments without the bundled webapps/plugins, see the [core image variant](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#core-image-variant)
 
 Or in a Kubernetes cluster:
 

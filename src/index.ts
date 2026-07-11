@@ -17,6 +17,7 @@
  * limitations under the License.
 */
 
+import './networkConfig'
 import './baconjs-compat'
 import {
   Context,
@@ -33,6 +34,7 @@ import {
   Update,
   WithFeatures
 } from '@signalk/server-api'
+import { randomUUID } from 'crypto'
 import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
@@ -44,7 +46,11 @@ import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache, { buildSrcToCanonicalMap } from './deltacache'
 import DeltaChain from './deltachain'
-import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
+import {
+  getToPreferredDelta,
+  sourceRefIdentity,
+  ToPreferredDelta
+} from './deltaPriority'
 import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
@@ -139,6 +145,7 @@ class Server {
       })
     )
     app.use(bodyParser.json({ limit: FILEUPLOADSIZELIMIT }))
+    app.use(bodyParser.urlencoded({ extended: true }))
 
     this.app = app
     app.started = false
@@ -171,10 +178,8 @@ class Server {
 
     app.propertyValues = new PropertyValues()
 
-    const deltachainV1 = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
-    const deltachainV2 = new DeltaChain((delta: Delta) =>
-      app.signalk.emit('delta', delta)
-    )
+    const deltachainV1 = new DeltaChain()
+    const deltachainV2 = new DeltaChain()
     app.registerDeltaInputHandler = (handler: DeltaInputHandler) => {
       const unRegisterHandlers = [
         deltachainV1.register(handler),
@@ -323,6 +328,25 @@ class Server {
     initialPassthrough.routesPath = () => false
     initialPassthrough.getMaxFailoverTimeoutMs = () => 0
     let toPreferredDelta: ToPreferredDelta = initialPassthrough
+
+    // Terminal of the delta input handler chain: once every handler has
+    // run on the raw delta, cache it, fan it out unfiltered, apply
+    // source-priority filtering and dispatch the result. Defined once
+    // (not per delta) and reads `toPreferredDelta` through the closure so
+    // it picks up engine rebuilds. now / version are passed in by the
+    // chain so this stays a single hoisted function on the hot path.
+    const dispatchDelta = (handled: Delta, now: Date, version: SKVersion) => {
+      if (app.deltaCache) {
+        app.deltaCache.ingestDelta(handled)
+      }
+      app.signalk.emit('unfilteredDelta', cloneDelta(handled))
+      const preferred = toPreferredDelta(handled, now, app.selfContext)
+      if (version === SKVersion.v1) {
+        app.signalk.addDelta(preferred)
+      } else {
+        app.signalk.emit('delta', preferred)
+      }
+    }
     // Translate `<label>.<numeric>` deltas to their `<label>.<canName>`
     // form so a saved canName-form ranking matches incoming refs from
     // providers that have useCanName off. The cache is keyed by the
@@ -395,6 +419,39 @@ class Server {
     app.getMaxFailoverTimeoutMs = (path: string): number =>
       toPreferredDelta.getMaxFailoverTimeoutMs(path)
     app.activateSourcePriorities()
+
+    // Build a per-subscription priority engine that runs the user's
+    // ranking with a sourceRef exclusion mask. Used by
+    // SubscribeMessage.excludeSources / excludeSelf: a derived-data
+    // plugin that publishes on the same path it consumes can still
+    // receive the priority cascade across the upstream sources
+    // without seeing its own output in the candidate set.
+    //
+    // Reads groups / overrides / fallbackMs from the live settings
+    // each time so a per-subscription engine reflects whatever the
+    // user has currently saved, and shares the canonicaliseSourceRef
+    // closure so canName matching behaves the same as the global
+    // engine. Seeding seenPublishersByPath is not needed — the
+    // resulting engine is consumed by a single subscriber callback
+    // and never feeds routesPath consumers.
+    app.buildSubscriptionEngine = (
+      excludeSourceRefs: string[]
+    ): ToPreferredDelta => {
+      const excludeIdentities = new Set<string>()
+      for (const ref of excludeSourceRefs) {
+        if (typeof ref === 'string' && ref.length > 0) {
+          excludeIdentities.add(sourceRefIdentity(canonicaliseSourceRef(ref)))
+        }
+      }
+      const s = app.config.settings
+      return getToPreferredDelta({
+        groups: s.priorityGroups ?? [],
+        overrides: s.priorityOverrides ?? {},
+        fallbackMs: s.priorityDefaults?.fallbackMs,
+        canonicalise: canonicaliseSourceRef,
+        excludeIdentities
+      })
+    }
 
     // Defer migration so that the moved device's own re-arbitration
     // address claim has time to land in app.signalk.sources first.
@@ -515,20 +572,17 @@ class Server {
         try {
           // data.updates was just rebuilt above, so the resulting Partial<Delta>
           // is in practice a full Delta by the time it reaches the chain.
-          let delta = filterStaticSelfData(data, app.selfContext) as Delta
-          if (app.deltaCache) {
-            app.deltaCache.ingestDelta(delta)
-          }
-          if (app.signalk.listenerCount('unfilteredDelta') > 0) {
-            app.signalk.emit('unfilteredDelta', cloneDelta(delta))
-          }
-          delta = toPreferredDelta(delta, now, app.selfContext)
+          const delta = filterStaticSelfData(data, app.selfContext) as Delta
 
-          if (skVersion === SKVersion.v1) {
-            deltachainV1.process(delta)
-          } else {
-            deltachainV2.process(delta)
-          }
+          // Input handlers intercept the raw delta first, per the
+          // registerDeltaInputHandler contract ("before they are
+          // processed by the server"). Whatever a handler passes to
+          // next() — modified or original — is what the cache, the
+          // unfiltered bus, source-priority filtering and the full
+          // model then see. A handler that never calls next() drops
+          // the delta here, before any of that runs.
+          const chain = skVersion === SKVersion.v1 ? deltachainV1 : deltachainV2
+          chain.process(delta, dispatchDelta, now, skVersion)
         } catch (err) {
           console.error(err)
         }
@@ -555,12 +609,14 @@ class Server {
     // and flip routesPath on for already-contended paths at boot.
     app.activateSourcePriorities()
 
+    const serverStartId = randomUUID()
     app.getHello = () => ({
       name: app.config.name,
       version: app.config.version,
       self: `vessels.${app.selfId}`,
       roles: ['master', 'main'],
-      timestamp: new Date()
+      timestamp: new Date(),
+      serverStartId
     })
 
     app.isNmea2000OutAvailable = false

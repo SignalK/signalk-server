@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-api",
-  "version": "2.25.0",
+  "version": "2.30.0",
   "description": "signalk-server Typescript API for plugins etc with relevant implementation classes",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,12 +23,12 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",
-    "@signalk/path-metadata": "*",
-    "@sinclair/typebox": "^0.34.0",
-    "baconjs": "^3.0.0"
+    "@signalk/path-metadata": "^1.0.1",
+    "@sinclair/typebox": "^0.34.49",
+    "baconjs": "^3.0.23"
   },
   "devDependencies": {
-    "ts-auto-guard": "^5.0.1"
+    "ts-auto-guard": "^5.1.3"
   },
   "exports": {
     ".": "./dist/index.js",

@@ -21,7 +21,6 @@ import {
   RouteDestination,
   CourseInfo,
   COURSE_POINT_TYPES,
-  Update,
   Delta,
   hasValues,
   SourceRef,
@@ -38,6 +37,7 @@ import { Store } from '../../serverstate/store'
 
 import { buildSchemaSync } from 'api-schema-builder'
 import { courseApiDoc } from './openApi'
+import { crossTrackDistance, rebasePreviousPointFromXte } from './xteGeometry'
 import { ResourcesApi } from '../resources'
 import { ConfigApp, writeSettingsFile } from '../../config/config'
 
@@ -79,12 +79,67 @@ const NO_COURSE_INFO: CourseInfo = {
   previousPoint: null
 }
 
+const EXTERNAL_COURSE_SOURCE_TYPES = new Set(['NMEA0183', 'NMEA2000'])
+const EXTERNAL_NAV_MAX_AGE_MS = 15000
+const XTE_REBASE_THRESHOLD_M = 10
+const XTE_REBASE_CONFIRMATIONS = 3
+
+const EXTERNAL_NEXT_POINT_PATHS = new Set([
+  'navigation.courseRhumbline.nextPoint.position',
+  'navigation.courseGreatCircle.nextPoint.position'
+])
+
+const EXTERNAL_PREVIOUS_POINT_PATHS = new Set([
+  'navigation.courseRhumbline.previousPoint.position',
+  'navigation.courseGreatCircle.previousPoint.position'
+])
+
+const EXTERNAL_XTE_PATHS = new Set([
+  'navigation.courseRhumbline.crossTrackError',
+  'navigation.courseGreatCircle.crossTrackError'
+])
+
+const EXTERNAL_NAV_TOUCH_PATHS = [
+  'navigation.courseRhumbline.nextPoint.distance',
+  'navigation.courseGreatCircle.nextPoint.distance',
+  'navigation.courseRhumbline.nextPoint.bearingTrue',
+  'navigation.courseGreatCircle.nextPoint.bearingTrue',
+  'navigation.courseRhumbline.nextPoint.bearingMagnetic',
+  'navigation.courseGreatCircle.nextPoint.bearingMagnetic',
+  'navigation.courseRhumbline.bearingTrackTrue',
+  'navigation.courseGreatCircle.bearingTrackTrue',
+  'navigation.courseRhumbline.bearingTrackMagnetic',
+  'navigation.courseGreatCircle.bearingTrackMagnetic'
+]
+
+const EXTERNAL_NAV_PATHS = [
+  ...EXTERNAL_NEXT_POINT_PATHS,
+  ...EXTERNAL_PREVIOUS_POINT_PATHS,
+  ...EXTERNAL_XTE_PATHS,
+  ...EXTERNAL_NAV_TOUCH_PATHS
+]
+
+const orderExternalNavigationValues = (values: PathValue[]) => [
+  ...values.filter((pathValue) =>
+    EXTERNAL_NEXT_POINT_PATHS.has(pathValue.path)
+  ),
+  ...values.filter(
+    (pathValue) => !EXTERNAL_NEXT_POINT_PATHS.has(pathValue.path)
+  )
+]
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value)
+
 export class CourseApi {
   private courseInfo = NO_COURSE_INFO
 
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
   private unsubscribes: Unsubscribes = []
+  private externalNavTimer: ReturnType<typeof setTimeout> | null = null
+  private externalNavLastUpdate = 0
+  private xteRebaseMismatchCount = 0
 
   constructor(
     private app: CourseApplication,
@@ -120,23 +175,22 @@ export class CourseApi {
       this.app.subscriptionmanager?.subscribe(
         {
           context: 'vessels.self' as Context,
-          subscribe: [
-            {
-              path: 'navigation.courseRhumbline.nextPoint.position' as Path,
-              period: 500
-            },
-            {
-              path: 'navigation.courseGreatCircle.nextPoint.position' as Path,
-              period: 500
-            }
-          ]
+          subscribe: EXTERNAL_NAV_PATHS.map((path) => ({
+            path: path as Path,
+            period: 500
+          }))
         },
         this.unsubscribes,
         (err) => {
           console.log(`Course API: Subscribe failed: ${err}`)
         },
         (msg: Delta) => {
-          this.processV1DestinationDeltas(msg)
+          void this.processV1DestinationDeltas(msg).catch((error) => {
+            debug(
+              'Course API: external navigation delta processing failed',
+              error
+            )
+          })
         }
       )
       this.app.subscriptionmanager?.subscribe(
@@ -300,37 +354,41 @@ export class CourseApi {
     ) {
       return
     }
-    delta.updates.forEach((update: Update) => {
+    for (const update of delta.updates) {
       if (hasValues(update)) {
-        update.values.forEach((pathValue: PathValue) => {
-          if (
-            update.source &&
-            update.source.type &&
-            ['NMEA0183', 'NMEA2000'].includes(update.source.type)
-          ) {
-            this.parseStreamValue(
-              {
-                type: update.source.type,
-                $source: update.$source || getSourceId(update.source),
-                msg:
-                  update.source.type === 'NMEA0183'
-                    ? `${update.source.sentence}`
-                    : `${update.source.pgn}`,
-                path: pathValue.path
-              },
-              pathValue.value as Position
-            )
-          }
-        })
+        if (!update.source?.type) {
+          continue
+        }
+
+        if (!EXTERNAL_COURSE_SOURCE_TYPES.has(update.source.type)) {
+          continue
+        }
+
+        for (const pathValue of orderExternalNavigationValues(update.values)) {
+          await this.parseStreamValue(
+            {
+              type: update.source.type,
+              $source:
+                (update.$source as SourceRef | undefined) ||
+                getSourceId(update.source),
+              msg:
+                update.source.type === 'NMEA0183'
+                  ? `${update.source.sentence}`
+                  : `${update.source.pgn}`,
+              path: pathValue.path
+            },
+            pathValue.value
+          )
+        }
       }
-    })
+    }
   }
 
   /** Test for valid Signal K position */
   private isValidPosition(position: Position): boolean {
     return (
       typeof position?.latitude === 'number' &&
-      typeof position?.latitude === 'number' &&
+      typeof position?.longitude === 'number' &&
       position?.latitude >= -90 &&
       position?.latitude <= 90 &&
       position?.longitude >= -180 &&
@@ -340,30 +398,57 @@ export class CourseApi {
 
   /** Process stream value and take action
    * @param cmdSource Object describing the source of the update
-   * @param pos Destination location value in the update
+   * @param value Destination position or external navigation value in the update
    */
-  private async parseStreamValue(cmdSource: CommandSource, pos: Position) {
+  private async parseStreamValue(cmdSource: CommandSource, value: unknown) {
+    const isNextPoint = EXTERNAL_NEXT_POINT_PATHS.has(cmdSource.path ?? '')
+    const isPreviousPoint = EXTERNAL_PREVIOUS_POINT_PATHS.has(
+      cmdSource.path ?? ''
+    )
+    const isXte = EXTERNAL_XTE_PATHS.has(cmdSource.path ?? '')
+
     if (!this.cmdSource) {
       // New source
-      if (!this.isValidPosition(pos)) {
+      if (!isNextPoint || !this.isValidPosition(value as Position)) {
         return
       }
       debug('parseStreamValue:', 'Setting Destination...')
-      const result = await this.setDestination({ position: pos }, cmdSource)
+      const result = await this.setDestination(
+        { position: value as Position },
+        cmdSource
+      )
       debug('parseStreamValue: Source set...', this.cmdSource)
       if (result) {
+        this.markExternalNavigationUpdate()
         this.emitCourseInfo()
         return
       }
     }
 
-    if (this.isCurrentCmdSource(cmdSource)) {
+    if (this.isCurrentNavigationSource(cmdSource)) {
+      this.markExternalNavigationUpdate()
+
+      if (isPreviousPoint) {
+        this.updateExternalPreviousPoint(value)
+        return
+      }
+
+      if (isXte) {
+        this.maybeRebaseExternalPreviousPoint(value)
+        return
+      }
+
+      if (!isNextPoint) {
+        return
+      }
+
+      const pos = value as Position
       if (!this.isValidPosition(pos)) {
         debug(
           'parseStreamValue:',
           'No or invalid position... Clear Destination...'
         )
-        this.clearDestination()
+        this.clearDestination(true)
         return
       }
 
@@ -383,6 +468,135 @@ export class CourseApi {
     }
   }
 
+  private markExternalNavigationUpdate() {
+    this.externalNavLastUpdate = Date.now()
+    this.scheduleExternalNavigationTimeout()
+  }
+
+  private scheduleExternalNavigationTimeout() {
+    if (!this.cmdSource || !isExternalCmdSource(this.cmdSource)) {
+      return
+    }
+
+    if (this.externalNavTimer) {
+      clearTimeout(this.externalNavTimer)
+    }
+
+    const age = Date.now() - this.externalNavLastUpdate
+    const delay = Math.max(EXTERNAL_NAV_MAX_AGE_MS - age, 0)
+    this.externalNavTimer = setTimeout(() => {
+      const elapsed = Date.now() - this.externalNavLastUpdate
+      if (
+        this.cmdSource &&
+        isExternalCmdSource(this.cmdSource) &&
+        elapsed >= EXTERNAL_NAV_MAX_AGE_MS
+      ) {
+        debug('External navigation stale; clearing course')
+        this.clearDestination(true)
+      } else {
+        this.scheduleExternalNavigationTimeout()
+      }
+    }, delay)
+    this.externalNavTimer.unref?.()
+  }
+
+  private clearExternalNavigationState() {
+    if (this.externalNavTimer) {
+      clearTimeout(this.externalNavTimer)
+      this.externalNavTimer = null
+    }
+    this.externalNavLastUpdate = 0
+    this.xteRebaseMismatchCount = 0
+  }
+
+  private updateExternalPreviousPoint(value: unknown) {
+    const position = value as Position
+    if (!this.isValidPosition(position)) {
+      return
+    }
+
+    if (
+      this.courseInfo.previousPoint?.position?.latitude === position.latitude &&
+      this.courseInfo.previousPoint?.position?.longitude === position.longitude
+    ) {
+      return
+    }
+
+    this.xteRebaseMismatchCount = 0
+    this.courseInfo.previousPoint = {
+      position,
+      type: RoutePoint,
+      name: this.courseInfo.previousPoint?.name ?? 'WP0'
+    }
+    this.emitCourseInfo(true, 'previousPoint')
+  }
+
+  private maybeRebaseExternalPreviousPoint(externalXte: unknown) {
+    if (!isFiniteNumber(externalXte)) {
+      return
+    }
+
+    const vesselPositionValue: any = this.getVesselPosition()
+    const vesselPosition = vesselPositionValue?.value as Position | undefined
+    const previousPoint = this.courseInfo.previousPoint?.position
+    const destination = this.courseInfo.nextPoint?.position
+
+    if (
+      !vesselPosition ||
+      !previousPoint ||
+      !destination ||
+      !this.isValidPosition(vesselPosition) ||
+      !this.isValidPosition(previousPoint) ||
+      !this.isValidPosition(destination)
+    ) {
+      return
+    }
+
+    const calculatedXte = crossTrackDistance(
+      vesselPosition,
+      previousPoint,
+      destination
+    )
+
+    if (
+      calculatedXte === undefined ||
+      Math.abs(calculatedXte - externalXte) <= XTE_REBASE_THRESHOLD_M
+    ) {
+      this.xteRebaseMismatchCount = 0
+      return
+    }
+
+    this.xteRebaseMismatchCount += 1
+    if (this.xteRebaseMismatchCount < XTE_REBASE_CONFIRMATIONS) {
+      return
+    }
+
+    const rebasedPreviousPoint = rebasePreviousPointFromXte(
+      vesselPosition,
+      destination,
+      externalXte
+    )
+    if (!rebasedPreviousPoint) {
+      return
+    }
+
+    debug(
+      'External XTE mismatch; rebasing previousPoint',
+      calculatedXte,
+      externalXte,
+      rebasedPreviousPoint
+    )
+    this.xteRebaseMismatchCount = 0
+    this.courseInfo.previousPoint = {
+      position: rebasedPreviousPoint,
+      type: VesselPosition,
+      name: 'VP'
+    }
+    this.courseInfo.activeRoute = null
+    this.courseInfo.startTime = new Date().toISOString()
+    this.emitCourseInfo(true, 'activeRoute', 'nextPoint', 'previousPoint')
+  }
+
   /** Get course (exposed to plugins) */
   async getCourse(): Promise<CourseInfo> {
     debug(`** getCourse()`)
@@ -391,6 +605,7 @@ export class CourseApi {
 
   /** Clear destination / route (exposed to plugins) */
   async clearDestination(persistState?: boolean): Promise<void> {
+    this.clearExternalNavigationState()
     this.courseInfo = {
       ...NO_COURSE_INFO,
       arrivalCircle: this.courseInfo.arrivalCircle
@@ -950,6 +1165,7 @@ export class CourseApi {
     }
     this.courseInfo = newCourse
     this.cmdSource = src
+    this.clearExternalNavigationState()
     return true
   }
 
@@ -1035,6 +1251,10 @@ export class CourseApi {
     }
     this.courseInfo = newCourse
     this.cmdSource = src
+    this.clearExternalNavigationState()
+    if (isExternalCmdSource(src)) {
+      this.markExternalNavigationUpdate()
+    }
     return true
   }
 
@@ -1141,8 +1361,7 @@ export class CourseApi {
     if (h) {
       try {
         return (await this.resourcesApi.getResource(h.type, h.id)) as
-          | Route
-          | undefined
+          Route | undefined
       } catch (_err) {
         debug(`** Unable to fetch resource: ${h.type}, ${h.id}`)
         return undefined
@@ -1332,12 +1551,18 @@ export class CourseApi {
     (this.cmdSource.type !== newSource.type ||
       this.cmdSource.$source !== newSource.$source)
 
-  private isCurrentCmdSource = (cmdSource: CommandSource) =>
+  private isCurrentNavigationSource = (cmdSource: CommandSource) =>
     this.cmdSource?.type === cmdSource.type &&
-    this.cmdSource?.$source === cmdSource.$source &&
+    this.cmdSource?.$source === cmdSource.$source
+
+  private isCurrentCmdSource = (cmdSource: CommandSource) =>
+    this.isCurrentNavigationSource(cmdSource) &&
     this.cmdSource?.path === cmdSource.path &&
     this.cmdSource?.msg === cmdSource.msg
 }
+
+const isExternalCmdSource = (cmdSource: CommandSource) =>
+  EXTERNAL_COURSE_SOURCE_TYPES.has(cmdSource.type)
 
 const hasAllProperties = (info: CourseInfo, propNames: string[]) => {
   return !propNames.find((propName) => !(propName in info))

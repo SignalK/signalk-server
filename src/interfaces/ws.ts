@@ -57,6 +57,25 @@ import { Delta, hasValues } from '@signalk/server-api'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 
+function incrementIpCount(
+  ipConnectionCounts: Map<string, number>,
+  ip: string
+): void {
+  ipConnectionCounts.set(ip, (ipConnectionCounts.get(ip) ?? 0) + 1)
+}
+
+function decrementIpCount(
+  ipConnectionCounts: Map<string, number>,
+  ip: string
+): void {
+  const count = ipConnectionCounts.get(ip)
+  if (count !== undefined && count > 1) {
+    ipConnectionCounts.set(ip, count - 1)
+  } else {
+    ipConnectionCounts.delete(ip)
+  }
+}
+
 interface SkPrincipal {
   identifier: string
 }
@@ -121,6 +140,8 @@ interface WsMessage {
   statusCode?: number
   message?: string
   sourcePolicy?: SourcePolicy
+  excludeSources?: string[]
+  excludeSelf?: boolean
 }
 
 interface WsRequestReply extends UpdateOptions {
@@ -196,7 +217,8 @@ interface SubscriptionManager {
     write: (data: unknown) => void,
     onChange: (delta: Delta) => void,
     principal?: SkPrincipal,
-    sourcePolicy?: string
+    sourcePolicy?: string,
+    excludeSources?: string[]
   ) => void
   unsubscribe: (msg: WsMessage, unsubscribes: Array<() => void>) => void
 }
@@ -499,6 +521,9 @@ function wsInterface(app: WsApp): WsApi {
 
         primus.on('connection', function (primusSpark: unknown) {
           const spark = primusSpark as Spark
+          const sparkIp = spark.request._resolvedIp
+          incrementIpCount(ipConnectionCounts, sparkIp)
+
           let principalId: string | undefined
           if (spark.request.skPrincipal) {
             principalId = spark.request.skPrincipal.identifier
@@ -659,18 +684,9 @@ function wsInterface(app: WsApp): WsApi {
             })
           })
 
-          const sparkIp = spark.request._resolvedIp
-
           spark.onDisconnects = [
             () => spark.backpressureManager?.clear(),
-            () => {
-              const count = ipConnectionCounts.get(sparkIp)
-              if (count !== undefined && count > 1) {
-                ipConnectionCounts.set(sparkIp, count - 1)
-              } else {
-                ipConnectionCounts.delete(sparkIp)
-              }
-            }
+            () => decrementIpCount(ipConnectionCounts, sparkIp)
           ]
 
           if (primusOptions.isPlayback) {
@@ -883,8 +899,13 @@ function createPrimusAuthorize(
         : undefined
     req._resolvedIp = firstForwardedIp || req.connection.remoteAddress
     const ip = req._resolvedIp
-    if ((ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp) {
-      debug(`IP ${ip} exceeded max connections (${maxConnectionsPerIp})`)
+    const isWebSocketUpgrade =
+      String(req.headers.upgrade || '').toLowerCase() === 'websocket'
+    if (
+      isWebSocketUpgrade &&
+      (ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp
+    ) {
+      debug('IP %s exceeded max connections (%d)', ip, maxConnectionsPerIp)
       const err = Object.assign(
         new Error(
           JSON.stringify({
@@ -897,8 +918,6 @@ function createPrimusAuthorize(
       authorized(err)
       return
     }
-
-    ipConnectionCounts.set(ip, (ipConnectionCounts.get(ip) ?? 0) + 1)
 
     if (!authorizeWS) {
       authorized()
@@ -1032,8 +1051,7 @@ function handleValuesMeta(
           // Clone and enhance metadata with displayUnits formulas
           const metaClone = structuredClone(meta) as Record<string, unknown>
           let storedDisplayUnits = metaClone.displayUnits as
-            | Record<string, unknown>
-            | undefined
+            Record<string, unknown> | undefined
           const username = this.spark.request.skPrincipal?.identifier
           if (!storedDisplayUnits?.category && path) {
             const defaultCategory = getDefaultCategory(
@@ -1123,6 +1141,16 @@ function processSubscribe(
     // listener attached in handleRealtimeConnection. Falling back to the
     // spark-level policy keeps the URL-query default working for clients
     // that never send a per-message override.
+    //
+    // excludeSelf is only meaningful for plugin subscriptions (where
+    // the server can resolve it to the plugin's id); WebSocket clients
+    // have no identity to resolve against, so it's logged and ignored.
+    // Explicit excludeSources is forwarded as-is.
+    if (msg.excludeSelf) {
+      debug(
+        'WebSocket subscribe ignores excludeSelf: there is no plugin identity to resolve; use excludeSources instead'
+      )
+    }
     app.subscriptionmanager.subscribe(
       msg,
       unsubscribes,
@@ -1136,7 +1164,10 @@ function processSubscribe(
         spark.backpressureManager!.send(filtered)
       },
       spark.request.skPrincipal,
-      msg.sourcePolicy ?? spark.sourcePolicy
+      msg.sourcePolicy ?? spark.sourcePolicy,
+      Array.isArray(msg.excludeSources) && msg.excludeSources.length > 0
+        ? msg.excludeSources
+        : undefined
     )
   }
 }
@@ -1283,8 +1314,7 @@ function handleRealtimeConnection(
           const pathMeta =
             (getMetadata(fullPath) as Record<string, unknown>) || {}
           const storedDU = pathMeta.displayUnits as
-            | DisplayUnitsMetadata
-            | undefined
+            DisplayUnitsMetadata | undefined
           const category =
             storedDU?.category ||
             getDefaultCategory(

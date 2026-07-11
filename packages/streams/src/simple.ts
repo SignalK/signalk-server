@@ -329,6 +329,21 @@ function nmea2000input(
       }),
       new Liner(subOptions)
     ]
+  } else if (subOptions.type === 'canboat-csv-canboatjs') {
+    // canboat-pipeline's CSV R/W port (default 2603). Bidirectional:
+    // we read PLAIN/FAST lines and forward outbound PGNs over the
+    // same socket.
+
+    const CanboatCsv = require('./canboat-csv') as {
+      default: new (options: object) => PipeElement
+    }
+    const Ctor = CanboatCsv.default ?? CanboatCsv
+    return [
+      new (Ctor as new (options: object) => PipeElement)(
+        subOptions as SubOptions & { host: string; port: number }
+      ),
+      new Liner(subOptions)
+    ]
   } else if (subOptions.type === 'w2k-1-n2k-ascii-canboatjs') {
     const W2k01Ctor = requireW2k01()
     return [
@@ -352,21 +367,16 @@ function nmea2000input(
     ]
   } else if (subOptions.type === 'n2k-ip-gateway-canboatjs') {
     const canboatjs = require('@canboat/canboatjs') as {
-      N2kIpGateway?: unknown
-    }
-    // N2kIpGateway lives in canboatjs only after the PR that introduced
-    // the 'n2k-ip-gateway-canboatjs' type — older installs (still on the
-    // ^3.3.0 floor) will resolve to undefined here and otherwise throw a
-    // cryptic "undefined is not a constructor". Give the user something
-    // they can act on.
-    if (typeof canboatjs.N2kIpGateway !== 'function') {
-      throw new Error(
-        "Provider type 'n2k-ip-gateway-canboatjs' requires @canboat/canboatjs " +
-          'with N2kIpGateway exported. Update the canboatjs dependency.'
-      )
+      N2kIpGateway: unknown
     }
     const N2kIpGatewayCtor = canboatjs.N2kIpGateway as unknown as CanboatCtor
     return [new N2kIpGatewayCtor(subOptions)]
+  } else if (subOptions.type === 'maretron-ipg-canboatjs') {
+    const canboatjs = require('@canboat/canboatjs') as {
+      MaretronIPG: unknown
+    }
+    const MaretronIPGCtor = canboatjs.MaretronIPG as unknown as CanboatCtor
+    return [new MaretronIPGCtor(subOptions)]
   } else if (subOptions.type === 'navlink2-udp-canboatjs') {
     return [
       new Udp(subOptions as SubOptions & { port: number }),
@@ -597,7 +607,9 @@ export default class Simple extends Transform {
         opts.subOptions.type === 'canbus-canboatjs' ||
         opts.subOptions.type === 'w2k-1-n2k-actisense-canboatjs' ||
         opts.subOptions.type === 'w2k-1-n2k-ascii-canboatjs' ||
-        opts.subOptions.type === 'n2k-ip-gateway-canboatjs'
+        opts.subOptions.type === 'n2k-ip-gateway-canboatjs' ||
+        opts.subOptions.type === 'canboat-csv-canboatjs' ||
+        opts.subOptions.type === 'maretron-ipg-canboatjs'
       ) {
         mappingType = 'NMEA2000JS'
       } else if (

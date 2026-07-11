@@ -56,11 +56,15 @@
   border-bottom: 1px solid var(--bs-border-color, #c2cfd6);
   font-size: 0.875rem;
   content-visibility: auto;
-  contain-intrinsic-block-size: 40px;
+  /* `auto <length>` caches each row's last rendered height as the
+     placeholder, so tall rows (sky-plot SVG, expanded <details>, NMEA
+     labels wrapping 1 to 2 lines) stop swinging page height and
+     flickering the scrollbar on viewport entry. */
+  contain-intrinsic-block-size: auto 40px;
 }
 
 .virtual-table-row[data-raw-row='true'] {
-  contain-intrinsic-block-size: 150px;
+  contain-intrinsic-block-size: auto 150px;
 }
 
 .virtual-table-row:hover {
@@ -179,6 +183,10 @@
     display: block;
     padding: 0.5rem;
     border-bottom: 2px solid var(--bs-border-color, #c2cfd6);
+    /* Stacked-cell rows are roughly 3 to 4 times the desktop height
+       (path-cell plus four label-flex cells plus padding), so raise
+       the first-paint placeholder accordingly. */
+    contain-intrinsic-block-size: auto 150px;
   }
 
   .virtual-table-row.striped {
@@ -311,5 +319,5 @@
 
 .virtual-table-meta-row {
   content-visibility: auto;
-  contain-intrinsic-block-size: 200px;
+  contain-intrinsic-block-size: auto 200px;
 }

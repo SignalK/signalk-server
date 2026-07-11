@@ -1,12 +1,9 @@
 import { useStore, type SignalKStore } from '../store'
+import { sanitizeGnssConfig } from '../store/slices/gnssPositionSlice'
 import { fetchAllData } from '../dataFetching'
 
 export type WebSocketStatus =
-  | 'initial'
-  | 'connecting'
-  | 'open'
-  | 'closed'
-  | 'error'
+  'initial' | 'connecting' | 'open' | 'closed' | 'error'
 
 export type DeltaMessageHandler = (message: unknown) => void
 export type StatusChangeHandler = (status: WebSocketStatus) => void
@@ -20,8 +17,7 @@ interface WebSocketServiceState {
 type Listener = () => void
 type ZustandStateSetter = (
   partial:
-    | Partial<SignalKStore>
-    | ((state: SignalKStore) => Partial<SignalKStore>)
+    Partial<SignalKStore> | ((state: SignalKStore) => Partial<SignalKStore>)
 ) => void
 
 export class WebSocketService {
@@ -39,6 +35,11 @@ export class WebSocketService {
   private maxReconnectAttempts = Infinity
   private reconnectInterval = 5000
   private zustandSetState: ZustandStateSetter | null = null
+  // Last hello.serverStartId we saw, used to detect that the server has
+  // been restarted between connections. On change, the client's
+  // signalkData mirror is wiped so paths the new server instance no
+  // longer publishes don't linger as ghost rows in the Data Browser.
+  private lastServerStartId: string | null = null
 
   setZustandState(setState: ZustandStateSetter): void {
     this.zustandSetState = setState
@@ -68,7 +69,15 @@ export class WebSocketService {
 
       if (isReconnect) {
         fetchAllData()
-        useStore.getState().setRestarting(false)
+        const store = useStore.getState()
+        const wasRestarting = store.restarting
+        store.setRestarting(false)
+        // Only clear the settings restart banner when this reconnect
+        // followed an actual restart; a transient disconnect must not
+        // hide a still-pending restart reminder.
+        if (wasRestarting) {
+          store.setRestartRequired(false)
+        }
       }
     }
 
@@ -179,8 +188,25 @@ export class WebSocketService {
       return
     }
 
-    // Hello message — extract skSelf
+    // Hello message — extract skSelf and check for server restart
     if (msg.name) {
+      const serverStartId =
+        typeof msg.serverStartId === 'string' ? msg.serverStartId : null
+      // A different serverStartId than last seen means the server
+      // process has restarted; the new instance has none of the old
+      // delta cache, so wipe our mirror to drop paths it will never
+      // re-publish. First hello on a freshly-loaded page just records
+      // the id (no clear, there is nothing cached yet).
+      if (
+        serverStartId &&
+        this.lastServerStartId &&
+        serverStartId !== this.lastServerStartId
+      ) {
+        useStore.getState().clearData()
+      }
+      if (serverStartId) {
+        this.lastServerStartId = serverStartId
+      }
       this.updateState({ skSelf: msg.self as string })
       return
     }
@@ -327,6 +353,19 @@ export class WebSocketService {
             (data ?? {}) as Parameters<SignalKStore['setN2kDeviceStatus']>[0]
           )
         break
+      case 'POSITION_SOURCES':
+        useStore
+          .getState()
+          .setPositionSources(
+            Array.isArray(data)
+              ? data.filter((item): item is string => typeof item === 'string')
+              : []
+          )
+        break
+      case 'GNSS_SENSORS': {
+        useStore.getState().setGnssSensors(sanitizeGnssConfig(data))
+        break
+      }
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break

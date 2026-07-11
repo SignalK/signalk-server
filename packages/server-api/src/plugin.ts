@@ -1,4 +1,4 @@
-import { IRouter } from 'express'
+import { IRouter, RequestHandler } from 'express'
 import { ServerAPI } from './serverapi'
 
 /**
@@ -160,6 +160,18 @@ export interface Plugin {
    *
    * The router will be mounted at `/plugins/<pluginId>` and you can use standard _Express_ _(`.get()` `.post()` `.use()`, etc)_ methods to add HTTP path handlers.
    *
+   * Routes registered directly on the router require **admin** authentication.
+   * To open a route up to `readwrite` or `readonly` users, register it through
+   * {@link PluginRouter.access}:
+   *
+   * ```typescript
+   * plugin.registerWithRouter = (router) => {
+   *   router.access('readonly').get('/data/:id', handler)
+   *   router.access('readwrite').post('/data', handler)
+   *   router.delete('/data/:id', handler) // no access() call — admin only
+   * }
+   * ```
+   *
    * > [!note]
    * > `GET /plugins/<pluginid>` and `POST /plugins/<pluginid>/configure` are reserved by server (see below).
    *
@@ -175,11 +187,64 @@ export interface Plugin {
    * @param router
    * @returns
    */
-  registerWithRouter?(router: IRouter): void
+  registerWithRouter?(router: PluginRouter): void
 
   getOpenApi?: () => object
 
   statusMessage?: () => string | void
 
   signalKApiRoutes?(router: IRouter): IRouter
+}
+
+/**
+ * Access level a plugin route can be opened up to. Routes registered
+ * without an access level remain admin-only.
+ *
+ * @category Rest API
+ */
+export type RouteAccessLevel = 'readwrite' | 'readonly'
+
+/**
+ * Route registrar returned by {@link PluginRouter.access}. Routes
+ * registered through it are reachable at the given access level;
+ * supports Express-style parameterized paths (e.g. `/data/:sensorId`).
+ *
+ * @category Rest API
+ */
+export interface AccessScopedRouter {
+  get(path: string, ...handlers: RequestHandler[]): AccessScopedRouter
+  post(path: string, ...handlers: RequestHandler[]): AccessScopedRouter
+  put(path: string, ...handlers: RequestHandler[]): AccessScopedRouter
+  patch(path: string, ...handlers: RequestHandler[]): AccessScopedRouter
+  delete(path: string, ...handlers: RequestHandler[]): AccessScopedRouter
+}
+
+/**
+ * The router passed to {@link Plugin.registerWithRouter}: a standard
+ * _Express_ router where routes registered directly require **admin**
+ * authentication, plus {@link access} for opening individual routes up
+ * to `readwrite` or `readonly` users:
+ *
+ * ```typescript
+ * router.access('readonly').get('/data/:id', handler)
+ * ```
+ *
+ * The reserved paths `/` and `/config` cannot be downgraded.
+ *
+ * @category Rest API
+ */
+export interface PluginRouter extends IRouter {
+  access(level: RouteAccessLevel): AccessScopedRouter
+}
+
+/**
+ * The access level recorded for a plugin route registered via
+ * {@link PluginRouter.access}, as handed to the security strategy.
+ *
+ * @category Rest API
+ */
+export type RoutePermission = {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  path: string
+  permission: RouteAccessLevel
 }

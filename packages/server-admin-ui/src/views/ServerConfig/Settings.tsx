@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import Badge from 'react-bootstrap/Badge'
+import { Link } from 'react-router-dom'
+import Alert from 'react-bootstrap/Alert'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -11,6 +12,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 
 import VesselConfiguration from './VesselConfiguration'
 import Logging from './Logging'
+import { useStore, useLoginStatus } from '../../store'
 
 interface ServerSettingsData {
   hasData?: boolean
@@ -26,10 +28,21 @@ interface ServerSettingsData {
   courseApi?: {
     apiOnly?: boolean
   }
+  notifications?: {
+    manageNotifications?: boolean
+  }
   staleness?: {
     enforceDataTimeouts?: boolean
   }
 }
+
+interface SecurityConfig {
+  allow_readonly: boolean
+}
+
+// Opacity applied to the interface row when its toggle is disabled.
+const DISABLED_ROW_OPACITY = 0.5
+const ENABLED_ROW_OPACITY = 1
 
 const SettableInterfaces: Record<string, string> = {
   applicationData: 'Application Data Storage',
@@ -40,9 +53,15 @@ const SettableInterfaces: Record<string, string> = {
 }
 
 const ServerSettings: React.FC = () => {
+  const loginStatus = useLoginStatus()
   const [settings, setSettings] = useState<ServerSettingsData>({
     hasData: false
   })
+  // The Signal K over TCP interface only starts when anonymous readonly
+  // access is allowed (see src/interfaces/tcp.ts). Track that so the toggle
+  // can reflect when the port would not actually be available. null = unknown
+  // (not yet fetched, fetch failed, or security disabled).
+  const [allowReadonly, setAllowReadonly] = useState<boolean | null>(null)
 
   const fetchSettings = useCallback(() => {
     fetch(`${window.serverRoutesPrefix}/settings`, {
@@ -57,6 +76,31 @@ const ServerSettings: React.FC = () => {
   useEffect(() => {
     fetchSettings()
   }, [fetchSettings])
+
+  useEffect(() => {
+    if (loginStatus.authenticationRequired) {
+      fetch(`${window.serverRoutesPrefix}/security/config`, {
+        credentials: 'include'
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Unable to load security config')
+          }
+          return response.json() as Promise<SecurityConfig>
+        })
+        .then((data) => setAllowReadonly(data.allow_readonly))
+        .catch(() => setAllowReadonly(null))
+    } else {
+      setAllowReadonly(null)
+    }
+  }, [loginStatus.authenticationRequired])
+
+  // When security is enabled but anonymous readonly access is off, the Signal K
+  // over TCP port is not opened by the server even if its toggle is on. Only
+  // warn when we know readonly is off (allowReadonly === false), not when the
+  // security config is still unknown.
+  const tcpUnavailable =
+    loginStatus.authenticationRequired === true && allowReadonly === false
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,6 +123,23 @@ const ServerSettings: React.FC = () => {
         ...prev,
         courseApi: {
           ...prev.courseApi,
+          [event.target.name]: value
+        }
+      }))
+    },
+    []
+  )
+
+  const handleNotificationsChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value =
+        event.target.type === 'checkbox'
+          ? event.target.checked
+          : event.target.value
+      setSettings((prev) => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
           [event.target.name]: value
         }
       }))
@@ -145,11 +206,11 @@ const ServerSettings: React.FC = () => {
       },
       body: JSON.stringify(settings),
       credentials: 'include'
+    }).then((response) => {
+      if (response.ok) {
+        useStore.getState().setRestartRequired(true)
+      }
     })
-      .then((response) => response.text())
-      .then((response) => {
-        alert(response)
-      })
   }, [settings])
 
   const fieldColWidthMd = 10
@@ -272,28 +333,58 @@ const ServerSettings: React.FC = () => {
               </Col>
               <Col xs="12" md={fieldColWidthMd}>
                 {Object.keys(SettableInterfaces).map((name) => {
+                  const disabled = name === 'tcp' && tcpUnavailable
                   return (
-                    <div key={name} className="d-flex align-items-center mb-2">
-                      <Form.Label
-                        style={{ marginRight: '15px', marginBottom: 0 }}
-                        className="switch switch-text switch-primary"
+                    <div key={name} className="mb-2">
+                      <div
+                        className="d-flex align-items-center"
+                        style={{
+                          opacity: disabled
+                            ? DISABLED_ROW_OPACITY
+                            : ENABLED_ROW_OPACITY
+                        }}
                       >
-                        <input
-                          type="checkbox"
-                          id={`interface-${name}`}
-                          name={name}
-                          className="switch-input"
-                          onChange={handleInterfaceChange}
-                          checked={settings.interfaces?.[name] || false}
-                        />
-                        <span
-                          className="switch-label"
-                          data-on="On"
-                          data-off="Off"
-                        />
-                        <span className="switch-handle" />
-                      </Form.Label>
-                      <span>{SettableInterfaces[name]}</span>
+                        <Form.Label
+                          style={{ marginRight: '15px', marginBottom: 0 }}
+                          className="switch switch-text switch-primary"
+                        >
+                          <input
+                            type="checkbox"
+                            id={`interface-${name}`}
+                            name={name}
+                            className="switch-input"
+                            onChange={handleInterfaceChange}
+                            checked={
+                              disabled
+                                ? false
+                                : settings.interfaces?.[name] || false
+                            }
+                            disabled={disabled}
+                          />
+                          <span
+                            className="switch-label"
+                            data-on="On"
+                            data-off="Off"
+                          />
+                          <span className="switch-handle" />
+                        </Form.Label>
+                        <span>{SettableInterfaces[name]}</span>
+                      </div>
+                      {disabled && (
+                        <Alert
+                          variant="warning"
+                          className="mt-1 mb-0 py-1 px-2"
+                        >
+                          <small>
+                            Enable{' '}
+                            <Link to="/security/settings">
+                              Allow Readonly Access
+                            </Link>{' '}
+                            under Security → Settings to make this port
+                            available.
+                          </small>
+                        </Alert>
+                      )}
                     </div>
                   )
                 })}
@@ -429,6 +520,46 @@ const ServerSettings: React.FC = () => {
             </Form.Group>
             <Form.Group as={Row}>
               <Col md="2">
+                <Form.Label htmlFor="manageNotifications">
+                  Manage Notifications
+                  <br />
+                  <i>(restart required)</i>
+                </Form.Label>
+              </Col>
+              <Col xs="12" md={fieldColWidthMd}>
+                <div className="d-flex align-items-center mb-2">
+                  <Form.Label
+                    style={{ marginRight: '15px', marginBottom: 0 }}
+                    className="switch switch-text switch-primary"
+                  >
+                    <input
+                      type="checkbox"
+                      name="manageNotifications"
+                      id="manageNotifications"
+                      className="switch-input"
+                      onChange={handleNotificationsChange}
+                      checked={
+                        settings.notifications?.manageNotifications ?? true
+                      }
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="On"
+                      data-off="Off"
+                    />
+                    <span className="switch-handle" />
+                  </Form.Label>
+                </div>
+                <Form.Text muted>
+                  Run the built-in notification manager. Turn off to let an
+                  external notification handler own notification lifecycle and
+                  avoid conflicts. Disabling stops core silence/acknowledge
+                  handling; those operations return 501.
+                </Form.Text>
+              </Col>
+            </Form.Group>
+            <Form.Group as={Row}>
+              <Col md="2">
                 <Form.Label htmlFor="enforceDataTimeouts">
                   Enforce Data Timeouts
                 </Form.Label>
@@ -470,10 +601,7 @@ const ServerSettings: React.FC = () => {
         <Card.Footer>
           <Button size="sm" variant="primary" onClick={handleSaveSettings}>
             <FontAwesomeIcon icon={faFloppyDisk} /> Save
-          </Button>{' '}
-          <Badge bg="danger" className="float-end">
-            Restart Required
-          </Badge>
+          </Button>
         </Card.Footer>
       </Card>
     </div>

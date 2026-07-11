@@ -4,5 +4,9 @@ public
 **/*.mbtiles
 **/*.pmtiles
 **/.__mf__temp
+# Runtime cache the server writes into its config dir; the test config
+# dir is under prettier's scan, so a freshly-written cache trips
+# prettier --check during npm test.
+**/sources-cache.json
 # AssemblyScript build outputs
 packages/assemblyscript-plugin-sdk/build

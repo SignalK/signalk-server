@@ -1,7 +1,8 @@
 import chai from 'chai'
+import http from 'http'
 import WebSocket from 'ws'
 import { freeport } from './ts-servertestutilities'
-import { startServerP } from './servertestutilities'
+import { getReadOnlyToken, startServerP } from './servertestutilities'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ;(chai as any).Should()
@@ -20,6 +21,36 @@ function openWs(url: string): Promise<WebSocket> {
         response: res
       })
       reject(err)
+    })
+  })
+}
+
+function openWsExpectStatus(
+  url: string,
+  statusCode: number,
+  options?: WebSocket.ClientOptions
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(url, options)
+    ws.once('open', () => {
+      ws.close()
+      reject(
+        new Error(
+          `Expected connection to be rejected with HTTP ${statusCode} but it was accepted`
+        )
+      )
+    })
+    ws.once('error', reject)
+    ws.once('unexpected-response', (_req, res) => {
+      res.resume()
+      res.once('end', () => {
+        try {
+          res.statusCode!.should.equal(statusCode)
+          resolve()
+        } catch (err) {
+          reject(err)
+        }
+      })
     })
   })
 }
@@ -52,6 +83,17 @@ function openWsExpect429(
   })
 }
 
+function getHttpStatus(url: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, (res) => {
+      res.resume()
+      res.once('end', () => resolve(res.statusCode!))
+    })
+
+    req.once('error', reject)
+  })
+}
+
 describe('WebSocket per-IP connection limit', function () {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let server: any
@@ -72,11 +114,23 @@ describe('WebSocket per-IP connection limit', function () {
     await server.stop()
   })
 
+  it('does not count non-upgrade HTTP probes against the connection limit', async function () {
+    const httpUrl = wsUrl.replace(/^ws:/, 'http:')
+    for (let i = 0; i < MAX + 1; i++) {
+      ;(await getHttpStatus(httpUrl)).should.equal(426)
+    }
+  })
+
   it(`allows up to ${MAX} concurrent connections from the same IP`, async function () {
     for (let i = 0; i < MAX; i++) {
       const ws = await openWs(wsUrl)
       openSockets.push(ws)
     }
+  })
+
+  it('does not reject non-upgrade HTTP probes while websocket connections are at the limit', async function () {
+    const httpUrl = wsUrl.replace(/^ws:/, 'http:')
+    ;(await getHttpStatus(httpUrl)).should.equal(426)
   })
 
   it('rejects the next connection with HTTP 429 and a JSON error payload', async function () {
@@ -110,6 +164,41 @@ describe('WebSocket per-IP connection limit', function () {
     }
 
     openSockets.push(ws!)
+  })
+})
+
+describe('WebSocket per-IP connection limit with authorization failures', function () {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let server: any
+  let wsUrl: string
+  let readToken: string
+  const MAX = 2
+  const openSockets: WebSocket[] = []
+
+  before(async function () {
+    process.env.MAX_WS_CONNECTIONS_PER_IP = String(MAX)
+    const port = await freeport()
+    wsUrl = `ws://127.0.0.1:${port}${WS_STREAM_PATH}`
+    server = await startServerP(port, true)
+    readToken = await getReadOnlyToken(server)
+  })
+
+  after(async function () {
+    delete process.env.MAX_WS_CONNECTIONS_PER_IP
+    openSockets.forEach((ws) => ws.terminate())
+    await server.stop()
+  })
+
+  it('does not count rejected websocket authorization attempts', async function () {
+    const invalidToken = readToken.substring(0, readToken.length - 1)
+    for (let i = 0; i < MAX + 1; i++) {
+      await openWsExpectStatus(wsUrl, 401, {
+        headers: { Authorization: `JWT ${invalidToken}` }
+      })
+    }
+
+    const ws = await openWs(`${wsUrl}&token=${readToken}`)
+    openSockets.push(ws)
   })
 })
 

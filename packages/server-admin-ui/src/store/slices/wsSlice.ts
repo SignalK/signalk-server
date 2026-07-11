@@ -1,11 +1,7 @@
 import type { StateCreator } from 'zustand'
 
 export type WebSocketStatus =
-  | 'initial'
-  | 'connecting'
-  | 'open'
-  | 'closed'
-  | 'error'
+  'initial' | 'connecting' | 'open' | 'closed' | 'error'
 
 export type DeltaMessageHandler = (message: unknown) => void
 

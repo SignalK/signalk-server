@@ -29,6 +29,17 @@ import { isFanOutPriorities } from './deltaPriority'
 
 const SOURCES_CACHE_FILE = 'sources-cache.json'
 
+// Maximum time since a source's last accepted delta before it is considered
+// offline for POSITION_SOURCES purposes. Picked to be longer than typical
+// NMEA position update rates (1–10 Hz on N2K, 1 Hz on NMEA0183) but short
+// enough that a disconnected GNSS receiver flips to "offline" in the admin
+// UI within a minute, so users notice missing antennas before they navigate
+// by them.
+const POSITION_SOURCE_TTL_MS = 60 * 1000
+// How often to re-evaluate POSITION_SOURCES so silent publishers fall off
+// even when no new delta arrives to trigger an emit.
+const POSITION_SOURCE_SWEEP_MS = 15 * 1000
+
 interface StringKeyed {
   [key: string]: any
 }
@@ -140,6 +151,7 @@ export default class DeltaCache {
   private lastEmittedMultiSourceCount = 0
   private livePreferredEmitTimer: ReturnType<typeof setTimeout> | null = null
   private livePreferredDirtyPaths: Set<string> = new Set()
+  private lastEmittedPositionSources: string[] = []
 
   // Cached `<label>.<src> → <label>.<canName>` translation, refreshed
   // whenever `app.signalk.sources` is replaced or sourceRefChanged
@@ -189,6 +201,12 @@ export default class DeltaCache {
       },
       5 * 60 * 1000
     )
+
+    // Re-evaluate POSITION_SOURCES on a timer so silent publishers age
+    // out even when no new delta arrives to trigger an emit. The change
+    // detection in emitPositionSources keeps the event off the bus when
+    // the resulting set hasn't shifted.
+    setInterval(() => this.emitPositionSources(), POSITION_SOURCE_SWEEP_MS)
   }
 
   getContextAndPathParts(msg: NormalizedDelta): string[] {
@@ -211,7 +229,7 @@ export default class DeltaCache {
     return contextAndPathParts
   }
 
-  private canonicaliseSourceRef(sourceRef: string): string {
+  canonicaliseSourceRef(sourceRef: string): string {
     const sources = (this.app.signalk as any)?.sources
     if (sources !== this.canonicalSnapshot || this.canonicalMap === null) {
       this.canonicalSnapshot = sources
@@ -236,6 +254,7 @@ export default class DeltaCache {
     )
 
     if (msg.path.length !== 0) {
+      const isNewSource = !leaf[sourceRef]
       leaf[sourceRef] = msg
       // The enforcer's own synthetic timeout delta loops back through
       // here; letting it into onIncoming would record the timeout
@@ -274,6 +293,9 @@ export default class DeltaCache {
           this.livePreferredDirtyPaths.add(prefKey)
           this.scheduleLivePreferredEmit()
         }
+      }
+      if (isNewSource && msg.path === 'navigation.position') {
+        this.scheduleMultiSourceEmit()
       }
     } else if (msg.value) {
       _.keys(msg.value).forEach((key) => {
@@ -348,6 +370,58 @@ export default class DeltaCache {
     })
     if (countChanged) {
       this.scheduleMultiSourceEmit()
+    }
+    this.emitPositionSources()
+  }
+
+  /**
+   * `getSourcesForPath('navigation.position')` filtered by per-source
+   * freshness so disconnected publishers fall off after the TTL. Shared
+   * between the live event emitter and the REST GET handler so a cold
+   * page-load sees the same set the websocket would deliver moments later.
+   */
+  getActivePositionSources(): string[] {
+    const sources = this.getSourcesForPath('navigation.position')
+    const sourceMeta = (this.app.signalk as any)?.sourceMeta as
+      Record<string, { lastSeen?: number }> | undefined
+    if (!sourceMeta) return sources.slice().sort()
+    const cutoff = Date.now() - POSITION_SOURCE_TTL_MS
+    // sourceMeta is stamped under the raw update.$source while `sources`
+    // holds canonical (canName-form) refs, so a device whose frames are
+    // tagged with the numeric-src alias would look stale under its
+    // canonical key. Fold every alias's freshness onto its canonical ref.
+    const lastSeenByCanonical = new Map<string, number>()
+    for (const [ref, meta] of Object.entries(sourceMeta)) {
+      const t = meta?.lastSeen
+      if (typeof t !== 'number') continue
+      const canonical = this.canonicaliseSourceRef(ref)
+      const prev = lastSeenByCanonical.get(canonical)
+      if (prev === undefined || t > prev) {
+        lastSeenByCanonical.set(canonical, t)
+      }
+    }
+    return sources
+      .filter((ref) => {
+        const t = lastSeenByCanonical.get(ref)
+        return t !== undefined && t >= cutoff
+      })
+      .sort()
+  }
+
+  private emitPositionSources() {
+    const sorted = this.getActivePositionSources()
+    const changed =
+      sorted.length !== this.lastEmittedPositionSources.length ||
+      sorted.some((s, i) => s !== this.lastEmittedPositionSources[i])
+    if (changed) {
+      this.lastEmittedPositionSources = sorted
+      // Emit the sorted list so successive events have stable ordering;
+      // otherwise clients diffing payloads see spurious changes whenever
+      // the cache iteration order happens to swap two refs.
+      ;(this.app as any).emit('serverevent', {
+        type: 'POSITION_SOURCES',
+        data: sorted
+      })
     }
   }
 
@@ -561,17 +635,28 @@ export default class DeltaCache {
         }
 
         if (isNewSource) {
-          const sourceCount = Object.keys(leaf).filter((k) => {
-            const v = leaf[k]
-            return (
-              v &&
-              typeof v === 'object' &&
-              v.path !== undefined &&
-              v.value !== undefined
-            )
-          }).length
-          if (sourceCount >= 2) {
+          if (pathValue.path === 'navigation.position') {
             this.scheduleMultiSourceEmit()
+          } else {
+            // Count sources without allocating a new array on every delta:
+            // break out as soon as we have the two we need to decide the
+            // path is multi-source.
+            let sourceCount = 0
+            for (const k of Object.keys(leaf)) {
+              const v = leaf[k]
+              if (
+                v &&
+                typeof v === 'object' &&
+                v.path !== undefined &&
+                v.value !== undefined
+              ) {
+                sourceCount++
+                if (sourceCount >= 2) {
+                  this.scheduleMultiSourceEmit()
+                  break
+                }
+              }
+            }
           }
         }
       }
@@ -794,10 +879,7 @@ export default class DeltaCache {
       if (!selfBranch || !selfBranch[part]) return {}
       selfBranch = selfBranch[part]
     }
-    const srcToCanonical = buildSrcToCanonicalMap(
-      (this.app.signalk as any)?.sources
-    )
-    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const canonical = this.reconcileCanonical()
     const out: Record<string, string[]> = {}
     const walk = (node: any, pathParts: string[]) => {
       for (const key of Object.keys(node)) {
@@ -838,10 +920,7 @@ export default class DeltaCache {
       selfBranch = selfBranch[part]
     }
 
-    const srcToCanonical = buildSrcToCanonicalMap(
-      (this.app.signalk as any)?.sources
-    )
-    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const canonical = this.reconcileCanonical()
 
     // Per-path canonical publishers observed in the cache, regardless
     // of publisher count. Multi-source paths drop in via the standard
@@ -944,6 +1023,58 @@ export default class DeltaCache {
   }
 
   /**
+   * Supplementary `<conn>.<src>` → `<conn>.<canName>` translation built
+   * from the per-source delta store. `buildSrcToCanonicalMap` goes blind
+   * when `app.signalk.sources` has no `n2k.canName` for a numeric src —
+   * the cold-boot / UDP-gateway late-join window the comment at the top
+   * of this file describes — but a metadata delta carrying the resolved
+   * canName may already sit in `sourceDeltas` keyed by the same numeric
+   * src. Recovering it here lets a device that left a stale numeric leaf
+   * AND a canName leaf in the cache collapse onto one ref, so the two
+   * forms of one physical device don't land in two reconciled groups and
+   * trip the "a source may belong to at most one active group" save
+   * validator.
+   *
+   * Each `sourceDeltas` entry carries exactly one canName, so the map is
+   * single-valued per key and never merges two physically-different
+   * devices. Keys are usually numeric-form (the `setSourceDelta` key,
+   * n2k-signalk.ts) but `loadSourcesCache` can hydrate canName-form keys
+   * from disk; those map onto themselves (a harmless identity), which
+   * leaves the ref unchanged.
+   */
+  private buildSourceDeltaCanonicalMap(): Map<string, string> {
+    const out = new Map<string, string>()
+    for (const [key, delta] of Object.entries(this.sourceDeltas)) {
+      const source = (delta as any)?.updates?.[0]?.source
+      const canName = source?.canName
+      if (typeof canName !== 'string' || canName.length === 0) continue
+      const label = source?.label
+      if (typeof label !== 'string' || label.length === 0) continue
+      out.set(key, `${label}.${canName}`)
+    }
+    return out
+  }
+
+  /**
+   * Source-ref canonicaliser shared by the three cache-walk callers
+   * (getReconciledGroups, getSelfPathPublishers, getMultiSourcePaths).
+   * Prefers the live sources tree, then falls back to the canName
+   * recovered from the source-delta store for numeric refs the tree
+   * hasn't resolved yet. Routing all three through one closure keeps the
+   * reconciled groups, the engine's seenPublishersByPath seed and the
+   * multi-source UI from disagreeing about a device's ref during the
+   * late-join window.
+   */
+  private reconcileCanonical(): (ref: string) => string {
+    const srcToCanonical = buildSrcToCanonicalMap(
+      (this.app.signalk as any)?.sources
+    )
+    const srcDeltaCanonical = this.buildSourceDeltaCanonicalMap()
+    return (ref: string): string =>
+      srcToCanonical.get(ref) ?? srcDeltaCanonical.get(ref) ?? ref
+  }
+
+  /**
    * Compute reconciled priority groups for the admin UI: saved groups
    * are authoritative (composition is fixed by priorityGroups, not by
    * who is currently live), unsaved sources fall through to connected-
@@ -974,10 +1105,7 @@ export default class DeltaCache {
       selfBranch = selfBranch[part]
     }
 
-    const srcToCanonical = buildSrcToCanonicalMap(
-      (this.app.signalk as any)?.sources
-    )
-    const canonical = (ref: string): string => srcToCanonical.get(ref) ?? ref
+    const canonical = this.reconcileCanonical()
 
     // Walk once to populate two views: per-source path history, and
     // per-path live publisher set. The latter is the same set of edges
@@ -1131,6 +1259,14 @@ export default class DeltaCache {
             if (claimedBy && claimedBy.id !== sg.id) continue
             newcomers.add(ref)
             claimedByAnySavedGroup.add(ref)
+            // Claim the newcomer for this group so a later active group that
+            // also has it as a live publisher skips it at the guard above;
+            // otherwise the source lands in two active groups and the PUT
+            // /skServer/priorities validator rejects the save. Only active
+            // groups claim: the validator ignores inactive groups, so an
+            // inactive claim gives no benefit and would wrongly suppress the
+            // newcomer on a later active group's card.
+            if (!sg.inactive) sourceToSavedGroup.set(ref, sg)
           }
         }
         const newcomerList = [...newcomers].sort()
@@ -1202,6 +1338,39 @@ export default class DeltaCache {
     }
 
     return out.sort((a, b) => a.id.localeCompare(b.id))
+  }
+
+  /**
+   * Unlike getMultiSourcePaths, includes single-source paths too.
+   */
+  getSourcesForPath(path: string): string[] {
+    const selfParts = this.app.selfContext.split('.')
+    const pathParts = path.split('.')
+    const parts = [...selfParts, ...pathParts]
+
+    let node = this.cache
+    for (const part of parts) {
+      if (!node || !node[part]) return []
+      node = node[part]
+    }
+
+    // Canonicalise to canName form and dedupe: the cache may carry both
+    // `<label>.<src>` and `<label>.<canName>` entries for the same physical
+    // device during address-claim transitions, which would otherwise show
+    // up as two separate GNSS sources in the admin UI.
+    const out = new Set<string>()
+    for (const k of Object.keys(node)) {
+      const v = node[k]
+      if (
+        v &&
+        typeof v === 'object' &&
+        v.path !== undefined &&
+        v.value !== undefined
+      ) {
+        out.add(this.canonicaliseSourceRef(k))
+      }
+    }
+    return [...out]
   }
 
   getSources() {
@@ -1290,10 +1459,20 @@ export default class DeltaCache {
       (acc: NormalizedDelta[], context: Context) => {
         let deltasToProcess
 
-        if (key) {
-          deltasToProcess = _.get(context, key)
-        } else {
+        if (key === undefined) {
           deltasToProcess = findDeltas(context)
+        } else if (key === '') {
+          // An empty-path subscription targets values stored at the
+          // context root (e.g. mmsi, name), which live intermixed with
+          // nested path branches. Collect every cached delta and keep
+          // only those whose own path is empty. Testing `if (key)` here
+          // would treat '' as "no key" and leak every path into the
+          // bootstrap snapshot.
+          deltasToProcess = findDeltas(context).filter(
+            (delta: NormalizedDelta) => delta.path === ''
+          )
+        } else {
+          deltasToProcess = _.get(context, key)
         }
         if (deltasToProcess) {
           acc = acc.concat(

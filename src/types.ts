@@ -9,6 +9,13 @@ export interface HelloMessage {
   self: string
   roles: string[]
   timestamp: Date
+  /**
+   * Unique identifier for this server-process start. A fresh value each
+   * time the server starts lets reconnecting clients detect that
+   * server-side state (delta cache, source registry) has been wiped and
+   * drop their own mirrors of paths the new instance may never re-publish.
+   */
+  serverStartId: string
 }
 
 export type ICallback<T> = (error?: Error | null, result?: T) => void

@@ -277,6 +277,18 @@ plugin.registerWithRouter = (router) => {
 }
 ```
 
+By default all plugin routes require admin authentication. To allow `readwrite` or `readonly` users to access an endpoint, register it through `router.access(level)` instead of directly on the router. Supports Express-style parameterized paths. Routes registered without `access()` remain admin-only, and the reserved paths `/` and `/config` cannot be downgraded.
+
+_Example:_
+
+```javascript
+plugin.registerWithRouter = (router) => {
+  router.access('readonly').get('/data/:id', (req, res) => { ... })
+  router.access('readwrite').post('/data', (req, res) => { ... })
+  router.delete('/data/:id', (req, res) => { ... }) // no access() call — admin only
+}
+```
+
 - `getOpenApi()`: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OpenAPI definition available in the server Admin UI under `Documentation -> OpenAPI`.
 
 _Example:_
@@ -352,3 +364,14 @@ Following are links to some published SignalK plugins that serve as an example o
 
 - [set-system-time](https://github.com/SignalK/set-system-time/blob/master/index.js)
 - [Ais Reporter](https://github.com/SignalK/aisreporter/issues)
+
+---
+
+## AI-assisted plugin development
+
+If you develop with an AI coding assistant, these community-maintained [Claude Code](https://claude.com/claude-code) skill collections encode the conventions in this guide as on-demand prompts:
+
+- [sailingnaturali/claude-skills](https://github.com/sailingnaturali/claude-skills) — authoring a plugin (the `@signalk/server-api` patterns, resource-provider vs. Express router, deltas, the plugin scaffold), checking a plugin's [registry](https://signalk.org/signalk-plugin-registry/) score, and publishing to npm via OIDC trusted publishing.
+- [VesselSense/vesselsense-claude-plugins](https://github.com/VesselSense/vesselsense-claude-plugins) — configuring SignalK integrations: the KIP and WilhelmSK instrument dashboards, and SensESP sensor firmware.
+
+These are third-party resources maintained by the community, not part of Signal K itself.

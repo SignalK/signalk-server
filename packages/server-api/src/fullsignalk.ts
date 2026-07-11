@@ -23,6 +23,11 @@ import { metadataRegistry } from '@signalk/path-metadata'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObject = Record<string, any>
 
+// A delta path segment of __proto__ / constructor / prototype would let the
+// tree walk in addValue reach and mutate Object.prototype process-wide (#2768).
+// None of these are valid Signal K path segments, so such deltas are dropped.
+const FORBIDDEN_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
 export interface SourceMetaEntry {
   lastSeen: number
   pgnInstances?: Record<string, number[]>
@@ -213,6 +218,17 @@ function addValue(
     return
   } else {
     const splitPath: string[] = pathValue.path.split('.')
+    for (const pathPart of splitPath) {
+      if (FORBIDDEN_PATH_KEYS.has(pathPart)) {
+        console.error(
+          'Delta path contains forbidden segment "' +
+            pathPart +
+            '" in ' +
+            JSON.stringify(pathValue)
+        )
+        return
+      }
+    }
     valueLeaf = splitPath.reduce(
       (previous: AnyObject, pathPart: string, i: number) => {
         if (!previous[pathPart]) {
@@ -298,17 +314,47 @@ function addValues(
 }
 
 function addMeta(
-  _context: AnyObject,
+  context: AnyObject,
   contextPath: string,
   _source: AnyObject | string,
   _timestamp: string,
-  pathValue: AnyObject
+  pathValue: AnyObject,
+  applyToTree: boolean
 ): void {
   if (pathValue.path === undefined || pathValue.value === undefined) {
     console.error('Illegal value in delta:' + JSON.stringify(pathValue))
     return
   }
   metadataRegistry.addMetaData(contextPath, pathValue.path, pathValue.value)
+  if (applyToTree) {
+    mergeLeafMeta(context, pathValue.path, pathValue.value)
+  }
+}
+
+// Merge metadata onto an existing value-bearing leaf so a meta delta that
+// arrives after the value (e.g. an N2K device echoes a path a plugin also
+// owns and the plugin registers supportsPut afterwards) still reaches the
+// leaf. Only existing value leaves are updated: a meta-only path is left to
+// the registry alone, so no phantom tree node is created that DELETE-meta
+// could not later clear. The new fields win, mirroring last-writer-wins.
+function mergeLeafMeta(
+  context: AnyObject,
+  path: string,
+  meta: AnyObject
+): void {
+  if (path.length === 0) {
+    return
+  }
+  let node = context
+  for (const part of path.split('.')) {
+    node = node[part]
+    if (!node) {
+      return
+    }
+  }
+  if (node.value !== undefined) {
+    node.meta = { ...node.meta, ...meta }
+  }
 }
 
 function addMetas(
@@ -316,10 +362,11 @@ function addMetas(
   contextPath: string,
   source: AnyObject | string,
   timestamp: string,
-  metas: AnyObject[]
+  metas: AnyObject[],
+  applyToTree: boolean
 ): void {
   for (const meta of metas) {
-    addMeta(context, contextPath, source, timestamp, meta)
+    addMeta(context, contextPath, source, timestamp, meta, applyToTree)
   }
 }
 
@@ -376,6 +423,27 @@ export class FullSignalK extends EventEmitter {
     if (context) {
       this.addUpdates(context, delta.context, delta.updates)
       this.updateLastModified(delta.context)
+    } else if (delta.context && delta.updates) {
+      // A context without an identity segment (e.g. the bare `meteo`
+      // context some plugins use to register metadata) is rejected by
+      // findContext to avoid seeding an orphan tree entry. Meta updates
+      // only populate the global metadataRegistry — keyed by contextPath,
+      // never written onto the tree — so they carry no orphan risk and
+      // must still be applied; otherwise that metadata is silently lost.
+      // Value updates are intentionally not applied here: they would seed
+      // the orphan tree entry findContext exists to prevent.
+      for (const update of delta.updates) {
+        if (update.meta) {
+          addMetas(
+            this.root,
+            delta.context,
+            update.source || update['$source'],
+            update.timestamp,
+            update.meta,
+            false
+          )
+        }
+      }
     }
   }
 
@@ -456,7 +524,8 @@ export class FullSignalK extends EventEmitter {
         contextPath,
         update.source || update['$source'],
         update.timestamp,
-        update.meta
+        update.meta,
+        true
       )
     }
   }

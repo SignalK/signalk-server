@@ -132,8 +132,7 @@ describe('OIDC Auth Routes', () => {
     method: string,
     path: string
   ):
-    | ((req: Request, res: ExpressResponse) => Promise<void> | void)
-    | undefined {
+    ((req: Request, res: ExpressResponse) => Promise<void> | void) | undefined {
     const route = registeredRoutes.find(
       (r) => r.method === method && r.path === path
     )

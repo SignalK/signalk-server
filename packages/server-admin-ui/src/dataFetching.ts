@@ -1,5 +1,8 @@
-import { isUndefined } from 'lodash'
 import { useStore } from './store'
+import {
+  GNSS_API_PATH,
+  sanitizeGnssConfig
+} from './store/slices/gnssPositionSlice'
 
 declare global {
   interface Window {
@@ -7,14 +10,41 @@ declare global {
   }
 }
 
-export const authFetch = (
+const LOGIN_URL = '/signalk/v1/auth/login'
+
+// A 401 from any authenticated REST call means the server no longer
+// recognises our cookie — typically after a reinstall regenerates
+// `secretKey`. Flip the store into `notLoggedIn` so ProtectedRoute
+// auto-renders <Login />. Skipped for the login endpoint itself so
+// a bad-password attempt propagates as a normal 401 to loginAction.
+// Other LoginStatus fields (authenticationRequired, oidc*, etc.) are
+// server settings, not credential state — preserve them.
+export const authFetch = async (
   url: string,
   options?: RequestInit
 ): Promise<Response> => {
-  return fetch(url, {
+  const response = await fetch(url, {
     ...options,
     credentials: 'include'
   })
+
+  if (response.status === 401 && !isLoginUrl(url)) {
+    const { loginStatus, setLoginStatus } = useStore.getState()
+    if (loginStatus.status === 'loggedIn') {
+      setLoginStatus({
+        ...loginStatus,
+        status: 'notLoggedIn',
+        username: undefined
+      })
+    }
+  }
+
+  return response
+}
+
+function isLoginUrl(url: string): boolean {
+  const path = url.split('?')[0].split('#')[0]
+  return path === LOGIN_URL || path.endsWith(LOGIN_URL)
 }
 
 export async function fetchLoginStatus(): Promise<void> {
@@ -53,7 +83,7 @@ export async function fetchAllData(): Promise<void> {
   ) => {
     try {
       const response = await authFetch(
-        `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
+        `${prefix === undefined ? window.serverRoutesPrefix : prefix}${endpoint}`
       )
       if (response.status === 200) {
         const data = await response.json()
@@ -95,6 +125,12 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/n2kDeviceStatus', state.setN2kDeviceStatus),
     fetchAndSet('/livePreferredSources', state.setLivePreferredSources),
     fetchAndSet('/multiSourcePaths', state.setMultiSourcePaths),
-    fetchAndSet('/reconciledGroups', state.setReconciledGroups)
+    fetchAndSet('/reconciledGroups', state.setReconciledGroups),
+    fetchAndSet(
+      GNSS_API_PATH,
+      (data: unknown) => state.setGnssSensors(sanitizeGnssConfig(data)),
+      ''
+    ),
+    fetchAndSet('/positionSources', state.setPositionSources)
   ])
 }

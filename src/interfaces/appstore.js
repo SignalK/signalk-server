@@ -223,6 +223,31 @@ module.exports = function (app) {
         }
       )
 
+      app.get(
+        [
+          `${SERVERROUTESPREFIX}/appstore/installLog/:name`,
+          `${SERVERROUTESPREFIX}/appstore/installLog/:org/:name`
+        ],
+        (req, res) => {
+          let name = req.params.name
+          if (req.params.org) {
+            name = req.params.org + '/' + name
+          }
+          const entry = modulesInstalledSinceStartup[name]
+          if (!entry) {
+            res.status(404).json({ error: `No install log for ${name}` })
+            return
+          }
+          res.json({
+            name,
+            version: entry.version,
+            isRemove: !!entry.isRemove,
+            code: entry.code,
+            log: entry.output.map(String).join('')
+          })
+        }
+      )
+
       app.get(`${SERVERROUTESPREFIX}/appstore/available/`, (req, res) => {
         const installedNames = getInstalledPackageNames()
         let storeAvailable = true

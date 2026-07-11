@@ -39,6 +39,7 @@ import {
   canonicaliseSourceRef,
   isN2kSource,
   isPluginSource,
+  isRemoveSourceFailure,
   type SourcesData
 } from '../../utils/sourceLabels'
 import { useSourceAliases } from '../../hooks/useSourceAliases'
@@ -488,7 +489,11 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
     setSelectedSource(null)
   }
 
-  const handleRemoveSource = (sourceRef: string, label: string) => {
+  const handleRemoveSource = (
+    sourceRef: string,
+    label: string,
+    isMissingFromStatus = false
+  ) => {
     const ok = window.confirm(
       `Remove ${label} from this priority group?\n\n` +
         'Any path-level overrides in this group that mention the source ' +
@@ -547,8 +552,13 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
         // user sees the row briefly disappear (optimistic local edit)
         // and then reappear on the next reconcile with no clue why.
         // Most common cause is a non-admin session: addAdminMiddleware
-        // rejects the DELETE with 401.
-        if (res.ok) return
+        // rejects the DELETE with 401. A 404 on a missing-from-status ref
+        // is the exception — the server confirming an already-gone source,
+        // which isRemoveSourceFailure treats as success so the stale ref
+        // can finally be evicted from the saved group.
+        if (!isRemoveSourceFailure(res.status, res.ok, isMissingFromStatus)) {
+          return
+        }
         const detail =
           res.status === 401 || res.status === 403
             ? 'admin permission required'
@@ -621,13 +631,24 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
     setSelectedPath(path)
   }
 
+  // Stable reference for the items dnd-kit's SortableContext registers.
+  // group.sources is a fresh array on every RECONCILEDGROUPS push even
+  // when the contents are unchanged; without this memo dnd-kit's
+  // internal registry sees the items reference flicker between drag
+  // start and drag end and onDragEnd's `over` can land on a stale node.
+  const stableSources = useMemo(
+    () => group.sources,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [group.sources.join('|')]
+  )
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const from = group.sources.indexOf(String(active.id))
-    const to = group.sources.indexOf(String(over.id))
+    const from = stableSources.indexOf(String(active.id))
+    const to = stableSources.indexOf(String(over.id))
     if (from === -1 || to === -1 || from === to) return
-    const sources = [...group.sources]
+    const sources = [...stableSources]
     const [moved] = sources.splice(from, 1)
     sources.splice(to, 0, moved)
     setGroupSources(group.id, sources)
@@ -787,7 +808,7 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                       onDragEnd={handleDragEnd}
                     >
                       <SortableContext
-                        items={group.sources}
+                        items={stableSources}
                         strategy={verticalListSortingStrategy}
                       >
                         <ul className="pg-source-list">
@@ -871,7 +892,11 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                                 onRemove={
                                   canRemove
                                     ? () =>
-                                        handleRemoveSource(src, displayLabel)
+                                        handleRemoveSource(
+                                          src,
+                                          displayLabel,
+                                          isMissingFromStatus
+                                        )
                                     : undefined
                                 }
                                 deviceDot={deviceDot}

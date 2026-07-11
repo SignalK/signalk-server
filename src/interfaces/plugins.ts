@@ -17,6 +17,7 @@
 */
 import {
   Brand,
+  Context,
   PointDestination,
   PropertyValues,
   PropertyValuesCallback,
@@ -27,6 +28,7 @@ import {
   WeatherProvider,
   WeatherApi,
   Value,
+  MetaValue,
   SignalKApiId,
   SourceRef,
   PluginConstructor,
@@ -39,10 +41,14 @@ import {
   UnsubscribeMessage,
   NotificationId,
   AlarmRaiseOptions,
-  AlarmUpdateOptions
+  AlarmUpdateOptions,
+  AccessScopedRouter,
+  PluginRouter,
+  RouteAccessLevel,
+  RoutePermission
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
-import express, { Request, Response } from 'express'
+import express, { IRouter, Request, RequestHandler, Response } from 'express'
 import fs from 'fs'
 import { deprecate } from 'util'
 import _ from 'lodash'
@@ -77,6 +83,9 @@ import { HistoryProvider } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
 import { derivePluginId } from '../pluginid'
 import { atomicWriteFileSync } from '../atomicWrite'
+import { writeBaseDeltasFile, ConfigApp } from '../config/config'
+import DeltaEditor from '../deltaeditor'
+import { validateCategoryAssignment } from '../unitpreferences'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -108,6 +117,27 @@ interface PluginInfo extends Plugin {
 
 function backwardsCompat(url: string) {
   return [`${SERVERROUTESPREFIX}${url}`, url]
+}
+
+// Resolve excludeSelf:true to the plugin's id and union it with any
+// explicit excludeSources. Returns undefined when neither field is
+// set so the existing "no excludes" fast path in subscriptionmanager
+// is preserved.
+function mergeExcludeSelf(
+  excludeSources: SourceRef[] | undefined,
+  excludeSelf: boolean | undefined,
+  pluginId: string
+): SourceRef[] | undefined {
+  const hasList = Array.isArray(excludeSources) && excludeSources.length > 0
+  if (!hasList && !excludeSelf) return undefined
+  const merged = new Set<string>()
+  if (hasList) {
+    for (const ref of excludeSources!) {
+      if (typeof ref === 'string' && ref.length > 0) merged.add(ref)
+    }
+  }
+  if (excludeSelf) merged.add(pluginId)
+  return merged.size > 0 ? (Array.from(merged) as SourceRef[]) : undefined
 }
 
 module.exports = (theApp: any) => {
@@ -587,6 +617,56 @@ module.exports = (theApp: any) => {
     }
   }
 
+  // Adds access() to the plugin's router: routes registered through the
+  // returned registrar are recorded with the security strategy so the
+  // /plugins gate lets readwrite/readonly users through to them, while
+  // routes registered directly on the router keep the admin-only
+  // default. With security disabled there is no strategy registry and
+  // every route is reachable anyway.
+  type PluginRouterRegistrationApp = {
+    securityStrategy: {
+      // Optional because the dummy strategy (security disabled) does not
+      // implement it; the ?. call below is then a no-op, which is correct
+      // since every route is reachable when security is off.
+      registerPluginRoutePermissions?: (
+        pluginId: string,
+        permissions: RoutePermission[]
+      ) => void
+    }
+  }
+  function asPluginRouter(
+    app: PluginRouterRegistrationApp,
+    router: IRouter,
+    pluginId: string
+  ): PluginRouter {
+    const pluginRouter = router as PluginRouter
+    pluginRouter.access = (level: RouteAccessLevel): AccessScopedRouter => {
+      const register = (
+        method: RoutePermission['method'],
+        path: string,
+        handlers: RequestHandler[]
+      ): AccessScopedRouter => {
+        app.securityStrategy.registerPluginRoutePermissions?.(pluginId, [
+          { method, path, permission: level }
+        ])
+        router[method.toLowerCase() as Lowercase<RoutePermission['method']>](
+          path,
+          ...handlers
+        )
+        return registrar
+      }
+      const registrar: AccessScopedRouter = {
+        get: (path, ...handlers) => register('GET', path, handlers),
+        post: (path, ...handlers) => register('POST', path, handlers),
+        put: (path, ...handlers) => register('PUT', path, handlers),
+        patch: (path, ...handlers) => register('PATCH', path, handlers),
+        delete: (path, ...handlers) => register('DELETE', path, handlers)
+      }
+      return registrar
+    }
+    return pluginRouter
+  }
+
   async function doRegisterPlugin(
     app: any,
     packageName: string,
@@ -636,6 +716,68 @@ module.exports = (theApp: any) => {
       getSerialPorts,
       supportsMetaDeltas: true,
       getMetadata,
+      setDefaultMetadata: async (
+        skPath: string,
+        value: MetaValue
+      ): Promise<boolean> => {
+        const context = 'vessels.self'
+        const existingMeta = app.config.baseDeltaEditor.getMeta(
+          context,
+          skPath
+        ) as Record<string, unknown> | undefined
+
+        const { hasNewFields, fieldsToSet, merged } =
+          DeltaEditor.computeDefaultFields(
+            existingMeta,
+            value as unknown as Record<string, unknown>
+          )
+
+        if (!hasNewFields) {
+          return false
+        }
+
+        const displayUnits = fieldsToSet.displayUnits as
+          { category?: string } | undefined
+        if (displayUnits?.category) {
+          const schemaMeta = getMetadata('vessels.self.' + skPath) as Record<
+            string,
+            unknown
+          > | null
+          const pathSiUnit =
+            (fieldsToSet.units as string | undefined) ??
+            (existingMeta?.units as string | undefined) ??
+            (schemaMeta?.units as string | undefined)
+          const validationError = validateCategoryAssignment(
+            pathSiUnit,
+            displayUnits.category
+          )
+          if (validationError) {
+            debug(
+              `setDefaultMetadata: invalid category for ${skPath}: ${validationError}`
+            )
+            return false
+          }
+        }
+
+        app.config.baseDeltaEditor.setMeta(context, skPath, merged)
+        await writeBaseDeltasFile(app as unknown as ConfigApp)
+
+        app.handleMessage(plugin.id, {
+          context: 'vessels.self' as Context,
+          updates: [
+            {
+              meta: [
+                {
+                  path: skPath as Path,
+                  value: merged
+                }
+              ]
+            }
+          ]
+        })
+
+        return true
+      },
       reportOutputMessages: (count?: number) => {
         app.emit(CONNECTION_WRITE_EVENT_NAME, {
           providerId: plugin.id,
@@ -674,13 +816,25 @@ module.exports = (theApp: any) => {
         // a specific device — silently never see non-preferred deltas
         // because plugin subscriptions read streambundle.buses (the
         // post-toPreferredDelta bus). Same plumbing the WS interface uses.
+        //
+        // Resolve excludeSelf: true to [plugin.id] here so the engine
+        // downstream only ever sees excludeSources. Plugins emitting
+        // multiple labels (e.g. "myplugin.windFromPolars") should set
+        // excludeSources explicitly; excludeSelf is the simple case
+        // where the plugin's $source is plugin.id verbatim.
+        const excludeSources = mergeExcludeSelf(
+          command.excludeSources,
+          command.excludeSelf,
+          plugin.id
+        )
         app.subscriptionmanager.subscribe(
           command,
           unsubscribes,
           errorCallback,
           safeCallback,
           user,
-          command.sourcePolicy
+          command.sourcePolicy,
+          excludeSources
         )
       },
       unsubscribe: (msg: UnsubscribeMessage, unsubscribes: Unsubscribes) => {
@@ -918,7 +1072,7 @@ module.exports = (theApp: any) => {
     })
 
     if (typeof plugin.registerWithRouter === 'function') {
-      plugin.registerWithRouter(router)
+      plugin.registerWithRouter(asPluginRouter(app, router, plugin.id))
       if (typeof plugin.getOpenApi === 'function') {
         app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
       }

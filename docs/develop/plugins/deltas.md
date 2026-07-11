@@ -183,6 +183,59 @@ ws://localhost:3000/signalk/v1/stream?subscribe=self&sourcePolicy=all
 
 The query-string default applies to the bootstrap cache replay and to per-message subscriptions that don't carry their own `sourcePolicy`. A subscribe message can still override it on a per-call basis by including `sourcePolicy` in the message body.
 
+#### Excluding Sources: `excludeSources` / `excludeSelf`
+
+A plugin may want a priority-resolved view of a path with one or more sources removed from the cascade — for example to see the preferred upstream source while ignoring a known-bad device. `excludeSources` / `excludeSelf` provide that: the subscription still receives a single priority-resolved value per path, but the cascade runs without the excluded refs.
+
+> **Note:** Because the cascade runs on the subscription's feed, this delivers a single priority-resolved value — and if the user ranks the plugin itself above the upstream source, that source is held to the fallback timeout on the plugin's own input. That is the right behaviour for a plugin that wants _the preferred remaining upstream value_, but **not** for a correction/transform plugin that must see every raw sample at full rate — for that case see [Correction and transform plugins](#correction-and-transform-plugins) below, which uses `sourcePolicy: 'all'`.
+
+The same fallback semantics the user configured still apply across the remaining sources:
+
+```javascript
+let localSubscription = {
+  context: 'vessels.self',
+  excludeSelf: true,
+  subscribe: [
+    {
+      path: 'environment.wind.speedTrue'
+    }
+  ]
+}
+```
+
+With user ranking `myPlugin > sourceB > sourceA`:
+
+| Bus state                                  | Delivered to plugin |
+| ------------------------------------------ | ------------------- |
+| `sourceB` publishing                       | `sourceB`           |
+| `sourceB` silent past its fallback timeout | `sourceA`           |
+| `sourceB` resumes                          | `sourceB`           |
+| `myPlugin` (own output)                    | _(never delivered)_ |
+
+| Field                      | Behaviour                                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `excludeSources: string[]` | Drop these `$source` refs from the cascade. Explicit form; works in both plugin and WebSocket subscriptions.               |
+| `excludeSelf: true`        | Plugin-only shorthand. The server resolves it to `[plugin.id]`. Combine with `excludeSources` to add explicit refs on top. |
+
+Both fields take effect only when `sourcePolicy` is `'preferred'` (the default). Under `sourcePolicy: 'all'` they are ignored — `'all'` already bypasses the priority cascade and partial filtering would be surprising.
+
+`excludeSelf` resolves to the plugin's id only — a single ref, not a prefix match. A plugin that publishes under additional labels (e.g. `myPlugin.windFromPolars`) should use the explicit `excludeSources` form to list every ref it produces.
+
+WebSocket subscriptions can use `excludeSources` directly. `excludeSelf` is meaningless for them (there is no plugin identity to resolve against) and is silently ignored — WebSocket clients should always use the explicit form.
+
+The match is on the `$source` of the deltas your plugin emits, and `excludeSelf` resolves to your bare `plugin.id`. So your emitted deltas must carry `$source === plugin.id` for the exclusion to apply. The simplest way is to emit with **no** `source` object at all — the server then sets `$source` to your `plugin.id`:
+
+```javascript
+app.handleMessage(plugin.id, {
+  context: 'vessels.self',
+  updates: [
+    { values: [{ path: 'environment.wind.speedTrue', value: corrected }] }
+  ]
+})
+```
+
+If you do supply a `source` object, also set a top-level `$source: plugin.id` on the update — the server keeps an explicit `$source` and only derives one from the `source` object when it is absent, so this guarantees the match. (See [Sending Deltas](#sending-deltas) below.)
+
 ## Sending Deltas
 
 A SignalK plugin can not only read deltas, but can also send them. This is done using the `handleMessage()` API method and supplying:
@@ -210,6 +263,96 @@ app.handleMessage(
   },
   'v1'
 )
+```
+
+## Setting Default Metadata
+
+Plugins can suggest default metadata for paths they publish using `setDefaultMetadata()`. This is useful for setting display units, descriptions, or other metadata that improves the user experience in the data browser without overwriting values the user has already configured.
+
+The method uses **per-field merge** semantics: it only sets metadata fields that don't already exist for the path. If a user has already set `displayName` for a path, the plugin can still set `displayUnits` on the same path without overwriting the user's choice.
+
+```javascript
+plugin.start = async (options) => {
+  // Suggest that energy paths display in Wh instead of the SI unit (J)
+  await app.setDefaultMetadata('electrical.batteries.house.energy', {
+    displayUnits: { category: 'energy', targetUnit: 'Wh' }
+  })
+
+  // Suggest display units and a description
+  await app.setDefaultMetadata('electrical.solar.panelPower', {
+    displayUnits: { category: 'power', targetUnit: 'W' },
+    description: 'Total solar panel output'
+  })
+}
+```
+
+The method is **idempotent**: on subsequent server starts, fields already persisted from a previous call will not be overwritten. It returns `true` if any new fields were applied, `false` if all fields already existed.
+
+The `displayUnits.category` is validated against the path's SI unit. If the category doesn't match, the method returns `false` and logs a debug message.
+
+## Correction and transform plugins
+
+There are essentially two strategies a plugin can employ to change a value for a path:
+
+1. **Correct in place** when the value enters the server
+2. **Create a new value** with correction or transform and publish an improved value on the **same** path under its own label
+
+**In place strategy** is used when the new value is meant to replace the original value completely, for example applying a fixed offset to a heading to compensate for a sensor's mount position. This makes the original value unavailable for other consumers.
+
+With **new value strategy** both values are available, but using the source priority system the plugin's output can be prioritised over the original value. The user ranks the plugin's output above the raw source in [source priority](../../setup/source-priority.md), so downstream consumers get the corrected value and a user interface like a dashboard can display both if needed.
+
+A correction plugin needs its **input** at full rate, _independent_ of the priority ranking — you correct every reading from the upstream source, not just whichever one a cascade would currently prefer — while the user's ranking decides what _consumers_ see. Subscribe with **`sourcePolicy: 'all'`** and skip your own output in the callback:
+
+- `sourcePolicy: 'all'` delivers every source at full rate with no cascade on your input. Skip updates whose `$source` is your own `plugin.id` so you don't reprocess your output. The global priority cascade still applies to consumers, so the user's ranking of your output works as expected.
+
+Do **not** use `registerDeltaInputHandler` for **new value strategy**. An input handler is for modifying a delta in place as it passes through, not for republishing a value under your own source — a correction plugin emits its corrected value under its own `$source` and lets source priority choose between that and the raw source, which is a different shape from rewriting the incoming delta. Subscribe-and-emit keeps the raw and corrected values as two distinct sources the user can rank.
+
+`excludeSelf` (see [Excluding Sources](#excluding-sources-excludesources--excludeself)) is a different tool and **not** what you want for a full-rate correction. It runs the priority cascade on your input feed, so it delivers a single ranked-and-throttled upstream value rather than every reading: with the user ranking your plugin rank-0, the real source is held as a lower-ranked fallback and only reaches you after the fallback timeout. `excludeSelf` fits a plugin that wants _the preferred remaining upstream value_ (e.g. "show source B, fall back to A, never my own C"), not one that corrects each raw sample.
+
+A complete heel-correction example:
+
+```javascript
+let unsubscribes = []
+
+plugin.start = () => {
+  app.subscriptionmanager.subscribe(
+    {
+      context: 'vessels.self',
+      sourcePolicy: 'all',
+      subscribe: [{ path: 'navigation.speedThroughWater' }]
+    },
+    unsubscribes,
+    (err) => app.setPluginError(err),
+    (delta) => {
+      delta.updates.forEach((u) => {
+        // $source is a property of the update, not of each value. Skip
+        // our own output so we don't reprocess the corrected value.
+        if (u.$source === plugin.id) return
+        u.values.forEach((pv) => {
+          if (pv.path !== 'navigation.speedThroughWater') return
+          const corrected = applyHeelCorrection(pv.value)
+          // No source object: $source defaults to plugin.id, so the
+          // guard above recognises and skips this delta on the way back.
+          app.handleMessage(plugin.id, {
+            context: 'vessels.self',
+            updates: [
+              {
+                values: [
+                  { path: 'navigation.speedThroughWater', value: corrected }
+                ]
+              }
+            ]
+          })
+        })
+      })
+    }
+  )
+}
+
+plugin.stop = () => {
+  unsubscribes.forEach((f) => f())
+  unsubscribes = []
+}
 ```
 
 ## Sending NMEA 2000 data from a plugin

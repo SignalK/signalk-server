@@ -86,8 +86,7 @@ function extractPathSourceMeta(tree: unknown): SourceMetaMap {
     }
 
     const values = n.values as
-      | Record<string, Record<string, unknown>>
-      | undefined
+      Record<string, Record<string, unknown>> | undefined
     if (values && typeof values === 'object') {
       for (const [ref, entry] of Object.entries(values)) {
         if (!entry || typeof entry !== 'object') continue
@@ -430,17 +429,28 @@ const SourcePriorities: React.FC = () => {
   const displayed = useMemo(() => {
     const savedById = new Map(savedGroups.map((g) => [g.id, g]))
     return reconciled.map((g) => {
+      // Stable identity for the group: persisted saved id when present,
+      // otherwise a path-set fingerprint. The reconciled live id for an
+      // unsaved group is sortedSources.join(''), which flips whenever a
+      // source joins or leaves the connected component; using it as the
+      // storage key for local edits would orphan a pending drag the
+      // moment a newcomer arrives. The path-set is the structural
+      // identity reconcile uses to define a group cluster and is stable
+      // across source flux.
+      const effectiveId = g.matchedSavedId ?? [...g.paths].sort().join('|')
       const saved =
         g.matchedSavedId !== null ? savedById.get(g.matchedSavedId) : undefined
-      // For an unranked group the user might still have toggled
-      // Deactivate, which writes a stub saved entry under the live id
-      // (sources: [], inactive: true). reconcileGroups can't match that
-      // to anything via overlap, so fall back to a direct live-id
-      // lookup to surface the pending inactive state.
+      // Unsaved group with a pending local edit: the user has dragged
+      // (setGroupSources) or toggled Deactivate (setGroupInactive). Both
+      // write under effectiveId via the callbacks below, so the lookup
+      // also goes via effectiveId.
       const stub =
-        !saved && g.matchedSavedId === null ? savedById.get(g.id) : undefined
+        !saved && g.matchedSavedId === null
+          ? savedById.get(effectiveId)
+          : undefined
       const inactive = saved?.inactive ?? stub?.inactive ?? false
-      if (!saved) return { ...g, inactive }
+      const editSource = saved ?? stub
+      if (!editSource) return { ...g, id: effectiveId, inactive }
       // editedOrder respects the user's local edit; newcomers come
       // straight from the server's live-publisher view (not derived
       // from `g.sources \ editedOrder`). Otherwise trashing a source
@@ -448,14 +458,15 @@ const SourcePriorities: React.FC = () => {
       // since g.sources still echoes sg.sources from the on-disk
       // config until the user clicks Save.
       const liveSet = new Set(g.sources)
-      const editedOrder = saved.sources.filter((src) => liveSet.has(src))
+      const editedOrder = editSource.sources.filter((src) => liveSet.has(src))
       const editedSet = new Set(editedOrder)
-      const suppressed = new Set(suppressedNewcomersByGroup[g.id] ?? [])
+      const suppressed = new Set(suppressedNewcomersByGroup[effectiveId] ?? [])
       const newcomers = g.newcomerSources.filter(
         (src) => !editedSet.has(src) && !suppressed.has(src)
       )
       return {
         ...g,
+        id: effectiveId,
         // Hide suppressed newcomers from the ordering reported back
         // to the rest of the page, too — otherwise the dirty-by-group
         // calculation and buildSavePayload below would still see them.
@@ -647,6 +658,7 @@ const SourcePriorities: React.FC = () => {
 
   const [resetBusy, setResetBusy] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const handleReset = useCallback(async () => {
     const confirmed = window.confirm(
@@ -682,6 +694,7 @@ const SourcePriorities: React.FC = () => {
   const handleSave = useCallback(async () => {
     setGroupsSaving()
     setSaving()
+    setSaveError(null)
     const payload = buildSavePayload()
     try {
       const res = await fetch(`${window.serverRoutesPrefix}/priorities`, {
@@ -690,7 +703,13 @@ const SourcePriorities: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      if (!res.ok) throw new Error('save failed')
+      if (!res.ok) {
+        // The server rejects invalid payloads with a plain-text reason
+        // (e.g. a source assigned to two active groups). Surface it so
+        // the user can act on it instead of a generic failure.
+        const reason = (await res.text().catch(() => '')).trim()
+        throw new Error(reason || `save failed (HTTP ${res.status})`)
+      }
       // Reflect the save we just made in the local store before the
       // WS echo arrives. Otherwise savedGroups lags by one async tick
       // and dirty-detection flips on then off, which confuses the UI.
@@ -707,9 +726,13 @@ const SourcePriorities: React.FC = () => {
       setSourcePriorities(payload.overrides)
     } catch (err) {
       console.error('Failed to save priorities:', err)
+      setSaveError(err instanceof Error ? err.message : String(err))
       setGroupsSaveFailed()
       setSaveFailed()
-      setTimeout(() => clearSaveFailed(), 5000)
+      setTimeout(() => {
+        clearSaveFailed()
+        setSaveError(null)
+      }, 5000)
     }
   }, [
     buildSavePayload,
@@ -869,6 +892,10 @@ const SourcePriorities: React.FC = () => {
           )}
 
           {displayed.map((group) => (
+            // group.id is normalised in the displayed memo: matchedSavedId
+            // when persisted, path-set fingerprint otherwise. That gives a
+            // single stable identity for the React key, slice writes
+            // (setGroupSources, setGroupInactive), and savedById lookups.
             <PriorityGroupCard
               key={group.id}
               group={group}
@@ -951,8 +978,12 @@ const SourcePriorities: React.FC = () => {
           >
             <FontAwesomeIcon icon={faFloppyDisk} /> Save all changes
           </Button>
-          {(saveState.saveFailed || groupsSaveState.saveFailed) &&
-            ' Saving priorities settings failed!'}
+          {(saveState.saveFailed || groupsSaveState.saveFailed) && (
+            <span style={{ paddingLeft: '10px' }}>
+              <Badge bg="danger">Error</Badge>{' '}
+              {saveError || 'Saving priorities settings failed.'}
+            </span>
+          )}
           {!saveState.timeoutsOk && (
             <span style={{ paddingLeft: '10px' }}>
               <Badge bg="danger">Error</Badge>

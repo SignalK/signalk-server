@@ -30,10 +30,10 @@ import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
 import { atomicWriteFile } from '../atomicWrite'
 import {
+  getPrioritiesFilePath,
   loadPrioritiesIntoSettings,
   migratePrioritiesIntoSeparateFile,
-  splitPrioritiesFromSettings,
-  writePrioritiesFile
+  splitPrioritiesFromSettings
 } from './priorities-file'
 import {
   loadAll as loadUnitPreferences,
@@ -42,6 +42,16 @@ import {
 const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
+
+// Serialises every settings.json (and priorities.json) write. Callers
+// commonly mutate app.config.settings in place and pass it here; without a
+// queue two overlapping writes can interleave their priorities.json and
+// settings.json phases, and a slow write can land on disk after a newer one.
+// Chaining on this promise runs the file I/O one write at a time in call
+// order. The payload is stringified synchronously at call time (below) so a
+// later in-place mutation of the settings object cannot change what an
+// already-queued write persists.
+let settingsWriteQueue: Promise<void> = Promise.resolve()
 
 // use dynamic path so that ts compiler does not detect this
 // json file, as ts compile needs to copy all (other) used
@@ -143,9 +153,24 @@ export interface Config {
     /** Map of "sourceRefA+sourceRefB" (sorted) → ISO timestamp when the
      * conflict was dismissed by the user */
     ignoredInstanceConflicts?: Record<string, string>
+    gnssSensors?: {
+      sensorId: string
+      $source: string
+      fromBow: number | null
+      fromCenter: number | null
+    }[]
+    /** How configured GNSS antenna offsets are applied to
+     * navigation.position: 'off' stores the geometry without touching
+     * data (default), 'replace' rewrites matching deltas to the CCRP,
+     * 'both' additionally publishes the corrected position under
+     * `<sensorId>.ccrp` while leaving the original untouched. */
+    gnssCorrection?: 'off' | 'replace' | 'both'
     trustProxy?: boolean | string | number
     courseApi?: {
       apiOnly?: boolean
+    }
+    notifications?: {
+      manageNotifications?: boolean
     }
   }
   defaults: object
@@ -285,6 +310,44 @@ export function load(app: ConfigApp) {
     })
   }
 
+  if (app.argv.data) {
+    if (typeof app.argv.data !== 'string') {
+      console.error('--data requires a single raw log filename')
+      process.exit(1)
+    }
+    const filename = path.resolve(app.argv.data)
+    console.log(
+      `Disabling all data connections and playing back raw log ${filename}`
+    )
+    if (!app.argv['override-timestamps']) {
+      console.log(
+        'Add --override-timestamps to replace timestamps from the data log file with the current date and time.'
+      )
+    }
+    app.config.settings.pipedProviders.forEach((provider) => {
+      provider.enabled = false
+    })
+    const providerId = `fs-${Math.floor(Date.now() / 1000)}`
+    app.config.settings.pipedProviders.push({
+      id: providerId,
+      pipeElements: [
+        {
+          type: 'providers/simple',
+          options: {
+            logging: false,
+            type: 'FileStream',
+            subOptions: {
+              useCanName: true,
+              dataType: 'Multiplexed',
+              filename
+            }
+          }
+        }
+      ],
+      enabled: true
+    })
+  }
+
   if (app.argv['override-timestamps']) {
     app.config.overrideTimestampWithNow = true
   }
@@ -315,7 +378,11 @@ export function load(app: ConfigApp) {
 }
 
 function checkPackageVersion(name: string, pkg: any, appPath: string) {
-  const expected = pkg.dependencies[name]
+  const isOptional = Boolean(pkg.optionalDependencies?.[name])
+  const expected = pkg.dependencies?.[name] ?? pkg.optionalDependencies?.[name]
+  if (!expected) {
+    return
+  }
   let modulePackageJsonPath = path.join(
     appPath,
     'node_modules',
@@ -324,6 +391,10 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
   )
   if (!fs.existsSync(modulePackageJsonPath)) {
     modulePackageJsonPath = path.join(appPath, '..', name, 'package.json')
+  }
+  if (!fs.existsSync(modulePackageJsonPath) && isOptional) {
+    // Optional package not installed (e.g. core image with --omit=optional).
+    return
   }
   const installed = require(modulePackageJsonPath)
 
@@ -538,8 +609,28 @@ export function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
     cb()
     return
   }
-  const { settingsWithoutPriorities, priorities } =
-    splitPrioritiesFromSettings(settings)
+  // Capture the exact bytes now, before the write is queued: callers hand
+  // us app.config.settings and may mutate it (even nested) before this
+  // deferred write actually runs. Stringifying up front pins each queued
+  // write to the state at call time. Do it inside try/catch so a stringify
+  // failure (e.g. a circular reference in settings) reaches the caller via
+  // cb, matching the async error path, instead of throwing synchronously.
+  let settingsJson: string
+  let prioritiesJson: string
+  let prioritiesFile: string
+  let settingsFile: string
+  try {
+    const { settingsWithoutPriorities, priorities } =
+      splitPrioritiesFromSettings(settings)
+    settingsJson = JSON.stringify(settingsWithoutPriorities, null, 2)
+    prioritiesJson = JSON.stringify(priorities, null, 2)
+    prioritiesFile = getPrioritiesFilePath(app)
+    settingsFile = getSettingsFilename(app)
+  } catch (err) {
+    cb(err)
+    return
+  }
+
   // Always overwrite priorities.json — when the user resets all priority
   // state, the in-memory `priorities` is `{}` and the file must be cleared
   // too, otherwise stale entries from a previous save reload on next start.
@@ -550,15 +641,22 @@ export function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
   // settings write fails after priorities succeeded, only the
   // non-priority slice is stale, which is the safer half: the engine
   // keeps using the just-saved priorities.json on next load.
-  writePrioritiesFile(app, priorities)
-    .then(() =>
-      atomicWriteFile(
-        getSettingsFilename(app),
-        JSON.stringify(settingsWithoutPriorities, null, 2)
-      )
+  //
+  // The whole two-file write is queued behind any earlier write so
+  // concurrent callers cannot interleave their phases or land out of order.
+  const write = () =>
+    atomicWriteFile(prioritiesFile, prioritiesJson).then(() =>
+      atomicWriteFile(settingsFile, settingsJson)
     )
-    .then(() => cb())
-    .catch(cb)
+  const done = settingsWriteQueue.then(write, write)
+  // Keep the queue alive regardless of this write's outcome so a failed
+  // write doesn't wedge every later one; each caller still gets its own
+  // success/failure via cb.
+  settingsWriteQueue = done.then(
+    () => undefined,
+    () => undefined
+  )
+  done.then(() => cb()).catch(cb)
 }
 
 function getSettingsFilename(app: ConfigApp) {
@@ -613,6 +711,36 @@ function scanDefaults(deltaEditor: DeltaEditor, vpath: string, item: any) {
   })
 }
 
+// Walks an object emitted under a parent path and recursively sets a
+// leaf delta per terminal value (strings, numbers, booleans, arrays).
+// Used for legacy defaults.json shapes that nest bare values directly
+// (e.g. `communication: { callsignVhf: "OH..." }`) — scanDefaults only
+// reads `{ value: ... }` leaves so it silently drops bare values, and
+// emitting the whole object at the parent path leaks an out-of-date
+// snapshot of every child every time anyone GETs the parent.
+function emitBareLeafDeltas(
+  deltaEditor: DeltaEditor,
+  parentPath: string,
+  item: unknown
+) {
+  if (!_.isPlainObject(item)) return
+  const obj = item as Record<string, unknown>
+  for (const key of Object.keys(obj)) {
+    const value = obj[key]
+    const childPath = parentPath.length > 0 ? `${parentPath}.${key}` : key
+    if (_.isPlainObject(value)) {
+      // Skip {value:..., meta:...} shapes — scanDefaults already handled
+      // those in the main pass. Recurse into anything else to reach the
+      // bare leaves below.
+      const child = value as Record<string, unknown>
+      if ('value' in child || 'meta' in child) continue
+      emitBareLeafDeltas(deltaEditor, childPath, child)
+    } else if (value !== undefined && value !== null) {
+      deltaEditor.setSelfValue(childPath, value)
+    }
+  }
+}
+
 function convertOldDefaultsToDeltas(
   deltaEditor: DeltaEditor,
   defaults: object
@@ -629,7 +757,13 @@ function convertOldDefaultsToDeltas(
       }
     })
     if (self.communication) {
-      deltaEditor.setSelfValue('communication', self.communication)
+      // Legacy shape stores `communication.*` as bare values, not the
+      // `{ value: ... }` shape scanDefaults walks. Emit them as separate
+      // leaf deltas so they don't collide with paths the spec keeps
+      // under `communication` (e.g. communication.crewNames written by
+      // signalk-logbook), which a parent-path snapshot would otherwise
+      // serve as stale, defaults-sourced JSON in the Data Browser.
+      emitBareLeafDeltas(deltaEditor, 'communication', self.communication)
     }
   }
   return deltas

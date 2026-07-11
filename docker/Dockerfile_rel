@@ -18,15 +18,40 @@ RUN npm config rm proxy \
 
 ARG TAG
 
-# Install locally (not globally) to avoid permission issues
-# Copy @signalk packages and @mxtommy/kip to nested location where webapp discovery expects them
-RUN npm install signalk-server@$TAG \
+# EDITION selects the published variant: "full" bundles the optional webapps
+# and plugins; "core" installs with --omit=optional, then reinstates the admin
+# UI and serialport. Those two stay in optionalDependencies (serialport is a
+# native module that must degrade gracefully on unsupported platforms), but
+# unlike the other optionals they cannot be added back at the .signalk layer —
+# the server serves the admin UI from a fixed path in its own install and
+# require()s serialport directly. Their versions are read from the installed
+# server's optionalDependencies so they cannot drift from the full image.
+ARG EDITION=full
+
+# Install locally (not globally) to avoid permission issues, then relocate
+# nested packages to where webapp/plugin discovery expects them. The @signalk
+# packages are required in both editions, so that relocation always runs. The
+# @mxtommy/kip relocation is guarded on presence, so it is skipped automatically
+# in core, where kip is not installed.
+RUN case "$EDITION" in \
+      full) npm_flags="" ;; \
+      core) npm_flags="--omit=optional" ;; \
+      *) echo "Unknown EDITION: $EDITION" >&2; exit 1 ;; \
+    esac \
+  && npm install signalk-server@$TAG $npm_flags \
+  && if [ "$EDITION" = core ]; then \
+       adminui_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@signalk/server-admin-ui']") \
+       && serialport_spec=$(node -p "require('signalk-server/package.json').optionalDependencies.serialport") \
+       && npm install $npm_flags "@signalk/server-admin-ui@$adminui_spec" "serialport@$serialport_spec"; \
+     fi \
   && mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
   && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
   && rm -rf node_modules/@signalk/ \
-  && mkdir -p node_modules/signalk-server/node_modules/@mxtommy/ \
-  && cp -rf node_modules/@mxtommy/kip node_modules/signalk-server/node_modules/@mxtommy/ \
-  && rm -rf node_modules/@mxtommy/;
+  && if [ -d node_modules/@mxtommy/kip ]; then \
+       mkdir -p node_modules/signalk-server/node_modules/@mxtommy/ \
+       && cp -rf node_modules/@mxtommy/kip node_modules/signalk-server/node_modules/@mxtommy/ \
+       && rm -rf node_modules/@mxtommy/; \
+     fi
 
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 

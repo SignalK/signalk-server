@@ -44,6 +44,8 @@ In the past, plugins processing NMEA data streams have directly populated the ma
 
 ### Stream updates
 
+`SubscribeMessage` now accepts `excludeSources` and `excludeSelf`, letting a subscription apply the user's source-priority cascade across the upstream sources while filtering out the subscriber's own (or other named) output. See [Excluding Sources](./develop/plugins/deltas.md#excluding-sources-) for the canonical derived-data-plugin use case.
+
 The new REST APIs emit `v2` deltas with values that are objects.
 
 For example, when a course is activated, deltas will be emitted for `navigation.course.previousPoint`, `navigation.course.nextPoint` and `navigation.course.activeRoute` where the value is an object.

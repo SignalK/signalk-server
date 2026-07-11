@@ -1,7 +1,50 @@
 import { expect } from 'chai'
+import { metadataRegistry } from '@signalk/path-metadata'
 import { FullSignalK } from './fullsignalk'
 
 describe('FullSignalK', function () {
+  afterEach(function () {
+    // Guard against a regression leaking prototype pollution into sibling tests.
+    delete (Object.prototype as Record<string, unknown>).polluted
+  })
+
+  it('does not pollute Object.prototype via a __proto__ path segment', function () {
+    const delta = {
+      updates: [
+        {
+          source: { label: 'evil', type: 'NMEA0183' },
+          timestamp: '2014-08-15T19:03:21.532Z',
+          values: [{ path: 'navigation.__proto__.polluted', value: 'pwned' }]
+        }
+      ],
+      context: 'vessels.foo'
+    }
+    const fullSignalK = new FullSignalK()
+    fullSignalK.addDelta(delta)
+    expect(({} as Record<string, unknown>).polluted).to.equal(undefined)
+  })
+
+  it('does not pollute via a constructor path segment', function () {
+    const delta = {
+      updates: [
+        {
+          source: { label: 'evil', type: 'NMEA0183' },
+          timestamp: '2014-08-15T19:03:21.532Z',
+          values: [
+            {
+              path: 'navigation.constructor.prototype.polluted',
+              value: 'pwned'
+            }
+          ]
+        }
+      ],
+      context: 'vessels.foo'
+    }
+    const fullSignalK = new FullSignalK()
+    fullSignalK.addDelta(delta)
+    expect(({} as Record<string, unknown>).polluted).to.equal(undefined)
+  })
+
   it('Delta with object value should produce full tree leaf without the .value', function () {
     const delta = {
       updates: [
@@ -74,6 +117,104 @@ describe('FullSignalK', function () {
     expect(sog).to.have.property('$source')
     expect(sog.values['n2kFromFile.43']).to.have.property('value', 7.09)
     expect(sog.values['n2kFromFile.48']).to.have.property('value', 8)
+  })
+
+  it('applies a meta delta to an existing value-only leaf', function () {
+    // A value-only source (e.g. an N2K device echoing a path a plugin also
+    // owns) creates the leaf, then a meta delta arrives for the same path
+    // with no further value. The leaf must carry the metadata.
+    metadataRegistry.reset()
+    const path = 'electrical.displays.raymarine.helm1.brightness'
+    const ctx = 'vessels.foo'
+    const fullSignalK = new FullSignalK()
+    fullSignalK.addDelta({
+      context: ctx,
+      updates: [
+        {
+          source: { label: 'can0', type: 'NMEA2000', pgn: 126720, src: '1' },
+          timestamp: '2017-04-15T15:50:48.664Z',
+          values: [{ path, value: 0.98 }]
+        }
+      ]
+    })
+    const leaf = () =>
+      fullSignalK.retrieve().vessels.foo.electrical.displays.raymarine.helm1
+        .brightness
+    expect(leaf().meta?.supportsPut).to.equal(undefined)
+
+    fullSignalK.addDelta({
+      context: ctx,
+      updates: [
+        {
+          $source: 'a-plugin',
+          timestamp: '2017-04-15T15:50:49.664Z',
+          meta: [{ path, value: { supportsPut: true } }]
+        }
+      ]
+    })
+    expect(leaf().meta?.supportsPut).to.equal(true)
+    expect(leaf().value).to.equal(0.98)
+    metadataRegistry.reset()
+  })
+
+  it('lets a later meta delta overwrite an existing field on the leaf', function () {
+    // Last-writer-wins, consistent with the metadata registry: a second meta
+    // delta that changes the value of a field the leaf already carries must
+    // replace it, not be dropped in favour of the existing value.
+    metadataRegistry.reset()
+    const path = 'electrical.displays.raymarine.helm1.brightness'
+    const ctx = 'vessels.foo'
+    const fullSignalK = new FullSignalK()
+    fullSignalK.addDelta({
+      context: ctx,
+      updates: [
+        {
+          source: { label: 'can0', type: 'NMEA2000', pgn: 126720, src: '1' },
+          timestamp: '2017-04-15T15:50:48.664Z',
+          values: [{ path, value: 0.98 }]
+        }
+      ]
+    })
+    const leaf = () =>
+      fullSignalK.retrieve().vessels.foo.electrical.displays.raymarine.helm1
+        .brightness
+    const sendMeta = (value: object, ts: string) =>
+      fullSignalK.addDelta({
+        context: ctx,
+        updates: [
+          { $source: 'a-plugin', timestamp: ts, meta: [{ path, value }] }
+        ]
+      })
+
+    sendMeta({ supportsPut: true, description: 'old' }, '2017-04-15T15:50:49Z')
+    expect(leaf().meta?.supportsPut).to.equal(true)
+    expect(leaf().meta?.description).to.equal('old')
+
+    sendMeta({ supportsPut: false, description: 'new' }, '2017-04-15T15:50:50Z')
+    expect(leaf().meta?.supportsPut).to.equal(false)
+    expect(leaf().meta?.description).to.equal('new')
+    expect(leaf().value).to.equal(0.98)
+    metadataRegistry.reset()
+  })
+
+  it('does not seed an orphan tree entry for an identity-less context', function () {
+    metadataRegistry.reset()
+    const fullSignalK = new FullSignalK()
+    fullSignalK.addDelta({
+      context: 'meteo',
+      updates: [
+        {
+          $source: 'a-plugin',
+          timestamp: '2017-04-15T15:50:48.664Z',
+          meta: [
+            { path: 'environment.outside.temperature', value: { units: 'K' } }
+          ]
+        }
+      ]
+    })
+    expect(fullSignalK.retrieve()).to.not.have.property('environment')
+    expect(fullSignalK.retrieve()).to.not.have.property('meteo')
+    metadataRegistry.reset()
   })
 
   it('AIS delta produces Signal K tree with expected shape', function () {

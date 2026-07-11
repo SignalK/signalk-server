@@ -71,7 +71,7 @@ jobs:
     name: >-
       ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
           matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
-          matrix.os == 'macos-latest' && 'macOS' ||
+          matrix.os == 'macos-15' && 'macOS' ||
           matrix.os == 'windows-latest' && 'Windows' ||
           matrix.os }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
@@ -79,11 +79,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-latest]
         node: ${{ fromJson(inputs.node-versions) }}
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v6
@@ -252,14 +252,22 @@ jobs:
           function normaliseRelPath(p) {
             return p.replace(/^\.?\//, '');
           }
+          // existsSync returns true for directories too. The CDN serves
+          // files; pointing signalk.appIcon at a directory is just as
+          // broken as pointing it at a missing path.
+          function isFile(p) {
+            let stat;
+            try { stat = fs.statSync(p); } catch { stat = undefined; }
+            return !!stat && stat.isFile();
+          }
           function checkDeclaredPath(field, declared) {
             const rel = normaliseRelPath(declared);
-            // existsSync returns true for directories too. The CDN serves
-            // files; pointing signalk.appIcon at a directory is just as
-            // broken as pointing it at a missing path.
-            let stat;
-            try { stat = fs.statSync(rel); } catch { stat = undefined; }
-            if (!stat || !stat.isFile()) {
+            // The runtime webapp launcher mounts the package's public/ dir at
+            // its URL root, and the App Store icon probe tries public/ first,
+            // so an asset that only lives under public/ (commonly the build
+            // output) resolves fine at runtime. Accept either location here so
+            // this pre-build check does not warn about a path that works.
+            if (!isFile(rel) && !isFile('public/' + rel)) {
               warnings.push(
                 field + ' "' + declared + '" does not resolve to a file in the repo. ' +
                 'The App Store fetches assets from unpkg.com/{pkg}@{version}/{path} — ' +
@@ -617,6 +625,13 @@ jobs:
           }
 
           // ── Mock app with delta capture ─────────────────────────
+          // The real server app extends EventEmitter, so plugins that
+          // app.on(...) in start() and app.removeListener(...) in stop()
+          // rely on the full emitter surface. Back the mock with a real
+          // emitter so register/remove stay mutually consistent.
+          const { EventEmitter } = require('node:events');
+          const mockEmitter = new EventEmitter();
+          mockEmitter.setMaxListeners(0);
           const mockApp = {
             // ── Server configuration ──────────────────────────────
             config: { configPath: '/tmp', version: '0.0.0' },
@@ -665,8 +680,15 @@ jobs:
             registerActionHandler: () => {},
 
             // ── Event system ──────────────────────────────────────
-            on: () => ({ unsubscribe: () => {} }),
-            emit: () => {},
+            // Delegate to a real EventEmitter so on()/once()/addListener()
+            // and removeListener()/removeAllListeners() share one registry,
+            // matching the server app (which extends EventEmitter).
+            on: (...args) => mockEmitter.on(...args),
+            addListener: (...args) => mockEmitter.addListener(...args),
+            once: (...args) => mockEmitter.once(...args),
+            removeListener: (...args) => mockEmitter.removeListener(...args),
+            removeAllListeners: (...args) => mockEmitter.removeAllListeners(...args),
+            emit: (...args) => mockEmitter.emit(...args),
             emitPropertyValue: () => {},
             onPropertyValues: () => () => {},
 
@@ -1261,8 +1283,17 @@ jobs:
             exit 0
           fi
 
+          # ESM packages need es-check in module mode; otherwise top-level
+          # import/export parse as a script and falsely report ES2024+ syntax.
+          # es-check does not infer this from package.json "type", so pass it.
+          MODULE_FLAG=""
+          if [ "$(node -p "require('./package.json').type === 'module' ? 'y' : 'n'" 2>/dev/null)" = "y" ]; then
+            MODULE_FLAG="--module"
+            echo "Detected ESM package (type: module) — running es-check in module mode."
+          fi
+
           echo "Checking ES2023 compatibility: $FILES"
-          if ! npx --yes es-check@8 es2023 $FILES 2>&1; then
+          if ! npx --yes es-check@8 es2023 $MODULE_FLAG $FILES 2>&1; then
             echo ""
             echo "::warning::Plugin uses ES2024+ syntax not supported by Node 20 (Cerbo GX / Venus OS). Consider targeting ES2023 in your TypeScript/build config or tsconfig.json to maintain Cerbo GX compatibility."
           fi
@@ -1277,7 +1308,11 @@ jobs:
           # This means native addons (better-sqlite3, serialport, etc.) are NOT compiled.
           # This test catches plugins that will break when installed via the App Store.
           echo "Simulating SignalK App Store install (npm install --ignore-scripts)..."
-          PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP")
+          # Read the tarball name from --json: a plugin "prepare" script (e.g. tsc)
+          # prints a lifecycle banner to stdout that would pollute a bare
+          # $(npm pack) capture (npm < 11 runs prepare here despite --ignore-scripts).
+          PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP" \
+            | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
 
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
@@ -1433,7 +1468,7 @@ jobs:
           OS_NAME: >-
             ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
                 matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
-                matrix.os == 'macos-latest' && 'macOS' ||
+                matrix.os == 'macos-15' && 'macOS' ||
                 matrix.os == 'windows-latest' && 'Windows' ||
                 matrix.os }}
           NODE_VER: ${{ matrix.node }}
@@ -1487,25 +1522,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: ${{ inputs.enable-armv7 }}
-    # Expose the test-step outcome so ci-status can distinguish a step
-    # failure (advisory) from the job itself completing.
+    # Advisory: armv7 is non-blocking. continue-on-error at the job level lets
+    # the job show its true red/green status in the GitHub UI while keeping the
+    # overall workflow check green so it never blocks a PR merge.
+    continue-on-error: true
     outputs:
       advisory-outcome: ${{ steps.armv7-test.outcome }}
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up QEMU for ARM emulation
         # Advisory: a QEMU setup failure must not block the workflow — the
-        # armv7 test step handles its own failure via continue-on-error, and
-        # if QEMU truly didn't initialize, docker run will fail there instead.
+        # job-level continue-on-error handles this; if QEMU truly didn't
+        # initialize, docker run will fail there instead.
         continue-on-error: true
         uses: docker/setup-qemu-action@v4
         with:
           platforms: linux/arm/v7
 
       - name: Cache npm for armv7
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: /tmp/.npm-armv7-cache
           key: armv7-npm-${{ hashFiles('**/package-lock.json', '**/package.json') }}
@@ -1514,10 +1551,10 @@ jobs:
 
       - name: Test on armv7 via QEMU
         id: armv7-test
-        # Advisory: do not fail the workflow when armv7 tests fail. The
-        # outcome is captured via the job output above and surfaced in the
-        # ci-status summary.
-        continue-on-error: true
+        # The job-level continue-on-error keeps the workflow green; this step
+        # intentionally has no continue-on-error so that a failure shows the
+        # job as truly red rather than emitting a confusing red annotation
+        # under a green check.
         env:
           BUILD_CMD: ${{ inputs.build-command }}
           TEST_CMD: ${{ inputs.test-command }}
@@ -1584,8 +1621,8 @@ jobs:
         run: |
           PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
           PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
-          # Use the test-step outcome, not job.status — the job itself
-          # succeeds (continue-on-error) even when the step fails.
+          # Use the test-step outcome — the job-level continue-on-error means
+          # job.status is always success; the step outcome carries the true result.
           RESULT="${{ steps.armv7-test.outcome }}"
 
           {
@@ -1617,7 +1654,7 @@ jobs:
         signalk-server-version: ${{ fromJson(inputs.signalk-server-versions) }}
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v6
@@ -1631,6 +1668,21 @@ jobs:
           cd /tmp/sk-test
           npm init -y
           npm install signalk-server@${{ matrix.signalk-server-version }}
+
+      - name: Install plugins declared in signalk.requires
+        shell: bash
+        run: |
+          REQUIRES=$(jq -r '.signalk.requires // [] | .[]' "${{ github.workspace }}/package.json" 2>/dev/null || true)
+          if [ -z "$REQUIRES" ]; then
+            exit 0
+          fi
+          cd /tmp/sk-test
+          while IFS= read -r pkg; do
+            [ -z "$pkg" ] && continue
+            echo "::group::npm install $pkg (signalk.requires)"
+            npm install "$pkg"
+            echo "::endgroup::"
+          done <<< "$REQUIRES"
 
       - name: Build plugin
         env:
@@ -1646,9 +1698,11 @@ jobs:
 
       - name: Install plugin into SignalK
         run: |
-          # Pack the plugin and install it into the test server. Use basename
-          # defensively: some npm versions emit a path-prefixed tarball name.
-          PLUGIN_TGZ=$(npm pack --ignore-scripts --pack-destination /tmp)
+          # Pack the plugin and install it into the test server. Read the tarball
+          # name from --json so a plugin "prepare" lifecycle banner on stdout can't
+          # corrupt it (npm < 11 runs prepare here despite --ignore-scripts).
+          PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination /tmp \
+            | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
           cd /tmp/sk-test
           npm install "/tmp/$(basename "$PLUGIN_TGZ")"
 
@@ -1786,7 +1840,7 @@ jobs:
     needs: [desktop, armv7, signalk-integration]
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           sparse-checkout: package.json
 
