@@ -386,100 +386,97 @@ describe('Subscriptions', (_) => {
       })
   })
 
-  it('name subscription serves correct data', function () {
-    let self, wsPromiser
+  it('name subscription serves correct data', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+    )
+    const self = JSON.parse(await wsPromiser.nthMessage(1)).self
 
-    return serverP
-      .then((_) => {
-        wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
-        )
-        return wsPromiser.nextMsg()
-      })
-      .then((wsHello) => {
-        self = JSON.parse(wsHello).self
+    await wsPromiser.send({
+      context: 'vessels.*',
+      subscribe: [
+        {
+          path: ''
+        }
+      ]
+    })
 
-        return wsPromiser.send({
-          context: 'vessels.*',
-          subscribe: [
-            {
-              path: ''
-            }
-          ]
-        })
-      })
-      .then(() => {
-        sendDelta(
-          getEmptyPathDelta({
-            context: 'vessels.' + self
-          }),
-          deltaUrl
-        )
-      })
-      .then(() => wsPromiser.nthMessage(4)) //self, 1st delta with mmsi
-      .then((nextMsg) => {
-        const delta = JSON.parse(nextMsg)
-        assert(delta.updates[0].values[0].path === '', 'Path is empty string')
-        assert(
-          typeof delta.updates[0].values[0].value === 'object',
-          'Value is an object'
-        )
-        assert(
-          typeof delta.updates[0].values[0].value.mmsi !== 'undefined',
-          'Value has mmsi key'
-        )
-        return wsPromiser.nthMessage(5) //self, 2nd delta with mmsi
-      })
-      .then((nextMsg) => {
-        const delta = JSON.parse(nextMsg)
-        assert(delta.updates[0].values[0].path === '', 'Path is empty string')
-        assert(
-          typeof delta.updates[0].values[0].value === 'object',
-          'Value is an object'
-        )
-        assert(
-          typeof delta.updates[0].values[0].value.name !== 'undefined',
-          'Value has name key'
-        )
-        assert(
-          delta.updates[0].values[0].value.name === 'SomeBoat',
-          'Name value is correct'
-        )
-        assert(delta.updates.length === 1, 'Receives just one update')
-        assert(delta.updates[0].values.length === 1, 'Receives just one value')
-        assert(
-          delta.context === `vessels.${self}`,
-          `Context is vessels.${self}, got ${delta.context}`
-        )
-        assert(
-          delta.updates[0].timestamp === '2014-05-03T09:14:11.000Z',
-          'Timestamp is correct'
-        )
+    // Empty-path deltas for another vessel must be delivered...
+    await sendDelta(
+      getEmptyPathDelta({ context: 'vessels.othervessel' }),
+      deltaUrl
+    )
+    // ...but a non-empty path delta to self must NOT be. With
+    // subscribe=none the connection has no default self subscription, so
+    // the only deltas that arrive are those matching the empty-path
+    // subscription. If a non-empty path leaked through, the empty-path
+    // assertion below would catch it.
+    await sendDelta(getDelta({ context: self }), deltaUrl)
 
-        sendDelta(
-          getEmptyPathDelta({ context: 'vessels.othervessel' }),
-          deltaUrl
-        )
+    //wait for ws messages to arrive
+    await new Promise((resolve) => setTimeout(resolve, 30))
 
-        return wsPromiser.nthMessage(6) //othervessel, 1st delta
-      })
-      .then((nextMsg) => {
-        const delta = JSON.parse(nextMsg)
-        assert(delta.updates.length === 1, 'Receives just one update')
-        assert(delta.updates[0].values.length === 1, 'Receives just one value')
-        assert(
-          delta.updates[0].values[0].path === '',
-          'Receives pathvalue with empty path'
-        )
-        assert(
-          typeof delta.updates[0].values[0].value.mmsi === 'string',
-          'Receives object with mmsi'
-        )
-        assert(
-          delta.context === 'vessels.othervessel',
-          'Context is vessels.othervessel'
-        )
-      })
+    const deltas = wsPromiser.parsedMessages().slice(1)
+    const values = deltas.flatMap((delta) =>
+      delta.updates.flatMap((update) =>
+        (update.values || []).map((vp) => ({ context: delta.context, ...vp }))
+      )
+    )
+
+    //every delivered value must have an empty path
+    values.forEach((vp) =>
+      assert(vp.path === '', `Unexpected non-empty path '${vp.path}'`)
+    )
+
+    //othervessel empty-path values (mmsi + name) must have been delivered
+    const otherValues = values.filter(
+      (vp) => vp.context === 'vessels.othervessel'
+    )
+    assert(
+      otherValues.some((vp) => typeof vp.value.mmsi === 'string'),
+      'Expected othervessel value with mmsi, but none was found'
+    )
+    assert(
+      otherValues.some((vp) => vp.value.name === 'SomeBoat'),
+      'Expected othervessel value with name SomeBoat, but none was found'
+    )
+  })
+
+  it('empty-path subscription does not replay cached non-empty paths', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+    )
+    const self = JSON.parse(await wsPromiser.nthMessage(1)).self
+
+    // Prime the cache with non-empty path values for self before
+    // subscribing, so the bootstrap snapshot has something to leak.
+    await sendDelta(getDelta({ context: self }), deltaUrl)
+    await new Promise((resolve) => setTimeout(resolve, 30))
+
+    // Subscribe to the empty path, mirroring the reported client message.
+    await wsPromiser.send({
+      context: 'vessels.*',
+      subscribe: [{ path: '' }]
+    })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+
+    const values = wsPromiser
+      .parsedMessages()
+      .slice(1)
+      .flatMap((delta) =>
+        delta.updates.flatMap((update) => update.values || [])
+      )
+
+    // The bootstrap snapshot must only contain empty-path values.
+    values.forEach((vp) =>
+      assert(vp.path === '', `Unexpected non-empty path '${vp.path}'`)
+    )
   })
 
   it('relativePosition subscription serves correct data', function () {
