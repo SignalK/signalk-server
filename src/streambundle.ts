@@ -19,6 +19,7 @@ import {
   Delta,
   NormalizedDelta,
   Path,
+  PathValue,
   Update,
   Value,
   NormalizedMetaDelta
@@ -94,6 +95,7 @@ export class StreamBundle implements IStreamBundle {
               timestamp,
               path: pathValue.path,
               value: pathValue.value,
+              state: pathValue.state,
               isMeta: false
             })
           }
@@ -200,6 +202,7 @@ export class StreamBundle implements IStreamBundle {
             timestamp,
             path: pathValue.path,
             value: pathValue.value,
+            state: pathValue.state,
             isMeta: false
           }
           this.getUnfilteredBus().push(normalizedDelta)
@@ -234,16 +237,21 @@ export class StreamBundle implements IStreamBundle {
 
 export function toDelta(normalizedDeltaData: NormalizedDelta): Delta {
   const type = normalizedDeltaData.isMeta ? 'meta' : 'values'
+  const pathValue: Pick<PathValue, 'path' | 'value' | 'state'> = {
+    path: normalizedDeltaData.path,
+    value: normalizedDeltaData.value
+  }
+  // Replay the staleness state container alongside the value so a
+  // late-arriving WS subscriber receives the same `state.timedOut`
+  // signal a long-lived client got at the moment the path went stale.
+  if (!normalizedDeltaData.isMeta && normalizedDeltaData.state) {
+    pathValue.state = normalizedDeltaData.state
+  }
   const update = {
     source: normalizedDeltaData.source,
     $source: normalizedDeltaData.$source,
     timestamp: normalizedDeltaData.timestamp,
-    [type]: [
-      {
-        path: normalizedDeltaData.path,
-        value: normalizedDeltaData.value
-      }
-    ]
+    [type]: [pathValue]
   } as Update
 
   return {

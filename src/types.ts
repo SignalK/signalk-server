@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ServerAPI, WithContext, FullSignalK } from '@signalk/server-api'
 import { SecurityStrategy } from './security'
+import type { StalenessEnforcer } from './staleness'
 
 export interface HelloMessage {
   name: string
@@ -26,6 +27,7 @@ export interface SignalKServer extends ServerAPI {
   selfId: string
   selfType: string
   securityStrategy: SecurityStrategy
+  stalenessEnforcer?: StalenessEnforcer
 }
 
 export class Interface {

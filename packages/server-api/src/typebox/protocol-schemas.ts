@@ -199,6 +199,20 @@ export const EnhancedDisplayUnitsSchema = Type.Object(
 export type EnhancedDisplayUnits = Static<typeof EnhancedDisplayUnitsSchema>
 
 /**
+ * Update contract of a path: whether silence means failure (`periodic`)
+ * or unchanged state (`event`). Consumed by the staleness enforcer.
+ */
+export const UpdateContractSchema = Type.Union(
+  [Type.Literal('periodic'), Type.Literal('event')],
+  {
+    $id: 'UpdateContract',
+    description:
+      'Update contract for staleness enforcement: periodic (regular updates, silence = failure) or event (emits only on change, silence = unchanged). Defaults to periodic when absent.'
+  }
+)
+export type UpdateContract = Static<typeof UpdateContractSchema>
+
+/**
  * Metadata payload for a Signal K path.
  * Contains display hints, units, timeout, and alarm zones.
  */
@@ -217,12 +231,25 @@ export const MetaValueSchema = Type.Object(
       Type.String({ description: 'An example value for this path' })
     ),
     timeout: Type.Optional(
-      Type.Number({
-        description:
-          'The timeout in seconds after which the value should be considered stale',
-        minimum: 0
-      })
+      Type.Union(
+        [
+          Type.Number({
+            minimum: 0,
+            description:
+              'Numeric timeout in seconds; 0 disables enforcement for the path'
+          }),
+          Type.Literal('auto', {
+            description:
+              'Server derives the effective timeout from observed delta arrival rate'
+          })
+        ],
+        {
+          description:
+            'The timeout in seconds after which the value should be considered stale, or "auto" for server-derived timeout'
+        }
+      )
     ),
+    updateContract: Type.Optional(UpdateContractSchema),
     displayName: Type.Optional(
       Type.String({
         description: 'A human-readable display name for this path'
@@ -396,12 +423,44 @@ export const NotificationSchema = Type.Object(
 export type Notification = Static<typeof NotificationSchema>
 
 /**
+ * Server-emitted metadata about a delta value. The `timedOut` flag
+ * distinguishes a synthetic null produced by the staleness enforcer from
+ * a sensor that legitimately reports `value: null`.
+ */
+export const PathValueStateSchema = Type.Object(
+  {
+    timedOut: Type.Optional(
+      Type.Boolean({
+        description:
+          "True when this delta is the server's stale-timeout signal for the path+source"
+      })
+    ),
+    lastValue: Type.Optional(
+      Type.Object({
+        timestamp: Type.String({
+          pattern: IsoTimePattern,
+          description: 'Timestamp of the last good value'
+        }),
+        value: Type.Unknown({ description: 'The last good value' })
+      })
+    )
+  },
+  {
+    $id: 'PathValueState',
+    description:
+      "Out-of-band metadata about a particular delta value (e.g. server's staleness indicator). Clients that don't recognise it ignore the field."
+  }
+)
+export type PathValueState = Static<typeof PathValueStateSchema>
+
+/**
  * A path-value pair in an update delta.
  */
 export const PathValueSchema = Type.Object(
   {
     path: Type.String({ description: 'Signal K path' }),
-    value: Type.Unknown({ description: 'The value for this path' })
+    value: Type.Unknown({ description: 'The value for this path' }),
+    state: Type.Optional(PathValueStateSchema)
   },
   {
     $id: 'PathValue',

@@ -100,6 +100,26 @@ export interface Config {
     logCountToKeep?: number
     enablePluginLogging?: boolean
     loggingDirectory?: string
+    /** Master switch for the staleness enforcer. Default true.
+     * Emits a synthetic `value: null` delta with `state.timedOut: true`
+     * when a vessels.self.* path+source falls silent beyond its
+     * effective timeout. See src/staleness.ts. */
+    enforceDataTimeouts?: boolean
+    /** When true, paths without an explicit numeric `meta.timeout`
+     * fall back to `defaultTimeout` instead of being skipped. Default
+     * true; combined with `enforceDataTimeouts`, every periodic path
+     * on the self vessel is monitored out of the box. */
+    useDefaultTimeouts?: boolean
+    /** Global fallback timeout in seconds. Default 60. */
+    defaultTimeout?: number
+    /** Enforcer poll interval in ms. Default 1000. */
+    staleCheckIntervalMs?: number
+    /** Ring-buffer depth for `meta.timeout: 'auto'` inter-arrival sampling.
+     * Default 10. */
+    autoTimeoutSamples?: number
+    /** Warm-up window (seconds) for `meta.timeout: 'auto'` before the
+     * sampler's derived timeout takes effect. Default 30. */
+    autoTimeoutWarmupSeconds?: number
     /** Per-path explicit overrides. The engine consults this map first;
      * if a path has an entry here, that ranking is used. Includes the
      * fan-out sentinel `[{ sourceRef: '*', timeout: 0 }]` for paths the

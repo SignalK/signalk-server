@@ -175,22 +175,36 @@ function DataRow({
         })
       : undefined
 
-  let convertedValue: number | null = null
-  let convertedUnit: string | null = null
-  if (category && typeof data.value === 'number') {
+  const convertIfNumeric = (
+    rawValue: unknown
+  ): { value: number | null; unit: string | null } => {
+    if (!category || typeof rawValue !== 'number') {
+      return { value: null, unit: null }
+    }
     const converted = convertValue(
-      data.value,
+      rawValue,
       units,
       category,
       presetDetails,
       unitDefinitions,
       displayUnits
     )
-    if (converted && converted.unit !== units) {
-      convertedValue = converted.value
-      convertedUnit = converted.unit
-    }
+    return converted && converted.unit !== units
+      ? { value: converted.value, unit: converted.unit }
+      : { value: null, unit: null }
   }
+
+  const { value: convertedValue, unit: convertedUnit } = convertIfNumeric(
+    data.value
+  )
+
+  // The last good value displayed under a timed-out row gets the same
+  // unit conversion as the current value, so a user who reads SOG in
+  // knots doesn't suddenly see m/s in the "last:" line.
+  const { value: lastConvertedValue, unit: lastConvertedUnit } =
+    data.state?.timedOut && data.state.lastValue !== undefined
+      ? convertIfNumeric(data.state.lastValue.value)
+      : { value: null, unit: null }
 
   const path = data.path ?? ''
   const source = data.$source ?? ''
@@ -246,11 +260,35 @@ function DataRow({
           convertedValue={convertedValue}
           convertedUnit={convertedUnit}
         />
+        {data.state?.timedOut && data.state.lastValue !== undefined && (
+          <div
+            className="text-muted"
+            style={{ fontSize: '0.85em', marginTop: '2px' }}
+            title={`Last good value at ${data.state.lastValue.timestamp}`}
+          >
+            last:{' '}
+            <DefaultValueRenderer
+              value={data.state.lastValue.value}
+              units={units}
+              convertedValue={lastConvertedValue}
+              convertedUnit={lastConvertedUnit}
+            />
+          </div>
+        )}
       </div>
 
       <TimestampCell timestamp={timestamp} isPaused={isPaused} />
 
       <div className="virtual-table-cell source-cell" data-label="Source">
+        {data.state?.timedOut && (
+          <Badge
+            bg="warning"
+            title="Server-side staleness enforcement marked this path+source as timed out"
+            style={{ marginRight: '4px', fontSize: '0.7em' }}
+          >
+            Stale
+          </Badge>
+        )}
         {isPreferred && (
           <Badge
             bg="success"
