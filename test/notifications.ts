@@ -175,8 +175,7 @@ describe('NotificationApi', () => {
     const makeApp = (overrides: any = {}) => {
       const handleMessageCalls: Delta[] = []
       let registeredHandler:
-        | ((delta: Delta, next: (delta: Delta) => void) => void)
-        | null = null
+        ((delta: Delta, next: (delta: Delta) => void) => void) | null = null
       const app = {
         registerDeltaInputHandler: (
           handler: (delta: Delta, next: (delta: Delta) => void) => void
