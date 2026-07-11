@@ -576,9 +576,7 @@ const ServerSettings: React.FC = () => {
                       id="enforceDataTimeouts"
                       className="switch-input"
                       onChange={handleStalenessChange}
-                      checked={
-                        settings.staleness?.enforceDataTimeouts !== false
-                      }
+                      checked={settings.staleness?.enforceDataTimeouts === true}
                     />
                     <span
                       className="switch-label"
