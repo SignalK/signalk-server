@@ -105,6 +105,7 @@ export class Alarm {
       this.value.state !== ALARM_STATE.normal
     ) {
       this.status.acknowledged = false
+      delete this.status.acknowledgedAt
       this.status.silenced = false
     }
 
@@ -113,8 +114,12 @@ export class Alarm {
       this.value &&
       'acknowledgeStatus' in this.value
     ) {
-      this.status.acknowledged =
-        this.value.acknowledgeStatus === 'Yes' ? true : false
+      if (this.value.acknowledgeStatus === 'Yes') {
+        this.status.acknowledgedAt = new Date().toISOString() as Timestamp
+        this.status.acknowledged = true
+      } else {
+        this.status.acknowledged = false
+      }
     }
     if (
       !this.status.silenced &&
@@ -228,6 +233,7 @@ export class Alarm {
       throw new Error('Alarm already acknowledged!')
     }
     this.status.acknowledged = true
+    this.status.acknowledgedAt = new Date().toISOString() as Timestamp
     this.alignAlarmMethod()
     this.timeStamp()
   }
@@ -239,6 +245,7 @@ export class Alarm {
     this.value.state = ALARM_STATE.normal
     this.status.silenced = false
     this.status.acknowledged = false
+    delete this.status.acknowledgedAt
     this.timeStamp()
   }
 }
