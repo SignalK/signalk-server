@@ -119,6 +119,7 @@ export class Alarm {
         this.status.acknowledged = true
       } else {
         this.status.acknowledged = false
+        delete this.status.acknowledgedAt
       }
     }
     if (
