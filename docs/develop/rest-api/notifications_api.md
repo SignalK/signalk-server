@@ -442,7 +442,7 @@ The result of a successful acknowledge request is that the:
 
 - Both `sound` & `visual` values are removed from the `method` attribute
 - `status.acknowledged` is set to `true`
-- `status.acknowledgedAt` holds the timestamp of when the alarm was acknowledged. 
+- `status.acknowledgedAt` holds the timestamp of when the alarm was acknowledged.
 
 If the acknowledge action is requested when the `status.canAcknowledge` property is `false`, the alarm will not be acknowledged and an ERROR response is returned to the requestor.
 
