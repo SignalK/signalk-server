@@ -7,7 +7,7 @@ import { ResourcesApi } from './resources'
 import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
 import { RadarApi } from './radar'
-import { HistoryApiHttpRegistry } from './history'
+import { HistoryApiHttpRegistry, HistoryApplication } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 import { NotificationApi, NotificationApplication } from './notifications'
 import {
@@ -96,7 +96,9 @@ export const startApis = (
 
   const featuresApi = new FeaturesApi(app)
 
-  const historyApiHttpRegistry = new HistoryApiHttpRegistry(app)
+  const historyApiHttpRegistry = new HistoryApiHttpRegistry(
+    app as HistoryApplication
+  )
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).historyApiHttpRegistry = historyApiHttpRegistry
   apiList.push('history')

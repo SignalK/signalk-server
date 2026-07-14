@@ -166,6 +166,14 @@ export interface Config {
     courseApi?: {
       apiOnly?: boolean
     }
+    historyApi?: {
+      /** Plugin id of the History API provider to use as the default.
+       * Applied whenever the provider is registered, so the default does
+       * not depend on plugin load order. When the configured provider is
+       * not registered (e.g. plugin disabled), the first registered
+       * provider serves as fallback. */
+      defaultProvider?: string
+    }
     notifications?: {
       manageNotifications?: boolean
     }

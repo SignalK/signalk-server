@@ -20,6 +20,7 @@ import { Context, Path, SourceRef } from '@signalk/server-api'
 import { createDebug } from '../../debug'
 import { Request, Response } from 'express'
 import { WithSecurityStrategy } from '../../security'
+import { ConfigApp, writeSettingsFile } from '../../config/config'
 
 import { Responses } from '../'
 
@@ -27,14 +28,31 @@ const debug = createDebug('signalk-server:api:history')
 
 const HISTORY_API_PATH = `/signalk/v2/api/history`
 
-interface HistoryApplication extends WithSecurityStrategy, IRouter {}
+export interface HistoryApplication
+  extends WithSecurityStrategy, IRouter, ConfigApp, WithHistoryApi {}
 
 export class HistoryApiHttpRegistry {
   private historyProviders: Map<string, HistoryProvider> = new Map()
-  private defaultProviderId?: string
+  /** Persisted user choice; may reference a provider that is not
+   * currently registered (e.g. plugin disabled). */
+  private configuredProviderId?: string
   proxy: HistoryApi
 
-  constructor(private app: HistoryApplication & WithHistoryApi) {
+  /** The configured provider when it is registered, otherwise the first
+   * registered provider as fallback. Keeps the default independent of
+   * plugin load order. */
+  private get defaultProviderId(): string | undefined {
+    if (
+      this.configuredProviderId &&
+      this.historyProviders.has(this.configuredProviderId)
+    ) {
+      return this.configuredProviderId
+    }
+    return this.historyProviders.keys().next().value
+  }
+
+  constructor(private app: HistoryApplication) {
+    this.configuredProviderId = app.config.settings.historyApi?.defaultProvider
     this.proxy = {
       getValues: (query: ValuesRequest): Promise<ValuesResponse> => {
         return this.defaultProvider().getValues(query)
@@ -72,9 +90,6 @@ export class HistoryApiHttpRegistry {
     if (!this.historyProviders.has(pluginId)) {
       this.historyProviders.set(pluginId, provider)
     }
-    if (this.historyProviders.size === 1) {
-      this.defaultProviderId = pluginId
-    }
     debug(
       `Registered history api provider ${pluginId},`,
       `total=${this.historyProviders.size},`,
@@ -87,9 +102,6 @@ export class HistoryApiHttpRegistry {
       return
     }
     this.historyProviders.delete(pluginId)
-    if (pluginId === this.defaultProviderId) {
-      this.defaultProviderId = this.historyProviders.keys().next().value
-    }
     debug(
       `Unregistered history api provider ${pluginId},`,
       `total=${this.historyProviders.size},`,
@@ -128,7 +140,8 @@ export class HistoryApiHttpRegistry {
         debug(`**route = ${req.method} ${req.path}`)
         try {
           res.status(200).json({
-            id: this.defaultProviderId
+            id: this.defaultProviderId,
+            configured: this.configuredProviderId
           })
         } catch (err: unknown) {
           res.status(400).json({
@@ -161,11 +174,21 @@ export class HistoryApiHttpRegistry {
             throw new Error('Provider id not supplied!')
           }
           if (this.historyProviders.has(req.params.id)) {
-            this.defaultProviderId = req.params.id
-            res.status(200).json({
-              statusCode: 200,
-              state: 'COMPLETED',
-              message: `Default provider set to ${req.params.id}.`
+            this.configuredProviderId = req.params.id
+            this.saveConfiguredProvider((err) => {
+              if (err) {
+                res.status(500).json({
+                  statusCode: 500,
+                  state: 'FAILED',
+                  message: `Failed to save settings: ${err.message}`
+                })
+              } else {
+                res.status(200).json({
+                  statusCode: 200,
+                  state: 'COMPLETED',
+                  message: `Default provider set to ${req.params.id}.`
+                })
+              }
             })
           } else {
             throw new Error(`Provider ${req.params.id} not found!`)
@@ -219,6 +242,15 @@ export class HistoryApiHttpRegistry {
         res
       )
     )
+  }
+
+  private saveConfiguredProvider(cb: (err?: Error) => void) {
+    const settings = this.app.config.settings
+    settings.historyApi = {
+      ...settings.historyApi,
+      defaultProvider: this.configuredProviderId
+    }
+    writeSettingsFile(this.app, settings, cb)
   }
 
   private defaultProvider(): HistoryProvider {
