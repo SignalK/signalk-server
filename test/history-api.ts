@@ -389,7 +389,19 @@ describe('History API v2', () => {
       app.notifications.length.should.equal(0)
     })
 
-    it('clears a stale warning when the default is switched to a registered provider', async function () {
+    // Drives the POST default-provider route directly: stubs
+    // writeSettingsFile with the given outcome, captures the registry's
+    // route handlers and provides a postDefault(id) helper returning the
+    // response status code. Restores the stub afterwards.
+    const withDefaultProviderRoute = async (
+      configuredDefault: string | undefined,
+      writeSettings: (cb: (err?: Error) => void) => void,
+      run: (ctx: {
+        app: TestApp
+        registry: ReturnType<typeof makeRegistry>
+        postDefault: (id: string) => Promise<number>
+      }) => Promise<void>
+    ) => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const config = require('../dist/config/config')
       const origWriteSettingsFile = config.writeSettingsFile
@@ -397,9 +409,9 @@ describe('History API v2', () => {
         _app: unknown,
         _settings: unknown,
         cb: (err?: Error) => void
-      ) => cb()
+      ) => writeSettings(cb)
       try {
-        const app = makeApp('questdb') as TestApp & {
+        const app = makeApp(configuredDefault) as TestApp & {
           securityStrategy: { shouldAllowPut: () => boolean }
           get: (path: string, handler: unknown) => void
           post: (path: string, handler: unknown) => void
@@ -415,96 +427,76 @@ describe('History API v2', () => {
         }
 
         const registry = makeRegistry(app)
-        registry.registerHistoryApiProvider('kip', provider('kip'))
         registry.start()
 
-        // configured questdb is unavailable: first request warns
-        await defaultOf(app)
-        app.notifications.length.should.equal(1)
-        app.notifications[0].state.should.equal('warn')
-
-        // switching the default to the registered kip resolves the
-        // situation and must clear the warning
-        const res = {
-          status() {
-            return this
-          },
-          json() {
-            return this
+        const postDefault = async (id: string): Promise<number> => {
+          let statusCode = 0
+          const res = {
+            status(code: number) {
+              statusCode = code
+              return this
+            },
+            json() {
+              return this
+            }
           }
+          await postHandlers['/signalk/v2/api/history/_providers/_default/:id'](
+            { params: { id }, method: 'POST', path: '' },
+            res
+          )
+          return statusCode
         }
-        await postHandlers['/signalk/v2/api/history/_providers/_default/:id'](
-          { params: { id: 'kip' }, method: 'POST', path: '' },
-          res
-        )
-        app.notifications.length.should.equal(2)
-        app.notifications[1].state.should.equal('normal')
 
-        // a later unavailability must warn again, not be swallowed
-        registry.unregisterHistoryApiProvider('kip')
-        registry.registerHistoryApiProvider('questdb', provider('questdb'))
-        await defaultOf(app)
-        app.notifications.length.should.equal(3)
-        app.notifications[2].state.should.equal('warn')
-        app.notifications[2].message.should.contain('kip')
+        await run({ app, registry, postDefault })
       } finally {
         config.writeSettingsFile = origWriteSettingsFile
       }
+    }
+
+    it('clears a stale warning when the default is switched to a registered provider', async function () {
+      await withDefaultProviderRoute(
+        'questdb',
+        (cb) => cb(),
+        async ({ app, registry, postDefault }) => {
+          registry.registerHistoryApiProvider('kip', provider('kip'))
+
+          // configured questdb is unavailable: first request warns
+          await defaultOf(app)
+          app.notifications.length.should.equal(1)
+          app.notifications[0].state.should.equal('warn')
+
+          // switching the default to the registered kip resolves the
+          // situation and must clear the warning
+          ;(await postDefault('kip')).should.equal(200)
+          app.notifications.length.should.equal(2)
+          app.notifications[1].state.should.equal('normal')
+
+          // a later unavailability must warn again, not be swallowed
+          registry.unregisterHistoryApiProvider('kip')
+          registry.registerHistoryApiProvider('questdb', provider('questdb'))
+          await defaultOf(app)
+          app.notifications.length.should.equal(3)
+          app.notifications[2].state.should.equal('warn')
+          app.notifications[2].message.should.contain('kip')
+        }
+      )
     })
 
     it('does not change the active provider when persisting fails', async function () {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const config = require('../dist/config/config')
-      const origWriteSettingsFile = config.writeSettingsFile
-      config.writeSettingsFile = (
-        _app: unknown,
-        _settings: unknown,
-        cb: (err?: Error) => void
-      ) => cb(new Error('disk full'))
-      try {
-        const app = makeApp() as TestApp & {
-          securityStrategy: { shouldAllowPut: () => boolean }
-          get: (path: string, handler: unknown) => void
-          post: (path: string, handler: unknown) => void
-        }
-        app.securityStrategy = { shouldAllowPut: () => true }
-        const postHandlers: Record<
-          string,
-          (req: unknown, res: unknown) => Promise<void>
-        > = {}
-        app.get = () => undefined
-        app.post = (path, handler) => {
-          postHandlers[path] = handler as (typeof postHandlers)[string]
-        }
+      await withDefaultProviderRoute(
+        undefined,
+        (cb) => cb(new Error('disk full')),
+        async ({ app, registry, postDefault }) => {
+          registry.registerHistoryApiProvider('kip', provider('kip'))
+          registry.registerHistoryApiProvider('questdb', provider('questdb'))
+          ;(await postDefault('questdb')).should.equal(500)
 
-        const registry = makeRegistry(app)
-        registry.registerHistoryApiProvider('kip', provider('kip'))
-        registry.registerHistoryApiProvider('questdb', provider('questdb'))
-        registry.start()
-
-        let statusCode = 0
-        const res = {
-          status(code: number) {
-            statusCode = code
-            return this
-          },
-          json() {
-            return this
-          }
+          // the failed save must not have switched the default nor
+          // mutated the persisted settings
+          ;(await defaultOf(app)).should.equal(providerContext('kip'))
+          chai.expect(app.config.settings.historyApi).to.equal(undefined)
         }
-        await postHandlers['/signalk/v2/api/history/_providers/_default/:id'](
-          { params: { id: 'questdb' }, method: 'POST', path: '' },
-          res
-        )
-
-        statusCode.should.equal(500)
-        // the failed save must not have switched the default nor
-        // mutated the persisted settings
-        ;(await defaultOf(app)).should.equal(providerContext('kip'))
-        chai.expect(app.config.settings.historyApi).to.equal(undefined)
-      } finally {
-        config.writeSettingsFile = origWriteSettingsFile
-      }
+      )
     })
   })
 })

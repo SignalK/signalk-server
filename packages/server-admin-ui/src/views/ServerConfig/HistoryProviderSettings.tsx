@@ -35,7 +35,7 @@ const HistoryProviderSettings: React.FC = () => {
           setSaved(true)
           setTimeout(() => setSaved(false), SAVED_MESSAGE_CLEAR_MS)
         } else {
-          const body = await res.json()
+          const body = (await res.json()) as { message?: string }
           setSaveError(body.message || `Save failed (HTTP ${res.status})`)
         }
       } catch (e) {
