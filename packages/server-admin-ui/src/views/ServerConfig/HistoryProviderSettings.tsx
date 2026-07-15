@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faClockRotateLeft } from '@fortawesome/free-solid-svg-icons/faClockRotateLeft'
 
 const PROVIDERS_PATH = '/signalk/v2/api/history/_providers'
+const SAVED_MESSAGE_CLEAR_MS = 3000
 
 interface ProvidersState {
   ids: string[]
@@ -58,13 +59,16 @@ const HistoryProviderSettings: React.FC = () => {
       setSaveError(null)
       setSaved(false)
       try {
-        const res = await fetch(`${PROVIDERS_PATH}/_default/${id}`, {
-          method: 'POST',
-          credentials: 'include'
-        })
+        const res = await fetch(
+          `${PROVIDERS_PATH}/_default/${encodeURIComponent(id)}`,
+          {
+            method: 'POST',
+            credentials: 'include'
+          }
+        )
         if (res.ok) {
           setSaved(true)
-          setTimeout(() => setSaved(false), 3000)
+          setTimeout(() => setSaved(false), SAVED_MESSAGE_CLEAR_MS)
         } else {
           const body = await res.json()
           setSaveError(body.message || `Save failed (HTTP ${res.status})`)
@@ -92,7 +96,11 @@ const HistoryProviderSettings: React.FC = () => {
         <strong>History Provider</strong>
       </Card.Header>
       <Card.Body>
-        <Form.Group as={Row} className="mb-0">
+        <Form.Group
+          as={Row}
+          className="mb-0"
+          controlId="historyDefaultProvider"
+        >
           <Col md={2}>
             <Form.Label>Default Provider</Form.Label>
           </Col>
