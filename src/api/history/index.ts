@@ -27,6 +27,8 @@ import { Responses } from '../'
 const debug = createDebug('signalk-server:api:history')
 
 const HISTORY_API_PATH = `/signalk/v2/api/history`
+const PROVIDER_NOTIFICATION_PATH =
+  'notifications.server.history.defaultProvider' as Path
 
 export interface HistoryApplication
   extends WithSecurityStrategy, IRouter, ConfigApp, WithHistoryApi {}
@@ -36,6 +38,9 @@ export class HistoryApiHttpRegistry {
   /** Persisted user choice; may reference a provider that is not
    * currently registered (e.g. plugin disabled). */
   private configuredProviderId?: string
+  /** True while a warn notification about the configured provider
+   * being unavailable is active. */
+  private warnedUnavailable = false
   proxy: HistoryApi
 
   /** The configured provider when it is registered, otherwise the first
@@ -89,6 +94,9 @@ export class HistoryApiHttpRegistry {
     }
     if (!this.historyProviders.has(pluginId)) {
       this.historyProviders.set(pluginId, provider)
+    }
+    if (pluginId === this.configuredProviderId) {
+      this.notifyConfiguredAvailable()
     }
     debug(
       `Registered history api provider ${pluginId},`,
@@ -244,26 +252,82 @@ export class HistoryApiHttpRegistry {
   }
 
   // Commit the new default only when the write succeeds, so a failed
-  // save does not leave the active provider out of sync with the
-  // settings file.
+  // save does not leave the active provider or the in-memory settings
+  // out of sync with the settings file. The write gets an immutable
+  // snapshot; app.config.settings is untouched until the write lands.
   private saveConfiguredProvider(id: string, cb: (err?: Error) => void) {
     const settings = this.app.config.settings
-    const previous = settings.historyApi
-    settings.historyApi = {
-      ...previous,
-      defaultProvider: id
+    const snapshot = {
+      ...settings,
+      historyApi: {
+        ...settings.historyApi,
+        defaultProvider: id
+      }
     }
-    writeSettingsFile(this.app, settings, (err?: Error) => {
-      if (err) {
-        settings.historyApi = previous
-      } else {
+    writeSettingsFile(this.app, snapshot, (err?: Error) => {
+      if (!err) {
+        settings.historyApi = snapshot.historyApi
         this.configuredProviderId = id
       }
       cb(err)
     })
   }
 
+  // Raise a warn notification the first time a request needs the
+  // default provider while the configured one is unavailable; cleared
+  // via notifyConfiguredAvailable() when its plugin registers again.
+  private warnIfConfiguredUnavailable() {
+    const configured = this.configuredProviderId
+    if (
+      !configured ||
+      this.historyProviders.has(configured) ||
+      this.warnedUnavailable
+    ) {
+      return
+    }
+    this.warnedUnavailable = true
+    const fallback = this.defaultProviderId
+    this.notify(
+      'warn',
+      `Configured default history provider '${configured}' is not available` +
+        (fallback
+          ? `, using '${fallback}' instead`
+          : ' and no other provider is registered')
+    )
+  }
+
+  private notifyConfiguredAvailable() {
+    if (!this.warnedUnavailable) {
+      return
+    }
+    this.warnedUnavailable = false
+    this.notify(
+      'normal',
+      `Configured default history provider '${this.configuredProviderId}' is available again`
+    )
+  }
+
+  private notify(state: 'normal' | 'warn', message: string) {
+    this.app.handleMessage('historyApi', {
+      updates: [
+        {
+          values: [
+            {
+              path: PROVIDER_NOTIFICATION_PATH,
+              value: {
+                state,
+                method: [],
+                message
+              }
+            }
+          ]
+        }
+      ]
+    })
+  }
+
   private defaultProvider(): HistoryProvider {
+    this.warnIfConfiguredUnavailable()
     if (
       this.defaultProviderId &&
       this.historyProviders.has(this.defaultProviderId)
@@ -281,6 +345,7 @@ export class HistoryApiHttpRegistry {
       }
       return provider
     }
+    this.warnIfConfiguredUnavailable()
     return this.defaultProviderId
       ? this.historyProviders.get(this.defaultProviderId)
       : undefined

@@ -259,19 +259,39 @@ describe('History API v2', () => {
       getPaths: async () => []
     })
 
-    interface TestApp extends WithHistoryApi {
-      config: { settings: { historyApi?: { defaultProvider?: string } } }
+    interface NotificationValue {
+      state: string
+      message: string
     }
 
-    const makeApp = (configuredDefault?: string): TestApp => ({
-      config: {
-        settings: {
-          historyApi: configuredDefault
-            ? { defaultProvider: configuredDefault }
-            : undefined
+    interface TestApp extends WithHistoryApi {
+      config: { settings: { historyApi?: { defaultProvider?: string } } }
+      handleMessage: (id: string, delta: unknown) => void
+      /** Notification values captured from handleMessage */
+      notifications: NotificationValue[]
+    }
+
+    const makeApp = (configuredDefault?: string): TestApp => {
+      const notifications: NotificationValue[] = []
+      return {
+        config: {
+          settings: {
+            historyApi: configuredDefault
+              ? { defaultProvider: configuredDefault }
+              : undefined
+          }
+        },
+        notifications,
+        handleMessage: (_id: string, delta: unknown) => {
+          const update = (
+            delta as {
+              updates: { values: { value: NotificationValue }[] }[]
+            }
+          ).updates[0]
+          notifications.push(update.values[0].value)
         }
       }
-    })
+    }
 
     const makeRegistry = (app: TestApp) =>
       new HistoryApiHttpRegistry(app as unknown as HistoryApplication)
@@ -337,6 +357,36 @@ describe('History API v2', () => {
         .catch((err: Error) =>
           err.message.should.contain('No history api provider')
         )
+    })
+
+    it('emits a single warn notification when the configured provider is needed but unavailable', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('kip', provider('kip'))
+      await defaultOf(app)
+      await defaultOf(app)
+      app.notifications.length.should.equal(1)
+      app.notifications[0].state.should.equal('warn')
+      app.notifications[0].message.should.contain('questdb')
+      app.notifications[0].message.should.contain('kip')
+    })
+
+    it('clears the warning when the configured provider registers', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('kip', provider('kip'))
+      await defaultOf(app)
+      registry.registerHistoryApiProvider('questdb', provider('questdb'))
+      app.notifications.length.should.equal(2)
+      app.notifications[1].state.should.equal('normal')
+    })
+
+    it('does not notify when the configured provider serves requests', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('questdb', provider('questdb'))
+      await defaultOf(app)
+      app.notifications.length.should.equal(0)
     })
 
     it('does not change the active provider when persisting fails', async function () {

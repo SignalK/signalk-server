@@ -90,24 +90,33 @@ const HistoryProviderSettings: React.FC = () => {
     [fetchProviders]
   )
 
-  if (providers === null && loadError === null) {
-    return null
-  }
-
   const configuredButUnavailable =
     providers !== null &&
     providers.configuredId !== null &&
     !providers.ids.includes(providers.configuredId)
 
+  // The choice only matters when there is something to choose between:
+  // stay hidden for zero or one registered provider, unless the
+  // persisted choice points at an unavailable provider (worth a
+  // warning) or loading failed.
+  const visible =
+    loadError !== null ||
+    (providers !== null &&
+      (providers.ids.length > 1 || configuredButUnavailable))
+
+  if (!visible) {
+    return null
+  }
+
   return (
-    <Card>
+    <Card className="mb-3">
       <Card.Header>
         <FontAwesomeIcon icon={faClockRotateLeft} />{' '}
-        <strong>History Provider</strong>
+        <strong>Default History Provider</strong>
       </Card.Header>
       <Card.Body>
         {loadError && (
-          <Alert variant="danger" style={{ marginBottom: 0 }}>
+          <Alert variant="danger" className="mb-0">
             {loadError}
           </Alert>
         )}
@@ -135,6 +144,11 @@ const HistoryProviderSettings: React.FC = () => {
                     }
                     style={{ maxWidth: '300px' }}
                   >
+                    {!providers.defaultId && (
+                      <option value="" disabled>
+                        Select a provider...
+                      </option>
+                    )}
                     {providers.ids.map((id) => (
                       <option key={id} value={id}>
                         {id}
@@ -149,12 +163,9 @@ const HistoryProviderSettings: React.FC = () => {
                 </>
               )}
               {configuredButUnavailable && (
-                <Alert
-                  variant="warning"
-                  style={{ marginTop: '10px', marginBottom: 0 }}
-                >
-                  The configured default provider &quot;{providers.configuredId}
-                  &quot; is not currently available
+                <Alert variant="warning" className="mt-2 mb-0">
+                  The configured default provider &quot;
+                  {providers.configuredId}&quot; is not currently available
                   {providers.defaultId
                     ? ` — using "${providers.defaultId}" as fallback`
                     : ''}
@@ -162,18 +173,12 @@ const HistoryProviderSettings: React.FC = () => {
                 </Alert>
               )}
               {saved && (
-                <Alert
-                  variant="success"
-                  style={{ marginTop: '10px', marginBottom: 0 }}
-                >
+                <Alert variant="success" className="mt-2 mb-0">
                   Default history provider saved.
                 </Alert>
               )}
               {saveError && (
-                <Alert
-                  variant="danger"
-                  style={{ marginTop: '10px', marginBottom: 0 }}
-                >
+                <Alert variant="danger" className="mt-2 mb-0">
                   {saveError}
                 </Alert>
               )}
