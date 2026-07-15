@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePlugins } from '../store'
 
-const PROVIDERS_PATH = '/signalk/v2/api/history/_providers'
+export const PROVIDERS_PATH = '/signalk/v2/api/history/_providers'
 
 /** Response of GET /signalk/v2/api/history/_providers */
 type HistoryProvidersResponse = Record<string, { isDefault: boolean }>

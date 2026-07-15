@@ -8,10 +8,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faClockRotateLeft } from '@fortawesome/free-solid-svg-icons/faClockRotateLeft'
 import {
   useHistoryProviders,
-  isConfiguredProviderUnavailable
+  isConfiguredProviderUnavailable,
+  PROVIDERS_PATH
 } from '../../hooks/useHistoryProviderStatus'
 
-const PROVIDERS_PATH = '/signalk/v2/api/history/_providers'
 const SAVED_MESSAGE_CLEAR_MS = 3000
 
 const HistoryProviderSettings: React.FC = () => {
