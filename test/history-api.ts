@@ -389,6 +389,69 @@ describe('History API v2', () => {
       app.notifications.length.should.equal(0)
     })
 
+    it('clears a stale warning when the default is switched to a registered provider', async function () {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const config = require('../dist/config/config')
+      const origWriteSettingsFile = config.writeSettingsFile
+      config.writeSettingsFile = (
+        _app: unknown,
+        _settings: unknown,
+        cb: (err?: Error) => void
+      ) => cb()
+      try {
+        const app = makeApp('questdb') as TestApp & {
+          securityStrategy: { shouldAllowPut: () => boolean }
+          get: (path: string, handler: unknown) => void
+          post: (path: string, handler: unknown) => void
+        }
+        app.securityStrategy = { shouldAllowPut: () => true }
+        const postHandlers: Record<
+          string,
+          (req: unknown, res: unknown) => Promise<void>
+        > = {}
+        app.get = () => undefined
+        app.post = (path, handler) => {
+          postHandlers[path] = handler as (typeof postHandlers)[string]
+        }
+
+        const registry = makeRegistry(app)
+        registry.registerHistoryApiProvider('kip', provider('kip'))
+        registry.start()
+
+        // configured questdb is unavailable: first request warns
+        await defaultOf(app)
+        app.notifications.length.should.equal(1)
+        app.notifications[0].state.should.equal('warn')
+
+        // switching the default to the registered kip resolves the
+        // situation and must clear the warning
+        const res = {
+          status() {
+            return this
+          },
+          json() {
+            return this
+          }
+        }
+        await postHandlers['/signalk/v2/api/history/_providers/_default/:id'](
+          { params: { id: 'kip' }, method: 'POST', path: '' },
+          res
+        )
+        app.notifications.length.should.equal(2)
+        app.notifications[1].state.should.equal('normal')
+
+        // a later unavailability must warn again, not be swallowed
+        registry.unregisterHistoryApiProvider('kip')
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        await defaultOf(app)
+        app.notifications.length.should.equal(3)
+        app.notifications[2].state.should.equal('warn')
+        app.notifications[2].message.should.contain('kip')
+      } finally {
+        config.writeSettingsFile = origWriteSettingsFile
+      }
+    })
+
     it('does not change the active provider when persisting fails', async function () {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const config = require('../dist/config/config')

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import Alert from 'react-bootstrap/Alert'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -6,62 +6,18 @@ import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faClockRotateLeft } from '@fortawesome/free-solid-svg-icons/faClockRotateLeft'
+import {
+  useHistoryProviders,
+  isConfiguredProviderUnavailable
+} from '../../hooks/useHistoryProviderStatus'
 
 const PROVIDERS_PATH = '/signalk/v2/api/history/_providers'
 const SAVED_MESSAGE_CLEAR_MS = 3000
 
-interface ProvidersState {
-  ids: string[]
-  /** Provider currently serving unqualified History API requests */
-  defaultId: string | null
-  /** Provider persisted in server settings; may not be registered */
-  configuredId: string | null
-}
-
 const HistoryProviderSettings: React.FC = () => {
-  const [providers, setProviders] = useState<ProvidersState | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const { providers, loadError, refresh } = useHistoryProviders()
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
-
-  const fetchProviders = useCallback(async () => {
-    try {
-      const [providersRes, defaultRes] = await Promise.all([
-        fetch(PROVIDERS_PATH, { credentials: 'include' }),
-        fetch(`${PROVIDERS_PATH}/_default`, { credentials: 'include' })
-      ])
-      if (!providersRes.ok || !defaultRes.ok) {
-        setLoadError(
-          `Failed to load history providers (HTTP ${
-            providersRes.ok ? defaultRes.status : providersRes.status
-          })`
-        )
-        return
-      }
-      const providersBody = (await providersRes.json()) as Record<
-        string,
-        { isDefault: boolean }
-      >
-      const defaultBody = (await defaultRes.json()) as {
-        id?: string
-        configured?: string
-      }
-      setProviders({
-        ids: Object.keys(providersBody),
-        defaultId: defaultBody.id ?? null,
-        configuredId: defaultBody.configured ?? null
-      })
-      setLoadError(null)
-    } catch (e) {
-      setLoadError(
-        e instanceof Error ? e.message : 'Failed to load history providers'
-      )
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchProviders()
-  }, [fetchProviders])
 
   const handleChange = useCallback(
     async (id: string) => {
@@ -85,15 +41,12 @@ const HistoryProviderSettings: React.FC = () => {
       } catch (e) {
         setSaveError(e instanceof Error ? e.message : 'Save failed')
       }
-      await fetchProviders()
+      await refresh()
     },
-    [fetchProviders]
+    [refresh]
   )
 
-  const configuredButUnavailable =
-    providers !== null &&
-    providers.configuredId !== null &&
-    !providers.ids.includes(providers.configuredId)
+  const configuredButUnavailable = isConfiguredProviderUnavailable(providers)
 
   // The choice only matters when there is something to choose between:
   // stay hidden for zero or one registered provider, unless the

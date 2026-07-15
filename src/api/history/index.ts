@@ -268,6 +268,9 @@ export class HistoryApiHttpRegistry {
       if (!err) {
         settings.historyApi = snapshot.historyApi
         this.configuredProviderId = id
+        // The newly configured id is guaranteed registered by the
+        // caller, so any active "unavailable" warning no longer applies.
+        this.notifyConfiguredAvailable()
       }
       cb(err)
     })
@@ -303,7 +306,7 @@ export class HistoryApiHttpRegistry {
     this.warnedUnavailable = false
     this.notify(
       'normal',
-      `Configured default history provider '${this.configuredProviderId}' is available again`
+      `Configured default history provider '${this.configuredProviderId}' is available`
     )
   }
 
