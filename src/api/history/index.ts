@@ -174,8 +174,7 @@ export class HistoryApiHttpRegistry {
             throw new Error('Provider id not supplied!')
           }
           if (this.historyProviders.has(req.params.id)) {
-            this.configuredProviderId = req.params.id
-            this.saveConfiguredProvider((err) => {
+            this.saveConfiguredProvider(req.params.id, (err) => {
               if (err) {
                 res.status(500).json({
                   statusCode: 500,
@@ -244,13 +243,24 @@ export class HistoryApiHttpRegistry {
     )
   }
 
-  private saveConfiguredProvider(cb: (err?: Error) => void) {
+  // Commit the new default only when the write succeeds, so a failed
+  // save does not leave the active provider out of sync with the
+  // settings file.
+  private saveConfiguredProvider(id: string, cb: (err?: Error) => void) {
     const settings = this.app.config.settings
+    const previous = settings.historyApi
     settings.historyApi = {
-      ...settings.historyApi,
-      defaultProvider: this.configuredProviderId
+      ...previous,
+      defaultProvider: id
     }
-    writeSettingsFile(this.app, settings, cb)
+    writeSettingsFile(this.app, settings, (err?: Error) => {
+      if (err) {
+        settings.historyApi = previous
+      } else {
+        this.configuredProviderId = id
+      }
+      cb(err)
+    })
   }
 
   private defaultProvider(): HistoryProvider {

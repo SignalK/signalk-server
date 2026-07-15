@@ -12,11 +12,18 @@ import { startServerP } from './servertestutilities'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Server = require('../dist/')
-import { HistoryApiHttpRegistry } from '../dist/api/history/index.js'
+import {
+  HistoryApiHttpRegistry,
+  type HistoryApplication
+} from '../dist/api/history/index.js'
 import type {
   HistoryProvider,
-  ValuesResponse
+  ValuesRequest,
+  ValuesResponse,
+  WithHistoryApi
 } from '@signalk/server-api/history'
+import type { Context, Path, Timestamp } from '@signalk/server-api'
+import { Temporal } from '@js-temporal/polyfill'
 
 chai.should()
 
@@ -236,14 +243,27 @@ describe('History API v2', () => {
   })
 
   describe('default provider selection', () => {
+    const providerContext = (name: string) => `vessels.${name}` as Context
+
     const provider = (name: string): HistoryProvider => ({
-      getValues: async () => name as unknown as ValuesResponse,
+      getValues: async (): Promise<ValuesResponse> => ({
+        context: providerContext(name),
+        range: {
+          from: FROM as Timestamp,
+          to: TO as Timestamp
+        },
+        values: [{ path: 'navigation.position' as Path, method: 'first' }],
+        data: [[FROM as Timestamp, null]]
+      }),
       getContexts: async () => [],
       getPaths: async () => []
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const makeApp = (configuredDefault?: string): any => ({
+    interface TestApp extends WithHistoryApi {
+      config: { settings: { historyApi?: { defaultProvider?: string } } }
+    }
+
+    const makeApp = (configuredDefault?: string): TestApp => ({
       config: {
         settings: {
           historyApi: configuredDefault
@@ -253,61 +273,125 @@ describe('History API v2', () => {
       }
     })
 
-    const defaultOf = async (
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      app: any
-    ) => (await (await app.getHistoryApi()).getValues({})) as unknown as string
+    const makeRegistry = (app: TestApp) =>
+      new HistoryApiHttpRegistry(app as unknown as HistoryApplication)
+
+    const VALUES_QUERY: ValuesRequest = {
+      duration: Temporal.Duration.from({ minutes: 15 }),
+      pathSpecs: []
+    }
+
+    // Identifies the provider serving unqualified requests by the
+    // context its getValues stub reports.
+    const defaultOf = async (app: TestApp): Promise<Context> => {
+      const api = await app.getHistoryApi!()
+      return (await api.getValues(VALUES_QUERY)).context
+    }
 
     it('uses the configured provider even when it registers last', async function () {
       const app = makeApp('questdb')
-      const registry = new HistoryApiHttpRegistry(app)
+      const registry = makeRegistry(app)
       registry.registerHistoryApiProvider('kip', provider('kip'))
       registry.registerHistoryApiProvider('questdb', provider('questdb'))
-      ;(await defaultOf(app)).should.equal('questdb')
+      ;(await defaultOf(app)).should.equal(providerContext('questdb'))
     })
 
     it('falls back to the first registered provider when the configured one is not registered', async function () {
       const app = makeApp('questdb')
-      const registry = new HistoryApiHttpRegistry(app)
+      const registry = makeRegistry(app)
       registry.registerHistoryApiProvider('kip', provider('kip'))
-      ;(await defaultOf(app)).should.equal('kip')
+      ;(await defaultOf(app)).should.equal(providerContext('kip'))
     })
 
     it('reverts to the configured provider when the fallback unregisters', async function () {
       const app = makeApp('questdb')
-      const registry = new HistoryApiHttpRegistry(app)
+      const registry = makeRegistry(app)
       registry.registerHistoryApiProvider('kip', provider('kip'))
       registry.registerHistoryApiProvider('questdb', provider('questdb'))
       registry.unregisterHistoryApiProvider('kip')
-      ;(await defaultOf(app)).should.equal('questdb')
+      ;(await defaultOf(app)).should.equal(providerContext('questdb'))
     })
 
     it('falls back when the configured provider unregisters', async function () {
       const app = makeApp('questdb')
-      const registry = new HistoryApiHttpRegistry(app)
+      const registry = makeRegistry(app)
       registry.registerHistoryApiProvider('questdb', provider('questdb'))
       registry.registerHistoryApiProvider('kip', provider('kip'))
       registry.unregisterHistoryApiProvider('questdb')
-      ;(await defaultOf(app)).should.equal('kip')
+      ;(await defaultOf(app)).should.equal(providerContext('kip'))
     })
 
     it('defaults to the first registered provider without configuration', async function () {
       const app = makeApp()
-      const registry = new HistoryApiHttpRegistry(app)
+      const registry = makeRegistry(app)
       registry.registerHistoryApiProvider('kip', provider('kip'))
       registry.registerHistoryApiProvider('questdb', provider('questdb'))
-      ;(await defaultOf(app)).should.equal('kip')
+      ;(await defaultOf(app)).should.equal(providerContext('kip'))
     })
 
     it('rejects when no provider is registered', async function () {
       const app = makeApp('questdb')
-      new HistoryApiHttpRegistry(app)
-      await app
-        .getHistoryApi()
+      makeRegistry(app)
+      await app.getHistoryApi!()
         .then(() => chai.assert.fail('should have rejected'))
         .catch((err: Error) =>
           err.message.should.contain('No history api provider')
         )
+    })
+
+    it('does not change the active provider when persisting fails', async function () {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const config = require('../dist/config/config')
+      const origWriteSettingsFile = config.writeSettingsFile
+      config.writeSettingsFile = (
+        _app: unknown,
+        _settings: unknown,
+        cb: (err?: Error) => void
+      ) => cb(new Error('disk full'))
+      try {
+        const app = makeApp() as TestApp & {
+          securityStrategy: { shouldAllowPut: () => boolean }
+          get: (path: string, handler: unknown) => void
+          post: (path: string, handler: unknown) => void
+        }
+        app.securityStrategy = { shouldAllowPut: () => true }
+        const postHandlers: Record<
+          string,
+          (req: unknown, res: unknown) => Promise<void>
+        > = {}
+        app.get = () => undefined
+        app.post = (path, handler) => {
+          postHandlers[path] = handler as (typeof postHandlers)[string]
+        }
+
+        const registry = makeRegistry(app)
+        registry.registerHistoryApiProvider('kip', provider('kip'))
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        registry.start()
+
+        let statusCode = 0
+        const res = {
+          status(code: number) {
+            statusCode = code
+            return this
+          },
+          json() {
+            return this
+          }
+        }
+        await postHandlers['/signalk/v2/api/history/_providers/_default/:id'](
+          { params: { id: 'questdb' }, method: 'POST', path: '' },
+          res
+        )
+
+        statusCode.should.equal(500)
+        // the failed save must not have switched the default nor
+        // mutated the persisted settings
+        ;(await defaultOf(app)).should.equal(providerContext('kip'))
+        chai.expect(app.config.settings.historyApi).to.equal(undefined)
+      } finally {
+        config.writeSettingsFile = origWriteSettingsFile
+      }
     })
   })
 })
