@@ -18,6 +18,7 @@
 */
 
 import './networkConfig'
+import './host-modules'
 import './baconjs-compat'
 import {
   Context,
