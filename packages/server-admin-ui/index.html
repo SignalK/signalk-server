@@ -9,6 +9,23 @@
     />
     <meta name="description" content="Signal K Node Server" />
 
+    <script>
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('sk:theme') || 'auto'
+          var resolved = stored
+          if (stored === 'auto') {
+            resolved = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+          }
+          document.documentElement.dataset.bsTheme = resolved
+        } catch (e) {
+          document.documentElement.dataset.bsTheme = 'light'
+        }
+      })()
+    </script>
+
     %ADDONSCRIPTS%
 
     <link rel="shortcut icon" href="img/favicon.ico" />
