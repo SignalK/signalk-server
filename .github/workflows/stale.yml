@@ -3,10 +3,12 @@
 # "good first task" or "help wanted" are exempt. Pull requests are never
 # touched. The workflow runs daily and can also be triggered manually.
 #
-# Additionally, whenever the author of an issue or pull request comments, or
-# new commits are pushed to their pull request, the "awaiting response"
-# label is removed automatically so the item no longer counts as awaiting a
-# reply.
+# Additionally, whenever the author of an issue or pull request comments,
+# new commits are pushed to their pull request, or the author re-requests a
+# review, the "awaiting response" label is removed automatically so the item
+# no longer counts as awaiting a reply. The daily run also sweeps open pull
+# requests whose author re-requested a review while the label was present,
+# covering re-requests the event triggers missed.
 name: Stale issues
 
 on:
@@ -16,11 +18,12 @@ on:
   issue_comment:
     types: [created]
   pull_request_target:
-    types: [synchronize]
+    types: [synchronize, review_requested]
 
 permissions:
   contents: read
   issues: write
+  pull-requests: read
 
 concurrency:
   group: stale
@@ -51,6 +54,63 @@ jobs:
           days-before-pr-close: -1
           operations-per-run: 100
 
+  sweep-awaiting-response:
+    # Reconcile open PRs whose author re-requested a review while the label
+    # was present, covering review-request events the triggers missed.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const LABEL = 'awaiting response'
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            })
+            for (const pr of prs) {
+              if (!pr.labels.some((l) => l.name === LABEL)) continue
+              const events = await github.paginate(
+                github.rest.issues.listEventsForTimeline,
+                {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  per_page: 100
+                }
+              )
+              const lastLabeled = events.findLast(
+                (e) => e.event === 'labeled' && e.label?.name === LABEL
+              )
+              const reRequested =
+                lastLabeled &&
+                events.some(
+                  (e) =>
+                    e.event === 'review_requested' &&
+                    e.actor?.login === pr.user.login &&
+                    new Date(e.created_at) > new Date(lastLabeled.created_at)
+                )
+              if (!reRequested) continue
+              core.info(`Removing "${LABEL}" from #${pr.number}`)
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  name: LABEL
+                })
+              } catch (error) {
+                // An event-driven job may have removed the label after the
+                // sweep listed this PR; don't let that abort the loop.
+                if (error.status !== 403 && error.status !== 404) {
+                  throw error
+                }
+              }
+            }
+
   remove-awaiting-response:
     # When the author of the issue/PR comments, clear the awaiting response label.
     if: >
@@ -80,9 +140,14 @@ jobs:
             }
 
   remove-awaiting-response-pr:
-    # Any push to the PR clears the awaiting response label.
+    # Any push to the PR, or the PR author re-requesting a review, clears
+    # the awaiting response label. review_requested also fires when a
+    # maintainer adds a reviewer, so it only counts when triggered by the
+    # author.
     if: >
       github.event_name == 'pull_request_target' &&
+      (github.event.action == 'synchronize' ||
+       github.event.sender.login == github.event.pull_request.user.login) &&
       contains(github.event.pull_request.labels.*.name, 'awaiting response')
     runs-on: ubuntu-latest
     timeout-minutes: 10
