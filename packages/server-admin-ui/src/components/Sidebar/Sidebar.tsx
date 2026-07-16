@@ -27,6 +27,7 @@ import {
 } from '../../store'
 import classNames from 'classnames'
 import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
+import { useHistoryProviderUnavailable } from '../../hooks/useHistoryProviderStatus'
 import './Sidebar.css'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
@@ -158,6 +159,7 @@ export default function Sidebar({ location }: SidebarProps) {
   ).length
 
   const unconfiguredGnssCount = useUnconfiguredGnssSources().length
+  const historyProviderUnavailable = useHistoryProviderUnavailable()
 
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
@@ -306,13 +308,17 @@ export default function Sidebar({ location }: SidebarProps) {
       })()
     ]
 
+    const historyProviderBadge: BadgeData | null = historyProviderUnavailable
+      ? { variant: 'warning', text: '!' }
+      : null
+
     if (isAdmin) {
       result.push(
         {
           name: 'Apps & Plugins',
           url: '/apps',
           icon: 'icon-basket',
-          badges: [updatesBadge, unconfiguredBadge],
+          badges: [updatesBadge, unconfiguredBadge, historyProviderBadge],
           children: [
             {
               name: 'Store',
@@ -322,7 +328,7 @@ export default function Sidebar({ location }: SidebarProps) {
             {
               name: 'Configuration',
               url: '/apps/configuration/-',
-              badge: unconfiguredBadge
+              badges: [unconfiguredBadge, historyProviderBadge]
             }
           ]
         },
@@ -432,7 +438,8 @@ export default function Sidebar({ location }: SidebarProps) {
     conflictCount,
     unconfiguredPriorityCount,
     overridesWithMissingSourcesCount,
-    unconfiguredGnssCount
+    unconfiguredGnssCount,
+    historyProviderUnavailable
   ])
 
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(

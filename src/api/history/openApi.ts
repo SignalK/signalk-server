@@ -345,6 +345,11 @@ historyApiDoc.paths = {
                   id: {
                     type: 'string',
                     description: 'Provider identifier.'
+                  },
+                  configured: {
+                    type: 'string',
+                    description:
+                      'Provider identifier persisted in server settings. May differ from `id` when the configured provider is not currently registered.'
                   }
                 },
                 example: { id: 'signalk-to-influxdb2' }
@@ -360,7 +365,8 @@ historyApiDoc.paths = {
     post: {
       tags: ['Provider'],
       summary: 'Sets the default history provider.',
-      description: 'Sets the provider with the supplied `id` as the default.',
+      description:
+        'Sets the provider with the supplied `id` as the default and persists the choice in server settings.',
       responses: {
         default: { $ref: '#/components/responses/ErrorResponse' },
         '200': { $ref: '#/components/responses/200OKResponse' }
