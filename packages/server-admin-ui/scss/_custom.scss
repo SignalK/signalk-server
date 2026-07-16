@@ -1,3 +1,5 @@
+@use 'sass:color';
+
 // Here you can add other styles
 
 // Navbar toggler - remove border to match CoreUI v1 styling
@@ -906,7 +908,9 @@ form.rjsf {
 [data-bs-theme='dark'] {
   --bs-primary: #{$sk-primary-dark};
   --bs-primary-rgb:
-    #{red($sk-primary-dark), green($sk-primary-dark), blue($sk-primary-dark)};
+    #{color.channel($sk-primary-dark, 'red', $space: rgb)},
+    #{color.channel($sk-primary-dark, 'green', $space: rgb)},
+    #{color.channel($sk-primary-dark, 'blue', $space: rgb)};
 }
 
 // brighten sk logo when in dark more to improve contrast
