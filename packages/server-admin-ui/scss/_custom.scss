@@ -87,7 +87,7 @@ form.rjsf {
   }
 
   div.row.array-item {
-    background-color: aliceblue;
+    background-color: var(--sk-plugin-config-array-item-bg);
     margin-bottom: 3px;
   }
 
@@ -849,4 +849,95 @@ form.rjsf {
   &:focus-visible {
     outline: 2px solid var(--bs-danger);
   }
+}
+
+.app-header.navbar,
+.app-header.navbar .navbar-brand {
+  background-color: var(--sk-navbar-bg);
+  border-bottom-color: var(--sk-navbar-border-color);
+}
+
+.app-footer {
+  color: var(--sk-footer-color);
+  background-color: var(--sk-footer-bg);
+  border-top-color: var(--sk-navbar-border-color);
+}
+
+.sidebar {
+  color: var(--sk-sidebar-color);
+  background-color: var(--sk-sidebar-bg);
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .navbar .active.dropdown-toggle,
+.navbar .nav-tabs .active.dropdown-toggle {
+  color: var(--sk-nav-color);
+  background: var(--sk-nav-bg);
+  border-color: var(--sk-nav-border-color);
+  border-bottom-color: var(--sk-nav-bottom-color);
+}
+
+.nav-tabs .nav-link.active:focus,
+.nav-tabs .navbar .active.dropdown-toggle:focus,
+.navbar .nav-tabs .active.dropdown-toggle:focus {
+  background: var(--sk-nav-bg);
+  border-color: var(--sk-nav-border-color);
+  border-bottom-color: var(--sk-nav-bottom-color);
+}
+
+.tab-content {
+  background: var(--sk-nav-bg);
+  border-color: var(--sk-nav-border-color);
+}
+
+.sidebar .nav-link.active,
+.sidebar .navbar .active.dropdown-toggle,
+.navbar .sidebar .active.dropdown-toggle {
+  background-color: var(--sk-sidebar-active-bg);
+}
+
+.switch.switch-text .switch-handle,
+.switch.switch-text .switch-label {
+  background-color: var(--sk-switch-bg);
+}
+
+// brighten bs-primary when in dark mode to improve contrast
+
+[data-bs-theme='dark'] {
+  --bs-primary: #{$sk-primary-dark};
+  --bs-primary-rgb:
+    #{red($sk-primary-dark), green($sk-primary-dark), blue($sk-primary-dark)};
+}
+
+// brighten sk logo when in dark more to improve contrast
+
+[data-bs-theme='dark'] .app-header.navbar .navbar-brand {
+  position: relative;
+  background-color: var(--sk-navbar-bg);
+  background-image: none;
+  border-bottom-color: var(--bs-border-color-translucent);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('public_src/img/signal-k-logo-image-text.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 110px auto;
+    filter: brightness(1.4);
+  }
+}
+
+// light/dark/auto mode navbar dropdown menu:
+
+.app-header.navbar .theme-dropdown .dropdown-menu,
+.app-header.navbar .theme-dropdown .dropdown-item {
+  min-width: 7rem;
+}
+
+// light/dark/auto mode navbar dropdown menu icon size:
+
+.app-header.navbar .theme-dropdown .dropdown-toggle svg {
+  font-size: 1rem;
 }
