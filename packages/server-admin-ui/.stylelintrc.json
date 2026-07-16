@@ -2,7 +2,7 @@
   "extends": ["stylelint-config-standard-scss"],
   "rules": {
     "color-no-hex": null,
-    "scss/at-import-partial-extension": null,
+    "scss/load-partial-extension": null,
     "no-descending-specificity": null,
     "selector-class-pattern": null
   }
