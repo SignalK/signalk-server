@@ -201,7 +201,7 @@ export default function Header() {
             </Dropdown.Toggle>
             <Dropdown.Menu align="end">
               {MODES.map(({ mode, label, icon }) => (
-                <NavDropdown.Item
+                <Dropdown.Item
                   key={mode}
                   active={theme === mode}
                   onClick={() => setTheme(mode)}
@@ -211,7 +211,7 @@ export default function Header() {
                     <FontAwesomeIcon icon={icon} className="me-2" /> {label}
                   </span>
                   {theme === mode && <FontAwesomeIcon icon={faCheck} />}
-                </NavDropdown.Item>
+                </Dropdown.Item>
               ))}
               {loginStatus.status === 'loggedIn' &&
                 loginStatus.userLevel === 'admin' && (
