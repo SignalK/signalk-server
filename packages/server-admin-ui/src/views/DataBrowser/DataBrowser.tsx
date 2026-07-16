@@ -904,7 +904,7 @@ const DataBrowser: React.FC = () => {
                         ? 'var(--bs-primary)'
                         : 'var(--sk-input-border-color)',
                       boxShadow: state.isFocused
-                        ? '0 0 0 0.25rem var(--bs-primary-rgb, rgba(13,110,253,0.25))'
+                        ? '0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25)'
                         : 'none',
                       '&:hover': {
                         borderColor: 'var(--bs-primary)'
