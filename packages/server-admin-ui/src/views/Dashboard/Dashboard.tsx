@@ -240,7 +240,8 @@ export default function Dashboard() {
 
           <Card>
             <Card.Header>
-              Connection & Plugin Status <p className="text-danger">{errors}</p>
+              Connection & Plugin Status{' '}
+              {errors && <p className="text-danger">{errors}</p>}
             </Card.Header>
             <Card.Body>
               <Row>

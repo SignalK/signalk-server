@@ -101,14 +101,53 @@ const MetaDataPage: React.FC = () => {
                   noOptionsMessage={() => 'No contexts available'}
                   components={{ Option: ContextOption }}
                   styles={{
-                    menu: (base) => ({ ...base, zIndex: 100 }),
+                    control: (base, state) => ({
+                      ...base,
+                      backgroundColor: 'var(--sk-input-bg)',
+                      borderColor: state.isFocused
+                        ? 'var(--bs-primary)'
+                        : 'var(--sk-input-border-color)',
+                      boxShadow: state.isFocused
+                        ? '0 0 0 0.25rem var(--bs-primary-rgb, rgba(13,110,253,0.25))'
+                        : 'none',
+                      '&:hover': {
+                        borderColor: 'var(--bs-primary)'
+                      }
+                    }),
+                    singleValue: (base) => ({
+                      ...base,
+                      color: 'var(--bs-body-color)'
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      color: 'var(--bs-body-color)'
+                    }),
+                    placeholder: (base) => ({
+                      ...base,
+                      color: 'var(--bs-secondary-color)'
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      zIndex: 100,
+                      backgroundColor: 'var(--bs-body-bg)',
+                      border: '1px solid var(--sk-dropdown-border-color)'
+                    }),
+                    menuList: (base) => ({
+                      ...base,
+                      backgroundColor: 'var(--bs-body-bg)'
+                    }),
                     option: (base, state) => ({
                       ...base,
                       backgroundColor: state.isSelected
-                        ? base.backgroundColor
-                        : 'transparent',
+                        ? 'var(--bs-primary)'
+                        : state.isFocused
+                          ? 'var(--bs-tertiary-bg)'
+                          : 'transparent',
+                      color: state.isSelected ? '#fff' : 'var(--bs-body-color)',
                       ':hover': {
-                        backgroundColor: '#deebff'
+                        backgroundColor: state.isSelected
+                          ? 'var(--bs-primary)'
+                          : 'var(--bs-tertiary-bg)'
                       }
                     })
                   }}
