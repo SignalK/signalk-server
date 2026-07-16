@@ -793,7 +793,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
                 gap: '15px'
               }}
             >
-              <span style={{ color: 'var(-bs-light-text-emphasis)' }}>
+              <span style={{ color: 'var(--bs-light-text-emphasis)' }}>
                 <strong>Value:</strong> {formatMetaValue(currentValue)}{' '}
                 {siUnit && <strong>{siUnit}</strong>}
               </span>
