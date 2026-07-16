@@ -14,7 +14,7 @@
   grid-template-columns:
     minmax(150px, 1.5fr) minmax(120px, 2fr) minmax(80px, 0.8fr)
     minmax(120px, 1.2fr);
-  background-color: var(--bs-tertiary-bg, #f0f3f5);
+  background-color: var(--sk-table-bg, #f0f3f5);
   border-bottom: 2px solid var(--bs-border-color, #c2cfd6);
   position: sticky;
   top: 55px; /* Fixed header height */
@@ -67,16 +67,20 @@
   contain-intrinsic-block-size: auto 150px;
 }
 
+.virtual-table-row {
+  background-color: var(--sk-table-bg, #f0f3f5);
+}
+
 .virtual-table-row:hover {
-  background-color: var(--bs-tertiary-bg, #f0f3f5);
+  background-color: var(--sk-table-hover-bg, #f0f3f5);
 }
 
 .virtual-table-row.striped {
-  background-color: var(--bs-tertiary-bg, #f0f3f5);
+  background-color: var(--sk-table-striped-bg, #f0f3f5);
 }
 
 .virtual-table-row.striped:hover {
-  background-color: var(--bs-secondary-bg, #e2e6ea);
+  background-color: var(--sk-table-hover-bg, #e2e6ea);
 }
 
 .virtual-table-cell {
@@ -190,7 +194,7 @@
   }
 
   .virtual-table-row.striped {
-    background-color: var(--bs-tertiary-bg, #f0f3f5);
+    background-color: var(--sk-table-striped-bg, #f0f3f5);
   }
 
   .virtual-table-cell {

@@ -400,7 +400,6 @@ export default function PluginConfigurationList() {
                 ref={tableContainerRef}
                 className="plugin-list-container"
                 style={{
-                  border: '1px solid #dee2e6',
                   opacity: isFiltering ? 0.7 : 1,
                   transition: 'opacity 0.2s'
                 }}
@@ -410,7 +409,6 @@ export default function PluginConfigurationList() {
                     style={{
                       position: 'sticky',
                       top: 0,
-                      backgroundColor: '#f8f9fa',
                       zIndex: 1
                     }}
                   >
