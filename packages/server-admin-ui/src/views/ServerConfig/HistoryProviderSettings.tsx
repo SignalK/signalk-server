@@ -65,7 +65,7 @@ const HistoryProviderSettings: React.FC = () => {
     <Card className="mb-3">
       <Card.Header>
         <FontAwesomeIcon icon={faClockRotateLeft} />{' '}
-        <strong>Default History Provider</strong>
+        <strong>History API</strong>
       </Card.Header>
       <Card.Body>
         {loadError && (
@@ -76,13 +76,13 @@ const HistoryProviderSettings: React.FC = () => {
         {providers !== null && (
           <Form.Group
             as={Row}
-            className="mb-0"
+            className="mb-0 align-items-baseline"
             controlId="historyDefaultProvider"
           >
             <Col md={2}>
-              <Form.Label>Default Provider</Form.Label>
+              <Form.Label>Default provider plugin</Form.Label>
             </Col>
-            <Col xs="12" md={10}>
+            <Col xs="12" md={2}>
               {providers.ids.length === 0 ? (
                 <Form.Text className="text-muted">
                   No history providers are registered. Enable a plugin that
@@ -108,11 +108,6 @@ const HistoryProviderSettings: React.FC = () => {
                       </option>
                     ))}
                   </Form.Select>
-                  <Form.Text className="text-muted">
-                    Serves History API requests that do not specify a provider.
-                    The setting persists across restarts and does not depend on
-                    plugin load order.
-                  </Form.Text>
                 </>
               )}
               {configuredButUnavailable && (
@@ -135,6 +130,11 @@ const HistoryProviderSettings: React.FC = () => {
                   {saveError}
                 </Alert>
               )}
+            </Col>
+            <Col xs="12" md={8}>
+              <Form.Text className="text-muted">
+                Serves History API requests that do not specify a provider
+              </Form.Text>
             </Col>
           </Form.Group>
         )}
