@@ -67,7 +67,7 @@ ModuleInternal._resolveFilename = function (
   request: string,
   parent: NodeModule | undefined,
   isMain: boolean,
-  options: Record<string, unknown>
+  options?: Record<string, unknown>
 ) {
   if (isHostProvided(request)) {
     const hostPath = resolveHostPath(request)
