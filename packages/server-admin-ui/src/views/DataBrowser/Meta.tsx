@@ -785,7 +785,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
             <div
               style={{
                 padding: '10px 15px',
-                background: '#f8f9fa',
+                background: 'var(--bs-light-bg-subtle)',
                 borderRadius: '4px',
                 marginBottom: '15px',
                 display: 'flex',
@@ -793,7 +793,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
                 gap: '15px'
               }}
             >
-              <span style={{ color: '#495057' }}>
+              <span style={{ color: 'var(--bs-light-text-emphasis)' }}>
                 <strong>Value:</strong> {formatMetaValue(currentValue)}{' '}
                 {siUnit && <strong>{siUnit}</strong>}
               </span>

@@ -141,7 +141,6 @@
 
   &__grid {
     flex: 1 1 auto;
-    background-color: white;
     max-height: 80%;
     font-size: 14px;
 
@@ -210,7 +209,6 @@
 
 .plugin-card {
   position: relative;
-  border: 1px solid #dee2e6;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
@@ -595,14 +593,12 @@
     }
 
     pre {
-      background: #f0f3f5;
       padding: 8px;
       border-radius: 4px;
       overflow-x: auto;
     }
 
     code {
-      background: #f0f3f5;
       padding: 1px 4px;
       border-radius: 3px;
     }

@@ -1,0 +1,298 @@
+// Bootstrap overrides
+
+//
+// Color system
+//
+
+$white: #fff;
+$gray-100: #f0f3f5;
+$gray-200: #c2cfd6;
+$gray-300: #a4b7c1;
+$gray-400: #869fac;
+$gray-500: #678898;
+$gray-600: #536c79;
+$gray-700: #3e515b;
+$gray-800: #29363d;
+$gray-900: #151b1e;
+$black: #000 !default;
+
+$blue: #003399;
+$indigo: #6610f2 !default;
+$purple: #6f42c1 !default;
+$pink: #e83e8c !default;
+$red: #f86c6b;
+$orange: #f8cb00;
+$yellow: #ffcc00 !default;
+$green: #00cd79;
+$teal: #20c997 !default;
+$cyan: #63c2de;
+
+$colors: (
+  blue: $blue,
+  indigo: $indigo,
+  purple: $purple,
+  pink: $pink,
+  red: $red,
+  orange: $orange,
+  yellow: $yellow,
+  green: $green,
+  teal: $teal,
+  cyan: $cyan,
+  white: $white,
+  gray: $gray-600,
+  gray-dark: $gray-800
+);
+
+$theme-colors: (
+  primary: $blue,
+  secondary: $gray-700,
+  success: $green,
+  info: $cyan,
+  warning: $yellow,
+  danger: $red,
+  light: $gray-200,
+  dark: $gray-800
+);
+
+// Options
+//
+// Quickly modify global styling by enabling or disabling optional features.
+
+$enable-transitions: true;
+$enable-rounded: true;
+
+//
+// Signal K Light Mode Colors
+//
+
+$sk-body-tertiary-bg-light: #e4e5e6;
+
+$sk-primary-light: $blue;
+
+$sk-card-bg-light: $white;
+$sk-card-border-color-light: $gray-200;
+$sk-card-cap-bg-light: $gray-100;
+
+$sk-navbar-bg-light: $white;
+$sk-navbar-border-color-light: $gray-300;
+
+$sk-footer-color-light: $gray-900;
+$sk-footer-bg-light: $gray-100;
+
+$sk-sidebar-color-light: $white;
+$sk-sidebar-bg-light: $gray-800;
+$sk-sidebar-active-bg-light: #33444c;
+$sk-sidebar-border-color-light: transparent;
+
+$sk-progress-bg-light: $gray-100;
+
+$sk-input-bg-light: $white;
+$sk-input-focus-bg-light: $white;
+$sk-input-group-addon-bg-light: $gray-100;
+$sk-input-border-color-light: $gray-200;
+$sk-input-group-addon-border-color-light: $gray-200;
+
+$sk-dropdown-border-color-light: $gray-200;
+$sk-dropdown-divider-bg-light: $gray-100;
+
+$sk-switch-bg-light: $white;
+
+$sk-nav-color-light: $gray-800;
+$sk-nav-bg-light: $white;
+$sk-nav-border-color-light: var(--bs-card-border-color);
+$sk-nav-bottom-color-light: $white;
+
+$sk-table-bg-light: $white;
+$sk-table-hover-bg-light: $gray-100;
+$sk-table-striped-bg-light: $gray-100;
+
+$sk-plugin-config-array-item-bg-light: aliceblue;
+
+//
+// Signal K Dark Mode Colors
+//
+
+$sk-bg-dark: #222630;
+$sk-border-color-dark: #343a48;
+
+$sk-primary-dark: #5b9dff;
+
+$sk-body-tertiary-bg-dark: #1e222a;
+
+$sk-card-bg-dark: $sk-bg-dark;
+$sk-card-border-color-dark: #3f424b;
+$sk-card-cap-bg-dark: #292d36;
+
+$sk-navbar-bg-dark: $sk-bg-dark;
+$sk-navbar-border-color-dark: $sk-border-color-dark;
+
+$sk-footer-color-dark: #dadbdd;
+$sk-footer-bg-dark: $sk-bg-dark;
+
+$sk-sidebar-color-dark: #e3e3e4;
+$sk-sidebar-bg-dark: $sk-bg-dark;
+$sk-sidebar-active-bg-dark: #2b303c;
+$sk-sidebar-border-color-dark: $sk-border-color-dark;
+
+$sk-progress-bg-dark: $gray-800;
+
+$sk-input-bg-dark: $sk-bg-dark;
+$sk-input-focus-bg-dark: $sk-bg-dark;
+$sk-input-group-addon-bg-dark: $gray-100;
+$sk-input-border-color-dark: $sk-border-color-dark;
+$sk-input-group-addon-border-color-dark: $gray-200;
+
+$sk-dropdown-border-color-dark: $sk-border-color-dark;
+$sk-dropdown-divider-bg-dark: $sk-border-color-dark;
+
+$sk-switch-bg-dark: $sk-bg-dark;
+
+$sk-nav-color-dark: #e3e3e4;
+$sk-nav-bg-dark: $sk-bg-dark;
+$sk-nav-border-color-dark: $sk-border-color-dark;
+$sk-nav-bottom-color-dark: $sk-bg-dark;
+
+$sk-table-bg-dark: #212631;
+$sk-table-hover-bg-dark: #32363f;
+$sk-table-striped-bg-dark: #2d313b;
+
+$sk-plugin-config-array-item-bg-dark: $gray-900;
+
+//
+// Apply Signal K Colors to Bootstrap Using Sass Overrides
+//
+
+// NOTE: use bs sass vars for bs overrides that provide both "light" and "dark" variants:
+
+$body-tertiary-bg: $sk-body-tertiary-bg-light;
+$body-tertiary-bg-dark: $sk-body-tertiary-bg-dark;
+
+// NOTE: use css vars for bs overrides that do not provide both "light" and "dark" variants:
+
+:root,
+[data-bs-theme='light'] {
+  --sk-card-bg: #{$sk-card-bg-light};
+  --sk-card-cap-bg: #{$sk-card-cap-bg-light};
+  --sk-card-border-color: #{$sk-card-border-color-light};
+
+  --sk-navbar-bg: #{$sk-navbar-bg-light};
+  --sk-navbar-border-color: #{$sk-navbar-border-color-light};
+
+  --sk-footer-color: #{$sk-footer-color-light};
+  --sk-footer-bg: #{$sk-footer-bg-light};
+
+  --sk-sidebar-color: #{$sk-sidebar-color-light};
+  --sk-sidebar-bg: #{$sk-sidebar-bg-light};
+  --sk-sidebar-active-bg: #{$sk-sidebar-active-bg-light};
+  --sk-sidebar-border-color: #{$sk-sidebar-border-color-light};
+
+  --sk-progress-bg: #{$sk-progress-bg-light};
+
+  --sk-input-bg: #{$sk-input-bg-light};
+  --sk-input-focus-bg: #{$sk-input-focus-bg-light};
+  --sk-input-group-addon-bg: #{$sk-input-group-addon-bg-light};
+  --sk-input-border-color: #{$sk-input-border-color-light};
+  --sk-input-group-addon-border-color: #{$sk-input-group-addon-border-color-light};
+
+  --sk-dropdown-border-color: #{$sk-dropdown-border-color-light};
+  --sk-dropdown-divider-bg: #{$sk-dropdown-divider-bg-light};
+
+  --sk-switch-bg: #{$sk-switch-bg-light};
+
+  --sk-nav-color: #{$sk-nav-color-light};
+  --sk-nav-bg: #{$sk-nav-bg-light};
+  --sk-nav-border-color: #{$sk-nav-border-color-light};
+  --sk-nav-bottom-color: #{$sk-nav-bottom-color-light};
+
+  --sk-table-bg: #{$sk-table-bg-light};
+  --sk-table-hover-bg: #{$sk-table-hover-bg-light};
+  --sk-table-striped-bg: #{$sk-table-striped-bg-light};
+
+  --sk-plugin-config-array-item-bg: #{$sk-plugin-config-array-item-bg-light};
+}
+
+[data-bs-theme='dark'] {
+  --sk-card-bg: #{$sk-card-bg-dark};
+  --sk-card-cap-bg: #{$sk-card-cap-bg-dark};
+  --sk-card-border-color: #{$sk-card-border-color-dark};
+
+  --sk-navbar-bg: #{$sk-navbar-bg-dark};
+  --sk-navbar-border-color: #{$sk-navbar-border-color-dark};
+
+  --sk-footer-color: #{$sk-footer-color-dark};
+  --sk-footer-bg: #{$sk-footer-bg-dark};
+
+  --sk-sidebar-color: #{$sk-sidebar-color-dark};
+  --sk-sidebar-bg: #{$sk-sidebar-bg-dark};
+  --sk-sidebar-active-bg: #{$sk-sidebar-active-bg-dark};
+  --sk-sidebar-border-color: #{$sk-sidebar-border-color-dark};
+
+  --sk-progress-bg: #{$sk-progress-bg-dark};
+
+  --sk-input-bg: #{$sk-input-bg-dark};
+  --sk-input-focus-bg: #{$sk-input-focus-bg-dark};
+  --sk-input-group-addon-bg: #{$sk-input-group-addon-bg-dark};
+  --sk-input-border-color: #{$sk-input-border-color-dark};
+  --sk-input-group-addon-border-color: #{$sk-input-group-addon-border-color-dark};
+
+  --sk-dropdown-border-color: #{$sk-dropdown-border-color-dark};
+  --sk-dropdown-divider-bg: #{$sk-dropdown-divider-bg-dark};
+
+  --sk-switch-bg: #{$sk-switch-bg-dark};
+
+  --sk-nav-color: #{$sk-nav-color-dark};
+  --sk-nav-bg: #{$sk-nav-bg-dark};
+  --sk-nav-border-color: #{$sk-nav-border-color-dark};
+  --sk-nav-bottom-color: #{$sk-nav-bottom-color-dark};
+
+  --sk-table-bg: #{$sk-table-bg-dark};
+  --sk-table-hover-bg: #{$sk-table-hover-bg-dark};
+  --sk-table-striped-bg: #{$sk-table-striped-bg-dark};
+
+  --sk-plugin-config-array-item-bg: #{$sk-plugin-config-array-item-bg-dark};
+}
+
+// Typography
+//
+// Font, line-height, and color for body text, headings, and more.
+
+$font-size-base: 0.875rem;
+
+// Breadcrumbs
+
+$breadcrumb-bg: #fff;
+$breadcrumb-margin-bottom: 1.5rem;
+
+// Cards
+
+$card-bg: var(--sk-card-bg);
+$card-border-color: var(--sk-card-border-color);
+$card-cap-bg: var(--sk-card-cap-bg);
+
+// Dropdowns
+
+$dropdown-padding-y: 0;
+$dropdown-border-color: var(--sk-dropdown-border-color);
+$dropdown-divider-bg: var(--sk-dropdown-divider-bg);
+
+// Buttons
+
+$btn-secondary-border: $gray-300;
+
+// Progress bars
+
+$progress-bg: var(--sk-progress-bg);
+
+// Tables
+
+$table-bg: var(--sk-table-bg);
+$table-hover-bg: var(--sk-table-hover-bg);
+$table-striped-bg: var(--sk-table-striped-bg);
+
+// Forms
+
+$input-bg: var(--sk-input-bg);
+$input-focus-bg: var(--sk-input-focus-bg);
+$input-group-addon-bg: var(--sk-input-group-addon-bg);
+$input-border-color: var(--sk-input-border-color);
+$input-group-addon-border-color: var(--sk-input-group-addon-border-color);

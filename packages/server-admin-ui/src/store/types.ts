@@ -1,3 +1,5 @@
+import { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+
 export interface LogEntry {
   i: number
   d: string
@@ -287,4 +289,12 @@ export interface GnssSensorsData {
   status?: GnssCorrectionStatus
   saveState: SaveState
   saveError?: string
+}
+
+export type ThemeMode = 'light' | 'dark' | 'auto'
+
+export type ModeConfig = {
+  mode: ThemeMode
+  label: string
+  icon: IconDefinition
 }

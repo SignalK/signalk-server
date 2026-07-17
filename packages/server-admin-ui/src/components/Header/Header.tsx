@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback, type MouseEvent } from 'react'
 import Alert from 'react-bootstrap/Alert'
 import Dropdown from 'react-bootstrap/Dropdown'
 import Nav from 'react-bootstrap/Nav'
+import NavDropdown from 'react-bootstrap/NavDropdown'
 import Navbar from 'react-bootstrap/Navbar'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleNotch } from '@fortawesome/free-solid-svg-icons/faCircleNotch'
 import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faBars } from '@fortawesome/free-solid-svg-icons/faBars'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
+import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
 import {
   useLoginStatus,
   useRestarting,
@@ -15,6 +17,7 @@ import {
   useBackpressureWarning
 } from '../../store'
 import { logoutAction, restartAction } from '../../actions'
+import { MODES, useTheme } from '../../hooks/useTheme'
 
 // Header banners are absolutely positioned just below the navbar. The
 // stacked offset places a second banner below the first when both show.
@@ -73,6 +76,9 @@ export default function Header() {
     restartRequired &&
     loginStatus.status === 'loggedIn' &&
     loginStatus.userLevel === 'admin'
+
+  const { theme, setTheme } = useTheme()
+  const activeMode = MODES.find((m) => m.mode === theme)!
 
   return (
     <header className="app-header navbar">
@@ -139,9 +145,29 @@ export default function Header() {
       </button>
       <Nav className="ms-auto">
         {/* Desktop: show items directly */}
+        <NavDropdown
+          align="end"
+          className="theme-dropdown d-none d-sm-block"
+          title={<FontAwesomeIcon icon={activeMode.icon} />}
+          id="basic-nav-dropdown"
+        >
+          {MODES.map(({ mode, label, icon }) => (
+            <NavDropdown.Item
+              key={mode}
+              active={theme === mode}
+              onClick={() => setTheme(mode)}
+              className="d-flex justify-content-between align-items-center"
+            >
+              <span>
+                <FontAwesomeIcon icon={icon} className="me-2" /> {label}
+              </span>
+              {theme === mode && <FontAwesomeIcon icon={faCheck} />}
+            </NavDropdown.Item>
+          ))}
+        </NavDropdown>{' '}
         {loginStatus.status === 'loggedIn' &&
           loginStatus.userLevel === 'admin' && (
-            <Nav.Item className="d-none d-sm-block px-3">
+            <Nav.Item className="d-none d-sm-block">
               <Nav.Link href="#/" onClick={handleRestart}>
                 <FontAwesomeIcon
                   icon={faCircleNotch}
@@ -153,7 +179,7 @@ export default function Header() {
             </Nav.Item>
           )}
         {loginStatus.status === 'loggedIn' && (
-          <Nav.Item className="d-none d-sm-block px-3">
+          <Nav.Item className="d-none d-sm-block">
             <Nav.Link href="#/" onClick={handleLogout}>
               <FontAwesomeIcon icon={faLock} /> Logout
             </Nav.Link>
@@ -174,6 +200,19 @@ export default function Header() {
               <FontAwesomeIcon icon={faBars} />
             </Dropdown.Toggle>
             <Dropdown.Menu align="end">
+              {MODES.map(({ mode, label, icon }) => (
+                <Dropdown.Item
+                  key={mode}
+                  active={theme === mode}
+                  onClick={() => setTheme(mode)}
+                  className="d-flex justify-content-between align-items-center"
+                >
+                  <span>
+                    <FontAwesomeIcon icon={icon} className="me-2" /> {label}
+                  </span>
+                  {theme === mode && <FontAwesomeIcon icon={faCheck} />}
+                </Dropdown.Item>
+              ))}
               {loginStatus.status === 'loggedIn' &&
                 loginStatus.userLevel === 'admin' && (
                   <Dropdown.Item onClick={handleRestart}>
