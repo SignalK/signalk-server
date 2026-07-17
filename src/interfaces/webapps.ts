@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { WebappStatus } from '@signalk/server-api'
 import express, { Application, Request, Response } from 'express'
 import fs from 'fs'
 import { uniqBy } from 'lodash'
@@ -22,6 +23,7 @@ import { Config } from '../config/config'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { modulesWithKeyword, NpmPackageData } from '../modules'
+import { SecurityStrategy } from '../security'
 
 const debug = createDebug('signalk-server:interfaces:webapps')
 
@@ -47,6 +49,8 @@ interface WebappsApp extends Application {
   pluginconfigurators: NpmPackageData[]
   plugins?: PluginEntry[]
   getPluginOptions?: (id: string) => PluginOptions
+  securityStrategy: SecurityStrategy
+  setWebappStatus: (webappName: string, status: WebappStatus) => void
 }
 
 function isPluginWebapp(metadata: NpmPackageData): boolean {
@@ -100,6 +104,32 @@ function mountApis(app: WebappsApp): void {
   app.get(`${SERVERROUTESPREFIX}/addons`, (_req: Request, res: Response) => {
     res.json(app.addons)
   })
+
+  const statusPath = `${SERVERROUTESPREFIX}/webapps/:name/status`
+  app.securityStrategy.addWriteMiddleware(statusPath)
+  app.put(statusPath, (req: Request, res: Response) => {
+    const name = req.params.name
+    const installed =
+      app.webapps.some((webapp) => webapp.name === name) ||
+      app.embeddablewebapps.some((webapp) => webapp.name === name)
+    if (!installed) {
+      res.status(404).json({ error: `Unknown webapp: ${name}` })
+      return
+    }
+    const { warnCount, errorCount } = req.body ?? {}
+    if (!isCount(warnCount) || !isCount(errorCount)) {
+      res.status(400).json({
+        error: 'warnCount and errorCount must be non-negative integers'
+      })
+      return
+    }
+    app.setWebappStatus(name, { warnCount, errorCount })
+    res.json({ ok: true })
+  })
+}
+
+function isCount(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0
 }
 
 module.exports = (app: WebappsApp) => {

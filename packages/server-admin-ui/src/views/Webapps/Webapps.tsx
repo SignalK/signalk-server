@@ -5,7 +5,7 @@ import {
   createElement,
   ComponentType
 } from 'react'
-import { useWebapps, useAddons } from '../../store'
+import { useWebapps, useWebappStatus, useAddons } from '../../store'
 import { fetchWebapps } from '../../actions'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -33,6 +33,7 @@ interface AddonPanelProps {
 
 export default function Webapps() {
   const webapps = useWebapps() as WebAppInfo[]
+  const webappStatus = useWebappStatus()
   const addons = useAddons() as AddonModule[]
 
   useEffect(() => {
@@ -64,7 +65,11 @@ export default function Webapps() {
               .map((webAppInfo) => {
                 return (
                   <Col xs="12" md="12" lg="6" xl="4" key={webAppInfo.name}>
-                    <Webapp key={webAppInfo.name} webAppInfo={webAppInfo} />
+                    <Webapp
+                      key={webAppInfo.name}
+                      webAppInfo={webAppInfo}
+                      status={webappStatus[webAppInfo.name]}
+                    />
                   </Col>
                 )
               })}

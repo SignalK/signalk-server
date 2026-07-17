@@ -23,7 +23,8 @@ import {
   usePriorityOverrides,
   usePriorityGroups,
   useActiveConflictCount,
-  useUnconfiguredGnssSources
+  useUnconfiguredGnssSources,
+  useWebappStatus
 } from '../../store'
 import classNames from 'classnames'
 import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
@@ -75,6 +76,7 @@ export default function Sidebar({ location }: SidebarProps) {
   const loginStatus = useLoginStatus()
   const plugins = usePlugins()
   const conflictCount = useActiveConflictCount()
+  const webappStatus = useWebappStatus()
 
   const multiSourcePaths = useMultiSourcePaths()
   const reconciled = useReconciledGroups()
@@ -286,11 +288,27 @@ export default function Sidebar({ location }: SidebarProps) {
         url: '/dashboard',
         icon: 'icon-speedometer'
       },
-      {
-        name: 'Webapps',
-        url: '/webapps',
-        icon: 'icon-grid'
-      },
+      ((): NavItemData => {
+        let webappErrorSum = 0
+        let webappWarnSum = 0
+        for (const status of Object.values(webappStatus)) {
+          webappErrorSum += status.errorCount
+          webappWarnSum += status.warnCount
+        }
+        return {
+          name: 'Webapps',
+          url: '/webapps',
+          icon: 'icon-grid',
+          badges: [
+            webappErrorSum > 0
+              ? { variant: 'danger', text: `${webappErrorSum}` }
+              : null,
+            webappWarnSum > 0
+              ? { variant: 'warning', text: `${webappWarnSum}` }
+              : null
+          ]
+        }
+      })(),
       ((): NavItemData => {
         const dataBadgeCount = isAdmin
           ? prioritiesAttentionCount + conflictCount + unconfiguredGnssCount
@@ -439,7 +457,8 @@ export default function Sidebar({ location }: SidebarProps) {
     unconfiguredPriorityCount,
     overridesWithMissingSourcesCount,
     unconfiguredGnssCount,
-    historyProviderUnavailable
+    historyProviderUnavailable,
+    webappStatus
   ])
 
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(

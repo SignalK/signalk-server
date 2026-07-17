@@ -217,6 +217,41 @@ export interface Webapp {
   [key: string]: unknown
 }
 
+export interface WebappStatus {
+  warnCount: number
+  errorCount: number
+  timeStamp?: string
+}
+
+export type WebappStatusMap = Record<string, WebappStatus>
+
+// The server is the only writer, but the payload arrives over the wire, so
+// drop any entry that would make the badge renderers read a count off null.
+export function sanitizeWebappStatusMap(data: unknown): WebappStatusMap {
+  if (typeof data !== 'object' || data === null) {
+    return {}
+  }
+  const result: WebappStatusMap = {}
+  for (const [name, entry] of Object.entries(data as Record<string, unknown>)) {
+    if (typeof entry !== 'object' || entry === null) {
+      continue
+    }
+    const { warnCount, errorCount, timeStamp } = entry as Record<
+      string,
+      unknown
+    >
+    if (!Number.isFinite(warnCount) || !Number.isFinite(errorCount)) {
+      continue
+    }
+    result[name] = {
+      warnCount: warnCount as number,
+      errorCount: errorCount as number,
+      timeStamp: typeof timeStamp === 'string' ? timeStamp : undefined
+    }
+  }
+  return result
+}
+
 export interface Addon {
   name: string
   [key: string]: unknown

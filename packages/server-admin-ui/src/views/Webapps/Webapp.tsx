@@ -1,9 +1,11 @@
 import { ReactNode } from 'react'
+import Badge from 'react-bootstrap/Badge'
 import Card from 'react-bootstrap/Card'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTableCells } from '@fortawesome/free-solid-svg-icons/faTableCells'
 import classNames from 'classnames'
 import { toSafeModuleId } from './dynamicutilities'
+import type { WebappStatus } from '../../store/types'
 
 const ICON_BOX_SIZE = '72px'
 
@@ -21,6 +23,7 @@ interface WebAppInfo {
 
 interface WebappProps {
   webAppInfo: WebAppInfo
+  status?: WebappStatus
   children?: ReactNode
 }
 
@@ -30,7 +33,11 @@ export function urlToWebapp(webAppInfo: WebAppInfo): string {
     : `/${webAppInfo.name}/`
 }
 
-export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
+export default function Webapp({
+  webAppInfo,
+  status,
+  ...attributes
+}: WebappProps) {
   const padding = { card: 'p-3', icon: 'p-3', lead: 'mt-2' }
 
   const card = {
@@ -56,7 +63,7 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
     const classes = classNames(
       !appIcon && 'bg-primary',
       padding.icon,
-      'font-2xl me-3 float-start'
+      'font-2xl'
     )
     const style: React.CSSProperties = {
       backgroundSize: 'cover',
@@ -77,11 +84,43 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
     )
   }
 
+  const errorCount = status?.errorCount ?? 0
+  const warnCount = status?.warnCount ?? 0
+  const statusBadge = (
+    count: number,
+    variant: 'danger' | 'warning',
+    style: React.CSSProperties
+  ) => (
+    <Badge
+      pill
+      bg={variant}
+      text={variant === 'warning' ? 'dark' : undefined}
+      style={{ position: 'absolute', right: 0, ...style }}
+    >
+      {count}
+    </Badge>
+  )
+
   return (
     <a href={url}>
       <Card>
         <Card.Body className={card.style} {...attributes}>
-          {blockIcon()}
+          <span
+            className="float-start me-3"
+            style={{ position: 'relative', display: 'inline-block' }}
+          >
+            {blockIcon()}
+            {errorCount > 0 &&
+              statusBadge(errorCount, 'danger', {
+                top: 0,
+                transform: 'translate(40%, -40%)'
+              })}
+            {warnCount > 0 &&
+              statusBadge(warnCount, 'warning', {
+                bottom: 0,
+                transform: 'translate(40%, 40%)'
+              })}
+          </span>
           <div className={lead.classes}>{header}</div>
           <div className="text-muted font-xs">{webAppInfo.description}</div>
         </Card.Body>

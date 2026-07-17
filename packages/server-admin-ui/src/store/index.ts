@@ -182,6 +182,10 @@ export function useWebapps() {
   return useStore((s) => s.webapps)
 }
 
+export function useWebappStatus() {
+  return useStore((s) => s.webappStatus)
+}
+
 export function useAddons() {
   return useStore((s) => s.addons)
 }
