@@ -98,7 +98,7 @@
     "preview": "vite preview",
     "format": "prettier --write src/",
     "lint": "eslint --fix",
-    "lint:css": "stylelint \"scss/**/*.scss\" \"src/**/*.scss\"",
+    "lint:css": "stylelint \"src/**/*.scss\"",
     "clean": "rimraf ./public",
     "bundle-analyzer": "vite-bundle-visualizer",
     "test": "vitest run",
