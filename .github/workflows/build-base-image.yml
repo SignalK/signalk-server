@@ -9,6 +9,10 @@ on:
         description: 'Ubuntu 24.04 + Node 24.x'
         type: boolean
         default: true
+      ubuntu_26_04_node_24:
+        description: 'Ubuntu 26.04 + Node 24.x'
+        type: boolean
+        default: true
       alpine_node_24:
         description: 'Alpine + Node 24'
         type: boolean

@@ -10,6 +10,10 @@ on:
         description: 'Ubuntu 24.04 + Node 24.x'
         type: boolean
         default: true
+      ubuntu_26_04_node_24:
+        description: 'Ubuntu 26.04 + Node 24.x'
+        type: boolean
+        default: true
       alpine_node_24:
         description: 'Alpine + Node 24'
         type: boolean
@@ -189,8 +193,11 @@ jobs:
           # dispatch inputs and follow their own default_enabled. The release
           # manifest tag convention puts ubuntu full on the bare semver tags
           # (v2.21.3, latest, v2, v2.21) and adds '-<family>' for non-ubuntu
-          # variants (v2.21.3-alpine, latest-alpine); the edition tag_suffix
-          # ('' for full, '-core' for core) is appended (v2.21.3-core,
+          # variants (v2.21.3-alpine, latest-alpine); each os_variant's own
+          # tag_suffix ('' for the primary row of a family, e.g. '-26.04' for
+          # a secondary ubuntu row) is appended so rows sharing a family don't
+          # collide on the same tags, and finally the edition tag_suffix (''
+          # for full, '-core' for core) is appended (v2.21.3-core,
           # latest-core, v2.21.3-alpine-core).
           variants=$(jq -c \
             --argjson enabled "${ENABLED_JSON:-null}" '
@@ -207,7 +214,7 @@ jobs:
                   node_id:   $n.id,
                   edition:   $e.id,
                   tag_suffix: $e.tag_suffix,
-                  suffix:    ((if $o.family == "ubuntu" then "" else "-\($o.family)" end) + $e.tag_suffix)
+                  suffix:    ((if $o.family == "ubuntu" then "" else "-\($o.family)" end) + $o.tag_suffix + $e.tag_suffix)
                 }
               ]
             | map(select(.enabled == "true" and .ed_enabled))
