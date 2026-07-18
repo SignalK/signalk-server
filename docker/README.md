@@ -105,12 +105,12 @@ The **core** variant strips the bundled webapps and plugins from the image, keep
 
 ### Tags
 
-| Variant | Ubuntu rolling | Alpine rolling        | Ubuntu pinned | Alpine pinned        |
-| ------- | -------------- | --------------------- | ------------- | -------------------- |
-| Full    | `:latest`      | `:latest-alpine`      | `:X.Y.Z`      | `:X.Y.Z-alpine`      |
-| Core    | `:latest-core` | `:latest-alpine-core` | `:X.Y.Z-core` | `:X.Y.Z-alpine-core` |
+| Variant | Ubuntu 24.04 rolling | Ubuntu 26.04 rolling | Alpine rolling        | Ubuntu 24.04 pinned | Ubuntu 26.04 pinned | Alpine pinned        |
+| ------- | -------------------- | -------------------- | --------------------- | ------------------- | ------------------- | -------------------- |
+| Full    | `:latest`            | `:latest-26.04`      | `:latest-alpine`      | `:X.Y.Z`            | `:X.Y.Z-26.04`      | `:X.Y.Z-alpine`      |
+| Core    | `:latest-core`       | `:latest-26.04-core` | `:latest-alpine-core` | `:X.Y.Z-core`       | `:X.Y.Z-26.04-core` | `:X.Y.Z-alpine-core` |
 
-The core `-core` suffix is appended after the full variant's tag, so core mirrors every full tag. Versioned core tags follow the existing major / major.minor pattern (`:v2-core`, `:v2.27-core`, plus `-alpine-core` siblings).
+The core `-core` suffix is appended after the full variant's tag, so core mirrors every full tag. Versioned core tags follow the existing major / major.minor pattern (`:v2-core`, `:v2.27-core`, plus `-alpine-core` / `-26.04-core` siblings). `:latest` / `:X.Y.Z` (no OS suffix) always refer to the Ubuntu 24.04 build.
 
 ### What's stripped
 

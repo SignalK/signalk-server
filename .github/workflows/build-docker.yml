@@ -18,6 +18,10 @@ on:
         description: 'Ubuntu 24.04 + Node 24.x'
         type: boolean
         default: true
+      ubuntu_26_04_node_24:
+        description: 'Ubuntu 26.04 + Node 24.x'
+        type: boolean
+        default: true
       alpine_node_24:
         description: 'Alpine + Node 24'
         type: boolean
@@ -83,8 +87,11 @@ jobs:
           # checkbox (or by default_enabled for non-dispatch runs); editions
           # are not dispatch inputs and follow their own default_enabled.
           # The per-variant suffix preserves the existing SignalK manifest tag
-          # convention ('-<node>' for ubuntu, '-<node_id>-<family>' otherwise)
-          # with the edition tag_suffix ('' for full, '-core' for core) appended.
+          # convention ('-<node>' for ubuntu, '-<node_id>-<family>' otherwise),
+          # then appends each os_variant's own tag_suffix ('' for the primary
+          # row of a family, e.g. '-26.04' for a secondary ubuntu row) so rows
+          # sharing a family don't collide, and finally the edition tag_suffix
+          # ('' for full, '-core' for core).
           variants=$(jq -c \
             --argjson enabled "${ENABLED_JSON:-null}" '
             (if ($enabled | type) == "object" then $enabled else {} end) as $en
@@ -100,7 +107,7 @@ jobs:
                   node_id:   $n.id,
                   edition:   $e.id,
                   tag_suffix: $e.tag_suffix,
-                  suffix:    ((if $o.family == "ubuntu" then "-\($n.id).x" else "-\($n.id)-\($o.family)" end) + $e.tag_suffix)
+                  suffix:    ((if $o.family == "ubuntu" then "-\($n.id).x" else "-\($n.id)-\($o.family)" end) + $o.tag_suffix + $e.tag_suffix)
                 }
               ]
             | map(select(.enabled == "true" and .ed_enabled))
