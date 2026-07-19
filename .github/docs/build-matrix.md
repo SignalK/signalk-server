@@ -17,6 +17,7 @@
   - `default_enabled` — when scheduled / push / tag runs occur (i.e. when no `workflow_dispatch` inputs are provided), the variant is included only if this is `true` on both the OS row and the Node row.
 - `node_versions` — list of Node major versions. Each entry:
   - `id` — Node major (e.g. `24`).
+  - `primary` — exactly one row must be `true`: it owns the bare release tags (`latest`, `vX.Y.Z`, `latest-alpine`, …). `release.yml` prepends the node label (`-<node>.x` for ubuntu, `-<node>` otherwise) to every tag of a non-primary row (e.g. `latest-26.x`, `v2.21.3-26-alpine`) so two Node majors never collide on the same release tags. `build-base-image.yml` and `build-docker.yml` ignore this field — their tags already include the node label.
   - `default_enabled` — see above.
   - `extra_platforms` — optional `{ <arch.id>: <platform string> }` appended to that arch's base platform for this Node major.
   - `exclude_archs` — optional `[<arch.id>, …]` listing archs that should not be built for this Node major.
@@ -33,7 +34,7 @@
 ## Adding things
 
 - **New OS:** append a row to `os_variants`. Each Docker workflow exposes one `workflow_dispatch` toggle per row (keyed by `family` + `id`, see Naming conventions), so the row needs a matching input in every workflow where it should be independently selectable. If the row shares a `family` with an existing row, give it a non-empty `tag_suffix` — otherwise the two rows resolve to the same manifest tags and each build silently overwrites the other's `latest` / `vX.Y.Z` image.
-- **New Node major:** append a row to `node_versions` and add inputs to the same three workflows.
+- **New Node major:** append a row to `node_versions` (with `primary: false` — promote it later by swapping which row is `primary`) and add inputs to the same three workflows.
 - **New arch:** append a row to `architectures`. No workflow input changes needed — arches aren't part of the dispatch input UI.
 - **New edition:** append a row to `editions` with its `tag_suffix`, and add a matching `case` branch keyed on `EDITION` in `./docker/Dockerfile` (dev) and `./docker/Dockerfile_rel` (release). No workflow input changes needed — editions aren't part of the dispatch input UI.
 
