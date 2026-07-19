@@ -17,6 +17,18 @@ on:
         description: 'Alpine + Node 24'
         type: boolean
         default: true
+      ubuntu_24_04_node_26:
+        description: 'Ubuntu 24.04 + Node 26.x'
+        type: boolean
+        default: true
+      ubuntu_26_04_node_26:
+        description: 'Ubuntu 26.04 + Node 26.x'
+        type: boolean
+        default: true
+      alpine_node_26:
+        description: 'Alpine + Node 26'
+        type: boolean
+        default: true
 
 env:
   GHCR_REGISTRY: ghcr.io
