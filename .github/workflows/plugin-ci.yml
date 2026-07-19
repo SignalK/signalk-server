@@ -14,11 +14,15 @@
 # Usage in your plugin repo:
 #   See docs/develop/plugins/examples/plugin-caller-example.yml
 #
-# By default the plugin is built once per matrix Node version (whatever
-# is under test). Pass `build-node-version` to pin the Build step to a
-# single fixed Node version (e.g. to match a production target like an
-# ARMv6l Pi Zero W) regardless of which versions are listed in
-# `node-versions` for testing.
+# The plugin is built exactly once (see the `build` job below), and every
+# platform/Node combination tested downstream installs and tests that same
+# build output. `build-node-version` picks which Node version runs that one
+# build; it defaults to '24' (set in the input schema below) — a deliberate
+# fixed choice, not derived from `node-versions`. Modern build tooling
+# (TypeScript, bundlers, etc.) commonly requires a current Node, and
+# `node-versions` may legitimately list older versions you still want to
+# *test* against. If '24' doesn't suit your build, set `build-node-version`
+# explicitly.
 
 name: SignalK Plugin CI
 
@@ -47,9 +51,9 @@ on:
         type: string
         default: '["22", "24"]'
       build-node-version:
-        description: 'Pin the Node version used only for the Build step, independent of node-versions. Leave empty to build with whichever matrix Node version is under test (default behavior).'
+        description: 'Node version used to Build the plugin'
         type: string
-        default: ''
+        default: '24'
 
       # ── armv7 / Cerbo GX options ────────────────────────────
       enable-armv7:
@@ -87,7 +91,7 @@ jobs:
   #  works downstream. Only the transpile/bundle step is shared.
   # ════════════════════════════════════════════════════════════
   build:
-    name: Build (Node ${{ inputs.build-node-version != '' && inputs.build-node-version || '24' }})
+    name: Build (Node ${{ inputs.build-node-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -97,7 +101,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: ${{ inputs.build-node-version != '' && inputs.build-node-version || '24' }}
+          node-version: ${{ inputs.build-node-version }}
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
 
       - name: Install dependencies
@@ -1979,7 +1983,7 @@ jobs:
             echo ""
             echo "| Job | Result | Notes |"
             echo "|-----|--------|-------|"
-            echo "| Build | $(icon "$BUILD_RESULT") | Node ${{ inputs.build-node-version != '' && inputs.build-node-version || '24' }} — shared by all jobs below |"
+            echo "| Build | $(icon "$BUILD_RESULT") | Node ${{ inputs.build-node-version }} — shared by all jobs below |"
             echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24 |"
             echo "| armv7 — Cerbo GX (QEMU) | $(icon "$ARMV7_RESULT") | Node 20 (Venus OS 3.70) — advisory, non-blocking |"
             if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
