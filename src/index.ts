@@ -32,6 +32,7 @@ import {
   SourceRef,
   Timestamp,
   Update,
+  WebappStatus,
   WithFeatures
 } from '@signalk/server-api'
 import { randomUUID } from 'crypto'
@@ -273,6 +274,32 @@ class Server {
         from: 'signalk-server',
         data: app.getProviderStatus()
       })
+    }
+
+    app.webappsStatus = {}
+    app.setWebappStatus = (webappName: string, status: WebappStatus) => {
+      const warnCount = sanitizeCount(status?.warnCount)
+      const errorCount = sanitizeCount(status?.errorCount)
+      if (warnCount === 0 && errorCount === 0) {
+        delete app.webappsStatus[webappName]
+      } else {
+        app.webappsStatus[webappName] = {
+          warnCount,
+          errorCount,
+          timeStamp: new Date().toISOString()
+        }
+      }
+      app.emit('serverevent', {
+        type: 'WEBAPPS_STATUS',
+        from: 'signalk-server',
+        data: app.webappsStatus
+      })
+    }
+
+    function sanitizeCount(value: number | undefined) {
+      return Number.isSafeInteger(value) && (value as number) > 0
+        ? (value as number)
+        : 0
     }
 
     app.getProviderStatus = () => {
@@ -723,6 +750,14 @@ class Server {
       if (event.type) {
         app.lastServerEvents[event.type] = event
       }
+    })
+
+    // seed the replay-on-connect cache so clients reset webapp badges
+    // after a server restart
+    app.emit('serverevent', {
+      type: 'WEBAPPS_STATUS',
+      from: 'signalk-server',
+      data: app.webappsStatus
     })
 
     app.intervals.push(startDeltaStatistics(app))

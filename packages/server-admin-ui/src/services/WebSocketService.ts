@@ -1,5 +1,6 @@
 import { useStore, type SignalKStore } from '../store'
 import { sanitizeGnssConfig } from '../store/slices/gnssPositionSlice'
+import { sanitizeWebappStatusMap } from '../store/types'
 import { fetchAllData } from '../dataFetching'
 
 export type WebSocketStatus =
@@ -238,6 +239,11 @@ export class WebSocketService {
         break
       case 'PROVIDERSTATUS':
         this.zustandSetState({ providerStatus: data } as Partial<SignalKStore>)
+        break
+      case 'WEBAPPS_STATUS':
+        this.zustandSetState({
+          webappStatus: sanitizeWebappStatusMap(data)
+        } as Partial<SignalKStore>)
         break
       case 'DEBUG_SETTINGS':
         this.zustandSetState((state) => ({

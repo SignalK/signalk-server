@@ -49,6 +49,45 @@ where:
 
 See also [Working Offline](./README.md#offline-use).
 
+## Reporting Status Counts (Badges)
+
+A webapp can report warning and error counts to the server. The counts are displayed in the Admin UI as badges on the webapp's icon in the _Webapps_ list — red for errors, yellow for warnings — and summed across all webapps as badges on the _Webapps_ item in the sidebar. This lets users see at a glance that a webapp needs attention without opening it.
+
+There are two ways to report counts:
+
+**1. From the webapp (browser):**
+
+```
+PUT /skServer/webapps/:name/status
+{
+  "warnCount": 2,
+  "errorCount": 1
+}
+```
+
+`:name` is the webapp's package name, URL-encoded (`@signalk/freeboard-sk` → `%40signalk%2Ffreeboard-sk`). For example:
+
+```javascript
+fetch(`/skServer/webapps/${encodeURIComponent('my-signalk-webapp')}/status`, {
+  method: 'PUT',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ warnCount: 2, errorCount: 1 })
+})
+```
+
+When security is enabled the request must be made by a user with _read/write_ permission. Responses: `404` if the named webapp is not installed, `400` if the counts are not non-negative integers.
+
+**2. From a plugin:**
+
+```javascript
+app.setWebappStatus('my-signalk-webapp', { warnCount: 2, errorCount: 1 })
+```
+
+If your webapp has a plugin backend, prefer this method: the plugin runs continuously, so it can keep the badges up to date while the webapp itself is not open in any browser.
+
+Reporting zero for both counts clears the badges. The counts are held in memory only and are cleared when the server restarts.
+
 ## Application Data: Storing Webapp Data on the Server
 
 Application Data is only supported if security is turned on. It supports two namespaces, one for _global data_ and one for _user specific data_. For example, a client might want to store boat specific gauge configuration globally so that other users have access to it. Otherwise, it could use the user area to store user specific preferences.

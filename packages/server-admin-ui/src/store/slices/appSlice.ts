@@ -18,7 +18,8 @@ import type {
   ServerStatistics,
   PathPriority,
   LogState,
-  NodeInfo
+  NodeInfo,
+  WebappStatusMap
 } from '../types'
 import type { SourcesData } from '../../utils/sourceLabels'
 
@@ -39,6 +40,7 @@ export type AppstoreView = 'All' | 'Installed' | 'Updates' | 'Installing'
 export interface AppSliceState {
   plugins: Plugin[]
   webapps: Webapp[]
+  webappStatus: WebappStatusMap
   addons: Addon[]
   appStore: AppStoreState
   loginStatus: LoginStatus
@@ -121,6 +123,7 @@ export interface AppSliceState {
 export interface AppSliceActions {
   setPlugins: (plugins: Plugin[]) => void
   setWebapps: (webapps: Webapp[]) => void
+  setWebappStatus: (webappStatus: WebappStatusMap) => void
   setAddons: (addons: Addon[]) => void
   setAppStore: (appStore: AppStoreState) => void
   setLoginStatus: (status: LoginStatus) => void
@@ -196,6 +199,7 @@ export type AppSlice = AppSliceState & AppSliceActions
 const initialAppState: AppSliceState = {
   plugins: [],
   webapps: [],
+  webappStatus: {},
   addons: [],
   appStore: {
     updates: [],
@@ -254,6 +258,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setWebapps: (webapps) => {
     set({ webapps })
+  },
+
+  setWebappStatus: (webappStatus) => {
+    set({ webappStatus })
   },
 
   setAddons: (addons) => {

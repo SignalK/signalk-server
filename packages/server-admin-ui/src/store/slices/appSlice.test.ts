@@ -8,6 +8,7 @@ describe('appSlice', () => {
     useStore.setState({
       plugins: [],
       webapps: [],
+      webappStatus: {},
       addons: [],
       appStore: {
         updates: [],
@@ -65,6 +66,19 @@ describe('appSlice', () => {
       useStore.getState().setWebapps(webapps)
 
       expect(useStore.getState().webapps).toEqual(webapps)
+    })
+  })
+
+  describe('setWebappStatus', () => {
+    it('should update webapp status state', () => {
+      const webappStatus = {
+        'Webapp 1': { warnCount: 2, errorCount: 1 },
+        'Webapp 2': { warnCount: 0, errorCount: 3 }
+      }
+
+      useStore.getState().setWebappStatus(webappStatus)
+
+      expect(useStore.getState().webappStatus).toEqual(webappStatus)
     })
   })
 

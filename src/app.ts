@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Delta, ServerAPI, SKVersion, FullSignalK } from '@signalk/server-api'
+import {
+  Delta,
+  ServerAPI,
+  SKVersion,
+  FullSignalK,
+  WebappStatus
+} from '@signalk/server-api'
 import { EventEmitter } from 'node:events'
 
 import { Config } from './config/config'
@@ -23,6 +29,7 @@ export interface ServerApp extends ServerAPI {
   stalenessEnforcer?: StalenessEnforcer
   getMaxFailoverTimeoutMs?: (path: string) => number
   getProviderStatus: () => any
+  webappsStatus: { [webappName: string]: WebappStatus & { timeStamp: string } }
   lastServerEvents: { [key: string]: any }
   clients: number
 }

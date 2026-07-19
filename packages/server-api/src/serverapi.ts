@@ -267,6 +267,32 @@ export interface ServerAPI
   setPluginError(msg: string): void
 
   /**
+   * Report warning and error counts for an installed webapp.
+   *
+   * The counts are displayed as badges on the webapp's icon in the
+   * _Webapps_ list of the Admin UI (red for errors, yellow for warnings)
+   * and summed on the _Webapps_ item in the Admin UI sidebar.
+   *
+   * Reporting zero for both counts clears the webapp's badges. The counts
+   * are held in memory only and are cleared when the server restarts.
+   *
+   * Webapps without a plugin backend can report their counts via
+   * `PUT /skServer/webapps/:name/status` instead.
+   *
+   * @example
+   * ```javascript
+   * app.setWebappStatus('@signalk/freeboard-sk', {
+   *   warnCount: 2,
+   *   errorCount: 1
+   * });
+   * ```
+   *
+   * @param webappName the name of an installed webapp, e.g. `@signalk/freeboard-sk`
+   * @category Status and Debugging
+   */
+  setWebappStatus?(webappName: string, status: WebappStatus): void
+
+  /**
    * Emit a delta message.
    *
    * _Note: These deltas are handled by the server in the same way as any other incoming deltas._
@@ -512,6 +538,16 @@ export interface SelfIdentity {
   selfType: string
   selfId: string
   selfContext: string
+}
+
+/**
+ * Warning and error counts reported for a webapp, displayed as badges
+ * in the Admin UI. See {@link ServerAPI.setWebappStatus}.
+ * @category Server API
+ */
+export interface WebappStatus {
+  warnCount: number
+  errorCount: number
 }
 
 /** @category Server API */
