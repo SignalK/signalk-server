@@ -71,33 +71,52 @@ export type RadarControlsSchemaType = Static<typeof RadarControlsSchema>
 
 export const RadarInfoSchema = Type.Object(
   {
-    id: Type.String({ description: 'Unique radar identifier' }),
-    name: Type.String({ description: 'Display name' }),
-    brand: Type.Optional(Type.String({ description: 'Manufacturer/brand' })),
-    status: RadarStatusSchema,
-    spokesPerRevolution: Type.Integer({
-      description: 'Number of spokes per full rotation (e.g. 512, 1024, 2048)',
-      examples: [2048]
+    name: Type.String({
+      description: 'User-defined name, or the auto-detected model name'
     }),
-    maxSpokeLen: Type.Integer({
-      description: 'Maximum spoke length in samples (e.g. 512, 1024)',
-      examples: [1024]
+    brand: Type.String({
+      description:
+        'Radar manufacturer brand (Navico, Furuno, Raymarine, Garmin, Emulator)'
     }),
-    range: Type.Number({
-      description: 'Current range in meters',
-      units: 'm'
+    model: Type.Optional(
+      Type.String({ description: 'Radar model name, if detected' })
+    ),
+    radarIpAddress: Type.String({
+      description: 'IP address of the radar unit on the network'
     }),
-    controls: RadarControlsSchema,
+    spokeDataUrl: Type.Optional(
+      Type.String({
+        description:
+          'WebSocket URL for one-way binary spoke image data. Absent = served by this server at …/radars/{id}/spokes; present = an external URL for direct client connection.'
+      })
+    ),
     streamUrl: Type.Optional(
       Type.String({
         description:
-          'WebSocket URL for spoke stream. If absent, use /radars/{id}/stream'
+          'WebSocket URL for the Signal K delta/PUT stream carrying radars.{id}.controls.* and target data (distinct from spokeDataUrl). Absent = use this server at /signalk/v1/stream; present = an external URL.'
       })
     )
   },
   {
     $id: 'RadarInfoModel',
-    description: 'Information about a radar device'
+    description:
+      'Discovery information for a radar device. Live state (status, controls) is on /state; static parameters on /capabilities.'
   }
 )
 export type RadarInfoSchemaType = Static<typeof RadarInfoSchema>
+
+export const RadarsResponseSchema = Type.Object(
+  {
+    version: Type.String({
+      description: 'Radar API version (semver) this response conforms to'
+    }),
+    radars: Type.Record(Type.String(), RadarInfoSchema, {
+      description: 'Discovered radars, keyed by radar ID'
+    })
+  },
+  {
+    $id: 'RadarsResponse',
+    description: 'Response for GET /radars'
+  }
+)
+export type RadarsResponseSchemaType = Static<typeof RadarsResponseSchema>

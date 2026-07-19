@@ -439,59 +439,89 @@ export interface ArpaSettings {
 // ============================================================================
 
 /**
- * Radar information returned by GET /radars/{id}
+ * Radar discovery information — the entries of the `GET /radars` response.
+ *
+ * This is a *lean* discovery object: it identifies the radar and points at its
+ * two stream URLs, but carries no live state. Dynamic values live on separate
+ * endpoints — operational status and control values at `GET /radars/{id}/state`
+ * (and `/controls`), and static parameters such as `spokesPerRevolution` /
+ * `maxSpokeLength` at `GET /radars/{id}/capabilities`. This matches the Radar API
+ * specification (`radar_api.md`) and the mayara-server reference implementation.
  *
  * @category Radar API
  *
  * @example
  * ```json
  * {
- *   "id": "radar-0",
- *   "name": "Furuno DRS4D-NXT",
- *   "brand": "Furuno",
- *   "status": "transmit",
- *   "spokesPerRevolution": 2048,
- *   "maxSpokeLen": 1024,
- *   "range": 2000,
- *   "controls": {
- *     "gain": { "auto": false, "value": 50 },
- *     "sea": { "auto": true, "value": 30 }
- *   },
- *   "streamUrl": "ws://192.168.1.100:3001/v1/api/stream/radar-0"
+ *   "name": "HALO 034A",
+ *   "brand": "Navico",
+ *   "model": "HALO",
+ *   "radarIpAddress": "192.168.1.50",
+ *   "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034A/spokes",
+ *   "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
  * }
  * ```
  */
 export interface RadarInfo {
-  /** Unique identifier for this radar */
-  id: string
-  /** Display name */
+  /** User-defined name, or the auto-detected model name */
   name: string
-  /** Radar brand/manufacturer */
-  brand?: string
-  /** Current operational status */
-  status: RadarStatus
-  /** Number of spokes per full rotation */
-  spokesPerRevolution: number
-  /** Maximum spoke length in samples */
-  maxSpokeLen: number
-  /** Current range in meters */
-  range: number
-  /** Current control settings */
-  controls: RadarControls
-  /** Color legend for radar display */
-  legend?: LegendEntry[]
+  /** Radar manufacturer brand (Navico, Furuno, Raymarine, Garmin, Emulator) */
+  brand: string
+  /** Radar model name, if detected */
+  model?: string
+  /** IP address of the radar unit on the network */
+  radarIpAddress: string
   /**
-   * WebSocket URL for radar spoke streaming.
+   * WebSocket URL for receiving raw binary radar spoke data.
    *
-   * - If **absent**: Clients use the built-in stream endpoint:
-   *   `ws://server/signalk/v2/api/vessels/self/radars/{id}/stream`
-   *   or `ws://server/signalk/v2/api/streams/radars/{id}`
-   *   (WASM plugins emit spokes via `sk_radar_emit_spokes()` FFI binding)
+   * Optional. When **absent**, the radar's spokes are served by signalk-server
+   * itself and the client uses the built-in endpoint, constructed from the host
+   * it is already talking to:
+   * `ws://{host}/signalk/v2/api/vessels/self/radars/{id}/spokes`.
+   * This is the normal case: the provider pipes spokes into the server and every
+   * client reaches them through the server, so deployments where the radar/
+   * provider is on another host or container work with only the server port open.
    *
-   * - If **present**: Clients connect directly to external URL (backward compat)
-   *   @example "ws://192.168.1.100:3001/stream" (external mayara-server)
+   * When **present**, it is an absolute URL a client may connect to directly
+   * (e.g. an external provider on the same LAN), bypassing the server.
+   */
+  spokeDataUrl?: string
+  /**
+   * WebSocket URL for the **control/target stream**: this is the standard
+   * Signal K delta/PUT stream, not a radar-specific socket. Radar state is
+   * modelled as Signal K paths (`radars.{id}.controls.*`, target data) — a
+   * client subscribes to receive control-value and ARPA-target deltas and sends
+   * Signal K PUTs to change controls. Distinct from `spokeDataUrl`, which carries
+   * one-way binary spoke image data.
+   *
+   * Optional. When absent, the client uses the server's own Signal K stream:
+   * `ws://{host}/signalk/v1/stream`. When present, it is an external URL
+   * (e.g. a provider's own Signal K stream) for direct connection.
    */
   streamUrl?: string
+}
+
+/**
+ * The `GET /radars` response: the API version plus the discovered radars keyed
+ * by radar ID.
+ *
+ * @category Radar API
+ *
+ * @example
+ * ```json
+ * {
+ *   "version": "3.1.0",
+ *   "radars": {
+ *     "nav1034A": { "name": "HALO 034A", "brand": "Navico", "radarIpAddress": "192.168.1.50", "spokeDataUrl": "...", "streamUrl": "..." }
+ *   }
+ * }
+ * ```
+ */
+export interface RadarsResponse {
+  /** Radar API version (semver) this response conforms to */
+  version: string
+  /** Discovered radars, keyed by radar ID */
+  radars: Record<string, RadarInfo>
 }
 
 // ============================================================================
@@ -510,14 +540,12 @@ export interface RadarInfo {
  *   methods: {
  *     getRadars: async () => ['radar-0'],
  *     getRadarInfo: async (id) => ({
- *       id: 'radar-0',
  *       name: 'Furuno DRS4D-NXT',
- *       status: 'transmit',
- *       spokesPerRevolution: 2048,
- *       maxSpokeLen: 1024,
- *       range: 2000,
- *       controls: { gain: { auto: false, value: 50 } },
- *       streamUrl: 'ws://192.168.1.100:3001/stream'
+ *       brand: 'Furuno',
+ *       model: 'DRS4D-NXT',
+ *       radarIpAddress: '192.168.1.50',
+ *       spokeDataUrl: 'ws://192.168.1.100:3001/radars/radar-0/spokes',
+ *       streamUrl: 'ws://192.168.1.100:3001/signalk/v1/stream'
  *     }),
  *     setPower: async (id, state) => { ... },
  *     setRange: async (id, range) => { ... },
