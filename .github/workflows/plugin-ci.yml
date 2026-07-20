@@ -1387,10 +1387,10 @@ jobs:
           # Read the tarball name from --json: a plugin "prepare" script (e.g. tsc)
           # prints a lifecycle banner to stdout that would pollute a bare
           # $(npm pack) capture (npm < 11 runs prepare here despite --ignore-scripts).
+          # Split into two steps (rather than piping straight into `node -e`) so a
+          # failure in `npm pack` itself isn't swallowed by the pipe.
           PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
           PLUGIN_TGZ=$(node -e 'const s=process.argv[1]; process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)' "$PACK_JSON")
-          # PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP" \
-          #   | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
 
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
@@ -1802,12 +1802,12 @@ jobs:
           # Pack the plugin and install it into the test server. Read the tarball
           # name from --json so a plugin "prepare" lifecycle banner on stdout can't
           # corrupt it (npm < 11 runs prepare here despite --ignore-scripts).
+          # Split into two steps (rather than piping straight into `node -e`) so a
+          # failure in `npm pack` itself isn't swallowed by the pipe.
           PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
           PLUGIN_TGZ=$(node -e 'const s=process.argv[1]; process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)' "$PACK_JSON")
-          # PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination /tmp \
-          #   | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
           cd /tmp/sk-test
-          npm install "/tmp/$(basename "$PLUGIN_TGZ")"
+          npm install "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")"
 
       - name: Configure plugin to auto-start
         run: |
