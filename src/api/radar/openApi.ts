@@ -417,6 +417,26 @@ const radarApiDoc = {
         }
       }
     },
+    '/signalk/v2/api/vessels/self/radars/{radar_id}': {
+      get: {
+        tags: ['Radars'],
+        summary: 'Get a single radar',
+        description:
+          'Returns the discovery information for one radar by ID. Live state (status, controls) is at /state and /controls; static parameters at /capabilities.',
+        parameters: [radarIdParam],
+        responses: {
+          '200': {
+            description: 'Radar discovery information',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RadarInfo' }
+              }
+            }
+          },
+          '404': { description: 'Radar not found' }
+        }
+      }
+    },
     '/signalk/v2/api/vessels/self/radars/interfaces': {
       get: {
         tags: ['Configuration'],
