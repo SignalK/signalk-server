@@ -29,12 +29,12 @@ For the REST API documentation, see OpenAPI at \`/admin/openapi/\`.
       host: 'localhost:3000',
       protocol: 'ws',
       description: 'Signal K server WebSocket endpoint',
-      pathname: '/signalk/v2/api/vessels/self/radars/{radarId}/stream'
+      pathname: '/signalk/v2/api/vessels/self/radars/{radarId}/spokes'
     }
   },
   channels: {
-    'radars.stream': {
-      address: 'radars/{radarId}/stream',
+    'radars.spokes': {
+      address: 'radars/{radarId}/spokes',
       description: 'Radar spoke data stream. Binary spoke data for rendering.',
       parameters: {
         radarId: {
@@ -60,7 +60,7 @@ For the REST API documentation, see OpenAPI at \`/admin/openapi/\`.
   operations: {
     receiveSpokeData: {
       action: 'receive',
-      channel: { $ref: '#/channels/radars.stream' },
+      channel: { $ref: '#/channels/radars.spokes' },
       summary: 'Receive radar spoke data'
     }
   },

@@ -7,13 +7,13 @@ import WebSocket from 'ws'
 ;(chai as any).Should()
 
 // The radar spoke stream is served as a binary-stream WebSocket at the
-// alias path /signalk/v2/api/vessels/self/radars/:id/stream. WebSocket
+// alias path /signalk/v2/api/vessels/self/radars/:id/spokes. WebSocket
 // upgrade requests bypass the Express middleware chain, so the handler
 // must parse the cookie header and query string itself before calling
 // authorizeWS() — otherwise a browser's same-origin HttpOnly
 // JAUTHENTICATION cookie is ignored and every connection is rejected.
 describe('Binary stream WebSocket authentication', function () {
-  const RADAR_STREAM = '/signalk/v2/api/vessels/self/radars/test-radar/stream'
+  const RADAR_STREAM = '/signalk/v2/api/vessels/self/radars/test-radar/spokes'
 
   let host: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
