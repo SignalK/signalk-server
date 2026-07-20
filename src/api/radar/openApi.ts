@@ -64,13 +64,7 @@ const radarApiDoc = {
             description: 'IP address of the radar unit on the network'
           }
         },
-        required: [
-          'name',
-          'brand',
-          'spokeDataUrl',
-          'streamUrl',
-          'radarIpAddress'
-        ]
+        required: ['name', 'brand', 'radarIpAddress']
       },
       Capabilities: {
         type: 'object',
@@ -394,17 +388,28 @@ const radarApiDoc = {
         tags: ['Radars'],
         summary: 'List all active radars',
         description:
-          'Returns all radars detected on the network. Each entry includes WebSocket URLs for spoke data and control streams.',
+          'Returns the API version and all radars detected on the network, keyed by radar ID. Spoke/control stream URLs are optional per entry; when absent the client uses this server (spokes at …/radars/{id}/spokes, control via /signalk/v1/stream).',
         responses: {
           '200': {
-            description: 'Map of radar IDs to radar information',
+            description: 'API version and map of radar IDs to radar information',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
-                  additionalProperties: {
-                    $ref: '#/components/schemas/RadarInfo'
-                  }
+                  properties: {
+                    version: {
+                      type: 'string',
+                      description:
+                        'Radar API version (semver) this response conforms to'
+                    },
+                    radars: {
+                      type: 'object',
+                      additionalProperties: {
+                        $ref: '#/components/schemas/RadarInfo'
+                      }
+                    }
+                  },
+                  required: ['version', 'radars']
                 }
               }
             }
