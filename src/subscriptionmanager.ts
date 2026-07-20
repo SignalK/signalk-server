@@ -27,7 +27,10 @@ import {
   SubscribeCallback,
   RelativePositionOrigin,
   Delta,
-  SourceRef
+  SourceRef,
+  Update,
+  PathValue,
+  Value
 } from '@signalk/server-api'
 import * as Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
@@ -325,9 +328,25 @@ function handleSubscribeRow(
   const matcher = pathMatcher(subscribeRow.path)
   // iterate over all the buses, checking if we want to subscribe to its values
   forOwn(buses, (bus, key) => {
-    if (matcher(key)) {
+    // Root deltas (path '') carry vessel identity fields (name, mmsi,
+    // communication.callsignVhf, ...) as one object value, mirroring their
+    // attribute form in the full model. A row asking for such a leaf path
+    // can never match the '' bus directly, so flatten root values into
+    // per-leaf deltas for it. Rows whose pattern matches '' itself ('' and
+    // wildcards) keep receiving the original root delta, so nothing is
+    // delivered twice.
+    const flattenRootValues = key === '' && !matcher(key)
+    if (matcher(key) || flattenRootValues) {
       debug('Subscribing to key ' + key)
       let filteredBus: Bacon.EventStream<NormalizedDelta> = bus.filter(filter)
+      if (flattenRootValues) {
+        filteredBus = filteredBus.flatMap(
+          (normalizedDelta: NormalizedDelta) =>
+            Bacon.fromArray(
+              flattenRootDelta(normalizedDelta, matcher)
+            ) as Bacon.EventStream<NormalizedDelta>
+        )
+      }
       if (subscribeRow.minPeriod) {
         if (subscribeRow.policy && subscribeRow.policy !== 'instant') {
           errorCallback(
@@ -413,12 +432,16 @@ function handleSubscribeRow(
       // would carry the global preferred winner — which may BE the
       // excluded source — and the subscriber would see it once on
       // startup.
-      const latest = app.deltaCache.getCachedDeltas(
+      const cached = app.deltaCache.getCachedDeltas(
         filter,
         user,
         key,
         perSubEngine ? 'all' : sourcePolicy
       )
+      const latest =
+        flattenRootValues && cached
+          ? flattenCachedRootDeltas(cached, matcher)
+          : cached
       if (latest) {
         if (perSubEngine) {
           const now = new Date()
@@ -446,6 +469,74 @@ function pathMatcher(path: string = '*') {
     .replace(/\*/g, '.*')
   const matcher = new RegExp('^' + pattern + '$')
   return (aPath: string) => matcher.test(aPath)
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function collectLeaves(
+  obj: Record<string, unknown>,
+  prefix: string,
+  accept: (path: string) => boolean,
+  leaves: PathValue[]
+) {
+  for (const key of Object.keys(obj)) {
+    const path = prefix === '' ? key : `${prefix}.${key}`
+    const value = obj[key]
+    if (isPlainObject(value)) {
+      collectLeaves(value, path, accept, leaves)
+    } else if (accept(path)) {
+      leaves.push({ path: path as Path, value: value as Value })
+    }
+  }
+}
+
+function flattenRootDelta(
+  normalizedDelta: NormalizedDelta,
+  accept: (path: string) => boolean
+): NormalizedDelta[] {
+  if (normalizedDelta.isMeta || !isPlainObject(normalizedDelta.value)) {
+    return []
+  }
+  const leaves: PathValue[] = []
+  collectLeaves(normalizedDelta.value, '', accept, leaves)
+  return leaves.map((leaf) => ({
+    context: normalizedDelta.context,
+    source: normalizedDelta.source,
+    $source: normalizedDelta.$source,
+    timestamp: normalizedDelta.timestamp,
+    path: leaf.path,
+    value: leaf.value,
+    state: normalizedDelta.state,
+    isMeta: false
+  }))
+}
+
+function flattenCachedRootDeltas(
+  deltas: Delta[],
+  accept: (path: string) => boolean
+): Delta[] {
+  return deltas.reduce<Delta[]>((acc, delta) => {
+    const updates = delta.updates.reduce<Update[]>((updatesAcc, update) => {
+      if ('values' in update) {
+        const values: PathValue[] = []
+        for (const pathValue of update.values) {
+          if (pathValue.path === '' && isPlainObject(pathValue.value)) {
+            collectLeaves(pathValue.value, '', accept, values)
+          }
+        }
+        if (values.length > 0) {
+          updatesAcc.push({ ...update, values })
+        }
+      }
+      return updatesAcc
+    }, [])
+    if (updates.length > 0) {
+      acc.push({ context: delta.context, updates })
+    }
+    return acc
+  }, [])
 }
 
 function contextMatcher(
