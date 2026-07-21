@@ -50,19 +50,13 @@ const radarApiDoc = {
             type: 'string',
             description: 'Radar model name if detected'
           },
-          spokeDataUrl: {
-            type: 'string',
-            description:
-              'WebSocket URL for receiving raw radar spoke data (binary)'
-          },
-          streamUrl: {
-            type: 'string',
-            description: 'WebSocket URL for Signal K control stream (JSON)'
-          },
           radarIpAddress: {
             type: 'string',
             description: 'IP address of the radar unit on the network'
           }
+          // Stream URLs are not listed: the spoke WS (…/radars/{id}/spokes) and
+          // the control stream (/signalk/v1/stream) are reached by convention
+          // from the host serving this response.
         },
         required: ['name', 'brand', 'radarIpAddress']
       },

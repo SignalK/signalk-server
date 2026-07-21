@@ -83,24 +83,15 @@ export const RadarInfoSchema = Type.Object(
     ),
     radarIpAddress: Type.String({
       description: 'IP address of the radar unit on the network'
-    }),
-    spokeDataUrl: Type.Optional(
-      Type.String({
-        description:
-          'WebSocket URL for one-way binary spoke image data. Absent = served by this server at …/radars/{id}/spokes; present = an external URL for direct client connection.'
-      })
-    ),
-    streamUrl: Type.Optional(
-      Type.String({
-        description:
-          'WebSocket URL for the Signal K delta/PUT stream carrying radars.{id}.controls.* and target data (distinct from spokeDataUrl). Absent = use this server at /signalk/v1/stream; present = an external URL.'
-      })
-    )
+    })
+    // No stream URLs: the spoke WS (…/radars/{id}/spokes) and the control/target
+    // stream (/signalk/v1/stream) are always reached by convention from the host
+    // serving this response.
   },
   {
     $id: 'RadarInfoModel',
     description:
-      'Discovery information for a radar device. Live state (status, controls) is on /state; static parameters on /capabilities.'
+      'Discovery information for a radar device. Live state (status, controls) is on /state; static parameters on /capabilities. Stream URLs are reached by convention, not listed here.'
   }
 )
 export type RadarInfoSchemaType = Static<typeof RadarInfoSchema>

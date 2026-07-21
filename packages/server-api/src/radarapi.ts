@@ -456,9 +456,7 @@ export interface ArpaSettings {
  *   "name": "HALO 034A",
  *   "brand": "Navico",
  *   "model": "HALO",
- *   "radarIpAddress": "192.168.1.50",
- *   "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034A/spokes",
- *   "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
+ *   "radarIpAddress": "192.168.1.50"
  * }
  * ```
  */
@@ -471,34 +469,14 @@ export interface RadarInfo {
   model?: string
   /** IP address of the radar unit on the network */
   radarIpAddress: string
-  /**
-   * WebSocket URL for receiving raw binary radar spoke data.
-   *
-   * Optional. When **absent**, the radar's spokes are served by signalk-server
-   * itself and the client uses the built-in endpoint, constructed from the host
-   * it is already talking to:
-   * `ws://{host}/signalk/v2/api/vessels/self/radars/{id}/spokes`.
-   * This is the normal case: the provider pipes spokes into the server and every
-   * client reaches them through the server, so deployments where the radar/
-   * provider is on another host or container work with only the server port open.
-   *
-   * When **present**, it is an absolute URL a client may connect to directly
-   * (e.g. an external provider on the same LAN), bypassing the server.
-   */
-  spokeDataUrl?: string
-  /**
-   * WebSocket URL for the **control/target stream**: this is the standard
-   * Signal K delta/PUT stream, not a radar-specific socket. Radar state is
-   * modelled as Signal K paths (`radars.{id}.controls.*`, target data) — a
-   * client subscribes to receive control-value and ARPA-target deltas and sends
-   * Signal K PUTs to change controls. Distinct from `spokeDataUrl`, which carries
-   * one-way binary spoke image data.
-   *
-   * Optional. When absent, the client uses the server's own Signal K stream:
-   * `ws://{host}/signalk/v1/stream`. When present, it is an external URL
-   * (e.g. a provider's own Signal K stream) for direct connection.
-   */
-  streamUrl?: string
+  // The radar's two WebSocket streams are not listed here: they are always
+  // reached by convention from the host serving this response, so a client uses
+  // the same construction whether it talks to a provider directly or through
+  // this server:
+  //   - binary spoke data: `ws://{host}/signalk/v2/api/vessels/self/radars/{id}/spokes`
+  //   - control/target (deltas + PUTs): the standard Signal K stream at
+  //     `ws://{host}/signalk/v1/stream`, with radar state modelled as
+  //     `radars.{id}.controls.*` paths.
 }
 
 /**
@@ -512,7 +490,7 @@ export interface RadarInfo {
  * {
  *   "version": "3.1.0",
  *   "radars": {
- *     "nav1034A": { "name": "HALO 034A", "brand": "Navico", "radarIpAddress": "192.168.1.50", "spokeDataUrl": "...", "streamUrl": "..." }
+ *     "nav1034A": { "name": "HALO 034A", "brand": "Navico", "radarIpAddress": "192.168.1.50" }
  *   }
  * }
  * ```
@@ -543,9 +521,7 @@ export interface RadarsResponse {
  *       name: 'Furuno DRS4D-NXT',
  *       brand: 'Furuno',
  *       model: 'DRS4D-NXT',
- *       radarIpAddress: '192.168.1.50',
- *       spokeDataUrl: 'ws://192.168.1.100:3001/radars/radar-0/spokes',
- *       streamUrl: 'ws://192.168.1.100:3001/signalk/v1/stream'
+ *       radarIpAddress: '192.168.1.50'
  *     }),
  *     setPower: async (id, state) => { ... },
  *     setRange: async (id, range) => { ... },
@@ -641,7 +617,8 @@ export interface RadarProviderMethods {
 
   /**
    * Handle WebSocket stream connection (optional).
-   * Only needed if provider doesn't expose external streamUrl.
+   * Only needed if the provider serves spoke data itself rather than piping it
+   * into the server's binary stream manager.
    * @param radarId The radar ID
    * @param ws WebSocket connection to send spoke data to
    */
