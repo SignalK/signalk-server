@@ -108,9 +108,12 @@ module.exports = function mdnsResponder(app) {
         type.port
     )
     const ad = new Advertisement(type.type, type.port, options)
+    // mDNS advertisement is best-effort; without a network interface the
+    // library emits errors such as "Timed out getting default route". Log
+    // them at debug level instead of the console so an isolated (offline)
+    // server does not surface a scary, seemingly-fatal error.
     ad.on('error', (err) => {
-      console.log(type.type)
-      console.error(err)
+      debug(`mDNS advertisement error for ${type.type}: ${err.message || err}`)
     })
     ad.start()
     ads.push(ad)
