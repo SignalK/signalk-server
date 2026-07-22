@@ -45,7 +45,13 @@ export const ValuesResponseSchema = Type.Object(
     values: Type.Array(
       Type.Object({
         path: Type.String({ description: 'Signal K path' }),
-        method: Type.String({ description: 'Aggregation method' })
+        method: Type.String({ description: 'Aggregation method' }),
+        $source: Type.Optional(
+          Type.String({
+            description:
+              'Source reference for this value column, present when the values are source-specific'
+          })
+        )
       })
     ),
     data: Type.Array(
@@ -80,7 +86,13 @@ export const PathSpecSchema = Type.Object(
     parameter: Type.Array(Type.String(), {
       description:
         'Additional parameters for the aggregation method (e.g., sample count for sma, alpha for ema)'
-    })
+    }),
+    sourceRef: Type.Optional(
+      Type.String({
+        description:
+          'Optional source reference to filter this path to a single source'
+      })
+    )
   },
   {
     $id: 'PathSpec',

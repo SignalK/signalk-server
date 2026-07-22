@@ -175,6 +175,37 @@ describe('History API v2', () => {
       body.data.length.should.be.greaterThan(0)
     })
 
+    it('passes sourcePolicy=all to the provider', async function () {
+      const res = await fetch(
+        `${api}/history/values?paths=navigation.speedOverGround&from=${FROM}&to=${TO}&resolution=60&sourcePolicy=all`
+      )
+      res.status.should.equal(200)
+      const body = await res.json()
+      assertSchema(ValuesResponseSchema, body, 'ValuesResponse')
+      body.values.should.deep.equal([
+        {
+          path: 'navigation.speedOverGround',
+          method: 'average',
+          $source: 'source.a'
+        },
+        {
+          path: 'navigation.speedOverGround',
+          method: 'average',
+          $source: 'source.b'
+        }
+      ])
+      body.data.should.deep.equal([['2025-01-01T12:00:00Z', 1.2, 2.4]])
+    })
+
+    it('returns 400 for invalid sourcePolicy', async function () {
+      const res = await fetch(
+        `${api}/history/values?paths=navigation.position&from=${FROM}&to=${TO}&sourcePolicy=unknown`
+      )
+      res.status.should.equal(400)
+      const body = await res.json()
+      body.error.should.contain('sourcePolicy')
+    })
+
     it('returns paths from the provider', async function () {
       const res = await fetch(`${api}/history/paths?from=${FROM}&to=${TO}`)
       res.status.should.equal(200)
