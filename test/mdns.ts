@@ -56,7 +56,7 @@ describe('mdnsResponder', () => {
     delete require.cache[mdnsModulePath]
   })
 
-  function loadResponder(): (app: App) => unknown {
+  function loadResponder(debugEnabled = true): (app: App) => unknown {
     debugMessages = []
 
     Module._load = ((request, parent, isMain) => {
@@ -77,7 +77,7 @@ describe('mdnsResponder', () => {
                 debugMessages.push(message)
               }
             }
-            debug.enabled = true
+            debug.enabled = debugEnabled
             return debug
           }
         }
@@ -143,5 +143,23 @@ describe('mdnsResponder', () => {
       console.error = originalConsoleError
       console.log = originalConsoleLog
     }
+  })
+
+  it('does not log advertisement errors when debug is disabled', () => {
+    const mdnsResponder = loadResponder(false)
+    mdnsResponder(makeApp())
+
+    expect(FakeAdvertisement.instances).to.have.length(1)
+
+    FakeAdvertisement.instances[0].emit(
+      'error',
+      new Error('Timed out getting default route')
+    )
+
+    expect(
+      debugMessages.some((message) =>
+        message.includes('Timed out getting default route')
+      )
+    ).to.equal(false)
   })
 })
