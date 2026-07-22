@@ -6,7 +6,15 @@ title: Radar API
 
 The Signal K server Radar API provides a unified interface for viewing and controlling marine radar equipment from any manufacturer. The API is **(web)app-friendly**: clients can build dynamic UIs that automatically adapt to any radar's capabilities without hardcoding support for specific brands or models.
 
-This is version v3.1.0 of the API. The version will use semver for version updates.
+This is version **3.4.0** of the API. The version uses semver for version updates.
+
+The Radar API version is reported in the `version` field of the `GET /radars`
+response (see [Listing All Radars](#listing-all-radars)). Every conforming
+implementation reports the **same** version for the same API — signalk-server and
+the reference provider (mayara-server) are kept in lockstep — so a client sees an
+identical `version`, and identical response shapes, whether it talks to a provider
+directly or through a Signal K server. Bump the version in both implementations
+together whenever the Radar API changes.
 
 Radar functionality is provided by "provider plugins" that handle the interaction with radar hardware and stream spoke data to connected clients.
 
@@ -131,28 +139,35 @@ Retrieve all available radars with their current info:
 HTTP GET "/signalk/v2/api/vessels/self/radars"
 ```
 
+The response is a `{ version, radars }` envelope: the Radar API `version` (see
+above) plus the discovered radars keyed by radar ID.
+
 _Response:_
 
 ```json
 {
-  "nav1034A": {
-    "brand": "Navico",
-    "model": "HALO",
-    "name": "HALO 034A",
-    "radarIpAddress": "192.168.1.50",
-    "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034A/spokes",
-    "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
-  },
-  "nav1034B": {
-    "brand": "Navico",
-    "model": "HALO",
-    "name": "HALO 034B",
-    "radarIpAddress": "192.168.1.50",
-    "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034B/spokes",
-    "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
+  "version": "3.4.0",
+  "radars": {
+    "nav1034A": {
+      "brand": "Navico",
+      "model": "HALO",
+      "name": "HALO 034A",
+      "radarIpAddress": "192.168.1.50"
+    },
+    "nav1034B": {
+      "brand": "Navico",
+      "model": "HALO",
+      "name": "HALO 034B",
+      "radarIpAddress": "192.168.1.50"
+    }
   }
 }
 ```
+
+A radar entry carries no stream URLs — the spoke and control-stream WebSockets are
+always reached by convention from the host serving the response
+(`…/radars/{id}/spokes` and `/signalk/v1/stream`), so a client constructs the same
+URL whether it talks to a provider directly or through a Signal K server.
 
 ### Network Interfaces
 
@@ -998,8 +1013,10 @@ interface RadarInfo {
   brand: string
   model?: string
   radarIpAddress: string
-  spokeDataUrl: string
-  streamUrl: string
+  // The spoke and control-stream WebSockets are reached by convention from the
+  // host serving this response (…/radars/{id}/spokes and /signalk/v1/stream),
+  // so no URLs are listed. A provider may add implementation-specific fields
+  // (e.g. mayara-server's `replay`); clients ignore unknown fields.
 }
 ```
 

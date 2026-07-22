@@ -12,8 +12,12 @@ import { radar } from '@signalk/server-api'
 
 const RADAR_API_PATH = `/signalk/v2/api/vessels/self/radars`
 // Version of the Radar API this server implements (radar_api.md). Surfaced in the
-// GET /radars discovery envelope so clients can negotiate shape.
-const RADAR_API_VERSION = '3.1.0'
+// GET /radars discovery envelope so clients can negotiate shape. Kept in lockstep
+// with the reference provider (mayara-server's `api-version`) so a client sees the
+// same `version` whether it talks to a provider directly or through Signal K —
+// bump both together when the Radar API changes. Also used as the OpenAPI
+// info.version in openApi.ts.
+export const RADAR_API_VERSION = '3.4.0'
 const TWO_PI = 2 * Math.PI
 
 interface RadarApplication

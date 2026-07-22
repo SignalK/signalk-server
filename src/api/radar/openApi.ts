@@ -1,4 +1,5 @@
 import { OpenApiDescription } from '../swagger'
+import { RADAR_API_VERSION } from './index'
 
 const radarIdParam = {
   name: 'radar_id',
@@ -13,7 +14,7 @@ const radarApiDoc = {
   openapi: '3.0.0',
   info: {
     title: 'Signal K Radar API',
-    version: '3.1.0',
+    version: RADAR_API_VERSION,
     description:
       'REST API for controlling marine radars. Supports Navico (Simrad, B&G, Lowrance), ' +
       'Furuno, Raymarine, and Garmin radar systems. Provides endpoints for discovering radars, ' +
@@ -385,7 +386,8 @@ const radarApiDoc = {
           'Returns the API version and all radars detected on the network, keyed by radar ID. Spoke/control stream URLs are optional per entry; when absent the client uses this server (spokes at …/radars/{id}/spokes, control via /signalk/v1/stream).',
         responses: {
           '200': {
-            description: 'API version and map of radar IDs to radar information',
+            description:
+              'API version and map of radar IDs to radar information',
             content: {
               'application/json': {
                 schema: {
