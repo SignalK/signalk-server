@@ -109,7 +109,10 @@ module.exports = function mdnsResponder(app) {
     )
     const ad = new Advertisement(type.type, type.port, options)
     ad.on('error', (err) => {
-      debug(`mDNS advertisement error for ${type.type}: ${err.message || err}`)
+      debug.enabled &&
+        debug(
+          `mDNS advertisement error for ${type.type}: ${err.message || err}`
+        )
     })
     ad.start()
     ads.push(ad)

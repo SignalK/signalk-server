@@ -71,10 +71,14 @@ describe('mdnsResponder', () => {
       }
       if (request === './debug') {
         return {
-          createDebug: () => (message: unknown) => {
-            if (typeof message === 'string') {
-              debugMessages.push(message)
+          createDebug: () => {
+            const debug = (message: unknown) => {
+              if (typeof message === 'string') {
+                debugMessages.push(message)
+              }
             }
+            debug.enabled = true
+            return debug
           }
         }
       }
