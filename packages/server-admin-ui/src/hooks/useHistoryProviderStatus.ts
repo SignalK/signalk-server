@@ -73,19 +73,46 @@ export const isConfiguredProviderUnavailable = (
   providers.configuredId !== null &&
   !providers.ids.includes(providers.configuredId)
 
+export const UNAVAILABLE_GRACE_MS = 10000
+export const UNAVAILABLE_POLL_INTERVAL_MS = 5000
+
 /**
  * True when a default History API provider is configured but not
  * currently registered (e.g. its plugin is disabled), so requests are
  * served by a fallback. Re-checks whenever the plugin list changes,
  * since providers register and unregister with plugin enable/disable.
+ *
+ * Providers can register late (e.g. a plugin waiting for its database
+ * container to come up after a restart), so unavailability is only
+ * reported after it has persisted for a grace period, with polling in
+ * the meantime so the warning also clears without user interaction.
  */
 export function useHistoryProviderUnavailable(): boolean {
   const plugins = usePlugins()
   const { providers, refresh } = useHistoryProviders()
+  const [confirmedUnavailable, setConfirmedUnavailable] = useState(false)
 
   useEffect(() => {
     refresh()
   }, [plugins, refresh])
 
-  return isConfiguredProviderUnavailable(providers)
+  const unavailable = isConfiguredProviderUnavailable(providers)
+
+  useEffect(() => {
+    if (!unavailable) {
+      setConfirmedUnavailable(false)
+      return
+    }
+    const graceTimer = setTimeout(
+      () => setConfirmedUnavailable(true),
+      UNAVAILABLE_GRACE_MS
+    )
+    const poll = setInterval(refresh, UNAVAILABLE_POLL_INTERVAL_MS)
+    return () => {
+      clearTimeout(graceTimer)
+      clearInterval(poll)
+    }
+  }, [unavailable, refresh])
+
+  return confirmedUnavailable
 }
