@@ -7,6 +7,35 @@ export type WebSocketStatus =
 
 export type DeltaMessageHandler = (message: unknown) => void
 export type StatusChangeHandler = (status: WebSocketStatus) => void
+export type ServerEventHandler = (data: unknown) => void
+
+// Known server event names: the handleServerEvent switch cases plus
+// events delivered only through addServerEventHandler subscriptions.
+export type ServerEventType =
+  | 'SERVERSTATISTICS'
+  | 'PROVIDERSTATUS'
+  | 'DEBUG_SETTINGS'
+  | 'LOG'
+  | 'ACCESS_REQUEST'
+  | 'RECEIVE_LOGIN_STATUS'
+  | 'DISCOVERY_CHANGED'
+  | 'PRIORITYOVERRIDES'
+  | 'PRIORITYGROUPS'
+  | 'PRIORITYDEFAULTS'
+  | 'SOURCEALIASES'
+  | 'MULTISOURCEPATHS'
+  | 'RECONCILEDGROUPS'
+  | 'LIVEPREFERREDSOURCES'
+  | 'SOURCEEVICTED'
+  | 'SOURCESTATUS'
+  | 'N2KDEVICESTATUS'
+  | 'RESTORESTATUS'
+  | 'VESSEL_INFO'
+  | 'SOURCEPRIORITIES'
+  | 'RECEIVE_APPSTORE_LIST'
+  | 'APP_STORE_CHANGED'
+  | 'PLUGINS_CHANGED'
+  | 'DEVICE_STATUS_CHANGE'
 
 interface WebSocketServiceState {
   status: WebSocketStatus
@@ -30,6 +59,10 @@ export class WebSocketService {
   private listeners = new Set<Listener>()
   private deltaHandlers = new Set<DeltaMessageHandler>()
   private statusHandlers = new Set<StatusChangeHandler>()
+  private serverEventHandlers = new Map<
+    ServerEventType,
+    Set<ServerEventHandler>
+  >()
   private reconnectTimer: ReturnType<typeof setInterval> | null = null
   private reconnectAttempts = 0
   private maxReconnectAttempts = Infinity
@@ -154,6 +187,27 @@ export class WebSocketService {
     this.statusHandlers.add(handler)
     return () => {
       this.statusHandlers.delete(handler)
+    }
+  }
+
+  addServerEventHandler(
+    eventType: ServerEventType,
+    handler: ServerEventHandler
+  ): () => void {
+    let handlers = this.serverEventHandlers.get(eventType)
+    if (!handlers) {
+      handlers = new Set()
+      this.serverEventHandlers.set(eventType, handlers)
+    }
+    handlers.add(handler)
+    return () => {
+      const current = this.serverEventHandlers.get(eventType)
+      if (current) {
+        current.delete(handler)
+        if (current.size === 0) {
+          this.serverEventHandlers.delete(eventType)
+        }
+      }
     }
   }
 
@@ -396,6 +450,19 @@ export class WebSocketService {
         break
       default:
         console.debug('Unhandled server event:', eventType)
+    }
+
+    // eventType is an arbitrary wire string here; unknown names simply
+    // find no subscription.
+    const handlers = this.serverEventHandlers.get(eventType as ServerEventType)
+    if (handlers) {
+      handlers.forEach((handler) => {
+        try {
+          handler(data)
+        } catch (e) {
+          console.error('Server event handler error:', e)
+        }
+      })
     }
   }
 
