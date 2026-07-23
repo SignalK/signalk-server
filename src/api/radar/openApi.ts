@@ -1,4 +1,11 @@
 import { OpenApiDescription } from '../swagger'
+import { typeboxToOpenApiSchemas } from '../openApiSchemas'
+import {
+  RadarControlsSchema,
+  RadarControlValueSchema,
+  RadarInfoSchema,
+  RadarStatusSchema
+} from '@signalk/server-api/typebox'
 
 const radarIdParam = {
   name: 'radar_id',
@@ -9,69 +16,41 @@ const radarIdParam = {
   example: 'nav1034A'
 }
 
-const radarApiDoc = {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export const radarApiDoc: any = {
   openapi: '3.0.0',
   info: {
     title: 'Signal K Radar API',
     version: '3.1.0',
+    termsOfService: 'http://signalk.org/terms/',
+    license: {
+      name: 'Apache 2.0',
+      url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+    },
     description:
       'REST API for controlling marine radars. Supports Navico (Simrad, B&G, Lowrance), ' +
       'Furuno, Raymarine, and Garmin radar systems. Provides endpoints for discovering radars, ' +
       'reading and setting control values, and accessing radar data via WebSocket streams.'
   },
+  externalDocs: {
+    url: 'http://signalk.org/specification/',
+    description: 'Signal K specification.'
+  },
+  servers: [{ url: '/signalk/v2/api/vessels/self/radars' }],
   tags: [
     { name: 'Radars', description: 'Radar discovery and capabilities' },
     { name: 'Controls', description: 'Read and modify radar control settings' },
-    { name: 'Targets', description: 'ARPA target acquisition and tracking' },
-    {
-      name: 'Configuration',
-      description: 'Server and network configuration'
-    },
-    {
-      name: 'Stream',
-      description: 'Real-time WebSocket stream for control updates'
-    }
+    { name: 'Targets', description: 'ARPA target acquisition and tracking' }
   ],
   components: {
     schemas: {
-      RadarInfo: {
-        type: 'object',
-        properties: {
-          name: {
-            type: 'string',
-            description: 'User-defined name or auto-detected model name'
-          },
-          brand: {
-            type: 'string',
-            description:
-              'Radar manufacturer brand (Navico, Furuno, Raymarine, Garmin, Emulator)'
-          },
-          model: {
-            type: 'string',
-            description: 'Radar model name if detected'
-          },
-          spokeDataUrl: {
-            type: 'string',
-            description:
-              'WebSocket URL for receiving raw radar spoke data (binary)'
-          },
-          streamUrl: {
-            type: 'string',
-            description: 'WebSocket URL for Signal K control stream (JSON)'
-          },
-          radarIpAddress: {
-            type: 'string',
-            description: 'IP address of the radar unit on the network'
-          }
-        },
-        required: [
-          'name',
-          'brand',
-          'spokeDataUrl',
-          'streamUrl',
-          'radarIpAddress'
-        ]
-      },
+      ...typeboxToOpenApiSchemas([
+        RadarInfoSchema,
+        RadarStatusSchema,
+        RadarControlsSchema,
+        RadarControlValueSchema
+      ]),
       Capabilities: {
         type: 'object',
         properties: {
@@ -141,135 +120,6 @@ const radarApiDoc = {
           'stationary',
           'controls'
         ]
-      },
-      ControlDefinition: {
-        type: 'object',
-        properties: {
-          id: { type: 'integer', description: 'Numeric control identifier' },
-          name: { type: 'string', description: 'Human-readable control name' },
-          dataType: {
-            type: 'string',
-            enum: [
-              'number',
-              'enum',
-              'string',
-              'button',
-              'sector',
-              'zone',
-              'rect'
-            ],
-            description: 'Control data type'
-          },
-          category: {
-            type: 'string',
-            description:
-              'Control category (e.g., display, installation, targets)'
-          },
-          minValue: { type: 'number' },
-          maxValue: { type: 'number' },
-          stepValue: { type: 'number' },
-          units: {
-            type: 'string',
-            description: 'SI unit (m, rad, s, m/s, rad/s)'
-          },
-          description: { type: 'string' },
-          descriptions: {
-            type: 'object',
-            description: 'Value descriptions for enum types',
-            additionalProperties: { type: 'string' }
-          },
-          hasAuto: { type: 'boolean' },
-          hasAutoAdjustable: { type: 'boolean' },
-          hasEnabled: {
-            type: 'boolean',
-            description:
-              'Whether the control has an enabled/disabled toggle (sector, zone, rect)'
-          },
-          isReadOnly: {
-            type: 'boolean',
-            description: 'Whether the control is read-only'
-          },
-          maxDistance: {
-            type: 'number',
-            description: 'Maximum distance for zone controls (meters)'
-          },
-          validValues: {
-            type: 'array',
-            items: { type: 'integer' },
-            description:
-              'Subset of values that can be set by clients (enum controls)'
-          }
-        },
-        required: ['id', 'name', 'dataType', 'category']
-      },
-      ControlValue: {
-        type: 'object',
-        description:
-          'Control value. Fields present depend on the control dataType.',
-        properties: {
-          value: {
-            description: 'The control value (numeric or string)'
-          },
-          auto: {
-            type: 'boolean',
-            description: 'Whether automatic mode is enabled'
-          },
-          autoValue: {
-            type: 'number',
-            description: 'Adjustment when auto=true'
-          },
-          timestamp: {
-            type: 'string',
-            format: 'date-time',
-            description: 'ISO 8601 timestamp when value was last changed'
-          },
-          enabled: {
-            type: 'boolean',
-            description: 'Whether the control is enabled (sector, zone, rect)'
-          },
-          endValue: {
-            type: 'number',
-            description: 'End angle in radians (sector, zone)'
-          },
-          startDistance: {
-            type: 'number',
-            description: 'Inner radius in meters (zone)'
-          },
-          endDistance: {
-            type: 'number',
-            description: 'Outer radius in meters (zone)'
-          },
-          x1: {
-            type: 'number',
-            description: 'First corner X in meters (rect)'
-          },
-          y1: {
-            type: 'number',
-            description: 'First corner Y in meters (rect)'
-          },
-          x2: {
-            type: 'number',
-            description: 'Second corner X in meters (rect)'
-          },
-          y2: {
-            type: 'number',
-            description: 'Second corner Y in meters (rect)'
-          },
-          width: {
-            type: 'number',
-            description: 'Perpendicular width in meters (rect)'
-          },
-          allowed: {
-            type: 'boolean',
-            description:
-              'Whether changing this control is currently allowed (read-only)'
-          },
-          error: {
-            type: 'string',
-            description:
-              'Error message if the control change failed (read-only)'
-          }
-        }
       },
       ArpaTarget: {
         type: 'object',
@@ -386,10 +236,57 @@ const radarApiDoc = {
         },
         required: ['targetId', 'radarId']
       }
+    },
+    responses: {
+      '200Ok': {
+        description: 'OK',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                state: { type: 'string', enum: ['COMPLETED'] },
+                statusCode: { type: 'number', enum: [200] }
+              },
+              required: ['state', 'statusCode']
+            }
+          }
+        }
+      },
+      ErrorResponse: {
+        description: 'Failed operation',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              description: 'Request error response',
+              properties: {
+                state: { type: 'string', enum: ['FAILED'] },
+                statusCode: { type: 'number', enum: [404] },
+                message: { type: 'string' }
+              },
+              required: ['state', 'statusCode', 'message']
+            }
+          }
+        }
+      }
+    },
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT'
+      },
+      cookieAuth: {
+        type: 'apiKey',
+        in: 'cookie',
+        name: 'JAUTHENTICATION'
+      }
     }
   },
+  security: [{ cookieAuth: [] }, { bearerAuth: [] }],
   paths: {
-    '/signalk/v2/api/vessels/self/radars': {
+    '/': {
       get: {
         tags: ['Radars'],
         summary: 'List all active radars',
@@ -403,7 +300,7 @@ const radarApiDoc = {
                 schema: {
                   type: 'object',
                   additionalProperties: {
-                    $ref: '#/components/schemas/RadarInfo'
+                    $ref: '#/components/schemas/RadarInfoModel'
                   }
                 }
               }
@@ -412,49 +309,26 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/interfaces': {
+    '/{radar_id}': {
       get: {
-        tags: ['Configuration'],
-        summary: 'List network interfaces',
-        description:
-          'Returns network interfaces and which radar brands are listening on each.',
+        tags: ['Radars'],
+        summary: 'Get radar information',
+        description: 'Returns static information about a radar.',
+        parameters: [radarIdParam],
         responses: {
           '200': {
-            description: 'Network interfaces with radar brands',
+            description: 'Radar information',
             content: {
               'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    brands: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Radar brands compiled into this server'
-                    },
-                    interfaces: {
-                      type: 'object',
-                      additionalProperties: {
-                        type: 'object',
-                        properties: {
-                          status: { type: 'string' },
-                          ip: { type: 'string' },
-                          netmask: { type: 'string' },
-                          listeners: {
-                            type: 'object',
-                            additionalProperties: { type: 'string' }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                schema: { $ref: '#/components/schemas/RadarInfoModel' }
               }
             }
-          }
+          },
+          '404': { description: 'Radar not found' }
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/capabilities': {
+    '/{radar_id}/capabilities': {
       get: {
         tags: ['Radars'],
         summary: 'Get radar capabilities',
@@ -474,7 +348,7 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/controls': {
+    '/{radar_id}/controls': {
       get: {
         tags: ['Controls'],
         summary: 'Get all control values',
@@ -489,7 +363,7 @@ const radarApiDoc = {
                 schema: {
                   type: 'object',
                   additionalProperties: {
-                    $ref: '#/components/schemas/ControlValue'
+                    $ref: '#/components/schemas/RadarControlValue'
                   }
                 }
               }
@@ -499,7 +373,7 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/controls/{control_id}': {
+    '/controls/{control_id}': {
       get: {
         tags: ['Controls'],
         summary: 'Get a single control value',
@@ -520,7 +394,7 @@ const radarApiDoc = {
             description: 'Control value',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/ControlValue' }
+                schema: { $ref: '#/components/schemas/RadarControlValue' }
               }
             }
           },
@@ -545,7 +419,7 @@ const radarApiDoc = {
         requestBody: {
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/ControlValue' }
+              schema: { $ref: '#/components/schemas/RadarControlValue' }
             }
           }
         },
@@ -556,7 +430,7 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/targets': {
+    '/{radar_id}/targets': {
       get: {
         tags: ['Targets'],
         summary: 'Get tracked targets',
@@ -611,7 +485,7 @@ const radarApiDoc = {
         }
       }
     },
-    '/signalk/v2/api/vessels/self/radars/{radar_id}/targets/{target_id}': {
+    '/{radar_id}/targets/{target_id}': {
       delete: {
         tags: ['Targets'],
         summary: 'Cancel target tracking',
