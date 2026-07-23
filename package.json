@@ -139,7 +139,9 @@
     "ws": "^8.17.0"
   },
   "optionalDependencies": {
+    "@jellybrick/dbus-next": "^0.10.3",
     "@mxtommy/kip": "^4.8.0",
+    "@naugehyde/node-ble": "^1.13.5",
     "@signalk/app-dock": "^1.1.0",
     "@signalk/freeboard-sk": "^2.24.0",
     "@signalk/instrumentpanel": "0.x",
