@@ -337,7 +337,7 @@ function handleSubscribeRow(
     // delivered twice.
     const flattenRootValues = key === '' && !matcher(key)
     if (matcher(key) || flattenRootValues) {
-      debug('Subscribing to key ' + key)
+      debug.enabled && debug('Subscribing to key ' + key)
       let filteredBus: Bacon.EventStream<NormalizedDelta> = bus.filter(filter)
       if (flattenRootValues) {
         filteredBus = filteredBus.flatMap(

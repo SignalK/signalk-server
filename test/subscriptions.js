@@ -497,6 +497,10 @@ describe('Subscriptions', (_) => {
       )
   }
 
+  function settle() {
+    return new Promise((resolve) => setTimeout(resolve, 30))
+  }
+
   it('leaf path subscription receives flattened root values', async function () {
     await serverP
     const wsPromiser = new WsPromiser(
@@ -510,13 +514,13 @@ describe('Subscriptions', (_) => {
       context: 'vessels.flat-live',
       subscribe: [{ path: 'name' }]
     })
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await settle()
 
     await sendDelta(
       getEmptyPathDelta({ context: 'vessels.flat-live' }),
       deltaUrl
     )
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await settle()
 
     const values = collectValues(wsPromiser)
     assert(
@@ -544,7 +548,7 @@ describe('Subscriptions', (_) => {
       context: 'vessels.flat-nested',
       subscribe: [{ path: 'communication.*' }]
     })
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await settle()
 
     await sendDelta(
       getEmptyPathDelta({
@@ -567,7 +571,7 @@ describe('Subscriptions', (_) => {
       }),
       deltaUrl
     )
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await settle()
 
     const values = collectValues(wsPromiser)
     assert(
@@ -595,13 +599,13 @@ describe('Subscriptions', (_) => {
       context: 'vessels.flat-wild',
       subscribe: [{ path: '*' }]
     })
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await settle()
 
     await sendDelta(
       getEmptyPathDelta({ context: 'vessels.flat-wild' }),
       deltaUrl
     )
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await settle()
 
     const values = collectValues(wsPromiser)
     // getEmptyPathDelta carries two root values (mmsi and name); the
@@ -624,7 +628,7 @@ describe('Subscriptions', (_) => {
       getEmptyPathDelta({ context: 'vessels.flat-cached' }),
       deltaUrl
     )
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await settle()
 
     const wsPromiser = new WsPromiser(
       'ws://localhost:' +
@@ -637,7 +641,7 @@ describe('Subscriptions', (_) => {
       context: 'vessels.flat-cached',
       subscribe: [{ path: 'name' }]
     })
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await settle()
 
     const values = collectValues(wsPromiser)
     assert(
