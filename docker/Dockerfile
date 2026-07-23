@@ -29,6 +29,13 @@ COPY --chown=node:node *.tgz .
 # the .signalk layer, so the image must carry them.
 ARG EDITION=full
 
+# npm 12 gates dependency install-time lifecycle scripts behind an allowlist
+# (allow-scripts defaults to empty). @canboat/canboatjs builds its native
+# SocketCAN addon (canSocket.node) from an "install" script and ships no
+# prebuilt binaries, so without this the CAN interface silently disappears.
+# The install is asserted below so a future regression fails the build loudly.
+RUN printf 'allow-scripts[]=@canboat/canboatjs\n' > /home/node/signalk/.npmrc
+
 # Install workspace tarballs locally (not globally) to avoid permission issues,
 # then install signalk-server. The grep excludes the top-level signalk-server
 # tarball (installed separately below); the admin UI tarball is intentionally
@@ -52,7 +59,12 @@ RUN case "$EDITION" in \
        && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
        && rm -rf node_modules/@signalk/; \
      fi \
-  && rm *.tgz
+  && rm *.tgz \
+  && can_socket=$(find node_modules -path '*/@canboat/canboatjs/build/Release/canSocket.node' -print -quit) \
+  && if [ -z "$can_socket" ]; then \
+       echo "canSocket.node missing — canboatjs install script did not build the native CAN addon (npm allow-scripts gate skipped it, or node-gyp rebuild failed)" >&2; \
+       exit 1; \
+     fi
 
 FROM base
 

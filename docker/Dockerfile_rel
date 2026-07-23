@@ -28,6 +28,13 @@ ARG TAG
 # server's optionalDependencies so they cannot drift from the full image.
 ARG EDITION=full
 
+# npm 12 gates dependency install-time lifecycle scripts behind an allowlist
+# (allow-scripts defaults to empty). @canboat/canboatjs builds its native
+# SocketCAN addon (canSocket.node) from an "install" script and ships no
+# prebuilt binaries, so without this the CAN interface silently disappears.
+# The install is asserted below so a future regression fails the build loudly.
+RUN printf 'allow-scripts[]=@canboat/canboatjs\n' > /home/node/signalk/.npmrc
+
 # Install locally (not globally) to avoid permission issues, then relocate
 # nested packages to where webapp/plugin discovery expects them. The @signalk
 # packages are required in both editions, so that relocation always runs. The
@@ -51,6 +58,11 @@ RUN case "$EDITION" in \
        mkdir -p node_modules/signalk-server/node_modules/@mxtommy/ \
        && cp -rf node_modules/@mxtommy/kip node_modules/signalk-server/node_modules/@mxtommy/ \
        && rm -rf node_modules/@mxtommy/; \
+     fi \
+  && can_socket=$(find node_modules -path '*/@canboat/canboatjs/build/Release/canSocket.node' -print -quit) \
+  && if [ -z "$can_socket" ]; then \
+       echo "canSocket.node missing — canboatjs install script did not build the native CAN addon (npm allow-scripts gate skipped it, or node-gyp rebuild failed)" >&2; \
+       exit 1; \
      fi
 
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
