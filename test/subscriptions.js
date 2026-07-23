@@ -497,8 +497,10 @@ describe('Subscriptions', (_) => {
       )
   }
 
+  const SETTLE_DELAY_MS = 30
+
   function settle() {
-    return new Promise((resolve) => setTimeout(resolve, 30))
+    return new Promise((resolve) => setTimeout(resolve, SETTLE_DELAY_MS))
   }
 
   it('leaf path subscription receives flattened root values', async function () {

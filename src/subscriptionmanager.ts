@@ -360,7 +360,11 @@ function handleSubscribeRow(
             `invalid minPeriod value '${subscribeRow.minPeriod}', ignoring`
           )
         } else if (key !== '') {
-          // we can not apply minPeriod for empty path subscriptions
+          // Timing policies are not applied on the '' bus (flattened rows
+          // included): the stream carries values for multiple paths, so a
+          // shared debounce would drop values of one path because another
+          // path delivered first. Root identity data also arrives on AIS
+          // static-report cadence, far slower than any practical period.
           debug('debouncing')
           filteredBus = filteredBus.debounceImmediate(minPeriodValue)
         }
