@@ -13,6 +13,7 @@ import {
 import { RadarProviderRegistry, WithRadarApi } from './radarapi'
 import { CourseApi } from './course'
 import { HistoryProviderRegistry, WithHistoryApi } from './history'
+import { WithMessageLog } from './communications'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
 
@@ -45,6 +46,7 @@ export interface ServerAPI
     WithFeatures,
     CourseApi,
     WithNotificationsApi,
+    WithMessageLog,
     SelfIdentity {
   /**
    * Returns the entry for the provided path starting from `vessels.self` in the full data model.
