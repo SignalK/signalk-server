@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useSourceAliases } from '../../hooks/useSourceAliases'
+import { useLoginStatus } from '../../store'
 import type { SourcesData } from '../../utils/sourceLabels'
 
 interface SourceLabelProps {
@@ -12,6 +13,11 @@ const SourceLabel: React.FC<SourceLabelProps> = ({
   sourcesData
 }) => {
   const { aliases, setAlias, getDisplayName } = useSourceAliases()
+  const loginStatus = useLoginStatus()
+  // Alias writes go to the admin-only /sourceAliases endpoint; non-admins
+  // see the resolved name but get no edit affordance.
+  const isAdmin =
+    !loginStatus.authenticationRequired || loginStatus.userLevel === 'admin'
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -61,6 +67,10 @@ const SourceLabel: React.FC<SourceLabelProps> = ({
 
   const displayName = getDisplayName(sourceRef, sourcesData)
   const hasAlias = !!aliases[sourceRef]
+
+  if (!isAdmin) {
+    return <span>{displayName}</span>
+  }
 
   if (isEditing) {
     return (

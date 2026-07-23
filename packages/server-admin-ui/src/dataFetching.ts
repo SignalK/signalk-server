@@ -121,6 +121,9 @@ export async function fetchAllData(): Promise<void> {
       state.setPriorityDefaultsFromServer(data.defaults || {})
     }),
     fetchAndSet('/sourceAliases', state.setSourceAliases),
+    fetchAndSet('/sourceNames', (data) =>
+      state.setSourceNames((data ?? {}) as Record<string, string>)
+    ),
     fetchAndSet('/ignoredInstanceConflicts', state.setIgnoredInstanceConflicts),
     fetchAndSet('/n2kDeviceStatus', state.setN2kDeviceStatus),
     fetchAndSet('/livePreferredSources', state.setLivePreferredSources),

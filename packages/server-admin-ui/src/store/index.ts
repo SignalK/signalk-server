@@ -262,6 +262,10 @@ export function useSourceAliasesData() {
   return useStore((s) => s.sourceAliases)
 }
 
+export function useSourceNames() {
+  return useStore((s) => s.sourceNames)
+}
+
 export function useIgnoredInstanceConflicts() {
   return useStore((s) => s.ignoredInstanceConflicts)
 }
