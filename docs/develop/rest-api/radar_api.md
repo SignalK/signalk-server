@@ -692,7 +692,7 @@ There are two types of websocket:
 
 The JSON data websocket provides real-time control value updates for all radars via the standard Signal K stream.
 
-The URI is found in the radar response as `streamUrl` or can be constructed as:
+The URI is constructed by convention from the host serving the radar list:
 
 ```text
 ws://{host}:{port}/signalk/v1/stream
@@ -932,7 +932,7 @@ message RadarMessage {
 }
 ```
 
-The URL is found in the `radars` REST response as `spokeDataUrl` or can be constructed as:
+The URL is constructed by convention from the host serving the radar list:
 
 ```text
 /signalk/v2/api/vessels/self/radars/{radar_id}/spokes
@@ -948,13 +948,10 @@ const response = await fetch('/signalk/v2/api/vessels/self/radars/')
 const data = await response.json()
 
 // Choose a radar_id from the returned radars
-const radarId = Object.keys(data)[0]
-const radar = data[radarId]
+const radarId = Object.keys(data.radars)[0]
 
 // Connect to spoke data stream
-const wsUrl =
-  radar.spokeDataUrl ??
-  `ws://${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
+const wsUrl = `ws://${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
 
 const socket = new WebSocket(wsUrl)
 socket.binaryType = 'arraybuffer'

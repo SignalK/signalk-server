@@ -383,7 +383,7 @@ const radarApiDoc = {
         tags: ['Radars'],
         summary: 'List all active radars',
         description:
-          'Returns the API version and all radars detected on the network, keyed by radar ID. Spoke/control stream URLs are optional per entry; when absent the client uses this server (spokes at …/radars/{id}/spokes, control via /signalk/v1/stream).',
+          'Returns the API version and all radars detected on the network, keyed by radar ID. Entries carry no stream URLs; the client constructs both by convention from this server (spokes at …/radars/{id}/spokes, control via /signalk/v1/stream).',
         responses: {
           '200': {
             description:

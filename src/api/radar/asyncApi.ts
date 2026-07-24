@@ -51,7 +51,8 @@ For the REST API documentation, see OpenAPI at \`/admin/openapi/\`.
           // frame verbatim as one WebSocket binary message (mayara-server emits
           // protobuf-encoded spokes). It is not JSON, so the payload is opaque
           // octet data rather than an { angle, data } object.
-          payload: Type.Any({
+          payload: Type.String({
+            format: 'binary',
             description:
               'Raw binary spoke frame — one WebSocket binary message per spoke, in the provider-defined encoding (mayara-server: protobuf). Not JSON.'
           })

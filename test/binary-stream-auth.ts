@@ -13,7 +13,7 @@ import WebSocket from 'ws'
 // authorizeWS() — otherwise a browser's same-origin HttpOnly
 // JAUTHENTICATION cookie is ignored and every connection is rejected.
 describe('Binary stream WebSocket authentication', function () {
-  const RADAR_STREAM = '/signalk/v2/api/vessels/self/radars/test-radar/spokes'
+  const RADAR_SPOKES = '/signalk/v2/api/vessels/self/radars/test-radar/spokes'
 
   let host: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,31 +54,31 @@ describe('Binary stream WebSocket authentication', function () {
   }
 
   it('rejects an unauthenticated connection with 401', async function () {
-    const status = await upgradeStatus(RADAR_STREAM)
+    const status = await upgradeStatus(RADAR_SPOKES)
     status.should.equal(401)
   })
 
   it('rejects an invalid token with 401', async function () {
-    const status = await upgradeStatus(RADAR_STREAM, {
+    const status = await upgradeStatus(RADAR_SPOKES, {
       Cookie: 'JAUTHENTICATION=not-a-real-token'
     })
     status.should.equal(401)
   })
 
   it('accepts a valid token via the JAUTHENTICATION cookie', async function () {
-    const status = await upgradeStatus(RADAR_STREAM, {
+    const status = await upgradeStatus(RADAR_SPOKES, {
       Cookie: `JAUTHENTICATION=${adminToken}`
     })
     status.should.equal(101)
   })
 
   it('accepts a valid token via the ?token= query parameter', async function () {
-    const status = await upgradeStatus(`${RADAR_STREAM}?token=${adminToken}`)
+    const status = await upgradeStatus(`${RADAR_SPOKES}?token=${adminToken}`)
     status.should.equal(101)
   })
 
   it('accepts a valid token via the Authorization header', async function () {
-    const status = await upgradeStatus(RADAR_STREAM, {
+    const status = await upgradeStatus(RADAR_SPOKES, {
       Authorization: `Bearer ${adminToken}`
     })
     status.should.equal(101)

@@ -441,8 +441,9 @@ export interface ArpaSettings {
 /**
  * Radar discovery information — the entries of the `GET /radars` response.
  *
- * This is a *lean* discovery object: it identifies the radar and points at its
- * two stream URLs, but carries no live state. Dynamic values live on separate
+ * This is a *lean* discovery object: it identifies the radar but carries neither
+ * live state nor stream URLs — the radar's two streams are always reached by
+ * convention from the host serving this response. Dynamic values live on separate
  * endpoints — operational status and control values at `GET /radars/{id}/state`
  * (and `/controls`), and static parameters such as `spokesPerRevolution` /
  * `maxSpokeLength` at `GET /radars/{id}/capabilities`. This matches the Radar API
@@ -488,7 +489,7 @@ export interface RadarInfo {
  * @example
  * ```json
  * {
- *   "version": "3.1.0",
+ *   "version": "3.4.0",
  *   "radars": {
  *     "nav1034A": { "name": "HALO 034A", "brand": "Navico", "radarIpAddress": "192.168.1.50" }
  *   }
