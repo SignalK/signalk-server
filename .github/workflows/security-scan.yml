@@ -29,6 +29,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       # An OS variant added to the build matrix has no released image until the
       # next release publishes its tag, so scan only what is actually there.
       - name: Check image is published
