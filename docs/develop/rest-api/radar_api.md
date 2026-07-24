@@ -943,27 +943,29 @@ The URL is constructed by convention from the host serving the radar list:
 This a Javascript example how to set up the connection to receive spokes:
 
 ```javascript
-// Fetch radars
-const response = await fetch('/signalk/v2/api/vessels/self/radars/')
-const data = await response.json()
+async function connectToSpokes() {
+  // Fetch radars
+  const response = await fetch('/signalk/v2/api/vessels/self/radars/')
+  const data = await response.json()
 
-// Choose a radar_id from the returned radars. The map is empty when no radar
-// has been discovered yet, so there is nothing to connect to.
-const radarId = Object.keys(data.radars)[0]
-if (!radarId) {
-  return
-}
+  // Choose a radar_id from the returned radars. The map is empty when no radar
+  // has been discovered yet, so there is nothing to connect to.
+  const radarId = Object.keys(data.radars)[0]
+  if (!radarId) {
+    return
+  }
 
-// Connect to spoke data stream (wss: when the page itself is served over HTTPS)
-const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-const wsUrl = `${wsProto}//${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
+  // Connect to spoke data stream (wss: when the page is served over HTTPS)
+  const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${wsProto}//${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
 
-const socket = new WebSocket(wsUrl)
-socket.binaryType = 'arraybuffer'
+  const socket = new WebSocket(wsUrl)
+  socket.binaryType = 'arraybuffer'
 
-socket.onmessage = (event) => {
-  const spokeData = new Uint8Array(event.data)
-  // Process binary spoke data...
+  socket.onmessage = (event) => {
+    const spokeData = new Uint8Array(event.data)
+    // Process binary spoke data...
+  }
 }
 ```
 
