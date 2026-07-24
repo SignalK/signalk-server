@@ -950,8 +950,9 @@ const data = await response.json()
 // Choose a radar_id from the returned radars
 const radarId = Object.keys(data.radars)[0]
 
-// Connect to spoke data stream
-const wsUrl = `ws://${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
+// Connect to spoke data stream (wss: when the page itself is served over HTTPS)
+const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+const wsUrl = `${wsProto}//${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
 
 const socket = new WebSocket(wsUrl)
 socket.binaryType = 'arraybuffer'

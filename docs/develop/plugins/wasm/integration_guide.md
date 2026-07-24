@@ -387,7 +387,8 @@ function processSpokeData(radarId: string, spokeProtobuf: Uint8Array): void {
 Clients connect to the WebSocket stream:
 
 ```javascript
-const wsUrl = `ws://${location.host}/signalk/v2/api/vessels/self/radars/radar-0/spokes`
+const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+const wsUrl = `${wsProto}//${location.host}/signalk/v2/api/vessels/self/radars/radar-0/spokes`
 const ws = new WebSocket(wsUrl)
 ws.binaryType = 'arraybuffer'
 
