@@ -14,6 +14,7 @@ import Replacer from './replacer'
 import Throttle from './throttle'
 import TimestampThrottle from './timestamp-throttle'
 import Gpsd from './gpsd'
+import Nmea0183LinerFilter from './nmea0183-liner-filter'
 import PigpioSeatalk from './pigpio-seatalk'
 import GpiodSeatalk from './gpiod-seatalk'
 import type { CreateDebug, DeltaCache } from './types'
@@ -445,6 +446,11 @@ function nmea0183input(subOptions: SubOptions): PipeElement[] {
   if (pipePart) {
     if (subOptions.removeNulls) {
       pipePart.push(new Replacer({ regexp: '\u0000', template: '' }))
+    }
+    // Drop gpsd's JSON handshake after null cleanup, so a sentence prefixed by
+    // a stray NUL is still recognised as NMEA once removeNulls has run.
+    if (subOptions.type === 'gpsd') {
+      pipePart.push(new Nmea0183LinerFilter())
     }
     pipePart.push(...nmea0183inputFilter(subOptions.ignoredSentences ?? []))
     return pipePart
