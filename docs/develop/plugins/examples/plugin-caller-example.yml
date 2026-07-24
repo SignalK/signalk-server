@@ -50,6 +50,11 @@ on:
         required: false
         default: '["22", "24"]'
         type: string
+      build-node-version:
+        description: 'Node version used to Build the plugin'
+        required: false
+        default: '24'
+        type: string
       enable-armv7:
         description: Run armv7 (Cerbo GX) tests via QEMU
         required: false
@@ -75,6 +80,7 @@ jobs:
       test-command: npm test
       build-command: npm run build --if-present
       node-versions: '["22", "24"]'
+      build-node-version: '24'
       enable-armv7: false
       enable-signalk-integration: false
       signalk-server-versions: '["latest"]'
@@ -89,6 +95,7 @@ jobs:
       format-check-command: ${{ inputs.format-check-command }}
       coverage-command: ${{ inputs.coverage-command }}
       node-versions: ${{ inputs.node-versions }}
+      build-node-version: ${{ inputs.build-node-version }}
       enable-armv7: ${{ inputs.enable-armv7 }}
       enable-signalk-integration: ${{ inputs.enable-signalk-integration }}
       signalk-server-versions: ${{ inputs.signalk-server-versions }}
