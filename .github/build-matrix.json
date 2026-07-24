@@ -31,7 +31,18 @@
     }
   ],
   "node_versions": [
-    { "id": "24", "default_enabled": true, "extra_platforms": {} }
+    {
+      "id": "24",
+      "primary": true,
+      "default_enabled": true,
+      "extra_platforms": {}
+    },
+    {
+      "id": "26",
+      "primary": false,
+      "default_enabled": true,
+      "extra_platforms": {}
+    }
   ],
   "editions": [
     { "id": "full", "tag_suffix": "", "default_enabled": true },

@@ -18,6 +18,18 @@ on:
         description: 'Alpine + Node 24'
         type: boolean
         default: true
+      ubuntu_24_04_node_26:
+        description: 'Ubuntu 24.04 + Node 26.x'
+        type: boolean
+        default: true
+      ubuntu_26_04_node_26:
+        description: 'Ubuntu 26.04 + Node 26.x'
+        type: boolean
+        default: true
+      alpine_node_26:
+        description: 'Alpine + Node 26'
+        type: boolean
+        default: true
 
 permissions:
   id-token: write # Required for OIDC
@@ -191,14 +203,16 @@ jobs:
           # .github/build-matrix.json, then filter by the per-row dispatch
           # checkbox (or by default_enabled for tag runs); editions are not
           # dispatch inputs and follow their own default_enabled. The release
-          # manifest tag convention puts ubuntu full on the bare semver tags
-          # (v2.21.3, latest, v2, v2.21) and adds '-<family>' for non-ubuntu
-          # variants (v2.21.3-alpine, latest-alpine); each os_variant's own
-          # tag_suffix ('' for the primary row of a family, e.g. '-26.04' for
-          # a secondary ubuntu row) is appended so rows sharing a family don't
-          # collide on the same tags, and finally the edition tag_suffix (''
-          # for full, '-core' for core) is appended (v2.21.3-core,
-          # latest-core, v2.21.3-alpine-core).
+          # manifest tag convention puts ubuntu full on the primary node's
+          # bare semver tags (v2.21.3, latest, v2, v2.21); a non-primary node
+          # major prepends its node label ('-26.x' for ubuntu, '-26'
+          # otherwise, e.g. v2.21.3-26.x); '-<family>' is added for
+          # non-ubuntu variants (v2.21.3-alpine, latest-26-alpine); each
+          # os_variant's own tag_suffix ('' for the primary row of a family,
+          # e.g. '-26.04' for a secondary ubuntu row) is appended so rows
+          # sharing a family don't collide on the same tags, and finally the
+          # edition tag_suffix ('' for full, '-core' for core) is appended
+          # (v2.21.3-core, latest-core, v2.21.3-alpine-core).
           variants=$(jq -c \
             --argjson enabled "${ENABLED_JSON:-null}" '
             (if ($enabled | type) == "object" then $enabled else {} end) as $en
@@ -214,7 +228,7 @@ jobs:
                   node_id:   $n.id,
                   edition:   $e.id,
                   tag_suffix: $e.tag_suffix,
-                  suffix:    ((if $o.family == "ubuntu" then "" else "-\($o.family)" end) + $o.tag_suffix + $e.tag_suffix)
+                  suffix:    ((if ($n.primary // false) then "" else (if $o.family == "ubuntu" then "-\($n.id).x" else "-\($n.id)" end) end) + (if $o.family == "ubuntu" then "" else "-\($o.family)" end) + $o.tag_suffix + $e.tag_suffix)
                 }
               ]
             | map(select(.enabled == "true" and .ed_enabled))
