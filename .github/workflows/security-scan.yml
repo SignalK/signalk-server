@@ -17,27 +17,48 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [24.04, alpine]
+        os: [24.04, 26.04]
         node: [24.x]
         include:
           - os: 24.04
             node: 24.x
             image-tag: 'latest'
-          - os: alpine
+          - os: 26.04
             node: 24.x
-            image-tag: 'latest-alpine'
+            image-tag: 'latest-26.04'
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # An OS variant added to the build matrix has no released image until the
+      # next release publishes its tag, so scan only what is actually there.
+      # Only a confirmed missing manifest skips the scan; any other lookup
+      # failure fails the job rather than passing an unscanned image.
+      - name: Check image is published
+        id: image
+        env:
+          IMAGE: 'ghcr.io/signalk/signalk-server:${{ matrix.image-tag }}'
+        run: |
+          if error=$(docker manifest inspect "$IMAGE" 2>&1 >/dev/null); then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif [[ "${error,,}" == *"manifest unknown"* || "${error,,}" == *"not found"* ]]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$IMAGE is not published, skipping scan"
+          else
+            echo "::error::cannot determine whether $IMAGE is published: $error"
+            exit 1
+          fi
       - name: Run Trivy vulnerability scanner for Docker Image
-        uses: aquasecurity/trivy-action@v0.36.0
+        if: steps.image.outputs.exists == 'true'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: 'ghcr.io/signalk/signalk-server:${{ matrix.image-tag }}'
           format: 'sarif'
           output: 'trivy-results-docker-node${{ matrix.node }}-${{ matrix.image-tag }}.sarif'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        if: always() && steps.image.outputs.exists == 'true'
         with:
           sarif_file: 'trivy-results-docker-node${{ matrix.node }}-${{ matrix.image-tag }}.sarif'
           category: 'trivy-docker-node${{ matrix.node }}-${{ matrix.image-tag }}'

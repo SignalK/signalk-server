@@ -9,15 +9,15 @@
   - `vm` — `runs-on` runner label (e.g. `ubuntu-latest`, `ubuntu-24.04-arm`).
   - `platform` — Docker buildx platform string (e.g. `linux/amd64`).
 - `os_variants` — list of OS variants. Each entry:
-  - `id` — version identifier (e.g. `24.04`, `alpine`).
-  - `family` — OS family (e.g. `ubuntu`, `alpine`). Used for image-tag rendering and dispatch-input naming.
+  - `id` — version identifier (e.g. `24.04`).
+  - `family` — OS family (e.g. `ubuntu`). Used for image-tag rendering and dispatch-input naming.
   - `os_arg` — value passed to Docker build-args / used in image tags as the `os_label`.
   - `dockerfile_base` — path to the OS-specific base Dockerfile.
   - `tag_suffix` — appended to `build-docker.yml` / `release.yml` image tags for this row, after the family-based rendering described in Naming conventions. Empty for the primary row of a family (the one that owns the bare `latest` / `vX.Y.Z` tags); set on any additional row that shares a `family` with another row (e.g. `-26.04`) so the two don't collide on the same tags. `build-base-image.yml` doesn't use this field — its tags already key on `os_label` directly.
   - `default_enabled` — when scheduled / push / tag runs occur (i.e. when no `workflow_dispatch` inputs are provided), the variant is included only if this is `true` on both the OS row and the Node row.
 - `node_versions` — list of Node major versions. Each entry:
   - `id` — Node major (e.g. `24`).
-  - `primary` — exactly one row must be `true`: it owns the bare release tags (`latest`, `vX.Y.Z`, `latest-alpine`, …). `release.yml` prepends the node label (`-<node>.x` for ubuntu, `-<node>` otherwise) to every tag of a non-primary row (e.g. `latest-26.x`, `v2.21.3-26-alpine`) so two Node majors never collide on the same release tags. `build-base-image.yml` and `build-docker.yml` ignore this field — their tags already include the node label.
+  - `primary` — exactly one row must be `true`: it owns the bare release tags (`latest`, `vX.Y.Z`, …). `release.yml` prepends the node label (`-<node>.x` for ubuntu, `-<node>` otherwise) to every tag of a non-primary row (e.g. `latest-26.x`, `v2.21.3-26.x-26.04`) so two Node majors never collide on the same release tags. `build-base-image.yml` and `build-docker.yml` ignore this field — their tags already include the node label.
   - `default_enabled` — see above.
   - `extra_platforms` — optional `{ <arch.id>: <platform string> }` appended to that arch's base platform for this Node major.
   - `exclude_archs` — optional `[<arch.id>, …]` listing archs that should not be built for this Node major.
@@ -28,8 +28,8 @@
 
 ## Naming conventions
 
-- **Image tags.** For the ubuntu family the node label is rendered as `<node>.x` (e.g. `24.x`); for other families it is `<node>` (e.g. `24`). Arch suffix (`amd`, `arm`) comes from `architectures[].id`. Each os_variant's own `tag_suffix` is appended next (e.g. `-26.04` for a secondary ubuntu row), then the edition `tag_suffix` (e.g. `-core`) last, so the core variant rolls up as `latest-core` / `latest-alpine-core` / `latest-26.04-core` and pins as `X.Y.Z-core` / `X.Y.Z-alpine-core` / `X.Y.Z-26.04-core`.
-- **Dispatch input names.** `<family>_<id_with_-_and_._mapped_to__>_node_<node_id>` when `family != id`, otherwise `<id>_node_<node_id>`. Examples: `ubuntu_24_04_node_24`, `alpine_node_24`. The leading `<family>_` segment exists because GitHub Actions input names must start with a letter — `24_04_…` would be rejected.
+- **Image tags.** For the ubuntu family the node label is rendered as `<node>.x` (e.g. `24.x`); for other families it is `<node>` (e.g. `24`). Arch suffix (`amd`, `arm`) comes from `architectures[].id`. Each os_variant's own `tag_suffix` is appended next (e.g. `-26.04` for a secondary ubuntu row), then the edition `tag_suffix` (e.g. `-core`) last, so the core variant rolls up as `latest-core` / `latest-26.04-core` and pins as `X.Y.Z-core` / `X.Y.Z-26.04-core`.
+- **Dispatch input names.** `<family>_<id_with_-_and_._mapped_to__>_node_<node_id>` when `family != id`, otherwise `<id>_node_<node_id>`. Example: `ubuntu_24_04_node_24`. The leading `<family>_` segment exists because GitHub Actions input names must start with a letter — `24_04_…` would be rejected.
 
 ## Adding things
 
