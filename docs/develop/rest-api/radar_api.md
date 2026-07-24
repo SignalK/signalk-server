@@ -944,7 +944,6 @@ This a Javascript example how to set up the connection to receive spokes:
 
 ```javascript
 async function connectToSpokes() {
-  // Fetch radars
   const response = await fetch('/signalk/v2/api/vessels/self/radars/')
   const data = await response.json()
 
