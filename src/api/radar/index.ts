@@ -99,10 +99,19 @@ export class RadarApi {
    */
   async getRadars(): Promise<radar.RadarsResponse> {
     const radars: Record<string, radar.RadarInfo> = {}
+    // First provider to claim an ID wins, so a collision resolves the same way
+    // here as in getRadarInfo()/findProviderForRadar() — otherwise GET /radars
+    // and GET /radars/{id} would silently disagree about the same radar.
+    const claimed = new Set<string>()
     for (const [pluginId, provider] of this.radarProviders) {
       try {
         const radarIds = await provider.methods.getRadars()
         for (const radarId of radarIds) {
+          if (claimed.has(radarId)) {
+            debug(`Duplicate radar id ${radarId} from ${pluginId}: ignored`)
+            continue
+          }
+          claimed.add(radarId)
           const info = await provider.methods.getRadarInfo(radarId)
           if (info) {
             radars[radarId] = info
@@ -824,9 +833,8 @@ export class RadarApi {
     // - Control/target: the standard Signal K delta/PUT stream at
     //   /signalk/v1/stream, with radar state modelled as `radars.{id}.controls.*`
     //   paths and PUT handlers registered by the provider plugin.
-    // A provider may still advertise an external spokeDataUrl/streamUrl in
-    // RadarInfo for direct connection; when absent, the above server endpoints
-    // are used.
+    // Neither URL appears in RadarInfo: a client always constructs both by
+    // convention from the host it fetched the radar list from.
 
     // ============================================
     // ARPA Target Endpoints

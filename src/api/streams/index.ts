@@ -106,7 +106,7 @@ export function initializeBinaryStreams(app: StreamApplication): void {
           debug('Matched stream pattern: %s', streamId)
         } else if (radarMatch) {
           // Alias: map the radar spokes endpoint to the radars/{radarId} stream
-          const radarId = radarMatch[1]
+          const radarId = decodeURIComponent(radarMatch[1])
           streamId = `radars/${radarId}`
           debug('Matched radar spokes pattern: %s', streamId)
         } else {
