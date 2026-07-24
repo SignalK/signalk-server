@@ -6,7 +6,7 @@ RUN deluser node 2>/dev/null || true && \
 
 RUN apk add --no-cache \
     sudo git bash \
-    python3 py3-virtualenv py3-pip build-base \
+    python3 py3-virtualenv py3-pip build-base linux-headers \
     procps-ng nano curl libcap-setcap bluez \
  && addgroup -g 991 -S docker \
  && addgroup -g 990 -S i2c \
