@@ -340,17 +340,10 @@ export function radar_get_radars(): string {
 // Return RadarInfo JSON for a specific radar
 export function radar_get_radar_info(requestJson: string): string {
   const info = {
-    id: 'radar-0',
     name: 'Furuno DRS4D-NXT',
     brand: 'Furuno',
-    status: 'transmit',
-    spokesPerRevolution: 2048,
-    maxSpokeLen: 1024,
-    range: 2000,
-    controls: {
-      gain: { auto: false, value: 50 },
-      sea: { auto: true, value: 30 }
-    }
+    model: 'DRS4D-NXT',
+    radarIpAddress: '192.168.1.50'
   }
   return JSON.stringify(info)
 }
@@ -358,20 +351,25 @@ export function radar_get_radar_info(requestJson: string): string {
 
 ### RadarInfo Interface
 
+`RadarInfo` is a lean discovery object — it identifies the radar and carries no
+live state. Operational status and control values are served from
+`GET /radars/{id}/state` (and `/controls`), static parameters such as
+`spokesPerRevolution`, `maxSpokeLen` and the display `legend` from
+`GET /radars/{id}/capabilities`. Stream URLs are not part of the object; clients
+construct them by convention from the host they fetched the radar list from.
+
 ```typescript
 interface RadarInfo {
-  id: string // Unique radar ID
-  name: string // Display name
-  brand?: string // Manufacturer
-  status: 'off' | 'standby' | 'transmit' | 'warming'
-  spokesPerRevolution: number // Spokes per rotation
-  maxSpokeLen: number // Max spoke samples
-  range: number // Current range (meters)
-  controls: RadarControls // Current control values
-  legend?: LegendEntry[] // Color legend for display
-  streamUrl?: string // Optional external WebSocket URL
+  name: string // User-defined name, or the auto-detected model name
+  brand: string // Manufacturer (Navico, Furuno, Raymarine, Garmin, Emulator)
+  model?: string // Radar model name, if detected
+  radarIpAddress: string // IP address of the radar unit on the network
 }
 ```
+
+The radar's ID is the key it is listed under in the `GET /radars` response
+(`{ version, radars: { [id]: RadarInfo } }`) — the same ID `radar_get_radars()`
+returns.
 
 ### Streaming Radar Spokes
 
@@ -389,7 +387,8 @@ function processSpokeData(radarId: string, spokeProtobuf: Uint8Array): void {
 Clients connect to the WebSocket stream:
 
 ```javascript
-const wsUrl = `ws://${location.host}/signalk/v2/api/vessels/self/radars/radar-0/stream`
+const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+const wsUrl = `${wsProto}//${location.host}/signalk/v2/api/vessels/self/radars/radar-0/spokes`
 const ws = new WebSocket(wsUrl)
 ws.binaryType = 'arraybuffer'
 

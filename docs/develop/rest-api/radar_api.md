@@ -6,7 +6,15 @@ title: Radar API
 
 The Signal K server Radar API provides a unified interface for viewing and controlling marine radar equipment from any manufacturer. The API is **(web)app-friendly**: clients can build dynamic UIs that automatically adapt to any radar's capabilities without hardcoding support for specific brands or models.
 
-This is version v3.1.0 of the API. The version will use semver for version updates.
+This is version **3.4.0** of the API. The version uses semver for version updates.
+
+The Radar API version is reported in the `version` field of the `GET /radars`
+response (see [Listing All Radars](#listing-all-radars)). Every conforming
+implementation reports the **same** version for the same API — signalk-server and
+the reference provider (mayara-server) are kept in lockstep — so a client sees an
+identical `version`, and identical response shapes, whether it talks to a provider
+directly or through a Signal K server. Bump the version in both implementations
+together whenever the Radar API changes.
 
 Radar functionality is provided by "provider plugins" that handle the interaction with radar hardware and stream spoke data to connected clients.
 
@@ -131,28 +139,35 @@ Retrieve all available radars with their current info:
 HTTP GET "/signalk/v2/api/vessels/self/radars"
 ```
 
+The response is a `{ version, radars }` envelope: the Radar API `version` (see
+above) plus the discovered radars keyed by radar ID.
+
 _Response:_
 
 ```json
 {
-  "nav1034A": {
-    "brand": "Navico",
-    "model": "HALO",
-    "name": "HALO 034A",
-    "radarIpAddress": "192.168.1.50",
-    "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034A/spokes",
-    "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
-  },
-  "nav1034B": {
-    "brand": "Navico",
-    "model": "HALO",
-    "name": "HALO 034B",
-    "radarIpAddress": "192.168.1.50",
-    "spokeDataUrl": "ws://192.168.1.100:8080/signalk/v2/api/vessels/self/radars/nav1034B/spokes",
-    "streamUrl": "ws://192.168.1.100:8080/signalk/v1/stream"
+  "version": "3.4.0",
+  "radars": {
+    "nav1034A": {
+      "brand": "Navico",
+      "model": "HALO",
+      "name": "HALO 034A",
+      "radarIpAddress": "192.168.1.50"
+    },
+    "nav1034B": {
+      "brand": "Navico",
+      "model": "HALO",
+      "name": "HALO 034B",
+      "radarIpAddress": "192.168.1.50"
+    }
   }
 }
 ```
+
+A radar entry carries no stream URLs — the spoke and control-stream WebSockets are
+always reached by convention from the host serving the response
+(`…/radars/{id}/spokes` and `/signalk/v1/stream`), so a client constructs the same
+URL whether it talks to a provider directly or through a Signal K server.
 
 ### Network Interfaces
 
@@ -677,7 +692,7 @@ There are two types of websocket:
 
 The JSON data websocket provides real-time control value updates for all radars via the standard Signal K stream.
 
-The URI is found in the radar response as `streamUrl` or can be constructed as:
+The URI is constructed by convention from the host serving the radar list:
 
 ```text
 ws://{host}:{port}/signalk/v1/stream
@@ -917,7 +932,7 @@ message RadarMessage {
 }
 ```
 
-The URL is found in the `radars` REST response as `spokeDataUrl` or can be constructed as:
+The URL is constructed by convention from the host serving the radar list:
 
 ```text
 /signalk/v2/api/vessels/self/radars/{radar_id}/spokes
@@ -928,25 +943,28 @@ The URL is found in the `radars` REST response as `spokeDataUrl` or can be const
 This a Javascript example how to set up the connection to receive spokes:
 
 ```javascript
-// Fetch radars
-const response = await fetch('/signalk/v2/api/vessels/self/radars/')
-const data = await response.json()
+async function connectToSpokes() {
+  const response = await fetch('/signalk/v2/api/vessels/self/radars/')
+  const data = await response.json()
 
-// Choose a radar_id from the returned radars
-const radarId = Object.keys(data)[0]
-const radar = data[radarId]
+  // Choose a radar_id from the returned radars. The map is empty when no radar
+  // has been discovered yet, so there is nothing to connect to.
+  const radarId = Object.keys(data.radars)[0]
+  if (!radarId) {
+    return
+  }
 
-// Connect to spoke data stream
-const wsUrl =
-  radar.spokeDataUrl ??
-  `ws://${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
+  // Connect to spoke data stream (wss: when the page is served over HTTPS)
+  const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${wsProto}//${location.host}/signalk/v2/api/vessels/self/radars/${radarId}/spokes`
 
-const socket = new WebSocket(wsUrl)
-socket.binaryType = 'arraybuffer'
+  const socket = new WebSocket(wsUrl)
+  socket.binaryType = 'arraybuffer'
 
-socket.onmessage = (event) => {
-  const spokeData = new Uint8Array(event.data)
-  // Process binary spoke data...
+  socket.onmessage = (event) => {
+    const spokeData = new Uint8Array(event.data)
+    // Process binary spoke data...
+  }
 }
 ```
 
@@ -998,8 +1016,10 @@ interface RadarInfo {
   brand: string
   model?: string
   radarIpAddress: string
-  spokeDataUrl: string
-  streamUrl: string
+  // The spoke and control-stream WebSockets are reached by convention from the
+  // host serving this response (…/radars/{id}/spokes and /signalk/v1/stream),
+  // so no URLs are listed. A provider may add implementation-specific fields
+  // (e.g. mayara-server's `replay`); clients ignore unknown fields.
 }
 ```
 

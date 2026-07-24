@@ -11,6 +11,13 @@ import { SignalKMessageHub } from '../../app'
 import { radar } from '@signalk/server-api'
 
 const RADAR_API_PATH = `/signalk/v2/api/vessels/self/radars`
+// Version of the Radar API this server implements (radar_api.md). Surfaced in the
+// GET /radars discovery envelope so clients can negotiate shape. Kept in lockstep
+// with the reference provider (mayara-server's `api-version`) so a client sees the
+// same `version` whether it talks to a provider directly or through Signal K —
+// bump both together when the Radar API changes. Also used as the OpenAPI
+// info.version in openApi.ts.
+export const RADAR_API_VERSION = '3.4.0'
 const TWO_PI = 2 * Math.PI
 
 interface RadarApplication
@@ -87,24 +94,34 @@ export class RadarApi {
   // ***** Server API methods *****
 
   /**
-   * Get list of all radars from all providers.
+   * Get all radars from all providers as the keyed discovery response
+   * `{ version, radars: { [id]: RadarInfo } }` (per radar_api.md).
    */
-  async getRadars(): Promise<radar.RadarInfo[]> {
-    const radars: radar.RadarInfo[] = []
+  async getRadars(): Promise<radar.RadarsResponse> {
+    const radars: Record<string, radar.RadarInfo> = {}
+    // First provider to claim an ID wins, so a collision resolves the same way
+    // here as in getRadarInfo()/findProviderForRadar() — otherwise GET /radars
+    // and GET /radars/{id} would silently disagree about the same radar.
+    const claimed = new Set<string>()
     for (const [pluginId, provider] of this.radarProviders) {
       try {
         const radarIds = await provider.methods.getRadars()
         for (const radarId of radarIds) {
+          if (claimed.has(radarId)) {
+            debug(`Duplicate radar id ${radarId} from ${pluginId}: ignored`)
+            continue
+          }
+          claimed.add(radarId)
           const info = await provider.methods.getRadarInfo(radarId)
           if (info) {
-            radars.push(info)
+            radars[radarId] = info
           }
         }
       } catch (err: any) {
         debug(`Error getting radars from ${pluginId}: ${err.message}`)
       }
     }
-    return radars
+    return { version: RADAR_API_VERSION, radars }
   }
 
   /**
@@ -809,9 +826,15 @@ export class RadarApi {
       }
     )
 
-    // Note: WebSocket stream endpoint (/radars/:id/stream) would require
-    // additional WebSocket handling infrastructure. For now, providers
-    // should expose their own streamUrl for direct client connection.
+    // Note: the radar streams are served outside this module.
+    // - Binary spokes: `…/radars/{id}/spokes` — handled by the binary stream
+    //   manager (src/api/streams/index.ts), fed by the provider via
+    //   app.binaryStreamManager.emitData('radars/{id}', buf).
+    // - Control/target: the standard Signal K delta/PUT stream at
+    //   /signalk/v1/stream, with radar state modelled as `radars.{id}.controls.*`
+    //   paths and PUT handlers registered by the provider plugin.
+    // Neither URL appears in RadarInfo: a client always constructs both by
+    // convention from the host it fetched the radar list from.
 
     // ============================================
     // ARPA Target Endpoints

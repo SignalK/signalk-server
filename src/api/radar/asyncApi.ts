@@ -29,12 +29,12 @@ For the REST API documentation, see OpenAPI at \`/admin/openapi/\`.
       host: 'localhost:3000',
       protocol: 'ws',
       description: 'Signal K server WebSocket endpoint',
-      pathname: '/signalk/v2/api/vessels/self/radars/{radarId}/stream'
+      pathname: '/signalk/v2/api/vessels/self/radars/{radarId}/spokes'
     }
   },
   channels: {
-    'radars.stream': {
-      address: 'radars/{radarId}/stream',
+    'radars.spokes': {
+      address: 'radars/{radarId}/spokes',
       description: 'Radar spoke data stream. Binary spoke data for rendering.',
       parameters: {
         radarId: {
@@ -47,11 +47,14 @@ For the REST API documentation, see OpenAPI at \`/admin/openapi/\`.
           title: 'Spoke Data',
           summary: 'Raw radar spoke data for display rendering',
           contentType: 'application/octet-stream',
-          payload: Type.Object({
-            angle: Type.Number({ description: 'Spoke angle in degrees' }),
-            data: Type.String({
-              description: 'Base64-encoded spoke sample data'
-            })
+          // The spoke stream is raw binary: signalk-server relays each provider
+          // frame verbatim as one WebSocket binary message (mayara-server emits
+          // protobuf-encoded spokes). It is not JSON, so the payload is opaque
+          // octet data rather than an { angle, data } object.
+          payload: Type.String({
+            format: 'binary',
+            description:
+              'Raw binary spoke frame — one WebSocket binary message per spoke, in the provider-defined encoding (mayara-server: protobuf). Not JSON.'
           })
         }
       }
@@ -60,7 +63,7 @@ For the REST API documentation, see OpenAPI at \`/admin/openapi/\`.
   operations: {
     receiveSpokeData: {
       action: 'receive',
-      channel: { $ref: '#/channels/radars.stream' },
+      channel: { $ref: '#/channels/radars.spokes' },
       summary: 'Receive radar spoke data'
     }
   },

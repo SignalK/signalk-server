@@ -91,9 +91,12 @@ export function initializeBinaryStreams(app: StreamApplication): void {
           /^\/signalk\/v2\/api\/streams\/(.+)$/
         )
 
-        // Match: /signalk/v2/api/vessels/self/radars/:id/stream (convenience alias)
+        // Match: /signalk/v2/api/vessels/self/radars/:id/spokes (binary spoke
+        // image data; the radar_api.md endpoint name). This is the binary spoke
+        // stream — distinct from the control/target channel, which rides the
+        // standard Signal K delta/PUT stream at /signalk/v1/stream.
         const radarMatch = pathname.match(
-          /^\/signalk\/v2\/api\/vessels\/self\/radars\/([^\/]+)\/stream$/
+          /^\/signalk\/v2\/api\/vessels\/self\/radars\/([^\/]+)\/spokes$/
         )
 
         let streamId: string | null = null
@@ -102,10 +105,10 @@ export function initializeBinaryStreams(app: StreamApplication): void {
           streamId = decodeURIComponent(streamMatch[1])
           debug('Matched stream pattern: %s', streamId)
         } else if (radarMatch) {
-          // Alias: map radar endpoint to radars/{radarId} stream
-          const radarId = radarMatch[1]
+          // Alias: map the radar spokes endpoint to the radars/{radarId} stream
+          const radarId = decodeURIComponent(radarMatch[1])
           streamId = `radars/${radarId}`
-          debug('Matched radar stream pattern: %s', streamId)
+          debug('Matched radar spokes pattern: %s', streamId)
         } else {
           // Not a binary stream endpoint, let other handlers process
           debug('No match for path, ignoring: %s', pathname)
