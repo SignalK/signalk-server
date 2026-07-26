@@ -187,6 +187,73 @@ export default function ServerLogs() {
                         : ''
                     doHandleDebug(value)
                   }}
+                  styles={{
+                    control: (base, state) => ({
+                      ...base,
+                      backgroundColor: 'var(--sk-input-bg)',
+                      borderColor: state.isFocused
+                        ? 'var(--bs-primary)'
+                        : 'var(--sk-input-border-color)',
+                      boxShadow: state.isFocused
+                        ? '0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25)'
+                        : 'none',
+                      '&:hover': {
+                        borderColor: 'var(--bs-primary)'
+                      }
+                    }),
+                    valueContainer: (base) => ({
+                      ...base,
+                      gap: '0.25rem'
+                    }),
+                    multiValue: (base) => ({
+                      ...base,
+                      backgroundColor: 'var(--bs-tertiary-bg)'
+                    }),
+                    multiValueLabel: (base) => ({
+                      ...base,
+                      color: 'var(--bs-body-color)'
+                    }),
+                    multiValueRemove: (base) => ({
+                      ...base,
+                      color: 'var(--bs-secondary-color)',
+                      ':hover': {
+                        backgroundColor: 'var(--bs-danger-bg-subtle)',
+                        color: 'var(--bs-danger)'
+                      }
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      color: 'var(--bs-body-color)'
+                    }),
+                    placeholder: (base) => ({
+                      ...base,
+                      color: 'var(--bs-secondary-color)'
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      zIndex: 100,
+                      backgroundColor: 'var(--bs-body-bg)',
+                      border: '1px solid var(--sk-dropdown-border-color)'
+                    }),
+                    menuList: (base) => ({
+                      ...base,
+                      backgroundColor: 'var(--bs-body-bg)'
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isSelected
+                        ? 'var(--bs-primary)'
+                        : state.isFocused
+                          ? 'var(--bs-tertiary-bg)'
+                          : 'transparent',
+                      color: state.isSelected ? '#fff' : 'var(--bs-body-color)',
+                      ':hover': {
+                        backgroundColor: state.isSelected
+                          ? 'var(--bs-primary)'
+                          : 'var(--bs-tertiary-bg)'
+                      }
+                    })
+                  }}
                 />
                 <Form.Text
                   className="text-muted"
