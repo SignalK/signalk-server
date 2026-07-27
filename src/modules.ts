@@ -410,9 +410,10 @@ async function findModulesWithKeyword(
 
   const search = (async () => {
     const moduleData = await searchByKeyword(keyword)
-    npmDebug(
-      `npm search returned ${moduleData.length} modules with keyword ${keyword}`
-    )
+    npmDebug.enabled &&
+      npmDebug(
+        `npm search returned ${moduleData.length} modules with keyword ${keyword}`
+      )
 
     // Map, not a plain object: package names like 'constructor' would
     // collide with Object.prototype keys
@@ -472,9 +473,10 @@ async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
       // npm's total is an estimate that can exceed what the search
       // actually delivers; treat an empty (or malformed) page as the
       // end instead of retrying the same offset forever
-      npmDebug(
-        `npm search for ${keyword} ended early at ${fetchedCount} of ${toFetchCount}`
-      )
+      npmDebug.enabled &&
+        npmDebug(
+          `npm search for ${keyword} ended early at ${fetchedCount} of ${toFetchCount}`
+        )
       break
     }
 
@@ -482,7 +484,7 @@ async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
       parsed.objects.filter(
         (entry) =>
           typeof entry?.package?.name === 'string' &&
-          typeof entry.package.version === 'string'
+          semver.valid(entry.package.version) !== null
       )
     )
     fetchedCount += parsed.objects.length
