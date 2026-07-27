@@ -4,6 +4,7 @@ const fs = require('fs')
 const path = require('path')
 const {
   modulesWithKeyword,
+  findModulesWithKeyword,
   checkForNewServerVersion,
   getLatestServerVersion,
   importOrRequire,
@@ -66,6 +67,85 @@ describe('modulesWithKeyword', () => {
       (moduleInfo) => moduleInfo.module === updateInstalledModule
     )
     chai.expect(installedModuleInfo.location).to.eql(tempNodeModules)
+  })
+})
+
+describe('findModulesWithKeyword', () => {
+  // each test uses its own keyword because results are cached per
+  // keyword for 60s at module level
+  const originalFetch = global.fetch
+  let fetchCalls
+
+  function searchPage(objects, total) {
+    return { ok: true, json: () => Promise.resolve({ objects, total }) }
+  }
+
+  function searchObjects(prefix, count, start = 0) {
+    return Array.from({ length: count }, (_, i) => ({
+      package: { name: `${prefix}-${start + i}`, version: '1.0.0' }
+    }))
+  }
+
+  // the stub serves pages by the requested from= offset so an
+  // implementation stuck re-requesting the same offset cannot pass
+  function stubFetch(pageForOffset) {
+    fetchCalls = []
+    global.fetch = (url) => {
+      const from = Number(new URL(url).searchParams.get('from'))
+      fetchCalls.push(from)
+      return Promise.resolve(pageForOffset(from))
+    }
+  }
+
+  afterEach(() => {
+    global.fetch = originalFetch
+  })
+
+  it('pages through multi-page search results', async () => {
+    stubFetch((from) => {
+      if (from === 0) return searchPage(searchObjects('multi', 250, 0), 550)
+      if (from === 250) return searchPage(searchObjects('multi', 250, 250), 550)
+      if (from === 500) return searchPage(searchObjects('multi', 50, 500), 550)
+      return searchPage([], 550)
+    })
+    const packages = await findModulesWithKeyword('test-multi-page')
+    chai.expect(packages).to.have.length(550)
+    chai.expect(fetchCalls).to.deep.equal([0, 250, 500])
+  })
+
+  it('resolves with partial results when npm returns an empty page below total', async () => {
+    // npm's total is an estimate: an empty page below the claimed
+    // total must end pagination with the accumulated results
+    stubFetch((from) =>
+      from === 0
+        ? searchPage(searchObjects('short', 250), 300)
+        : searchPage([], 300)
+    )
+    const packages = await findModulesWithKeyword('test-empty-page')
+    chai.expect(packages).to.have.length(250)
+    chai.expect(fetchCalls).to.deep.equal([0, 250])
+  })
+
+  it('stops paging at the page cap when total keeps growing', async () => {
+    stubFetch((from) => searchPage(searchObjects('grow', 1, from), 1000))
+    const packages = await findModulesWithKeyword('test-page-cap')
+    chai.expect(packages).to.have.length(20)
+    chai
+      .expect(fetchCalls)
+      .to.deep.equal(Array.from({ length: 20 }, (_, i) => i))
+  })
+
+  it('coalesces concurrent searches for the same keyword', async () => {
+    stubFetch(() => searchPage(searchObjects('single', 1), 1))
+    const [first, second] = await Promise.all([
+      findModulesWithKeyword('test-coalesce'),
+      findModulesWithKeyword('test-coalesce')
+    ])
+    chai.expect(fetchCalls).to.have.length(1)
+    chai.expect(first).to.equal(second)
+    const third = await findModulesWithKeyword('test-coalesce')
+    chai.expect(third).to.equal(first)
+    chai.expect(fetchCalls).to.have.length(1)
   })
 })
 
