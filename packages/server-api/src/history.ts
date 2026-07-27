@@ -35,13 +35,12 @@ export type ValueList = {
  * Controls how history providers should handle multiple sources for the
  * requested paths.
  *
- * - `preferred`: provider default / priority-resolved source handling
  * - `all`: return values split by source, with `$source` set in `values`
  *
  * A `sourceRef` specified on an individual path remains an explicit filter;
  * `all` only expands paths that do not already specify a source.
  */
-export type HistorySourcePolicy = 'preferred' | 'all'
+export type HistorySourcePolicy = 'all'
 
 /**
  * A row of historical data: first element is timestamp, followed by aggregated values.

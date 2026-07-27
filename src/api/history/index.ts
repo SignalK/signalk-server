@@ -521,8 +521,8 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
 
 const parseSourcePolicy = (value: unknown): HistorySourcePolicy | undefined => {
   if (value === undefined || value === null || value === '') return undefined
-  if (value === 'preferred' || value === 'all') return value
-  throw new Error("sourcePolicy parameter must be 'preferred' or 'all'")
+  if (value === 'all') return value
+  throw new Error("sourcePolicy parameter must be 'all'")
 }
 
 // Maps the single-letter unit suffix in a resolution time expression to seconds.
