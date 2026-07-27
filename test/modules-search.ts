@@ -16,8 +16,8 @@ describe('findModulesWithKeyword', () => {
   const originalFetch = global.fetch
   let fetchCalls: number[] = []
 
-  function searchPage(objects: SearchObject[], total: number) {
-    return { ok: true, json: () => Promise.resolve({ objects, total }) }
+  function searchPage(objects: unknown[], total: number): Response {
+    return Response.json({ objects, total })
   }
 
   function searchObjects(
@@ -32,13 +32,13 @@ describe('findModulesWithKeyword', () => {
 
   // the stub serves pages by the requested from= offset so an
   // implementation stuck re-requesting the same offset cannot pass
-  function stubFetch(pageForOffset: (from: number) => unknown) {
+  function stubFetch(pageForOffset: (from: number) => Response) {
     fetchCalls = []
-    global.fetch = ((url: string) => {
-      const from = Number(new URL(url).searchParams.get('from'))
+    global.fetch = (input: RequestInfo | URL) => {
+      const from = Number(new URL(String(input)).searchParams.get('from'))
       fetchCalls.push(from)
       return Promise.resolve(pageForOffset(from))
-    }) as unknown as typeof fetch
+    }
   }
 
   afterEach(() => {
@@ -92,7 +92,7 @@ describe('findModulesWithKeyword', () => {
           { package: { name: 'valid-pkg', version: '1.0.0' } },
           { package: { name: 'valid-pkg', version: 'not-semver' } },
           { package: { name: 'invalid-only', version: 'also-bad' } },
-          {} as SearchObject
+          {}
         ],
         4
       )
