@@ -11,6 +11,13 @@ describe('prioritiesSlice', () => {
           dirty: false,
           timeoutsOk: true
         }
+      },
+      priorityOverridesData: {
+        paths: [],
+        saveState: {
+          dirty: false,
+          timeoutsOk: true
+        }
       }
     })
   })
@@ -102,6 +109,55 @@ describe('prioritiesSlice', () => {
 
       expect(useStore.getState().sourcePrioritiesData.saveState.dirty).toBe(
         true
+      )
+    })
+
+    it('should register the path as a priority override', () => {
+      // The save payload only carries paths present in
+      // priorityOverridesData: without this, a freshly added ungrouped
+      // override is dropped from the PUT and vanishes on save.
+      useStore.getState().changePath(0, 'navigation.headingTrue')
+
+      expect(useStore.getState().priorityOverridesData.paths).toContain(
+        'navigation.headingTrue'
+      )
+      expect(useStore.getState().priorityOverridesData.saveState.dirty).toBe(
+        true
+      )
+    })
+
+    it('should not duplicate an already-registered override path', () => {
+      useStore
+        .getState()
+        .setPriorityOverridesFromServer(['navigation.headingTrue'])
+      useStore.getState().changePath(0, 'navigation.headingTrue')
+
+      expect(useStore.getState().priorityOverridesData.paths).toEqual([
+        'navigation.headingTrue'
+      ])
+      expect(useStore.getState().priorityOverridesData.saveState.dirty).toBe(
+        false
+      )
+    })
+
+    it('should keep registered override paths sorted', () => {
+      useStore
+        .getState()
+        .setPriorityOverridesFromServer(['navigation.position'])
+      useStore.getState().changePath(0, 'navigation.headingTrue')
+
+      expect(useStore.getState().priorityOverridesData.paths).toEqual([
+        'navigation.headingTrue',
+        'navigation.position'
+      ])
+    })
+
+    it('should not register an empty path as an override', () => {
+      useStore.getState().changePath(0, '')
+
+      expect(useStore.getState().priorityOverridesData.paths).toEqual([])
+      expect(useStore.getState().priorityOverridesData.saveState.dirty).toBe(
+        false
       )
     })
   })

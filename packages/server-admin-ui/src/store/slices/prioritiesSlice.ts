@@ -158,12 +158,29 @@ export const createPrioritiesSlice: StateCreator<
         sourcePriorities.push({ path: '', priorities: [] })
       }
       sourcePriorities[index] = { ...sourcePriorities[index], path }
+      // Giving a row a path is an explicit user override, so the path
+      // must enter priorityOverridesData too: the save payload only
+      // carries paths present there, and without this a freshly added
+      // ungrouped override is silently dropped from the PUT and
+      // vanishes on save.
+      const priorityOverridesData =
+        !path || state.priorityOverridesData.paths.includes(path)
+          ? state.priorityOverridesData
+          : {
+              ...state.priorityOverridesData,
+              paths: [...state.priorityOverridesData.paths, path].sort(),
+              saveState: {
+                ...state.priorityOverridesData.saveState,
+                dirty: true
+              }
+            }
       return {
         sourcePrioritiesData: {
           ...state.sourcePrioritiesData,
           sourcePriorities,
           saveState: { ...state.sourcePrioritiesData.saveState, dirty: true }
-        }
+        },
+        priorityOverridesData
       }
     })
   },
