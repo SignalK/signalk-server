@@ -20,14 +20,6 @@
       "dockerfile_base": "./docker/Dockerfile_base_26.04",
       "tag_suffix": "-26.04",
       "default_enabled": true
-    },
-    {
-      "id": "alpine",
-      "family": "alpine",
-      "os_arg": "alpine",
-      "dockerfile_base": "./docker/Dockerfile_base_alpine",
-      "tag_suffix": "",
-      "default_enabled": true
     }
   ],
   "node_versions": [
