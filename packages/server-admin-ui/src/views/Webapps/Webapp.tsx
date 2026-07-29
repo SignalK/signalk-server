@@ -1,8 +1,7 @@
 import { ReactNode } from 'react'
 import Card from 'react-bootstrap/Card'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTableCells } from '@fortawesome/free-solid-svg-icons/faTableCells'
 import classNames from 'classnames'
+import { monogramFor } from '../../utils/monogram'
 import { toSafeModuleId } from './dynamicutilities'
 
 const ICON_BOX_SIZE = '72px'
@@ -76,13 +75,15 @@ export default function Webapp({
   const header = webAppInfo?.signalk?.displayName || webAppInfo.name
   const url = urlToWebapp(webAppInfo)
   const appIcon = webAppInfo?.signalk?.appIcon
-  const hasDisplayName = !!webAppInfo?.signalk?.displayName
+  const displayName = webAppInfo?.signalk?.displayName
 
   const blockIcon = function () {
     // A real icon renders on a transparent box so the card shows through its
     // transparent areas; the primary colour is reserved for the placeholder.
+    // text-white because the surrounding anchor would otherwise paint the
+    // monogram in link blue, on blue.
     const classes = classNames(
-      !appIcon && 'bg-primary',
+      !appIcon && 'bg-primary text-white',
       padding.icon,
       'font-2xl me-3 float-start'
     )
@@ -95,14 +96,15 @@ export default function Webapp({
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: ICON_BORDER_RADIUS,
-      overflow: 'hidden'
-    }
-    if (appIcon) {
-      style.width = style.height = ICON_BOX_SIZE
+      overflow: 'hidden',
+      // Fixed square for the placeholder too, so a monogram tile lines up
+      // with the real icons in the same row.
+      width: ICON_BOX_SIZE,
+      height: ICON_BOX_SIZE
     }
     return (
-      <span className={classes} style={style}>
-        {!appIcon && !hasDisplayName && <FontAwesomeIcon icon={faTableCells} />}
+      <span aria-hidden="true" className={classes} style={style}>
+        {!appIcon && monogramFor(webAppInfo.name, displayName)}
       </span>
     )
   }
