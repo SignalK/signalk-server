@@ -109,6 +109,21 @@ export interface AppSliceState {
   sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
   sourceStatusLoaded: boolean
   /**
+   * Registered History API providers and the effective/configured
+   * default, pushed by the server as HISTORYPROVIDERS serverevents
+   * (replayed on connect). null until the first event arrives.
+   * configuredUnavailable is the server-graced signal: it only flips
+   * true after the configured provider has stayed unregistered for the
+   * server's grace window, so slow-starting provider backends don't
+   * flash the warning badge on every restart.
+   */
+  historyProviders: {
+    ids: string[]
+    defaultId?: string
+    configuredId?: string
+    configuredUnavailable: boolean
+  } | null
+  /**
    * App Store list view filter (All/Installed/Updates/Installing) and search
    * text. Held in the store rather than component state so they survive the
    * unmount/remount when the user opens a plugin detail page and returns via
@@ -175,6 +190,12 @@ export interface AppSliceActions {
       lastSeen?: number
     }[]
   ) => void
+  setHistoryProviders: (data: {
+    ids: string[]
+    defaultId?: string
+    configuredId?: string
+    configuredUnavailable: boolean
+  }) => void
   setDebugSettings: (settings: {
     debugEnabled?: string
     rememberDebug?: boolean
@@ -238,6 +259,7 @@ const initialAppState: AppSliceState = {
   n2kDeviceStatusLoaded: false,
   sourceStatus: {},
   sourceStatusLoaded: false,
+  historyProviders: null,
   appstoreView: 'All',
   appstoreSearch: ''
 }
@@ -449,6 +471,12 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
       }
     }
     set({ sourceStatus, sourceStatusLoaded: true })
+  },
+
+  setHistoryProviders: (data) => {
+    // Full-snapshot replace: the server emits complete state on every
+    // provider register/unregister/default change.
+    set({ historyProviders: data })
   },
 
   setDebugSettings: (settings) => {

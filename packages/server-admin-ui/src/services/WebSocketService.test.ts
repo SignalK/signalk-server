@@ -115,4 +115,44 @@ describe('WebSocketService serverStartId tracking', () => {
       Object.keys(useStore.getState().signalkData.self ?? {})
     ).toHaveLength(1)
   })
+
+  it('stores HISTORYPROVIDERS serverevents as a full snapshot', () => {
+    // handleServerEvent no-ops until the zustand setter is registered
+    // (done by the app bootstrap in production).
+    service.setZustandState(useStore.setState)
+    useStore.setState({ historyProviders: null })
+
+    ws.receive({
+      type: 'HISTORYPROVIDERS',
+      data: {
+        ids: ['questdb', 'influx'],
+        defaultId: 'influx',
+        configuredId: 'questdb',
+        configuredUnavailable: true
+      }
+    })
+    expect(useStore.getState().historyProviders).toEqual({
+      ids: ['questdb', 'influx'],
+      defaultId: 'influx',
+      configuredId: 'questdb',
+      configuredUnavailable: true
+    })
+
+    // A later snapshot replaces the previous state entirely.
+    ws.receive({
+      type: 'HISTORYPROVIDERS',
+      data: {
+        ids: ['questdb'],
+        defaultId: 'questdb',
+        configuredId: 'questdb',
+        configuredUnavailable: false
+      }
+    })
+    expect(useStore.getState().historyProviders).toEqual({
+      ids: ['questdb'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredUnavailable: false
+    })
+  })
 })

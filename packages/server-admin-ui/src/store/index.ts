@@ -318,6 +318,14 @@ export function useSourceStatusLoaded() {
   return useStore((s) => s.sourceStatusLoaded)
 }
 
+export function useHistoryProviders() {
+  return useStore((s) => s.historyProviders)
+}
+
+export function useHistoryProviderUnavailable() {
+  return useStore((s) => s.historyProviders?.configuredUnavailable ?? false)
+}
+
 export function useConfiguredPriorityPaths(): Set<string> {
   // Select a primitive string so zustand can compare by ===.
   // useShallow doesn't work with Set (Object.keys returns [] for Sets).

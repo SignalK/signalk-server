@@ -340,6 +340,15 @@ export class WebSocketService {
             (data ?? []) as Parameters<SignalKStore['setSourceStatus']>[0]
           )
         break
+      case 'HISTORYPROVIDERS':
+        useStore
+          .getState()
+          .setHistoryProviders(
+            (data ?? { ids: [], configuredUnavailable: false }) as Parameters<
+              SignalKStore['setHistoryProviders']
+            >[0]
+          )
+        break
       case 'N2KDEVICESTATUS':
         // Server pushes the same payload shape as GET /n2kDeviceStatus
         // whenever pgnDataInstances / pgnSourceKeys actually change.

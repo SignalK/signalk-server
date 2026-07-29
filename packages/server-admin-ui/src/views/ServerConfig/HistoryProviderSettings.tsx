@@ -6,56 +6,50 @@ import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faClockRotateLeft } from '@fortawesome/free-solid-svg-icons/faClockRotateLeft'
-import {
-  useHistoryProviders,
-  isConfiguredProviderUnavailable,
-  PROVIDERS_PATH
-} from '../../hooks/useHistoryProviderStatus'
+import { useHistoryProviders } from '../../store'
 
+const PROVIDERS_PATH = '/signalk/v2/api/history/_providers'
 const SAVED_MESSAGE_CLEAR_MS = 3000
 
 const HistoryProviderSettings: React.FC = () => {
-  const { providers, loadError, refresh } = useHistoryProviders()
+  // Provider state is pushed by the server (HISTORYPROVIDERS
+  // serverevents, replayed on connect), so a successful save needs no
+  // re-fetch — the server emits the new state when the default changes.
+  const providers = useHistoryProviders()
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
-  const handleChange = useCallback(
-    async (id: string) => {
-      setSaveError(null)
-      setSaved(false)
-      try {
-        const res = await fetch(
-          `${PROVIDERS_PATH}/_default/${encodeURIComponent(id)}`,
-          {
-            method: 'POST',
-            credentials: 'include'
-          }
-        )
-        if (res.ok) {
-          setSaved(true)
-          setTimeout(() => setSaved(false), SAVED_MESSAGE_CLEAR_MS)
-        } else {
-          const body = (await res.json()) as { message?: string }
-          setSaveError(body.message || `Save failed (HTTP ${res.status})`)
+  const handleChange = useCallback(async (id: string) => {
+    setSaveError(null)
+    setSaved(false)
+    try {
+      const res = await fetch(
+        `${PROVIDERS_PATH}/_default/${encodeURIComponent(id)}`,
+        {
+          method: 'POST',
+          credentials: 'include'
         }
-      } catch (e) {
-        setSaveError(e instanceof Error ? e.message : 'Save failed')
+      )
+      if (res.ok) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), SAVED_MESSAGE_CLEAR_MS)
+      } else {
+        const body = (await res.json()) as { message?: string }
+        setSaveError(body.message || `Save failed (HTTP ${res.status})`)
       }
-      await refresh()
-    },
-    [refresh]
-  )
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Save failed')
+    }
+  }, [])
 
-  const configuredButUnavailable = isConfiguredProviderUnavailable(providers)
+  const configuredButUnavailable = providers?.configuredUnavailable ?? false
 
   // The choice only matters when there is something to choose between:
   // stay hidden for zero or one registered provider, unless the
   // persisted choice points at an unavailable provider (worth a
-  // warning) or loading failed.
+  // warning).
   const visible =
-    loadError !== null ||
-    (providers !== null &&
-      (providers.ids.length > 1 || configuredButUnavailable))
+    providers !== null && (providers.ids.length > 1 || configuredButUnavailable)
 
   if (!visible) {
     return null
@@ -68,76 +62,69 @@ const HistoryProviderSettings: React.FC = () => {
         <strong>Default History Provider</strong>
       </Card.Header>
       <Card.Body>
-        {loadError && (
-          <Alert variant="danger" className="mb-0">
-            {loadError}
-          </Alert>
-        )}
-        {providers !== null && (
-          <Form.Group
-            as={Row}
-            className="mb-0"
-            controlId="historyDefaultProvider"
-          >
-            <Col md={2}>
-              <Form.Label>Default Provider</Form.Label>
-            </Col>
-            <Col xs="12" md={10}>
-              {providers.ids.length === 0 ? (
+        <Form.Group
+          as={Row}
+          className="mb-0"
+          controlId="historyDefaultProvider"
+        >
+          <Col md={2}>
+            <Form.Label>Default Provider</Form.Label>
+          </Col>
+          <Col xs="12" md={10}>
+            {providers.ids.length === 0 ? (
+              <Form.Text className="text-muted">
+                No history providers are registered. Enable a plugin that
+                provides the History API to select a default.
+              </Form.Text>
+            ) : (
+              <>
+                <Form.Select
+                  value={providers.defaultId ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    handleChange(e.target.value)
+                  }
+                  style={{ maxWidth: '300px' }}
+                >
+                  {!providers.defaultId && (
+                    <option value="" disabled>
+                      Select a provider...
+                    </option>
+                  )}
+                  {providers.ids.map((id) => (
+                    <option key={id} value={id}>
+                      {id}
+                    </option>
+                  ))}
+                </Form.Select>
                 <Form.Text className="text-muted">
-                  No history providers are registered. Enable a plugin that
-                  provides the History API to select a default.
+                  Serves History API requests that do not specify a provider.
+                  The setting persists across restarts and does not depend on
+                  plugin load order.
                 </Form.Text>
-              ) : (
-                <>
-                  <Form.Select
-                    value={providers.defaultId ?? ''}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                      handleChange(e.target.value)
-                    }
-                    style={{ maxWidth: '300px' }}
-                  >
-                    {!providers.defaultId && (
-                      <option value="" disabled>
-                        Select a provider...
-                      </option>
-                    )}
-                    {providers.ids.map((id) => (
-                      <option key={id} value={id}>
-                        {id}
-                      </option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    Serves History API requests that do not specify a provider.
-                    The setting persists across restarts and does not depend on
-                    plugin load order.
-                  </Form.Text>
-                </>
-              )}
-              {configuredButUnavailable && (
-                <Alert variant="warning" className="mt-2 mb-0">
-                  The configured default provider &quot;
-                  {providers.configuredId}&quot; is not currently available
-                  {providers.defaultId
-                    ? ` — using "${providers.defaultId}" as fallback`
-                    : ''}
-                  . It will become the default again when its plugin is enabled.
-                </Alert>
-              )}
-              {saved && (
-                <Alert variant="success" className="mt-2 mb-0">
-                  Default history provider saved.
-                </Alert>
-              )}
-              {saveError && (
-                <Alert variant="danger" className="mt-2 mb-0">
-                  {saveError}
-                </Alert>
-              )}
-            </Col>
-          </Form.Group>
-        )}
+              </>
+            )}
+            {configuredButUnavailable && (
+              <Alert variant="warning" className="mt-2 mb-0">
+                The configured default provider &quot;
+                {providers.configuredId}&quot; is not currently available
+                {providers.defaultId
+                  ? ` — using "${providers.defaultId}" as fallback`
+                  : ''}
+                . It will become the default again when its plugin is enabled.
+              </Alert>
+            )}
+            {saved && (
+              <Alert variant="success" className="mt-2 mb-0">
+                Default history provider saved.
+              </Alert>
+            )}
+            {saveError && (
+              <Alert variant="danger" className="mt-2 mb-0">
+                {saveError}
+              </Alert>
+            )}
+          </Col>
+        </Form.Group>
       </Card.Body>
     </Card>
   )

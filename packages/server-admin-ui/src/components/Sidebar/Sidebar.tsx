@@ -23,11 +23,11 @@ import {
   usePriorityOverrides,
   usePriorityGroups,
   useActiveConflictCount,
-  useUnconfiguredGnssSources
+  useUnconfiguredGnssSources,
+  useHistoryProviderUnavailable
 } from '../../store'
 import classNames from 'classnames'
 import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
-import { useHistoryProviderUnavailable } from '../../hooks/useHistoryProviderStatus'
 import './Sidebar.css'
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
