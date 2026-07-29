@@ -9,14 +9,27 @@ const ICON_BOX_SIZE = '72px'
 // Match the Appstore's PluginIcon so a webapp tile and a plugin tile read
 // as the same mark.
 const ICON_BORDER_RADIUS = 8
+const HEADER_MAX_LINES = 1
 const DESCRIPTION_MAX_LINES = 3
+const TEXT_LINE_HEIGHT = 1.4
 
-const descriptionStyle: React.CSSProperties = {
-  display: '-webkit-box',
-  WebkitBoxOrient: 'vertical',
-  WebkitLineClamp: DESCRIPTION_MAX_LINES,
-  overflow: 'hidden'
+// Clamp to a fixed number of lines, ellipsising whatever overflows. The line
+// box is also *reserved*: the height is spelled out rather than left to the
+// content, so a card with a one-line description is exactly as tall as one
+// with an overflowing description.
+function clampToLines(lines: number): React.CSSProperties {
+  return {
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical',
+    WebkitLineClamp: lines,
+    overflow: 'hidden',
+    lineHeight: TEXT_LINE_HEIGHT,
+    height: `${lines * TEXT_LINE_HEIGHT}em`
+  }
 }
+
+const headerStyle = clampToLines(HEADER_MAX_LINES)
+const descriptionStyle = clampToLines(DESCRIPTION_MAX_LINES)
 
 interface SignalKInfo {
   displayName?: string
@@ -95,7 +108,9 @@ export default function Webapp({
       <Card>
         <Card.Body className={card.style} {...attributes}>
           {blockIcon()}
-          <div className={lead.classes}>{header}</div>
+          <div className={lead.classes} style={headerStyle}>
+            {header}
+          </div>
           <div className="text-muted font-xs" style={descriptionStyle}>
             {webAppInfo.description}
           </div>
