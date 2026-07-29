@@ -36,6 +36,20 @@ function nameCollator<T extends { name: string; displayName?: string }>(
 
 export type AppstoreView = 'All' | 'Installed' | 'Updates' | 'Installing'
 
+/**
+ * Snapshot carried by the server's HISTORYPROVIDERS serverevent.
+ * configuredUnavailable is the server-graced signal: it only flips true
+ * after the configured provider has stayed unregistered for the
+ * server's grace window, so slow-starting provider backends don't flash
+ * the warning badge on every restart.
+ */
+export interface HistoryProvidersState {
+  ids: string[]
+  defaultId?: string
+  configuredId?: string
+  configuredUnavailable: boolean
+}
+
 export interface AppSliceState {
   plugins: Plugin[]
   webapps: Webapp[]
@@ -112,17 +126,8 @@ export interface AppSliceState {
    * Registered History API providers and the effective/configured
    * default, pushed by the server as HISTORYPROVIDERS serverevents
    * (replayed on connect). null until the first event arrives.
-   * configuredUnavailable is the server-graced signal: it only flips
-   * true after the configured provider has stayed unregistered for the
-   * server's grace window, so slow-starting provider backends don't
-   * flash the warning badge on every restart.
    */
-  historyProviders: {
-    ids: string[]
-    defaultId?: string
-    configuredId?: string
-    configuredUnavailable: boolean
-  } | null
+  historyProviders: HistoryProvidersState | null
   /**
    * App Store list view filter (All/Installed/Updates/Installing) and search
    * text. Held in the store rather than component state so they survive the
@@ -190,12 +195,7 @@ export interface AppSliceActions {
       lastSeen?: number
     }[]
   ) => void
-  setHistoryProviders: (data: {
-    ids: string[]
-    defaultId?: string
-    configuredId?: string
-    configuredUnavailable: boolean
-  }) => void
+  setHistoryProviders: (data: HistoryProvidersState) => void
   setDebugSettings: (settings: {
     debugEnabled?: string
     rememberDebug?: boolean

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import Alert from 'react-bootstrap/Alert'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -18,6 +18,17 @@ const HistoryProviderSettings: React.FC = () => {
   const providers = useHistoryProviders()
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  // Re-armed on every save and cleared on unmount, so rapid re-selects
+  // don't stack timers and a late fire can't hit an unmounted card.
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (savedTimer.current) {
+        clearTimeout(savedTimer.current)
+      }
+    },
+    []
+  )
 
   const handleChange = useCallback(async (id: string) => {
     setSaveError(null)
@@ -32,7 +43,13 @@ const HistoryProviderSettings: React.FC = () => {
       )
       if (res.ok) {
         setSaved(true)
-        setTimeout(() => setSaved(false), SAVED_MESSAGE_CLEAR_MS)
+        if (savedTimer.current) {
+          clearTimeout(savedTimer.current)
+        }
+        savedTimer.current = setTimeout(
+          () => setSaved(false),
+          SAVED_MESSAGE_CLEAR_MS
+        )
       } else {
         const body = (await res.json()) as { message?: string }
         setSaveError(body.message || `Save failed (HTTP ${res.status})`)
