@@ -388,6 +388,11 @@ const modulesByKeyword: Record<
   { time: number; packages: NpmModuleData[] }
 > = {}
 
+// Coalesces concurrent searches for the same keyword so parallel
+// /appstore/available requests share one npm search instead of each
+// paging through the registry on their own.
+const searchInFlight: Map<string, Promise<NpmModuleData[]>> = new Map()
+
 async function findModulesWithKeyword(
   keyword: string
 ): Promise<NpmModuleData[]> {
@@ -398,39 +403,59 @@ async function findModulesWithKeyword(
     return modulesByKeyword[keyword].packages
   }
 
-  const moduleData = await searchByKeyword(keyword)
-  npmDebug(
-    `npm search returned ${moduleData.length} modules with keyword ${keyword}`
-  )
+  const existing = searchInFlight.get(keyword)
+  if (existing) {
+    return existing
+  }
 
-  const result = moduleData.reduce(
-    (acc: Record<string, NpmModuleData>, module: NpmModuleData) => {
-      const name = module.package.name
-      if (
-        !acc[name] ||
-        semver.gt(module.package.version, acc[name].package.version)
-      ) {
-        acc[name] = module
-      }
-      return acc
-    },
-    {}
-  )
+  const search = (async () => {
+    const moduleData = await searchByKeyword(keyword)
+    npmDebug.enabled &&
+      npmDebug(
+        `npm search returned ${moduleData.length} modules with keyword ${keyword}`
+      )
 
-  const packages = Object.values(result)
-  modulesByKeyword[keyword] = { time: Date.now(), packages }
-  return packages
+    // Map, not a plain object: package names like 'constructor' would
+    // collide with Object.prototype keys
+    const result = moduleData.reduce(
+      (acc: Map<string, NpmModuleData>, module: NpmModuleData) => {
+        const name = module.package.name
+        const current = acc.get(name)
+        if (
+          !current ||
+          semver.gt(module.package.version, current.package.version)
+        ) {
+          acc.set(name, module)
+        }
+        return acc
+      },
+      new Map<string, NpmModuleData>()
+    )
+
+    const packages = [...result.values()]
+    modulesByKeyword[keyword] = { time: Date.now(), packages }
+    return packages
+  })()
+  searchInFlight.set(keyword, search)
+  try {
+    return await search
+  } finally {
+    searchInFlight.delete(keyword)
+  }
 }
 
 const NPM_SEARCH_TIMEOUT_MS = 60_000
 const NPM_DIST_TAGS_TIMEOUT_MS = 20_000
+const NPM_SEARCH_MAX_PAGES = 20
 
 async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
   let fetchedCount = 0
   let toFetchCount = 1
+  let pageCount = 0
   let moduleData: NpmModuleData[] = []
 
-  while (fetchedCount < toFetchCount) {
+  while (fetchedCount < toFetchCount && pageCount < NPM_SEARCH_MAX_PAGES) {
+    pageCount++
     npmDebug(`searching ${keyword} from ${fetchedCount + 1} of ${toFetchCount}`)
     const res = await fetch(
       `https://registry.npmjs.org/-/v1/search?size=250&from=${
@@ -444,7 +469,24 @@ async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
     }
     const parsed = (await res.json()) as NpmSearchResponse
 
-    moduleData = moduleData.concat(parsed.objects)
+    if (!Array.isArray(parsed?.objects) || parsed.objects.length === 0) {
+      // npm's total is an estimate that can exceed what the search
+      // actually delivers; treat an empty (or malformed) page as the
+      // end instead of retrying the same offset forever
+      npmDebug.enabled &&
+        npmDebug(
+          `npm search for ${keyword} ended early at ${fetchedCount} of ${toFetchCount}`
+        )
+      break
+    }
+
+    moduleData = moduleData.concat(
+      parsed.objects.filter(
+        (entry) =>
+          typeof entry?.package?.name === 'string' &&
+          semver.valid(entry.package.version) !== null
+      )
+    )
     fetchedCount += parsed.objects.length
     toFetchCount = parsed.total
   }
