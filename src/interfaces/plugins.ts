@@ -691,12 +691,12 @@ module.exports = (theApp: any) => {
         console.error(`${plugin.id}:no configuration data`)
         safeConfiguration = {}
       }
+      const handlersBeforeStart = onStopHandlers[plugin.id].length
       onStopHandlers[plugin.id].push(() => {
         app.resourcesApi.unRegister(plugin.id)
         app.autopilotApi.unRegister(plugin.id)
         app.weatherApi.unRegister(plugin.id)
       })
-      const handlersBeforeStart = onStopHandlers[plugin.id].length
       try {
         plugin.start(safeConfiguration, restart)
       } catch (e) {
