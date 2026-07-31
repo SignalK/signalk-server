@@ -479,6 +479,185 @@ describe('Subscriptions', (_) => {
     )
   })
 
+  // Root deltas (path '') carry vessel identity fields as one object value.
+  // Subscriptions to the corresponding leaf paths (name, mmsi,
+  // communication.callsignVhf, ...) receive them flattened into per-leaf
+  // deltas; '' and wildcard subscriptions keep the original root delta.
+  // Each test uses its own context so cached data from other tests cannot
+  // leak into the bootstrap snapshot.
+
+  function collectValues(wsPromiser) {
+    return wsPromiser
+      .parsedMessages()
+      .slice(1)
+      .flatMap((delta) =>
+        delta.updates.flatMap((update) =>
+          (update.values || []).map((vp) => ({ context: delta.context, ...vp }))
+        )
+      )
+  }
+
+  const SETTLE_DELAY_MS = 30
+
+  function settle() {
+    return new Promise((resolve) => setTimeout(resolve, SETTLE_DELAY_MS))
+  }
+
+  it('leaf path subscription receives flattened root values', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+    )
+    await wsPromiser.nthMessage(1)
+
+    await wsPromiser.send({
+      context: 'vessels.flat-live',
+      subscribe: [{ path: 'name' }]
+    })
+    await settle()
+
+    await sendDelta(
+      getEmptyPathDelta({ context: 'vessels.flat-live' }),
+      deltaUrl
+    )
+    await settle()
+
+    const values = collectValues(wsPromiser)
+    assert(
+      values.length === 1,
+      `Expected exactly one value, got ${values.length}`
+    )
+    assert(values[0].context === 'vessels.flat-live')
+    assert(
+      values[0].path === 'name',
+      `Expected path 'name', got '${values[0].path}'`
+    )
+    assert(values[0].value === 'SomeBoat')
+  })
+
+  it('wildcard leaf subscription receives nested flattened root values', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+    )
+    await wsPromiser.nthMessage(1)
+
+    await wsPromiser.send({
+      context: 'vessels.flat-nested',
+      subscribe: [{ path: 'communication.*' }]
+    })
+    await settle()
+
+    await sendDelta(
+      getEmptyPathDelta({
+        context: 'vessels.flat-nested',
+        updates: [
+          {
+            timestamp: '2014-05-03T09:14:11.000Z',
+            $source: 'ais',
+            values: [
+              {
+                path: '',
+                value: {
+                  name: 'SomeBoat',
+                  communication: { callsignVhf: 'MIPR2' }
+                }
+              }
+            ]
+          }
+        ]
+      }),
+      deltaUrl
+    )
+    await settle()
+
+    const values = collectValues(wsPromiser)
+    assert(
+      values.length === 1,
+      `Expected exactly one value, got ${values.length}`
+    )
+    assert(values[0].context === 'vessels.flat-nested')
+    assert(
+      values[0].path === 'communication.callsignVhf',
+      `Expected path 'communication.callsignVhf', got '${values[0].path}'`
+    )
+    assert(values[0].value === 'MIPR2')
+  })
+
+  it('wildcard subscription receives the root delta once, not flattened duplicates', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+    )
+    await wsPromiser.nthMessage(1)
+
+    await wsPromiser.send({
+      context: 'vessels.flat-wild',
+      subscribe: [{ path: '*' }]
+    })
+    await settle()
+
+    await sendDelta(
+      getEmptyPathDelta({ context: 'vessels.flat-wild' }),
+      deltaUrl
+    )
+    await settle()
+
+    const values = collectValues(wsPromiser)
+    // getEmptyPathDelta carries two root values (mmsi and name); the
+    // subscriber must see exactly those, unflattened and undupped.
+    assert(
+      values.length === 2,
+      `Expected exactly two values, got ${values.length}`
+    )
+    values.forEach((vp) => {
+      assert(vp.context === 'vessels.flat-wild')
+      assert(vp.path === '', `Unexpected non-root path '${vp.path}'`)
+    })
+  })
+
+  it('leaf path subscription replays flattened cached root values', async function () {
+    await serverP
+
+    // Prime the cache before the client connects.
+    await sendDelta(
+      getEmptyPathDelta({ context: 'vessels.flat-cached' }),
+      deltaUrl
+    )
+    await settle()
+
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+    )
+    await wsPromiser.nthMessage(1)
+
+    await wsPromiser.send({
+      context: 'vessels.flat-cached',
+      subscribe: [{ path: 'name' }]
+    })
+    await settle()
+
+    const values = collectValues(wsPromiser)
+    assert(
+      values.length === 1,
+      `Expected exactly one value, got ${values.length}`
+    )
+    assert(values[0].context === 'vessels.flat-cached')
+    assert(
+      values[0].path === 'name',
+      `Expected path 'name', got '${values[0].path}'`
+    )
+    assert(values[0].value === 'SomeBoat')
+  })
+
   it('relativePosition subscription serves correct data', function () {
     let wsPromiser
 
