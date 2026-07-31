@@ -51,7 +51,11 @@ const HistoryProviderSettings: React.FC = () => {
           SAVED_MESSAGE_CLEAR_MS
         )
       } else {
-        const body = (await res.json()) as { message?: string }
+        // The error body may be empty or non-JSON; fall back to the
+        // status code instead of surfacing a parser error.
+        const body = (await res.json().catch(() => ({}))) as {
+          message?: string
+        }
         setSaveError(body.message || `Save failed (HTTP ${res.status})`)
       }
     } catch (e) {
