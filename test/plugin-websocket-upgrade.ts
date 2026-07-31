@@ -142,13 +142,27 @@ describe('plugin WebSocket endpoints', () => {
     await assert.rejects(open('/plugins/upgradetestplugin/raw'), /418/)
   })
 
-  it('does not break the primary Signal K WebSocket', (done) => {
-    const ws = new WebSocket(`ws://localhost:${port}/signalk/v1/stream`)
-    ws.on('open', () => {
-      ws.close()
-      done()
+  function connect(pathname: string): Promise<WebSocket> {
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(`ws://localhost:${port}${pathname}`)
+      const timer = setTimeout(() => {
+        ws.close()
+        reject(new Error(`WebSocket connect timeout for ${pathname}`))
+      }, OPEN_TIMEOUT_MS)
+      ws.on('open', () => {
+        clearTimeout(timer)
+        resolve(ws)
+      })
+      ws.on('error', (err) => {
+        clearTimeout(timer)
+        reject(err)
+      })
     })
-    ws.on('error', done)
+  }
+
+  it('does not break the primary Signal K WebSocket', async () => {
+    const ws = await connect('/signalk/v1/stream')
+    ws.close()
   })
 
   it('re-registers endpoints across a config-change restart', async () => {
@@ -173,18 +187,10 @@ describe('plugin WebSocket endpoints', () => {
   })
 
   it('removes endpoints when the plugin stops', async () => {
-    // A live connection must be terminated when the plugin stops, and new
-    // upgrades must then be rejected.
     await setPluginConfig(port, true, {})
     await waitForEcho(open, true)
 
-    const live = new WebSocket(
-      `ws://localhost:${port}/plugins/upgradetestplugin/echo`
-    )
-    await new Promise<void>((resolve, reject) => {
-      live.on('open', () => resolve())
-      live.on('error', reject)
-    })
+    const live = await connect('/plugins/upgradetestplugin/echo')
     const closed = new Promise<void>((resolve, reject) => {
       live.on('close', () => resolve())
       const timer = setTimeout(
