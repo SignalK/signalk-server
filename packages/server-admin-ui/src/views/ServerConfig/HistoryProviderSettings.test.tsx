@@ -108,6 +108,30 @@ describe('HistoryProviderSettings', () => {
     ).toBeInTheDocument()
   })
 
+  it('URL-encodes the selected provider id in the save path', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 200 }))
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb', '@scope/provider'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: '@scope/provider' }
+      })
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/signalk/v2/api/history/_providers/_default/%40scope%2Fprovider',
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
   it('surfaces the server error message on a failed save', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ message: 'no can do' }), { status: 500 })
@@ -127,5 +151,26 @@ describe('HistoryProviderSettings', () => {
     })
 
     expect(screen.getByText('no can do')).toBeInTheDocument()
+  })
+
+  it('falls back to the HTTP status when the error body is not JSON', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(null, { status: 500 })
+    )
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb', 'influx'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: 'influx' }
+      })
+    })
+
+    expect(screen.getByText('Save failed (HTTP 500)')).toBeInTheDocument()
   })
 })
