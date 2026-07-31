@@ -111,6 +111,34 @@ The final argument is a function that will be called every time an update is rec
 
 In the `stop()` method each subcription in the `unsubscribes` array is _unsubscribed_ and the resources released.
 
+### Subscribing to `name`, `mmsi` and other root values
+
+Not all data in the model lives under a leaf path. Vessel identity fields — `name`, `mmsi`, `communication.callsignVhf` and similar attributes, typically sourced from AIS static reports — sit at the vessel root and are delivered as a _root delta_: a single update whose `path` is the empty string and whose `value` is an object holding the fields:
+
+```javascript
+{
+  path: '',
+  value: { name: 'Boaty McBoatface', mmsi: '230099999' }
+}
+```
+
+There are two ways to subscribe to these values (both via `app.subscriptionmanager.subscribe()` and over WebSocket):
+
+**By leaf path.** Subscribe to the field's path as if it were a regular leaf and the server flattens matching root deltas into ordinary per-path updates:
+
+```javascript
+subscribe: [
+  { path: 'name' }, // delivers { path: 'name', value: 'Boaty McBoatface' }
+  { path: 'communication.*' } // delivers e.g. { path: 'communication.callsignVhf', value: 'OH1234' }
+]
+```
+
+**By empty path.** Subscribe with `path: ''` to receive the root delta as-is — one update with the whole object as its value. A wildcard `'*'` subscription also matches the empty path and likewise receives the unflattened root delta (in addition to all leaf paths).
+
+A root delta is never delivered twice to the same subscription: flattening applies only when the subscribed pattern does not itself match the empty path.
+
+Note that `period` and `minPeriod` are not applied to root values, flattened or not — they arrive at the rate the source emits them (for AIS static data, typically every few minutes).
+
 ### Path Discovery with `announceNewPaths`
 
 When using granular subscriptions (subscribing to specific paths rather than `*`), you may want to discover what paths are available without receiving continuous updates for all of them. The `announceNewPaths` option solves this:
