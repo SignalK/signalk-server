@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
+import { compression } from 'vite-plugin-compression2'
 
 import '@signalk/server-admin-ui-dependencies'
 
@@ -86,6 +87,15 @@ export default defineConfig({
     react(),
     babel({
       presets: [reactCompilerPreset()]
+    }),
+    // Emit .br and .gz sidecars next to the originals; the server serves
+    // them directly with matching Content-Encoding, skipping per-request
+    // compression. Both are needed: Chrome only accepts brotli on secure
+    // origins, so plain-HTTP installs fall back to the gzip sidecar.
+    // Files under 1 KB gain nothing from compression.
+    compression({
+      algorithms: ['brotliCompress', 'gzip'],
+      threshold: 1024
     })
   ],
   css: {
