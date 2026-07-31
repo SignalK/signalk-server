@@ -6,7 +6,7 @@ import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faClockRotateLeft } from '@fortawesome/free-solid-svg-icons/faClockRotateLeft'
-import { useHistoryProviders } from '../../store'
+import { useHistoryProviders, useHistoryProviderUnavailable } from '../../store'
 
 const PROVIDERS_PATH = '/signalk/v2/api/history/_providers'
 const SAVED_MESSAGE_CLEAR_MS = 3000
@@ -63,10 +63,7 @@ const HistoryProviderSettings: React.FC = () => {
     }
   }, [])
 
-  const configuredButUnavailable =
-    providers !== null &&
-    providers.configuredId !== undefined &&
-    !providers.configuredAvailable
+  const configuredButUnavailable = useHistoryProviderUnavailable()
 
   // The choice only matters when there is something to choose between:
   // stay hidden for zero or one registered provider, unless the
