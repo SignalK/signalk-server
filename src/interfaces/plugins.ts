@@ -49,6 +49,7 @@ import {
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { IRouter, Request, RequestHandler, Response } from 'express'
+import { serveStaticFiles } from '../staticfiles'
 import fs from 'fs'
 import { deprecate } from 'util'
 import _ from 'lodash'
@@ -153,7 +154,7 @@ module.exports = (theApp: any) => {
 
       theApp.use(
         backwardsCompat('/plugins/configure'),
-        express.static(getPluginConfigPublic(theApp))
+        serveStaticFiles(getPluginConfigPublic(theApp))
       )
 
       theApp.get(backwardsCompat('/plugins'), (req: Request, res: Response) => {

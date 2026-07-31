@@ -19,6 +19,7 @@ const debug = createDebug('signalk-server:interfaces:rest')
 const express = require('express')
 const { getMetadata } = require('@signalk/path-metadata')
 const ports = require('../ports')
+const { serveStaticFiles } = require('../staticfiles')
 const {
   resolveDisplayUnits,
   getDefaultCategory
@@ -111,7 +112,7 @@ module.exports = function (app) {
 
   return {
     start: function () {
-      app.use('/', express.static(__dirname + '/../../public'))
+      app.use('/', serveStaticFiles(__dirname + '/../../public'))
 
       function snapshotHandler(snapshotPath, req, res, next) {
         if (!req.query.time) {

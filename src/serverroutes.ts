@@ -39,6 +39,7 @@ import path from 'path'
 import unzipper from 'unzipper'
 import util from 'util'
 import { mountSwaggerUi } from './api/swagger'
+import { serveStaticFiles } from './staticfiles'
 import {
   ConfigApp,
   readDefaultsFile,
@@ -420,7 +421,7 @@ module.exports = function (
   mountSwaggerUi(app, '/doc/openapi')
 
   // mount server-guide
-  app.use('/documentation', express.static(__dirname + '/../docs/dist'))
+  app.use('/documentation', serveStaticFiles(__dirname + '/../docs/dist'))
 
   // Redirect old documentation URLs to new ones
   let oldpath: keyof typeof redirects
@@ -479,7 +480,7 @@ module.exports = function (
     serveIndexWithAddonScripts(path.join(adminUiPath, 'index.html'), res)
   })
 
-  app.use('/admin', express.static(adminUiPath))
+  app.use('/admin', serveStaticFiles(adminUiPath))
 
   app.get('/', (req: Request, res: Response) => {
     let landingPage = '/admin/'

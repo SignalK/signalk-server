@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import express, { Application, Request, Response } from 'express'
+import { Application, Request, Response } from 'express'
+import { serveStaticFiles } from '../staticfiles'
 import fs from 'fs'
 import { uniqBy } from 'lodash'
 import path from 'path'
@@ -87,7 +88,7 @@ function mountWebModules(app: WebappsApp, keyword: string): NpmPackageData[] {
       webappPath += '/public/'
     }
     debug('Mounting web module /' + moduleData.module + ':' + webappPath)
-    app.use('/' + moduleData.module, express.static(webappPath))
+    app.use('/' + moduleData.module, serveStaticFiles(webappPath))
   })
   return modules.map((moduleData) => moduleData.metadata as NpmPackageData)
 }
