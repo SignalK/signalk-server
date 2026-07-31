@@ -148,7 +148,14 @@ export class StreamBundle implements IStreamBundle {
       let result = this.buses[path]
       if (!result) {
         result = this.buses[path] = new Bacon.Bus()
-        this.keys.push(path)
+        // Don't double-emit on `keys` if getUnfilteredBus(path) already
+        // announced it. Value deltas reach the unfiltered bus first, so
+        // without this guard every value path is announced twice and
+        // subscriptionmanager's keys listener builds two delivery chains
+        // for it, delivering each delta to the client twice.
+        if (!this.unfilteredBuses[path]) {
+          this.keys.push(path)
+        }
       }
       return result
     } else {
