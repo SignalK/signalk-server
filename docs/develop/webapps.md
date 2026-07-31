@@ -49,6 +49,16 @@ where:
 
 See also [Working Offline](./README.md#offline-use).
 
+### Precompressed Assets
+
+The server serves precompressed sidecar files from the `public` folder: when a file has a `.br` (brotli) or `.gz` (gzip) sibling — for example `bundle.js.br` next to `bundle.js` — the server sends the compressed file directly with the matching `Content-Encoding`, preferring brotli, to browsers that accept it. When no sidecar exists the original file is served, subject to the server's normal response compression, so shipping sidecars is optional — but precompressing at build time saves server CPU on every cold-cache load (Signal K Server often runs on battery-powered Raspberry Pi hardware) and brotli at maximum quality is typically 15–20% smaller than the runtime gzip a client would otherwise receive.
+
+To opt in, generate the sidecar files as part of the webapp's build and include them in the published package. There is no keyword or manifest entry — the presence of the files next to the originals is the whole contract.
+
+Generate **both** `.br` and `.gz` sidecars: browsers only advertise brotli support on secure origins (HTTPS and `localhost`), so on a plain-HTTP connection — the common case for a Signal K server reached by IP address or hostname on the boat network — the browser requests gzip only. A webapp that ships only `.br` files would leave those clients on runtime compression.
+
+Make sure sidecars are always regenerated together with the files they accompany: a stale sidecar takes precedence over a fresh plain file.
+
 ## Application Data: Storing Webapp Data on the Server
 
 Application Data is only supported if security is turned on. It supports two namespaces, one for _global data_ and one for _user specific data_. For example, a client might want to store boat specific gauge configuration globally so that other users have access to it. Otherwise, it could use the user area to store user specific preferences.
