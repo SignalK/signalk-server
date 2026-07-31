@@ -40,11 +40,13 @@ export const UNAVAILABLE_GRACE_MS = 10_000
 
 export interface HistoryProvidersEventData {
   ids: string[]
-  defaultId?: string
-  configuredId?: string
-  /** True only after the configured provider has stayed unregistered
-   * for the whole grace window. */
-  configuredUnavailable: boolean
+  defaultId: string | undefined
+  configuredId: string | undefined
+  /** True while the configured provider is registered or still within
+   * the grace window; false when no provider is configured or the
+   * configured one has stayed unregistered past the whole grace
+   * window. */
+  configuredAvailable: boolean
 }
 
 export interface HistoryApplication
@@ -58,9 +60,10 @@ export class HistoryApiHttpRegistry {
   /** True while a warn notification about the configured provider
    * being unavailable is active. */
   private warnedUnavailable = false
-  /** Graced availability state carried in the HISTORYPROVIDERS
-   * serverevent; flips true only when the grace timer expires. */
-  private configuredUnavailable = false
+  /** True once the configured provider has stayed unregistered past
+   * the whole grace window; drives the graced availability carried in
+   * the HISTORYPROVIDERS serverevent. */
+  private unavailableGraceExpired = false
   private unavailableGraceTimer: ReturnType<typeof setTimeout> | null = null
   proxy: HistoryApi
 
@@ -121,7 +124,7 @@ export class HistoryApiHttpRegistry {
     }
     if (pluginId === this.configuredProviderId) {
       this.clearUnavailableGrace()
-      this.configuredUnavailable = false
+      this.unavailableGraceExpired = false
       this.notifyConfiguredAvailable()
     }
     this.emitProvidersState()
@@ -308,7 +311,7 @@ export class HistoryApiHttpRegistry {
         settings.historyApi = snapshot.historyApi
         this.configuredProviderId = id
         this.clearUnavailableGrace()
-        this.configuredUnavailable = false
+        this.unavailableGraceExpired = false
         // The route validated the id as registered, but the settings
         // write is asynchronous — the provider can unregister in the
         // gap. Re-check before declaring it available, else the UI
@@ -336,7 +339,8 @@ export class HistoryApiHttpRegistry {
       ids: [...this.historyProviders.keys()],
       defaultId: this.defaultProviderId,
       configuredId: this.configuredProviderId,
-      configuredUnavailable: this.configuredUnavailable
+      configuredAvailable:
+        this.configuredProviderId !== undefined && !this.unavailableGraceExpired
     }
     this.app.emit('serverevent', { type: 'HISTORYPROVIDERS', data })
   }
@@ -359,7 +363,7 @@ export class HistoryApiHttpRegistry {
       if (!this.configuredProviderAbsent()) {
         return
       }
-      this.configuredUnavailable = true
+      this.unavailableGraceExpired = true
       this.emitProvidersState()
     }, this.unavailableGraceMs)
     this.unavailableGraceTimer.unref?.()

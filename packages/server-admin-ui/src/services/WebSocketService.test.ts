@@ -128,14 +128,14 @@ describe('WebSocketService serverStartId tracking', () => {
         ids: ['questdb', 'influx'],
         defaultId: 'influx',
         configuredId: 'questdb',
-        configuredUnavailable: true
+        configuredAvailable: false
       }
     })
     expect(useStore.getState().historyProviders).toEqual({
       ids: ['questdb', 'influx'],
       defaultId: 'influx',
       configuredId: 'questdb',
-      configuredUnavailable: true
+      configuredAvailable: false
     })
 
     // A later snapshot replaces the previous state entirely.
@@ -145,14 +145,14 @@ describe('WebSocketService serverStartId tracking', () => {
         ids: ['questdb'],
         defaultId: 'questdb',
         configuredId: 'questdb',
-        configuredUnavailable: false
+        configuredAvailable: true
       }
     })
     expect(useStore.getState().historyProviders).toEqual({
       ids: ['questdb'],
       defaultId: 'questdb',
       configuredId: 'questdb',
-      configuredUnavailable: false
+      configuredAvailable: true
     })
   })
 })

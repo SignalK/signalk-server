@@ -28,7 +28,7 @@ describe('HistoryProviderSettings', () => {
       ids: ['questdb'],
       defaultId: 'questdb',
       configuredId: 'questdb',
-      configuredUnavailable: false
+      configuredAvailable: true
     })
     expect(container.firstChild).toBeNull()
   })
@@ -39,7 +39,7 @@ describe('HistoryProviderSettings', () => {
       ids: ['questdb', 'influx'],
       defaultId: 'questdb',
       configuredId: 'questdb',
-      configuredUnavailable: false
+      configuredAvailable: true
     })
     expect(screen.getByText('Default History Provider')).toBeInTheDocument()
     expect(screen.getByRole('combobox')).toHaveValue('questdb')
@@ -51,7 +51,7 @@ describe('HistoryProviderSettings', () => {
       ids: ['influx'],
       defaultId: 'influx',
       configuredId: 'questdb',
-      configuredUnavailable: true
+      configuredAvailable: false
     })
     expect(
       screen.getByText(/"questdb" is not currently available/)
@@ -65,7 +65,7 @@ describe('HistoryProviderSettings', () => {
       ids: ['influx'],
       defaultId: 'influx',
       configuredId: 'questdb',
-      configuredUnavailable: true
+      configuredAvailable: false
     })
     expect(screen.getByText(/is not currently available/)).toBeInTheDocument()
 
@@ -73,7 +73,7 @@ describe('HistoryProviderSettings', () => {
       ids: ['influx', 'questdb'],
       defaultId: 'questdb',
       configuredId: 'questdb',
-      configuredUnavailable: false
+      configuredAvailable: true
     })
     expect(
       screen.queryByText(/is not currently available/)
@@ -89,7 +89,7 @@ describe('HistoryProviderSettings', () => {
       ids: ['questdb', 'influx'],
       defaultId: 'questdb',
       configuredId: 'questdb',
-      configuredUnavailable: false
+      configuredAvailable: true
     })
 
     await act(async () => {
@@ -117,7 +117,7 @@ describe('HistoryProviderSettings', () => {
       ids: ['questdb', 'influx'],
       defaultId: 'questdb',
       configuredId: 'questdb',
-      configuredUnavailable: false
+      configuredAvailable: true
     })
 
     await act(async () => {

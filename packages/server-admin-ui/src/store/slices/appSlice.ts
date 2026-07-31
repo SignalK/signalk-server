@@ -38,16 +38,17 @@ export type AppstoreView = 'All' | 'Installed' | 'Updates' | 'Installing'
 
 /**
  * Snapshot carried by the server's HISTORYPROVIDERS serverevent.
- * configuredUnavailable is the server-graced signal: it only flips true
- * after the configured provider has stayed unregistered for the
- * server's grace window, so slow-starting provider backends don't flash
- * the warning badge on every restart.
+ * configuredAvailable is the server-graced signal: false when no
+ * provider is configured or once the configured provider has stayed
+ * unregistered past the server's grace window; it stays true through
+ * the grace so slow-starting provider backends don't flash the warning
+ * badge on every restart.
  */
 export interface HistoryProvidersState {
   ids: string[]
-  defaultId?: string
-  configuredId?: string
-  configuredUnavailable: boolean
+  defaultId: string | undefined
+  configuredId: string | undefined
+  configuredAvailable: boolean
 }
 
 export interface AppSliceState {

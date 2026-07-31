@@ -341,13 +341,14 @@ export class WebSocketService {
           )
         break
       case 'HISTORYPROVIDERS':
-        useStore
-          .getState()
-          .setHistoryProviders(
-            (data ?? { ids: [], configuredUnavailable: false }) as Parameters<
-              SignalKStore['setHistoryProviders']
-            >[0]
-          )
+        useStore.getState().setHistoryProviders(
+          (data ?? {
+            ids: [],
+            defaultId: undefined,
+            configuredId: undefined,
+            configuredAvailable: false
+          }) as Parameters<SignalKStore['setHistoryProviders']>[0]
+        )
         break
       case 'N2KDEVICESTATUS':
         // Server pushes the same payload shape as GET /n2kDeviceStatus

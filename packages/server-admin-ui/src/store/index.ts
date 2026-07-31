@@ -323,7 +323,14 @@ export function useHistoryProviders() {
 }
 
 export function useHistoryProviderUnavailable() {
-  return useStore((s) => s.historyProviders?.configuredUnavailable ?? false)
+  return useStore((s) => {
+    const providers = s.historyProviders
+    return (
+      providers !== null &&
+      providers.configuredId !== undefined &&
+      !providers.configuredAvailable
+    )
+  })
 }
 
 export function useConfiguredPriorityPaths(): Set<string> {

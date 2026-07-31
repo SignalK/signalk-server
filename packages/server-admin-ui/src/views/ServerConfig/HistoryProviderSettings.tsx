@@ -59,7 +59,10 @@ const HistoryProviderSettings: React.FC = () => {
     }
   }, [])
 
-  const configuredButUnavailable = providers?.configuredUnavailable ?? false
+  const configuredButUnavailable =
+    providers !== null &&
+    providers.configuredId !== undefined &&
+    !providers.configuredAvailable
 
   // The choice only matters when there is something to choose between:
   // stay hidden for zero or one registered provider, unless the

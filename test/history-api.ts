@@ -439,7 +439,7 @@ describe('History API v2', () => {
           ids: ['influx'],
           defaultId: 'influx',
           configuredId: 'questdb',
-          configuredUnavailable: false
+          configuredAvailable: true
         })
 
         registry.registerHistoryApiProvider('questdb', provider('questdb'))
@@ -447,7 +447,7 @@ describe('History API v2', () => {
           ids: ['influx', 'questdb'],
           defaultId: 'questdb',
           configuredId: 'questdb',
-          configuredUnavailable: false
+          configuredAvailable: true
         })
 
         registry.unregisterHistoryApiProvider('influx')
@@ -455,7 +455,7 @@ describe('History API v2', () => {
           ids: ['questdb'],
           defaultId: 'questdb',
           configuredId: 'questdb',
-          configuredUnavailable: false
+          configuredAvailable: true
         })
       })
 
@@ -472,7 +472,7 @@ describe('History API v2', () => {
           ids: ['influx'],
           defaultId: 'influx',
           configuredId: 'questdb',
-          configuredUnavailable: false
+          configuredAvailable: true
         })
 
         await wait(PAST_GRACE_MS)
@@ -480,7 +480,7 @@ describe('History API v2', () => {
           ids: ['influx'],
           defaultId: 'influx',
           configuredId: 'questdb',
-          configuredUnavailable: true
+          configuredAvailable: false
         })
       })
 
@@ -493,9 +493,9 @@ describe('History API v2', () => {
 
         await wait(PAST_GRACE_MS)
         app.serverEvents
-          .filter((e) => e.configuredUnavailable)
+          .filter((e) => !e.configuredAvailable)
           .should.deep.equal([])
-        lastEvent(app).configuredUnavailable.should.equal(false)
+        lastEvent(app).configuredAvailable.should.equal(true)
       })
 
       it('clears the unavailable flag when the provider registers again', async function () {
@@ -504,14 +504,14 @@ describe('History API v2', () => {
         registry.registerHistoryApiProvider('questdb', provider('questdb'))
         registry.unregisterHistoryApiProvider('questdb')
         await wait(PAST_GRACE_MS)
-        lastEvent(app).configuredUnavailable.should.equal(true)
+        lastEvent(app).configuredAvailable.should.equal(false)
 
         registry.registerHistoryApiProvider('questdb', provider('questdb'))
         lastEvent(app).should.deep.equal({
           ids: ['questdb'],
           defaultId: 'questdb',
           configuredId: 'questdb',
-          configuredUnavailable: false
+          configuredAvailable: true
         })
       })
 
@@ -527,7 +527,7 @@ describe('History API v2', () => {
               ids: ['questdb', 'influx'],
               defaultId: 'influx',
               configuredId: 'influx',
-              configuredUnavailable: false
+              configuredAvailable: true
             })
           }
         )
@@ -542,7 +542,7 @@ describe('History API v2', () => {
               ids: [],
               defaultId: undefined,
               configuredId: 'questdb',
-              configuredUnavailable: false
+              configuredAvailable: true
             })
           }
         )
@@ -558,7 +558,7 @@ describe('History API v2', () => {
               ids: [],
               defaultId: undefined,
               configuredId: 'questdb',
-              configuredUnavailable: true
+              configuredAvailable: false
             })
           },
           TEST_GRACE_MS
@@ -587,14 +587,14 @@ describe('History API v2', () => {
               ids: [],
               defaultId: undefined,
               configuredId: 'influx',
-              configuredUnavailable: false
+              configuredAvailable: true
             })
             await wait(PAST_GRACE_MS)
             lastEvent(app).should.deep.equal({
               ids: [],
               defaultId: undefined,
               configuredId: 'influx',
-              configuredUnavailable: true
+              configuredAvailable: false
             })
           },
           TEST_GRACE_MS
