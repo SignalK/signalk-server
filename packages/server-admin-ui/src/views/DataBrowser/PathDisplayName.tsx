@@ -26,6 +26,7 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
   const [saveFailed, setSaveFailed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const isCancelRef = useRef(false)
+  const saveSeqRef = useRef(0)
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -68,8 +69,15 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
       // the request is in flight — deliberately no AbortController,
       // which would falsely revert a write the server already accepted.
       const previous = name ?? null
+      // Rapid consecutive saves can settle out of order; only the
+      // latest request may revert the store or toggle the failure flag,
+      // otherwise a stale rejection would clobber the newer optimistic
+      // value with its older `previous` snapshot.
+      const seq = ++saveSeqRef.current
+      const isCurrent = () => saveSeqRef.current === seq
       updateMeta(context, path, { displayName: trimmed || null })
       const onFailure = () => {
+        if (!isCurrent()) return
         updateMeta(context, path, { displayName: previous })
         setSaveFailed(true)
       }
@@ -85,7 +93,7 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
           if (!res.ok) {
             console.warn('displayName save rejected:', res.status)
             onFailure()
-          } else {
+          } else if (isCurrent()) {
             setSaveFailed(false)
           }
         })

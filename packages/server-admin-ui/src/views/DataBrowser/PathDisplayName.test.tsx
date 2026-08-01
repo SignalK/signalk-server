@@ -150,6 +150,48 @@ describe('PathDisplayName', () => {
     )
   })
 
+  it('ignores a stale rejection settling after a newer save', async () => {
+    asAdmin()
+    setMeta({})
+    // Manually settled responses so the first save can fail AFTER the
+    // second one succeeded.
+    const settlers: Array<(res: { ok: boolean; status: number }) => void> = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            settlers.push(resolve as (typeof settlers)[number])
+          })
+      )
+    )
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const { getByRole, queryByText } = render(
+      <PathDisplayName context="self" path={PATH} />
+    )
+    fireEvent.click(getByRole('button'))
+    fireEvent.change(getByRole('textbox'), { target: { value: 'First' } })
+    fireEvent.keyDown(getByRole('textbox'), { key: 'Enter' })
+
+    fireEvent.click(getByRole('button'))
+    fireEvent.change(getByRole('textbox'), { target: { value: 'Second' } })
+    fireEvent.keyDown(getByRole('textbox'), { key: 'Enter' })
+
+    expect(settlers.length).toBe(2)
+    settlers[1]({ ok: true, status: 200 })
+    settlers[0]({ ok: false, status: 500 })
+
+    // The stale rejection must neither revert the newer value nor flag
+    // a failure.
+    await waitFor(() =>
+      expect(useStore.getState().signalkMeta['self'][PATH].displayName).toBe(
+        'Second'
+      )
+    )
+    await waitFor(() => expect(queryByText('Save failed')).toBeNull())
+  })
+
   it('cancels with Escape without saving', () => {
     asAdmin()
     setMeta({ [PATH]: { displayName: 'Freshwater STB' } })
