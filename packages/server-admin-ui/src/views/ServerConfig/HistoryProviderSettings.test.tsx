@@ -173,4 +173,28 @@ describe('HistoryProviderSettings', () => {
 
     expect(screen.getByText('Save failed (HTTP 500)')).toBeInTheDocument()
   })
+
+  it.each([
+    ['a JSON null body', JSON.stringify(null)],
+    ['a non-string message', JSON.stringify({ message: { odd: true } })]
+  ])('falls back to the HTTP status for %s', async (_name, payload) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(payload, { status: 500 })
+    )
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb', 'influx'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: 'influx' }
+      })
+    })
+
+    expect(screen.getByText('Save failed (HTTP 500)')).toBeInTheDocument()
+  })
 })
