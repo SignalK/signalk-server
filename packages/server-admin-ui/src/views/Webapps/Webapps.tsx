@@ -203,7 +203,8 @@ export default function Webapps() {
     // hidden (e.g. a disabled plugin's webapp) keep a slot by being
     // re-appended, so they come back ranked instead of vanishing from
     // the stored order.
-    const hidden = customOrder.filter((name) => !displayedNames.includes(name))
+    const displayedSet = new Set(displayedNames)
+    const hidden = customOrder.filter((name) => !displayedSet.has(name))
     setWebappCustomOrder([...next, ...hidden])
   }
 
