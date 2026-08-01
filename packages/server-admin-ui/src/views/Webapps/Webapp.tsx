@@ -21,6 +21,7 @@ interface WebAppInfo {
 
 interface WebappProps {
   webAppInfo: WebAppInfo
+  onLaunch?: () => void
   children?: ReactNode
 }
 
@@ -30,7 +31,11 @@ export function urlToWebapp(webAppInfo: WebAppInfo): string {
     : `/${webAppInfo.name}/`
 }
 
-export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
+export default function Webapp({
+  webAppInfo,
+  onLaunch,
+  ...attributes
+}: WebappProps) {
   const padding = { card: 'p-3', icon: 'p-3', lead: 'mt-2' }
 
   const card = {
@@ -78,7 +83,7 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
   }
 
   return (
-    <a href={url}>
+    <a href={url} onClick={onLaunch}>
       <Card>
         <Card.Body className={card.style} {...attributes}>
           {blockIcon()}

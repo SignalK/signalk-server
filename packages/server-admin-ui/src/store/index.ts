@@ -19,6 +19,10 @@ import {
   type GnssPositionSlice
 } from './slices/gnssPositionSlice'
 import {
+  createWebappSortSlice,
+  type WebappSortSlice
+} from './slices/webappSortSlice'
+import {
   conflictKey,
   detectInstanceConflicts,
   extractN2kDevices
@@ -34,13 +38,15 @@ export type { DataSlice, PathData, MetaData } from './slices/dataSlice'
 export type { PrioritiesSlice } from './slices/prioritiesSlice'
 export type { UnitPreferencesSlice } from './slices/unitPreferencesSlice'
 export type { GnssPositionSlice } from './slices/gnssPositionSlice'
+export type { WebappSortSlice } from './slices/webappSortSlice'
 
 export type SignalKStore = AppSlice &
   WsSlice &
   DataSlice &
   PrioritiesSlice &
   UnitPreferencesSlice &
-  GnssPositionSlice
+  GnssPositionSlice &
+  WebappSortSlice
 
 export const useStore = create<SignalKStore>()(
   subscribeWithSelector((...args) => ({
@@ -49,7 +55,8 @@ export const useStore = create<SignalKStore>()(
     ...createDataSlice(...args),
     ...createPrioritiesSlice(...args),
     ...createUnitPreferencesSlice(...args),
-    ...createGnssPositionSlice(...args)
+    ...createGnssPositionSlice(...args),
+    ...createWebappSortSlice(...args)
   }))
 )
 
@@ -184,6 +191,18 @@ export function useWebapps() {
 
 export function useAddons() {
   return useStore((s) => s.addons)
+}
+
+export function useWebappSortMode() {
+  return useStore((s) => s.webappSortMode)
+}
+
+export function useWebappCustomOrder() {
+  return useStore((s) => s.webappCustomOrder)
+}
+
+export function useWebappLastUsed() {
+  return useStore((s) => s.webappLastUsed)
 }
 
 export function usePlugins() {
