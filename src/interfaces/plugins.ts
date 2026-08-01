@@ -148,7 +148,9 @@ module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
   const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
 
-  // Outer key is the plugin id, inner key the normalized path.
+  // Partitioned by plugin id so the dispatcher can tell a plugin that does
+  // not use registerWebSocket at all (leave the upgrade event to other
+  // listeners) apart from a registered plugin with an unknown path (404).
   const pluginWebSocketServers: Map<
     string,
     Map<string, WebSocketServer>
