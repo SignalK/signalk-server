@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findContextName } from './pathUtils'
+import { findContextName, pathToUrlSegments } from './pathUtils'
 
 describe('findContextName', () => {
   it('resolves the name from a source-suffixed key', () => {
@@ -44,5 +44,25 @@ describe('findContextName', () => {
       'name$AIS.2': { value: 'Black Pearl' }
     }
     expect(findContextName(contextData)).toBe('Black Pearl')
+  })
+})
+
+describe('pathToUrlSegments', () => {
+  it('turns dots into slashes for ordinary paths', () => {
+    expect(pathToUrlSegments('tanks.freshWater.2.currentLevel')).toBe(
+      'tanks/freshWater/2/currentLevel'
+    )
+  })
+
+  it('URL-encodes characters that would change the request target', () => {
+    expect(pathToUrlSegments('environment.we#ird.a?b.100%')).toBe(
+      'environment/we%23ird/a%3Fb/100%25'
+    )
+  })
+
+  it('cannot produce a ".." segment — dots are separators', () => {
+    // Consecutive dots become empty segments, so upward traversal via
+    // a literal '..' segment is structurally impossible.
+    expect(pathToUrlSegments('a...b')).toBe('a///b')
   })
 })

@@ -28,3 +28,9 @@ export function findContextName(
   }
   return undefined
 }
+
+// Signal K paths originate from data providers and are not guaranteed
+// URL-safe. Encode each segment before embedding a path into an API URL.
+export function pathToUrlSegments(path: string): string {
+  return path.split('.').map(encodeURIComponent).join('/')
+}
