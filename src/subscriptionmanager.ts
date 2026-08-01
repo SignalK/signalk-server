@@ -338,14 +338,20 @@ function handleSubscribeRow(
     const flattenRootValues = key === '' && !matcher(key)
     if (matcher(key) || flattenRootValues) {
       debug.enabled && debug('Subscribing to key ' + key)
-      let filteredBus: Bacon.EventStream<NormalizedDelta> = bus.filter(filter)
+      // Build Bacon stages only for rows that need them. A plain row (no
+      // rate limiting, no root flattening, no per-subscription engine) is
+      // delivered by a single inline sink further down instead, which
+      // retains about a quarter of what filter().map().onValue() does.
+      let filteredBus: Bacon.EventStream<NormalizedDelta> | null = null
       if (flattenRootValues) {
-        filteredBus = filteredBus.flatMap(
-          (normalizedDelta: NormalizedDelta) =>
-            Bacon.fromArray(
-              flattenRootDelta(normalizedDelta, matcher)
-            ) as Bacon.EventStream<NormalizedDelta>
-        )
+        filteredBus = bus
+          .filter(filter)
+          .flatMap(
+            (normalizedDelta: NormalizedDelta) =>
+              Bacon.fromArray(
+                flattenRootDelta(normalizedDelta, matcher)
+              ) as Bacon.EventStream<NormalizedDelta>
+          )
       }
       if (subscribeRow.minPeriod) {
         if (subscribeRow.policy && subscribeRow.policy !== 'instant') {
@@ -366,7 +372,9 @@ function handleSubscribeRow(
           // path delivered first. Root identity data also arrives on AIS
           // static-report cadence, far slower than any practical period.
           debug('debouncing')
-          filteredBus = filteredBus.debounceImmediate(minPeriodValue)
+          filteredBus = (filteredBus ?? bus.filter(filter)).debounceImmediate(
+            minPeriodValue
+          )
         }
       } else if (
         subscribeRow.period ||
@@ -379,7 +387,7 @@ function handleSubscribeRow(
         } else if (key !== '') {
           // we can not apply period for empty path subscriptions
           const interval = Number(subscribeRow.period) || 1000
-          filteredBus = filteredBus
+          filteredBus = (filteredBus ?? bus.filter(filter))
             .bufferWithTime(interval)
             .flatMapLatest((bufferedValues: any) => {
               const uniqueValues = _(bufferedValues)
@@ -413,7 +421,7 @@ function handleSubscribeRow(
       // plugin's own (or otherwise excluded) sources removed from the
       // candidate set.
       if (perSubEngine) {
-        const engineStream = filteredBus
+        const engineStream = (filteredBus ?? bus.filter(filter))
           .map(toDelta)
           .flatMap((delta: Delta) => {
             const filtered = runPerSubEngine(
@@ -425,8 +433,18 @@ function handleSubscribeRow(
             return filtered ? Bacon.once(filtered) : Bacon.never()
           }) as Bacon.EventStream<Delta>
         unsubscribes.push(engineStream.onValue(callback))
-      } else {
+      } else if (filteredBus) {
         unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
+      } else {
+        // Plain row: no stages needed. Returning the callback's result keeps
+        // Bacon.noMore working the same as through a filter/map chain.
+        unsubscribes.push(
+          bus.onValue((normalizedDelta: NormalizedDelta) => {
+            if (filter(normalizedDelta)) {
+              return callback(toDelta(normalizedDelta))
+            }
+          })
+        )
       }
 
       // Bootstrap snapshot: fetch every source's last cached value
