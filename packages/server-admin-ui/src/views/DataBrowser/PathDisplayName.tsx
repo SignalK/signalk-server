@@ -23,6 +23,7 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
   })
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
+  const [saveFailed, setSaveFailed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const isCancelRef = useRef(false)
 
@@ -48,6 +49,7 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
   const handleStartEdit = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation()
     setEditValue(name ?? '')
+    setSaveFailed(false)
     isCancelRef.current = false
     setIsEditing(true)
   }
@@ -60,28 +62,36 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
     const trimmed = editValue.trim()
     if (trimmed !== (name ?? '')) {
       // Editable rows resolve at their own path only, so the previous
-      // value for a revert is simply the currently shown name.
+      // value for a revert is simply the currently shown name. Revert
+      // and failure flag write to the global store / state directly, so
+      // they behave the same even if the virtualized row unmounts while
+      // the request is in flight — deliberately no AbortController,
+      // which would falsely revert a write the server already accepted.
       const previous = name ?? null
       updateMeta(context, path, { displayName: trimmed || null })
-      const revert = () => updateMeta(context, path, { displayName: previous })
-      fetch(
-        `/signalk/v1/api/vessels/self/${path.replaceAll('.', '/')}/meta/displayName`,
-        {
-          method: 'PUT',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value: trimmed || null })
-        }
-      )
+      const onFailure = () => {
+        updateMeta(context, path, { displayName: previous })
+        setSaveFailed(true)
+      }
+      // Provider-sourced paths are not guaranteed URL-safe.
+      const encodedPath = path.split('.').map(encodeURIComponent).join('/')
+      fetch(`/signalk/v1/api/vessels/self/${encodedPath}/meta/displayName`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: trimmed || null })
+      })
         .then((res) => {
           if (!res.ok) {
             console.warn('displayName save rejected:', res.status)
-            revert()
+            onFailure()
+          } else {
+            setSaveFailed(false)
           }
         })
         .catch((err) => {
           console.warn('displayName save failed:', err)
-          revert()
+          onFailure()
         })
     }
     // Press-Enter calls this directly and then setIsEditing(false)
@@ -146,6 +156,15 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
       }}
     >
       {name && <span style={{ fontStyle: 'italic' }}>{name}</span>}
+      {saveFailed && (
+        <span
+          role="alert"
+          style={{ color: 'var(--bs-danger, #d9534f)' }}
+          title="The server rejected the displayName change; the previous value was restored."
+        >
+          Save failed
+        </span>
+      )}
       {canEdit && (
         <button
           type="button"

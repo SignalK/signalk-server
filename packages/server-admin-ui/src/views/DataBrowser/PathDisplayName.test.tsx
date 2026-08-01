@@ -36,6 +36,7 @@ describe('PathDisplayName', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('shows the displayName stored at the exact path', () => {
@@ -103,16 +104,18 @@ describe('PathDisplayName', () => {
     )
   })
 
-  it('reverts the optimistic update when the PUT is rejected', async () => {
+  it('reverts the optimistic update and shows feedback when the PUT is rejected', async () => {
     asAdmin()
     setMeta({ [PATH]: { displayName: 'Old name' } })
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({ ok: false, status: 401 }))
     )
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    const { getByRole } = render(<PathDisplayName context="self" path={PATH} />)
+    const { getByRole, findByText } = render(
+      <PathDisplayName context="self" path={PATH} />
+    )
     fireEvent.click(getByRole('button'))
     const input = getByRole('textbox')
     fireEvent.change(input, { target: { value: 'New name' } })
@@ -123,7 +126,28 @@ describe('PathDisplayName', () => {
         'Old name'
       )
     )
-    warn.mockRestore()
+    expect(await findByText('Save failed')).toBeInTheDocument()
+  })
+
+  it('URL-encodes path segments in the PUT request', () => {
+    asAdmin()
+    setMeta({})
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const oddPath = 'environment.we#ird.1.value'
+
+    const { getByRole } = render(
+      <PathDisplayName context="self" path={oddPath} />
+    )
+    fireEvent.click(getByRole('button'))
+    const input = getByRole('textbox')
+    fireEvent.change(input, { target: { value: 'Odd' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/signalk/v1/api/vessels/self/environment/we%23ird/1/value/meta/displayName',
+      expect.objectContaining({ method: 'PUT' })
+    )
   })
 
   it('cancels with Escape without saving', () => {
