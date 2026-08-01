@@ -27,6 +27,7 @@ import type { UnitDefinitions } from '../../utils/unitConversion'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
+import { pathToUrlSegments } from './pathUtils'
 
 // Imperative accessor — avoids subscribing Meta to every value change.
 const getSignalkData = () => useStore.getState().signalkData
@@ -594,7 +595,7 @@ const saveMeta = (path: string, meta: MetaData) => {
       : undefined
   }
 
-  fetch(`/signalk/v1/api/vessels/self/${path.replaceAll('.', '/')}/meta`, {
+  fetch(`/signalk/v1/api/vessels/self/${pathToUrlSegments(path)}/meta`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
