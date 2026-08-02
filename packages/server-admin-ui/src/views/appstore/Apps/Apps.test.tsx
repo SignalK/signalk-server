@@ -207,18 +207,36 @@ describe('Apps view/search state survives the detail round trip', () => {
     const user = userEvent.setup()
     setAppStore({
       ...emptyStore,
-      categories: ['All', 'Weather', 'Utility']
+      categories: ['All', 'Weather', 'Utility'],
+      available: [
+        {
+          name: 'weather-plugin',
+          version: '1.0.0',
+          description: 'forecasts',
+          categories: ['Weather']
+        },
+        {
+          name: 'util-plugin',
+          version: '1.0.0',
+          description: 'tools',
+          categories: ['Utility']
+        }
+      ]
     })
     const { unmount } = renderApps()
 
     await user.click(screen.getByRole('button', { name: /^Weather$/ }))
-    expect(tabIsActive(/^Weather$/)).toBe(true)
+    // The category filters the visible results…
+    expect(screen.getByText('weather-plugin')).toBeInTheDocument()
+    expect(screen.queryByText('util-plugin')).toBeNull()
 
     unmount()
     renderApps()
 
+    // …and keeps filtering them after the detail round trip.
+    expect(screen.getByText('weather-plugin')).toBeInTheDocument()
+    expect(screen.queryByText('util-plugin')).toBeNull()
     expect(tabIsActive(/^Weather$/)).toBe(true)
-    expect(tabIsActive(/^Utility$/)).toBe(false)
   })
 
   it('restores the search term after an unmount/remount', async () => {
