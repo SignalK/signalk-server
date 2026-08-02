@@ -152,6 +152,65 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
 
   if (!name && !canEdit) return null
 
+  const pencil = canEdit && (
+    <button
+      type="button"
+      onClick={handleStartEdit}
+      title={
+        name
+          ? `Edit displayName (meta.displayName at ${path})`
+          : `Set displayName (meta.displayName at ${path})`
+      }
+      aria-label={
+        name ? `Edit displayName for ${path}` : `Set displayName for ${path}`
+      }
+      className="path-displayname-edit"
+      style={{
+        cursor: 'pointer',
+        opacity: 0.4,
+        fontSize: '0.85em',
+        lineHeight: 1,
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        color: 'inherit'
+      }}
+    >
+      &#9998;
+    </button>
+  )
+
+  const failure = saveFailed && (
+    <span
+      role="alert"
+      style={{ color: 'var(--bs-danger, #d9534f)', fontSize: '0.85em' }}
+      title="The server rejected the displayName change; the previous value was restored."
+    >
+      Save failed
+    </span>
+  )
+
+  // Unnamed rows stay single-line: the pencil flows inline after the
+  // path instead of opening an almost-empty second row, so the table
+  // keeps its density until a name actually needs the space.
+  if (!name) {
+    return (
+      <span
+        className="path-display-name"
+        style={{
+          marginLeft: '4px',
+          whiteSpace: 'nowrap',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '3px'
+        }}
+      >
+        {failure}
+        {pencil}
+      </span>
+    )
+  }
+
   return (
     <div
       className="path-display-name text-muted"
@@ -163,45 +222,9 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
         gap: '3px'
       }}
     >
-      {name && <span style={{ fontStyle: 'italic' }}>{name}</span>}
-      {saveFailed && (
-        <span
-          role="alert"
-          style={{ color: 'var(--bs-danger, #d9534f)' }}
-          title="The server rejected the displayName change; the previous value was restored."
-        >
-          Save failed
-        </span>
-      )}
-      {canEdit && (
-        <button
-          type="button"
-          onClick={handleStartEdit}
-          title={
-            name
-              ? `Edit displayName (meta.displayName at ${path})`
-              : `Set displayName (meta.displayName at ${path})`
-          }
-          aria-label={
-            name
-              ? `Edit displayName for ${path}`
-              : `Set displayName for ${path}`
-          }
-          className="path-displayname-edit"
-          style={{
-            cursor: 'pointer',
-            opacity: 0.4,
-            fontSize: '0.85em',
-            lineHeight: 1,
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            color: 'inherit'
-          }}
-        >
-          &#9998;
-        </button>
-      )}
+      <span style={{ fontStyle: 'italic' }}>{name}</span>
+      {failure}
+      {pencil}
     </div>
   )
 }

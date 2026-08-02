@@ -61,6 +61,26 @@ describe('PathDisplayName', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('keeps unnamed rows single-line: inline pencil, no block sub-line', () => {
+    asAdmin()
+    setMeta({})
+    const { container, getByRole } = render(
+      <PathDisplayName context="self" path={PATH} />
+    )
+    expect(container.querySelector('div.path-display-name')).toBeNull()
+    expect(
+      container.querySelector('span.path-display-name')
+    ).toBeInTheDocument()
+    expect(getByRole('button')).toBeInTheDocument()
+  })
+
+  it('renders the block sub-line only when a name is set', () => {
+    asAdmin()
+    setMeta({ [PATH]: { displayName: 'Freshwater STB' } })
+    const { container } = render(<PathDisplayName context="self" path={PATH} />)
+    expect(container.querySelector('div.path-display-name')).toBeInTheDocument()
+  })
+
   it('hides the pencil on non-self contexts', () => {
     setMeta({})
     useStore.setState({
