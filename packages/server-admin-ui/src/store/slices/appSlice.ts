@@ -116,6 +116,7 @@ export interface AppSliceState {
    */
   appstoreView: AppstoreView
   appstoreSearch: string
+  appstoreCategory: string
 }
 
 export interface AppSliceActions {
@@ -189,6 +190,7 @@ export interface AppSliceActions {
   ) => void
   setAppstoreView: (view: AppstoreView) => void
   setAppstoreSearch: (search: string) => void
+  setAppstoreCategory: (category: string) => void
 }
 
 export type AppSlice = AppSliceState & AppSliceActions
@@ -239,7 +241,8 @@ const initialAppState: AppSliceState = {
   sourceStatus: {},
   sourceStatusLoaded: false,
   appstoreView: 'All',
-  appstoreSearch: ''
+  appstoreSearch: '',
+  appstoreCategory: 'All'
 }
 
 export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
@@ -504,5 +507,9 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setAppstoreSearch: (appstoreSearch) => {
     set({ appstoreSearch })
+  },
+
+  setAppstoreCategory: (appstoreCategory) => {
+    set({ appstoreCategory })
   }
 })

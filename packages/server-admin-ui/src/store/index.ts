@@ -132,8 +132,10 @@ export function useAppstoreFilter() {
     useShallow((s) => ({
       view: s.appstoreView,
       search: s.appstoreSearch,
+      category: s.appstoreCategory,
       setView: s.setAppstoreView,
-      setSearch: s.setAppstoreSearch
+      setSearch: s.setAppstoreSearch,
+      setCategory: s.setAppstoreCategory
     }))
   )
 }

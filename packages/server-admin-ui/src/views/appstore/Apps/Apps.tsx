@@ -110,15 +110,17 @@ function writeString(key: string, value: string) {
 const Apps: React.FC = () => {
   const appStore = useAppStore() as AppStoreState
   const [searchParams, setSearchParams] = useSearchParams()
-  // View and search live in the store so they survive the unmount/remount
-  // when the user opens a plugin detail page and returns via "Back to Store".
+  // View, search and category live in the store so they survive the
+  // unmount/remount when the user opens a plugin detail page and returns
+  // via "Back to Store".
   const {
     view,
     search,
+    category,
     setView: setSelectedView,
-    setSearch
+    setSearch,
+    setCategory: setSelectedCategory
   } = useAppstoreFilter()
-  const [category, setSelectedCategory] = useState('All')
 
   // An explicit ?q= in the URL (author link from a card/detail page, or a
   // reloaded/bookmarked search) wins over the remembered store value. Runs

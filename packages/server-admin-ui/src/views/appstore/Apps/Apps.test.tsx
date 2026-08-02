@@ -170,6 +170,7 @@ describe('Apps view/search state survives the detail round trip', () => {
     act(() => {
       useStore.getState().setAppstoreView('All')
       useStore.getState().setAppstoreSearch('')
+      useStore.getState().setAppstoreCategory('All')
     })
   })
 
@@ -200,6 +201,24 @@ describe('Apps view/search state survives the detail round trip', () => {
 
     expect(tabIsActive(/^Installed$/)).toBe(true)
     expect(tabIsActive(/^All$/)).toBe(false)
+  })
+
+  it('restores the selected category after an unmount/remount', async () => {
+    const user = userEvent.setup()
+    setAppStore({
+      ...emptyStore,
+      categories: ['All', 'Weather', 'Utility']
+    })
+    const { unmount } = renderApps()
+
+    await user.click(screen.getByRole('button', { name: /^Weather$/ }))
+    expect(tabIsActive(/^Weather$/)).toBe(true)
+
+    unmount()
+    renderApps()
+
+    expect(tabIsActive(/^Weather$/)).toBe(true)
+    expect(tabIsActive(/^Utility$/)).toBe(false)
   })
 
   it('restores the search term after an unmount/remount', async () => {
