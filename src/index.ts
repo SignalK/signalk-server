@@ -41,6 +41,7 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
+import type { HistoryApiHttpRegistry } from './api/history'
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
@@ -825,6 +826,15 @@ class Server {
       })
 
       this.app.stalenessEnforcer?.stop()
+
+      // Cancel a pending history-provider grace timer; reload() creates
+      // a fresh registry, so a timer left running here would emit a
+      // stale HISTORYPROVIDERS event into the replay cache.
+      ;(
+        this.app as {
+          historyApiHttpRegistry?: HistoryApiHttpRegistry
+        }
+      ).historyApiHttpRegistry?.stop()
 
       if (this.pendingSourceRefMigrations) {
         for (const handle of this.pendingSourceRefMigrations) {

@@ -1,0 +1,200 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import HistoryProviderSettings from './HistoryProviderSettings'
+import { useStore } from '../../store'
+
+const setProviders = (
+  data: Parameters<
+    ReturnType<typeof useStore.getState>['setHistoryProviders']
+  >[0]
+) => act(() => useStore.getState().setHistoryProviders(data))
+
+describe('HistoryProviderSettings', () => {
+  beforeEach(() => {
+    useStore.setState({ historyProviders: null })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('renders nothing before the first server snapshot arrives', () => {
+    const { container } = render(<HistoryProviderSettings />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('stays hidden with a single available provider', () => {
+    const { container } = render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('shows the selector when there is a choice to make', () => {
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb', 'influx'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+    expect(screen.getByText('Default History Provider')).toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toHaveValue('questdb')
+  })
+
+  it('warns with the fallback name when the configured provider is unavailable', () => {
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['influx'],
+      defaultId: 'influx',
+      configuredId: 'questdb',
+      configuredAvailable: false
+    })
+    expect(
+      screen.getByText(/"questdb" is not currently available/)
+    ).toBeInTheDocument()
+    expect(screen.getByText(/using "influx" as fallback/)).toBeInTheDocument()
+  })
+
+  it('clears the warning when a new snapshot reports the provider back', () => {
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['influx'],
+      defaultId: 'influx',
+      configuredId: 'questdb',
+      configuredAvailable: false
+    })
+    expect(screen.getByText(/is not currently available/)).toBeInTheDocument()
+
+    setProviders({
+      ids: ['influx', 'questdb'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+    expect(
+      screen.queryByText(/is not currently available/)
+    ).not.toBeInTheDocument()
+  })
+
+  it('POSTs the selection and reports success without re-fetching state', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 200 }))
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb', 'influx'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: 'influx' }
+      })
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/signalk/v2/api/history/_providers/_default/influx',
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(
+      screen.getByText('Default history provider saved.')
+    ).toBeInTheDocument()
+  })
+
+  it('URL-encodes the selected provider id in the save path', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 200 }))
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb', '@scope/provider'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: '@scope/provider' }
+      })
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/signalk/v2/api/history/_providers/_default/%40scope%2Fprovider',
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
+  it('surfaces the server error message on a failed save', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ message: 'no can do' }), { status: 500 })
+    )
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb', 'influx'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: 'influx' }
+      })
+    })
+
+    expect(screen.getByText('no can do')).toBeInTheDocument()
+  })
+
+  it('falls back to the HTTP status when the error body is not JSON', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(null, { status: 500 })
+    )
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb', 'influx'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: 'influx' }
+      })
+    })
+
+    expect(screen.getByText('Save failed (HTTP 500)')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['a JSON null body', JSON.stringify(null)],
+    ['a non-string message', JSON.stringify({ message: { odd: true } })]
+  ])('falls back to the HTTP status for %s', async (_name, payload) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(payload, { status: 500 })
+    )
+    render(<HistoryProviderSettings />)
+    setProviders({
+      ids: ['questdb', 'influx'],
+      defaultId: 'questdb',
+      configuredId: 'questdb',
+      configuredAvailable: true
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: 'influx' }
+      })
+    })
+
+    expect(screen.getByText('Save failed (HTTP 500)')).toBeInTheDocument()
+  })
+})

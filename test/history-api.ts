@@ -14,7 +14,8 @@ import { startServerP } from './servertestutilities'
 const Server = require('../dist/')
 import {
   HistoryApiHttpRegistry,
-  type HistoryApplication
+  type HistoryApplication,
+  type HistoryProvidersEventData
 } from '../dist/api/history/index.js'
 import type {
   HistoryProvider,
@@ -269,10 +270,14 @@ describe('History API v2', () => {
       handleMessage: (id: string, delta: unknown) => void
       /** Notification values captured from handleMessage */
       notifications: NotificationValue[]
+      /** HISTORYPROVIDERS serverevent payloads captured from emit */
+      serverEvents: HistoryProvidersEventData[]
+      emit: (event: string, data: unknown) => void
     }
 
     const makeApp = (configuredDefault?: string): TestApp => {
       const notifications: NotificationValue[] = []
+      const serverEvents: HistoryProvidersEventData[] = []
       return {
         config: {
           settings: {
@@ -282,6 +287,18 @@ describe('History API v2', () => {
           }
         },
         notifications,
+        serverEvents,
+        emit: (channel: string, e: unknown) => {
+          // Only the replay-cached channel counts — a rename to e.g.
+          // serverAdminEvent would silently lose the connect replay.
+          if (channel !== 'serverevent') {
+            return
+          }
+          const event = e as { type: string; data: HistoryProvidersEventData }
+          if (event.type === 'HISTORYPROVIDERS') {
+            serverEvents.push(event.data)
+          }
+        },
         handleMessage: (_id: string, delta: unknown) => {
           const update = (
             delta as {
@@ -293,8 +310,22 @@ describe('History API v2', () => {
       }
     }
 
-    const makeRegistry = (app: TestApp) =>
-      new HistoryApiHttpRegistry(app as unknown as HistoryApplication)
+    // Track every registry so afterEach can cancel pending grace
+    // timers — a timer surviving its test would emit into a finished
+    // test's serverEvents array.
+    const registries: HistoryApiHttpRegistry[] = []
+    const makeRegistry = (app: TestApp, unavailableGraceMs?: number) => {
+      const registry = new HistoryApiHttpRegistry(
+        app as unknown as HistoryApplication,
+        unavailableGraceMs
+      )
+      registries.push(registry)
+      return registry
+    }
+
+    afterEach(() => {
+      registries.splice(0).forEach((r) => r.stop())
+    })
 
     const VALUES_QUERY: ValuesRequest = {
       duration: Temporal.Duration.from({ minutes: 15 }),
@@ -389,6 +420,188 @@ describe('History API v2', () => {
       app.notifications.length.should.equal(0)
     })
 
+    describe('HISTORYPROVIDERS serverevent', () => {
+      // Wide margin between the grace window and the wait so a stalled
+      // event loop on loaded CI cannot invert the expected ordering.
+      const TEST_GRACE_MS = 50
+      const PAST_GRACE_MS = 250
+      const wait = (ms: number) =>
+        new Promise((resolve) => setTimeout(resolve, ms))
+      const lastEvent = (app: TestApp) =>
+        app.serverEvents[app.serverEvents.length - 1]
+
+      it('emits full state on register and unregister', function () {
+        const app = makeApp('questdb')
+        const registry = makeRegistry(app)
+
+        registry.registerHistoryApiProvider('influx', provider('influx'))
+        lastEvent(app).should.deep.equal({
+          ids: ['influx'],
+          defaultId: 'influx',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        lastEvent(app).should.deep.equal({
+          ids: ['influx', 'questdb'],
+          defaultId: 'questdb',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+
+        registry.unregisterHistoryApiProvider('influx')
+        lastEvent(app).should.deep.equal({
+          ids: ['questdb'],
+          defaultId: 'questdb',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+      })
+
+      it('flags the configured provider unavailable only after the grace window', async function () {
+        const app = makeApp('questdb')
+        const registry = makeRegistry(app, TEST_GRACE_MS)
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        registry.registerHistoryApiProvider('influx', provider('influx'))
+
+        registry.unregisterHistoryApiProvider('questdb')
+        // The unregister itself must emit immediately (the provider
+        // list changed) but not yet flag unavailability.
+        lastEvent(app).should.deep.equal({
+          ids: ['influx'],
+          defaultId: 'influx',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+
+        await wait(PAST_GRACE_MS)
+        lastEvent(app).should.deep.equal({
+          ids: ['influx'],
+          defaultId: 'influx',
+          configuredId: 'questdb',
+          configuredAvailable: false
+        })
+      })
+
+      it('never flags unavailable when the provider returns within the grace', async function () {
+        const app = makeApp('questdb')
+        const registry = makeRegistry(app, TEST_GRACE_MS)
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        registry.unregisterHistoryApiProvider('questdb')
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+
+        await wait(PAST_GRACE_MS)
+        app.serverEvents
+          .filter((e) => !e.configuredAvailable)
+          .should.deep.equal([])
+        lastEvent(app).configuredAvailable.should.equal(true)
+      })
+
+      it('clears the unavailable flag when the provider registers again', async function () {
+        const app = makeApp('questdb')
+        const registry = makeRegistry(app, TEST_GRACE_MS)
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        registry.unregisterHistoryApiProvider('questdb')
+        await wait(PAST_GRACE_MS)
+        lastEvent(app).configuredAvailable.should.equal(false)
+
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        lastEvent(app).should.deep.equal({
+          ids: ['questdb'],
+          defaultId: 'questdb',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+      })
+
+      it('emits the new state when the default provider is saved', async function () {
+        await withDefaultProviderRoute(
+          'questdb',
+          (cb) => cb(),
+          async ({ app, registry, postDefault }) => {
+            registry.registerHistoryApiProvider('questdb', provider('questdb'))
+            registry.registerHistoryApiProvider('influx', provider('influx'))
+            ;(await postDefault('influx')).should.equal(200)
+            lastEvent(app).should.deep.equal({
+              ids: ['questdb', 'influx'],
+              defaultId: 'influx',
+              configuredId: 'influx',
+              configuredAvailable: true
+            })
+          }
+        )
+      })
+
+      it('start() seeds the state event for the replay cache', async function () {
+        await withDefaultProviderRoute(
+          'questdb',
+          (cb) => cb(),
+          async ({ app }) => {
+            app.serverEvents[0].should.deep.equal({
+              ids: [],
+              defaultId: undefined,
+              configuredId: 'questdb',
+              configuredAvailable: true
+            })
+          }
+        )
+      })
+
+      it('boot grace flags a configured provider that never registers', async function () {
+        await withDefaultProviderRoute(
+          'questdb',
+          (cb) => cb(),
+          async ({ app }) => {
+            await wait(PAST_GRACE_MS)
+            lastEvent(app).should.deep.equal({
+              ids: [],
+              defaultId: undefined,
+              configuredId: 'questdb',
+              configuredAvailable: false
+            })
+          },
+          TEST_GRACE_MS
+        )
+      })
+
+      it('re-arms the grace when the provider unregisters during the settings write', async function () {
+        // The POST route validates the id as registered, but the
+        // settings write is asynchronous — the provider can unregister
+        // in the gap. The save must not declare it available.
+        let registryRef: ReturnType<typeof makeRegistry> | undefined
+        await withDefaultProviderRoute(
+          'questdb',
+          (cb) => {
+            if (!registryRef) {
+              throw new Error('settings write before the test armed it')
+            }
+            registryRef.unregisterHistoryApiProvider('influx')
+            cb()
+          },
+          async ({ app, registry, postDefault }) => {
+            registryRef = registry
+            registry.registerHistoryApiProvider('influx', provider('influx'))
+            ;(await postDefault('influx')).should.equal(200)
+            lastEvent(app).should.deep.equal({
+              ids: [],
+              defaultId: undefined,
+              configuredId: 'influx',
+              configuredAvailable: true
+            })
+            await wait(PAST_GRACE_MS)
+            lastEvent(app).should.deep.equal({
+              ids: [],
+              defaultId: undefined,
+              configuredId: 'influx',
+              configuredAvailable: false
+            })
+          },
+          TEST_GRACE_MS
+        )
+      })
+    })
+
     // Drives the POST default-provider route directly: stubs
     // writeSettingsFile with the given outcome, captures the registry's
     // route handlers and provides a postDefault(id) helper returning the
@@ -400,7 +613,8 @@ describe('History API v2', () => {
         app: TestApp
         registry: ReturnType<typeof makeRegistry>
         postDefault: (id: string) => Promise<number>
-      }) => Promise<void>
+      }) => Promise<void>,
+      unavailableGraceMs?: number
     ) => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const config = require('../dist/config/config')
@@ -426,7 +640,7 @@ describe('History API v2', () => {
           postHandlers[path] = handler as (typeof postHandlers)[string]
         }
 
-        const registry = makeRegistry(app)
+        const registry = makeRegistry(app, unavailableGraceMs)
         registry.start()
 
         const postDefault = async (id: string): Promise<number> => {

@@ -30,6 +30,25 @@ const HISTORY_API_PATH = `/signalk/v2/api/history`
 const PROVIDER_NOTIFICATION_PATH =
   'notifications.server.history.defaultProvider' as Path
 
+/** Grace before the configured provider is reported unavailable in the
+ * HISTORYPROVIDERS serverevent. History providers typically live in
+ * plugins backed by slow-starting services (a database container can
+ * come up well after the server), so flagging immediately on startup or
+ * on a restart-driven unregister would flash a warning for a state that
+ * resolves itself moments later. */
+export const UNAVAILABLE_GRACE_MS = 10_000
+
+export interface HistoryProvidersEventData {
+  ids: string[]
+  defaultId: string | undefined
+  configuredId: string | undefined
+  /** True while the configured provider is registered or still within
+   * the grace window; false when no provider is configured or the
+   * configured one has stayed unregistered past the whole grace
+   * window. */
+  configuredAvailable: boolean
+}
+
 export interface HistoryApplication
   extends WithSecurityStrategy, IRouter, ConfigApp, WithHistoryApi {}
 
@@ -41,6 +60,11 @@ export class HistoryApiHttpRegistry {
   /** True while a warn notification about the configured provider
    * being unavailable is active. */
   private warnedUnavailable = false
+  /** True once the configured provider has stayed unregistered past
+   * the whole grace window; drives the graced availability carried in
+   * the HISTORYPROVIDERS serverevent. */
+  private unavailableGraceExpired = false
+  private unavailableGraceTimer: ReturnType<typeof setTimeout> | null = null
   proxy: HistoryApi
 
   /** The configured provider when it is registered, otherwise the first
@@ -56,7 +80,10 @@ export class HistoryApiHttpRegistry {
     return this.historyProviders.keys().next().value
   }
 
-  constructor(private app: HistoryApplication) {
+  constructor(
+    private app: HistoryApplication,
+    private unavailableGraceMs: number = UNAVAILABLE_GRACE_MS
+  ) {
     this.configuredProviderId = app.config.settings.historyApi?.defaultProvider
     this.proxy = {
       getValues: (query: ValuesRequest): Promise<ValuesResponse> => {
@@ -96,8 +123,11 @@ export class HistoryApiHttpRegistry {
       this.historyProviders.set(pluginId, provider)
     }
     if (pluginId === this.configuredProviderId) {
+      this.clearUnavailableGrace()
+      this.unavailableGraceExpired = false
       this.notifyConfiguredAvailable()
     }
+    this.emitProvidersState()
     debug(
       `Registered history api provider ${pluginId},`,
       `total=${this.historyProviders.size},`,
@@ -110,6 +140,10 @@ export class HistoryApiHttpRegistry {
       return
     }
     this.historyProviders.delete(pluginId)
+    if (pluginId === this.configuredProviderId) {
+      this.armUnavailableGrace()
+    }
+    this.emitProvidersState()
     debug(
       `Unregistered history api provider ${pluginId},`,
       `total=${this.historyProviders.size},`,
@@ -118,6 +152,14 @@ export class HistoryApiHttpRegistry {
   }
 
   start() {
+    // Seed the serverevent cache so a connecting admin UI always
+    // receives the current state (events.ts replays the last event of
+    // each type to new websocket clients), and start the grace window
+    // for a configured provider whose plugin has not registered yet —
+    // the normal case on a cold boot with a slow-starting backend.
+    this.armUnavailableGrace()
+    this.emitProvidersState()
+
     // return list of history providers
     this.app.get(
       `${HISTORY_API_PATH}/_providers`,
@@ -268,12 +310,70 @@ export class HistoryApiHttpRegistry {
       if (!err) {
         settings.historyApi = snapshot.historyApi
         this.configuredProviderId = id
-        // The newly configured id is guaranteed registered by the
-        // caller, so any active "unavailable" warning no longer applies.
-        this.notifyConfiguredAvailable()
+        this.clearUnavailableGrace()
+        this.unavailableGraceExpired = false
+        // The route validated the id as registered, but the settings
+        // write is asynchronous — the provider can unregister in the
+        // gap. Re-check before declaring it available, else the UI
+        // would show a false available state with no grace armed.
+        if (this.historyProviders.has(id)) {
+          this.notifyConfiguredAvailable()
+        } else {
+          this.armUnavailableGrace()
+        }
+        this.emitProvidersState()
       }
       cb(err)
     })
+  }
+
+  /** Cancel the pending grace timer; for shutdown and tests. */
+  stop() {
+    this.clearUnavailableGrace()
+  }
+
+  /** Full-snapshot state event for the admin UI; replayed to new
+   * websocket clients from the server's last-event cache. */
+  private emitProvidersState() {
+    const data: HistoryProvidersEventData = {
+      ids: [...this.historyProviders.keys()],
+      defaultId: this.defaultProviderId,
+      configuredId: this.configuredProviderId,
+      configuredAvailable:
+        this.configuredProviderId !== undefined && !this.unavailableGraceExpired
+    }
+    this.app.emit('serverevent', { type: 'HISTORYPROVIDERS', data })
+  }
+
+  private configuredProviderAbsent(): boolean {
+    return (
+      this.configuredProviderId !== undefined &&
+      !this.historyProviders.has(this.configuredProviderId)
+    )
+  }
+
+  private armUnavailableGrace() {
+    if (this.unavailableGraceTimer || !this.configuredProviderAbsent()) {
+      return
+    }
+    this.unavailableGraceTimer = setTimeout(() => {
+      this.unavailableGraceTimer = null
+      // Re-check at fire time — the provider may have registered (or
+      // the configured id changed) during the grace window.
+      if (!this.configuredProviderAbsent()) {
+        return
+      }
+      this.unavailableGraceExpired = true
+      this.emitProvidersState()
+    }, this.unavailableGraceMs)
+    this.unavailableGraceTimer.unref?.()
+  }
+
+  private clearUnavailableGrace() {
+    if (this.unavailableGraceTimer) {
+      clearTimeout(this.unavailableGraceTimer)
+      this.unavailableGraceTimer = null
+    }
   }
 
   // Raise a warn notification the first time a request needs the
