@@ -7,6 +7,18 @@ interface PathDisplayNameProps {
   path: string
 }
 
+const SUB_LINE_FONT_SIZE = '0.85em'
+const SUB_LINE_TOP_MARGIN = '2px'
+const EDIT_INPUT_WIDTH = '220px'
+const PENCIL_OPACITY = 0.4
+const ITEM_GAP = '3px'
+const INLINE_PENCIL_LEFT_MARGIN = '4px'
+
+// Latest save revision per row, module-level so a virtualized
+// unmount/remount continues the same sequence — a stale settlement from
+// a request started in a previous mount must not touch the store.
+const saveRevisions = new Map<string, number>()
+
 // Muted second line under the path showing meta.displayName, with the
 // same inline pencil editing pattern as SourceLabel. The name shown is
 // exactly the one stored at the row's own path (notifications rows
@@ -26,7 +38,6 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
   const [saveFailed, setSaveFailed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const isCancelRef = useRef(false)
-  const saveSeqRef = useRef(0)
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -72,9 +83,12 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
       // Rapid consecutive saves can settle out of order; only the
       // latest request may revert the store or toggle the failure flag,
       // otherwise a stale rejection would clobber the newer optimistic
-      // value with its older `previous` snapshot.
-      const seq = ++saveSeqRef.current
-      const isCurrent = () => saveSeqRef.current === seq
+      // value with its older `previous` snapshot. Revisions are keyed
+      // per row (context + path), not per component instance.
+      const revisionKey = `${context}\0${path}`
+      const seq = (saveRevisions.get(revisionKey) ?? 0) + 1
+      saveRevisions.set(revisionKey, seq)
+      const isCurrent = () => saveRevisions.get(revisionKey) === seq
       updateMeta(context, path, { displayName: trimmed || null })
       const onFailure = () => {
         if (!isCurrent()) return
@@ -125,7 +139,7 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
     return (
       <div
         className="path-display-name"
-        style={{ fontSize: '0.85em', marginTop: '2px' }}
+        style={{ fontSize: SUB_LINE_FONT_SIZE, marginTop: SUB_LINE_TOP_MARGIN }}
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -142,7 +156,7 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
             padding: '1px 4px',
             border: '1px solid var(--bs-primary, #20a8d8)',
             borderRadius: '3px',
-            width: '220px',
+            width: EDIT_INPUT_WIDTH,
             outline: 'none'
           }}
         />
@@ -167,8 +181,8 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
       className="path-displayname-edit"
       style={{
         cursor: 'pointer',
-        opacity: 0.4,
-        fontSize: '0.85em',
+        opacity: PENCIL_OPACITY,
+        fontSize: SUB_LINE_FONT_SIZE,
         lineHeight: 1,
         background: 'none',
         border: 'none',
@@ -183,7 +197,10 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
   const failure = saveFailed && (
     <span
       role="alert"
-      style={{ color: 'var(--bs-danger, #d9534f)', fontSize: '0.85em' }}
+      style={{
+        color: 'var(--bs-danger, #d9534f)',
+        fontSize: SUB_LINE_FONT_SIZE
+      }}
       title="The server rejected the displayName change; the previous value was restored."
     >
       Save failed
@@ -198,11 +215,11 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
       <span
         className="path-display-name"
         style={{
-          marginLeft: '4px',
+          marginLeft: INLINE_PENCIL_LEFT_MARGIN,
           whiteSpace: 'nowrap',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '3px'
+          gap: ITEM_GAP
         }}
       >
         {failure}
@@ -215,11 +232,11 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
     <div
       className="path-display-name text-muted"
       style={{
-        fontSize: '0.85em',
-        marginTop: '2px',
+        fontSize: SUB_LINE_FONT_SIZE,
+        marginTop: SUB_LINE_TOP_MARGIN,
         display: 'flex',
         alignItems: 'center',
-        gap: '3px'
+        gap: ITEM_GAP
       }}
     >
       <span style={{ fontStyle: 'italic' }}>{name}</span>

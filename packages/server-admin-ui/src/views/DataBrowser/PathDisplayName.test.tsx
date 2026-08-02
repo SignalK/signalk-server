@@ -170,6 +170,90 @@ describe('PathDisplayName', () => {
     )
   })
 
+  it('preserves other metadata fields through successful and rejected saves', async () => {
+    asAdmin()
+    setMeta({
+      [PATH]: { displayName: 'Old', units: 'ratio', description: 'level' }
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, status: 200 }))
+    )
+
+    const { getByRole } = render(<PathDisplayName context="self" path={PATH} />)
+    fireEvent.click(getByRole('button'))
+    fireEvent.change(getByRole('textbox'), { target: { value: 'New' } })
+    fireEvent.keyDown(getByRole('textbox'), { key: 'Enter' })
+
+    let meta = useStore.getState().signalkMeta['self'][PATH]
+    expect(meta).toMatchObject({
+      displayName: 'New',
+      units: 'ratio',
+      description: 'level'
+    })
+
+    // Rejected save: revert must also merge, not replace.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 500 }))
+    )
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    fireEvent.click(getByRole('button'))
+    fireEvent.change(getByRole('textbox'), { target: { value: 'Newer' } })
+    fireEvent.keyDown(getByRole('textbox'), { key: 'Enter' })
+
+    await waitFor(() =>
+      expect(useStore.getState().signalkMeta['self'][PATH].displayName).toBe(
+        'New'
+      )
+    )
+    meta = useStore.getState().signalkMeta['self'][PATH]
+    expect(meta).toMatchObject({ units: 'ratio', description: 'level' })
+  })
+
+  it('ignores a stale rejection from a save started before a row remount', async () => {
+    asAdmin()
+    setMeta({})
+    const settlers: Array<(res: { ok: boolean; status: number }) => void> = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            settlers.push(resolve as (typeof settlers)[number])
+          })
+      )
+    )
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    // Mount A: save 'First', then the virtualized row unmounts.
+    const first = render(<PathDisplayName context="self" path={PATH} />)
+    fireEvent.click(first.getByRole('button'))
+    fireEvent.change(first.getByRole('textbox'), {
+      target: { value: 'First' }
+    })
+    fireEvent.keyDown(first.getByRole('textbox'), { key: 'Enter' })
+    first.unmount()
+
+    // Mount B: save 'Second'.
+    const second = render(<PathDisplayName context="self" path={PATH} />)
+    fireEvent.click(second.getByRole('button'))
+    fireEvent.change(second.getByRole('textbox'), {
+      target: { value: 'Second' }
+    })
+    fireEvent.keyDown(second.getByRole('textbox'), { key: 'Enter' })
+
+    expect(settlers.length).toBe(2)
+    settlers[1]({ ok: true, status: 200 })
+    settlers[0]({ ok: false, status: 500 })
+
+    await waitFor(() =>
+      expect(useStore.getState().signalkMeta['self'][PATH].displayName).toBe(
+        'Second'
+      )
+    )
+  })
+
   it('ignores a stale rejection settling after a newer save', async () => {
     asAdmin()
     setMeta({})
