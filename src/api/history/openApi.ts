@@ -208,7 +208,7 @@ historyApiDoc.paths = {
                         $source: {
                           type: 'string',
                           description:
-                            'Source reference, present when the query specified a source filter for this path'
+                            'Source reference for this value series, present when source-aware history is requested, including sourcePolicy=all'
                         }
                       }
                     }
