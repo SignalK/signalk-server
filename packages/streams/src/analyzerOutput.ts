@@ -125,20 +125,26 @@ export function unwrapAnalyzerOutput(
   }
   const types = fieldTypesForId(id)
   const result: Record<string, unknown> = { ...inner }
-  if (isPlainObject(inner.fields)) {
-    const fields = normalizeFields(inner.fields, types)
-    for (const [fieldId, fieldType] of Object.entries(types)) {
-      if (isSpareOrReserved(fieldType) && !(fieldId in fields)) {
-        fields[fieldId] = 0
-      }
-      // The analyzer also omits bit lookups with no set bits; canboatjs
-      // emits [], from which n2k-signalk derives "normal" notification
-      // states — restore the empty array so those states are not lost.
-      if (fieldType === 'BITLOOKUP' && !(fieldId in fields)) {
-        fields[fieldId] = []
-      }
+  // A message whose fields are all empty (e.g. a Configuration Information
+  // with blank strings) arrives with no fields object at all — the analyzer
+  // skips empty values wholesale. canboatjs always emits a fields object,
+  // and n2k-signalk's meta-PGN handlers return n2k.fields directly, so a
+  // missing object flows through as undefined metadata and crashes the
+  // n2kSourceMetadata listener. Normalise to {}.
+  const fields = isPlainObject(inner.fields)
+    ? normalizeFields(inner.fields, types)
+    : {}
+  for (const [fieldId, fieldType] of Object.entries(types)) {
+    if (isSpareOrReserved(fieldType) && !(fieldId in fields)) {
+      fields[fieldId] = 0
     }
-    result.fields = fields
+    // The analyzer also omits bit lookups with no set bits; canboatjs
+    // emits [], from which n2k-signalk derives "normal" notification
+    // states — restore the empty array so those states are not lost.
+    if (fieldType === 'BITLOOKUP' && !(fieldId in fields)) {
+      fields[fieldId] = []
+    }
   }
+  result.fields = fields
   return result
 }

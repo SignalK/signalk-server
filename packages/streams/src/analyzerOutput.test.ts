@@ -77,6 +77,22 @@ describe('unwrapAnalyzerOutput', () => {
     ])
   })
 
+  it('supplies an empty fields object when the analyzer omits it', () => {
+    // All-empty messages (e.g. blank Configuration Information) arrive with
+    // no fields key; n2k-signalk's meta-PGN handlers return n2k.fields
+    // directly and their listeners dereference it.
+    const flat = unwrapAnalyzerOutput({
+      configurationInformation: {
+        pgn: 126998,
+        src: 5,
+        dst: 255,
+        prio: 6,
+        description: 'Configuration Information'
+      }
+    })
+    expect(flat.fields).to.deep.equal({})
+  })
+
   it('passes already-flat output through unchanged', () => {
     const flat = {
       timestamp: '2017-04-15T14:57:58.470Z',
