@@ -1,4 +1,5 @@
 import { Transform, TransformCallback } from 'stream'
+import shellescape from 'any-shell-escape'
 import N2kAnalyzer from './n2kAnalyzer'
 import FromJson from './from_json'
 import MultiplexedLog from './multiplexedlog'
@@ -396,14 +397,39 @@ function nmea2000input(
       })
     ]
   } else {
+    // Native (canboat) sources: each command bridges the gateway to canboat
+    // PLAIN/FAST CSV on stdout, which the downstream N2kAnalyzer decodes.
+    // Where toChildProcess is set, the same CSV format is accepted on stdin
+    // for outbound PGNs (encoded by canboatjs in execute.ts).
     let command: string
     let toChildProcess: string | undefined
     if (subOptions.type === 'ngt-1') {
       command = `actisense-serial -s ${subOptions.baudrate ?? 115200} ${subOptions.device}`
       toChildProcess = 'nmea2000out'
     } else if (subOptions.type === 'canbus') {
-      command = `candump ${subOptions.interface} | candump2analyzer`
-      toChildProcess = undefined
+      // canboat's socketcan-serial rather than candump|candump2analyzer:
+      // same decode path, but bidirectional — it claims an address and
+      // accepts outbound PGNs on stdin, which the candump pipeline cannot.
+      // -u/-m mirror the uniqueNumber/mfgCode settings the canboatjs
+      // SocketCAN option honors.
+      command =
+        `socketcan-serial` +
+        (subOptions.uniqueNumber
+          ? ` -u ${Number(subOptions.uniqueNumber)}`
+          : '') +
+        (subOptions.mfgCode ? ` -m ${Number(subOptions.mfgCode)}` : '') +
+        ` ${subOptions.interface}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'ikonvert') {
+      command = `ikonvert-serial -s ${subOptions.baudrate ?? 230400} ${subOptions.device}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'maretron-ipg') {
+      const password = (subOptions as { password?: string }).password
+      command =
+        `maretron-ipg` +
+        (password ? ` --password=${shellescape(password)}` : '') +
+        ` tcp://${subOptions.host}:${subOptions.port ?? 6543}`
+      toChildProcess = 'nmea2000out'
     } else {
       throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
     }

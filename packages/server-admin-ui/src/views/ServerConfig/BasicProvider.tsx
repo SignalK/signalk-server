@@ -971,7 +971,10 @@ function BaudRateInputCanboat({
   onChange: OnChangeHandler
 }) {
   // Default baud rate based on device type - controlled with fallback
-  const defaultBaudrate = value.type === 'ikonvert-canboatjs' ? 230400 : 115200
+  const defaultBaudrate =
+    value.type === 'ikonvert-canboatjs' || value.type === 'ikonvert'
+      ? 230400
+      : 115200
   const displayBaudrate = value.baudrate ?? defaultBaudrate
 
   return (
@@ -1690,6 +1693,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
               Actisense NGT-1 (canboat)
             </option>
             <option value="ikonvert-canboatjs">iKonvert (canboatjs)</option>
+            <option value="ikonvert" disabled={!hasAnalyzer}>
+              iKonvert (canboat)
+            </option>
             <option value="navlink2-tcp-canboatjs">NavLink2 (canboatjs)</option>
             <option value="canboat-csv-canboatjs">
               canboat-pipeline CSV R/W (canboatjs)
@@ -1716,6 +1722,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             <option value="maretron-ipg-canboatjs">
               Maretron IPG 100 (canboatjs)
             </option>
+            <option value="maretron-ipg" disabled={!hasAnalyzer}>
+              Maretron IPG 100 (canboat)
+            </option>
             <option value="canbus" disabled={!hasAnalyzer}>
               Canbus (canboat)
             </option>
@@ -1725,7 +1734,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       {(value.options.type === 'ngt-1' ||
         value.options.type === 'ngt-1-canboatjs' ||
         value.options.type === 'ydwg02-usb-canboatjs' ||
-        value.options.type === 'ikonvert-canboatjs') && (
+        value.options.type === 'ikonvert-canboatjs' ||
+        value.options.type === 'ikonvert') && (
         <div>
           <DeviceInput value={value.options} onChange={onChange} />
           <BaudRateInputCanboat value={value.options} onChange={onChange} />
@@ -1852,7 +1862,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           </div>
         </div>
       )}
-      {value.options.type === 'maretron-ipg-canboatjs' && (
+      {(value.options.type === 'maretron-ipg-canboatjs' ||
+        value.options.type === 'maretron-ipg') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
