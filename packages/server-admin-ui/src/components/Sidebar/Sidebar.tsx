@@ -476,6 +476,16 @@ export default function Sidebar({ location }: SidebarProps) {
     lastPathnameRef.current = location.pathname
   }, [location.pathname, items])
 
+  // NavLink navigates via pushState, which fires no popstate, so the mobile
+  // sidebar would stay open on top of the page the user just picked. Only
+  // leaf links close it: toggling a dropdown open also navigates (to the
+  // group's remembered page), and closing there would hide the children the
+  // user is about to choose from. Header owns the same class, so both remove
+  // it — the operation is idempotent.
+  const closeMobileSidebar = useCallback(() => {
+    document.body.classList.remove('sidebar-mobile-show')
+  }, [])
+
   const handleClick = useCallback(
     (item: NavItemData) => (e: MouseEvent<HTMLAnchorElement>) => {
       e.preventDefault()
@@ -610,7 +620,12 @@ export default function Sidebar({ location }: SidebarProps) {
     return (
       <Nav.Item as="li" key={key} className={classes.item}>
         {isExternal(url) ? (
-          <Nav.Link href={url} className={classes.link} {...(item.props || {})}>
+          <Nav.Link
+            href={url}
+            className={classes.link}
+            {...(item.props || {})}
+            onClick={closeMobileSidebar}
+          >
             {renderIcon(item.icon)}
             {item.name}
             {renderBadges(item)}
@@ -622,6 +637,7 @@ export default function Sidebar({ location }: SidebarProps) {
               isActive ? `${classes.link} active` : classes.link
             }
             {...(item.props || {})}
+            onClick={closeMobileSidebar}
           >
             {renderIcon(item.icon)}
             {item.name}
