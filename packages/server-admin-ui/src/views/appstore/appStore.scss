@@ -560,16 +560,13 @@
   }
 
   &__dep-card {
-    background: #f0f3f5;
-    border: 1px solid #e4e7ea;
     border-radius: 6px;
     padding: 6px 10px;
     min-width: 180px;
     max-width: 260px;
-    color: #23282c;
 
     &:hover {
-      background: #e4e7ea;
+      background-color: var(--bs-secondary-bg) !important;
     }
   }
 
