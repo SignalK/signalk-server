@@ -430,6 +430,20 @@ function nmea2000input(
         (password ? ` --password=${shellescape(password)}` : '') +
         ` tcp://${subOptions.host}:${subOptions.port ?? 6543}`
       toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'ydwg02') {
+      command = `canboat interface --kind ydwg tcp://${subOptions.host}:${subOptions.port ?? 1457}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'ydwg02-udp') {
+      // The YDWG-02's UDP mode is receive-only; the bridge drops
+      // outbound frames with a warning.
+      command = `canboat interface --kind ydwg udp://${subOptions.port ?? 1457}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'navlink2') {
+      command = `canboat interface --kind ikonvert tcp://${subOptions.host}:${subOptions.port ?? 6001}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'w2k-1-ascii') {
+      command = `canboat interface --kind w2k-ascii tcp://${subOptions.host}:${subOptions.port ?? 60002}`
+      toChildProcess = 'nmea2000out'
     } else {
       throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
     }

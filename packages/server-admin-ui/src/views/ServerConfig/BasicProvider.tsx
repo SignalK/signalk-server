@@ -1697,11 +1697,20 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
               iKonvert (canboat)
             </option>
             <option value="navlink2-tcp-canboatjs">NavLink2 (canboatjs)</option>
+            <option value="navlink2" disabled={!hasAnalyzer}>
+              NavLink2 (canboat)
+            </option>
             <option value="canboat-csv-canboatjs">
               canboat-pipeline CSV R/W (canboatjs)
             </option>
             <option value="ydwg02-canboatjs">
               Yacht Devices RAW TCP (canboatjs)
+            </option>
+            <option value="ydwg02" disabled={!hasAnalyzer}>
+              Yacht Devices RAW TCP (canboat)
+            </option>
+            <option value="ydwg02-udp" disabled={!hasAnalyzer}>
+              Yacht Devices RAW UDP (canboat)
             </option>
             <option value="ydwg02-udp-canboatjs">
               Yacht Devices RAW UDP (canboatjs)
@@ -1718,6 +1727,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             </option>
             <option value="w2k-1-n2k-actisense-canboatjs">
               W2K-1 N2K ACTISENSE (canboatjs)
+            </option>
+            <option value="w2k-1-ascii" disabled={!hasAnalyzer}>
+              W2K-1 N2K ASCII (canboat)
             </option>
             <option value="maretron-ipg-canboatjs">
               Maretron IPG 100 (canboatjs)
@@ -1741,7 +1753,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           <BaudRateInputCanboat value={value.options} onChange={onChange} />
         </div>
       )}
-      {value.options.type === 'ydwg02-canboatjs' && (
+      {(value.options.type === 'ydwg02-canboatjs' ||
+        value.options.type === 'ydwg02' ||
+        value.options.type === 'navlink2') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
@@ -1751,7 +1765,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           />
         </div>
       )}
-      {value.options.type === 'ydwg02-udp-canboatjs' && (
+      {(value.options.type === 'ydwg02-udp-canboatjs' ||
+        value.options.type === 'ydwg02-udp') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
@@ -1817,7 +1832,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         <CollectNetworkStatsInput value={value.options} onChange={onChange} />
       )}
       {(value.options.type === 'w2k-1-n2k-ascii-canboatjs' ||
-        value.options.type === 'w2k-1-n2k-actisense-canboatjs') && (
+        value.options.type === 'w2k-1-n2k-actisense-canboatjs' ||
+        value.options.type === 'w2k-1-ascii') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
