@@ -158,9 +158,7 @@ describe('appstore/enrich', () => {
     const r = enrichEntry({
       ...basePkg,
       signalk: {
-        // @ts-expect-error — intentionally invalid shape
         screenshots: 'not-an-array',
-        // @ts-expect-error — intentionally invalid shape
         requires: 42,
         displayName: 'Still Works'
       }
