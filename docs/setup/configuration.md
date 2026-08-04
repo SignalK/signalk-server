@@ -145,6 +145,20 @@ Click the _Restart_ button at the top right of the screen to restart the server.
 
 After the server has restarted, the installed plugin(s) can be configued by selecting _Server -> Plugin Config_ menu entry.
 
+## The Webapps page
+
+Installed webapps are launched from the _Webapps_ page of the Admin UI.
+
+The sort selector at the top right of the list offers three orders:
+
+- `A-Z` — alphabetical, by display name.
+
+- `Custom order` — arrange the webapps yourself by dragging the grip handle at the top right of each card (works with mouse and touch). Newly installed webapps are appended at the end of your order.
+
+- `Last used` — most recently launched webapps first, followed by the webapps you have not launched yet in alphabetical order.
+
+The last selected order becomes your standard view and is restored on your next visit. It is remembered per browser; on servers with security enabled it is additionally stored per user, so it follows your login across devices.
+
 ## Trouble shooting and the Server Log
 
 If things are not working as expected after installing a plugin or webapp, select _Server -> Server Log_ to view the server's log. If the errors logged there are not providing the information required, you can enable debugging for individual components and plugins by toggling the switch to activate them.

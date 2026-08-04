@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, fireEvent } from '@testing-library/react'
 import Webapp from './Webapp'
 
 describe('Webapp', () => {
@@ -43,6 +43,20 @@ describe('Webapp', () => {
       expect(
         container.querySelector('[data-icon="table-cells"]')
       ).not.toBeInTheDocument()
+    })
+  })
+
+  describe('launch', () => {
+    it('fires onLaunch when the card link is clicked', () => {
+      const onLaunch = vi.fn()
+      const { container } = render(
+        <Webapp webAppInfo={{ name: 'test-app' }} onLaunch={onLaunch} />
+      )
+
+      const link = container.querySelector('a') as HTMLAnchorElement
+      fireEvent.click(link)
+
+      expect(onLaunch).toHaveBeenCalledTimes(1)
     })
   })
 })
