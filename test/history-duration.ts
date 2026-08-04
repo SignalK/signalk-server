@@ -1,5 +1,9 @@
 import { expect } from 'chai'
+import { Duration } from '@signalk/server-api/history'
 import { parseTimeRangeParams } from '../dist/api/history/index.js'
+
+const totalSeconds = (d: Duration | undefined) =>
+  typeof d === 'number' ? d : d?.total({ unit: 'seconds' })
 
 const callParse = (query: Record<string, unknown>) => {
   try {
@@ -20,18 +24,13 @@ describe('parseTimeRangeParams duration handling', () => {
   it('parses an integer number of seconds passed as a string', () => {
     const result = callParse({ duration: '900' })
     if (result instanceof Error) throw result
-    const total = result.timeRangeParams.duration?.total({
-      unit: 'seconds'
-    })
-    expect(total).to.equal(900)
+    expect(totalSeconds(result.timeRangeParams.duration)).to.equal(900)
   })
 
   it('parses zero seconds as a valid duration', () => {
     const result = callParse({ duration: '0', from: '2025-01-01T00:00:00Z' })
     if (result instanceof Error) throw result
-    expect(
-      result.timeRangeParams.duration?.total({ unit: 'seconds' })
-    ).to.equal(0)
+    expect(totalSeconds(result.timeRangeParams.duration)).to.equal(0)
   })
 
   it('rejects fractional duration strings', () => {
@@ -79,8 +78,8 @@ describe('parseTimeRangeParams duration handling', () => {
     const seconds = callParse({ duration: '900' })
     if (iso instanceof Error) throw iso
     if (seconds instanceof Error) throw seconds
-    const isoSec = iso.timeRangeParams.duration?.total({ unit: 'seconds' })
-    const intSec = seconds.timeRangeParams.duration?.total({ unit: 'seconds' })
+    const isoSec = totalSeconds(iso.timeRangeParams.duration)
+    const intSec = totalSeconds(seconds.timeRangeParams.duration)
     expect(isoSec).to.equal(intSec)
   })
 
