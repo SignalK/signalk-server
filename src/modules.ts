@@ -27,12 +27,6 @@ import { pluginConfigPath, pluginDataDir } from './plugin-paths'
 const debug = createDebug('signalk:modules')
 const npmDebug = createDebug('signalk:modules:npm')
 
-// npm 12 blocks dependency install scripts unless allowlisted. The server
-// depends on @canboat/canboatjs, which builds its native SocketCAN addon from
-// an install script; without this the CAN interface disappears after a global
-// self-update. Older npm ignores the flag with a warning.
-const SERVER_ALLOW_SCRIPTS = '--allow-scripts=@canboat/canboatjs'
-
 interface ModuleData {
   module: string
   metadata: object
@@ -352,9 +346,13 @@ export function runNpm(
 
   debug(`${command}: ${packageString}`)
 
+  // npm 12 blocks dependency install scripts unless allowlisted. The server
+  // depends on @canboat/canboatjs, which builds its native SocketCAN addon from
+  // an install script; without this the CAN interface disappears after a global
+  // self-update. Older npm ignores the flag with a warning.
   const npmArgs = isTheServerModule(name, config)
     ? command === 'install' || command === 'update'
-      ? [command, '-g', SERVER_ALLOW_SCRIPTS]
+      ? [command, '-g', '--allow-scripts=@canboat/canboatjs']
       : [command, '-g']
     : ['--save', '--ignore-scripts', command]
 
