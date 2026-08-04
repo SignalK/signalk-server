@@ -346,6 +346,7 @@ export class BLEApi implements IBLEApi {
       }
     }
     if (adv.connectable) device.connectable = true
+    if (adv.addressType) device.addressType = adv.addressType
 
     // Prune providers that haven't reported this device recently
     const seenByCutoff = Date.now() - DEVICE_STALE_MS

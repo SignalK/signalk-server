@@ -43,6 +43,8 @@ const AD_TYPE_INCOMPLETE_32_UUID = 0x04
 const AD_TYPE_COMPLETE_32_UUID = 0x05
 const AD_TYPE_INCOMPLETE_128_UUID = 0x06
 const AD_TYPE_COMPLETE_128_UUID = 0x07
+const AD_TYPE_SHORTENED_LOCAL_NAME = 0x08
+const AD_TYPE_COMPLETE_LOCAL_NAME = 0x09
 const AD_TYPE_SERVICE_DATA_16 = 0x16
 const AD_TYPE_SERVICE_DATA_32 = 0x20
 const AD_TYPE_SERVICE_DATA_128 = 0x21
@@ -53,7 +55,8 @@ const AD_TYPE_MANUFACTURER_DATA = 0xff
 // the advertisement PDU type (ADV_IND vs ADV_NONCONN_IND), which the
 // scanner reports separately.  Callers resolve it from the gateway's
 // explicit `connectable` field instead.
-interface ParsedAdv {
+export interface ParsedAdv {
+  name?: string
   manufacturerData?: Record<number, string>
   serviceData?: Record<string, string>
   serviceUuids?: string[]
@@ -67,7 +70,7 @@ interface ParsedAdv {
  * received by the ESP32 scanner.  Each AD structure is:
  *   [length: 1 byte] [type: 1 byte] [data: length-1 bytes]
  */
-function parseAdvData(hex: string): ParsedAdv {
+export function parseAdvData(hex: string): ParsedAdv {
   const buf = Buffer.from(hex, 'hex')
   const result: ParsedAdv = {}
   let offset = 0
@@ -79,6 +82,19 @@ function parseAdvData(hex: string): ParsedAdv {
     const data = buf.subarray(offset + 2, offset + 1 + len)
 
     switch (adType) {
+      case AD_TYPE_SHORTENED_LOCAL_NAME: {
+        // A complete name (0x09) wins over a shortened one (0x08)
+        if (result.name === undefined) {
+          result.name = data.toString('utf8')
+        }
+        break
+      }
+
+      case AD_TYPE_COMPLETE_LOCAL_NAME: {
+        result.name = data.toString('utf8')
+        break
+      }
+
       case AD_TYPE_MANUFACTURER_DATA: {
         if (data.length >= 2) {
           const companyId = data.readUInt16LE(0)
@@ -636,18 +652,31 @@ export class RemoteGatewayProvider {
       const mac = dev.mac.toUpperCase()
       macs.set(mac, Date.now())
 
+      let name: string | undefined
       let manufacturerData: Record<number, string> | undefined
       let serviceData: Record<string, string> | undefined
       let serviceUuids: string[] | undefined
       let txPower: number | undefined
       let connectable: boolean | undefined
 
-      if (dev.adv_data) {
-        const parsed = parseAdvData(dev.adv_data)
-        manufacturerData = parsed.manufacturerData
-        serviceData = parsed.serviceData
-        serviceUuids = parsed.serviceUuids
-        txPower = parsed.txPower
+      // Scan-response AD structures extend the advertisement; parse both
+      // payloads the same way and merge the scan response over the base
+      for (const raw of [dev.adv_data, dev.scan_rsp_data]) {
+        if (!raw) continue
+        const parsed = parseAdvData(raw)
+        if (parsed.name !== undefined) name = parsed.name
+        if (parsed.manufacturerData) {
+          manufacturerData = { ...manufacturerData, ...parsed.manufacturerData }
+        }
+        if (parsed.serviceData) {
+          serviceData = { ...serviceData, ...parsed.serviceData }
+        }
+        if (parsed.serviceUuids) {
+          serviceUuids = [
+            ...new Set([...(serviceUuids ?? []), ...parsed.serviceUuids])
+          ]
+        }
+        if (parsed.txPower !== undefined) txPower = parsed.txPower
       }
 
       if (dev.manufacturer_data) {
@@ -674,13 +703,14 @@ export class RemoteGatewayProvider {
 
       const adv: BLEAdvertisement = {
         mac,
-        name: dev.name,
+        name: dev.name ?? name,
         rssi: dev.rssi,
         manufacturerData,
         serviceData,
         serviceUuids,
         txPower,
         connectable,
+        addressType: dev.address_type,
         providerId,
         timestamp: Date.now()
       }

@@ -36,6 +36,22 @@ export const BLEGatewayDeviceSchema = Type.Object(
           'The server parses this into manufacturerData, serviceData, etc.'
       })
     ),
+    scan_rsp_data: Type.Optional(
+      Type.String({
+        description:
+          'Raw scan-response payload as hex string (AD structures), ' +
+          'parsed like adv_data and merged over it. Delivered separately ' +
+          'because BLE stacks report scan responses as their own event.'
+      })
+    ),
+    address_type: Type.Optional(
+      Type.Union([Type.Literal('public'), Type.Literal('random')], {
+        description:
+          'BLE address type as reported by the scanner. Needed for GATT ' +
+          'connections (BlueZ connects differently to public and random ' +
+          'addresses) and to reason about rotating random addresses.'
+      })
+    ),
     manufacturer_data: Type.Optional(
       Type.Record(Type.String(), Type.String(), {
         description:
@@ -147,6 +163,11 @@ export const BLEDeviceInfoSchema = Type.Object(
     gattClaimedBy: Type.Optional(
       Type.Union([Type.String(), Type.Null()], {
         description: 'Plugin that currently holds a GATT connection, if any'
+      })
+    ),
+    addressType: Type.Optional(
+      Type.Union([Type.Literal('public'), Type.Literal('random')], {
+        description: 'Last reported BLE address type'
       })
     )
   },
