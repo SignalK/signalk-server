@@ -1,8 +1,30 @@
-import { ChildProcess, spawn } from 'child_process'
+import { ChildProcess, execFileSync, spawn } from 'child_process'
 import { Transform, TransformCallback, Writable } from 'stream'
 import { pgnToActisenseSerialFormat } from '@canboat/canboatjs'
 import type { PGN } from '@canboat/ts-pgns'
 import type { CreateDebug, DebugLogger } from './types'
+
+// The canboat Rust binary's gateway bridges accept analyzer JSON on
+// stdin and encode it against the canboat schema in-process. When that
+// binary is on PATH the spawned child is one of its shims, so outbound
+// PGNs are handed over as JSON — one schema drives both directions —
+// instead of being pre-encoded with canboatjs. With the C tools (or no
+// canboat at all) the wire format written to the child is unchanged.
+// Probed once: PATH does not change within a server run.
+let nativeJsonTx: boolean | undefined
+function canEncodeNatively(): boolean {
+  if (nativeJsonTx === undefined) {
+    try {
+      execFileSync(process.platform === 'win32' ? 'where' : 'which', [
+        'canboat'
+      ])
+      nativeJsonTx = true
+    } catch {
+      nativeJsonTx = false
+    }
+  }
+  return nativeJsonTx
+}
 
 interface ExecuteOptions {
   command: string
@@ -66,7 +88,11 @@ export default class Execute extends Transform {
 
     if (stdOutEvent === 'nmea2000out') {
       this.options.app.on('nmea2000JsonOut', (pgn: PGN) => {
-        this.childProcess.stdin?.write(pgnToActisenseSerialFormat(pgn) + '\r\n')
+        this.childProcess.stdin?.write(
+          canEncodeNatively()
+            ? JSON.stringify(pgn) + '\r\n'
+            : pgnToActisenseSerialFormat(pgn) + '\r\n'
+        )
       })
       this.options.app.emit('nmea2000OutAvailable')
     }
