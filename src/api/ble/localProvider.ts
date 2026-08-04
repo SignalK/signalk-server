@@ -17,6 +17,16 @@ import {
   GATTSubscriptionHandle
 } from '@signalk/server-api'
 
+// How often to poll BlueZ for newly discovered devices
+const DEVICE_WATCH_INTERVAL_MS = 5000
+// waitDevice timeout when attaching a listener to an already-known device
+const DEVICE_ATTACH_TIMEOUT_S = 1
+// waitDevice timeout when establishing a GATT connection
+const GATT_CONNECT_TIMEOUT_S = 30
+// GATT reconnect exponential backoff bounds
+const RECONNECT_BACKOFF_BASE_MS = 5000
+const RECONNECT_BACKOFF_MAX_MS = 60000
+
 // ---------------------------------------------------------------------------
 // Connection serializer (port of bt-sensors AutoQueue concept)
 // ---------------------------------------------------------------------------
@@ -244,7 +254,10 @@ export class LocalBLEProvider {
 
     // Initial scan + periodic check for new devices
     await watchDevices()
-    const interval = setInterval(watchDevices, 5000)
+    // Discovery may have been stopped while the initial scan awaited
+    if (!this.scanning) return
+    const interval = setInterval(watchDevices, DEVICE_WATCH_INTERVAL_MS)
+    interval.unref()
 
     const origCleanup = this.deviceListeners.get('__watcher__')
     if (origCleanup) origCleanup()
@@ -256,7 +269,7 @@ export class LocalBLEProvider {
     // iterations don't both kick off an attach for the same MAC.
     this.deviceListeners.set(mac, () => {})
     try {
-      const device = await this.adapter.waitDevice(mac, 1)
+      const device = await this.adapter.waitDevice(mac, DEVICE_ATTACH_TIMEOUT_S)
       await device.helper._prepare()
       this.emitDeviceAdvertisement(device, mac)
 
@@ -356,7 +369,9 @@ export class LocalBLEProvider {
           debug(`Advertisement callback error: ${e.message}`)
         }
       }
-    } catch (_e) {}
+    } catch (e: any) {
+      debug(`Advertisement read error for ${mac}: ${e?.message ?? e}`)
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -450,7 +465,7 @@ export class LocalBLEProvider {
       debug(`GATT connecting to ${mac}`)
 
       // 1. Find device
-      const device = await this.adapter.waitDevice(mac, 30)
+      const device = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_S)
       session.device = device
 
       // 2. Connect
@@ -557,7 +572,10 @@ export class LocalBLEProvider {
       }
       this.clearSessionTimers(session)
       const attemptReconnect = (attempt: number) => {
-        const delay = Math.min(5000 * Math.pow(2, attempt - 1), 60000)
+        const delay = Math.min(
+          RECONNECT_BACKOFF_BASE_MS * Math.pow(2, attempt - 1),
+          RECONNECT_BACKOFF_MAX_MS
+        )
         // Only one reconnect chain may be active per session
         if (session.reconnectTimer) {
           clearTimeout(session.reconnectTimer)
@@ -581,7 +599,10 @@ export class LocalBLEProvider {
               // ignore cleanup errors
             }
             if (!session.closed) {
-              const nextDelay = Math.min(5000 * Math.pow(2, attempt), 60000)
+              const nextDelay = Math.min(
+                RECONNECT_BACKOFF_BASE_MS * Math.pow(2, attempt),
+                RECONNECT_BACKOFF_MAX_MS
+              )
               debug(`GATT retry ${mac} in ${nextDelay / 1000}s`)
               attemptReconnect(attempt + 1)
             }
@@ -661,7 +682,7 @@ export class LocalBLEProvider {
     let device: any
     try {
       device = await this.connectQueue.enqueue(async () => {
-        const dev = await this.adapter.waitDevice(mac, 30)
+        const dev = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_S)
         await dev.helper.callMethod('Connect')
         try {
           await this.adapter.helper.callMethod('StopDiscovery')

@@ -84,6 +84,7 @@ export default function BLEManager() {
   const localBLESupported = bleSettings?.localBLESupported ?? true
   const activeAdapters = bleSettings?.activeAdapters ?? []
   const adapterErrors = bleSettings?.adapterErrors ?? {}
+  const isScanning = hasGateways || activeAdapters.length > 0
 
   return (
     <div className="animated fadeIn">
@@ -355,7 +356,7 @@ export default function BLEManager() {
         <Card.Body>
           {devices.length === 0 ? (
             <p className="text-body-secondary mb-0">
-              {hasGateways
+              {isScanning
                 ? 'No BLE devices detected yet. Waiting for advertisements...'
                 : 'No BLE devices detected. Enable local Bluetooth in settings or connect a gateway to start scanning.'}
             </p>

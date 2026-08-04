@@ -34,7 +34,7 @@ import {
 const BLE_API_PATH = `/signalk/v2/api/vessels/self/ble`
 
 // Devices not seen for this long are pruned from the device table
-const DEVICE_STALE_MS = 120_000
+export const DEVICE_STALE_MS = 120_000
 
 interface BLEApplication
   extends WithSecurityStrategy, SignalKMessageHub, WithConfig, IRouter {
@@ -74,6 +74,7 @@ export class BLEApi implements IBLEApi {
   private providerUnsubscribers: Map<string, () => void> = new Map()
   private deviceTable: Map<string, BLEDeviceInfo> = new Map()
   private gattClaims: Map<string, GATTClaim> = new Map()
+  private pendingGattClaims: Set<string> = new Set()
   private advertisementCallbacks: Map<string, (adv: BLEAdvertisement) => void> =
     new Map()
   private wsClients: Set<WebSocket> = new Set()
@@ -219,9 +220,14 @@ export class BLEApi implements IBLEApi {
 
   private async shutdownLocalProviders() {
     for (const [providerId, provider] of this.localProviders) {
-      this.unRegister(providerId)
-      provider.shutdown()
-      debug(`Local BLE provider shut down: ${providerId}`)
+      // One misbehaving adapter must not keep the others registered
+      try {
+        this.unRegister(providerId)
+        provider.shutdown()
+        debug(`Local BLE provider shut down: ${providerId}`)
+      } catch (e: any) {
+        debug(`Local BLE provider shutdown failed: ${providerId}: ${e.message}`)
+      }
     }
     this.localProviders.clear()
     this.localProviderErrors.clear()
@@ -414,114 +420,132 @@ export class BLEApi implements IBLEApi {
   // GATT
   // -------------------------------------------------------------------
 
+  /**
+   * Reserve a MAC before the provider call awaits, so two concurrent
+   * subscribeGATT/connectGATT calls for the same device cannot both pass
+   * the claim check. Throws when the device is claimed or being claimed.
+   */
+  private reserveGATTClaim(mac: string) {
+    const existing = this.gattClaims.get(mac)
+    if (existing) {
+      throw new Error(`Device ${mac} already claimed by ${existing.pluginId}`)
+    }
+    if (this.pendingGattClaims.has(mac)) {
+      throw new Error(`Device ${mac} has a GATT claim in progress`)
+    }
+    this.pendingGattClaims.add(mac)
+  }
+
   async subscribeGATT(
     descriptor: GATTSubscriptionDescriptor,
     pluginId: string,
     callback: (charUuid: string, data: Buffer) => void
   ): Promise<GATTSubscriptionHandle> {
     const mac = descriptor.mac.toUpperCase()
+    this.reserveGATTClaim(mac)
+    try {
+      const providerId = this.selectGATTProvider(mac)
+      if (!providerId) {
+        throw new Error(
+          `No provider with GATT support and available slots can see ${mac}`
+        )
+      }
 
-    const existing = this.gattClaims.get(mac)
-    if (existing) {
-      throw new Error(`Device ${mac} already claimed by ${existing.pluginId}`)
+      const provider = this.bleProviders.get(providerId)!
+      const handle = await provider.methods.subscribeGATT(descriptor, callback)
+
+      debug(`GATT claim: ${mac} → ${pluginId} via ${providerId}`)
+
+      // Ensure the device exists in the table — GATT devices may stop advertising
+      // once connected, so they would otherwise be pruned.
+      if (!this.deviceTable.has(mac)) {
+        this.deviceTable.set(mac, {
+          mac,
+          rssi: 0,
+          lastSeen: Date.now(),
+          connectable: true,
+          seenBy: [{ providerId, rssi: 0, lastSeen: Date.now() }]
+        })
+      }
+      // Keep lastSeen fresh for the duration of the claim so the device
+      // is not pruned while GATT is active (GATT devices stop advertising).
+      const keepAliveTimer = setInterval(() => {
+        const d = this.deviceTable.get(mac)
+        if (d) d.lastSeen = Date.now()
+      }, DEVICE_STALE_MS / 2)
+      keepAliveTimer.unref()
+
+      const claimEntry: GATTClaim = {
+        pluginId,
+        providerId,
+        handle,
+        keepAliveTimer
+      }
+      this.gattClaims.set(mac, claimEntry)
+
+      const origClose = handle.close.bind(handle)
+      handle.close = async () => {
+        clearInterval(keepAliveTimer)
+        this.gattClaims.delete(mac)
+        debug(`GATT released: ${mac} (was ${pluginId})`)
+        return origClose()
+      }
+
+      return handle
+    } finally {
+      this.pendingGattClaims.delete(mac)
     }
-
-    const providerId = this.selectGATTProvider(mac)
-    if (!providerId) {
-      throw new Error(
-        `No provider with GATT support and available slots can see ${mac}`
-      )
-    }
-
-    const provider = this.bleProviders.get(providerId)!
-    const handle = await provider.methods.subscribeGATT(descriptor, callback)
-
-    debug(`GATT claim: ${mac} → ${pluginId} via ${providerId}`)
-
-    // Ensure the device exists in the table — GATT devices may stop advertising
-    // once connected, so they would otherwise be pruned.
-    if (!this.deviceTable.has(mac)) {
-      this.deviceTable.set(mac, {
-        mac,
-        rssi: 0,
-        lastSeen: Date.now(),
-        connectable: true,
-        seenBy: [{ providerId, rssi: 0, lastSeen: Date.now() }]
-      })
-    }
-    // Keep lastSeen fresh for the duration of the claim so the device
-    // is not pruned while GATT is active (GATT devices stop advertising).
-    const keepAliveTimer = setInterval(() => {
-      const d = this.deviceTable.get(mac)
-      if (d) d.lastSeen = Date.now()
-    }, DEVICE_STALE_MS / 2)
-    keepAliveTimer.unref()
-
-    const claimEntry: GATTClaim = {
-      pluginId,
-      providerId,
-      handle,
-      keepAliveTimer
-    }
-    this.gattClaims.set(mac, claimEntry)
-
-    const origClose = handle.close.bind(handle)
-    handle.close = async () => {
-      clearInterval(keepAliveTimer)
-      this.gattClaims.delete(mac)
-      debug(`GATT released: ${mac} (was ${pluginId})`)
-      return origClose()
-    }
-
-    return handle
   }
 
   async connectGATT(mac: string, pluginId: string): Promise<BLEGattConnection> {
     mac = mac.toUpperCase()
-
-    const existing = this.gattClaims.get(mac)
-    if (existing) {
-      throw new Error(`Device ${mac} already claimed by ${existing.pluginId}`)
-    }
-
-    const providerId = this.selectGATTProvider(mac)
-    if (!providerId) {
-      throw new Error(`No provider with GATT support can see ${mac}`)
-    }
-
-    const provider = this.bleProviders.get(providerId)!
-    if (!provider.methods.connectGATT) {
-      throw new Error(
-        `Provider ${providerId} does not support raw GATT connections`
-      )
-    }
-
-    const conn = await provider.methods.connectGATT(mac)
-
-    const syntheticHandle: GATTSubscriptionHandle = {
-      read: async () => Buffer.alloc(0),
-      write: async () => {},
-      close: async () => {
-        this.gattClaims.delete(mac)
-        await conn.disconnect()
-      },
-      get connected() {
-        return conn.connected
-      },
-      onDisconnect: (cb) => conn.onDisconnect(cb),
-      onConnect: (cb) => {
-        // Raw connection is already established when connectGATT returns
-        if (conn.connected) cb()
+    this.reserveGATTClaim(mac)
+    try {
+      const providerId = this.selectGATTProvider(mac)
+      if (!providerId) {
+        throw new Error(`No provider with GATT support can see ${mac}`)
       }
+
+      const provider = this.bleProviders.get(providerId)!
+      if (!provider.methods.connectGATT) {
+        throw new Error(
+          `Provider ${providerId} does not support raw GATT connections`
+        )
+      }
+
+      const conn = await provider.methods.connectGATT(mac)
+
+      const syntheticHandle: GATTSubscriptionHandle = {
+        read: async () => Buffer.alloc(0),
+        write: async () => {},
+        close: async () => {
+          this.gattClaims.delete(mac)
+          await conn.disconnect()
+        },
+        get connected() {
+          return conn.connected
+        },
+        onDisconnect: (cb) => conn.onDisconnect(cb),
+        onConnect: (cb) => {
+          // Raw connection is already established when connectGATT returns
+          if (conn.connected) cb()
+        }
+      }
+      this.gattClaims.set(mac, {
+        pluginId,
+        providerId,
+        handle: syntheticHandle
+      })
+
+      conn.onDisconnect(() => {
+        this.gattClaims.delete(mac)
+        debug(`Raw GATT claim auto-released (disconnect): ${mac}`)
+      })
+
+      return conn
+    } finally {
+      this.pendingGattClaims.delete(mac)
     }
-    this.gattClaims.set(mac, { pluginId, providerId, handle: syntheticHandle })
-
-    conn.onDisconnect(() => {
-      this.gattClaims.delete(mac)
-      debug(`Raw GATT claim auto-released (disconnect): ${mac}`)
-    })
-
-    return conn
   }
 
   async releaseGATTDevice(mac: string, pluginId: string): Promise<void> {
@@ -871,7 +895,7 @@ export class BLEApi implements IBLEApi {
       const server = this.app.server
       if (!server) {
         debug('HTTP server not yet available, retrying in 1s...')
-        setTimeout(tryAttach, 1000)
+        setTimeout(tryAttach, 1000).unref()
         return
       }
 

@@ -362,8 +362,8 @@ export const BLEGatewayHelloSchema = Type.Object(
       minLength: 1,
       description: 'Unique identifier for this gateway (typically the hostname)'
     }),
-    max_gatt_connections: OptionalNullable(Type.Number()),
-    active_gatt_connections: OptionalNullable(Type.Number()),
+    max_gatt_connections: OptionalNullable(Type.Integer({ minimum: 0 })),
+    active_gatt_connections: OptionalNullable(Type.Integer({ minimum: 0 })),
     firmware: OptionalNullable(Type.String()),
     mac: OptionalNullable(Type.String()),
     hostname: OptionalNullable(Type.String())
@@ -470,10 +470,14 @@ export const BLEGattSessionEventSchema = Type.Union(
 export const BLEGatewayStatusSchema = Type.Object(
   {
     type: Type.Literal('status'),
-    active_gatt_connections: OptionalNullable(Type.Number()),
-    max_gatt_connections: OptionalNullable(Type.Number()),
-    uptime: OptionalNullable(Type.Number({ description: 'Seconds' })),
-    free_heap: OptionalNullable(Type.Number({ description: 'Bytes' }))
+    active_gatt_connections: OptionalNullable(Type.Integer({ minimum: 0 })),
+    max_gatt_connections: OptionalNullable(Type.Integer({ minimum: 0 })),
+    uptime: OptionalNullable(
+      Type.Number({ minimum: 0, description: 'Seconds' })
+    ),
+    free_heap: OptionalNullable(
+      Type.Number({ minimum: 0, description: 'Bytes' })
+    )
   },
   { $id: 'BLEGatewayStatus' }
 )

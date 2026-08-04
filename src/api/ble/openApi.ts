@@ -1,5 +1,6 @@
 import { OpenApiDescription } from '../swagger'
 import { typeboxToOpenApiSchemas } from '../openApiSchemas'
+import { DEVICE_STALE_MS } from './index'
 import {
   BLEAdvertisementSchema,
   BLEConsumerInfoSchema,
@@ -143,7 +144,8 @@ const bleApiDoc = {
         summary: 'List all visible BLE devices',
         description:
           'Returns all visible devices across all providers, deduplicated by ' +
-          'MAC address. Devices not seen for 120 seconds are pruned.',
+          `MAC address. Devices not seen for ${DEVICE_STALE_MS / 1000} ` +
+          'seconds are pruned.',
         responses: {
           '200': {
             description: 'Array of BLE device info',

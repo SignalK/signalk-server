@@ -25,6 +25,11 @@ import {
 // How long to keep a recently-disconnected gateway in the list
 const OFFLINE_SNAPSHOT_MS = 60_000
 
+// Devices not reported by a gateway for this long stop counting as seen.
+// Matches the BLE API's own device-table staleness window; without this
+// the per-gateway MAC set grows without bound under BLE MAC randomization.
+const DEVICE_SEEN_TTL_MS = 120_000
+
 // Ping interval for WebSocket keepalive
 const PING_INTERVAL_MS = 30_000
 
@@ -491,8 +496,8 @@ export class RemoteGatewayProvider {
 
   // Per-gateway: MAC → Set of advertisement callbacks
   private advCallbacks = new Map<string, Set<(adv: BLEAdvertisement) => void>>()
-  // Per-gateway: Set<mac> of seen devices
-  private seenMacs = new Map<string, Set<string>>()
+  // Per-gateway: MAC → last-seen timestamp (ms)
+  private seenMacs = new Map<string, Map<string, number>>()
   // Per-gateway: timestamp of last HTTP POST (ms)
   private lastPostTime = new Map<string, number>()
   // Per-gateway: metadata from HTTP POST body (for HTTP-only gateways like C5)
@@ -521,11 +526,12 @@ export class RemoteGatewayProvider {
     const GW_PATH = `/signalk/v2/api/ble`
 
     // Prune independently of POST traffic so the last HTTP-only gateway
-    // releases its provider and callbacks once it goes quiet
-    this.httpPruneTimer = setInterval(
-      () => this._pruneStaleHttpGateways(),
-      OFFLINE_SNAPSHOT_MS
-    )
+    // releases its provider and callbacks once it goes quiet, and so
+    // per-gateway device sets age out under BLE MAC randomization
+    this.httpPruneTimer = setInterval(() => {
+      this._pruneStaleHttpGateways()
+      this._pruneSeenMacs()
+    }, OFFLINE_SNAPSHOT_MS)
     this.httpPruneTimer.unref()
 
     router.get(`${GW_PATH}/gateways`, (_req: Request, res: Response) => {
@@ -600,13 +606,13 @@ export class RemoteGatewayProvider {
       this._registerGatewayProvider(gatewayId)
     }
 
-    const macs = this.seenMacs.get(gatewayId) ?? new Set<string>()
+    const macs = this.seenMacs.get(gatewayId) ?? new Map<string, number>()
     const callbacks = this.advCallbacks.get(gatewayId) ?? new Set()
     const providerId = `ble:gateway:${gatewayId}`
 
     for (const dev of body.devices) {
       const mac = dev.mac.toUpperCase()
-      macs.add(mac)
+      macs.set(mac, Date.now())
 
       let manufacturerData: Record<number, string> | undefined
       let serviceData: Record<string, string> | undefined
@@ -679,7 +685,7 @@ export class RemoteGatewayProvider {
       this.advCallbacks.set(gatewayId, new Set())
     }
     if (!this.seenMacs.has(gatewayId)) {
-      this.seenMacs.set(gatewayId, new Set())
+      this.seenMacs.set(gatewayId, new Map())
     }
 
     const provider: BLEProvider = {
@@ -687,7 +693,8 @@ export class RemoteGatewayProvider {
       methods: {
         startDiscovery: async () => {},
         stopDiscovery: async () => {},
-        getDevices: async () => Array.from(this.seenMacs.get(gatewayId) ?? []),
+        getDevices: async () =>
+          Array.from(this.seenMacs.get(gatewayId)?.keys() ?? []),
         onAdvertisement: (cb) => {
           const callbacks = this.advCallbacks.get(gatewayId)!
           callbacks.add(cb)
@@ -746,7 +753,14 @@ export class RemoteGatewayProvider {
             `http://${request.headers.host ?? 'localhost'}`
           )
           const query = Object.fromEntries(reqUrl.searchParams.entries())
-          const headers = request.headers as Record<string, string>
+          // IncomingHttpHeaders values may be string arrays; the security
+          // strategy expects plain strings, so take the first value
+          const headers: Record<string, string> = {}
+          for (const [key, value] of Object.entries(request.headers)) {
+            if (typeof value === 'string') headers[key] = value
+            else if (Array.isArray(value) && value.length > 0)
+              headers[key] = value[0]
+          }
           const cookies = request.headers.cookie
             ? cookie.parse(request.headers.cookie)
             : {}
@@ -881,7 +895,7 @@ export class RemoteGatewayProvider {
           setTimeout(
             () => this.snapshots.delete(gatewayId),
             OFFLINE_SNAPSHOT_MS
-          )
+          ).unref()
 
           // Release GATT claims held through this gateway before firing disconnect callbacks,
           // so plugins can immediately re-claim via another provider.
@@ -927,17 +941,27 @@ export class RemoteGatewayProvider {
     tryAttach()
   }
 
-  /**
-   * Remove state for HTTP-only gateways that haven't POSTed within the
-   * snapshot TTL.  Runs on a periodic timer and from the POST handler —
-   * keeping `getGatewayInfo` a pure read.
-   */
   /** An HTTP-only gateway is fresh while a POST arrived within the TTL. */
   private _isHttpGatewayFresh(gatewayId: string): boolean {
     const lastPost = this.lastPostTime.get(gatewayId) ?? 0
     return Date.now() - lastPost <= OFFLINE_SNAPSHOT_MS
   }
 
+  /** Drop per-gateway device entries not reported within the TTL. */
+  private _pruneSeenMacs() {
+    const cutoff = Date.now() - DEVICE_SEEN_TTL_MS
+    for (const macs of this.seenMacs.values()) {
+      for (const [mac, lastSeen] of macs) {
+        if (lastSeen < cutoff) macs.delete(mac)
+      }
+    }
+  }
+
+  /**
+   * Remove state for HTTP-only gateways that haven't POSTed within the
+   * snapshot TTL.  Runs on a periodic timer and from the POST handler —
+   * keeping `getGatewayInfo` a pure read.
+   */
   private _pruneStaleHttpGateways() {
     for (const [gatewayId] of this.seenMacs) {
       if (this.sessions.has(gatewayId) || this.snapshots.has(gatewayId))
