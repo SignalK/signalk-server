@@ -5,7 +5,7 @@
  * and runtime request validation.
  */
 
-import { Type, type Static } from '@sinclair/typebox'
+import { Type, type Static, type TSchema } from '@sinclair/typebox'
 
 const MAC_PATTERN = '^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$'
 
@@ -343,6 +343,148 @@ export const BLEGattClaimStatusSchema = Type.Object(
 )
 
 // ---------------------------------------------------------------------------
+// Gateway WebSocket protocol
+//
+// Frames exchanged on /signalk/v2/api/ble/gateway/ws. These schemas are
+// both the AsyncAPI payload documentation and the runtime validation
+// applied to every inbound frame in the remote gateway provider.
+// Optional metadata fields accept null so firmware may serialize absent
+// values either way.
+// ---------------------------------------------------------------------------
+
+const OptionalNullable = <T extends TSchema>(schema: T) =>
+  Type.Optional(Type.Union([schema, Type.Null()]))
+
+export const BLEGatewayHelloSchema = Type.Object(
+  {
+    type: Type.Literal('hello'),
+    gateway_id: Type.String({
+      minLength: 1,
+      description: 'Unique identifier for this gateway (typically the hostname)'
+    }),
+    max_gatt_connections: OptionalNullable(Type.Number()),
+    active_gatt_connections: OptionalNullable(Type.Number()),
+    firmware: OptionalNullable(Type.String()),
+    mac: OptionalNullable(Type.String()),
+    hostname: OptionalNullable(Type.String())
+  },
+  { $id: 'BLEGatewayHello' }
+)
+
+export const BLEGattSubscribeCommandSchema = Type.Object(
+  {
+    type: Type.Literal('gatt_subscribe'),
+    session_id: Type.String(),
+    mac: Type.String(),
+    service: Type.String(),
+    notify: Type.Optional(Type.Array(Type.String())),
+    poll: Type.Optional(
+      Type.Array(
+        Type.Object({
+          uuid: Type.String(),
+          interval_ms: Type.Number(),
+          write_before_read: Type.Optional(Type.String())
+        })
+      )
+    ),
+    init: Type.Optional(
+      Type.Array(
+        Type.Object({
+          uuid: Type.String(),
+          data: Type.String({ description: 'Hex-encoded write payload' }),
+          with_response: Type.Optional(Type.Boolean())
+        })
+      )
+    ),
+    periodic_write: Type.Optional(
+      Type.Array(
+        Type.Object({
+          uuid: Type.String(),
+          data: Type.String({ description: 'Hex-encoded write payload' }),
+          interval_ms: Type.Number(),
+          with_response: Type.Optional(Type.Boolean())
+        })
+      )
+    )
+  },
+  { $id: 'BLEGattSubscribeCommand' }
+)
+
+export const BLEGattWriteCommandSchema = Type.Object(
+  {
+    type: Type.Literal('gatt_write'),
+    session_id: Type.String(),
+    uuid: Type.String(),
+    data: Type.String({ description: 'Hex-encoded write payload' }),
+    with_response: Type.Optional(Type.Boolean())
+  },
+  { $id: 'BLEGattWriteCommand' }
+)
+
+export const BLEGattCloseCommandSchema = Type.Object(
+  {
+    type: Type.Literal('gatt_close'),
+    session_id: Type.String()
+  },
+  { $id: 'BLEGattCloseCommand' }
+)
+
+/** Server → gateway commands. */
+export const BLEGattCommandSchema = Type.Union(
+  [
+    BLEGattSubscribeCommandSchema,
+    BLEGattWriteCommandSchema,
+    BLEGattCloseCommandSchema
+  ],
+  { $id: 'BLEGattCommand' }
+)
+
+/** Gateway → server GATT session lifecycle and data frames. */
+export const BLEGattSessionEventSchema = Type.Union(
+  [
+    Type.Object({
+      type: Type.Literal('gatt_connected'),
+      session_id: Type.String(),
+      mac: Type.Optional(Type.String())
+    }),
+    Type.Object({
+      type: Type.Literal('gatt_data'),
+      session_id: Type.String(),
+      uuid: Type.String(),
+      data: Type.String({ description: 'Hex-encoded characteristic value' })
+    }),
+    Type.Object({
+      type: Type.Literal('gatt_disconnected'),
+      session_id: Type.String(),
+      reason: Type.Optional(Type.String())
+    }),
+    Type.Object({
+      type: Type.Literal('gatt_error'),
+      session_id: Type.String(),
+      error: Type.Optional(Type.String())
+    })
+  ],
+  { $id: 'BLEGattSessionEvent' }
+)
+
+export const BLEGatewayStatusSchema = Type.Object(
+  {
+    type: Type.Literal('status'),
+    active_gatt_connections: OptionalNullable(Type.Number()),
+    max_gatt_connections: OptionalNullable(Type.Number()),
+    uptime: OptionalNullable(Type.Number({ description: 'Seconds' })),
+    free_heap: OptionalNullable(Type.Number({ description: 'Bytes' }))
+  },
+  { $id: 'BLEGatewayStatus' }
+)
+
+/** Every frame a gateway may send to the server. */
+export const BLEGatewayInboundMessageSchema = Type.Union(
+  [BLEGatewayHelloSchema, BLEGattSessionEventSchema, BLEGatewayStatusSchema],
+  { $id: 'BLEGatewayInboundMessage' }
+)
+
+// ---------------------------------------------------------------------------
 // Type exports
 // ---------------------------------------------------------------------------
 
@@ -360,3 +502,10 @@ export type BLESettingsResponse = Static<typeof BLESettingsResponseSchema>
 export type BLESettingsRequest = Static<typeof BLESettingsRequestSchema>
 export type BLEDefaultProvider = Static<typeof BLEDefaultProviderSchema>
 export type BLEGattClaimStatus = Static<typeof BLEGattClaimStatusSchema>
+export type BLEGatewayHello = Static<typeof BLEGatewayHelloSchema>
+export type BLEGattCommand = Static<typeof BLEGattCommandSchema>
+export type BLEGattSessionEvent = Static<typeof BLEGattSessionEventSchema>
+export type BLEGatewayStatus = Static<typeof BLEGatewayStatusSchema>
+export type BLEGatewayInboundMessage = Static<
+  typeof BLEGatewayInboundMessageSchema
+>

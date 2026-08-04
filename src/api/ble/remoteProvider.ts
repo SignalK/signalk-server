@@ -15,7 +15,11 @@ import {
 import {
   BLEGatewayAdvertisementBatchSchema,
   BLEGatewayDeviceSchema,
-  BLEGatewayInfo
+  BLEGatewayHello,
+  BLEGatewayInboundMessageSchema,
+  BLEGatewayInfo,
+  BLEGatewayStatus,
+  BLEGattSessionEvent
 } from '@signalk/server-api/typebox'
 
 // How long to keep a recently-disconnected gateway in the list
@@ -181,14 +185,6 @@ interface SessionState {
   disconnectCallbacks: Array<() => void>
 }
 
-// WS control messages arrive as raw JSON from the gateway; unlike the HTTP
-// POST path there is no schema validation, so coerce fields defensively.
-const numberField = (v: unknown, fallback: number): number =>
-  typeof v === 'number' && Number.isFinite(v) ? v : fallback
-
-const stringField = (v: unknown): string | null =>
-  typeof v === 'string' ? v : null
-
 interface GatewaySnapshot {
   gatewayId: string
   ipAddress: string | null
@@ -228,19 +224,26 @@ class RemoteGATTSession {
     this.connectedAt = Date.now()
   }
 
-  handleHello(msg: Record<string, unknown>) {
-    this.maxSlots = numberField(msg.max_gatt_connections, 0)
-    this.activeSlots = numberField(msg.active_gatt_connections, 0)
-    this.firmware = stringField(msg.firmware)
-    this.mac = stringField(msg.mac)
-    this.hostname = stringField(msg.hostname)
+  handleHello(msg: BLEGatewayHello) {
+    this.maxSlots = msg.max_gatt_connections ?? 0
+    this.activeSlots = msg.active_gatt_connections ?? 0
+    this.firmware = msg.firmware ?? null
+    this.mac = msg.mac ?? null
+    this.hostname = msg.hostname ?? null
     debug(
       `[${this.gatewayId}] hello: ${this.maxSlots} max slots, fw=${this.firmware}, mac=${this.mac}`
     )
   }
 
-  handleMessage(msg: Record<string, unknown>) {
-    const sessionId = msg.session_id as string
+  handleMessage(msg: BLEGattSessionEvent | BLEGatewayStatus) {
+    if (msg.type === 'status') {
+      this.activeSlots = msg.active_gatt_connections ?? 0
+      this.maxSlots = msg.max_gatt_connections ?? this.maxSlots
+      this.uptime = msg.uptime ?? 0
+      this.freeHeap = msg.free_heap ?? 0
+      return
+    }
+    const sessionId = msg.session_id
     switch (msg.type) {
       case 'gatt_connected': {
         const session = this.sessions.get(sessionId)
@@ -262,10 +265,7 @@ class RemoteGATTSession {
         const session = this.sessions.get(sessionId)
         if (!session?.callback) return
         try {
-          session.callback(
-            msg.uuid as string,
-            Buffer.from(msg.data as string, 'hex')
-          )
+          session.callback(msg.uuid, Buffer.from(msg.data, 'hex'))
         } catch (e: unknown) {
           debug(
             `[${this.gatewayId}] data callback error: ${(e as Error).message}`
@@ -305,13 +305,6 @@ class RemoteGATTSession {
         this.sessions.delete(sessionId)
         this.activeSlots = Math.max(0, this.activeSlots - 1)
         debug(`[${this.gatewayId}] session ${sessionId} error: ${msg.error}`)
-        break
-      }
-      case 'status': {
-        this.activeSlots = numberField(msg.active_gatt_connections, 0)
-        this.maxSlots = numberField(msg.max_gatt_connections, this.maxSlots)
-        this.uptime = numberField(msg.uptime, 0)
-        this.freeHeap = numberField(msg.free_heap, 0)
         break
       }
     }
@@ -777,20 +770,33 @@ export class RemoteGatewayProvider {
         })
 
         ws.on('message', (raw: Buffer) => {
-          let msg: Record<string, unknown>
+          let parsed: unknown
           try {
-            msg = JSON.parse(raw.toString())
+            parsed = JSON.parse(raw.toString())
           } catch {
             debug('Gateway WS: invalid JSON')
             return
           }
+          // Same contract the AsyncAPI spec publishes: frames that don't
+          // match the protocol schemas are dropped, not guessed at
+          if (!Value.Check(BLEGatewayInboundMessageSchema, parsed)) {
+            if (debug.enabled) {
+              const first = Value.Errors(
+                BLEGatewayInboundMessageSchema,
+                parsed
+              ).First()
+              debug(
+                `Gateway WS: dropping invalid frame${
+                  first ? ` (${first.path}: ${first.message})` : ''
+                }`
+              )
+            }
+            return
+          }
+          const msg = parsed
 
           if (msg.type === 'hello' && !session) {
-            const gatewayId = msg.gateway_id as string
-            if (!gatewayId) {
-              debug('Gateway WS: hello missing gateway_id')
-              return
-            }
+            const gatewayId = msg.gateway_id
 
             // Close any stale session for same gateway or same IP
             const existing = this.sessions.get(gatewayId)
@@ -848,7 +854,7 @@ export class RemoteGatewayProvider {
               pongReceived = false
               ws.ping()
             }, PING_INTERVAL_MS)
-          } else if (session) {
+          } else if (session && msg.type !== 'hello') {
             session.handleMessage(msg)
           }
         })
