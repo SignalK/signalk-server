@@ -235,9 +235,10 @@ class RemoteGATTSession {
     this.firmware = msg.firmware ?? null
     this.mac = msg.mac ?? null
     this.hostname = msg.hostname ?? null
-    debug(
-      `[${this.gatewayId}] hello: ${this.maxSlots} max slots, fw=${this.firmware}, mac=${this.mac}`
-    )
+    debug.enabled &&
+      debug(
+        `[${this.gatewayId}] hello: ${this.maxSlots} max slots, fw=${this.firmware}, mac=${this.mac}`
+      )
   }
 
   handleMessage(msg: BLEGattSessionEvent | BLEGatewayStatus) {
@@ -261,9 +262,10 @@ class RemoteGATTSession {
             /* ignore */
           }
         }
-        debug(
-          `[${this.gatewayId}] session ${sessionId} connected to ${msg.mac}`
-        )
+        debug.enabled &&
+          debug(
+            `[${this.gatewayId}] session ${sessionId} connected to ${msg.mac}`
+          )
         break
       }
       case 'gatt_data': {
@@ -272,9 +274,10 @@ class RemoteGATTSession {
         try {
           session.callback(msg.uuid, Buffer.from(msg.data, 'hex'))
         } catch (e: unknown) {
-          debug(
-            `[${this.gatewayId}] data callback error: ${(e as Error).message}`
-          )
+          debug.enabled &&
+            debug(
+              `[${this.gatewayId}] data callback error: ${(e as Error).message}`
+            )
         }
         break
       }
@@ -291,9 +294,10 @@ class RemoteGATTSession {
         }
         this.sessions.delete(sessionId)
         this.activeSlots = Math.max(0, this.activeSlots - 1)
-        debug(
-          `[${this.gatewayId}] session ${sessionId} disconnected: ${msg.reason}`
-        )
+        debug.enabled &&
+          debug(
+            `[${this.gatewayId}] session ${sessionId} disconnected: ${msg.reason}`
+          )
         break
       }
       case 'gatt_error': {
@@ -309,7 +313,8 @@ class RemoteGATTSession {
         }
         this.sessions.delete(sessionId)
         this.activeSlots = Math.max(0, this.activeSlots - 1)
-        debug(`[${this.gatewayId}] session ${sessionId} error: ${msg.error}`)
+        debug.enabled &&
+          debug(`[${this.gatewayId}] session ${sessionId} error: ${msg.error}`)
         break
       }
     }
@@ -415,6 +420,9 @@ class RemoteGATTSession {
             JSON.stringify({ type: 'gatt_close', session_id: sessionId })
           )
         }
+        // The handle's connected getter reads the session — report
+        // false after close, matching LocalBLEProvider
+        session.connected = false
         this.sessions.delete(sessionId)
         this.activeSlots = Math.max(0, this.activeSlots - 1)
       },
@@ -430,16 +438,18 @@ class RemoteGATTSession {
       _fireDisconnect: fireDisconnect
     }
 
-    debug(
-      `[${this.gatewayId}] subscribeGATT session=${sessionId} mac=${descriptor.mac}`
-    )
+    debug.enabled &&
+      debug(
+        `[${this.gatewayId}] subscribeGATT session=${sessionId} mac=${descriptor.mac}`
+      )
     return handle
   }
 
   handleDisconnect() {
-    debug(
-      `[${this.gatewayId}] WS disconnected, cleaning up ${this.sessions.size} sessions`
-    )
+    debug.enabled &&
+      debug(
+        `[${this.gatewayId}] WS disconnected, cleaning up ${this.sessions.size} sessions`
+      )
     for (const session of this.sessions.values()) {
       // Skip callbacks if already fired by releaseGATTClaimsForProvider
       const wasConnected = session.connected
@@ -523,6 +533,9 @@ export class RemoteGatewayProvider {
   ) {}
 
   attach(router: IRouter) {
+    // Guard against duplicate routes, upgrade listeners, and timers if
+    // a future caller attaches twice
+    if (this.httpPruneTimer) return
     const GW_PATH = `/signalk/v2/api/ble`
 
     // Prune independently of POST traffic so the last HTTP-only gateway
@@ -551,13 +564,22 @@ export class RemoteGatewayProvider {
   private _handleAdvertisementPost(req: Request, res: Response) {
     const strategy = this.app.securityStrategy
     if (strategy?.canAuthorizeWS?.()) {
-      const authHeader = req.headers['authorization'] as string | undefined
-      const token = authHeader?.startsWith('Bearer ')
-        ? authHeader.slice(7)
-        : undefined
+      // Same credential sources as the WebSocket upgrade: let the
+      // strategy probe query, headers, and cookies for the token
+      const query: Record<string, string> = {}
+      for (const [key, value] of Object.entries(req.query)) {
+        if (typeof value === 'string') query[key] = value
+      }
+      const headers: Record<string, string> = {}
+      for (const [key, value] of Object.entries(req.headers)) {
+        if (typeof value === 'string') headers[key] = value
+        else if (Array.isArray(value) && value.length > 0)
+          headers[key] = value[0]
+      }
+      const cookies = req.headers.cookie ? cookie.parse(req.headers.cookie) : {}
       try {
         if (!strategy.authorizeWS) throw new Error('authorizeWS unavailable')
-        strategy.authorizeWS({ token })
+        strategy.authorizeWS({ query, headers, cookies })
       } catch {
         res.status(401).json({ error: 'Unauthorized' })
         return
@@ -667,7 +689,7 @@ export class RemoteGatewayProvider {
         try {
           cb(adv)
         } catch (e: unknown) {
-          debug(`adv callback error: ${(e as Error).message}`)
+          debug.enabled && debug(`adv callback error: ${(e as Error).message}`)
         }
       }
     }
@@ -679,7 +701,8 @@ export class RemoteGatewayProvider {
   }
 
   private _registerGatewayProvider(gatewayId: string) {
-    debug(`Registering provider for gateway: ble:gateway:${gatewayId}`)
+    debug.enabled &&
+      debug(`Registering provider for gateway: ble:gateway:${gatewayId}`)
 
     if (!this.advCallbacks.has(gatewayId)) {
       this.advCallbacks.set(gatewayId, new Set())
@@ -799,11 +822,12 @@ export class RemoteGatewayProvider {
                 BLEGatewayInboundMessageSchema,
                 parsed
               ).First()
-              debug(
-                `Gateway WS: dropping invalid frame${
-                  first ? ` (${first.path}: ${first.message})` : ''
-                }`
-              )
+              debug.enabled &&
+                debug(
+                  `Gateway WS: dropping invalid frame${
+                    first ? ` (${first.path}: ${first.message})` : ''
+                  }`
+                )
             }
             return
           }
@@ -826,9 +850,10 @@ export class RemoteGatewayProvider {
             // Same IP → different gateway_id (reflash with new name)
             for (const [oldId, oldSession] of this.sessions) {
               if (oldSession.ipAddress === gatewayIp && oldId !== gatewayId) {
-                debug(
-                  `Closing stale gateway ${oldId} (same IP as ${gatewayId})`
-                )
+                debug.enabled &&
+                  debug(
+                    `Closing stale gateway ${oldId} (same IP as ${gatewayId})`
+                  )
                 oldSession.handleDisconnect()
                 this.sessions.delete(oldId)
                 this._unregisterGatewayProvider(oldId)
@@ -855,13 +880,15 @@ export class RemoteGatewayProvider {
             ws.send(
               JSON.stringify({ type: 'hello_ack', server_time: Date.now() })
             )
-            debug(`Gateway ${gatewayId} registered via WebSocket`)
+            debug.enabled &&
+              debug(`Gateway ${gatewayId} registered via WebSocket`)
 
             // Keepalive
             pingTimer = setInterval(() => {
               if (ws.readyState !== WebSocket.OPEN) return
               if (!pongReceived) {
-                debug(`No pong from ${gatewayId} — terminating`)
+                debug.enabled &&
+                  debug(`No pong from ${gatewayId} — terminating`)
                 ws.terminate()
                 return
               }
@@ -878,7 +905,7 @@ export class RemoteGatewayProvider {
           if (!session) return
 
           const { gatewayId } = session
-          debug(`Gateway ${gatewayId} WebSocket closed`)
+          debug.enabled && debug(`Gateway ${gatewayId} WebSocket closed`)
 
           this.snapshots.set(gatewayId, {
             gatewayId,
@@ -907,7 +934,7 @@ export class RemoteGatewayProvider {
         })
 
         ws.on('error', (err) => {
-          debug(`Gateway WS error: ${err.message}`)
+          debug.enabled && debug(`Gateway WS error: ${err.message}`)
         })
       }
     )
@@ -936,7 +963,7 @@ export class RemoteGatewayProvider {
           }
         }
       )
-      debug(`Gateway WebSocket endpoint ready at ${wsPath}`)
+      debug.enabled && debug(`Gateway WebSocket endpoint ready at ${wsPath}`)
     }
     tryAttach()
   }

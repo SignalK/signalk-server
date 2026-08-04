@@ -104,10 +104,10 @@ For the REST API documentation, see OpenAPI at \`/doc/openapi\`.
     }
   },
   operations: {
-    receiveAdvertisement: {
-      action: 'receive',
+    streamAdvertisements: {
+      action: 'send',
       channel: { $ref: '#/channels/advertisements' },
-      summary: 'Receive BLE advertisements'
+      summary: 'Stream BLE advertisements to subscribed clients'
     },
     gatewayControl: {
       action: 'send',

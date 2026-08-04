@@ -121,16 +121,18 @@ export class LocalBLEProvider {
 
       const powered = await this.adapter.isPowered()
       if (!powered) {
-        debug(
-          `Adapter ${this.adapterName} not powered — local provider unavailable`
-        )
+        debug.enabled &&
+          debug(
+            `Adapter ${this.adapterName} not powered — local provider unavailable`
+          )
         throw new Error(`Adapter ${this.adapterName} not powered`)
       }
 
       this.adapterReady = true
-      debug(`Local BLE provider initialized on ${this.adapterName}`)
+      debug.enabled &&
+        debug(`Local BLE provider initialized on ${this.adapterName}`)
     } catch (e: any) {
-      debug(`Failed to initialize local BLE: ${e.message}`)
+      debug.enabled && debug(`Failed to initialize local BLE: ${e.message}`)
       throw e
     }
   }
@@ -145,6 +147,7 @@ export class LocalBLEProvider {
       cleanup()
     }
     this.deviceListeners.clear()
+    this.lastRssi.clear()
     if (this.destroy) {
       try {
         this.destroy()
@@ -194,13 +197,14 @@ export class LocalBLEProvider {
     try {
       await this.adapter.helper.callMethod('StopDiscovery')
     } catch (e: any) {
-      debug(`Error stopping discovery: ${e.message}`)
+      debug.enabled && debug(`Error stopping discovery: ${e.message}`)
     }
     this.scanning = false
     for (const cleanup of this.deviceListeners.values()) {
       cleanup()
     }
     this.deviceListeners.clear()
+    this.lastRssi.clear()
     debug('Discovery stopped')
   }
 
@@ -271,6 +275,12 @@ export class LocalBLEProvider {
     try {
       const device = await this.adapter.waitDevice(mac, DEVICE_ATTACH_TIMEOUT_S)
       await device.helper._prepare()
+      // Discovery may have been stopped while the awaits above ran —
+      // registering now would repopulate the cleared listener table
+      if (!this.scanning) {
+        this.deviceListeners.delete(mac)
+        return
+      }
       this.emitDeviceAdvertisement(device, mac)
 
       const handler = (props: any) => {
@@ -366,11 +376,12 @@ export class LocalBLEProvider {
         try {
           cb(adv)
         } catch (e: any) {
-          debug(`Advertisement callback error: ${e.message}`)
+          debug.enabled && debug(`Advertisement callback error: ${e.message}`)
         }
       }
     } catch (e: any) {
-      debug(`Advertisement read error for ${mac}: ${e?.message ?? e}`)
+      debug.enabled &&
+        debug(`Advertisement read error for ${mac}: ${e?.message ?? e}`)
     }
   }
 
@@ -462,7 +473,7 @@ export class LocalBLEProvider {
     await this.connectQueue.enqueue(async () => {
       if (session.closed) return
 
-      debug(`GATT connecting to ${mac}`)
+      debug.enabled && debug(`GATT connecting to ${mac}`)
 
       // 1. Find device
       const device = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_S)
@@ -471,14 +482,17 @@ export class LocalBLEProvider {
       // 2. Connect
       await device.helper.callMethod('Connect')
       session.connected = true
-      debug(`GATT connected to ${mac}`)
+      debug.enabled && debug(`GATT connected to ${mac}`)
 
-      // 3. Restart scanning (BlueZ suspends during GATT connections)
-      try {
-        await this.adapter.helper.callMethod('StopDiscovery')
-        await this.adapter.helper.callMethod('StartDiscovery')
-      } catch (_e) {
-        // Ignorable
+      // 3. Restart scanning (BlueZ suspends during GATT connections) —
+      // but only when discovery is actually supposed to be running
+      if (this.scanning) {
+        try {
+          await this.adapter.helper.callMethod('StopDiscovery')
+          await this.adapter.helper.callMethod('StartDiscovery')
+        } catch (_e) {
+          // Ignorable
+        }
       }
     })
 
@@ -529,7 +543,8 @@ export class LocalBLEProvider {
             const value = await char.readValue()
             session.callback(pollEntry.uuid, value)
           } catch (e: any) {
-            debug(`Poll error for ${pollEntry.uuid}: ${e.message}`)
+            debug.enabled &&
+              debug(`Poll error for ${pollEntry.uuid}: ${e.message}`)
           }
         }, pollEntry.intervalMs)
         session.pollTimers.push(timer)
@@ -549,7 +564,8 @@ export class LocalBLEProvider {
               await char.writeValue(Buffer.from(pw.data, 'hex'))
             }
           } catch (e: any) {
-            debug(`Periodic write error for ${pw.uuid}: ${e.message}`)
+            debug.enabled &&
+              debug(`Periodic write error for ${pw.uuid}: ${e.message}`)
           }
         }, pw.intervalMs)
         session.periodicWriteTimers.push(timer)
@@ -562,7 +578,7 @@ export class LocalBLEProvider {
     const onDisconnect = () => {
       if (session.closed) return
       session.connected = false
-      debug(`GATT disconnected from ${mac}`)
+      debug.enabled && debug(`GATT disconnected from ${mac}`)
       for (const cb of session.disconnectCallbacks) {
         try {
           cb()
@@ -582,12 +598,14 @@ export class LocalBLEProvider {
         }
         session.reconnectTimer = setTimeout(async () => {
           if (session.closed) return
-          debug(`GATT reconnecting to ${mac} (attempt ${attempt})`)
+          debug.enabled &&
+            debug(`GATT reconnecting to ${mac} (attempt ${attempt})`)
           try {
             // executeGATTLifecycle fires connectCallbacks itself on success
             await this.executeGATTLifecycle(session)
           } catch (e: any) {
-            debug(`GATT reconnect failed for ${mac}: ${e.message}`)
+            debug.enabled &&
+              debug(`GATT reconnect failed for ${mac}: ${e.message}`)
             // A failed attempt may leave a partial connection behind
             // (connected flag set, poll timers armed); tear it down so
             // state does not accumulate across retries
@@ -603,7 +621,8 @@ export class LocalBLEProvider {
                 RECONNECT_BACKOFF_BASE_MS * Math.pow(2, attempt),
                 RECONNECT_BACKOFF_MAX_MS
               )
-              debug(`GATT retry ${mac} in ${nextDelay / 1000}s`)
+              debug.enabled &&
+                debug(`GATT retry ${mac} in ${nextDelay / 1000}s`)
               attemptReconnect(attempt + 1)
             }
           }
@@ -657,10 +676,11 @@ export class LocalBLEProvider {
       try {
         // device.disconnect() may return a promise that rejects asynchronously
         Promise.resolve(session.device.disconnect()).catch((e: any) => {
-          debug(`device.disconnect() failed: ${e?.message ?? e}`)
+          debug.enabled &&
+            debug(`device.disconnect() failed: ${e?.message ?? e}`)
         })
       } catch (e: any) {
-        debug(`device.disconnect() threw: ${e?.message ?? e}`)
+        debug.enabled && debug(`device.disconnect() threw: ${e?.message ?? e}`)
       }
     }
     session.connected = false
@@ -684,11 +704,13 @@ export class LocalBLEProvider {
       device = await this.connectQueue.enqueue(async () => {
         const dev = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_S)
         await dev.helper.callMethod('Connect')
-        try {
-          await this.adapter.helper.callMethod('StopDiscovery')
-          await this.adapter.helper.callMethod('StartDiscovery')
-        } catch (_e) {
-          // Ignorable
+        if (this.scanning) {
+          try {
+            await this.adapter.helper.callMethod('StopDiscovery')
+            await this.adapter.helper.callMethod('StartDiscovery')
+          } catch (_e) {
+            // Ignorable
+          }
         }
         return dev
       })

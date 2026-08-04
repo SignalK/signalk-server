@@ -108,6 +108,7 @@ export type BleSlice = BleSliceState & BleSliceActions
 // Zustand state: they are not renderable data and the counter ticks far
 // too often to funnel through set() per advertisement.
 let pollTimer: ReturnType<typeof setInterval> | null = null
+let pollAbort: AbortController | null = null
 let advWs: WebSocket | null = null
 let advReconnectTimer: ReturnType<typeof setTimeout> | null = null
 let advCountTimer: ReturnType<typeof setInterval> | null = null
@@ -117,10 +118,11 @@ let advDisposed = true
 async function fetchValidated<T extends TSchema>(
   url: string,
   schema: T,
-  onValid: (data: Static<T>) => void
+  onValid: (data: Static<T>) => void,
+  signal?: AbortSignal
 ): Promise<void> {
   try {
-    const res = await fetch(url, { credentials: 'include' })
+    const res = await fetch(url, { credentials: 'include', signal })
     if (!res.ok) return
     const data: unknown = await res.json()
     // Malformed payloads are ignored, keeping the previous state.
@@ -128,7 +130,8 @@ async function fetchValidated<T extends TSchema>(
       onValid(data)
     }
   } catch {
-    // ignore — the poll retries, and the BLE API may not be available
+    // ignore — aborted or failed; the poll retries, and the BLE API
+    // may not be available at all
   }
 }
 
@@ -148,21 +151,35 @@ export const createBleSlice: StateCreator<BleSlice, [], [], BleSlice> = (
   get
 ) => {
   const pollAll = () => {
-    fetchValidated(`${BLE_API_PATH}/devices`, BleDeviceListSchema, (devices) =>
-      set({ bleDevices: devices })
+    // Abort the previous cycle first: a stalled or slow response must
+    // not land after a newer one and overwrite fresher state
+    pollAbort?.abort()
+    const controller = new AbortController()
+    pollAbort = controller
+    const signal = controller.signal
+    fetchValidated(
+      `${BLE_API_PATH}/devices`,
+      BleDeviceListSchema,
+      (devices) => set({ bleDevices: devices }),
+      signal
     )
     fetchValidated(
       `${BLE_API_PATH}/consumers`,
       BleConsumerListSchema,
-      (consumers) => set({ bleConsumers: consumers })
+      (consumers) => set({ bleConsumers: consumers }),
+      signal
     )
     fetchValidated(
       `${BLE_GATEWAY_API_PATH}/gateways`,
       BleGatewayListSchema,
-      (gateways) => set({ bleGateways: gateways })
+      (gateways) => set({ bleGateways: gateways }),
+      signal
     )
-    fetchValidated(`${BLE_API_PATH}/settings`, BleSettingsSchema, (settings) =>
-      set({ bleSettings: settings })
+    fetchValidated(
+      `${BLE_API_PATH}/settings`,
+      BleSettingsSchema,
+      (settings) => set({ bleSettings: settings }),
+      signal
     )
   }
 
@@ -232,6 +249,8 @@ export const createBleSlice: StateCreator<BleSlice, [], [], BleSlice> = (
         clearInterval(pollTimer)
         pollTimer = null
       }
+      pollAbort?.abort()
+      pollAbort = null
     },
 
     connectBleAdvertisements: () => {

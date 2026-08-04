@@ -191,7 +191,8 @@ export class BLEApi implements IBLEApi {
           name: `Local Bluetooth (${adapterName})`,
           methods: provider.getMethods()
         })
-        debug(`Local BLE provider registered and scanning: ${providerId}`)
+        debug.enabled &&
+          debug(`Local BLE provider registered and scanning: ${providerId}`)
       } catch (e: any) {
         // Roll back any partial state if init succeeded but startDiscovery failed
         if (provider) {
@@ -224,9 +225,12 @@ export class BLEApi implements IBLEApi {
       try {
         this.unRegister(providerId)
         provider.shutdown()
-        debug(`Local BLE provider shut down: ${providerId}`)
+        debug.enabled && debug(`Local BLE provider shut down: ${providerId}`)
       } catch (e: any) {
-        debug(`Local BLE provider shutdown failed: ${providerId}: ${e.message}`)
+        debug.enabled &&
+          debug(
+            `Local BLE provider shutdown failed: ${providerId}: ${e.message}`
+          )
       }
     }
     this.localProviders.clear()
@@ -238,14 +242,15 @@ export class BLEApi implements IBLEApi {
   // -------------------------------------------------------------------
 
   register(pluginId: string, provider: BLEProvider) {
-    debug(`Registering BLE provider: ${pluginId} "${provider.name}"`)
-
     if (!pluginId || !provider) {
       throw new Error(`Error registering BLE provider ${pluginId}!`)
     }
     if (!isBLEProvider(provider)) {
       throw new Error(`${pluginId} is missing BLEProvider properties/methods!`)
     }
+    debug.enabled &&
+      debug.enabled &&
+      debug(`Registering BLE provider: ${pluginId} "${provider.name}"`)
 
     if (this.bleProviders.has(pluginId)) {
       this.unRegister(pluginId)
@@ -253,16 +258,22 @@ export class BLEApi implements IBLEApi {
     this.bleProviders.set(pluginId, provider)
 
     const unsub = provider.methods.onAdvertisement((adv: BLEAdvertisement) => {
+      // Advertisements are routed by providerId; never trust the provider
+      // to stamp its own id correctly
+      if (adv.providerId !== pluginId) {
+        adv = { ...adv, providerId: pluginId }
+      }
       this._handleAdvertisement(adv)
     })
     this.providerUnsubscribers.set(pluginId, unsub)
 
-    debug(`BLE providers registered: ${this.bleProviders.size}`)
+    debug.enabled &&
+      debug(`BLE providers registered: ${this.bleProviders.size}`)
   }
 
   unRegister(pluginId: string) {
     if (!pluginId) return
-    debug(`Unregistering BLE provider: ${pluginId}`)
+    debug.enabled && debug(`Unregistering BLE provider: ${pluginId}`)
 
     const unsub = this.providerUnsubscribers.get(pluginId)
     if (unsub) {
@@ -278,7 +289,7 @@ export class BLEApi implements IBLEApi {
     }
 
     this.bleProviders.delete(pluginId)
-    debug(`BLE providers remaining: ${this.bleProviders.size}`)
+    debug.enabled && debug(`BLE providers remaining: ${this.bleProviders.size}`)
   }
 
   // -------------------------------------------------------------------
@@ -454,7 +465,8 @@ export class BLEApi implements IBLEApi {
       const provider = this.bleProviders.get(providerId)!
       const handle = await provider.methods.subscribeGATT(descriptor, callback)
 
-      debug(`GATT claim: ${mac} → ${pluginId} via ${providerId}`)
+      debug.enabled &&
+        debug(`GATT claim: ${mac} → ${pluginId} via ${providerId}`)
 
       // Ensure the device exists in the table — GATT devices may stop advertising
       // once connected, so they would otherwise be pruned.
@@ -487,7 +499,7 @@ export class BLEApi implements IBLEApi {
       handle.close = async () => {
         clearInterval(keepAliveTimer)
         this.gattClaims.delete(mac)
-        debug(`GATT released: ${mac} (was ${pluginId})`)
+        debug.enabled && debug(`GATT released: ${mac} (was ${pluginId})`)
         return origClose()
       }
 
@@ -539,7 +551,8 @@ export class BLEApi implements IBLEApi {
 
       conn.onDisconnect(() => {
         this.gattClaims.delete(mac)
-        debug(`Raw GATT claim auto-released (disconnect): ${mac}`)
+        debug.enabled &&
+          debug(`Raw GATT claim auto-released (disconnect): ${mac}`)
       })
 
       return conn
@@ -593,9 +606,10 @@ export class BLEApi implements IBLEApi {
       if (claim.providerId === providerId) {
         if (claim.keepAliveTimer) clearInterval(claim.keepAliveTimer)
         this.gattClaims.delete(mac)
-        debug(
-          `GATT claim released (gateway offline): ${mac} was ${claim.pluginId} via ${providerId}`
-        )
+        debug.enabled &&
+          debug(
+            `GATT claim released (gateway offline): ${mac} was ${claim.pluginId} via ${providerId}`
+          )
         // Fire disconnect callbacks so the plugin knows to reconnect via
         // another provider. Don't call handle.close() — the WS is already
         // dead and close() does not fire disconnectCallbacks.
@@ -639,7 +653,7 @@ export class BLEApi implements IBLEApi {
   // -------------------------------------------------------------------
 
   private initApiEndpoints() {
-    debug(`Initialise ${BLE_API_PATH} endpoints`)
+    debug.enabled && debug(`Initialise ${BLE_API_PATH} endpoints`)
 
     this.app.use(
       `${BLE_API_PATH}/*`,
@@ -821,42 +835,50 @@ export class BLEApi implements IBLEApi {
           return
         }
 
+        // Apply to a candidate first: in-memory settings only change
+        // after the write to disk has succeeded
+        const candidate: BLESettings = { ...this.settings }
         let changed = false
         let providerChange = false
         if (typeof body.localBluetoothManaged === 'boolean') {
-          this.settings.localBluetoothManaged = body.localBluetoothManaged
+          candidate.localBluetoothManaged = body.localBluetoothManaged
           changed = true
           providerChange = true
         }
         if (Array.isArray(body.localAdapters)) {
-          this.settings.localAdapters = body.localAdapters
+          candidate.localAdapters = body.localAdapters
           changed = true
           providerChange = true
         }
         if (typeof body.localMaxGATTSlots === 'number') {
-          this.settings.localMaxGATTSlots = body.localMaxGATTSlots
+          candidate.localMaxGATTSlots = body.localMaxGATTSlots
           changed = true
           providerChange = true
         }
 
         if (changed) {
-          const appSettings = this.app.config.settings as any
-          appSettings.bleApi = { ...this.settings }
+          const candidateSettings = structuredClone(
+            this.app.config.settings
+          ) as any
+          candidateSettings.bleApi = { ...candidate }
           try {
             await new Promise<void>((resolve, reject) => {
               writeSettingsFile(
                 this.app as any,
-                this.app.config.settings,
+                candidateSettings,
                 (err: any) => (err ? reject(err) : resolve())
               )
             })
           } catch (err: any) {
-            debug(`Error saving BLE settings: ${err.message}`)
+            debug.enabled && debug(`Error saving BLE settings: ${err.message}`)
             res
               .status(500)
               .json({ message: `Failed to save settings: ${err.message}` })
             return
           }
+
+          this.settings = candidate
+          ;(this.app.config.settings as any).bleApi = { ...candidate }
 
           if (providerChange) {
             await this.shutdownLocalProviders()
@@ -927,7 +949,7 @@ export class BLEApi implements IBLEApi {
           wss.emit('connection', ws, request)
         })
       })
-      debug(`WebSocket endpoint ready at ${wsPath}`)
+      debug.enabled && debug(`WebSocket endpoint ready at ${wsPath}`)
     }
 
     tryAttach()

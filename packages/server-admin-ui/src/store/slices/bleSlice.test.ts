@@ -199,6 +199,25 @@ describe('bleSlice', () => {
       expect(s.bleSettings).toEqual(VALID_SETTINGS)
     })
 
+    it('aborts an in-flight cycle when polling stops, so stalled requests cannot land later', async () => {
+      const signals: AbortSignal[] = []
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (_url: string, init?: RequestInit) => {
+          if (init?.signal) signals.push(init.signal)
+          // Stalled request: never resolves within the test
+          return new Promise(() => {})
+        })
+      )
+
+      useStore.getState().startBleManagerPolling()
+      expect(signals).toHaveLength(4)
+      expect(signals.every((s) => !s.aborted)).toBe(true)
+
+      useStore.getState().stopBleManagerPolling()
+      expect(signals.every((s) => s.aborted)).toBe(true)
+    })
+
     it('rejects malformed list payloads, keeping previous state', async () => {
       useStore.setState({ bleDevices: [VALID_DEVICE] })
       mockFetch({

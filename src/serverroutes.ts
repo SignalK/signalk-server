@@ -1185,7 +1185,7 @@ module.exports = function (
     if (!isUndefined(settings.options.useBLEManager)) {
       updatedSettings.bleApi = {
         ...(updatedSettings.bleApi ?? {}),
-        localBluetoothManaged: settings.options.useBLEManager
+        localBluetoothManaged: Boolean(settings.options.useBLEManager)
       }
     }
 
