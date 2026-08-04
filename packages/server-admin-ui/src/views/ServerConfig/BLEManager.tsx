@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useEffect } from 'react'
 import Badge from 'react-bootstrap/Badge'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -11,13 +11,7 @@ import { faTowerBroadcast } from '@fortawesome/free-solid-svg-icons/faTowerBroad
 import { faLink } from '@fortawesome/free-solid-svg-icons/faLink'
 import { faPlug } from '@fortawesome/free-solid-svg-icons/faPlug'
 import { faMicrochip } from '@fortawesome/free-solid-svg-icons/faMicrochip'
-
-const BLE_API = '/signalk/v2/api/vessels/self/ble'
-const GATEWAY_API = '/signalk/v2/api/ble'
-
-const POLL_INTERVAL_MS = 5000
-const WS_RECONNECT_DELAY_MS = 5000
-const ADV_COUNT_REFRESH_MS = 1000
+import { useStore, useShallow } from '../../store'
 
 // Ages below this render as "just now"
 const JUST_NOW_MAX_S = 5
@@ -26,50 +20,6 @@ const JUST_NOW_MAX_S = 5
 const RSSI_STRONG_DBM = -50
 const RSSI_GOOD_DBM = -70
 const RSSI_FAIR_DBM = -85
-
-interface SeenByEntry {
-  providerId: string
-  rssi: number
-  lastSeen: number
-}
-
-interface BLEDeviceInfo {
-  mac: string
-  name?: string
-  rssi: number
-  lastSeen: number
-  connectable: boolean
-  seenBy: SeenByEntry[]
-  gattClaimedBy?: string | null
-}
-
-interface ConsumerInfo {
-  pluginId: string
-  advertisementSubscriber: boolean
-  gattClaims: string[]
-}
-
-interface BLESettings {
-  localBluetoothManaged: boolean
-  localAdapters: string[]
-  localMaxGATTSlots: number
-  localBLESupported: boolean
-  activeAdapters: string[]
-  adapterErrors: Record<string, string>
-}
-
-interface GatewayInfo {
-  gatewayId: string
-  ipAddress?: string
-  firmware?: string
-  online: boolean
-  connectedAt: number | null
-  disconnectedAt?: number
-  uptime?: number
-  freeHeap?: number
-  gattSlots: { total: number; available: number }
-  deviceCount: number
-}
 
 function formatAge(lastSeen: number): string {
   const seconds = Math.round((Date.now() - lastSeen) / 1000)
@@ -101,120 +51,30 @@ function rssiColor(rssi: number): string {
 }
 
 export default function BLEManager() {
-  const [devices, setDevices] = useState<BLEDeviceInfo[]>([])
-  const [consumers, setConsumers] = useState<ConsumerInfo[]>([])
-  const [gateways, setGateways] = useState<GatewayInfo[]>([])
-  const [bleSettings, setBleSettings] = useState<BLESettings | null>(null)
-  const [wsConnected, setWsConnected] = useState(false)
-  const [advCount, setAdvCount] = useState(0)
-  const wsRef = useRef<WebSocket | null>(null)
-  const advCountRef = useRef(0)
-
-  const fetchDevices = useCallback(async () => {
-    try {
-      const response = await fetch(`${BLE_API}/devices`, {
-        credentials: 'include'
-      })
-      if (response.ok) {
-        setDevices(await response.json())
-      }
-    } catch (_e) {
-      // ignore — poll retries every 5s
-    }
-  }, [])
-
-  const fetchConsumers = useCallback(async () => {
-    try {
-      const response = await fetch(`${BLE_API}/consumers`, {
-        credentials: 'include'
-      })
-      if (response.ok) {
-        setConsumers(await response.json())
-      }
-    } catch (_e) {
-      // ignore
-    }
-  }, [])
-
-  const fetchGateways = useCallback(async () => {
-    try {
-      const response = await fetch(`${GATEWAY_API}/gateways`, {
-        credentials: 'include'
-      })
-      if (response.ok) {
-        setGateways(await response.json())
-      }
-    } catch (_e) {
-      // ignore
-    }
-  }, [])
-
-  const fetchBleSettings = useCallback(async () => {
-    try {
-      const response = await fetch(`${BLE_API}/settings`, {
-        credentials: 'include'
-      })
-      if (response.ok) {
-        setBleSettings(await response.json())
-      }
-    } catch (_e) {
-      // ignore
-    }
-  }, [])
+  const { devices, consumers, gateways, bleSettings, wsConnected, advCount } =
+    useStore(
+      useShallow((s) => ({
+        devices: s.bleDevices,
+        consumers: s.bleConsumers,
+        gateways: s.bleGateways,
+        bleSettings: s.bleSettings,
+        wsConnected: s.bleWsConnected,
+        advCount: s.bleAdvCount
+      }))
+    )
 
   useEffect(() => {
-    const poll = () => {
-      fetchDevices()
-      fetchConsumers()
-      fetchGateways()
-      fetchBleSettings()
-    }
-    const interval = setInterval(poll, POLL_INTERVAL_MS)
-    poll()
-    return () => clearInterval(interval)
-  }, [fetchDevices, fetchConsumers, fetchGateways, fetchBleSettings])
-
-  useEffect(() => {
-    const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    const wsUrl = `${wsProto}://${window.location.host}${BLE_API}/advertisements`
-    let ws: WebSocket | null = null
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-    let disposed = false
-
-    const connect = () => {
-      if (disposed) return
-      const socket = new WebSocket(wsUrl)
-      ws = socket
-      wsRef.current = socket
-      socket.onopen = () => {
-        if (wsRef.current !== socket) return
-        setWsConnected(true)
-      }
-      socket.onclose = () => {
-        if (wsRef.current !== socket) return
-        setWsConnected(false)
-        if (!disposed)
-          reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS)
-      }
-      socket.onerror = () => {
-        if (wsRef.current !== socket) return
-        socket.close()
-      }
-      socket.onmessage = () => {
-        advCountRef.current += 1
-      }
-    }
-    connect()
-
-    const countInterval = setInterval(() => {
-      setAdvCount(advCountRef.current)
-    }, ADV_COUNT_REFRESH_MS)
-
+    const {
+      startBleManagerPolling,
+      stopBleManagerPolling,
+      connectBleAdvertisements,
+      closeBleAdvertisements
+    } = useStore.getState()
+    startBleManagerPolling()
+    connectBleAdvertisements()
     return () => {
-      disposed = true
-      clearInterval(countInterval)
-      if (reconnectTimer) clearTimeout(reconnectTimer)
-      ws?.close()
+      stopBleManagerPolling()
+      closeBleAdvertisements()
     }
   }, [])
 
@@ -339,12 +199,12 @@ export default function BLEManager() {
                     <td>{gw.deviceCount}</td>
                     <td>
                       {gw.online
-                        ? gw.connectedAt
+                        ? gw.connectedAt != null
                           ? formatDuration(
                               Math.round((Date.now() - gw.connectedAt) / 1000)
                             )
                           : '-'
-                        : gw.disconnectedAt
+                        : gw.disconnectedAt != null
                           ? formatAge(gw.disconnectedAt)
                           : '-'}
                     </td>

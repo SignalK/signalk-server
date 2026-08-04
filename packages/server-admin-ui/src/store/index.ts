@@ -22,6 +22,7 @@ import {
   createWebappSortSlice,
   type WebappSortSlice
 } from './slices/webappSortSlice'
+import { createBleSlice, type BleSlice } from './slices/bleSlice'
 import {
   conflictKey,
   detectInstanceConflicts,
@@ -39,6 +40,7 @@ export type { PrioritiesSlice } from './slices/prioritiesSlice'
 export type { UnitPreferencesSlice } from './slices/unitPreferencesSlice'
 export type { GnssPositionSlice } from './slices/gnssPositionSlice'
 export type { WebappSortSlice } from './slices/webappSortSlice'
+export type { BleSlice } from './slices/bleSlice'
 
 export type SignalKStore = AppSlice &
   WsSlice &
@@ -46,7 +48,8 @@ export type SignalKStore = AppSlice &
   PrioritiesSlice &
   UnitPreferencesSlice &
   GnssPositionSlice &
-  WebappSortSlice
+  WebappSortSlice &
+  BleSlice
 
 export const useStore = create<SignalKStore>()(
   subscribeWithSelector((...args) => ({
@@ -56,7 +59,8 @@ export const useStore = create<SignalKStore>()(
     ...createPrioritiesSlice(...args),
     ...createUnitPreferencesSlice(...args),
     ...createGnssPositionSlice(...args),
-    ...createWebappSortSlice(...args)
+    ...createWebappSortSlice(...args),
+    ...createBleSlice(...args)
   }))
 )
 

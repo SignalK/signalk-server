@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import Alert from 'react-bootstrap/Alert'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
@@ -8,65 +8,29 @@ import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBluetooth } from '@fortawesome/free-brands-svg-icons/faBluetooth'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
-
-const BLE_API = '/signalk/v2/api/vessels/self/ble'
+import { useStore, useShallow } from '../../store'
 
 const MIN_GATT_SLOTS = 1
 const MAX_GATT_SLOTS = 10
 
-interface BLESettingsData {
-  localBluetoothManaged: boolean
-  localMaxGATTSlots: number
-  localBLESupported: boolean
-}
-
 const BLESettings: React.FC = () => {
-  const [settings, setSettings] = useState<BLESettingsData | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
-
-  const fetchSettings = useCallback(async () => {
-    try {
-      const res = await fetch(`${BLE_API}/settings`, { credentials: 'include' })
-      if (res.ok) setSettings(await res.json())
-    } catch (_e) {
-      // ignore — BLE API may not be available
-    }
-  }, [])
+  const { settings, saving, saveError } = useStore(
+    useShallow((s) => ({
+      settings: s.bleSettings,
+      saving: s.bleSettingsSaving,
+      saveError: s.bleSettingsSaveError
+    }))
+  )
 
   useEffect(() => {
-    fetchSettings()
-  }, [fetchSettings])
-
-  const handleSave = useCallback(async () => {
-    if (!settings) return
-    setSaving(true)
-    setSaveError(null)
-    try {
-      const res = await fetch(`${BLE_API}/settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          localBluetoothManaged: settings.localBluetoothManaged,
-          localMaxGATTSlots: settings.localMaxGATTSlots
-        }),
-        credentials: 'include'
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: res.statusText }))
-        setSaveError(err.message || 'Failed to save BLE settings')
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      setSaveError(`Failed to save BLE settings: ${message}`)
-    } finally {
-      setSaving(false)
-    }
-  }, [settings])
+    useStore.getState().fetchBleSettings()
+  }, [])
 
   if (!settings) return null
 
   const supported = settings.localBLESupported
+  const { setBleSettingsLocal, saveBleSettings, clearBleSettingsSaveError } =
+    useStore.getState()
 
   return (
     <Card className="mt-3">
@@ -95,11 +59,9 @@ const BLESettings: React.FC = () => {
                     disabled={!supported}
                     checked={settings.localBluetoothManaged}
                     onChange={(e) =>
-                      setSettings((prev) =>
-                        prev
-                          ? { ...prev, localBluetoothManaged: e.target.checked }
-                          : prev
-                      )
+                      setBleSettingsLocal({
+                        localBluetoothManaged: e.target.checked
+                      })
                     }
                   />
                   <span className="switch-label" data-on="On" data-off="Off" />
@@ -129,20 +91,16 @@ const BLESettings: React.FC = () => {
                   min={MIN_GATT_SLOTS}
                   max={MAX_GATT_SLOTS}
                   value={settings.localMaxGATTSlots}
-                  onChange={(e) =>
-                    setSettings((prev) => {
-                      if (!prev) return prev
-                      const val = parseInt(e.target.value, 10)
-                      if (isNaN(val)) return prev
-                      return {
-                        ...prev,
-                        localMaxGATTSlots: Math.max(
-                          MIN_GATT_SLOTS,
-                          Math.min(MAX_GATT_SLOTS, val)
-                        )
-                      }
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10)
+                    if (isNaN(val)) return
+                    setBleSettingsLocal({
+                      localMaxGATTSlots: Math.max(
+                        MIN_GATT_SLOTS,
+                        Math.min(MAX_GATT_SLOTS, val)
+                      )
                     })
-                  }
+                  }}
                 />
                 <Form.Text muted>
                   Maximum concurrent GATT connections per local adapter.
@@ -157,7 +115,7 @@ const BLESettings: React.FC = () => {
           <Alert
             variant="danger"
             dismissible
-            onClose={() => setSaveError(null)}
+            onClose={clearBleSettingsSaveError}
           >
             {saveError}
           </Alert>
@@ -165,7 +123,7 @@ const BLESettings: React.FC = () => {
         <Button
           size="sm"
           variant="primary"
-          onClick={handleSave}
+          onClick={() => saveBleSettings()}
           disabled={saving || !supported}
         >
           <FontAwesomeIcon icon={faFloppyDisk} /> Save
