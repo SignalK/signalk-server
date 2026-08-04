@@ -111,7 +111,7 @@ plugin.start = async function () {
 
 ## Provider Plugin
 
-A provider plugin gives the server access to a BLE radio. Register a provider by calling `app.bleApi.register()`. The server will call your `onAdvertisement` callback to receive all advertisements, merge them into the device table, and route GATT requests to your `subscribeGATT` method.
+A provider plugin gives the server access to a BLE radio. Register a provider by calling `app.registerBLEProvider()`. The server will call your `onAdvertisement` callback to receive all advertisements, merge them into the device table, and route GATT requests to your `subscribeGATT` method. The provider is unregistered automatically when the plugin stops.
 
 ```javascript
 const plugin = { id: 'my-ble-gateway', name: 'My BLE Gateway' }
@@ -164,11 +164,7 @@ plugin.start = function () {
     }
   }
 
-  app.bleApi.register(plugin.id, provider)
-}
-
-plugin.stop = function () {
-  app.bleApi.unRegister(plugin.id)
+  app.registerBLEProvider(provider)
 }
 ```
 

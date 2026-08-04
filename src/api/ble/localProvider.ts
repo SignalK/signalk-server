@@ -95,6 +95,7 @@ export class LocalBLEProvider {
   private connectQueue = new ConnectionQueue()
   private deviceListeners: Map<string, () => void> = new Map() // MAC → cleanup
   private lastRssi: Map<string, number> = new Map() // MAC → last known RSSI
+  private watcherTimer?: ReturnType<typeof setInterval>
   private rawConnections = 0
   private scanning = false
   private adapterReady = false
@@ -139,6 +140,7 @@ export class LocalBLEProvider {
 
   shutdown() {
     this.scanning = false
+    this.clearWatcherTimer()
     for (const [mac, session] of this.sessions) {
       this.closeSession(session)
       this.sessions.delete(mac)
@@ -200,6 +202,7 @@ export class LocalBLEProvider {
       debug.enabled && debug(`Error stopping discovery: ${e.message}`)
     }
     this.scanning = false
+    this.clearWatcherTimer()
     for (const cleanup of this.deviceListeners.values()) {
       cleanup()
     }
@@ -260,12 +263,16 @@ export class LocalBLEProvider {
     await watchDevices()
     // Discovery may have been stopped while the initial scan awaited
     if (!this.scanning) return
-    const interval = setInterval(watchDevices, DEVICE_WATCH_INTERVAL_MS)
-    interval.unref()
+    if (this.watcherTimer) clearInterval(this.watcherTimer)
+    this.watcherTimer = setInterval(watchDevices, DEVICE_WATCH_INTERVAL_MS)
+    this.watcherTimer.unref()
+  }
 
-    const origCleanup = this.deviceListeners.get('__watcher__')
-    if (origCleanup) origCleanup()
-    this.deviceListeners.set('__watcher__', () => clearInterval(interval))
+  private clearWatcherTimer() {
+    if (this.watcherTimer) {
+      clearInterval(this.watcherTimer)
+      this.watcherTimer = undefined
+    }
   }
 
   private async attachDeviceListener(mac: string) {

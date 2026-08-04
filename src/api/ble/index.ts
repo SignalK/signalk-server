@@ -922,10 +922,18 @@ export class BLEApi implements IBLEApi {
       }
 
       server.on('upgrade', (request: any, socket: any, head: any) => {
-        const url = new URL(
-          request.url,
-          `http://${request.headers.host ?? 'localhost'}`
-        )
+        // A malformed Host header must not throw in the upgrade listener
+        let url: URL
+        try {
+          url = new URL(
+            request.url,
+            `http://${request.headers.host ?? 'localhost'}`
+          )
+        } catch {
+          socket.write('HTTP/1.1 400 Bad Request\r\n\r\n')
+          socket.destroy()
+          return
+        }
         if (url.pathname !== wsPath) return
 
         const sec = this.app.securityStrategy as any

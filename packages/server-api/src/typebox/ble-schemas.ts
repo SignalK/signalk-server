@@ -365,7 +365,7 @@ export const BLEGatewayHelloSchema = Type.Object(
     max_gatt_connections: OptionalNullable(Type.Integer({ minimum: 0 })),
     active_gatt_connections: OptionalNullable(Type.Integer({ minimum: 0 })),
     firmware: OptionalNullable(Type.String()),
-    mac: OptionalNullable(Type.String()),
+    mac: OptionalNullable(Type.String({ pattern: MAC_PATTERN })),
     hostname: OptionalNullable(Type.String())
   },
   { $id: 'BLEGatewayHello' }

@@ -56,7 +56,7 @@ const BLESettings: React.FC = () => {
                     id="localBluetoothManaged"
                     name="localBluetoothManaged"
                     className="switch-input"
-                    disabled={!supported}
+                    disabled={!supported || saving}
                     checked={settings.localBluetoothManaged}
                     onChange={(e) =>
                       setBleSettingsLocal({
@@ -88,6 +88,7 @@ const BLESettings: React.FC = () => {
                   type="number"
                   id="localMaxGATTSlots"
                   name="localMaxGATTSlots"
+                  disabled={saving}
                   min={MIN_GATT_SLOTS}
                   max={MAX_GATT_SLOTS}
                   value={settings.localMaxGATTSlots}

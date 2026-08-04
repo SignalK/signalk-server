@@ -952,10 +952,18 @@ export class RemoteGatewayProvider {
           socket: import('net').Socket,
           head: Buffer
         ) => {
-          const url = new URL(
-            request.url ?? '/',
-            `http://${request.headers.host ?? 'localhost'}`
-          )
+          // A malformed Host header must not throw in the upgrade listener
+          let url: URL
+          try {
+            url = new URL(
+              request.url ?? '/',
+              `http://${request.headers.host ?? 'localhost'}`
+            )
+          } catch {
+            socket.write('HTTP/1.1 400 Bad Request\r\n\r\n')
+            socket.destroy()
+            return
+          }
           if (url.pathname === wsPath) {
             wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
               wss.emit('connection', ws, request)

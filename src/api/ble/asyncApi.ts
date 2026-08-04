@@ -20,8 +20,10 @@ export const bleAsyncApiDoc = {
 WebSocket streams for the Signal K BLE API.
 
 ## Advertisement Stream
-Real-time BLE advertisements from all registered providers, deduplicated and
-fanned out to subscribed clients. Each frame is a JSON \`BLEAdvertisement\`.
+Real-time BLE advertisements from all registered providers, merged and
+fanned out to subscribed clients. Each frame is a JSON \`BLEAdvertisement\`;
+a device seen by several providers produces one frame per provider (the
+server deduplicates only its device table, not the stream).
 
 ## Gateway GATT Channel
 Bidirectional control channel for remote BLE gateways. The server sends
@@ -50,7 +52,8 @@ For the REST API documentation, see OpenAPI at \`/doc/openapi\`.
       address: '/signalk/v2/api/vessels/self/ble/advertisements',
       description:
         'Real-time stream of BLE advertisements from all providers, ' +
-        'deduplicated server-side and fanned out to all subscribers.',
+        'merged and fanned out to all subscribers. Frames are not ' +
+        'deduplicated across providers.',
       messages: {
         advertisement: {
           name: 'advertisement',

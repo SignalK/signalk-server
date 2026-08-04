@@ -129,7 +129,11 @@ export default function BLEManager() {
                   icon={faCircle}
                   className={wsConnected ? 'text-success' : 'text-danger'}
                   style={{ fontSize: '0.6em', verticalAlign: 'middle' }}
+                  aria-hidden="true"
                 />{' '}
+                <span className="visually-hidden">
+                  {wsConnected ? 'Stream connected' : 'Stream disconnected'}
+                </span>
                 {advCount}
               </div>
               <small className="text-body-secondary text-uppercase fw-bold">

@@ -78,6 +78,16 @@ describe('BLESettings', () => {
     expect(input).toHaveValue(1)
   })
 
+  it('disables the controls while a save is pending', () => {
+    render(<BLESettings />)
+    setBleSettings(SETTINGS)
+    act(() => useStore.setState({ bleSettingsSaving: true }))
+
+    expect(screen.getByRole('checkbox')).toBeDisabled()
+    expect(screen.getByLabelText('Max GATT Connections')).toBeDisabled()
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled()
+  })
+
   it('saves only the persistable fields', async () => {
     const calls = stubFetch(200, {})
     render(<BLESettings />)
