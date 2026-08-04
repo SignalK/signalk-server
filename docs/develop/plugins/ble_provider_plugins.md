@@ -120,12 +120,8 @@ plugin.start = function () {
   const provider = {
     name: 'My Gateway',
     methods: {
-      startDiscovery: async () => {
-        /* start scanning */
-      },
-      stopDiscovery: async () => {
-        /* stop scanning */
-      },
+      startDiscovery: async () => {},
+      stopDiscovery: async () => {},
       getDevices: async () => [], // return visible MACs
 
       onAdvertisement(callback) {
@@ -175,7 +171,7 @@ See `BLEProviderMethods` in `@signalk/server-api` for the full method signatures
 Each advertisement fired into the server must conform to `BLEAdvertisement` (see `@signalk/server-api` for the full schema). Key semantics that are not obvious from the type alone:
 
 - `mac` is uppercase, colon-separated (`AA:BB:CC:DD:EE:FF`).
-- `providerId` must match the plugin ID passed to `register()`.
+- `providerId` is associated with your plugin by `app.registerBLEProvider(provider)`; the server stamps every advertisement with the registering plugin's ID, overriding a mismatched value.
 - `manufacturerData` keys are **decimal** Bluetooth SIG company IDs; values are hex-encoded payloads **without** the 2-byte company ID prefix.
 
 ---
