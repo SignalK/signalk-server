@@ -83,6 +83,24 @@ describe('serveStaticFiles', () => {
     expect(await res.text()).to.equal('<html></html>')
   })
 
+  it('leaves req.url intact for downstream routes on fallthrough', async () => {
+    const app = express()
+    app.use('/', serveStaticFiles(fixtureDir))
+    app.get('/api/*', (req, res) => res.json({ url: req.url }))
+    const routeServer = app.listen(0)
+    await new Promise((resolve) => routeServer.on('listening', resolve))
+    try {
+      const { port } = routeServer.address() as AddressInfo
+      const res = await fetch(`http://localhost:${port}/api/`)
+      expect(res.status).to.equal(200)
+      expect(await res.json()).to.deep.equal({ url: '/api/' })
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        routeServer.close((error) => (error ? reject(error) : resolve()))
+      )
+    }
+  })
+
   it('tolerates a nonexistent root directory', async () => {
     const app = express()
     app.use('/missing', serveStaticFiles(path.join(fixtureDir, 'nope')))
