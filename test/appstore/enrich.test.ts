@@ -46,7 +46,6 @@ describe('appstore/enrich', () => {
     const r = enrichEntry({
       ...basePkg,
       signalk: {
-        // @ts-expect-error — intentionally invalid input to test guard
         screenshots: ['./ok.png', null, 42, './also.png']
       }
     })
