@@ -884,7 +884,27 @@ module.exports = (theApp: any) => {
     appCopy.registerBLEProvider = (provider: BLEProvider) => {
       bleApi.register(plugin.id, provider)
     }
-    appCopy.bleApi = bleApi
+    // Expose a scoped view instead of the raw instance: ownership-sensitive
+    // calls always act as this plugin, so a plugin cannot unregister or
+    // impersonate another plugin's providers and claims
+    appCopy.bleApi = {
+      get localBluetoothManaged() {
+        return bleApi.localBluetoothManaged
+      },
+      register: (_pluginId: string, provider: BLEProvider) =>
+        bleApi.register(plugin.id, provider),
+      unRegister: (_pluginId: string) => bleApi.unRegister(plugin.id),
+      onAdvertisement: (_pluginId, callback) =>
+        bleApi.onAdvertisement(plugin.id, callback),
+      getDevices: () => bleApi.getDevices(),
+      getDevice: (mac) => bleApi.getDevice(mac),
+      subscribeGATT: (descriptor, _pluginId, callback) =>
+        bleApi.subscribeGATT(descriptor, plugin.id, callback),
+      connectGATT: (mac, _pluginId) => bleApi.connectGATT(mac, plugin.id),
+      releaseGATTDevice: (mac, _pluginId) =>
+        bleApi.releaseGATTDevice(mac, plugin.id),
+      getGATTClaims: () => bleApi.getGATTClaims()
+    }
 
     const courseApi: CourseApi = app.courseApi
     appCopy.getCourse = () => {

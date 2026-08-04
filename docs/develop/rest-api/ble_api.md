@@ -25,7 +25,7 @@ BLE hardware access is provided by **providers** (built-in local adapter, remote
 
 ### Local Bluetooth Adapter
 
-Enable under **Data → BLE Manager → Bluetooth Settings** (`localBluetoothManaged: true`). The server enumerates all available BlueZ adapters and registers each as a separate provider (`_localBLE:hci0`, `_localBLE:hci1`, …). An explicit adapter list can be configured via `localAdapters`.
+Enable under **Server Settings → Bluetooth** (`localBluetoothManaged: true`). The server enumerates all available BlueZ adapters and registers each as a separate provider (`_localBLE:hci0`, `_localBLE:hci1`, …). An explicit adapter list can be configured via `localAdapters`.
 
 Only available on Linux (BlueZ via DBus). Not supported on macOS or Windows.
 
@@ -38,7 +38,7 @@ A built-in provider that lets devices outside the server host contribute BLE cov
 
 Each connected gateway is registered as `ble:gateway:<hostname>`. The advertisement-batch path is intended for memory-constrained devices that cannot keep a persistent WebSocket open; richer gateways use the WebSocket for full GATT subscribe/notify/write flows.
 
-The reference implementation is the [SensESP BLE gateway firmware](https://github.com/dirkwa/SensESP) running on ESP32 boards (ESP32-P4 with bundled Bluedroid, ESP32-C5 stand-alone). The protocol is documented in the [AsyncAPI spec](#schemas) so other gateway implementations are straightforward.
+The reference implementation is the [SensESP BLE gateway firmware](https://github.com/dirkwa/SensESP) running on ESP32 boards (ESP32-P4 with bundled Bluedroid, ESP32-C5 stand-alone). The protocol is documented in the AsyncAPI spec — browse it in the admin UI under _Documentation → AsyncAPI_ or fetch the raw document from `/skServer/asyncapi/ble` — so other gateway implementations are straightforward.
 
 ## Endpoints
 

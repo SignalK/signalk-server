@@ -1184,7 +1184,7 @@ module.exports = function (
 
     if (!isUndefined(settings.options.useBLEManager)) {
       updatedSettings.bleApi = {
-        ...(app.config.settings.bleApi ?? {}),
+        ...(updatedSettings.bleApi ?? {}),
         localBluetoothManaged: settings.options.useBLEManager
       }
     }

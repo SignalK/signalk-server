@@ -41,6 +41,8 @@ module.exports = function (app) {
 For sensors that require a persistent GATT connection, use `subscribeGATT`. Provide a declarative descriptor — the server selects the best provider (strongest RSSI, available slots) and manages connect/reconnect autonomously.
 
 ```javascript
+let gattHandle = null
+
 plugin.start = async function () {
   const descriptor = {
     mac: 'AA:BB:CC:DD:EE:FF',
@@ -98,10 +100,8 @@ Consumer plugins that can also operate with a direct BlueZ connection should aut
 ```javascript
 plugin.start = async function () {
   if (app.bleApi) {
-    // Server manages BLE — use the BLE API
     await startBleApiMode()
   } else {
-    // Fall back to direct BlueZ access
     await startDirectBlueZMode()
   }
 }
@@ -192,4 +192,4 @@ All consumer-facing methods (`onAdvertisement`, `subscribeGATT`, `connectGATT`, 
 
 ## Remote Gateway Protocol
 
-Remote BLE gateways feed advertisements via HTTP POST and (optionally) participate in GATT subscribe/notify/write over a bidirectional WebSocket. The exact request bodies, message frames, and connection flow are defined in the [OpenAPI and AsyncAPI specs](../rest-api/ble_api.md) — see them for the canonical wire contract. The reference firmware is [SensESP](https://github.com/dirkwa/SensESP) for ESP32 boards.
+Remote BLE gateways feed advertisements via HTTP POST and (optionally) participate in GATT subscribe/notify/write over a bidirectional WebSocket. The exact request bodies are defined in the [OpenAPI spec](../rest-api/ble_api.md), and the WebSocket message frames and connection flow in the AsyncAPI spec (admin UI: _Documentation → AsyncAPI_, raw document at `/skServer/asyncapi/ble`) — see them for the canonical wire contract. The reference firmware is [SensESP](https://github.com/dirkwa/SensESP) for ESP32 boards.

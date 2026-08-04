@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import Alert from 'react-bootstrap/Alert'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
@@ -10,6 +11,9 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 
 const BLE_API = '/signalk/v2/api/vessels/self/ble'
 
+const MIN_GATT_SLOTS = 1
+const MAX_GATT_SLOTS = 10
+
 interface BLESettingsData {
   localBluetoothManaged: boolean
   localMaxGATTSlots: number
@@ -19,6 +23,7 @@ interface BLESettingsData {
 const BLESettings: React.FC = () => {
   const [settings, setSettings] = useState<BLESettingsData | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -36,6 +41,7 @@ const BLESettings: React.FC = () => {
   const handleSave = useCallback(async () => {
     if (!settings) return
     setSaving(true)
+    setSaveError(null)
     try {
       const res = await fetch(`${BLE_API}/settings`, {
         method: 'PUT',
@@ -48,11 +54,11 @@ const BLESettings: React.FC = () => {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }))
-        alert(err.message || 'Failed to save BLE settings')
+        setSaveError(err.message || 'Failed to save BLE settings')
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      alert(`Failed to save BLE settings: ${message}`)
+      setSaveError(`Failed to save BLE settings: ${message}`)
     } finally {
       setSaving(false)
     }
@@ -120,17 +126,20 @@ const BLESettings: React.FC = () => {
                   type="number"
                   id="localMaxGATTSlots"
                   name="localMaxGATTSlots"
-                  min={1}
-                  max={10}
+                  min={MIN_GATT_SLOTS}
+                  max={MAX_GATT_SLOTS}
                   value={settings.localMaxGATTSlots}
                   onChange={(e) =>
                     setSettings((prev) => {
                       if (!prev) return prev
-                      const val = parseInt(e.target.value)
+                      const val = parseInt(e.target.value, 10)
                       if (isNaN(val)) return prev
                       return {
                         ...prev,
-                        localMaxGATTSlots: Math.max(1, Math.min(10, val))
+                        localMaxGATTSlots: Math.max(
+                          MIN_GATT_SLOTS,
+                          Math.min(MAX_GATT_SLOTS, val)
+                        )
                       }
                     })
                   }
@@ -144,6 +153,15 @@ const BLESettings: React.FC = () => {
         </Form>
       </Card.Body>
       <Card.Footer>
+        {saveError && (
+          <Alert
+            variant="danger"
+            dismissible
+            onClose={() => setSaveError(null)}
+          >
+            {saveError}
+          </Alert>
+        )}
         <Button
           size="sm"
           variant="primary"

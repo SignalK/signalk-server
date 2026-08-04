@@ -14,7 +14,8 @@ import {
 } from '@signalk/server-api'
 import {
   BLEGatewayAdvertisementBatchSchema,
-  BLEGatewayDeviceSchema
+  BLEGatewayDeviceSchema,
+  BLEGatewayInfo
 } from '@signalk/server-api/typebox'
 
 // How long to keep a recently-disconnected gateway in the list
@@ -27,7 +28,6 @@ const PING_INTERVAL_MS = 30_000
 // BLE AD type constants (Bluetooth Core Supplement, Part A)
 // ---------------------------------------------------------------------------
 
-const AD_TYPE_FLAGS = 0x01
 const AD_TYPE_INCOMPLETE_16_UUID = 0x02
 const AD_TYPE_COMPLETE_16_UUID = 0x03
 const AD_TYPE_INCOMPLETE_32_UUID = 0x04
@@ -40,12 +40,15 @@ const AD_TYPE_SERVICE_DATA_128 = 0x21
 const AD_TYPE_TX_POWER = 0x0a
 const AD_TYPE_MANUFACTURER_DATA = 0xff
 
+// Connectability cannot be derived from the raw AD payload — it lives in
+// the advertisement PDU type (ADV_IND vs ADV_NONCONN_IND), which the
+// scanner reports separately.  Callers resolve it from the gateway's
+// explicit `connectable` field instead.
 interface ParsedAdv {
   manufacturerData?: Record<number, string>
   serviceData?: Record<string, string>
   serviceUuids?: string[]
   txPower?: number
-  connectable?: boolean
 }
 
 /**
@@ -67,16 +70,6 @@ function parseAdvData(hex: string): ParsedAdv {
     const data = buf.subarray(offset + 2, offset + 1 + len)
 
     switch (adType) {
-      case AD_TYPE_FLAGS: {
-        // Bit 1 of flags = LE General Discoverable, bit 2 = BR/EDR not supported
-        // connectable is inferred from AD flags: devices that advertise are generally connectable
-        // unless they set the non-connectable flag.  A more reliable source is the
-        // advertisement PDU type (ADV_IND vs ADV_NONCONN_IND), but that is not
-        // available in the raw AD payload.  We leave connectable undefined here
-        // and let the caller decide based on other signals.
-        break
-      }
-
       case AD_TYPE_MANUFACTURER_DATA: {
         if (data.length >= 2) {
           const companyId = data.readUInt16LE(0)
@@ -188,6 +181,14 @@ interface SessionState {
   disconnectCallbacks: Array<() => void>
 }
 
+// WS control messages arrive as raw JSON from the gateway; unlike the HTTP
+// POST path there is no schema validation, so coerce fields defensively.
+const numberField = (v: unknown, fallback: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : fallback
+
+const stringField = (v: unknown): string | null =>
+  typeof v === 'string' ? v : null
+
 interface GatewaySnapshot {
   gatewayId: string
   ipAddress: string | null
@@ -228,11 +229,11 @@ class RemoteGATTSession {
   }
 
   handleHello(msg: Record<string, unknown>) {
-    this.maxSlots = (msg.max_gatt_connections as number) || 0
-    this.activeSlots = (msg.active_gatt_connections as number) || 0
-    this.firmware = (msg.firmware as string) || null
-    this.mac = (msg.mac as string) || null
-    this.hostname = (msg.hostname as string) || null
+    this.maxSlots = numberField(msg.max_gatt_connections, 0)
+    this.activeSlots = numberField(msg.active_gatt_connections, 0)
+    this.firmware = stringField(msg.firmware)
+    this.mac = stringField(msg.mac)
+    this.hostname = stringField(msg.hostname)
     debug(
       `[${this.gatewayId}] hello: ${this.maxSlots} max slots, fw=${this.firmware}, mac=${this.mac}`
     )
@@ -307,10 +308,10 @@ class RemoteGATTSession {
         break
       }
       case 'status': {
-        this.activeSlots = (msg.active_gatt_connections as number) || 0
-        this.maxSlots = (msg.max_gatt_connections as number) || this.maxSlots
-        this.uptime = (msg.uptime as number) || 0
-        this.freeHeap = (msg.free_heap as number) || 0
+        this.activeSlots = numberField(msg.active_gatt_connections, 0)
+        this.maxSlots = numberField(msg.max_gatt_connections, this.maxSlots)
+        this.uptime = numberField(msg.uptime, 0)
+        this.freeHeap = numberField(msg.free_heap, 0)
         break
       }
     }
@@ -324,6 +325,11 @@ class RemoteGATTSession {
     descriptor: GATTSubscriptionDescriptor,
     callback: (charUuid: string, data: Buffer) => void
   ): Promise<GATTSubscriptionHandle> {
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error(
+        `Gateway ${this.gatewayId} WebSocket is not open — cannot subscribe`
+      )
+    }
     const sessionId = `s${this.nextSessionId++}`
 
     const cmd: Record<string, unknown> = {
@@ -458,31 +464,32 @@ class RemoteGATTSession {
 // RemoteGatewayProvider — owns all ESP32 gateway connections
 // ---------------------------------------------------------------------------
 
-interface GatewayInfo {
-  gatewayId: string
-  providerId: string
-  online: boolean
-  ipAddress: string | null
-  mac: string | null
-  hostname: string | null
-  firmware: string | null
-  connectedAt: number | null
-  disconnectedAt?: number
-  uptime?: number
-  freeHeap?: number
-  gattSlots: { total: number; available: number }
-  deviceCount: number
-}
-
 type RegisterFn = (id: string, provider: BLEProvider) => void
 type UnregisterFn = (id: string) => void
 type ReleaseGATTClaimsFn = (providerId: string) => void
 
+// The methods this provider uses from the security strategy. The shared
+// SecurityStrategy type in src/security.ts does not declare the WS
+// authorization methods — they are attached by token/dummy security —
+// so type just the subset needed here, optional for structural
+// compatibility with SecurityStrategy.
+interface GatewaySecurityStrategy {
+  // Shared with SecurityStrategy so the two types stay structurally
+  // compatible (all-optional interfaces need a property in common)
+  isDummy?: () => boolean
+  canAuthorizeWS?: () => boolean
+  authorizeWS?: (req: {
+    token?: string
+    query?: Record<string, string>
+    headers?: Record<string, string>
+    cookies?: Record<string, string>
+  }) => void
+}
+
 interface RemoteGatewayApp extends IRouter {
   server?: import('http').Server
   config?: { settings?: { security?: unknown } }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  securityStrategy?: any
+  securityStrategy?: GatewaySecurityStrategy
 }
 
 export class RemoteGatewayProvider {
@@ -508,6 +515,7 @@ export class RemoteGatewayProvider {
       firstSeen: number
     }
   >()
+  private httpPruneTimer?: ReturnType<typeof setInterval>
 
   constructor(
     private readonly app: RemoteGatewayApp,
@@ -518,6 +526,14 @@ export class RemoteGatewayProvider {
 
   attach(router: IRouter) {
     const GW_PATH = `/signalk/v2/api/ble`
+
+    // Prune independently of POST traffic so the last HTTP-only gateway
+    // releases its provider and callbacks once it goes quiet
+    this.httpPruneTimer = setInterval(
+      () => this._pruneStaleHttpGateways(),
+      OFFLINE_SNAPSHOT_MS
+    )
+    this.httpPruneTimer.unref()
 
     router.get(`${GW_PATH}/gateways`, (_req: Request, res: Response) => {
       res.json(this.getGatewayInfo())
@@ -534,13 +550,15 @@ export class RemoteGatewayProvider {
   }
 
   private _handleAdvertisementPost(req: Request, res: Response) {
-    if (this.app.securityStrategy?.canAuthorizeWS()) {
+    const strategy = this.app.securityStrategy
+    if (strategy?.canAuthorizeWS?.()) {
       const authHeader = req.headers['authorization'] as string | undefined
       const token = authHeader?.startsWith('Bearer ')
         ? authHeader.slice(7)
         : undefined
       try {
-        this.app.securityStrategy.authorizeWS({ token })
+        if (!strategy.authorizeWS) throw new Error('authorizeWS unavailable')
+        strategy.authorizeWS({ token })
       } catch {
         res.status(401).json({ error: 'Unauthorized' })
         return
@@ -609,7 +627,6 @@ export class RemoteGatewayProvider {
         serviceData = parsed.serviceData
         serviceUuids = parsed.serviceUuids
         txPower = parsed.txPower
-        connectable = parsed.connectable
       }
 
       if (dev.manufacturer_data) {
@@ -726,7 +743,8 @@ export class RemoteGatewayProvider {
         debug('Gateway WebSocket connected')
         const gatewayIp: string | null = request.socket?.remoteAddress ?? null
 
-        if (this.app.securityStrategy?.canAuthorizeWS()) {
+        const strategy = this.app.securityStrategy
+        if (strategy?.canAuthorizeWS?.()) {
           // Build a WSConnection-shaped object from the upgrade request and
           // let the security strategy probe for the token in the query,
           // Authorization header, or cookie — same as the main WS endpoint.
@@ -740,7 +758,9 @@ export class RemoteGatewayProvider {
             ? cookie.parse(request.headers.cookie)
             : {}
           try {
-            this.app.securityStrategy.authorizeWS({ query, headers, cookies })
+            if (!strategy.authorizeWS)
+              throw new Error('authorizeWS unavailable')
+            strategy.authorizeWS({ query, headers, cookies })
           } catch {
             debug('Gateway WS: unauthorized — closing')
             ws.close(4401, 'Unauthorized')
@@ -875,7 +895,7 @@ export class RemoteGatewayProvider {
     const tryAttach = () => {
       const server = this.app.server
       if (!server) {
-        setTimeout(tryAttach, 1000)
+        setTimeout(tryAttach, 1000).unref()
         return
       }
       server.on(
@@ -903,16 +923,20 @@ export class RemoteGatewayProvider {
 
   /**
    * Remove state for HTTP-only gateways that haven't POSTed within the
-   * snapshot TTL.  Called from the POST handler so cleanup happens on
-   * the same path that updates `lastPostTime` — keeping `getGatewayInfo`
-   * a pure read.
+   * snapshot TTL.  Runs on a periodic timer and from the POST handler —
+   * keeping `getGatewayInfo` a pure read.
    */
+  /** An HTTP-only gateway is fresh while a POST arrived within the TTL. */
+  private _isHttpGatewayFresh(gatewayId: string): boolean {
+    const lastPost = this.lastPostTime.get(gatewayId) ?? 0
+    return Date.now() - lastPost <= OFFLINE_SNAPSHOT_MS
+  }
+
   private _pruneStaleHttpGateways() {
     for (const [gatewayId] of this.seenMacs) {
       if (this.sessions.has(gatewayId) || this.snapshots.has(gatewayId))
         continue
-      const lastPost = this.lastPostTime.get(gatewayId) ?? 0
-      if (Date.now() - lastPost > OFFLINE_SNAPSHOT_MS) {
+      if (!this._isHttpGatewayFresh(gatewayId)) {
         this.seenMacs.delete(gatewayId)
         this.lastPostTime.delete(gatewayId)
         this.httpGatewayMeta.delete(gatewayId)
@@ -922,8 +946,8 @@ export class RemoteGatewayProvider {
     }
   }
 
-  getGatewayInfo(): GatewayInfo[] {
-    const result: GatewayInfo[] = []
+  getGatewayInfo(): BLEGatewayInfo[] {
+    const result: BLEGatewayInfo[] = []
 
     for (const [gatewayId, session] of this.sessions) {
       result.push({
@@ -970,8 +994,7 @@ export class RemoteGatewayProvider {
     for (const [gatewayId] of this.seenMacs) {
       if (this.sessions.has(gatewayId) || this.snapshots.has(gatewayId))
         continue
-      const lastPost = this.lastPostTime.get(gatewayId) ?? 0
-      if (Date.now() - lastPost > OFFLINE_SNAPSHOT_MS) continue
+      if (!this._isHttpGatewayFresh(gatewayId)) continue
       const meta = this.httpGatewayMeta.get(gatewayId)
       result.push({
         gatewayId,

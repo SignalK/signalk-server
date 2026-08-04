@@ -558,6 +558,10 @@ export class LocalBLEProvider {
       this.clearSessionTimers(session)
       const attemptReconnect = (attempt: number) => {
         const delay = Math.min(5000 * Math.pow(2, attempt - 1), 60000)
+        // Only one reconnect chain may be active per session
+        if (session.reconnectTimer) {
+          clearTimeout(session.reconnectTimer)
+        }
         session.reconnectTimer = setTimeout(async () => {
           if (session.closed) return
           debug(`GATT reconnecting to ${mac} (attempt ${attempt})`)
@@ -566,6 +570,16 @@ export class LocalBLEProvider {
             await this.executeGATTLifecycle(session)
           } catch (e: any) {
             debug(`GATT reconnect failed for ${mac}: ${e.message}`)
+            // A failed attempt may leave a partial connection behind
+            // (connected flag set, poll timers armed); tear it down so
+            // state does not accumulate across retries
+            session.connected = false
+            this.clearSessionTimers(session)
+            try {
+              await session.device?.disconnect?.()
+            } catch (_e) {
+              // ignore cleanup errors
+            }
             if (!session.closed) {
               const nextDelay = Math.min(5000 * Math.pow(2, attempt), 60000)
               debug(`GATT retry ${mac} in ${nextDelay / 1000}s`)

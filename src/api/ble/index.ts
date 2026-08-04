@@ -82,6 +82,7 @@ export class BLEApi implements IBLEApi {
   private defaultProviderId: string | null = null
   private settings: BLESettings
   private remoteGatewayProvider: RemoteGatewayProvider | null = null
+  private devicePruneTimer?: ReturnType<typeof setInterval>
 
   get localBluetoothManaged(): boolean {
     return this.settings.localBluetoothManaged
@@ -105,6 +106,14 @@ export class BLEApi implements IBLEApi {
   async start() {
     this.initApiEndpoints()
     this.initWebSocketEndpoint()
+
+    // Prune independently of REST polling so the device table cannot
+    // grow without bound when no client requests /devices
+    this.devicePruneTimer = setInterval(
+      () => this.pruneStaleDevices(),
+      DEVICE_STALE_MS
+    )
+    this.devicePruneTimer.unref()
 
     this.remoteGatewayProvider = new RemoteGatewayProvider(
       this.app,
@@ -341,10 +350,12 @@ export class BLEApi implements IBLEApi {
       }
     }
 
-    const json = JSON.stringify(adv)
-    for (const ws of this.wsClients) {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(json)
+    if (this.wsClients.size > 0) {
+      const json = JSON.stringify(adv)
+      for (const ws of this.wsClients) {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(json)
+        }
       }
     }
   }
@@ -444,6 +455,7 @@ export class BLEApi implements IBLEApi {
       const d = this.deviceTable.get(mac)
       if (d) d.lastSeen = Date.now()
     }, DEVICE_STALE_MS / 2)
+    keepAliveTimer.unref()
 
     const claimEntry: GATTClaim = {
       pluginId,

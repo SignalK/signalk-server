@@ -1,8 +1,108 @@
+import { Type } from '@sinclair/typebox'
 import {
   BLEAdvertisementSchema,
   BLEGatewayAdvertisementBatchSchema,
   BLEGatewayDeviceSchema
 } from '@signalk/server-api/typebox'
+
+const GatewayHelloSchema = Type.Object({
+  type: Type.Literal('hello'),
+  gateway_id: Type.String({
+    description: 'Unique identifier for this gateway (typically the hostname)'
+  }),
+  max_gatt_connections: Type.Optional(Type.Number()),
+  active_gatt_connections: Type.Optional(Type.Number()),
+  firmware: Type.Optional(Type.String()),
+  mac: Type.Optional(Type.String()),
+  hostname: Type.Optional(Type.String())
+})
+
+const GattSubscribeCommandSchema = Type.Object({
+  type: Type.Literal('gatt_subscribe'),
+  session_id: Type.String(),
+  mac: Type.String(),
+  service: Type.String(),
+  notify: Type.Optional(Type.Array(Type.String())),
+  poll: Type.Optional(
+    Type.Array(
+      Type.Object({
+        uuid: Type.String(),
+        interval_ms: Type.Number(),
+        write_before_read: Type.Optional(Type.String())
+      })
+    )
+  ),
+  init: Type.Optional(
+    Type.Array(
+      Type.Object({
+        uuid: Type.String(),
+        data: Type.String({ description: 'Hex-encoded write payload' }),
+        with_response: Type.Optional(Type.Boolean())
+      })
+    )
+  ),
+  periodic_write: Type.Optional(
+    Type.Array(
+      Type.Object({
+        uuid: Type.String(),
+        data: Type.String({ description: 'Hex-encoded write payload' }),
+        interval_ms: Type.Number(),
+        with_response: Type.Optional(Type.Boolean())
+      })
+    )
+  )
+})
+
+const GattWriteCommandSchema = Type.Object({
+  type: Type.Literal('gatt_write'),
+  session_id: Type.String(),
+  uuid: Type.String(),
+  data: Type.String({ description: 'Hex-encoded write payload' }),
+  with_response: Type.Optional(Type.Boolean())
+})
+
+const GattCloseCommandSchema = Type.Object({
+  type: Type.Literal('gatt_close'),
+  session_id: Type.String()
+})
+
+const GattCommandSchema = Type.Union([
+  GattSubscribeCommandSchema,
+  GattWriteCommandSchema,
+  GattCloseCommandSchema
+])
+
+const GattSessionEventSchema = Type.Union([
+  Type.Object({
+    type: Type.Literal('gatt_connected'),
+    session_id: Type.String(),
+    mac: Type.Optional(Type.String())
+  }),
+  Type.Object({
+    type: Type.Literal('gatt_data'),
+    session_id: Type.String(),
+    uuid: Type.String(),
+    data: Type.String({ description: 'Hex-encoded characteristic value' })
+  }),
+  Type.Object({
+    type: Type.Literal('gatt_disconnected'),
+    session_id: Type.String(),
+    reason: Type.Optional(Type.String())
+  }),
+  Type.Object({
+    type: Type.Literal('gatt_error'),
+    session_id: Type.String(),
+    error: Type.Optional(Type.String())
+  })
+])
+
+const GatewayStatusSchema = Type.Object({
+  type: Type.Literal('status'),
+  active_gatt_connections: Type.Optional(Type.Number()),
+  max_gatt_connections: Type.Optional(Type.Number()),
+  uptime: Type.Optional(Type.Number({ description: 'Seconds' })),
+  free_heap: Type.Optional(Type.Number({ description: 'Bytes' }))
+})
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const serverVersion: string = require('../../../' + 'package.json').version
@@ -69,26 +169,32 @@ For the REST API documentation, see OpenAPI at \`/doc/openapi\`.
           name: 'hello',
           title: 'Gateway Hello',
           summary: 'Initial frame from the gateway after WS upgrade',
-          contentType: 'application/json'
+          contentType: 'application/json',
+          payload: GatewayHelloSchema
         },
         gattCommand: {
           name: 'gatt_command',
           title: 'GATT Command',
           summary:
             'Server → gateway: gatt_subscribe, gatt_write, or gatt_close',
-          contentType: 'application/json'
+          contentType: 'application/json',
+          payload: GattCommandSchema
         },
         gattData: {
           name: 'gatt_data',
-          title: 'GATT Data',
-          summary: 'Gateway → server: notification or read result',
-          contentType: 'application/json'
+          title: 'GATT Session Event',
+          summary:
+            'Gateway → server: gatt_connected, gatt_data, ' +
+            'gatt_disconnected, or gatt_error',
+          contentType: 'application/json',
+          payload: GattSessionEventSchema
         },
         gatewayStatus: {
           name: 'status',
           title: 'Gateway Status',
           summary: 'Periodic uptime and slot status from the gateway',
-          contentType: 'application/json'
+          contentType: 'application/json',
+          payload: GatewayStatusSchema
         }
       }
     }
@@ -102,12 +208,18 @@ For the REST API documentation, see OpenAPI at \`/doc/openapi\`.
     gatewayControl: {
       action: 'send',
       channel: { $ref: '#/channels/gatewayGatt' },
-      summary: 'Send GATT commands to a remote gateway'
+      summary: 'Send GATT commands to a remote gateway',
+      messages: [{ $ref: '#/channels/gatewayGatt/messages/gattCommand' }]
     },
     gatewayEvents: {
       action: 'receive',
       channel: { $ref: '#/channels/gatewayGatt' },
-      summary: 'Receive GATT data and status from a remote gateway'
+      summary: 'Receive GATT data and status from a remote gateway',
+      messages: [
+        { $ref: '#/channels/gatewayGatt/messages/gatewayHello' },
+        { $ref: '#/channels/gatewayGatt/messages/gattData' },
+        { $ref: '#/channels/gatewayGatt/messages/gatewayStatus' }
+      ]
     }
   },
   components: {

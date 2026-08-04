@@ -15,6 +15,18 @@ import { faMicrochip } from '@fortawesome/free-solid-svg-icons/faMicrochip'
 const BLE_API = '/signalk/v2/api/vessels/self/ble'
 const GATEWAY_API = '/signalk/v2/api/ble'
 
+const POLL_INTERVAL_MS = 5000
+const WS_RECONNECT_DELAY_MS = 5000
+const ADV_COUNT_REFRESH_MS = 1000
+
+// Ages below this render as "just now"
+const JUST_NOW_MAX_S = 5
+
+// RSSI badge color bands (dBm)
+const RSSI_STRONG_DBM = -50
+const RSSI_GOOD_DBM = -70
+const RSSI_FAIR_DBM = -85
+
 interface SeenByEntry {
   providerId: string
   rssi: number
@@ -61,7 +73,7 @@ interface GatewayInfo {
 
 function formatAge(lastSeen: number): string {
   const seconds = Math.round((Date.now() - lastSeen) / 1000)
-  if (seconds < 5) return 'just now'
+  if (seconds < JUST_NOW_MAX_S) return 'just now'
   if (seconds < 60) return `${seconds}s ago`
   return `${Math.floor(seconds / 60)}m ago`
 }
@@ -82,9 +94,9 @@ function formatBytes(bytes: number): string {
 }
 
 function rssiColor(rssi: number): string {
-  if (rssi >= -50) return 'success'
-  if (rssi >= -70) return 'primary'
-  if (rssi >= -85) return 'warning'
+  if (rssi >= RSSI_STRONG_DBM) return 'success'
+  if (rssi >= RSSI_GOOD_DBM) return 'primary'
+  if (rssi >= RSSI_FAIR_DBM) return 'warning'
   return 'danger'
 }
 
@@ -157,7 +169,7 @@ export default function BLEManager() {
       fetchGateways()
       fetchBleSettings()
     }
-    const interval = setInterval(poll, 5000)
+    const interval = setInterval(poll, POLL_INTERVAL_MS)
     poll()
     return () => clearInterval(interval)
   }, [fetchDevices, fetchConsumers, fetchGateways, fetchBleSettings])
@@ -181,7 +193,8 @@ export default function BLEManager() {
       socket.onclose = () => {
         if (wsRef.current !== socket) return
         setWsConnected(false)
-        if (!disposed) reconnectTimer = setTimeout(connect, 5000)
+        if (!disposed)
+          reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS)
       }
       socket.onerror = () => {
         if (wsRef.current !== socket) return
@@ -195,7 +208,7 @@ export default function BLEManager() {
 
     const countInterval = setInterval(() => {
       setAdvCount(advCountRef.current)
-    }, 1000)
+    }, ADV_COUNT_REFRESH_MS)
 
     return () => {
       disposed = true
@@ -214,7 +227,6 @@ export default function BLEManager() {
 
   return (
     <div className="animated fadeIn">
-      {/* Status overview */}
       <Row className="mb-3">
         <Col sm="3">
           <Card className="text-center">
@@ -267,7 +279,6 @@ export default function BLEManager() {
         </Col>
       </Row>
 
-      {/* Gateways */}
       <Card className="mb-3">
         <Card.Header>
           <FontAwesomeIcon icon={faTowerBroadcast} />{' '}
@@ -345,7 +356,6 @@ export default function BLEManager() {
         </Card.Body>
       </Card>
 
-      {/* Local Adapters */}
       <Card className="mb-3">
         <Card.Header>
           <FontAwesomeIcon icon={faMicrochip} />{' '}
@@ -414,7 +424,6 @@ export default function BLEManager() {
         </Card.Body>
       </Card>
 
-      {/* Consumer Plugins */}
       <Card className="mb-3">
         <Card.Header>
           <FontAwesomeIcon icon={faPlug} /> <strong>Consumer Plugins</strong>
@@ -474,7 +483,6 @@ export default function BLEManager() {
         </Card.Body>
       </Card>
 
-      {/* Devices */}
       <Card>
         <Card.Header>
           <FontAwesomeIcon icon={faBluetooth} /> <strong>BLE Devices</strong>

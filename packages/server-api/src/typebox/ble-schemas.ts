@@ -315,7 +315,7 @@ export const BLESettingsRequestSchema = Type.Object(
   {
     localBluetoothManaged: Type.Optional(Type.Boolean()),
     localAdapters: Type.Optional(Type.Array(Type.String())),
-    localMaxGATTSlots: Type.Optional(Type.Number({ minimum: 1, maximum: 10 }))
+    localMaxGATTSlots: Type.Optional(Type.Integer({ minimum: 1, maximum: 10 }))
   },
   { $id: 'BLESettingsRequest' }
 )
@@ -354,3 +354,9 @@ export type BLEAdvertisement = Static<typeof BLEAdvertisementSchema>
 export type BLEDeviceInfo = Static<typeof BLEDeviceInfoSchema>
 export type BLEConsumerInfo = Static<typeof BLEConsumerInfoSchema>
 export type BLEProviders = Static<typeof BLEProvidersSchema>
+export type BLEGatewayInfo = Static<typeof BLEGatewayInfoSchema>
+export type BLEProviderInfo = Static<typeof BLEProviderInfoSchema>
+export type BLESettingsResponse = Static<typeof BLESettingsResponseSchema>
+export type BLESettingsRequest = Static<typeof BLESettingsRequestSchema>
+export type BLEDefaultProvider = Static<typeof BLEDefaultProviderSchema>
+export type BLEGattClaimStatus = Static<typeof BLEGattClaimStatusSchema>
