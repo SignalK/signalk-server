@@ -160,6 +160,10 @@ const expectedOrder = [
   }
 ]
 
+// Mirrors scheduleLivePreferredEmit's debounce in src/deltacache.ts.
+const EMIT_DEBOUNCE_MS = 1000
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 describe('Deltacache', () => {
   let doStop, theServer, doSendADelta
 
@@ -969,6 +973,12 @@ describe('Deltacache', () => {
     const context = 'vessels.urn:mrn:signalk:uuid:prune-leak-test'
     const path = 'navigation.speedOverGround'
     const prefKey = context + '\0' + path
+    const deltaCache = theServer.app.deltaCache
+    // onValue only records a winner for paths the priority engine
+    // routes, and a server with no priorities configured gates every
+    // path off — which would leave preferredSources empty and make
+    // this test vacuous. Stand in for a configured engine.
+    deltaCache.setRoutesPathPredicate(() => true)
 
     return doSendADelta({
       context,
@@ -979,17 +989,63 @@ describe('Deltacache', () => {
           values: [{ path, value: 1 }]
         }
       ]
-    }).then(() => {
-      const deltaCache = theServer.app.deltaCache
-      deltaCache
-        .getLivePreferredSources()
-        .should.have.property(prefKey, 'pruneLeakSource')
-
-      deltaCache.deleteContext(context)
-
-      deltaCache
-        .getLivePreferredSources()
-        .should.not.have.property(prefKey)
     })
+      .then(() => {
+        deltaCache.cachedContextPaths.should.have.property(context)
+        deltaCache
+          .getLivePreferredSources()
+          .should.have.property(prefKey, 'pruneLeakSource')
+
+        deltaCache.deleteContext(context)
+
+        deltaCache.cachedContextPaths.should.not.have.property(context)
+        deltaCache.getLivePreferredSources().should.not.have.property(prefKey)
+      })
+      .finally(() => deltaCache.setRoutesPathPredicate(null))
+  })
+
+  it('deleteContext tombstones the removed paths on the live preferred stream', function () {
+    // The admin UI merges LIVEPREFERREDSOURCES over its snapshot and
+    // only forgets a key on an empty-string tombstone, so a silent
+    // server-side delete would move the leak into every long-lived
+    // browser session.
+    const context = 'vessels.urn:mrn:signalk:uuid:prune-tombstone-test'
+    const path = 'navigation.speedOverGround'
+    const prefKey = context + '\0' + path
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.setRoutesPathPredicate(() => true)
+
+    return doSendADelta({
+      context,
+      updates: [
+        {
+          $source: 'pruneTombstoneSource',
+          timestamp: '2024-05-01T10:00:00.000Z',
+          values: [{ path, value: 1 }]
+        }
+      ]
+    })
+      // Ingesting the delta marks the path dirty too, so let that emit
+      // drain before deleting — otherwise the assertion could race
+      // against an event announcing the winner rather than retiring it.
+      .then(() => delay(EMIT_DEBOUNCE_MS + 200))
+      .then(() => {
+        const tombstoned = new Promise((resolve) => {
+          const onServerEvent = (event) => {
+            if (
+              event.type === 'LIVEPREFERREDSOURCES' &&
+              prefKey in (event.data || {})
+            ) {
+              theServer.app.removeListener('serverevent', onServerEvent)
+              resolve(event.data[prefKey])
+            }
+          }
+          theServer.app.on('serverevent', onServerEvent)
+        })
+        deltaCache.deleteContext(context)
+        return tombstoned
+      })
+      .then((sourceRef) => sourceRef.should.equal(''))
+      .finally(() => deltaCache.setRoutesPathPredicate(null))
   })
 })
