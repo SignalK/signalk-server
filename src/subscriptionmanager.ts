@@ -98,6 +98,27 @@ class SubscriptionManager implements ISubscriptionManager {
     sourcePolicy?: 'preferred' | 'all',
     excludeSources?: SourceRef[]
   ) {
+    // The callback is plugin/client code that runs synchronously inside
+    // Bacon dispatches: live bus fan-out, cache bootstrap replay and the
+    // keys announcements new-path attachment rides on. An exception
+    // escaping into a dispatch aborts delivery to every subscriber
+    // registered after this one, and baconjs' Bus drains its re-entrant
+    // push queue in a finally block, so a throw there leaves the bus
+    // permanently stuck swallowing all further pushes — one broken
+    // callback silences other subscriptions' path announcements for good.
+    // Contain it here; the return value must pass through for Bacon.noMore.
+    const guardedCallback: SubscribeCallback = (delta: Delta) => {
+      try {
+        return callback(delta)
+      } catch (err) {
+        try {
+          errorCallback(err)
+        } catch (errorCallbackError) {
+          console.error(err)
+          console.error(errorCallbackError)
+        }
+      }
+    }
     const contextFilter = contextMatcher(
       this.selfContext,
       this.app,
@@ -145,7 +166,7 @@ class SubscriptionManager implements ISubscriptionManager {
         unsubscribes,
         buses,
         contextFilter,
-        callback,
+        guardedCallback,
         errorCallback,
         user,
         sourcePolicy,
@@ -166,7 +187,7 @@ class SubscriptionManager implements ISubscriptionManager {
             unsubscribes,
             newBuses,
             contextFilter,
-            callback,
+            guardedCallback,
             errorCallback,
             user,
             sourcePolicy,
@@ -210,7 +231,7 @@ class SubscriptionManager implements ISubscriptionManager {
               }
             })
           })
-          callback(filtered)
+          guardedCallback(filtered)
         })
       }
 
@@ -240,9 +261,9 @@ class SubscriptionManager implements ISubscriptionManager {
                   new Date(),
                   this.selfContext
                 )
-                if (filtered) callback(filtered)
+                if (filtered) guardedCallback(filtered)
               } else {
-                callback(delta)
+                guardedCallback(delta)
               }
             })
 
