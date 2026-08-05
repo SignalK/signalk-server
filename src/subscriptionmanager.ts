@@ -150,10 +150,16 @@ class SubscriptionManager implements ISubscriptionManager {
         user,
         sourcePolicy,
         perSubEngine,
-        this.selfContext
+        this.selfContext,
+        true
       )
       // listen to new keys and then use the same logic to check if we
-      // want to subscribe, passing in a map with just that single bus
+      // want to subscribe, passing in a map with just that single bus.
+      // No cache bootstrap here: a keys announcement is triggered by the
+      // delta that is mid-dispatch, already ingested into the delta cache
+      // (index.ts ingests before it emits), and its live push follows the
+      // attach within the same dispatch — a cache replay would deliver
+      // that first delta twice.
       unsubscribes.push(
         this.streambundle.keys.onValue((path) => {
           const newBuses: BusesMap = {}
@@ -171,7 +177,8 @@ class SubscriptionManager implements ISubscriptionManager {
             user,
             sourcePolicy,
             perSubEngine,
-            this.selfContext
+            this.selfContext,
+            false
           )
         })
       )
@@ -286,7 +293,8 @@ function handleSubscribeRows(
   user?: string,
   sourcePolicy?: 'preferred' | 'all',
   perSubEngine?: ToPreferredDelta | null,
-  selfContext?: string
+  selfContext?: string,
+  bootstrapFromCache?: boolean
 ) {
   rows.reduce((acc, subscribeRow) => {
     if (subscribeRow.path !== undefined) {
@@ -301,7 +309,8 @@ function handleSubscribeRows(
         user,
         sourcePolicy,
         perSubEngine,
-        selfContext
+        selfContext,
+        bootstrapFromCache
       )
     }
     return acc
@@ -323,7 +332,8 @@ function handleSubscribeRow(
   user?: string,
   sourcePolicy?: 'preferred' | 'all',
   perSubEngine?: ToPreferredDelta | null,
-  selfContext?: string
+  selfContext?: string,
+  bootstrapFromCache?: boolean
 ) {
   const matcher = pathMatcher(subscribeRow.path)
   // iterate over all the buses, checking if we want to subscribe to its values
@@ -447,37 +457,39 @@ function handleSubscribeRow(
         )
       }
 
-      // Bootstrap snapshot: fetch every source's last cached value
-      // (sourcePolicy='all') when a per-subscription engine owns this
-      // subscription, then replay through the engine so the snapshot
-      // honours the exclude mask. Without the override the snapshot
-      // would carry the global preferred winner — which may BE the
-      // excluded source — and the subscriber would see it once on
+      // Bootstrap snapshot at subscribe time only: fetch every source's
+      // last cached value (sourcePolicy='all') when a per-subscription
+      // engine owns this subscription, then replay through the engine so
+      // the snapshot honours the exclude mask. Without the override the
+      // snapshot would carry the global preferred winner — which may BE
+      // the excluded source — and the subscriber would see it once on
       // startup.
-      const cached = app.deltaCache.getCachedDeltas(
-        filter,
-        user,
-        key,
-        perSubEngine ? 'all' : sourcePolicy
-      )
-      const latest =
-        flattenRootValues && cached
-          ? flattenCachedRootDeltas(cached, matcher)
-          : cached
-      if (latest) {
-        if (perSubEngine) {
-          const now = new Date()
-          for (const delta of latest) {
-            const filtered = runPerSubEngine(
-              perSubEngine,
-              delta,
-              now,
-              selfContext ?? ''
-            )
-            if (filtered) callback(filtered)
+      if (bootstrapFromCache) {
+        const cached = app.deltaCache.getCachedDeltas(
+          filter,
+          user,
+          key,
+          perSubEngine ? 'all' : sourcePolicy
+        )
+        const latest =
+          flattenRootValues && cached
+            ? flattenCachedRootDeltas(cached, matcher)
+            : cached
+        if (latest) {
+          if (perSubEngine) {
+            const now = new Date()
+            for (const delta of latest) {
+              const filtered = runPerSubEngine(
+                perSubEngine,
+                delta,
+                now,
+                selfContext ?? ''
+              )
+              if (filtered) callback(filtered)
+            }
+          } else {
+            latest.forEach(callback)
           }
-        } else {
-          latest.forEach(callback)
         }
       }
     }
