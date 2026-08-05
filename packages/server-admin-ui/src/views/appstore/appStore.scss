@@ -32,7 +32,7 @@
     // and the dropdown/icons/search look glued to them.
     row-gap: 12px;
 
-    @media (max-width: 768px) {
+    @media (width <= 768px) {
       flex-direction: column;
       align-items: stretch;
       row-gap: 16px;
@@ -50,8 +50,7 @@
 
       .action__container {
         width: 100%;
-        flex-direction: row-reverse;
-        flex-wrap: wrap;
+        flex-flow: row-reverse wrap;
         row-gap: 8px;
 
         .search {
@@ -133,7 +132,7 @@
 
   &__tags {
     button {
-      margin: 5px 5px;
+      margin: 5px;
       border-radius: 30px;
     }
     margin-bottom: 20px;
@@ -215,7 +214,7 @@
 }
 
 .plugin-card:hover {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 10%);
   transform: translateY(-1px);
 }
 
@@ -424,8 +423,7 @@
     'title   action'
     'tags    tags'
     'meta    meta';
-  column-gap: 12px;
-  row-gap: 4px;
+  gap: 4px 12px;
   align-items: center;
 }
 
@@ -477,7 +475,7 @@
 
 // md+ (>= 768px): collapse to a single dense row for classic desktop
 // density. Same grid, just one template row with four columns.
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .plugin-row {
     grid-template-columns: minmax(0, 1fr) auto auto auto;
     grid-template-areas: 'title tags meta action';
@@ -533,7 +531,7 @@
     width: 220px;
   }
 
-  @media (max-width: 575.98px) {
+  @media (width <= 575.98px) {
     &__header-row {
       flex-wrap: wrap;
     }
@@ -671,7 +669,7 @@
   &__lightbox {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.82);
+    background: rgb(0 0 0 / 82%);
     z-index: 1080; // above bootstrap modals (1050) and toasts (1055)
     display: flex;
     align-items: center;
@@ -695,7 +693,7 @@
     max-width: 100%;
     max-height: calc(100vh - 120px);
     object-fit: contain;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 32px rgb(0 0 0 / 50%);
     border-radius: 4px;
     background-color: var(--bs-body-bg);
   }
@@ -712,7 +710,7 @@
     right: 16px;
     width: 40px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgb(255 255 255 / 10%);
     border: 0;
     border-radius: 50%;
     color: #fff;
@@ -724,7 +722,7 @@
     justify-content: center;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgb(255 255 255 / 20%);
     }
 
     &:focus-visible {
@@ -739,7 +737,7 @@
     transform: translateY(-50%);
     width: 48px;
     height: 48px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgb(255 255 255 / 10%);
     border: 0;
     border-radius: 50%;
     color: #fff;
@@ -752,7 +750,7 @@
     padding-bottom: 6px; // visual centring for the chevron glyph
 
     &:hover {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgb(255 255 255 / 20%);
     }
 
     &:focus-visible {
