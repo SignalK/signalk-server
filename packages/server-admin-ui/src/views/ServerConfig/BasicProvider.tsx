@@ -143,6 +143,7 @@ interface TypeComponentProps {
   value: ProviderValue
   onChange: OnChangeHandler
   hasAnalyzer?: boolean
+  hasWasm?: boolean
 }
 
 // Defined outside component to avoid recreation on render
@@ -163,6 +164,7 @@ export default function BasicProvider({
   onPropChange
 }: BasicProviderProps) {
   const [hasAnalyzer, setHasAnalyzer] = useState(false)
+  const [hasWasm, setHasWasm] = useState(false)
 
   useEffect(() => {
     fetch(`${window.serverRoutesPrefix}/hasAnalyzer`, {
@@ -171,6 +173,13 @@ export default function BasicProvider({
       .then((response) => response.json())
       .then((data) => {
         setHasAnalyzer(data)
+      })
+    fetch(`${window.serverRoutesPrefix}/hasWasm`, {
+      credentials: 'include'
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        setHasWasm(data)
       })
   }, [])
 
@@ -255,6 +264,7 @@ export default function BasicProvider({
           value={value}
           onChange={onChange}
           hasAnalyzer={hasAnalyzer}
+          hasWasm={hasWasm}
         />
       )}
       <OverrideTimestamps value={value.options} onChange={onChange} />
@@ -910,6 +920,7 @@ function DataTypeInput({
   value: ProviderValue
   onChange: OnChangeHandler
   hasAnalyzer?: boolean
+  hasWasm?: boolean
 }) {
   return (
     <Form.Group as={Row} className="mb-3">
@@ -1670,7 +1681,12 @@ function CollectNetworkStatsInput({
   )
 }
 
-function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
+function NMEA2000({
+  value,
+  onChange,
+  hasAnalyzer,
+  hasWasm
+}: TypeComponentProps) {
   return (
     <div>
       <Form.Group as={Row} className="mb-3">
@@ -1689,6 +1705,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             <option value="ngt-1" disabled={!hasAnalyzer}>
               Actisense NGT-1 (canboat)
             </option>
+            <option value="ngt-1-wasm" disabled={!hasWasm}>
+              Actisense NGT-1 (canboat wasm)
+            </option>
             <option value="ikonvert-canboatjs">iKonvert (canboatjs)</option>
             <option value="navlink2-tcp-canboatjs">NavLink2 (canboatjs)</option>
             <option value="canboat-csv-canboatjs">
@@ -1697,6 +1716,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             <option value="ydwg02-canboatjs">
               Yacht Devices RAW TCP (canboatjs)
             </option>
+            <option value="ydwg02-wasm" disabled={!hasWasm}>
+              Yacht Devices RAW TCP (canboat wasm)
+            </option>
             <option value="ydwg02-udp-canboatjs">
               Yacht Devices RAW UDP (canboatjs)
             </option>
@@ -1704,17 +1726,29 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
               Yacht Devices RAW USB (canboatjs)
             </option>
             <option value="canbus-canboatjs">Canbus (canboatjs)</option>
+            <option value="canbus-wasm" disabled={!hasWasm}>
+              Canbus (canboat wasm)
+            </option>
             <option value="n2k-ip-gateway-canboatjs">
               N2K IP Gateway (canboatjs)
             </option>
             <option value="w2k-1-n2k-ascii-canboatjs">
               W2K-1 N2K ASCII (canboatjs)
             </option>
+            <option value="w2k-1-n2k-ascii-wasm" disabled={!hasWasm}>
+              W2K-1 N2K ASCII (canboat wasm)
+            </option>
             <option value="w2k-1-n2k-actisense-canboatjs">
               W2K-1 N2K ACTISENSE (canboatjs)
             </option>
             <option value="maretron-ipg-canboatjs">
               Maretron IPG 100 (canboatjs)
+            </option>
+            <option value="maretron-ipg-wasm" disabled={!hasWasm}>
+              Maretron IPG 100 (canboat wasm)
+            </option>
+            <option value="w2k-1-n2k-actisense-wasm" disabled={!hasWasm}>
+              W2K-1 N2K ACTISENSE (canboat wasm)
             </option>
             <option value="canbus" disabled={!hasAnalyzer}>
               Canbus (canboat)
@@ -1724,6 +1758,7 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       </Form.Group>
       {(value.options.type === 'ngt-1' ||
         value.options.type === 'ngt-1-canboatjs' ||
+        value.options.type === 'ngt-1-wasm' ||
         value.options.type === 'ydwg02-usb-canboatjs' ||
         value.options.type === 'ikonvert-canboatjs') && (
         <div>
@@ -1731,7 +1766,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           <BaudRateInputCanboat value={value.options} onChange={onChange} />
         </div>
       )}
-      {value.options.type === 'ydwg02-canboatjs' && (
+      {(value.options.type === 'ydwg02-canboatjs' ||
+        value.options.type === 'ydwg02-wasm') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
@@ -1775,7 +1811,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         </div>
       )}
       {(value.options.type === 'canbus' ||
-        value.options.type === 'canbus-canboatjs') && (
+        value.options.type === 'canbus-canboatjs' ||
+        value.options.type === 'canbus-wasm') && (
         <div>
           <TextInput
             title="Interface"
@@ -1807,7 +1844,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         <CollectNetworkStatsInput value={value.options} onChange={onChange} />
       )}
       {(value.options.type === 'w2k-1-n2k-ascii-canboatjs' ||
-        value.options.type === 'w2k-1-n2k-actisense-canboatjs') && (
+        value.options.type === 'w2k-1-n2k-actisense-canboatjs' ||
+        value.options.type === 'w2k-1-n2k-ascii-wasm' ||
+        value.options.type === 'w2k-1-n2k-actisense-wasm') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
@@ -1852,7 +1891,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           </div>
         </div>
       )}
-      {value.options.type === 'maretron-ipg-canboatjs' && (
+      {(value.options.type === 'maretron-ipg-canboatjs' ||
+        value.options.type === 'maretron-ipg-wasm') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />

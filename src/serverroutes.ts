@@ -1770,6 +1770,18 @@ module.exports = function (
     }
   )
 
+  // Whether @canboat/wasm (the in-process wasm decode/encode brain) is
+  // installed — gates the wasm connection subtypes in the admin UI the
+  // same way hasAnalyzer gates the native ones.
+  app.get(`${SERVERROUTESPREFIX}/hasWasm`, (req: Request, res: Response) => {
+    try {
+      require.resolve('@canboat/wasm')
+      res.json(true)
+    } catch {
+      res.json(false)
+    }
+  })
+
   // /priorities admin middleware: registered up front so every method
   // (DELETE, GET, PUT) below it picks up auth. Express applies a
   // middleware to routes registered AFTER the middleware call, so the

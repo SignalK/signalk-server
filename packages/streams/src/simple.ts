@@ -139,6 +139,8 @@ type PipeStartFactory = (
 ) => PipeElement[]
 
 const discriminatorByDataType: Record<string, string> = {
+  NMEA2000WASM: 'A',
+  NMEA2000WASMBYTES: 'A',
   NMEA2000JS: 'A',
   NMEA2000IK: 'A',
   NMEA2000YD: 'A',
@@ -178,6 +180,33 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
   NMEA2000: (options) => {
     const N2kCtor = requireN2kToSignalK()
     const result: PipeElement[] = [new N2kAnalyzer(options.subOptions)]
+    if (options.type === 'FileStream') {
+      result.push(new TimestampThrottle())
+    }
+    return [...result, new N2kCtor(options.subOptions)]
+  },
+  NMEA2000WASMBYTES: (options) => {
+    const N2kCtor = requireN2kToSignalK()
+    return [new N2kCtor(options.subOptions)]
+  },
+  NMEA2000WASM: (options) => {
+    const N2kCtor = requireN2kToSignalK()
+    const WasmN2kMod = require('./wasm-n2k') as {
+      default: new (options: object) => PipeElement
+    }
+    const WasmN2kCtor = WasmN2kMod.default ?? WasmN2kMod
+    const txBySubtype: Record<string, { txFormat: string; txEvent: string }> = {
+      'ydwg02-wasm': { txFormat: 'ydwg-raw', txEvent: 'ydwg02-out' },
+      'w2k-1-n2k-ascii-wasm': { txFormat: 'n2k-ascii', txEvent: 'w2k-1-out' }
+      // canbus-wasm: TX and address claiming stay with the canbus
+      // transport element (candevice), which owns the socket.
+    }
+    const result: PipeElement[] = [
+      new (WasmN2kCtor as new (options: object) => PipeElement)({
+        ...options.subOptions,
+        ...(txBySubtype[options.subOptions.type ?? ''] ?? {})
+      })
+    ]
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
@@ -279,6 +308,54 @@ function nmea2000input(
       new (Ctor as new (options: object) => PipeElement)({
         ...subOptions,
         plainText: logging
+      })
+    ]
+  } else if (subOptions.type === 'ydwg02-wasm') {
+    return [
+      new Tcp({ ...subOptions, outEvent: 'ydwg02-out' } as SubOptions & {
+        host: string
+        port: number
+        outEvent: string
+      }),
+      new Liner(subOptions)
+    ]
+  } else if (subOptions.type === 'w2k-1-n2k-ascii-wasm') {
+    return [
+      new Tcp({ ...subOptions, outEvent: 'w2k-1-out' } as SubOptions & {
+        host: string
+        port: number
+        outEvent: string
+      }),
+      new Liner(subOptions)
+    ]
+  } else if (
+    subOptions.type === 'maretron-ipg-wasm' ||
+    subOptions.type === 'w2k-1-n2k-actisense-wasm' ||
+    subOptions.type === 'ngt-1-wasm'
+  ) {
+    const WasmBytes = require('./wasm-n2k-bytes') as {
+      default: new (options: object) => PipeElement
+    }
+    const Ctor = WasmBytes.default ?? WasmBytes
+    return [
+      new (Ctor as new (options: object) => PipeElement)({
+        ...subOptions,
+        byteKind:
+          subOptions.type === 'maretron-ipg-wasm' ? 'maretron-ipg' : 'ngt1'
+      })
+    ]
+  } else if (subOptions.type === 'canbus-wasm') {
+    // canboatjs's canbus element stays the transport: the small
+    // canSocket AF_CAN shim moves frames and candevice does the
+    // address claiming; the wasm element downstream does the decoding.
+    const Canbus = require('./canbus') as {
+      default: new (options: object) => PipeElement
+    }
+    const Ctor = Canbus.default ?? Canbus
+    return [
+      new (Ctor as new (options: object) => PipeElement)({
+        ...subOptions,
+        canDevice: subOptions.interface
       })
     ]
   } else if (subOptions.type === 'canbus-canboatjs') {
@@ -609,6 +686,18 @@ export default class Simple extends Transform {
 
     if (options.type === 'NMEA2000' && opts.subOptions) {
       if (
+        opts.subOptions.type === 'maretron-ipg-wasm' ||
+        opts.subOptions.type === 'w2k-1-n2k-actisense-wasm' ||
+        opts.subOptions.type === 'ngt-1-wasm'
+      ) {
+        mappingType = 'NMEA2000WASMBYTES'
+      } else if (
+        opts.subOptions.type === 'ydwg02-wasm' ||
+        opts.subOptions.type === 'w2k-1-n2k-ascii-wasm' ||
+        opts.subOptions.type === 'canbus-wasm'
+      ) {
+        mappingType = 'NMEA2000WASM'
+      } else if (
         opts.subOptions.type === 'ngt-1-canboatjs' ||
         opts.subOptions.type === 'canbus-canboatjs' ||
         opts.subOptions.type === 'w2k-1-n2k-actisense-canboatjs' ||
