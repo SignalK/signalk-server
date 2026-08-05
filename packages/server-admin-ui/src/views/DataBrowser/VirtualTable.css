@@ -86,7 +86,7 @@
 .virtual-table-cell {
   padding: 0.5rem 0.25rem;
   vertical-align: top;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
   word-break: break-word;
   border-right: 1px solid var(--bs-border-color, #c2cfd6);
   overflow: hidden;
@@ -144,12 +144,12 @@
   padding: 0;
   font-size: 0.8rem;
   white-space: pre-wrap;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
   word-break: break-word;
 }
 
 /* Responsive breakpoints */
-@media (max-width: 1200px) {
+@media (width <= 1200px) {
   .virtual-table-row,
   .virtual-table-header {
     font-size: 0.8rem;
@@ -161,7 +161,7 @@
   }
 }
 
-@media (max-width: 992px) {
+@media (width <= 992px) {
   .virtual-table-header,
   .virtual-table-row {
     grid-template-columns:
@@ -178,7 +178,7 @@
 }
 
 /* Narrow screens: stack cells vertically with per-row labels */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .virtual-table-header {
     display: none;
   }
@@ -294,7 +294,7 @@
   display: inline-block;
   width: 12px;
   height: 14px;
-  border: 1px solid currentColor;
+  border: 1px solid currentcolor;
   border-radius: 2px;
   position: relative;
   opacity: 0.5;
@@ -308,7 +308,7 @@
   position: absolute;
   width: 10px;
   height: 12px;
-  border: 1px solid currentColor;
+  border: 1px solid currentcolor;
   border-radius: 2px;
   top: -4px;
   left: -4px;
