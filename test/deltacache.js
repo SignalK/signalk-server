@@ -1025,10 +1025,13 @@ describe('Deltacache', () => {
         }
       ]
     })
-      // Ingesting the delta marks the path dirty too, so let that emit
-      // drain before deleting — otherwise the assertion could race
-      // against an event announcing the winner rather than retiring it.
-      .then(() => delay(EMIT_DEBOUNCE_MS + 200))
+      .then(() => {
+        // Ingesting the delta marks the path dirty too, so let that
+        // emit drain before deleting — otherwise the assertion could
+        // race against an event announcing the winner rather than
+        // retiring it.
+        return delay(EMIT_DEBOUNCE_MS + 200)
+      })
       .then(() => {
         const tombstoned = new Promise((resolve) => {
           const onServerEvent = (event) => {
