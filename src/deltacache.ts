@@ -817,6 +817,17 @@ export default class DeltaCache {
     if (contextParts.length === 2) {
       delete this.cache[contextParts[0]][contextParts[1]]
     }
+    delete this.cachedContextPaths[contextKey]
+    // preferredSources is keyed `${context}\0${path}` and otherwise never
+    // shrinks: every (context, path) pair ever seen — e.g. every AIS
+    // target that has come into range — would live for the process
+    // lifetime instead of aging out with the context.
+    const prefix = contextKey + '\0'
+    for (const key of this.preferredSources.keys()) {
+      if (key.startsWith(prefix)) {
+        this.preferredSources.delete(key)
+      }
+    }
     this.app.stalenessEnforcer?.onContextRemoved(contextKey)
   }
 

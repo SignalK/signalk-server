@@ -958,4 +958,38 @@ describe('Deltacache', () => {
         deltaCache.removeSourceDelta(NUMERIC_B)
       })
   })
+
+  it('deleteContext removes the context entries from preferredSources', function () {
+    // Regression test for a memory leak: preferredSources is keyed
+    // `${context}\0${path}` and previously only grew, since
+    // deleteContext (called by pruneContexts for every aged-out
+    // context) never removed the entries belonging to that context.
+    // Over long uptime with many transient contexts (e.g. AIS
+    // targets) this accumulates unboundedly.
+    const context = 'vessels.urn:mrn:signalk:uuid:prune-leak-test'
+    const path = 'navigation.speedOverGround'
+    const prefKey = context + '\0' + path
+
+    return doSendADelta({
+      context,
+      updates: [
+        {
+          $source: 'pruneLeakSource',
+          timestamp: '2024-05-01T10:00:00.000Z',
+          values: [{ path, value: 1 }]
+        }
+      ]
+    }).then(() => {
+      const deltaCache = theServer.app.deltaCache
+      deltaCache
+        .getLivePreferredSources()
+        .should.have.property(prefKey, 'pruneLeakSource')
+
+      deltaCache.deleteContext(context)
+
+      deltaCache
+        .getLivePreferredSources()
+        .should.not.have.property(prefKey)
+    })
+  })
 })
