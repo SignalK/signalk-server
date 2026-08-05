@@ -7,7 +7,7 @@ import Col from 'react-bootstrap/Col'
 import Table from 'react-bootstrap/Table'
 import { useServerStats, useWsStatus, useStore } from '../../store'
 import type { ProviderStatistics, ProviderStatus } from '../../store/types'
-import '../../fa-pulse.css'
+import '../../styles/fa-pulse.css'
 
 export default function Dashboard() {
   const serverStatistics = useServerStats()
