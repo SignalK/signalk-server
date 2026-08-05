@@ -86,8 +86,7 @@
 .virtual-table-cell {
   padding: 0.5rem 0.25rem;
   vertical-align: top;
-  overflow-wrap: break-word;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   border-right: 1px solid var(--bs-border-color, #c2cfd6);
   overflow: hidden;
 }
@@ -125,11 +124,11 @@
   bottom: 0;
   width: 3px;
   background-color: var(--bs-success, #00cd79);
-  animation: highlightFade 15s ease-out forwards;
+  animation: highlight-fade 15s ease-out forwards;
   pointer-events: none;
 }
 
-@keyframes highlightFade {
+@keyframes highlight-fade {
   0% {
     opacity: 1;
   }
@@ -144,8 +143,7 @@
   padding: 0;
   font-size: 0.8rem;
   white-space: pre-wrap;
-  overflow-wrap: break-word;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* Responsive breakpoints */
@@ -238,7 +236,7 @@
   .virtual-table-cell.value-cell > * {
     flex: 1;
     min-width: 0;
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   .virtual-table-cell.timestamp-cell {
@@ -255,10 +253,10 @@
 
   .virtual-table-row:has(.timestamp-updated-bar) {
     border-left: 3px solid var(--bs-success, #00cd79);
-    animation: borderFade 15s ease-out forwards;
+    animation: border-fade 15s ease-out forwards;
   }
 
-  @keyframes borderFade {
+  @keyframes border-fade {
     0% {
       border-left-color: var(--bs-success, #00cd79);
     }
