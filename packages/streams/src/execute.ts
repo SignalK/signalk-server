@@ -89,24 +89,38 @@ export default class Execute extends Transform {
 
     if (stdOutEvent === 'nmea2000out') {
       this.options.app.on('nmea2000JsonOut', (pgn: PGN) => {
-        if (canEncodeNatively()) {
-          // Check against the shared schema before handing over, so a
-          // malformed plugin PGN surfaces as a provider error here
-          // instead of a warning inside the child's stderr.
-          if (
-            typeof pgn?.pgn !== 'number' ||
-            getPGNWithNumber(pgn.pgn) === undefined
-          ) {
-            this.options.app.setProviderError(
-              this.options.providerId,
-              `outbound PGN rejected: unknown PGN ${pgn?.pgn}`
+        // Runs inside an app-emitter handler: an uncaught throw from
+        // either encoder would take the server down.
+        try {
+          if (canEncodeNatively()) {
+            // Check against the shared schema before handing over, so a
+            // malformed plugin PGN surfaces as a provider error here
+            // instead of a warning inside the child's stderr. Field
+            // contents are not validated: canboat's encoders treat an
+            // absent or unrecognised field as "not available" rather
+            // than an error, so there is nothing to reject against
+            // short of a schema-walking validator.
+            if (
+              typeof pgn?.pgn !== 'number' ||
+              getPGNWithNumber(pgn.pgn) === undefined
+            ) {
+              this.options.app.setProviderError(
+                this.options.providerId,
+                `outbound PGN rejected: unknown PGN ${pgn?.pgn}`
+              )
+              return
+            }
+            this.childProcess.stdin?.write(JSON.stringify(pgn) + '\r\n')
+          } else {
+            this.childProcess.stdin?.write(
+              pgnToActisenseSerialFormat(pgn) + '\r\n'
             )
-            return
           }
-          this.childProcess.stdin?.write(JSON.stringify(pgn) + '\r\n')
-        } else {
-          this.childProcess.stdin?.write(
-            pgnToActisenseSerialFormat(pgn) + '\r\n'
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err)
+          this.options.app.setProviderError(
+            this.options.providerId,
+            `outbound PGN ${pgn?.pgn} not sent: ${message}`
           )
         }
       })

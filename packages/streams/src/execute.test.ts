@@ -1,5 +1,6 @@
 import { expect } from 'chai'
 import { Writable } from 'stream'
+import { execFileSync } from 'child_process'
 import Execute from './execute'
 import { createMockApp, createDebugStub } from './test-helpers'
 
@@ -92,5 +93,57 @@ describe('Execute', () => {
       }
     })
     exec.pipe(writable)
+  })
+
+  it('rejects an unknown outbound PGN instead of writing it', function (done) {
+    this.timeout(5000)
+    // The native JSON path only engages when the canboat binary is on
+    // PATH; without it the canboatjs encoder runs and this check does
+    // not apply.
+    let haveCanboat = true
+    try {
+      execFileSync(process.platform === 'win32' ? 'where' : 'which', [
+        'canboat'
+      ])
+    } catch {
+      haveCanboat = false
+    }
+    if (!haveCanboat) {
+      this.skip()
+      return
+    }
+
+    const app = createMockApp()
+    const origSetStatus = app.setProviderStatus.bind(app)
+    app.setProviderStatus = (id: string, msg: string) => {
+      origSetStatus(id, msg)
+      if (msg === 'Started') {
+        setImmediate(() => {
+          // 999999 is not in the schema, so nothing may reach the child.
+          app.emit('nmea2000JsonOut', { pgn: 999999, fields: {} })
+        })
+      }
+    }
+
+    const exec = new Execute({
+      command: 'cat',
+      app,
+      providerId: 'test-exec',
+      toChildProcess: 'nmea2000out',
+      restartOnClose: false,
+      createDebug: createDebugStub()
+    })
+
+    const writable = createCollectingWritable()
+    exec.pipe(writable)
+    setTimeout(() => {
+      const rejected = app.providerErrors.some((e) =>
+        e.msg.includes('unknown PGN 999999')
+      )
+      exec.end()
+      expect(rejected).to.equal(true)
+      expect(writable.chunks.join('')).to.not.include('999999')
+      done()
+    }, 500)
   })
 })
