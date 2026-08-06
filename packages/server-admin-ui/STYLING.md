@@ -81,10 +81,14 @@ colors").
 A few rules are intentionally disabled. If you're tempted to re-enable one,
 read the reason first:
 
-| Rule                     | Status | Why                                                                                                                                                                                 |
-| ------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rule-empty-line-before` | off    | Prettier doesn't manage blank-line placement and will never satisfy this rule automatically — it's not deprecated in Stylelint, just a genuine ongoing conflict with our formatter. |
-| `scss/comment-no-empty`  | off    | We use Bootstrap's own banner-comment convention for section headers (see below), which uses bare `//` lines that this rule flags as "empty."                                       |
+| Rule                                                                                                                                                                                                                                              | Status | Why                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rule-empty-line-before`, `declaration-empty-line-before`, `at-rule-empty-line-before`, `comment-empty-line-before`, `custom-property-empty-line-before`, `scss/dollar-variable-empty-line-before`, `scss/double-slash-comment-empty-line-before` | off    | The whole "blank line before X" family. Prettier doesn't manage blank-line placement in CSS/SCSS at all and will never satisfy these automatically — not deprecated in Stylelint, just a permanent, unwinnable conflict with our formatter. Disabled as a group rather than one at a time as each was hit. |
+| `scss/comment-no-empty`                                                                                                                                                                                                                           | off    | We use Bootstrap's own banner-comment convention for section headers (see [Comment style](#comment-style) below), which uses bare `//` border lines this rule flags as "empty." No secondary option exists to exempt just the banner pattern.                                                              |
+| `selector-class-pattern`                                                                                                                                                                                                                          | off    | Bootstrap and legacy CoreUI class names don't follow one consistent convention a single regex could enforce without constantly flagging vendor markup we don't control.                                                                                                                                    |
+| `custom-property-pattern`                                                                                                                                                                                                                         | off    | We deliberately use two coexisting prefixes, `--bs-*` and `--sk-*` — the rule's naming-pattern check isn't built to accommodate two valid prefixes at once.                                                                                                                                                |
+| `scss/dollar-variable-pattern`                                                                                                                                                                                                                    | off    | Bootstrap's own `$variable` names (`$gray-600`, `$btn-border-radius`, etc.) don't follow a single pattern either; this would flag legitimate Bootstrap variables constantly.                                                                                                                               |
+| `no-descending-specificity`                                                                                                                                                                                                                       | off    | Common and expected with Bootstrap-style overrides (e.g. `.btn-danger:hover` following `.btn-danger`) — enforcing this against Bootstrap's own cascade conventions is mostly noise.                                                                                                                        |
 
 Everything else — `color-no-hex`, `color-named`, `function-disallowed-list`,
 `declaration-property-value-disallowed-list`,
@@ -124,31 +128,6 @@ intent applies. When overriding component-level Bootstrap variables
 (`--bs-btn-*`, `--bs-nav-*`, etc.), use `var(--bs-*)`/`var(--sk-*)` there
 too, even though the linter won't catch you if you don't.
 
-## Comment style
-
-Section-header banners using bare `//` border lines are intentional and
-match Bootstrap's own source convention:
-
-```scss
-//
-// Color system
-//
-$white: #fff;
-```
-
-Note: no blank line between the closing `//` and the first variable — that
-matches Bootstrap's own formatting and satisfies
-`scss/dollar-variable-empty-line-before`'s `after-comment` exception.
-
-## Deprecated CSS properties
-
-Prefer `overflow-wrap: anywhere` over the legacy `word-wrap` /
-`word-break: break-word` pairing. The old pairing behaves like
-`overflow-wrap: anywhere` in practice (per spec, `word-break: break-word`
-forces that behavior regardless of the `overflow-wrap` value) — so replace
-both properties with the single modern equivalent rather than just renaming
-`word-wrap` to `overflow-wrap` and leaving `word-break` in place.
-
 ## Resources
 
 Before adding a new color, token, or override, check whether Bootstrap
@@ -180,12 +159,3 @@ npm run lint:css      # Stylelint — governance rules
 npm run format         # Prettier — formatting
 npm run dev            # Vite dev server — visually confirm nothing broke
 ```
-
-When autofixing (`stylelint --fix`), review the diff before committing —
-most fixes (hex shorthand, modern color-function notation) are purely
-mechanical, but a few categories are worth a second look:
-
-- Merges into shorthand properties (`gap`, `place-self`) — safe as long as
-  the longhand values weren't intentionally different.
-- Renamed `@keyframes` — check nothing else in the codebase (another
-  stylesheet, or a `.tsx` file) still references the old name.
