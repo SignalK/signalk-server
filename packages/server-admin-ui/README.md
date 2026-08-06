@@ -41,6 +41,10 @@ Then access the Admin UI at http://localhost:3000.
 - `npm run build` - Production build
 - `npm run lint` - ESLint with auto-fix
 - `npm run format` - Prettier
+- `npm run generate:icon` - Regenerate the committed favicon and home screen
+  icons from the logo SVG. The rasterisers (sharp, png-to-ico) are not project
+  dependencies; the script installs them on demand, and they can be removed
+  afterward
 
 ## Module Federation
 

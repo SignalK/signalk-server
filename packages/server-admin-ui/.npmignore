@@ -38,6 +38,7 @@ jspm_packages
 
 src
 public_src
+scripts
 scss
 vite.config.js
 tsconfig.json
