@@ -6,7 +6,7 @@
 .app-header .navbar-toggler {
   border: none;
   outline: none;
-  -webkit-tap-highlight-color: rgb(0 0 0 / 10%);
+  -webkit-tap-highlight-color: rgb(var(--bs-black-rgb), 0.1);
 
   &:focus {
     box-shadow: none;
@@ -25,7 +25,7 @@
 ) {
   background-color: $bg-color !important;
   border-color: $border-color !important;
-  color: white !important;
+  color: var(--bs-white) !important;
 
   &:hover {
     background-color: $hover-bg !important;
@@ -208,16 +208,16 @@ form.rjsf {
       width: 20px;
       margin: 0 0.5rem 0 0;
       font-size: 14px;
-      color: #536c79;
+      color: var(--bs-gray-600);
       text-align: center;
     }
 
     &.active svg.nav-icon {
-      color: #039;
+      color: var(--bs-blue);
     }
 
     &:hover svg.nav-icon {
-      color: #fff;
+      color: var(--bs-white);
     }
   }
 
@@ -226,7 +226,7 @@ form.rjsf {
     width: 20px;
     margin: 0 0.5rem 0 0;
     font-size: 14px;
-    color: #536c79;
+    color: var(--bs-gray-600);
     text-align: center;
   }
 
@@ -246,16 +246,16 @@ form.rjsf {
 .btn-success:hover,
 .btn-success:focus,
 .btn-success:active {
-  --bs-btn-color: #fff;
-  --bs-btn-hover-color: #fff;
-  --bs-btn-active-color: #fff;
-  color: #fff !important;
+  --bs-btn-color: var(--bs-white);
+  --bs-btn-hover-color: var(--bs-white);
+  --bs-btn-active-color: var(--bs-white);
+  color: var(--bs-white) !important;
 }
 
 // Source Priorities: nested table in Priorities column should have white background
 .table-striped .table {
-  --bs-table-bg: #fff;
-  background-color: #fff;
+  --bs-table-bg: var(--bs-white);
+  background-color: var(--bs-white);
 }
 
 // Ensure btn-danger has white text
@@ -263,10 +263,10 @@ form.rjsf {
 .btn-danger:hover,
 .btn-danger:focus,
 .btn-danger:active {
-  --bs-btn-color: #fff;
-  --bs-btn-hover-color: #fff;
-  --bs-btn-active-color: #fff;
-  color: #fff !important;
+  --bs-btn-color: var(--bs-white);
+  --bs-btn-hover-color: var(--bs-white);
+  --bs-btn-active-color: var(--bs-white);
+  color: var(--bs-white) !important;
 }
 
 // Ensure badges have white text
@@ -274,7 +274,7 @@ form.rjsf {
 .badge.text-bg-danger,
 .badge.bg-success,
 .badge.bg-danger {
-  color: #fff !important;
+  color: var(--bs-white) !important;
 }
 
 // Plugin config: scrollable list and connected panels on desktop
@@ -304,7 +304,7 @@ form.rjsf {
 .pg-default-fallback {
   padding: 0.75rem;
   margin-bottom: 1rem;
-  border: 1px solid rgb(0 0 0 / 8%);
+  border: 1px solid rgb(var(--bs-black-rgb), 0.08);
   border-radius: 0.375rem;
   background: rgb(var(--bs-primary-rgb), 0.03);
 
@@ -322,7 +322,7 @@ form.rjsf {
   }
 
   &.pg-card-dirty {
-    border-left-color: #fb923c;
+    border-left-color: $orange-400;
   }
 }
 
@@ -367,7 +367,7 @@ form.rjsf {
   background: rgb(var(--bs-warning-rgb), 0.12);
   border: 1px solid rgb(var(--bs-warning-rgb), 0.3);
   font-size: 0.875rem;
-  color: #7a4f00;
+  color: $orange-800;
 }
 
 .pg-three-col {
@@ -415,7 +415,7 @@ form.rjsf {
       'enabled order order';
     gap: 0.35rem 0.5rem;
     padding: 0.5rem 0;
-    border-bottom: 1px solid rgb(0 0 0 / 8%);
+    border-bottom: 1px solid rgb(var(--bs-black-rgb), 0.08);
   }
   td {
     padding: 0;
@@ -424,7 +424,7 @@ form.rjsf {
       content: attr(data-th);
       display: block;
       font-size: 0.7rem;
-      color: var(--bs-secondary-color, #6c757d);
+      color: var(--bs-secondary-color);
       text-transform: uppercase;
       letter-spacing: 0.02em;
       margin-bottom: 0.1rem;
@@ -469,7 +469,7 @@ form.rjsf {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--bs-secondary-color, #6c757d);
+  color: var(--bs-secondary-color);
   margin-bottom: 0.5rem;
 }
 
@@ -489,7 +489,7 @@ form.rjsf {
   gap: 0.5rem;
   padding: 0.4rem 0.5rem;
   background: var(--bs-body-bg);
-  border: 1px solid rgb(0 0 0 / 8%);
+  border: 1px solid rgb(var(--bs-black-rgb), 0.08);
   border-radius: 0.375rem;
   transition:
     border-color 0.15s ease,
@@ -506,7 +506,7 @@ form.rjsf {
   background: none;
   border: none;
   padding: 0.25rem;
-  color: var(--bs-secondary-color, #6c757d);
+  color: var(--bs-secondary-color);
   cursor: grab;
 
   &:active {
@@ -542,7 +542,7 @@ form.rjsf {
 
 .pg-rank {
   font-weight: 600;
-  color: var(--bs-secondary-color, #6c757d);
+  color: var(--bs-secondary-color);
 }
 
 .pg-source-name {
@@ -693,7 +693,7 @@ form.rjsf {
 }
 
 .pg-path-row {
-  background: rgb(0 0 0 / 2%);
+  background: rgb(var(--bs-black-rgb), 0.02);
   border: 1px solid transparent;
   border-radius: 0.25rem;
   transition:
@@ -702,8 +702,8 @@ form.rjsf {
     opacity 0.15s ease;
 
   &.is-override {
-    background: rgb(13 110 253 / 6%);
-    border-color: rgb(13 110 253 / 40%);
+    background: rgb(var(--bs-primary-rgb), 0.06);
+    border-color: rgb(var(--bs-primary-rgb), 0.4);
   }
 
   &.is-highlighted {
@@ -724,7 +724,7 @@ form.rjsf {
   border-radius: 0.25rem;
 
   &:hover {
-    background: rgb(0 0 0 / 4%);
+    background: rgb(var(--bs-black-rgb), 0.04);
   }
 
   &:focus-visible {
@@ -749,8 +749,8 @@ form.rjsf {
 .pg-path-publishers {
   font-size: 0.65rem;
   font-family: var(--bs-font-monospace);
-  color: var(--bs-secondary-color, #6c757d);
-  background: rgb(0 0 0 / 4%);
+  color: var(--bs-secondary-color);
+  background: rgb(var(--bs-black-rgb), 0.04);
   padding: 0.05rem 0.35rem;
   border-radius: 0.25rem;
   white-space: nowrap;
@@ -760,8 +760,8 @@ form.rjsf {
   // darker neutral tint so partial coverage is visible without implying a
   // warning.
   &.is-partial {
-    color: #495057;
-    background: rgb(0 0 0 / 8%);
+    color: var(--bs-gray-700);
+    background: rgb(var(--bs-black-rgb), 0.08);
   }
 }
 
@@ -775,8 +775,8 @@ form.rjsf {
 .pg-path-kind {
   font-size: 0.65rem;
   font-family: var(--bs-font-monospace);
-  color: var(--bs-secondary-color, #6c757d);
-  background: rgb(0 0 0 / 5%);
+  color: var(--bs-secondary-color);
+  background: rgb(var(--bs-black-rgb), 0.05);
   padding: 0.05rem 0.3rem;
   border-radius: 0.25rem;
   white-space: nowrap;
@@ -795,9 +795,9 @@ form.rjsf {
 
 .pg-override-row {
   padding: 0.5rem 0.5rem 0.25rem;
-  border: 1px solid rgb(13 110 253 / 35%);
+  border: 1px solid rgb(var(--bs-primary-rgb), 0.35);
   border-radius: 0.375rem;
-  background: rgb(13 110 253 / 4%);
+  background: rgb(var(--bs-primary-rgb), 0.04);
   transition: box-shadow 0.15s ease;
 
   &.is-focused {
@@ -825,7 +825,7 @@ form.rjsf {
   padding: 0.35rem 0.5rem;
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
-  color: #7a4f00;
+  color: $orange-800;
   background: rgb(var(--bs-warning-rgb), 0.18);
   border: 1px solid rgb(var(--bs-warning-rgb), 0.45);
   border-radius: 0.25rem;

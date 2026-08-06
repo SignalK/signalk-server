@@ -13,6 +13,7 @@
 @import 'bootstrap/scss/functions';
 
 // 2. Include any default variable overrides here
+//    Overrides that DON'T depend on other Bootstrap vars (e.g. $gray-300)
 @import 'bootstrap-variables';
 
 // 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
@@ -20,6 +21,7 @@
 @import 'bootstrap/scss/variables-dark';
 
 // 4. Include any default map overrides here
+//    Overrides that DO depend on Bootstrap-defined vars (e.g. $gray-300)
 
 // 5. Include remainder of required parts
 @import 'bootstrap/scss/maps';
@@ -64,13 +66,13 @@
 // Helpers
 @import 'bootstrap/scss/helpers';
 
-// Utilities
+// Utilities API last
 @import 'bootstrap/scss/utilities/api';
 
-// Override core-ui variables
+// Override Core-UI variables
 @import 'core-variables';
 
-// Import core-ui styles
+// Import Core-UI styles
 @import 'core/core';
 
 // Custom styles

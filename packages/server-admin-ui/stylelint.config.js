@@ -30,22 +30,49 @@ export default {
 
     // 3. Ban the common functional color notations
     //    (rgb, rgba, hsl, hsla, hwb, lab, lch, oklab, oklch, color, …)
+    // 'function-disallowed-list': [
+    //   [
+    //     '/^rgb/i',
+    //     '/^hsl/i',
+    //     '/^hwb/i',
+    //     '/^lab/i',
+    //     '/^lch/i',
+    //     '/^oklab/i',
+    //     '/^oklch/i',
+    //     'color',
+    //     'gray'
+    //   ],
+    //   {
+    //     severity: 'error',
+    //     message:
+    //       'Use a CSS variable (var(--bs-*) or var(--sk-*)) instead of a color function'
+    //   }
+    // ],
+
+    // 3. Ban color functions with no legitimate var()-wrapped use in this codebase
+    //    (rgb/hsl/hwb are governed by declaration-property-value-disallowed-list instead,
+    //    since those are used legitimately with var(--bs-*-rgb) + alpha)
     'function-disallowed-list': [
-      [
-        '/^rgb/i',
-        '/^hsl/i',
-        '/^hwb/i',
-        '/^lab/i',
-        '/^lch/i',
-        '/^oklab/i',
-        '/^oklch/i',
-        'color',
-        'gray'
-      ],
+      ['/^lab/i', '/^lch/i', '/^oklab/i', '/^oklch/i', 'color', 'gray'],
       {
         severity: 'error',
         message:
           'Use a CSS variable (var(--bs-*) or var(--sk-*)) instead of a color function'
+      }
+    ],
+
+    // 4. Ban literal values inside rgb()/rgba()/hsl()/hsla()/hwb() (e.g. rgba(220, 53, 69, 0.5))
+    //    while allowing var()-wrapped tokens combined with an alpha value
+    //    (e.g. rgb(var(--bs-primary-rgb), 0.1)) — Bootstrap's own documented pattern
+    //    for applying opacity to a token color. Matches on "function( digit"
+    //    so anything starting with var(...) passes through untouched.
+    'declaration-property-value-disallowed-list': [
+      {
+        '/^(?!--)/': [/rgba?\(\s*\d/i, /hsla?\(\s*\d/i, /hwb\(\s*\d/i]
+      },
+      {
+        message:
+          'Use a CSS variable (var(--bs-*) or var(--sk-*)) instead of a literal color function value'
       }
     ],
 

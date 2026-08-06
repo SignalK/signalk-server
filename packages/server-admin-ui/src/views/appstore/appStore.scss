@@ -3,9 +3,9 @@
 
   .message__container {
     padding: 10px;
-    color: var(--bs-warning-text-emphasis, #9d8641);
-    border: 1px solid var(--bs-warning-border-subtle, #9d8641);
-    background-color: var(--bs-warning-bg-subtle, #fff2cd);
+    color: var(--bs-warning-text-emphasis);
+    border: 1px solid var(--bs-warning-border-subtle);
+    background-color: var(--bs-warning-bg-subtle);
     p {
       margin: 0;
 
@@ -76,10 +76,10 @@
         }
 
         span.badge__update {
-          color: #fff !important;
+          color: var(--bs-white) !important;
           font-size: 10px;
           border-radius: 3px;
-          background-color: #00cd79 !important;
+          background-color: var(--bs-success) !important;
           margin-left: 5px;
           padding: 3px;
           vertical-align: middle;
@@ -118,7 +118,7 @@
           left: 0.75rem;
           top: 50%;
           transform: translateY(-50%);
-          color: grey;
+          color: var(--bs-gray-600);
         }
         &__input {
           padding: 0.375rem 0.75rem;
@@ -214,7 +214,7 @@
 }
 
 .plugin-card:hover {
-  box-shadow: 0 2px 10px rgb(0 0 0 / 10%);
+  box-shadow: 0 2px 10px rgb(var(--bs-black-rgb), 0.1);
   transform: translateY(-1px);
 }
 
@@ -258,35 +258,35 @@
   font-size: 0.75rem;
   padding: 0.15rem 0.5rem;
   border-radius: 0.5rem;
-  background: #f1f3f5;
-  color: #495057;
+  background: var(--bs-gray-100);
+  color: var(--bs-gray-700);
   white-space: nowrap;
 
   &--installed {
-    background: #d4edda;
-    color: #155724;
+    background-color: var(--bs-success-bg-subtle);
+    color: var(--bs-success-text-emphasis);
   }
 
   &--update {
-    background: #d1ecf1;
-    color: #0c5460;
+    background-color: var(--bs-info-bg-subtle);
+    color: var(--bs-info-text-emphasis);
     font-weight: 600;
   }
 
   &--available {
     background: transparent;
-    color: #6c757d;
+    color: var(--bs-gray-600);
     font-family: var(--bs-font-monospace);
   }
 
   &--busy {
-    background: #fff3cd;
-    color: #856404;
+    background-color: var(--bs-warning-bg-subtle);
+    color: var(--bs-warning-text-emphasis);
   }
 
   &--failed {
-    background: #f8d7da;
-    color: #721c24;
+    background-color: var(--bs-danger-bg-subtle);
+    color: var(--bs-danger-text-emphasis);
   }
 }
 
@@ -322,11 +322,11 @@
 // 2px coloured top border picks the recently-published cards out at scan
 // speed. Green for first-time appearances, blue for refreshed releases.
 .plugin-card--recent-new {
-  border-top: 2px solid var(--bs-success, #28a745);
+  border-top: 2px solid var(--bs-success);
 }
 
 .plugin-card--recent-updated {
-  border-top: 2px solid var(--bs-info, #17a2b8);
+  border-top: 2px solid var(--bs-info);
 }
 
 .plugin-card__title {
@@ -357,7 +357,7 @@
 
   &:hover,
   &:focus {
-    color: var(--bs-link-color, #0d6efd);
+    color: var(--bs-link-color, var(--bs-primary));
     text-decoration: underline;
   }
 }
@@ -379,7 +379,7 @@
 .plugin-card__stats {
   width: 56px;
   min-width: 56px;
-  border-left: 1px solid #e4e7ea;
+  border-left: 1px solid var(--bs-gray-100);
   margin-left: 12px;
   padding-left: 10px;
   display: flex;
@@ -388,7 +388,7 @@
   gap: 6px;
   font-family: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
   font-size: 11px;
-  color: #6c757d;
+  color: var(--bs-gray-600);
 }
 
 .plugin-card__metric {
@@ -396,7 +396,7 @@
 }
 
 .plugin-card__star {
-  color: #f8cb00;
+  color: var(--bs-orange);
   margin-right: 1px;
 }
 
@@ -508,19 +508,19 @@
 
 .plugin-detail {
   &__back {
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--bs-gray-100);
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
   }
 
   &__back-link {
-    color: #6c757d;
+    color: var(--bs-gray-600);
     text-decoration: none;
     font-size: 0.85rem;
 
     &:hover,
     &:focus {
-      color: var(--bs-link-color, #0d6efd);
+      color: var(--bs-link-color, var(--bs-primary));
       text-decoration: underline;
     }
   }
@@ -546,10 +546,10 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #4dbd74;
+    background: var(--bs-success);
 
     &.is-webapp {
-      background: #20a8d8;
+      background: var(--bs-info);
     }
   }
 
@@ -586,6 +586,7 @@
     }
 
     pre {
+      background-color: var(--bs-tertiary-bg);
       padding: 8px;
       border-radius: 4px;
       overflow-x: auto;
@@ -617,7 +618,7 @@
   }
 
   &__no-screenshots {
-    border-top: 1px solid #e4e7ea;
+    border-top: 1px solid var(--bs-gray-100);
     padding-top: 16px;
   }
 
@@ -626,17 +627,17 @@
   }
 
   &__changelog-feat {
-    color: #1e7e34;
+    color: var(--bs-success-text-emphasis);
     font-weight: 600;
   }
 
   &__changelog-fix {
-    color: #117a8b;
+    color: var(--bs-info-text-emphasis);
     font-weight: 600;
   }
 
   &__changelog-breaking {
-    color: #c82333;
+    color: var(--bs-danger-text-emphasis);
     font-weight: 700;
     text-transform: uppercase;
   }
@@ -661,7 +662,7 @@
     }
 
     &:focus-visible {
-      outline: 2px solid #20a8d8;
+      outline: 2px solid var(--bs-info);
       outline-offset: 2px;
     }
   }
@@ -669,7 +670,7 @@
   &__lightbox {
     position: fixed;
     inset: 0;
-    background: rgb(0 0 0 / 82%);
+    background: rgb(var(--bs-black-rgb), 0.82);
     z-index: 1080; // above bootstrap modals (1050) and toasts (1055)
     display: flex;
     align-items: center;
@@ -693,13 +694,13 @@
     max-width: 100%;
     max-height: calc(100vh - 120px);
     object-fit: contain;
-    box-shadow: 0 8px 32px rgb(0 0 0 / 50%);
+    box-shadow: 0 8px 32px rgb(var(--bs-black-rgb), 0.5);
     border-radius: 4px;
     background-color: var(--bs-body-bg);
   }
 
   &__lightbox-counter {
-    color: #fff;
+    color: var(--bs-white);
     font-size: 0.9rem;
     opacity: 0.75;
   }
@@ -710,10 +711,10 @@
     right: 16px;
     width: 40px;
     height: 40px;
-    background: rgb(255 255 255 / 10%);
+    background: rgb(var(--bs-white-rgb), 0.1);
     border: 0;
     border-radius: 50%;
-    color: #fff;
+    color: var(--bs-white);
     font-size: 28px;
     line-height: 1;
     cursor: pointer;
@@ -722,11 +723,11 @@
     justify-content: center;
 
     &:hover {
-      background: rgb(255 255 255 / 20%);
+      background: rgb(var(--bs-white-rgb), 0.2);
     }
 
     &:focus-visible {
-      outline: 2px solid #fff;
+      outline: 2px solid var(--bs-white);
       outline-offset: 2px;
     }
   }
@@ -737,10 +738,10 @@
     transform: translateY(-50%);
     width: 48px;
     height: 48px;
-    background: rgb(255 255 255 / 10%);
+    background: rgb(var(--bs-white-rgb), 0.1);
     border: 0;
     border-radius: 50%;
-    color: #fff;
+    color: var(--bs-white);
     font-size: 42px;
     line-height: 1;
     cursor: pointer;
@@ -750,11 +751,11 @@
     padding-bottom: 6px; // visual centring for the chevron glyph
 
     &:hover {
-      background: rgb(255 255 255 / 20%);
+      background: rgb(var(--bs-white-rgb), 0.2);
     }
 
     &:focus-visible {
-      outline: 2px solid #fff;
+      outline: 2px solid var(--bs-white);
       outline-offset: 2px;
     }
 
