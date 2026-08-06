@@ -181,6 +181,10 @@ export default function BasicProvider({
       .then((data) => {
         setHasWasm(data)
       })
+      // Capability probe: a failure means "no wasm", which is already the
+      // initial state. Swallow it rather than leaving an unhandled
+      // rejection in the console — the wasm options stay hidden either way.
+      .catch(() => setHasWasm(false))
   }, [])
 
   const TypeComponent = TYPE_COMPONENTS[value.type]
@@ -1928,14 +1932,23 @@ function NMEA2000({
           </div>
         </div>
       )}
+      {/* Address-claim identity. canbus-wasm runs through the same canbus
+          transport and candevice as canbus-canboatjs — only the decoder
+          downstream differs — so it takes the same identity options. */}
       {value.options.type !== undefined &&
-        value.options.type.indexOf('canboatjs') !== -1 && (
+        (value.options.type.indexOf('canboatjs') !== -1 ||
+          value.options.type === 'canbus-wasm') && (
           <>
             <UseCanNameInput value={value.options} onChange={onChange} />
             <DeviceInstanceInput value={value.options} onChange={onChange} />
             <SystemInstanceInput value={value.options} onChange={onChange} />
-            <CamelCaseCompatInput value={value.options} onChange={onChange} />
           </>
+        )}
+      {/* CamelCase compat is a canboatjs decoder option; the wasm element
+          pins camelCase in its compat shim and ignores the flag. */}
+      {value.options.type !== undefined &&
+        value.options.type.indexOf('canboatjs') !== -1 && (
+          <CamelCaseCompatInput value={value.options} onChange={onChange} />
         )}
       {value.options.type !== undefined &&
         /^ydwg02/.test(value.options.type) && (

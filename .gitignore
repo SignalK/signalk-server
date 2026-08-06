@@ -59,5 +59,3 @@ nul
 # debug artefacts
 *.sln
 test/server-test-config/debug
-cr-review-*.txt
-

@@ -97,11 +97,19 @@ export default class J1939Can extends Transform {
     this.channel = channel
 
     channel.addListener('onMessage', (msg) => {
-      this.push({
-        pgn: parseCanId(msg.id),
-        length: msg.data.length,
-        data: msg.data
-      })
+      // Inside a listener: an uncaught throw would take the process
+      // down, so a frame the header parser rejects is dropped with a
+      // log line instead.
+      try {
+        this.push({
+          pgn: parseCanId(msg.id),
+          length: msg.data.length,
+          data: msg.data
+        })
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err)
+        this.debug(`[frame] ${message}`)
+      }
     })
     channel.addListener('onStopped', () => {
       if (this.channel !== channel) {

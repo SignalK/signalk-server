@@ -83,6 +83,7 @@ export default class WasmN2kBytes extends Transform {
   private decoder!: InstanceType<WasmByteApi['ByteDecoder']>
   private socket: ByteTransport | null = null
   private keepaliveTimer: NodeJS.Timeout | null = null
+  private reconnectTimer: NodeJS.Timeout | null = null
   private stopped = false
   private readonly txHandler: (pgn: unknown) => void
   private readonly debug: DebugLogger
@@ -173,25 +174,34 @@ export default class WasmN2kBytes extends Transform {
     this.socket = socket
 
     socket.on('data', (buf: Buffer) => {
-      const records = this.decoder.decodeBytes(buf)
-      const timestamp = new Date().toISOString()
-      for (const record of records) {
-        const pgnData = this.wasm.unwrapAnalyzerOutput(JSON.parse(record))
-        pgnData.timestamp = timestamp
-        pgnData.providerId = this.options.providerId
-        this.push(pgnData)
-        this.options.app.emit(
-          this.options.analyzerOutEvent ?? 'N2KAnalyzerOut',
-          pgnData
-        )
-      }
-      const pending = this.decoder.takePendingTx()
-      if (pending.length > 0) {
-        socket.write(Buffer.from(pending))
-      }
-      for (const error of this.decoder.takeErrors()) {
-        this.debug(`[error] ${error}`)
-        this.options.app.emit('canboatjs:error', new Error(error))
+      // Everything here runs inside a socket event handler, where an
+      // uncaught throw takes the process down. Malformed framing from
+      // a gateway must degrade to a logged error, not a crash.
+      try {
+        const records = this.decoder.decodeBytes(buf)
+        const timestamp = new Date().toISOString()
+        for (const record of records) {
+          const pgnData = this.wasm.unwrapAnalyzerOutput(JSON.parse(record))
+          pgnData.timestamp = timestamp
+          pgnData.providerId = this.options.providerId
+          this.push(pgnData)
+          this.options.app.emit(
+            this.options.analyzerOutEvent ?? 'N2KAnalyzerOut',
+            pgnData
+          )
+        }
+        const pending = this.decoder.takePendingTx()
+        if (pending.length > 0) {
+          socket.write(Buffer.from(pending))
+        }
+        for (const error of this.decoder.takeErrors()) {
+          this.debug(`[error] ${error}`)
+          this.options.app.emit('canboatjs:error', new Error(error))
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err)
+        this.debug(`[decode] ${message}`)
+        this.options.app.emit('canboatjs:error', err)
       }
     })
 
@@ -209,7 +219,10 @@ export default class WasmN2kBytes extends Transform {
         if (this.options.providerId) {
           this.options.app.setProviderError?.(this.options.providerId, why)
         }
-        setTimeout(() => this.connect(), RECONNECT_DELAY)
+        this.reconnectTimer = setTimeout(() => {
+          this.reconnectTimer = null
+          this.connect()
+        }, RECONNECT_DELAY)
       }
     }
     socket.on('error', (err: Error) => retry(err.message))
@@ -228,6 +241,10 @@ export default class WasmN2kBytes extends Transform {
 
   end(): this {
     this.stopped = true
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
     // Detach from the shared app emitter: a stale instance would keep
     // encoding outbound PGNs and writing to a destroyed socket.
     this.options.app.removeListener('nmea2000JsonOut', this.txHandler)
