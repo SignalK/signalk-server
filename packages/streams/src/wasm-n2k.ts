@@ -36,6 +36,9 @@ interface WasmN2kOptions {
   analyzerOutEvent?: string
   txFormat?: 'ydwg-raw' | 'n2k-ascii' | 'plain'
   txEvent?: string
+  /** Decode against canboat's J1939 schema flavor (plain J1939 buses
+   * — engines, gensets) instead of NMEA 2000. */
+  j1939?: boolean
   createDebug?: CreateDebug
   [key: string]: unknown
 }
@@ -53,7 +56,7 @@ interface CanFrameChunk {
 }
 
 interface WasmCompat {
-  FromPgn: new () => {
+  FromPgn: new (options?: { j1939?: boolean }) => {
     on(event: string, cb: (...args: unknown[]) => void): void
     parseString(
       line: string
@@ -97,7 +100,9 @@ export default class WasmN2k extends Transform {
     const createDebug = options.createDebug ?? require('debug')
     this.debug = createDebug('signalk:streams:wasm-n2k')
 
-    this.fromPgn = new FromPgn()
+    this.fromPgn = new FromPgn(
+      options.j1939 === true ? { j1939: true } : undefined
+    )
     this.fromPgn.on('error', (line: unknown, err: unknown) => {
       const message = err instanceof Error ? err.message : String(err)
       this.debug(`[error] ${String(line)} ${message}`)

@@ -1729,6 +1729,9 @@ function NMEA2000({
             <option value="canbus-wasm" disabled={!hasWasm}>
               Canbus (canboat wasm)
             </option>
+            <option value="j1939-wasm" disabled={!hasWasm}>
+              J1939 Canbus listen-only (canboat wasm)
+            </option>
             <option value="n2k-ip-gateway-canboatjs">
               N2K IP Gateway (canboatjs)
             </option>
@@ -1812,7 +1815,8 @@ function NMEA2000({
       )}
       {(value.options.type === 'canbus' ||
         value.options.type === 'canbus-canboatjs' ||
-        value.options.type === 'canbus-wasm') && (
+        value.options.type === 'canbus-wasm' ||
+        value.options.type === 'j1939-wasm') && (
         <div>
           <TextInput
             title="Interface"
@@ -1821,20 +1825,24 @@ function NMEA2000({
             value={value.options.interface}
             onChange={onChange}
           />
-          <TextInput
-            title="UniqueNumber"
-            name="options.uniqueNumber"
-            helpText="Example: any number from 1 to 2097151, will be equal to SerialNumber of a SignalK NMEA2000 device. Leave empty for random (default). Set a fixed value if you have problem with source identification on some B&G MFD's after SignalK restart."
-            value={value.options.uniqueNumber}
-            onChange={onChange}
-          />
-          <TextInput
-            title="ManufacturerCode"
-            name="options.mfgCode"
-            helpText="Example: 999 - Unknown (default), 0 - Internal, or any other mabufacturer code to emulate. Leave empty for default 999.  Set to 0 if you have problem with source identification on some B&G MFD's after SignalK restart."
-            value={value.options.mfgCode}
-            onChange={onChange}
-          />
+          {value.options.type !== 'j1939-wasm' && (
+            <>
+              <TextInput
+                title="UniqueNumber"
+                name="options.uniqueNumber"
+                helpText="Example: any number from 1 to 2097151, will be equal to SerialNumber of a SignalK NMEA2000 device. Leave empty for random (default). Set a fixed value if you have problem with source identification on some B&G MFD's after SignalK restart."
+                value={value.options.uniqueNumber}
+                onChange={onChange}
+              />
+              <TextInput
+                title="ManufacturerCode"
+                name="options.mfgCode"
+                helpText="Example: 999 - Unknown (default), 0 - Internal, or any other mabufacturer code to emulate. Leave empty for default 999.  Set to 0 if you have problem with source identification on some B&G MFD's after SignalK restart."
+                value={value.options.mfgCode}
+                onChange={onChange}
+              />
+            </>
+          )}
         </div>
       )}
       {(value.options.type === 'ngt-1-canboatjs' ||

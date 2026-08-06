@@ -204,7 +204,8 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     const result: PipeElement[] = [
       new (WasmN2kCtor as new (options: object) => PipeElement)({
         ...options.subOptions,
-        ...(txBySubtype[options.subOptions.type ?? ''] ?? {})
+        ...(txBySubtype[options.subOptions.type ?? ''] ?? {}),
+        ...(options.subOptions.type === 'j1939-wasm' ? { j1939: true } : {})
       })
     ]
     if (options.type === 'FileStream') {
@@ -358,6 +359,15 @@ function nmea2000input(
         canDevice: subOptions.interface
       })
     ]
+  } else if (subOptions.type === 'j1939-wasm') {
+    // Plain J1939 bus (engines, gensets): listen-only — the same
+    // canSocket AF_CAN shim, but no candevice, no address claim, no
+    // TX. The wasm element downstream decodes with the J1939 schema.
+    const J1939Can = require('./j1939-can') as {
+      default: new (options: object) => PipeElement
+    }
+    const Ctor = J1939Can.default ?? J1939Can
+    return [new (Ctor as new (options: object) => PipeElement)(subOptions)]
   } else if (subOptions.type === 'canbus-canboatjs') {
     const Canbus = require('./canbus') as {
       default: new (options: object) => PipeElement
@@ -694,7 +704,8 @@ export default class Simple extends Transform {
       } else if (
         opts.subOptions.type === 'ydwg02-wasm' ||
         opts.subOptions.type === 'w2k-1-n2k-ascii-wasm' ||
-        opts.subOptions.type === 'canbus-wasm'
+        opts.subOptions.type === 'canbus-wasm' ||
+        opts.subOptions.type === 'j1939-wasm'
       ) {
         mappingType = 'NMEA2000WASM'
       } else if (
