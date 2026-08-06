@@ -87,8 +87,34 @@ read the reason first:
 | `scss/comment-no-empty`  | off    | We use Bootstrap's own banner-comment convention for section headers (see below), which uses bare `//` lines that this rule flags as "empty."                                       |
 
 Everything else — `color-no-hex`, `color-named`, `function-disallowed-list`,
+`declaration-property-value-disallowed-list`,
 `declaration-property-value-no-unknown`, etc. — is enforcing something real.
 If a rule is firing and you're not sure why, ask before disabling it.
+
+**Two rules split the job of banning color functions:**
+
+- `function-disallowed-list` bans `lab`/`lch`/`oklab`/`oklch`/`color`/`gray`
+  outright — nothing in this codebase combines those with a `var()`-wrapped
+  token, so a flat ban is simplest. If that changes (e.g. we adopt OKLCH
+  tokens), move the relevant function to the rule below instead of just
+  re-allowing it here.
+- `declaration-property-value-disallowed-list` bans **literal** values
+  inside `rgb()`/`rgba()`/`hsl()`/`hsla()`/`hwb()` (e.g.
+  `rgba(220, 53, 69, 0.5)`) while allowing `var()`-wrapped tokens combined
+  with an alpha value (e.g. `rgb(var(--bs-primary-rgb), 0.1)`) — this is
+  Bootstrap's own documented pattern for applying opacity to a token color,
+  and `-rgb` variables like `--bs-primary-rgb` are comma-separated triplets,
+  so **always use the legacy comma syntax** with them:
+  `rgb(var(--bs-primary-rgb), 0.1)`, never
+  `rgb(var(--bs-primary-rgb) / 10%)`. Mixing comma-separated channels with
+  a slash-separated alpha is invalid CSS — the browser drops the
+  declaration entirely rather than rendering a translucent color.
+
+**Blind spot:** Stylelint only checks `.css`/`.scss` files — it has no
+visibility into color functions inside inline style strings in `.tsx`
+files (e.g. `style={{ boxShadow: '0 0 0 .25rem rgba(var(--bs-primary-rgb), 0.25)' }}`).
+Apply the same var()-token rule there by hand; nothing will flag it for you
+if you don't.
 
 **Known gap:** color rules only catch raw colors at _usage_ sites (`color:`,
 `background-color:`, …), not inside custom-property _definitions_
