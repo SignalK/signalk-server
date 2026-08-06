@@ -198,6 +198,7 @@ const Apps: React.FC = () => {
         allApps[app.name] = {
           ...allApps[app.name],
           installing: true,
+          pendingVersion: app.pendingVersion,
           isInstalling: app.isInstalling,
           isWaiting: app.isWaiting,
           isRemoving: app.isRemoving,

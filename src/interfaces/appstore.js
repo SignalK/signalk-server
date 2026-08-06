@@ -122,6 +122,14 @@ module.exports = function (app) {
             name = req.params.org + '/' + name
           }
 
+          // npm rejects a bad version too, but only after the install has been
+          // recorded as in-flight, which leaks the bogus value to the UI.
+          if (!semver.valid(version)) {
+            res.status(400)
+            res.json({ error: 'version must be valid semver' })
+            return
+          }
+
           findPluginsAndWebapps()
             .then(([plugins, webapps]) => {
               if (
@@ -1295,10 +1303,23 @@ module.exports = function (app) {
         pluginInfo.installedVersion = installedModule.version
       }
 
-      if (moduleInstallQueue.find((p) => p.name === name)) {
+      const queued = moduleInstallQueue.find((p) => p.name === name)
+      if (queued) {
         pluginInfo.isWaiting = true
+        if (!queued.isRemove && typeof queued.version === 'string') {
+          pluginInfo.pendingVersion = queued.version
+        }
         addIfNotDuplicate(result.installing, pluginInfo)
       } else if (modulesInstalledSinceStartup[name]) {
+        // installedVersion comes from the running plugin registration, which
+        // keeps reporting the version loaded at startup until the server is
+        // restarted. Carry the version npm actually put on disk separately so
+        // the UI can show what the user just installed. Removals carry a null
+        // version, so only installs get the field.
+        const operation = modulesInstalledSinceStartup[name]
+        if (!operation.isRemove && typeof operation.version === 'string') {
+          pluginInfo.pendingVersion = operation.version
+        }
         if (moduleInstalling && moduleInstalling.name === name) {
           if (moduleInstalling.isRemove) {
             pluginInfo.isRemoving = true

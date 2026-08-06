@@ -40,6 +40,13 @@ export interface AppInfo {
   categories?: string[]
   recent?: boolean
   installedVersion?: string
+  // Target version of an install or update: set while it is queued or
+  // running, and kept afterwards — including on failure. Only once the
+  // operation has settled successfully does it describe what npm actually
+  // put on disk, which is when it is worth showing: installedVersion keeps
+  // reporting the version the running plugin was loaded from until restart.
+  // Never set for removals.
+  pendingVersion?: string
   // Synthetic fields layered on by Apps.tsx when projecting the
   // AppStore state into a single per-row record. Optional because they
   // exist only after that projection runs.
@@ -51,6 +58,7 @@ export interface AppInfo {
 
 export interface InstallingApp {
   name: string
+  pendingVersion?: string
   isWaiting?: boolean
   isInstalling?: boolean
   isRemoving?: boolean
