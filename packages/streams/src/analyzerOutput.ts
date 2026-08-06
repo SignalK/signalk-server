@@ -46,15 +46,38 @@ const isNameValue = (v: unknown): v is NameValue =>
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
-function fieldTypesForId(id: string): Record<string, string> {
-  const types: Record<string, string> = {}
-  const definition = getPGNWithId(id)
-  if (definition) {
-    for (const field of definition.Fields) {
-      types[field.Id] = field.FieldType as string
+interface SchemaInfo {
+  types: Record<string, string>
+  /** Fields the analyzer omits but canboatjs always emits, with the
+   * default to restore: 0 for SPARE/RESERVED, [] for BITLOOKUP. */
+  defaults: Array<[string, 0 | []]>
+}
+
+// One schema lookup per PGN id for the lifetime of the process — this
+// runs per message on the hot path, and the schema cannot change.
+const schemaCache = new Map<string, SchemaInfo>()
+
+function schemaForId(id: string): SchemaInfo {
+  let info = schemaCache.get(id)
+  if (info === undefined) {
+    const types: Record<string, string> = {}
+    const defaults: Array<[string, 0 | []]> = []
+    const definition = getPGNWithId(id)
+    if (definition) {
+      for (const field of definition.Fields) {
+        const fieldType = field.FieldType as string
+        types[field.Id] = fieldType
+        if (isSpareOrReserved(fieldType)) {
+          defaults.push([field.Id, 0])
+        } else if (fieldType === 'BITLOOKUP') {
+          defaults.push([field.Id, []])
+        }
+      }
     }
+    info = { types, defaults }
+    schemaCache.set(id, info)
   }
-  return types
+  return info
 }
 
 const isSpareOrReserved = (fieldType: string | undefined) =>
@@ -77,7 +100,11 @@ function normalizeValue(
     }
     return value.map((entry) =>
       isNameValue(entry)
-        ? (entry.name ?? entry.value)
+        ? // Same rule as the scalar branch: indirect lookups stay
+          // numeric — a name string would change re-encoded output.
+          fieldType === 'INDIRECT_LOOKUP'
+          ? entry.value
+          : (entry.name ?? entry.value)
         : isPlainObject(entry)
           ? normalizeFields(entry, types)
           : entry
@@ -123,7 +150,7 @@ export function unwrapAnalyzerOutput(
   if (!isPlainObject(inner) || typeof inner.pgn !== 'number') {
     return parsed
   }
-  const types = fieldTypesForId(id)
+  const { types, defaults } = schemaForId(id)
   const result: Record<string, unknown> = { ...inner }
   // A message whose fields are all empty (e.g. a Configuration Information
   // with blank strings) arrives with no fields object at all — the analyzer
@@ -134,15 +161,15 @@ export function unwrapAnalyzerOutput(
   const fields = isPlainObject(inner.fields)
     ? normalizeFields(inner.fields, types)
     : {}
-  for (const [fieldId, fieldType] of Object.entries(types)) {
-    if (isSpareOrReserved(fieldType) && !(fieldId in fields)) {
-      fields[fieldId] = 0
-    }
-    // The analyzer also omits bit lookups with no set bits; canboatjs
-    // emits [], from which n2k-signalk derives "normal" notification
-    // states — restore the empty array so those states are not lost.
-    if (fieldType === 'BITLOOKUP' && !(fieldId in fields)) {
-      fields[fieldId] = []
+  // The analyzer omits SPARE/RESERVED fields whose bits are all zero and
+  // bit lookups with no set bits; canboatjs emits 0 and [] respectively —
+  // n2k-signalk derives "normal" notification states from the empty
+  // array, and a missing spare corrupts the re-encoded canName.
+  for (const [fieldId, empty] of defaults) {
+    if (!(fieldId in fields)) {
+      // Fresh array per message — the cached entry must never become a
+      // shared mutable instance.
+      fields[fieldId] = empty === 0 ? 0 : []
     }
   }
   result.fields = fields

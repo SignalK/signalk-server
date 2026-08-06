@@ -93,6 +93,50 @@ describe('unwrapAnalyzerOutput', () => {
     expect(flat.fields).to.deep.equal({})
   })
 
+  it('restores omitted SPARE and RESERVED fields as 0', () => {
+    // The analyzer skips all-zero SPARE/RESERVED fields; canboatjs emits
+    // them as 0, and toPgn fills absent fields with all-ones — for 60928
+    // the spare bit sits inside the NAME, so the restoration is what
+    // keeps the re-encoded canName identical to the canboatjs path.
+    const claim = unwrapAnalyzerOutput({
+      isoAddressClaim: {
+        pgn: 60928,
+        src: 3,
+        fields: { uniqueNumber: 1631699 }
+      }
+    })
+    expect((claim.fields as Record<string, unknown>).spare).to.equal(0)
+
+    const engine = unwrapAnalyzerOutput({
+      engineParametersDynamic: {
+        pgn: 127489,
+        src: 16,
+        fields: {
+          instance: { value: 0, name: 'Single Engine or Dual Engine Port' }
+        }
+      }
+    })
+    expect((engine.fields as Record<string, unknown>).reserved).to.equal(0)
+  })
+
+  it('restores omitted BITLOOKUP fields as an empty array', () => {
+    // Bit lookups with no set bits are omitted by the analyzer; canboatjs
+    // emits [], from which n2k-signalk derives "normal" notification
+    // states.
+    const engine = unwrapAnalyzerOutput({
+      engineParametersDynamic: {
+        pgn: 127489,
+        src: 16,
+        fields: {
+          instance: { value: 0, name: 'Single Engine or Dual Engine Port' }
+        }
+      }
+    })
+    const fields = engine.fields as Record<string, unknown>
+    expect(fields.discreteStatus1).to.deep.equal([])
+    expect(fields.discreteStatus2).to.deep.equal([])
+  })
+
   it('passes already-flat output through unchanged', () => {
     const flat = {
       timestamp: '2017-04-15T14:57:58.470Z',
@@ -100,7 +144,10 @@ describe('unwrapAnalyzerOutput', () => {
       src: 3,
       fields: { uniqueNumber: 1631699 }
     }
-    expect(unwrapAnalyzerOutput(flat)).to.deep.equal(flat)
+    // Snapshot before the call: comparing the return value against the
+    // same reference could never fail, even for an in-place mutation.
+    const expected = structuredClone(flat)
+    expect(unwrapAnalyzerOutput(flat)).to.deep.equal(expected)
   })
 
   it('derives the same canName as the canboatjs decode path', () => {
