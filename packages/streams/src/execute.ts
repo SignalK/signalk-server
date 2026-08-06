@@ -151,6 +151,18 @@ export default class Execute extends Transform {
     this.lastStartupTime = Date.now()
     this.options.app.setProviderStatus(this.options.providerId, 'Started')
 
+    // A write that lands as the child is exiting fails asynchronously
+    // (EPIPE), and an unhandled 'error' on a stream terminates the
+    // process — the try/catch around the write sites only covers
+    // synchronous throws. Report and carry on: the close handler below
+    // already owns restarting.
+    this.childProcess.stdin?.on('error', (err: Error) => {
+      this.options.app.setProviderError(
+        this.options.providerId,
+        `write to |${command}| failed: ${err.message}`
+      )
+    })
+
     this.childProcess.stderr?.on('data', (data: Buffer) => {
       const msg = data.toString()
       this.options.app.setProviderError(this.options.providerId, msg)

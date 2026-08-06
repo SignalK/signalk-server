@@ -146,4 +146,41 @@ describe('Execute', () => {
       done()
     }, 500)
   })
+
+  it('survives writes to a child whose stdin is closed', function (done) {
+    this.timeout(5000)
+    // A write to a closed pipe fails asynchronously with EPIPE, which
+    // arrives as an 'error' event rather than a throw at the write
+    // site — unhandled, that terminates the process. (Verified: this
+    // condition does fire the event; a child that has merely exited
+    // does not reliably do so.)
+    const app = createMockApp()
+    const exec = new Execute({
+      // Closes stdin, then lingers so the writes land on a dead pipe.
+      command: 'exec 0<&-; sleep 0.5',
+      app,
+      providerId: 'test-exec',
+      toChildProcess: 'testInput',
+      restartOnClose: false,
+      createDebug: createDebugStub()
+    })
+
+    const writable = createCollectingWritable()
+    exec.pipe(writable)
+
+    setTimeout(() => {
+      for (let i = 0; i < 200; i++) {
+        app.emit('testInput', 'x'.repeat(9000))
+      }
+    }, 100)
+
+    setTimeout(() => {
+      const reported = app.providerErrors.some((e) => e.msg.includes('failed:'))
+      exec.end()
+      // The point is that we got here at all: an unhandled stdin error
+      // would have taken the process down before this ran.
+      expect(reported).to.equal(true)
+      done()
+    }, 900)
+  })
 })
