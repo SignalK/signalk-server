@@ -1750,7 +1750,13 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         value.options.type === 'ikonvert') && (
         <div>
           <DeviceInput value={value.options} onChange={onChange} />
-          <BaudRateInputCanboat value={value.options} onChange={onChange} />
+          {/* The canboatjs iKonvert and YDWG-02 USB elements pin their
+              protocol's baud rate, so offering the control there would
+              save a value the server ignores. */}
+          {value.options.type !== 'ikonvert-canboatjs' &&
+            value.options.type !== 'ydwg02-usb-canboatjs' && (
+              <BaudRateInputCanboat value={value.options} onChange={onChange} />
+            )}
         </div>
       )}
       {(value.options.type === 'ydwg02-canboatjs' ||
@@ -1768,7 +1774,11 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       {(value.options.type === 'ydwg02-udp-canboatjs' ||
         value.options.type === 'ydwg02-udp') && (
         <div>
-          <HostInput value={value.options} onChange={onChange} />
+          {/* The native bridge listens on a UDP port and never dials a
+              host, so a Host value there would be saved and ignored. */}
+          {value.options.type !== 'ydwg02-udp' && (
+            <HostInput value={value.options} onChange={onChange} />
+          )}
           <PortInput value={value.options} onChange={onChange} />
           <div className="text-muted small mt-1 mb-2">
             UDP is receive-only — N2K device discovery and PGN 126208 instance
@@ -1903,7 +1913,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           </Form.Group>
           <div className="text-muted small mt-1 mb-2">
             Maretron IPG 100 Ethernet gateway. Default TCP port 6543. Uses
-            Maretron&apos;s 0xA5-framed binary protocol (handled by canboatjs).
+            Maretron&apos;s 0xA5-framed binary protocol. The password is sent in
+            the clear during the gateway&apos;s own connection handshake — the
+            protocol offers no encrypted alternative.
           </div>
         </div>
       )}

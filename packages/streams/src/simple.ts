@@ -423,7 +423,7 @@ function nmea2000input(
       return n
     }
     let command: string
-    let toChildProcess: string | undefined
+    let toChildProcess: string | false | undefined
     if (subOptions.type === 'ngt-1') {
       command = `actisense-serial -s ${safeNum(subOptions.baudrate ?? 115200, 'baud rate')} ${safeArg(subOptions.device, 'device')}`
       toChildProcess = 'nmea2000out'
@@ -433,12 +433,15 @@ function nmea2000input(
       // accepts outbound PGNs on stdin, which the candump pipeline cannot.
       // -u/-m mirror the uniqueNumber/mfgCode settings the canboatjs
       // SocketCAN option honors.
+      // Absence, not falsiness: 0 is a valid manufacturer code (the
+      // form offers it as "Internal") and a valid unique number.
+      const hasValue = (v: unknown) => v !== undefined && v !== null && v !== ''
       command =
         `socketcan-serial` +
-        (subOptions.uniqueNumber
+        (hasValue(subOptions.uniqueNumber)
           ? ` -u ${safeNum(subOptions.uniqueNumber, 'unique number')}`
           : '') +
-        (subOptions.mfgCode
+        (hasValue(subOptions.mfgCode)
           ? ` -m ${safeNum(subOptions.mfgCode, 'manufacturer code')}`
           : '') +
         ` ${safeArg(subOptions.interface, 'interface')}`
@@ -457,9 +460,11 @@ function nmea2000input(
       command = `canboat interface --kind ydwg tcp://${safeArg(subOptions.host, 'host')}:${safeNum(subOptions.port ?? 1457, 'port')}`
       toChildProcess = 'nmea2000out'
     } else if (subOptions.type === 'ydwg02-udp') {
-      // The YDWG-02's UDP mode is receive-only — no stdin wiring, so
-      // the admin UI never reports transmit activity for it.
+      // The YDWG-02's UDP mode is receive-only: `false` disables the
+      // child's stdin wiring outright, so no plugin's outbound PGN can
+      // reach a gateway that cannot transmit.
       command = `canboat interface --kind ydwg udp://${safeNum(subOptions.port ?? 1457, 'port')}`
+      toChildProcess = false
     } else if (subOptions.type === 'navlink2') {
       command = `canboat interface --kind ikonvert tcp://${safeArg(subOptions.host, 'host')}:${safeNum(subOptions.port ?? 6001, 'port')}`
       toChildProcess = 'nmea2000out'
