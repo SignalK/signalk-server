@@ -299,6 +299,35 @@ const openapi = require('./openApi.json')
 plugin.getOpenApi = () => openapi
 ```
 
+### Serving WebSockets
+
+Express routers do not see HTTP `upgrade` requests &mdash; those are emitted on the underlying HTTP server &mdash; so WebSocket endpoints cannot be registered with `registerWithRouter`. Instead, call `app.registerWebSocket(path)` in `plugin.start()` to register a WebSocket endpoint at `ws://{skserver}:3000/plugins/{pluginId}{path}`. The path is matched exactly (query string excluded) and the returned object is a subset of [ws](https://www.npmjs.com/package/ws)'s `WebSocketServer`. The endpoint is removed automatically when the plugin stops.
+
+_Example:_
+
+```javascript
+plugin.start = () => {
+  const wss = app.registerWebSocket('/stream')
+  wss.on('connection', (ws, request) => {
+    ws.on('message', (msg) => {
+      ws.send('echo: ' + msg.toString())
+    })
+  })
+  wss.on('error', (err) => app.error(err))
+}
+```
+
+A plugin that needs the raw HTTP `upgrade` &mdash; typically to forward it to another server &mdash; attaches an `upgrade` listener and handles the upgrade entirely itself. The server then does not complete the handshake and `connection` is never emitted:
+
+```javascript
+const wss = app.registerWebSocket('/ws')
+wss.on('upgrade', (request, socket, head) => {
+  proxy.upgrade(request, socket, head)
+})
+```
+
+Authentication is the plugin's responsibility. The upgrade request carries the same cookies and headers as any other request to the server, so a plugin can apply its own checks before accepting a connection.
+
 ---
 
 ## Add an OpenAPI Definition

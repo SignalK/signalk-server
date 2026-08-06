@@ -15,6 +15,47 @@ import { CourseApi } from './course'
 import { HistoryProviderRegistry, WithHistoryApi } from './history'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
+import type { WebSocket } from 'ws'
+import type { IncomingMessage } from 'http'
+import type { Duplex } from 'stream'
+
+/**
+ * A WebSocket endpoint under the plugin's route, returned by
+ * {@link ServerAPI.registerWebSocket}. A subset of
+ * [ws](https://github.com/websockets/ws)'s `WebSocketServer`.
+ *
+ * @category Server API
+ */
+export interface PluginWebSocketServer {
+  /**
+   * Emitted with each WebSocket connection after the server has completed
+   * the handshake. Not emitted when an `upgrade` listener is attached.
+   */
+  on(
+    event: 'connection',
+    listener: (ws: WebSocket, request: IncomingMessage) => void
+  ): this
+  /**
+   * Escape hatch for plugins that need the raw HTTP `upgrade` — typically
+   * to hand it to a reverse proxy. When at least one `upgrade` listener is
+   * attached the plugin handles the upgrade entirely itself: the server
+   * does not complete the handshake and `connection` is never emitted.
+   * The arguments match Node.js's `http.Server` `upgrade` event.
+   */
+  on(
+    event: 'upgrade',
+    listener: (request: IncomingMessage, socket: Duplex, head: Buffer) => void
+  ): this
+  on(event: 'error', listener: (error: Error) => void): this
+  /** Connections completed by the server (empty when using `upgrade`). */
+  readonly clients: ReadonlySet<WebSocket>
+  /**
+   * Stops accepting new connections and removes the endpoint. Called
+   * automatically when the plugin stops, which also terminates any
+   * connected clients.
+   */
+  close(cb?: (err?: Error) => void): void
+}
 
 /**
  * SignalK server provides an interface to allow {@link Plugin | Plugins } to:
@@ -455,6 +496,45 @@ export interface ServerAPI
       onDelta: (delta: object) => void
     ) => void
   }): void
+
+  /**
+   * Registers a WebSocket endpoint at `path` under the plugin's route, i.e.
+   * at `/plugins/<pluginId><path>`. Express routers never see HTTP `upgrade`
+   * requests — those are emitted on the underlying HTTP server — so
+   * WebSocket endpoints are registered with this method instead of
+   * {@link Plugin.registerWithRouter}.
+   *
+   * The path is matched exactly (query string excluded). Call in
+   * `plugin.start()`; the endpoint is removed automatically when the plugin
+   * stops.
+   *
+   * By default the server completes the WebSocket handshake and emits
+   * `connection` with a ready-to-use socket:
+   *
+   * ```typescript
+   * plugin.start = () => {
+   *   const wss = app.registerWebSocket('/stream')
+   *   wss.on('connection', (ws, request) => {
+   *     ws.on('message', (data) => ws.send(`got ${data}`))
+   *   })
+   * }
+   * ```
+   *
+   * A plugin that needs the raw upgrade — e.g. to forward it to another
+   * server — attaches an `upgrade` listener and handles everything itself:
+   *
+   * ```typescript
+   * const wss = app.registerWebSocket('/ws')
+   * wss.on('upgrade', (request, socket, head) =>
+   *   proxy.upgrade(request, socket, head)
+   * )
+   * ```
+   *
+   * Authentication and authorization are the plugin's responsibility.
+   *
+   * @category Server API
+   */
+  registerWebSocket(path: string): PluginWebSocketServer
 
   /**
    * Returns Ports object which contains information about the serial ports available on the machine.
