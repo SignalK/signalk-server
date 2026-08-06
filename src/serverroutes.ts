@@ -1772,14 +1772,18 @@ module.exports = function (
 
   // Whether @canboat/wasm (the in-process wasm decode/encode brain) is
   // installed — gates the wasm connection subtypes in the admin UI the
-  // same way hasAnalyzer gates the native ones.
-  app.get(`${SERVERROUTESPREFIX}/hasWasm`, (req: Request, res: Response) => {
+  // same way hasAnalyzer gates the native ones. Resolved once: a newly
+  // installed package needs a server restart to load anyway.
+  const hasWasm = (() => {
     try {
       require.resolve('@canboat/wasm')
-      res.json(true)
+      return true
     } catch {
-      res.json(false)
+      return false
     }
+  })()
+  app.get(`${SERVERROUTESPREFIX}/hasWasm`, (req: Request, res: Response) => {
+    res.json(hasWasm)
   })
 
   // /priorities admin middleware: registered up front so every method

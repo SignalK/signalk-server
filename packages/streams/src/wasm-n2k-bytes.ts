@@ -20,6 +20,8 @@ interface WasmN2kBytesOptions {
   app: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    removeListener(event: string, cb: (...args: any[]) => void): void
     emit(event: string, ...args: unknown[]): void
     setProviderStatus?(id: string, msg: string): void
     setProviderError?(id: string, msg: string): void
@@ -82,6 +84,7 @@ export default class WasmN2kBytes extends Transform {
   private socket: ByteTransport | null = null
   private keepaliveTimer: NodeJS.Timeout | null = null
   private stopped = false
+  private readonly txHandler: (pgn: unknown) => void
   private readonly debug: DebugLogger
 
   constructor(options: WasmN2kBytesOptions) {
@@ -93,7 +96,7 @@ export default class WasmN2kBytes extends Transform {
 
     this.connect()
 
-    options.app.on('nmea2000JsonOut', (pgn: unknown) => {
+    this.txHandler = (pgn: unknown) => {
       try {
         const bytes = this.decoder.encodeFrame(JSON.stringify(pgn), true)
         this.socket?.write(Buffer.from(bytes))
@@ -102,7 +105,8 @@ export default class WasmN2kBytes extends Transform {
         console.error(`wasm-n2k-bytes tx: ${message}`)
         options.app.emit('canboatjs:error', err)
       }
-    })
+    }
+    options.app.on('nmea2000JsonOut', this.txHandler)
     options.app.emit('nmea2000OutAvailable')
   }
 
@@ -151,11 +155,19 @@ export default class WasmN2kBytes extends Transform {
       serial.on('open', () => onOpen(serial))
       socket = serial
     } else {
+      const { host, port } = this.options
+      if (!host || !port) {
+        // Retrying cannot fix missing configuration — report and stop.
+        this.stopped = true
+        this.options.app.setProviderError?.(
+          this.options.providerId ?? '',
+          'host and port are required for a TCP wasm N2K connection'
+        )
+        return
+      }
       const tcp = new Socket()
-      this.status(`Connecting to ${this.options.host}:${this.options.port}`)
-      tcp.connect(this.options.port ?? 0, this.options.host ?? '', () =>
-        onOpen(tcp)
-      )
+      this.status(`Connecting to ${host}:${port}`)
+      tcp.connect(port, host, () => onOpen(tcp))
       socket = tcp
     }
     this.socket = socket
@@ -216,10 +228,15 @@ export default class WasmN2kBytes extends Transform {
 
   end(): this {
     this.stopped = true
+    // Detach from the shared app emitter: a stale instance would keep
+    // encoding outbound PGNs and writing to a destroyed socket.
+    this.options.app.removeListener('nmea2000JsonOut', this.txHandler)
     if (this.keepaliveTimer) {
       clearInterval(this.keepaliveTimer)
+      this.keepaliveTimer = null
     }
     this.socket?.destroy()
+    this.socket = null
     super.end()
     return this
   }

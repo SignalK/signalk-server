@@ -345,10 +345,14 @@ function nmea2000input(
           subOptions.type === 'maretron-ipg-wasm' ? 'maretron-ipg' : 'ngt1'
       })
     ]
-  } else if (subOptions.type === 'canbus-wasm') {
-    // canboatjs's canbus element stays the transport: the small
+  } else if (
+    subOptions.type === 'canbus-wasm' ||
+    subOptions.type === 'canbus-canboatjs'
+  ) {
+    // canboatjs's canbus element is the transport for both: the small
     // canSocket AF_CAN shim moves frames and candevice does the
-    // address claiming; the wasm element downstream does the decoding.
+    // address claiming. For canbus-wasm the wasm element downstream
+    // does the decoding instead of canboatjs (mappingType routing).
     const Canbus = require('./canbus') as {
       default: new (options: object) => PipeElement
     }
@@ -368,17 +372,6 @@ function nmea2000input(
     }
     const Ctor = J1939Can.default ?? J1939Can
     return [new (Ctor as new (options: object) => PipeElement)(subOptions)]
-  } else if (subOptions.type === 'canbus-canboatjs') {
-    const Canbus = require('./canbus') as {
-      default: new (options: object) => PipeElement
-    }
-    const Ctor = Canbus.default ?? Canbus
-    return [
-      new (Ctor as new (options: object) => PipeElement)({
-        ...subOptions,
-        canDevice: subOptions.interface
-      })
-    ]
   } else if (subOptions.type === 'ikonvert-canboatjs') {
     const Serialport = require('./serialport') as {
       default: new (options: object) => PipeElement

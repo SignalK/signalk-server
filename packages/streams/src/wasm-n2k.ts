@@ -30,6 +30,8 @@ interface WasmN2kOptions {
   app: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    removeListener(event: string, cb: (...args: any[]) => void): void
     emit(event: string, ...args: unknown[]): void
   }
   providerId?: string
@@ -92,6 +94,7 @@ export default class WasmN2k extends Transform {
   private readonly analyzerOutEvent: string
   private readonly providerId: string | undefined
   private readonly debug: DebugLogger
+  private txHandler: ((pgn: unknown) => void) | null = null
 
   constructor(options: WasmN2kOptions) {
     super({ objectMode: true })
@@ -116,7 +119,7 @@ export default class WasmN2k extends Transform {
     if (options.txFormat && options.txEvent) {
       const tx = new TxEncoder(true)
       const { txFormat, txEvent } = options
-      options.app.on('nmea2000JsonOut', (pgn: unknown) => {
+      this.txHandler = (pgn: unknown) => {
         try {
           for (const line of tx.encode(JSON.stringify(pgn), txFormat)) {
             options.app.emit(txEvent, line)
@@ -126,9 +129,22 @@ export default class WasmN2k extends Transform {
           console.error(`wasm-n2k tx: ${message}`)
           options.app.emit('canboatjs:error', err)
         }
-      })
+      }
+      options.app.on('nmea2000JsonOut', this.txHandler)
       options.app.emit('nmea2000OutAvailable')
     }
+  }
+
+  // The tx handler sits on the shared app emitter; a provider restart
+  // creates a fresh element, so the old one must detach or every
+  // restart adds a duplicate encoder writing to the gateway.
+  end(): this {
+    if (this.txHandler) {
+      this.app.removeListener('nmea2000JsonOut', this.txHandler)
+      this.txHandler = null
+    }
+    super.end()
+    return this
   }
 
   private parseLine(line: string, timestamp?: string): void {
@@ -155,9 +171,9 @@ export default class WasmN2k extends Transform {
       // AF_CAN shim): header already decomposed, payload raw. Render
       // it as a plain wire line; the wasm reassembler does the rest.
       const { prio, pgn, src, dst } = chunk.pgn
-      const hex = Array.from(chunk.data)
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join(',')
+      // Hot path (one call per CAN frame): native hex conversion, then
+      // one pass to insert the separators.
+      const hex = chunk.data.toString('hex').replace(/(..)(?=.)/g, '$1,')
       this.parseLine(
         `,${prio},${pgn},${src},${dst},${chunk.data.length},${hex}`
       )
