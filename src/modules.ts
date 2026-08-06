@@ -346,8 +346,14 @@ export function runNpm(
 
   debug(`${command}: ${packageString}`)
 
+  // npm 12 blocks dependency install scripts unless allowlisted. The server
+  // depends on @canboat/canboatjs, which builds its native SocketCAN addon from
+  // an install script; without this the CAN interface disappears after a global
+  // self-update. Older npm ignores the flag with a warning.
   const npmArgs = isTheServerModule(name, config)
-    ? [command, '-g']
+    ? command === 'install' || command === 'update'
+      ? [command, '-g', '--allow-scripts=@canboat/canboatjs']
+      : [command, '-g']
     : ['--save', '--ignore-scripts', command]
 
   if (packageString) {
