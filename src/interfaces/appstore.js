@@ -895,6 +895,9 @@ module.exports = function (app) {
     await Promise.all(
       Array.from({ length: ICON_PROBE_CONCURRENCY }, () => worker())
     )
+    // The cache coalesces writes on a timer; force the batch out now that
+    // the pass is done rather than leaving it to an unref'd timeout.
+    iconProbe.flush()
   }
 
   // For non-installed plugins whose npm-search entry lacks signalk.* (because

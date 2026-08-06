@@ -7,6 +7,10 @@ import {
   probeIconUrl
 } from '../../dist/appstore/icon-probe.js'
 
+// Mirrors PERSIST_DEBOUNCE_MS in src/appstore/icon-probe.ts. Kept as a
+// local constant rather than exporting an internal purely for tests.
+const PERSIST_DEBOUNCE_MS = 1_000
+
 const tmpDirs: string[] = []
 function tmpDir(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'appstore-iconprobe-'))
@@ -32,8 +36,58 @@ describe('appstore/icon-probe cache', () => {
     const a = createIconProbeCache(dir)
     const url = 'https://unpkg.com/@signalk/foo@1.0.0/public/icon.svg'
     a.set('@signalk/foo', '1.0.0', './icon.svg', url)
+    a.flush()
     const b = createIconProbeCache(dir)
     expect(b.get('@signalk/foo', '1.0.0', './icon.svg')).to.equal(url)
+  })
+
+  it('coalesces writes instead of serializing on every set()', () => {
+    const dir = tmpDir()
+    const cache = createIconProbeCache(dir)
+    const file = path.join(dir, 'iconUrls.json')
+    for (let i = 0; i < 50; i++) {
+      cache.set('pkg', '1.0.0', `./icon-${i}.svg`, `url-${i}`)
+    }
+    expect(fs.existsSync(file)).to.equal(false)
+    cache.flush()
+    const written = JSON.parse(fs.readFileSync(file, 'utf8'))
+    expect(Object.keys(written)).to.have.lengthOf(50)
+  })
+
+  // Every other persistence case forces the write with flush(), which
+  // bypasses the timer entirely — a broken debounce callback would still
+  // pass those. This one waits the interval out instead.
+  it('persists on the debounce timer without an explicit flush()', async function () {
+    this.timeout(PERSIST_DEBOUNCE_MS * 4)
+    const dir = tmpDir()
+    const cache = createIconProbeCache(dir)
+    const file = path.join(dir, 'iconUrls.json')
+    cache.set('pkg', '1.0.0', './icon.svg', 'url')
+    expect(fs.existsSync(file)).to.equal(false)
+    await new Promise((resolve) => setTimeout(resolve, PERSIST_DEBOUNCE_MS * 2))
+    expect(fs.existsSync(file)).to.equal(true)
+    const written = JSON.parse(fs.readFileSync(file, 'utf8'))
+    expect(Object.keys(written)).to.have.lengthOf(1)
+  })
+
+  it('flush() is a no-op when nothing is pending', () => {
+    const dir = tmpDir()
+    const cache = createIconProbeCache(dir)
+    cache.set('pkg', '1.0.0', './icon.svg', 'url')
+    cache.flush()
+    const first = fs.statSync(path.join(dir, 'iconUrls.json')).mtimeMs
+    cache.flush()
+    expect(fs.statSync(path.join(dir, 'iconUrls.json')).mtimeMs).to.equal(first)
+  })
+
+  it('invalidate() drops a pending write instead of resurrecting entries', () => {
+    const dir = tmpDir()
+    const cache = createIconProbeCache(dir)
+    cache.set('pkg', '1.0.0', './icon.svg', 'url')
+    cache.invalidate()
+    cache.flush()
+    expect(fs.existsSync(path.join(dir, 'iconUrls.json'))).to.equal(false)
+    expect(cache.get('pkg', '1.0.0', './icon.svg')).to.equal(undefined)
   })
 
   it('distinguishes null from undefined (null = probed, 404)', () => {
