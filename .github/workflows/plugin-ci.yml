@@ -85,6 +85,23 @@ jobs:
       - name: Checkout plugin
         uses: actions/checkout@v7
 
+      # The reusable workflow only checks out the plugin repo, so CI helper
+      # scripts it runs must be fetched from signalk-server itself. The job
+      # context (job.workflow_repository / job.workflow_sha) identifies the
+      # repo and exact commit of the workflow file defining this job — the
+      # reusable workflow's own origin, not the caller's — so the scripts
+      # always match this workflow version with no drift.
+      - name: Checkout CI scripts
+        if: runner.os == 'Linux'
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+          path: .signalk-ci
+          persist-credentials: false
+
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v6
         with:
@@ -295,6 +312,16 @@ jobs:
           console.log('Plugin package.json validation passed');
           VALIDATE
           node /tmp/validate-pkg.js
+
+      - name: Check shared core package ranges
+        id: core-ranges
+        # The registry answer is platform-independent, and spawning npm from
+        # node is fragile on Windows — Linux jobs only. Run the checked-out
+        # TypeScript helper with tsx (no build/tsconfig needed); pin the tsx
+        # version so CI doesn't pull whatever npm serves at runtime.
+        if: runner.os == 'Linux'
+        shell: bash
+        run: npx --yes tsx@4.23.1 "$GITHUB_WORKSPACE/.signalk-ci/.github/scripts/check-core-ranges.ts"
 
       - name: Install dependencies
         # Retry once on transient failure. npm install / npm ci occasionally
@@ -1439,7 +1466,8 @@ jobs:
         shell: bash
         run: |
           # Plugins should not leave stray files in the repo after install/build/test.
-          UNTRACKED=$(git ls-files --others --exclude-standard -- ':!node_modules' ':!.npm')
+          # .signalk-ci is this workflow's own scripts checkout, not plugin output.
+          UNTRACKED=$(git ls-files --others --exclude-standard -- ':!node_modules' ':!.npm' ':!.signalk-ci')
           if [ -n "$UNTRACKED" ]; then
             echo "::warning::Build/test left untracked files in the repository:"
             echo "$UNTRACKED" | while read -r f; do echo "  $f"; done
@@ -1454,6 +1482,7 @@ jobs:
         shell: bash
         env:
           VALIDATE_PKG: ${{ steps.validate-pkg.outcome }}
+          CORE_RANGES: ${{ steps.core-ranges.outcome }}
           VALIDATE_ENTRY: ${{ steps.validate-entry.outcome }}
           VALIDATE_SCHEMA: ${{ steps.validate-schema.outcome }}
           LIFECYCLE_CHECK: ${{ steps.lifecycle-check.outcome }}
@@ -1491,6 +1520,7 @@ jobs:
             echo "| Check | Result |"
             echo "|-------|--------|"
             echo "| package.json valid | $(icon "$VALIDATE_PKG") |"
+            echo "| Core package range check | $(icon "$CORE_RANGES") |"
             echo "| Entry point exports function | $(icon "$VALIDATE_ENTRY") |"
             echo "| plugin.schema() valid | $(icon "$VALIDATE_SCHEMA") |"
             echo "| start/stop/restart lifecycle | $(icon "$LIFECYCLE_CHECK") |"
