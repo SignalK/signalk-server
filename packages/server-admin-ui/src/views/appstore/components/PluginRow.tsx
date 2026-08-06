@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import Badge from 'react-bootstrap/Badge'
 import type { AppInfo } from '../../../store/types'
 import ActionCellRenderer from '../Grid/cell-renderers/ActionCellRenderer'
+import { hasPendingInstall } from '../projectAppInfo'
 import PluginIcon from './PluginIcon'
 import RecencyBadge from './RecencyBadge'
 import UpdateAvailableBadge from './UpdateAvailableBadge'
@@ -13,6 +14,9 @@ interface PluginRowProps {
 }
 
 const formatVersionLabel = (app: AppInfo): string => {
+  if (hasPendingInstall(app)) {
+    return `v${app.pendingVersion}`
+  }
   if (
     app.installedVersion &&
     app.newVersion &&

@@ -254,3 +254,35 @@ describe('Apps view/search state survives the detail round trip', () => {
     )
   })
 })
+
+describe('Apps projects the pending version onto installing rows', () => {
+  beforeEach(() => {
+    setAppStore(emptyStore)
+    act(() => {
+      useStore.getState().setAppstoreView('All')
+      useStore.getState().setAppstoreSearch('')
+      useStore.getState().setAppstoreCategory('All')
+    })
+  })
+
+  it('shows the just-installed version rather than the running one', () => {
+    setAppStore({
+      ...emptyStore,
+      available: [
+        { name: 'plugin-a', version: '2.0.0', installedVersion: '1.0.0' }
+      ],
+      installed: [
+        { name: 'plugin-a', version: '2.0.0', installedVersion: '1.0.0' }
+      ],
+      installing: [{ name: 'plugin-a', pendingVersion: '2.0.0' }]
+    })
+    render(
+      <MemoryRouter>
+        <Apps />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText('v2.0.0 (pending restart)')).toBeInTheDocument()
+    expect(screen.queryByText('Installed v1.0.0')).toBeNull()
+  })
+})
