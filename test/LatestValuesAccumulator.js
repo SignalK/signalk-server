@@ -326,5 +326,22 @@ describe('LatestValuesAccumulator', function () {
       expect(deltas[0].$backpressure.accumulated).to.equal(10)
       expect(deltas[0].$backpressure.duration).to.equal(2000)
     })
+
+    it('should propagate undefined timestamp when items have no timestamp', function () {
+      const accumulator = new Map()
+      accumulator.set('vessels.self:navigation.speedOverGround:gps', {
+        context: 'vessels.self',
+        path: 'navigation.speedOverGround',
+        value: 5.0,
+        $source: 'gps',
+        timestamp: undefined
+      })
+
+      const deltas = buildFlushDeltas(accumulator, 1000)
+
+      expect(deltas.length).to.equal(1)
+      expect(deltas[0].updates.length).to.equal(1)
+      expect(deltas[0].updates[0].timestamp).to.equal(undefined)
+    })
   })
 })
