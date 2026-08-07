@@ -38,7 +38,6 @@ import {
   useConfiguredPriorityPaths,
   usePreferredSourceByPath,
   useLivePreferredSources,
-  useSourcePrioritiesLoaded,
   useDiscoveredAddresses
 } from '../../store'
 
@@ -160,7 +159,6 @@ const DataBrowser: React.FC = () => {
   const configuredPriorityPaths = useConfiguredPriorityPaths()
   const preferredSourceByPath = usePreferredSourceByPath()
   const livePreferredSourcesRaw = useLivePreferredSources()
-  const sourcePrioritiesLoaded = useSourcePrioritiesLoaded()
   const discoveredAddresses = useDiscoveredAddresses()
 
   // Paths the user has flagged for fan-out (sentinel '*' override).
