@@ -103,9 +103,14 @@ export function getDeviceInfo(
  */
 export function buildSourceLabel(
   sourceRef: string,
-  sourcesData: SourcesData | null
+  sourcesData: SourcesData | null,
+  sourceNames?: Record<string, string> | null
 ): string {
-  const { primary, secondary } = buildSourceLabelParts(sourceRef, sourcesData)
+  const { primary, secondary } = buildSourceLabelParts(
+    sourceRef,
+    sourcesData,
+    sourceNames
+  )
   return secondary ? `${primary} (${secondary})` : primary
 }
 
@@ -117,8 +122,16 @@ export function buildSourceLabel(
  */
 export function buildSourceLabelParts(
   sourceRef: string,
-  sourcesData: SourcesData | null
+  sourcesData: SourcesData | null,
+  sourceNames?: Record<string, string> | null
 ): { primary: string; secondary: string | null } {
+  // Server-supplied names (WebSocket device descriptions, merged with any
+  // manual aliases) take precedence over bus-derived labels. This is the
+  // only path available to non-admin users, who cannot read the device
+  // registry directly.
+  const name = sourceNames?.[sourceRef]
+  if (name) return { primary: name, secondary: sourceRef }
+
   if (!sourcesData) return { primary: sourceRef, secondary: null }
 
   const n2k = getDeviceInfo(sourceRef, sourcesData)

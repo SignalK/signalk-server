@@ -155,6 +155,7 @@ const DataBrowser: React.FC = () => {
   const updateMeta = useStore((s) => s.updateMeta)
   const getPathData = useStore((s) => s.getPathData)
 
+  const sourceNames = useStore((s) => s.sourceNames)
   const unitPrefsLoaded = useUnitPrefsLoaded()
   const fetchUnitPreferences = useStore((s) => s.fetchUnitPreferences)
   const configuredPriorityPaths = useConfiguredPriorityPaths()
@@ -612,7 +613,7 @@ const DataBrowser: React.FC = () => {
       if (!src) return ''
       let label = sourceLabels.get(src)
       if (label === undefined) {
-        label = buildSourceLabel(src, rawSourcesData)
+        label = buildSourceLabel(src, rawSourcesData, sourceNames)
         sourceLabels.set(src, label)
       }
       return label
@@ -786,7 +787,8 @@ const DataBrowser: React.FC = () => {
     liveWinnerForCurrentContext,
     skSelf,
     collapsedSources,
-    rawSourcesData
+    rawSourcesData,
+    sourceNames
   ])
 
   // Keep the ref in sync with the current memoised path list so the
