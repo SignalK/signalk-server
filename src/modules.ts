@@ -399,9 +399,33 @@ const modulesByKeyword: Record<
 // paging through the registry on their own.
 const searchInFlight: Map<string, Promise<NpmModuleData[]>> = new Map()
 
+// Bumped by resetModuleCaches so a request that was already in flight
+// cannot commit its result into the caches the reset emptied.
+let cacheGeneration = 0
+
+// Both caches above are module scope with a 60s TTL, which is what a running
+// server wants. A test process runs many servers in sequence, so a suite that
+// stubs the npm registry still reads whatever an earlier suite cached —
+// stubbing replaces the transport, not the cached result. Reset between test
+// servers, the same way requestResponse.resetRequests() is.
+export function resetModuleCaches() {
+  // A search or dist-tag fetch started before this call still resolves
+  // afterwards — the appstore's background refresh is fire-and-forget and
+  // outlives the server that scheduled it — and would write its result
+  // into the caches this reset just emptied. Bump the generation so those
+  // late writes are discarded instead.
+  cacheGeneration++
+  for (const keyword of Object.keys(modulesByKeyword)) {
+    delete modulesByKeyword[keyword]
+  }
+  searchInFlight.clear()
+  distTagsCache = { time: 0, data: {} }
+}
+
 async function findModulesWithKeyword(
   keyword: string
 ): Promise<NpmModuleData[]> {
+  const generation = cacheGeneration
   if (
     modulesByKeyword[keyword] &&
     Date.now() - modulesByKeyword[keyword].time < 60 * 1000
@@ -439,14 +463,20 @@ async function findModulesWithKeyword(
     )
 
     const packages = [...result.values()]
-    modulesByKeyword[keyword] = { time: Date.now(), packages }
+    if (generation === cacheGeneration) {
+      modulesByKeyword[keyword] = { time: Date.now(), packages }
+    }
     return packages
   })()
   searchInFlight.set(keyword, search)
   try {
     return await search
   } finally {
-    searchInFlight.delete(keyword)
+    // Only drop our own entry: a reset may have cleared the map and a
+    // newer search may already have registered under this keyword.
+    if (searchInFlight.get(keyword) === search) {
+      searchInFlight.delete(keyword)
+    }
   }
 }
 
@@ -508,6 +538,7 @@ let distTagsCache: { time: number; data: Record<string, NpmDistTags> } = {
 async function fetchDistTagsForPackages(
   packageNames: string[]
 ): Promise<Record<string, NpmDistTags>> {
+  const generation = cacheGeneration
   if (Date.now() - distTagsCache.time < 60 * 1000) {
     return distTagsCache.data
   }
@@ -537,7 +568,9 @@ async function fetchDistTagsForPackages(
     i += CONCURRENCY
   }
 
-  distTagsCache = { time: Date.now(), data: result }
+  if (generation === cacheGeneration) {
+    distTagsCache = { time: Date.now(), data: result }
+  }
   return result
 }
 
@@ -662,5 +695,6 @@ module.exports = {
   restoreModules,
   importOrRequire,
   runNpm,
-  getPluginDataSize
+  getPluginDataSize,
+  resetModuleCaches
 }
