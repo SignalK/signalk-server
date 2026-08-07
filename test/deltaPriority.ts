@@ -77,38 +77,41 @@ describe('toPreferredDelta logic', () => {
       unknownSourceTimeout: 200
     })
 
-    let totalDelay = 0
+    // The engine decides by comparing the `now` it is handed against the
+    // configured timeouts, so the delays are advanced on a virtual clock
+    // rather than slept through. Real timers put several of the steps
+    // below within a few milliseconds of a 150ms boundary, where a late
+    // callback flips the comparison and drops an emission.
+    let clock = 0
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any[] = []
     const expectedResult: string[] = []
     let n = 0
     function push(sourceRef: string, delay: number, shouldBeEmitted: boolean) {
-      totalDelay += delay
+      clock += delay
       if (shouldBeEmitted) {
         expectedResult.push(sourceRef)
       }
-      setTimeout(() => {
-        result.push(
-          toPreferredDelta(
-            {
-              context: 'self',
-              updates: [
-                {
-                  $source: sourceRef,
-                  values: [
-                    {
-                      path: 'environment.wind.speedApparent',
-                      value: n++
-                    }
-                  ]
-                }
-              ]
-            },
-            new Date(),
-            'self'
-          )
+      result.push(
+        toPreferredDelta(
+          {
+            context: 'self',
+            updates: [
+              {
+                $source: sourceRef,
+                values: [
+                  {
+                    path: 'environment.wind.speedApparent',
+                    value: n++
+                  }
+                ]
+              }
+            ]
+          },
+          new Date(clock),
+          'self'
         )
-      }, totalDelay)
+      )
     }
 
     push('a', 0, true)
@@ -129,19 +132,10 @@ describe('toPreferredDelta logic', () => {
     push('c', 150, true)
     push('d', 205, true)
 
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          result
-            .filter((r) => r.updates[0].values.length > 0)
-            .map((r) => r.updates[0].$source)
-            .should.eql(expectedResult)
-          resolve(undefined)
-        } catch (err) {
-          reject(err)
-        }
-      }, totalDelay + 10)
-    })
+    result
+      .filter((r) => r.updates[0].values.length > 0)
+      .map((r) => r.updates[0].$source)
+      .should.eql(expectedResult)
   })
 })
 
