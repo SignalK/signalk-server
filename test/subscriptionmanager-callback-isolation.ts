@@ -172,12 +172,7 @@ describe('SubscriptionManager callback isolation', () => {
     dispatch(metaDelta(SELF_CONTEXT, STW_PATH))
     dispatch(valueDelta(SELF_CONTEXT, STW_PATH, 3.2))
 
-    expect(pathsOf(received)).to.deep.equal([
-      STW_PATH,
-      STW_PATH,
-      'meta',
-      STW_PATH
-    ])
+    expect(pathsOf(received)).to.deep.equal([STW_PATH, 'meta', STW_PATH])
   })
 
   it('reports callback exceptions through errorCallback', () => {
@@ -186,8 +181,8 @@ describe('SubscriptionManager callback isolation', () => {
 
     dispatch(valueDelta(SELF_CONTEXT, STW_PATH, 3.1))
 
-    // the callback runs for the announcement-time cache bootstrap and for
-    // the live push, so at least one error per delivery must surface
+    // the callback throws on every delivery, so the error must surface
+    // through errorCallback rather than escaping into the dispatch
     expect(errors).to.not.be.empty
     errors.forEach((err) => expect(err).to.be.instanceOf(TypeError))
   })
@@ -203,7 +198,7 @@ describe('SubscriptionManager callback isolation', () => {
     dispatch(valueDelta(SELF_CONTEXT, STW_PATH, 3.1))
     dispatch(valueDelta(SELF_CONTEXT, STW_PATH, 3.2))
 
-    expect(pathsOf(received)).to.deep.equal([STW_PATH, STW_PATH, STW_PATH])
+    expect(pathsOf(received)).to.deep.equal([STW_PATH, STW_PATH])
   })
 
   it('keys announcements keep flowing after repeated callback crashes', () => {
