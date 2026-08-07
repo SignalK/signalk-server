@@ -1555,8 +1555,8 @@ function DeviceInstanceInput({
       </Col>
       <Col xs="7" md="6" className="form-text text-muted small">
         {MIN_DEVICE_INSTANCE}–{MAX_DEVICE_INSTANCE}. Identifies this
-        signalk-server among multiple N2K nodes (split into PGN 60928's lower 3
-        bits and upper 5 bits). Defaults to 0.
+        signalk-server among multiple N2K nodes (split into PGN 60928&apos;s
+        lower 3 bits and upper 5 bits). Defaults to 0.
       </Col>
     </Form.Group>
   )
@@ -1748,9 +1748,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           <div className="text-muted small mt-1 mb-2">
             UDP is receive-only — N2K device discovery and PGN 126208 instance
             edits are not available. Frames may also occasionally be attributed
-            to the gateway's own N2K address rather than the originating device,
-            producing ghost sources in Source Discovery and priority groups. Use
-            TCP if either matters for your setup.
+            to the gateway&apos;s own N2K address rather than the originating
+            device, producing ghost sources in Source Discovery and priority
+            groups. Use TCP if either matters for your setup.
           </div>
         </div>
       )}
@@ -1847,8 +1847,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           <ActAsCanDeviceInput value={value.options} onChange={onChange} />
           <div className="text-muted small mt-1 mb-2">
             Generic source for IP-based N2K gateways that stream raw CAN frames
-            over TCP in one of canboatjs's supported text formats. Default port
-            2599, default format candump3.
+            over TCP in one of canboatjs&apos;s supported text formats. Default
+            port 2599, default format candump3.
           </div>
         </div>
       )}
