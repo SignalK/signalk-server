@@ -461,6 +461,17 @@ module.exports = function (app) {
       return cached || null
     }
     const pkg = match.package
+    // Serve a cached detail when it was built for the version npm is
+    // currently offering. Rebuilding costs a readme, changelog, metrics
+    // and icon-probe round trip, and the background refresh calls this
+    // once per installed plugin. The version check is what keeps the
+    // short-circuit honest: cache.readPluginDetail() treats an installed
+    // plugin's entry as fresh indefinitely, so without it a newly
+    // published release would never reach the detail page.
+    const cachedDetail = readDetailFromCache(cache, name)
+    if (cachedDetail && cachedDetail.version === pkg.version) {
+      return cachedDetail
+    }
     const isInstalled = !!getPlugin(name) || !!getWebApp(name)
     let pkgForEnrichment = pkg
     // Always try the npm registry first — it has the signalk.* key for
@@ -1389,6 +1400,10 @@ module.exports = function (app) {
     // re-reads from disk and reflects the in-progress version, not the
     // pre-change one. Cleared again on completion below.
     installedMetadataCache.delete(module)
+    // The cached detail carries installed-only fields (local icon and
+    // screenshot URLs) that an install or removal invalidates without
+    // changing the npm version loadPluginDetail matches on.
+    cache.invalidatePluginDetail(module)
     moduleInstalling = {
       name: module,
       output: [],
@@ -1411,6 +1426,7 @@ module.exports = function (app) {
       // Re-evict in case anything cached a stale read between the
       // initial delete and the install completing.
       installedMetadataCache.delete(module)
+      cache.invalidatePluginDetail(module)
       debug.enabled && debug('close: ' + module)
       modulesInstalledSinceStartup[module].code = code
       moduleInstalling = undefined
