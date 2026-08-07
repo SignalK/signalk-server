@@ -1280,6 +1280,48 @@ describe('Plugin route permissions', () => {
     result.status.should.equal(401)
   })
 
+  // The per-plugin app copy, which is what a real plugin holds.
+  function pluginApp() {
+    const plugin = server.app.plugins.find((p) => p.id === 'testplugin')
+    return plugin.app
+  }
+
+  it('plugin self-auth token authenticates a loopback call to a readonly route', async function () {
+    const result = await fetch(`${url}/plugins/testplugin/selfCall`, {
+      headers: { Authorization: `Bearer ${readToken}` }
+    })
+    result.status.should.equal(200)
+    const body = await result.json()
+    body.hadToken.should.equal(true)
+    // Without the token this inner request is the unauthenticated 401 case above.
+    body.status.should.equal(200)
+  })
+
+  it('plugin self-auth token does not grant admin access', async function () {
+    // Mint through the plugin-facing API, so the appCopy wiring is covered too.
+    const token = pluginApp().getSelfAuthToken()
+    // Guard against a vacuous pass: `Bearer undefined` would 401 regardless.
+    token.should.be.a('string').and.not.equal('')
+    const result = await fetch(`${url}/plugins/testplugin/config`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    result.status.should.equal(401)
+  })
+
+  it('plugin self-auth token does not grant write access', async function () {
+    const token = pluginApp().getSelfAuthToken()
+    token.should.be.a('string').and.not.equal('')
+    const result = await fetch(`${url}/plugins/testplugin/writeData`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ value: 1 })
+    })
+    result.status.should.equal(401)
+  })
+
   it('readonly user can access parameterized route declared as readonly', async function () {
     const result = await fetch(
       `${url}/plugins/testplugin/sensorData/temperature`,

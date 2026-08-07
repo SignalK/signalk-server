@@ -340,6 +340,30 @@ export interface ServerAPI
   getDataDirPath(): string
 
   /**
+   * Returns a short-lived readonly token for calling ANOTHER plugin's HTTP
+   * route on this same server over loopback.
+   *
+   * Plugin routes under `/plugins/` require an authenticated request whenever
+   * security is enabled, and a server-side `fetch` carries no session cookie,
+   * so such calls are otherwise rejected with `401`. Pass the token as a
+   * `Bearer` credential. Mint one per request rather than caching it; it
+   * expires in minutes.
+   *
+   * Returns `undefined` when security is disabled, in which case no
+   * credential is needed.
+   *
+   * @example
+   * ```ts
+   * const token = app.getSelfAuthToken()
+   * const res = await fetch(url, {
+   *   headers: token ? { Authorization: `Bearer ${token}` } : {}
+   * })
+   * ```
+   * @category Configuration
+   */
+  getSelfAuthToken(): string | undefined
+
+  /**
    * Register a handler to action [`PUT`](http://signalk.org/specification/1.3.0/doc/put.html) requests for a specific path.
    *
    * The action handler can handle the request synchronously or asynchronously.

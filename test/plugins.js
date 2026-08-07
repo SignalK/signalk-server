@@ -40,6 +40,10 @@ describe('Demo plugin ', () => {
     const optionsTest = plugin.app.readPluginOptions()
     assert(optionsTest.configuration.testOption === 'testValue')
 
+    // No security configured, so there is no credential to mint and callers
+    // are expected to send no Authorization header at all.
+    assert.strictEqual(plugin.app.getSelfAuthToken(), undefined)
+
     assert(server.app.signalk.self.some.path.value === 'someValue')
 
     const outputValues = []

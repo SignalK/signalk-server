@@ -241,6 +241,13 @@ export interface SecurityStrategy {
     permissions: RoutePermission[]
   ) => void
 
+  /**
+   * Mint a short-lived readonly token a plugin can present on loopback HTTP
+   * requests to another plugin's routes in this same server (optional - only
+   * available when token security is active).
+   */
+  getPluginSelfAuthToken?: (pluginId: string) => string
+
   /** Update OIDC config in memory (optional - only available when token security is active) */
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
 

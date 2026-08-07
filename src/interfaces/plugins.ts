@@ -949,6 +949,9 @@ module.exports = (theApp: any) => {
     }
     appCopy.getDataDirPath = () => dirForPluginId(plugin.id)
 
+    appCopy.getSelfAuthToken = () =>
+      app.securityStrategy.getPluginSelfAuthToken?.(plugin.id)
+
     appCopy.registerPutHandler = (context, aPath, callback, source) => {
       appCopy.handleMessage(plugin.id, {
         updates: [

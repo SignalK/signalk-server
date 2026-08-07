@@ -96,6 +96,10 @@ const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 const VALID_PERMISSIONS = new Set(['readonly', 'readwrite', 'admin'])
 
+// Short enough that a leaked plugin self-token is near-useless, long enough to
+// cover a slow export request. Callers mint one per request.
+const PLUGIN_SELF_TOKEN_EXPIRY = '10m'
+
 // Dummy hash for timing attack prevention - pre-generated bcrypt hash
 const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
 
@@ -126,6 +130,7 @@ interface Principal {
 interface JWTPayload {
   id?: string
   device?: string
+  plugin?: string
   exp?: number
   iat?: number
   rememberMe?: boolean
@@ -984,6 +989,22 @@ function tokenSecurityFactory(
     res.type('text/plain').send(token)
   }
 
+  // Plugins run in-process but reach each other's routes over loopback HTTP,
+  // where they have no session cookie. Without this they get a blanket 401
+  // whenever security is on and allow_readonly is false.
+  strategy.getPluginSelfAuthToken = function (pluginId: string): string {
+    // A falsy claim never resolves in getPrincipal, so the token would look
+    // valid but authenticate nothing.
+    if (!pluginId) {
+      throw new Error('getPluginSelfAuthToken requires a plugin id')
+    }
+    const configuration = getConfiguration()
+    const payload: JWTPayload = { plugin: pluginId }
+    return jwt.sign(payload, configuration.secretKey, {
+      expiresIn: PLUGIN_SELF_TOKEN_EXPIRY
+    })
+  }
+
   strategy.allowReadOnly = function (): boolean {
     const configuration = getConfiguration()
     return configuration.allow_readonly
@@ -1663,6 +1684,14 @@ function tokenSecurityFactory(
           identifier: device.clientId,
           permissions: device.permissions
         }
+      }
+    } else if (payload.plugin) {
+      // Minted by getPluginSelfAuthToken for a plugin calling another
+      // plugin's route in this same process. Readonly and short-lived, so it
+      // grants no more than an anonymous request would under allow_readonly.
+      principal = {
+        identifier: `plugin:${payload.plugin}`,
+        permissions: 'readonly'
       }
     }
     return principal
