@@ -79,6 +79,35 @@ describe('appstore/local-assets', () => {
         .undefined
     })
 
+    it('rejects percent-encoded traversal', () => {
+      expect(buildLocalAssetUrl('pkg', '%2e%2e/admin', undefined)).to.be
+        .undefined
+      expect(buildLocalAssetUrl('pkg', '%2e%2e%2fadmin', undefined)).to.be
+        .undefined
+      expect(buildLocalAssetUrl('pkg', '%2fadmin', undefined)).to.be.undefined
+    })
+
+    // path.join resolves "..\" as traversal on Windows, so a backslash
+    // path would stat outside servedRoot during the existence check.
+    it('rejects backslash paths', () => {
+      expect(buildLocalAssetUrl('pkg', '..\\secret.png', undefined)).to.be
+        .undefined
+      expect(buildLocalAssetUrl('pkg', 'a\\..\\b.png', undefined)).to.be
+        .undefined
+    })
+
+    it('rejects percent-encoded backslash paths', () => {
+      expect(buildLocalAssetUrl('pkg', '..%5csecret.png', undefined)).to.be
+        .undefined
+      expect(buildLocalAssetUrl('pkg', '%2e%2e%5csecret.png', undefined)).to.be
+        .undefined
+    })
+
+    it('rejects malformed percent-encoding', () => {
+      expect(buildLocalAssetUrl('pkg', '%E0%A4%A.png', undefined)).to.be
+        .undefined
+    })
+
     it('allows ".." inside a path segment name', () => {
       expect(buildLocalAssetUrl('pkg', 'a..b/icon.png', undefined)).to.equal(
         '/pkg/a..b/icon.png'
