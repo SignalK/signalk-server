@@ -812,23 +812,71 @@ export default class DeltaCache {
   }
 
   deleteContext(contextKey: string) {
+    this.deleteContextEntries(contextKey)
+    this.prunePreferredSources((context) => context === contextKey)
+  }
+
+  /**
+   * Everything deleteContext drops except the preferredSources sweep,
+   * which walks the whole map and so is batched by pruneContexts.
+   */
+  private deleteContextEntries(contextKey: string) {
     debug('Deleting context ' + contextKey)
     const contextParts = contextKey.split('.')
     if (contextParts.length === 2) {
       delete this.cache[contextParts[0]][contextParts[1]]
     }
+    // Otherwise only cleared by the wholesale 5-minute reset, which
+    // would let a dead context's split-path cache outlive it.
+    delete this.cachedContextPaths[contextKey]
     this.app.stalenessEnforcer?.onContextRemoved(contextKey)
+  }
+
+  /**
+   * Drop every preferredSources entry whose context the predicate
+   * matches.
+   *
+   * preferredSources is keyed `${context}\0${path}` and otherwise never
+   * shrinks: every (context, path) pair the priority engine routes —
+   * e.g. every AIS target that has come into range — would live for the
+   * process lifetime instead of aging out with its context.
+   */
+  private prunePreferredSources(matches: (context: string) => boolean) {
+    let preferredChanged = false
+    for (const key of this.preferredSources.keys()) {
+      const nullIdx = key.indexOf('\0')
+      if (!matches(nullIdx === -1 ? key : key.slice(0, nullIdx))) continue
+      this.preferredSources.delete(key)
+      // The client's mergeLivePreferredSources only forgets a key when
+      // it receives the empty-string tombstone scheduleLivePreferredEmit
+      // sends for a dirty path with no entry left. Without this a
+      // long-lived admin UI session keeps accumulating winners for
+      // contexts the server has already dropped.
+      this.livePreferredDirtyPaths.add(key)
+      preferredChanged = true
+    }
+    if (preferredChanged) {
+      this.scheduleLivePreferredEmit()
+    }
   }
 
   pruneContexts(seconds: number) {
     debug('pruning contexts...')
     const threshold = Date.now() - seconds * 1000
+    const pruned = new Set<string>()
     for (const contextKey in this.lastModifieds) {
       if (this.lastModifieds[contextKey] < threshold) {
-        this.deleteContext(contextKey)
+        this.deleteContextEntries(contextKey)
         delete this.lastModifieds[contextKey]
+        pruned.add(contextKey)
       }
     }
+    if (pruned.size === 0) return
+    // One pass for the whole sweep. Calling deleteContext per context
+    // would rescan all of preferredSources for each one, and a sweep
+    // that evicts hundreds of stale AIS targets at once is exactly the
+    // case this pruning exists for.
+    this.prunePreferredSources((context) => pruned.has(context))
   }
 
   buildFull(user: string, path: string[]) {
