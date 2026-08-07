@@ -363,7 +363,7 @@ module.exports = (theApp: any) => {
         )
       ])
         .then(([schema, uiSchema]) => {
-          const status = providerStatus.find((p: any) => p.id === plugin.name)
+          const status = providerStatus.find((p: any) => p.id === plugin.id)
           const statusMessage = status ? status.message : ''
           if (schema === undefined) {
             console.error(
