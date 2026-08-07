@@ -61,6 +61,34 @@ function isDirectory(candidate: string): boolean {
 }
 
 /**
+ * Whether a declared asset path stays inside the plugin's own mount.
+ *
+ * A path escapes when it is server-absolute, or when any segment is
+ * `..`. Both the raw and the percent-decoded form are checked: the raw
+ * form is what gets joined against `servedRoot` on disk, while the
+ * decoded form is what a static file server resolves for the browser.
+ *
+ * Backslashes are rejected outright. `path.join` treats `..\` as
+ * traversal on Windows, so a declared `"..\secret"` would otherwise stat
+ * a file outside the served root during the existence check.
+ */
+function isContainedRelativePath(cleaned: string): boolean {
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(cleaned)
+  } catch {
+    // Malformed percent-encoding cannot be reasoned about; treat as unsafe.
+    return false
+  }
+  for (const candidate of [cleaned, decoded]) {
+    if (candidate.startsWith('/')) return false
+    if (candidate.includes('\\')) return false
+    if (candidate.split('/').includes('..')) return false
+  }
+  return true
+}
+
+/**
  * Turn a package.json-declared asset path into a URL under the plugin's
  * own `/<pkgName>/` mount.
  *
@@ -79,7 +107,7 @@ function isDirectory(candidate: string): boolean {
  * buggy plugin could otherwise ask the admin UI to load `/admin` or
  * `/plugins/somethingelse/...` by setting `signalk.appIcon` to
  * `"../foo.png"` or `"/admin"`. Anything that does not sit cleanly under
- * the plugin's own mount is dropped.
+ * the plugin's own mount is dropped — see `isContainedRelativePath`.
  *
  * When `servedRoot` is known, paths whose target file is absent are
  * dropped too: the mount would 404 them anyway, and falling back to the
@@ -94,9 +122,7 @@ export function buildLocalAssetUrl(
   if (/^(https?:)?\/\//i.test(declaredPath)) return declaredPath
   if (/^data:/i.test(declaredPath)) return declaredPath
   const cleaned = declaredPath.replace(/^\.\//, '')
-  if (cleaned.startsWith('/') || cleaned.split('/').includes('..')) {
-    return undefined
-  }
+  if (!isContainedRelativePath(cleaned)) return undefined
   if (servedRoot) {
     const onDisk = path.join(servedRoot, cleaned)
     if (!fs.existsSync(onDisk)) return undefined
