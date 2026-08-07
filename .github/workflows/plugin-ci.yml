@@ -13,6 +13,16 @@
 #
 # Usage in your plugin repo:
 #   See docs/develop/plugins/examples/plugin-caller-example.yml
+#
+# The plugin is built exactly once (see the `build` job below), and every
+# platform/Node combination tested downstream installs and tests that same
+# build output. `build-node-version` picks which Node version runs that one
+# build; it defaults to '24' (set in the input schema below) — a deliberate
+# fixed choice, not derived from `node-versions`. Modern build tooling
+# (TypeScript, bundlers, etc.) commonly requires a current Node, and
+# `node-versions` may legitimately list older versions you still want to
+# *test* against. If '24' doesn't suit your build, set `build-node-version`
+# explicitly.
 
 name: SignalK Plugin CI
 
@@ -40,6 +50,10 @@ on:
         description: 'JSON array of Node versions for desktop platforms (default: ["22", "24"])'
         type: string
         default: '["22", "24"]'
+      build-node-version:
+        description: 'Node version used to Build the plugin'
+        type: string
+        default: '24'
 
       # ── armv7 / Cerbo GX options ────────────────────────────
       enable-armv7:
@@ -65,6 +79,60 @@ permissions:
 
 jobs:
   # ════════════════════════════════════════════════════════════
+  #  Build once — produces a single build artifact that every
+  #  platform/Node test job below installs and tests, instead of
+  #  each of them re-running `build-command` independently.
+  #
+  #  Note: this uploads the working tree post-build (minus
+  #  node_modules), NOT `npm pack` output — node_modules is
+  #  platform/arch/Node-ABI specific (native addons) and must be
+  #  installed fresh in every downstream job via its own `npm ci`.
+  #  .git is retained so the stray-files check (git ls-files) still
+  #  works downstream. Only the transpile/bundle step is shared.
+  # ════════════════════════════════════════════════════════════
+  build:
+    name: Build (Node ${{ inputs.build-node-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.build-node-version }}
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+        shell: bash
+
+      - name: Build
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+        shell: bash
+        run: eval "$BUILD_CMD"
+
+      - name: Package build output
+        shell: bash
+        run: |
+          rm -rf node_modules
+          tar -czf "$RUNNER_TEMP/built-plugin.tar.gz" .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: built-plugin
+          path: ${{ runner.temp }}/built-plugin.tar.gz
+          retention-days: 1
+
+  # ════════════════════════════════════════════════════════════
   #  Desktop platforms matrix: Linux x64, Linux arm64, macOS, Windows
   # ════════════════════════════════════════════════════════════
   desktop:
@@ -75,6 +143,7 @@ jobs:
           matrix.os == 'windows-latest' && 'Windows' ||
           matrix.os }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
+    needs: build
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -82,11 +151,24 @@ jobs:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-latest]
         node: ${{ fromJson(inputs.node-versions) }}
     steps:
-      - name: Checkout plugin
-        uses: actions/checkout@v7
+      - name: Download build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: built-plugin
+          path: _artifact-download
+
+      - name: Extract build artifact
+        shell: bash
+        # Use a plain relative path here, not ${{ runner.temp }} — on
+        # Windows runners that resolves to e.g. "D:\a\_temp", and GNU
+        # tar (bundled with Git Bash) misparses the leading "D:" as
+        # hostname:path remote-tar syntax ("Cannot connect to D:").
+        run: |
+          tar -xzf _artifact-download/built-plugin.tar.gz
+          rm -rf _artifact-download
 
       - name: Setup Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
@@ -320,12 +402,6 @@ jobs:
             npm_install_with_retry "npm install"
           fi
         shell: bash
-
-      - name: Build
-        env:
-          BUILD_CMD: ${{ inputs.build-command }}
-        shell: bash
-        run: eval "$BUILD_CMD"
 
       - name: Validate plugin entry point
         id: validate-entry
@@ -1311,8 +1387,14 @@ jobs:
           # Read the tarball name from --json: a plugin "prepare" script (e.g. tsc)
           # prints a lifecycle banner to stdout that would pollute a bare
           # $(npm pack) capture (npm < 11 runs prepare here despite --ignore-scripts).
-          PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP" \
-            | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
+          # `npm pack` is captured on its own line (not piped straight into
+          # `node -e`) so a failure there isn't swallowed by a pipe's exit
+          # status. The captured JSON is then handed to `node -e` over stdin,
+          # not as a CLI argument — a plugin with a large file count (e.g. a
+          # bundled webapp) makes --json's `files` array big enough to blow
+          # past Windows' argv-length limit ("Argument list too long").
+          PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
+          PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
 
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
@@ -1520,6 +1602,7 @@ jobs:
   armv7:
     name: armv7 (Cerbo GX) / Node 20
     runs-on: ubuntu-latest
+    needs: build
     timeout-minutes: 30
     if: ${{ inputs.enable-armv7 }}
     # Advisory: armv7 is non-blocking. continue-on-error at the job level lets
@@ -1529,8 +1612,21 @@ jobs:
     outputs:
       advisory-outcome: ${{ steps.armv7-test.outcome }}
     steps:
-      - name: Checkout plugin
-        uses: actions/checkout@v7
+      - name: Download build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: built-plugin
+          path: _artifact-download
+
+      - name: Extract build artifact
+        shell: bash
+        # Use a plain relative path here, not ${{ runner.temp }} — on
+        # Windows runners that resolves to e.g. "D:\a\_temp", and GNU
+        # tar (bundled with Git Bash) misparses the leading "D:" as
+        # hostname:path remote-tar syntax ("Cannot connect to D:").
+        run: |
+          tar -xzf _artifact-download/built-plugin.tar.gz
+          rm -rf _artifact-download
 
       - name: Set up QEMU for ARM emulation
         # Advisory: a QEMU setup failure must not block the workflow — the
@@ -1556,14 +1652,12 @@ jobs:
         # job as truly red rather than emitting a confusing red annotation
         # under a green check.
         env:
-          BUILD_CMD: ${{ inputs.build-command }}
           TEST_CMD: ${{ inputs.test-command }}
         run: |
           docker run --rm --platform linux/arm/v7 \
             -v "${{ github.workspace }}:/plugin" \
             -v "/tmp/.npm-armv7-cache:/root/.npm" \
             -w /plugin \
-            -e BUILD_CMD \
             -e TEST_CMD \
             node:20-bookworm-slim \
             bash -c '
@@ -1572,15 +1666,13 @@ jobs:
               echo "arch: $(uname -m)  node: $(node -v)  npm: $(npm -v)"
               echo "── Installing build tools (python3, make, g++) ──"
               apt-get update -qq && apt-get install -y -qq python3 make g++ > /dev/null 2>&1
-              echo "── Installing dependencies ──"
+              echo "── Installing dependencies (build already done centrally) ──"
               if [ -f package-lock.json ]; then
                 npm ci --ignore-scripts
               else
                 npm install --ignore-scripts
               fi
               npm rebuild
-              echo "── Building ──"
-              eval "$BUILD_CMD"
 
               echo "── Checking for native addons ──"
               node -e "
@@ -1645,6 +1737,7 @@ jobs:
   signalk-integration:
     name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
+    needs: build
     timeout-minutes: 15
     if: ${{ inputs.enable-signalk-integration }}
     strategy:
@@ -1653,11 +1746,24 @@ jobs:
         node: ${{ fromJson(inputs.node-versions) }}
         signalk-server-version: ${{ fromJson(inputs.signalk-server-versions) }}
     steps:
-      - name: Checkout plugin
-        uses: actions/checkout@v7
+      - name: Download build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: built-plugin
+          path: _artifact-download
+
+      - name: Extract build artifact
+        shell: bash
+        # Use a plain relative path here, not ${{ runner.temp }} — on
+        # Windows runners that resolves to e.g. "D:\a\_temp", and GNU
+        # tar (bundled with Git Bash) misparses the leading "D:" as
+        # hostname:path remote-tar syntax ("Cannot connect to D:").
+        run: |
+          tar -xzf _artifact-download/built-plugin.tar.gz
+          rm -rf _artifact-download
 
       - name: Setup Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
@@ -1684,9 +1790,9 @@ jobs:
             echo "::endgroup::"
           done <<< "$REQUIRES"
 
-      - name: Build plugin
-        env:
-          BUILD_CMD: ${{ inputs.build-command }}
+      - name: Install plugin dependencies
+        # Build already happened centrally in the `build` job — this only
+        # needs to install node_modules (native deps compiled for this Node).
         shell: bash
         run: |
           if [ -f package-lock.json ]; then
@@ -1694,17 +1800,22 @@ jobs:
           else
             npm install
           fi
-          eval "$BUILD_CMD"
 
       - name: Install plugin into SignalK
         run: |
           # Pack the plugin and install it into the test server. Read the tarball
           # name from --json so a plugin "prepare" lifecycle banner on stdout can't
           # corrupt it (npm < 11 runs prepare here despite --ignore-scripts).
-          PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination /tmp \
-            | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
+          # `npm pack` is captured on its own line (not piped straight into
+          # `node -e`) so a failure there isn't swallowed by a pipe's exit
+          # status. The captured JSON is then handed to `node -e` over stdin,
+          # not as a CLI argument — a plugin with a large file count (e.g. a
+          # bundled webapp) makes --json's `files` array big enough to blow
+          # past Windows' argv-length limit ("Argument list too long").
+          PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
+          PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
           cd /tmp/sk-test
-          npm install "/tmp/$(basename "$PLUGIN_TGZ")"
+          npm install "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")"
 
       - name: Configure plugin to auto-start
         run: |
@@ -1837,7 +1948,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
-    needs: [desktop, armv7, signalk-integration]
+    needs: [build, desktop, armv7, signalk-integration]
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v7
@@ -1846,6 +1957,7 @@ jobs:
 
       - name: Write CI summary report
         env:
+          BUILD_RESULT: ${{ needs.build.result }}
           DESKTOP_RESULT: ${{ needs.desktop.result }}
           # Prefer the armv7 test-step outcome when the job ran — it records
           # whether the advisory tests actually passed. Falls back to
@@ -1869,7 +1981,7 @@ jobs:
           PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
 
           OVERALL="pass"
-          if [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
+          if [[ "$BUILD_RESULT" == "failure" ]] || [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
             OVERALL="FAIL"
           fi
 
@@ -1883,6 +1995,7 @@ jobs:
             echo ""
             echo "| Job | Result | Notes |"
             echo "|-----|--------|-------|"
+            echo "| Build | $(icon "$BUILD_RESULT") | Node ${{ inputs.build-node-version }} — shared by all jobs below |"
             echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24 |"
             echo "| armv7 — Cerbo GX (QEMU) | $(icon "$ARMV7_RESULT") | Node 20 (Venus OS 3.70) — advisory, non-blocking |"
             if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
@@ -1926,9 +2039,16 @@ jobs:
           fi
 
           echo ""
+          echo "Build:                $BUILD_RESULT"
           echo "Desktop:              $DESKTOP_RESULT"
           echo "armv7 (Cerbo GX):     $ARMV7_RESULT"
           echo "SignalK integration:  $INTEGRATION_RESULT"
+
+          # Build is mandatory — every other job depends on its artifact
+          if [[ "$BUILD_RESULT" == "failure" ]]; then
+            echo "::error::Build failed — all downstream jobs were skipped"
+            exit 1
+          fi
 
           # Desktop is mandatory
           if [[ "$DESKTOP_RESULT" == "failure" ]]; then
