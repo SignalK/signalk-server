@@ -946,6 +946,8 @@ function createPrimusAuthorize(
       ) {
         authorized(error as Error)
       } else {
+        // If the error is not related to token validation, we still want to allow
+        // the connection to proceed to support authentication over WebSocket
         authorized()
       }
     }
