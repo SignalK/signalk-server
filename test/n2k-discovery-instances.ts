@@ -162,6 +162,32 @@ describe('buildPgnSourceKeysFromTree', function () {
     ])
   })
 
+  it('keys 130310 (combined Environmental Parameters) by leaf path', function () {
+    // A DST810 populates only the water-temperature field of 130310;
+    // an SCX-20 populates only outside temperature + pressure. Their
+    // leaf paths are disjoint, so sharing device instance 0 must not
+    // read as a conflict.
+    const tree = {
+      environment: {
+        water: {
+          temperature: { value: 293, $source: 'IPG100.35' }
+        },
+        outside: {
+          temperature: { value: 288, $source: 'IPG100.4' },
+          pressure: { value: 101325, $source: 'IPG100.4' }
+        }
+      }
+    }
+    const out = buildPgnSourceKeysFromTree(tree)
+    expect(out['IPG100.35']['130310']).to.deep.equal([
+      'environment.water.temperature'
+    ])
+    expect(out['IPG100.4']['130310']).to.deep.equal([
+      'environment.outside.pressure',
+      'environment.outside.temperature'
+    ])
+  })
+
   it('returns empty object for tree without temp/humidity paths', function () {
     expect(
       buildPgnSourceKeysFromTree({ electrical: { batteries: {} } })
