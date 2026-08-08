@@ -39,6 +39,7 @@ import {
   UpdateOptions
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
+import type { DeviceTracker } from '../deviceTracker'
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -290,6 +291,7 @@ interface WsApp {
   handleMessage: (source: string, msg: WsMessage) => void
   setProviderError: (provider: string, message: string) => void
   getHello: () => Record<string, unknown>
+  deviceTracker?: DeviceTracker
 }
 
 interface WsApi {
@@ -533,6 +535,10 @@ function wsInterface(app: WsApp): WsApi {
             `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'})`
           )
 
+          if (principalId && app.deviceTracker) {
+            app.deviceTracker.onConnect(principalId, sparkIp)
+          }
+
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
           spark.sourcePolicy = spark.query.sourcePolicy || 'preferred'
           spark.sentMetaData = {}
@@ -671,6 +677,10 @@ function wsInterface(app: WsApp): WsApi {
             debugConnection(
               `${spark.id} end ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId}`
             )
+
+            if (principalId && app.deviceTracker) {
+              app.deviceTracker.onDisconnect(principalId)
+            }
 
             unsubscribes.forEach((unsubscribe) => unsubscribe())
 
