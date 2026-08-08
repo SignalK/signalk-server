@@ -38,8 +38,9 @@ RUN printf 'allow-scripts[]=@canboat/canboatjs\n' > /home/node/signalk/.npmrc
 # Install locally (not globally) to avoid permission issues, then relocate
 # nested packages to where webapp/plugin discovery expects them. The @signalk
 # packages are required in both editions, so that relocation always runs. The
-# @mxtommy/kip relocation is guarded on presence, so it is skipped automatically
-# in core, where kip is not installed.
+# @halos-org relocation moves the whole scope, since Skip's own dependencies
+# hoist alongside it, and is guarded on presence so it is skipped
+# automatically in core, where Skip is not installed.
 RUN case "$EDITION" in \
       full) npm_flags="" ;; \
       core) npm_flags="--omit=optional" ;; \
@@ -54,10 +55,10 @@ RUN case "$EDITION" in \
   && mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
   && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
   && rm -rf node_modules/@signalk/ \
-  && if [ -d node_modules/@mxtommy/kip ]; then \
-       mkdir -p node_modules/signalk-server/node_modules/@mxtommy/ \
-       && cp -rf node_modules/@mxtommy/kip node_modules/signalk-server/node_modules/@mxtommy/ \
-       && rm -rf node_modules/@mxtommy/; \
+  && if [ -d node_modules/@halos-org ]; then \
+       mkdir -p node_modules/signalk-server/node_modules/@halos-org/ \
+       && cp -rf node_modules/@halos-org/* node_modules/signalk-server/node_modules/@halos-org/ \
+       && rm -rf node_modules/@halos-org/; \
      fi \
   && can_socket=$(find node_modules -path '*/@canboat/canboatjs/build/Release/canSocket.node' -print -quit) \
   && if [ -z "$can_socket" ]; then \

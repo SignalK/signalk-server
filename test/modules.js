@@ -19,7 +19,7 @@ describe('modulesWithKeyword', () => {
       '@signalk/instrumentpanel',
       '@signalk/freeboard-sk',
       '@signalk/server-admin-ui',
-      '@mxtommy/kip'
+      '@halos-org/skip'
     ]
     const updateInstalledModule = '@signalk/instrumentpanel'
 

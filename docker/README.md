@@ -116,7 +116,7 @@ The core `-core` suffix is appended after the full variant's tag, so core mirror
 
 The core image omits these packages — all declared in `package.json` `optionalDependencies` and discovered at runtime from `/home/node/.signalk`, so they can be reinstalled on demand (see below):
 
-- Webapps: `@signalk/freeboard-sk`, `@signalk/instrumentpanel`, `@mxtommy/kip`, `@signalk/app-dock`
+- Webapps: `@signalk/freeboard-sk`, `@signalk/instrumentpanel`, `@halos-org/skip`, `@signalk/app-dock`
 - Plugins and bridges: `@signalk/set-system-time`, `@signalk/signalk-to-nmea0183`, `@signalk/udp-nmea-plugin`, `signalk-n2kais-to-nmea0183`, `signalk-to-nmea2000`
 
 What the core image ships: the Signal K server, the admin UI (`@signalk/server-admin-ui`) and its app store, serial-port support (`serialport`), `@signalk/server-api`, `@signalk/streams`, `@signalk/signalk-schema`, `@signalk/course-provider`, `@signalk/resources-provider`, and the NMEA0183 / NMEA2000 parser libraries (`@signalk/nmea0183-signalk`, `@signalk/n2k-signalk`).
