@@ -276,7 +276,8 @@ export default function Sidebar({ location }: SidebarProps) {
               ? { variant: 'warning', text: `${unconfiguredGnssCount}` }
               : null
         },
-        { name: 'Fiddler', url: '/data/fiddler' }
+        { name: 'Fiddler', url: '/data/fiddler' },
+        { name: 'BLE Manager', url: '/data/blemanager' }
       )
     }
 
