@@ -16,7 +16,6 @@
 
 import { createDebug } from '../debug'
 import fs from 'fs'
-import path from 'path'
 const debug = createDebug('signalk-server:interfaces:appstore')
 
 // Module-scope state for scheduleInstalledDetailRefresh. Lives here
@@ -56,7 +55,9 @@ const {
   buildPluginDetail,
   readDetailFromCache,
   badgesToIndicators,
-  probeIconUrl
+  probeIconUrl,
+  buildLocalAssetUrls: buildLocalAssetUrlsFor,
+  packageNameIs
 } = require('../appstore')
 
 const bundledAdminUIs = ['@signalk/server-admin-ui']
@@ -727,52 +728,6 @@ module.exports = function (app) {
     return undefined
   }
 
-  // Webapps and plugins that ship static assets are mounted by the server at
-  // /<package-name>/, so declared paths that look wrong against unpkg's raw
-  // tarball layout (e.g. freeboard-sk's "./assets/icons/icon-72x72.png" which
-  // is actually at "/public/assets/icons/icon-72x72.png" inside the tarball)
-  // resolve correctly against the mounted serving root. Reuse that URL
-  // scheme for installed plugins so the App Store card matches what Webapps
-  // shows elsewhere in the admin UI.
-  // The webapp mount in webapps.js serves <plugin>/public/ when public/
-  // exists, falling back to the package root otherwise. So a declared
-  // path like "./docs/screenshots/foo.png" is unreachable when the
-  // plugin ships a public/ webapp — the docs/ tree is outside the mount.
-  // Return the on-disk directory the mount actually serves from so we
-  // can stat candidate paths against it before emitting URLs.
-  function getInstalledServedRoot(pkgName) {
-    const plugin = getPlugin(pkgName)
-    const base = plugin?.packageLocation
-      ? path.join(plugin.packageLocation, pkgName)
-      : undefined
-    if (!base) return undefined
-    const publicDir = path.join(base, 'public')
-    return fs.existsSync(publicDir) ? publicDir : base
-  }
-
-  function buildLocalAssetUrl(pkgName, declaredPath, servedRoot) {
-    if (!declaredPath || typeof declaredPath !== 'string') return undefined
-    if (/^(https?:)?\/\//i.test(declaredPath)) return declaredPath
-    if (declaredPath.startsWith('data:')) return declaredPath
-    const cleaned = declaredPath.replace(/^\.\//, '')
-    // declaredPath comes from a plugin's own package.json, so a hostile
-    // or buggy plugin could ask the admin UI to load /admin or
-    // /plugins/somethingelse/... by setting signalk.appIcon to
-    // "../foo.png" or "/admin". Drop anything that doesn't sit cleanly
-    // under the plugin's own /<pkgName>/ mount.
-    if (cleaned.startsWith('/') || cleaned.split('/').includes('..')) {
-      return undefined
-    }
-    // When we know where the mount serves from, drop URLs whose target
-    // file isn't there - the mount would 404 them anyway, and we'd
-    // rather fall back to the CDN URL than ship a broken <img>.
-    if (servedRoot) {
-      const onDisk = path.join(servedRoot, cleaned)
-      if (!fs.existsSync(onDisk)) return undefined
-    }
-    return `/${pkgName}/${cleaned}`
-  }
-
   // When the background probe + downloader has cached a plugin's icon
   // locally, route the card/detail <img> through the server's own icon
   // route so the browser never has to reach unpkg. This makes the grid
@@ -787,22 +742,11 @@ module.exports = function (app) {
   }
 
   function buildLocalAssetUrls(pkgName, pkg) {
-    const signalk = pkg && pkg.signalk
-    if (!signalk || typeof signalk !== 'object') return undefined
-    const servedRoot = getInstalledServedRoot(pkgName)
-    const appIcon =
-      typeof signalk.appIcon === 'string' && signalk.appIcon.trim()
-        ? buildLocalAssetUrl(pkgName, signalk.appIcon.trim(), servedRoot)
-        : undefined
-    let screenshots
-    if (Array.isArray(signalk.screenshots)) {
-      screenshots = signalk.screenshots
-        .filter((s) => typeof s === 'string' && s.trim())
-        .map((s) => buildLocalAssetUrl(pkgName, s.trim(), servedRoot))
-        .filter(Boolean)
-    }
-    if (!appIcon && (!screenshots || screenshots.length === 0)) return undefined
-    return { appIcon, screenshots }
+    return buildLocalAssetUrlsFor(
+      pkgName,
+      pkg,
+      getPlugin(pkgName)?.packageLocation
+    )
   }
 
   function resolveLatestVersion(name, plugins, webapps) {
@@ -1484,8 +1428,4 @@ module.exports = function (app) {
       installModule(app.config, module, version, onData, onErr, onClose)
     }
   }
-}
-
-function packageNameIs(name) {
-  return (x) => x.package.name === name
 }
