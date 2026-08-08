@@ -117,6 +117,12 @@ export const AlarmStatusSchema = Type.Object(
     acknowledged: Type.Boolean({
       description: 'Whether the alarm has been acknowledged'
     }),
+    acknowledgedAt: Type.Optional(
+      Type.String({
+        pattern: IsoTimePattern,
+        description: 'ISO 8601 timestamp when the alarm was acknowledged'
+      })
+    ),
     canSilence: Type.Boolean({
       description: 'Whether the alarm can be silenced'
     }),

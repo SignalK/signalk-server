@@ -210,6 +210,7 @@ export enum ALARM_METHOD {
 export interface AlarmStatus {
   silenced: boolean
   acknowledged: boolean
+  acknowledgedAt?: Timestamp
   canSilence: boolean
   canAcknowledge: boolean
   canClear: boolean
