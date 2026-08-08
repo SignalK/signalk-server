@@ -52,6 +52,9 @@ import {
   RequestStatusData,
   ACL,
   SecurityStrategy,
+  SkPrincipal,
+  LoginResponse as SecurityLoginResponse,
+  WSConnection as SecurityWSConnection,
   isOIDCUserIdentifier
 } from './security'
 // requestResponse is still CommonJS
@@ -118,9 +121,16 @@ interface SKRequest extends Request {
 /**
  * Principal representing an authenticated user or device
  */
-interface Principal {
-  identifier: string
-  permissions: string
+type Principal = SkPrincipal
+
+/**
+ * The authentication state an Express request and a websocket connection both
+ * carry. Checks that only need to know who the caller is take this rather than
+ * one of the two concrete request types.
+ */
+interface AuthenticatedRequest {
+  skIsAuthenticated?: boolean
+  skPrincipal?: Principal
 }
 
 interface JWTPayload {
@@ -131,13 +141,7 @@ interface JWTPayload {
   rememberMe?: boolean
 }
 
-interface LoginResponse {
-  statusCode: number
-  token?: string
-  user?: string
-  message?: string
-  timeToLive?: number | null
-}
+type LoginResponse = SecurityLoginResponse
 
 interface CookieOptions {
   sameSite?: 'strict' | 'lax' | 'none' | boolean
@@ -201,7 +205,6 @@ interface TokenSecurityStrategy extends SecurityStrategy {
   getAuthRequiredString: () => string
   addAdminWriteMiddleware: (path: string) => void
   addWriteMiddleware: (path: string) => void
-  hasAdminAccess: (req: Request) => boolean
   anyACLs: () => boolean
   checkACL: (
     id: string,
@@ -212,22 +215,13 @@ interface TokenSecurityStrategy extends SecurityStrategy {
   ) => boolean
   verifyWS: (spark: WSConnection) => void
   authorizeWS: (req: WSConnection) => void
-  shouldAllowWrite: (req: Request, delta: Delta) => boolean
   canAuthorizeWS: () => boolean
 }
 
 /**
  * WebSocket connection with auth properties
  */
-interface WSConnection {
-  lastTokenVerify?: number
-  token?: string
-  query?: { token?: string }
-  headers?: { [key: string]: string }
-  cookies?: { [key: string]: string }
-  skPrincipal?: Principal
-  skIsAuthenticated?: boolean
-}
+type WSConnection = SecurityWSConnection
 
 function tokenSecurityFactory(
   app: TokenSecurityApp,
@@ -562,8 +556,8 @@ function tokenSecurityFactory(
     }
   }
 
-  function hasAdminAccess(req: Request): boolean {
-    const skReq = req as SKRequest
+  function hasAdminAccess(req: Request | SecurityWSConnection): boolean {
+    const skReq = req as AuthenticatedRequest
     return (
       skReq.skIsAuthenticated === true &&
       skReq.skPrincipal !== undefined &&
@@ -1276,8 +1270,11 @@ function tokenSecurityFactory(
     options = theConfig as TokenSecurityOptions
   }
 
-  strategy.shouldAllowWrite = function (req: Request, delta: Delta): boolean {
-    const skReq = req as SKRequest
+  strategy.shouldAllowWrite = function (
+    req: Request | SecurityWSConnection,
+    delta: Delta
+  ): boolean {
+    const skReq = req as AuthenticatedRequest
     if (
       skReq.skPrincipal &&
       (skReq.skPrincipal.permissions === 'admin' ||
