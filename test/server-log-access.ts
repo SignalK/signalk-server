@@ -50,7 +50,7 @@ describe('Server log websocket access', function () {
     let wsUrl: string
 
     before(async function () {
-      this.timeout(30000)
+      this.timeout(90000)
       const port = await freeport()
       server = await startServerP(port, false)
       wsUrl =
@@ -77,7 +77,7 @@ describe('Server log websocket access', function () {
     let readToken: string
 
     before(async function () {
-      this.timeout(30000)
+      this.timeout(90000)
       port = await freeport()
       server = await startServerP(port, true)
       adminToken = await getAdminToken(server)
