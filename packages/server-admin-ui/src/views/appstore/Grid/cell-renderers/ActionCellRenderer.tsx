@@ -372,7 +372,8 @@ export default function ActionCellRenderer({
               <div
                 style={{
                   maxHeight: '450px',
-                  overflowY: 'auto'
+                  overflowY: 'auto',
+                  border: '1px solid var(--bs-border-color)'
                 }}
               >
                 <ListGroup>

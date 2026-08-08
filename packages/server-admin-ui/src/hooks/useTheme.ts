@@ -23,7 +23,7 @@ const getStoredTheme = (): ThemeMode | null => {
 const getSystemTheme = (): 'light' | 'dark' =>
   window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 
-const getPreferredTheme = (): ThemeMode => getStoredTheme() ?? getSystemTheme()
+const getPreferredTheme = (): ThemeMode => getStoredTheme() ?? 'auto'
 
 export function useTheme() {
   const [theme, setThemeState] = useState<ThemeMode>(() => getPreferredTheme())
