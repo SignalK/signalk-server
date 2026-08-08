@@ -1,10 +1,12 @@
+@use 'sass:color';
+
 // Here you can add other styles
 
 // Navbar toggler - remove border to match CoreUI v1 styling
 .app-header .navbar-toggler {
   border: none;
   outline: none;
-  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  -webkit-tap-highlight-color: rgb(var(--bs-black-rgb), 0.1);
 
   &:focus {
     box-shadow: none;
@@ -23,7 +25,7 @@
 ) {
   background-color: $bg-color !important;
   border-color: $border-color !important;
-  color: white !important;
+  color: var(--bs-white) !important;
 
   &:hover {
     background-color: $hover-bg !important;
@@ -46,7 +48,7 @@ form.rjsf {
   div > p.field-description {
     font-size: 0.7rem;
     font-style: italic;
-    margin-bottom: 0px;
+    margin-bottom: 0;
   }
 
   input[type='text'],
@@ -87,7 +89,7 @@ form.rjsf {
   }
 
   div.row.array-item {
-    background-color: aliceblue;
+    background-color: var(--sk-plugin-config-array-item-bg);
     margin-bottom: 3px;
   }
 
@@ -146,13 +148,13 @@ form.rjsf {
   margin-bottom: 1rem;
 }
 
-@media (max-width: 767px) {
+@media (width <= 767px) {
   .container-fluid,
   .row {
     padding: 0 2px !important;
   }
   .navbar-header {
-    margin: 0px;
+    margin: 0;
   }
 }
 
@@ -206,16 +208,16 @@ form.rjsf {
       width: 20px;
       margin: 0 0.5rem 0 0;
       font-size: 14px;
-      color: #536c79;
+      color: var(--bs-gray-600);
       text-align: center;
     }
 
     &.active svg.nav-icon {
-      color: #003399;
+      color: var(--bs-blue);
     }
 
     &:hover svg.nav-icon {
-      color: #fff;
+      color: var(--bs-white);
     }
   }
 
@@ -224,7 +226,7 @@ form.rjsf {
     width: 20px;
     margin: 0 0.5rem 0 0;
     font-size: 14px;
-    color: #536c79;
+    color: var(--bs-gray-600);
     text-align: center;
   }
 
@@ -244,16 +246,16 @@ form.rjsf {
 .btn-success:hover,
 .btn-success:focus,
 .btn-success:active {
-  --bs-btn-color: #fff;
-  --bs-btn-hover-color: #fff;
-  --bs-btn-active-color: #fff;
-  color: #fff !important;
+  --bs-btn-color: var(--bs-white);
+  --bs-btn-hover-color: var(--bs-white);
+  --bs-btn-active-color: var(--bs-white);
+  color: var(--bs-white) !important;
 }
 
 // Source Priorities: nested table in Priorities column should have white background
 .table-striped .table {
-  --bs-table-bg: #fff;
-  background-color: #fff;
+  --bs-table-bg: var(--bs-white);
+  background-color: var(--bs-white);
 }
 
 // Ensure btn-danger has white text
@@ -261,10 +263,10 @@ form.rjsf {
 .btn-danger:hover,
 .btn-danger:focus,
 .btn-danger:active {
-  --bs-btn-color: #fff;
-  --bs-btn-hover-color: #fff;
-  --bs-btn-active-color: #fff;
-  color: #fff !important;
+  --bs-btn-color: var(--bs-white);
+  --bs-btn-hover-color: var(--bs-white);
+  --bs-btn-active-color: var(--bs-white);
+  color: var(--bs-white) !important;
 }
 
 // Ensure badges have white text
@@ -272,11 +274,11 @@ form.rjsf {
 .badge.text-bg-danger,
 .badge.bg-success,
 .badge.bg-danger {
-  color: #fff !important;
+  color: var(--bs-white) !important;
 }
 
 // Plugin config: scrollable list and connected panels on desktop
-@media (min-width: 1200px) {
+@media (width >= 1200px) {
   .plugin-list-container {
     max-height: calc(100vh - 280px);
     overflow-y: auto;
@@ -302,9 +304,9 @@ form.rjsf {
 .pg-default-fallback {
   padding: 0.75rem;
   margin-bottom: 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgb(var(--bs-black-rgb), 0.08);
   border-radius: 0.375rem;
-  background: rgba(var(--bs-primary-rgb), 0.03);
+  background: rgb(var(--bs-primary-rgb), 0.03);
 
   .pg-default-fallback-input {
     max-width: 140px;
@@ -320,7 +322,7 @@ form.rjsf {
   }
 
   &.pg-card-dirty {
-    border-left-color: #fb923c;
+    border-left-color: $orange-400;
   }
 }
 
@@ -362,10 +364,10 @@ form.rjsf {
 .pg-unranked-hint {
   padding: 0.5rem 0.75rem;
   border-radius: 0.375rem;
-  background: rgba(var(--bs-warning-rgb), 0.12);
-  border: 1px solid rgba(var(--bs-warning-rgb), 0.3);
+  background: rgb(var(--bs-warning-rgb), 0.12);
+  border: 1px solid rgb(var(--bs-warning-rgb), 0.3);
   font-size: 0.875rem;
-  color: #7a4f00;
+  color: $orange-800;
 }
 
 .pg-three-col {
@@ -373,7 +375,7 @@ form.rjsf {
   grid-template-columns: 1fr 1fr 1fr;
   gap: 1rem;
 
-  @media (max-width: 900px) {
+  @media (width <= 900px) {
     grid-template-columns: 1fr;
   }
 }
@@ -411,10 +413,9 @@ form.rjsf {
       'rank source actions'
       'fallback fallback fallback'
       'enabled order order';
-    column-gap: 0.5rem;
-    row-gap: 0.35rem;
+    gap: 0.35rem 0.5rem;
     padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgb(var(--bs-black-rgb), 0.08);
   }
   td {
     padding: 0;
@@ -423,7 +424,7 @@ form.rjsf {
       content: attr(data-th);
       display: block;
       font-size: 0.7rem;
-      color: var(--bs-secondary-color, #6c757d);
+      color: var(--bs-secondary-color);
       text-transform: uppercase;
       letter-spacing: 0.02em;
       margin-bottom: 0.1rem;
@@ -454,8 +455,7 @@ form.rjsf {
   }
   td:nth-child(6) {
     grid-area: actions;
-    align-self: end;
-    justify-self: end;
+    place-self: end end;
   }
 }
 
@@ -469,7 +469,7 @@ form.rjsf {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--bs-secondary-color, #6c757d);
+  color: var(--bs-secondary-color);
   margin-bottom: 0.5rem;
 }
 
@@ -489,7 +489,7 @@ form.rjsf {
   gap: 0.5rem;
   padding: 0.4rem 0.5rem;
   background: var(--bs-body-bg);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgb(var(--bs-black-rgb), 0.08);
   border-radius: 0.375rem;
   transition:
     border-color 0.15s ease,
@@ -498,7 +498,7 @@ form.rjsf {
 
   &.is-highlighted {
     border-color: var(--bs-primary);
-    background: rgba(var(--bs-primary-rgb), 0.06);
+    background: rgb(var(--bs-primary-rgb), 0.06);
   }
 }
 
@@ -506,7 +506,7 @@ form.rjsf {
   background: none;
   border: none;
   padding: 0.25rem;
-  color: var(--bs-secondary-color, #6c757d);
+  color: var(--bs-secondary-color);
   cursor: grab;
 
   &:active {
@@ -532,7 +532,7 @@ form.rjsf {
   border-radius: 0.25rem;
 
   &:hover {
-    background: rgba(var(--bs-primary-rgb), 0.05);
+    background: rgb(var(--bs-primary-rgb), 0.05);
   }
 
   &:focus-visible {
@@ -542,7 +542,7 @@ form.rjsf {
 
 .pg-rank {
   font-weight: 600;
-  color: var(--bs-secondary-color, #6c757d);
+  color: var(--bs-secondary-color);
 }
 
 .pg-source-name {
@@ -613,7 +613,7 @@ form.rjsf {
   }
 }
 
-@media (max-width: 575.98px) {
+@media (width <= 575.98px) {
   .pg-device-label {
     display: none;
   }
@@ -674,7 +674,7 @@ form.rjsf {
   border-radius: 0.25rem;
 
   &:hover {
-    background: rgba(var(--bs-danger-rgb), 0.12);
+    background: rgb(var(--bs-danger-rgb), 0.12);
   }
 
   &:focus-visible {
@@ -693,7 +693,7 @@ form.rjsf {
 }
 
 .pg-path-row {
-  background: rgba(0, 0, 0, 0.02);
+  background: rgb(var(--bs-black-rgb), 0.02);
   border: 1px solid transparent;
   border-radius: 0.25rem;
   transition:
@@ -702,13 +702,13 @@ form.rjsf {
     opacity 0.15s ease;
 
   &.is-override {
-    background: rgba(13, 110, 253, 0.06);
-    border-color: rgba(13, 110, 253, 0.4);
+    background: rgb(var(--bs-primary-rgb), 0.06);
+    border-color: rgb(var(--bs-primary-rgb), 0.4);
   }
 
   &.is-highlighted {
     border-color: var(--bs-primary);
-    background: rgba(var(--bs-primary-rgb), 0.1);
+    background: rgb(var(--bs-primary-rgb), 0.1);
   }
 }
 
@@ -724,7 +724,7 @@ form.rjsf {
   border-radius: 0.25rem;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgb(var(--bs-black-rgb), 0.04);
   }
 
   &:focus-visible {
@@ -749,8 +749,8 @@ form.rjsf {
 .pg-path-publishers {
   font-size: 0.65rem;
   font-family: var(--bs-font-monospace);
-  color: var(--bs-secondary-color, #6c757d);
-  background: rgba(0, 0, 0, 0.04);
+  color: var(--bs-secondary-color);
+  background: rgb(var(--bs-black-rgb), 0.04);
   padding: 0.05rem 0.35rem;
   border-radius: 0.25rem;
   white-space: nowrap;
@@ -760,8 +760,8 @@ form.rjsf {
   // darker neutral tint so partial coverage is visible without implying a
   // warning.
   &.is-partial {
-    color: #495057;
-    background: rgba(0, 0, 0, 0.08);
+    color: var(--bs-gray-700);
+    background: rgb(var(--bs-black-rgb), 0.08);
   }
 }
 
@@ -775,8 +775,8 @@ form.rjsf {
 .pg-path-kind {
   font-size: 0.65rem;
   font-family: var(--bs-font-monospace);
-  color: var(--bs-secondary-color, #6c757d);
-  background: rgba(0, 0, 0, 0.05);
+  color: var(--bs-secondary-color);
+  background: rgb(var(--bs-black-rgb), 0.05);
   padding: 0.05rem 0.3rem;
   border-radius: 0.25rem;
   white-space: nowrap;
@@ -795,13 +795,13 @@ form.rjsf {
 
 .pg-override-row {
   padding: 0.5rem 0.5rem 0.25rem;
-  border: 1px solid rgba(13, 110, 253, 0.35);
+  border: 1px solid rgb(var(--bs-primary-rgb), 0.35);
   border-radius: 0.375rem;
-  background: rgba(13, 110, 253, 0.04);
+  background: rgb(var(--bs-primary-rgb), 0.04);
   transition: box-shadow 0.15s ease;
 
   &.is-focused {
-    box-shadow: 0 0 0 2px rgba(var(--bs-primary-rgb), 0.35);
+    box-shadow: 0 0 0 2px rgb(var(--bs-primary-rgb), 0.35);
   }
 
   .pg-override-path {
@@ -825,9 +825,9 @@ form.rjsf {
   padding: 0.35rem 0.5rem;
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
-  color: #7a4f00;
-  background: rgba(var(--bs-warning-rgb), 0.18);
-  border: 1px solid rgba(var(--bs-warning-rgb), 0.45);
+  color: $orange-800;
+  background: rgb(var(--bs-warning-rgb), 0.18);
+  border: 1px solid rgb(var(--bs-warning-rgb), 0.45);
   border-radius: 0.25rem;
 
   .pg-override-fix {
@@ -843,10 +843,103 @@ form.rjsf {
   border-radius: 0.25rem;
 
   &:hover {
-    background: rgba(var(--bs-danger-rgb), 0.12);
+    background: rgb(var(--bs-danger-rgb), 0.12);
   }
 
   &:focus-visible {
     outline: 2px solid var(--bs-danger);
   }
+}
+
+.app-header.navbar,
+.app-header.navbar .navbar-brand {
+  background-color: var(--sk-navbar-bg);
+  border-bottom-color: var(--sk-navbar-border-color);
+}
+
+.app-footer {
+  color: var(--sk-footer-color);
+  background-color: var(--sk-footer-bg);
+  border-top-color: var(--sk-navbar-border-color);
+}
+
+.sidebar {
+  color: var(--sk-sidebar-color);
+  background-color: var(--sk-sidebar-bg);
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .navbar .active.dropdown-toggle,
+.navbar .nav-tabs .active.dropdown-toggle {
+  color: var(--sk-nav-color);
+  background: var(--sk-nav-bg);
+  border-color: var(--sk-nav-border-color);
+  border-bottom-color: var(--sk-nav-bottom-color);
+}
+
+.nav-tabs .nav-link.active:focus,
+.nav-tabs .navbar .active.dropdown-toggle:focus,
+.navbar .nav-tabs .active.dropdown-toggle:focus {
+  background: var(--sk-nav-bg);
+  border-color: var(--sk-nav-border-color);
+  border-bottom-color: var(--sk-nav-bottom-color);
+}
+
+.tab-content {
+  background: var(--sk-nav-bg);
+  border-color: var(--sk-nav-border-color);
+}
+
+.sidebar .nav-link.active,
+.sidebar .navbar .active.dropdown-toggle,
+.navbar .sidebar .active.dropdown-toggle {
+  background-color: var(--sk-sidebar-active-bg);
+}
+
+.switch.switch-text .switch-handle,
+.switch.switch-text .switch-label {
+  background-color: var(--sk-switch-bg);
+}
+
+// brighten bs-primary when in dark mode to improve contrast
+
+[data-bs-theme='dark'] {
+  --bs-primary: #{$sk-primary-dark};
+  --bs-primary-rgb:
+    #{color.channel($sk-primary-dark, 'red', $space: rgb)},
+    #{color.channel($sk-primary-dark, 'green', $space: rgb)},
+    #{color.channel($sk-primary-dark, 'blue', $space: rgb)};
+}
+
+// brighten sk logo when in dark mode to improve contrast
+
+[data-bs-theme='dark'] .app-header.navbar .navbar-brand {
+  position: relative;
+  background-color: var(--sk-navbar-bg);
+  background-image: none;
+  border-bottom-color: var(--bs-border-color-translucent);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('../assets/signal-k-logo-image-text.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 110px auto;
+    filter: brightness(1.4);
+  }
+}
+
+// light/dark/auto mode navbar dropdown menu:
+
+.app-header.navbar .theme-dropdown .dropdown-menu,
+.app-header.navbar .theme-dropdown .dropdown-item {
+  min-width: 7rem;
+}
+
+// light/dark/auto mode navbar dropdown menu icon size:
+
+.app-header.navbar .theme-dropdown .dropdown-toggle svg {
+  font-size: 1rem;
 }

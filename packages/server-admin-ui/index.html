@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -9,13 +9,30 @@
     />
     <meta name="description" content="Signal K Node Server" />
 
+    <script>
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('sk:theme') || 'auto'
+          var resolved = stored
+          if (stored === 'auto') {
+            resolved = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+          }
+          document.documentElement.dataset.bsTheme = resolved
+        } catch (e) {
+          document.documentElement.dataset.bsTheme = 'light'
+        }
+      })()
+    </script>
+
     %ADDONSCRIPTS%
 
     <link rel="shortcut icon" href="img/favicon.ico" />
     <title>Signal K Server</title>
   </head>
   <body
-    class="app header-fixed sidebar-fixed aside-menu-fixed aside-menu-hidden"
+    class="app header-fixed sidebar-fixed aside-menu-fixed aside-menu-hidden bg-body-tertiary"
   >
     <div id="root"></div>
     <script type="module" src="/src/index.ts"></script>

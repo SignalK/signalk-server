@@ -124,7 +124,7 @@ function DataRow({
   if (!data) {
     return (
       <div
-        className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}
+        className={`virtual-table-row ${!(index % 2) ? 'striped' : ''}`}
         data-raw-row={raw ? 'true' : undefined}
       >
         <div className="virtual-table-cell path-cell" data-label="Path">
@@ -234,7 +234,7 @@ function DataRow({
 
   return (
     <div
-      className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}
+      className={`virtual-table-row ${!(index % 2) ? 'striped' : ''}`}
       data-raw-row={raw ? 'true' : undefined}
     >
       <div className="virtual-table-cell path-cell" data-label="Path">
