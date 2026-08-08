@@ -547,12 +547,14 @@ module.exports = function (app) {
                     t.declaredPath,
                     iconProbe
                   )
-                  if (
-                    resolved &&
-                    t.kind === 'icon' &&
-                    !iconBytes.read(pkg.name)
-                  ) {
-                    await iconBytes.download(pkg.name, pkg.version, resolved)
+                  if (resolved && t.kind === 'icon') {
+                    // Icons are cached per version, so check the version and
+                    // not just presence — otherwise a plugin that changes its
+                    // icon keeps serving the one cached for an older release.
+                    const stored = iconBytes.read(pkg.name)
+                    if (!stored || stored.version !== pkg.version) {
+                      await iconBytes.download(pkg.name, pkg.version, resolved)
+                    }
                   }
                 } catch (err) {
                   debug.enabled &&
@@ -583,7 +585,7 @@ module.exports = function (app) {
           name: pkg.name,
           version: pkg.version,
           displayName: ext.displayName,
-          appIcon: appIconUrlFor(pkg.name, ext.appIcon),
+          appIcon: appIconUrlFor(pkg.name, ext.appIcon, pkg.version),
           screenshots: ext.screenshots || [],
           official: ext.official,
           deprecated: ext.deprecated,
@@ -742,10 +744,14 @@ module.exports = function (app) {
   // route so the browser never has to reach unpkg. This makes the grid
   // render instantly on a boat with no internet after a one-time warmup.
   // When bytes aren't cached yet, pass the CDN URL through unchanged.
-  function appIconUrlFor(pkgName, cdnUrl) {
+  // The icon route is versionless and sets a one-hour max-age, so the version
+  // goes in the query string: without it a browser holds the old icon for up
+  // to an hour after the bytes are replaced. Bytes cached for some other
+  // version fall through to the CDN rather than render the wrong icon.
+  function appIconUrlFor(pkgName, cdnUrl, version) {
     if (!pkgName) return cdnUrl
-    if (iconBytes.read(pkgName)) {
-      return `${SERVERROUTESPREFIX}/appstore/icon/${pkgName}`
+    if (iconBytes.read(pkgName)?.version === version) {
+      return `${SERVERROUTESPREFIX}/appstore/icon/${pkgName}?v=${version}`
     }
     return cdnUrl
   }
@@ -778,7 +784,7 @@ module.exports = function (app) {
       const ext = enrichEntry(pkg, { iconUrlLookup })
       return {
         displayName: ext.displayName,
-        appIcon: appIconUrlFor(name, ext.appIcon),
+        appIcon: appIconUrlFor(name, ext.appIcon, pkg.version),
         installed
       }
     }
@@ -845,11 +851,20 @@ module.exports = function (app) {
         for (const entry of entries) {
           const key = `${pkg.name}@${pkg.version}@${entry.declaredPath}`
           if (queuedKey.has(key)) continue
-          if (
-            iconProbe.get(pkg.name, pkg.version, entry.declaredPath) !==
-            undefined
+          const probed = iconProbe.get(
+            pkg.name,
+            pkg.version,
+            entry.declaredPath
           )
-            continue
+          // A cached probe result usually means there is nothing left to do,
+          // but the byte download that follows it can fail on its own. Keep
+          // the task when this version's bytes are still missing, so the
+          // worker retries the download against the URL already probed.
+          const bytesMissing =
+            entry.kind === 'icon' &&
+            typeof probed === 'string' &&
+            iconBytes.read(pkg.name)?.version !== pkg.version
+          if (probed !== undefined && !bytesMissing) continue
           queuedKey.add(key)
           tasks.push({
             name: pkg.name,
@@ -883,7 +898,7 @@ module.exports = function (app) {
           // Screenshots stay remote (larger + only viewed on detail).
           if (resolved && t.kind === 'icon') {
             const existing = iconBytes.read(t.name)
-            if (!existing) {
+            if (!existing || existing.version !== t.version) {
               await iconBytes.download(t.name, t.version, resolved)
             }
           }
@@ -1205,7 +1220,7 @@ module.exports = function (app) {
           (v) => v === 'signalk-embeddable-webapp'
         ),
         displayName: ext.displayName,
-        appIcon: appIconUrlFor(name, ext.appIcon),
+        appIcon: appIconUrlFor(name, ext.appIcon, plugin.package.version),
         installedIconUrl: localIcons?.appIcon,
         screenshots: ext.screenshots,
         // Only advertise installedScreenshotUrls when the installed version
