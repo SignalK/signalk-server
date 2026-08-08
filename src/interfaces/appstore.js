@@ -26,6 +26,13 @@ const debug = createDebug('signalk-server:interfaces:appstore')
 let installedDetailRefreshInFlight = false
 let installedDetailRefreshLastRunAt = 0
 const INSTALLED_DETAIL_REFRESH_COOLDOWN_MS = 5 * 60 * 1000
+let iconProbeInFlight = false
+let iconProbeLastRunAt = 0
+// Bumped by a manual refresh so a pass that started before the caches
+// were cleared cannot claim the cooldown for the state it no longer
+// reflects.
+let iconProbeGeneration = 0
+const ICON_PROBE_COOLDOWN_MS = 5 * 60 * 1000
 const _ = require('lodash')
 const semver = require('semver')
 const { gt } = semver
@@ -384,6 +391,8 @@ module.exports = function (app) {
         // warmup and the user sees stale icons immediately after asking
         // the server to refresh.
         installedDetailRefreshLastRunAt = 0
+        iconProbeLastRunAt = 0
+        iconProbeGeneration++
         res.json({ ok: true })
       })
 
@@ -990,19 +999,42 @@ module.exports = function (app) {
     )
   }
 
+  // Hydration and probing both capture the full plugin/webapp arrays for
+  // the duration of their network I/O. Without a guard, every
+  // /appstore/available hit starts another pass, so overlapping runs pin
+  // several generations of those arrays alive at once and re-issue probes
+  // the previous pass has not yet cached. Guard with the same in-flight
+  // flag plus cooldown pairing scheduleInstalledDetailRefresh uses.
   function scheduleIconProbe(plugins, webapps) {
+    if (iconProbeInFlight) return
+    if (Date.now() - iconProbeLastRunAt < ICON_PROBE_COOLDOWN_MS) return
+    iconProbeInFlight = true
+    const generation = iconProbeGeneration
     setImmediate(async () => {
       try {
-        await hydrateNonInstalledMetadata(plugins, webapps)
-      } catch (err) {
-        debug.enabled && debug('metadata hydration run failed: %O', err)
+        try {
+          await hydrateNonInstalledMetadata(plugins, webapps)
+        } catch (err) {
+          debug.enabled && debug('metadata hydration run failed: %O', err)
+        }
+        // A refresh landing mid-pass invalidated the module list this
+        // pass was built from, so stop before spending the probe I/O;
+        // the next request rebuilds from the refreshed list.
+        if (generation !== iconProbeGeneration) return
+        const tasks = collectIconProbeTasks(plugins, webapps)
+        if (tasks.length === 0) return
+        debug.enabled && debug('scheduling %d icon probes', tasks.length)
+        await runIconProbeTasks(tasks).catch(
+          (err) => debug.enabled && debug('icon probe run failed: %O', err)
+        )
+      } finally {
+        iconProbeInFlight = false
+        // A refresh during this pass already cleared the caches it was
+        // filling, so leave the cooldown open for the next request.
+        if (generation === iconProbeGeneration) {
+          iconProbeLastRunAt = Date.now()
+        }
       }
-      const tasks = collectIconProbeTasks(plugins, webapps)
-      if (tasks.length === 0) return
-      debug.enabled && debug('scheduling %d icon probes', tasks.length)
-      runIconProbeTasks(tasks).catch(
-        (err) => debug.enabled && debug('icon probe run failed: %O', err)
-      )
     })
   }
 
