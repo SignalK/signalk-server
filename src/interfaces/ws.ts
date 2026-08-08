@@ -197,6 +197,7 @@ interface SecurityStrategy {
     delta: Delta
   ) => Delta | null
   shouldAllowWrite: (req: Spark['request'], msg: WsMessage) => boolean
+  hasAdminAccess?: (req: Spark['request']) => boolean
   supportsLogin: () => boolean
   login: (
     username: string,
@@ -1133,6 +1134,16 @@ function processSubscribe(
     msg.subscribe.length > 0 &&
     msg.subscribe[0].path === 'log'
   ) {
+    if (
+      !app.securityStrategy.isDummy() &&
+      !app.securityStrategy.hasAdminAccess?.(spark.request)
+    ) {
+      debug('server log subscription denied: admin access required')
+      spark.write({
+        errorMessage: 'Server log access requires admin permissions'
+      })
+      return
+    }
     if (!spark.logUnsubscribe) {
       spark.logUnsubscribe = startServerLog(app, spark)
     }
