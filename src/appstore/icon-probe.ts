@@ -52,13 +52,22 @@ export interface IconProbeCache {
     declaredPath: string,
     resolved: string | null
   ): void
+  flush(): void
   invalidate(): void
 }
+
+// A probe pass resolves many icons in quick succession, and serializing
+// the whole memo on every result costs O(entries) per probe. Coalesce
+// writes onto a timer so a pass produces one write instead of one per
+// icon; flush() forces the pending write out for callers that need the
+// file on disk immediately.
+const PERSIST_DEBOUNCE_MS = 1_000
 
 export function createIconProbeCache(cacheDir: string): IconProbeCache {
   const file = path.join(cacheDir, 'iconUrls.json')
   let memo: Record<string, ProbedEntry> = {}
   let loaded = false
+  let persistTimer: ReturnType<typeof setTimeout> | undefined
 
   function load() {
     if (loaded) return
@@ -74,6 +83,16 @@ export function createIconProbeCache(cacheDir: string): IconProbeCache {
       debug.enabled && debug('iconUrls cache load failed: %O', err)
       memo = {}
     }
+  }
+
+  function schedulePersist() {
+    if (persistTimer) return
+    persistTimer = setTimeout(() => {
+      persistTimer = undefined
+      persist()
+    }, PERSIST_DEBOUNCE_MS)
+    // Never hold the event loop open just to flush an icon-URL cache.
+    persistTimer.unref?.()
   }
 
   function persist() {
@@ -123,9 +142,21 @@ export function createIconProbeCache(cacheDir: string): IconProbeCache {
         resolved,
         probedAt: Date.now()
       }
+      schedulePersist()
+    },
+    flush() {
+      if (!persistTimer) return
+      clearTimeout(persistTimer)
+      persistTimer = undefined
       persist()
     },
     invalidate() {
+      // Drop any pending write first, or it would rewrite the entries
+      // this call is removing.
+      if (persistTimer) {
+        clearTimeout(persistTimer)
+        persistTimer = undefined
+      }
       memo = {}
       loaded = true
       try {
