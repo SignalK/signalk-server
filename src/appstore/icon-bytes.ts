@@ -40,6 +40,8 @@ export interface StoredIcon {
   contentType: string
   size: number
   writtenAt: number
+  /** Version this icon was downloaded for, taken from the filename. */
+  version: string
 }
 
 export interface IconBytesCache {
@@ -126,6 +128,12 @@ export function createIconBytesCache(cacheDir: string): IconBytesCache {
     const full = path.join(root, best.entry)
     const ext = best.entry.split('.').pop() || ''
     const contentType = guessContentTypeFromExt(ext)
+    // Filenames are `${safeName(pkg)}@${version}.${ext}`, so the version is
+    // whatever sits between the prefix and the extension.
+    const version = best.entry.slice(
+      prefix.length,
+      best.entry.length - (ext.length + 1)
+    )
     // Re-stat for the size: a concurrent purgeOldVersions or a manual
     // /appstore/refresh between the loop and here could have removed
     // the file. Treat that as "not stored" rather than throwing.
@@ -140,7 +148,8 @@ export function createIconBytesCache(cacheDir: string): IconBytesCache {
       path: full,
       contentType,
       size,
-      writtenAt: best.mtime
+      writtenAt: best.mtime,
+      version
     }
   }
 
@@ -211,7 +220,8 @@ export function createIconBytesCache(cacheDir: string): IconBytesCache {
         path: full,
         contentType: contentType.split(';')[0].trim(),
         size: bytes.byteLength,
-        writtenAt: Date.now()
+        writtenAt: Date.now(),
+        version
       }
     } catch (err) {
       debug.enabled && debug('write %s failed: %O', full, err)

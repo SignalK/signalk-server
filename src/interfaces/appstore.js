@@ -537,12 +537,14 @@ module.exports = function (app) {
                     t.declaredPath,
                     iconProbe
                   )
-                  if (
-                    resolved &&
-                    t.kind === 'icon' &&
-                    !iconBytes.read(pkg.name)
-                  ) {
-                    await iconBytes.download(pkg.name, pkg.version, resolved)
+                  if (resolved && t.kind === 'icon') {
+                    // Icons are cached per version, so check the version and
+                    // not just presence — otherwise a plugin that changes its
+                    // icon keeps serving the one cached for an older release.
+                    const stored = iconBytes.read(pkg.name)
+                    if (!stored || stored.version !== pkg.version) {
+                      await iconBytes.download(pkg.name, pkg.version, resolved)
+                    }
                   }
                 } catch (err) {
                   debug.enabled &&
@@ -930,7 +932,7 @@ module.exports = function (app) {
           // Screenshots stay remote (larger + only viewed on detail).
           if (resolved && t.kind === 'icon') {
             const existing = iconBytes.read(t.name)
-            if (!existing) {
+            if (!existing || existing.version !== t.version) {
               await iconBytes.download(t.name, t.version, resolved)
             }
           }
