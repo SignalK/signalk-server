@@ -106,6 +106,7 @@ function persistAliases(
 export function useSourceAliases() {
   const aliases = useStore((s) => s.sourceAliases)
   const loaded = useStore((s) => s.sourceAliasesLoaded)
+  const sourceNames = useStore((s) => s.sourceNames)
 
   // Migration runs once when the server's aliases have arrived; reading
   // current state from the store keeps `aliases` out of the dependency
@@ -133,10 +134,12 @@ export function useSourceAliases() {
 
   const getDisplayName = useCallback(
     (sourceRef: string, sourcesData?: SourcesData | null): string => {
+      // Local alias first for instant feedback on admin edits before the
+      // server-merged sourceNames map round-trips.
       if (aliases[sourceRef]) return aliases[sourceRef]
-      return buildSourceLabel(sourceRef, sourcesData ?? null)
+      return buildSourceLabel(sourceRef, sourcesData ?? null, sourceNames)
     },
-    [aliases]
+    [aliases, sourceNames]
   )
 
   const getDisplayParts = useCallback(
@@ -147,9 +150,9 @@ export function useSourceAliases() {
       if (aliases[sourceRef]) {
         return { primary: aliases[sourceRef], secondary: sourceRef }
       }
-      return buildSourceLabelParts(sourceRef, sourcesData ?? null)
+      return buildSourceLabelParts(sourceRef, sourcesData ?? null, sourceNames)
     },
-    [aliases]
+    [aliases, sourceNames]
   )
 
   return { aliases, setAlias, removeAlias, getDisplayName, getDisplayParts }
