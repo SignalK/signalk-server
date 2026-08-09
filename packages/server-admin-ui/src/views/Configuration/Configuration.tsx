@@ -27,6 +27,7 @@ import { faCircleInfo } from '@fortawesome/free-solid-svg-icons/faCircleInfo'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 import HistoryProviderSettings from '../ServerConfig/HistoryProviderSettings'
 import { useStore } from '../../store'
+import { pluginCountLabel } from './pluginCountLabel'
 
 interface PluginSchema {
   properties?: Record<string, unknown>
@@ -395,6 +396,10 @@ export default function PluginConfigurationList() {
                   </Form.Select>
                 </Form.Group>
               </Form>
+
+              <div className="text-body-secondary small mb-1" id="pluginCount">
+                {pluginCountLabel(pluginList.length, plugins.length)}
+              </div>
 
               <div
                 ref={tableContainerRef}
