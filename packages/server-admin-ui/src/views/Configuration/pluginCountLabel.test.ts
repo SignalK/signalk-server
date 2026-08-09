@@ -18,6 +18,10 @@ describe('pluginCountLabel', () => {
     expect(pluginCountLabel(1, 1)).toBe('1 plugin')
   })
 
+  it('singularises a single installed plugin hidden by a filter', () => {
+    expect(pluginCountLabel(0, 1)).toBe('Showing 0 of 1 plugin')
+  })
+
   it('describes an empty install without counts', () => {
     expect(pluginCountLabel(0, 0)).toBe('No plugins installed')
   })

@@ -7,8 +7,9 @@ export function pluginCountLabel(shown: number, total: number): string {
   if (total === 0) {
     return 'No plugins installed'
   }
+  const noun = `plugin${total === 1 ? '' : 's'}`
   if (shown === total) {
-    return `${total} plugin${total === 1 ? '' : 's'}`
+    return `${total} ${noun}`
   }
-  return `Showing ${shown} of ${total} plugins`
+  return `Showing ${shown} of ${total} ${noun}`
 }
