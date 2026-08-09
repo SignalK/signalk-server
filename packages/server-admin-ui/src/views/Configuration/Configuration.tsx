@@ -68,6 +68,9 @@ export default function PluginConfigurationList() {
   const params = useParams<{ pluginid?: string }>()
 
   const [plugins, setPlugins] = useState<Plugin[]>([])
+  // An empty list means "no plugins installed" only once a load has succeeded;
+  // before that it is indistinguishable from a pending or failed request.
+  const [pluginsLoaded, setPluginsLoaded] = useState(false)
   const [search, setSearch] = useState(
     () => localStorage.getItem(searchStorageKey) || ''
   )
@@ -311,6 +314,7 @@ export default function PluginConfigurationList() {
         }
 
         setPlugins(fetchedPlugins)
+        setPluginsLoaded(true)
         useStore.getState().setPlugins(fetchedPlugins)
         setSelectedPlugin(initialSelectedPlugin)
         setWasmEnabled(wasmInterfaceEnabled)
@@ -336,6 +340,7 @@ export default function PluginConfigurationList() {
       (storePlugins) => {
         if (storePlugins.length > 0) {
           setPlugins(storePlugins as Plugin[])
+          setPluginsLoaded(true)
           setSelectedPlugin((prev) => {
             if (!prev) return null
             return (
@@ -397,8 +402,14 @@ export default function PluginConfigurationList() {
                 </Form.Group>
               </Form>
 
-              <div className="text-body-secondary small mb-1" id="pluginCount">
-                {pluginCountLabel(pluginList.length, plugins.length)}
+              <div
+                className="text-body-secondary small mb-1"
+                id="pluginCount"
+                role="status"
+              >
+                {pluginsLoaded
+                  ? pluginCountLabel(pluginList.length, plugins.length)
+                  : ''}
               </div>
 
               <div
