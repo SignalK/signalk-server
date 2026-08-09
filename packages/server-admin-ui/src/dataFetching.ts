@@ -1,5 +1,8 @@
-import { isUndefined } from 'lodash'
 import { useStore } from './store'
+import {
+  GNSS_API_PATH,
+  sanitizeGnssConfig
+} from './store/slices/gnssPositionSlice'
 
 declare global {
   interface Window {
@@ -80,7 +83,7 @@ export async function fetchAllData(): Promise<void> {
   ) => {
     try {
       const response = await authFetch(
-        `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
+        `${prefix === undefined ? window.serverRoutesPrefix : prefix}${endpoint}`
       )
       if (response.status === 200) {
         const data = await response.json()
@@ -125,6 +128,12 @@ export async function fetchAllData(): Promise<void> {
     fetchAndSet('/n2kDeviceStatus', state.setN2kDeviceStatus),
     fetchAndSet('/livePreferredSources', state.setLivePreferredSources),
     fetchAndSet('/multiSourcePaths', state.setMultiSourcePaths),
-    fetchAndSet('/reconciledGroups', state.setReconciledGroups)
+    fetchAndSet('/reconciledGroups', state.setReconciledGroups),
+    fetchAndSet(
+      GNSS_API_PATH,
+      (data: unknown) => state.setGnssSensors(sanitizeGnssConfig(data)),
+      ''
+    ),
+    fetchAndSet('/positionSources', state.setPositionSources)
   ])
 }

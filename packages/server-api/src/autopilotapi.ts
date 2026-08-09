@@ -5,13 +5,7 @@ import { Value } from './deltas'
  * @category  Autopilot API
  */
 export type AutopilotUpdateAttrib =
-  | 'mode'
-  | 'state'
-  | 'target'
-  | 'engaged'
-  | 'options'
-  | 'actions'
-  | 'alarm'
+  'mode' | 'state' | 'target' | 'engaged' | 'options' | 'actions' | 'alarm'
 
 /**@hidden
  * @category  Autopilot API

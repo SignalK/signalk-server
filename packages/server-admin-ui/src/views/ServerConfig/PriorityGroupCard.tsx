@@ -367,25 +367,6 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
     [group.newcomerSources]
   )
 
-  // Lookup from path → configured priorities, for paths within this group.
-  // Prefer entries with a populated rank-1 sourceRef when duplicates exist.
-  const pathPrioritiesByPath = useMemo(() => {
-    const map = new Map<
-      string,
-      (typeof sourcePriorities)[number]['priorities']
-    >()
-    for (const pp of sourcePriorities) {
-      if (!groupPathSet.has(pp.path)) continue
-      const existing = map.get(pp.path)
-      const existingHasRankOne = !!existing?.[0]?.sourceRef
-      const incomingHasRankOne = !!pp.priorities?.[0]?.sourceRef
-      if (!existing || (!existingHasRankOne && incomingHasRankOne)) {
-        map.set(pp.path, pp.priorities)
-      }
-    }
-    return map
-  }, [sourcePriorities, groupPathSet])
-
   // Short descriptor per path (PGNs / 0183 sentences).
   const pathKinds: PathKinds = useMemo(() => {
     const map = new Map<string, string[]>()
@@ -969,7 +950,7 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                 </div>
               ) : (
                 <div className="pg-overrides-list">
-                  {overrideRows.map(({ pp, index }) => {
+                  {overrideRows.map(({ pp }) => {
                     const kinds = pathKinds.get(pp.path) ?? []
                     const isFanOut =
                       pp.priorities.length === 1 &&
@@ -1067,7 +1048,6 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                         <PrefsEditor
                           path={pp.path}
                           priorities={pp.priorities}
-                          pathIndex={index}
                           isSaving={isSaving}
                           sourcesData={sourcesData}
                           multiSourcePaths={multiSourcePaths}

@@ -534,8 +534,7 @@ export const toLazyDynamicComponent = (
   React.lazy(() =>
     (async () => {
       let container = window[toSafeModuleId(moduleName)] as
-        | Container
-        | undefined
+        Container | undefined
 
       if (container === undefined) {
         const remoteEntryScript = findRemoteEntryScript(moduleName)

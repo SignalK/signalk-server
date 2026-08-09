@@ -20,21 +20,71 @@ import { Context, Path, SourceRef } from '@signalk/server-api'
 import { createDebug } from '../../debug'
 import { Request, Response } from 'express'
 import { WithSecurityStrategy } from '../../security'
+import { ConfigApp, writeSettingsFile } from '../../config/config'
 
 import { Responses } from '../'
 
 const debug = createDebug('signalk-server:api:history')
 
 const HISTORY_API_PATH = `/signalk/v2/api/history`
+const PROVIDER_NOTIFICATION_PATH =
+  'notifications.server.history.defaultProvider' as Path
 
-interface HistoryApplication extends WithSecurityStrategy, IRouter {}
+/** Grace before the configured provider is reported unavailable in the
+ * HISTORYPROVIDERS serverevent. History providers typically live in
+ * plugins backed by slow-starting services (a database container can
+ * come up well after the server), so flagging immediately on startup or
+ * on a restart-driven unregister would flash a warning for a state that
+ * resolves itself moments later. */
+export const UNAVAILABLE_GRACE_MS = 10_000
+
+export interface HistoryProvidersEventData {
+  ids: string[]
+  defaultId: string | undefined
+  configuredId: string | undefined
+  /** True while the configured provider is registered or still within
+   * the grace window; false when no provider is configured or the
+   * configured one has stayed unregistered past the whole grace
+   * window. */
+  configuredAvailable: boolean
+}
+
+export interface HistoryApplication
+  extends WithSecurityStrategy, IRouter, ConfigApp, WithHistoryApi {}
 
 export class HistoryApiHttpRegistry {
   private historyProviders: Map<string, HistoryProvider> = new Map()
-  private defaultProviderId?: string
+  /** Persisted user choice; may reference a provider that is not
+   * currently registered (e.g. plugin disabled). */
+  private configuredProviderId?: string
+  /** True while a warn notification about the configured provider
+   * being unavailable is active. */
+  private warnedUnavailable = false
+  /** True once the configured provider has stayed unregistered past
+   * the whole grace window; drives the graced availability carried in
+   * the HISTORYPROVIDERS serverevent. */
+  private unavailableGraceExpired = false
+  private unavailableGraceTimer: ReturnType<typeof setTimeout> | null = null
   proxy: HistoryApi
 
-  constructor(private app: HistoryApplication & WithHistoryApi) {
+  /** The configured provider when it is registered, otherwise the first
+   * registered provider as fallback. Keeps the default independent of
+   * plugin load order. */
+  private get defaultProviderId(): string | undefined {
+    if (
+      this.configuredProviderId &&
+      this.historyProviders.has(this.configuredProviderId)
+    ) {
+      return this.configuredProviderId
+    }
+    return this.historyProviders.keys().next().value
+  }
+
+  constructor(
+    private app: HistoryApplication,
+    private unavailableGraceMs: number = UNAVAILABLE_GRACE_MS
+  ) {
+    this.configuredProviderId = app.config.settings.historyApi?.defaultProvider
     this.proxy = {
       getValues: (query: ValuesRequest): Promise<ValuesResponse> => {
         return this.defaultProvider().getValues(query)
@@ -72,9 +122,12 @@ export class HistoryApiHttpRegistry {
     if (!this.historyProviders.has(pluginId)) {
       this.historyProviders.set(pluginId, provider)
     }
-    if (this.historyProviders.size === 1) {
-      this.defaultProviderId = pluginId
+    if (pluginId === this.configuredProviderId) {
+      this.clearUnavailableGrace()
+      this.unavailableGraceExpired = false
+      this.notifyConfiguredAvailable()
     }
+    this.emitProvidersState()
     debug(
       `Registered history api provider ${pluginId},`,
       `total=${this.historyProviders.size},`,
@@ -87,9 +140,10 @@ export class HistoryApiHttpRegistry {
       return
     }
     this.historyProviders.delete(pluginId)
-    if (pluginId === this.defaultProviderId) {
-      this.defaultProviderId = this.historyProviders.keys().next().value
+    if (pluginId === this.configuredProviderId) {
+      this.armUnavailableGrace()
     }
+    this.emitProvidersState()
     debug(
       `Unregistered history api provider ${pluginId},`,
       `total=${this.historyProviders.size},`,
@@ -98,6 +152,14 @@ export class HistoryApiHttpRegistry {
   }
 
   start() {
+    // Seed the serverevent cache so a connecting admin UI always
+    // receives the current state (events.ts replays the last event of
+    // each type to new websocket clients), and start the grace window
+    // for a configured provider whose plugin has not registered yet —
+    // the normal case on a cold boot with a slow-starting backend.
+    this.armUnavailableGrace()
+    this.emitProvidersState()
+
     // return list of history providers
     this.app.get(
       `${HISTORY_API_PATH}/_providers`,
@@ -128,7 +190,8 @@ export class HistoryApiHttpRegistry {
         debug(`**route = ${req.method} ${req.path}`)
         try {
           res.status(200).json({
-            id: this.defaultProviderId
+            id: this.defaultProviderId,
+            configured: this.configuredProviderId
           })
         } catch (err: unknown) {
           res.status(400).json({
@@ -161,11 +224,20 @@ export class HistoryApiHttpRegistry {
             throw new Error('Provider id not supplied!')
           }
           if (this.historyProviders.has(req.params.id)) {
-            this.defaultProviderId = req.params.id
-            res.status(200).json({
-              statusCode: 200,
-              state: 'COMPLETED',
-              message: `Default provider set to ${req.params.id}.`
+            this.saveConfiguredProvider(req.params.id, (err) => {
+              if (err) {
+                res.status(500).json({
+                  statusCode: 500,
+                  state: 'FAILED',
+                  message: `Failed to save settings: ${err.message}`
+                })
+              } else {
+                res.status(200).json({
+                  statusCode: 200,
+                  state: 'COMPLETED',
+                  message: `Default provider set to ${req.params.id}.`
+                })
+              }
             })
           } else {
             throw new Error(`Provider ${req.params.id} not found!`)
@@ -221,7 +293,144 @@ export class HistoryApiHttpRegistry {
     )
   }
 
+  // Commit the new default only when the write succeeds, so a failed
+  // save does not leave the active provider or the in-memory settings
+  // out of sync with the settings file. The write gets an immutable
+  // snapshot; app.config.settings is untouched until the write lands.
+  private saveConfiguredProvider(id: string, cb: (err?: Error) => void) {
+    const settings = this.app.config.settings
+    const snapshot = {
+      ...settings,
+      historyApi: {
+        ...settings.historyApi,
+        defaultProvider: id
+      }
+    }
+    writeSettingsFile(this.app, snapshot, (err?: Error) => {
+      if (!err) {
+        settings.historyApi = snapshot.historyApi
+        this.configuredProviderId = id
+        this.clearUnavailableGrace()
+        this.unavailableGraceExpired = false
+        // The route validated the id as registered, but the settings
+        // write is asynchronous — the provider can unregister in the
+        // gap. Re-check before declaring it available, else the UI
+        // would show a false available state with no grace armed.
+        if (this.historyProviders.has(id)) {
+          this.notifyConfiguredAvailable()
+        } else {
+          this.armUnavailableGrace()
+        }
+        this.emitProvidersState()
+      }
+      cb(err)
+    })
+  }
+
+  /** Cancel the pending grace timer; for shutdown and tests. */
+  stop() {
+    this.clearUnavailableGrace()
+  }
+
+  /** Full-snapshot state event for the admin UI; replayed to new
+   * websocket clients from the server's last-event cache. */
+  private emitProvidersState() {
+    const data: HistoryProvidersEventData = {
+      ids: [...this.historyProviders.keys()],
+      defaultId: this.defaultProviderId,
+      configuredId: this.configuredProviderId,
+      configuredAvailable:
+        this.configuredProviderId !== undefined && !this.unavailableGraceExpired
+    }
+    this.app.emit('serverevent', { type: 'HISTORYPROVIDERS', data })
+  }
+
+  private configuredProviderAbsent(): boolean {
+    return (
+      this.configuredProviderId !== undefined &&
+      !this.historyProviders.has(this.configuredProviderId)
+    )
+  }
+
+  private armUnavailableGrace() {
+    if (this.unavailableGraceTimer || !this.configuredProviderAbsent()) {
+      return
+    }
+    this.unavailableGraceTimer = setTimeout(() => {
+      this.unavailableGraceTimer = null
+      // Re-check at fire time — the provider may have registered (or
+      // the configured id changed) during the grace window.
+      if (!this.configuredProviderAbsent()) {
+        return
+      }
+      this.unavailableGraceExpired = true
+      this.emitProvidersState()
+    }, this.unavailableGraceMs)
+    this.unavailableGraceTimer.unref?.()
+  }
+
+  private clearUnavailableGrace() {
+    if (this.unavailableGraceTimer) {
+      clearTimeout(this.unavailableGraceTimer)
+      this.unavailableGraceTimer = null
+    }
+  }
+
+  // Raise a warn notification the first time a request needs the
+  // default provider while the configured one is unavailable; cleared
+  // via notifyConfiguredAvailable() when its plugin registers again.
+  private warnIfConfiguredUnavailable() {
+    const configured = this.configuredProviderId
+    if (
+      !configured ||
+      this.historyProviders.has(configured) ||
+      this.warnedUnavailable
+    ) {
+      return
+    }
+    this.warnedUnavailable = true
+    const fallback = this.defaultProviderId
+    this.notify(
+      'warn',
+      `Configured default history provider '${configured}' is not available` +
+        (fallback
+          ? `, using '${fallback}' instead`
+          : ' and no other provider is registered')
+    )
+  }
+
+  private notifyConfiguredAvailable() {
+    if (!this.warnedUnavailable) {
+      return
+    }
+    this.warnedUnavailable = false
+    this.notify(
+      'normal',
+      `Configured default history provider '${this.configuredProviderId}' is available`
+    )
+  }
+
+  private notify(state: 'normal' | 'warn', message: string) {
+    this.app.handleMessage('historyApi', {
+      updates: [
+        {
+          values: [
+            {
+              path: PROVIDER_NOTIFICATION_PATH,
+              value: {
+                state,
+                method: [],
+                message
+              }
+            }
+          ]
+        }
+      ]
+    })
+  }
+
   private defaultProvider(): HistoryProvider {
+    this.warnIfConfiguredUnavailable()
     if (
       this.defaultProviderId &&
       this.historyProviders.has(this.defaultProviderId)
@@ -239,6 +448,7 @@ export class HistoryApiHttpRegistry {
       }
       return provider
     }
+    this.warnIfConfiguredUnavailable()
     return this.defaultProviderId
       ? this.historyProviders.get(this.defaultProviderId)
       : undefined

@@ -38,7 +38,6 @@ import {
   useConfiguredPriorityPaths,
   usePreferredSourceByPath,
   useLivePreferredSources,
-  useSourcePrioritiesLoaded,
   useDiscoveredAddresses
 } from '../../store'
 
@@ -79,6 +78,7 @@ interface DeltaMessage {
     values?: Array<{
       path: string
       value: unknown
+      state?: PathData['state']
     }>
     meta?: Array<{
       path: string
@@ -160,7 +160,6 @@ const DataBrowser: React.FC = () => {
   const configuredPriorityPaths = useConfiguredPriorityPaths()
   const preferredSourceByPath = usePreferredSourceByPath()
   const livePreferredSourcesRaw = useLivePreferredSources()
-  const sourcePrioritiesLoaded = useSourcePrioritiesLoaded()
   const discoveredAddresses = useDiscoveredAddresses()
 
   // Paths the user has flagged for fan-out (sentinel '*' override).
@@ -313,7 +312,8 @@ const DataBrowser: React.FC = () => {
                   value: vp.value,
                   pgn: pgn || undefined,
                   sentence: sentence || undefined,
-                  timestamp: formattedTimestamp
+                  timestamp: formattedTimestamp,
+                  state: vp.state
                 }
                 const wasNew = !getPathData(key, path$SourceKey)
                 updatePath(key, path$SourceKey, pathData)

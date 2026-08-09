@@ -27,7 +27,10 @@ import {
   SubscribeCallback,
   RelativePositionOrigin,
   Delta,
-  SourceRef
+  SourceRef,
+  Update,
+  PathValue,
+  Value
 } from '@signalk/server-api'
 import * as Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
@@ -95,6 +98,27 @@ class SubscriptionManager implements ISubscriptionManager {
     sourcePolicy?: 'preferred' | 'all',
     excludeSources?: SourceRef[]
   ) {
+    // The callback is plugin/client code that runs synchronously inside
+    // Bacon dispatches: live bus fan-out, cache bootstrap replay and the
+    // keys announcements new-path attachment rides on. An exception
+    // escaping into a dispatch aborts delivery to every subscriber
+    // registered after this one, and baconjs' Bus drains its re-entrant
+    // push queue in a finally block, so a throw there leaves the bus
+    // permanently stuck swallowing all further pushes — one broken
+    // callback silences other subscriptions' path announcements for good.
+    // Contain it here; the return value must pass through for Bacon.noMore.
+    const guardedCallback: SubscribeCallback = (delta: Delta) => {
+      try {
+        return callback(delta)
+      } catch (err) {
+        try {
+          errorCallback(err)
+        } catch (errorCallbackError) {
+          console.error(err)
+          console.error(errorCallbackError)
+        }
+      }
+    }
     const contextFilter = contextMatcher(
       this.selfContext,
       this.app,
@@ -142,15 +166,21 @@ class SubscriptionManager implements ISubscriptionManager {
         unsubscribes,
         buses,
         contextFilter,
-        callback,
+        guardedCallback,
         errorCallback,
         user,
         sourcePolicy,
         perSubEngine,
-        this.selfContext
+        this.selfContext,
+        true
       )
       // listen to new keys and then use the same logic to check if we
-      // want to subscribe, passing in a map with just that single bus
+      // want to subscribe, passing in a map with just that single bus.
+      // No cache bootstrap here: a keys announcement is triggered by the
+      // delta that is mid-dispatch, already ingested into the delta cache
+      // (index.ts ingests before it emits), and its live push follows the
+      // attach within the same dispatch — a cache replay would deliver
+      // that first delta twice.
       unsubscribes.push(
         this.streambundle.keys.onValue((path) => {
           const newBuses: BusesMap = {}
@@ -163,12 +193,13 @@ class SubscriptionManager implements ISubscriptionManager {
             unsubscribes,
             newBuses,
             contextFilter,
-            callback,
+            guardedCallback,
             errorCallback,
             user,
             sourcePolicy,
             perSubEngine,
-            this.selfContext
+            this.selfContext,
+            false
           )
         })
       )
@@ -207,7 +238,7 @@ class SubscriptionManager implements ISubscriptionManager {
               }
             })
           })
-          callback(filtered)
+          guardedCallback(filtered)
         })
       }
 
@@ -237,9 +268,9 @@ class SubscriptionManager implements ISubscriptionManager {
                   new Date(),
                   this.selfContext
                 )
-                if (filtered) callback(filtered)
+                if (filtered) guardedCallback(filtered)
               } else {
-                callback(delta)
+                guardedCallback(delta)
               }
             })
 
@@ -283,7 +314,8 @@ function handleSubscribeRows(
   user?: string,
   sourcePolicy?: 'preferred' | 'all',
   perSubEngine?: ToPreferredDelta | null,
-  selfContext?: string
+  selfContext?: string,
+  bootstrapFromCache?: boolean
 ) {
   rows.reduce((acc, subscribeRow) => {
     if (subscribeRow.path !== undefined) {
@@ -298,7 +330,8 @@ function handleSubscribeRows(
         user,
         sourcePolicy,
         perSubEngine,
-        selfContext
+        selfContext,
+        bootstrapFromCache
       )
     }
     return acc
@@ -320,14 +353,37 @@ function handleSubscribeRow(
   user?: string,
   sourcePolicy?: 'preferred' | 'all',
   perSubEngine?: ToPreferredDelta | null,
-  selfContext?: string
+  selfContext?: string,
+  bootstrapFromCache?: boolean
 ) {
   const matcher = pathMatcher(subscribeRow.path)
   // iterate over all the buses, checking if we want to subscribe to its values
   forOwn(buses, (bus, key) => {
-    if (matcher(key)) {
-      debug('Subscribing to key ' + key)
-      let filteredBus: Bacon.EventStream<NormalizedDelta> = bus.filter(filter)
+    // Root deltas (path '') carry vessel identity fields (name, mmsi,
+    // communication.callsignVhf, ...) as one object value, mirroring their
+    // attribute form in the full model. A row asking for such a leaf path
+    // can never match the '' bus directly, so flatten root values into
+    // per-leaf deltas for it. Rows whose pattern matches '' itself ('' and
+    // wildcards) keep receiving the original root delta, so nothing is
+    // delivered twice.
+    const flattenRootValues = key === '' && !matcher(key)
+    if (matcher(key) || flattenRootValues) {
+      debug.enabled && debug('Subscribing to key ' + key)
+      // Build Bacon stages only for rows that need them. A plain row (no
+      // rate limiting, no root flattening, no per-subscription engine) is
+      // delivered by a single inline sink further down instead, which
+      // retains about a quarter of what filter().map().onValue() does.
+      let filteredBus: Bacon.EventStream<NormalizedDelta> | null = null
+      if (flattenRootValues) {
+        filteredBus = bus
+          .filter(filter)
+          .flatMap(
+            (normalizedDelta: NormalizedDelta) =>
+              Bacon.fromArray(
+                flattenRootDelta(normalizedDelta, matcher)
+              ) as Bacon.EventStream<NormalizedDelta>
+          )
+      }
       if (subscribeRow.minPeriod) {
         if (subscribeRow.policy && subscribeRow.policy !== 'instant') {
           errorCallback(
@@ -341,9 +397,15 @@ function handleSubscribeRow(
             `invalid minPeriod value '${subscribeRow.minPeriod}', ignoring`
           )
         } else if (key !== '') {
-          // we can not apply minPeriod for empty path subscriptions
+          // Timing policies are not applied on the '' bus (flattened rows
+          // included): the stream carries values for multiple paths, so a
+          // shared debounce would drop values of one path because another
+          // path delivered first. Root identity data also arrives on AIS
+          // static-report cadence, far slower than any practical period.
           debug('debouncing')
-          filteredBus = filteredBus.debounceImmediate(minPeriodValue)
+          filteredBus = (filteredBus ?? bus.filter(filter)).debounceImmediate(
+            minPeriodValue
+          )
         }
       } else if (
         subscribeRow.period ||
@@ -356,7 +418,7 @@ function handleSubscribeRow(
         } else if (key !== '') {
           // we can not apply period for empty path subscriptions
           const interval = Number(subscribeRow.period) || 1000
-          filteredBus = filteredBus
+          filteredBus = (filteredBus ?? bus.filter(filter))
             .bufferWithTime(interval)
             .flatMapLatest((bufferedValues: any) => {
               const uniqueValues = _(bufferedValues)
@@ -390,7 +452,7 @@ function handleSubscribeRow(
       // plugin's own (or otherwise excluded) sources removed from the
       // candidate set.
       if (perSubEngine) {
-        const engineStream = filteredBus
+        const engineStream = (filteredBus ?? bus.filter(filter))
           .map(toDelta)
           .flatMap((delta: Delta) => {
             const filtered = runPerSubEngine(
@@ -402,37 +464,53 @@ function handleSubscribeRow(
             return filtered ? Bacon.once(filtered) : Bacon.never()
           }) as Bacon.EventStream<Delta>
         unsubscribes.push(engineStream.onValue(callback))
-      } else {
+      } else if (filteredBus) {
         unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
+      } else {
+        // Plain row: no stages needed. Returning the callback's result keeps
+        // Bacon.noMore working the same as through a filter/map chain.
+        unsubscribes.push(
+          bus.onValue((normalizedDelta: NormalizedDelta) => {
+            if (filter(normalizedDelta)) {
+              return callback(toDelta(normalizedDelta))
+            }
+          })
+        )
       }
 
-      // Bootstrap snapshot: fetch every source's last cached value
-      // (sourcePolicy='all') when a per-subscription engine owns this
-      // subscription, then replay through the engine so the snapshot
-      // honours the exclude mask. Without the override the snapshot
-      // would carry the global preferred winner — which may BE the
-      // excluded source — and the subscriber would see it once on
+      // Bootstrap snapshot at subscribe time only: fetch every source's
+      // last cached value (sourcePolicy='all') when a per-subscription
+      // engine owns this subscription, then replay through the engine so
+      // the snapshot honours the exclude mask. Without the override the
+      // snapshot would carry the global preferred winner — which may BE
+      // the excluded source — and the subscriber would see it once on
       // startup.
-      const latest = app.deltaCache.getCachedDeltas(
-        filter,
-        user,
-        key,
-        perSubEngine ? 'all' : sourcePolicy
-      )
-      if (latest) {
-        if (perSubEngine) {
-          const now = new Date()
-          for (const delta of latest) {
-            const filtered = runPerSubEngine(
-              perSubEngine,
-              delta,
-              now,
-              selfContext ?? ''
-            )
-            if (filtered) callback(filtered)
+      if (bootstrapFromCache) {
+        const cached = app.deltaCache.getCachedDeltas(
+          filter,
+          user,
+          key,
+          perSubEngine ? 'all' : sourcePolicy
+        )
+        const latest =
+          flattenRootValues && cached
+            ? flattenCachedRootDeltas(cached, matcher)
+            : cached
+        if (latest) {
+          if (perSubEngine) {
+            const now = new Date()
+            for (const delta of latest) {
+              const filtered = runPerSubEngine(
+                perSubEngine,
+                delta,
+                now,
+                selfContext ?? ''
+              )
+              if (filtered) callback(filtered)
+            }
+          } else {
+            latest.forEach(callback)
           }
-        } else {
-          latest.forEach(callback)
         }
       }
     }
@@ -446,6 +524,74 @@ function pathMatcher(path: string = '*') {
     .replace(/\*/g, '.*')
   const matcher = new RegExp('^' + pattern + '$')
   return (aPath: string) => matcher.test(aPath)
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function collectLeaves(
+  obj: Record<string, unknown>,
+  prefix: string,
+  accept: (path: string) => boolean,
+  leaves: PathValue[]
+) {
+  for (const key of Object.keys(obj)) {
+    const path = prefix === '' ? key : `${prefix}.${key}`
+    const value = obj[key]
+    if (isPlainObject(value)) {
+      collectLeaves(value, path, accept, leaves)
+    } else if (accept(path)) {
+      leaves.push({ path: path as Path, value: value as Value })
+    }
+  }
+}
+
+function flattenRootDelta(
+  normalizedDelta: NormalizedDelta,
+  accept: (path: string) => boolean
+): NormalizedDelta[] {
+  if (normalizedDelta.isMeta || !isPlainObject(normalizedDelta.value)) {
+    return []
+  }
+  const leaves: PathValue[] = []
+  collectLeaves(normalizedDelta.value, '', accept, leaves)
+  return leaves.map((leaf) => ({
+    context: normalizedDelta.context,
+    source: normalizedDelta.source,
+    $source: normalizedDelta.$source,
+    timestamp: normalizedDelta.timestamp,
+    path: leaf.path,
+    value: leaf.value,
+    state: normalizedDelta.state,
+    isMeta: false
+  }))
+}
+
+function flattenCachedRootDeltas(
+  deltas: Delta[],
+  accept: (path: string) => boolean
+): Delta[] {
+  return deltas.reduce<Delta[]>((acc, delta) => {
+    const updates = delta.updates.reduce<Update[]>((updatesAcc, update) => {
+      if ('values' in update) {
+        const values: PathValue[] = []
+        for (const pathValue of update.values) {
+          if (pathValue.path === '' && isPlainObject(pathValue.value)) {
+            collectLeaves(pathValue.value, '', accept, values)
+          }
+        }
+        if (values.length > 0) {
+          updatesAcc.push({ ...update, values })
+        }
+      }
+      return updatesAcc
+    }, [])
+    if (updates.length > 0) {
+      acc.push({ context: delta.context, updates })
+    }
+    return acc
+  }, [])
 }
 
 function contextMatcher(

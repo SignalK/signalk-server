@@ -15,6 +15,14 @@ import {
   type UnitPreferencesSlice
 } from './slices/unitPreferencesSlice'
 import {
+  createGnssPositionSlice,
+  type GnssPositionSlice
+} from './slices/gnssPositionSlice'
+import {
+  createWebappSortSlice,
+  type WebappSortSlice
+} from './slices/webappSortSlice'
+import {
   conflictKey,
   detectInstanceConflicts,
   extractN2kDevices
@@ -29,12 +37,16 @@ export type {
 export type { DataSlice, PathData, MetaData } from './slices/dataSlice'
 export type { PrioritiesSlice } from './slices/prioritiesSlice'
 export type { UnitPreferencesSlice } from './slices/unitPreferencesSlice'
+export type { GnssPositionSlice } from './slices/gnssPositionSlice'
+export type { WebappSortSlice } from './slices/webappSortSlice'
 
 export type SignalKStore = AppSlice &
   WsSlice &
   DataSlice &
   PrioritiesSlice &
-  UnitPreferencesSlice
+  UnitPreferencesSlice &
+  GnssPositionSlice &
+  WebappSortSlice
 
 export const useStore = create<SignalKStore>()(
   subscribeWithSelector((...args) => ({
@@ -42,7 +54,9 @@ export const useStore = create<SignalKStore>()(
     ...createWsSlice(...args),
     ...createDataSlice(...args),
     ...createPrioritiesSlice(...args),
-    ...createUnitPreferencesSlice(...args)
+    ...createUnitPreferencesSlice(...args),
+    ...createGnssPositionSlice(...args),
+    ...createWebappSortSlice(...args)
   }))
 )
 
@@ -125,8 +139,10 @@ export function useAppstoreFilter() {
     useShallow((s) => ({
       view: s.appstoreView,
       search: s.appstoreSearch,
+      category: s.appstoreCategory,
       setView: s.setAppstoreView,
-      setSearch: s.setAppstoreSearch
+      setSearch: s.setAppstoreSearch,
+      setCategory: s.setAppstoreCategory
     }))
   )
 }
@@ -177,6 +193,18 @@ export function useWebapps() {
 
 export function useAddons() {
   return useStore((s) => s.addons)
+}
+
+export function useWebappSortMode() {
+  return useStore((s) => s.webappSortMode)
+}
+
+export function useWebappCustomOrder() {
+  return useStore((s) => s.webappCustomOrder)
+}
+
+export function useWebappLastUsed() {
+  return useStore((s) => s.webappLastUsed)
 }
 
 export function usePlugins() {
@@ -315,6 +343,21 @@ export function useSourceStatusLoaded() {
   return useStore((s) => s.sourceStatusLoaded)
 }
 
+export function useHistoryProviders() {
+  return useStore((s) => s.historyProviders)
+}
+
+export function useHistoryProviderUnavailable() {
+  return useStore((s) => {
+    const providers = s.historyProviders
+    return (
+      providers !== null &&
+      providers.configuredId !== undefined &&
+      !providers.configuredAvailable
+    )
+  })
+}
+
 export function useConfiguredPriorityPaths(): Set<string> {
   // Select a primitive string so zustand can compare by ===.
   // useShallow doesn't work with Set (Object.keys returns [] for Sets).
@@ -378,6 +421,35 @@ export function usePreferredSourceByPath(): Map<string, string> {
     }
     return map
   }, [serialized])
+}
+
+export function useGnssSensorsData() {
+  return useStore((s) => s.gnssSensorsData)
+}
+
+export function usePositionSources() {
+  return useStore((s) => s.positionSources)
+}
+
+// Detected navigation.position sources that have no sensor row yet.
+// The shared definition of "configured" — a row exists for the source,
+// regardless of whether its offsets are filled in (the corrector skips
+// rows with null offsets) — used by both the Preferences page rows and
+// the sidebar warning badge so the two cannot drift.
+export function useUnconfiguredGnssSources(): string[] {
+  const gnssSensorsData = useGnssSensorsData()
+  const positionSources = usePositionSources()
+  return useMemo(() => {
+    const configuredRefs = new Set(
+      gnssSensorsData.sensors.filter((s) => s.$source).map((s) => s.$source)
+    )
+    // *.ccrp sources are the corrector's own output in 'both' mode —
+    // offering them as configurable antennas would invite correcting
+    // already-corrected data.
+    return positionSources.filter(
+      (ref) => !configuredRefs.has(ref) && !ref.endsWith('.ccrp')
+    )
+  }, [gnssSensorsData, positionSources])
 }
 
 export * from './types'

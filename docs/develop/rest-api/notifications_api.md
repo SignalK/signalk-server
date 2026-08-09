@@ -103,6 +103,7 @@ The remaining properties indicate the actions that **HAVE been taken**:
 
 - `silenced` - `true` when the silence action has been taken
 - `acknowledged` - `true` when the acknowledge action has been taken
+- `acknowledgedAt` - timestamp indicating when the acknowledge action was taken
 
 ## Taking Action
 
@@ -328,6 +329,7 @@ The result of a successful clear request is that the:
 - `state` value is set to `normal`
 - `status.silenced` is set to `false`
 - `status.acknowledged` is set to `false`
+- `status.acknowledgedAt` is not present
 
 If the clear action is requested when the `status.canClear` property is `false`, the alarm will not be cleared and an ERROR response is returned to the requestor.
 
@@ -440,6 +442,7 @@ The result of a successful acknowledge request is that the:
 
 - Both `sound` & `visual` values are removed from the `method` attribute
 - `status.acknowledged` is set to `true`
+- `status.acknowledgedAt` holds the timestamp of when the alarm was acknowledged.
 
 If the acknowledge action is requested when the `status.canAcknowledge` property is `false`, the alarm will not be acknowledged and an ERROR response is returned to the requestor.
 
@@ -480,6 +483,7 @@ _Notification: after successful `acknowledge` request_
    "status": {
       "silenced": true,
       "acknowledged": true,
+      "acknowledgedAt": "2026-04-06T03:34:48.203Z",
       "canSilence": true,
       "canAcknow;edge": true,
       "canClear": true
@@ -598,3 +602,20 @@ Updates notification `state` & `status` properties as follows:
 | Source | Condition         | State    | silenced | acknowledged |
 | ------ | ----------------- | -------- | -------- | ------------ |
 | API    | `canClear = true` | `normal` | false    | false        |
+
+## Disabling Core Notification Management
+
+By default the server manages the lifecycle of all notifications as described
+above. Setting `notifications.manageNotifications` to `false` in the server
+settings (Server -> Settings in the admin UI, restart required) takes the core
+notification manager out of the notification path so an external handler can
+own the lifecycle instead. `notifications.*` deltas then flow to the data
+model unmodified — no server-assigned `id` or `status` is embedded in values.
+
+With management disabled the API surface stays mounted but behaves as follows:
+
+| Operation                                                                                                | Behavior when disabled                                                                                                                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /notifications`                                                                                     | Served from the data model (`self` context only). Keys are the source-supplied `value.id` when present, otherwise the notification path. No `status` enrichment.                                                                                         |
+| `POST /notifications` (raise), `POST /notifications/mob`                                                 | Emit the notification delta directly. `path` is required for raise (no `notifications.{id}` fallback) and `context` is ignored. The returned `id` is embedded in the emitted value but not tracked by the server.                                        |
+| `GET/PUT/DELETE /notifications/{id}`, `{id}/silence`, `{id}/acknowledge`, `silenceAll`, `acknowledgeAll` | Respond `501` with `{"state": "FAILED", "statusCode": 501, "message": ...}`. The matching `app.notifications.*` plugin methods throw `NotificationManagerDisabledError` (identify via `instanceof` or `error.code === 'NOTIFICATION_MANAGER_DISABLED'`). |

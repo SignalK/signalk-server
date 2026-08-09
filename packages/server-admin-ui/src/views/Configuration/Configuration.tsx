@@ -25,6 +25,7 @@ import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import { faCircleInfo } from '@fortawesome/free-solid-svg-icons/faCircleInfo'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
+import HistoryProviderSettings from '../ServerConfig/HistoryProviderSettings'
 import { useStore } from '../../store'
 
 interface PluginSchema {
@@ -350,163 +351,172 @@ export default function PluginConfigurationList() {
   const selectedPluginId = selectedPlugin ? selectedPlugin.id : null
 
   return (
-    <Row className="plugin-config-row g-0">
-      <Col xl={6}>
-        <Card>
-          <Card.Header>
-            <FontAwesomeIcon icon={faAlignJustify} />{' '}
-            <strong>Plugin Configuration</strong>
-          </Card.Header>
-          <Card.Body>
-            <Form
-              action=""
-              method="post"
-              encType="multipart/form-data"
-              className="form-horizontal"
-              onSubmit={(e: FormEvent) => {
-                e.preventDefault()
-              }}
-            >
-              <Form.Group className="mb-2">
-                <Form.Control
-                  type="text"
-                  name="search"
-                  id="search"
-                  onChange={handleSearch}
-                  value={search}
-                  placeholder="Filter installed plugins..."
-                />
-              </Form.Group>
-              <Form.Group className="mb-2">
-                <Form.Select
-                  name="statusFilter"
-                  id="statusFilter"
-                  onChange={handleStatusFilter}
-                  value={statusFilter}
-                  size="sm"
-                >
-                  <option value="all">All Plugins</option>
-                  <option value="enabled">Enabled</option>
-                  <option value="disabled">Disabled</option>
-                  <option value="unconfigured">Unconfigured</option>
-                </Form.Select>
-              </Form.Group>
-            </Form>
+    <>
+      <HistoryProviderSettings />
+      <Row className="plugin-config-row g-0">
+        <Col xl={6}>
+          <Card>
+            <Card.Header>
+              <FontAwesomeIcon icon={faAlignJustify} />{' '}
+              <strong>Plugin Configuration</strong>
+            </Card.Header>
+            <Card.Body>
+              <Form
+                action=""
+                method="post"
+                encType="multipart/form-data"
+                className="form-horizontal"
+                onSubmit={(e: FormEvent) => {
+                  e.preventDefault()
+                }}
+              >
+                <Form.Group className="mb-2">
+                  <Form.Control
+                    type="text"
+                    name="search"
+                    id="search"
+                    onChange={handleSearch}
+                    value={search}
+                    placeholder="Filter installed plugins..."
+                  />
+                </Form.Group>
+                <Form.Group className="mb-2">
+                  <Form.Select
+                    name="statusFilter"
+                    id="statusFilter"
+                    onChange={handleStatusFilter}
+                    value={statusFilter}
+                    size="sm"
+                  >
+                    <option value="all">All Plugins</option>
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                    <option value="unconfigured">Unconfigured</option>
+                  </Form.Select>
+                </Form.Group>
+              </Form>
 
-            <div
-              ref={tableContainerRef}
-              className="plugin-list-container"
-              style={{
-                border: '1px solid #dee2e6',
-                opacity: isFiltering ? 0.7 : 1,
-                transition: 'opacity 0.2s'
-              }}
-            >
-              <Table responsive bordered size="sm" hover className="mb-0">
-                <thead
-                  style={{
-                    position: 'sticky',
-                    top: 0,
-                    backgroundColor: '#f8f9fa',
-                    zIndex: 1
-                  }}
-                >
-                  <tr>
-                    <th>Plugin Name</th>
-                    <th style={{ width: '1%', whiteSpace: 'nowrap' }}>
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pluginList.map((plugin) => {
-                    const isSelected = selectedPluginId === plugin.id
-                    const configurationRequired =
-                      plugin.schema &&
-                      plugin.schema.properties &&
-                      Object.keys(plugin.schema?.properties).length !== 0 &&
-                      (plugin.data.configuration === null ||
-                        plugin.data.configuration === undefined)
+              <div
+                ref={tableContainerRef}
+                className="plugin-list-container"
+                style={{
+                  border: '1px solid #dee2e6',
+                  opacity: isFiltering ? 0.7 : 1,
+                  transition: 'opacity 0.2s'
+                }}
+              >
+                <Table responsive bordered size="sm" hover className="mb-0">
+                  <thead
+                    style={{
+                      position: 'sticky',
+                      top: 0,
+                      backgroundColor: '#f8f9fa',
+                      zIndex: 1
+                    }}
+                  >
+                    <tr>
+                      <th>Plugin Name</th>
+                      <th style={{ width: '1%', whiteSpace: 'nowrap' }}>
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pluginList.map((plugin) => {
+                      const isSelected = selectedPluginId === plugin.id
+                      const configurationRequired =
+                        plugin.schema &&
+                        plugin.schema.properties &&
+                        Object.keys(plugin.schema?.properties).length !== 0 &&
+                        (plugin.data.configuration === null ||
+                          plugin.data.configuration === undefined)
 
-                    const isWasmPlugin = plugin.type === 'wasm'
-                    const wasmDisabledForPlugin = isWasmPlugin && !wasmEnabled
+                      const isWasmPlugin = plugin.type === 'wasm'
+                      const wasmDisabledForPlugin = isWasmPlugin && !wasmEnabled
 
-                    let badgeClass = 'text-bg-secondary'
-                    let badgeText = 'Disabled'
+                      let badgeClass = 'text-bg-secondary'
+                      let badgeText = 'Disabled'
 
-                    if (wasmDisabledForPlugin) {
-                      badgeClass = 'text-bg-danger'
-                      badgeText = 'WASM disabled'
-                    } else if (!plugin.bundled && configurationRequired) {
-                      badgeClass = 'text-bg-warning'
-                      badgeText = 'Unconfigured'
-                    } else if (plugin.data.enabled && !configurationRequired) {
-                      badgeClass = 'text-bg-success'
-                      badgeText = 'Enabled'
-                    }
+                      if (wasmDisabledForPlugin) {
+                        badgeClass = 'text-bg-danger'
+                        badgeText = 'WASM disabled'
+                      } else if (!plugin.bundled && configurationRequired) {
+                        badgeClass = 'text-bg-warning'
+                        badgeText = 'Unconfigured'
+                      } else if (
+                        plugin.data.enabled &&
+                        !configurationRequired
+                      ) {
+                        badgeClass = 'text-bg-success'
+                        badgeText = 'Enabled'
+                      }
 
-                    return (
-                      <tr
-                        key={plugin.id}
-                        data-plugin-id={plugin.id}
-                        onClick={handlePluginClick}
-                        style={{ cursor: 'pointer' }}
-                        className={isSelected ? 'table-active' : ''}
-                      >
-                        <td>
-                          {isSelected ? (
-                            <strong>
-                              <FontAwesomeIcon icon={faGear} className="me-1" />
-                              {plugin.name}
-                            </strong>
-                          ) : (
-                            plugin.name
-                          )}
-                        </td>
-                        <td>
-                          <div className={`badge ${badgeClass}`}>
-                            {badgeText}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
-            </div>
-          </Card.Body>
-        </Card>
-      </Col>
-
-      <Col xl={6} ref={configCardRef}>
-        {selectedPlugin && (
-          <PluginConfigCard
-            plugin={selectedPlugin}
-            isConfigurator={isConfigurator(selectedPlugin)}
-            saveData={(data: PluginData) => {
-              if (
-                selectedPlugin.data.enabled === undefined &&
-                data.enabled === undefined
-              ) {
-                data.enabled = true
-              }
-              return saveData(selectedPlugin.id, data)
-            }}
-          />
-        )}
-        {!selectedPlugin && (
-          <Card className="mt-3 mt-xl-0">
-            <Card.Body className="text-center text-muted py-5">
-              <FontAwesomeIcon
-                icon={faGear}
-                style={{ fontSize: '48px', opacity: 0.3 }}
-              />
-              <p className="mt-3">Select a plugin in the list to configure</p>
+                      return (
+                        <tr
+                          key={plugin.id}
+                          data-plugin-id={plugin.id}
+                          onClick={handlePluginClick}
+                          style={{ cursor: 'pointer' }}
+                          className={isSelected ? 'table-active' : ''}
+                        >
+                          <td>
+                            {isSelected ? (
+                              <strong>
+                                <FontAwesomeIcon
+                                  icon={faGear}
+                                  className="me-1"
+                                />
+                                {plugin.name}
+                              </strong>
+                            ) : (
+                              plugin.name
+                            )}
+                          </td>
+                          <td>
+                            <div className={`badge ${badgeClass}`}>
+                              {badgeText}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </Table>
+              </div>
             </Card.Body>
           </Card>
-        )}
-      </Col>
-    </Row>
+        </Col>
+
+        <Col xl={6} ref={configCardRef}>
+          {selectedPlugin && (
+            <PluginConfigCard
+              plugin={selectedPlugin}
+              isConfigurator={isConfigurator(selectedPlugin)}
+              saveData={(data: PluginData) => {
+                if (
+                  selectedPlugin.data.enabled === undefined &&
+                  data.enabled === undefined
+                ) {
+                  data.enabled = true
+                }
+                return saveData(selectedPlugin.id, data)
+              }}
+            />
+          )}
+          {!selectedPlugin && (
+            <Card className="mt-3 mt-xl-0">
+              <Card.Body className="text-center text-muted py-5">
+                <FontAwesomeIcon
+                  icon={faGear}
+                  style={{ fontSize: '48px', opacity: 0.3 }}
+                />
+                <p className="mt-3">Select a plugin in the list to configure</p>
+              </Card.Body>
+            </Card>
+          )}
+        </Col>
+      </Row>
+    </>
   )
 }
 

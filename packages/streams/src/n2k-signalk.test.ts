@@ -13,13 +13,15 @@ const HEADING_PGN = {
   id: 'vesselHeading'
 }
 
-/**
- * Pre-seed sourceMeta for a src so that deltas pass through without waiting
- * for CAN Name resolution (which requires PGN 60928 address claim traffic).
- */
-function markCanNameUnknown(stream: N2kToSignalK, src: number): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(stream as any).sourceMeta[src] = { unknownCanName: true }
+const WIND_PGN = {
+  prio: 2,
+  pgn: 130306,
+  dst: 255,
+  src: 35,
+  timestamp: '2024-01-01T00:00:00.000Z',
+  fields: { sid: 0, windSpeed: 5.2, windAngle: 1.1, reference: 'Apparent' },
+  description: 'Wind Data',
+  id: 'windData'
 }
 
 describe('N2kToSignalK', () => {
@@ -29,7 +31,6 @@ describe('N2kToSignalK', () => {
       app,
       providerId: 'test-n2k'
     })
-    markCanNameUnknown(stream, 204)
 
     const outputPromise = collectStreamOutput(stream)
 
@@ -76,7 +77,6 @@ describe('N2kToSignalK', () => {
       filtersEnabled: true,
       filters: [{ pgn: '999999', source: '' }]
     })
-    markCanNameUnknown(stream, 204)
 
     const outputPromise = collectStreamOutput(stream)
 
@@ -191,7 +191,6 @@ describe('N2kToSignalK', () => {
     // flow downstream — they create phantom can0.254 / ydgw02.254 devices.
     const app = createMockApp()
     const stream = new N2kToSignalK({ app, providerId: 'test-n2k' })
-    markCanNameUnknown(stream, 254)
 
     const outputPromise = collectStreamOutput(stream)
     stream.write({ ...HEADING_PGN, src: 254 })
@@ -229,7 +228,6 @@ describe('N2kToSignalK', () => {
       filtersEnabled: false,
       filters: [{ pgn: '127250', source: '204' }]
     })
-    markCanNameUnknown(stream, 204)
 
     const outputPromise = collectStreamOutput(stream)
 
@@ -238,5 +236,135 @@ describe('N2kToSignalK', () => {
 
     const results = await outputPromise
     expect(results).to.have.length(1)
+  })
+})
+
+describe('N2kToSignalK canName warmup', () => {
+  // Pre-seed the mapper so a src already has a resolved canName, as it
+  // would after a PGN 60928 address claim. toDelta then stamps the
+  // canName onto the delta source.
+  function seedCanName(stream: N2kToSignalK, src: number, canName: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(stream as any).n2kMapper.state[src] = { canName }
+  }
+
+  it('drops src-only deltas during the warmup window (useCanName on)', async () => {
+    const app = createMockApp()
+    const stream = new N2kToSignalK({
+      app,
+      providerId: 'canbus0',
+      useCanName: true,
+      canNameWarmupMs: 60000
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+    stream.write(WIND_PGN)
+    stream.end()
+
+    // Inside warmup with no canName yet — hold it back so no numeric-form
+    // ref is stamped before the address claim resolves.
+    expect(await outputPromise).to.have.length(0)
+  })
+
+  it('passes src-only deltas once warmup has elapsed (never-claiming device)', async () => {
+    const app = createMockApp()
+    const stream = new N2kToSignalK({
+      app,
+      providerId: 'canbus0',
+      useCanName: true,
+      canNameWarmupMs: 0
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+    stream.write(WIND_PGN)
+    stream.end()
+
+    const results = (await outputPromise) as Array<{
+      updates: Array<{ source: { src: string; canName?: string } }>
+    }>
+    expect(results).to.have.length(1)
+    expect(results[0]!.updates[0]!.source.src).to.equal('35')
+    expect(results[0]!.updates[0]!.source.canName).to.equal(undefined)
+  })
+
+  it('passes deltas that already carry a canName during warmup', async () => {
+    const app = createMockApp()
+    const stream = new N2kToSignalK({
+      app,
+      providerId: 'canbus0',
+      useCanName: true,
+      canNameWarmupMs: 60000
+    })
+    seedCanName(stream, 35, 'c0509635e7664732')
+
+    const outputPromise = collectStreamOutput(stream)
+    stream.write(WIND_PGN)
+    stream.end()
+
+    const results = (await outputPromise) as Array<{
+      updates: Array<{ source: { canName?: string } }>
+    }>
+    expect(results).to.have.length(1)
+    expect(results[0]!.updates[0]!.source.canName).to.equal('c0509635e7664732')
+  })
+
+  it('does not gate src-only deltas when useCanName is off', async () => {
+    const app = createMockApp()
+    const stream = new N2kToSignalK({
+      app,
+      providerId: 'canbus0',
+      canNameWarmupMs: 60000
+      // useCanName off
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+    stream.write(WIND_PGN)
+    stream.end()
+
+    expect(await outputPromise).to.have.length(1)
+  })
+
+  it('an alarm dropped during warmup is delivered when it re-arrives after warmup', async () => {
+    // Answers the core question: notifications need no special-casing
+    // during warmup because N2K alarms are periodic (PGN 127489 every
+    // 500 ms). The same alarm that is held back mid-warmup flows through
+    // once the window passes.
+    const ENGINE_ALARM = {
+      prio: 2,
+      pgn: 127489,
+      dst: 255,
+      src: 50,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      fields: { engineInstance: 0, discreteStatus1: ['Check Engine'] },
+      description: 'Engine Parameters, Dynamic',
+      id: 'engineParametersDynamic'
+    }
+
+    const app = createMockApp()
+    const stream = new N2kToSignalK({
+      app,
+      providerId: 'canbus0',
+      useCanName: true,
+      canNameWarmupMs: 0
+    })
+    // Force the first frame into the warmup window, then let it lapse so
+    // the periodic retransmit lands after warmup — without real timers.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(stream as any).warmupUntil = Number.MAX_SAFE_INTEGER
+
+    const outputPromise = collectStreamOutput(stream)
+    stream.write(ENGINE_ALARM)
+    // Warmup elapsed: the alarm's next periodic broadcast gets through.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(stream as any).warmupUntil = 0
+    stream.write({ ...ENGINE_ALARM, timestamp: '2024-01-01T00:00:00.500Z' })
+    stream.end()
+
+    const results = (await outputPromise) as Array<{
+      updates: Array<{ values: Array<{ path: string }> }>
+    }>
+    expect(results).to.have.length(1)
+    const paths = results[0]!.updates[0]!.values.map((v) => v.path)
+    expect(paths).to.include('notifications.propulsion.starboard.checkEngine')
   })
 })

@@ -8,6 +8,21 @@ import {
 } from '.'
 
 /**
+ * Error thrown by Notifications API methods that require the core
+ * NotificationManager when `notifications.manageNotifications` is `false`.
+ * Identify it with `instanceof` or via its `code` property.
+ *
+ * @category Notifications API
+ */
+export class NotificationManagerDisabledError extends Error {
+  readonly code = 'NOTIFICATION_MANAGER_DISABLED'
+  constructor() {
+    super('Core notification management is disabled on this server.')
+    this.name = 'NotificationManagerDisabledError'
+  }
+}
+
+/**
  * Plugin interface functions.
  * @see [Notifications REST API](../../../docs/develop/rest-api/notifications_api.md) for further details.
  * @category  Notifications API
@@ -19,6 +34,8 @@ export interface NotificationsApi {
    * @category Notifications API
    *
    * @param id - Notification identifier.
+   * @throws {@link NotificationManagerDisabledError} when core notification
+   * management is disabled (`notifications.manageNotifications = false`).
    *
    * @example
    * ```typescript
@@ -29,6 +46,12 @@ export interface NotificationsApi {
 
   /**
    * Retrieve the notification(s) with the supplied path.
+   *
+   * When core notification management is disabled, entries are read from the
+   * data model (`self` context only): values carry no core-side `status`, keys
+   * are the source-supplied `value.id` when present (otherwise the
+   * notification path), and matching is by subtree (path prefix) rather than
+   * exact path.
    *
    * @category Notifications API
    *
@@ -43,6 +66,11 @@ export interface NotificationsApi {
 
   /**
    * Retrieve a list notifications keyed by identifier.
+   *
+   * When core notification management is disabled, entries are read from the
+   * data model (`self` context only): values carry no core-side `status`, and
+   * keys are the source-supplied `value.id` when present, otherwise the
+   * notification path.
    *
    * @category Notifications API
    *
@@ -92,6 +120,12 @@ export interface NotificationsApi {
    * // path = `notifications.propulsion.port.temperature.{notificationId}`
    * ```
    *
+   * Note: when core notification management is disabled
+   * (`notifications.manageNotifications = false`), `path` is required — there
+   * is no `notifications.{notificationId}` fallback — and a plain `Error` is
+   * thrown if it is missing. The returned id is embedded in the emitted value
+   * but not tracked by the server. `context` is ignored: the notification is
+   * emitted for the self context, matching managed-mode emission.
    */
   raise(options: AlarmRaiseOptions): NotificationId
 
@@ -125,6 +159,8 @@ export interface NotificationsApi {
    *
    * @param id - Notification identifier.
    * @param options - Alarm options.
+   * @throws {@link NotificationManagerDisabledError} when core notification
+   * management is disabled (`notifications.manageNotifications = false`).
    *
    * @example
    * ```typescript
@@ -149,6 +185,8 @@ export interface NotificationsApi {
    * @category Notifications API
    *
    * @param id - Notification identifier.
+   * @throws {@link NotificationManagerDisabledError} when core notification
+   * management is disabled (`notifications.manageNotifications = false`).
    *
    * @example
    * ```typescript
@@ -161,6 +199,9 @@ export interface NotificationsApi {
    * Silences all notifications.
    *
    * @category Notifications API
+   *
+   * @throws {@link NotificationManagerDisabledError} when core notification
+   * management is disabled (`notifications.manageNotifications = false`).
    *
    * @example
    * ```typescript
@@ -178,6 +219,8 @@ export interface NotificationsApi {
    * @category Notifications API
    *
    * @param id - Notification identifier.
+   * @throws {@link NotificationManagerDisabledError} when core notification
+   * management is disabled (`notifications.manageNotifications = false`).
    *
    * @example
    * ```typescript
@@ -190,6 +233,9 @@ export interface NotificationsApi {
    * Acknowledges all notifications.
    *
    * @category Notifications API
+   *
+   * @throws {@link NotificationManagerDisabledError} when core notification
+   * management is disabled (`notifications.manageNotifications = false`).
    *
    * @example
    * ```typescript
@@ -206,6 +252,8 @@ export interface NotificationsApi {
    * @category Notifications API
    *
    * @param id - Notification identifier.
+   * @throws {@link NotificationManagerDisabledError} when core notification
+   * management is disabled (`notifications.manageNotifications = false`).
    *
    * @example
    * ```typescript

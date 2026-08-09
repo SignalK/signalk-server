@@ -62,13 +62,23 @@ docker run -d --init  --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.s
 
 This will run the server as background process and current directory as the settings directory. You will be prompted to create admin credentials the first time you you access the configuration admin web UI.
 
+## Playback of a raw log file
+
+You can launch an ephemeral container named `signalk-playback` that disables all configured data connections and plays back a single raw log file instead. Mount the directory containing the log file and pass it to `--data`:
+
+```
+docker run --init -it --rm --name signalk-playback --publish 3000:3000 -v $(pwd):/data --entrypoint /home/node/signalk/node_modules/.bin/signalk-server cr.signalk.io/signalk/signalk-server --data /data/skserver-raw_2025-02-10T11.log
+```
+
+Replace `skserver-raw_2025-02-10T11.log` with the name of your log file in the current directory. The server is available at http://localhost:3000. Because `--rm` is used, the container is removed automatically when it stops, leaving no persisted state.
+
 ## Docker Compose
 
 See `docker/docker-compose.yml` for reference / example if you want to use docker-compose.
 
 # Image details and used tags
 
-Signal K Server docker images are based on Ubuntu 24.04 LTS. During build process, Node.js is installed including tools required to install or compile plugins. Signal K supports mDNS from docker, uses avahi for e.g. mDNS discovery. All required avahi tools and settings are available for user `node`, also from command line.
+Signal K Server docker images are based on Ubuntu LTS and include Node.js and the tools required to install or compile plugins.
 
 ## Directory structure
 
@@ -95,12 +105,12 @@ The **core** variant strips the bundled webapps and plugins from the image, keep
 
 ### Tags
 
-| Variant | Ubuntu rolling | Alpine rolling        | Ubuntu pinned | Alpine pinned        |
-| ------- | -------------- | --------------------- | ------------- | -------------------- |
-| Full    | `:latest`      | `:latest-alpine`      | `:X.Y.Z`      | `:X.Y.Z-alpine`      |
-| Core    | `:latest-core` | `:latest-alpine-core` | `:X.Y.Z-core` | `:X.Y.Z-alpine-core` |
+| Variant | Ubuntu 24.04 rolling | Ubuntu 26.04 rolling | Ubuntu 24.04 pinned | Ubuntu 26.04 pinned |
+| ------- | -------------------- | -------------------- | ------------------- | ------------------- |
+| Full    | `:latest`            | `:latest-26.04`      | `:X.Y.Z`            | `:X.Y.Z-26.04`      |
+| Core    | `:latest-core`       | `:latest-26.04-core` | `:X.Y.Z-core`       | `:X.Y.Z-26.04-core` |
 
-The core `-core` suffix is appended after the full variant's tag, so core mirrors every full tag. Versioned core tags follow the existing major / major.minor pattern (`:v2-core`, `:v2.27-core`, plus `-alpine-core` siblings).
+The core `-core` suffix is appended after the full variant's tag, so core mirrors every full tag. Versioned core tags follow the existing major / major.minor pattern (`:v2-core`, `:v2.27-core`, plus the `-26.04-core` sibling). `:latest` / `:X.Y.Z` (no OS suffix) always refer to the Ubuntu 24.04 build.
 
 ### What's stripped
 

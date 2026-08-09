@@ -127,7 +127,8 @@ module.exports = {
     port,
     enableSecurity,
     extraConfig = {},
-    securityConfig
+    securityConfig,
+    configDir = serverTestConfigDirectory()
   ) {
     const Server = require('../dist')
     // The requestResponse module stores requests in-memory at module scope.
@@ -137,6 +138,12 @@ module.exports = {
     } catch (_e) {
       // ignore - not critical for non-test usage
     }
+    // The npm keyword/dist-tag caches are module scope with a 60s TTL, so a
+    // suite that stubs the registry would otherwise serve the previous
+    // suite's live search results. Deliberately unguarded: a failure here
+    // means test isolation is broken, which must surface as a setup error
+    // rather than as confusing cross-suite failures later.
+    require('../dist/modules').resetModuleCaches()
     const props = {
       config: JSON.parse(JSON.stringify(defaultConfig))
     }
@@ -153,7 +160,7 @@ module.exports = {
       }
     }
 
-    process.env.SIGNALK_NODE_CONFIG_DIR = serverTestConfigDirectory()
+    process.env.SIGNALK_NODE_CONFIG_DIR = configDir
     process.env.SIGNALK_DISABLE_SERVER_UPDATES = 'true'
 
     const server = new Server(props)

@@ -12,9 +12,14 @@ import {
   Update,
   AlarmProperties,
   NotificationId,
+  NotificationManagerDisabledError,
   AlarmRaiseOptions,
   AlarmUpdateOptions,
-  Path
+  Path,
+  ALARM_STATE,
+  ALARM_METHOD,
+  Notification,
+  Timestamp
 } from '@signalk/server-api'
 import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
@@ -37,28 +42,50 @@ export interface NotificationApplication
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const NOTI_API_PATH = `${SIGNALK_API_PATH}/notifications`
 
+const DISABLED_MESSAGE = new NotificationManagerDisabledError().message
+
+/** Non-path metadata keys on fullsignalk model nodes */
+const MODEL_NODE_KEYS = new Set([
+  'value',
+  'values',
+  'meta',
+  '$source',
+  'timestamp'
+])
+
 export const deltaVersion: SKVersion = SKVersion.v1
 
 export class NotificationApi {
   private app: NotificationApplication
   private notiKeys: Map<NotificationKey, NotificationId> = new Map()
-  private notificationManager: NotificationManager
+  private notificationManager?: NotificationManager
 
   constructor(private server: NotificationApplication) {
     this.app = server
-    this.notificationManager = new NotificationManager(server)
   }
 
   async start() {
-    return new Promise<void>(async (resolve) => {
+    return new Promise<void>((resolve) => {
       this.initNotificationRoutes()
-      this.app.registerDeltaInputHandler(
-        (delta: Delta, next: (delta: Delta) => void) => {
-          next(this.filterNotifications(delta))
-        }
-      )
+      if (this.isManaging()) {
+        this.notificationManager = new NotificationManager(this.server)
+        this.app.registerDeltaInputHandler(
+          (delta: Delta, next: (delta: Delta) => void) => {
+            next(this.filterNotifications(delta))
+          }
+        )
+      } else {
+        debug(
+          'Core notification management disabled ' +
+            '(settings.notifications.manageNotifications=false)'
+        )
+      }
       resolve()
     })
+  }
+
+  private isManaging(): boolean {
+    return this.app.config.settings.notifications?.manageNotifications !== false
   }
 
   /** Filter out notifications.* paths and push onto notiUpdate */
@@ -115,7 +142,7 @@ export class NotificationApi {
         this.notiKeys.set(key, update.notificationId)
       }
       // register with manager
-      this.notificationManager.processNotificationUpdate(update, context)
+      this.notificationManager?.processNotificationUpdate(update, context)
     }
   }
 
@@ -132,6 +159,7 @@ export class NotificationApi {
       `${NOTI_API_PATH}/:id`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
+        if (this.rejectIfDisabled(res)) return
         if (uuid.validate(req.params.id)) {
           const n = this.getId(req.params.id as NotificationId)
           if (n) {
@@ -150,6 +178,7 @@ export class NotificationApi {
       `${NOTI_API_PATH}/silenceAll`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
+        if (this.rejectIfDisabled(res)) return
         try {
           this.silenceAll()
           res.status(200).json(Responses.ok)
@@ -168,6 +197,7 @@ export class NotificationApi {
       `${NOTI_API_PATH}/:id/silence`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
+        if (this.rejectIfDisabled(res)) return
         try {
           if (uuid.validate(req.params.id)) {
             this.silence(req.params.id as NotificationId)
@@ -190,6 +220,7 @@ export class NotificationApi {
       `${NOTI_API_PATH}/acknowledgeAll`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
+        if (this.rejectIfDisabled(res)) return
         try {
           this.acknowledgeAll()
           res.status(200).json(Responses.ok)
@@ -208,6 +239,7 @@ export class NotificationApi {
       `${NOTI_API_PATH}/:id/acknowledge`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
+        if (this.rejectIfDisabled(res)) return
         try {
           if (uuid.validate(req.params.id)) {
             this.acknowledge(req.params.id as NotificationId)
@@ -230,6 +262,7 @@ export class NotificationApi {
       `${NOTI_API_PATH}/:id`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
+        if (this.rejectIfDisabled(res)) return
         try {
           if (uuid.validate(req.params.id)) {
             this.clear(req.params.id as NotificationId)
@@ -267,6 +300,7 @@ export class NotificationApi {
       `${NOTI_API_PATH}/:id`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
+        if (this.rejectIfDisabled(res)) return
         try {
           if (uuid.validate(req.params.id)) {
             this.update(req.params.id as NotificationId, req.body)
@@ -306,46 +340,187 @@ export class NotificationApi {
   //** Plugin Interface Methods */
 
   list(): Record<NotificationId, AlarmProperties> {
-    return this.notificationManager.list
+    return this.notificationManager
+      ? this.notificationManager.list
+      : this.listFromModel()
   }
 
   getId(id: NotificationId): AlarmProperties | undefined {
-    return this.notificationManager.get(id)
+    return this.requireManager().get(id)
   }
 
   getPath(path: Path): Record<NotificationId, AlarmProperties> {
-    return this.notificationManager.getPath(path)
+    return this.notificationManager
+      ? this.notificationManager.getPath(path)
+      : this.listFromModel(path)
   }
 
   silence(id: NotificationId): void {
-    this.notificationManager.silence(id)
+    this.requireManager().silence(id)
   }
 
   silenceAll(): void {
-    this.notificationManager.silenceAll()
+    this.requireManager().silenceAll()
   }
 
   acknowledge(id: NotificationId): void {
-    this.notificationManager.acknowledge(id)
+    this.requireManager().acknowledge(id)
   }
 
   acknowledgeAll(): void {
-    this.notificationManager.acknowledgeAll()
+    this.requireManager().acknowledgeAll()
   }
 
   clear(id: NotificationId): void {
-    this.notificationManager.clear(id)
+    this.requireManager().clear(id)
   }
 
   raise(options: AlarmRaiseOptions): NotificationId {
-    return this.notificationManager.raise(options)
+    return this.notificationManager
+      ? this.notificationManager.raise(options)
+      : this.raiseViaDelta(options)
   }
 
   update(id: NotificationId, options: AlarmUpdateOptions): void {
-    this.notificationManager.update(id, options)
+    this.requireManager().update(id, options)
   }
 
   mob(message?: string): NotificationId {
-    return this.notificationManager.mob(message)
+    return this.notificationManager
+      ? this.notificationManager.mob(message)
+      : this.raiseViaDelta({
+          state: ALARM_STATE.emergency,
+          message: message ?? 'Person Overboard!',
+          path: 'mob' as Path,
+          idInPath: true,
+          includePosition: true,
+          includeCreatedAt: true
+        })
+  }
+
+  // ----- Disabled-mode behaviour (no NotificationManager) -----
+
+  private requireManager(): NotificationManager {
+    if (!this.notificationManager) {
+      throw new NotificationManagerDisabledError()
+    }
+    return this.notificationManager
+  }
+
+  private rejectIfDisabled(res: Response): boolean {
+    if (this.notificationManager) {
+      return false
+    }
+    res.status(501).json({
+      state: 'FAILED',
+      statusCode: 501,
+      message: DISABLED_MESSAGE
+    })
+    return true
+  }
+
+  /**
+   * Read notifications from the data model. A handler's notifications still
+   * appear in the model when core management is off, so list/getPath serve
+   * them. A handler-supplied `id` in the value is used as the key; otherwise
+   * the path is used (no core-side status enrichment).
+   */
+  private listFromModel(
+    pathFilter?: Path
+  ): Record<NotificationId, AlarmProperties> {
+    const result: Record<string, AlarmProperties> = Object.create(null)
+    const root: unknown = this.app.signalk.self?.notifications
+    if (!root) {
+      return result
+    }
+    const filter = pathFilter
+      ? String(pathFilter).replace(/^notifications(\.|$)/, '')
+      : ''
+    // iterative walk: a notification leaf can itself parent further
+    // notification nodes, so leaves do not end the descent
+    const stack: Array<[unknown, string]> = [[root, '']]
+    while (stack.length) {
+      const [entry, dotted] = stack.pop()!
+      if (!entry || typeof entry !== 'object') {
+        continue
+      }
+      const node = entry as Record<string, unknown>
+      const nodeValue = node.value
+      if (
+        nodeValue &&
+        typeof nodeValue === 'object' &&
+        'state' in nodeValue &&
+        (!filter || dotted === filter || dotted.startsWith(`${filter}.`))
+      ) {
+        const value = nodeValue as Notification
+        const path = `notifications.${dotted}` as Path
+        // key by source-supplied id; on a duplicate id fall back to the
+        // (unique) path so no notification is silently dropped
+        const key =
+          typeof value.id === 'string' && !(value.id in result)
+            ? value.id
+            : path
+        result[key] = { context: 'vessels.self' as Context, path, value }
+      }
+      for (const segment of Object.keys(node)) {
+        if (!MODEL_NODE_KEYS.has(segment)) {
+          stack.push([node[segment], dotted ? `${dotted}.${segment}` : segment])
+        }
+      }
+    }
+    return result
+  }
+
+  /**
+   * Emit a notification as a delta without a NotificationManager. It lands in
+   * the data model and reaches any external handler. A generated id is
+   * embedded in the value (matching managed-mode) and returned.
+   */
+  private raiseViaDelta(options: AlarmRaiseOptions): NotificationId {
+    if (!options || !options.state || !options.message) {
+      throw new Error(
+        'Notification `state` or `message` properties are missing!'
+      )
+    }
+    if (!options.path) {
+      throw new Error(
+        'Notification `path` is required when core notification management is disabled.'
+      )
+    }
+    const id = uuid.v4() as NotificationId
+    const basePath = String(options.path).startsWith('notifications.')
+      ? String(options.path)
+      : `notifications.${options.path}`
+    const path = (options.idInPath ? `${basePath}.${id}` : basePath) as Path
+
+    const value: Notification = {
+      state: options.state,
+      message: options.message,
+      method: [ALARM_METHOD.visual, ALARM_METHOD.sound],
+      id
+    }
+    if (options.includePosition || options.state === ALARM_STATE.emergency) {
+      value.position =
+        this.app.signalk.self?.navigation?.position?.value ?? null
+    }
+    if (options.includeCreatedAt || options.state === ALARM_STATE.emergency) {
+      value.createdAt = new Date().toISOString() as Timestamp
+    }
+    if (options.data) {
+      value.data = structuredClone(options.data)
+    }
+
+    const delta: Delta = {
+      // managed-mode raise also emits for self regardless of options.context
+      // (Alarm attaches context to the delta only for external updates)
+      context: 'vessels.self' as Context,
+      updates: [
+        {
+          values: [{ path, value }]
+        } as Update
+      ]
+    }
+    this.app.handleMessage('notificationApi', delta, deltaVersion)
+    return id
   }
 }

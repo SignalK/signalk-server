@@ -106,6 +106,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 
 1. In GitHub, create a pull request.
    - Use the same guidelines as commit messages to write the PR title and description.
+   - Start the PR title with a conventional-commit prefix (e.g. `feat:`, `fix:`, `docs:`, with an optional scope like `fix(docker):`). A GitHub Action reads this prefix and automatically applies the matching label, so a correctly prefixed title satisfies the required-label check.
    - The server's release notes are automatically generated from PR titles, so think about how you can make them **descriptive, informative and easy to understand**. Ask yourself: "If I only knew the title would I understand what the PR does?".
    - The description should tell how the change affects the server's behavior and motivation for doing the change.
    - If you change the Admin UI include screenshots in the description to help others get a quick idea what changes and how it will look. Before & after pictures are great for this.
@@ -114,7 +115,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 
 1. Wait for labeling and review
    - PRs are automatically reviewed by [CodeRabbit](https://coderabbit.ai/). Address any comments it raises. Once you are done addressing CodeRabbit's feedback, add a comment **"Ready for human review"** to signal that the PR is ready for maintainer review.
-   - The maintainers will apply a label to the PR. The label is used to group PRs, mainly to distinguish fixes and new features.
+   - A label is applied automatically from the PR title prefix (see above); maintainers may adjust it if needed. The label is used to group PRs, mainly to distinguish fixes, new features and chores.
    - If we require changes to your PR we expect you to:
    - Implement the agreed changes.
    - Rebase your branch and force push to your GitHub repository (this will update your Pull Request):

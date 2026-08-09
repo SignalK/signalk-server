@@ -49,8 +49,7 @@ describe('DELETE /skServer/removeSource', function () {
       const tick = () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sources = (server.app.signalk as any)?.sources as
-          | Record<string, Record<string, unknown>>
-          | undefined
+          Record<string, Record<string, unknown>> | undefined
         if (sources?.['0183-1']?.['II']) return resolve()
         if (Date.now() > deadline) {
           return reject(

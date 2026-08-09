@@ -9,6 +9,7 @@ interface CanboatJsOptions {
   analyzerOutEvent?: string
   useCamelCompat?: boolean
   createDebug?: CreateDebug
+  providerId?: string
   [key: string]: unknown
 }
 
@@ -18,10 +19,15 @@ interface FileChunk {
   timestamp: string
 }
 
+type ParsedPgnData = ReturnType<InstanceType<typeof FromPgn>['parse']> & {
+  providerId?: string
+}
+
 export default class CanboatJs extends Transform {
   private readonly fromPgn: InstanceType<typeof FromPgn>
   private readonly app: CanboatJsOptions['app']
   private readonly analyzerOutEvent: string
+  private readonly providerId: string | undefined
 
   constructor(options: CanboatJsOptions) {
     super({ objectMode: true })
@@ -46,6 +52,7 @@ export default class CanboatJs extends Transform {
 
     this.app = options.app
     this.analyzerOutEvent = options.analyzerOutEvent ?? 'N2KAnalyzerOut'
+    this.providerId = options.providerId
   }
 
   _transform(
@@ -59,17 +66,19 @@ export default class CanboatJs extends Transform {
       'fromFile' in chunk &&
       chunk.fromFile
     ) {
-      const pgnData = this.fromPgn.parse(chunk.data)
+      const pgnData = this.fromPgn.parse(chunk.data) as ParsedPgnData
       if (pgnData) {
         pgnData.timestamp = new Date(Number(chunk.timestamp)).toISOString()
+        pgnData.providerId = this.providerId
         this.push(pgnData)
         this.app.emit(this.analyzerOutEvent, pgnData)
       } else {
         this.app.emit('canboatjs:unparsed:object', chunk)
       }
     } else {
-      const pgnData = this.fromPgn.parse(chunk)
+      const pgnData = this.fromPgn.parse(chunk) as ParsedPgnData
       if (pgnData) {
+        pgnData.providerId = this.providerId
         this.push(pgnData)
         this.app.emit(this.analyzerOutEvent, pgnData)
       } else {

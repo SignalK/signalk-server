@@ -22,7 +22,9 @@ import {
   useSourcePriorities,
   usePriorityOverrides,
   usePriorityGroups,
-  useActiveConflictCount
+  useActiveConflictCount,
+  useUnconfiguredGnssSources,
+  useHistoryProviderUnavailable
 } from '../../store'
 import classNames from 'classnames'
 import { isOverrideDormantUnderGroups } from '../../utils/sourceGroups'
@@ -156,6 +158,9 @@ export default function Sidebar({ location }: SidebarProps) {
     (d) => d.tokenExpiry && d.tokenExpiry * 1000 < nowMs
   ).length
 
+  const unconfiguredGnssCount = useUnconfiguredGnssSources().length
+  const historyProviderUnavailable = useHistoryProviderUnavailable()
+
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
     let updatesBadge: BadgeData | null = null
@@ -204,14 +209,11 @@ export default function Sidebar({ location }: SidebarProps) {
 
     const unconfiguredCount = plugins.filter((plugin: Plugin) => {
       const bundled = (plugin as Record<string, unknown>).bundled as
-        | boolean
-        | undefined
+        boolean | undefined
       const schema = (plugin as Record<string, unknown>).schema as
-        | { properties?: Record<string, unknown> }
-        | undefined
+        { properties?: Record<string, unknown> } | undefined
       const data = (plugin as Record<string, unknown>).data as
-        | { configuration?: unknown }
-        | undefined
+        { configuration?: unknown } | undefined
       return (
         !bundled &&
         schema?.properties &&
@@ -266,7 +268,14 @@ export default function Sidebar({ location }: SidebarProps) {
                 }
               : null
         },
-        { name: 'Unit Preferences', url: '/data/units' },
+        {
+          name: 'Preferences',
+          url: '/data/preferences',
+          badge:
+            unconfiguredGnssCount > 0
+              ? { variant: 'warning', text: `${unconfiguredGnssCount}` }
+              : null
+        },
         { name: 'Fiddler', url: '/data/fiddler' }
       )
     }
@@ -284,7 +293,7 @@ export default function Sidebar({ location }: SidebarProps) {
       },
       ((): NavItemData => {
         const dataBadgeCount = isAdmin
-          ? prioritiesAttentionCount + conflictCount
+          ? prioritiesAttentionCount + conflictCount + unconfiguredGnssCount
           : 0
         return {
           name: 'Data',
@@ -299,13 +308,17 @@ export default function Sidebar({ location }: SidebarProps) {
       })()
     ]
 
+    const historyProviderBadge: BadgeData | null = historyProviderUnavailable
+      ? { variant: 'warning', text: '!' }
+      : null
+
     if (isAdmin) {
       result.push(
         {
           name: 'Apps & Plugins',
           url: '/apps',
           icon: 'icon-basket',
-          badges: [updatesBadge, unconfiguredBadge],
+          badges: [updatesBadge, unconfiguredBadge, historyProviderBadge],
           children: [
             {
               name: 'Store',
@@ -315,7 +328,7 @@ export default function Sidebar({ location }: SidebarProps) {
             {
               name: 'Configuration',
               url: '/apps/configuration/-',
-              badge: unconfiguredBadge
+              badges: [unconfiguredBadge, historyProviderBadge]
             }
           ]
         },
@@ -424,7 +437,9 @@ export default function Sidebar({ location }: SidebarProps) {
     plugins,
     conflictCount,
     unconfiguredPriorityCount,
-    overridesWithMissingSourcesCount
+    overridesWithMissingSourcesCount,
+    unconfiguredGnssCount,
+    historyProviderUnavailable
   ])
 
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(
@@ -460,6 +475,16 @@ export default function Sidebar({ location }: SidebarProps) {
     }
     lastPathnameRef.current = location.pathname
   }, [location.pathname, items])
+
+  // NavLink navigates via pushState, which fires no popstate, so the mobile
+  // sidebar would stay open on top of the page the user just picked. Only
+  // leaf links close it: toggling a dropdown open also navigates (to the
+  // group's remembered page), and closing there would hide the children the
+  // user is about to choose from. Header owns the same class, so both remove
+  // it — the operation is idempotent.
+  const closeMobileSidebar = useCallback(() => {
+    document.body.classList.remove('sidebar-mobile-show')
+  }, [])
 
   const handleClick = useCallback(
     (item: NavItemData) => (e: MouseEvent<HTMLAnchorElement>) => {
@@ -595,7 +620,12 @@ export default function Sidebar({ location }: SidebarProps) {
     return (
       <Nav.Item as="li" key={key} className={classes.item}>
         {isExternal(url) ? (
-          <Nav.Link href={url} className={classes.link} {...(item.props || {})}>
+          <Nav.Link
+            href={url}
+            className={classes.link}
+            {...(item.props || {})}
+            onClick={closeMobileSidebar}
+          >
             {renderIcon(item.icon)}
             {item.name}
             {renderBadges(item)}
@@ -607,6 +637,7 @@ export default function Sidebar({ location }: SidebarProps) {
               isActive ? `${classes.link} active` : classes.link
             }
             {...(item.props || {})}
+            onClick={closeMobileSidebar}
           >
             {renderIcon(item.icon)}
             {item.name}

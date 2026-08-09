@@ -36,6 +36,21 @@ function nameCollator<T extends { name: string; displayName?: string }>(
 
 export type AppstoreView = 'All' | 'Installed' | 'Updates' | 'Installing'
 
+/**
+ * Snapshot carried by the server's HISTORYPROVIDERS serverevent.
+ * configuredAvailable is the server-graced signal: false when no
+ * provider is configured or once the configured provider has stayed
+ * unregistered past the server's grace window; it stays true through
+ * the grace so slow-starting provider backends don't flash the warning
+ * badge on every restart.
+ */
+export interface HistoryProvidersState {
+  ids: string[]
+  defaultId: string | undefined
+  configuredId: string | undefined
+  configuredAvailable: boolean
+}
+
 export interface AppSliceState {
   plugins: Plugin[]
   webapps: Webapp[]
@@ -115,6 +130,12 @@ export interface AppSliceState {
   sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
   sourceStatusLoaded: boolean
   /**
+   * Registered History API providers and the effective/configured
+   * default, pushed by the server as HISTORYPROVIDERS serverevents
+   * (replayed on connect). null until the first event arrives.
+   */
+  historyProviders: HistoryProvidersState | null
+  /**
    * App Store list view filter (All/Installed/Updates/Installing) and search
    * text. Held in the store rather than component state so they survive the
    * unmount/remount when the user opens a plugin detail page and returns via
@@ -122,6 +143,7 @@ export interface AppSliceState {
    */
   appstoreView: AppstoreView
   appstoreSearch: string
+  appstoreCategory: string
 }
 
 export interface AppSliceActions {
@@ -182,6 +204,7 @@ export interface AppSliceActions {
       lastSeen?: number
     }[]
   ) => void
+  setHistoryProviders: (data: HistoryProvidersState) => void
   setDebugSettings: (settings: {
     debugEnabled?: string
     rememberDebug?: boolean
@@ -196,6 +219,7 @@ export interface AppSliceActions {
   ) => void
   setAppstoreView: (view: AppstoreView) => void
   setAppstoreSearch: (search: string) => void
+  setAppstoreCategory: (category: string) => void
 }
 
 export type AppSlice = AppSliceState & AppSliceActions
@@ -246,8 +270,10 @@ const initialAppState: AppSliceState = {
   n2kDeviceStatusLoaded: false,
   sourceStatus: {},
   sourceStatusLoaded: false,
+  historyProviders: null,
   appstoreView: 'All',
-  appstoreSearch: ''
+  appstoreSearch: '',
+  appstoreCategory: 'All'
 }
 
 export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
@@ -463,6 +489,12 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
     set({ sourceStatus, sourceStatusLoaded: true })
   },
 
+  setHistoryProviders: (data) => {
+    // Full-snapshot replace: the server emits complete state on every
+    // provider register/unregister/default change.
+    set({ historyProviders: data })
+  },
+
   setDebugSettings: (settings) => {
     set((state) => ({
       log: { ...state.log, ...settings }
@@ -516,5 +548,9 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setAppstoreSearch: (appstoreSearch) => {
     set({ appstoreSearch })
+  },
+
+  setAppstoreCategory: (appstoreCategory) => {
+    set({ appstoreCategory })
   }
 })

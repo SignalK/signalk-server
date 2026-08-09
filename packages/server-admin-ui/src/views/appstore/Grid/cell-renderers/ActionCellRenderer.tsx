@@ -31,10 +31,11 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
 }
 
-interface AppData {
+export interface AppData {
   name: string
   version?: string
   installedVersion?: string
+  pendingVersion?: string
   newVersion?: string
   installed?: boolean
   installing?: boolean
@@ -207,10 +208,11 @@ export default function ActionCellRenderer({
       status = 'Failed'
     } else if (app.isRemove) {
       status = 'Removed'
-    } else if (app.installedVersion) {
-      status = 'Updated'
     } else {
-      status = 'Installed'
+      // app.installedVersion is the running plugin's version and stays stale
+      // until restart; pendingVersion is what npm just wrote to disk.
+      const verb = app.installedVersion ? 'Updated' : 'Installed'
+      status = app.pendingVersion ? `${verb} v${app.pendingVersion}` : verb
     }
 
     const isTerminalFailure = !progress && app.installFailed

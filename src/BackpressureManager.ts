@@ -79,7 +79,7 @@ export class BackpressureManager {
 
   send(delta: Delta): void {
     const bufferLength = this.transport.getBufferLength()
-    if (bufferLength > this.options.enterThreshold) {
+    if (this.active || bufferLength > this.options.enterThreshold) {
       if (!this.active) {
         this.active = true
         this.since = Date.now()

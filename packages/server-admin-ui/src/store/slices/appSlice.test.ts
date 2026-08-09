@@ -24,7 +24,21 @@ describe('appSlice', () => {
       vesselInfo: {},
       backpressureWarning: null,
       serverStatistics: null,
-      providerStatus: []
+      providerStatus: [],
+      appstoreCategory: 'All'
+    })
+  })
+
+  describe('appstore filter state', () => {
+    it('persists the selected category across component lifecycles', () => {
+      // The Apps view unmounts when a plugin detail page opens; the
+      // category must live in the store (like view and search) so
+      // "Back to Store" restores it.
+      expect(useStore.getState().appstoreCategory).toBe('All')
+
+      useStore.getState().setAppstoreCategory('Weather')
+
+      expect(useStore.getState().appstoreCategory).toBe('Weather')
     })
   })
 

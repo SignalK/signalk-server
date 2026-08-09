@@ -1,4 +1,5 @@
 import { OpenApiDescription } from '../swagger'
+import { RADAR_API_VERSION } from './index'
 
 const radarIdParam = {
   name: 'radar_id',
@@ -13,7 +14,7 @@ const radarApiDoc = {
   openapi: '3.0.0',
   info: {
     title: 'Signal K Radar API',
-    version: '3.1.0',
+    version: RADAR_API_VERSION,
     description:
       'REST API for controlling marine radars. Supports Navico (Simrad, B&G, Lowrance), ' +
       'Furuno, Raymarine, and Garmin radar systems. Provides endpoints for discovering radars, ' +
@@ -50,27 +51,15 @@ const radarApiDoc = {
             type: 'string',
             description: 'Radar model name if detected'
           },
-          spokeDataUrl: {
-            type: 'string',
-            description:
-              'WebSocket URL for receiving raw radar spoke data (binary)'
-          },
-          streamUrl: {
-            type: 'string',
-            description: 'WebSocket URL for Signal K control stream (JSON)'
-          },
           radarIpAddress: {
             type: 'string',
             description: 'IP address of the radar unit on the network'
           }
+          // Stream URLs are not listed: the spoke WS (…/radars/{id}/spokes) and
+          // the control stream (/signalk/v1/stream) are reached by convention
+          // from the host serving this response.
         },
-        required: [
-          'name',
-          'brand',
-          'spokeDataUrl',
-          'streamUrl',
-          'radarIpAddress'
-        ]
+        required: ['name', 'brand', 'radarIpAddress']
       },
       Capabilities: {
         type: 'object',
@@ -394,21 +383,53 @@ const radarApiDoc = {
         tags: ['Radars'],
         summary: 'List all active radars',
         description:
-          'Returns all radars detected on the network. Each entry includes WebSocket URLs for spoke data and control streams.',
+          'Returns the API version and all radars detected on the network, keyed by radar ID. Entries carry no stream URLs; the client constructs both by convention from this server (spokes at …/radars/{id}/spokes, control via /signalk/v1/stream).',
         responses: {
           '200': {
-            description: 'Map of radar IDs to radar information',
+            description:
+              'API version and map of radar IDs to radar information',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
-                  additionalProperties: {
-                    $ref: '#/components/schemas/RadarInfo'
-                  }
+                  properties: {
+                    version: {
+                      type: 'string',
+                      description:
+                        'Radar API version (semver) this response conforms to'
+                    },
+                    radars: {
+                      type: 'object',
+                      additionalProperties: {
+                        $ref: '#/components/schemas/RadarInfo'
+                      }
+                    }
+                  },
+                  required: ['version', 'radars']
                 }
               }
             }
           }
+        }
+      }
+    },
+    '/signalk/v2/api/vessels/self/radars/{radar_id}': {
+      get: {
+        tags: ['Radars'],
+        summary: 'Get a single radar',
+        description:
+          'Returns the discovery information for one radar by ID. Live state (status, controls) is at /state and /controls; static parameters at /capabilities.',
+        parameters: [radarIdParam],
+        responses: {
+          '200': {
+            description: 'Radar discovery information',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RadarInfo' }
+              }
+            }
+          },
+          '404': { description: 'Radar not found' }
         }
       }
     },

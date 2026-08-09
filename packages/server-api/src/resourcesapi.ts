@@ -1,10 +1,6 @@
 /** @category  Resources API */
 export type SignalKResourceType =
-  | 'routes'
-  | 'waypoints'
-  | 'notes'
-  | 'regions'
-  | 'charts'
+  'routes' | 'waypoints' | 'notes' | 'regions' | 'charts'
 
 /**
  * @hidden

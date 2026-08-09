@@ -160,6 +160,10 @@ const expectedOrder = [
   }
 ]
 
+// Mirrors scheduleLivePreferredEmit's debounce in src/deltacache.ts.
+const EMIT_DEBOUNCE_MS = 1000
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 describe('Deltacache', () => {
   let doStop, theServer, doSendADelta
 
@@ -759,5 +763,292 @@ describe('Deltacache', () => {
       .finally(() => {
         delete settings.priorityGroups
       })
+  })
+
+  it('getReconciledGroups collapses a device seen under both numeric and canName refs', function () {
+    // Canonicalisation skew (cold boot / UDP gateway that missed the ISO
+    // Address Claim): one physical N2K device leaks a stale numeric-src
+    // leaf AND a canName leaf on the same path. buildSrcToCanonicalMap is
+    // blind because app.signalk.sources has no n2k.canName for the src,
+    // but the resolved canName already sits in sourceDeltas keyed by the
+    // numeric src. Reconcile must collapse the two onto the canName form
+    // so one device does not present two refs across two groups and trip
+    // the PUT validator ("a source may belong to at most one active
+    // group"). A genuinely different device on the same path must stay
+    // separable.
+    const PATH = 'environment.depth.canonSkew'
+    const NUMERIC = 'canbus0.172'
+    const CANNAME = 'canbus0.c0509635e7664732'
+    const OTHER = 'canbus0.c0788c00e7e04312'
+    const deltaCache = theServer.app.deltaCache
+    // The recovered numeric->canName association the late address claim
+    // wrote to the per-source delta store (keyed by numeric src). Set it
+    // directly rather than via setSourceDelta: setSourceDelta would
+    // app.signalk.addDelta() it, backfilling app.signalk.sources and
+    // letting the EXISTING buildSrcToCanonicalMap path collapse the ref -
+    // which would mask the gap this test exercises. Keeping it out of the
+    // sources tree forces the fix's sourceDeltas fallback to do the work.
+    deltaCache.sourceDeltas[NUMERIC] = {
+      context: 'vessels.self',
+      updates: [
+        {
+          source: {
+            label: 'canbus0',
+            type: 'NMEA2000',
+            canName: 'c0509635e7664732',
+            src: '172'
+          },
+          timestamp: '2024-04-01T10:00:00.000Z',
+          values: []
+        }
+      ]
+    }
+    return doSendADelta({
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: NUMERIC,
+          timestamp: '2024-04-01T10:00:01.000Z',
+          values: [{ path: PATH, value: 1 }]
+        }
+      ]
+    })
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: CANNAME,
+              timestamp: '2024-04-01T10:00:02.000Z',
+              values: [{ path: PATH, value: 2 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: OTHER,
+              timestamp: '2024-04-01T10:00:03.000Z',
+              values: [{ path: PATH, value: 3 }]
+            }
+          ]
+        })
+      )
+      .then(() => {
+        const reconciled = deltaCache.getReconciledGroups()
+        const allSources = []
+        for (const g of reconciled) {
+          for (const s of g.sources) allSources.push(s)
+        }
+        // The numeric ref must have been rewritten to its canName twin,
+        // so it never appears verbatim and the device is a single ref.
+        allSources.should.not.include(NUMERIC)
+        allSources.filter((s) => s === CANNAME).length.should.equal(1)
+        // The genuinely different device stays as its own distinct ref.
+        allSources.filter((s) => s === OTHER).length.should.equal(1)
+      })
+      .finally(() => {
+        deltaCache.removeSourceDelta(NUMERIC)
+      })
+  })
+
+  it('getReconciledGroups keeps two different canName devices separable when both have a stale numeric twin', function () {
+    // The two-different-devices invariant under the sourceDeltas fallback:
+    // TWO physically-distinct N2K devices each leak a numeric-src leaf AND
+    // a canName leaf on the SAME shared path. Each numeric ref must
+    // collapse onto ITS OWN canName twin (per-src single canName), and the
+    // two devices must remain two separate refs - a label-wide merge would
+    // force genuinely-separate devices into one group/source-list.
+    const PATH = 'environment.depth.canonSkewPair'
+    const NUMERIC_A = 'canbus0.181'
+    const CANNAME_A = 'canbus0.c0509635e7664732'
+    const NUMERIC_B = 'canbus0.182'
+    const CANNAME_B = 'canbus0.c0788c00e7e04312'
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.sourceDeltas[NUMERIC_A] = {
+      context: 'vessels.self',
+      updates: [
+        {
+          source: {
+            label: 'canbus0',
+            type: 'NMEA2000',
+            canName: 'c0509635e7664732',
+            src: '181'
+          },
+          timestamp: '2024-04-02T10:00:00.000Z',
+          values: []
+        }
+      ]
+    }
+    deltaCache.sourceDeltas[NUMERIC_B] = {
+      context: 'vessels.self',
+      updates: [
+        {
+          source: {
+            label: 'canbus0',
+            type: 'NMEA2000',
+            canName: 'c0788c00e7e04312',
+            src: '182'
+          },
+          timestamp: '2024-04-02T10:00:01.000Z',
+          values: []
+        }
+      ]
+    }
+    return doSendADelta({
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: NUMERIC_A,
+          timestamp: '2024-04-02T10:00:02.000Z',
+          values: [{ path: PATH, value: 1 }]
+        }
+      ]
+    })
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: CANNAME_A,
+              timestamp: '2024-04-02T10:00:03.000Z',
+              values: [{ path: PATH, value: 2 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: NUMERIC_B,
+              timestamp: '2024-04-02T10:00:04.000Z',
+              values: [{ path: PATH, value: 3 }]
+            }
+          ]
+        })
+      )
+      .then(() =>
+        doSendADelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              $source: CANNAME_B,
+              timestamp: '2024-04-02T10:00:05.000Z',
+              values: [{ path: PATH, value: 4 }]
+            }
+          ]
+        })
+      )
+      .then(() => {
+        const reconciled = deltaCache.getReconciledGroups()
+        const allSources = []
+        for (const g of reconciled) {
+          for (const s of g.sources) allSources.push(s)
+        }
+        // Neither numeric ref survives - each collapsed onto its OWN twin.
+        allSources.should.not.include(NUMERIC_A)
+        allSources.should.not.include(NUMERIC_B)
+        // Both devices remain present as two distinct canName refs.
+        allSources.filter((s) => s === CANNAME_A).length.should.equal(1)
+        allSources.filter((s) => s === CANNAME_B).length.should.equal(1)
+      })
+      .finally(() => {
+        deltaCache.removeSourceDelta(NUMERIC_A)
+        deltaCache.removeSourceDelta(NUMERIC_B)
+      })
+  })
+
+  it('deleteContext removes the context entries from preferredSources', function () {
+    // Regression test for a memory leak: preferredSources is keyed
+    // `${context}\0${path}` and previously only grew, since
+    // deleteContext (called by pruneContexts for every aged-out
+    // context) never removed the entries belonging to that context.
+    // Over long uptime with many transient contexts (e.g. AIS
+    // targets) this accumulates unboundedly.
+    const context = 'vessels.urn:mrn:signalk:uuid:prune-leak-test'
+    const path = 'navigation.speedOverGround'
+    const prefKey = context + '\0' + path
+    const deltaCache = theServer.app.deltaCache
+    // onValue only records a winner for paths the priority engine
+    // routes, and a server with no priorities configured gates every
+    // path off — which would leave preferredSources empty and make
+    // this test vacuous. Stand in for a configured engine.
+    deltaCache.setRoutesPathPredicate(() => true)
+
+    return doSendADelta({
+      context,
+      updates: [
+        {
+          $source: 'pruneLeakSource',
+          timestamp: '2024-05-01T10:00:00.000Z',
+          values: [{ path, value: 1 }]
+        }
+      ]
+    })
+      .then(() => {
+        deltaCache.cachedContextPaths.should.have.property(context)
+        deltaCache
+          .getLivePreferredSources()
+          .should.have.property(prefKey, 'pruneLeakSource')
+
+        deltaCache.deleteContext(context)
+
+        deltaCache.cachedContextPaths.should.not.have.property(context)
+        deltaCache.getLivePreferredSources().should.not.have.property(prefKey)
+      })
+      .finally(() => deltaCache.setRoutesPathPredicate(null))
+  })
+
+  it('deleteContext tombstones the removed paths on the live preferred stream', function () {
+    // The admin UI merges LIVEPREFERREDSOURCES over its snapshot and
+    // only forgets a key on an empty-string tombstone, so a silent
+    // server-side delete would move the leak into every long-lived
+    // browser session.
+    const context = 'vessels.urn:mrn:signalk:uuid:prune-tombstone-test'
+    const path = 'navigation.speedOverGround'
+    const prefKey = context + '\0' + path
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.setRoutesPathPredicate(() => true)
+
+    return doSendADelta({
+      context,
+      updates: [
+        {
+          $source: 'pruneTombstoneSource',
+          timestamp: '2024-05-01T10:00:00.000Z',
+          values: [{ path, value: 1 }]
+        }
+      ]
+    })
+      .then(() => {
+        // Ingesting the delta marks the path dirty too, so let that
+        // emit drain before deleting — otherwise the assertion could
+        // race against an event announcing the winner rather than
+        // retiring it.
+        return delay(EMIT_DEBOUNCE_MS + 200)
+      })
+      .then(() => {
+        const tombstoned = new Promise((resolve) => {
+          const onServerEvent = (event) => {
+            if (
+              event.type === 'LIVEPREFERREDSOURCES' &&
+              prefKey in (event.data || {})
+            ) {
+              theServer.app.removeListener('serverevent', onServerEvent)
+              resolve(event.data[prefKey])
+            }
+          }
+          theServer.app.on('serverevent', onServerEvent)
+        })
+        deltaCache.deleteContext(context)
+        return tombstoned
+      })
+      .then((sourceRef) => sourceRef.should.equal(''))
+      .finally(() => deltaCache.setRoutesPathPredicate(null))
   })
 })

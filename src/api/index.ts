@@ -7,9 +7,14 @@ import { ResourcesApi } from './resources'
 import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
 import { RadarApi } from './radar'
-import { HistoryApiHttpRegistry } from './history'
+import { HistoryApiHttpRegistry, HistoryApplication } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 import { NotificationApi, NotificationApplication } from './notifications'
+import {
+  GnssOffsetCorrector,
+  GnssCorrectorApplication
+} from './gnssOffsetCorrector'
+import { SensorsApi, SensorsApplication } from './sensors'
 import { binaryStreamManager, initializeBinaryStreams } from './streams'
 
 export interface ApiResponse {
@@ -91,7 +96,9 @@ export const startApis = (
 
   const featuresApi = new FeaturesApi(app)
 
-  const historyApiHttpRegistry = new HistoryApiHttpRegistry(app)
+  const historyApiHttpRegistry = new HistoryApiHttpRegistry(
+    app as HistoryApplication
+  )
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).historyApiHttpRegistry = historyApiHttpRegistry
   apiList.push('history')
@@ -101,6 +108,17 @@ export const startApis = (
   ;(app as any).notificationApi = notificationApi
   apiList.push('notifications')
 
+  const gnssOffsetCorrector = new GnssOffsetCorrector(
+    app as GnssCorrectorApplication
+  )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).gnssOffsetCorrector = gnssOffsetCorrector
+
+  const sensorsApi = new SensorsApi(app as SensorsApplication)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).sensorsApi = sensorsApi
+  apiList.push('sensors')
+
   Promise.all([
     resourcesApi.start(),
     courseApi.start(),
@@ -109,7 +127,9 @@ export const startApis = (
     autopilotApi.start(),
     radarApi.start(),
     historyApiHttpRegistry.start(),
-    notificationApi.start()
+    notificationApi.start(),
+    gnssOffsetCorrector.start(),
+    sensorsApi.start()
   ])
   return apiList
 }

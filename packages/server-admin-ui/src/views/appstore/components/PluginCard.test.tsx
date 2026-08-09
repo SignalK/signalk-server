@@ -68,4 +68,62 @@ describe('PluginCard', () => {
     expect(screen.getByText('Weather')).toBeDefined()
     expect(screen.getByText('Utility')).toBeDefined()
   })
+
+  it('shows the just-installed version, not the still-running one', () => {
+    renderCard({
+      installedVersion: '1.0.0',
+      pendingVersion: '2.0.0',
+      installing: true
+    })
+    expect(screen.getByText('v2.0.0 (pending restart)')).toBeDefined()
+    expect(screen.queryByText('Installed v1.0.0')).toBeNull()
+  })
+
+  it('keeps the busy pill while the install is still running', () => {
+    renderCard({
+      installedVersion: '1.0.0',
+      pendingVersion: '2.0.0',
+      installing: true,
+      isInstalling: true
+    })
+    expect(screen.getByText('Installing')).toBeDefined()
+    expect(screen.queryByText('v2.0.0 (pending restart)')).toBeNull()
+  })
+
+  it('keeps the queued pill while the install is still waiting', () => {
+    renderCard({
+      installedVersion: '1.0.0',
+      pendingVersion: '2.0.0',
+      installing: true,
+      isWaiting: true
+    })
+    expect(screen.getByText('Waiting')).toBeDefined()
+    expect(screen.queryByText(/pending restart/)).toBeNull()
+  })
+
+  it('keeps the failure pill instead of claiming a pending version', () => {
+    renderCard({
+      installedVersion: '1.0.0',
+      pendingVersion: '2.0.0',
+      installing: true,
+      installFailed: true
+    })
+    expect(screen.getByText('Install failed')).toBeDefined()
+    expect(screen.queryByText(/pending restart/)).toBeNull()
+  })
+
+  it('does not claim a pending version after a removal', () => {
+    renderCard({
+      installedVersion: '1.0.0',
+      pendingVersion: '1.0.0',
+      installing: true,
+      isRemove: true
+    })
+    expect(screen.queryByText(/pending restart/)).toBeNull()
+  })
+
+  it('falls back to the installed version when nothing is pending', () => {
+    renderCard({ installedVersion: '1.0.0' })
+    expect(screen.getByText('Installed v1.0.0')).toBeDefined()
+  })
 })

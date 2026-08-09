@@ -39,6 +39,7 @@ import path from 'path'
 import unzipper from 'unzipper'
 import util from 'util'
 import { mountSwaggerUi } from './api/swagger'
+import { serveStaticFiles } from './staticfiles'
 import {
   ConfigApp,
   readDefaultsFile,
@@ -51,6 +52,7 @@ import { resetPriorities } from './config/priorities-file'
 import { buildDeviceIdentities } from './deviceIdentities'
 import { buildSourceNames } from './sourceNames'
 import { SERVERROUTESPREFIX } from './constants'
+import { readDesignLengthOverall } from './api/sensors/vesselDimensions'
 import { handleAdminUICORSOrigin } from './cors'
 import { createDebug, listKnownDebugs } from './debug'
 import { PluginManager } from './interfaces/plugins'
@@ -182,6 +184,41 @@ function validatePrioritiesPayload(
   normaliseSourcePriorityTimeouts(value.overrides)
   return { ok: true, value }
 }
+
+/**
+ * Validates the staleness-enforcer settings before they are merged into
+ * the live config. Numeric ranges follow the bounds the enforcer itself
+ * tolerates (see src/staleness.ts).
+ */
+const MAX_DEFAULT_TIMEOUT_SECONDS = 24 * 60 * 60
+const MIN_STALE_CHECK_INTERVAL_MS = 100
+const MAX_STALE_CHECK_INTERVAL_MS = 60 * 1000
+const MIN_AUTO_TIMEOUT_SAMPLES = 2
+const MAX_AUTO_TIMEOUT_SAMPLES = 1000
+const MAX_AUTO_TIMEOUT_WARMUP_SECONDS = 3600
+
+const stalenessSettingsSchema = Type.Object({
+  enforceDataTimeouts: Type.Optional(Type.Boolean()),
+  useDefaultTimeouts: Type.Optional(Type.Boolean()),
+  defaultTimeout: Type.Optional(
+    Type.Number({ minimum: 0, maximum: MAX_DEFAULT_TIMEOUT_SECONDS })
+  ),
+  staleCheckIntervalMs: Type.Optional(
+    Type.Integer({
+      minimum: MIN_STALE_CHECK_INTERVAL_MS,
+      maximum: MAX_STALE_CHECK_INTERVAL_MS
+    })
+  ),
+  autoTimeoutSamples: Type.Optional(
+    Type.Integer({
+      minimum: MIN_AUTO_TIMEOUT_SAMPLES,
+      maximum: MAX_AUTO_TIMEOUT_SAMPLES
+    })
+  ),
+  autoTimeoutWarmupSeconds: Type.Optional(
+    Type.Integer({ minimum: 0, maximum: MAX_AUTO_TIMEOUT_WARMUP_SECONDS })
+  )
+})
 
 const sourceAliasesSchema = Type.Record(
   Type.String(),
@@ -385,7 +422,7 @@ module.exports = function (
   mountSwaggerUi(app, '/doc/openapi')
 
   // mount server-guide
-  app.use('/documentation', express.static(__dirname + '/../docs/dist'))
+  app.use('/documentation', serveStaticFiles(__dirname + '/../docs/dist'))
 
   // Redirect old documentation URLs to new ones
   let oldpath: keyof typeof redirects
@@ -444,7 +481,7 @@ module.exports = function (
     serveIndexWithAddonScripts(path.join(adminUiPath, 'index.html'), res)
   })
 
-  app.use('/admin', express.static(adminUiPath))
+  app.use('/admin', serveStaticFiles(adminUiPath))
 
   app.get('/', (req: Request, res: Response) => {
     let landingPage = '/admin/'
@@ -881,6 +918,13 @@ module.exports = function (
       runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true',
       courseApi: {
         apiOnly: app.config.settings.courseApi?.apiOnly || false
+      },
+      notifications: {
+        manageNotifications:
+          app.config.settings.notifications?.manageNotifications ?? true
+      },
+      staleness: {
+        enforceDataTimeouts: app.config.settings.enforceDataTimeouts === true
       }
     }
 
@@ -1203,10 +1247,49 @@ module.exports = function (
       updatedSettings.logCountToKeep = Number(settings.logCountToKeep)
     }
 
+    if (settings.staleness !== undefined) {
+      const r = validateAgainst(
+        stalenessSettingsSchema,
+        settings.staleness,
+        'staleness'
+      )
+      if (!r.ok) {
+        res.status(400).type('text/plain').send(r.error)
+        return
+      }
+      const s = settings.staleness as Record<string, unknown>
+      if (!isUndefined(s.enforceDataTimeouts)) {
+        updatedSettings.enforceDataTimeouts = Boolean(s.enforceDataTimeouts)
+      }
+      if (!isUndefined(s.useDefaultTimeouts)) {
+        updatedSettings.useDefaultTimeouts = Boolean(s.useDefaultTimeouts)
+      }
+      if (!isUndefined(s.defaultTimeout)) {
+        updatedSettings.defaultTimeout = Number(s.defaultTimeout)
+      }
+      if (!isUndefined(s.staleCheckIntervalMs)) {
+        updatedSettings.staleCheckIntervalMs = Number(s.staleCheckIntervalMs)
+      }
+      if (!isUndefined(s.autoTimeoutSamples)) {
+        updatedSettings.autoTimeoutSamples = Number(s.autoTimeoutSamples)
+      }
+      if (!isUndefined(s.autoTimeoutWarmupSeconds)) {
+        updatedSettings.autoTimeoutWarmupSeconds = Number(
+          s.autoTimeoutWarmupSeconds
+        )
+      }
+    }
+
     forIn(settings.courseApi, (enabled, name) => {
       const courseApi: { [index: string]: boolean | string | number } =
         updatedSettings.courseApi || (updatedSettings.courseApi = {})
       courseApi[name] = enabled
+    })
+
+    forIn(settings.notifications, (enabled, name) => {
+      const notifications: { [index: string]: boolean | string | number } =
+        updatedSettings.notifications || (updatedSettings.notifications = {})
+      notifications[name] = enabled
     })
 
     writeSettingsFile(app, updatedSettings, (err: Error) => {
@@ -1223,18 +1306,32 @@ module.exports = function (
     const de = app.config.baseDeltaEditor
     const communication = de.getSelfValue('communication')
     const draft = de.getSelfValue('design.draft')
-    const length = de.getSelfValue('design.length')
+    // /vessel clients (including the GNSS preferences page) expect a number
+    // for both stored shapes of design.length; readDesignLengthOverall is
+    // the same normalisation the sensors API uses.
+    const lengthOverall = readDesignLengthOverall(de)
     const type = de.getSelfValue('design.aisShipType')
     const json = {
       name: app.config.vesselName,
       mmsi: app.config.vesselMMSI,
       uuid: app.config.vesselUUID,
       draft: draft && draft.maximum,
-      length: length && length.overall,
+      length: lengthOverall,
       beam: de.getSelfValue('design.beam'),
       height: de.getSelfValue('design.airHeight'),
-      gpsFromBow: de.getSelfValue('sensors.gps.fromBow'),
-      gpsFromCenter: de.getSelfValue('sensors.gps.fromCenter'),
+      // Older /vessel clients read gpsFromBow/gpsFromCenter; surface the
+      // first configured sensor row so the legacy shape stays meaningful.
+      // The server consumes the same data from settings.gnssSensors to
+      // rewrite navigation.position at the Consistent Common Reference
+      // Point (vessel center on the centerline). An explicit `null` on
+      // a configured row means "not set yet" — fall back to the legacy
+      // single-GPS base-delta only when there is no sensor row at all.
+      gpsFromBow: app.config.settings.gnssSensors?.[0]
+        ? app.config.settings.gnssSensors[0].fromBow
+        : de.getSelfValue('sensors.gps.fromBow'),
+      gpsFromCenter: app.config.settings.gnssSensors?.[0]
+        ? app.config.settings.gnssSensors[0].fromCenter
+        : de.getSelfValue('sensors.gps.fromCenter'),
       aisShipType: type && type.id,
       callsignVhf: communication && communication.callsignVhf
     }
@@ -2078,6 +2175,22 @@ module.exports = function (
   )
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/debug`)
+
+  // Register middleware before the routes so every method picks up auth.
+  // Match the /priorities pattern: source topology is admin-only across
+  // the board. (GNSS antenna config has moved to the v2 sensors API.)
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/positionSources`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/positionSources`,
+    (req: Request, res: Response) => {
+      // Use the same freshness-filtered + sorted set the POSITION_SOURCES
+      // event emits, so a cold page-load matches the next websocket update.
+      res.json(app.deltaCache.getActivePositionSources())
+    }
+  )
 
   app.post(`${SERVERROUTESPREFIX}/debug`, (req: Request, res: Response) => {
     if (!app.logging.enableDebug(req.body.value)) {

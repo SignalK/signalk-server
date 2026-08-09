@@ -10,7 +10,7 @@
 import * as path from 'path'
 import * as fs from 'fs'
 import Debug from 'debug'
-import express from 'express'
+import { serveStaticFiles } from '../../staticfiles'
 import { WasmPlugin } from './types'
 import { getWasmRuntime, WasmCapabilities } from '../wasm-runtime'
 import {
@@ -123,7 +123,7 @@ function mountWasmWebapp(
 
   // Mount static files
   debug(`Mounting WASM webapp /${packageName}: ${webappPath}`)
-  app.use('/' + packageName, express.static(webappPath))
+  app.use('/' + packageName, serveStaticFiles(webappPath))
 
   // Create webapp metadata for admin UI
   const webappMetadata = {

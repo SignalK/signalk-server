@@ -12,6 +12,19 @@ import { startServerP } from './servertestutilities'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Server = require('../dist/')
+import {
+  HistoryApiHttpRegistry,
+  type HistoryApplication,
+  type HistoryProvidersEventData
+} from '../dist/api/history/index.js'
+import type {
+  HistoryProvider,
+  ValuesRequest,
+  ValuesResponse,
+  WithHistoryApi
+} from '@signalk/server-api/history'
+import type { Context, Path, Timestamp } from '@signalk/server-api'
+import { Temporal } from '@js-temporal/polyfill'
 
 chai.should()
 
@@ -134,6 +147,25 @@ describe('History API v2', () => {
       body.should.have.property('id', 'testplugin')
     })
 
+    it('sets and reports the default provider', async function () {
+      const postRes = await fetch(
+        `${api}/history/_providers/_default/testplugin`,
+        { method: 'POST' }
+      )
+      postRes.status.should.equal(200)
+      const res = await fetch(`${api}/history/_providers/_default`)
+      const body = await res.json()
+      body.should.have.property('id', 'testplugin')
+      body.should.have.property('configured', 'testplugin')
+    })
+
+    it('returns 400 when setting an unregistered provider as default', async function () {
+      const res = await fetch(`${api}/history/_providers/_default/nosuch`, {
+        method: 'POST'
+      })
+      res.status.should.equal(400)
+    })
+
     it('returns values from the provider', async function () {
       const res = await fetch(
         `${api}/history/values?paths=navigation.position&from=${FROM}&to=${TO}&resolution=60`
@@ -208,6 +240,477 @@ describe('History API v2', () => {
       // mention of "duration", to avoid false greens from unrelated
       // validators that also mention the word.
       body.error.should.contain('ISO 8601')
+    })
+  })
+
+  describe('default provider selection', () => {
+    const providerContext = (name: string) => `vessels.${name}` as Context
+
+    const provider = (name: string): HistoryProvider => ({
+      getValues: async (): Promise<ValuesResponse> => ({
+        context: providerContext(name),
+        range: {
+          from: FROM as Timestamp,
+          to: TO as Timestamp
+        },
+        values: [{ path: 'navigation.position' as Path, method: 'first' }],
+        data: [[FROM as Timestamp, null]]
+      }),
+      getContexts: async () => [],
+      getPaths: async () => []
+    })
+
+    interface NotificationValue {
+      state: string
+      message: string
+    }
+
+    interface TestApp extends WithHistoryApi {
+      config: { settings: { historyApi?: { defaultProvider?: string } } }
+      handleMessage: (id: string, delta: unknown) => void
+      /** Notification values captured from handleMessage */
+      notifications: NotificationValue[]
+      /** HISTORYPROVIDERS serverevent payloads captured from emit */
+      serverEvents: HistoryProvidersEventData[]
+      emit: (event: string, data: unknown) => void
+    }
+
+    const makeApp = (configuredDefault?: string): TestApp => {
+      const notifications: NotificationValue[] = []
+      const serverEvents: HistoryProvidersEventData[] = []
+      return {
+        config: {
+          settings: {
+            historyApi: configuredDefault
+              ? { defaultProvider: configuredDefault }
+              : undefined
+          }
+        },
+        notifications,
+        serverEvents,
+        emit: (channel: string, e: unknown) => {
+          // Only the replay-cached channel counts — a rename to e.g.
+          // serverAdminEvent would silently lose the connect replay.
+          if (channel !== 'serverevent') {
+            return
+          }
+          const event = e as { type: string; data: HistoryProvidersEventData }
+          if (event.type === 'HISTORYPROVIDERS') {
+            serverEvents.push(event.data)
+          }
+        },
+        handleMessage: (_id: string, delta: unknown) => {
+          const update = (
+            delta as {
+              updates: { values: { value: NotificationValue }[] }[]
+            }
+          ).updates[0]
+          notifications.push(update.values[0].value)
+        }
+      }
+    }
+
+    // Track every registry so afterEach can cancel pending grace
+    // timers — a timer surviving its test would emit into a finished
+    // test's serverEvents array.
+    const registries: HistoryApiHttpRegistry[] = []
+    const makeRegistry = (app: TestApp, unavailableGraceMs?: number) => {
+      const registry = new HistoryApiHttpRegistry(
+        app as unknown as HistoryApplication,
+        unavailableGraceMs
+      )
+      registries.push(registry)
+      return registry
+    }
+
+    afterEach(() => {
+      registries.splice(0).forEach((r) => r.stop())
+    })
+
+    const VALUES_QUERY: ValuesRequest = {
+      duration: Temporal.Duration.from({ minutes: 15 }),
+      pathSpecs: []
+    }
+
+    // Identifies the provider serving unqualified requests by the
+    // context its getValues stub reports.
+    const defaultOf = async (app: TestApp): Promise<Context> => {
+      const api = await app.getHistoryApi!()
+      return (await api.getValues(VALUES_QUERY)).context
+    }
+
+    it('uses the configured provider even when it registers last', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('kip', provider('kip'))
+      registry.registerHistoryApiProvider('questdb', provider('questdb'))
+      ;(await defaultOf(app)).should.equal(providerContext('questdb'))
+    })
+
+    it('falls back to the first registered provider when the configured one is not registered', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('kip', provider('kip'))
+      ;(await defaultOf(app)).should.equal(providerContext('kip'))
+    })
+
+    it('reverts to the configured provider when the fallback unregisters', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('kip', provider('kip'))
+      registry.registerHistoryApiProvider('questdb', provider('questdb'))
+      registry.unregisterHistoryApiProvider('kip')
+      ;(await defaultOf(app)).should.equal(providerContext('questdb'))
+    })
+
+    it('falls back when the configured provider unregisters', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('questdb', provider('questdb'))
+      registry.registerHistoryApiProvider('kip', provider('kip'))
+      registry.unregisterHistoryApiProvider('questdb')
+      ;(await defaultOf(app)).should.equal(providerContext('kip'))
+    })
+
+    it('defaults to the first registered provider without configuration', async function () {
+      const app = makeApp()
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('kip', provider('kip'))
+      registry.registerHistoryApiProvider('questdb', provider('questdb'))
+      ;(await defaultOf(app)).should.equal(providerContext('kip'))
+    })
+
+    it('rejects when no provider is registered', async function () {
+      const app = makeApp('questdb')
+      makeRegistry(app)
+      await app.getHistoryApi!()
+        .then(() => chai.assert.fail('should have rejected'))
+        .catch((err: Error) =>
+          err.message.should.contain('No history api provider')
+        )
+    })
+
+    it('emits a single warn notification when the configured provider is needed but unavailable', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('kip', provider('kip'))
+      await defaultOf(app)
+      await defaultOf(app)
+      app.notifications.length.should.equal(1)
+      app.notifications[0].state.should.equal('warn')
+      app.notifications[0].message.should.contain('questdb')
+      app.notifications[0].message.should.contain('kip')
+    })
+
+    it('clears the warning when the configured provider registers', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('kip', provider('kip'))
+      await defaultOf(app)
+      registry.registerHistoryApiProvider('questdb', provider('questdb'))
+      app.notifications.length.should.equal(2)
+      app.notifications[1].state.should.equal('normal')
+    })
+
+    it('does not notify when the configured provider serves requests', async function () {
+      const app = makeApp('questdb')
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('questdb', provider('questdb'))
+      await defaultOf(app)
+      app.notifications.length.should.equal(0)
+    })
+
+    describe('HISTORYPROVIDERS serverevent', () => {
+      // Wide margin between the grace window and the wait so a stalled
+      // event loop on loaded CI cannot invert the expected ordering.
+      const TEST_GRACE_MS = 50
+      const PAST_GRACE_MS = 250
+      const wait = (ms: number) =>
+        new Promise((resolve) => setTimeout(resolve, ms))
+      const lastEvent = (app: TestApp) =>
+        app.serverEvents[app.serverEvents.length - 1]
+
+      it('emits full state on register and unregister', function () {
+        const app = makeApp('questdb')
+        const registry = makeRegistry(app)
+
+        registry.registerHistoryApiProvider('influx', provider('influx'))
+        lastEvent(app).should.deep.equal({
+          ids: ['influx'],
+          defaultId: 'influx',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        lastEvent(app).should.deep.equal({
+          ids: ['influx', 'questdb'],
+          defaultId: 'questdb',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+
+        registry.unregisterHistoryApiProvider('influx')
+        lastEvent(app).should.deep.equal({
+          ids: ['questdb'],
+          defaultId: 'questdb',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+      })
+
+      it('flags the configured provider unavailable only after the grace window', async function () {
+        const app = makeApp('questdb')
+        const registry = makeRegistry(app, TEST_GRACE_MS)
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        registry.registerHistoryApiProvider('influx', provider('influx'))
+
+        registry.unregisterHistoryApiProvider('questdb')
+        // The unregister itself must emit immediately (the provider
+        // list changed) but not yet flag unavailability.
+        lastEvent(app).should.deep.equal({
+          ids: ['influx'],
+          defaultId: 'influx',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+
+        await wait(PAST_GRACE_MS)
+        lastEvent(app).should.deep.equal({
+          ids: ['influx'],
+          defaultId: 'influx',
+          configuredId: 'questdb',
+          configuredAvailable: false
+        })
+      })
+
+      it('never flags unavailable when the provider returns within the grace', async function () {
+        const app = makeApp('questdb')
+        const registry = makeRegistry(app, TEST_GRACE_MS)
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        registry.unregisterHistoryApiProvider('questdb')
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+
+        await wait(PAST_GRACE_MS)
+        app.serverEvents
+          .filter((e) => !e.configuredAvailable)
+          .should.deep.equal([])
+        lastEvent(app).configuredAvailable.should.equal(true)
+      })
+
+      it('clears the unavailable flag when the provider registers again', async function () {
+        const app = makeApp('questdb')
+        const registry = makeRegistry(app, TEST_GRACE_MS)
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        registry.unregisterHistoryApiProvider('questdb')
+        await wait(PAST_GRACE_MS)
+        lastEvent(app).configuredAvailable.should.equal(false)
+
+        registry.registerHistoryApiProvider('questdb', provider('questdb'))
+        lastEvent(app).should.deep.equal({
+          ids: ['questdb'],
+          defaultId: 'questdb',
+          configuredId: 'questdb',
+          configuredAvailable: true
+        })
+      })
+
+      it('emits the new state when the default provider is saved', async function () {
+        await withDefaultProviderRoute(
+          'questdb',
+          (cb) => cb(),
+          async ({ app, registry, postDefault }) => {
+            registry.registerHistoryApiProvider('questdb', provider('questdb'))
+            registry.registerHistoryApiProvider('influx', provider('influx'))
+            ;(await postDefault('influx')).should.equal(200)
+            lastEvent(app).should.deep.equal({
+              ids: ['questdb', 'influx'],
+              defaultId: 'influx',
+              configuredId: 'influx',
+              configuredAvailable: true
+            })
+          }
+        )
+      })
+
+      it('start() seeds the state event for the replay cache', async function () {
+        await withDefaultProviderRoute(
+          'questdb',
+          (cb) => cb(),
+          async ({ app }) => {
+            app.serverEvents[0].should.deep.equal({
+              ids: [],
+              defaultId: undefined,
+              configuredId: 'questdb',
+              configuredAvailable: true
+            })
+          }
+        )
+      })
+
+      it('boot grace flags a configured provider that never registers', async function () {
+        await withDefaultProviderRoute(
+          'questdb',
+          (cb) => cb(),
+          async ({ app }) => {
+            await wait(PAST_GRACE_MS)
+            lastEvent(app).should.deep.equal({
+              ids: [],
+              defaultId: undefined,
+              configuredId: 'questdb',
+              configuredAvailable: false
+            })
+          },
+          TEST_GRACE_MS
+        )
+      })
+
+      it('re-arms the grace when the provider unregisters during the settings write', async function () {
+        // The POST route validates the id as registered, but the
+        // settings write is asynchronous — the provider can unregister
+        // in the gap. The save must not declare it available.
+        let registryRef: ReturnType<typeof makeRegistry> | undefined
+        await withDefaultProviderRoute(
+          'questdb',
+          (cb) => {
+            if (!registryRef) {
+              throw new Error('settings write before the test armed it')
+            }
+            registryRef.unregisterHistoryApiProvider('influx')
+            cb()
+          },
+          async ({ app, registry, postDefault }) => {
+            registryRef = registry
+            registry.registerHistoryApiProvider('influx', provider('influx'))
+            ;(await postDefault('influx')).should.equal(200)
+            lastEvent(app).should.deep.equal({
+              ids: [],
+              defaultId: undefined,
+              configuredId: 'influx',
+              configuredAvailable: true
+            })
+            await wait(PAST_GRACE_MS)
+            lastEvent(app).should.deep.equal({
+              ids: [],
+              defaultId: undefined,
+              configuredId: 'influx',
+              configuredAvailable: false
+            })
+          },
+          TEST_GRACE_MS
+        )
+      })
+    })
+
+    // Drives the POST default-provider route directly: stubs
+    // writeSettingsFile with the given outcome, captures the registry's
+    // route handlers and provides a postDefault(id) helper returning the
+    // response status code. Restores the stub afterwards.
+    const withDefaultProviderRoute = async (
+      configuredDefault: string | undefined,
+      writeSettings: (cb: (err?: Error) => void) => void,
+      run: (ctx: {
+        app: TestApp
+        registry: ReturnType<typeof makeRegistry>
+        postDefault: (id: string) => Promise<number>
+      }) => Promise<void>,
+      unavailableGraceMs?: number
+    ) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const config = require('../dist/config/config')
+      const origWriteSettingsFile = config.writeSettingsFile
+      config.writeSettingsFile = (
+        _app: unknown,
+        _settings: unknown,
+        cb: (err?: Error) => void
+      ) => writeSettings(cb)
+      try {
+        const app = makeApp(configuredDefault) as TestApp & {
+          securityStrategy: { shouldAllowPut: () => boolean }
+          get: (path: string, handler: unknown) => void
+          post: (path: string, handler: unknown) => void
+        }
+        app.securityStrategy = { shouldAllowPut: () => true }
+        const postHandlers: Record<
+          string,
+          (req: unknown, res: unknown) => Promise<void>
+        > = {}
+        app.get = () => undefined
+        app.post = (path, handler) => {
+          postHandlers[path] = handler as (typeof postHandlers)[string]
+        }
+
+        const registry = makeRegistry(app, unavailableGraceMs)
+        registry.start()
+
+        const postDefault = async (id: string): Promise<number> => {
+          let statusCode = 0
+          const res = {
+            status(code: number) {
+              statusCode = code
+              return this
+            },
+            json() {
+              return this
+            }
+          }
+          await postHandlers['/signalk/v2/api/history/_providers/_default/:id'](
+            { params: { id }, method: 'POST', path: '' },
+            res
+          )
+          return statusCode
+        }
+
+        await run({ app, registry, postDefault })
+      } finally {
+        config.writeSettingsFile = origWriteSettingsFile
+      }
+    }
+
+    it('clears a stale warning when the default is switched to a registered provider', async function () {
+      await withDefaultProviderRoute(
+        'questdb',
+        (cb) => cb(),
+        async ({ app, registry, postDefault }) => {
+          registry.registerHistoryApiProvider('kip', provider('kip'))
+
+          // configured questdb is unavailable: first request warns
+          await defaultOf(app)
+          app.notifications.length.should.equal(1)
+          app.notifications[0].state.should.equal('warn')
+
+          // switching the default to the registered kip resolves the
+          // situation and must clear the warning
+          ;(await postDefault('kip')).should.equal(200)
+          app.notifications.length.should.equal(2)
+          app.notifications[1].state.should.equal('normal')
+
+          // a later unavailability must warn again, not be swallowed
+          registry.unregisterHistoryApiProvider('kip')
+          registry.registerHistoryApiProvider('questdb', provider('questdb'))
+          await defaultOf(app)
+          app.notifications.length.should.equal(3)
+          app.notifications[2].state.should.equal('warn')
+          app.notifications[2].message.should.contain('kip')
+        }
+      )
+    })
+
+    it('does not change the active provider when persisting fails', async function () {
+      await withDefaultProviderRoute(
+        undefined,
+        (cb) => cb(new Error('disk full')),
+        async ({ app, registry, postDefault }) => {
+          registry.registerHistoryApiProvider('kip', provider('kip'))
+          registry.registerHistoryApiProvider('questdb', provider('questdb'))
+          ;(await postDefault('questdb')).should.equal(500)
+
+          // the failed save must not have switched the default nor
+          // mutated the persisted settings
+          ;(await defaultOf(app)).should.equal(providerContext('kip'))
+          chai.expect(app.config.settings.historyApi).to.equal(undefined)
+        }
+      )
     })
   })
 })

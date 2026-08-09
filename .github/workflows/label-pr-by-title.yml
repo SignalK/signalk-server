@@ -1,0 +1,75 @@
+name: Label PR by title
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Map conventional-commit types to the repo's PR labels
+            // (see .github/workflows/require_pr_label.yml).
+            const typeToLabel = {
+              feat: 'feature',
+              fix: 'fix',
+              docs: 'doc',
+              chore: 'chore',
+              test: 'test',
+              refactor: 'refactor',
+              perf: 'other',
+              style: 'other',
+              build: 'chore',
+              ci: 'chore'
+            }
+
+            const title = context.payload.pull_request.title || ''
+            // <type>(<optional scope>)<optional !>: e.g. "feat:", "fix(docker):"
+            const match = title.match(/^\s*([a-z]+)(\([^)]*\))?!?:/i)
+            if (!match) {
+              core.info(`No conventional prefix found in title: "${title}"`)
+              return
+            }
+
+            const type = match[1].toLowerCase()
+            const label = typeToLabel[type]
+            if (!label) {
+              core.info(`Unrecognized type "${type}", no label applied`)
+              return
+            }
+
+            const { owner, repo } = context.repo
+            const issue_number = context.payload.pull_request.number
+
+            const managed = new Set(Object.values(typeToLabel))
+            const current = context.payload.pull_request.labels.map((l) => l.name)
+
+            // Remove any other managed label so exactly one type label remains.
+            for (const name of current) {
+              if (managed.has(name) && name !== label) {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number,
+                  name
+                })
+              }
+            }
+
+            if (!current.includes(label)) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: [label]
+              })
+              core.info(`Applied label "${label}" for type "${type}"`)
+            } else {
+              core.info(`Label "${label}" already present`)
+            }

@@ -24,6 +24,7 @@ services:
     #        source: $PWD/startup.sh    # (2/3)
     #        target: /home/node/signalk/startup.sh    # (3/3)
     #   ----------------------
+    init: true
     entrypoint: sh /home/node/signalk/startup.sh
     privileged: true
     logging:

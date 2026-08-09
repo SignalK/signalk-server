@@ -7,6 +7,16 @@ export interface PathData {
   $source?: string
   pgn?: string
   sentence?: string
+  /**
+   * Server-emitted staleness state. Populated when the server has
+   * timed the path+source out via meta.timeout enforcement; clients use
+   * `state.timedOut` to render a stale indicator and `state.lastValue`
+   * to show the most recent good reading.
+   */
+  state?: {
+    timedOut?: boolean
+    lastValue?: { timestamp: string; value: unknown }
+  }
   [key: string]: unknown
 }
 

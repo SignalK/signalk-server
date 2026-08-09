@@ -1,0 +1,15 @@
+{
+  "notifications": "event",
+  "design": "event",
+  "navigation.anchor": "event",
+  "navigation.home": "event",
+  "navigation.course": "event",
+  "uuid": "event",
+  "mmsi": "event",
+  "url": "event",
+  "name": "event",
+  "flag": "event",
+  "port": "event",
+  "registrations": "event",
+  "communication": "event"
+}

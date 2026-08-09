@@ -10,18 +10,31 @@
       "family": "ubuntu",
       "os_arg": "24.04",
       "dockerfile_base": "./docker/Dockerfile_base_24.04",
+      "tag_suffix": "",
       "default_enabled": true
     },
     {
-      "id": "alpine",
-      "family": "alpine",
-      "os_arg": "alpine",
-      "dockerfile_base": "./docker/Dockerfile_base_alpine",
+      "id": "26.04",
+      "family": "ubuntu",
+      "os_arg": "26.04",
+      "dockerfile_base": "./docker/Dockerfile_base_26.04",
+      "tag_suffix": "-26.04",
       "default_enabled": true
     }
   ],
   "node_versions": [
-    { "id": "24", "default_enabled": true, "extra_platforms": {} }
+    {
+      "id": "24",
+      "primary": true,
+      "default_enabled": true,
+      "extra_platforms": {}
+    },
+    {
+      "id": "26",
+      "primary": false,
+      "default_enabled": true,
+      "extra_platforms": {}
+    }
   ],
   "editions": [
     { "id": "full", "tag_suffix": "", "default_enabled": true },

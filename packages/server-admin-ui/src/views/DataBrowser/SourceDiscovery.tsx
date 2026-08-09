@@ -464,13 +464,13 @@ const SourceDiscovery: React.FC = () => {
           variant="warning"
           style={{ fontSize: '0.9rem', marginBottom: '16px' }}
         >
-          <FontAwesomeIcon icon={faInfoCircle} /> The server can't currently
-          send ISO Requests on the N2K bus. <strong>Discover Devices</strong>,
-          instance edits and the automatic identity refresh are unavailable.
-          This usually means the N2K connection hasn't completed address claim
-          yet (give it ~5 s after boot) — or, for Yacht Devices YDEN / YDWG
-          gateways over TCP, that <em>Act as N2K device</em> is off on the
-          connection.{' '}
+          <FontAwesomeIcon icon={faInfoCircle} /> The server can&apos;t
+          currently send ISO Requests on the N2K bus.{' '}
+          <strong>Discover Devices</strong>, instance edits and the automatic
+          identity refresh are unavailable. This usually means the N2K
+          connection hasn&apos;t completed address claim yet (give it ~5 s after
+          boot) — or, for Yacht Devices YDEN / YDWG gateways over TCP, that{' '}
+          <em>Act as N2K device</em> is off on the connection.{' '}
           <a href="./#/data/connections/-" className="text-decoration-none">
             Open Connections
           </a>{' '}

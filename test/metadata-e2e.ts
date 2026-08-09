@@ -8,6 +8,7 @@ import { freeport } from './ts-servertestutilities'
 import path from 'path'
 import { rimraf } from 'rimraf'
 import { SERVERSTATEDIRNAME } from '../src/serverstate/store'
+import DeltaEditor from '../src/deltaeditor'
 
 const TEST_PATH_DOTS = 'a.test.path'
 const TEST_PATH_SLASHES = 'a/test/path'
@@ -214,5 +215,73 @@ describe('Metadata end to end', function () {
       'description',
       'Updated description'
     )
+  })
+})
+
+describe('setDefaultMetadata per-field merge logic', function () {
+  it('sets all fields when no existing metadata', () => {
+    const editor = new DeltaEditor()
+    const context = 'vessels.self'
+    const skPath = 'electrical.batteries.house.energy'
+
+    const existing = editor.getMeta(context, skPath)
+    expect(existing).to.be.null
+
+    const value = { units: 'J', description: 'Battery energy' }
+    const { hasNewFields, merged } = DeltaEditor.computeDefaultFields(
+      existing,
+      value
+    )
+    expect(hasNewFields).to.be.true
+    editor.setMeta(context, skPath, merged)
+
+    const result = editor.getMeta(context, skPath)
+    expect(result).to.deep.equal({ units: 'J', description: 'Battery energy' })
+  })
+
+  it('skips fields already set by the user', () => {
+    const editor = new DeltaEditor()
+    const context = 'vessels.self'
+    const skPath = 'electrical.batteries.house.energy'
+
+    editor.setMeta(context, skPath, { units: 'J', displayName: 'My Energy' })
+
+    const existing = editor.getMeta(context, skPath) as Record<string, unknown>
+    const value = {
+      units: 'C',
+      displayName: 'Default Name',
+      description: 'Battery energy'
+    }
+
+    const { hasNewFields, fieldsToSet, merged } =
+      DeltaEditor.computeDefaultFields(existing, value)
+
+    expect(hasNewFields).to.be.true
+    expect(fieldsToSet).to.deep.equal({ description: 'Battery energy' })
+    expect(fieldsToSet).to.not.have.property('units')
+    expect(fieldsToSet).to.not.have.property('displayName')
+
+    editor.setMeta(context, skPath, merged)
+
+    const result = editor.getMeta(context, skPath)
+    expect(result).to.deep.equal({
+      units: 'J',
+      displayName: 'My Energy',
+      description: 'Battery energy'
+    })
+  })
+
+  it('returns no new fields when all fields already exist', () => {
+    const editor = new DeltaEditor()
+    const context = 'vessels.self'
+    const skPath = 'electrical.batteries.house.energy'
+
+    editor.setMeta(context, skPath, { units: 'J', description: 'Existing' })
+
+    const existing = editor.getMeta(context, skPath) as Record<string, unknown>
+    const value = { units: 'C', description: 'New description' }
+
+    const { hasNewFields } = DeltaEditor.computeDefaultFields(existing, value)
+    expect(hasNewFields).to.be.false
   })
 })

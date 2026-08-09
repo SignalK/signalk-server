@@ -17,10 +17,17 @@ const emptyConfigDirectory = () =>
   Promise.all(
     [SERVERSTATEDIRNAME, 'resources', 'plugin-config-data', 'baseDeltas.json']
       .map((subDir) => path.join(serverTestConfigDirectory(), subDir))
-      .map((dir) => rimraf(dir).then(() => console.error(dir)))
+      // Retry on ENOTEMPTY/EBUSY: a plugin from the previous test (e.g. the
+      // resources provider) can still be flushing files when the next test
+      // clears the config directory.
+      .map((dir) =>
+        rimraf(dir, { maxRetries: 5, retryDelay: 100 }).then(() =>
+          console.error(dir)
+        )
+      )
   )
 
-export const startServer = async () => {
+export const startServer = async (extraSettings: object = {}) => {
   const port = await freeport()
   const host = 'http://localhost:' + port
   const sendDeltaUrl = host + '/signalk/v1/api/_test/delta'
@@ -32,7 +39,8 @@ export const startServer = async () => {
     settings: {
       interfaces: {
         plugins: true
-      }
+      },
+      ...extraSettings
     }
   })
   return {

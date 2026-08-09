@@ -29,9 +29,7 @@ interface FetchOptions {
 // 'error' = network/timeout/abort or 5xx; we don't know whether the asset
 // exists, so the caller must not advertise it as missing.
 type FetchTextResult =
-  | { kind: 'ok'; text: string }
-  | { kind: 'missing' }
-  | { kind: 'error' }
+  { kind: 'ok'; text: string } | { kind: 'missing' } | { kind: 'error' }
 
 async function fetchText(
   url: string,

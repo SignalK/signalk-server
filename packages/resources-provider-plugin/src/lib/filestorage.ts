@@ -158,6 +158,8 @@ export class FileStore implements IResourceStore {
       // return matching resources
       const rt = this.resources[type]
       const files = await readdir(rt.path, { withFileTypes: true })
+      // Enumerate in a stable order so `limit` returns a deterministic subset.
+      files.sort((a, b) => a.name.localeCompare(b.name))
       // check resource count
       const fcount =
         params.limit && files.length > params.limit
@@ -169,26 +171,40 @@ export class FileStore implements IResourceStore {
           this.debug(`${files[f].name} is not a File => ignore.`)
           continue
         }
-        if (++count > fcount) {
+        if (count >= fcount) {
           break
         }
+        let res
         try {
-          const res = JSON.parse(
+          res = JSON.parse(
             await readFile(path.join(rt.path, files[f].name), 'utf8')
           )
-          // apply param filters
-          if (passFilter(res, type, params)) {
-            const uuid = files[f].name
-            const stats = await stat(path.join(rt.path, files[f].name))
-            result[uuid] = {
-              ...res,
-              timestamp: stats.mtime,
-              $source: this.pkg.id
-            }
-          }
         } catch (err) {
-          console.error(err)
-          throw new Error(`Invalid file contents: ${files[f]}`)
+          // A single unparseable file (e.g. truncated by an interrupted
+          // write) must not hide the rest of the collection. Log which file
+          // is bad and skip it rather than failing the whole listing. Only
+          // read/parse failures are caught here so genuine filter/metadata
+          // bugs still surface instead of being silently swallowed.
+          console.warn(
+            `Skipping resource file with invalid contents: ${path.join(
+              rt.path,
+              files[f].name
+            )}`,
+            err
+          )
+          continue
+        }
+        if (passFilter(res, type, params)) {
+          const uuid = files[f].name
+          const stats = await stat(path.join(rt.path, files[f].name))
+          result[uuid] = {
+            ...res,
+            timestamp: stats.mtime,
+            $source: this.pkg.id
+          }
+          // Count only resources actually returned, so neither a skipped
+          // corrupt file nor a filtered-out entry consumes a `limit` slot.
+          count++
         }
       }
       return result

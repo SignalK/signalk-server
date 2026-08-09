@@ -9,8 +9,16 @@ on:
         description: 'Ubuntu 24.04 + Node 24.x'
         type: boolean
         default: true
-      alpine_node_24:
-        description: 'Alpine + Node 24'
+      ubuntu_26_04_node_24:
+        description: 'Ubuntu 26.04 + Node 24.x'
+        type: boolean
+        default: true
+      ubuntu_24_04_node_26:
+        description: 'Ubuntu 24.04 + Node 26.x'
+        type: boolean
+        default: true
+      ubuntu_26_04_node_26:
+        description: 'Ubuntu 26.04 + Node 26.x'
         type: boolean
         default: true
 
@@ -30,7 +38,7 @@ jobs:
       any_enabled: ${{ steps.matrix.outputs.any_enabled }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Compute matrices
         id: matrix
         env:
@@ -121,7 +129,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.prepare.outputs.build_matrix) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
 
       - name: Login to ghcr.io

@@ -361,10 +361,7 @@ export interface WeatherData {
  * @category  Weather API
  */
 export type TendencyKind =
-  | 'steady'
-  | 'decreasing'
-  | 'increasing'
-  | 'not available'
+  'steady' | 'decreasing' | 'increasing' | 'not available'
 
 /**
  * @category  Weather API

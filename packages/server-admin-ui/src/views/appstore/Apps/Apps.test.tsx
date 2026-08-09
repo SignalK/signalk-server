@@ -170,6 +170,7 @@ describe('Apps view/search state survives the detail round trip', () => {
     act(() => {
       useStore.getState().setAppstoreView('All')
       useStore.getState().setAppstoreSearch('')
+      useStore.getState().setAppstoreCategory('All')
     })
   })
 
@@ -202,6 +203,40 @@ describe('Apps view/search state survives the detail round trip', () => {
     expect(tabIsActive(/^All$/)).toBe(false)
   })
 
+  it('restores the selected category after an unmount/remount', async () => {
+    const user = userEvent.setup()
+    setAppStore({
+      ...emptyStore,
+      categories: ['All', 'Weather', 'Utility'],
+      available: [
+        {
+          name: 'weather-plugin',
+          version: '1.0.0',
+          description: 'forecasts',
+          categories: ['Weather']
+        },
+        {
+          name: 'util-plugin',
+          version: '1.0.0',
+          description: 'tools',
+          categories: ['Utility']
+        }
+      ]
+    })
+    const { unmount } = renderApps()
+
+    await user.click(screen.getByRole('button', { name: /^Weather$/ }))
+    expect(screen.getByText('weather-plugin')).toBeInTheDocument()
+    expect(screen.queryByText('util-plugin')).toBeNull()
+
+    unmount()
+    renderApps()
+
+    expect(screen.getByText('weather-plugin')).toBeInTheDocument()
+    expect(screen.queryByText('util-plugin')).toBeNull()
+    expect(tabIsActive(/^Weather$/)).toBe(true)
+  })
+
   it('restores the search term after an unmount/remount', async () => {
     const user = userEvent.setup()
     const { unmount } = renderApps()
@@ -217,5 +252,37 @@ describe('Apps view/search state survives the detail round trip', () => {
     expect(screen.getByRole('textbox', { name: /Search/ })).toHaveValue(
       'anchor'
     )
+  })
+})
+
+describe('Apps projects the pending version onto installing rows', () => {
+  beforeEach(() => {
+    setAppStore(emptyStore)
+    act(() => {
+      useStore.getState().setAppstoreView('All')
+      useStore.getState().setAppstoreSearch('')
+      useStore.getState().setAppstoreCategory('All')
+    })
+  })
+
+  it('shows the just-installed version rather than the running one', () => {
+    setAppStore({
+      ...emptyStore,
+      available: [
+        { name: 'plugin-a', version: '2.0.0', installedVersion: '1.0.0' }
+      ],
+      installed: [
+        { name: 'plugin-a', version: '2.0.0', installedVersion: '1.0.0' }
+      ],
+      installing: [{ name: 'plugin-a', pendingVersion: '2.0.0' }]
+    })
+    render(
+      <MemoryRouter>
+        <Apps />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText('v2.0.0 (pending restart)')).toBeInTheDocument()
+    expect(screen.queryByText('Installed v1.0.0')).toBeNull()
   })
 })

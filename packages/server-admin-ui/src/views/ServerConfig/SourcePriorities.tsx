@@ -17,9 +17,7 @@ import {
   useReconciledGroups,
   usePriorityGroups,
   usePriorityDefaults,
-  usePriorityOverrides,
-  useSourceStatus,
-  useSourceStatusLoaded
+  usePriorityOverrides
 } from '../../store'
 import type { SourcesData } from '../../utils/sourceLabels'
 import type { SourcePriority } from '../../store/types'
@@ -86,8 +84,7 @@ function extractPathSourceMeta(tree: unknown): SourceMetaMap {
     }
 
     const values = n.values as
-      | Record<string, Record<string, unknown>>
-      | undefined
+      Record<string, Record<string, unknown>> | undefined
     if (values && typeof values === 'object') {
       for (const [ref, entry] of Object.entries(values)) {
         if (!entry || typeof entry !== 'object') continue
@@ -328,8 +325,6 @@ const SourcePriorities: React.FC = () => {
   const priorityOverridesData = usePriorityOverrides()
   const multiSourcePaths = useMultiSourcePaths()
   const reconciled = useReconciledGroups()
-  const sourceStatus = useSourceStatus()
-  const sourceStatusLoaded = useSourceStatusLoaded()
 
   const setSaving = useStore((s) => s.setSaving)
   const setSaved = useStore((s) => s.setSaved)
@@ -947,7 +942,6 @@ const SourcePriorities: React.FC = () => {
                     <PrefsEditor
                       path={pp.path}
                       priorities={pp.priorities}
-                      pathIndex={index}
                       isSaving={isSaving}
                       sourcesData={sourcesData}
                       multiSourcePaths={multiSourcePaths}

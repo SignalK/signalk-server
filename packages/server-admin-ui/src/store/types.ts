@@ -40,6 +40,13 @@ export interface AppInfo {
   categories?: string[]
   recent?: boolean
   installedVersion?: string
+  // Target version of an install or update: set while it is queued or
+  // running, and kept afterwards — including on failure. Only once the
+  // operation has settled successfully does it describe what npm actually
+  // put on disk, which is when it is worth showing: installedVersion keeps
+  // reporting the version the running plugin was loaded from until restart.
+  // Never set for removals.
+  pendingVersion?: string
   // Synthetic fields layered on by Apps.tsx when projecting the
   // AppStore state into a single per-row record. Optional because they
   // exist only after that projection runs.
@@ -51,6 +58,7 @@ export interface AppInfo {
 
 export interface InstallingApp {
   name: string
+  pendingVersion?: string
   isWaiting?: boolean
   isInstalling?: boolean
   isRemoving?: boolean
@@ -259,4 +267,32 @@ export interface DefaultCategory {
 export interface CategoryInfo {
   baseUnit?: string
   [key: string]: unknown
+}
+
+export interface GnssSensorConfig {
+  sensorId: string
+  $source: string
+  fromBow: number | null
+  fromCenter: number | null
+}
+
+export type GnssCorrectionMode = 'off' | 'replace' | 'both'
+
+// Whether vessel reference point correction can currently run, mirroring the
+// server's sensors API GET `status`. `active` is true only when a mode is
+// selected
+// and both vessel length and true heading are available; `blocked` names
+// the missing input otherwise.
+export interface GnssCorrectionStatus {
+  mode: GnssCorrectionMode
+  active: boolean
+  blocked?: 'no-length' | 'no-heading'
+}
+
+export interface GnssSensorsData {
+  correction: GnssCorrectionMode
+  sensors: GnssSensorConfig[]
+  status?: GnssCorrectionStatus
+  saveState: SaveState
+  saveError?: string
 }

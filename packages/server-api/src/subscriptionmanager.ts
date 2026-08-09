@@ -121,8 +121,7 @@ type InstantPolicyOptions = {
  * @category Server API
  */
 export type SubscriptionOptions = (
-  | FixedPolicyOptions
-  | InstantPolicyOptions
+  FixedPolicyOptions | InstantPolicyOptions
 ) & {
   /**
    * The path to subscribe to.

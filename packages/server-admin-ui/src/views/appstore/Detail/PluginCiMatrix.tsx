@@ -12,12 +12,7 @@ export interface PluginCiJob {
   platform: string
   node: number
   conclusion:
-    | 'success'
-    | 'failure'
-    | 'skipped'
-    | 'cancelled'
-    | 'in_progress'
-    | null
+    'success' | 'failure' | 'skipped' | 'cancelled' | 'in_progress' | null
   server_version?: string
   job_url?: string
 }
@@ -165,7 +160,7 @@ const PluginCiMatrix: React.FC<PluginCiMatrixProps> = ({ data }) => {
     <div className="plugin-detail__plugin-ci">
       <h5 className="mt-4">plugin-ci matrix</h5>
       <div className="text-muted small mb-2">
-        Tested against the published version's commit{' '}
+        Tested against the published version&apos;s commit{' '}
         <a
           href={data.commit_url}
           target="_blank"

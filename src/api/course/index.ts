@@ -1361,8 +1361,7 @@ export class CourseApi {
     if (h) {
       try {
         return (await this.resourcesApi.getResource(h.type, h.id)) as
-          | Route
-          | undefined
+          Route | undefined
       } catch (_err) {
         debug(`** Unable to fetch resource: ${h.type}, ${h.id}`)
         return undefined

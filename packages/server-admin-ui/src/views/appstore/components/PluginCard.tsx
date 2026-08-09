@@ -8,6 +8,7 @@ import { faChevronRight } from '@fortawesome/free-solid-svg-icons/faChevronRight
 import type { AppInfo } from '../../../store/types'
 import InstallLogModal from './InstallLogModal'
 import PluginIcon from './PluginIcon'
+import { hasPendingInstall } from '../projectAppInfo'
 import RecencyBadge from './RecencyBadge'
 import ScoreRing from './ScoreRing'
 import UpdateAvailableBadge from './UpdateAvailableBadge'
@@ -57,6 +58,16 @@ const StatePill: React.FC<StatePillProps> = ({ app, onFailedClick }) => {
         >
           Install failed
         </button>
+      )
+    }
+    if (hasPendingInstall(app)) {
+      return (
+        <span
+          className="plugin-card__state-pill plugin-card__state-pill--installed"
+          title="Restart the server to activate this version"
+        >
+          v{app.pendingVersion} (pending restart)
+        </span>
       )
     }
   }

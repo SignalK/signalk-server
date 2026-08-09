@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
+import { compression } from 'vite-plugin-compression2'
 
 import '@signalk/server-admin-ui-dependencies'
 
@@ -70,6 +71,13 @@ function stripSvgFonts() {
   }
 }
 
+// mathjs and its runtime dependencies, split into a lazy vendor chunk.
+// Deliberately excludes @babel/runtime: it is shared with eagerly loaded
+// dependencies, so bundling it here would pull the whole chunk into the
+// initial load.
+const MATHJS_VENDOR_PATTERN =
+  /[\\/]node_modules[\\/](mathjs|decimal\.js|typed-function|complex\.js|fraction\.js|seedrandom|escape-latex|javascript-natural-sort)[\\/]/
+
 export default defineConfig({
   base: './',
   publicDir: 'public_src',
@@ -79,6 +87,15 @@ export default defineConfig({
     react(),
     babel({
       presets: [reactCompilerPreset()]
+    }),
+    // Emit .br and .gz sidecars next to the originals; the server serves
+    // them directly with matching Content-Encoding, skipping per-request
+    // compression. Both are needed: Chrome only accepts brotli on secure
+    // origins, so plain-HTTP installs fall back to the gzip sidecar.
+    // Files under 1 KB gain nothing from compression.
+    compression({
+      algorithms: ['brotliCompress', 'gzip'],
+      threshold: 1024
     })
   ],
   css: {
@@ -131,7 +148,16 @@ export default defineConfig({
     target: 'es2023',
     assetsInlineLimit: 0, // Prevent inlining assets to allow server-side logo override
     cssCodeSplit: false, // Generate single CSS file to ensure it's always loaded
-    manifest: true // Emit .vite/manifest.json so plugins can resolve hashed asset URLs
+    manifest: true, // Emit .vite/manifest.json so plugins can resolve hashed asset URLs
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (MATHJS_VENDOR_PATTERN.test(id)) {
+            return 'vendor-mathjs'
+          }
+        }
+      }
+    }
   },
   resolve: {
     alias: {
