@@ -45,6 +45,42 @@ export function unwrapControlPayload(body: unknown): unknown {
     : body
 }
 
+/**
+ * Apply one control, preferring the generic `setControl` path.
+ *
+ * The `/power`, `/range`, `/gain`, `/sea` and `/rain` routes predate
+ * `/controls/{controlId}` and each called its own typed provider method.
+ * Those methods bypass the control abstraction the rest of the API is built
+ * on, so a provider has to implement the same control twice and the two
+ * paths drift: against mayara-server, `/range` and `/power` worked (their
+ * payload is a scalar and survives the detour) while `/gain`, `/sea` and
+ * `/rain` returned 400, because the typed methods reshape `{ auto, value }`
+ * into something the provider's own control endpoint does not accept.
+ *
+ * Routing them through `setControl` with the control id makes the shortcut
+ * routes exactly equivalent to the documented generic route. `setControl` is
+ * optional, so the typed method stays as a fallback for providers that only
+ * implement it.
+ */
+export async function applyControl(
+  provider: radar.RadarProviderMethods,
+  radarId: string,
+  controlId: string,
+  payload: unknown,
+  legacy?: () => Promise<boolean>
+): Promise<{ success: boolean; error?: string }> {
+  if (provider.setControl) {
+    return provider.setControl(radarId, controlId, payload)
+  }
+  if (legacy) {
+    return { success: await legacy() }
+  }
+  return {
+    success: false,
+    error: `Provider supports neither setControl nor a ${controlId} method`
+  }
+}
+
 interface RadarApplication
   extends WithSecurityStrategy, SignalKMessageHub, IRouter {}
 
@@ -380,7 +416,7 @@ export class RadarApi {
             res.status(404).json(Responses.notFound)
             return
           }
-          if (!provider.setPower) {
+          if (!provider.setControl && !provider.setPower) {
             res.status(501).json({
               statusCode: 501,
               state: 'FAILED',
@@ -398,7 +434,14 @@ export class RadarApi {
             })
             return
           }
-          const success = await provider.setPower(req.params.id, state)
+          const { success } = await applyControl(
+            provider,
+            req.params.id,
+            'power',
+            state,
+            provider.setPower &&
+              (() => provider.setPower!(req.params.id, state))
+          )
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
@@ -433,7 +476,7 @@ export class RadarApi {
             res.status(404).json(Responses.notFound)
             return
           }
-          if (!provider.setRange) {
+          if (!provider.setControl && !provider.setRange) {
             res.status(501).json({
               statusCode: 501,
               state: 'FAILED',
@@ -450,7 +493,14 @@ export class RadarApi {
             })
             return
           }
-          const success = await provider.setRange(req.params.id, range)
+          const { success } = await applyControl(
+            provider,
+            req.params.id,
+            'range',
+            range,
+            provider.setRange &&
+              (() => provider.setRange!(req.params.id, range))
+          )
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
@@ -485,7 +535,7 @@ export class RadarApi {
             res.status(404).json(Responses.notFound)
             return
           }
-          if (!provider.setGain) {
+          if (!provider.setControl && !provider.setGain) {
             res.status(501).json({
               statusCode: 501,
               state: 'FAILED',
@@ -503,7 +553,13 @@ export class RadarApi {
             })
             return
           }
-          const success = await provider.setGain(req.params.id, gain)
+          const { success } = await applyControl(
+            provider,
+            req.params.id,
+            'gain',
+            gain,
+            provider.setGain && (() => provider.setGain!(req.params.id, gain))
+          )
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
@@ -538,7 +594,7 @@ export class RadarApi {
             res.status(404).json(Responses.notFound)
             return
           }
-          if (!provider.setSea) {
+          if (!provider.setControl && !provider.setSea) {
             res.status(501).json({
               statusCode: 501,
               state: 'FAILED',
@@ -556,7 +612,13 @@ export class RadarApi {
             })
             return
           }
-          const success = await provider.setSea(req.params.id, sea)
+          const { success } = await applyControl(
+            provider,
+            req.params.id,
+            'sea',
+            sea,
+            provider.setSea && (() => provider.setSea!(req.params.id, sea))
+          )
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
@@ -591,7 +653,7 @@ export class RadarApi {
             res.status(404).json(Responses.notFound)
             return
           }
-          if (!provider.setRain) {
+          if (!provider.setControl && !provider.setRain) {
             res.status(501).json({
               statusCode: 501,
               state: 'FAILED',
@@ -609,7 +671,13 @@ export class RadarApi {
             })
             return
           }
-          const success = await provider.setRain(req.params.id, rain)
+          const { success } = await applyControl(
+            provider,
+            req.params.id,
+            'rain',
+            rain,
+            provider.setRain && (() => provider.setRain!(req.params.id, rain))
+          )
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
