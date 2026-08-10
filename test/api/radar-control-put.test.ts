@@ -1,5 +1,7 @@
 import { expect } from 'chai'
 import express from 'express'
+import type { AddressInfo } from 'node:net'
+import type { radar } from '@signalk/server-api'
 import { RadarApi, unwrapControlPayload } from '../../src/api/radar'
 
 // Every shape in the "Setting a Control Value" section of radar_api.md.
@@ -78,11 +80,15 @@ describe('Radar API: PUT /controls/{controlId} route', () => {
   async function startRadarApi(
     onSetControl: (radarId: string, controlId: string, value: unknown) => void
   ) {
-    const app: any = express()
+    const app = express() as unknown as express.Express & {
+      securityStrategy: { shouldAllowPut: () => boolean }
+    }
     app.use(express.json())
     app.securityStrategy = { shouldAllowPut: () => true }
 
-    const api = new RadarApi(app)
+    const api = new RadarApi(
+      app as unknown as ConstructorParameters<typeof RadarApi>[0]
+    )
     await api.start()
     api.register('test-provider', {
       name: 'Test Radar Provider',
@@ -102,11 +108,11 @@ describe('Radar API: PUT /controls/{controlId} route', () => {
           return { success: true }
         }
       }
-    } as any)
+    } as unknown as radar.RadarProvider)
 
     const server = app.listen(0)
     await new Promise((resolve) => server.once('listening', resolve))
-    const { port } = server.address()
+    const { port } = server.address() as AddressInfo
     return {
       put: (path: string, body: unknown) =>
         fetch(`http://127.0.0.1:${port}${path}`, {
