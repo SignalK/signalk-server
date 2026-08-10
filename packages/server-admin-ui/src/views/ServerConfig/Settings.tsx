@@ -92,6 +92,7 @@ const ServerSettings: React.FC = () => {
         .then((data) => setAllowReadonly(data.allow_readonly))
         .catch(() => setAllowReadonly(null))
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllowReadonly(null)
     }
   }, [loginStatus.authenticationRequired])

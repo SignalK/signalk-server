@@ -1112,7 +1112,11 @@ function TalkerGroups({
     )
   )
 
+  // Re-seed the local edit buffer when the persisted value changes upstream.
+  // `entries` holds in-progress user edits (added/renamed rows not yet saved),
+  // so it is genuine local state rather than something derivable during render.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEntries(
       talkerGroupsToEntries(
         value.talkerGroups as Record<string, string[]> | undefined

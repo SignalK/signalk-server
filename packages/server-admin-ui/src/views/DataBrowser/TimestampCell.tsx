@@ -35,7 +35,10 @@ function TimestampCell({ timestamp, isPaused, className }: TimestampCellProps) {
     if (changed) {
       prevTimestampRef.current = timestamp
     }
+    // Drives a CSS animation via a timer — synchronising React state with an
+    // external system (the fade-out timeout), not derivable during render.
     if (isPaused) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnimate(false)
       return
     }

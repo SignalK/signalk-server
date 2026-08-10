@@ -105,6 +105,7 @@ const DetailView: React.FC = () => {
     // plugin so a stale install/remove banner or open lightbox from
     // the previous page can't bleed into this one.
     const controller = new AbortController()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActionError(null)
     setLightboxIndex(null)
     setState({ status: 'loading' })

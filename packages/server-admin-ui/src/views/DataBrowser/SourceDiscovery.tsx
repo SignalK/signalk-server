@@ -2322,6 +2322,7 @@ const InlineTextField: React.FC<{
   // the data-flow explicit.
   useEffect(() => {
     if (!isSaving && editState.syncedFrom !== currentValue) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditState({ value: currentValue, syncedFrom: currentValue })
     }
   }, [isSaving, currentValue, editState.syncedFrom])
