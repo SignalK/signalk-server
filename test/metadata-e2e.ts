@@ -4,7 +4,7 @@ import {
   startServerP,
   WsPromiser
 } from './servertestutilities'
-import { freeport } from './ts-servertestutilities'
+import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
 import path from 'path'
 import { rimraf } from 'rimraf'
 import { SERVERSTATEDIRNAME } from '../src/serverstate/store'
@@ -21,7 +21,7 @@ const emptyConfigDirectory = () =>
   )
 
 describe('Metadata end to end', function () {
-  this.timeout(10000)
+  this.timeout(SERVER_START_TIMEOUT)
 
   let port: number
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

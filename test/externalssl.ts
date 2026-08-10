@@ -1,9 +1,9 @@
 import { expect } from 'chai'
-import { freeport } from './ts-servertestutilities'
+import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
 import { startServerP } from './servertestutilities'
 
 describe('EXTERNALSSL', function () {
-  this.timeout(10000)
+  this.timeout(SERVER_START_TIMEOUT)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let server: any
