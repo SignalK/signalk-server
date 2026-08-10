@@ -120,35 +120,22 @@ export function initializeBinaryStreams(app: StreamApplication): void {
         }
         authRequest.query = Object.fromEntries(url.searchParams)
 
-        // Check if security is enabled
-        if (
-          app.securityStrategy &&
-          typeof app.securityStrategy.shouldAllowWrite === 'function'
-        ) {
+        if (app.securityStrategy.isDummy()) {
+          debug(
+            'Security disabled, allowing unauthenticated connection to stream: %s',
+            streamId
+          )
+          principal = { identifier: 'unauthenticated' }
+        } else {
           try {
-            // Security is enabled, perform authentication
-            if (app.securityStrategy.authorizeWS) {
-              app.securityStrategy.authorizeWS(request)
-              principal = authRequest.skPrincipal || { identifier: 'unknown' }
-            } else {
-              // Fallback: use shouldAllowWrite for basic auth check
-              if (!app.securityStrategy.shouldAllowWrite(request, 'streams')) {
-                throw new Error('Unauthorized')
-              }
-              principal = authRequest.skPrincipal || { identifier: 'unknown' }
-            }
+            app.securityStrategy.authorizeWS(request)
+            principal = authRequest.skPrincipal || { identifier: 'unknown' }
           } catch (error) {
-            debug(`Authentication failed for stream ${streamId}: ${error}`)
+            debug('Authentication failed for stream %s: %s', streamId, error)
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
             socket.destroy()
             return
           }
-        } else {
-          // Security is disabled, allow connection without authentication
-          debug(
-            `Security disabled, allowing unauthenticated connection to stream: ${streamId}`
-          )
-          principal = { identifier: 'unauthenticated' }
         }
 
         // Create WebSocket connection
