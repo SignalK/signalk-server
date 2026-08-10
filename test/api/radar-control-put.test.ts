@@ -77,6 +77,14 @@ describe('Radar API: PUT /controls/{controlId} route', () => {
   const RADAR = 'radar-0'
   const base = `/signalk/v2/api/vessels/self/radars/${RADAR}/controls`
 
+  // A failed assertion skips any cleanup at the end of a test body, and a
+  // still-listening server keeps the mocha process alive. Close them here
+  // instead, so a failure reports as a failure rather than as a hang.
+  const started: Array<() => Promise<void>> = []
+  afterEach(async () => {
+    while (started.length) await started.pop()!()
+  })
+
   async function startRadarApi(
     onSetControl: (radarId: string, controlId: string, value: unknown) => void
   ) {
@@ -113,20 +121,22 @@ describe('Radar API: PUT /controls/{controlId} route', () => {
     const server = app.listen(0)
     await new Promise((resolve) => server.once('listening', resolve))
     const { port } = server.address() as AddressInfo
+    started.push(
+      () => new Promise<void>((resolve) => server.close(() => resolve()))
+    )
     return {
       put: (path: string, body: unknown) =>
         fetch(`http://127.0.0.1:${port}${path}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
-        }),
-      stop: () => new Promise((resolve) => server.close(resolve))
+        })
     }
   }
 
   it('hands the provider every field of a guard zone body', async () => {
     const seen: Array<[string, string, unknown]> = []
-    const { put, stop } = await startRadarApi((...args) => seen.push(args))
+    const { put } = await startRadarApi((...args) => seen.push(args))
 
     const zone = {
       enabled: true,
@@ -139,17 +149,15 @@ describe('Radar API: PUT /controls/{controlId} route', () => {
 
     expect(res.status).to.equal(200)
     expect(seen).to.deep.equal([[RADAR, 'guardZone1', zone]])
-    await stop()
   })
 
   it('still unwraps a bare envelope for a scalar control', async () => {
     const seen: Array<[string, string, unknown]> = []
-    const { put, stop } = await startRadarApi((...args) => seen.push(args))
+    const { put } = await startRadarApi((...args) => seen.push(args))
 
     const res = await put(`${base}/range`, { value: 1852 })
 
     expect(res.status).to.equal(200)
     expect(seen).to.deep.equal([[RADAR, 'range', 1852]])
-    await stop()
   })
 })
