@@ -338,20 +338,22 @@ export default function PluginConfigurationList() {
     const unsubscribe = useStore.subscribe(
       (state) => state.plugins,
       (storePlugins) => {
-        if (storePlugins.length > 0) {
-          setPlugins(storePlugins as Plugin[])
-          setPluginsLoaded(true)
-          setSelectedPlugin((prev) => {
-            if (!prev) return null
-            return (
-              (storePlugins.find((p) => p.id === prev.id) as Plugin) || null
-            )
-          })
+        // Before the initial load an empty store just means "not loaded yet".
+        // Afterwards it means the last plugin was removed, which must clear
+        // the list rather than leave the removed plugin on screen.
+        if (storePlugins.length === 0 && !pluginsLoaded) {
+          return
         }
+        setPlugins(storePlugins as Plugin[])
+        setPluginsLoaded(true)
+        setSelectedPlugin((prev) => {
+          if (!prev) return null
+          return (storePlugins.find((p) => p.id === prev.id) as Plugin) || null
+        })
       }
     )
     return unsubscribe
-  }, [])
+  }, [pluginsLoaded])
 
   const pluginList = getFilteredPlugins()
   const selectedPluginId = selectedPlugin ? selectedPlugin.id : null
