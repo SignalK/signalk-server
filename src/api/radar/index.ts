@@ -434,7 +434,7 @@ export class RadarApi {
             })
             return
           }
-          const { success } = await applyControl(
+          const { success, error } = await applyControl(
             provider,
             req.params.id,
             'power',
@@ -448,7 +448,7 @@ export class RadarApi {
             res.status(400).json({
               statusCode: 400,
               state: 'FAILED',
-              message: 'Failed to set radar power state'
+              message: error ?? 'Failed to set radar power state'
             })
           }
         } catch (err: any) {
@@ -493,7 +493,7 @@ export class RadarApi {
             })
             return
           }
-          const { success } = await applyControl(
+          const { success, error } = await applyControl(
             provider,
             req.params.id,
             'range',
@@ -507,7 +507,7 @@ export class RadarApi {
             res.status(400).json({
               statusCode: 400,
               state: 'FAILED',
-              message: 'Failed to set radar range'
+              message: error ?? 'Failed to set radar range'
             })
           }
         } catch (err: any) {
@@ -553,7 +553,7 @@ export class RadarApi {
             })
             return
           }
-          const { success } = await applyControl(
+          const { success, error } = await applyControl(
             provider,
             req.params.id,
             'gain',
@@ -566,7 +566,7 @@ export class RadarApi {
             res.status(400).json({
               statusCode: 400,
               state: 'FAILED',
-              message: 'Failed to set radar gain'
+              message: error ?? 'Failed to set radar gain'
             })
           }
         } catch (err: any) {
@@ -612,7 +612,7 @@ export class RadarApi {
             })
             return
           }
-          const { success } = await applyControl(
+          const { success, error } = await applyControl(
             provider,
             req.params.id,
             'sea',
@@ -625,7 +625,7 @@ export class RadarApi {
             res.status(400).json({
               statusCode: 400,
               state: 'FAILED',
-              message: 'Failed to set radar sea clutter'
+              message: error ?? 'Failed to set radar sea clutter'
             })
           }
         } catch (err: any) {
@@ -671,7 +671,7 @@ export class RadarApi {
             })
             return
           }
-          const { success } = await applyControl(
+          const { success, error } = await applyControl(
             provider,
             req.params.id,
             'rain',
@@ -684,7 +684,7 @@ export class RadarApi {
             res.status(400).json({
               statusCode: 400,
               state: 'FAILED',
-              message: 'Failed to set radar rain clutter'
+              message: error ?? 'Failed to set radar rain clutter'
             })
           }
         } catch (err: any) {

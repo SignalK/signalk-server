@@ -1,5 +1,7 @@
 import { expect } from 'chai'
-import { applyControl } from '../../src/api/radar'
+import express from 'express'
+import type { AddressInfo } from 'node:net'
+import { applyControl, RadarApi } from '../../src/api/radar'
 import type { radar } from '@signalk/server-api'
 
 // The /power, /range, /gain, /sea and /rain routes predate
@@ -108,5 +110,140 @@ describe('Radar API: shortcut control routes', () => {
     })
     expect(result.success).to.equal(false)
     expect(result.error).to.match(/neither setControl nor a gain method/)
+  })
+})
+
+// Route-level coverage. The unit tests above prove the dispatch rule; these
+// drive the five shortcut endpoints themselves, so the capability guards and
+// the response contract are exercised too.
+
+describe('Radar API: shortcut routes over HTTP', () => {
+  const RADAR = 'radar-0'
+  const root = `/signalk/v2/api/vessels/self/radars/${RADAR}`
+
+  async function startRadarApi(overrides: Partial<radar.RadarProviderMethods>) {
+    const app = express() as unknown as express.Express & {
+      securityStrategy: { shouldAllowPut: () => boolean }
+    }
+    app.use(express.json())
+    app.securityStrategy = { shouldAllowPut: () => true }
+
+    const api = new RadarApi(
+      app as unknown as ConstructorParameters<typeof RadarApi>[0]
+    )
+    await api.start()
+    api.register('test-provider', {
+      name: 'Test Radar Provider',
+      methods: {
+        getRadars: async () => [RADAR],
+        getRadarInfo: async () => ({
+          name: 'Test',
+          brand: 'Test',
+          radarIpAddress: '10.0.0.1'
+        }),
+        ...overrides
+      }
+    } as unknown as radar.RadarProvider)
+
+    const server = app.listen(0)
+    await new Promise((resolve) => server.once('listening', resolve))
+    const { port } = server.address() as AddressInfo
+    return {
+      put: (path: string, body: unknown) =>
+        fetch(`http://127.0.0.1:${port}${path}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }),
+      stop: () => new Promise((resolve) => server.close(resolve))
+    }
+  }
+
+  it('forwards each shortcut to setControl with its control id', async () => {
+    const seen: Array<[string, unknown]> = []
+    const { put, stop } = await startRadarApi({
+      setControl: async (_id, controlId, value) => {
+        seen.push([controlId, value])
+        return { success: true }
+      }
+    })
+
+    expect((await put(`${root}/power`, { value: 'transmit' })).status).to.equal(
+      200
+    )
+    expect((await put(`${root}/range`, { value: 1852 })).status).to.equal(200)
+    expect(
+      (await put(`${root}/gain`, { auto: false, value: 75 })).status
+    ).to.equal(200)
+    expect(
+      (await put(`${root}/sea`, { auto: true, autoValue: -20 })).status
+    ).to.equal(200)
+    expect(
+      (await put(`${root}/rain`, { auto: false, value: 30 })).status
+    ).to.equal(200)
+
+    expect(seen).to.deep.equal([
+      ['power', 'transmit'],
+      ['range', 1852],
+      ['gain', { auto: false, value: 75 }],
+      ['sea', { auto: true, autoValue: -20 }],
+      ['rain', { auto: false, value: 30 }]
+    ])
+    await stop()
+  })
+
+  it('works for a provider that implements only the typed methods', async () => {
+    let gain: unknown
+    const { put, stop } = await startRadarApi({
+      setGain: async (_id, value) => {
+        gain = value
+        return true
+      }
+    })
+
+    const res = await put(`${root}/gain`, { auto: false, value: 75 })
+    expect(res.status).to.equal(200)
+    expect(gain).to.deep.equal({ auto: false, value: 75 })
+    await stop()
+  })
+
+  it('returns 501 when the provider supports neither path', async () => {
+    const { put, stop } = await startRadarApi({})
+    const res = await put(`${root}/gain`, { auto: false, value: 75 })
+    expect(res.status).to.equal(501)
+    await stop()
+  })
+
+  it("reports the provider's own error rather than a generic message", async () => {
+    const { put, stop } = await startRadarApi({
+      setControl: async () => ({
+        success: false,
+        error: 'gain is read-only in auto mode'
+      })
+    })
+
+    const res = await put(`${root}/gain`, { auto: false, value: 75 })
+    expect(res.status).to.equal(400)
+    expect((await res.json()).message).to.equal(
+      'gain is read-only in auto mode'
+    )
+    await stop()
+  })
+
+  it('still validates before reaching the provider', async () => {
+    let called = false
+    const { put, stop } = await startRadarApi({
+      setControl: async () => {
+        called = true
+        return { success: true }
+      }
+    })
+
+    expect((await put(`${root}/power`, { value: 'nonsense' })).status).to.equal(
+      400
+    )
+    expect((await put(`${root}/range`, { value: -1 })).status).to.equal(400)
+    expect(called).to.equal(false)
+    await stop()
   })
 })
