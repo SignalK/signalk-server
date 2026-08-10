@@ -96,6 +96,10 @@ module.exports = defineConfig([
     rules: {
       // React hooks rules
       ...reactHooks.configs.recommended.rules,
+      // Duplicates react-hooks/set-state-in-effect, which is already an error
+      // from the official plugin. Reporting both means every annotated site
+      // needs two disable comments.
+      '@eslint-react/hooks-extra/no-direct-set-state-in-use-effect': 'off',
       // React compiler rules
       'react-compiler/react-compiler': 'warn',
       // React 17+ with new JSX transform doesn't require React in scope
@@ -104,6 +108,16 @@ module.exports = defineConfig([
       'react/prop-types': 'off',
       'react/no-string-refs': 'off',
       'react/no-direct-mutation-state': 'off'
+    }
+  },
+
+  // Admin UI tests. Must follow the React block above so these overrides win.
+  {
+    files: ['packages/server-admin-ui/src/**/*.test.{ts,tsx}'],
+    rules: {
+      // vi.mock factories must re-export hook names verbatim to replace the
+      // real module, so the use-prefix convention cannot apply here.
+      '@eslint-react/hooks-extra/no-unnecessary-use-prefix': 'off'
     }
   },
 
