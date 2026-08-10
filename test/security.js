@@ -1,7 +1,7 @@
 const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
-const { freeport } = require('./ts-servertestutilities')
+const { freeport, SERVER_START_TIMEOUT } = require('./ts-servertestutilities')
 const path = require('path')
 const WebSocket = require('ws')
 const jwt = require('jsonwebtoken')
@@ -73,7 +73,7 @@ describe('Security', () => {
   let previousHttpRateLimits
 
   before(async function () {
-    this.timeout(20000)
+    this.timeout(SERVER_START_TIMEOUT)
     previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
     process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000,login=1000'
 
@@ -952,7 +952,7 @@ describe('Access Request Limit', () => {
   let previousHttpRateLimits
 
   before(async function () {
-    this.timeout(20000)
+    this.timeout(SERVER_START_TIMEOUT)
     previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
     process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000'
 
@@ -1087,7 +1087,7 @@ describe('WS Access Request IP reporting', () => {
   let previousHttpRateLimits
 
   beforeEach(async function () {
-    this.timeout(20000)
+    this.timeout(SERVER_START_TIMEOUT)
     previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
     process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000'
     port = await freeport()
@@ -1185,7 +1185,7 @@ describe('Plugin route permissions', () => {
   let previousHttpRateLimits
 
   before(async function () {
-    this.timeout(20000)
+    this.timeout(SERVER_START_TIMEOUT)
     previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
     process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000,login=1000'
 
