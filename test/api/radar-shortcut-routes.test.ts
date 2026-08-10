@@ -21,6 +21,9 @@ function methods(
   } as radar.RadarProviderMethods
 }
 
+/** One nautical mile in metres — a range every marine radar supports. */
+const ONE_NM_METRES = 1852
+
 describe('Radar API: shortcut control routes', () => {
   it('routes through setControl with the control id and payload', async () => {
     const seen: Array<[string, string, unknown]> = []
@@ -56,10 +59,16 @@ describe('Radar API: shortcut control routes', () => {
     let usedLegacy = false
     const provider = methods({ setControl: async () => ({ success: true }) })
 
-    await applyControl(provider, 'radar-0', 'range', 1852, async () => {
-      usedLegacy = true
-      return true
-    })
+    await applyControl(
+      provider,
+      'radar-0',
+      'range',
+      ONE_NM_METRES,
+      async () => {
+        usedLegacy = true
+        return true
+      }
+    )
     expect(usedLegacy).to.equal(false)
   })
 
@@ -71,7 +80,7 @@ describe('Radar API: shortcut control routes', () => {
       provider,
       'radar-0',
       'range',
-      1852,
+      ONE_NM_METRES,
       async () => {
         usedLegacy = true
         return true
@@ -87,7 +96,7 @@ describe('Radar API: shortcut control routes', () => {
       provider,
       'radar-0',
       'range',
-      1852,
+      ONE_NM_METRES,
       async () => false
     )
     expect(result.success).to.equal(false)
@@ -97,7 +106,12 @@ describe('Radar API: shortcut control routes', () => {
     const provider = methods({
       setControl: async () => ({ success: false, error: 'range not settable' })
     })
-    const result = await applyControl(provider, 'radar-0', 'range', 1852)
+    const result = await applyControl(
+      provider,
+      'radar-0',
+      'range',
+      ONE_NM_METRES
+    )
     expect(result).to.deep.equal({
       success: false,
       error: 'range not settable'
@@ -120,6 +134,14 @@ describe('Radar API: shortcut control routes', () => {
 describe('Radar API: shortcut routes over HTTP', () => {
   const RADAR = 'radar-0'
   const root = `/signalk/v2/api/vessels/self/radars/${RADAR}`
+
+  // A failed assertion skips any cleanup at the end of a test body, and a
+  // still-listening server keeps the mocha process alive. Close them here
+  // instead, so a failure reports as a failure rather than as a hang.
+  const started: Array<() => Promise<void>> = []
+  afterEach(async () => {
+    while (started.length) await started.pop()!()
+  })
 
   async function startRadarApi(overrides: Partial<radar.RadarProviderMethods>) {
     const app = express() as unknown as express.Express & {
@@ -148,20 +170,22 @@ describe('Radar API: shortcut routes over HTTP', () => {
     const server = app.listen(0)
     await new Promise((resolve) => server.once('listening', resolve))
     const { port } = server.address() as AddressInfo
+    started.push(
+      () => new Promise<void>((resolve) => server.close(() => resolve()))
+    )
     return {
       put: (path: string, body: unknown) =>
         fetch(`http://127.0.0.1:${port}${path}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
-        }),
-      stop: () => new Promise((resolve) => server.close(resolve))
+        })
     }
   }
 
   it('forwards each shortcut to setControl with its control id', async () => {
     const seen: Array<[string, unknown]> = []
-    const { put, stop } = await startRadarApi({
+    const { put } = await startRadarApi({
       setControl: async (_id, controlId, value) => {
         seen.push([controlId, value])
         return { success: true }
@@ -171,7 +195,9 @@ describe('Radar API: shortcut routes over HTTP', () => {
     expect((await put(`${root}/power`, { value: 'transmit' })).status).to.equal(
       200
     )
-    expect((await put(`${root}/range`, { value: 1852 })).status).to.equal(200)
+    expect(
+      (await put(`${root}/range`, { value: ONE_NM_METRES })).status
+    ).to.equal(200)
     expect(
       (await put(`${root}/gain`, { auto: false, value: 75 })).status
     ).to.equal(200)
@@ -184,17 +210,16 @@ describe('Radar API: shortcut routes over HTTP', () => {
 
     expect(seen).to.deep.equal([
       ['power', 'transmit'],
-      ['range', 1852],
+      ['range', ONE_NM_METRES],
       ['gain', { auto: false, value: 75 }],
       ['sea', { auto: true, autoValue: -20 }],
       ['rain', { auto: false, value: 30 }]
     ])
-    await stop()
   })
 
   it('works for a provider that implements only the typed methods', async () => {
     let gain: unknown
-    const { put, stop } = await startRadarApi({
+    const { put } = await startRadarApi({
       setGain: async (_id, value) => {
         gain = value
         return true
@@ -204,18 +229,16 @@ describe('Radar API: shortcut routes over HTTP', () => {
     const res = await put(`${root}/gain`, { auto: false, value: 75 })
     expect(res.status).to.equal(200)
     expect(gain).to.deep.equal({ auto: false, value: 75 })
-    await stop()
   })
 
   it('returns 501 when the provider supports neither path', async () => {
-    const { put, stop } = await startRadarApi({})
+    const { put } = await startRadarApi({})
     const res = await put(`${root}/gain`, { auto: false, value: 75 })
     expect(res.status).to.equal(501)
-    await stop()
   })
 
   it("reports the provider's own error rather than a generic message", async () => {
-    const { put, stop } = await startRadarApi({
+    const { put } = await startRadarApi({
       setControl: async () => ({
         success: false,
         error: 'gain is read-only in auto mode'
@@ -227,12 +250,11 @@ describe('Radar API: shortcut routes over HTTP', () => {
     expect((await res.json()).message).to.equal(
       'gain is read-only in auto mode'
     )
-    await stop()
   })
 
   it('still validates before reaching the provider', async () => {
     let called = false
-    const { put, stop } = await startRadarApi({
+    const { put } = await startRadarApi({
       setControl: async () => {
         called = true
         return { success: true }
@@ -244,6 +266,5 @@ describe('Radar API: shortcut routes over HTTP', () => {
     )
     expect((await put(`${root}/range`, { value: -1 })).status).to.equal(400)
     expect(called).to.equal(false)
-    await stop()
   })
 })
