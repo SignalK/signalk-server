@@ -617,11 +617,13 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
   // when the contents are unchanged; without this memo dnd-kit's
   // internal registry sees the items reference flicker between drag
   // start and drag end and onDragEnd's `over` can land on a stale node.
-  const stableSources = useMemo(
-    () => group.sources,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [group.sources.join('|')]
-  )
+  // The content-derived key is deliberate: memoising on identity would defeat
+  // the purpose, since the array is a fresh reference with identical contents.
+  // JSON.stringify rather than join() so a source ref containing the separator
+  // cannot collide with a differently-split array.
+  const sourcesKey = JSON.stringify(group.sources)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stableSources = useMemo(() => group.sources, [sourcesKey])
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event

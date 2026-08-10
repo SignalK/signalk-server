@@ -92,6 +92,8 @@ export default function EmbeddedAsyncApi() {
 
   useEffect(() => {
     if (specs.length === 0) return
+    // Stop the previous document or error showing while the new spec loads.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError('')
     setDoc(null)
     fetch(specs[selectedIdx].url)

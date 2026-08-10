@@ -71,6 +71,8 @@ export default function PathReference() {
 
   useEffect(() => {
     const controller = new AbortController()
+    // loadMeta clears the previous error synchronously before fetching.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMeta(controller.signal)
     return () => controller.abort()
   }, [loadMeta])

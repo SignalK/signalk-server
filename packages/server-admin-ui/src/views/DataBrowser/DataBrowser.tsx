@@ -1,6 +1,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useRef,
   useMemo,
@@ -789,7 +790,11 @@ const DataBrowser: React.FC = () => {
 
   // Keep the ref in sync with the current memoised path list so the
   // reconnect handler can read it without taking a dep on the memo.
-  filteredPathKeysRef.current = filteredPathKeys
+  // Layout effect rather than render-phase assignment: the only reader runs
+  // from a post-commit effect, so this always lands first.
+  useLayoutEffect(() => {
+    filteredPathKeysRef.current = filteredPathKeys
+  }, [filteredPathKeys])
 
   const toggleSourceCollapse = useCallback((sourceRef: string) => {
     setCollapsedSources((prev) => {

@@ -406,13 +406,13 @@ const SourcePriorities: React.FC = () => {
 
   const [sourcesData, setSourcesData] = useState<SourcesData | null>(null)
   const [deviceIdentityIndex, setDeviceIdentityIndex] =
-    useState<DeviceIdentityIndex>({
+    useState<DeviceIdentityIndex>(() => ({
       canNameBySourceRef: new Map(),
       identityByCanName: new Map()
-    })
+    }))
   const [pathSourceMeta, setPathSourceMeta] = useState<
     Map<string, { pgn?: number; sentence?: string }>
-  >(new Map())
+  >(() => new Map())
   const [helpOpen, setHelpOpen] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 

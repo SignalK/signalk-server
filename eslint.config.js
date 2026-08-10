@@ -23,9 +23,7 @@ module.exports = defineConfig([
     'examples/wasm-plugins/**/build/**',
     'examples/wasm-plugins/**/plugin.js',
     'examples/wasm-plugins/**/plugin.d.ts',
-    'packages/assemblyscript-plugin-sdk/build/**',
-    // Legacy admin UI - kept as fallback, not actively maintained
-    'packages/server-admin-ui/**'
+    'packages/assemblyscript-plugin-sdk/build/**'
   ]),
 
   // TypeScript options
