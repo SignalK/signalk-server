@@ -58,8 +58,8 @@ const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
   const svgRef = useRef<SVGSVGElement>(null)
   const [dragging, setDragging] = useState<number | null>(null)
 
-  // SK spec: positive fromCenter is starboard, which is also the direction
-  // SVG x grows in, so the mapping is direct.
+  // SK spec: positive fromCenter is starboard, and SVG x increases to the
+  // right, so the mapping is direct.
   const toSvgCoords = useCallback(
     (fromBow: number | null, fromCenter: number | null) => {
       const bow = fromBow ?? 0
