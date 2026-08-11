@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -24,6 +24,7 @@ describe('getSecurityConfig', () => {
 
     afterEach(() => {
       restoreConsoleError()
+      rmSync(configPath, { recursive: true, force: true })
     })
 
     it('returns {} and does not log when securityStrategy is not initialized', () => {

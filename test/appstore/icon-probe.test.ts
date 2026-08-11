@@ -3,9 +3,11 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import {
-  createIconProbeCache,
+  createIconProbeCache as createCache,
   probeIconUrl
 } from '../../dist/appstore/icon-probe.js'
+
+type IconProbeCache = ReturnType<typeof createCache>
 
 // Mirrors PERSIST_DEBOUNCE_MS in src/appstore/icon-probe.ts. Kept as a
 // local constant rather than exporting an internal purely for tests.
@@ -18,14 +20,25 @@ function tmpDir(): string {
   return dir
 }
 
-describe('appstore/icon-probe cache', () => {
-  afterEach(() => {
-    while (tmpDirs.length > 0) {
-      const dir = tmpDirs.pop()
-      if (dir) fs.rmSync(dir, { recursive: true, force: true })
-    }
-  })
+// A cache left holding a debounced write recreates its directory when the
+// timer fires, so cleanup has to cancel pending writes before removing the
+// directories, not just after the last assertion.
+const caches: IconProbeCache[] = []
+function createIconProbeCache(cacheDir: string): IconProbeCache {
+  const cache = createCache(cacheDir)
+  caches.push(cache)
+  return cache
+}
 
+afterEach(() => {
+  while (caches.length > 0) caches.pop()?.invalidate()
+  while (tmpDirs.length > 0) {
+    const dir = tmpDirs.pop()
+    if (dir) fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+describe('appstore/icon-probe cache', () => {
   it('returns undefined for unknown entries', () => {
     const cache = createIconProbeCache(tmpDir())
     expect(cache.get('@signalk/foo', '1.0.0', './icon.svg')).to.equal(undefined)

@@ -13,6 +13,15 @@ const {
 } = require('../dist/modules')
 
 describe('modulesWithKeyword', () => {
+  let testTempDir
+
+  afterEach(() => {
+    if (testTempDir) {
+      fs.rmSync(testTempDir, { recursive: true, force: true })
+      testTempDir = undefined
+    }
+  })
+
   it('returns a list of modules with one "installed" update in config dir', () => {
     const expectedModules = [
       '@signalk/app-dock',
@@ -23,9 +32,8 @@ describe('modulesWithKeyword', () => {
     ]
     const updateInstalledModule = '@signalk/instrumentpanel'
 
-    const testTempDir = path.join(
-      require('os').tmpdir(),
-      '_skservertest_modules' + Date.now()
+    testTempDir = fs.mkdtempSync(
+      path.join(require('os').tmpdir(), '_skservertest_modules')
     )
 
     const app = {
@@ -35,7 +43,6 @@ describe('modulesWithKeyword', () => {
       }
     }
 
-    fs.mkdirSync(testTempDir)
     const tempNodeModules = path.join(testTempDir, 'node_modules/')
     fs.mkdirSync(path.join(testTempDir, 'node_modules'))
     fs.mkdirSync(path.join(testTempDir, 'node_modules/@signalk'))
@@ -317,11 +324,9 @@ describe('getPluginDataSize', () => {
   let tempDir
 
   beforeEach(() => {
-    tempDir = path.join(
-      require('os').tmpdir(),
-      '_skservertest_datasize' + Date.now()
+    tempDir = fs.mkdtempSync(
+      path.join(require('os').tmpdir(), '_skservertest_datasize')
     )
-    fs.mkdirSync(tempDir, { recursive: true })
   })
 
   afterEach(() => {
