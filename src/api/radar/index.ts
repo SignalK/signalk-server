@@ -20,6 +20,31 @@ const RADAR_API_PATH = `/signalk/v2/api/vessels/self/radars`
 export const RADAR_API_VERSION = '3.4.0'
 const TWO_PI = 2 * Math.PI
 
+/**
+ * Unwrap the Signal K `{ value }` PUT envelope from a control payload.
+ *
+ * Signal K PUTs carry their payload as `{ "value": x }`, so a scalar control
+ * arrives wrapped. Radar controls are the one place where that convention
+ * collides with the data: a compound control's payload has its own `value`
+ * field alongside siblings — a guard zone's `value` is its start bearing (see
+ * "Setting a Control Value" in radar_api.md).
+ *
+ * So `value` is only an envelope when it is the *sole* key. Anything else is
+ * the payload itself and must be passed through whole. Unwrapping on the mere
+ * presence of `value` silently discarded every sibling field, which meant a
+ * zone or sector PUT set the bearing and dropped `enabled`, `endValue`,
+ * `startDistance` and `endDistance` — and still answered 200.
+ */
+export function unwrapControlPayload(body: unknown): unknown {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return body
+  }
+  const keys = Object.keys(body)
+  return keys.length === 1 && keys[0] === 'value'
+    ? (body as Record<string, unknown>).value
+    : body
+}
+
 interface RadarApplication
   extends WithSecurityStrategy, SignalKMessageHub, IRouter {}
 
@@ -801,7 +826,7 @@ export class RadarApi {
             })
             return
           }
-          const value = req.body.value !== undefined ? req.body.value : req.body
+          const value = unwrapControlPayload(req.body)
           const result = await provider.setControl(
             req.params.id,
             req.params.controlId,
