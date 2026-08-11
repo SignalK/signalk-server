@@ -11,14 +11,28 @@ import type { radar } from '@signalk/server-api'
 // /power worked, purely because a scalar survives the detour and { auto, value }
 // does not. These routes now go through setControl with the control id.
 
+const RADAR_ID = 'radar-0'
+
+/**
+ * A RadarProviderMethods carrying only the two members the interface requires,
+ * plus whatever the test under discussion needs. Object.assign rather than a
+ * spread so the required members stay non-optional and no cast is needed.
+ */
 function methods(
-  overrides: Partial<radar.RadarProviderMethods>
+  overrides: Partial<radar.RadarProviderMethods> = {}
 ): radar.RadarProviderMethods {
-  return {
-    getRadars: async () => ['radar-0'],
-    getRadarInfo: async () => null,
-    ...overrides
-  } as radar.RadarProviderMethods
+  const base: radar.RadarProviderMethods = {
+    getRadars: async () => [RADAR_ID],
+    getRadarInfo: async () => null
+  }
+  return Object.assign(base, overrides)
+}
+
+/** The provider wrapper, built from a real RadarProviderMethods. */
+function provider(
+  overrides: Partial<radar.RadarProviderMethods> = {}
+): radar.RadarProvider {
+  return { name: 'Test Radar Provider', methods: methods(overrides) }
 }
 
 /** One nautical mile in metres — a range every marine radar supports. */
@@ -35,10 +49,10 @@ describe('Radar API: shortcut control routes', () => {
     })
 
     const payload = { auto: false, value: 75 }
-    const result = await applyControl(provider, 'radar-0', 'gain', payload)
+    const result = await applyControl(provider, RADAR_ID, 'gain', payload)
 
     expect(result.success).to.equal(true)
-    expect(seen).to.deep.equal([['radar-0', 'gain', payload]])
+    expect(seen).to.deep.equal([[RADAR_ID, 'gain', payload]])
   })
 
   it('passes a compound payload through untouched', async () => {
@@ -119,7 +133,7 @@ describe('Radar API: shortcut control routes', () => {
   })
 
   it('fails clearly when the provider supports neither path', async () => {
-    const result = await applyControl(methods({}), 'radar-0', 'gain', {
+    const result = await applyControl(methods({}), RADAR_ID, 'gain', {
       auto: true
     })
     expect(result.success).to.equal(false)
@@ -132,8 +146,7 @@ describe('Radar API: shortcut control routes', () => {
 // the response contract are exercised too.
 
 describe('Radar API: shortcut routes over HTTP', () => {
-  const RADAR = 'radar-0'
-  const root = `/signalk/v2/api/vessels/self/radars/${RADAR}`
+  const root = `/signalk/v2/api/vessels/self/radars/${RADAR_ID}`
 
   // A failed assertion skips any cleanup at the end of a test body, and a
   // still-listening server keeps the mocha process alive. Close them here
@@ -144,28 +157,30 @@ describe('Radar API: shortcut routes over HTTP', () => {
   })
 
   async function startRadarApi(overrides: Partial<radar.RadarProviderMethods>) {
-    const app = express() as unknown as express.Express & {
-      securityStrategy: { shouldAllowPut: () => boolean }
-    }
+    const app = Object.assign(express(), {
+      securityStrategy: { shouldAllowPut: () => true }
+    })
     app.use(express.json())
-    app.securityStrategy = { shouldAllowPut: () => true }
 
+    // The one unavoidable seam: RadarApi's application type also extends
+    // SignalKMessageHub, which express cannot satisfy and which the radar
+    // routes never touch — they use only the router methods and
+    // securityStrategy, both of which `app` really does provide.
     const api = new RadarApi(
       app as unknown as ConstructorParameters<typeof RadarApi>[0]
     )
     await api.start()
-    api.register('test-provider', {
-      name: 'Test Radar Provider',
-      methods: {
-        getRadars: async () => [RADAR],
+    api.register(
+      'test-provider',
+      provider({
         getRadarInfo: async () => ({
           name: 'Test',
           brand: 'Test',
           radarIpAddress: '10.0.0.1'
         }),
         ...overrides
-      }
-    } as unknown as radar.RadarProvider)
+      })
+    )
 
     const server = app.listen(0)
     await new Promise((resolve) => server.once('listening', resolve))
