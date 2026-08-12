@@ -166,9 +166,19 @@ A failure answers with the same three fields and an HTTP status to match:
 | Status | Meaning                                                                   |
 | ------ | ------------------------------------------------------------------------- |
 | 200    | The request was carried out                                               |
+| 201    | A target was acquired, and the response carries its `targetId`            |
 | 400    | The body could not be read, or a value was outside what the control takes |
+| 403    | The client may not change this                                            |
 | 404    | No such radar, control or target                                          |
+| 500    | The server failed to carry the request out                                |
 | 501    | An optional part of this API the server does not implement                |
+
+Acquiring a target answers 201 and carries the new target's id beside the
+three fields, since a client needs it to cancel the target later:
+
+```json
+{ "state": "COMPLETED", "statusCode": 201, "message": "OK", "targetId": 5 }
+```
 
 Note that a control being settable does not mean the radar has accepted the
 new value: a server answers once it has passed the request on, and the radar
