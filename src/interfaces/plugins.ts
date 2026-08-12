@@ -46,12 +46,16 @@ import {
   AccessScopedRouter,
   PluginRouter,
   RouteAccessLevel,
-  RoutePermission
+  RoutePermission,
+  PluginWebSocketServer
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { IRouter, Request, RequestHandler, Response } from 'express'
 import { serveStaticFiles } from '../staticfiles'
 import fs from 'fs'
+import { IncomingMessage } from 'http'
+import { Duplex } from 'stream'
+import { WebSocketServer } from 'ws'
 import { deprecate } from 'util'
 import _ from 'lodash'
 import path from 'path'
@@ -146,6 +150,93 @@ function mergeExcludeSelf(
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
   const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
+
+  // Partitioned by plugin id so the dispatcher can tell a plugin that does
+  // not use registerWebSocket at all (leave the upgrade event to other
+  // listeners) apart from a registered plugin with an unknown path (404).
+  const pluginWebSocketServers: Map<
+    string,
+    Map<string, WebSocketServer>
+  > = new Map()
+  let upgradeListenerInstalled = false
+
+  function normalizeWebSocketPath(wsPath: string): string {
+    const withLeadingSlash = wsPath.startsWith('/') ? wsPath : '/' + wsPath
+    return withLeadingSlash.length > 1 && withLeadingSlash.endsWith('/')
+      ? withLeadingSlash.slice(0, -1)
+      : withLeadingSlash
+  }
+
+  function installUpgradeListenerOnce() {
+    if (upgradeListenerInstalled || !theApp.server) {
+      return
+    }
+    upgradeListenerInstalled = true
+    debug('plugin WebSocket upgrade dispatcher installed on app.server')
+    theApp.server.on(
+      'upgrade',
+      (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+        const match = (request.url ?? '').match(/^\/plugins\/([^/?#]+)([^?#]*)/)
+        if (!match) {
+          return
+        }
+        const [, pluginId, rest] = match
+        const forPlugin = pluginWebSocketServers.get(pluginId)
+        if (!forPlugin) {
+          // The plugin does not use registerWebSocket — leave the event
+          // for other upgrade listeners.
+          return
+        }
+        // Log the plugin id + normalized path, not request.url — the query
+        // string may carry credentials (?token=...).
+        const wssPath = normalizeWebSocketPath(rest || '/')
+        const wss = forPlugin.get(wssPath)
+        if (!wss) {
+          debug(
+            'no WebSocket endpoint matches /plugins/%s%s',
+            pluginId,
+            wssPath
+          )
+          try {
+            // end() flushes the 404 before closing; destroy() could drop it.
+            socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n')
+          } catch {
+            // socket already gone
+          }
+          return
+        }
+        try {
+          if (wss.listenerCount('upgrade') > 0) {
+            // The plugin handles the upgrade entirely itself.
+            wss.emit('upgrade', request, socket, head)
+          } else {
+            wss.handleUpgrade(request, socket, head, (ws) =>
+              wss.emit('connection', ws, request)
+            )
+          }
+        } catch (err) {
+          console.error(
+            `Error handling WebSocket upgrade for /plugins/${pluginId}${wssPath}: ${err}`
+          )
+          try {
+            socket.destroy()
+          } catch {
+            // socket already gone
+          }
+        }
+      }
+    )
+  }
+
+  // Install the plugin upgrade dispatcher here, in the interface factory,
+  // rather than in start(). Factories run synchronously as the interface
+  // list is built, before any interface's start() is awaited — so the
+  // dispatcher is attached before the ws interface's start() creates Primus,
+  // which snapshots the server's existing 'upgrade' listeners. Doing this in
+  // start() would make correctness depend on start() completion order, which
+  // Promise.all does not guarantee.
+  installUpgradeListenerOnce()
+
   return {
     async start() {
       ensureExists(path.join(theApp.config.configPath, PLUGIN_CONFIG_DATA_DIR))
@@ -605,13 +696,29 @@ module.exports = (theApp: any) => {
         console.error(`${plugin.id}:no configuration data`)
         safeConfiguration = {}
       }
+      const handlersBeforeStart = onStopHandlers[plugin.id].length
       onStopHandlers[plugin.id].push(() => {
         app.resourcesApi.unRegister(plugin.id)
         app.autopilotApi.unRegister(plugin.id)
         app.weatherApi.unRegister(plugin.id)
         app.bleApi.unRegister(plugin.id)
       })
-      plugin.start(safeConfiguration, restart)
+      try {
+        plugin.start(safeConfiguration, restart)
+      } catch (e) {
+        // Roll back anything the failed start() registered (e.g. a
+        // WebSocket endpoint left in the dispatch registry), otherwise a
+        // later restart re-registers it and throws on the duplicate.
+        const added = onStopHandlers[plugin.id].splice(handlersBeforeStart)
+        for (const f of added.reverse()) {
+          try {
+            f()
+          } catch (cleanupErr) {
+            console.error(cleanupErr)
+          }
+        }
+        throw e
+      }
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
     } catch (e: any) {
@@ -1008,6 +1115,75 @@ module.exports = (theApp: any) => {
       onStopHandlers[plugin.id].push(() => {
         app.unregisterHistoryProvider(provider)
       })
+    }
+
+    appCopy.registerWebSocket = (wsPath: string): PluginWebSocketServer => {
+      installUpgradeListenerOnce()
+      if (typeof wsPath !== 'string') {
+        // JavaScript plugins are untyped, so guard this public boundary.
+        throw new TypeError(`${plugin.id}: WebSocket path must be a string`)
+      }
+      if (wsPath.includes('?') || wsPath.includes('#')) {
+        // The dispatcher matches on the path only (query/fragment stripped),
+        // so a registered path carrying either could never be reached.
+        throw new Error(
+          `${plugin.id}: WebSocket path ${wsPath} must not contain '?' or '#'`
+        )
+      }
+      const normalized = normalizeWebSocketPath(wsPath)
+      let forPlugin = pluginWebSocketServers.get(plugin.id)
+      if (!forPlugin) {
+        forPlugin = new Map()
+        pluginWebSocketServers.set(plugin.id, forPlugin)
+      }
+      if (forPlugin.has(normalized)) {
+        throw new Error(
+          `${plugin.id}: WebSocket path ${normalized} is already registered`
+        )
+      }
+      const wss = new WebSocketServer({ noServer: true })
+      // Baseline 'error' handler so an error from a plugin that forgot to
+      // attach its own listener is logged rather than crashing the process
+      // (unhandled 'error' events on an EventEmitter throw).
+      wss.on('error', (err) => {
+        console.error(
+          `${plugin.id}: WebSocket endpoint ${normalized} error: ${err}`
+        )
+      })
+      // Each accepted client socket is its own EventEmitter. A baseline
+      // 'error' listener keeps a mid-connection failure (e.g. a client
+      // dropping the TCP connection, ECONNRESET) from crashing the process
+      // when the plugin has not attached its own handler.
+      wss.on('connection', (ws) => {
+        ws.on('error', (err) => {
+          debug(
+            '%s: WebSocket client error on %s: %s',
+            plugin.id,
+            normalized,
+            err
+          )
+        })
+      })
+      forPlugin.set(normalized, wss)
+      debug('%s: registered WebSocket endpoint %s', plugin.id, normalized)
+      const removeEndpoint = () => {
+        if (forPlugin.get(normalized) === wss) {
+          forPlugin.delete(normalized)
+        }
+      }
+      wss.on('close', removeEndpoint)
+      onStopHandlers[plugin.id].push(() => {
+        removeEndpoint()
+        for (const client of wss.clients) {
+          client.terminate()
+        }
+        try {
+          wss.close()
+        } catch {
+          // already closed by the plugin
+        }
+      })
+      return wss
     }
 
     const startupOptions = getPluginOptions(plugin.id)
