@@ -13,6 +13,8 @@ import { faPlug } from '@fortawesome/free-solid-svg-icons/faPlug'
 import { faMicrochip } from '@fortawesome/free-solid-svg-icons/faMicrochip'
 import { useStore, useShallow } from '../../store'
 
+const MILLISECONDS_PER_SECOND = 1000
+
 // Ages below this render as "just now"
 const JUST_NOW_MAX_S = 5
 
@@ -22,7 +24,7 @@ const RSSI_GOOD_DBM = -70
 const RSSI_FAIR_DBM = -85
 
 function formatAge(lastSeen: number): string {
-  const seconds = Math.round((Date.now() - lastSeen) / 1000)
+  const seconds = Math.round((Date.now() - lastSeen) / MILLISECONDS_PER_SECOND)
   if (seconds < JUST_NOW_MAX_S) return 'just now'
   if (seconds < 60) return `${seconds}s ago`
   return `${Math.floor(seconds / 60)}m ago`
@@ -36,6 +38,12 @@ function formatDuration(seconds: number): string {
   if (h < 24) return `${h}h ${m}m`
   const d = Math.floor(h / 24)
   return `${d}d ${h % 24}h`
+}
+
+function formatConnectedDuration(connectedAt: number): string {
+  return formatDuration(
+    Math.round((Date.now() - connectedAt) / MILLISECONDS_PER_SECOND)
+  )
 }
 
 function formatBytes(bytes: number): string {
@@ -191,10 +199,14 @@ export default function BLEManager() {
                     </td>
                     <td>{gw.firmware || '-'}</td>
                     <td>
-                      {gw.uptime != null ? formatDuration(gw.uptime) : '-'}
+                      {typeof gw.uptime === 'number'
+                        ? formatDuration(gw.uptime)
+                        : '-'}
                     </td>
                     <td>
-                      {gw.freeHeap != null ? formatBytes(gw.freeHeap) : '-'}
+                      {typeof gw.freeHeap === 'number'
+                        ? formatBytes(gw.freeHeap)
+                        : '-'}
                     </td>
                     <td>
                       {gw.gattSlots.total > 0
@@ -204,12 +216,10 @@ export default function BLEManager() {
                     <td>{gw.deviceCount}</td>
                     <td>
                       {gw.online
-                        ? gw.connectedAt != null
-                          ? formatDuration(
-                              Math.round((Date.now() - gw.connectedAt) / 1000)
-                            )
+                        ? typeof gw.connectedAt === 'number'
+                          ? formatConnectedDuration(gw.connectedAt)
                           : '-'
-                        : gw.disconnectedAt != null
+                        : typeof gw.disconnectedAt === 'number'
                           ? formatAge(gw.disconnectedAt)
                           : '-'}
                     </td>
