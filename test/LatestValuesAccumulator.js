@@ -6,6 +6,8 @@ const {
   buildFlushDeltas
 } = require('../dist/LatestValuesAccumulator')
 
+const FLUSH_DURATION_MS = 1000
+
 describe('LatestValuesAccumulator', function () {
   describe('accumulateLatestValue', function () {
     it('should accumulate a single value', function () {
@@ -326,7 +328,7 @@ describe('LatestValuesAccumulator', function () {
         timestamp: '2024-01-15T10:30:00.005Z'
       })
 
-      const deltas = buildFlushDeltas(accumulator, 1000)
+      const deltas = buildFlushDeltas(accumulator, FLUSH_DURATION_MS)
 
       expect(deltas).to.have.length(1)
       expect(deltas[0].updates).to.deep.equal([
@@ -360,7 +362,7 @@ describe('LatestValuesAccumulator', function () {
         timestamp: '2024-01-15T10:30:00.005Z'
       })
 
-      const [flushed] = buildFlushDeltas(accumulator, 1000)
+      const [flushed] = buildFlushDeltas(accumulator, FLUSH_DURATION_MS)
 
       expect(flushed.updates).to.deep.equal([
         {
