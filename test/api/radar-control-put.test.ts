@@ -114,7 +114,11 @@ describe('Radar API: PUT /controls/{controlId} route', () => {
         ) => {
           onSetControl(radarId, controlId, value)
           return { success: true }
-        }
+        },
+        getControl: async (_radarId: string, controlId: string) =>
+          controlId === 'gain'
+            ? { auto: false, value: 50 }
+            : { auto: true, autoValue: -20, value: 28 }
       }
     } as unknown as radar.RadarProvider)
 
@@ -130,7 +134,8 @@ describe('Radar API: PUT /controls/{controlId} route', () => {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
-        })
+        }),
+      get: (path: string) => fetch(`http://127.0.0.1:${port}${path}`)
     }
   }
 
@@ -159,5 +164,78 @@ describe('Radar API: PUT /controls/{controlId} route', () => {
 
     expect(res.status).to.equal(200)
     expect(seen).to.deep.equal([[RADAR, 'range', 1852]])
+  })
+})
+
+// radar_api.md, "Getting a Single Control Value", documents the response as
+// `{ "auto": false, "value": 50 }`. Wrapping that in a Signal K value envelope
+// put the documented object one level down, so `body.value` was the whole
+// control rather than the control's value — and a compound control ended up
+// with a `value` inside a `value`.
+
+describe('Radar API: GET /controls/{controlId} route', () => {
+  const RADAR = 'radar-0'
+  const base = `/signalk/v2/api/vessels/self/radars/${RADAR}/controls`
+
+  const started: Array<() => Promise<void>> = []
+  afterEach(async () => {
+    while (started.length) await started.pop()!()
+  })
+
+  async function startRadarApi() {
+    const app = express() as unknown as express.Express & {
+      securityStrategy: { shouldAllowPut: () => boolean }
+    }
+    app.use(express.json())
+    app.securityStrategy = { shouldAllowPut: () => true }
+
+    const api = new RadarApi(
+      app as unknown as ConstructorParameters<typeof RadarApi>[0]
+    )
+    await api.start()
+    api.register('test-provider', {
+      name: 'Test Radar Provider',
+      methods: {
+        getRadars: async () => [RADAR],
+        getRadarInfo: async () => ({
+          name: 'Test',
+          brand: 'Test',
+          radarIpAddress: '10.0.0.1'
+        }),
+        getControl: async (_radarId: string, controlId: string) =>
+          controlId === 'gain'
+            ? { auto: false, value: 50 }
+            : { auto: true, autoValue: -20, value: 28 }
+      }
+    } as unknown as radar.RadarProvider)
+
+    const server = app.listen(0)
+    await new Promise((resolve) => server.once('listening', resolve))
+    const { port } = server.address() as AddressInfo
+    started.push(
+      () => new Promise<void>((resolve) => server.close(() => resolve()))
+    )
+    return { get: (path: string) => fetch(`http://127.0.0.1:${port}${path}`) }
+  }
+
+  it('answers with the control as documented, not wrapped', async () => {
+    const { get } = await startRadarApi()
+
+    const res = await get(`${base}/gain`)
+
+    expect(res.status).to.equal(200)
+    expect(await res.json()).to.deep.equal({ auto: false, value: 50 })
+  })
+
+  it('keeps an auto adjustment beside the value it belongs to', async () => {
+    const { get } = await startRadarApi()
+
+    const res = await get(`${base}/sea`)
+
+    expect(await res.json()).to.deep.equal({
+      auto: true,
+      autoValue: -20,
+      value: 28
+    })
   })
 })

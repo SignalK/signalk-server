@@ -851,7 +851,12 @@ export class RadarApi {
             req.params.controlId
           )
           if (value !== null && value !== undefined) {
-            res.status(200).json({ value })
+            // Bare, as radar_api.md documents it: `{ "auto": false, "value":
+            // 50 }`. A control's own `value` is one field among siblings, so
+            // wrapping it in a Signal K value envelope nests one `value`
+            // inside another and a client reading the documented shape finds
+            // nothing where it looked.
+            res.status(200).json(value)
           } else {
             res.status(404).json({
               error: 'Control not found',
