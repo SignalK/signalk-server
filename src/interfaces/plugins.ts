@@ -27,6 +27,7 @@ import {
   RouteDestination,
   WeatherProvider,
   WeatherApi,
+  BLEProvider,
   Value,
   MetaValue,
   SignalKApiId,
@@ -55,6 +56,7 @@ import { deprecate } from 'util'
 import _ from 'lodash'
 import path from 'path'
 import { AutopilotApi } from '../api/autopilot'
+import { BLEApi } from '../api/ble'
 import { CourseApi } from '../api/course'
 import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
@@ -607,6 +609,7 @@ module.exports = (theApp: any) => {
         app.resourcesApi.unRegister(plugin.id)
         app.autopilotApi.unRegister(plugin.id)
         app.weatherApi.unRegister(plugin.id)
+        app.bleApi.unRegister(plugin.id)
       })
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
@@ -875,6 +878,32 @@ module.exports = (theApp: any) => {
       apInfo: { [k: string]: Value }
     ) => {
       autopilotApi.apUpdate(plugin.id, deviceId, apInfo)
+    }
+
+    const bleApi: BLEApi = app.bleApi
+    appCopy.registerBLEProvider = (provider: BLEProvider) => {
+      bleApi.register(plugin.id, provider)
+    }
+    // Expose a scoped view instead of the raw instance: ownership-sensitive
+    // calls always act as this plugin, so a plugin cannot unregister or
+    // impersonate another plugin's providers and claims
+    appCopy.bleApi = {
+      get localBluetoothManaged() {
+        return bleApi.localBluetoothManaged
+      },
+      register: (_pluginId: string, provider: BLEProvider) =>
+        bleApi.register(plugin.id, provider),
+      unRegister: (_pluginId: string) => bleApi.unRegister(plugin.id),
+      onAdvertisement: (_pluginId, callback) =>
+        bleApi.onAdvertisement(plugin.id, callback),
+      getDevices: () => bleApi.getDevices(),
+      getDevice: (mac) => bleApi.getDevice(mac),
+      subscribeGATT: (descriptor, _pluginId, callback) =>
+        bleApi.subscribeGATT(descriptor, plugin.id, callback),
+      connectGATT: (mac, _pluginId) => bleApi.connectGATT(mac, plugin.id),
+      releaseGATTDevice: (mac, _pluginId) =>
+        bleApi.releaseGATTDevice(mac, plugin.id),
+      getGATTClaims: () => bleApi.getGATTClaims()
     }
 
     const courseApi: CourseApi = app.courseApi
