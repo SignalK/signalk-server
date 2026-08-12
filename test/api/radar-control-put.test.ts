@@ -290,7 +290,7 @@ describe('Radar API: mutation response shape', () => {
         headers: { 'Content-Type': 'application/json' },
         body: body === undefined ? undefined : JSON.stringify(body)
       })
-    return { put: call('PUT'), post: call('POST') }
+    return { put: call('PUT'), post: call('POST'), get: call('GET') }
   }
 
   it('answers a set control with the request response', async () => {
@@ -340,6 +340,49 @@ describe('Radar API: mutation response shape', () => {
       message: 'OK',
       targetId: 5
     })
+  })
+
+  // Reads answer failure in the same shape as writes. They used to answer
+  // `{error: 'Radar not found', id}`, so a client had to know whether it had
+  // read or written to know which field carried the reason.
+  const reads = [
+    ['capabilities', `${base}/capabilities`],
+    ['controls', `${base}/controls`],
+    ['a single control', `${base}/controls/gain`],
+    ['targets', `${base}/targets`]
+  ] as const
+
+  for (const [what, path] of reads) {
+    it(`reports a missing radar the same way when reading ${what}`, async () => {
+      const { get } = await start({})
+
+      const res = await get(path.replace(RADAR, 'nosuchradar'))
+
+      expect(res.status).to.equal(404)
+      const body = await res.json()
+      expect(body.state).to.equal('FAILED')
+      expect(body.statusCode).to.equal(404)
+      expect(body.message).to.be.a('string')
+      expect(body.error, 'the old error field must be gone').to.equal(undefined)
+      expect(body.id, 'the old id field must be gone').to.equal(undefined)
+    })
+  }
+
+  it('reports an unknown control in the same shape', async () => {
+    const { get } = await start({
+      getControl: async () => null
+    })
+
+    const res = await get(`${base}/controls/nosuchcontrol`)
+
+    expect(res.status).to.equal(404)
+    const body = await res.json()
+    expect(body.state).to.equal('FAILED')
+    expect(body.statusCode).to.equal(404)
+    expect(body.error, 'the old error field must be gone').to.equal(undefined)
+    expect(body.controlId, 'the old controlId field must be gone').to.equal(
+      undefined
+    )
   })
 
   it('reports an unknown radar in the same shape', async () => {

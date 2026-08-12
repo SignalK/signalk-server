@@ -84,6 +84,16 @@ export async function applyControl(
 interface RadarApplication
   extends WithSecurityStrategy, SignalKMessageHub, IRouter {}
 
+/**
+ * Answer a request that failed, in the one shape this API answers in. The
+ * status appears once: it is both the HTTP status and the `statusCode` a
+ * Signal K client reads it from, and the two drifting apart is exactly the
+ * confusion the shared shape exists to avoid.
+ */
+function failed(res: Response, statusCode: number, message: string) {
+  res.status(statusCode).json({ state: 'FAILED', statusCode, message })
+}
+
 export class RadarApi {
   private radarProviders: Map<string, radar.RadarProvider> = new Map()
   private defaultProviderId?: string
@@ -250,11 +260,7 @@ export class RadarApi {
         const radars = await this.getRadars()
         res.status(200).json(radars)
       } catch (err: any) {
-        res.status(500).json({
-          statusCode: 500,
-          state: 'FAILED',
-          message: err.message
-        })
+        failed(res, 500, err.message)
       }
     })
 
@@ -273,11 +279,7 @@ export class RadarApi {
           })
           res.status(200).json(r)
         } catch (err: any) {
-          res.status(400).json({
-            statusCode: 400,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 400, err.message)
         }
       }
     )
@@ -292,11 +294,7 @@ export class RadarApi {
             id: this.defaultProviderId
           })
         } catch (err: any) {
-          res.status(400).json({
-            statusCode: 400,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 400, err.message)
         }
       }
     )
@@ -325,11 +323,7 @@ export class RadarApi {
             throw new Error(`Provider ${req.params.id} not found!`)
           }
         } catch (err: any) {
-          res.status(400).json({
-            statusCode: 400,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 400, err.message)
         }
       }
     )
@@ -347,11 +341,7 @@ export class RadarApi {
             res.status(404).json(Responses.notFound)
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -372,11 +362,7 @@ export class RadarApi {
             return
           }
           if (!provider.setControls) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support setControls'
-            })
+            failed(res, 501, 'Provider does not support setControls')
             return
           }
           const controls: Partial<radar.RadarControls> =
@@ -385,18 +371,10 @@ export class RadarApi {
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: 'Failed to update radar controls'
-            })
+            failed(res, 400, 'Failed to update radar controls')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -417,21 +395,16 @@ export class RadarApi {
             return
           }
           if (!provider.setControl && !provider.setPower) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support setPower'
-            })
+            failed(res, 501, 'Provider does not support setPower')
             return
           }
           const state: radar.RadarStatus = req.body.value
           if (!['off', 'standby', 'transmit', 'warming'].includes(state)) {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message:
-                'Invalid power state. Must be: off, standby, transmit, or warming'
-            })
+            failed(
+              res,
+              400,
+              'Invalid power state. Must be: off, standby, transmit, or warming'
+            )
             return
           }
           const { success, error } = await applyControl(
@@ -445,18 +418,10 @@ export class RadarApi {
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: error ?? 'Failed to set radar power state'
-            })
+            failed(res, 400, error ?? 'Failed to set radar power state')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -477,20 +442,16 @@ export class RadarApi {
             return
           }
           if (!provider.setControl && !provider.setRange) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support setRange'
-            })
+            failed(res, 501, 'Provider does not support setRange')
             return
           }
           const range: number = req.body.value
           if (typeof range !== 'number' || range <= 0) {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: 'Invalid range value. Must be a positive number (meters)'
-            })
+            failed(
+              res,
+              400,
+              'Invalid range value. Must be a positive number (meters)'
+            )
             return
           }
           const { success, error } = await applyControl(
@@ -504,18 +465,10 @@ export class RadarApi {
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: error ?? 'Failed to set radar range'
-            })
+            failed(res, 400, error ?? 'Failed to set radar range')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -536,21 +489,17 @@ export class RadarApi {
             return
           }
           if (!provider.setControl && !provider.setGain) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support setGain'
-            })
+            failed(res, 501, 'Provider does not support setGain')
             return
           }
           const gain: { auto: boolean; value?: number } =
             typeof req.body.value === 'object' ? req.body.value : req.body
           if (typeof gain.auto !== 'boolean') {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: 'Invalid gain value. Must have "auto" boolean property'
-            })
+            failed(
+              res,
+              400,
+              'Invalid gain value. Must have "auto" boolean property'
+            )
             return
           }
           const { success, error } = await applyControl(
@@ -563,18 +512,10 @@ export class RadarApi {
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: error ?? 'Failed to set radar gain'
-            })
+            failed(res, 400, error ?? 'Failed to set radar gain')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -595,21 +536,17 @@ export class RadarApi {
             return
           }
           if (!provider.setControl && !provider.setSea) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support setSea'
-            })
+            failed(res, 501, 'Provider does not support setSea')
             return
           }
           const sea: { auto: boolean; value?: number } =
             typeof req.body.value === 'object' ? req.body.value : req.body
           if (typeof sea.auto !== 'boolean') {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: 'Invalid sea value. Must have "auto" boolean property'
-            })
+            failed(
+              res,
+              400,
+              'Invalid sea value. Must have "auto" boolean property'
+            )
             return
           }
           const { success, error } = await applyControl(
@@ -622,18 +559,10 @@ export class RadarApi {
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: error ?? 'Failed to set radar sea clutter'
-            })
+            failed(res, 400, error ?? 'Failed to set radar sea clutter')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -654,21 +583,17 @@ export class RadarApi {
             return
           }
           if (!provider.setControl && !provider.setRain) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support setRain'
-            })
+            failed(res, 501, 'Provider does not support setRain')
             return
           }
           const rain: { auto: boolean; value?: number } =
             typeof req.body.value === 'object' ? req.body.value : req.body
           if (typeof rain.auto !== 'boolean') {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: 'Invalid rain value. Must have "auto" boolean property'
-            })
+            failed(
+              res,
+              400,
+              'Invalid rain value. Must have "auto" boolean property'
+            )
             return
           }
           const { success, error } = await applyControl(
@@ -681,18 +606,10 @@ export class RadarApi {
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: error ?? 'Failed to set radar rain clutter'
-            })
+            failed(res, 400, error ?? 'Failed to set radar rain clutter')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -709,37 +626,21 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.getCapabilities) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support getCapabilities'
-            })
+            failed(res, 501, 'Provider does not support getCapabilities')
             return
           }
           const capabilities = await provider.getCapabilities(req.params.id)
           if (capabilities) {
             res.status(200).json(capabilities)
           } else {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -752,37 +653,21 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.getState) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support getState'
-            })
+            failed(res, 501, 'Provider does not support getState')
             return
           }
           const state = await provider.getState(req.params.id)
           if (state) {
             res.status(200).json(state)
           } else {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -795,37 +680,21 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.getState) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support getState'
-            })
+            failed(res, 501, 'Provider does not support getState')
             return
           }
           const state = await provider.getState(req.params.id)
           if (state && state.controls) {
             res.status(200).json(state.controls)
           } else {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -838,19 +707,11 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.getControl) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support getControl'
-            })
+            failed(res, 501, 'Provider does not support getControl')
             return
           }
           const value = await provider.getControl(
@@ -865,18 +726,10 @@ export class RadarApi {
             // nothing where it looked.
             res.status(200).json(value)
           } else {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Control ${req.params.controlId} not found`
-            })
+            failed(res, 404, `Control ${req.params.controlId} not found`)
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -893,19 +746,11 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.setControl) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support setControl'
-            })
+            failed(res, 501, 'Provider does not support setControl')
             return
           }
           const value = unwrapControlPayload(req.body)
@@ -917,18 +762,10 @@ export class RadarApi {
           if (result.success) {
             res.status(200).json(Responses.ok)
           } else {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: result.error || 'Failed to set control'
-            })
+            failed(res, 400, result.error || 'Failed to set control')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -955,37 +792,21 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.getTargets) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support ARPA targets'
-            })
+            failed(res, 501, 'Provider does not support ARPA targets')
             return
           }
           const targets = await provider.getTargets(req.params.id)
           if (targets) {
             res.status(200).json(targets)
           } else {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -1002,45 +823,28 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.acquireTarget) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support target acquisition'
-            })
+            failed(res, 501, 'Provider does not support target acquisition')
             return
           }
           const { bearing, distance } = req.body
           if (typeof bearing !== 'number' || typeof distance !== 'number') {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message:
-                'Invalid request. Must provide bearing (radians) and distance (meters)'
-            })
+            failed(
+              res,
+              400,
+              'Invalid request. Must provide bearing (radians) and distance (meters)'
+            )
             return
           }
           if (bearing < 0 || bearing >= TWO_PI) {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: 'Bearing must be in radians [0, 2π)'
-            })
+            failed(res, 400, 'Bearing must be in radians [0, 2π)')
             return
           }
           if (distance <= 0) {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: 'Distance must be a positive number (meters)'
-            })
+            failed(res, 400, 'Distance must be a positive number (meters)')
             return
           }
           const result = await provider.acquireTarget(
@@ -1056,18 +860,10 @@ export class RadarApi {
               targetId: result.targetId
             })
           } else {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: result.error || 'Failed to acquire target'
-            })
+            failed(res, 400, result.error || 'Failed to acquire target')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -1084,46 +880,26 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.cancelTarget) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support target cancellation'
-            })
+            failed(res, 501, 'Provider does not support target cancellation')
             return
           }
           const targetId = parseInt(req.params.targetId, 10)
           if (isNaN(targetId)) {
-            res.status(400).json({
-              statusCode: 400,
-              state: 'FAILED',
-              message: 'Invalid target ID. Must be a number'
-            })
+            failed(res, 400, 'Invalid target ID. Must be a number')
             return
           }
           const success = await provider.cancelTarget(req.params.id, targetId)
           if (success) {
             res.status(200).json(Responses.ok)
           } else {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: 'Target not found or already cancelled'
-            })
+            failed(res, 404, 'Target not found or already cancelled')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -1136,37 +912,21 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.getArpaSettings) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support ARPA settings'
-            })
+            failed(res, 501, 'Provider does not support ARPA settings')
             return
           }
           const settings = await provider.getArpaSettings(req.params.id)
           if (settings) {
             res.status(200).json(settings)
           } else {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
@@ -1183,19 +943,11 @@ export class RadarApi {
         try {
           const provider = await this.findProviderForRadar(req.params.id)
           if (!provider) {
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Radar ${req.params.id} not found`
-            })
+            failed(res, 404, `Radar ${req.params.id} not found`)
             return
           }
           if (!provider.setArpaSettings) {
-            res.status(501).json({
-              statusCode: 501,
-              state: 'FAILED',
-              message: 'Provider does not support ARPA settings'
-            })
+            failed(res, 501, 'Provider does not support ARPA settings')
             return
           }
           const settings: Partial<radar.ArpaSettings> =
@@ -1204,18 +956,10 @@ export class RadarApi {
           if (result.success) {
             res.status(200).json(Responses.ok)
           } else {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: result.error || 'Failed to update ARPA settings'
-            })
+            failed(res, 400, result.error || 'Failed to update ARPA settings')
           }
         } catch (err: any) {
-          res.status(500).json({
-            statusCode: 500,
-            state: 'FAILED',
-            message: err.message
-          })
+          failed(res, 500, err.message)
         }
       }
     )
