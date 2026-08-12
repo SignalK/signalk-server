@@ -8,6 +8,7 @@ import {
   Delta,
   hasValues,
   Path,
+  PathValue,
   SourceRef,
   Timestamp,
   Update
@@ -16,7 +17,7 @@ import {
 export interface AccumulatedItem {
   context: Context
   path: Path
-  value: unknown
+  value: PathValue['value']
   $source: SourceRef | undefined
   timestamp: Timestamp | undefined
 }
@@ -91,17 +92,16 @@ export function buildFlushDeltas(
     let update = byTimestamp.get(item.timestamp)
     if (!update) {
       update = {
-        $source: item.$source as SourceRef,
-        timestamp: item.timestamp as Timestamp,
+        $source: item.$source,
+        timestamp: item.timestamp,
         values: []
       }
       byTimestamp.set(item.timestamp, update)
     }
     if (hasValues(update)) {
       update.values.push({
-        path: item.path as Path,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        value: item.value as any
+        path: item.path,
+        value: item.value
       })
     }
   }
