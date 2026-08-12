@@ -309,6 +309,73 @@ describe('LatestValuesAccumulator', function () {
       expect(compassUpdate.values.length).to.equal(1)
     })
 
+    it('should keep different timestamps in separate updates', function () {
+      const accumulator = new Map()
+      accumulator.set('vessels.self:navigation.speedOverGround:gps', {
+        context: 'vessels.self',
+        path: 'navigation.speedOverGround',
+        value: 5.0,
+        $source: 'gps',
+        timestamp: '2024-01-15T10:30:00.000Z'
+      })
+      accumulator.set('vessels.self:navigation.headingTrue:gps', {
+        context: 'vessels.self',
+        path: 'navigation.headingTrue',
+        value: 1.5,
+        $source: 'gps',
+        timestamp: '2024-01-15T10:30:00.005Z'
+      })
+
+      const deltas = buildFlushDeltas(accumulator, 1000)
+
+      expect(deltas).to.have.length(1)
+      expect(deltas[0].updates).to.deep.equal([
+        {
+          $source: 'gps',
+          timestamp: '2024-01-15T10:30:00.000Z',
+          values: [{ path: 'navigation.speedOverGround', value: 5.0 }]
+        },
+        {
+          $source: 'gps',
+          timestamp: '2024-01-15T10:30:00.005Z',
+          values: [{ path: 'navigation.headingTrue', value: 1.5 }]
+        }
+      ])
+    })
+
+    it('should keep missing and dated timestamps in separate updates', function () {
+      const accumulator = new Map()
+      accumulator.set('vessels.self:navigation.speedOverGround:gps', {
+        context: 'vessels.self',
+        path: 'navigation.speedOverGround',
+        value: 5.0,
+        $source: 'gps',
+        timestamp: undefined
+      })
+      accumulator.set('vessels.self:navigation.headingTrue:gps', {
+        context: 'vessels.self',
+        path: 'navigation.headingTrue',
+        value: 1.5,
+        $source: 'gps',
+        timestamp: '2024-01-15T10:30:00.005Z'
+      })
+
+      const [flushed] = buildFlushDeltas(accumulator, 1000)
+
+      expect(flushed.updates).to.deep.equal([
+        {
+          $source: 'gps',
+          timestamp: undefined,
+          values: [{ path: 'navigation.speedOverGround', value: 5.0 }]
+        },
+        {
+          $source: 'gps',
+          timestamp: '2024-01-15T10:30:00.005Z',
+          values: [{ path: 'navigation.headingTrue', value: 1.5 }]
+        }
+      ])
+    })
+
     it('should include accumulated count in backpressure indicator', function () {
       const accumulator = new Map()
       for (let i = 0; i < 10; i++) {
