@@ -30,12 +30,18 @@ export interface BackpressureDelta extends Delta {
   }
 }
 
+const UNDEFINED_SOURCE_KEY = '0'
+const DEFINED_SOURCE_KEY_PREFIX = '1'
+
 function accumulationKey(
   context: Context,
   path: Path,
   $source: SourceRef | undefined
 ): string {
-  const sourceKey = $source === undefined ? '0' : `1${$source}`
+  const sourceKey =
+    $source === undefined
+      ? UNDEFINED_SOURCE_KEY
+      : `${DEFINED_SOURCE_KEY_PREFIX}${$source}`
   return `${context}:${path}:${sourceKey}`
 }
 
