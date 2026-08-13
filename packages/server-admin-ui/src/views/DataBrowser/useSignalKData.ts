@@ -18,8 +18,6 @@ import {
 } from '../../hooks/useWebSocket'
 import { useStore, useShallow } from '../../store'
 
-const getSignalkData = () => useStore.getState().signalkData
-
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
 const SOURCES_FETCH_TIMEOUT_MS = 10_000
@@ -92,6 +90,7 @@ export function useSignalKData() {
   const contextKeys = useStore(
     useShallow((s) => Object.keys(s.signalkData).sort())
   )
+  const contextNames = useStore((s) => s.contextNames)
 
   const updatePath = useStore((s) => s.updatePath)
   const updateMeta = useStore((s) => s.updateMeta)
@@ -249,15 +248,12 @@ export function useSignalKData() {
   }, [loadSources])
 
   const contextOptions: SelectOption[] = useMemo(() => {
-    const currentData = getSignalkData()
     const options: SelectOption[] = [
       { value: 'all', label: 'ALL', section: 'all' }
     ]
 
     if (contextKeys.includes('self')) {
-      const contextData = currentData['self']?.['name'] as
-        { value?: string } | undefined
-      const contextName = contextData?.value
+      const contextName = contextNames['self']
       options.push({
         value: 'self',
         label: `${contextName || ''} self`,
@@ -268,9 +264,7 @@ export function useSignalKData() {
     let isFirst = true
     contextKeys.forEach((key) => {
       if (key !== 'self') {
-        const contextData = currentData[key]?.['name'] as
-          { value?: string } | undefined
-        const contextName = contextData?.value
+        const contextName = contextNames[key]
         options.push({
           value: key,
           label: `${contextName || ''} ${key}`,
@@ -282,7 +276,7 @@ export function useSignalKData() {
     })
 
     return options
-  }, [contextKeys, dataVersion])
+  }, [contextKeys, contextNames])
 
   useEffect(() => {
     subscribeToDataIfNeeded()

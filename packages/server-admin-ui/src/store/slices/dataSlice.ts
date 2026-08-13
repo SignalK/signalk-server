@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand'
+import { findContextName, isNameKey } from '../../utils/pathKeys'
 
 export interface PathData {
   path?: string
@@ -40,6 +41,16 @@ export interface DataSliceState {
   signalkMeta: Record<string, Record<string, MetaData>>
   /** Version counter - increments when structure changes (new paths added) */
   dataVersion: number
+  /**
+   * Derived map of context key → vessel display name, maintained
+   * incrementally as `name` leaves arrive, change, or are removed.
+   * Contexts without a resolved name have no entry. Kept here rather
+   * than computed in a selector so readers get O(1) access and the
+   * object's identity only changes when a name actually changes —
+   * scanning every context on each store update would put a full
+   * cache sweep on the per-delta path.
+   */
+  contextNames: Record<string, string>
 }
 
 export interface DataSliceActions {
@@ -67,7 +78,25 @@ export type DataSlice = DataSliceState & DataSliceActions
 const initialDataState: DataSliceState = {
   signalkData: {},
   signalkMeta: {},
-  dataVersion: 0
+  dataVersion: 0,
+  contextNames: {}
+}
+
+// Re-resolve one context's entry in the contextNames map after its data
+// changed in a way that can affect the name. Returns the previous map
+// unchanged (same identity) when the resolved name is the same.
+function withContextName(
+  contextNames: Record<string, string>,
+  context: string,
+  contextData: Record<string, PathData>
+): Record<string, string> {
+  const resolved = findContextName(contextData)
+  if (resolved === contextNames[context]) return contextNames
+  if (resolved === undefined) {
+    const { [context]: _, ...rest } = contextNames
+    return rest
+  }
+  return { ...contextNames, [context]: resolved }
 }
 
 export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
@@ -96,7 +125,10 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
 
       return {
         signalkData: newSignalkData,
-        dataVersion: newVersion
+        dataVersion: newVersion,
+        contextNames: isNameKey(path$SourceKey)
+          ? withContextName(state.contextNames, context, newContextData)
+          : state.contextNames
       }
     })
   },
@@ -146,7 +178,10 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
       const { [path$SourceKey]: _, ...rest } = contextData
       return {
         signalkData: { ...state.signalkData, [context]: rest },
-        dataVersion: state.dataVersion + 1
+        dataVersion: state.dataVersion + 1,
+        contextNames: isNameKey(path$SourceKey)
+          ? withContextName(state.contextNames, context, rest)
+          : state.contextNames
       }
     })
   },
@@ -159,21 +194,27 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
       // so a sourceRef match shows up as a `$<ref>` suffix.
       const suffix = `$${sourceRef}`
       let changed = false
+      let contextNames = state.contextNames
       const next: typeof state.signalkData = {}
       for (const ctx of Object.keys(state.signalkData)) {
         const contextData = state.signalkData[ctx]
         const keptEntries: [string, PathData][] = []
         let ctxChanged = false
+        let nameDropped = false
         for (const key of Object.keys(contextData)) {
           if (key.endsWith(suffix)) {
             ctxChanged = true
             changed = true
+            if (isNameKey(key)) nameDropped = true
             continue
           }
           keptEntries.push([key, contextData[key]])
         }
         if (ctxChanged) {
           next[ctx] = Object.fromEntries(keptEntries)
+          if (nameDropped) {
+            contextNames = withContextName(contextNames, ctx, next[ctx])
+          }
         } else {
           next[ctx] = contextData
         }
@@ -181,7 +222,8 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
       if (!changed) return state
       return {
         signalkData: next,
-        dataVersion: state.dataVersion + 1
+        dataVersion: state.dataVersion + 1,
+        contextNames
       }
     })
   },

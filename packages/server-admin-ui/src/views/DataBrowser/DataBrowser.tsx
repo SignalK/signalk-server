@@ -26,7 +26,7 @@ import {
   type SourcesData
 } from '../../utils/sourceLabels'
 import granularSubscriptionManager from './GranularSubscriptionManager'
-import { getPath$SourceKey, getPathFromKey, findContextName } from './pathUtils'
+import { getPath$SourceKey, getPathFromKey } from './pathUtils'
 import {
   useWebSocket,
   useDeltaMessages,
@@ -150,6 +150,7 @@ const DataBrowser: React.FC = () => {
   const contextKeys = useStore(
     useShallow((s) => Object.keys(s.signalkData).sort())
   )
+  const contextNames = useStore((s) => s.contextNames)
 
   const updatePath = useStore((s) => s.updatePath)
   const updateMeta = useStore((s) => s.updateMeta)
@@ -444,13 +445,12 @@ const DataBrowser: React.FC = () => {
   }, [discoveredAddresses, loadSources, pause])
 
   const contextOptions: SelectOption[] = useMemo(() => {
-    const currentData = getSignalkData()
     const options: SelectOption[] = [
       { value: 'all', label: 'ALL', section: 'all' }
     ]
 
     if (contextKeys.includes('self')) {
-      const contextName = findContextName(currentData['self'])
+      const contextName = contextNames['self']
       options.push({
         value: 'self',
         label: `${contextName || ''} self`,
@@ -461,7 +461,7 @@ const DataBrowser: React.FC = () => {
     let isFirst = true
     contextKeys.forEach((key) => {
       if (key !== 'self') {
-        const contextName = findContextName(currentData[key])
+        const contextName = contextNames[key]
         options.push({
           value: key,
           label: `${contextName || ''} ${key}`,
@@ -473,9 +473,7 @@ const DataBrowser: React.FC = () => {
     })
 
     return options
-    // dataVersion is included so the labels pick up a vessel's `name`
-    // leaf, which arrives in a delta after the context key first appears.
-  }, [contextKeys, dataVersion])
+  }, [contextKeys, contextNames])
 
   useEffect(() => {
     subscribeToDataIfNeeded()
