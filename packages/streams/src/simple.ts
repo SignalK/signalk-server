@@ -71,6 +71,8 @@ interface SimpleApp {
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: string, cb: (...args: any[]) => void): void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  removeListener(event: string, cb: (...args: any[]) => void): void
   emit(event: string, ...args: unknown[]): void
   emitPropertyValue(name: string, value: unknown): void
   setProviderStatus(id: string, msg: string): void
@@ -133,6 +135,13 @@ interface PipeElement {
 }
 
 type PipelineFactory = (options: SimpleOptions) => PipeElement[]
+
+// The wasm-backed elements load lazily (the server runs without
+// @canboat/wasm), so their constructor types are pulled from the
+// modules statically to keep the dynamic requires strictly typed.
+type WasmN2kCtor = typeof import('./wasm-n2k').default
+type WasmN2kOptions = ConstructorParameters<WasmN2kCtor>[0]
+type J1939CanCtor = typeof import('./j1939-can').default
 type PipeStartFactory = (
   subOptions: SubOptions,
   logging?: boolean
@@ -141,6 +150,7 @@ type PipeStartFactory = (
 const discriminatorByDataType: Record<string, string> = {
   NMEA2000WASM: 'A',
   NMEA2000WASMBYTES: 'A',
+  J1939: 'A',
   NMEA2000JS: 'A',
   NMEA2000IK: 'A',
   NMEA2000YD: 'A',
@@ -191,21 +201,41 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
   },
   NMEA2000WASM: (options) => {
     const N2kCtor = requireN2kToSignalK()
-    const WasmN2kMod = require('./wasm-n2k') as {
-      default: new (options: object) => PipeElement
-    }
-    const WasmN2kCtor = WasmN2kMod.default ?? WasmN2kMod
-    const txBySubtype: Record<string, { txFormat: string; txEvent: string }> = {
+    const WasmN2kMod = require('./wasm-n2k') as
+      { default: WasmN2kCtor } | WasmN2kCtor
+    const Ctor = 'default' in WasmN2kMod ? WasmN2kMod.default : WasmN2kMod
+    const txBySubtype: Record<
+      string,
+      { txFormat: WasmN2kOptions['txFormat']; txEvent: string }
+    > = {
       'ydwg02-wasm': { txFormat: 'ydwg-raw', txEvent: 'ydwg02-out' },
       'w2k-1-n2k-ascii-wasm': { txFormat: 'n2k-ascii', txEvent: 'w2k-1-out' }
       // canbus-wasm: TX and address claiming stay with the canbus
       // transport element (candevice), which owns the socket.
     }
     const result: PipeElement[] = [
-      new (WasmN2kCtor as new (options: object) => PipeElement)({
+      new Ctor({
         ...options.subOptions,
         ...(txBySubtype[options.subOptions.type ?? ''] ?? {}),
         ...(options.subOptions.type === 'j1939-wasm' ? { j1939: true } : {})
+      })
+    ]
+    if (options.type === 'FileStream') {
+      result.push(new TimestampThrottle())
+    }
+    return [...result, new N2kCtor(options.subOptions)]
+  },
+  J1939: (options) => {
+    // No canboatjs variant exists for J1939 — the wasm decoder is the
+    // only element that carries the J1939 schema flavor.
+    const N2kCtor = requireN2kToSignalK()
+    const WasmN2kMod = require('./wasm-n2k') as
+      { default: WasmN2kCtor } | WasmN2kCtor
+    const Ctor = 'default' in WasmN2kMod ? WasmN2kMod.default : WasmN2kMod
+    const result: PipeElement[] = [
+      new Ctor({
+        ...options.subOptions,
+        j1939: true
       })
     ]
     if (options.type === 'FileStream') {
@@ -296,6 +326,21 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
   Multiplexed: (options) => [new MultiplexedLog(options.subOptions)]
 }
 
+function j1939Input(subOptions: SubOptions): PipeElement[] {
+  // Plain J1939 bus (engines, gensets): listen-only — the same
+  // canSocket AF_CAN shim, but no candevice, no address claim, no
+  // TX. The wasm element downstream decodes with the J1939 schema.
+  if (subOptions.type !== 'j1939-wasm') {
+    // An unselected source would otherwise open the default can0 and
+    // decode whatever bus lives there with the J1939 schema.
+    throw new Error(`unknown J1939 type: ${subOptions.type}`)
+  }
+  const J1939CanMod = require('./j1939-can') as
+    { default: J1939CanCtor } | J1939CanCtor
+  const Ctor = 'default' in J1939CanMod ? J1939CanMod.default : J1939CanMod
+  return [new Ctor(subOptions)]
+}
+
 function nmea2000input(
   subOptions: SubOptions,
   logging?: boolean
@@ -364,14 +409,9 @@ function nmea2000input(
       })
     ]
   } else if (subOptions.type === 'j1939-wasm') {
-    // Plain J1939 bus (engines, gensets): listen-only — the same
-    // canSocket AF_CAN shim, but no candevice, no address claim, no
-    // TX. The wasm element downstream decodes with the J1939 schema.
-    const J1939Can = require('./j1939-can') as {
-      default: new (options: object) => PipeElement
-    }
-    const Ctor = J1939Can.default ?? J1939Can
-    return [new (Ctor as new (options: object) => PipeElement)(subOptions)]
+    // Compatibility: configs may still store J1939 as an NMEA2000
+    // source; the J1939 connection type is the canonical shape.
+    return j1939Input(subOptions)
   } else if (subOptions.type === 'ikonvert-canboatjs') {
     const Serialport = require('./serialport') as {
       default: new (options: object) => PipeElement
@@ -629,6 +669,7 @@ function seatalk1inputFilter(ignoredCommands: string[]): PipeElement[] {
 
 const pipeStartByType: Record<string, PipeStartFactory> = {
   NMEA2000: nmea2000input,
+  J1939: j1939Input,
   NMEA0183: nmea0183input,
   Execute: executeInput,
   FileStream: fileInput,
@@ -668,7 +709,14 @@ export default class Simple extends Transform {
     }
 
     opts.subOptions.providerId = options.providerId
-    const dataType = opts.subOptions.dataType ?? options.type
+    // A live J1939 connection always decodes as J1939 — a stale
+    // subOptions.dataType left over from configuring another type in
+    // the UI must not divert it (FileStream replay still selects its
+    // decode chain via dataType).
+    const dataType =
+      options.type === 'J1939'
+        ? 'J1939'
+        : (opts.subOptions.dataType ?? options.type)
     if (!dataType) {
       throw new Error(`Unknown data type for ${options.type}`)
     }
@@ -742,11 +790,16 @@ export default class Simple extends Transform {
     const pipeStart = pipeStartByType[options.type]!
     const dataMapper = dataTypeMapping[mappingType]!
 
+    // The J1939 CAN source emits frame objects with no text form —
+    // Log would stringify them to unreplayable '[object Object]'
+    // lines, so logging is disabled for it regardless of the flag.
+    const loggable = options.logging && opts.subOptions.type !== 'j1939-wasm'
+
     const pipeline: PipeElement[] = [
       ...pipeStart(opts.subOptions, options.logging),
       ...getLoggerPipeline(
         options.app,
-        options.logging,
+        loggable,
         discriminatorByDataType[dataType]
       ),
       ...dataMapper(opts)

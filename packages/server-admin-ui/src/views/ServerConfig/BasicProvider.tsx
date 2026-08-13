@@ -152,6 +152,7 @@ const TYPE_COMPONENTS: Record<
   React.ComponentType<TypeComponentProps>
 > = {
   NMEA2000: NMEA2000,
+  J1939: J1939,
   NMEA0183: NMEA0183,
   SignalK: SignalK,
   Seatalk: Seatalk,
@@ -204,6 +205,11 @@ export default function BasicProvider({
               onChange={(event) => onChange(event)}
             >
               <option value="NMEA2000">NMEA 2000</option>
+              {/* J1939 has no canboatjs fallback — without wasm there
+                  is no source that could serve the connection. */}
+              <option value="J1939" disabled={!hasWasm}>
+                J1939
+              </option>
               <option value="NMEA0183">NMEA 0183</option>
               <option value="SignalK">Signal K</option>
               <option value="Seatalk">Seatalk (GPIO)</option>
@@ -233,7 +239,9 @@ export default function BasicProvider({
           </Form.Label>
         </Col>
       </Form.Group>
-      {value.type !== 'FileStream' && (
+      {/* No logging for J1939: the CAN source emits frame objects with
+          no text form, so logged lines would be unreplayable junk. */}
+      {value.type !== 'FileStream' && value.type !== 'J1939' && (
         <LoggingInput value={value} onChange={onChange} />
       )}
       <Form.Group as={Row} className="mb-3">
@@ -1733,9 +1741,6 @@ function NMEA2000({
             <option value="canbus-wasm" disabled={!hasWasm}>
               Canbus (canboat wasm)
             </option>
-            <option value="j1939-wasm" disabled={!hasWasm}>
-              J1939 Canbus listen-only (canboat wasm)
-            </option>
             <option value="n2k-ip-gateway-canboatjs">
               N2K IP Gateway (canboatjs)
             </option>
@@ -1819,8 +1824,7 @@ function NMEA2000({
       )}
       {(value.options.type === 'canbus' ||
         value.options.type === 'canbus-canboatjs' ||
-        value.options.type === 'canbus-wasm' ||
-        value.options.type === 'j1939-wasm') && (
+        value.options.type === 'canbus-wasm') && (
         <div>
           <TextInput
             title="Interface"
@@ -1829,24 +1833,20 @@ function NMEA2000({
             value={value.options.interface}
             onChange={onChange}
           />
-          {value.options.type !== 'j1939-wasm' && (
-            <>
-              <TextInput
-                title="UniqueNumber"
-                name="options.uniqueNumber"
-                helpText="Example: any number from 1 to 2097151, will be equal to SerialNumber of a SignalK NMEA2000 device. Leave empty for random (default). Set a fixed value if you have problem with source identification on some B&G MFD's after SignalK restart."
-                value={value.options.uniqueNumber}
-                onChange={onChange}
-              />
-              <TextInput
-                title="ManufacturerCode"
-                name="options.mfgCode"
-                helpText="Example: 999 - Unknown (default), 0 - Internal, or any other mabufacturer code to emulate. Leave empty for default 999.  Set to 0 if you have problem with source identification on some B&G MFD's after SignalK restart."
-                value={value.options.mfgCode}
-                onChange={onChange}
-              />
-            </>
-          )}
+          <TextInput
+            title="UniqueNumber"
+            name="options.uniqueNumber"
+            helpText="Example: any number from 1 to 2097151, will be equal to SerialNumber of a SignalK NMEA2000 device. Leave empty for random (default). Set a fixed value if you have problem with source identification on some B&G MFD's after SignalK restart."
+            value={value.options.uniqueNumber}
+            onChange={onChange}
+          />
+          <TextInput
+            title="ManufacturerCode"
+            name="options.mfgCode"
+            helpText="Example: 999 - Unknown (default), 0 - Internal, or any other manufacturer code to emulate. Leave empty for default 999.  Set to 0 if you have problem with source identification on some B&G MFD's after SignalK restart."
+            value={value.options.mfgCode}
+            onChange={onChange}
+          />
         </div>
       )}
       {(value.options.type === 'ngt-1-canboatjs' ||
@@ -1954,6 +1954,45 @@ function NMEA2000({
         /^ydwg02/.test(value.options.type) && (
           <CreateDeviceInput value={value.options} onChange={onChange} />
         )}
+    </div>
+  )
+}
+
+function J1939({ value, onChange, hasWasm }: TypeComponentProps) {
+  return (
+    <div>
+      <Form.Group as={Row} className="mb-3">
+        <Col md="3">
+          <Form.Label htmlFor="j1939-source-type">J1939 Source</Form.Label>
+        </Col>
+        <Col xs="12" md="3">
+          <Form.Select
+            id="j1939-source-type"
+            value={value.options.type || 'none'}
+            name="options.type"
+            onChange={(event) => onChange(event)}
+          >
+            <option value="none">Select a source</option>
+            <option value="j1939-wasm" disabled={!hasWasm}>
+              Canbus listen-only (canboat wasm)
+            </option>
+          </Form.Select>
+        </Col>
+      </Form.Group>
+      {value.options.type === 'j1939-wasm' && (
+        <TextInput
+          title="Interface"
+          name="options.interface"
+          helpText="Example: can0"
+          value={value.options.interface}
+          onChange={onChange}
+        />
+      )}
+      <div className="text-muted small mt-1 mb-2">
+        Listen-only: the server never transmits or claims an address on the
+        J1939 bus. Manufacturer names resolve from the ISO 11783/J1939 registry,
+        not the NMEA 2000 one.
+      </div>
     </div>
   )
 }
