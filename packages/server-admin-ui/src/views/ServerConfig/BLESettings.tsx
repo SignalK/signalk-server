@@ -14,11 +14,21 @@ const MIN_GATT_SLOTS = 1
 const MAX_GATT_SLOTS = 10
 
 const BLESettings: React.FC = () => {
-  const { settings, saving, saveError } = useStore(
+  const {
+    settings,
+    saving,
+    saveError,
+    setBleSettingsLocal,
+    saveBleSettings,
+    clearBleSettingsSaveError
+  } = useStore(
     useShallow((s) => ({
       settings: s.bleSettings,
       saving: s.bleSettingsSaving,
-      saveError: s.bleSettingsSaveError
+      saveError: s.bleSettingsSaveError,
+      setBleSettingsLocal: s.setBleSettingsLocal,
+      saveBleSettings: s.saveBleSettings,
+      clearBleSettingsSaveError: s.clearBleSettingsSaveError
     }))
   )
 
@@ -29,8 +39,6 @@ const BLESettings: React.FC = () => {
   if (!settings) return null
 
   const supported = settings.localBLESupported
-  const { setBleSettingsLocal, saveBleSettings, clearBleSettingsSaveError } =
-    useStore.getState()
 
   return (
     <Card className="mt-3">

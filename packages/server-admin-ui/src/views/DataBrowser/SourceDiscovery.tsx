@@ -2301,10 +2301,13 @@ const InlineTextField: React.FC<{
   const isMountedRef = useRef(true)
   const refreshTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
   useEffect(() => {
+    // The Set's identity never changes; the copy just satisfies the
+    // effect-cleanup rule about reading refs at cleanup time.
+    const timers = refreshTimersRef.current
     return () => {
       isMountedRef.current = false
-      for (const t of refreshTimersRef.current) clearTimeout(t)
-      refreshTimersRef.current.clear()
+      for (const t of timers) clearTimeout(t)
+      timers.clear()
     }
   }, [])
   const scheduleRefresh = (delay: number, fn: () => void) => {

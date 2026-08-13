@@ -138,6 +138,10 @@ export default function EmbeddedAsyncApi() {
           {doc.info.descriptionHtml && (
             <div
               style={{ marginTop: 12, fontSize: 14, lineHeight: 1.6 }}
+              // descriptionHtml is rendered by this server itself from its
+              // own AsyncAPI spec (marked() in src/api/swagger.ts), not
+              // from user- or plugin-supplied input.
+              // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
               dangerouslySetInnerHTML={{ __html: doc.info.descriptionHtml }}
             />
           )}

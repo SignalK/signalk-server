@@ -569,9 +569,11 @@ export default function Sidebar({ location }: SidebarProps) {
       return (
         <>
           {item.badges.map(
-            (b, index) =>
+            (b) =>
               b && (
-                <React.Fragment key={`badge-${index}`}>
+                <React.Fragment
+                  key={`${b.variant ?? ''}-${b.class ?? ''}-${b.text ?? ''}`}
+                >
                   {renderBadge(b)}
                 </React.Fragment>
               )

@@ -26,7 +26,7 @@ const markdownComponents: Components = {
   // inline. Runs through React rendering so we never need to inject raw
   // HTML into the markdown pipeline.
   li({ children, ...rest }) {
-    const arr = React.Children.toArray(children)
+    const arr = Array.isArray(children) ? children : [children]
     const first = arr[0]
     if (typeof first === 'string') {
       const m = PREFIX_RE.exec(first)

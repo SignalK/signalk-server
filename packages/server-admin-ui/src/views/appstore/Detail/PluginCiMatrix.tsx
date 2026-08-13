@@ -187,6 +187,7 @@ const PluginCiMatrix: React.FC<PluginCiMatrixProps> = ({ data }) => {
               // both lack server_version (e.g. two non-integration runs
               // on the same matrix cell). The array order is stable
               // for the lifetime of one render's data.
+              // eslint-disable-next-line @eslint-react/no-array-index-key
               key={`${i}-${j.platform}-${j.node}-${j.server_version ?? ''}`}
               bg={conclusionVariant(j.conclusion)}
               className="fw-normal plugin-detail__plugin-ci-cell"
