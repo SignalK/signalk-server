@@ -265,6 +265,75 @@ describe('dataSlice', () => {
     })
   })
 
+  describe('contextNames', () => {
+    const ctx = 'vessels.urn:mrn:imo:mmsi:123456789'
+
+    it('resolves a name leaf that arrives after the context appears', () => {
+      useStore.getState().updatePath(ctx, 'mmsi$AIS.1', { value: '123456789' })
+      expect(useStore.getState().contextNames[ctx]).toBeUndefined()
+
+      useStore
+        .getState()
+        .updatePath(ctx, 'name$AIS.1', { value: 'Black Pearl' })
+      expect(useStore.getState().contextNames[ctx]).toBe('Black Pearl')
+    })
+
+    it('picks up an in-place name value change', () => {
+      useStore
+        .getState()
+        .updatePath(ctx, 'name$AIS.1', { value: 'Black Pearl' })
+      useStore.getState().updatePath(ctx, 'name$AIS.1', { value: 'Queen Anne' })
+      expect(useStore.getState().contextNames[ctx]).toBe('Queen Anne')
+    })
+
+    it('keeps the map identity stable for non-name updates', () => {
+      useStore
+        .getState()
+        .updatePath(ctx, 'name$AIS.1', { value: 'Black Pearl' })
+      const before = useStore.getState().contextNames
+      useStore.getState().updatePath(ctx, 'navigation.position$AIS.1', {
+        value: { latitude: 1, longitude: 2 }
+      })
+      expect(useStore.getState().contextNames).toBe(before)
+    })
+
+    it('ignores paths that merely start with name', () => {
+      useStore.getState().updatePath(ctx, 'nameplate$AIS.1', { value: 'ABC' })
+      expect(useStore.getState().contextNames[ctx]).toBeUndefined()
+    })
+
+    it('falls back to another source when a name leaf is removed', () => {
+      useStore
+        .getState()
+        .updatePath(ctx, 'name$AIS.1', { value: 'Black Pearl' })
+      useStore.getState().updatePath(ctx, 'name$AIS.2', { value: 'Queen Anne' })
+
+      useStore.getState().removePath(ctx, 'name$AIS.1')
+      expect(useStore.getState().contextNames[ctx]).toBe('Queen Anne')
+
+      useStore.getState().removePath(ctx, 'name$AIS.2')
+      expect(useStore.getState().contextNames[ctx]).toBeUndefined()
+    })
+
+    it('drops the name when its source is evicted', () => {
+      useStore
+        .getState()
+        .updatePath(ctx, 'name$AIS.1', { value: 'Black Pearl' })
+      useStore.getState().updatePath(ctx, 'mmsi$AIS.2', { value: '123456789' })
+
+      useStore.getState().evictSource('AIS.1')
+      expect(useStore.getState().contextNames[ctx]).toBeUndefined()
+    })
+
+    it('resets with clearData', () => {
+      useStore
+        .getState()
+        .updatePath(ctx, 'name$AIS.1', { value: 'Black Pearl' })
+      useStore.getState().clearData()
+      expect(useStore.getState().contextNames).toEqual({})
+    })
+  })
+
   describe('evictSource', () => {
     it('removes every leaf whose key ends with $sourceRef across contexts', () => {
       useStore
