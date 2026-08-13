@@ -620,10 +620,14 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
   // The content-derived key is deliberate: memoising on identity would defeat
   // the purpose, since the array is a fresh reference with identical contents.
   // JSON.stringify rather than join() so a source ref containing the separator
-  // cannot collide with a differently-split array.
+  // cannot collide with a differently-split array. Parsing the key back
+  // instead of closing over group.sources keeps the memo's dependency
+  // honest: the value is derived from exactly what it is keyed on.
   const sourcesKey = JSON.stringify(group.sources)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stableSources = useMemo(() => group.sources, [sourcesKey])
+  const stableSources = useMemo(
+    () => JSON.parse(sourcesKey) as string[],
+    [sourcesKey]
+  )
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event

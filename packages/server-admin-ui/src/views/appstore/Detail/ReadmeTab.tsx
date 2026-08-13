@@ -90,6 +90,11 @@ const ReadmeTab: React.FC<ReadmeTabProps> = ({
         >
           <div className="row g-2">
             {screenshots.slice(0, MAX_SCREENSHOTS).map((src, idx) => (
+              // The index keeps keys unique when an author lists the same
+              // screenshot path twice; it is also the identity the
+              // lightbox uses (onScreenshotClick(idx)), so order is the
+              // key's true meaning here.
+              // eslint-disable-next-line @eslint-react/no-array-index-key
               <div className="col-6" key={`${src}-${idx}`}>
                 <button
                   type="button"
