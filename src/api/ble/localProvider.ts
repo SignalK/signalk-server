@@ -19,10 +19,17 @@ import {
 
 // How often to poll BlueZ for newly discovered devices
 const DEVICE_WATCH_INTERVAL_MS = 5000
-// waitDevice timeout when attaching a listener to an already-known device
-const DEVICE_ATTACH_TIMEOUT_S = 1
-// waitDevice timeout when establishing a GATT connection
-const GATT_CONNECT_TIMEOUT_S = 30
+// waitDevice timeout (ms) when attaching a listener to an already-known
+// device. @naugehyde/node-ble's Adapter#waitDevice races a timeout against
+// a discoveryHandler whose first check() only runs after one full
+// discoveryInterval (default 1000ms) has elapsed, via setInterval rather
+// than an immediate check - so a timeout at or below that interval loses
+// the race almost every time, before a single check can succeed. This must
+// stay comfortably above the default discoveryInterval.
+const DEVICE_ATTACH_TIMEOUT_MS = 5000
+// waitDevice timeout (ms) when establishing a GATT connection. Same
+// discoveryInterval-race constraint as above applies.
+const GATT_CONNECT_TIMEOUT_MS = 30000
 // GATT reconnect exponential backoff bounds
 const RECONNECT_BACKOFF_BASE_MS = 5000
 const RECONNECT_BACKOFF_MAX_MS = 60000
@@ -280,7 +287,7 @@ export class LocalBLEProvider {
     // iterations don't both kick off an attach for the same MAC.
     this.deviceListeners.set(mac, () => {})
     try {
-      const device = await this.adapter.waitDevice(mac, DEVICE_ATTACH_TIMEOUT_S)
+      const device = await this.adapter.waitDevice(mac, DEVICE_ATTACH_TIMEOUT_MS)
       await device.helper._prepare()
       // Discovery may have been stopped while the awaits above ran —
       // registering now would repopulate the cleared listener table
@@ -483,7 +490,7 @@ export class LocalBLEProvider {
       debug.enabled && debug(`GATT connecting to ${mac}`)
 
       // 1. Find device
-      const device = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_S)
+      const device = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_MS)
       session.device = device
 
       // 2. Connect
@@ -709,7 +716,7 @@ export class LocalBLEProvider {
     let device: any
     try {
       device = await this.connectQueue.enqueue(async () => {
-        const dev = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_S)
+        const dev = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_MS)
         await dev.helper.callMethod('Connect')
         if (this.scanning) {
           try {

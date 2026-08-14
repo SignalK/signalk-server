@@ -184,17 +184,30 @@ export class BLEApi implements IBLEApi {
           providerId
         )
         await provider.init()
-        await provider.startDiscovery()
         this.localProviders.set(providerId, provider)
         this.localProviderErrors.delete(adapterName)
+        // Register (which wires up onAdvertisement -> _handleAdvertisement,
+        // populating deviceTable) before starting discovery. Discovery's
+        // first pass emits advertisements for every already-known device
+        // synchronously as part of startDiscovery(), and LocalBLEProvider's
+        // emitDeviceAdvertisement drops advertisements entirely when nobody
+        // has subscribed yet - registering afterward silently lost that
+        // whole first batch, leaving those devices absent from the device
+        // table (and therefore unreachable via subscribeGATT) until BlueZ
+        // happened to re-report one of their properties later.
         this.register(providerId, {
           name: `Local Bluetooth (${adapterName})`,
           methods: provider.getMethods()
         })
+        await provider.startDiscovery()
         debug.enabled &&
           debug(`Local BLE provider registered and scanning: ${providerId}`)
       } catch (e: any) {
-        // Roll back any partial state if init succeeded but startDiscovery failed
+        // Roll back any partial state if init and/or register succeeded but
+        // startDiscovery failed
+        if (this.bleProviders.has(providerId)) {
+          this.unRegister(providerId)
+        }
         if (provider) {
           try {
             provider.shutdown()
