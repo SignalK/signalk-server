@@ -4,10 +4,10 @@
 # Plugin developers reference it with a single line in their own workflow.
 #
 # Platforms tested:
-#   - Linux x64    (Node 22, 24)
-#   - Linux arm64  (Node 22, 24) — Raspberry Pi 4/5
-#   - macOS        (Node 22, 24)
-#   - Windows      (Node 22, 24)
+#   - Linux x64    (Node 22, 24, 26)
+#   - Linux arm64  (Node 22, 24, 26) — Raspberry Pi 4/5
+#   - macOS        (Node 22, 24, 26)
+#   - Windows      (Node 22, 24, 26)
 #   - armv7/armhf  (Node 20 — matches Venus OS 3.70 on Cerbo GX)
 #                    Runs under QEMU emulation with python3, make, g++
 #
@@ -23,6 +23,14 @@
 # `node-versions` may legitimately list older versions you still want to
 # *test* against. If '24' doesn't suit your build, set `build-node-version`
 # explicitly.
+#
+# One consequence: this workflow no longer verifies that `build-command`
+# itself succeeds on Windows/macOS, or on any Node version other than
+# `build-node-version` — only that the resulting build *output* installs
+# and runs correctly there. That trade is deliberate: build failures are
+# overwhelmingly Node/tooling-version issues, not OS issues, while install
+# and runtime behavior (native addons, path handling, ESM/CJS interop)
+# genuinely varies by platform — that's what the matrix below is for.
 
 name: SignalK Plugin CI
 
@@ -47,13 +55,17 @@ on:
         type: string
         default: ''
       node-versions:
-        description: 'JSON array of Node versions for desktop platforms (default: ["22", "24"])'
+        description: 'JSON array of Node versions for desktop platforms (default: ["22", "24", "26"])'
         type: string
-        default: '["22", "24"]'
+        default: '["22", "24", "26"]'
       build-node-version:
         description: 'Node version used to Build the plugin'
         type: string
         default: '24'
+      artifact-name-suffix:
+        description: 'Optional suffix appended to the shared build artifact name — set this if your caller workflow invokes this reusable workflow more than once in a single run, to avoid an artifact name collision'
+        type: string
+        default: ''
 
       # ── armv7 / Cerbo GX options ────────────────────────────
       enable-armv7:
@@ -70,6 +82,10 @@ on:
         description: 'JSON array of signalk-server versions to fan the integration test out over (e.g. ''["2.23.0", "latest"]'')'
         type: string
         default: '["latest"]'
+      signalk-integration-matrix:
+        description: 'JSON array of {"node-version": ..., "signalk-server-version": ...} pairs to test in the integration job, overriding the node-versions × signalk-server-versions cartesian product — use this when only some combinations are valid (e.g. an older signalk-server version that does not support a newer Node)'
+        type: string
+        default: ''
 
 # Least-privilege token for the jobs in this reusable workflow. We only
 # read the caller's repository — install, build, and test steps never
@@ -107,10 +123,11 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
-            npm ci
+            npm ci --ignore-scripts
           else
-            npm install
+            npm install --ignore-scripts
           fi
+          npm rebuild
         shell: bash
 
       - name: Build
@@ -128,7 +145,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: built-plugin
+          name: built-plugin${{ inputs.artifact-name-suffix }}
           path: ${{ runner.temp }}/built-plugin.tar.gz
           retention-days: 1
 
@@ -154,7 +171,7 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v8
         with:
-          name: built-plugin
+          name: built-plugin${{ inputs.artifact-name-suffix }}
           path: _artifact-download
 
       - name: Extract build artifact
@@ -396,11 +413,12 @@ jobs:
             return 1
           }
           if [ -f package-lock.json ]; then
-            npm_install_with_retry "npm ci"
+            npm_install_with_retry "npm ci --ignore-scripts"
           else
             echo "No package-lock.json found — using npm install instead of npm ci"
-            npm_install_with_retry "npm install"
+            npm_install_with_retry "npm install --ignore-scripts"
           fi
+          npm rebuild
         shell: bash
 
       - name: Validate plugin entry point
@@ -1615,7 +1633,7 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v8
         with:
-          name: built-plugin
+          name: built-plugin${{ inputs.artifact-name-suffix }}
           path: _artifact-download
 
       - name: Extract build artifact
@@ -1734,22 +1752,62 @@ jobs:
   # ════════════════════════════════════════════════════════════
   #  Optional: SignalK server integration test
   # ════════════════════════════════════════════════════════════
-  signalk-integration:
-    name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node }}
+  #  Computes the node/signalk-server-version pairs the integration job
+  #  below fans out over. Always runs (even when the integration test is
+  #  disabled) so `signalk-integration`'s `fromJson(...)` below never has
+  #  to deal with an empty/skipped upstream output.
+  integration-matrix:
+    name: Compute integration test matrix
     runs-on: ubuntu-latest
-    needs: build
+    timeout-minutes: 2
+    outputs:
+      matrix: ${{ steps.compute.outputs.matrix }}
+    steps:
+      - name: Compute node × signalk-server-version pairs
+        id: compute
+        shell: bash
+        env:
+          NODE_VERSIONS: ${{ inputs.node-versions }}
+          SK_VERSIONS: ${{ inputs.signalk-server-versions }}
+          EXPLICIT_MATRIX: ${{ inputs.signalk-integration-matrix }}
+        run: |
+          node -e '
+            const explicit = process.env.EXPLICIT_MATRIX.trim();
+            let matrix;
+            if (explicit !== "") {
+              // Caller gave an explicit list of {node-version, signalk-server-version}
+              // pairs — use it as-is instead of cross-producting the two
+              // separate arrays below, so combinations that do not make
+              // sense together are never generated.
+              matrix = JSON.parse(explicit);
+            } else {
+              const nodeVersions = JSON.parse(process.env.NODE_VERSIONS);
+              const skVersions = JSON.parse(process.env.SK_VERSIONS);
+              matrix = [];
+              for (const node of nodeVersions) {
+                for (const signalkServerVersion of skVersions) {
+                  matrix.push({ "node-version": node, "signalk-server-version": signalkServerVersion });
+                }
+              }
+            }
+            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, "matrix=" + JSON.stringify(matrix) + "\n");
+          '
+
+  signalk-integration:
+    name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    needs: [build, integration-matrix]
     timeout-minutes: 15
     if: ${{ inputs.enable-signalk-integration }}
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ fromJson(inputs.node-versions) }}
-        signalk-server-version: ${{ fromJson(inputs.signalk-server-versions) }}
+        include: ${{ fromJson(needs.integration-matrix.outputs.matrix) }}
     steps:
       - name: Download build artifact
         uses: actions/download-artifact@v8
         with:
-          name: built-plugin
+          name: built-plugin${{ inputs.artifact-name-suffix }}
           path: _artifact-download
 
       - name: Extract build artifact
@@ -1762,10 +1820,10 @@ jobs:
           tar -xzf _artifact-download/built-plugin.tar.gz
           rm -rf _artifact-download
 
-      - name: Setup Node.js ${{ matrix.node }}
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node }}
+          node-version: ${{ matrix.node-version }}
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
 
       - name: Install SignalK server ${{ matrix.signalk-server-version }}
@@ -1796,10 +1854,11 @@ jobs:
         shell: bash
         run: |
           if [ -f package-lock.json ]; then
-            npm ci
+            npm ci --ignore-scripts
           else
-            npm install
+            npm install --ignore-scripts
           fi
+          npm rebuild
 
       - name: Install plugin into SignalK
         run: |
@@ -1996,7 +2055,7 @@ jobs:
             echo "| Job | Result | Notes |"
             echo "|-----|--------|-------|"
             echo "| Build | $(icon "$BUILD_RESULT") | Node ${{ inputs.build-node-version }} — shared by all jobs below |"
-            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24 |"
+            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24, 26 |"
             echo "| armv7 — Cerbo GX (QEMU) | $(icon "$ARMV7_RESULT") | Node 20 (Venus OS 3.70) — advisory, non-blocking |"
             if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
               echo "| SignalK integration | $(icon "$INTEGRATION_RESULT") | Server install + plugin load |"

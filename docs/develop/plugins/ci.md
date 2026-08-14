@@ -40,10 +40,10 @@ See [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) f
 
 | Platform | Architecture     | Node versions | Notes                                            |
 | -------- | ---------------- | ------------- | ------------------------------------------------ |
-| Linux    | x64              | 22, 24        | GitHub-hosted runner                             |
-| Linux    | arm64            | 22, 24        | GitHub-hosted runner — Raspberry Pi 4/5          |
-| macOS    | arm64            | 22, 24        | GitHub-hosted runner                             |
-| Windows  | x64              | 22, 24        | GitHub-hosted runner                             |
+| Linux    | x64              | 22, 24, 26    | GitHub-hosted runner                             |
+| Linux    | arm64            | 22, 24, 26    | GitHub-hosted runner — Raspberry Pi 4/5          |
+| macOS    | arm64            | 22, 24, 26    | GitHub-hosted runner                             |
+| Windows  | x64              | 22, 24, 26    | GitHub-hosted runner                             |
 | Linux    | armv7 (Cerbo GX) | 20            | QEMU emulation — matches Venus OS 3.70 (Node 20) |
 
 ### Validation Checks
@@ -89,16 +89,23 @@ jobs:
       node-versions: '["22"]'
 ```
 
-| Input                        | Default                      | Description                                                                                                              |
-| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `test-command`               | `npm test`                   | Command to run your test suite                                                                                           |
-| `build-command`              | `npm run build --if-present` | Build command                                                                                                            |
-| `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty                           |
-| `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary |
-| `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms                                                                                      |
-| `enable-armv7`               | `true`                       | Test on armv7 (Cerbo GX) via QEMU                                                                                        |
-| `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                               |
-| `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                            |
+| Input                        | Default                      | Description                                                                                                                                                                                 |
+| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test-command`               | `npm test`                   | Command to run your test suite                                                                                                                                                              |
+| `build-command`              | `npm run build --if-present` | Build command                                                                                                                                                                               |
+| `build-node-version`         | `24`                         | Node version used to run `build-command` — the plugin is built once, on this version, and every job below tests that same build output                                                      |
+| `artifact-name-suffix`       | _(empty)_                    | Suffix appended to the shared build artifact name; set this only if your caller workflow invokes this reusable workflow more than once in a single run, to avoid an artifact name collision |
+| `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty                                                                                              |
+| `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary                                                                    |
+| `node-versions`              | `["22", "24", "26"]`         | Node versions for desktop platforms                                                                                                                                                         |
+| `enable-armv7`               | `true`                       | Test on armv7 (Cerbo GX) via QEMU                                                                                                                                                           |
+| `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                                                                                                  |
+| `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                                                                                               |
+| `signalk-integration-matrix` | _(empty)_                    | JSON array of explicit `{node-version, signalk-server-version}` pairs for the integration job, overriding the `node-versions` × `signalk-server-versions` cross product                     |
+
+### Build once, test broadly
+
+The plugin is built exactly once — on `build-node-version`, `ubuntu-latest` — and every platform/Node combination below installs and tests that same build output, instead of rebuilding it. This means CI no longer verifies that `build-command` itself succeeds on Windows, macOS, or on Node versions other than `build-node-version` — only that the built output installs and runs correctly there. That's a deliberate trade: build failures are overwhelmingly Node/tooling-version issues, not OS issues, whereas install and runtime behavior (native addon compilation, path handling, ESM/CJS interop) genuinely varies by platform — that's where the matrix's breadth pays for itself. If your build process itself needs verifying across platforms or Node versions, that's no longer covered here.
 
 ### Formatting and coverage
 
@@ -126,7 +133,7 @@ Plugins without a `test` script still get all validation checks — tests are sk
 
 The Cerbo GX runs an Allwinner dual-core Cortex-A7 (ARMv7, 32-bit) with Venus OS. The CI emulates this environment using QEMU with a `node:20-bookworm-slim` Docker image plus `python3`, `make`, and `g++` — matching Venus OS 3.70 which ships Node 20 and has build tools available via opkg.
 
-The armv7 job runs install, build, and tests — it does not repeat the full validation suite (that's covered by the desktop jobs). The armv7 Node version is fixed to match the Cerbo GX and is not user-configurable. Expect armv7 jobs to take 3-5x longer than native x64. armv7 failures are **advisory and non-blocking**.
+The armv7 job downloads the centrally-built artifact and runs install and tests — build already happened once, centrally (see [Build once, test broadly](#build-once-test-broadly)) — and it does not repeat the full validation suite (that's covered by the desktop jobs). The armv7 Node version is fixed to match the Cerbo GX and is not user-configurable. Expect armv7 jobs to take 3-5x longer than native x64. armv7 failures are **advisory and non-blocking**.
 
 ### Limitations
 
@@ -149,7 +156,15 @@ with:
   signalk-server-versions: '["2.23.0", "latest"]'
 ```
 
-The integration job runs the full Cartesian product of `node-versions × signalk-server-versions`. The default `["22", "24"] × ["latest"]` is 2 jobs; `["22", "24"] × ["2.23.0", "latest"]` is 4. To keep the matrix small, shrink either dimension — integration coverage often only needs a single Node version (`node-versions: '["22"]'`) even when the desktop jobs exercise several.
+The integration job runs the full Cartesian product of `node-versions × signalk-server-versions`. The default `["22", "24", "26"] × ["latest"]` is 3 jobs; `["22", "24", "26"] × ["2.23.0", "latest"]` is 6. To keep the matrix small, shrink either dimension — integration coverage often only needs a single Node version (`node-versions: '["22"]'`) even when the desktop jobs exercise several.
+
+Some combinations may not make sense together — e.g. a Node version an older `signalk-server` release doesn't support. Pass `signalk-integration-matrix` as an explicit JSON array of `{node-version, signalk-server-version}` pairs to test exactly the combinations you want instead of the full cross product:
+
+```yaml
+with:
+  enable-signalk-integration: true
+  signalk-integration-matrix: '[{"node-version": "20", "signalk-server-version": "2.14.0"}, {"node-version": "22", "signalk-server-version": "latest"}]'
+```
 
 ### Provider API Verification
 
