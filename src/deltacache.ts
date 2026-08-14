@@ -24,7 +24,12 @@ import { join } from 'path'
 import { atomicWriteFile } from './atomicWrite'
 import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
-import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
+import {
+  Context,
+  FORBIDDEN_PATH_KEYS,
+  NormalizedDelta,
+  SourceRef
+} from '@signalk/server-api'
 import { isFanOutPriorities } from './deltaPriority'
 
 const SOURCES_CACHE_FILE = 'sources-cache.json'
@@ -212,6 +217,7 @@ export default class DeltaCache {
   getContextAndPathParts(msg: NormalizedDelta): string[] {
     let result
     if (
+      !FORBIDDEN_PATH_KEYS.has(msg.context) &&
       this.cachedContextPaths[msg.context] &&
       (result = this.cachedContextPaths[msg.context][msg.path])
     ) {
@@ -221,6 +227,14 @@ export default class DeltaCache {
     let contextAndPathParts = msg.context.split('.')
     if (msg.path.length !== 0) {
       contextAndPathParts = contextAndPathParts.concat(msg.path.split('.'))
+    }
+    // A prototype key anywhere in context or path must never be cached:
+    // this.cachedContextPaths['__proto__'] is Object.prototype, so the
+    // "create if missing" guard below would never fire and the write
+    // would land straight on the shared prototype. Return the parts
+    // uncached; getLeafObject rejects them too.
+    if (contextAndPathParts.some((p) => FORBIDDEN_PATH_KEYS.has(p))) {
+      return contextAndPathParts
     }
     if (!this.cachedContextPaths[msg.context]) {
       this.cachedContextPaths[msg.context] = {}
@@ -252,6 +266,11 @@ export default class DeltaCache {
       this.getContextAndPathParts(msg),
       true
     )
+    // getLeafObject returns null when the context/path contains a
+    // prototype key; drop the delta rather than pollute Object.prototype.
+    if (!leaf) {
+      return
+    }
 
     if (msg.path.length !== 0) {
       const isNewSource = !leaf[sourceRef]
@@ -619,6 +638,11 @@ export default class DeltaCache {
           this.getContextAndPathParts(msg),
           true
         )
+        // Skip deltas whose context/path contains a prototype key rather
+        // than letting the walk mutate Object.prototype.
+        if (!leaf) {
+          continue
+        }
         const isNewSource = !leaf[sourceRef]
         leaf[sourceRef] = msg
         // Populate preferredSources so getCachedDeltas('preferred')
@@ -1625,6 +1649,13 @@ function getLeafObject(
 
   for (let i = 0; i < contextAndPathParts.length; i++) {
     const p = contextAndPathParts[i]
+    // A __proto__ / constructor / prototype segment resolves to a live
+    // prototype object that already exists, so the walk would step onto
+    // Object.prototype and the next segment would be written there. Reject
+    // rather than pollute the shared prototype.
+    if (FORBIDDEN_PATH_KEYS.has(p)) {
+      return null
+    }
     if (isUndefined(current[p])) {
       if (createIfMissing) {
         current[p] = {}

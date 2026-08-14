@@ -291,6 +291,51 @@ describe('Deltacache', () => {
     sourceMeta['gps.backup'].lastSeen.should.be.above(0)
   })
 
+  it('ingestDelta drops a delta whose context is a prototype key', function () {
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.ingestDelta({
+      context: '__proto__',
+      updates: [
+        {
+          $source: 'poc',
+          timestamp: '2024-01-15T10:30:02.000Z',
+          values: [{ path: 'pocPollutedFlag', value: 'pwned' }]
+        }
+      ]
+    })
+    // chai's have.property walks the prototype chain, so a polluted
+    // Object.prototype would make this bare object appear to have the key.
+    ;({}).should.not.have.property('pocPollutedFlag')
+  })
+
+  it('ingestDelta drops a delta whose path is a prototype key', function () {
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.ingestDelta({
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: 'poc',
+          timestamp: '2024-01-15T10:30:03.000Z',
+          values: [{ path: '__proto__.enabled', value: true }]
+        }
+      ]
+    })
+    ;({}).should.not.have.property('enabled')
+  })
+
+  it('onValue drops a delta whose context is a prototype key', function () {
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.onValue({
+      context: '__proto__',
+      path: 'pocPollutedFlag2',
+      value: 'pwned',
+      $source: 'poc',
+      timestamp: '2024-01-15T10:30:04.000Z',
+      isMeta: false
+    })
+    ;({}).should.not.have.property('pocPollutedFlag2')
+  })
+
   it('getCachedDeltas fans out unrouted multi-source paths', function () {
     // With no priority configuration, every cached source is delivered
     // — preferredSources stays empty for unrouted paths so the

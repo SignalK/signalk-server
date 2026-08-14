@@ -16,17 +16,12 @@
 
 import { EventEmitter } from 'events'
 import { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
-import { PathValueState } from './deltas'
+import { FORBIDDEN_PATH_KEYS, PathValueState } from './deltas'
 import { metadataRegistry } from '@signalk/path-metadata'
 
 /** @hidden */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObject = Record<string, any>
-
-// A delta path segment of __proto__ / constructor / prototype would let the
-// tree walk in addValue reach and mutate Object.prototype process-wide (#2768).
-// None of these are valid Signal K path segments, so such deltas are dropped.
-const FORBIDDEN_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
 
 export interface SourceMetaEntry {
   lastSeen: number

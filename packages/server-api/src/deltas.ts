@@ -1,6 +1,20 @@
 import { Position } from '.'
 import { Brand } from './brand'
 
+/**
+ * Object property names that are unsafe to use as keys when building or
+ * walking a nested object tree from untrusted input: assigning through
+ * them reaches Object.prototype and pollutes every object in the process.
+ * None are valid Signal K context or path segments, so deltas containing
+ * them are dropped rather than allowed to mutate the prototype chain.
+ * @hidden
+ */
+export const FORBIDDEN_PATH_KEYS = new Set([
+  '__proto__',
+  'constructor',
+  'prototype'
+])
+
 /** @hidden */
 export interface WithContext {
   context: Context
