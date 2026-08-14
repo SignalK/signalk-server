@@ -107,8 +107,10 @@ export default class J1939Can extends Transform {
           data: msg.data
         })
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err)
-        this.debug(`[frame] ${message}`)
+        if (this.debug.enabled) {
+          const message = err instanceof Error ? err.message : String(err)
+          this.debug(`[frame] ${message}`)
+        }
       }
     })
     channel.addListener('onStopped', () => {
@@ -130,8 +132,19 @@ export default class J1939Can extends Transform {
       channel.start()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      channel.removeAllListeners()
-      channel.stop()
+      // connect() also runs from the reconnect timer, where an escaping
+      // throw from the half-started channel's teardown would take the
+      // process down and skip the reconnect.
+      try {
+        channel.removeAllListeners()
+        channel.stop()
+      } catch (stopErr: unknown) {
+        if (this.debug.enabled) {
+          this.debug(
+            `[stop] ${stopErr instanceof Error ? stopErr.message : String(stopErr)}`
+          )
+        }
+      }
       this.channel = null
       if (this.options.providerId) {
         this.options.app.setProviderError?.(this.options.providerId, message)

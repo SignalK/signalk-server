@@ -1928,7 +1928,7 @@ function NMEA2000({
           </Form.Group>
           <div className="text-muted small mt-1 mb-2">
             Maretron IPG 100 Ethernet gateway. Default TCP port 6543. Uses
-            Maretron&apos;s 0xA5-framed binary protocol (handled by canboatjs).
+            Maretron&apos;s 0xA5-framed binary protocol.
           </div>
         </div>
       )}

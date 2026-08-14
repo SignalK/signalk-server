@@ -31,6 +31,7 @@ interface WasmN2kBytesOptions {
   /** Serial transport instead of TCP (e.g. an NGT-1 dongle). */
   device?: string
   baudrate?: number
+  noDataReceivedTimeout?: string | number
   byteKind: 'ngt1' | 'maretron-ipg'
   password?: string
   providerId?: string
@@ -71,6 +72,7 @@ function requireWasm(): WasmByteApi {
 
 const RECONNECT_DELAY = 3000
 const KEEPALIVE_INTERVAL = 20000
+const DEFAULT_IDLE_TIMEOUT_SECONDS = 60
 
 interface ByteTransport {
   write(data: Buffer): void
@@ -84,6 +86,8 @@ export default class WasmN2kBytes extends Transform {
   private socket: ByteTransport | null = null
   private keepaliveTimer: NodeJS.Timeout | null = null
   private reconnectTimer: NodeJS.Timeout | null = null
+  private idleTimer: NodeJS.Timeout | null = null
+  private idleMs = 0
   private stopped = false
   private readonly txHandler: (pgn: unknown) => void
   private readonly debug: DebugLogger
@@ -94,8 +98,6 @@ export default class WasmN2kBytes extends Transform {
     this.wasm = requireWasm()
     const createDebug = options.createDebug ?? require('debug')
     this.debug = createDebug('signalk:streams:wasm-n2k-bytes')
-
-    this.connect()
 
     this.txHandler = (pgn: unknown) => {
       try {
@@ -109,6 +111,8 @@ export default class WasmN2kBytes extends Transform {
     }
     options.app.on('nmea2000JsonOut', this.txHandler)
     options.app.emit('nmea2000OutAvailable')
+
+    this.connect()
   }
 
   private status(msg: string): void {
@@ -116,6 +120,31 @@ export default class WasmN2kBytes extends Transform {
       this.options.app.setProviderStatus?.(this.options.providerId, msg)
     }
     this.debug(msg)
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer)
+      this.idleTimer = null
+    }
+  }
+
+  private armIdleTimer(): void {
+    this.clearIdleTimer()
+    if (this.idleMs <= 0) {
+      return
+    }
+    const socket = this.socket
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null
+      if (!socket || this.socket !== socket) {
+        return
+      }
+      this.debug.enabled && this.debug('Idle timeout, closing socket')
+      // destroy(), not end(): the peer is presumed gone, and only
+      // destroy fires 'close' immediately for the retry path.
+      socket.destroy()
+    }, this.idleMs)
   }
 
   private connect(): void {
@@ -168,12 +197,26 @@ export default class WasmN2kBytes extends Transform {
       }
       const tcp = new Socket()
       this.status(`Connecting to ${host}:${port}`)
+      // Receive-only idle timer: a half-open connection raises neither
+      // 'error' nor 'close', so without it the retry path never runs.
+      // socket.setTimeout() cannot serve here — it counts the periodic
+      // keepalive writes as activity, so it would never fire while the
+      // gateway sends nothing. Re-armed only in the data handler,
+      // cleared in retry and end().
+      const parsedTimeout = Number.parseInt(
+        (this.options.noDataReceivedTimeout + '').trim()
+      )
+      this.idleMs =
+        (isNaN(parsedTimeout) ? DEFAULT_IDLE_TIMEOUT_SECONDS : parsedTimeout) *
+        1000
       tcp.connect(port, host, () => onOpen(tcp))
       socket = tcp
     }
     this.socket = socket
+    this.armIdleTimer()
 
     socket.on('data', (buf: Buffer) => {
+      this.armIdleTimer()
       // Everything here runs inside a socket event handler, where an
       // uncaught throw takes the process down. Malformed framing from
       // a gateway must degrade to a logged error, not a crash.
@@ -206,6 +249,7 @@ export default class WasmN2kBytes extends Transform {
     })
 
     const retry = (why: string) => {
+      this.clearIdleTimer()
       if (this.keepaliveTimer) {
         clearInterval(this.keepaliveTimer)
         this.keepaliveTimer = null
@@ -252,6 +296,7 @@ export default class WasmN2kBytes extends Transform {
       clearInterval(this.keepaliveTimer)
       this.keepaliveTimer = null
     }
+    this.clearIdleTimer()
     this.socket?.destroy()
     this.socket = null
     super.end()

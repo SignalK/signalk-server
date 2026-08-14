@@ -107,8 +107,10 @@ export default class WasmN2k extends Transform {
       options.j1939 === true ? { j1939: true } : undefined
     )
     this.fromPgn.on('error', (line: unknown, err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err)
-      this.debug(`[error] ${String(line)} ${message}`)
+      if (this.debug.enabled) {
+        const message = err instanceof Error ? err.message : String(err)
+        this.debug(`[error] ${String(line)} ${message}`)
+      }
       options.app.emit('canboatjs:error', err)
     })
 
