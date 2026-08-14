@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { load } from '../src/config/config'
+import { load, writeSettingsFile } from '../src/config/config'
 import { ConfigApp } from '../src/config/config'
 
 // load() consults these before config.configPath / the temp dir, so they
@@ -82,5 +82,36 @@ describe('settings defaults on fresh install', () => {
     load(app)
 
     expect(app.config.settings.enforceDataTimeouts).to.equal(false)
+  })
+
+  it('does not seed when the settings file is unreadable', () => {
+    // The recovery path for a corrupt settings file must not switch
+    // enforcement on: that is an existing installation, not a fresh one.
+    fs.writeFileSync(path.join(dir, 'settings.json'), '{ not json')
+    const app = makeApp(dir)
+
+    load(app)
+
+    expect(app.config.settings.enforceDataTimeouts).to.equal(undefined)
+  })
+
+  it('persists the seeded value with the first settings save', (done) => {
+    const app = makeApp(dir)
+    load(app)
+
+    writeSettingsFile(app, app.config.settings, (err: unknown) => {
+      if (err) {
+        return done(err)
+      }
+      const onDisk = JSON.parse(
+        fs.readFileSync(path.join(dir, 'settings.json'), 'utf8')
+      )
+      expect(onDisk.enforceDataTimeouts).to.equal(true)
+
+      const reloaded = makeApp(dir)
+      load(reloaded)
+      expect(reloaded.config.settings.enforceDataTimeouts).to.equal(true)
+      done()
+    })
   })
 })
