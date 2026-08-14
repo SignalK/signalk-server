@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/stale@v10
+      - uses: actions/stale@v11
         with:
           days-before-issue-stale: 30
           days-before-issue-close: 30
