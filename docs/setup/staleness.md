@@ -6,7 +6,7 @@ title: Stale Data Detection
 
 When a sensor or bus stops sending data, the last received value would otherwise be displayed forever — and zone-based alerting plugins stay silent because no new delta ever arrives. Signal K Server therefore enforces `meta.timeout` on the self vessel: when a path stops updating beyond its effective timeout, the server marks the value as timed out so displays and plugins can react.
 
-Enforcement is enabled by default on new installations, disabled on installations that predate it (see Configuration below), and applies to `vessels.self` paths only.
+Enforcement applies to `vessels.self` paths only. New installations start with it enabled; on existing installations the setting keeps its stored value, and when it is absent enforcement is off (see Configuration below).
 
 ## How It Works
 
@@ -66,7 +66,7 @@ Timeout enforcement and notifications complement each other: when a sensor path 
 
 ## Configuration
 
-Enforcement is on by default for new installations. Installations upgraded from a version that predates the enforcer keep it off until enabled. The master switch is exposed in the Admin UI under **Server → Settings → Enforce Data Timeouts** — turn it off there if a source's data is being marked stale unexpectedly while troubleshooting, or on to have sources' data marked stale when they fall silent. The following settings keys control it:
+New installations start with `enforceDataTimeouts` enabled. An existing settings file keeps its stored choice; when the key is absent, enforcement is off. The master switch is exposed in the Admin UI under **Server → Settings → Enforce Data Timeouts** — turn it off there if a source's data is being marked stale unexpectedly while troubleshooting, or on to have sources' data marked stale when they fall silent. The following settings keys control it:
 
 | Setting                    | Default                                   | Purpose                                                              |
 | -------------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
