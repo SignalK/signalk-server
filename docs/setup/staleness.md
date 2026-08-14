@@ -6,7 +6,7 @@ title: Stale Data Detection
 
 When a sensor or bus stops sending data, the last received value would otherwise be displayed forever — and zone-based alerting plugins stay silent because no new delta ever arrives. Signal K Server therefore enforces `meta.timeout` on the self vessel: when a path stops updating beyond its effective timeout, the server marks the value as timed out so displays and plugins can react.
 
-Enforcement is disabled by default (see Configuration below) and applies to `vessels.self` paths only.
+Enforcement is enabled by default on new installations, disabled on installations that predate it (see Configuration below), and applies to `vessels.self` paths only.
 
 ## How It Works
 
@@ -66,15 +66,15 @@ Timeout enforcement and notifications complement each other: when a sensor path 
 
 ## Configuration
 
-Enforcement is off by default for now, but the plan is to activate it in a future version. The master switch is exposed in the Admin UI under **Server → Settings → Enforce Data Timeouts** — turn it on there to have sources' data marked stale when they fall silent. The following settings keys control it:
+Enforcement is on by default for new installations. Installations upgraded from a version that predates the enforcer keep it off until enabled. The master switch is exposed in the Admin UI under **Server → Settings → Enforce Data Timeouts** — turn it off there if a source's data is being marked stale unexpectedly while troubleshooting, or on to have sources' data marked stale when they fall silent. The following settings keys control it:
 
-| Setting                    | Default | Purpose                                                              |
-| -------------------------- | ------- | -------------------------------------------------------------------- |
-| `enforceDataTimeouts`      | `false` | Master switch for the enforcer                                       |
-| `useDefaultTimeouts`       | `true`  | Apply the global default to periodic paths without their own timeout |
-| `defaultTimeout`           | `60`    | Global fallback timeout in seconds                                   |
-| `staleCheckIntervalMs`     | `1000`  | How often the enforcer checks, in milliseconds                       |
-| `autoTimeoutSamples`       | `10`    | Update intervals sampled for `timeout: "auto"`                       |
-| `autoTimeoutWarmupSeconds` | `30`    | Warm-up before a learned `auto` timeout takes effect                 |
+| Setting                    | Default                                   | Purpose                                                              |
+| -------------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
+| `enforceDataTimeouts`      | `true` on new installations, else `false` | Master switch for the enforcer                                       |
+| `useDefaultTimeouts`       | `true`                                    | Apply the global default to periodic paths without their own timeout |
+| `defaultTimeout`           | `60`                                      | Global fallback timeout in seconds                                   |
+| `staleCheckIntervalMs`     | `1000`                                    | How often the enforcer checks, in milliseconds                       |
+| `autoTimeoutSamples`       | `10`                                      | Update intervals sampled for `timeout: "auto"`                       |
+| `autoTimeoutWarmupSeconds` | `30`                                      | Warm-up before a learned `auto` timeout takes effect                 |
 
 Per-path control is available to every user via the path's metadata: a numeric `timeout` to tighten or relax detection, `0` to exempt the path, `"auto"` to let the server learn, or `updateContract: "event"` to declare the path event-driven.
