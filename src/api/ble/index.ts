@@ -177,6 +177,7 @@ export class BLEApi implements IBLEApi {
       const providerId = `_localBLE:${adapterName}`
       if (this.localProviders.has(providerId)) continue
       let provider: LocalBLEProvider | undefined
+      let registeredProvider: BLEProvider | undefined
       try {
         provider = new LocalBLEProvider(
           adapterName,
@@ -195,10 +196,11 @@ export class BLEApi implements IBLEApi {
         // whole first batch, leaving those devices absent from the device
         // table (and therefore unreachable via subscribeGATT) until BlueZ
         // happened to re-report one of their properties later.
-        this.register(providerId, {
+        registeredProvider = {
           name: `Local Bluetooth (${adapterName})`,
           methods: provider.getMethods()
-        })
+        }
+        this.register(providerId, registeredProvider)
         await provider.startDiscovery()
         debug.enabled &&
           debug(`Local BLE provider registered and scanning: ${providerId}`)
@@ -211,7 +213,7 @@ export class BLEApi implements IBLEApi {
         // alone would tear down that replacement instead of the one that
         // actually failed.
         if (this.localProviders.get(providerId) === provider) {
-          if (this.bleProviders.has(providerId)) {
+          if (this.bleProviders.get(providerId) === registeredProvider) {
             this.unRegister(providerId)
           }
           this.localProviders.delete(providerId)
