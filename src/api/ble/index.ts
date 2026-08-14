@@ -204,9 +204,17 @@ export class BLEApi implements IBLEApi {
           debug(`Local BLE provider registered and scanning: ${providerId}`)
       } catch (e: any) {
         // Roll back any partial state if init and/or register succeeded but
-        // startDiscovery failed
-        if (this.bleProviders.has(providerId)) {
-          this.unRegister(providerId)
+        // startDiscovery failed. Only touch state that's still this
+        // provider's - a concurrent initLocalProviders() call for the same
+        // adapter could have already replaced it with a working instance by
+        // the time this catch runs, and unregistering/deleting on providerId
+        // alone would tear down that replacement instead of the one that
+        // actually failed.
+        if (this.localProviders.get(providerId) === provider) {
+          if (this.bleProviders.has(providerId)) {
+            this.unRegister(providerId)
+          }
+          this.localProviders.delete(providerId)
         }
         if (provider) {
           try {
@@ -215,7 +223,6 @@ export class BLEApi implements IBLEApi {
             /* ignore */
           }
         }
-        this.localProviders.delete(providerId)
         const msg = `Local BLE adapter ${adapterName} unavailable: ${e.message}`
         debug(msg)
         // Suppress console.log for expected "no hardware / no BlueZ" errors
