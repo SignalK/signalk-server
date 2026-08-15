@@ -1411,8 +1411,21 @@ jobs:
           # not as a CLI argument — a plugin with a large file count (e.g. a
           # bundled webapp) makes --json's `files` array big enough to blow
           # past Windows' argv-length limit ("Argument list too long").
+          #
+          # Beyond the stdout-corruption risk above, npm 10.x (bundled with
+          # Node 22) actually *runs* "prepare" here despite --ignore-scripts
+          # — not just prints its banner — once the tarball is reinstalled
+          # from a local path below (confirmed empirically; npm 11+ does not
+          # do this; armv7's npm 10.8.2 is unaffected since it never packs
+          # and reinstalls itself). The plugin was already built once,
+          # centrally, so prepare has no legitimate work left to do here —
+          # strip it before packing rather than depend on --ignore-scripts
+          # alone to suppress it.
+          cp package.json "$RUNNER_TEMP/package.json.orig"
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));if(p.scripts)delete p.scripts.prepare;fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
           PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
           PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
+          mv "$RUNNER_TEMP/package.json.orig" package.json
 
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
@@ -1905,8 +1918,17 @@ jobs:
           # not as a CLI argument — a plugin with a large file count (e.g. a
           # bundled webapp) makes --json's `files` array big enough to blow
           # past Windows' argv-length limit ("Argument list too long").
+          #
+          # npm 10.x (Node 22) actually runs "prepare" here despite
+          # --ignore-scripts once the tarball is reinstalled below — same
+          # issue and fix as the desktop job's App Store simulation step.
+          # Strip it before packing rather than depend on --ignore-scripts
+          # alone to suppress it.
+          cp package.json "$RUNNER_TEMP/package.json.orig"
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));if(p.scripts)delete p.scripts.prepare;fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
           PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
           PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
+          mv "$RUNNER_TEMP/package.json.orig" package.json
           cd /tmp/sk-test
           # --ignore-scripts matches how the real SignalK server installs
           # plugins (src/modules.ts:223) — a required native addon that
