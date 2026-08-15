@@ -1204,6 +1204,20 @@ jobs:
           // Get list of files that npm pack would include
           // --ignore-scripts: don't re-run prepack (we already built in a prior step)
           // stdio pipe suppresses stderr cross-platform (2>/dev/null breaks on Windows)
+          //
+          // npm 10.x (Node 22) actually *runs* "prepare" during npm pack
+          // despite --ignore-scripts (npm 11+ does not — see the same fix
+          // in the App Store simulation step below) — strip it from
+          // package.json before either dry-run call, and restore it once
+          // we have the file list, rather than depend on --ignore-scripts
+          // alone to suppress it.
+          const fs = require('fs');
+          const pkgJsonPath = path.join(process.cwd(), 'package.json');
+          const pkgJsonOrig = fs.readFileSync(pkgJsonPath, 'utf8');
+          const pkgForPack = JSON.parse(pkgJsonOrig);
+          if (pkgForPack.scripts) delete pkgForPack.scripts.prepare;
+          fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgForPack, null, 2));
+
           let packOutput;
           try {
             packOutput = execSync('npm pack --dry-run --json --ignore-scripts', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
@@ -1224,6 +1238,7 @@ jobs:
             }
             files = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('npm') && !l.startsWith('Tarball'));
           }
+          fs.writeFileSync(pkgJsonPath, pkgJsonOrig);
 
           const errors = [];
           const warnings = [];
