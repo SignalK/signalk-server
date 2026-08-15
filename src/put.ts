@@ -276,13 +276,16 @@ export function start(app: PutApp): void {
     }
 
     // Clients read displayUnits resolved, so the update they get carries the
-    // conversion rather than the override that was stored.
+    // conversion rather than the override that was stored. This delta also
+    // merges into the metadata registry, which resolves from it again, so it
+    // names the override whether or not any client asked for one.
     const metaUpdate: Record<string, unknown> = { ...full_meta, ...metaValue }
     if (metaValue.displayUnits) {
       const resolved = resolveDisplayUnits(
         metaValue.displayUnits as DisplayUnitsMetadata,
         (metaValue.units ?? full_meta?.units) as string | undefined,
-        username
+        username,
+        true
       )
       if (resolved) {
         metaUpdate.displayUnits = resolved

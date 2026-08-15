@@ -106,9 +106,11 @@ interface Spark {
     events?: string
     sendCachedValues?: string
     sourcePolicy?: SourcePolicy
+    displayUnitsOverride?: string
   }
   request: SignalKSparkRequest
   sendMetaDeltas: boolean
+  sendDisplayUnitsOverride: boolean
   sourcePolicy: SourcePolicy
   sentMetaData: Record<string, boolean>
   backpressureManager?: BackpressureManager
@@ -535,6 +537,10 @@ function wsInterface(app: WsApp): WsApi {
           )
 
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
+          // An editor needs to tell the path's own display unit choices from
+          // the preset's; nothing else does, so it comes only when asked for.
+          spark.sendDisplayUnitsOverride =
+            spark.query.displayUnitsOverride === 'true'
           spark.sourcePolicy = spark.query.sourcePolicy || 'preferred'
           spark.sentMetaData = {}
 
@@ -1077,7 +1083,8 @@ function handleValuesMeta(
                 displayFormat?: string
               },
               metaClone.units as string | undefined,
-              username
+              username,
+              this.spark.sendDisplayUnitsOverride
             )
             if (enhanced) {
               metaClone.displayUnits = enhanced
@@ -1339,7 +1346,8 @@ function handleRealtimeConnection(
             const displayUnits = resolveDisplayUnits(
               { ...storedDU, category },
               pathMeta.units as string | undefined,
-              username
+              username,
+              spark.sendDisplayUnitsOverride
             )
             if (displayUnits) {
               acc.push({ path, value: { ...pathMeta, displayUnits } })

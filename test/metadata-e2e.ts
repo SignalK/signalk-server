@@ -282,6 +282,53 @@ describe('Display unit metadata', function () {
     await awaitPutSuccess(port, result)
   }
 
+  const servedDisplayUnits = async (
+    skPath = SPEED_PATH_SLASHES,
+    includeOverride = false
+  ) => {
+    const query = includeOverride ? '?displayUnitsOverride=true' : ''
+    const meta = await fetch(
+      `${v1Api}/vessels/self/${skPath}/meta${query}`
+    ).then((r) => r.json())
+    return meta.displayUnits
+  }
+
+  // The metadata a client receives for a path once a value for it arrives.
+  // The stream carries other traffic, so read on until the metadata shows up.
+  const streamedDisplayUnits = async (includeOverride: boolean) => {
+    const receiver = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false` +
+        (includeOverride ? '&displayUnitsOverride=true' : ''),
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await receiver.nextMsg() // hello
+
+    const sender = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=none&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await sender.nextMsg() // hello
+    await sender.send({
+      context: 'vessels.self',
+      updates: [{ values: [{ path: SPEED_PATH_DOTS, value: 1 }] }]
+    })
+
+    const until = Date.now() + REQUEST_DEADLINE_MS
+    while (Date.now() < until) {
+      for (const msg of receiver.parsedMessages()) {
+        for (const update of msg.updates ?? []) {
+          for (const entry of update.meta ?? []) {
+            if (entry.path === SPEED_PATH_DOTS && entry.value?.displayUnits) {
+              return entry.value.displayUnits
+            }
+          }
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, REQUEST_POLL_MS))
+    }
+    throw new Error('no displayUnits metadata on the stream')
+  }
+
   const storedDisplayUnits = (): DisplayUnitsMetadata | undefined => {
     const deltas = JSON.parse(
       fs.readFileSync(
@@ -373,6 +420,72 @@ describe('Display unit metadata', function () {
     expect(storedDisplayUnits()).to.deep.equal({ category: 'speed' })
   })
 
+  it('names the path override when the request asks for it', async () => {
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+    expect(await servedDisplayUnits()).to.include({
+      targetUnit: 'm/s',
+      symbol: 'm/s'
+    })
+    expect(
+      (await servedDisplayUnits(SPEED_PATH_SLASHES, true)).override
+    ).to.deep.equal({ targetUnit: 'm/s' })
+  })
+
+  it('names no override unless the request asks for it', async () => {
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+    expect(await servedDisplayUnits()).to.not.have.property('override')
+  })
+
+  it('leaves the override empty for a path that follows the preset', async () => {
+    const displayUnits = await servedDisplayUnits(
+      'navigation/speedOverGround',
+      true
+    )
+    expect(displayUnits.targetUnit).to.equal(PRESET_SPEED_UNIT)
+    expect(displayUnits.override).to.deep.equal({})
+  })
+
+  it('names the path override on a stream that asks for it', async () => {
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+    expect((await streamedDisplayUnits(true)).override).to.deep.equal({
+      targetUnit: 'm/s'
+    })
+  })
+
+  it('names no override on a stream that does not ask for it', async () => {
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+    expect(await streamedDisplayUnits(false)).to.not.have.property('override')
+  })
+
+  it('keeps the override a resolved response is saved back with', async () => {
+    await putSpeedMeta({
+      category: 'speed',
+      targetUnit: PRESET_SPEED_UNIT,
+      formula: 'value * 1.94384',
+      inverseFormula: 'value * 0.514444',
+      symbol: PRESET_SPEED_UNIT,
+      displayFormat: '0.0',
+      override: { targetUnit: PRESET_SPEED_UNIT }
+    })
+    expect(storedDisplayUnits()).to.deep.equal({
+      category: 'speed',
+      targetUnit: PRESET_SPEED_UNIT
+    })
+  })
+
+  it('drops what a resolved response says the path does not own', async () => {
+    await putSpeedMeta({
+      category: 'speed',
+      targetUnit: 'm/s',
+      formula: 'value',
+      inverseFormula: 'value',
+      symbol: 'm/s',
+      displayFormat: '0.0',
+      override: {}
+    })
+    expect(storedDisplayUnits()).to.deep.equal({ category: 'speed' })
+  })
+
   it('sends the resolved conversion to connected clients', async () => {
     const receiver = new WsPromiser(
       `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false`,
@@ -392,6 +505,11 @@ describe('Display unit metadata', function () {
       targetUnit: 'm/s',
       symbol: 'm/s',
       formula: 'value'
+    })
+    // The metadata registry resolves from this delta again, so it names the
+    // override whether or not any client asked for one.
+    expect(metaUpdate.value.displayUnits.override).to.deep.equal({
+      targetUnit: 'm/s'
     })
   })
 
