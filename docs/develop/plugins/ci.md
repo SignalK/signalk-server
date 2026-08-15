@@ -56,7 +56,7 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **plugin.schema()** — Calls `schema()` and checks it returns a JSON-serializable schema-like object without crashing (not fully validated against the JSON Schema meta-schema)
 
-**Lifecycle** — Runs `start()` → `stop()` → `start()` (restart) with an empty configuration. Validates delta messages emitted during startup and checks that `registerDeltaInputHandler` handlers forward deltas correctly.
+**Lifecycle** — Runs `start()` → `stop()` → `start()` (restart) with an empty configuration, then once more with a configuration built from your `schema`'s own declared `default` values (skipped if your schema declares none). The empty-config pass alone can miss a bug that only fires once a real default value is present — e.g. an assumed-present default array field. Validates delta messages emitted during startup and checks that `registerDeltaInputHandler` handlers forward deltas correctly.
 
 **API usage** — Scans source files for:
 
@@ -72,6 +72,8 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 **App Store compatibility** — Installs the plugin with `--ignore-scripts` (as the App Store does) and checks for native addon dependencies. Lint, formatting, and the test run below all then run against that same uncompiled install (not the earlier, fully-built one) — this is the only place a required or poorly-guarded optional native addon actually gets exercised at runtime, which matters most since `enable-signalk-integration` defaults to off.
 
 **Stray files** — Warns when build and test steps leave untracked files
+
+**npm audit** — Runs once, in the `build` job (not per desktop platform/Node combination, since results don't vary by OS/arch). Warns — does not fail the build — with a severity breakdown when `npm audit` finds known vulnerabilities in your dependency tree.
 
 ## Configuration
 

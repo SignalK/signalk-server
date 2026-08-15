@@ -38,6 +38,13 @@ on:
   workflow_call:
     inputs:
       # ── Test configuration ──────────────────────────────────
+      # External dependency: SignalK/signalk-plugin-registry reads a caller
+      # workflow's `with: test-command` / `with: build-command` values
+      # directly out of its `.github/workflows/*.yml` (test-harness/
+      # plugin-ci-commands.ts) as a fallback when a plugin's published
+      # tarball can't run its own tests. Renaming these inputs, or
+      # restructuring how a caller declares them, silently breaks that
+      # parser — nothing in either repo's test suite currently catches it.
       test-command:
         description: 'Command to run tests (default: npm test)'
         type: string
@@ -154,6 +161,56 @@ jobs:
             npm rebuild $NATIVE_MODULES
           fi
         shell: bash
+
+      - name: Run npm audit
+        shell: bash
+        run: |
+          # npm audit exits non-zero whenever it finds anything at all —
+          # capture into a variable first (not a pipe) so that exit code
+          # never reaches this step's own exit status under the default
+          # `set -e -o pipefail` shell; stdout is still valid JSON either way.
+          AUDIT_JSON=$(npm audit --json 2>/dev/null || true)
+          printf '%s' "$AUDIT_JSON" | node -e '
+            let input = "";
+            process.stdin.on("data", (chunk) => { input += chunk; });
+            process.stdin.on("end", () => {
+              let data;
+              try {
+                data = JSON.parse(input);
+              } catch (e) {
+                console.log("npm audit produced no parseable output — skipping");
+                return;
+              }
+              // npm audit itself can fail (e.g. ENOLOCK) and still print
+              // valid JSON — an {error: ...} shape, not {metadata: ...}.
+              // Treating that as "0 vulnerabilities" would be a false
+              // all-clear, so surface it distinctly instead of falling
+              // through to the normal count logic below.
+              if (data.error) {
+                console.log("npm audit could not run: " + (data.error.summary || JSON.stringify(data.error)));
+                return;
+              }
+              if (!data.metadata || !data.metadata.vulnerabilities) {
+                console.log("npm audit output missing the expected metadata.vulnerabilities shape — skipping");
+                return;
+              }
+              const v = data.metadata.vulnerabilities;
+              const critical = v.critical || 0;
+              const high = v.high || 0;
+              const moderate = v.moderate || 0;
+              const low = v.low || 0;
+              const total = critical + high + moderate + low;
+              if (total === 0) {
+                console.log("npm audit: no known vulnerabilities");
+                return;
+              }
+              console.log(
+                "::warning::npm audit found " + total + " known vulnerabilit" + (total === 1 ? "y" : "ies") +
+                " in dependencies (critical: " + critical + ", high: " + high + ", moderate: " + moderate + ", low: " + low + "). " +
+                "Run npm audit locally for details, and npm audit fix where a safe upgrade exists."
+              );
+            });
+          '
 
       - name: Build
         env:
@@ -883,6 +940,29 @@ jobs:
             return /\w+ is not a function/.test(msg) || /Cannot read propert/.test(msg);
           }
 
+          // Mirrors signalk-plugin-registry's test-harness/schema-defaults.ts —
+          // a config-shaped object built from the plugin's own declared
+          // defaults, not an arbitrary probe. {} alone can pass activation
+          // while a real default value (e.g. an assumed-present default
+          // array/object field) breaks start() the first time a user
+          // actually saves the config screen with its defaults intact.
+          function extractSchemaDefaults(schema) {
+            if (!schema || typeof schema !== 'object') return {};
+            if (schema.type !== 'object' || !schema.properties) return {};
+            const result = {};
+            for (const key of Object.keys(schema.properties)) {
+              const prop = schema.properties[key];
+              if (!prop || typeof prop !== 'object') continue;
+              if (prop.type === 'object' && prop.properties) {
+                const nested = extractSchemaDefaults(prop);
+                if (Object.keys(nested).length > 0) result[key] = nested;
+              } else if ('default' in prop) {
+                result[key] = prop.default;
+              }
+            }
+            return result;
+          }
+
           // Wrap in an async IIFE so that Promise-returning start()/stop()
           // hooks surface rejections via await — a sync try/catch around
           // `plugin.start({})` would silently swallow them.
@@ -934,6 +1014,34 @@ jobs:
           }
 
           try { await Promise.resolve(plugin.stop()); } catch (e) { /* ignore */ }
+
+          // Also activate once with the plugin's own schema defaults, not
+          // just {} — see extractSchemaDefaults above for why. Skipped
+          // entirely when the schema has no default values to extract.
+          let schemaForDefaults;
+          try {
+            schemaForDefaults = typeof plugin.schema === 'function' ? plugin.schema() : plugin.schema;
+          } catch (e) {
+            schemaForDefaults = undefined; // a throwing schema() is check-schema.js's own check to report
+          }
+          const schemaDefaults = extractSchemaDefaults(schemaForDefaults);
+          if (Object.keys(schemaDefaults).length > 0) {
+            try {
+              await Promise.resolve(plugin.start(schemaDefaults));
+              console.log('start(<schema defaults>) — ok');
+            } catch (e) {
+              const msg = e.message || String(e);
+              if (isMockGap(msg)) {
+                console.log('::warning::plugin.start(<schema defaults>) threw: ' + msg);
+                console.log('::warning::This looks like a missing CI mock method, not a plugin bug. Please report at https://github.com/SignalK/signalk-server/issues');
+                process.exit(0);
+              }
+              console.log('::error::plugin.start(<schema defaults>) threw: ' + msg);
+              console.log("::error::This only surfaces once a user saves the config screen with the plugin's own default values intact — start({}) alone would not catch it.");
+              process.exit(1);
+            }
+            try { await Promise.resolve(plugin.stop()); } catch (e) { /* ignore */ }
+          }
 
           // ── Report delta validation results ─────────────────────
           if (deltaWarnings.length > 0 || deltaErrors.length > 0) {
