@@ -1799,8 +1799,8 @@ jobs:
               else
                 npm install --ignore-scripts
               fi
-              # Bare npm rebuild (no args) also re-runs the *root* package's
-              # own preinstall/install/postinstall scripts, not just
+              # Bare npm rebuild (no args) also re-runs preinstall/install/
+              # postinstall scripts on the *root* package itself, not just
               # dependency native addons. Naming only the dependencies that
               # actually need rebuilding avoids that, and skips the call
               # entirely when nothing needs compiling.
