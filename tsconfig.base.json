@@ -12,6 +12,9 @@
     "sourceMap": true
   },
   "ts-node": {
-    "files": true
+    "files": true,
+    "compilerOptions": {
+      "types": ["node", "mocha"]
+    }
   }
 }
