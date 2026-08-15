@@ -8,18 +8,26 @@
  * version pin holds the hoisted copy back for every other plugin that would
  * accept a newer version (npm optimizes for dedupe, not freshness).
  *
- * This module hooks Node's CJS module resolution so that require() of the
+ * This module hooks Node's module resolution so that loading any of the
  * packages listed below — including exported subpaths such as
  * '@signalk/server-api/history' — always resolves to the server's own copy,
  * no matter what npm installed in the plugin tree: the same model as
  * require('vscode') in VS Code extensions. Plugin-bundled copies remain on
  * disk but are never loaded.
  *
+ * Coverage comes from two hooks: the CJS _resolveFilename hook answers
+ * require() on every supported Node version, and module.registerHooks
+ * (Node >= 22.15) extends the same redirect to `import` statements in ESM
+ * plugins, which never reach the CJS hook. On Node 22.0-22.14 only the
+ * CJS hook is available, so a pure-ESM plugin bundling its own copy can
+ * still load it there.
+ *
  * This module MUST be imported before any other module that may load one of
  * the host-provided packages.
  */
 
 import Module from 'module'
+import { pathToFileURL } from 'url'
 import { createDebug } from './debug'
 
 const debug = createDebug('signalk-server:host-modules')
@@ -78,4 +86,25 @@ ModuleInternal._resolveFilename = function (
     }
   }
   return origResolveFilename.call(this, request, parent, isMain, options)
+}
+
+// registerHooks resolve hooks see both `import` and require() specifiers,
+// but never the direct origResolveFilename calls made by resolveHostPath —
+// verified empirically, so no re-entrancy guard is needed here
+if (typeof Module.registerHooks === 'function') {
+  Module.registerHooks({
+    resolve(specifier, context, nextResolve) {
+      if (isHostProvided(specifier)) {
+        const hostPath = resolveHostPath(specifier)
+        if (hostPath !== null) {
+          debug.enabled &&
+            debug(
+              `resolving ${specifier} for ${context.parentURL} to the host copy`
+            )
+          return { url: pathToFileURL(hostPath).href, shortCircuit: true }
+        }
+      }
+      return nextResolve(specifier, context)
+    }
+  })
 }
