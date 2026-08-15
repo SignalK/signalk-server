@@ -1483,6 +1483,37 @@ jobs:
           CHECKSCRIPT
           node "$RUNNER_TEMP/check-native.js"
 
+      - name: Reinstall without native compilation (App Store fidelity)
+        # The checks above needed `npm rebuild` (from "Install
+        # dependencies") to load the plugin at all. From here on we
+        # deliberately give that up, so lint/format/tests below run
+        # against a tree installed exactly like the real server installs
+        # it (--ignore-scripts, no rebuild — see src/modules.ts:349-351)
+        # — the only place a required or poorly-guarded optional native
+        # addon actually gets exercised at runtime, not just statically
+        # detected above. Matters most since enable-signalk-integration
+        # defaults to false, so most plugins never hit this otherwise.
+        run: |
+          npm_install_with_retry() {
+            local cmd="$1"
+            local attempts=2
+            for i in $(seq 1 $attempts); do
+              if $cmd; then return 0; fi
+              if [ "$i" -lt "$attempts" ]; then
+                echo "::warning::$cmd failed (attempt $i/$attempts), retrying in 5s..."
+                sleep 5
+              fi
+            done
+            return 1
+          }
+          rm -rf node_modules
+          if [ -f package-lock.json ]; then
+            npm_install_with_retry "npm ci --ignore-scripts"
+          else
+            npm_install_with_retry "npm install --ignore-scripts"
+          fi
+        shell: bash
+
       - name: Lint (if available)
         run: npm run lint --if-present
         continue-on-error: true
@@ -1841,10 +1872,13 @@ jobs:
             exit 0
           fi
           cd /tmp/sk-test
+          # --ignore-scripts matches how the real server installs plugins
+          # (src/modules.ts:223) — see the "Install plugin into SignalK"
+          # step below for the full rationale.
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
             echo "::group::npm install $pkg (signalk.requires)"
-            npm install "$pkg"
+            npm install --ignore-scripts "$pkg"
             echo "::endgroup::"
           done <<< "$REQUIRES"
 
@@ -1874,7 +1908,11 @@ jobs:
           PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
           PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
           cd /tmp/sk-test
-          npm install "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")"
+          # --ignore-scripts matches how the real SignalK server installs
+          # plugins (src/modules.ts:223) — a required native addon that
+          # would fail to compile there must fail here too, not silently
+          # succeed because this step compiled it for real.
+          npm install --ignore-scripts "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")"
 
       - name: Configure plugin to auto-start
         run: |
@@ -2071,7 +2109,7 @@ jobs:
             echo "- **API usage** — No deprecated (\`setProviderStatus\`), internal (\`app.server\`), file storage, or security anti-patterns"
             echo "- **Node built-in modules** — \`node:sqlite\` requires \`engines.node >= 22.5.0\` declared in package.json"
             echo "- **npm pack** — All files referenced by \`main\`/\`exports\` are included in the package"
-            echo "- **App Store install** — No native addons that break with \`--ignore-scripts\`"
+            echo "- **App Store install** — No native addons that break with \`--ignore-scripts\`; lint/format/tests then re-run against that same uncompiled install"
             echo "- **Hardcoded paths** — No \`/home/user/...\` literals in source files"
             echo "- **ES2023 compatibility** — Built JS checked for Cerbo GX (Node 20) syntax compatibility"
             echo "- **baconjs** — Plugins must not bundle their own baconjs; the server provides >= 3.x"

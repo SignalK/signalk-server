@@ -69,7 +69,7 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **npm pack** — Verifies all files referenced by `main`/`exports` are included in the published package
 
-**App Store compatibility** — Installs the plugin with `--ignore-scripts` (as the App Store does) and checks for native addon dependencies
+**App Store compatibility** — Installs the plugin with `--ignore-scripts` (as the App Store does) and checks for native addon dependencies. Lint, formatting, and the test run below all then run against that same uncompiled install (not the earlier, fully-built one) — this is the only place a required or poorly-guarded optional native addon actually gets exercised at runtime, which matters most since `enable-signalk-integration` defaults to off.
 
 **Stray files** — Warns when build and test steps leave untracked files
 
