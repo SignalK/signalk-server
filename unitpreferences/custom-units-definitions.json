@@ -3,12 +3,12 @@
     "conversions": {
       "Gigabyte": {
         "formula": "value / 1000",
-        "inverseFormula": "value *1000",
+        "inverseFormula": "value * 1000",
         "symbol": "GB"
       },
-      "Terrabyte": {
-        "formula": "value / 1_000_000",
-        "inverseFormula": "value * 1_000_000",
+      "Terabyte": {
+        "formula": "value / 1000000",
+        "inverseFormula": "value * 1000000",
         "symbol": "TB"
       }
     }
