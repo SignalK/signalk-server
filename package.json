@@ -176,6 +176,7 @@
     "@types/lodash": "^4.17.24",
     "@types/mocha": "^10.0.10",
     "@types/ncp": "^2.0.8",
+    "@types/node": "^26.1.0",
     "@types/semver": "^7.7.1",
     "@types/split": "^1.0.5",
     "@types/swagger-ui-express": "^4.1.8",

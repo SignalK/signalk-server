@@ -5,6 +5,7 @@
     "rootDir": "${configDir}/src",
     "allowJs": true,
     "typeRoots": ["${configDir}/src/types", "./node_modules/@types"],
+    "types": ["node", "mocha"],
     "resolveJsonModule": true,
     "composite": true,
     "declaration": true,
