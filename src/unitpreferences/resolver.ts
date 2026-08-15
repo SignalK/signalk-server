@@ -143,6 +143,77 @@ export function resolveDisplayUnits(
 }
 
 /**
+ * Reduce displayUnits to the override it expresses.
+ *
+ * Clients read metadata back resolved — target unit, formulas and format
+ * filled in from the active preset — so writing it back verbatim would store
+ * the preset's current choices as a path override and detach the path from
+ * the preset. The resolved shape carries a formula and the stored shape does
+ * not, which is what tells an echo of the resolution apart from an override
+ * the client states itself. In an echo, a value the preset would have
+ * produced anyway is dropped unless the path already stored it.
+ *
+ * @param incoming - displayUnits as received in a metadata PUT
+ * @param previous - displayUnits currently stored for the path
+ * @param username - Username for per-user preset resolution (optional)
+ * @returns displayUnits to store
+ */
+export function stripResolvedDisplayUnits(
+  incoming: DisplayUnitsMetadata | undefined,
+  previous: DisplayUnitsMetadata | undefined,
+  username?: string
+): DisplayUnitsMetadata | undefined {
+  if (!incoming?.category) {
+    return incoming
+  }
+
+  const category = incoming.category
+
+  // A custom unit is nothing but its explicit conversion, and "base" needs
+  // no conversion at all.
+  if (category === 'custom') {
+    return incoming
+  }
+  if (category === 'base') {
+    return { category }
+  }
+
+  const echoesResolution = incoming.formula !== undefined
+  const preset = username ? getActivePresetForUser(username) : getActivePreset()
+  const presetCategory = preset?.categories?.[category]
+  const stored: DisplayUnitsMetadata = { category }
+
+  const overrides = (
+    value?: string,
+    presetValue?: string,
+    storedValue?: string
+  ) =>
+    value !== undefined &&
+    (!echoesResolution || value !== presetValue || storedValue !== undefined)
+
+  if (
+    overrides(
+      incoming.targetUnit,
+      presetCategory?.targetUnit,
+      previous?.targetUnit
+    )
+  ) {
+    stored.targetUnit = incoming.targetUnit
+  }
+  if (
+    overrides(
+      incoming.displayFormat,
+      presetCategory?.displayFormat,
+      previous?.displayFormat
+    )
+  ) {
+    stored.displayFormat = incoming.displayFormat
+  }
+
+  return stored
+}
+
+/**
  * Validate that a category assignment is valid for a path
  *
  * @param pathSiUnit - The SI unit from SignalK schema for this path (may be undefined)

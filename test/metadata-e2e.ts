@@ -1,17 +1,54 @@
 import { expect } from 'chai'
 import {
   serverTestConfigDirectory,
+  startServerFromConfigP,
   startServerP,
   WsPromiser
 } from './servertestutilities'
 import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
+import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import { rimraf } from 'rimraf'
 import { SERVERSTATEDIRNAME } from '../src/serverstate/store'
 import DeltaEditor from '../src/deltaeditor'
+import { DisplayUnitsMetadata } from '../src/unitpreferences/types'
 
 const TEST_PATH_DOTS = 'a.test.path'
 const TEST_PATH_SLASHES = 'a/test/path'
+// A speed path no other suite reads: meta deltas land in a process-wide
+// registry that outlives the server they were sent to.
+const SPEED_PATH_DOTS = 'performance.velocityMadeGoodToWaypoint'
+const SPEED_PATH_SLASHES = 'performance/velocityMadeGoodToWaypoint'
+
+// A metadata PUT answers 202 before it persists anything; the write is done
+// once the request the response links to leaves PENDING.
+const REQUEST_DEADLINE_MS = 5000
+const REQUEST_POLL_MS = 10
+// WsPromiser resolves 'timeout' after this much silence.
+const WS_MESSAGE_TIMEOUT_MS = 500
+
+type ServerHandle = { stop: () => Promise<unknown> }
+
+const awaitPutSuccess = async (port: number, response: Response) => {
+  expect(response.status).to.equal(202)
+  const { href } = (await response.json()) as { href: string }
+  const until = Date.now() + REQUEST_DEADLINE_MS
+  let request = { state: 'PENDING', statusCode: 202 }
+  while (Date.now() < until) {
+    request = (await fetch(`http://localhost:${port}${href}`).then((r) =>
+      r.json()
+    )) as { state: string; statusCode: number }
+    if (request.state !== 'PENDING') {
+      break
+    }
+    await new Promise((resolve) => setTimeout(resolve, REQUEST_POLL_MS))
+  }
+  // A finished handler reports COMPLETED either way; the status code says
+  // whether the write succeeded.
+  expect(request.state).to.equal('COMPLETED')
+  expect(request.statusCode).to.equal(200)
+}
 
 const emptyConfigDirectory = () =>
   Promise.all(
@@ -215,6 +252,237 @@ describe('Metadata end to end', function () {
       'description',
       'Updated description'
     )
+  })
+})
+
+// The active preset is nautical-metric: speeds in knots, formatted "0.0".
+const PRESET_SPEED_UNIT = 'kn'
+
+describe('Display unit metadata', function () {
+  this.timeout(SERVER_START_TIMEOUT)
+
+  let port: number
+  let server: ServerHandle
+  let v1Api: string
+
+  const putSpeedMeta = async (
+    displayUnits: DisplayUnitsMetadata,
+    description?: string
+  ) => {
+    const result = await fetch(
+      `${v1Api}/vessels/self/${SPEED_PATH_SLASHES}/meta`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          value: { units: 'm/s', description, displayUnits }
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
+    await awaitPutSuccess(port, result)
+  }
+
+  const storedDisplayUnits = (): DisplayUnitsMetadata | undefined => {
+    const deltas = JSON.parse(
+      fs.readFileSync(
+        path.join(serverTestConfigDirectory(), 'baseDeltas.json'),
+        'utf8'
+      )
+    )
+    for (const delta of deltas) {
+      for (const update of delta.updates || []) {
+        for (const meta of update.meta || []) {
+          if (meta.path === SPEED_PATH_DOTS) {
+            return meta.value.displayUnits
+          }
+        }
+      }
+    }
+    return undefined
+  }
+
+  before(async () => {
+    port = await freeport()
+    v1Api = `http://localhost:${port}/signalk/v1/api`
+    await emptyConfigDirectory()
+    server = await startServerP(port, false, {
+      settings: { interfaces: { plugins: false } }
+    })
+  })
+
+  after(async () => {
+    await server.stop()
+    await rimraf(path.join(serverTestConfigDirectory(), 'baseDeltas.json'))
+  })
+
+  it('stores no override when the metadata carries the preset unit', async () => {
+    await putSpeedMeta({
+      category: 'speed',
+      targetUnit: PRESET_SPEED_UNIT,
+      formula: 'value * 1.94384',
+      inverseFormula: 'value * 0.514444',
+      symbol: PRESET_SPEED_UNIT,
+      displayFormat: '0.0'
+    })
+    expect(storedDisplayUnits()).to.deep.equal({ category: 'speed' })
+  })
+
+  it('stores a target unit that differs from the preset unit', async () => {
+    await putSpeedMeta({
+      category: 'speed',
+      targetUnit: 'm/s',
+      formula: 'value',
+      inverseFormula: 'value',
+      symbol: 'm/s',
+      displayFormat: '0.0'
+    })
+    expect(storedDisplayUnits()).to.deep.equal({
+      category: 'speed',
+      targetUnit: 'm/s'
+    })
+  })
+
+  it('keeps the stored target unit when other metadata changes', async () => {
+    await putSpeedMeta(
+      {
+        category: 'speed',
+        targetUnit: 'm/s',
+        formula: 'value',
+        inverseFormula: 'value',
+        symbol: 'm/s',
+        displayFormat: '0.0'
+      },
+      'Apparent wind speed'
+    )
+    expect(storedDisplayUnits()).to.deep.equal({
+      category: 'speed',
+      targetUnit: 'm/s'
+    })
+  })
+
+  it('stores the preset unit when it is stated as an override', async () => {
+    await putSpeedMeta({ category: 'speed', targetUnit: PRESET_SPEED_UNIT })
+    expect(storedDisplayUnits()).to.deep.equal({
+      category: 'speed',
+      targetUnit: PRESET_SPEED_UNIT
+    })
+  })
+
+  it('drops an override the metadata no longer states', async () => {
+    await putSpeedMeta({ category: 'speed' })
+    expect(storedDisplayUnits()).to.deep.equal({ category: 'speed' })
+  })
+
+  it('sends the resolved conversion to connected clients', async () => {
+    const receiver = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await receiver.nextMsg() // hello
+    const metaMsgPromise = receiver.nextMsg()
+
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+
+    const metaMsg = await metaMsgPromise
+    expect(metaMsg).to.not.equal('timeout')
+    const metaUpdate = JSON.parse(metaMsg).updates[0].meta[0]
+    expect(metaUpdate.path).to.equal(SPEED_PATH_DOTS)
+    expect(metaUpdate.value.displayUnits).to.include({
+      category: 'speed',
+      targetUnit: 'm/s',
+      symbol: 'm/s',
+      formula: 'value'
+    })
+  })
+
+  it('stores a custom unit with its conversion', async () => {
+    await putSpeedMeta({
+      category: 'custom',
+      targetUnit: 'Bf',
+      formula: '(value / 0.836)^(2/3)',
+      inverseFormula: '0.836 * value^1.5',
+      symbol: 'Bf'
+    })
+    expect(storedDisplayUnits()).to.deep.equal({
+      category: 'custom',
+      targetUnit: 'Bf',
+      formula: '(value / 0.836)^(2/3)',
+      inverseFormula: '0.836 * value^1.5',
+      symbol: 'Bf'
+    })
+  })
+})
+
+// A config directory from before baseDeltas.json holds a defaults.json and
+// opts out of conversion with useBaseDeltas: false. Metadata PUTs then
+// persist through the defaults-file branch of putMetaHandler, which must
+// apply the same displayUnits normalization as the base-deltas branch.
+describe('Display unit metadata with a legacy defaults file', function () {
+  this.timeout(SERVER_START_TIMEOUT)
+
+  let port: number
+  let server: ServerHandle
+  let configDir: string
+
+  const storedLegacyMeta = () => {
+    const defaults = JSON.parse(
+      fs.readFileSync(path.join(configDir, 'defaults.json'), 'utf8')
+    )
+    return SPEED_PATH_DOTS.split('.').reduce(
+      (node, key) => node?.[key],
+      defaults?.vessels?.self
+    )?.meta
+  }
+
+  before(async () => {
+    port = await freeport()
+    configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-legacy-'))
+    fs.writeFileSync(
+      path.join(configDir, 'settings.json'),
+      JSON.stringify({
+        port,
+        interfaces: { plugins: false },
+        useBaseDeltas: false,
+        pipedProviders: []
+      })
+    )
+    fs.writeFileSync(
+      path.join(configDir, 'defaults.json'),
+      JSON.stringify({ vessels: { self: { name: 'legacy' } } })
+    )
+    server = await startServerFromConfigP(configDir)
+  })
+
+  after(async () => {
+    await server.stop()
+    await rimraf(configDir)
+  })
+
+  // The single-field form: metaValue is a fresh merge here, so nothing
+  // aliases the raw request value into the normalized object.
+  it('strips preset-derived fields before writing the defaults file', async () => {
+    const result = await fetch(
+      `http://localhost:${port}/signalk/v1/api/vessels/self/${SPEED_PATH_SLASHES}/meta/displayUnits`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          value: {
+            category: 'speed',
+            targetUnit: PRESET_SPEED_UNIT,
+            formula: 'value * 1.94384',
+            inverseFormula: 'value * 0.514444',
+            symbol: PRESET_SPEED_UNIT,
+            displayFormat: '0.0'
+          }
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
+    await awaitPutSuccess(port, result)
+
+    expect(storedLegacyMeta().displayUnits).to.deep.equal({
+      category: 'speed'
+    })
   })
 })
 

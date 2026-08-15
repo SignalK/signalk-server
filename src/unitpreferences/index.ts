@@ -19,5 +19,9 @@ export {
   saveUserPreferences,
   DEFAULT_PRESET
 } from './loader'
-export { resolveDisplayUnits, validateCategoryAssignment } from './resolver'
+export {
+  resolveDisplayUnits,
+  stripResolvedDisplayUnits,
+  validateCategoryAssignment
+} from './resolver'
 export * from './types'
