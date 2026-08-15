@@ -49,25 +49,29 @@ describe('host-provided modules', () => {
     writeStaleBundledCopies(pluginDir)
     plugin = await importOrRequire(pluginDir)
 
-    const esmPluginDir = path.join(testDir, 'node_modules', 'testplugin-esm')
-    writeModule(
-      esmPluginDir,
-      {
-        name: 'testplugin-esm',
-        version: '1.0.0',
-        type: 'module',
-        main: 'index.js'
-      },
-      {
-        'index.js': `import serverApi from '@signalk/server-api'
+    // without registerHooks coverage the ESM fixture cannot even load:
+    // importing the extensionless subpath fails against the stale copy
+    if (typeof Module.registerHooks === 'function') {
+      const esmPluginDir = path.join(testDir, 'node_modules', 'testplugin-esm')
+      writeModule(
+        esmPluginDir,
+        {
+          name: 'testplugin-esm',
+          version: '1.0.0',
+          type: 'module',
+          main: 'index.js'
+        },
+        {
+          'index.js': `import serverApi from '@signalk/server-api'
           import historyApi from '@signalk/server-api/history'
           import deep from '@signalk/server-api/deep.js'
           import bacon from 'baconjs'
           export { serverApi, historyApi, deep, bacon }`
-      }
-    )
-    writeStaleBundledCopies(esmPluginDir)
-    esmPlugin = await importOrRequire(esmPluginDir)
+        }
+      )
+      writeStaleBundledCopies(esmPluginDir)
+      esmPlugin = await importOrRequire(esmPluginDir)
+    }
   })
 
   // stale bundled copies without an exports map, like server-api 2.9.x
