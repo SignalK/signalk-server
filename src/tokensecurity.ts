@@ -1060,20 +1060,17 @@ function tokenSecurityFactory(
   strategy.getUsers = (aConfig: SecurityConfig): UserData[] => {
     if (aConfig && aConfig.users) {
       return aConfig.users.map((user) => {
-        const userData: UserData & {
-          isOIDC?: boolean
-          oidc?: { issuer?: string; email?: string; name?: string }
-        } = {
+        const userData: UserData = {
           userId: user.username,
           type: user.type,
           isOIDC: !!user.oidc
         }
-        // Include OIDC metadata for OIDC users
         if (user.oidc) {
           userData.oidc = {
             issuer: user.oidc.issuer,
             email: user.oidc.email,
-            name: user.oidc.name
+            name: user.oidc.name,
+            sub: user.oidc.sub
           }
         }
         return userData
@@ -1216,12 +1213,13 @@ function tokenSecurityFactory(
     callback: ICallback<SecurityConfig>
   ): void => {
     assertConfigImmutability()
-    for (let i = theConfig.users.length - 1; i >= 0; i--) {
-      if (theConfig.users[i].username === username) {
-        theConfig.users.splice(i, 1)
-        break
-      }
-    }
+    // Duplicate usernames can exist (OIDC auto-creation does not rename on
+    // OIDC-vs-OIDC collisions), and getPrincipal authenticates the first
+    // match. The API is keyed by username, so remove every record claiming
+    // it — deleting a single one would leave the username able to log in.
+    theConfig.users = theConfig.users.filter(
+      (user) => user.username !== username
+    )
     options = theConfig as TokenSecurityOptions
     callback(null, theConfig)
   }

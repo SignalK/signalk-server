@@ -27,11 +27,34 @@ type UserType = 'readonly' | 'readwrite' | 'admin'
 interface User {
   userId: string
   type?: UserType
-  email?: string
+  oidc?: {
+    issuer?: string
+    email?: string
+    name?: string
+    sub?: string
+  }
   isOIDC?: boolean
   isNew?: boolean
   password?: string
   confirmPassword?: string
+}
+
+/**
+ * Row keys for the users table. The API exposes no per-record identifier and
+ * usernames are not unique, so identity is the username plus the OIDC
+ * issuer/sub pair — sub is unique only within its issuer — with an occurrence
+ * suffix for records that are indistinguishable even then.
+ */
+function userRowKeys(users: User[]): string[] {
+  const seen = new Map<string, number>()
+  return users.map((user) => {
+    const identity = `${user.userId}:${user.oidc?.issuer ?? ''}:${
+      user.oidc?.sub ?? 'local'
+    }`
+    const occurrence = seen.get(identity) ?? 0
+    seen.set(identity, occurrence + 1)
+    return `${identity}#${occurrence}`
+  })
 }
 
 function convertType(type: UserType | undefined): string {
@@ -205,14 +228,15 @@ export default function Users() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(users || []).map((user) => {
+                  {userRowKeys(users).map((key, index) => {
+                    const user = users[index]
                     return (
-                      <tr key={user.userId} onClick={() => userClicked(user)}>
+                      <tr key={key} onClick={() => userClicked(user)}>
                         <td>
                           {user.userId}
-                          {user.email && (
+                          {user.oidc?.email && (
                             <small className="text-muted ms-2">
-                              ({user.email})
+                              ({user.oidc.email})
                             </small>
                           )}
                         </td>
@@ -271,13 +295,30 @@ export default function Users() {
                       )}
                     </Col>
                   </Form.Group>
-                  {selectedUser.email && (
+                  {selectedUser.oidc?.email && (
                     <Form.Group as={Row} className="mb-3">
                       <Col md="2">
                         <Form.Label>Email</Form.Label>
                       </Col>
                       <Col xs="12" md="9">
-                        <Form.Label>{selectedUser.email}</Form.Label>
+                        <Form.Label>{selectedUser.oidc.email}</Form.Label>
+                      </Col>
+                    </Form.Group>
+                  )}
+                  {selectedUser.oidc?.sub && (
+                    <Form.Group as={Row} className="mb-3">
+                      <Col md="2">
+                        <Form.Label>Subject</Form.Label>
+                      </Col>
+                      <Col xs="12" md="9">
+                        <Form.Label>
+                          {selectedUser.oidc.sub}
+                          {selectedUser.oidc.issuer && (
+                            <small className="text-muted ms-2">
+                              ({selectedUser.oidc.issuer})
+                            </small>
+                          )}
+                        </Form.Label>
                       </Col>
                     </Form.Group>
                   )}

@@ -94,6 +94,13 @@ export interface User {
 export interface UserData {
   userId: string
   type: string
+  isOIDC?: boolean
+  /**
+   * OIDC claims for a user authenticated through an external provider. sub is
+   * unique only within its issuer, so the issuer/sub pair is what tells two
+   * records apart when they share a username.
+   */
+  oidc?: Omit<OIDCUserIdentifier, 'groups'>
 }
 export interface UserDataUpdate {
   type?: string
