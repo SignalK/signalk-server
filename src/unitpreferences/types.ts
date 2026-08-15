@@ -66,6 +66,14 @@ export interface DisplayUnitsMetadata {
   inverseFormula?: string // Only if custom category
   symbol?: string // Only if custom category
   displayFormat?: string // Only if path override
+  override?: DisplayUnitsOverride // Only on the way out, never stored
+}
+
+// The part of a resolved response the path itself chose, as opposed to the
+// part the active preset supplied. Empty when the path follows the preset.
+export interface DisplayUnitsOverride {
+  targetUnit?: string
+  displayFormat?: string
 }
 
 // What server returns in GET /meta response
@@ -76,4 +84,5 @@ export interface EnhancedDisplayUnits {
   inverseFormula: string
   symbol: string
   displayFormat?: string
+  override: DisplayUnitsOverride
 }

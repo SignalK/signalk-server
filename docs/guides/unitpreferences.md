@@ -116,7 +116,8 @@ Request the metadata for any path:
     "formula": "value * 1.94384",
     "inverseFormula": "value / 1.94384",
     "symbol": "kn",
-    "displayFormat": "0.0"
+    "displayFormat": "0.0",
+    "override": {}
   }
 }
 ```
@@ -129,6 +130,7 @@ The `displayUnits` object provides everything you need to display the value:
 - **inverseFormula**: A Math.js expression to convert back from the display unit to SI (useful for user input).
 - **symbol**: The symbol to display next to the value.
 - **displayFormat**: (Optional) A format pattern for consistency (e.g., "0.0" for one decimal place).
+- **override**: The part of the answer the path itself chose rather than the active preset, as `targetUnit` and `displayFormat`. Empty when the path follows the preset. Display code can ignore this; an editor needs it to tell "knots because this path asks for knots" from "knots because the preset says so". A `PUT` of the whole object is read the same way, so saving a response back does not turn the preset's current choices into a path override.
 
 ### WebSocket Stream
 
@@ -173,7 +175,8 @@ ws.onopen = () => {
               "formula": "value * 1.94384",
               "inverseFormula": "value / 1.94384",
               "symbol": "kn",
-              "displayFormat": "0.0"
+              "displayFormat": "0.0",
+              "override": {}
             }
           }
         }

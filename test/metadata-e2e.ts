@@ -282,6 +282,13 @@ describe('Display unit metadata', function () {
     await awaitPutSuccess(port, result)
   }
 
+  const servedDisplayUnits = async (skPath = SPEED_PATH_SLASHES) => {
+    const meta = await fetch(`${v1Api}/vessels/self/${skPath}/meta`).then((r) =>
+      r.json()
+    )
+    return meta.displayUnits
+  }
+
   const storedDisplayUnits = (): DisplayUnitsMetadata | undefined => {
     const deltas = JSON.parse(
       fs.readFileSync(
@@ -370,6 +377,52 @@ describe('Display unit metadata', function () {
 
   it('drops an override the metadata no longer states', async () => {
     await putSpeedMeta({ category: 'speed' })
+    expect(storedDisplayUnits()).to.deep.equal({ category: 'speed' })
+  })
+
+  it('names the path override in the resolved metadata', async () => {
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+    expect(await servedDisplayUnits()).to.include({
+      targetUnit: 'm/s',
+      symbol: 'm/s'
+    })
+    expect((await servedDisplayUnits()).override).to.deep.equal({
+      targetUnit: 'm/s'
+    })
+  })
+
+  it('leaves the override empty for a path that follows the preset', async () => {
+    const displayUnits = await servedDisplayUnits('navigation/speedOverGround')
+    expect(displayUnits.targetUnit).to.equal(PRESET_SPEED_UNIT)
+    expect(displayUnits.override).to.deep.equal({})
+  })
+
+  it('keeps the override a resolved response is saved back with', async () => {
+    await putSpeedMeta({
+      category: 'speed',
+      targetUnit: PRESET_SPEED_UNIT,
+      formula: 'value * 1.94384',
+      inverseFormula: 'value * 0.514444',
+      symbol: PRESET_SPEED_UNIT,
+      displayFormat: '0.0',
+      override: { targetUnit: PRESET_SPEED_UNIT }
+    })
+    expect(storedDisplayUnits()).to.deep.equal({
+      category: 'speed',
+      targetUnit: PRESET_SPEED_UNIT
+    })
+  })
+
+  it('drops what a resolved response says the path does not own', async () => {
+    await putSpeedMeta({
+      category: 'speed',
+      targetUnit: 'm/s',
+      formula: 'value',
+      inverseFormula: 'value',
+      symbol: 'm/s',
+      displayFormat: '0.0',
+      override: {}
+    })
     expect(storedDisplayUnits()).to.deep.equal({ category: 'speed' })
   })
 
