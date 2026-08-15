@@ -73,6 +73,10 @@ on:
         description: 'Optional suffix appended to the shared build artifact name — set this if your caller workflow invokes this reusable workflow more than once in a single run, to avoid an artifact name collision'
         type: string
         default: ''
+      fail-on-warning:
+        description: 'Treat non-blocking findings (missing CHANGELOG/screenshots, deprecated API usage, npm audit findings, ES2023/Cerbo GX syntax, stray files, etc.) as failures instead of warnings. Off by default — these checks are advisory by design. Does NOT apply to the lifecycle check''s "mock gap" warnings (registerWithRouter()/start()/stop() hitting a method our test harness does not model) — those indicate a gap in this workflow''s mock, not necessarily a defect in your plugin, so failing on them would be unfair to enable.'
+        type: boolean
+        default: false
 
       # ── armv7 / Cerbo GX options ────────────────────────────
       enable-armv7:
@@ -163,6 +167,8 @@ jobs:
         shell: bash
 
       - name: Run npm audit
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         run: |
           # npm audit exits non-zero whenever it finds anything at all —
@@ -211,16 +217,46 @@ jobs:
                 summary("✅ No known vulnerabilities.");
                 return;
               }
+              // data.vulnerabilities (distinct from data.metadata.vulnerabilities
+              // above) is keyed by package name, each with its own severity —
+              // pull those out so the message says *what* is vulnerable, not
+              // just how many. Worst severity first, capped so one plugin with
+              // a huge advisory list cannot produce an unreadable annotation.
+              const severityRank = { critical: 4, high: 3, moderate: 2, low: 1 };
+              const vulnPkgs = data.vulnerabilities && typeof data.vulnerabilities === "object"
+                ? Object.keys(data.vulnerabilities).map((name) => ({
+                    name,
+                    severity: (data.vulnerabilities[name] && data.vulnerabilities[name].severity) || "unknown"
+                  }))
+                : [];
+              vulnPkgs.sort((a, b) =>
+                (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0) || a.name.localeCompare(b.name)
+              );
+              const MAX_PKGS_SHOWN = 10;
+              let pkgList = vulnPkgs.slice(0, MAX_PKGS_SHOWN).map((p) => p.name + " (" + p.severity + ")").join(", ");
+              if (vulnPkgs.length > MAX_PKGS_SHOWN) {
+                pkgList += ", and " + (vulnPkgs.length - MAX_PKGS_SHOWN) + " more";
+              }
+              const pkgSuffix = pkgList ? ": " + pkgList : "";
               console.log(
                 "::warning::npm audit found " + total + " known vulnerabilit" + (total === 1 ? "y" : "ies") +
-                " in dependencies (critical: " + critical + ", high: " + high + ", moderate: " + moderate + ", low: " + low + "). " +
+                " in dependencies (critical: " + critical + ", high: " + high + ", moderate: " + moderate + ", low: " + low + ")" + pkgSuffix + ". " +
                 "Run npm audit locally for details, and npm audit fix where a safe upgrade exists."
               );
               summary(
                 "⚠️ **" + total + " known vulnerabilit" + (total === 1 ? "y" : "ies") + "** in dependencies " +
-                "(critical: " + critical + ", high: " + high + ", moderate: " + moderate + ", low: " + low + "). " +
+                "(critical: " + critical + ", high: " + high + ", moderate: " + moderate + ", low: " + low + ")" + pkgSuffix + ". " +
                 "Run `npm audit` locally for details, and `npm audit fix` where a safe upgrade exists."
               );
+              if (process.env.FAIL_ON_WARNING === "true") {
+                // This fails the build job itself, not just this step — every
+                // downstream job (desktop/armv7/integration) needs its
+                // artifact, so a vulnerable dependency skips the whole run
+                // past this point when fail-on-warning is on. Same blast
+                // radius a real build-command failure already has today.
+                console.log("::error::fail-on-warning is enabled — the vulnerabilit" + (total === 1 ? "y" : "ies") + " above " + (total === 1 ? "is" : "are") + " treated as a failure.");
+                process.exit(1);
+              }
             });
           '
 
@@ -247,15 +283,15 @@ jobs:
   #  Desktop platforms matrix: Linux x64, Linux arm64, macOS, Windows
   # ════════════════════════════════════════════════════════════
   desktop:
-    # No "/" in this name (unlike armv7's "armv7 (Cerbo GX) / Node 20" below,
-    # which is a single non-matrix job with nothing to disambiguate) — the
-    # Actions sidebar's compact matrix-job list appears to extract only the
-    # last "/"-delimited segment of a custom matrix name, which collapsed
-    # every OS down to a bare "Node 22"/"Node 24"/"Node 26" with no way to
-    # tell them apart. Matches "Build (Node 24)"'s existing parenthetical
-    # style above instead.
+    # No "/" — the Actions sidebar's compact matrix-job list appears to
+    # extract only the last "/"-delimited segment of a custom matrix
+    # name, which collapsed every OS down to a bare "Node 22"/"Node
+    # 24"/"Node 26" with no way to tell them apart. The "Install & Test:"
+    # prefix mirrors "Build (Node 24)" above — this job downloads the
+    # build artifact and validates/tests it, it doesn't build anything.
     name: >-
-      ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
+      Install & Test: ${{
+          matrix.os == 'ubuntu-latest' && 'Linux' ||
           matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
           matrix.os == 'macos-15' && 'macOS' ||
           matrix.os == 'windows-latest' && 'Windows' ||
@@ -300,6 +336,8 @@ jobs:
         # Runs on one representative combination; a failure there still
         # fails the overall desktop matrix (and ci-status) the same way.
         if: matrix.os == 'ubuntu-latest' && matrix.node == fromJson(inputs.node-versions)[0]
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         run: |
           cat << 'VALIDATE' > /tmp/validate-pkg.js
@@ -502,6 +540,10 @@ jobs:
             errors.forEach(e => console.log('::error::' + e));
             process.exit(1);
           }
+          if (process.env.FAIL_ON_WARNING === 'true' && warnings.length > 0) {
+            console.log('::error::fail-on-warning is enabled — the ' + warnings.length + ' warning(s) above are treated as failures.');
+            process.exit(1);
+          }
           console.log('Plugin package.json validation passed');
           VALIDATE
           node /tmp/validate-pkg.js
@@ -602,6 +644,8 @@ jobs:
 
       - name: Validate plugin.schema() if defined
         id: validate-schema
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         timeout-minutes: 2
         run: |
@@ -757,6 +801,10 @@ jobs:
 
           if (process.env.GITHUB_OUTPUT) {
             require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'warning-count=' + schemaWarningCount + '\n');
+          }
+          if (process.env.FAIL_ON_WARNING === 'true' && schemaWarningCount > 0) {
+            console.log('::error::fail-on-warning is enabled — the warning above is treated as a failure.');
+            process.exit(1);
           }
           console.log(label + ' is a valid JSON Schema object');
           process.exit(0);
@@ -1106,6 +1154,8 @@ jobs:
         # static source-file analysis, platform/Node-invariant, so it
         # only needs to run once instead of 12x duplicating every finding.
         if: matrix.os == 'ubuntu-latest' && matrix.node == fromJson(inputs.node-versions)[0]
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         run: |
           cat << 'APISCAN' > /tmp/check-api-usage.js
@@ -1369,6 +1419,10 @@ jobs:
             console.log('See: https://signalk.org/signalk-server/develop/plugins/server_api.html');
             process.exit(1);
           }
+          if (process.env.FAIL_ON_WARNING === 'true' && warnings.length > 0) {
+            console.log('::error::fail-on-warning is enabled — the ' + warnings.length + ' warning(s) above are treated as failures.');
+            process.exit(1);
+          }
           process.exit(0);
           APISCAN
           node /tmp/check-api-usage.js
@@ -1525,6 +1579,8 @@ jobs:
       - name: Check ES2023 compatibility (Cerbo GX / Node 20)
         id: es-check
         if: always() && steps.pack-check.outcome != 'skipped'
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         run: |
           # Cerbo GX (Venus OS) runs Node 20 which supports ES2023 syntax.
@@ -1605,6 +1661,10 @@ jobs:
           if ! npx --yes es-check@8 es2023 $MODULE_FLAG $FILES 2>&1; then
             echo ""
             echo "::warning::Plugin uses ES2024+ syntax not supported by Node 20 (Cerbo GX / Venus OS). Consider targeting ES2023 in your TypeScript/build config or tsconfig.json to maintain Cerbo GX compatibility."
+            if [ "$FAIL_ON_WARNING" = "true" ]; then
+              echo "::error::fail-on-warning is enabled — the ES2023 compatibility warning above is treated as a failure."
+              exit 1
+            fi
           fi
 
       - name: Simulate App Store install (--ignore-scripts)
@@ -1795,6 +1855,8 @@ jobs:
 
       - name: Check for untracked files after build/test
         id: stray-files
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         run: |
           # Plugins should not leave stray files in the repo after install/build/test.
@@ -1806,6 +1868,10 @@ jobs:
             echo "These files would pollute the signalk-server git directory when"
             echo "the plugin is installed. Add them to .gitignore or fix the build"
             echo "to write output into node_modules or a temp directory."
+            if [ "$FAIL_ON_WARNING" = "true" ]; then
+              echo "::error::fail-on-warning is enabled — the stray files above are treated as a failure."
+              exit 1
+            fi
           fi
 
       - name: Write job summary
@@ -1895,7 +1961,8 @@ jobs:
   #  armv7 — Cerbo GX / Raspberry Pi (32-bit ARM via QEMU)
   # ════════════════════════════════════════════════════════════
   armv7:
-    name: armv7 (Cerbo GX) / Node 20
+    # No "/" — see the identical note on desktop's name below.
+    name: "Install & Test: armv7 (Cerbo GX, Node 20)"
     runs-on: ubuntu-latest
     needs: build
     timeout-minutes: 30
@@ -2095,7 +2162,8 @@ jobs:
           '
 
   signalk-integration:
-    name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node-version }}
+    # No "/" — see the identical note on desktop's name below.
+    name: "Integration Test: SK ${{ matrix.signalk-server-version }} (Node ${{ matrix.node-version }})"
     runs-on: ubuntu-latest
     needs: [build, integration-matrix]
     timeout-minutes: 15

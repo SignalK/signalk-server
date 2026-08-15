@@ -75,6 +75,55 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **npm audit** — Runs once, in the `build` job (not per desktop platform/Node combination, since results don't vary by OS/arch). Warns — does not fail the build — with a severity breakdown when `npm audit` finds known vulnerabilities in your dependency tree.
 
+### Failures vs. warnings
+
+Not every check above can fail your build. Some findings are treated as **blocking** (they fail
+the job, turn the run red, and — if you have GitHub's own Actions notification setting enabled
+for your account — trigger the notification GitHub already sends by default when a run you
+triggered fails). Everything else is **advisory**: logged as a `::warning::` annotation in the
+run, visible in the job summary and the Annotations panel, but the run still succeeds and
+nothing gets notified. This is a deliberate split — the blocking checks are things that break
+the plugin or the App Store listing outright; the advisory ones are best-practice nudges that
+don't stop the plugin from working.
+
+**Blocking (fails the run):**
+
+- Missing `signalk-node-server-plugin` keyword, missing `main`/`exports`, or a missing/invalid `version`
+- A hardcoded `/home/user/...` path in source
+- Entry point doesn't export a constructor function
+- `plugin.schema()` throws, returns a non-object, or returns values that can't survive `JSON.stringify` (functions, symbols, circular references, `undefined` properties)
+- `stop()`, or the restart `start()` call, throws a genuine error (not a "mock gap" — see below)
+- Access to an internal server property (`app.server`, `app.deltaCache`, `app.pluginsMap`, `historyApiHttpRegistry`)
+- Malformed delta messages emitted while the plugin runs during lifecycle testing
+- A file referenced by `main`/`exports` is missing from the published package
+- A required native addon dependency, or an optional one used unconditionally with no fallback once tested against a real, uncompiled App Store-style install
+- `format-check-command`, if you set one, failing
+
+**Advisory only (warns, does not fail the run, by default):**
+
+- Missing `CHANGELOG.md`/`.github/release.yml`, missing `signalk.screenshots`, or an `appIcon`/`screenshots` path that doesn't resolve to a real file
+- Missing `engines.node`
+- `preinstall`/`postinstall`/`install` scripts declared (informational — the App Store install step is the real enforcement)
+- Bundling `baconjs` < 3.x, or React < 19 on a `webapp`-keyword plugin
+- `plugin.schema()` missing `type`/`properties`/`oneOf`/`anyOf`
+- Deprecated calls (`setProviderStatus`, `setProviderError`) and the other API-usage anti-patterns (direct Express routes, file-storage anti-patterns, security anti-patterns)
+- `node:sqlite`/`node:test` used with an `engines.node` that allows an older Node, if the usage is already wrapped in a try/catch
+- ES2024+ syntax that would crash on Cerbo GX (Node 20)
+- `npm audit` findings
+- Stray untracked files left after build/test
+- Lint failures (`npm run lint --if-present` is always advisory)
+- The lifecycle check's "mock gap" warnings — `registerWithRouter()` throwing, or `start()`/`stop()` hitting a `"X is not a function"`/`"Cannot read propert…"` pattern. These specifically mean this workflow's test harness doesn't model something your plugin depends on, not necessarily a defect in your plugin — see `fail-on-warning` below for why these are the one category that stays advisory no matter what.
+
+Set `fail-on-warning: true` to promote every advisory item above **except** the lifecycle
+mock-gap warnings into a blocking failure. Off by default, since these checks are advisory by
+design — turn it on if you'd rather your CI (and GitHub's own failure notification) catch them
+than rely on someone reading the job summary.
+
+```yaml
+with:
+  fail-on-warning: true
+```
+
 ## Configuration
 
 Override defaults by passing inputs to the shared workflow:
@@ -104,6 +153,7 @@ jobs:
 | `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                                                                                                  |
 | `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                                                                                               |
 | `signalk-integration-matrix` | _(empty)_                    | JSON array of explicit `{node-version, signalk-server-version}` pairs for the integration job, overriding the `node-versions` × `signalk-server-versions` cross product                     |
+| `fail-on-warning`            | `false`                      | Treat advisory findings as failures instead of warnings — see [Failures vs. warnings](#failures-vs-warnings). Never applies to the lifecycle check's mock-gap warnings                       |
 
 ### Build once, test broadly
 
