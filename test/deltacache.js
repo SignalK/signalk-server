@@ -390,6 +390,31 @@ describe('Deltacache', () => {
     sources.should.deep.equal(['gps.backup', 'gps.primary'])
   })
 
+  it('getCachedDeltasForContexts over getMatchingContexts equals getCachedDeltas', function () {
+    // subscribe enumerates matching contexts once and reuses them across
+    // paths — the split path must return exactly what the single-call
+    // path does, for every key mode (all paths, root values, one path)
+    const selfContext = 'vessels.' + theServer.app.selfId
+    const contextFilter = (d) => d.context === selfContext
+    const cache = theServer.app.deltaCache
+
+    for (const key of [undefined, '', 'navigation.speedOverGround']) {
+      const direct = cache.getCachedDeltas(contextFilter, null, key)
+      const viaContexts = cache.getCachedDeltasForContexts(
+        cache.getMatchingContexts(contextFilter),
+        null,
+        key
+      )
+      direct.length.should.be.greaterThan(0)
+      viaContexts.should.deep.equal(direct)
+    }
+
+    cache.getMatchingContexts(() => false).should.deep.equal([])
+    cache
+      .getCachedDeltasForContexts(cache.getMatchingContexts(() => false))
+      .should.deep.equal([])
+  })
+
   it('getMultiSourcePaths excludes notifications', function () {
     return doSendADelta({
       context: 'vessels.self',

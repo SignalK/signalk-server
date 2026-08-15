@@ -49,6 +49,10 @@ interface StringKeyed {
   [key: string]: any
 }
 
+// Opaque handle for consumers: context branches of the cache as returned
+// by getMatchingContexts and consumed by getCachedDeltasForContexts.
+export type CachedContexts = StringKeyed[]
+
 /**
  * Build a `<label>.<src>` → `<label>.<canName>` map from the Signal K
  * sources summary tree.
@@ -1511,8 +1515,43 @@ export default class DeltaCache {
     return result.concat(Array.from(byPath.values()))
   }
 
+  // Enumerate the context branches matching contextFilter. Subscribe
+  // handling evaluates the filter once per context via this method and
+  // reuses the result across every subscribed path, instead of paying
+  // O(paths × contexts) by re-scanning the whole cache per path. The
+  // returned array holds live references into the cache — hand it to
+  // getCachedDeltasForContexts within the same synchronous task, before
+  // ingestion can add or expire contexts.
+  getMatchingContexts(contextFilter: ContextMatcher): CachedContexts {
+    const contextNodes: StringKeyed[] = []
+    for (const type in this.cache) {
+      const contextsOfType: StringKeyed = this.cache[type]
+      for (const id in contextsOfType) {
+        const context = `${type}.${id}` as Context
+        if (contextFilter({ context })) {
+          contextNodes.push(contextsOfType[id])
+        }
+      }
+    }
+    return contextNodes
+  }
+
   getCachedDeltas(
     contextFilter: ContextMatcher,
+    user?: string,
+    key?: string,
+    sourcePolicy?: 'preferred' | 'all'
+  ) {
+    return this.getCachedDeltasForContexts(
+      this.getMatchingContexts(contextFilter),
+      user,
+      key,
+      sourcePolicy
+    )
+  }
+
+  getCachedDeltasForContexts(
+    contextNodes: CachedContexts,
     user?: string,
     key?: string,
     sourcePolicy?: 'preferred' | 'all'
@@ -1524,34 +1563,26 @@ export default class DeltaCache {
     const keyParts: string[] = key ? key.split('.') : []
 
     const deltas: NormalizedDelta[] = []
-    for (const type in this.cache) {
-      const contextsOfType: StringKeyed = this.cache[type]
-      for (const id in contextsOfType) {
-        const context = `${type}.${id}` as Context
-        if (!contextFilter({ context })) {
-          continue
+    for (const contextNode of contextNodes) {
+      if (key === undefined) {
+        findDeltas(contextNode, deltas)
+      } else if (key === '') {
+        // An empty-path subscription targets values stored at the
+        // context root (e.g. mmsi, name), which live intermixed with
+        // nested path branches. Collect every cached delta and keep
+        // only those whose own path is empty. Testing `if (key)` here
+        // would treat '' as "no key" and leak every path into the
+        // bootstrap snapshot.
+        findDeltas(contextNode, deltas, hasEmptyPath)
+      } else {
+        let node: StringKeyed | undefined = contextNode
+        for (let i = 0; i < keyParts.length; i++) {
+          node = node?.[keyParts[i]]
         }
-        const contextNode: StringKeyed = contextsOfType[id]
-        if (key === undefined) {
-          findDeltas(contextNode, deltas)
-        } else if (key === '') {
-          // An empty-path subscription targets values stored at the
-          // context root (e.g. mmsi, name), which live intermixed with
-          // nested path branches. Collect every cached delta and keep
-          // only those whose own path is empty. Testing `if (key)` here
-          // would treat '' as "no key" and leak every path into the
-          // bootstrap snapshot.
-          findDeltas(contextNode, deltas, hasEmptyPath)
-        } else {
-          let node: StringKeyed | undefined = contextNode
-          for (let i = 0; i < keyParts.length; i++) {
-            node = node?.[keyParts[i]]
-          }
-          if (node) {
-            for (const akey in node) {
-              if (akey !== 'meta') {
-                deltas.push(node[akey])
-              }
+        if (node) {
+          for (const akey in node) {
+            if (akey !== 'meta') {
+              deltas.push(node[akey])
             }
           }
         }

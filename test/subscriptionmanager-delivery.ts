@@ -54,7 +54,10 @@ function mockApp(bundle: StreamBundle, cached: Delta[] = []) {
   return {
     streambundle: bundle,
     selfContext: SELF_CONTEXT,
-    deltaCache: { getCachedDeltas: () => cached },
+    deltaCache: {
+      getMatchingContexts: () => [],
+      getCachedDeltasForContexts: () => cached
+    },
     securityStrategy: {
       filterReadDelta: (_user: unknown, delta: Delta) => delta,
       shouldFilterDeltas: () => false
