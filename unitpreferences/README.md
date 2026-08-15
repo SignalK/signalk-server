@@ -10,7 +10,8 @@ unitpreferences/
 ├── categories.json                  # Category → SI unit mapping
 ├── default-categories.json          # Default category assignments for paths
 ├── standard-units-definitions.json  # Unit conversion formulas
-├── custom-units-definitions.json    # Custom unit definitions (created on demand)
+├── custom-units-definitions.json    # User-added unit definitions (ships a sample)
+├── custom-categories.json           # User-added categories (ships a sample)
 └── presets/
     ├── metric.json                  # Built-in: Metric (SI)
     ├── imperial-us.json             # Built-in: Imperial (US)
@@ -37,10 +38,13 @@ Maps category names to their base SI units. Used to validate that a path's units
 
 ```json
 {
-  "temperature": "K",
-  "speed": "m/s",
-  "distance": "m",
-  ...
+  "categoryToBaseUnit": {
+    "temperature": "K",
+    "speed": "m/s",
+    "distance": "m",
+    ...
+  },
+  "coreCategories": ["speed", "temperature", "pressure", ...]
 }
 ```
 
@@ -82,7 +86,13 @@ Defines all unit conversions. Each SI unit has conversion formulas to display un
 
 ### custom-units-definitions.json
 
-User-defined unit conversions that extend or override standard definitions. Created when users add custom conversions via the API.
+User-defined unit conversions that extend or override the standard definitions. Ships a sample `MB` group to copy from. The API writes user additions to the copy in the configuration directory, never to this one.
+
+### custom-categories.json
+
+User-defined categories, each mapped to its base SI unit, merged into the `categoryToBaseUnit` map of `categories.json`. Ships the sample `Memory` category that the `MB` group serves.
+
+Both files, and `config.json`, are copied into the configuration directory on first start. A copy that is already there is never overwritten, on upgrade or otherwise, so anything shipped here becomes the starting state of a new installation only.
 
 ### Preset Files (presets/\*.json)
 
