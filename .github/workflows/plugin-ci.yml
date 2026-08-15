@@ -171,6 +171,13 @@ jobs:
           # `set -e -o pipefail` shell; stdout is still valid JSON either way.
           AUDIT_JSON=$(npm audit --json 2>/dev/null || true)
           printf '%s' "$AUDIT_JSON" | node -e '
+            const fs = require("fs");
+            function summary(line) {
+              console.log(line);
+              if (process.env.GITHUB_STEP_SUMMARY) {
+                fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "### Dependency audit\n\n" + line + "\n");
+              }
+            }
             let input = "";
             process.stdin.on("data", (chunk) => { input += chunk; });
             process.stdin.on("end", () => {
@@ -187,7 +194,7 @@ jobs:
               // all-clear, so surface it distinctly instead of falling
               // through to the normal count logic below.
               if (data.error) {
-                console.log("npm audit could not run: " + (data.error.summary || JSON.stringify(data.error)));
+                summary("⚠️ npm audit could not run: " + (data.error.summary || JSON.stringify(data.error)));
                 return;
               }
               if (!data.metadata || !data.metadata.vulnerabilities) {
@@ -201,13 +208,18 @@ jobs:
               const low = v.low || 0;
               const total = critical + high + moderate + low;
               if (total === 0) {
-                console.log("npm audit: no known vulnerabilities");
+                summary("✅ No known vulnerabilities.");
                 return;
               }
               console.log(
                 "::warning::npm audit found " + total + " known vulnerabilit" + (total === 1 ? "y" : "ies") +
                 " in dependencies (critical: " + critical + ", high: " + high + ", moderate: " + moderate + ", low: " + low + "). " +
                 "Run npm audit locally for details, and npm audit fix where a safe upgrade exists."
+              );
+              summary(
+                "⚠️ **" + total + " known vulnerabilit" + (total === 1 ? "y" : "ies") + "** in dependencies " +
+                "(critical: " + critical + ", high: " + high + ", moderate: " + moderate + ", low: " + low + "). " +
+                "Run `npm audit` locally for details, and `npm audit fix` where a safe upgrade exists."
               );
             });
           '
@@ -235,12 +247,19 @@ jobs:
   #  Desktop platforms matrix: Linux x64, Linux arm64, macOS, Windows
   # ════════════════════════════════════════════════════════════
   desktop:
+    # No "/" in this name (unlike armv7's "armv7 (Cerbo GX) / Node 20" below,
+    # which is a single non-matrix job with nothing to disambiguate) — the
+    # Actions sidebar's compact matrix-job list appears to extract only the
+    # last "/"-delimited segment of a custom matrix name, which collapsed
+    # every OS down to a bare "Node 22"/"Node 24"/"Node 26" with no way to
+    # tell them apart. Matches "Build (Node 24)"'s existing parenthetical
+    # style above instead.
     name: >-
       ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
           matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
           matrix.os == 'macos-15' && 'macOS' ||
           matrix.os == 'windows-latest' && 'Windows' ||
-          matrix.os }} / Node ${{ matrix.node }}
+          matrix.os }} (Node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}
     needs: build
     timeout-minutes: 15
@@ -274,6 +293,13 @@ jobs:
 
       - name: Validate plugin package.json
         id: validate-pkg
+        # Pure static analysis of package.json/source files — the result
+        # cannot differ by OS or Node version, so running it on all 12
+        # desktop combinations is 12x redundant work and, worse, 12x
+        # duplicate ::warning:: annotations for the exact same finding.
+        # Runs on one representative combination; a failure there still
+        # fails the overall desktop matrix (and ci-status) the same way.
+        if: matrix.os == 'ubuntu-latest' && matrix.node == fromJson(inputs.node-versions)[0]
         shell: bash
         run: |
           cat << 'VALIDATE' > /tmp/validate-pkg.js
@@ -469,6 +495,9 @@ jobs:
           }
 
           warnings.forEach(w => console.log('::warning::' + w));
+          if (process.env.GITHUB_OUTPUT) {
+            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'warning-count=' + warnings.length + '\n');
+          }
           if (errors.length > 0) {
             errors.forEach(e => console.log('::error::' + e));
             process.exit(1);
@@ -680,8 +709,10 @@ jobs:
           }
 
           // Basic JSON Schema structure check (rjsf compatibility)
+          let schemaWarningCount = 0;
           if (!schema.type && !schema.properties && !schema.oneOf && !schema.anyOf) {
             console.log('::warning::' + label + ' has no type, properties, oneOf, or anyOf — is this a valid JSON Schema?');
+            schemaWarningCount++;
           }
 
           // Check for JSON-hostile values that would be silently dropped or
@@ -724,6 +755,9 @@ jobs:
             process.exit(1);
           }
 
+          if (process.env.GITHUB_OUTPUT) {
+            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'warning-count=' + schemaWarningCount + '\n');
+          }
           console.log(label + ' is a valid JSON Schema object');
           process.exit(0);
           SCHEMACHECK
@@ -1068,6 +1102,10 @@ jobs:
 
       - name: Scan for deprecated and misused SignalK APIs
         id: deprecated-api
+        # Same reasoning as "Validate plugin package.json" above — pure
+        # static source-file analysis, platform/Node-invariant, so it
+        # only needs to run once instead of 12x duplicating every finding.
+        if: matrix.os == 'ubuntu-latest' && matrix.node == fromJson(inputs.node-versions)[0]
         shell: bash
         run: |
           cat << 'APISCAN' > /tmp/check-api-usage.js
@@ -1317,6 +1355,10 @@ jobs:
           notices.forEach(n => console.log('::notice::' + n));
           warnings.forEach(w => console.log('::warning::' + w));
           errors.forEach(e => console.log('::error::' + e));
+
+          if (process.env.GITHUB_OUTPUT) {
+            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'warning-count=' + warnings.length + '\n');
+          }
 
           if (errors.length > 0) {
             console.log('');
@@ -1771,10 +1813,13 @@ jobs:
         shell: bash
         env:
           VALIDATE_PKG: ${{ steps.validate-pkg.outcome }}
+          VALIDATE_PKG_WARNINGS: ${{ steps.validate-pkg.outputs.warning-count }}
           VALIDATE_ENTRY: ${{ steps.validate-entry.outcome }}
           VALIDATE_SCHEMA: ${{ steps.validate-schema.outcome }}
+          VALIDATE_SCHEMA_WARNINGS: ${{ steps.validate-schema.outputs.warning-count }}
           LIFECYCLE_CHECK: ${{ steps.lifecycle-check.outcome }}
           DEPRECATED_API: ${{ steps.deprecated-api.outcome }}
+          DEPRECATED_API_WARNINGS: ${{ steps.deprecated-api.outputs.warning-count }}
           PACK_CHECK: ${{ steps.pack-check.outcome }}
           APPSTORE_CHECK: ${{ steps.appstore-check.outcome }}
           # When coverage-command is set, steps.tests is skipped and the
@@ -1799,6 +1844,21 @@ jobs:
             esac
           }
 
+          # A step's `outcome` is "success" even when it logged ::warning::
+          # annotations — only exit 1 changes it. Without this, a check that
+          # found real problems (missing CHANGELOG, deprecated API usage,
+          # etc.) reports a flat "pass" here, and the only place the
+          # warnings themselves are visible is the Annotations panel at the
+          # very bottom of the run page — easy to miss entirely.
+          result() {
+            local outcome="$1" count="${2:-0}"
+            if [ "$outcome" = "success" ] && [ "$count" -gt 0 ] 2>/dev/null; then
+              echo "⚠️ $count warning$([ "$count" != "1" ] && echo s)"
+            else
+              icon "$outcome"
+            fi
+          }
+
           PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
           PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
 
@@ -1807,11 +1867,11 @@ jobs:
             echo ""
             echo "| Check | Result |"
             echo "|-------|--------|"
-            echo "| package.json valid | $(icon "$VALIDATE_PKG") |"
+            echo "| package.json valid | $(result "$VALIDATE_PKG" "$VALIDATE_PKG_WARNINGS") |"
             echo "| Entry point exports function | $(icon "$VALIDATE_ENTRY") |"
-            echo "| plugin.schema() valid | $(icon "$VALIDATE_SCHEMA") |"
+            echo "| plugin.schema() valid | $(result "$VALIDATE_SCHEMA" "$VALIDATE_SCHEMA_WARNINGS") |"
             echo "| start/stop/restart lifecycle | $(icon "$LIFECYCLE_CHECK") |"
-            echo "| API usage (no deprecated/internal) | $(icon "$DEPRECATED_API") |"
+            echo "| API usage (no deprecated/internal) | $(result "$DEPRECATED_API" "$DEPRECATED_API_WARNINGS") |"
             echo "| npm pack includes all files | $(icon "$PACK_CHECK") |"
             echo "| App Store compatible (no native addons) | $(icon "$APPSTORE_CHECK") |"
             echo "| Tests / coverage | $(icon "$TESTS") |"
@@ -2360,7 +2420,11 @@ jobs:
             echo "- **React version** — Plugins with webapp keywords must use React >= 19 for Module Federation compatibility"
             echo "- **Stray files** — Build/test does not leave untracked files in the repo"
             echo ""
-            echo "See the individual job summaries above for per-platform details."
+            echo "**⚠️ next to a check below means it passed but found something worth fixing** —"
+            echo "package.json/schema/API-usage checks report a warning count instead of a bare"
+            echo "pass when they have non-blocking findings (missing CHANGELOG, deprecated API"
+            echo "usage, etc.). See the individual job summaries above for per-platform details"
+            echo "and the actual warning text."
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [[ "$INTEGRATION_RESULT" == "skipped" ]]; then
