@@ -64,7 +64,7 @@ interface GATTClaim {
 }
 
 const DEFAULT_BLE_SETTINGS: BLESettings = {
-  localBluetoothManaged: true,
+  localBluetoothManaged: false,
   localAdapters: [],
   localMaxGATTSlots: 3
 }

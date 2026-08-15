@@ -2,7 +2,7 @@
 /**
  * Local BLE Provider — wraps BlueZ via @naugehyde/node-ble as a standard
  * BLE provider.  Registered automatically by BLEApi when the
- * `localBluetoothManaged` setting is enabled (default: true on Linux).
+ * `localBluetoothManaged` setting is enabled (default: false).
  */
 
 import { createDebug } from '../../debug'
