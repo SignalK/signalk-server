@@ -218,6 +218,19 @@ export interface ProviderUserLookup {
 }
 
 /**
+ * Thrown by ExternalUserService.createUser when the username is already
+ * taken. Lets provisioning distinguish a lost creation race (retry with
+ * another candidate) from storage failures (propagate).
+ */
+export class UsernameConflictError extends Error {
+  constructor(username: string) {
+    super(`Username already exists: ${username}`)
+    this.name = 'UsernameConflictError'
+    Error.captureStackTrace(this, UsernameConflictError)
+  }
+}
+
+/**
  * Generic user service interface for external authentication providers.
  * Named generically to support future auth providers beyond OIDC.
  *
@@ -232,7 +245,10 @@ export interface ExternalUserService {
   /** Find a user by username (for collision detection) */
   findUserByUsername(username: string): Promise<ExternalUser | null>
 
-  /** Create a new user */
+  /**
+   * Create a new user. The uniqueness check and the insert must be atomic;
+   * rejects with UsernameConflictError if the username is already taken.
+   */
   createUser(user: ExternalUser): Promise<void>
 
   /** Update an existing user's type and/or provider data */

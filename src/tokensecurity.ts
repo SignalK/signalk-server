@@ -74,7 +74,8 @@ import {
   ProviderUserLookup,
   PartialOIDCConfig,
   OIDCError,
-  OIDC_DEFAULTS
+  OIDC_DEFAULTS,
+  UsernameConflictError
 } from './oidc'
 import { SERVERROUTESPREFIX } from './constants'
 import { ICallback } from './types'
@@ -335,6 +336,12 @@ function tokenSecurityFactory(
     },
 
     async createUser(externalUser: ExternalUser): Promise<void> {
+      // Check and insert with no await between them, so concurrent
+      // provisioning requests cannot both claim the same username.
+      if (options.users.some((u) => u.username === externalUser.username)) {
+        throw new UsernameConflictError(externalUser.username)
+      }
+
       const newUser: User = {
         username: externalUser.username,
         type: externalUser.type

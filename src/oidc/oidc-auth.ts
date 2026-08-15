@@ -24,7 +24,8 @@ import {
   ExternalUserService,
   ExternalUser,
   STATE_COOKIE_NAME,
-  STATE_MAX_AGE_MS
+  STATE_MAX_AGE_MS,
+  UsernameConflictError
 } from './types'
 import { isOIDCEnabled } from './config'
 import {
@@ -156,6 +157,38 @@ function isSafeRelativeUrl(url: unknown): url is string {
  * current group memberships. This allows permission changes to take effect
  * when group assignments change in the identity provider.
  */
+const SUB_SUFFIX_LENGTH = 8
+const MAX_USERNAME_ATTEMPTS = 100
+
+/**
+ * Find a username no stored record claims yet.
+ *
+ * Callers reach this only when no record matches the identity's sub+issuer, so
+ * any record holding the preferred name belongs to someone else — providers do
+ * not guarantee that preferred_username is unique, and reusing it would create
+ * records that no username-keyed operation can tell apart. The subject
+ * disambiguates; a numeric suffix covers subjects sharing a prefix.
+ */
+async function findFreeUsername(
+  preferred: string,
+  sub: string,
+  deps: Pick<OIDCAuthDependencies, 'userService'>
+): Promise<string> {
+  if (!(await deps.userService.findUserByUsername(preferred))) {
+    return preferred
+  }
+
+  const withSub = `${preferred}-${sub.substring(0, SUB_SUFFIX_LENGTH)}`
+  for (let attempt = 0; attempt < MAX_USERNAME_ATTEMPTS; attempt++) {
+    const candidate = attempt === 0 ? withSub : `${withSub}-${attempt}`
+    if (!(await deps.userService.findUserByUsername(candidate))) {
+      return candidate
+    }
+  }
+
+  throw new Error(`Could not derive a free username from ${preferred}`)
+}
+
 export async function findOrCreateOIDCUser(
   userInfo: OIDCUserInfo,
   oidcConfig: OIDCConfig,
@@ -223,36 +256,50 @@ export async function findOrCreateOIDCUser(
     return null
   }
 
-  // Create new user
+  // Create new user. findFreeUsername and createUser are separate awaits, so
+  // a concurrent request can claim the candidate in between; createUser
+  // rejects the loser, which rechecks the identity and tries again. Every
+  // retry means another request created a user, so the loop terminates; the
+  // bound mirrors the candidate space findFreeUsername can allocate.
   const username =
     userInfo.preferredUsername || userInfo.email || `oidc-${userInfo.sub}`
 
-  // Check for username collision with non-OIDC user
-  const existingUser = await deps.userService.findUserByUsername(username)
-  // Only consider it a collision if the existing user is NOT an OIDC user
-  const isCollision = existingUser && !existingUser.providerData
-  const finalUsername = isCollision
-    ? `${username}-${userInfo.sub.substring(0, 8)}`
-    : username
+  for (let attempt = 0; attempt < MAX_USERNAME_ATTEMPTS; attempt++) {
+    const finalUsername = await findFreeUsername(username, userInfo.sub, deps)
 
-  const newUser: ExternalUser = {
-    username: finalUsername,
-    type: mappedPermission,
-    providerData: { oidc: oidcMetadata }
+    const newUser: ExternalUser = {
+      username: finalUsername,
+      type: mappedPermission,
+      providerData: { oidc: oidcMetadata }
+    }
+
+    debug(
+      `OIDC: creating new user ${newUser.username} with permission ${newUser.type}`
+    )
+
+    try {
+      await deps.userService.createUser(newUser)
+      return newUser
+    } catch (err) {
+      if (!(err instanceof UsernameConflictError)) {
+        console.error('Failed to create OIDC user:', err)
+        throw err
+      }
+      // The request that won the race may have provisioned this very
+      // identity (e.g. a double-submitted login); reuse its record.
+      const existing = await deps.userService.findUserByProvider({
+        provider: 'oidc',
+        criteria: { sub: userInfo.sub, issuer }
+      })
+      if (existing) {
+        return existing
+      }
+    }
   }
 
-  debug(
-    `OIDC: creating new user ${newUser.username} with permission ${newUser.type}`
+  throw new Error(
+    `Could not create a user for ${username} after ${MAX_USERNAME_ATTEMPTS} attempts`
   )
-
-  try {
-    await deps.userService.createUser(newUser)
-  } catch (err) {
-    console.error('Failed to create OIDC user:', err)
-    throw err
-  }
-
-  return newUser
 }
 
 /**
