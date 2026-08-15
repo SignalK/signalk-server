@@ -127,7 +127,32 @@ jobs:
           else
             npm install --ignore-scripts
           fi
-          npm rebuild
+          # Bare `npm rebuild` (no args) also re-runs the *root* package's
+          # own preinstall/install/postinstall scripts, not just dependency
+          # native addons — rebuild doesn't honor --ignore-scripts the way
+          # install does. Naming only the dependencies that actually need
+          # rebuilding avoids touching the root package's scripts at all,
+          # and skips the call entirely when nothing needs compiling.
+          NATIVE_MODULES=$(node -e '
+            const fs = require("fs");
+            const path = require("path");
+            function scan(dir, prefix) {
+              const names = [];
+              if (!fs.existsSync(dir)) return names;
+              for (const entry of fs.readdirSync(dir)) {
+                if (entry === ".package-lock.json" || entry === ".bin") continue;
+                const full = path.join(dir, entry);
+                if (entry.startsWith("@")) { names.push(...scan(full, entry + "/")); continue; }
+                if (fs.existsSync(path.join(full, "binding.gyp"))) names.push(prefix + entry);
+                names.push(...scan(path.join(full, "node_modules"), ""));
+              }
+              return names;
+            }
+            process.stdout.write(scan("node_modules", "").join(" "));
+          ')
+          if [ -n "$NATIVE_MODULES" ]; then
+            npm rebuild $NATIVE_MODULES
+          fi
         shell: bash
 
       - name: Build
@@ -418,7 +443,32 @@ jobs:
             echo "No package-lock.json found — using npm install instead of npm ci"
             npm_install_with_retry "npm install --ignore-scripts"
           fi
-          npm rebuild
+          # Bare `npm rebuild` (no args) also re-runs the *root* package's
+          # own preinstall/install/postinstall scripts, not just dependency
+          # native addons — rebuild doesn't honor --ignore-scripts the way
+          # install does. Naming only the dependencies that actually need
+          # rebuilding avoids touching the root package's scripts at all,
+          # and skips the call entirely when nothing needs compiling.
+          NATIVE_MODULES=$(node -e '
+            const fs = require("fs");
+            const path = require("path");
+            function scan(dir, prefix) {
+              const names = [];
+              if (!fs.existsSync(dir)) return names;
+              for (const entry of fs.readdirSync(dir)) {
+                if (entry === ".package-lock.json" || entry === ".bin") continue;
+                const full = path.join(dir, entry);
+                if (entry.startsWith("@")) { names.push(...scan(full, entry + "/")); continue; }
+                if (fs.existsSync(path.join(full, "binding.gyp"))) names.push(prefix + entry);
+                names.push(...scan(path.join(full, "node_modules"), ""));
+              }
+              return names;
+            }
+            process.stdout.write(scan("node_modules", "").join(" "));
+          ')
+          if [ -n "$NATIVE_MODULES" ]; then
+            npm rebuild $NATIVE_MODULES
+          fi
         shell: bash
 
       - name: Validate plugin entry point
@@ -1749,7 +1799,31 @@ jobs:
               else
                 npm install --ignore-scripts
               fi
-              npm rebuild
+              # Bare npm rebuild (no args) also re-runs the *root* package's
+              # own preinstall/install/postinstall scripts, not just
+              # dependency native addons. Naming only the dependencies that
+              # actually need rebuilding avoids that, and skips the call
+              # entirely when nothing needs compiling.
+              NATIVE_MODULES=$(node -e "
+                const fs = require(\"fs\");
+                const path = require(\"path\");
+                function scan(dir, prefix) {
+                  const names = [];
+                  if (!fs.existsSync(dir)) return names;
+                  for (const entry of fs.readdirSync(dir)) {
+                    if (entry === \".package-lock.json\" || entry === \".bin\") continue;
+                    const full = path.join(dir, entry);
+                    if (entry.startsWith(\"@\")) { names.push(...scan(full, entry + \"/\")); continue; }
+                    if (fs.existsSync(path.join(full, \"binding.gyp\"))) names.push(prefix + entry);
+                    names.push(...scan(path.join(full, \"node_modules\"), \"\"));
+                  }
+                  return names;
+                }
+                process.stdout.write(scan(\"node_modules\", \"\").join(\" \"));
+              ")
+              if [ -n "$NATIVE_MODULES" ]; then
+                npm rebuild $NATIVE_MODULES
+              fi
 
               echo "── Checking for native addons ──"
               node -e "
@@ -1920,7 +1994,32 @@ jobs:
           else
             npm install --ignore-scripts
           fi
-          npm rebuild
+          # Bare `npm rebuild` (no args) also re-runs the *root* package's
+          # own preinstall/install/postinstall scripts, not just dependency
+          # native addons — rebuild doesn't honor --ignore-scripts the way
+          # install does. Naming only the dependencies that actually need
+          # rebuilding avoids touching the root package's scripts at all,
+          # and skips the call entirely when nothing needs compiling.
+          NATIVE_MODULES=$(node -e '
+            const fs = require("fs");
+            const path = require("path");
+            function scan(dir, prefix) {
+              const names = [];
+              if (!fs.existsSync(dir)) return names;
+              for (const entry of fs.readdirSync(dir)) {
+                if (entry === ".package-lock.json" || entry === ".bin") continue;
+                const full = path.join(dir, entry);
+                if (entry.startsWith("@")) { names.push(...scan(full, entry + "/")); continue; }
+                if (fs.existsSync(path.join(full, "binding.gyp"))) names.push(prefix + entry);
+                names.push(...scan(path.join(full, "node_modules"), ""));
+              }
+              return names;
+            }
+            process.stdout.write(scan("node_modules", "").join(" "));
+          ')
+          if [ -n "$NATIVE_MODULES" ]; then
+            npm rebuild $NATIVE_MODULES
+          fi
 
       - name: Install plugin into SignalK
         run: |
