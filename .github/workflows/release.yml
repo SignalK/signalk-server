@@ -36,6 +36,13 @@ jobs:
   build_and_publish:
     if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
+    # npm moves the `latest` dist-tag on every publish unless --tag says
+    # otherwise, and does so even when the version itself is a prerelease.
+    # Passing the channel explicitly keeps a beta release off `latest` for
+    # every package in this job. releasing.md requires prerelease tags to
+    # contain "beta"; --tag latest is npm's own default for everything else.
+    env:
+      NPM_DIST_TAG: ${{ contains(github.ref, 'beta') && 'beta' || 'latest' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -56,7 +63,7 @@ jobs:
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui-dependencies/package.json)
           if ! npm view @signalk/server-admin-ui-dependencies@$LOCAL_VERSION version &>/dev/null; then
             cd packages/server-admin-ui-dependencies
-            npm publish --access public
+            npm publish --access public --tag "$NPM_DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -66,7 +73,7 @@ jobs:
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui/package.json)
           if ! npm view @signalk/server-admin-ui@$LOCAL_VERSION version &>/dev/null; then
             cd packages/server-admin-ui
-            npm publish --access public
+            npm publish --access public --tag "$NPM_DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -76,7 +83,7 @@ jobs:
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-api/package.json)
           if ! npm view @signalk/server-api@$LOCAL_VERSION version &>/dev/null; then
             cd packages/server-api
-            npm publish --access public
+            npm publish --access public --tag "$NPM_DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -86,7 +93,7 @@ jobs:
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)
           if ! npm view @signalk/streams@$LOCAL_VERSION version &>/dev/null; then
             cd packages/streams
-            npm publish --access public
+            npm publish --access public --tag "$NPM_DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -96,7 +103,7 @@ jobs:
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)
           if ! npm view @signalk/resources-provider@$LOCAL_VERSION version &>/dev/null; then
             cd packages/resources-provider-plugin
-            npm publish --access public
+            npm publish --access public --tag "$NPM_DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -106,7 +113,7 @@ jobs:
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/path-metadata/package.json)
           if ! npm view @signalk/path-metadata@$LOCAL_VERSION version &>/dev/null; then
             cd packages/path-metadata
-            npm publish --access public
+            npm publish --access public --tag "$NPM_DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -116,7 +123,7 @@ jobs:
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/typedoc-theme/package.json)
           if ! npm view @signalk/typedoc-signalk-theme@$LOCAL_VERSION version &>/dev/null; then
             cd packages/typedoc-theme
-            npm publish --access public
+            npm publish --access public --tag "$NPM_DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -126,23 +133,13 @@ jobs:
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/assemblyscript-plugin-sdk/package.json)
           if ! npm view @signalk/assemblyscript-plugin-sdk@$LOCAL_VERSION version &>/dev/null; then
             cd packages/assemblyscript-plugin-sdk
-            npm publish --access public
+            npm publish --access public --tag "$NPM_DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Set tag variable
-        id: vars
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-
       - name: Publish signalk-server
-        run: |
-          if [[ "${{ steps.vars.outputs.tag }}" == *beta* ]];
-            then
-              npm publish --tag beta
-            else
-              npm publish
-          fi
+        run: npm publish --tag "$NPM_DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
