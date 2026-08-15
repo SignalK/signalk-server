@@ -942,6 +942,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
               idPrefix={idPrefix}
               siUnit={siUnit}
               category={category}
+              targetUnit={localMeta.displayUnits?.targetUnit}
               presetDetails={presetDetails}
               unitDefinitions={unitDefinitions}
             />
@@ -1242,29 +1243,30 @@ interface ZonesProps {
   idPrefix: string
   siUnit: string
   category: string | undefined
+  targetUnit: string | undefined
   presetDetails: ReturnType<typeof usePresetDetails>
   unitDefinitions: UnitDefinitions | null
 }
 
-function Zones({
+export function Zones({
   zones,
   isEditing,
   setZones,
   idPrefix,
   siUnit,
   category,
+  targetUnit,
   presetDetails,
   unitDefinitions
 }: ZonesProps) {
   const availableUnits = getAvailableUnits(siUnit, unitDefinitions)
 
-  // Default display unit: preset's target unit for the category, or SI unit
-  const presetTargetUnit = category
-    ? (presetDetails?.categories?.[category]?.targetUnit ?? '')
-    : ''
+  const preferredUnit =
+    targetUnit ||
+    (category ? (presetDetails?.categories?.[category]?.targetUnit ?? '') : '')
   const defaultUnit =
-    presetTargetUnit && availableUnits.some((u) => u.unit === presetTargetUnit)
-      ? presetTargetUnit
+    preferredUnit && availableUnits.some((u) => u.unit === preferredUnit)
+      ? preferredUnit
       : siUnit
 
   const [displayUnit, setDisplayUnit] = useState(defaultUnit)
@@ -1334,6 +1336,7 @@ function Zones({
                 Unit:
               </Form.Text>
               <Form.Select
+                aria-label="Zone unit"
                 size="sm"
                 style={{ width: 'auto', display: 'inline-block' }}
                 value={displayUnit}

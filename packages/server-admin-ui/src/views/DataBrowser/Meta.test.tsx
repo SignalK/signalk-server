@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { CategorySelect } from './Meta'
+import { CategorySelect, Zones } from './Meta'
 import type { PresetDetails, UnitDefinitions } from '../../utils/unitConversion'
 
 const DEFINITIONS: UnitDefinitions = {
@@ -166,5 +166,32 @@ describe('CategorySelect', () => {
       inverseFormula: 'value * 1',
       symbol: 'm/s'
     })
+  })
+})
+
+const renderZones = (targetUnit?: string) =>
+  render(
+    <Zones
+      zones={[]}
+      isEditing={true}
+      setZones={() => {}}
+      idPrefix="test"
+      siUnit="m/s"
+      category="speed"
+      targetUnit={targetUnit}
+      presetDetails={PRESET}
+      unitDefinitions={DEFINITIONS}
+    />
+  )
+
+describe('Zones', () => {
+  it('edits thresholds in the unit the path asks for', () => {
+    renderZones('m/s')
+    expect(screen.getByLabelText('Zone unit')).toHaveValue('m/s')
+  })
+
+  it('edits thresholds in the preset unit when the path asks for none', () => {
+    renderZones()
+    expect(screen.getByLabelText('Zone unit')).toHaveValue('kn')
   })
 })
