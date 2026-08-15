@@ -15,11 +15,20 @@ export function atomicWriteFileSync(filePath: string, data: string): void {
 
 export async function atomicWriteFile(
   filePath: string,
-  data: string
+  data: string,
+  mode?: number
 ): Promise<void> {
   const tmp = filePath + '.tmp'
   try {
-    await fs.promises.writeFile(tmp, data)
+    // mode on writeFile only applies when the file is created; the chmod
+    // covers a tmp file left over from a crashed earlier attempt. Doing
+    // both before the rename means a permission failure surfaces while
+    // nothing has been persisted at the final path, and the file never
+    // exists anywhere with looser permissions than asked.
+    await fs.promises.writeFile(tmp, data, { mode })
+    if (mode !== undefined) {
+      await fs.promises.chmod(tmp, mode)
+    }
     await fs.promises.rename(tmp, filePath)
   } catch (err) {
     try {

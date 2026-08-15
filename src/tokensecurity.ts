@@ -214,6 +214,7 @@ interface TokenSecurityStrategy extends SecurityStrategy {
   authorizeWS: (req: WSConnection) => void
   shouldAllowWrite: (req: Request, delta: Delta) => boolean
   canAuthorizeWS: () => boolean
+  externalUserService: ExternalUserService
 }
 
 /**
@@ -352,6 +353,12 @@ function tokenSecurityFactory(
           options,
           (err: Error | null) => {
             if (err) {
+              // Keep memory consistent with disk: an unsaved record would
+              // authenticate until the next config reload silently drops it.
+              const index = options.users.indexOf(newUser)
+              if (index !== -1) {
+                options.users.splice(index, 1)
+              }
               reject(err)
             } else {
               resolve()
@@ -370,6 +377,9 @@ function tokenSecurityFactory(
         throw new Error(`User not found: ${username}`)
       }
 
+      const previousType = user.type
+      const previousOidc = user.oidc
+
       if (updates.type) {
         user.type = updates.type
       }
@@ -384,6 +394,10 @@ function tokenSecurityFactory(
           options,
           (err: Error | null) => {
             if (err) {
+              // Keep memory consistent with disk so a failed save does not
+              // leave the record with permissions that were never stored.
+              user.type = previousType
+              user.oidc = previousOidc
               reject(err)
             } else {
               resolve()
@@ -393,6 +407,8 @@ function tokenSecurityFactory(
       })
     }
   }
+
+  strategy.externalUserService = externalUserService
 
   if (process.env.ADMINUSER) {
     const adminUserParts = process.env.ADMINUSER.split(':')

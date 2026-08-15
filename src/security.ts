@@ -326,6 +326,9 @@ export function pathForSecurityConfig(app: WithConfig) {
   return path.join(app.config.configPath, 'security.json')
 }
 
+/** security.json holds the secret key, so only its owner may read it. */
+export const SECURITY_CONFIG_FILE_MODE = 0o600
+
 export function saveSecurityConfig(
   app: WithSecurityStrategy & WithConfig,
   data: any,
@@ -338,9 +341,12 @@ export function saveSecurityConfig(
     }
   } else {
     const configPath = pathForSecurityConfig(app)
-    atomicWriteFile(configPath, JSON.stringify(data, null, 2))
+    atomicWriteFile(
+      configPath,
+      JSON.stringify(data, null, 2),
+      SECURITY_CONFIG_FILE_MODE
+    )
       .then(() => {
-        chmodSync(configPath, '600')
         if (callback) {
           callback(null)
         }
