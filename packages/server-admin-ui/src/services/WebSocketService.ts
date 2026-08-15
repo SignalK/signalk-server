@@ -51,11 +51,13 @@ export class WebSocketService {
     }
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    // The metadata editor has to tell a unit the path pinned from one the
+    // preset lends it, and the server names that only when asked.
     const url =
       proto +
       '://' +
       window.location.host +
-      `/signalk/v1/stream?serverevents=all&subscribe=none&sendMeta=all`
+      `/signalk/v1/stream?serverevents=all&subscribe=none&sendMeta=all&displayUnitsOverride=true`
 
     this.updateState({ status: 'connecting' })
 

@@ -43,7 +43,8 @@ const renderSelect = (
   )
 
 // What the server sends back for a path that follows the preset: the target
-// unit comes with the conversion it resolved.
+// unit comes with the conversion it resolved, and the override it names is
+// empty. An older server names no override at all.
 const RESOLVED_PRESET_UNITS = {
   category: 'speed',
   targetUnit: 'kn',
@@ -113,6 +114,16 @@ describe('CategorySelect', () => {
     expect(targetSelect()).toHaveValue('m/s')
   })
 
+  it('shows the default as chosen when the named override is empty', () => {
+    renderSelect({ ...RESOLVED_PRESET_UNITS, override: {} })
+    expect(targetSelect()).toHaveValue('')
+  })
+
+  it('shows a pinned unit as chosen even when the preset agrees with it', () => {
+    renderSelect({ ...RESOLVED_PRESET_UNITS, override: { targetUnit: 'kn' } })
+    expect(targetSelect()).toHaveValue('kn')
+  })
+
   it('does not turn the preset unit into an override on a category change', () => {
     const setValue = vi.fn()
     renderSelect(RESOLVED_PRESET_UNITS, setValue)
@@ -152,6 +163,37 @@ describe('CategorySelect', () => {
       formula: 'value * 1.94384',
       inverseFormula: 'value * 0.514444',
       symbol: 'kn'
+    })
+  })
+
+  it('keeps a display format the path owns across a unit change', () => {
+    const setValue = vi.fn()
+    renderSelect(
+      {
+        ...RESOLVED_PRESET_UNITS,
+        displayFormat: '0.0',
+        override: { displayFormat: '0.0' }
+      },
+      setValue
+    )
+    fireEvent.change(targetSelect()!, { target: { value: 'm/s' } })
+    expect(setValue).toHaveBeenCalledWith({
+      category: 'speed',
+      targetUnit: 'm/s',
+      displayFormat: '0.0'
+    })
+  })
+
+  it('drops a display format the preset lends the path', () => {
+    const setValue = vi.fn()
+    renderSelect(
+      { ...RESOLVED_PRESET_UNITS, displayFormat: '0.0', override: {} },
+      setValue
+    )
+    fireEvent.change(targetSelect()!, { target: { value: 'm/s' } })
+    expect(setValue).toHaveBeenCalledWith({
+      category: 'speed',
+      targetUnit: 'm/s'
     })
   })
 
