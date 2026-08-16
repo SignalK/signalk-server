@@ -167,7 +167,7 @@ export default function Header() {
         </NavDropdown>{' '}
         {loginStatus.status === 'loggedIn' &&
           loginStatus.userLevel === 'admin' && (
-            <Nav.Item className="d-none d-sm-block">
+            <Nav.Item className="d-none d-sm-block px-3">
               <Nav.Link href="#/" onClick={handleRestart}>
                 <FontAwesomeIcon
                   icon={faCircleNotch}
@@ -179,7 +179,7 @@ export default function Header() {
             </Nav.Item>
           )}
         {loginStatus.status === 'loggedIn' && (
-          <Nav.Item className="d-none d-sm-block">
+          <Nav.Item className="d-none d-sm-block px-3">
             <Nav.Link href="#/" onClick={handleLogout}>
               <FontAwesomeIcon icon={faLock} /> Logout
             </Nav.Link>
