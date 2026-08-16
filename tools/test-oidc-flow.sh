@@ -192,8 +192,8 @@ log "Step 0: Checking Signal K OIDC status..."
 LOGIN_STATUS=$(curl "${CURL_OPTS[@]}" "$SIGNALK_URL/skServer/loginStatus")
 echo "$LOGIN_STATUS" > step0_login_status.json
 
-OIDC_ENABLED=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('oidcEnabled', False))" 2>/dev/null || echo "false")
-OIDC_LOGIN_URL=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('oidcLoginUrl', ''))" 2>/dev/null || echo "")
+OIDC_ENABLED=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(any(p['id']=='oidc' for p in json.load(sys.stdin).get('authProviders', [])))" 2>/dev/null || echo "false")
+OIDC_LOGIN_URL=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p['id']=='oidc']; print(p[0]['loginUrl'] if p else '')" 2>/dev/null || echo "")
 
 if [[ "$OIDC_ENABLED" == "True" || "$OIDC_ENABLED" == "true" ]]; then
     log_success "OIDC is enabled"
@@ -232,11 +232,11 @@ else
 fi
 
 # Check OIDC state cookie
-if grep -q "OIDC_STATE" cookies.txt; then
-    COOKIE_DOMAIN=$(grep "OIDC_STATE" cookies.txt | awk '{print $1}')
-    log_success "OIDC_STATE cookie set (domain: $COOKIE_DOMAIN)"
+if grep -q "SK_AUTH_HANDSHAKE" cookies.txt; then
+    COOKIE_DOMAIN=$(grep "SK_AUTH_HANDSHAKE" cookies.txt | awk '{print $1}')
+    log_success "SK_AUTH_HANDSHAKE cookie set (domain: $COOKIE_DOMAIN)"
 else
-    log_warn "OIDC_STATE cookie not found - may be stored differently"
+    log_warn "SK_AUTH_HANDSHAKE cookie not found - may be stored differently"
 fi
 
 #######################################
@@ -375,7 +375,7 @@ HTTP_CODE=$(curl "${CURL_OPTS[@]}" -c cookies.txt -b cookies.txt \
 
 # Check for error in redirect
 FINAL_REDIRECT=$(get_header step5_headers.txt "location")
-if [[ "$FINAL_REDIRECT" == *"oidcError=true"* ]]; then
+if [[ "$FINAL_REDIRECT" == *"authError=true"* ]]; then
     ERROR_MSG=$(echo "$FINAL_REDIRECT" | sed -n 's/.*message=\([^&]*\).*/\1/p' | python3 -c "import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read()))" 2>/dev/null || echo "unknown")
     log_error "OIDC callback failed: $ERROR_MSG"
     add_result "Step 5: FAIL - $ERROR_MSG"
