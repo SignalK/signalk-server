@@ -8,6 +8,13 @@ function uniqueTmpPath(filePath: string): string {
   return `${filePath}.${process.pid}.${tmpCounter++}.tmp`
 }
 
+/**
+ * Synchronous variant for boot-time migrations and other paths that run
+ * before the event loop serves traffic. It cannot join the async write
+ * queue, so it must not overlap an in-flight atomicWriteFile to the same
+ * path — the pending async write would rename its older content over the
+ * sync result.
+ */
 export function atomicWriteFileSync(filePath: string, data: string): void {
   const tmp = uniqueTmpPath(filePath)
   try {
