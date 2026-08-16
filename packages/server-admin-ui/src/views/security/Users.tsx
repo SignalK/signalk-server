@@ -24,11 +24,18 @@ import EnableSecurity from './EnableSecurity'
 
 type UserType = 'readonly' | 'readwrite' | 'admin'
 
+interface ExternalIdentity {
+  provider: string
+  subject: string
+  issuer?: string
+  email?: string
+  name?: string
+}
+
 interface User {
   userId: string
   type?: UserType
-  email?: string
-  isOIDC?: boolean
+  identity?: ExternalIdentity
   isNew?: boolean
   password?: string
   confirmPassword?: string
@@ -210,17 +217,20 @@ export default function Users() {
                       <tr key={user.userId} onClick={() => userClicked(user)}>
                         <td>
                           {user.userId}
-                          {user.email && (
+                          {user.identity?.email && (
                             <small className="text-muted ms-2">
-                              ({user.email})
+                              ({user.identity.email})
                             </small>
                           )}
                         </td>
                         <td>{convertType(user.type)}</td>
                         <td>
-                          {user.isOIDC ? (
-                            <Badge bg="info" title="Authenticated via SSO">
-                              SSO
+                          {user.identity ? (
+                            <Badge
+                              bg="info"
+                              title={`Authenticated via ${user.identity.provider}`}
+                            >
+                              {user.identity.provider}
                             </Badge>
                           ) : (
                             <Badge bg="secondary">Local</Badge>
@@ -244,9 +254,9 @@ export default function Users() {
               <Card>
                 <Card.Header>
                   <FontAwesomeIcon icon={faAlignJustify} /> User
-                  {selectedUser.isOIDC && (
+                  {selectedUser.identity && (
                     <Badge bg="info" className="ms-2">
-                      SSO User
+                      {selectedUser.identity.provider}
                     </Badge>
                   )}
                 </Card.Header>
@@ -271,23 +281,58 @@ export default function Users() {
                       )}
                     </Col>
                   </Form.Group>
-                  {selectedUser.email && (
-                    <Form.Group as={Row} className="mb-3">
-                      <Col md="2">
-                        <Form.Label>Email</Form.Label>
-                      </Col>
-                      <Col xs="12" md="9">
-                        <Form.Label>{selectedUser.email}</Form.Label>
-                      </Col>
-                    </Form.Group>
+                  {selectedUser.identity && (
+                    <>
+                      {selectedUser.identity.name && (
+                        <Form.Group as={Row} className="mb-3">
+                          <Col md="2">
+                            <Form.Label>Name</Form.Label>
+                          </Col>
+                          <Col xs="12" md="9">
+                            <Form.Label>
+                              {selectedUser.identity.name}
+                            </Form.Label>
+                          </Col>
+                        </Form.Group>
+                      )}
+                      {selectedUser.identity.email && (
+                        <Form.Group as={Row} className="mb-3">
+                          <Col md="2">
+                            <Form.Label>Email</Form.Label>
+                          </Col>
+                          <Col xs="12" md="9">
+                            <Form.Label>
+                              {selectedUser.identity.email}
+                            </Form.Label>
+                          </Col>
+                        </Form.Group>
+                      )}
+                      <Form.Group as={Row} className="mb-3">
+                        <Col md="2">
+                          <Form.Label>Identity</Form.Label>
+                        </Col>
+                        <Col xs="12" md="9">
+                          <Form.Label>
+                            <code>{selectedUser.identity.subject}</code>
+                            {selectedUser.identity.issuer && (
+                              <span className="text-muted">
+                                {' '}
+                                at {selectedUser.identity.issuer}
+                              </span>
+                            )}
+                          </Form.Label>
+                        </Col>
+                      </Form.Group>
+                    </>
                   )}
-                  {selectedUser.isOIDC ? (
+                  {selectedUser.identity ? (
                     <Form.Group as={Row} className="mb-3">
                       <Col md="12">
                         <Form.Text muted>
                           <FontAwesomeIcon icon={faCircleInfo} /> This user
-                          authenticates via Single Sign-On. Password cannot be
-                          set for SSO users.
+                          authenticates via {selectedUser.identity.provider}.
+                          Password cannot be set for externally authenticated
+                          users.
                         </Form.Text>
                       </Col>
                     </Form.Group>

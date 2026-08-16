@@ -50,7 +50,7 @@ export default function Login() {
   const loginStatus = useLoginStatus()
 
   const urlParams = getHashParams()
-  const initialOidcError = urlParams.has('oidcError')
+  const initialAuthError = urlParams.has('authError')
     ? urlParams.get('message') || 'SSO login failed'
     : null
 
@@ -72,7 +72,7 @@ export default function Login() {
       }
       return { error }
     },
-    { error: initialOidcError }
+    { error: initialAuthError }
   )
 
   const prevLoginStatusRef = useRef(loginStatus.status)
@@ -81,8 +81,8 @@ export default function Login() {
   const shouldSkipAutoLogin = useCallback((): boolean => {
     // Check URL params to prevent redirect loops and provide escape hatch
     const params = getHashParams()
-    // Skip if OIDC callback returned an error
-    if (params.has('oidcError')) {
+    // Skip if the provider callback returned an error
+    if (params.has('authError')) {
       return true
     }
     // Skip if user explicitly requested no auto-login (escape hatch)
@@ -93,10 +93,12 @@ export default function Login() {
   }, [])
 
   useEffect(() => {
+    const autoLoginProvider = loginStatus.authProviders?.find(
+      (provider) => provider.autoLogin
+    )
     const shouldAutoLogin =
       loginStatus.status === 'notLoggedIn' &&
-      loginStatus.oidcEnabled &&
-      loginStatus.oidcAutoLogin &&
+      autoLoginProvider !== undefined &&
       !loginStatus.noUsers &&
       !shouldSkipAutoLogin()
 
@@ -104,9 +106,9 @@ export default function Login() {
     const shouldRedirect =
       shouldAutoLogin && (isFirstRenderRef.current || statusChanged)
 
-    if (shouldRedirect && loginStatus.oidcLoginUrl) {
+    if (shouldRedirect) {
       window.location.href = appendRedirectParam(
-        loginStatus.oidcLoginUrl,
+        autoLoginProvider.loginUrl,
         getRedirectTarget()
       )
     }
@@ -228,37 +230,37 @@ export default function Login() {
                         </Col>
                       </Row>
                     </form>
-                    {loginStatus.oidcEnabled && (
-                      <>
-                        <Row className="mt-4 mb-3">
-                          <Col className="text-center">
-                            <span className="text-muted">
-                              &#8212; or &#8212;
-                            </span>
-                          </Col>
-                        </Row>
-                        <Row>
-                          <Col className="text-center">
-                            <Button
-                              onClick={() => {
-                                if (loginStatus.oidcLoginUrl) {
-                                  window.location.href = appendRedirectParam(
-                                    loginStatus.oidcLoginUrl,
-                                    getRedirectTarget()
-                                  )
-                                }
-                              }}
-                              variant="secondary"
-                              className="px-4"
-                            >
-                              <FontAwesomeIcon icon={faRightToBracket} />{' '}
-                              {(loginStatus.oidcProviderName as string) ||
-                                'SSO Login'}
-                            </Button>
-                          </Col>
-                        </Row>
-                      </>
-                    )}
+                    {loginStatus.authProviders &&
+                      loginStatus.authProviders.length > 0 && (
+                        <>
+                          <Row className="mt-4 mb-3">
+                            <Col className="text-center">
+                              <span className="text-muted">
+                                &#8212; or &#8212;
+                              </span>
+                            </Col>
+                          </Row>
+                          {loginStatus.authProviders.map((provider) => (
+                            <Row key={provider.id} className="mb-2">
+                              <Col className="text-center">
+                                <Button
+                                  onClick={() => {
+                                    window.location.href = appendRedirectParam(
+                                      provider.loginUrl,
+                                      getRedirectTarget()
+                                    )
+                                  }}
+                                  variant="secondary"
+                                  className="px-4"
+                                >
+                                  <FontAwesomeIcon icon={faRightToBracket} />{' '}
+                                  {provider.name}
+                                </Button>
+                              </Col>
+                            </Row>
+                          ))}
+                        </>
+                      )}
                   </Card.Body>
                 </Card>
               </CardGroup>
