@@ -192,8 +192,7 @@ log "Step 0: Checking Signal K OIDC status..."
 LOGIN_STATUS=$(curl "${CURL_OPTS[@]}" "$SIGNALK_URL/skServer/loginStatus")
 echo "$LOGIN_STATUS" > step0_login_status.json
 
-OIDC_ENABLED=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(any(p['id']=='oidc' for p in json.load(sys.stdin).get('authProviders', [])))" 2>/dev/null || echo "false")
-OIDC_LOGIN_URL=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p['id']=='oidc']; print(p[0]['loginUrl'] if p else '')" 2>/dev/null || echo "")
+OIDC_ENABLED=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(json.dumps(any(p.get('id')=='oidc' for p in json.load(sys.stdin).get('authProviders', []))))" 2>/dev/null || echo "false")
 
 if [[ "$OIDC_ENABLED" == "True" || "$OIDC_ENABLED" == "true" ]]; then
     log_success "OIDC is enabled"
