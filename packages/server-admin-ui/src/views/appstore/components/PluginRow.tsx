@@ -62,7 +62,7 @@ const PluginRow: React.FC<PluginRowProps> = ({
           <div className="d-flex align-items-center gap-2 flex-wrap">
             <NavLink
               to={`${detailLinkBase}/${encodeURIComponent(app.name)}`}
-              className="text-dark text-decoration-none fw-semibold text-truncate"
+              className="text-body text-decoration-none fw-semibold text-truncate"
             >
               {app.displayName || app.name}
             </NavLink>

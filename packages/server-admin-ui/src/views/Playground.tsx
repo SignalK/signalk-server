@@ -64,7 +64,7 @@ function N2kJsonPanel({ n2kData }: { n2kData: unknown[] }) {
         style={{
           overflowY: 'scroll',
           maxHeight: '60vh',
-          border: '1px solid',
+          border: '1px solid var(--sk-card-border-color)',
           padding: '5px'
         }}
       >
@@ -422,7 +422,7 @@ const Playground: React.FC = () => {
                         style={{
                           overflowY: 'scroll',
                           maxHeight: '60vh',
-                          border: '1px solid',
+                          border: '1px solid var(--sk-card-border-color)',
                           padding: '5px'
                         }}
                       >
@@ -486,7 +486,7 @@ const Playground: React.FC = () => {
                         style={{
                           overflowY: 'scroll',
                           maxHeight: '60vh',
-                          border: '1px solid',
+                          border: '1px solid var(--sk-card-border-color)',
                           padding: '5px'
                         }}
                       >
@@ -501,7 +501,7 @@ const Playground: React.FC = () => {
                         style={{
                           overflowY: 'scroll',
                           maxHeight: '60vh',
-                          border: '1px solid',
+                          border: '1px solid var(--sk-card-border-color)',
                           padding: '5px'
                         }}
                       >
