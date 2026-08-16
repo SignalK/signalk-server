@@ -118,7 +118,7 @@
           left: 0.75rem;
           top: 50%;
           transform: translateY(-50%);
-          color: var(--bs-gray-600);
+          color: var(--bs-secondary-color);
         }
         &__input {
           padding: 0.375rem 0.75rem;
@@ -258,8 +258,8 @@
   font-size: 0.75rem;
   padding: 0.15rem 0.5rem;
   border-radius: 0.5rem;
-  background: var(--bs-gray-100);
-  color: var(--bs-gray-700);
+  background-color: var(--bs-secondary-bg);
+  color: var(--bs-secondary-color);
   white-space: nowrap;
 
   &--installed {
@@ -275,7 +275,7 @@
 
   &--available {
     background: transparent;
-    color: var(--bs-gray-600);
+    color: var(--bs-secondary-color);
     font-family: var(--bs-font-monospace);
   }
 
@@ -379,7 +379,7 @@
 .plugin-card__stats {
   width: 56px;
   min-width: 56px;
-  border-left: 1px solid var(--bs-gray-100);
+  border-left: 1px solid var(--bs-border-color);
   margin-left: 12px;
   padding-left: 10px;
   display: flex;
@@ -388,7 +388,7 @@
   gap: 6px;
   font-family: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
   font-size: 11px;
-  color: var(--bs-gray-600);
+  color: var(--bs-secondary-color);
 }
 
 .plugin-card__metric {
@@ -508,13 +508,13 @@
 
 .plugin-detail {
   &__back {
-    border-bottom: 1px solid var(--bs-gray-100);
+    border-bottom: 1px solid var(--bs-border-color);
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
   }
 
   &__back-link {
-    color: var(--bs-gray-600);
+    color: var(--bs-secondary-color);
     text-decoration: none;
     font-size: 0.85rem;
 
@@ -619,7 +619,7 @@
   }
 
   &__no-screenshots {
-    border-top: 1px solid var(--bs-gray-100);
+    border-top: 1px solid var(--bs-border-color);
     padding-top: 16px;
   }
 

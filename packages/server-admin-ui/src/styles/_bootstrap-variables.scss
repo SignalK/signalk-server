@@ -72,8 +72,6 @@ $enable-rounded: true;
 
 $sk-body-tertiary-bg-light: #e4e5e6;
 
-$sk-primary-light: $blue;
-
 $sk-card-bg-light: $white;
 $sk-card-border-color-light: $gray-200;
 $sk-card-cap-bg-light: $gray-100;
@@ -87,7 +85,6 @@ $sk-footer-bg-light: $gray-100;
 $sk-sidebar-color-light: $white;
 $sk-sidebar-bg-light: $gray-800;
 $sk-sidebar-active-bg-light: #33444c;
-$sk-sidebar-border-color-light: transparent;
 
 $sk-progress-bg-light: $gray-100;
 
@@ -104,7 +101,7 @@ $sk-switch-bg-light: $white;
 
 $sk-nav-color-light: $gray-800;
 $sk-nav-bg-light: $white;
-$sk-nav-border-color-light: var(--bs-card-border-color);
+$sk-nav-border-color-light: var(--sk-card-border-color);
 $sk-nav-bottom-color-light: $white;
 
 $sk-plugin-config-array-item-bg-light: aliceblue;
@@ -133,15 +130,14 @@ $sk-footer-bg-dark: $sk-bg-dark;
 $sk-sidebar-color-dark: #e3e3e4;
 $sk-sidebar-bg-dark: $sk-bg-dark;
 $sk-sidebar-active-bg-dark: #2b303c;
-$sk-sidebar-border-color-dark: $sk-border-color-dark;
 
 $sk-progress-bg-dark: $gray-800;
 
 $sk-input-bg-dark: $sk-bg-dark;
 $sk-input-focus-bg-dark: $sk-bg-dark;
-$sk-input-group-addon-bg-dark: $gray-100;
+$sk-input-group-addon-bg-dark: $sk-card-cap-bg-dark;
 $sk-input-border-color-dark: $sk-border-color-dark;
-$sk-input-group-addon-border-color-dark: $gray-200;
+$sk-input-group-addon-border-color-dark: $sk-border-color-dark;
 
 $sk-dropdown-border-color-dark: $sk-border-color-dark;
 $sk-dropdown-divider-bg-dark: $sk-border-color-dark;
@@ -181,7 +177,6 @@ $body-tertiary-bg-dark: $sk-body-tertiary-bg-dark;
   --sk-sidebar-color: #{$sk-sidebar-color-light};
   --sk-sidebar-bg: #{$sk-sidebar-bg-light};
   --sk-sidebar-active-bg: #{$sk-sidebar-active-bg-light};
-  --sk-sidebar-border-color: #{$sk-sidebar-border-color-light};
 
   --sk-progress-bg: #{$sk-progress-bg-light};
 
@@ -218,7 +213,6 @@ $body-tertiary-bg-dark: $sk-body-tertiary-bg-dark;
   --sk-sidebar-color: #{$sk-sidebar-color-dark};
   --sk-sidebar-bg: #{$sk-sidebar-bg-dark};
   --sk-sidebar-active-bg: #{$sk-sidebar-active-bg-dark};
-  --sk-sidebar-border-color: #{$sk-sidebar-border-color-dark};
 
   --sk-progress-bg: #{$sk-progress-bg-dark};
 

@@ -322,7 +322,7 @@ form.rjsf {
   }
 
   &.pg-card-dirty {
-    border-left-color: $orange-400;
+    border-left-color: var(--bs-warning-text-emphasis);
   }
 }
 
@@ -367,7 +367,7 @@ form.rjsf {
   background: rgb(var(--bs-warning-rgb), 0.12);
   border: 1px solid rgb(var(--bs-warning-rgb), 0.3);
   font-size: 0.875rem;
-  color: $orange-800;
+  color: var(--bs-warning-text-emphasis);
 }
 
 .pg-three-col {
@@ -760,7 +760,7 @@ form.rjsf {
   // darker neutral tint so partial coverage is visible without implying a
   // warning.
   &.is-partial {
-    color: var(--bs-gray-700);
+    color: var(--bs-secondary-color);
     background: rgb(var(--bs-black-rgb), 0.08);
   }
 }
@@ -825,7 +825,7 @@ form.rjsf {
   padding: 0.35rem 0.5rem;
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
-  color: $orange-800;
+  color: var(--bs-warning-text-emphasis);
   background: rgb(var(--bs-warning-rgb), 0.18);
   border: 1px solid rgb(var(--bs-warning-rgb), 0.45);
   border-radius: 0.25rem;
