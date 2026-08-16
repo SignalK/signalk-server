@@ -1372,16 +1372,23 @@ function handleRealtimeConnection(
     sendLatestDeltas(app, app.deltaCache, app.selfContext, spark)
   }
 
+  // Server events are not accumulated by the BackpressureManager (they
+  // are not deltas), but they share the socket with it. Without this
+  // check a client that cannot keep up with a burst of server events
+  // — or a plugin emitting them in a loop — grows the send buffer
+  // without bound and never hits the overflow limit deltas already
+  // enforce.
+  const writeEvent = (event: Delta) => {
+    spark.write(event)
+    spark.backpressureManager?.assertBufferSize()
+  }
+
   if (spark.query.serverevents === 'all') {
     spark.hasServerEvents = true
     startServerEvents(
       app,
       spark,
-      wrapWithVerifyWS(
-        app.securityStrategy,
-        spark,
-        spark.write.bind(spark) as (delta: Delta) => void
-      )
+      wrapWithVerifyWS(app.securityStrategy, spark, writeEvent)
     )
   }
 
@@ -1389,11 +1396,7 @@ function handleRealtimeConnection(
     startEvents(
       app,
       spark,
-      wrapWithVerifyWS(
-        app.securityStrategy,
-        spark,
-        spark.write.bind(spark) as (delta: Delta) => void
-      ),
+      wrapWithVerifyWS(app.securityStrategy, spark, writeEvent),
       spark.query.events
     )
   }
