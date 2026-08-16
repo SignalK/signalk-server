@@ -12,13 +12,16 @@ interface Harness {
   users: User[]
   persisted: User[][]
   failNextPersist: (error: Error) => void
+  /** Simulates the owner reloading the list from disk while a save is in flight */
+  replaceListDuringNextPersist: () => void
   provisioner: UserProvisioner
 }
 
 function harness(initial: User[] = []): Harness {
-  const users = [...initial]
+  let users = [...initial]
   const persisted: User[][] = []
   let failure: Error | undefined
+  let replaceOnce = false
   const store = createIdentityUserStore({
     users: () => users,
     persist: async (next) => {
@@ -28,14 +31,24 @@ function harness(initial: User[] = []): Harness {
         throw err
       }
       persisted.push(structuredClone(next))
+      if (replaceOnce) {
+        // a reload from disk that raced the save and does not yet contain it
+        replaceOnce = false
+        users = structuredClone(users)
+      }
     }
   })
   return {
     store,
-    users,
+    get users() {
+      return users
+    },
     persisted,
     failNextPersist: (error) => {
       failure = error
+    },
+    replaceListDuringNextPersist: () => {
+      replaceOnce = true
     },
     provisioner: new UserProvisioner(store)
   }
@@ -155,28 +168,13 @@ describe('UserProvisioner', () => {
     ])
   })
 
-  it('updates permission and identity details of a known user and persists that first', async () => {
+  it('updates permission and identity details of a known user, persisting first', async () => {
     const h = harness()
     const user = await h.provisioner.resolve('oidc', true, {
       subject: 'sub-1',
       permission: 'readonly',
       email: 'old@example.com'
     })
-    h.failNextPersist(new Error('EROFS'))
-    let error: Error | undefined
-    try {
-      await h.provisioner.resolve('oidc', true, {
-        subject: 'sub-1',
-        permission: 'admin',
-        email: 'new@example.com'
-      })
-    } catch (err) {
-      error = err as Error
-    }
-    expect(error?.message).to.equal('EROFS')
-    expect(user.type).to.equal('readonly')
-    expect(user.identity?.email).to.equal('old@example.com')
-
     await h.provisioner.resolve('oidc', true, {
       subject: 'sub-1',
       permission: 'admin',
@@ -185,6 +183,46 @@ describe('UserProvisioner', () => {
     expect(user.type).to.equal('admin')
     expect(user.identity?.email).to.equal('new@example.com')
     expect(h.persisted).to.have.length(2)
+    expect(h.persisted[1][0].type).to.equal('admin')
+  })
+
+  it('still logs the user in when a refresh of email or name cannot be written', async () => {
+    const h = harness()
+    const user = await h.provisioner.resolve('oidc', true, {
+      subject: 'sub-1',
+      permission: 'readonly',
+      email: 'old@example.com'
+    })
+    h.failNextPersist(new Error('EROFS'))
+    const again = await h.provisioner.resolve('oidc', true, {
+      subject: 'sub-1',
+      permission: 'readonly',
+      email: 'new@example.com'
+    })
+    expect(again).to.equal(user)
+    expect(user.identity?.email).to.equal('old@example.com')
+    expect(h.persisted).to.have.length(1)
+  })
+
+  it('refuses the login when a permission change cannot be written', async () => {
+    const h = harness()
+    const user = await h.provisioner.resolve('oidc', true, {
+      subject: 'sub-1',
+      permission: 'admin'
+    })
+    h.failNextPersist(new Error('EROFS'))
+    let error: Error | undefined
+    try {
+      await h.provisioner.resolve('oidc', true, {
+        subject: 'sub-1',
+        permission: 'readonly'
+      })
+    } catch (err) {
+      error = err as Error
+    }
+    expect(error?.message).to.equal('EROFS')
+    expect(user.type).to.equal('admin')
+    expect(h.persisted).to.have.length(1)
   })
 
   it('does not write when nothing changed', async () => {
@@ -210,6 +248,25 @@ describe('UserProvisioner', () => {
     const user = await h.provisioner.resolve('oidc', true, { subject: 'sub-1' })
     expect(user.type).to.equal('admin')
     expect(h.persisted).to.deep.equal([])
+  })
+
+  it('applies writes to the list that is live after the save, not the one captured before it', async () => {
+    const h = harness()
+    h.replaceListDuringNextPersist()
+    const created = await h.provisioner.resolve('oidc', true, {
+      subject: 'sub-1',
+      permission: 'readonly'
+    })
+    expect(h.users).to.deep.equal([created])
+
+    h.replaceListDuringNextPersist()
+    await h.provisioner.resolve('oidc', true, {
+      subject: 'sub-1',
+      permission: 'admin'
+    })
+    expect(h.users).to.have.length(1)
+    expect(h.users[0].type).to.equal('admin')
+    expect(h.persisted).to.have.length(2)
   })
 
   it('rejects unknown identities when auto-creation is off', async () => {

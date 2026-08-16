@@ -370,7 +370,7 @@ For production use, always run Signal K behind HTTPS. Cookies are marked as `Sec
 
 ### Login Endpoint
 
-```
+```text
 GET /signalk/v1/auth/oidc/login
 ```
 
@@ -384,7 +384,7 @@ Query parameters:
 
 ### Callback Endpoint
 
-```
+```text
 GET /signalk/v1/auth/oidc/callback
 ```
 
@@ -392,7 +392,7 @@ Handles the OIDC callback from the identity provider. Not called directly by use
 
 ### Logout Endpoint
 
-```
+```text
 GET /signalk/v1/auth/oidc/logout
 ```
 
@@ -400,7 +400,7 @@ Clears the Signal K session and, when the provider publishes an `end_session_end
 
 ### Login Status
 
-```
+```text
 GET /skServer/loginStatus
 ```
 
