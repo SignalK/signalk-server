@@ -1701,7 +1701,7 @@ jobs:
           # strip it before packing rather than depend on --ignore-scripts
           # alone to suppress it.
           cp package.json "$RUNNER_TEMP/package.json.orig"
-          trap 'mv "$RUNNER_TEMP/package.json.orig" package.json' EXIT
+          trap 'mv "$RUNNER_TEMP/package.json.orig" "$GITHUB_WORKSPACE/package.json"' EXIT
           node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));if(p.scripts)delete p.scripts.prepare;fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
           PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
           PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
@@ -2279,7 +2279,7 @@ jobs:
           # Strip it before packing rather than depend on --ignore-scripts
           # alone to suppress it.
           cp package.json "$RUNNER_TEMP/package.json.orig"
-          trap 'mv "$RUNNER_TEMP/package.json.orig" package.json' EXIT
+          trap 'mv "$RUNNER_TEMP/package.json.orig" "$GITHUB_WORKSPACE/package.json"' EXIT
           node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));if(p.scripts)delete p.scripts.prepare;fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
           PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
           PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
