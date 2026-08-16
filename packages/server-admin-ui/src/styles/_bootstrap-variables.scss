@@ -107,10 +107,6 @@ $sk-nav-bg-light: $white;
 $sk-nav-border-color-light: var(--bs-card-border-color);
 $sk-nav-bottom-color-light: $white;
 
-$sk-table-bg-light: $white;
-$sk-table-hover-bg-light: $gray-100;
-$sk-table-striped-bg-light: $gray-100;
-
 $sk-plugin-config-array-item-bg-light: aliceblue;
 
 //
@@ -156,10 +152,6 @@ $sk-nav-color-dark: #e3e3e4;
 $sk-nav-bg-dark: $sk-bg-dark;
 $sk-nav-border-color-dark: $sk-border-color-dark;
 $sk-nav-bottom-color-dark: $sk-bg-dark;
-
-$sk-table-bg-dark: #212631;
-$sk-table-hover-bg-dark: #32363f;
-$sk-table-striped-bg-dark: #2d313b;
 
 $sk-plugin-config-array-item-bg-dark: $gray-900;
 
@@ -209,10 +201,6 @@ $body-tertiary-bg-dark: $sk-body-tertiary-bg-dark;
   --sk-nav-border-color: #{$sk-nav-border-color-light};
   --sk-nav-bottom-color: #{$sk-nav-bottom-color-light};
 
-  --sk-table-bg: #{$sk-table-bg-light};
-  --sk-table-hover-bg: #{$sk-table-hover-bg-light};
-  --sk-table-striped-bg: #{$sk-table-striped-bg-light};
-
   --sk-plugin-config-array-item-bg: #{$sk-plugin-config-array-item-bg-light};
 }
 
@@ -250,10 +238,6 @@ $body-tertiary-bg-dark: $sk-body-tertiary-bg-dark;
   --sk-nav-border-color: #{$sk-nav-border-color-dark};
   --sk-nav-bottom-color: #{$sk-nav-bottom-color-dark};
 
-  --sk-table-bg: #{$sk-table-bg-dark};
-  --sk-table-hover-bg: #{$sk-table-hover-bg-dark};
-  --sk-table-striped-bg: #{$sk-table-striped-bg-dark};
-
   --sk-plugin-config-array-item-bg: #{$sk-plugin-config-array-item-bg-dark};
 }
 
@@ -287,12 +271,6 @@ $btn-secondary-border: $gray-300;
 // Progress bars
 
 $progress-bg: var(--sk-progress-bg);
-
-// Tables
-
-$table-bg: var(--sk-table-bg);
-$table-hover-bg: var(--sk-table-hover-bg);
-$table-striped-bg: var(--sk-table-striped-bg);
 
 // Forms
 

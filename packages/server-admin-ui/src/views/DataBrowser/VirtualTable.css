@@ -14,7 +14,7 @@
   grid-template-columns:
     minmax(150px, 1.5fr) minmax(120px, 2fr) minmax(80px, 0.8fr)
     minmax(120px, 1.2fr);
-  background-color: var(--sk-table-bg);
+  background-color: var(--bs-body-bg);
   border-bottom: 2px solid var(--bs-border-color);
   position: sticky;
   top: 55px; /* Fixed header height */
@@ -68,19 +68,19 @@
 }
 
 .virtual-table-row {
-  background-color: var(--sk-table-bg);
+  background-color: var(--bs-body-bg);
 }
 
 .virtual-table-row:hover {
-  background-color: var(--sk-table-hover-bg);
+  background-color: rgb(var(--bs-emphasis-color-rgb), 0.075);
 }
 
 .virtual-table-row.striped {
-  background-color: var(--sk-table-striped-bg);
+  background-color: rgb(var(--bs-emphasis-color-rgb), 0.05);
 }
 
 .virtual-table-row.striped:hover {
-  background-color: var(--sk-table-hover-bg);
+  background-color: rgb(var(--bs-emphasis-color-rgb), 0.075);
 }
 
 .virtual-table-cell {
@@ -192,7 +192,7 @@
   }
 
   .virtual-table-row.striped {
-    background-color: var(--sk-table-striped-bg);
+    background-color: rgb(var(--bs-emphasis-color-rgb), 0.05);
   }
 
   .virtual-table-cell {
