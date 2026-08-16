@@ -146,7 +146,7 @@
     "@signalk/app-dock": "^1.1.0",
     "@signalk/freeboard-sk": "^2.24.0",
     "@signalk/instrumentpanel": "0.x",
-    "@signalk/server-admin-ui": "^2.31.1",
+    "@signalk/server-admin-ui": "^2.31.2",
     "@signalk/set-system-time": "^1.5.0",
     "@signalk/signalk-to-nmea0183": "^1.18.0",
     "@signalk/udp-nmea-plugin": "^2.0.0",
