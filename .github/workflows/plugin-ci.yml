@@ -66,7 +66,7 @@ on:
         type: string
         default: '["22", "24", "26"]'
       build-node-version:
-        description: 'Node version used to Build the plugin'
+        description: 'Node version used to build the plugin'
         type: string
         default: '24'
       artifact-name-suffix:
@@ -124,6 +124,10 @@ jobs:
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v7
+        with:
+          # The build output tarball below includes .git; without this the
+          # persisted http.extraheader token would ship inside the artifact.
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -1697,10 +1701,10 @@ jobs:
           # strip it before packing rather than depend on --ignore-scripts
           # alone to suppress it.
           cp package.json "$RUNNER_TEMP/package.json.orig"
+          trap 'mv "$RUNNER_TEMP/package.json.orig" package.json' EXIT
           node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));if(p.scripts)delete p.scripts.prepare;fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
           PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
           PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
-          mv "$RUNNER_TEMP/package.json.orig" package.json
 
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
@@ -2109,7 +2113,7 @@ jobs:
             echo "**Environment**: Venus OS 3.70 emulation (QEMU armv7, Debian Bookworm, python3, make, g++)"
             echo ""
             if [[ "$RESULT" == "success" ]]; then
-              echo "Install, build, and tests completed successfully under armv7 emulation."
+              echo "Install and tests completed successfully under armv7 emulation (the plugin was built centrally)."
             else
               echo "The armv7 job **failed**. Your plugin may not work on 32-bit ARM devices (Cerbo GX, Raspberry Pi OS 32-bit)."
             fi
@@ -2275,10 +2279,10 @@ jobs:
           # Strip it before packing rather than depend on --ignore-scripts
           # alone to suppress it.
           cp package.json "$RUNNER_TEMP/package.json.orig"
+          trap 'mv "$RUNNER_TEMP/package.json.orig" package.json' EXIT
           node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));if(p.scripts)delete p.scripts.prepare;fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
           PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
           PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
-          mv "$RUNNER_TEMP/package.json.orig" package.json
           cd /tmp/sk-test
           # --ignore-scripts matches how the real SignalK server installs
           # plugins (src/modules.ts:223) — a required native addon that
@@ -2434,6 +2438,8 @@ jobs:
           # step outcome exists.
           ARMV7_RESULT: ${{ needs.armv7.outputs.advisory-outcome || needs.armv7.result }}
           INTEGRATION_RESULT: ${{ needs.signalk-integration.result }}
+          BUILD_NODE_VERSION: ${{ inputs.build-node-version }}
+          NODE_VERSIONS: ${{ inputs.node-versions }}
         shell: bash
         run: |
           icon() {
@@ -2464,8 +2470,9 @@ jobs:
             echo ""
             echo "| Job | Result | Notes |"
             echo "|-----|--------|-------|"
-            echo "| Build | $(icon "$BUILD_RESULT") | Node ${{ inputs.build-node-version }} — shared by all jobs below |"
-            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24, 26 |"
+            DESKTOP_NODES=$(node -e 'process.stdout.write(JSON.parse(process.env.NODE_VERSIONS).join(", "))')
+            echo "| Build | $(icon "$BUILD_RESULT") | Node $BUILD_NODE_VERSION — shared by all jobs below |"
+            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node $DESKTOP_NODES |"
             echo "| armv7 — Cerbo GX (QEMU) | $(icon "$ARMV7_RESULT") | Node 20 (Venus OS 3.70) — advisory, non-blocking |"
             if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
               echo "| SignalK integration | $(icon "$INTEGRATION_RESULT") | Server install + plugin load |"

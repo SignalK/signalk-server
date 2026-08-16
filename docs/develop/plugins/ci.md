@@ -86,6 +86,8 @@ nothing gets notified. This is a deliberate split — the blocking checks are th
 the plugin or the App Store listing outright; the advisory ones are best-practice nudges that
 don't stop the plugin from working.
 
+These lists summarize check severity for readers — the authoritative source is the workflow itself: [.github/workflows/plugin-ci.yml](https://github.com/SignalK/signalk-server/blob/master/.github/workflows/plugin-ci.yml). If this page and the workflow ever disagree, the workflow wins.
+
 **Blocking (fails the run):**
 
 - Missing `signalk-node-server-plugin` keyword, missing `main`/`exports`, or a missing/invalid `version`
@@ -157,7 +159,7 @@ jobs:
 
 ### Build once, test broadly
 
-The plugin is built exactly once — on `build-node-version`, `ubuntu-latest` — and every platform/Node combination below installs and tests that same build output, instead of rebuilding it. This means CI no longer verifies that `build-command` itself succeeds on Windows, macOS, or on Node versions other than `build-node-version` — only that the built output installs and runs correctly there. That's a deliberate trade: build failures are overwhelmingly Node/tooling-version issues, not OS issues, whereas install and runtime behavior (native addon compilation, path handling, ESM/CJS interop) genuinely varies by platform — that's where the matrix's breadth pays for itself. If your build process itself needs verifying across platforms or Node versions, that's no longer covered here.
+The plugin is built exactly once — on `build-node-version`, `ubuntu-latest` — and every platform/Node combination below installs and tests that same build output. CI therefore verifies that `build-command` succeeds only on `build-node-version`, and that the resulting output installs and runs correctly on every other platform and Node version. This is a deliberate trade: build failures are overwhelmingly Node/tooling-version issues, not OS issues, whereas install and runtime behavior (native addon compilation, path handling, ESM/CJS interop) genuinely varies by platform. If your build process itself needs verifying across platforms or Node versions, cover that in your own workflow.
 
 ### Formatting and coverage
 
