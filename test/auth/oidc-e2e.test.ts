@@ -225,9 +225,13 @@ describe('OpenID Connect login (e2e)', () => {
     })
   })
 
-  // The next two cases build on the alice record created above; the suite
-  // runs in order against one server.
   it('updates the permission of a known user from current groups without creating a duplicate', async () => {
+    op.user = {
+      sub: 'alice-sub',
+      idTokenClaims: { preferred_username: 'alice' },
+      userinfoClaims: { groups: ['crew'] }
+    }
+    await login(new Browser())
     op.user = {
       sub: 'alice-sub',
       idTokenClaims: { preferred_username: 'alice' },
@@ -244,6 +248,11 @@ describe('OpenID Connect login (e2e)', () => {
   })
 
   it('gives a second account with the same preferred username a distinct local name', async () => {
+    op.user = {
+      sub: 'alice-sub',
+      idTokenClaims: { preferred_username: 'alice' }
+    }
+    await login(new Browser())
     op.user = {
       sub: 'bobsub123',
       idTokenClaims: { preferred_username: 'alice' }
