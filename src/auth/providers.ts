@@ -43,7 +43,7 @@ export class AuthenticationProviderRegistry {
     }
     this.providers.set(provider.id, provider)
     this.passport.use(provider.id, provider.strategy as passport.Strategy)
-    debug(`registered provider ${provider.id}`)
+    debug.enabled && debug(`registered provider ${provider.id}`)
     return () => this.unregister(provider.id, provider)
   }
 
@@ -55,7 +55,7 @@ export class AuthenticationProviderRegistry {
     }
     this.providers.delete(id)
     this.passport.unuse(id)
-    debug(`unregistered provider ${id}`)
+    debug.enabled && debug(`unregistered provider ${id}`)
   }
 
   get(id: string): AuthenticationProvider | undefined {
@@ -226,7 +226,8 @@ export function registerAuthProviderRoutes(
               )
               req.session = {}
               deps.loginUser(req, res, user)
-              debug(`${provider.id}: ${user.username} logged in`)
+              debug.enabled &&
+                debug(`${provider.id}: ${user.username} logged in`)
               res.redirect(returnTo)
             },
             (provisioningError: Error) => {
@@ -274,9 +275,11 @@ export function registerAuthProviderRoutes(
       deps.clearSessionCookie(res)
       const postLogoutRedirect = safeRelativeUrlOr(req.query.redirect, '/')
       const provider = registry.get(req.params.providerId)
-      Promise.resolve(provider?.logoutUrl?.(req, postLogoutRedirect))
+      Promise.resolve()
+        .then(() => provider?.logoutUrl?.(req, postLogoutRedirect))
         .catch((err) => {
-          debug(`${req.params.providerId}: logout URL unavailable:`, err)
+          debug.enabled &&
+            debug(`${req.params.providerId}: logout URL unavailable:`, err)
           return undefined
         })
         .then((target) => res.redirect(target ?? postLogoutRedirect))
