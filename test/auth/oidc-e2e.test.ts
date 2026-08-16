@@ -444,12 +444,19 @@ describe('OpenID Connect login (e2e)', () => {
       expect(status.userLevel).to.equal('admin')
     })
 
-    it('is gone after the plugin unregisters it', async () => {
+    it('is gone after the plugin unregisters it, but its users can still log out', async () => {
+      const browser = new Browser()
+      await browser.navigate(`${sk}/signalk/v1/auth/instant/login`)
       unregister()
       const response = await fetch(`${sk}/signalk/v1/auth/instant/login`, {
         redirect: 'manual'
       })
       expect(response.status).to.equal(404)
+      const logout = await browser.fetch(
+        `${sk}/signalk/v1/auth/instant/logout?redirect=/bye`
+      )
+      expect(location(logout)).to.equal('/bye')
+      expect(browser.cookie(sk, 'JAUTHENTICATION')).to.equal(undefined)
       const status = await loginStatus(new Browser())
       expect(
         (status.authProviders as Array<{ id: string }>).map((p) => p.id)

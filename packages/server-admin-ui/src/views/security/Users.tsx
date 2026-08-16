@@ -41,6 +41,14 @@ interface User {
   confirmPassword?: string
 }
 
+// Records that share a user ID are told apart by their external identity
+function userRowKey(user: User): string {
+  const id = user.identity
+  return id
+    ? JSON.stringify([user.userId, id.provider, id.issuer, id.subject])
+    : user.userId
+}
+
 function convertType(type: UserType | undefined): string {
   if (type === 'readonly') {
     return 'Read Only'
@@ -138,7 +146,7 @@ export default function Users() {
     }
 
     const response = await fetch(
-      `${window.serverRoutesPrefix}/security/users/${selectedUser.userId}`,
+      `${window.serverRoutesPrefix}/security/users/${encodeURIComponent(selectedUser.userId)}`,
       {
         method: isNew ? 'POST' : 'PUT',
         headers: {
@@ -163,8 +171,21 @@ export default function Users() {
   const deleteUser = async () => {
     if (!selectedUser) return
 
+    // The server removes every record carrying the user ID
+    const sameId = (users ?? []).filter(
+      (u) => u.userId === selectedUser.userId
+    ).length
+    if (
+      sameId > 1 &&
+      !window.confirm(
+        `${sameId} records share the user ID "${selectedUser.userId}". Deleting removes all of them. Continue?`
+      )
+    ) {
+      return
+    }
+
     const response = await fetch(
-      `${window.serverRoutesPrefix}/security/users/${selectedUser.userId}`,
+      `${window.serverRoutesPrefix}/security/users/${encodeURIComponent(selectedUser.userId)}`,
       {
         method: 'DELETE',
         headers: {
@@ -217,7 +238,10 @@ export default function Users() {
                 <tbody>
                   {(users || []).map((user) => {
                     return (
-                      <tr key={user.userId} onClick={() => userClicked(user)}>
+                      <tr
+                        key={userRowKey(user)}
+                        onClick={() => userClicked(user)}
+                      >
                         <td>
                           {user.userId}
                           {user.identity?.email && (
