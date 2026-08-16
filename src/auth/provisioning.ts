@@ -119,9 +119,10 @@ export class UserProvisioner {
     if (existing) {
       const updates: Partial<Pick<User, 'type' | 'identity'>> = {}
       if (identity.permission && identity.permission !== existing.type) {
-        debug(
-          `${providerId}: ${existing.username} permission ${existing.type} -> ${identity.permission}`
-        )
+        debug.enabled &&
+          debug(
+            `${providerId}: ${existing.username} permission ${existing.type} -> ${identity.permission}`
+          )
         updates.type = identity.permission
       }
       if (!sameIdentityRecord(existing.identity, record)) {
@@ -158,7 +159,8 @@ export class UserProvisioner {
       type: identity.permission ?? DEFAULT_PERMISSION,
       identity: record
     }
-    debug(`${providerId}: creating user ${user.username} (${user.type})`)
+    debug.enabled &&
+      debug(`${providerId}: creating user ${user.username} (${user.type})`)
     await this.store.createUser(user)
     return user
   }
