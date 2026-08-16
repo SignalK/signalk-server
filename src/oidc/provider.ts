@@ -32,7 +32,7 @@ import type {
   ExternalIdentity
 } from '@signalk/server-api'
 import { createDebug } from '../debug'
-import { OIDCConfig } from './types'
+import { OIDC_DEFAULTS, OIDCConfig } from './types'
 import { mapGroupsToPermission } from './permission-mapping'
 
 const debug = createDebug('signalk-server:oidc')
@@ -275,7 +275,7 @@ export function createOIDCProvider(config: OIDCConfig): AuthenticationProvider {
 
   return {
     id: OIDC_PROVIDER_ID,
-    name: config.providerName,
+    name: config.providerName.trim() || OIDC_DEFAULTS.providerName,
     autoCreateUsers: config.autoCreateUsers,
     autoLogin: config.autoLogin,
     strategy: lazyStrategy(async () =>

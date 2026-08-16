@@ -370,7 +370,7 @@ plugin.start = (options) => {
 
 Optional settings: `autoCreateUsers: false` rejects identities without a local user; `autoLogin: true` sends visitors of the login page straight to the provider; `authenticateOptions` are passed to `passport.authenticate()` on the login leg (e.g. `scope`); `logoutUrl(req, postLogoutRedirect)` lets `/signalk/v1/auth/{id}/logout` end the session at the provider too. Registration requires security to be enabled and the provider is removed automatically when the plugin stops.
 
-The cookie carrying the strategy's state between the two legs is `SameSite=Lax`, so the provider must return the browser to the callback with a top-level GET (the default for OAuth 2.0 and OpenID Connect); cross-site `POST` callbacks such as `response_mode=form_post` or SAML bindings do not see it.
+The cookie carrying the strategy's state between the two legs is `SameSite=Lax`, so the provider must return the browser to the callback with a top-level GET (the default for OAuth 2.0 and OpenID Connect); cross-site `POST` callbacks such as `response_mode=form_post` or SAML bindings do not see it. `POST` callbacks are routed to the strategy for strategies that read the parsed `req.body`.
 
 ---
 

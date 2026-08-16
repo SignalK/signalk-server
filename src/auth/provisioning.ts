@@ -62,10 +62,15 @@ function sameIdentityRecord(
 
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g
 
-/** Provider-supplied names are external input: strip control characters, trim */
+const PATH_SEGMENT_NAMES = new Set(['.', '..'])
+
+/**
+ * Provider-supplied names are external input: strip control characters,
+ * trim, and refuse the two names that are path segments in user URLs.
+ */
 function cleanUsername(value: string | undefined): string | undefined {
   const cleaned = value?.replace(CONTROL_CHARS, '').trim()
-  return cleaned || undefined
+  return cleaned && !PATH_SEGMENT_NAMES.has(cleaned) ? cleaned : undefined
 }
 
 function preferredUsername(
@@ -123,7 +128,20 @@ export class UserProvisioner {
         updates.identity = record
       }
       if (Object.keys(updates).length > 0) {
-        await this.store.updateUser(existing, updates)
+        try {
+          await this.store.updateUser(existing, updates)
+        } catch (err) {
+          // A permission change that cannot be persisted must not be
+          // bypassed by logging in with the stored one; a refresh of email
+          // or name is not worth locking the user out over
+          if (updates.type !== undefined) {
+            throw err
+          }
+          console.error(
+            `${providerId}: could not update user ${existing.username}, continuing with the stored record:`,
+            err
+          )
+        }
       }
       return existing
     }

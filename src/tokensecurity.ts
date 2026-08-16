@@ -67,6 +67,7 @@ import {
   parseOIDCConfig,
   registerOIDCAdminRoutes,
   createOIDCProvider,
+  OIDC_PROVIDER_ID,
   OIDCConfig,
   PartialOIDCConfig,
   OIDCError,
@@ -304,8 +305,14 @@ function tokenSecurityFactory(
 
   const authProviders = new AuthenticationProviderRegistry()
   const provisioner = new UserProvisioner(identityUserStore)
-  strategy.registerAuthenticationProvider = (provider) =>
-    authProviders.register(provider)
+  strategy.registerAuthenticationProvider = (provider) => {
+    if (provider.id === OIDC_PROVIDER_ID) {
+      throw new Error(
+        `Authentication provider id "${OIDC_PROVIDER_ID}" is reserved for the built-in OpenID Connect login`
+      )
+    }
+    return authProviders.register(provider)
+  }
 
   if (process.env.ADMINUSER) {
     const adminUserParts = process.env.ADMINUSER.split(':')
@@ -340,7 +347,10 @@ function tokenSecurityFactory(
 
   migrateLegacyIdentities(users)
 
+  // Spread the loaded config first so keys this module does not manage
+  // (allowedCorsOrigins, ...) survive saves that are built from `options`
   let options: TokenSecurityOptions = {
+    ...config,
     allow_readonly,
     expiration,
     secretKey,
