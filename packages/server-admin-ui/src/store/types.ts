@@ -68,6 +68,13 @@ export interface InstallingApp {
   installFailed?: boolean
 }
 
+export interface AuthProvider {
+  id: string
+  name: string
+  loginUrl: string
+  autoLogin: boolean
+}
+
 export interface LoginStatus {
   status?: 'notLoggedIn' | 'loggedIn'
   authenticationRequired?: boolean
@@ -76,9 +83,7 @@ export interface LoginStatus {
   securityWasEnabled?: boolean
   noUsers?: boolean
   allowNewUserRegistration?: boolean
-  oidcEnabled?: boolean
-  oidcLoginUrl?: string
-  oidcProviderName?: string
+  authProviders?: AuthProvider[]
   [key: string]: unknown
 }
 

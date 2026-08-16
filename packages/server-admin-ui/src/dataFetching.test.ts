@@ -36,15 +36,27 @@ const loggedIn: LoginStatus = {
   authenticationRequired: true,
   username: 'admin',
   userLevel: 'admin',
-  oidcEnabled: true,
-  oidcLoginUrl: '/signalk/v1/auth/oidc/login'
+  authProviders: [
+    {
+      id: 'oidc',
+      name: 'SSO Login',
+      loginUrl: '/signalk/v1/auth/oidc/login',
+      autoLogin: false
+    }
+  ]
 }
 
 const sessionGone: LoginStatus = {
   status: 'notLoggedIn',
   authenticationRequired: true,
-  oidcEnabled: true,
-  oidcLoginUrl: '/signalk/v1/auth/oidc/login'
+  authProviders: [
+    {
+      id: 'oidc',
+      name: 'SSO Login',
+      loginUrl: '/signalk/v1/auth/oidc/login',
+      autoLogin: false
+    }
+  ]
 }
 
 describe('authFetch 401 handling', () => {
@@ -64,8 +76,7 @@ describe('authFetch 401 handling', () => {
     expect(ls.status).toBe('notLoggedIn')
     expect(ls.username).toBeUndefined()
     expect(ls.authenticationRequired).toBe(true)
-    expect(ls.oidcEnabled).toBe(true)
-    expect(ls.oidcLoginUrl).toBe('/signalk/v1/auth/oidc/login')
+    expect(ls.authProviders).toEqual(loggedIn.authProviders)
   })
 
   it('stays logged in when a readonly user is denied an admin endpoint', async () => {

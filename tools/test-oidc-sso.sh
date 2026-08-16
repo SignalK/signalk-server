@@ -319,7 +319,7 @@ if [[ -n "$CALLBACK_URL" ]]; then
 
     FINAL_REDIRECT=$(grep -i "^location:" step6_headers.txt 2>/dev/null | tail -1 | cut -d' ' -f2- | tr -d '\r\n')
 
-    if [[ "$FINAL_REDIRECT" == *"oidcError=true"* ]]; then
+    if [[ "$FINAL_REDIRECT" == *"authError=true"* ]]; then
         ERROR_MSG=$(echo "$FINAL_REDIRECT" | sed -n 's/.*message=\([^&]*\).*/\1/p' | python3 -c "import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read()))" 2>/dev/null || echo "unknown")
         log_error "OIDC callback failed: $ERROR_MSG"
         add_result "Step 6: FAIL - $ERROR_MSG"
