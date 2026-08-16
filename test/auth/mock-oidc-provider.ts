@@ -41,6 +41,7 @@ export interface RecordedRequest {
 
 const KID = 'test-key'
 const ID_TOKEN_TTL_SECONDS = 300
+const ACCESS_TOKEN_TTL_SECONDS = 3600
 
 function base64url(input: Buffer | string): string {
   return Buffer.from(input).toString('base64url')
@@ -183,7 +184,14 @@ export class MockOIDCProvider {
 
   private authorize(params: URLSearchParams, res: ServerResponse) {
     const redirectUri = params.get('redirect_uri')
-    if (params.get('client_id') !== this.clientId || !redirectUri) {
+    // PKCE is mandatory here so a relying-party regression that drops it
+    // fails the end-to-end flow
+    if (
+      params.get('client_id') !== this.clientId ||
+      !redirectUri ||
+      !params.get('code_challenge') ||
+      params.get('code_challenge_method') !== 'S256'
+    ) {
       return this.json(res, { error: 'invalid_request' }, 400)
     }
     const location = new URL(redirectUri)
@@ -249,7 +257,7 @@ export class MockOIDCProvider {
     const response: Record<string, unknown> = {
       access_token: accessToken,
       token_type: 'Bearer',
-      expires_in: 3600,
+      expires_in: ACCESS_TOKEN_TTL_SECONDS,
       scope: 'openid email profile'
     }
     if (this.omitIdTokenOnce) {

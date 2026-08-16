@@ -116,10 +116,10 @@ echo "--- Test 1: OIDC Configuration Status ---"
 LOGIN_STATUS=$(curl "${CURL_OPTS[@]}" "$SIGNALK_URL/skServer/loginStatus")
 log_verbose "Login status: $LOGIN_STATUS"
 
-OIDC_ENABLED=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(any(p['id']=='oidc' for p in json.load(sys.stdin).get('authProviders', [])))" 2>/dev/null || echo "false")
-OIDC_AUTO_LOGIN=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p['id']=='oidc']; print(p[0]['autoLogin'] if p else False)" 2>/dev/null || echo "false")
-OIDC_LOGIN_URL=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p['id']=='oidc']; print(p[0]['loginUrl'] if p else '')" 2>/dev/null || echo "")
-OIDC_PROVIDER_NAME=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p['id']=='oidc']; print(p[0]['name'] if p else '')" 2>/dev/null || echo "")
+OIDC_ENABLED=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(json.dumps(any(p.get('id')=='oidc' for p in json.load(sys.stdin).get('authProviders', []))))" 2>/dev/null || echo "false")
+OIDC_AUTO_LOGIN=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p.get('id')=='oidc']; print(json.dumps(p[0].get('autoLogin', False) if p else False))" 2>/dev/null || echo "false")
+OIDC_LOGIN_URL=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p.get('id')=='oidc']; print(p[0]['loginUrl'] if p else '')" 2>/dev/null || echo "")
+OIDC_PROVIDER_NAME=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p.get('id')=='oidc']; print(p[0]['name'] if p else '')" 2>/dev/null || echo "")
 
 test_result "1.1 OIDC is enabled" "$( [[ "$OIDC_ENABLED" == "True" || "$OIDC_ENABLED" == "true" ]] && echo true || echo false )"
 test_result "1.2 OIDC login URL is set" "$( [[ -n "$OIDC_LOGIN_URL" ]] && echo true || echo false )"

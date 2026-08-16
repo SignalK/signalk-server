@@ -151,7 +151,7 @@ export function registerAuthProviderRoutes(
       req: HandshakeRequest,
       res: Response,
       next: NextFunction
-    ) => void
+    ) => void | Promise<void>
   ) {
     return (req: Request, res: Response, next: NextFunction) => {
       const provider = registry.get(req.params.providerId)
@@ -159,7 +159,10 @@ export function registerAuthProviderRoutes(
         res.status(404).json({ error: 'Unknown authentication provider' })
         return
       }
-      handler(provider, req as HandshakeRequest, res, next)
+      // Express 4 ignores returned promises; a rejection must reach next()
+      Promise.resolve(
+        handler(provider, req as HandshakeRequest, res, next)
+      ).catch(next)
     }
   }
 
@@ -263,18 +266,21 @@ export function registerAuthProviderRoutes(
   app.get(`${AUTH_ROUTE_PREFIX}/:providerId/callback`, handshake, callback)
   app.post(`${AUTH_ROUTE_PREFIX}/:providerId/callback`, handshake, callback)
 
+  // Logging out must work even when the provider has since been disabled,
+  // so the local session is cleared before the provider is looked up
   app.get(
     `${AUTH_ROUTE_PREFIX}/:providerId/logout`,
-    withProvider(async (provider, req, res) => {
+    (req: Request, res: Response, next: NextFunction) => {
       deps.clearSessionCookie(res)
       const postLogoutRedirect = safeRelativeUrlOr(req.query.redirect, '/')
-      let target: string | undefined
-      try {
-        target = await provider.logoutUrl?.(req, postLogoutRedirect)
-      } catch (err) {
-        debug(`${provider.id}: logout URL unavailable:`, err)
-      }
-      res.redirect(target ?? postLogoutRedirect)
-    })
+      const provider = registry.get(req.params.providerId)
+      Promise.resolve(provider?.logoutUrl?.(req, postLogoutRedirect))
+        .catch((err) => {
+          debug(`${req.params.providerId}: logout URL unavailable:`, err)
+          return undefined
+        })
+        .then((target) => res.redirect(target ?? postLogoutRedirect))
+        .catch(next)
+    }
   )
 }

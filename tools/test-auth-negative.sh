@@ -278,20 +278,23 @@ test_oidc_callback_validation() {
         return 0
     fi
 
-    # Test 1: Missing both code and state
+    # Test 1: No code and no error: the strategy treats the request as a
+    # fresh login and sends the browser to the identity provider
     log "Testing OIDC callback with no parameters..."
-    response=$(curl $CURL_OPTS "$OIDC_CALLBACK_URL")
-    assert_response_contains "Missing params redirects with error" "$response" "authError=true"
+    response=$(curl $CURL_OPTS -o /dev/null -w '%{http_code} %{redirect_url}' "$OIDC_CALLBACK_URL")
+    assert_response_contains "Callback without parameters starts a new login" "$response" "^302 "
+    assert_response_not_contains "Callback without parameters is not an error" "$response" "authError=true"
 
-    # Test 2: Missing state parameter
-    log "Testing OIDC callback with missing state..."
+    # Test 2: Code without a handshake cookie
+    log "Testing OIDC callback with a code but no handshake cookie..."
     response=$(curl $CURL_OPTS "${OIDC_CALLBACK_URL}?code=fake_auth_code")
-    assert_response_contains "Missing state rejected" "$response" "authError=true"
+    assert_response_contains "Code without handshake cookie rejected" "$response" "authError=true"
 
-    # Test 3: Missing code parameter
-    log "Testing OIDC callback with missing code..."
-    response=$(curl $CURL_OPTS "${OIDC_CALLBACK_URL}?state=fake_state")
-    assert_response_contains "Missing code rejected" "$response" "authError=true"
+    # Test 3: State only, no code: same as test 1
+    log "Testing OIDC callback with state but no code..."
+    response=$(curl $CURL_OPTS -o /dev/null -w '%{http_code} %{redirect_url}' "${OIDC_CALLBACK_URL}?state=fake_state")
+    assert_response_contains "Callback with state only starts a new login" "$response" "^302 "
+    assert_response_not_contains "Callback with state only is not an error" "$response" "authError=true"
 
     # Test 4: No state cookie
     log "Testing OIDC callback without state cookie..."
