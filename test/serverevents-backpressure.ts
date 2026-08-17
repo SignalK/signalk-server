@@ -27,7 +27,9 @@ interface TestServer {
 }
 
 describe('Server events send-buffer overflow', function () {
-  let server: TestServer
+  // Unset when startServerP fails, so a setup error surfaces as itself
+  // rather than as a TypeError from the teardown.
+  let server: TestServer | undefined
   let port: number
 
   before(async function () {
@@ -40,11 +42,15 @@ describe('Server events send-buffer overflow', function () {
   })
 
   after(async function () {
-    await server.stop()
+    await server?.stop()
   })
 
   it('terminates a serverevents client whose send buffer stays over the limit', async function () {
     this.timeout(TEST_TIMEOUT_MS)
+    if (!server) {
+      throw new Error('server did not start')
+    }
+    const app = server.app
     const ws = new WebSocket(
       `ws://0.0.0.0:${port}/signalk/v1/stream?serverevents=all&subscribe=none&sendCachedValues=false`
     )
@@ -63,7 +69,7 @@ describe('Server events send-buffer overflow', function () {
     socket.pause()
 
     const flood = setInterval(() => {
-      server.app.emit('serverevent', {
+      app.emit('serverevent', {
         type: 'FLOOD_TEST',
         data: EVENT_PAYLOAD
       })
