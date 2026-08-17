@@ -16,19 +16,27 @@ const EMIT_INTERVAL_MS = 10
 const FLOOD_MS = 1500
 const OVERFLOW_MESSAGE =
   'Server outgoing buffer overflow, terminating connection'
+const SERVER_START_TIMEOUT_MS = 90_000
+const TEST_TIMEOUT_MS = 30_000
+
+// startServerP is untyped JavaScript; this is the slice of the server the
+// test touches.
+interface TestServer {
+  app: { emit: (event: string, data: unknown) => void }
+  stop: () => Promise<unknown>
+}
 
 describe('Server events send-buffer overflow', function () {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let server: any
+  let server: TestServer
   let port: number
 
   before(async function () {
-    this.timeout(90000)
+    this.timeout(SERVER_START_TIMEOUT_MS)
     port = await freeport()
-    server = await startServerP(port, false, {
+    server = (await startServerP(port, false, {
       maxSendBufferSize: MAX_SEND_BUFFER,
       maxSendBufferCheckTime: MAX_BUFFER_CHECK_TIME_MS
-    })
+    })) as TestServer
   })
 
   after(async function () {
@@ -36,7 +44,7 @@ describe('Server events send-buffer overflow', function () {
   })
 
   it('terminates a serverevents client whose send buffer stays over the limit', async function () {
-    this.timeout(30000)
+    this.timeout(TEST_TIMEOUT_MS)
     const ws = new WebSocket(
       `ws://0.0.0.0:${port}/signalk/v1/stream?serverevents=all&subscribe=none&sendCachedValues=false`
     )
