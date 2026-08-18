@@ -12,6 +12,9 @@ Installation of Signal K server consists of the following steps:
 
 _**Important:** If you are updating a Signal K server installation, especially if upgrading an installed version <= 1.40.0, [please check here first](./updating.md)._
 
+> [!TIP]
+> You can skip these steps entirely by flashing a prebuilt image that already includes Signal K Server. See [How to get Signal K Server?](https://github.com/SignalK/signalk-server#how-to-get-signal-k-server) for the available images.
+
 ## Prerequisites:
 
 **64-bit** Raspberry Pi OS is installed on the device (Pi 3, 4 or 5 required). Node.js 24 does not support 32-bit ARM (armv7).
