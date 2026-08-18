@@ -151,6 +151,31 @@ export interface RequestStatusData {
   config: any
 }
 
+/** Authenticated identity attached to a request or websocket connection. */
+export interface SkPrincipal {
+  identifier: string
+  permissions: string
+}
+
+/** Websocket connection carrying the auth state set by authorizeWS. */
+export interface WSConnection {
+  lastTokenVerify?: number
+  token?: string
+  query?: { token?: string }
+  headers?: Record<string, string | string[] | undefined>
+  cookies?: { [key: string]: string }
+  skPrincipal?: SkPrincipal
+  skIsAuthenticated?: boolean
+}
+
+export interface LoginResponse {
+  statusCode: number
+  token?: string
+  user?: string
+  message?: string
+  timeToLive?: number | null
+}
+
 export interface SecurityStrategy {
   isDummy: () => boolean
   allowReadOnly: () => boolean
@@ -245,13 +270,39 @@ export interface SecurityStrategy {
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
 
   /** Verify credentials (optional - only available when token security is active) */
-  login?: (
-    username: string,
-    password: string
-  ) => Promise<{ statusCode: number }>
+  login?: (username: string, password: string) => Promise<LoginResponse>
 
   /** Shared login rate limiter (optional - only available when token security is active) */
   loginRateLimiter?: LoginRateLimiter
+
+  supportsLogin: () => boolean
+
+  canAuthorizeWS: () => boolean
+
+  /** Resolve the principal for a connection, throwing when a token is invalid. */
+  authorizeWS: (req: WSConnection) => void
+
+  /** Re-check a connection's token, throwing once it has expired. */
+  verifyWS: (req: WSConnection) => void
+
+  /**
+   * req is an Express Request over HTTP and a websocket connection over ws.
+   * The delta is typed loosely because the websocket caller passes a WsMessage,
+   * whose updates are optional - the caller guarantees they are present, but
+   * the type does not say so.
+   */
+  shouldAllowWrite: (req: Request | WSConnection, delta: any) => boolean
+
+  /**
+   * True for an authenticated principal with admin permissions.
+   *
+   * Optional because dummy security does not implement it, so call it as
+   * `hasAdminAccess?.(req)`. Note what that yields there: `undefined`, which
+   * negates to "not an admin" and would deny every caller on a server with
+   * security disabled. Check `isDummy()` first when absence should mean
+   * unrestricted rather than denied.
+   */
+  hasAdminAccess?: (req: Request | WSConnection) => boolean
 }
 
 export class InvalidTokenError extends Error {
