@@ -12,20 +12,10 @@ import { IncomingMessage } from 'http'
 import { Duplex } from 'stream'
 import { Server as HttpServer } from 'http'
 import { Server as HttpsServer } from 'https'
-import { SecurityStrategy, WithSecurityStrategy } from '../../security'
+import { WithSecurityStrategy } from '../../security'
 import { binaryStreamManager, StreamPrincipal } from './binary-stream-manager'
 
 const debug = Debug('signalk:streams')
-
-/**
- * Extended security strategy with WebSocket authentication methods.
- * These methods are implemented by tokensecurity.js and dummysecurity.ts
- * but not declared in the base SecurityStrategy interface.
- */
-interface WebSocketSecurityStrategy extends SecurityStrategy {
-  shouldAllowWrite?: (request: IncomingMessage, requestType: string) => boolean
-  authorizeWS?: (request: IncomingMessage) => void
-}
 
 /**
  * Application with HTTP server for WebSocket upgrades
@@ -37,10 +27,7 @@ interface WithServer {
 /**
  * Application interface for binary stream initialization
  */
-interface StreamApplication
-  extends WithServer, Omit<WithSecurityStrategy, 'securityStrategy'> {
-  securityStrategy: WebSocketSecurityStrategy
-}
+interface StreamApplication extends WithServer, WithSecurityStrategy {}
 
 /**
  * Extended request with SignalK principal attached by security middleware.
