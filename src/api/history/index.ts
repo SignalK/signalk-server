@@ -85,7 +85,15 @@ export class HistoryApiHttpRegistry {
     private app: HistoryApplication,
     private unavailableGraceMs: number = UNAVAILABLE_GRACE_MS
   ) {
-    this.configuredProviderId = app.config.settings.historyApi?.defaultProvider
+    // No supported path writes an empty id — the POST route rejects a
+    // falsy one — so an empty value comes from a hand-edited file and
+    // means nothing was chosen. Reading it as absent keeps every
+    // consumer agreeing: defaultProviderId and the notification already
+    // test truthiness, while the grace window and the state event tested
+    // for undefined, so an empty id armed the window and the Admin UI
+    // reported a default named "" as unavailable.
+    this.configuredProviderId =
+      app.config.settings.historyApi?.defaultProvider || undefined
     this.proxy = {
       getValues: (query: ValuesRequest): Promise<ValuesResponse> => {
         return this.defaultProvider().getValues(query)

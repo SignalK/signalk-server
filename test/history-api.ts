@@ -451,6 +451,17 @@ describe('History API v2', () => {
       app.notifications.length.should.equal(0)
     })
 
+    it('reports no configured provider for an empty configured id', function () {
+      const app = makeApp()
+      // makeApp takes a truthy id, so the empty value goes in directly.
+      app.config.settings.historyApi = { defaultProvider: '' }
+      const registry = makeRegistry(app)
+      registry.registerHistoryApiProvider('questdb', provider('questdb'))
+      const event = app.serverEvents[app.serverEvents.length - 1]
+      chai.expect(event.configuredId).to.equal(undefined)
+      event.defaultId!.should.equal('questdb')
+    })
+
     describe('HISTORYPROVIDERS serverevent', () => {
       // Wide margin between the grace window and the wait so a stalled
       // event loop on loaded CI cannot invert the expected ordering.
