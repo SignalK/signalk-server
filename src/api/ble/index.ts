@@ -292,7 +292,15 @@ export class BLEApi implements IBLEApi {
     // fully settled localProviders/bleProviders for a given providerId by
     // the time the loop below runs, so there's nothing left in flight to
     // race against.
-    if (this.localProviderInitializations.size > 0) {
+    //
+    // A single Promise.all() snapshot isn't enough: initLocalProviders()
+    // could still be running concurrently (e.g. a settings change firing
+    // again mid-shutdown) and add a *new* entry to
+    // localProviderInitializations while this method's own await is
+    // pending, and that new entry wouldn't be in the snapshot. Re-check
+    // and re-await until the map is actually empty, so a fresh entry
+    // added during the wait still gets caught before teardown proceeds.
+    while (this.localProviderInitializations.size > 0) {
       await Promise.all(this.localProviderInitializations.values())
     }
 
