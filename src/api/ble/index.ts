@@ -281,6 +281,21 @@ export class BLEApi implements IBLEApi {
   }
 
   private async shutdownLocalProviders() {
+    // Wait out any initOneLocalProvider() calls still in flight before
+    // tearing anything down. Without this, a call still awaiting
+    // provider.startDiscovery() (DBus) can resolve *after* this method
+    // has already run - at that point it finishes registering/logging
+    // for a provider this method just unregistered and shut down, and
+    // its now-orphaned discovery loop is left running (unreferenced by
+    // localProviders, so a later shutdown can no longer find it either).
+    // Waiting first means initOneLocalProvider's own try/catch has always
+    // fully settled localProviders/bleProviders for a given providerId by
+    // the time the loop below runs, so there's nothing left in flight to
+    // race against.
+    if (this.localProviderInitializations.size > 0) {
+      await Promise.all(this.localProviderInitializations.values())
+    }
+
     for (const [providerId, provider] of this.localProviders) {
       // One misbehaving adapter must not keep the others registered
       try {
