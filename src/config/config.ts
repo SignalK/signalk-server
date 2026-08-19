@@ -78,14 +78,13 @@ export interface Config {
   hasOldDefaults: boolean
   overrideTimestampWithNow: boolean
   /** True while `settings` represents what the user configured, so it
-   * may be saved back to their file. Cleared in two cases: `--data` and
-   * the sample data flags change the data connections that are in
-   * effect for this run, and a settings file that exists but cannot be
-   * parsed falls back to empty settings. `--data` disables every
-   * configured provider and adds a FileStream for the log; the sample
-   * flags add a FileStream provider beside the configured ones.
-   * Writers that persist settings without a user asking must check
-   * this.
+   * may be saved back to their file. Cleared in three cases:
+   * constructor-supplied settings (the caller owns the data, and
+   * there is no user file to save over), `--data` and the sample data
+   * flags (they change the data connections in effect for this run),
+   * and a settings file that exists but cannot be parsed (falls back
+   * to empty settings). Writers that persist settings without a user
+   * asking must check this.
    *
    * A missing settings file does not clear it: there is nothing to
    * overwrite, and a fresh install should still be able to save.
@@ -191,7 +190,9 @@ export interface Config {
        * Applied whenever the provider is registered, so the default does
        * not depend on plugin load order. When the configured provider is
        * not registered (e.g. plugin disabled), the first registered
-       * provider serves as fallback. */
+       * provider serves as fallback. Set through the History API, or by
+       * the server itself when a provider registers while this key is
+       * absent and safeToPersistSettings is set. */
       defaultProvider?: string
     }
     notifications?: {
