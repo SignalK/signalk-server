@@ -80,6 +80,18 @@ export class BLEApi implements IBLEApi {
   private wsClients: Set<WebSocket> = new Set()
   private localProviders: Map<string, LocalBLEProvider> = new Map() // key = providerId
   private localProviderErrors: Map<string, string> = new Map() // key = adapterName
+  // Tracks an initLocalProviders() attempt still in flight for a given
+  // providerId, from before provider.init() resolves through to
+  // register()/startDiscovery() (or the catch-block rollback). Without
+  // this, two overlapping initLocalProviders() calls for the same adapter
+  // (e.g. start() racing a PUT /settings-triggered reinit) can both pass
+  // the `localProviders.has(providerId)` skip-check before either await
+  // completes, each construct their own LocalBLEProvider, and the later
+  // one's register() ends up displacing the earlier one's registration -
+  // but the earlier LocalBLEProvider instance keeps running its own
+  // discovery loop, now unreferenced by localProviders and therefore
+  // unreachable by shutdown.
+  private localProviderInitializations: Map<string, Promise<void>> = new Map()
   private defaultProviderId: string | null = null
   private settings: BLESettings
   private remoteGatewayProvider: RemoteGatewayProvider | null = null
@@ -176,68 +188,95 @@ export class BLEApi implements IBLEApi {
     for (const adapterName of adapterNames) {
       const providerId = `_localBLE:${adapterName}`
       if (this.localProviders.has(providerId)) continue
-      let provider: LocalBLEProvider | undefined
-      let registeredProvider: BLEProvider | undefined
-      try {
-        provider = new LocalBLEProvider(
-          adapterName,
-          this.settings.localMaxGATTSlots,
-          providerId
-        )
-        await provider.init()
-        this.localProviders.set(providerId, provider)
-        this.localProviderErrors.delete(adapterName)
-        // Register (which wires up onAdvertisement -> _handleAdvertisement,
-        // populating deviceTable) before starting discovery. Discovery's
-        // first pass emits advertisements for every already-known device
-        // synchronously as part of startDiscovery(), and LocalBLEProvider's
-        // emitDeviceAdvertisement drops advertisements entirely when nobody
-        // has subscribed yet - registering afterward silently lost that
-        // whole first batch, leaving those devices absent from the device
-        // table (and therefore unreachable via subscribeGATT) until BlueZ
-        // happened to re-report one of their properties later.
-        registeredProvider = {
-          name: `Local Bluetooth (${adapterName})`,
-          methods: provider.getMethods()
-        }
-        this.register(providerId, registeredProvider)
-        await provider.startDiscovery()
-        debug.enabled &&
-          debug(`Local BLE provider registered and scanning: ${providerId}`)
-      } catch (e: any) {
-        // Roll back any partial state if init and/or register succeeded but
-        // startDiscovery failed. Only touch state that's still this
-        // provider's - a concurrent initLocalProviders() call for the same
-        // adapter could have already replaced it with a working instance by
-        // the time this catch runs, and unregistering/deleting on providerId
-        // alone would tear down that replacement instead of the one that
-        // actually failed.
-        if (this.localProviders.get(providerId) === provider) {
-          if (this.bleProviders.get(providerId) === registeredProvider) {
-            this.unRegister(providerId)
-          }
-          this.localProviders.delete(providerId)
-        }
-        if (provider) {
-          try {
-            provider.shutdown()
-          } catch (_e) {
-            /* ignore */
-          }
-        }
-        const msg = `Local BLE adapter ${adapterName} unavailable: ${e.message}`
-        debug(msg)
-        // Suppress console.log for expected "no hardware / no BlueZ" errors
-        const isExpected =
-          e.message?.includes('org.freedesktop.DBus.Error.ServiceUnknown') ||
-          e.message?.includes('not provided by any .service files') ||
-          e.message?.includes('ENOENT') ||
-          e.message?.includes('ECONNREFUSED')
-        if (!isExpected) {
-          console.log(`[BLE API] ${msg}`)
-        }
-        this.localProviderErrors.set(adapterName, e.message)
+
+      // Serialize against a concurrent initLocalProviders() call already
+      // in flight for this same adapter (see
+      // localProviderInitializations's comment) - await its result
+      // instead of racing it with a second LocalBLEProvider construction.
+      const inFlight = this.localProviderInitializations.get(providerId)
+      if (inFlight) {
+        await inFlight
+        continue
       }
+
+      const initialization = this.initOneLocalProvider(
+        adapterName,
+        providerId
+      )
+      this.localProviderInitializations.set(providerId, initialization)
+      try {
+        await initialization
+      } finally {
+        if (this.localProviderInitializations.get(providerId) === initialization) {
+          this.localProviderInitializations.delete(providerId)
+        }
+      }
+    }
+  }
+
+  private async initOneLocalProvider(adapterName: string, providerId: string) {
+    let provider: LocalBLEProvider | undefined
+    let registeredProvider: BLEProvider | undefined
+    try {
+      provider = new LocalBLEProvider(
+        adapterName,
+        this.settings.localMaxGATTSlots,
+        providerId
+      )
+      await provider.init()
+      this.localProviders.set(providerId, provider)
+      this.localProviderErrors.delete(adapterName)
+      // Register (which wires up onAdvertisement -> _handleAdvertisement,
+      // populating deviceTable) before starting discovery. Discovery's
+      // first pass emits advertisements for every already-known device
+      // synchronously as part of startDiscovery(), and LocalBLEProvider's
+      // emitDeviceAdvertisement drops advertisements entirely when nobody
+      // has subscribed yet - registering afterward silently lost that
+      // whole first batch, leaving those devices absent from the device
+      // table (and therefore unreachable via subscribeGATT) until BlueZ
+      // happened to re-report one of their properties later.
+      registeredProvider = {
+        name: `Local Bluetooth (${adapterName})`,
+        methods: provider.getMethods()
+      }
+      this.register(providerId, registeredProvider)
+      await provider.startDiscovery()
+      debug.enabled &&
+        debug(`Local BLE provider registered and scanning: ${providerId}`)
+    } catch (e: any) {
+      // Roll back any partial state if init and/or register succeeded but
+      // startDiscovery failed. Only touch state that's still this
+      // provider's - localProviderInitializations already prevents a
+      // concurrent initLocalProviders() call for the same adapter from
+      // running at the same time as this one, but the identity checks
+      // stay as defense in depth (e.g. a caller invoking
+      // initOneLocalProvider directly, or a future refactor that removes
+      // the serialization).
+      if (this.localProviders.get(providerId) === provider) {
+        if (this.bleProviders.get(providerId) === registeredProvider) {
+          this.unRegister(providerId)
+        }
+        this.localProviders.delete(providerId)
+      }
+      if (provider) {
+        try {
+          provider.shutdown()
+        } catch (_e) {
+          /* ignore */
+        }
+      }
+      const msg = `Local BLE adapter ${adapterName} unavailable: ${e.message}`
+      debug(msg)
+      // Suppress console.log for expected "no hardware / no BlueZ" errors
+      const isExpected =
+        e.message?.includes('org.freedesktop.DBus.Error.ServiceUnknown') ||
+        e.message?.includes('not provided by any .service files') ||
+        e.message?.includes('ENOENT') ||
+        e.message?.includes('ECONNREFUSED')
+      if (!isExpected) {
+        console.log(`[BLE API] ${msg}`)
+      }
+      this.localProviderErrors.set(adapterName, e.message)
     }
   }
 
