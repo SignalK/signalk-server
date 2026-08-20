@@ -80,7 +80,12 @@ describe('SubscriptionManager callback isolation', () => {
     streambundle: bundle,
     selfContext: SELF_CONTEXT,
     deltaCache: {
-      getCachedDeltas: (_filter: unknown, _user: unknown, key?: string) => {
+      getMatchingContexts: () => [],
+      getCachedDeltasForContexts: (
+        _contexts: unknown,
+        _user: unknown,
+        key?: string
+      ) => {
         if (key !== undefined) {
           const hit = cache.get(key)
           return hit ? [hit] : []

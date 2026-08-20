@@ -36,7 +36,7 @@ import * as Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 import { createDebug } from './debug'
-import DeltaCache from './deltacache'
+import DeltaCache, { CachedContexts } from './deltacache'
 import { ToPreferredDelta } from './deltaPriority'
 import { StreamBundle, toDelta } from './streambundle'
 import { ContextMatcher } from './types'
@@ -357,6 +357,19 @@ function handleSubscribeRow(
   bootstrapFromCache?: boolean
 ) {
   const matcher = pathMatcher(subscribeRow.path)
+  // The set of cached contexts matching filter is invariant across this
+  // row's synchronous bus sweep — enumerate it once, lazily, instead of
+  // re-scanning the whole cache and re-running the filter per context
+  // for every matching path, which made a wildcard row's subscribe
+  // O(paths × contexts) (#2874). Lazy: rows that never bootstrap from
+  // the cache don't pay for the scan.
+  let matchingContexts: CachedContexts | null = null
+  const getMatchingContexts = () => {
+    if (matchingContexts === null) {
+      matchingContexts = app.deltaCache.getMatchingContexts(filter)
+    }
+    return matchingContexts
+  }
   // iterate over all the buses, checking if we want to subscribe to its values
   forOwn(buses, (bus, key) => {
     // Root deltas (path '') carry vessel identity fields (name, mmsi,
@@ -486,8 +499,8 @@ function handleSubscribeRow(
       // the excluded source — and the subscriber would see it once on
       // startup.
       if (bootstrapFromCache) {
-        const cached = app.deltaCache.getCachedDeltas(
-          filter,
+        const cached = app.deltaCache.getCachedDeltasForContexts(
+          getMatchingContexts(),
           user,
           key,
           perSubEngine ? 'all' : sourcePolicy

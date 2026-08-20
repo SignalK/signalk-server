@@ -68,7 +68,12 @@ describe('SubscriptionManager cache bootstrap', () => {
       streambundle: bundle,
       selfContext: SELF_CONTEXT,
       deltaCache: {
-        getCachedDeltas: (_filter: unknown, _user: unknown, key?: string) => {
+        getMatchingContexts: () => [],
+        getCachedDeltasForContexts: (
+          _contexts: unknown,
+          _user: unknown,
+          key?: string
+        ) => {
           if (key !== undefined) {
             const hit = cache.get(key)
             return hit ? [hit] : []
@@ -120,6 +125,46 @@ describe('SubscriptionManager cache bootstrap', () => {
     dispatch(valueDelta(SELF_CONTEXT, SOG_PATH, SOG_SECOND))
 
     expect(valuesOf(received)).to.deep.equal([SOG_FIRST, SOG_SECOND])
+  })
+
+  it('enumerates matching contexts once per row across its matching paths', () => {
+    const cogPath = 'navigation.courseOverGroundTrue' as Path
+    dispatch(valueDelta(SELF_CONTEXT, SOG_PATH, SOG_FIRST))
+    dispatch(valueDelta(SELF_CONTEXT, cogPath, 1.2))
+
+    const sentinelContexts: unknown[] = []
+    let enumerations = 0
+    const contextsSeen: unknown[] = []
+    const manager = new SubscriptionManager({
+      streambundle: bundle,
+      selfContext: SELF_CONTEXT,
+      deltaCache: {
+        getMatchingContexts: () => {
+          enumerations++
+          return sentinelContexts
+        },
+        getCachedDeltasForContexts: (contexts: unknown) => {
+          contextsSeen.push(contexts)
+          return []
+        }
+      },
+      signalk: { root: {} }
+    })
+    manager.subscribe(
+      {
+        context: '*' as Context,
+        subscribe: [{ path: 'navigation.*' as Path }]
+      },
+      unsubscribes,
+      () => undefined,
+      (delta: Delta) => received.push(delta),
+      undefined,
+      'preferred'
+    )
+
+    expect(contextsSeen.length).to.equal(2)
+    expect(enumerations).to.equal(1)
+    contextsSeen.forEach((c) => expect(c).to.equal(sentinelContexts))
   })
 
   it('still replays the cached value at subscribe time for known paths', () => {
