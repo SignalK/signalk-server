@@ -729,3 +729,35 @@ describe('Mixed source shapes for one N2K source', function () {
     expect(entry.n2k.pgns).to.have.property('127508')
   })
 })
+
+describe('Mixed source shapes for one NMEA0183 source', function () {
+  const bareDollarSourceFirst = {
+    context: 'vessels.urn:mrn:imo:mmsi:200000000',
+    updates: [
+      {
+        $source: '0183-1.II',
+        timestamp: '2016-07-28T18:18:46.000Z',
+        values: [{ path: 'navigation.headingTrue', value: 0.1 }]
+      },
+      {
+        source: {
+          label: '0183-1',
+          type: 'NMEA0183',
+          talker: 'II',
+          sentence: 'HDM'
+        },
+        timestamp: '2016-07-28T18:18:47.000Z',
+        values: [{ path: 'navigation.headingTrue', value: 0.2 }]
+      }
+    ]
+  }
+
+  it('accepts a structured 0183 source after a bare $source created the key', function () {
+    const fullSignalK = new FullSignalK('urn:mrn:imo:mmsi:200000000')
+    expect(() => fullSignalK.addDelta(bareDollarSourceFirst)).to.not.throw()
+
+    const entry = fullSignalK.retrieve().sources['0183-1']['II']
+    expect(entry.talker).to.equal('II')
+    expect(entry.sentences).to.have.property('HDM', '2016-07-28T18:18:47.000Z')
+  })
+})
