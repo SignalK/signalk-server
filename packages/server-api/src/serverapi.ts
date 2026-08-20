@@ -340,28 +340,39 @@ export interface ServerAPI
   getDataDirPath(): string
 
   /**
-   * Returns a short-lived readonly token for calling ANOTHER plugin's HTTP
-   * route on this same server over loopback.
+   * Call another plugin's HTTP route on this same server.
    *
    * Plugin routes under `/plugins/` require an authenticated request whenever
    * security is enabled, and a server-side `fetch` carries no session cookie,
-   * so such calls are otherwise rejected with `401`. Pass the token as a
-   * `Bearer` credential. Mint one per request rather than caching it; it
-   * expires in minutes.
+   * so a direct call is otherwise rejected with `401`. This authenticates the
+   * request for you as a readonly principal, and resolves the server's own
+   * address — which moves with `proxy_port`, ssl and socket activation, so it
+   * is not something a plugin should be reconstructing.
    *
-   * Returns `undefined` when security is disabled, in which case no
-   * credential is needed.
+   * The target route must opt in with `router.access('readonly')`. Routes
+   * that declare no permission keep falling through to the admin gate, so
+   * this never widens what a plugin exposes by itself.
+   *
+   * Resolves to the same `Response` a `fetch` would give you, body stream
+   * included, so large exports can be streamed rather than buffered.
+   *
+   * @param pluginId - id of the plugin whose route is being called
+   * @param route - route path relative to that plugin, e.g. `/api/export`
+   * @param init - standard `fetch` options
    *
    * @example
    * ```ts
-   * const token = app.getSelfAuthToken()
-   * const res = await fetch(url, {
-   *   headers: token ? { Authorization: `Bearer ${token}` } : {}
-   * })
+   * const res = await app.pluginFetch('signalk-grafana', '/api/full-export/db')
+   * if (!res.ok) throw new Error(`export failed: ${res.status}`)
+   * await pipeline(res.body, createWriteStream(target))
    * ```
    * @category Configuration
    */
-  getSelfAuthToken(): string | undefined
+  pluginFetch(
+    pluginId: string,
+    route: string,
+    init?: RequestInit
+  ): Promise<Response>
 
   /**
    * Register a handler to action [`PUT`](http://signalk.org/specification/1.3.0/doc/put.html) requests for a specific path.
