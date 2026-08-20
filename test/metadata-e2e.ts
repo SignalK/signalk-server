@@ -61,8 +61,7 @@ describe('Metadata end to end', function () {
   this.timeout(SERVER_START_TIMEOUT)
 
   let port: number
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let server: any
+  let server: ServerHandle
   let v1Api: string
 
   const getV1 = (p: string) => fetch(`${v1Api}${p}`)
@@ -77,7 +76,7 @@ describe('Metadata end to end', function () {
   const createMetaWsPromiser = () =>
     new WsPromiser(
       `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false`,
-      500
+      WS_MESSAGE_TIMEOUT_MS
     )
 
   before(async () => {
@@ -213,8 +212,7 @@ describe('Metadata end to end', function () {
     const setupResult = await selfPutV1(`${TEST_PATH_SLASHES}/meta/zones`, {
       value: zones
     })
-    expect(setupResult.status).to.equal(202)
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await awaitPutSuccess(port, setupResult)
 
     const metaBefore = await selfGetMetaJson()
     expect(metaBefore).to.have.property('zones')
