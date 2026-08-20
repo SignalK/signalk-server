@@ -45,7 +45,7 @@ Advanced users can upload **Custom Presets** to define specific combinations of 
 
 In addition to category-wide settings (e.g., "All speeds in Knots"), you can override units for specific data paths. For example, you might want _Boat Speed_ in Knots but _Wind Speed_ in Meters/Second.
 
-These overrides are typically managed by editing the server configuration. When a specific path has an override, it takes precedence over the general category setting in your active preset.
+An override belongs to the path itself and is set under **Data → Metadata**. It names the category the path belongs to and, optionally, the target unit to display it in. A path that names no target unit of its own follows the active preset's choice for its category. A path that names one keeps that unit, and it takes precedence over the preset's setting for the category.
 
 ---
 
