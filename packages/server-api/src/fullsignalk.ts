@@ -85,8 +85,15 @@ function handleNmea0183Source(
   meta: SourceMetaEntry
 ): void {
   const talker = source.talker || 'XX'
-  if (!labelSource[talker]) {
+  const existing = labelSource[talker]
+  if (!existing) {
     labelSource[talker] = { talker, sentences: {} }
+  } else {
+    // As with the N2K node, updateDollarSource may already have created
+    // this key as a bare {} from a "label.talker" $source string, so the
+    // sentences sub-object cannot be assumed to exist.
+    if (!existing.talker) existing.talker = talker
+    if (!existing.sentences) existing.sentences = {}
   }
   labelSource[talker].sentences[source.sentence] = timestamp
   meta.lastSeen = Date.now()
