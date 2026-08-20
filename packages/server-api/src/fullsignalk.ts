@@ -37,6 +37,15 @@ function handleNmea2000Source(
   let existing = labelSource[source.src]
   if (!existing) {
     existing = labelSource[source.src] = { n2k: { pgns: {} } }
+  } else if (!existing.n2k) {
+    // The same key may already have been created as a bare {} by
+    // updateDollarSource, which splits a "label.src" $source string into
+    // nested keys without the n2k sub-object. Deltas for one source can
+    // arrive in both shapes, so adopt the existing node rather than
+    // assuming our own initializer created it.
+    existing.n2k = { pgns: {} }
+  } else if (!existing.n2k.pgns) {
+    existing.n2k.pgns = {}
   }
 
   Object.assign(existing.n2k, source)
