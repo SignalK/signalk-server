@@ -1,8 +1,31 @@
-import { ChildProcess, spawn } from 'child_process'
+import { ChildProcess, execFileSync, spawn } from 'child_process'
 import { Transform, TransformCallback, Writable } from 'stream'
 import { pgnToActisenseSerialFormat } from '@canboat/canboatjs'
+import { getPGNWithNumber } from '@canboat/ts-pgns'
 import type { PGN } from '@canboat/ts-pgns'
 import type { CreateDebug, DebugLogger } from './types'
+
+// The canboat Rust binary's gateway bridges accept analyzer JSON on
+// stdin and encode it against the canboat schema in-process. When that
+// binary is on PATH the spawned child is one of its shims, so outbound
+// PGNs are handed over as JSON — one schema drives both directions —
+// instead of being pre-encoded with canboatjs. With the C tools (or no
+// canboat at all) the wire format written to the child is unchanged.
+// Probed once: PATH does not change within a server run.
+let nativeJsonTx: boolean | undefined
+function canEncodeNatively(): boolean {
+  if (nativeJsonTx === undefined) {
+    try {
+      execFileSync(process.platform === 'win32' ? 'where' : 'which', [
+        'canboat'
+      ])
+      nativeJsonTx = true
+    } catch {
+      nativeJsonTx = false
+    }
+  }
+  return nativeJsonTx
+}
 
 interface ExecuteOptions {
   command: string
@@ -66,7 +89,40 @@ export default class Execute extends Transform {
 
     if (stdOutEvent === 'nmea2000out') {
       this.options.app.on('nmea2000JsonOut', (pgn: PGN) => {
-        this.childProcess.stdin?.write(pgnToActisenseSerialFormat(pgn) + '\r\n')
+        // Runs inside an app-emitter handler: an uncaught throw from
+        // either encoder would take the server down.
+        try {
+          if (canEncodeNatively()) {
+            // Check against the shared schema before handing over, so a
+            // malformed plugin PGN surfaces as a provider error here
+            // instead of a warning inside the child's stderr. Field
+            // contents are not validated: canboat's encoders treat an
+            // absent or unrecognised field as "not available" rather
+            // than an error, so there is nothing to reject against
+            // short of a schema-walking validator.
+            if (
+              typeof pgn?.pgn !== 'number' ||
+              getPGNWithNumber(pgn.pgn) === undefined
+            ) {
+              this.options.app.setProviderError(
+                this.options.providerId,
+                `outbound PGN rejected: unknown PGN ${pgn?.pgn}`
+              )
+              return
+            }
+            this.childProcess.stdin?.write(JSON.stringify(pgn) + '\r\n')
+          } else {
+            this.childProcess.stdin?.write(
+              pgnToActisenseSerialFormat(pgn) + '\r\n'
+            )
+          }
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err)
+          this.options.app.setProviderError(
+            this.options.providerId,
+            `outbound PGN ${pgn?.pgn} not sent: ${message}`
+          )
+        }
       })
       this.options.app.emit('nmea2000OutAvailable')
     }
@@ -94,6 +150,18 @@ export default class Execute extends Transform {
     }
     this.lastStartupTime = Date.now()
     this.options.app.setProviderStatus(this.options.providerId, 'Started')
+
+    // A write that lands as the child is exiting fails asynchronously
+    // (EPIPE), and an unhandled 'error' on a stream terminates the
+    // process — the try/catch around the write sites only covers
+    // synchronous throws. Report and carry on: the close handler below
+    // already owns restarting.
+    this.childProcess.stdin?.on('error', (err: Error) => {
+      this.options.app.setProviderError(
+        this.options.providerId,
+        `write to |${command}| failed: ${err.message}`
+      )
+    })
 
     this.childProcess.stderr?.on('data', (data: Buffer) => {
       const msg = data.toString()
