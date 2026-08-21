@@ -40,10 +40,10 @@ See [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) f
 
 | Platform | Architecture     | Node versions | Notes                                            |
 | -------- | ---------------- | ------------- | ------------------------------------------------ |
-| Linux    | x64              | 22, 24        | GitHub-hosted runner                             |
-| Linux    | arm64            | 22, 24        | GitHub-hosted runner — Raspberry Pi 4/5          |
-| macOS    | arm64            | 22, 24        | GitHub-hosted runner                             |
-| Windows  | x64              | 22, 24        | GitHub-hosted runner                             |
+| Linux    | x64              | 22, 24, 26    | GitHub-hosted runner                             |
+| Linux    | arm64            | 22, 24, 26    | GitHub-hosted runner — Raspberry Pi 4/5          |
+| macOS    | arm64            | 22, 24, 26    | GitHub-hosted runner                             |
+| Windows  | x64              | 22, 24, 26    | GitHub-hosted runner                             |
 | Linux    | armv7 (Cerbo GX) | 20            | QEMU emulation — matches Venus OS 3.70 (Node 20) |
 
 ### Validation Checks
@@ -56,7 +56,7 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **plugin.schema()** — Calls `schema()` and checks it returns a JSON-serializable schema-like object without crashing (not fully validated against the JSON Schema meta-schema)
 
-**Lifecycle** — Runs `start()` → `stop()` → `start()` (restart) with an empty configuration. Validates delta messages emitted during startup and checks that `registerDeltaInputHandler` handlers forward deltas correctly.
+**Lifecycle** — Runs `start()` → `stop()` → `start()` (restart) with an empty configuration, then once more with a configuration built from your `schema`'s own declared `default` values (skipped if your schema declares none). The empty-config pass alone can miss a bug that only fires once a real default value is present — e.g. an assumed-present default array field. Validates delta messages emitted during startup and checks that `registerDeltaInputHandler` handlers forward deltas correctly.
 
 **API usage** — Scans source files for:
 
@@ -69,9 +69,62 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **npm pack** — Verifies all files referenced by `main`/`exports` are included in the published package
 
-**App Store compatibility** — Installs the plugin with `--ignore-scripts` (as the App Store does) and checks for native addon dependencies
+**App Store compatibility** — Installs the plugin with `--ignore-scripts` (as the App Store does) and checks for native addon dependencies. Lint, formatting, and the test run below all then run against that same uncompiled install (not the earlier, fully-built one) — this is the only place a required or poorly-guarded optional native addon actually gets exercised at runtime, which matters most since `enable-signalk-integration` defaults to off.
 
 **Stray files** — Warns when build and test steps leave untracked files
+
+**npm audit** — Runs once, in the `build` job (not per desktop platform/Node combination, since results don't vary by OS/arch). Warns — does not fail the build — with a severity breakdown when `npm audit` finds known vulnerabilities in your dependency tree.
+
+### Failures vs. warnings
+
+Not every check above can fail your build. Some findings are treated as **blocking** (they fail
+the job, turn the run red, and — if you have GitHub's own Actions notification setting enabled
+for your account — trigger the notification GitHub already sends by default when a run you
+triggered fails). Everything else is **advisory**: logged as a `::warning::` annotation in the
+run, visible in the job summary and the Annotations panel, but the run still succeeds and
+nothing gets notified. This is a deliberate split — the blocking checks are things that break
+the plugin or the App Store listing outright; the advisory ones are best-practice nudges that
+don't stop the plugin from working.
+
+These lists summarize check severity for readers — the authoritative source is the workflow itself: [.github/workflows/plugin-ci.yml](https://github.com/SignalK/signalk-server/blob/master/.github/workflows/plugin-ci.yml). If this page and the workflow ever disagree, the workflow wins.
+
+**Blocking (fails the run):**
+
+- Missing `signalk-node-server-plugin` keyword, missing `main`/`exports`, or a missing/invalid `version`
+- A hardcoded `/home/user/...` path in source
+- Entry point doesn't export a constructor function
+- `plugin.schema()` throws, returns a non-object, or returns values that can't survive `JSON.stringify` (functions, symbols, circular references, `undefined` properties)
+- `stop()`, or the restart `start()` call, throws a genuine error (not a "mock gap" — see below)
+- Access to an internal server property (`app.server`, `app.deltaCache`, `app.pluginsMap`, `historyApiHttpRegistry`)
+- Malformed delta messages emitted while the plugin runs during lifecycle testing
+- A file referenced by `main`/`exports` is missing from the published package
+- A required native addon dependency, or an optional one used unconditionally with no fallback once tested against a real, uncompiled App Store-style install
+- `format-check-command`, if you set one, failing
+
+**Advisory only (warns, does not fail the run, by default):**
+
+- Missing `CHANGELOG.md`/`.github/release.yml`, missing `signalk.screenshots`, or an `appIcon`/`screenshots` path that doesn't resolve to a real file
+- Missing `engines.node`
+- `preinstall`/`postinstall`/`install` scripts declared (informational — the App Store install step is the real enforcement)
+- Bundling `baconjs` < 3.x, or React < 19 on a `webapp`-keyword plugin
+- `plugin.schema()` missing `type`/`properties`/`oneOf`/`anyOf`
+- Deprecated calls (`setProviderStatus`, `setProviderError`) and the other API-usage anti-patterns (direct Express routes, file-storage anti-patterns, security anti-patterns)
+- `node:sqlite`/`node:test` used with an `engines.node` that allows an older Node, if the usage is already wrapped in a try/catch
+- ES2024+ syntax that would crash on Cerbo GX (Node 20)
+- `npm audit` findings
+- Stray untracked files left after build/test
+- Lint failures (`npm run lint --if-present` is always advisory)
+- The lifecycle check's "mock gap" warnings — `registerWithRouter()` throwing, or `start()`/`stop()` hitting a `"X is not a function"`/`"Cannot read propert…"` pattern. These specifically mean this workflow's test harness doesn't model something your plugin depends on, not necessarily a defect in your plugin — see `fail-on-warning` below for why these are the one category that stays advisory no matter what.
+
+Set `fail-on-warning: true` to promote every advisory item above **except** the lifecycle
+mock-gap warnings into a blocking failure. Off by default, since these checks are advisory by
+design — turn it on if you'd rather your CI (and GitHub's own failure notification) catch them
+than rely on someone reading the job summary.
+
+```yaml
+with:
+  fail-on-warning: true
+```
 
 ## Configuration
 
@@ -89,16 +142,24 @@ jobs:
       node-versions: '["22"]'
 ```
 
-| Input                        | Default                      | Description                                                                                                              |
-| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `test-command`               | `npm test`                   | Command to run your test suite                                                                                           |
-| `build-command`              | `npm run build --if-present` | Build command                                                                                                            |
-| `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty                           |
-| `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary |
-| `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms                                                                                      |
-| `enable-armv7`               | `true`                       | Test on armv7 (Cerbo GX) via QEMU                                                                                        |
-| `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                               |
-| `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                            |
+| Input                        | Default                      | Description                                                                                                                                                                                 |
+| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test-command`               | `npm test`                   | Command to run your test suite                                                                                                                                                              |
+| `build-command`              | `npm run build --if-present` | Build command                                                                                                                                                                               |
+| `build-node-version`         | `24`                         | Node version used to run `build-command` — the plugin is built once, on this version, and every job below tests that same build output                                                      |
+| `artifact-name-suffix`       | _(empty)_                    | Suffix appended to the shared build artifact name; set this only if your caller workflow invokes this reusable workflow more than once in a single run, to avoid an artifact name collision |
+| `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty                                                                                              |
+| `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary                                                                    |
+| `node-versions`              | `["22", "24", "26"]`         | Node versions for desktop platforms                                                                                                                                                         |
+| `enable-armv7`               | `true`                       | Test on armv7 (Cerbo GX) via QEMU                                                                                                                                                           |
+| `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                                                                                                  |
+| `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                                                                                               |
+| `signalk-integration-matrix` | _(empty)_                    | JSON array of explicit `{node-version, signalk-server-version}` pairs for the integration job, overriding the `node-versions` × `signalk-server-versions` cross product                     |
+| `fail-on-warning`            | `false`                      | Treat advisory findings as failures instead of warnings — see [Failures vs. warnings](#failures-vs-warnings). Never applies to the lifecycle check's mock-gap warnings                       |
+
+### Build once, test broadly
+
+The plugin is built exactly once — on `build-node-version`, `ubuntu-latest` — and every platform/Node combination below installs and tests that same build output. CI therefore verifies that `build-command` succeeds only on `build-node-version`, and that the resulting output installs and runs correctly on every other platform and Node version. This is a deliberate trade: build failures are overwhelmingly Node/tooling-version issues, not OS issues, whereas install and runtime behavior (native addon compilation, path handling, ESM/CJS interop) genuinely varies by platform. If your build process itself needs verifying across platforms or Node versions, cover that in your own workflow.
 
 ### Formatting and coverage
 
@@ -126,7 +187,7 @@ Plugins without a `test` script still get all validation checks — tests are sk
 
 The Cerbo GX runs an Allwinner dual-core Cortex-A7 (ARMv7, 32-bit) with Venus OS. The CI emulates this environment using QEMU with a `node:20-bookworm-slim` Docker image plus `python3`, `make`, and `g++` — matching Venus OS 3.70 which ships Node 20 and has build tools available via opkg.
 
-The armv7 job runs install, build, and tests — it does not repeat the full validation suite (that's covered by the desktop jobs). The armv7 Node version is fixed to match the Cerbo GX and is not user-configurable. Expect armv7 jobs to take 3-5x longer than native x64. armv7 failures are **advisory and non-blocking**.
+The armv7 job downloads the centrally-built artifact and runs install and tests — build already happened once, centrally (see [Build once, test broadly](#build-once-test-broadly)) — and it does not repeat the full validation suite (that's covered by the desktop jobs). The armv7 Node version is fixed to match the Cerbo GX and is not user-configurable. Expect armv7 jobs to take 3-5x longer than native x64. armv7 failures are **advisory and non-blocking**.
 
 ### Limitations
 
@@ -149,7 +210,15 @@ with:
   signalk-server-versions: '["2.23.0", "latest"]'
 ```
 
-The integration job runs the full Cartesian product of `node-versions × signalk-server-versions`. The default `["22", "24"] × ["latest"]` is 2 jobs; `["22", "24"] × ["2.23.0", "latest"]` is 4. To keep the matrix small, shrink either dimension — integration coverage often only needs a single Node version (`node-versions: '["22"]'`) even when the desktop jobs exercise several.
+The integration job runs the full Cartesian product of `node-versions × signalk-server-versions`. The default `["22", "24", "26"] × ["latest"]` is 3 jobs; `["22", "24", "26"] × ["2.23.0", "latest"]` is 6. To keep the matrix small, shrink either dimension — integration coverage often only needs a single Node version (`node-versions: '["22"]'`) even when the desktop jobs exercise several.
+
+Some combinations may not make sense together — e.g. a Node version an older `signalk-server` release doesn't support. Pass `signalk-integration-matrix` as an explicit JSON array of `{node-version, signalk-server-version}` pairs to test exactly the combinations you want instead of the full cross product:
+
+```yaml
+with:
+  enable-signalk-integration: true
+  signalk-integration-matrix: '[{"node-version": "20", "signalk-server-version": "2.14.0"}, {"node-version": "22", "signalk-server-version": "latest"}]'
+```
 
 ### Provider API Verification
 
