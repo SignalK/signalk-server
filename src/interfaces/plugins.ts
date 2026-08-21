@@ -147,6 +147,57 @@ function mergeExcludeSelf(
   return merged.size > 0 ? (Array.from(merged) as SourceRef[]) : undefined
 }
 
+/**
+ * Call another plugin's HTTP route on this same server.
+ *
+ * The target route must opt in with `router.access('readonly')`; routes that
+ * declare no permission keep falling through to the admin gate, so this is
+ * never an implicit widening of what a plugin exposes.
+ *
+ * Kept in the server rather than handed to plugins as a raw token: the
+ * credential never leaves this process, its lifetime stops being the caller's
+ * problem, and callers do not have to rebuild the server's own base URL —
+ * which moves with `proxy_port`, ssl, and systemd socket activation.
+ */
+async function pluginFetch(
+  app: {
+    server?: { address(): { port: number; family: string } | string | null }
+    config?: { settings?: { ssl?: boolean } }
+    securityStrategy?: { getPluginSelfAuthToken?: (id: string) => string }
+  },
+  callerPluginId: string,
+  targetPluginId: string,
+  route: string,
+  init: RequestInit = {}
+): Promise<globalThis.Response> {
+  if (!targetPluginId) {
+    throw new Error('pluginFetch requires a target plugin id')
+  }
+  const address = app.server?.address()
+  if (!address || typeof address === 'string') {
+    // A string address means a pipe/unix socket (systemd may hand us one);
+    // there is no loopback URL to build for it.
+    throw new Error(
+      `pluginFetch: ${callerPluginId} cannot reach ${targetPluginId} — the server is not listening on a TCP port`
+    )
+  }
+  // Talk to the loopback interface on the port actually bound, not the
+  // externally advertised one: a reverse proxy in front of us is not
+  // necessarily reachable from here, and may not forward loopback traffic.
+  const host = address.family === 'IPv6' ? '[::1]' : '127.0.0.1'
+  const scheme = app.config?.settings?.ssl ? 'https' : 'http'
+  const path = route.startsWith('/') ? route : `/${route}`
+  const url = `${scheme}://${host}:${address.port}/plugins/${targetPluginId}${path}`
+
+  const token = app.securityStrategy?.getPluginSelfAuthToken?.(callerPluginId)
+  const headers = new Headers(init.headers)
+  // Never overwrite an Authorization the caller set deliberately.
+  if (token && !headers.has('authorization')) {
+    headers.set('authorization', `Bearer ${token}`)
+  }
+  return fetch(url, { ...init, headers })
+}
+
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
   const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
@@ -1084,6 +1135,18 @@ module.exports = (theApp: any) => {
       return getPluginOptions(plugin.id)
     }
     appCopy.getDataDirPath = () => dirForPluginId(plugin.id)
+
+    // Plugins run in-process but reach each other's routes over loopback
+    // HTTP, where they carry no session cookie and get a blanket 401 whenever
+    // security is on. Doing the call here keeps both the credential and the
+    // server's own address out of every calling plugin: the token never
+    // leaves this process, and callers stop having to reconstruct a base URL
+    // (proxy_port, ssl and systemd socket activation all move it).
+    appCopy.pluginFetch = (
+      targetPluginId: string,
+      route: string,
+      init?: RequestInit
+    ) => pluginFetch(app, plugin.id, targetPluginId, route, init)
 
     appCopy.registerPutHandler = (context, aPath, callback, source) => {
       appCopy.handleMessage(plugin.id, {
