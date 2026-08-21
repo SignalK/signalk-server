@@ -199,15 +199,14 @@ export class BLEApi implements IBLEApi {
         continue
       }
 
-      const initialization = this.initOneLocalProvider(
-        adapterName,
-        providerId
-      )
+      const initialization = this.initOneLocalProvider(adapterName, providerId)
       this.localProviderInitializations.set(providerId, initialization)
       try {
         await initialization
       } finally {
-        if (this.localProviderInitializations.get(providerId) === initialization) {
+        if (
+          this.localProviderInitializations.get(providerId) === initialization
+        ) {
           this.localProviderInitializations.delete(providerId)
         }
       }
@@ -333,7 +332,6 @@ export class BLEApi implements IBLEApi {
       throw new Error(`${pluginId} is missing BLEProvider properties/methods!`)
     }
     debug.enabled &&
-      debug.enabled &&
       debug(`Registering BLE provider: ${pluginId} "${provider.name}"`)
 
     if (this.bleProviders.has(pluginId)) {

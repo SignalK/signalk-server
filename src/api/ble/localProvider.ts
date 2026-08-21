@@ -287,7 +287,10 @@ export class LocalBLEProvider {
     // iterations don't both kick off an attach for the same MAC.
     this.deviceListeners.set(mac, () => {})
     try {
-      const device = await this.adapter.waitDevice(mac, DEVICE_ATTACH_TIMEOUT_MS)
+      const device = await this.adapter.waitDevice(
+        mac,
+        DEVICE_ATTACH_TIMEOUT_MS
+      )
       await device.helper._prepare()
       // Discovery may have been stopped while the awaits above ran —
       // registering now would repopulate the cleared listener table
