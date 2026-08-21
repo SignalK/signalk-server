@@ -73,6 +73,7 @@ import { buildProviderTalkerLookups } from './nmea0183TalkerGroups'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { StalenessEnforcer } from './staleness'
+import { ProviderStatusEmitter } from './providerStatusEmitter'
 import { Zones } from './zones'
 import checkNodeVersion from './version'
 import helmet from 'helmet'
@@ -105,6 +106,8 @@ function cloneDelta(delta: any): any {
   }
 }
 
+const PROVIDER_STATUS_REFRESH_INTERVAL_MS = 5 * 1000
+
 class Server {
   app: ServerApp &
     WithConfig &
@@ -120,6 +123,7 @@ class Server {
   // Pending sourceRef migration timers; cleared on stop() so a deferred
   // migration scheduled before a restart cannot fire on a torn-down app.
   pendingSourceRefMigrations?: Set<NodeJS.Timeout>
+  private providerStatusEmitter: ProviderStatusEmitter
 
   constructor(opts: { securityConfig: SecurityConfig }) {
     checkNodeVersion()
@@ -225,6 +229,15 @@ class Server {
     }
     Object.assign(app, pluginManager)
 
+    const providerStatusEmitter = new ProviderStatusEmitter(() => {
+      app.emit('serverevent', {
+        type: 'PROVIDERSTATUS',
+        from: 'signalk-server',
+        data: app.getProviderStatus()
+      })
+    })
+    this.providerStatusEmitter = providerStatusEmitter
+
     app.setPluginStatus = (providerId: string, statusMessage: string) => {
       doSetProviderStatus(providerId, statusMessage, 'status', 'plugin')
     }
@@ -269,11 +282,7 @@ class Server {
 
       status.message = statusMessage
 
-      app.emit('serverevent', {
-        type: 'PROVIDERSTATUS',
-        from: 'signalk-server',
-        data: app.getProviderStatus()
-      })
+      providerStatusEmitter.request()
     }
 
     app.getProviderStatus = () => {
@@ -670,13 +679,10 @@ class Server {
       app.stalenessEnforcer = undefined
     }
     app.intervals.push(
-      setInterval(() => {
-        app.emit('serverevent', {
-          type: 'PROVIDERSTATUS',
-          from: 'signalk-server',
-          data: app.getProviderStatus()
-        })
-      }, 5 * 1000)
+      setInterval(
+        () => self.providerStatusEmitter.emitNow(),
+        PROVIDER_STATUS_REFRESH_INTERVAL_MS
+      )
     )
 
     function serverUpgradeIsAvailable(err: any, newVersion?: string) {
@@ -806,6 +812,7 @@ class Server {
   }
 
   async stop(cb?: () => void) {
+    this.providerStatusEmitter.cancel()
     if (!this.app.started) {
       return this
     }
