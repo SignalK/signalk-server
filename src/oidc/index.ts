@@ -16,28 +16,12 @@
 
 export * from './types'
 export * from './config'
-export * from './pkce'
-export * from './state'
 export {
-  fetchDiscoveryDocument,
-  getDiscoveryDocument,
-  clearDiscoveryCache
-} from './discovery'
-export * from './authorization'
-export { exchangeAuthorizationCode, fetchUserinfo } from './token-exchange'
-export {
-  validateIdToken,
-  fetchJwks,
-  clearJwksCache,
-  type ValidatedIdTokenClaims
-} from './id-token-validation'
-export * from './user-info'
-export {
-  registerOIDCRoutes,
-  findOrCreateOIDCUser,
-  validateAndMergeUserinfoClaims,
-  type OIDCAuthDependencies
-} from './oidc-auth'
+  createOIDCProvider,
+  discoverOIDC,
+  summarizeMetadata,
+  OIDC_PROVIDER_ID
+} from './provider'
 export {
   registerOIDCAdminRoutes,
   type OIDCAdminDependencies,
