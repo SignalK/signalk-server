@@ -58,6 +58,8 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **Lifecycle** — Runs `start()` → `stop()` → `start()` (restart) with an empty configuration. Validates delta messages emitted during startup and checks that `registerDeltaInputHandler` handlers forward deltas correctly.
 
+**Async crashes** — Fails the job if the plugin terminates the process _after_ `start()` has returned — an unhandled `'error'` event or a floating promise that rejects late. See [Crashing the server after start()](#crashing-the-server-after-start) below.
+
 **API usage** — Scans source files for:
 
 - Deprecated APIs (`setProviderStatus` → `setPluginStatus`, `setProviderError` → `setPluginError`)
@@ -174,6 +176,77 @@ test-cerbo-hardware:
     - run: npm ci
     - run: npm test
 ```
+
+## Crashing the server after start()
+
+The server does not sandbox plugins. Everything runs in one Node process, so
+an error your plugin fails to handle does not disable just that plugin — it
+terminates the whole server. Under a process supervisor (`Restart=always`,
+Docker's `restart: unless-stopped`) the server then restart-loops: it comes up,
+runs for a few seconds, dies again, and keeps going indefinitely.
+
+The dangerous case is the one that escapes `try/catch`. Wrapping the body of
+`start()` is not enough, because two common failures arrive _after_ `start()`
+has already returned successfully:
+
+**Unhandled `'error'` events.** In Node, `'error'` is special: an `EventEmitter`
+that emits it with no listener attached throws, and there is nothing up the
+stack to catch it. Sockets, streams, D-Bus connections, serial ports and MQTT
+clients all report failures this way.
+
+```js
+// BAD — start() resolves cleanly, the server dies a moment later
+const client = net.connect('/var/run/some.sock')
+client.on('data', handle)
+
+// GOOD — the failure is handled where it happens
+const client = net.connect('/var/run/some.sock')
+client.on('data', handle)
+client.on('error', (err) => {
+  app.setPluginError(`connection failed: ${err.message}`)
+})
+```
+
+Note that a library opening the connection for you does not remove the
+obligation — if it hands back an emitter and attaches no listener itself, the
+responsibility is still yours.
+
+**Floating promises.** An async call started but never awaited (and with no
+`.catch()`) becomes an unhandled rejection, which terminates the process on
+Node 15 and later.
+
+```js
+// BAD — nothing observes the rejection
+start: () => {
+  connectToDevice()
+}
+
+// GOOD — await it so start()'s own error handling applies...
+start: async () => {
+  try {
+    await connectToDevice()
+  } catch (err) {
+    app.setPluginError(err.message)
+  }
+}
+
+// ...or attach a handler if it must run in the background
+start: () => {
+  connectToDevice().catch((err) => app.setPluginError(err.message))
+}
+```
+
+The general rule: a plugin should report failures through
+`app.setPluginError()` and keep the process alive. Hardware that is absent, a
+socket that is missing, a remote service that is down — these are normal
+conditions on a boat, not reasons to take navigation data offline.
+
+CI installs `uncaughtException` and `unhandledRejection` handlers around the
+lifecycle check and **fails the job** if either fires, including when
+`start()`, `stop()` and restart all report success. The check is an error
+rather than a warning because the consequence is not confined to the plugin:
+one faulty plugin makes the entire server unusable, and the resulting
+crash-loop is difficult for users to trace back to its cause.
 
 ## See also
 

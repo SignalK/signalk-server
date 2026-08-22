@@ -536,6 +536,30 @@ jobs:
           cat << 'LIFECYCLE' > /tmp/check-lifecycle.js
           const path = require('path');
           const pkg = require(process.cwd() + '/package.json');
+
+          // ── Async crash trap ─────────────────────────────────────
+          // A plugin can start cleanly and still take the server down a
+          // moment later: an 'error' event emitted on a socket/emitter with
+          // no listener, or a floating promise that rejects after start()
+          // has already resolved. Neither travels the promise path, so the
+          // try/catch around `await plugin.start({})` below cannot see them.
+          //
+          // In production the server has no such trap either — Node's
+          // default action for an unhandled 'error' event is to throw, and
+          // under systemd Restart=always the result is an endless
+          // crash-restart loop rather than one bad plugin.
+          //
+          // Recording them here (rather than dying immediately) lets the
+          // lifecycle run finish and report every problem it found, which
+          // is more useful than surfacing whichever one happened to fire
+          // first. Anything caught is fatal — see the report below.
+          const asyncCrashes = [];
+          process.on('uncaughtException', (e) => {
+            asyncCrashes.push('uncaught exception: ' + ((e && e.message) || String(e)));
+          });
+          process.on('unhandledRejection', (e) => {
+            asyncCrashes.push('unhandled rejection: ' + ((e && e.message) || String(e)));
+          });
           // See validate-entry.js for the rationale — object/conditional
           // exports must be resolved, not flattened to 'index.js'.
           function resolveEntry(p, fallback) {
@@ -802,6 +826,40 @@ jobs:
             console.log('');
             console.log('Malformed deltas are silently discarded by the server —');
             console.log('the plugin appears to work but data never reaches consumers.');
+            process.exit(1);
+          }
+
+          // ── Report async crashes ────────────────────────────────
+          // Let queued failures surface before deciding the verdict. A
+          // microtask turn would cover an 'error' already sitting on the
+          // queue, but the failures worth catching are slower than that: a
+          // socket connect, a D-Bus handshake or a DNS lookup started during
+          // start() typically fails a second or so in, which is exactly the
+          // "started fine, died shortly after" shape this check exists for.
+          //
+          // 1.5s covers those while staying far inside the step's 2-minute
+          // budget. It is a fixed cost on every run, so it is not raised
+          // further: this drains what start() already kicked off, and is not
+          // meant to wait out a slow remote endpoint.
+          const ASYNC_CRASH_DRAIN_MS = 1500;
+          await new Promise((resolve) => setTimeout(resolve, ASYNC_CRASH_DRAIN_MS));
+
+          if (asyncCrashes.length > 0) {
+            console.log('');
+            // start() runs twice (initial + restart), so one faulty code path
+            // reports the same message twice. Collapse duplicates — two
+            // identical lines read as two separate problems.
+            [...new Set(asyncCrashes)].forEach(c => console.log('::error::Lifecycle: ' + c));
+            console.log('');
+            console.log('The plugin crashed the process after start() had already');
+            console.log('returned. The server does not sandbox plugins: an unhandled');
+            console.log("'error' event or a rejected floating promise terminates the");
+            console.log('whole server, and under systemd it then restart-loops.');
+            console.log('');
+            console.log('Common cause: an emitter or socket used without an error');
+            console.log("listener. Attach one ('error' handlers are required, not");
+            console.log('optional), or await the operation so the failure reaches the');
+            console.log('try/catch in start().');
             process.exit(1);
           }
 
@@ -1895,7 +1953,7 @@ jobs:
             echo "- **package.json** — \`signalk-node-server-plugin\` keyword, \`main\`/\`exports\` field, \`engines.node\`"
             echo "- **Entry point** — Plugin exports a constructor function"
             echo "- **plugin.schema()** — Returns valid JSON Schema without crashing"
-            echo "- **Lifecycle** — start()/stop()/restart cycle works without errors"
+            echo "- **Lifecycle** — start()/stop()/restart cycle works without errors, and the plugin does not crash the process asynchronously afterwards"
             echo "- **API usage** — No deprecated (\`setProviderStatus\`), internal (\`app.server\`), file storage, or security anti-patterns"
             echo "- **Node built-in modules** — \`node:sqlite\` requires \`engines.node >= 22.5.0\` declared in package.json"
             echo "- **npm pack** — All files referenced by \`main\`/\`exports\` are included in the package"
