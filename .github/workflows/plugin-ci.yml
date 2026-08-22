@@ -1860,7 +1860,11 @@ jobs:
       - name: Checkout plugin
         uses: actions/checkout@v7
         with:
-          sparse-checkout: ${{ inputs.working-directory == '.' && 'package.json' || format('{0}/package.json', inputs.working-directory) }}
+          # Non-cone mode so the pattern selects the single manifest rather
+          # than a whole directory. A leading "./" matches nothing in non-cone
+          # mode, so the root default is spelled without one.
+          sparse-checkout: ${{ inputs.working-directory == '.' && '/package.json' || format('/{0}/package.json', inputs.working-directory) }}
+          sparse-checkout-cone-mode: false
 
       - name: Write CI summary report
         env:
