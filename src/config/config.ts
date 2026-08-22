@@ -77,6 +77,26 @@ export interface Config {
   baseDeltaEditor: DeltaEditor
   hasOldDefaults: boolean
   overrideTimestampWithNow: boolean
+  /** True while `settings` represents what the user configured, so it
+   * may be saved back to their file. Cleared in two cases: `--data` and
+   * the sample data flags change the data connections that are in
+   * effect for this run, and a settings file that exists but cannot be
+   * parsed falls back to empty settings. `--data` disables every
+   * configured provider and adds a FileStream for the log; the sample
+   * flags add a FileStream provider beside the configured ones.
+   * Writers that persist settings without a user asking must check
+   * this.
+   *
+   * A missing settings file does not clear it: there is nothing to
+   * overwrite, and a fresh install should still be able to save.
+   *
+   * Neither do the environment variables that set a single key
+   * (TRUST_PROXY, SSLPORT, WSCOMPRESSION) or --securityenabled. Those
+   * configure a container for the life of the installation, so
+   * blocking on them would stop automatic writes from ever succeeding
+   * there. They can still reach the file through any write, which is a
+   * wider problem than this flag solves. */
+  safeToPersistSettings: boolean
   security: boolean
   settings: {
     useBaseDeltas?: boolean
@@ -203,6 +223,7 @@ export function load(app: ConfigApp) {
 
   config.appPath = config.appPath || path.normalize(__dirname + '/../../')
   debug('appPath:' + config.appPath)
+  config.safeToPersistSettings = true
 
   try {
     config.name = packageJson.name
@@ -231,6 +252,12 @@ export function load(app: ConfigApp) {
   if (_.isObject(app.config.settings)) {
     debug('Using settings from constructor call, not reading defaults')
     disableWriteSettings = true
+    // The settings came from the caller, not from the user's file, so
+    // there is nothing they may be saved back over. writeSettingsFile
+    // already refuses; clearing this stops the writers that keep their
+    // own files, such as the sourceRef migration's channel labels, from
+    // persisting half of a change whose other half is refused.
+    config.safeToPersistSettings = false
     if (config.defaults) {
       convertOldDefaultsToDeltas(app.config.baseDeltaEditor, config.defaults)
     }
@@ -296,6 +323,7 @@ export function load(app: ConfigApp) {
       ],
       enabled: true
     })
+    app.config.safeToPersistSettings = false
   }
 
   if (app.argv['sample-n2k-data']) {
@@ -318,6 +346,7 @@ export function load(app: ConfigApp) {
       ],
       enabled: true
     })
+    app.config.safeToPersistSettings = false
   }
 
   if (app.argv.data) {
@@ -356,6 +385,7 @@ export function load(app: ConfigApp) {
       ],
       enabled: true
     })
+    app.config.safeToPersistSettings = false
   }
 
   if (app.argv['override-timestamps']) {
@@ -590,6 +620,9 @@ function readSettingsFile(app: ConfigApp) {
       app.config.settings = {
         pipedProviders: []
       }
+      // The file is still there and still the user's, so nothing may
+      // save these empty settings over it while they are unreadable.
+      app.config.safeToPersistSettings = false
     }
   }
   if (_.isUndefined(app.config.settings.pipedProviders)) {
