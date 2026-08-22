@@ -584,22 +584,11 @@ const METAFIELDRENDERERS: Record<
 }
 
 const saveMeta = (path: string, meta: MetaData) => {
-  // Mark displayUnits as explicit (manually set) so patterns don't overwrite
-  const metaToSave = {
-    ...meta,
-    displayUnits: meta.displayUnits
-      ? {
-          ...meta.displayUnits,
-          explicit: true
-        }
-      : undefined
-  }
-
   fetch(`/signalk/v1/api/vessels/self/${pathToUrlSegments(path)}/meta`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: metaToSave })
+    body: JSON.stringify({ value: meta })
   })
 }
 
