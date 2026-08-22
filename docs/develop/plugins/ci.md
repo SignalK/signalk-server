@@ -194,47 +194,23 @@ that emits it with no listener attached throws, and there is nothing up the
 stack to catch it. Sockets, streams, D-Bus connections, serial ports and MQTT
 clients all report failures this way.
 
-```js
-// BAD — start() resolves cleanly, the server dies a moment later
-const client = net.connect('/var/run/some.sock')
-client.on('data', handle)
+Attach an `'error'` listener to every emitter your plugin holds, at the point
+you create it, and report the failure through `app.setPluginError()`. A
+listener that only handles the success event (`'data'`, `'message'`,
+`'connect'`) leaves the failure path unguarded.
 
-// GOOD — the failure is handled where it happens
-const client = net.connect('/var/run/some.sock')
-client.on('data', handle)
-client.on('error', (err) => {
-  app.setPluginError(`connection failed: ${err.message}`)
-})
-```
-
-Note that a library opening the connection for you does not remove the
-obligation — if it hands back an emitter and attaches no listener itself, the
-responsibility is still yours.
+A library opening the connection for you does not remove the obligation — if it
+hands back an emitter and attaches no listener itself, the responsibility is
+still yours.
 
 **Floating promises.** An async call started but never awaited (and with no
 `.catch()`) becomes an unhandled rejection, which terminates the process on
 Node 15 and later.
 
-```js
-// BAD — nothing observes the rejection
-start: () => {
-  connectToDevice()
-}
-
-// GOOD — await it so start()'s own error handling applies...
-start: async () => {
-  try {
-    await connectToDevice()
-  } catch (err) {
-    app.setPluginError(err.message)
-  }
-}
-
-// ...or attach a handler if it must run in the background
-start: () => {
-  connectToDevice().catch((err) => app.setPluginError(err.message))
-}
-```
+Either await the call inside `start()`, so its own error handling applies, or —
+when the work must continue in the background — attach a rejection handler when
+you kick it off. What fails the check is a call whose rejection nothing
+observes.
 
 The general rule: a plugin should report failures through
 `app.setPluginError()` and keep the process alive. Hardware that is absent, a
