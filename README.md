@@ -83,24 +83,13 @@ There is a [Signal K Server FAQ Frequently Asked Questions](https://github.com/S
 
 ### Install with one command
 
-The [Signal K Universal Installer](https://github.com/dirkwa/signalk-universal-installer) installs and runs Signal K Server as a container stack, on amd64 and arm64:
+The [Signal K Universal Installer](https://github.com/dirkwa/signalk-universal-installer) installs and runs Signal K Server as a container stack on Linux, macOS and Windows 11, on amd64 and arm64. On Linux:
 
 ```shell
-# Linux (Debian 13 / trixie, Raspberry Pi OS trixie or later, Ubuntu 25.04 or later)
 curl -fsSL https://dirkwa.github.io/signalk-universal-installer/installer/linux/install.sh | bash
 ```
 
-```shell
-# macOS (Apple Silicon and Intel, Homebrew required)
-curl -fsSL https://dirkwa.github.io/signalk-universal-installer/installer/macos/install.sh | bash
-```
-
-```powershell
-# Windows 11 (PowerShell as administrator, enables WSL2 and runs the stack in a Podman machine)
-iwr -useb https://dirkwa.github.io/signalk-universal-installer/installer/windows/install.ps1 | iex
-```
-
-It also installs an updater for switching and rolling back server images, a doctor for health checks, recovery and bug reports, and a `signalk` command line tool.
+See the installer's [quick start](https://github.com/dirkwa/signalk-universal-installer#quick-start) for the macOS and Windows commands, along with the supported operating system versions and prerequisites. On Windows it runs the stack in a Podman machine on WSL2, which is a different approach from the [signalk-server-windows](https://github.com/SignalK/signalk-server-windows) installer listed below. It also installs an updater for switching and rolling back server images, a doctor for health checks, recovery and bug reports, and a `signalk` command line tool.
 
 For the typical boater, not being a software developer nor electrical engineer, the best option is to get a (commercially available) product that already has Signal K Server inside. These are the currently available devices:
 
