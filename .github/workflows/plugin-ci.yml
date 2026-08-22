@@ -71,6 +71,42 @@ permissions:
 
 jobs:
   # ════════════════════════════════════════════════════════════
+  #  Input validation — runs before anything touches the value
+  # ════════════════════════════════════════════════════════════
+  validate-inputs:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # working-directory reaches a docker -w, an artifact glob and a
+      # sparse-checkout pattern, so constrain it to a plain relative path.
+      # Everything else that consumes it does so through env, never through
+      # interpolation into a script.
+      - name: Validate working-directory
+        env:
+          PLUGIN_DIR: ${{ inputs.working-directory }}
+        run: |
+          if [ "$PLUGIN_DIR" = "." ]; then
+            echo "working-directory: repository root"
+            exit 0
+          fi
+          case "$PLUGIN_DIR" in
+            /*|~*)
+              echo "::error::working-directory must be relative to the repository root, got '$PLUGIN_DIR'"; exit 1 ;;
+          esac
+          if [ "$(printf '%s' "$PLUGIN_DIR" | wc -l)" -ne 0 ]; then
+            echo "::error::working-directory must be a single line"; exit 1
+          fi
+          if ! printf '%s' "$PLUGIN_DIR" | grep -qE '^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'; then
+            echo "::error::working-directory may only contain letters, digits, '.', '_', '-' and '/', got '$PLUGIN_DIR'"; exit 1
+          fi
+          case "/$PLUGIN_DIR/" in
+            */../*)
+              echo "::error::working-directory must not contain '..', got '$PLUGIN_DIR'"; exit 1 ;;
+          esac
+          echo "working-directory: $PLUGIN_DIR"
+
+  # ════════════════════════════════════════════════════════════
   #  Desktop platforms matrix: Linux x64, Linux arm64, macOS, Windows
   # ════════════════════════════════════════════════════════════
   desktop:
@@ -81,6 +117,7 @@ jobs:
           matrix.os == 'windows-latest' && 'Windows' ||
           matrix.os }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
+    needs: validate-inputs
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -1529,6 +1566,7 @@ jobs:
   armv7:
     name: armv7 (Cerbo GX) / Node 20
     runs-on: ubuntu-latest
+    needs: validate-inputs
     timeout-minutes: 30
     if: ${{ inputs.enable-armv7 }}
     # Advisory: armv7 is non-blocking. continue-on-error at the job level lets
@@ -1570,11 +1608,12 @@ jobs:
         env:
           BUILD_CMD: ${{ inputs.build-command }}
           TEST_CMD: ${{ inputs.test-command }}
+          PLUGIN_DIR: ${{ inputs.working-directory }}
         run: |
           docker run --rm --platform linux/arm/v7 \
             -v "${{ github.workspace }}:/plugin" \
             -v "/tmp/.npm-armv7-cache:/root/.npm" \
-            -w "/plugin/${{ inputs.working-directory }}" \
+            -w "/plugin/$PLUGIN_DIR" \
             -e BUILD_CMD \
             -e TEST_CMD \
             node:20-bookworm-slim \
@@ -1657,6 +1696,7 @@ jobs:
   signalk-integration:
     name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
+    needs: validate-inputs
     timeout-minutes: 15
     if: ${{ inputs.enable-signalk-integration }}
     strategy:
@@ -1686,8 +1726,10 @@ jobs:
 
       - name: Install plugins declared in signalk.requires
         shell: bash
+        env:
+          PLUGIN_DIR: ${{ inputs.working-directory }}
         run: |
-          REQUIRES=$(jq -r '.signalk.requires // [] | .[]' "${{ github.workspace }}/${{ inputs.working-directory }}/package.json" 2>/dev/null || true)
+          REQUIRES=$(jq -r '.signalk.requires // [] | .[]' "$GITHUB_WORKSPACE/$PLUGIN_DIR/package.json" 2>/dev/null || true)
           if [ -z "$REQUIRES" ]; then
             exit 0
           fi
@@ -1722,9 +1764,11 @@ jobs:
           npm install "/tmp/$(basename "$PLUGIN_TGZ")"
 
       - name: Configure plugin to auto-start
+        env:
+          PLUGIN_DIR: ${{ inputs.working-directory }}
         run: |
           cd /tmp/sk-test
-          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/${{ inputs.working-directory }}/package.json').name)")
+          PLUGIN_PKG_NAME=$(node -e "console.log(require(process.argv[1]).name)" "$GITHUB_WORKSPACE/$PLUGIN_DIR/package.json")
 
           # Derive plugin ID the same way signalk-server does (src/pluginid.ts)
           PLUGIN_ID=$(node -e "
@@ -1741,6 +1785,7 @@ jobs:
       - name: Start SignalK server and verify plugin
         env:
           SIGNALK_URL: 'http://localhost:3000'
+          PLUGIN_DIR: ${{ inputs.working-directory }}
         run: |
           cd /tmp/sk-test
           export SIGNALK_NODE_CONFIG_DIR=/tmp/sk-test
@@ -1773,7 +1818,7 @@ jobs:
           echo "SignalK server is ready (PID $SK_PID)"
 
           # Verify plugin is loaded
-          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/${{ inputs.working-directory }}/package.json').name)")
+          PLUGIN_PKG_NAME=$(node -e "console.log(require(process.argv[1]).name)" "$GITHUB_WORKSPACE/$PLUGIN_DIR/package.json")
           PLUGINS_JSON=$(curl -sf http://localhost:3000/skServer/plugins)
 
           echo "Loaded plugins:"
@@ -1829,7 +1874,7 @@ jobs:
           fi
 
           # Run integration tests from the plugin repo if they exist
-          cd "${{ github.workspace }}/${{ inputs.working-directory }}"
+          cd "$GITHUB_WORKSPACE/$PLUGIN_DIR"
           HAS_INTEGRATION=$(node -e "
             const pkg = require('./package.json');
             if (pkg.scripts && pkg.scripts['test:integration']) process.exit(0);
@@ -1852,7 +1897,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
-    needs: [desktop, armv7, signalk-integration]
+    needs: [validate-inputs, desktop, armv7, signalk-integration]
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
