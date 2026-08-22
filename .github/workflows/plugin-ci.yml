@@ -19,6 +19,12 @@ name: SignalK Plugin CI
 on:
   workflow_call:
     inputs:
+      # ── Repository layout ───────────────────────────────────
+      working-directory:
+        description: 'Path to the plugin within the repository, for plugins published from a monorepo subdirectory (matches npm''s repository.directory). Defaults to the repository root.'
+        type: string
+        default: '.'
+
       # ── Test configuration ──────────────────────────────────
       test-command:
         description: 'Command to run tests (default: npm test)'
@@ -81,6 +87,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-latest]
         node: ${{ fromJson(inputs.node-versions) }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v7
@@ -1508,9 +1517,9 @@ jobs:
         with:
           name: test-results-${{ matrix.os }}-node${{ matrix.node }}
           path: |
-            test-results/
-            coverage/
-            junit*.xml
+            ${{ inputs.working-directory }}/test-results/
+            ${{ inputs.working-directory }}/coverage/
+            ${{ inputs.working-directory }}/junit*.xml
           if-no-files-found: ignore
           retention-days: 7
 
@@ -1528,6 +1537,9 @@ jobs:
     continue-on-error: true
     outputs:
       advisory-outcome: ${{ steps.armv7-test.outcome }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v7
@@ -1562,7 +1574,7 @@ jobs:
           docker run --rm --platform linux/arm/v7 \
             -v "${{ github.workspace }}:/plugin" \
             -v "/tmp/.npm-armv7-cache:/root/.npm" \
-            -w /plugin \
+            -w "/plugin/${{ inputs.working-directory }}" \
             -e BUILD_CMD \
             -e TEST_CMD \
             node:20-bookworm-slim \
@@ -1652,6 +1664,9 @@ jobs:
       matrix:
         node: ${{ fromJson(inputs.node-versions) }}
         signalk-server-version: ${{ fromJson(inputs.signalk-server-versions) }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v7
@@ -1672,7 +1687,7 @@ jobs:
       - name: Install plugins declared in signalk.requires
         shell: bash
         run: |
-          REQUIRES=$(jq -r '.signalk.requires // [] | .[]' "${{ github.workspace }}/package.json" 2>/dev/null || true)
+          REQUIRES=$(jq -r '.signalk.requires // [] | .[]' "${{ github.workspace }}/${{ inputs.working-directory }}/package.json" 2>/dev/null || true)
           if [ -z "$REQUIRES" ]; then
             exit 0
           fi
@@ -1709,7 +1724,7 @@ jobs:
       - name: Configure plugin to auto-start
         run: |
           cd /tmp/sk-test
-          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/package.json').name)")
+          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/${{ inputs.working-directory }}/package.json').name)")
 
           # Derive plugin ID the same way signalk-server does (src/pluginid.ts)
           PLUGIN_ID=$(node -e "
@@ -1758,7 +1773,7 @@ jobs:
           echo "SignalK server is ready (PID $SK_PID)"
 
           # Verify plugin is loaded
-          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/package.json').name)")
+          PLUGIN_PKG_NAME=$(node -e "console.log(require('${{ github.workspace }}/${{ inputs.working-directory }}/package.json').name)")
           PLUGINS_JSON=$(curl -sf http://localhost:3000/skServer/plugins)
 
           echo "Loaded plugins:"
@@ -1814,7 +1829,7 @@ jobs:
           fi
 
           # Run integration tests from the plugin repo if they exist
-          cd "${{ github.workspace }}"
+          cd "${{ github.workspace }}/${{ inputs.working-directory }}"
           HAS_INTEGRATION=$(node -e "
             const pkg = require('./package.json');
             if (pkg.scripts && pkg.scripts['test:integration']) process.exit(0);
@@ -1838,11 +1853,14 @@ jobs:
     timeout-minutes: 5
     if: always()
     needs: [desktop, armv7, signalk-integration]
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v7
         with:
-          sparse-checkout: package.json
+          sparse-checkout: ${{ inputs.working-directory == '.' && 'package.json' || format('{0}/package.json', inputs.working-directory) }}
 
       - name: Write CI summary report
         env:
