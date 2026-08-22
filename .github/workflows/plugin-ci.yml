@@ -1920,6 +1920,7 @@ jobs:
           # step outcome exists.
           ARMV7_RESULT: ${{ needs.armv7.outputs.advisory-outcome || needs.armv7.result }}
           INTEGRATION_RESULT: ${{ needs.signalk-integration.result }}
+          VALIDATE_RESULT: ${{ needs.validate-inputs.result }}
         shell: bash
         run: |
           icon() {
@@ -1936,7 +1937,7 @@ jobs:
           PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
 
           OVERALL="pass"
-          if [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
+          if [[ "$VALIDATE_RESULT" != "success" ]] || [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
             OVERALL="FAIL"
           fi
 
