@@ -19,6 +19,7 @@ function createMockApp(
     argv: { s: 'settings.json' },
     config: {
       configPath: configPath ?? os.tmpdir(),
+      safeToPersistSettings: true,
       settings: {
         ...settingsOverrides
       }
@@ -157,6 +158,118 @@ describe('migrateSourceRef', () => {
     expect(prios['navigation.speedOverGround'][0].sourceRef).to.equal(
       'canhat.other'
     )
+  })
+
+  // The settings write is queued and asynchronous. Poll for the file so
+  // the positive case cannot pass on a slow box only because it waited
+  // long enough, and so the negative case below is measured against a
+  // deadline the positive case has already shown to be generous.
+  const WRITE_DEADLINE_MS = 2000
+  const WRITE_POLL_MS = 10
+  const settledSettingsFile = async (dir: string): Promise<boolean> => {
+    const target = path.join(dir, 'settings.json')
+    const until = Date.now() + WRITE_DEADLINE_MS
+    while (Date.now() < until) {
+      if (fs.existsSync(target)) return true
+      await new Promise((resolve) => setTimeout(resolve, WRITE_POLL_MS))
+    }
+    return false
+  }
+
+  const labelsFixture = (dir: string) => {
+    const labelsPath = path.join(dir, 'n2k-channel-labels.json')
+    fs.writeFileSync(
+      labelsPath,
+      JSON.stringify({ [`${OLD_REF}:130316:0`]: 'Engine Room' })
+    )
+    return labelsPath
+  }
+
+  it('persists the migration by default', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sktest-'))
+    try {
+      const labelsPath = labelsFixture(tmpDir)
+      const app = createMockApp(
+        { sourceAliases: { [OLD_REF]: 'Engine' } },
+        tmpDir
+      )
+      migrateSourceRef(app, OLD_REF, NEW_REF)
+
+      expect(await settledSettingsFile(tmpDir)).to.be.true
+      // writeSettingsFile splits the priority keys, and sourceAliases is
+      // one of them, so the migrated alias lands in priorities.json.
+      const saved = JSON.parse(
+        fs.readFileSync(path.join(tmpDir, 'priorities.json'), 'utf-8')
+      )
+      expect(saved.sourceAliases[NEW_REF]).to.equal('Engine')
+      const labels = JSON.parse(fs.readFileSync(labelsPath, 'utf-8'))
+      expect(labels).to.have.property(`${NEW_REF}:130316:0`)
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('writes neither file when settings cannot be persisted', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sktest-'))
+    try {
+      const labelsPath = labelsFixture(tmpDir)
+      const labelsBefore = fs.readFileSync(labelsPath, 'utf-8')
+      // sourceAliases is a priority key, so writeSettingsFile puts it in
+      // priorities.json — and writes that file first. Asserting only on
+      // settings.json would miss a migration that persisted there.
+      const prioritiesPath = path.join(tmpDir, 'priorities.json')
+      const prioritiesBefore = JSON.stringify({
+        sourceAliases: { [OLD_REF]: 'Engine' }
+      })
+      fs.writeFileSync(prioritiesPath, prioritiesBefore)
+      const app = createMockApp(
+        { sourceAliases: { [OLD_REF]: 'Engine' } },
+        tmpDir
+      )
+      app.config.safeToPersistSettings = false
+      migrateSourceRef(app, OLD_REF, NEW_REF)
+
+      expect(await settledSettingsFile(tmpDir)).to.be.false
+      expect(fs.readFileSync(prioritiesPath, 'utf-8')).to.equal(
+        prioritiesBefore
+      )
+      const aliases = app.config.settings.sourceAliases as Record<
+        string,
+        string
+      >
+      expect(aliases[NEW_REF]).to.equal('Engine')
+      expect(fs.readFileSync(labelsPath, 'utf-8')).to.equal(labelsBefore)
+      expect(app._activateCalled).to.be.true
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('reports a label-only migration it cannot persist', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sktest-'))
+    const logged: string[] = []
+    const savedLog = console.log
+    console.log = (...args: unknown[]) => logged.push(args.join(' '))
+    try {
+      // No settings key names the old ref, so the labels file is the
+      // only place the rename applies. Without a report the operator has
+      // nothing to act on: the file keeps the old ref and the event that
+      // triggered this does not come again.
+      const labelsPath = labelsFixture(tmpDir)
+      const labelsBefore = fs.readFileSync(labelsPath, 'utf-8')
+      const app = createMockApp({}, tmpDir)
+      app.config.safeToPersistSettings = false
+      migrateSourceRef(app, OLD_REF, NEW_REF)
+
+      expect(fs.readFileSync(labelsPath, 'utf-8')).to.equal(labelsBefore)
+      const report = logged.find((line) => line.includes('not persisted'))
+      expect(report, `no skip report in ${JSON.stringify(logged)}`).to.exist
+      expect(report).to.include(OLD_REF)
+      expect(report).to.include(NEW_REF)
+    } finally {
+      console.log = savedLog
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
   })
 
   it('handles missing channel labels file gracefully', () => {

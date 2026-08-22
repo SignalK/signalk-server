@@ -11,6 +11,8 @@ const LABELS_FILENAME = 'n2k-channel-labels.json'
 interface MigrationApp {
   config: {
     configPath: string
+    /** See Config.safeToPersistSettings. */
+    safeToPersistSettings: boolean
     settings: {
       priorityOverrides?: Record<
         string,
@@ -97,7 +99,12 @@ export function migrateSourceRef(
   }
   const settings = app.config.settings
   let settingsChanged = false
+  let labelsChanged = false
   const migrated = new Set<string>()
+  // Both files this function writes are covered: persisting one half of
+  // a migration would leave the channel labels keyed by newRef while
+  // settings still name oldRef.
+  const mayPersist = app.config.safeToPersistSettings
 
   // 1. priorityOverrides (path-level) — dedupe per path if newRef already present
   if (settings.priorityOverrides) {
@@ -197,18 +204,21 @@ export function migrateSourceRef(
       }
     }
     if (labelUpdates.length > 0) {
+      labelsChanged = true
       for (const [oldKey, newKey, value] of labelUpdates) {
         delete labels[oldKey]
         if (!(newKey in labels)) {
           labels[newKey] = value
         }
       }
-      // Sync write keeps callers (including the migration tests) able to
-      // observe the new file shape immediately on return. Channel labels
-      // files are tiny (one entry per N2K instance) so the blocking cost
-      // is negligible at startup.
-      fs.writeFileSync(labelsPath, JSON.stringify(labels, null, 2))
-      migrated.add('channelLabels')
+      if (mayPersist) {
+        // Sync write keeps callers (including the migration tests) able to
+        // observe the new file shape immediately on return. Channel labels
+        // files are tiny (one entry per N2K instance) so the blocking cost
+        // is negligible at startup.
+        fs.writeFileSync(labelsPath, JSON.stringify(labels, null, 2))
+        migrated.add('channelLabels')
+      }
     }
   } catch (e: unknown) {
     if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -259,7 +269,22 @@ export function migrateSourceRef(
     )
   }
 
-  if (settingsChanged) {
+  if ((settingsChanged || labelsChanged) && !mayPersist) {
+    // Saving would put this run's replaced data connections, or empty
+    // settings standing in for a file that would not parse, into the
+    // user's settings.json. The rewrites still apply in memory, so the
+    // running server is consistent with itself, but the rename is not
+    // deferred: migration runs from the sourceRefChanged event, and a
+    // later start of a device already at its new address raises no such
+    // event. The refs are logged so the rename can be made by hand.
+    // Channel labels count as a change of their own: a device whose ref
+    // appears only there still needs the hand rename, and nothing else
+    // would report it.
+    console.log(
+      `sourceRef migration ${oldRef} -> ${newRef} not persisted: settings do not represent the configured state`
+    )
+    finalize()
+  } else if (settingsChanged) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeSettingsFile(app as any, settings, (err: Error) => {
       if (err) {
@@ -273,7 +298,8 @@ export function migrateSourceRef(
       finalize()
     })
   } else {
-    // Nothing to persist (e.g. only channelLabels file was rewritten).
+    // Nothing left to persist: either nothing matched, or the channel
+    // labels file was the only match and has already been written.
     finalize()
   }
 }

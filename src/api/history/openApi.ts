@@ -356,7 +356,7 @@ historyApiDoc.paths = {
                   configured: {
                     type: 'string',
                     description:
-                      'Provider identifier persisted in server settings. May differ from `id` when the configured provider is not currently registered.'
+                      'Provider identifier persisted in server settings, set either by a client through this API or by the server itself, which records the first provider to register when no default is configured and its settings are safe to save. May differ from `id` when the configured provider is not currently registered, and is absent on a server that has recorded nothing.'
                   }
                 },
                 example: { id: 'signalk-to-influxdb2' }
