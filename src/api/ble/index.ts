@@ -15,6 +15,7 @@ import { SignalKMessageHub, WithConfig } from '../../app'
 import WebSocket from 'ws'
 import { writeSettingsFile } from '../../config/config'
 import { LocalBLEProvider } from './localProvider'
+import { createBluetoothSafe } from './safeBluetooth'
 import { RemoteGatewayProvider } from './remoteProvider'
 import { bleVendorName } from './bleCompanyIds'
 
@@ -150,12 +151,16 @@ export class BLEApi implements IBLEApi {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { createBluetooth } = require('@naugehyde/node-ble')
-      const { bluetooth, destroy } = createBluetooth()
-      const adapters = await bluetooth.activeAdapters()
-      destroy()
-      return adapters.map((a: any) => a.adapter as string)
+      const { bluetooth, destroy } = createBluetoothSafe()
+      // destroy() in finally: activeAdapters() rejects on a host with no
+      // usable bus, and skipping the teardown would leak the D-Bus
+      // connection every time this probe runs.
+      try {
+        const adapters = await bluetooth.activeAdapters()
+        return adapters.map((a: any) => a.adapter as string)
+      } finally {
+        destroy()
+      }
     } catch {
       return []
     }

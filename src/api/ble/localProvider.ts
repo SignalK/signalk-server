@@ -17,6 +17,8 @@ import {
   GATTSubscriptionHandle
 } from '@signalk/server-api'
 
+import { createBluetoothSafe } from './safeBluetooth'
+
 // How often to poll BlueZ for newly discovered devices
 const DEVICE_WATCH_INTERVAL_MS = 5000
 // waitDevice timeout when attaching a listener to an already-known device
@@ -113,9 +115,7 @@ export class LocalBLEProvider {
 
   async init(): Promise<void> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { createBluetooth } = require('@naugehyde/node-ble')
-      const bt = createBluetooth()
+      const bt = createBluetoothSafe()
       this.bluetooth = bt.bluetooth
       this.destroy = bt.destroy
       this.adapter = await this.bluetooth.getAdapter(this.adapterName)
