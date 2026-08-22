@@ -22,6 +22,10 @@ import Module from 'node:module'
 // behaviour is that an unlistened 'error' throws, exactly as Node's does.
 class FakeBus extends EventEmitter {}
 
+// The wrapper returns its own bluetooth facade, so the stub records the bus
+// it handed out for the test to drive.
+let lastBus: FakeBus | undefined
+
 // Module.prototype.require is not in @types/node's public surface, so the
 // patch point is described structurally rather than reached through `any`.
 type Requirer = (this: unknown, id: string, ...rest: unknown[]) => unknown
@@ -42,7 +46,17 @@ const withStubbedNodeBle = (fn: () => void) => {
       return {
         createBluetooth: () => {
           const dbus = new FakeBus()
-          return { bluetooth: { dbus }, destroy: () => undefined }
+          lastBus = dbus
+          return {
+            bluetooth: {
+              dbus,
+              // Never settles on its own — mirrors dbus-next leaving calls
+              // in flight when the connection dies.
+              activeAdapters: () => new Promise(() => undefined),
+              getAdapter: () => new Promise(() => undefined)
+            },
+            destroy: () => undefined
+          }
         }
       }
     }
@@ -63,8 +77,8 @@ describe('BLE D-Bus transport errors', () => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('../src/api/ble/safeBluetooth') as typeof import('../src/api/ble/safeBluetooth')
 
-      const session = createBluetoothSafe()
-      const bus = (session.bluetooth as { dbus: FakeBus }).dbus
+      createBluetoothSafe()
+      const bus = lastBus as FakeBus
 
       expect(bus.listenerCount('error')).to.equal(
         1,
@@ -86,6 +100,39 @@ describe('BLE D-Bus transport errors', () => {
 
       expect(emit).to.not.throw()
     })
+  })
+
+  it('rejects a pending adapter call when the bus fails under it', async () => {
+    // Swallowing the 'error' event is not enough on its own: dbus-next does
+    // not settle in-flight calls when the connection dies, so an operation
+    // issued before the failure would otherwise stay pending forever and
+    // turn the crash into a hang.
+    let session!: { bluetooth: { activeAdapters(): Promise<unknown> } }
+
+    withStubbedNodeBle(() => {
+      const { createBluetoothSafe: make } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../src/api/ble/safeBluetooth') as typeof import('../src/api/ble/safeBluetooth')
+      session = make()
+    })
+    const bus = lastBus as FakeBus
+
+    // A call that never settles on its own, as the real one does not.
+    const pending = session.bluetooth.activeAdapters()
+
+    bus.emit(
+      'error',
+      new Error('connect ENOENT /var/run/dbus/system_bus_socket')
+    )
+
+    let rejected = false
+    await pending.catch(() => {
+      rejected = true
+    })
+    expect(rejected).to.equal(
+      true,
+      'expected the pending call to reject once the bus failed'
+    )
   })
 
   it('still returns a usable session when the bus is healthy', () => {
