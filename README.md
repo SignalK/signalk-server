@@ -19,6 +19,7 @@
   - [Signal K Platform](#signal-k-platform)
   - [Documentation, Community \& Support](#documentation-community--support)
   - [How to get Signal K Server?](#how-to-get-signal-k-server)
+    - [Install with one command](#install-with-one-command)
   - [Configuration and use](#configuration-and-use)
     - [Opening the Signal K Server Admin UI](#opening-the-signal-k-server-admin-ui)
     - [Creating an admin account](#creating-an-admin-account)
@@ -79,6 +80,27 @@ See [Github Discussions](https://github.com/SignalK/signalk/discussions/) and [D
 There is a [Signal K Server FAQ Frequently Asked Questions](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions) on the Wiki, including [How do I integrate with NMEA2000 (CAN bus)](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus).
 
 ## How to get Signal K Server?
+
+### Install with one command
+
+The [Signal K Universal Installer](https://github.com/dirkwa/signalk-universal-installer) installs and runs Signal K Server as a container stack, on amd64 and arm64:
+
+```shell
+# Linux (Debian 13 / trixie, Raspberry Pi OS trixie or later, Ubuntu 25.04 or later)
+curl -fsSL https://dirkwa.github.io/signalk-universal-installer/installer/linux/install.sh | bash
+```
+
+```shell
+# macOS (Apple Silicon and Intel, Homebrew required)
+curl -fsSL https://dirkwa.github.io/signalk-universal-installer/installer/macos/install.sh | bash
+```
+
+```powershell
+# Windows 11 (PowerShell as administrator, enables WSL2 and runs the stack in a Podman machine)
+iwr -useb https://dirkwa.github.io/signalk-universal-installer/installer/windows/install.ps1 | iex
+```
+
+It also installs an updater for switching and rolling back server images, a doctor for health checks, recovery and bug reports, and a `signalk` command line tool.
 
 For the typical boater, not being a software developer nor electrical engineer, the best option is to get a (commercially available) product that already has Signal K Server inside. These are the currently available devices:
 
