@@ -42,6 +42,7 @@ export interface BluetoothSession {
 /** The only part of the dbus-next connection this module touches. */
 interface ErrorEmitter {
   on(event: 'error', listener: (err: unknown) => void): void
+  off(event: 'error', listener: (err: unknown) => void): void
 }
 
 /**
@@ -84,8 +85,14 @@ export function createBluetoothSafe(): BluetoothSession {
   // node-ble keeps the dbus-next connection on the Bluetooth instance; guard
   // the lookup so an upstream rename degrades to today's behaviour rather
   // than throwing from inside the safety wrapper itself.
-  const bus = (session.bluetooth as unknown as { dbus?: ErrorEmitter })?.dbus
-  if (bus && typeof bus.on === 'function') {
+  const maybeBus = (session.bluetooth as unknown as { dbus?: ErrorEmitter })
+    ?.dbus
+  const canListen =
+    !!maybeBus &&
+    typeof maybeBus.on === 'function' &&
+    typeof maybeBus.off === 'function'
+  const bus = maybeBus as ErrorEmitter
+  if (canListen) {
     bus.on('error', (err: unknown) => {
       busError =
         err instanceof Error ? err : new Error(String(err ?? 'unknown error'))
@@ -99,15 +106,27 @@ export function createBluetoothSafe(): BluetoothSession {
   // operation already in flight when the socket dies never settles.
   const guard = <T>(op: () => Promise<T>): Promise<T> => {
     if (busError) return Promise.reject(busError)
+    if (!canListen) return op()
     return new Promise<T>((resolve, reject) => {
-      if (bus && typeof bus.on === 'function') {
-        bus.on('error', (err: unknown) =>
-          reject(
-            err instanceof Error ? err : new Error(String(err ?? 'bus error'))
-          )
+      const onBusError = (err: unknown) =>
+        reject(
+          err instanceof Error ? err : new Error(String(err ?? 'bus error'))
         )
-      }
-      op().then(resolve, reject)
+      bus.on('error', onBusError)
+      // Removed on settle: without this every call would leave a listener
+      // behind and a long-lived session would trip Node's max-listeners
+      // warning after ten operations.
+      const done = () => bus.off('error', onBusError)
+      op().then(
+        (v) => {
+          done()
+          resolve(v)
+        },
+        (e) => {
+          done()
+          reject(e)
+        }
+      )
     })
   }
 

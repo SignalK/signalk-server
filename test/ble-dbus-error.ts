@@ -56,7 +56,7 @@ const withStubbedNodeBle = <T>(fn: () => T): { result: T; bus: FakeBus } => {
               // Never settles on its own — mirrors dbus-next leaving calls
               // in flight when the connection dies.
               activeAdapters: () => new Promise(() => undefined),
-              getAdapter: () => new Promise(() => undefined)
+              getAdapter: () => Promise.resolve({})
             },
             destroy: () => undefined
           }
@@ -136,6 +136,28 @@ describe('BLE D-Bus transport errors', () => {
     expect(rejected).to.equal(
       true,
       'expected the pending call to reject once the bus failed'
+    )
+  })
+
+  it('does not accumulate bus listeners across calls', async () => {
+    // guard() attaches an 'error' listener per call so a bus failure can
+    // reject the operation under way. Without removing it on settle, a
+    // long-lived session trips Node's max-listeners warning after ten
+    // operations and slowly leaks.
+    const { result: session, bus } = withStubbedNodeBle(() => {
+      const { createBluetoothSafe: make } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../src/api/ble/safeBluetooth') as typeof import('../src/api/ble/safeBluetooth')
+      return make()
+    })
+
+    const before = bus.listenerCount('error')
+    for (let i = 0; i < 12; i++) {
+      await session.bluetooth.getAdapter('hci0')
+    }
+    expect(bus.listenerCount('error')).to.equal(
+      before,
+      'expected per-call listeners to be removed once the call settled'
     )
   })
 

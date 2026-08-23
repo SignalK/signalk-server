@@ -58,7 +58,7 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **Lifecycle** — Runs `start()` → `stop()` → `start()` (restart) with an empty configuration. Validates delta messages emitted during startup and checks that `registerDeltaInputHandler` handlers forward deltas correctly.
 
-**Async crashes** — Fails the job if the plugin fails asynchronously _after_ `start()` has returned — an unhandled `'error'` event (which ends the server process) or a floating promise that rejects late. See [Crashing the server after start()](#crashing-the-server-after-start) below.
+**Async crashes** — Watches for roughly 1.5 seconds after the lifecycle calls return and fails the job if the plugin fails asynchronously in that window — an unhandled `'error'` event (which ends the server process) or a floating promise that rejects late. A failure that takes longer to surface will not be caught, so a clean run is not proof there is none. See [Crashing the server after start()](#crashing-the-server-after-start) below.
 
 **API usage** — Scans source files for:
 
