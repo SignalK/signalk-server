@@ -838,7 +838,10 @@ jobs:
             } else {
               console.log('::error::plugin.stop() threw: ' + msg);
               console.log('::error::This causes the server to leak resources when the plugin is disabled or restarted.');
-              process.exit(1);
+              // finish() rather than a bare exit: the job already fails here,
+              // but stop() may also have scheduled a delayed failure, and
+              // reporting it tells the author about both problems at once.
+              return await finish(1);
             }
           }
 
@@ -855,7 +858,7 @@ jobs:
             }
             console.log('::error::plugin.start({}) threw on second call: ' + msg);
             console.log('::error::Plugins must support restart (stop then start). This fails when users toggle the plugin in the server UI.');
-            process.exit(1);
+            return await finish(1);
           }
 
           try { await Promise.resolve(plugin.stop()); } catch (e) { /* ignore */ }

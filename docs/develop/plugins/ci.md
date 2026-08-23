@@ -58,7 +58,7 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **Lifecycle** — Runs `start()` → `stop()` → `start()` (restart) with an empty configuration. Validates delta messages emitted during startup and checks that `registerDeltaInputHandler` handlers forward deltas correctly.
 
-**Async crashes** — Fails the job if the plugin terminates the process _after_ `start()` has returned — an unhandled `'error'` event or a floating promise that rejects late. See [Crashing the server after start()](#crashing-the-server-after-start) below.
+**Async crashes** — Fails the job if the plugin fails asynchronously _after_ `start()` has returned — an unhandled `'error'` event (which ends the server process) or a floating promise that rejects late. See [Crashing the server after start()](#crashing-the-server-after-start) below.
 
 **API usage** — Scans source files for:
 
@@ -204,8 +204,12 @@ hands back an emitter and attaches no listener itself, the responsibility is
 still yours.
 
 **Floating promises.** An async call started but never awaited (and with no
-`.catch()`) becomes an unhandled rejection, which terminates the process on
-Node 15 and later.
+`.catch()`) becomes an unhandled rejection. Node terminates the process for
+these by default, but the server installs an `unhandledRejection` handler: it
+logs the rejection and, when the originating plugin can be identified from the
+stack, records a plugin error. So a floating rejection usually degrades your
+plugin rather than killing the server — the failure is silent from the user's
+point of view, and the work you meant to do never happened.
 
 Either await the call inside `start()`, so its own error handling applies, or —
 when the work must continue in the background — attach a rejection handler when
@@ -219,10 +223,14 @@ conditions on a boat, not reasons to take navigation data offline.
 
 CI installs `uncaughtException` and `unhandledRejection` handlers around the
 lifecycle check and **fails the job** if either fires, including when
-`start()`, `stop()` and restart all report success. The check is an error
-rather than a warning because the consequence is not confined to the plugin:
-one faulty plugin makes the entire server unusable, and the resulting
-crash-loop is difficult for users to trace back to its cause.
+`start()`, `stop()` and restart all report success.
+
+The check is an error rather than a warning because of the first case. The
+server's own `uncaughtException` handler logs the error and flags the plugin,
+but it cannot stop an unhandled `'error'` event: Node throws on those
+synchronously, and the throw ends the process regardless of what the handler
+logged. One faulty emitter therefore takes the whole server down, and the
+resulting crash-loop is difficult for users to trace back to its cause.
 
 ## See also
 

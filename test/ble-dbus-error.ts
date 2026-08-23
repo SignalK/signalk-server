@@ -36,7 +36,10 @@ interface PatchableModule {
 const patchable = Module as unknown as PatchableModule
 const requireStub: Requirer = patchable.prototype.require
 
-const withStubbedNodeBle = (fn: () => void) => {
+// Returns whatever the callback returns, and hands back the bus the stub
+// created so tests never read a stale one from an earlier case.
+const withStubbedNodeBle = <T>(fn: () => T): { result: T; bus: FakeBus } => {
+  lastBus = undefined
   patchable.prototype.require = function (
     this: unknown,
     id: string,
@@ -62,44 +65,48 @@ const withStubbedNodeBle = (fn: () => void) => {
     }
     return requireStub.call(this, id, ...rest)
   }
+  let result: T
   try {
-    fn()
+    result = fn()
   } finally {
     patchable.prototype.require = requireStub
   }
+  if (!lastBus) {
+    throw new Error('stub was never invoked — createBluetooth() not called')
+  }
+  return { result, bus: lastBus }
 }
 
 describe('BLE D-Bus transport errors', () => {
   it('does not let a system-bus error escape as an uncaught exception', () => {
-    withStubbedNodeBle(() => {
+    const { bus } = withStubbedNodeBle(() => {
       // Imported inside the stub so the wrapper picks up the fake module.
       const { createBluetoothSafe } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('../src/api/ble/safeBluetooth') as typeof import('../src/api/ble/safeBluetooth')
 
-      createBluetoothSafe()
-      const bus = lastBus as FakeBus
+      return createBluetoothSafe()
+    })
 
-      expect(bus.listenerCount('error')).to.equal(
-        1,
-        'expected an error listener to be attached synchronously'
+    expect(bus.listenerCount('error')).to.equal(
+      1,
+      'expected an error listener to be attached synchronously'
+    )
+
+    // The real failure: ENOENT on the system bus socket. Without a
+    // listener attached, this emit throws and takes the process down.
+    const emit = () =>
+      bus.emit(
+        'error',
+        Object.assign(
+          new Error('connect ENOENT /var/run/dbus/system_bus_socket'),
+          {
+            code: 'ENOENT'
+          }
+        )
       )
 
-      // The real failure: ENOENT on the system bus socket. Without a
-      // listener attached, this emit throws and takes the process down.
-      const emit = () =>
-        bus.emit(
-          'error',
-          Object.assign(
-            new Error('connect ENOENT /var/run/dbus/system_bus_socket'),
-            {
-              code: 'ENOENT'
-            }
-          )
-        )
-
-      expect(emit).to.not.throw()
-    })
+    expect(emit).to.not.throw()
   })
 
   it('rejects a pending adapter call when the bus fails under it', async () => {
@@ -107,15 +114,12 @@ describe('BLE D-Bus transport errors', () => {
     // not settle in-flight calls when the connection dies, so an operation
     // issued before the failure would otherwise stay pending forever and
     // turn the crash into a hang.
-    let session!: { bluetooth: { activeAdapters(): Promise<unknown> } }
-
-    withStubbedNodeBle(() => {
+    const { result: session, bus } = withStubbedNodeBle(() => {
       const { createBluetoothSafe: make } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('../src/api/ble/safeBluetooth') as typeof import('../src/api/ble/safeBluetooth')
-      session = make()
+      return make()
     })
-    const bus = lastBus as FakeBus
 
     // A call that never settles on its own, as the real one does not.
     const pending = session.bluetooth.activeAdapters()
