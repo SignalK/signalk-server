@@ -108,15 +108,19 @@ export function createBluetoothSafe(): BluetoothSession {
     if (busError) return Promise.reject(busError)
     if (!canListen) return op()
     return new Promise<T>((resolve, reject) => {
-      const onBusError = (err: unknown) =>
+      // Detached on every settle path, including the bus-error one: when the
+      // bus fails the underlying operation stays pending forever, so the
+      // op().then() handlers below never run and would leave the listener
+      // attached. A long-lived session would then trip Node's max-listeners
+      // warning after ten failed operations.
+      const done = () => bus.off('error', onBusError)
+      function onBusError(err: unknown) {
+        done()
         reject(
           err instanceof Error ? err : new Error(String(err ?? 'bus error'))
         )
+      }
       bus.on('error', onBusError)
-      // Removed on settle: without this every call would leave a listener
-      // behind and a long-lived session would trip Node's max-listeners
-      // warning after ten operations.
-      const done = () => bus.off('error', onBusError)
       op().then(
         (v) => {
           done()

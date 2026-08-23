@@ -121,6 +121,8 @@ describe('BLE D-Bus transport errors', () => {
       return make()
     })
 
+    const baseline = bus.listenerCount('error')
+
     // A call that never settles on its own, as the real one does not.
     const pending = session.bluetooth.activeAdapters()
 
@@ -136,6 +138,14 @@ describe('BLE D-Bus transport errors', () => {
     expect(rejected).to.equal(
       true,
       'expected the pending call to reject once the bus failed'
+    )
+
+    // The underlying op stays pending forever after a bus failure, so the
+    // listener has to come off on the rejection path too — nothing else
+    // will remove it.
+    expect(bus.listenerCount('error')).to.equal(
+      baseline,
+      'expected the per-call listener to be removed on the bus-error path'
     )
   })
 
