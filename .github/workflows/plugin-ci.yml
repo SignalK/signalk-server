@@ -21,7 +21,7 @@ on:
     inputs:
       # ── Repository layout ───────────────────────────────────
       working-directory:
-        description: 'Path to the plugin within the repository, for plugins published from a monorepo subdirectory (matches npm''s repository.directory). Defaults to the repository root.'
+        description: "Path to the plugin within the repository, for plugins published from a monorepo subdirectory (matches npm's repository.directory). Defaults to the repository root."
         type: string
         default: '.'
 
