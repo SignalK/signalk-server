@@ -4,15 +4,33 @@
 # Plugin developers reference it with a single line in their own workflow.
 #
 # Platforms tested:
-#   - Linux x64    (Node 22, 24)
-#   - Linux arm64  (Node 22, 24) — Raspberry Pi 4/5
-#   - macOS        (Node 22, 24)
-#   - Windows      (Node 22, 24)
+#   - Linux x64    (Node 22, 24, 26)
+#   - Linux arm64  (Node 22, 24, 26) — Raspberry Pi 4/5
+#   - macOS        (Node 22, 24, 26)
+#   - Windows      (Node 22, 24, 26)
 #   - armv7/armhf  (Node 20 — matches Venus OS 3.70 on Cerbo GX)
 #                    Runs under QEMU emulation with python3, make, g++
 #
 # Usage in your plugin repo:
 #   See docs/develop/plugins/examples/plugin-caller-example.yml
+#
+# The plugin is built exactly once (see the `build` job below), and every
+# platform/Node combination tested downstream installs and tests that same
+# build output. `build-node-version` picks which Node version runs that one
+# build; it defaults to '24' (set in the input schema below) — a deliberate
+# fixed choice, not derived from `node-versions`. Modern build tooling
+# (TypeScript, bundlers, etc.) commonly requires a current Node, and
+# `node-versions` may legitimately list older versions you still want to
+# *test* against. If '24' doesn't suit your build, set `build-node-version`
+# explicitly.
+#
+# One consequence: this workflow no longer verifies that `build-command`
+# itself succeeds on Windows/macOS, or on any Node version other than
+# `build-node-version` — only that the resulting build *output* installs
+# and runs correctly there. That trade is deliberate: build failures are
+# overwhelmingly Node/tooling-version issues, not OS issues, while install
+# and runtime behavior (native addons, path handling, ESM/CJS interop)
+# genuinely varies by platform — that's what the matrix below is for.
 
 name: SignalK Plugin CI
 
@@ -20,6 +38,13 @@ on:
   workflow_call:
     inputs:
       # ── Test configuration ──────────────────────────────────
+      # External dependency: SignalK/signalk-plugin-registry reads a caller
+      # workflow's `with: test-command` / `with: build-command` values
+      # directly out of its `.github/workflows/*.yml` (test-harness/
+      # plugin-ci-commands.ts) as a fallback when a plugin's published
+      # tarball can't run its own tests. Renaming these inputs, or
+      # restructuring how a caller declares them, silently breaks that
+      # parser — nothing in either repo's test suite currently catches it.
       test-command:
         description: 'Command to run tests (default: npm test)'
         type: string
@@ -37,9 +62,21 @@ on:
         type: string
         default: ''
       node-versions:
-        description: 'JSON array of Node versions for desktop platforms (default: ["22", "24"])'
+        description: 'JSON array of Node versions for desktop platforms (default: ["22", "24", "26"])'
         type: string
-        default: '["22", "24"]'
+        default: '["22", "24", "26"]'
+      build-node-version:
+        description: 'Node version used to build the plugin'
+        type: string
+        default: '24'
+      artifact-name-suffix:
+        description: 'Optional suffix appended to the shared build artifact name — set this if your caller workflow invokes this reusable workflow more than once in a single run, to avoid an artifact name collision'
+        type: string
+        default: ''
+      fail-on-warning:
+        description: 'Treat non-blocking findings (missing CHANGELOG/screenshots, deprecated API usage, npm audit findings, ES2023/Cerbo GX syntax, stray files, etc.) as failures instead of warnings. Off by default — these checks are advisory by design. Does NOT apply to the lifecycle check''s "mock gap" warnings (registerWithRouter()/start()/stop() hitting a method our test harness does not model) — those indicate a gap in this workflow''s mock, not necessarily a defect in your plugin, so failing on them would be unfair to enable.'
+        type: boolean
+        default: false
 
       # ── armv7 / Cerbo GX options ────────────────────────────
       enable-armv7:
@@ -56,6 +93,10 @@ on:
         description: 'JSON array of signalk-server versions to fan the integration test out over (e.g. ''["2.23.0", "latest"]'')'
         type: string
         default: '["latest"]'
+      signalk-integration-matrix:
+        description: 'JSON array of {"node-version": ..., "signalk-server-version": ...} pairs to test in the integration job, overriding the node-versions × signalk-server-versions cartesian product — use this when only some combinations are valid (e.g. an older signalk-server version that does not support a newer Node)'
+        type: string
+        default: ''
 
 # Least-privilege token for the jobs in this reusable workflow. We only
 # read the caller's repository — install, build, and test steps never
@@ -65,16 +106,202 @@ permissions:
 
 jobs:
   # ════════════════════════════════════════════════════════════
+  #  Build once — produces a single build artifact that every
+  #  platform/Node test job below installs and tests, instead of
+  #  each of them re-running `build-command` independently.
+  #
+  #  Note: this uploads the working tree post-build (minus
+  #  node_modules), NOT `npm pack` output — node_modules is
+  #  platform/arch/Node-ABI specific (native addons) and must be
+  #  installed fresh in every downstream job via its own `npm ci`.
+  #  .git is retained so the stray-files check (git ls-files) still
+  #  works downstream. Only the transpile/bundle step is shared.
+  # ════════════════════════════════════════════════════════════
+  build:
+    name: Build (Node ${{ inputs.build-node-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v7
+        with:
+          # The build output tarball below includes .git; without this the
+          # persisted http.extraheader token would ship inside the artifact.
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.build-node-version }}
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --ignore-scripts
+          else
+            npm install --ignore-scripts
+          fi
+          # Bare `npm rebuild` (no args) also re-runs the *root* package's
+          # own preinstall/install/postinstall scripts, not just dependency
+          # native addons — rebuild doesn't honor --ignore-scripts the way
+          # install does. Naming only the dependencies that actually need
+          # rebuilding avoids touching the root package's scripts at all,
+          # and skips the call entirely when nothing needs compiling.
+          NATIVE_MODULES=$(node -e '
+            const fs = require("fs");
+            const path = require("path");
+            function scan(dir, prefix) {
+              const names = [];
+              if (!fs.existsSync(dir)) return names;
+              for (const entry of fs.readdirSync(dir)) {
+                if (entry === ".package-lock.json" || entry === ".bin") continue;
+                const full = path.join(dir, entry);
+                if (entry.startsWith("@")) { names.push(...scan(full, entry + "/")); continue; }
+                if (fs.existsSync(path.join(full, "binding.gyp"))) names.push(prefix + entry);
+                names.push(...scan(path.join(full, "node_modules"), ""));
+              }
+              return names;
+            }
+            process.stdout.write(scan("node_modules", "").join(" "));
+          ')
+          if [ -n "$NATIVE_MODULES" ]; then
+            npm rebuild $NATIVE_MODULES
+          fi
+        shell: bash
+
+      - name: Run npm audit
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
+        shell: bash
+        run: |
+          # npm audit exits non-zero whenever it finds anything at all —
+          # capture into a variable first (not a pipe) so that exit code
+          # never reaches this step's own exit status under the default
+          # `set -e -o pipefail` shell; stdout is still valid JSON either way.
+          AUDIT_JSON=$(npm audit --json 2>/dev/null || true)
+          printf '%s' "$AUDIT_JSON" | node -e '
+            const fs = require("fs");
+            function summary(line) {
+              console.log(line);
+              if (process.env.GITHUB_STEP_SUMMARY) {
+                fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "### Dependency audit\n\n" + line + "\n");
+              }
+            }
+            let input = "";
+            process.stdin.on("data", (chunk) => { input += chunk; });
+            process.stdin.on("end", () => {
+              let data;
+              try {
+                data = JSON.parse(input);
+              } catch (e) {
+                console.log("npm audit produced no parseable output — skipping");
+                return;
+              }
+              // npm audit itself can fail (e.g. ENOLOCK) and still print
+              // valid JSON — an {error: ...} shape, not {metadata: ...}.
+              // Treating that as "0 vulnerabilities" would be a false
+              // all-clear, so surface it distinctly instead of falling
+              // through to the normal count logic below.
+              if (data.error) {
+                summary("⚠️ npm audit could not run: " + (data.error.summary || JSON.stringify(data.error)));
+                return;
+              }
+              if (!data.metadata || !data.metadata.vulnerabilities) {
+                console.log("npm audit output missing the expected metadata.vulnerabilities shape — skipping");
+                return;
+              }
+              const v = data.metadata.vulnerabilities;
+              const critical = v.critical || 0;
+              const high = v.high || 0;
+              const moderate = v.moderate || 0;
+              const low = v.low || 0;
+              const total = critical + high + moderate + low;
+              if (total === 0) {
+                summary("✅ No known vulnerabilities.");
+                return;
+              }
+              // data.vulnerabilities (distinct from data.metadata.vulnerabilities
+              // above) is keyed by package name, each with its own severity —
+              // pull those out so the message says *what* is vulnerable, not
+              // just how many. Worst severity first, capped so one plugin with
+              // a huge advisory list cannot produce an unreadable annotation.
+              const severityRank = { critical: 4, high: 3, moderate: 2, low: 1 };
+              const vulnPkgs = data.vulnerabilities && typeof data.vulnerabilities === "object"
+                ? Object.keys(data.vulnerabilities).map((name) => ({
+                    name,
+                    severity: (data.vulnerabilities[name] && data.vulnerabilities[name].severity) || "unknown"
+                  }))
+                : [];
+              vulnPkgs.sort((a, b) =>
+                (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0) || a.name.localeCompare(b.name)
+              );
+              const MAX_PKGS_SHOWN = 10;
+              let pkgList = vulnPkgs.slice(0, MAX_PKGS_SHOWN).map((p) => p.name + " (" + p.severity + ")").join(", ");
+              if (vulnPkgs.length > MAX_PKGS_SHOWN) {
+                pkgList += ", and " + (vulnPkgs.length - MAX_PKGS_SHOWN) + " more";
+              }
+              const pkgSuffix = pkgList ? ": " + pkgList : "";
+              console.log(
+                "::warning::npm audit found " + total + " known vulnerabilit" + (total === 1 ? "y" : "ies") +
+                " in dependencies (critical: " + critical + ", high: " + high + ", moderate: " + moderate + ", low: " + low + ")" + pkgSuffix + ". " +
+                "Run npm audit locally for details, and npm audit fix where a safe upgrade exists."
+              );
+              summary(
+                "⚠️ **" + total + " known vulnerabilit" + (total === 1 ? "y" : "ies") + "** in dependencies " +
+                "(critical: " + critical + ", high: " + high + ", moderate: " + moderate + ", low: " + low + ")" + pkgSuffix + ". " +
+                "Run `npm audit` locally for details, and `npm audit fix` where a safe upgrade exists."
+              );
+              if (process.env.FAIL_ON_WARNING === "true") {
+                // This fails the build job itself, not just this step — every
+                // downstream job (desktop/armv7/integration) needs its
+                // artifact, so a vulnerable dependency skips the whole run
+                // past this point when fail-on-warning is on. Same blast
+                // radius a real build-command failure already has today.
+                console.log("::error::fail-on-warning is enabled — the vulnerabilit" + (total === 1 ? "y" : "ies") + " above " + (total === 1 ? "is" : "are") + " treated as a failure.");
+                process.exit(1);
+              }
+            });
+          '
+
+      - name: Build
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+        shell: bash
+        run: eval "$BUILD_CMD"
+
+      - name: Package build output
+        shell: bash
+        run: |
+          rm -rf node_modules
+          tar -czf "$RUNNER_TEMP/built-plugin.tar.gz" .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: built-plugin${{ inputs.artifact-name-suffix }}
+          path: ${{ runner.temp }}/built-plugin.tar.gz
+          retention-days: 1
+
+  # ════════════════════════════════════════════════════════════
   #  Desktop platforms matrix: Linux x64, Linux arm64, macOS, Windows
   # ════════════════════════════════════════════════════════════
   desktop:
+    # No "/" — the Actions sidebar's compact matrix-job list appears to
+    # extract only the last "/"-delimited segment of a custom matrix
+    # name, which collapsed every OS down to a bare "Node 22"/"Node
+    # 24"/"Node 26" with no way to tell them apart. The "Install & Test:"
+    # prefix mirrors "Build (Node 24)" above — this job downloads the
+    # build artifact and validates/tests it, it doesn't build anything.
     name: >-
-      ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
+      Install & Test: ${{
+          matrix.os == 'ubuntu-latest' && 'Linux' ||
           matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
           matrix.os == 'macos-15' && 'macOS' ||
           matrix.os == 'windows-latest' && 'Windows' ||
-          matrix.os }} / Node ${{ matrix.node }}
+          matrix.os }} (Node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}
+    needs: build
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -82,17 +309,39 @@ jobs:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-latest]
         node: ${{ fromJson(inputs.node-versions) }}
     steps:
-      - name: Checkout plugin
-        uses: actions/checkout@v7
+      - name: Download build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: built-plugin${{ inputs.artifact-name-suffix }}
+          path: _artifact-download
+
+      - name: Extract build artifact
+        shell: bash
+        # Use a plain relative path here, not ${{ runner.temp }} — on
+        # Windows runners that resolves to e.g. "D:\a\_temp", and GNU
+        # tar (bundled with Git Bash) misparses the leading "D:" as
+        # hostname:path remote-tar syntax ("Cannot connect to D:").
+        run: |
+          tar -xzf _artifact-download/built-plugin.tar.gz
+          rm -rf _artifact-download
 
       - name: Setup Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
 
       - name: Validate plugin package.json
         id: validate-pkg
+        # Pure static analysis of package.json/source files — the result
+        # cannot differ by OS or Node version, so running it on all 12
+        # desktop combinations is 12x redundant work and, worse, 12x
+        # duplicate ::warning:: annotations for the exact same finding.
+        # Runs on one representative combination; a failure there still
+        # fails the overall desktop matrix (and ci-status) the same way.
+        if: matrix.os == 'ubuntu-latest' && matrix.node == fromJson(inputs.node-versions)[0]
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         run: |
           cat << 'VALIDATE' > /tmp/validate-pkg.js
@@ -288,8 +537,15 @@ jobs:
           }
 
           warnings.forEach(w => console.log('::warning::' + w));
+          if (process.env.GITHUB_OUTPUT) {
+            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'warning-count=' + warnings.length + '\n');
+          }
           if (errors.length > 0) {
             errors.forEach(e => console.log('::error::' + e));
+            process.exit(1);
+          }
+          if (process.env.FAIL_ON_WARNING === 'true' && warnings.length > 0) {
+            console.log('::error::fail-on-warning is enabled — the ' + warnings.length + ' warning(s) above are treated as failures.');
             process.exit(1);
           }
           console.log('Plugin package.json validation passed');
@@ -314,18 +570,38 @@ jobs:
             return 1
           }
           if [ -f package-lock.json ]; then
-            npm_install_with_retry "npm ci"
+            npm_install_with_retry "npm ci --ignore-scripts"
           else
             echo "No package-lock.json found — using npm install instead of npm ci"
-            npm_install_with_retry "npm install"
+            npm_install_with_retry "npm install --ignore-scripts"
+          fi
+          # Bare `npm rebuild` (no args) also re-runs the *root* package's
+          # own preinstall/install/postinstall scripts, not just dependency
+          # native addons — rebuild doesn't honor --ignore-scripts the way
+          # install does. Naming only the dependencies that actually need
+          # rebuilding avoids touching the root package's scripts at all,
+          # and skips the call entirely when nothing needs compiling.
+          NATIVE_MODULES=$(node -e '
+            const fs = require("fs");
+            const path = require("path");
+            function scan(dir, prefix) {
+              const names = [];
+              if (!fs.existsSync(dir)) return names;
+              for (const entry of fs.readdirSync(dir)) {
+                if (entry === ".package-lock.json" || entry === ".bin") continue;
+                const full = path.join(dir, entry);
+                if (entry.startsWith("@")) { names.push(...scan(full, entry + "/")); continue; }
+                if (fs.existsSync(path.join(full, "binding.gyp"))) names.push(prefix + entry);
+                names.push(...scan(path.join(full, "node_modules"), ""));
+              }
+              return names;
+            }
+            process.stdout.write(scan("node_modules", "").join(" "));
+          ')
+          if [ -n "$NATIVE_MODULES" ]; then
+            npm rebuild $NATIVE_MODULES
           fi
         shell: bash
-
-      - name: Build
-        env:
-          BUILD_CMD: ${{ inputs.build-command }}
-        shell: bash
-        run: eval "$BUILD_CMD"
 
       - name: Validate plugin entry point
         id: validate-entry
@@ -372,6 +648,8 @@ jobs:
 
       - name: Validate plugin.schema() if defined
         id: validate-schema
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         timeout-minutes: 2
         run: |
@@ -479,8 +757,10 @@ jobs:
           }
 
           // Basic JSON Schema structure check (rjsf compatibility)
+          let schemaWarningCount = 0;
           if (!schema.type && !schema.properties && !schema.oneOf && !schema.anyOf) {
             console.log('::warning::' + label + ' has no type, properties, oneOf, or anyOf — is this a valid JSON Schema?');
+            schemaWarningCount++;
           }
 
           // Check for JSON-hostile values that would be silently dropped or
@@ -523,6 +803,13 @@ jobs:
             process.exit(1);
           }
 
+          if (process.env.GITHUB_OUTPUT) {
+            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'warning-count=' + schemaWarningCount + '\n');
+          }
+          if (process.env.FAIL_ON_WARNING === 'true' && schemaWarningCount > 0) {
+            console.log('::error::fail-on-warning is enabled — the warning above is treated as a failure.');
+            process.exit(1);
+          }
           console.log(label + ' is a valid JSON Schema object');
           process.exit(0);
           SCHEMACHECK
@@ -739,6 +1026,29 @@ jobs:
             return /\w+ is not a function/.test(msg) || /Cannot read propert/.test(msg);
           }
 
+          // Mirrors signalk-plugin-registry's test-harness/schema-defaults.ts —
+          // a config-shaped object built from the plugin's own declared
+          // defaults, not an arbitrary probe. {} alone can pass activation
+          // while a real default value (e.g. an assumed-present default
+          // array/object field) breaks start() the first time a user
+          // actually saves the config screen with its defaults intact.
+          function extractSchemaDefaults(schema) {
+            if (!schema || typeof schema !== 'object') return {};
+            if (schema.type !== 'object' || !schema.properties) return {};
+            const result = {};
+            for (const key of Object.keys(schema.properties)) {
+              const prop = schema.properties[key];
+              if (!prop || typeof prop !== 'object') continue;
+              if (prop.type === 'object' && prop.properties) {
+                const nested = extractSchemaDefaults(prop);
+                if (Object.keys(nested).length > 0) result[key] = nested;
+              } else if ('default' in prop) {
+                result[key] = prop.default;
+              }
+            }
+            return result;
+          }
+
           // Wrap in an async IIFE so that Promise-returning start()/stop()
           // hooks surface rejections via await — a sync try/catch around
           // `plugin.start({})` would silently swallow them.
@@ -791,6 +1101,34 @@ jobs:
 
           try { await Promise.resolve(plugin.stop()); } catch (e) { /* ignore */ }
 
+          // Also activate once with the plugin's own schema defaults, not
+          // just {} — see extractSchemaDefaults above for why. Skipped
+          // entirely when the schema has no default values to extract.
+          let schemaForDefaults;
+          try {
+            schemaForDefaults = typeof plugin.schema === 'function' ? plugin.schema() : plugin.schema;
+          } catch (e) {
+            schemaForDefaults = undefined; // a throwing schema() is check-schema.js's own check to report
+          }
+          const schemaDefaults = extractSchemaDefaults(schemaForDefaults);
+          if (Object.keys(schemaDefaults).length > 0) {
+            try {
+              await Promise.resolve(plugin.start(schemaDefaults));
+              console.log('start(<schema defaults>) — ok');
+            } catch (e) {
+              const msg = e.message || String(e);
+              if (isMockGap(msg)) {
+                console.log('::warning::plugin.start(<schema defaults>) threw: ' + msg);
+                console.log('::warning::This looks like a missing CI mock method, not a plugin bug. Please report at https://github.com/SignalK/signalk-server/issues');
+                process.exit(0);
+              }
+              console.log('::error::plugin.start(<schema defaults>) threw: ' + msg);
+              console.log("::error::This only surfaces once a user saves the config screen with the plugin's own default values intact — start({}) alone would not catch it.");
+              process.exit(1);
+            }
+            try { await Promise.resolve(plugin.stop()); } catch (e) { /* ignore */ }
+          }
+
           // ── Report delta validation results ─────────────────────
           if (deltaWarnings.length > 0 || deltaErrors.length > 0) {
             console.log('');
@@ -816,6 +1154,12 @@ jobs:
 
       - name: Scan for deprecated and misused SignalK APIs
         id: deprecated-api
+        # Same reasoning as "Validate plugin package.json" above — pure
+        # static source-file analysis, platform/Node-invariant, so it
+        # only needs to run once instead of 12x duplicating every finding.
+        if: matrix.os == 'ubuntu-latest' && matrix.node == fromJson(inputs.node-versions)[0]
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         run: |
           cat << 'APISCAN' > /tmp/check-api-usage.js
@@ -1066,6 +1410,10 @@ jobs:
           warnings.forEach(w => console.log('::warning::' + w));
           errors.forEach(e => console.log('::error::' + e));
 
+          if (process.env.GITHUB_OUTPUT) {
+            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'warning-count=' + warnings.length + '\n');
+          }
+
           if (errors.length > 0) {
             console.log('');
             console.log('Found ' + errors.length + ' API misuse(s). These access internal server');
@@ -1073,6 +1421,10 @@ jobs:
             console.log('without notice in future server updates.');
             console.log('');
             console.log('See: https://signalk.org/signalk-server/develop/plugins/server_api.html');
+            process.exit(1);
+          }
+          if (process.env.FAIL_ON_WARNING === 'true' && warnings.length > 0) {
+            console.log('::error::fail-on-warning is enabled — the ' + warnings.length + ' warning(s) above are treated as failures.');
             process.exit(1);
           }
           process.exit(0);
@@ -1110,6 +1462,20 @@ jobs:
           // Get list of files that npm pack would include
           // --ignore-scripts: don't re-run prepack (we already built in a prior step)
           // stdio pipe suppresses stderr cross-platform (2>/dev/null breaks on Windows)
+          //
+          // npm 10.x (Node 22) actually *runs* "prepare" during npm pack
+          // despite --ignore-scripts (npm 11+ does not — see the same fix
+          // in the App Store simulation step below) — strip it from
+          // package.json before either dry-run call, and restore it once
+          // we have the file list, rather than depend on --ignore-scripts
+          // alone to suppress it.
+          const fs = require('fs');
+          const pkgJsonPath = path.join(process.cwd(), 'package.json');
+          const pkgJsonOrig = fs.readFileSync(pkgJsonPath, 'utf8');
+          const pkgForPack = JSON.parse(pkgJsonOrig);
+          if (pkgForPack.scripts) delete pkgForPack.scripts.prepare;
+          fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgForPack, null, 2));
+
           let packOutput;
           try {
             packOutput = execSync('npm pack --dry-run --json --ignore-scripts', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
@@ -1130,6 +1496,7 @@ jobs:
             }
             files = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('npm') && !l.startsWith('Tarball'));
           }
+          fs.writeFileSync(pkgJsonPath, pkgJsonOrig);
 
           const errors = [];
           const warnings = [];
@@ -1216,6 +1583,8 @@ jobs:
       - name: Check ES2023 compatibility (Cerbo GX / Node 20)
         id: es-check
         if: always() && steps.pack-check.outcome != 'skipped'
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         run: |
           # Cerbo GX (Venus OS) runs Node 20 which supports ES2023 syntax.
@@ -1296,6 +1665,10 @@ jobs:
           if ! npx --yes es-check@8 es2023 $MODULE_FLAG $FILES 2>&1; then
             echo ""
             echo "::warning::Plugin uses ES2024+ syntax not supported by Node 20 (Cerbo GX / Venus OS). Consider targeting ES2023 in your TypeScript/build config or tsconfig.json to maintain Cerbo GX compatibility."
+            if [ "$FAIL_ON_WARNING" = "true" ]; then
+              echo "::error::fail-on-warning is enabled — the ES2023 compatibility warning above is treated as a failure."
+              exit 1
+            fi
           fi
 
       - name: Simulate App Store install (--ignore-scripts)
@@ -1311,8 +1684,27 @@ jobs:
           # Read the tarball name from --json: a plugin "prepare" script (e.g. tsc)
           # prints a lifecycle banner to stdout that would pollute a bare
           # $(npm pack) capture (npm < 11 runs prepare here despite --ignore-scripts).
-          PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP" \
-            | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
+          # `npm pack` is captured on its own line (not piped straight into
+          # `node -e`) so a failure there isn't swallowed by a pipe's exit
+          # status. The captured JSON is then handed to `node -e` over stdin,
+          # not as a CLI argument — a plugin with a large file count (e.g. a
+          # bundled webapp) makes --json's `files` array big enough to blow
+          # past Windows' argv-length limit ("Argument list too long").
+          #
+          # Beyond the stdout-corruption risk above, npm 10.x (bundled with
+          # Node 22) actually *runs* "prepare" here despite --ignore-scripts
+          # — not just prints its banner — once the tarball is reinstalled
+          # from a local path below (confirmed empirically; npm 11+ does not
+          # do this; armv7's npm 10.8.2 is unaffected since it never packs
+          # and reinstalls itself). The plugin was already built once,
+          # centrally, so prepare has no legitimate work left to do here —
+          # strip it before packing rather than depend on --ignore-scripts
+          # alone to suppress it.
+          cp package.json "$RUNNER_TEMP/package.json.orig"
+          trap 'mv "$RUNNER_TEMP/package.json.orig" "$GITHUB_WORKSPACE/package.json"' EXIT
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));if(p.scripts)delete p.scripts.prepare;fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
+          PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
+          PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
 
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
@@ -1383,6 +1775,37 @@ jobs:
           CHECKSCRIPT
           node "$RUNNER_TEMP/check-native.js"
 
+      - name: Reinstall without native compilation (App Store fidelity)
+        # The checks above needed `npm rebuild` (from "Install
+        # dependencies") to load the plugin at all. From here on we
+        # deliberately give that up, so lint/format/tests below run
+        # against a tree installed exactly like the real server installs
+        # it (--ignore-scripts, no rebuild — see src/modules.ts:349-351)
+        # — the only place a required or poorly-guarded optional native
+        # addon actually gets exercised at runtime, not just statically
+        # detected above. Matters most since enable-signalk-integration
+        # defaults to false, so most plugins never hit this otherwise.
+        run: |
+          npm_install_with_retry() {
+            local cmd="$1"
+            local attempts=2
+            for i in $(seq 1 $attempts); do
+              if $cmd; then return 0; fi
+              if [ "$i" -lt "$attempts" ]; then
+                echo "::warning::$cmd failed (attempt $i/$attempts), retrying in 5s..."
+                sleep 5
+              fi
+            done
+            return 1
+          }
+          rm -rf node_modules
+          if [ -f package-lock.json ]; then
+            npm_install_with_retry "npm ci --ignore-scripts"
+          else
+            npm_install_with_retry "npm install --ignore-scripts"
+          fi
+        shell: bash
+
       - name: Lint (if available)
         run: npm run lint --if-present
         continue-on-error: true
@@ -1436,6 +1859,8 @@ jobs:
 
       - name: Check for untracked files after build/test
         id: stray-files
+        env:
+          FAIL_ON_WARNING: ${{ inputs.fail-on-warning }}
         shell: bash
         run: |
           # Plugins should not leave stray files in the repo after install/build/test.
@@ -1447,6 +1872,10 @@ jobs:
             echo "These files would pollute the signalk-server git directory when"
             echo "the plugin is installed. Add them to .gitignore or fix the build"
             echo "to write output into node_modules or a temp directory."
+            if [ "$FAIL_ON_WARNING" = "true" ]; then
+              echo "::error::fail-on-warning is enabled — the stray files above are treated as a failure."
+              exit 1
+            fi
           fi
 
       - name: Write job summary
@@ -1454,10 +1883,13 @@ jobs:
         shell: bash
         env:
           VALIDATE_PKG: ${{ steps.validate-pkg.outcome }}
+          VALIDATE_PKG_WARNINGS: ${{ steps.validate-pkg.outputs.warning-count }}
           VALIDATE_ENTRY: ${{ steps.validate-entry.outcome }}
           VALIDATE_SCHEMA: ${{ steps.validate-schema.outcome }}
+          VALIDATE_SCHEMA_WARNINGS: ${{ steps.validate-schema.outputs.warning-count }}
           LIFECYCLE_CHECK: ${{ steps.lifecycle-check.outcome }}
           DEPRECATED_API: ${{ steps.deprecated-api.outcome }}
+          DEPRECATED_API_WARNINGS: ${{ steps.deprecated-api.outputs.warning-count }}
           PACK_CHECK: ${{ steps.pack-check.outcome }}
           APPSTORE_CHECK: ${{ steps.appstore-check.outcome }}
           # When coverage-command is set, steps.tests is skipped and the
@@ -1482,6 +1914,21 @@ jobs:
             esac
           }
 
+          # A step's `outcome` is "success" even when it logged ::warning::
+          # annotations — only exit 1 changes it. Without this, a check that
+          # found real problems (missing CHANGELOG, deprecated API usage,
+          # etc.) reports a flat "pass" here, and the only place the
+          # warnings themselves are visible is the Annotations panel at the
+          # very bottom of the run page — easy to miss entirely.
+          result() {
+            local outcome="$1" count="${2:-0}"
+            if [ "$outcome" = "success" ] && [ "$count" -gt 0 ] 2>/dev/null; then
+              echo "⚠️ $count warning$([ "$count" != "1" ] && echo s)"
+            else
+              icon "$outcome"
+            fi
+          }
+
           PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
           PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
 
@@ -1490,11 +1937,11 @@ jobs:
             echo ""
             echo "| Check | Result |"
             echo "|-------|--------|"
-            echo "| package.json valid | $(icon "$VALIDATE_PKG") |"
+            echo "| package.json valid | $(result "$VALIDATE_PKG" "$VALIDATE_PKG_WARNINGS") |"
             echo "| Entry point exports function | $(icon "$VALIDATE_ENTRY") |"
-            echo "| plugin.schema() valid | $(icon "$VALIDATE_SCHEMA") |"
+            echo "| plugin.schema() valid | $(result "$VALIDATE_SCHEMA" "$VALIDATE_SCHEMA_WARNINGS") |"
             echo "| start/stop/restart lifecycle | $(icon "$LIFECYCLE_CHECK") |"
-            echo "| API usage (no deprecated/internal) | $(icon "$DEPRECATED_API") |"
+            echo "| API usage (no deprecated/internal) | $(result "$DEPRECATED_API" "$DEPRECATED_API_WARNINGS") |"
             echo "| npm pack includes all files | $(icon "$PACK_CHECK") |"
             echo "| App Store compatible (no native addons) | $(icon "$APPSTORE_CHECK") |"
             echo "| Tests / coverage | $(icon "$TESTS") |"
@@ -1518,8 +1965,10 @@ jobs:
   #  armv7 — Cerbo GX / Raspberry Pi (32-bit ARM via QEMU)
   # ════════════════════════════════════════════════════════════
   armv7:
-    name: armv7 (Cerbo GX) / Node 20
+    # No "/" — see the identical note on desktop's name below.
+    name: "Install & Test: armv7 (Cerbo GX, Node 20)"
     runs-on: ubuntu-latest
+    needs: build
     timeout-minutes: 30
     if: ${{ inputs.enable-armv7 }}
     # Advisory: armv7 is non-blocking. continue-on-error at the job level lets
@@ -1529,8 +1978,21 @@ jobs:
     outputs:
       advisory-outcome: ${{ steps.armv7-test.outcome }}
     steps:
-      - name: Checkout plugin
-        uses: actions/checkout@v7
+      - name: Download build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: built-plugin${{ inputs.artifact-name-suffix }}
+          path: _artifact-download
+
+      - name: Extract build artifact
+        shell: bash
+        # Use a plain relative path here, not ${{ runner.temp }} — on
+        # Windows runners that resolves to e.g. "D:\a\_temp", and GNU
+        # tar (bundled with Git Bash) misparses the leading "D:" as
+        # hostname:path remote-tar syntax ("Cannot connect to D:").
+        run: |
+          tar -xzf _artifact-download/built-plugin.tar.gz
+          rm -rf _artifact-download
 
       - name: Set up QEMU for ARM emulation
         # Advisory: a QEMU setup failure must not block the workflow — the
@@ -1556,14 +2018,12 @@ jobs:
         # job as truly red rather than emitting a confusing red annotation
         # under a green check.
         env:
-          BUILD_CMD: ${{ inputs.build-command }}
           TEST_CMD: ${{ inputs.test-command }}
         run: |
           docker run --rm --platform linux/arm/v7 \
             -v "${{ github.workspace }}:/plugin" \
             -v "/tmp/.npm-armv7-cache:/root/.npm" \
             -w /plugin \
-            -e BUILD_CMD \
             -e TEST_CMD \
             node:20-bookworm-slim \
             bash -c '
@@ -1572,15 +2032,37 @@ jobs:
               echo "arch: $(uname -m)  node: $(node -v)  npm: $(npm -v)"
               echo "── Installing build tools (python3, make, g++) ──"
               apt-get update -qq && apt-get install -y -qq python3 make g++ > /dev/null 2>&1
-              echo "── Installing dependencies ──"
+              echo "── Installing dependencies (build already done centrally) ──"
               if [ -f package-lock.json ]; then
                 npm ci --ignore-scripts
               else
                 npm install --ignore-scripts
               fi
-              npm rebuild
-              echo "── Building ──"
-              eval "$BUILD_CMD"
+              # Bare npm rebuild (no args) also re-runs preinstall/install/
+              # postinstall scripts on the *root* package itself, not just
+              # dependency native addons. Naming only the dependencies that
+              # actually need rebuilding avoids that, and skips the call
+              # entirely when nothing needs compiling.
+              NATIVE_MODULES=$(node -e "
+                const fs = require(\"fs\");
+                const path = require(\"path\");
+                function scan(dir, prefix) {
+                  const names = [];
+                  if (!fs.existsSync(dir)) return names;
+                  for (const entry of fs.readdirSync(dir)) {
+                    if (entry === \".package-lock.json\" || entry === \".bin\") continue;
+                    const full = path.join(dir, entry);
+                    if (entry.startsWith(\"@\")) { names.push(...scan(full, entry + \"/\")); continue; }
+                    if (fs.existsSync(path.join(full, \"binding.gyp\"))) names.push(prefix + entry);
+                    names.push(...scan(path.join(full, \"node_modules\"), \"\"));
+                  }
+                  return names;
+                }
+                process.stdout.write(scan(\"node_modules\", \"\").join(\" \"));
+              ")
+              if [ -n "$NATIVE_MODULES" ]; then
+                npm rebuild $NATIVE_MODULES
+              fi
 
               echo "── Checking for native addons ──"
               node -e "
@@ -1631,7 +2113,7 @@ jobs:
             echo "**Environment**: Venus OS 3.70 emulation (QEMU armv7, Debian Bookworm, python3, make, g++)"
             echo ""
             if [[ "$RESULT" == "success" ]]; then
-              echo "Install, build, and tests completed successfully under armv7 emulation."
+              echo "Install and tests completed successfully under armv7 emulation (the plugin was built centrally)."
             else
               echo "The armv7 job **failed**. Your plugin may not work on 32-bit ARM devices (Cerbo GX, Raspberry Pi OS 32-bit)."
             fi
@@ -1642,24 +2124,79 @@ jobs:
   # ════════════════════════════════════════════════════════════
   #  Optional: SignalK server integration test
   # ════════════════════════════════════════════════════════════
-  signalk-integration:
-    name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node }}
+  #  Computes the node/signalk-server-version pairs the integration job
+  #  below fans out over. Always runs (even when the integration test is
+  #  disabled) so `signalk-integration`'s `fromJson(...)` below never has
+  #  to deal with an empty/skipped upstream output.
+  integration-matrix:
+    name: Compute integration test matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      matrix: ${{ steps.compute.outputs.matrix }}
+    steps:
+      - name: Compute node × signalk-server-version pairs
+        id: compute
+        shell: bash
+        env:
+          NODE_VERSIONS: ${{ inputs.node-versions }}
+          SK_VERSIONS: ${{ inputs.signalk-server-versions }}
+          EXPLICIT_MATRIX: ${{ inputs.signalk-integration-matrix }}
+        run: |
+          node -e '
+            const explicit = process.env.EXPLICIT_MATRIX.trim();
+            let matrix;
+            if (explicit !== "") {
+              // Caller gave an explicit list of {node-version, signalk-server-version}
+              // pairs — use it as-is instead of cross-producting the two
+              // separate arrays below, so combinations that do not make
+              // sense together are never generated.
+              matrix = JSON.parse(explicit);
+            } else {
+              const nodeVersions = JSON.parse(process.env.NODE_VERSIONS);
+              const skVersions = JSON.parse(process.env.SK_VERSIONS);
+              matrix = [];
+              for (const node of nodeVersions) {
+                for (const signalkServerVersion of skVersions) {
+                  matrix.push({ "node-version": node, "signalk-server-version": signalkServerVersion });
+                }
+              }
+            }
+            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, "matrix=" + JSON.stringify(matrix) + "\n");
+          '
+
+  signalk-integration:
+    # No "/" — see the identical note on desktop's name below.
+    name: "Integration Test: SK ${{ matrix.signalk-server-version }} (Node ${{ matrix.node-version }})"
+    runs-on: ubuntu-latest
+    needs: [build, integration-matrix]
     timeout-minutes: 15
     if: ${{ inputs.enable-signalk-integration }}
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ fromJson(inputs.node-versions) }}
-        signalk-server-version: ${{ fromJson(inputs.signalk-server-versions) }}
+        include: ${{ fromJson(needs.integration-matrix.outputs.matrix) }}
     steps:
-      - name: Checkout plugin
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v6
+      - name: Download build artifact
+        uses: actions/download-artifact@v8
         with:
-          node-version: ${{ matrix.node }}
+          name: built-plugin${{ inputs.artifact-name-suffix }}
+          path: _artifact-download
+
+      - name: Extract build artifact
+        shell: bash
+        # Use a plain relative path here, not ${{ runner.temp }} — on
+        # Windows runners that resolves to e.g. "D:\a\_temp", and GNU
+        # tar (bundled with Git Bash) misparses the leading "D:" as
+        # hostname:path remote-tar syntax ("Cannot connect to D:").
+        run: |
+          tar -xzf _artifact-download/built-plugin.tar.gz
+          rm -rf _artifact-download
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
 
       - name: Install SignalK server ${{ matrix.signalk-server-version }}
@@ -1677,34 +2214,81 @@ jobs:
             exit 0
           fi
           cd /tmp/sk-test
+          # --ignore-scripts matches how the real server installs plugins
+          # (src/modules.ts:223) — see the "Install plugin into SignalK"
+          # step below for the full rationale.
           while IFS= read -r pkg; do
             [ -z "$pkg" ] && continue
             echo "::group::npm install $pkg (signalk.requires)"
-            npm install "$pkg"
+            npm install --ignore-scripts "$pkg"
             echo "::endgroup::"
           done <<< "$REQUIRES"
 
-      - name: Build plugin
-        env:
-          BUILD_CMD: ${{ inputs.build-command }}
+      - name: Install plugin dependencies
+        # Build already happened centrally in the `build` job — this only
+        # needs to install node_modules (native deps compiled for this Node).
         shell: bash
         run: |
           if [ -f package-lock.json ]; then
-            npm ci
+            npm ci --ignore-scripts
           else
-            npm install
+            npm install --ignore-scripts
           fi
-          eval "$BUILD_CMD"
+          # Bare `npm rebuild` (no args) also re-runs the *root* package's
+          # own preinstall/install/postinstall scripts, not just dependency
+          # native addons — rebuild doesn't honor --ignore-scripts the way
+          # install does. Naming only the dependencies that actually need
+          # rebuilding avoids touching the root package's scripts at all,
+          # and skips the call entirely when nothing needs compiling.
+          NATIVE_MODULES=$(node -e '
+            const fs = require("fs");
+            const path = require("path");
+            function scan(dir, prefix) {
+              const names = [];
+              if (!fs.existsSync(dir)) return names;
+              for (const entry of fs.readdirSync(dir)) {
+                if (entry === ".package-lock.json" || entry === ".bin") continue;
+                const full = path.join(dir, entry);
+                if (entry.startsWith("@")) { names.push(...scan(full, entry + "/")); continue; }
+                if (fs.existsSync(path.join(full, "binding.gyp"))) names.push(prefix + entry);
+                names.push(...scan(path.join(full, "node_modules"), ""));
+              }
+              return names;
+            }
+            process.stdout.write(scan("node_modules", "").join(" "));
+          ')
+          if [ -n "$NATIVE_MODULES" ]; then
+            npm rebuild $NATIVE_MODULES
+          fi
 
       - name: Install plugin into SignalK
         run: |
           # Pack the plugin and install it into the test server. Read the tarball
           # name from --json so a plugin "prepare" lifecycle banner on stdout can't
           # corrupt it (npm < 11 runs prepare here despite --ignore-scripts).
-          PLUGIN_TGZ=$(npm pack --ignore-scripts --json --pack-destination /tmp \
-            | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
+          # `npm pack` is captured on its own line (not piped straight into
+          # `node -e`) so a failure there isn't swallowed by a pipe's exit
+          # status. The captured JSON is then handed to `node -e` over stdin,
+          # not as a CLI argument — a plugin with a large file count (e.g. a
+          # bundled webapp) makes --json's `files` array big enough to blow
+          # past Windows' argv-length limit ("Argument list too long").
+          #
+          # npm 10.x (Node 22) actually runs "prepare" here despite
+          # --ignore-scripts once the tarball is reinstalled below — same
+          # issue and fix as the desktop job's App Store simulation step.
+          # Strip it before packing rather than depend on --ignore-scripts
+          # alone to suppress it.
+          cp package.json "$RUNNER_TEMP/package.json.orig"
+          trap 'mv "$RUNNER_TEMP/package.json.orig" "$GITHUB_WORKSPACE/package.json"' EXIT
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));if(p.scripts)delete p.scripts.prepare;fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
+          PACK_JSON=$(npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP")
+          PLUGIN_TGZ=$(printf '%s' "$PACK_JSON" | node -e 'const s=require("fs").readFileSync(0,"utf8");process.stdout.write(JSON.parse(s.slice(s.search(/^\s*\[/m)))[0].filename)')
           cd /tmp/sk-test
-          npm install "/tmp/$(basename "$PLUGIN_TGZ")"
+          # --ignore-scripts matches how the real SignalK server installs
+          # plugins (src/modules.ts:223) — a required native addon that
+          # would fail to compile there must fail here too, not silently
+          # succeed because this step compiled it for real.
+          npm install --ignore-scripts "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")"
 
       - name: Configure plugin to auto-start
         run: |
@@ -1837,7 +2421,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
-    needs: [desktop, armv7, signalk-integration]
+    needs: [build, desktop, armv7, signalk-integration]
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v7
@@ -1846,6 +2430,7 @@ jobs:
 
       - name: Write CI summary report
         env:
+          BUILD_RESULT: ${{ needs.build.result }}
           DESKTOP_RESULT: ${{ needs.desktop.result }}
           # Prefer the armv7 test-step outcome when the job ran — it records
           # whether the advisory tests actually passed. Falls back to
@@ -1853,6 +2438,8 @@ jobs:
           # step outcome exists.
           ARMV7_RESULT: ${{ needs.armv7.outputs.advisory-outcome || needs.armv7.result }}
           INTEGRATION_RESULT: ${{ needs.signalk-integration.result }}
+          BUILD_NODE_VERSION: ${{ inputs.build-node-version }}
+          NODE_VERSIONS: ${{ inputs.node-versions }}
         shell: bash
         run: |
           icon() {
@@ -1869,7 +2456,7 @@ jobs:
           PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
 
           OVERALL="pass"
-          if [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
+          if [[ "$BUILD_RESULT" == "failure" ]] || [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
             OVERALL="FAIL"
           fi
 
@@ -1883,7 +2470,9 @@ jobs:
             echo ""
             echo "| Job | Result | Notes |"
             echo "|-----|--------|-------|"
-            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24 |"
+            DESKTOP_NODES=$(node -e 'process.stdout.write(JSON.parse(process.env.NODE_VERSIONS).join(", "))')
+            echo "| Build | $(icon "$BUILD_RESULT") | Node $BUILD_NODE_VERSION — shared by all jobs below |"
+            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node $DESKTOP_NODES |"
             echo "| armv7 — Cerbo GX (QEMU) | $(icon "$ARMV7_RESULT") | Node 20 (Venus OS 3.70) — advisory, non-blocking |"
             if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
               echo "| SignalK integration | $(icon "$INTEGRATION_RESULT") | Server install + plugin load |"
@@ -1899,14 +2488,18 @@ jobs:
             echo "- **API usage** — No deprecated (\`setProviderStatus\`), internal (\`app.server\`), file storage, or security anti-patterns"
             echo "- **Node built-in modules** — \`node:sqlite\` requires \`engines.node >= 22.5.0\` declared in package.json"
             echo "- **npm pack** — All files referenced by \`main\`/\`exports\` are included in the package"
-            echo "- **App Store install** — No native addons that break with \`--ignore-scripts\`"
+            echo "- **App Store install** — No native addons that break with \`--ignore-scripts\`; lint/format/tests then re-run against that same uncompiled install"
             echo "- **Hardcoded paths** — No \`/home/user/...\` literals in source files"
             echo "- **ES2023 compatibility** — Built JS checked for Cerbo GX (Node 20) syntax compatibility"
             echo "- **baconjs** — Plugins must not bundle their own baconjs; the server provides >= 3.x"
             echo "- **React version** — Plugins with webapp keywords must use React >= 19 for Module Federation compatibility"
             echo "- **Stray files** — Build/test does not leave untracked files in the repo"
             echo ""
-            echo "See the individual job summaries above for per-platform details."
+            echo "**⚠️ next to a check below means it passed but found something worth fixing** —"
+            echo "package.json/schema/API-usage checks report a warning count instead of a bare"
+            echo "pass when they have non-blocking findings (missing CHANGELOG, deprecated API"
+            echo "usage, etc.). See the individual job summaries above for per-platform details"
+            echo "and the actual warning text."
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [[ "$INTEGRATION_RESULT" == "skipped" ]]; then
@@ -1926,9 +2519,16 @@ jobs:
           fi
 
           echo ""
+          echo "Build:                $BUILD_RESULT"
           echo "Desktop:              $DESKTOP_RESULT"
           echo "armv7 (Cerbo GX):     $ARMV7_RESULT"
           echo "SignalK integration:  $INTEGRATION_RESULT"
+
+          # Build is mandatory — every other job depends on its artifact
+          if [[ "$BUILD_RESULT" == "failure" ]]; then
+            echo "::error::Build failed — all downstream jobs were skipped"
+            exit 1
+          fi
 
           # Desktop is mandatory
           if [[ "$DESKTOP_RESULT" == "failure" ]]; then
