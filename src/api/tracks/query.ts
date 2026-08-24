@@ -31,17 +31,27 @@ const parseDuration = (
   name: string,
   errors: string[]
 ): Temporal.Duration | undefined => {
+  let parsed: Temporal.Duration
   try {
-    return Temporal.Duration.from(value)
+    parsed = Temporal.Duration.from(value)
   } catch {
     if (/^\d+$/.test(value)) {
-      return Temporal.Duration.from({ seconds: Number(value) })
+      parsed = Temporal.Duration.from({ seconds: Number(value) })
+    } else {
+      errors.push(
+        `${name} must be an ISO 8601 duration string (e.g. 'PT15M') or an integer number of seconds`
+      )
+      return undefined
     }
-    errors.push(
-      `${name} must be an ISO 8601 duration string (e.g. 'PT15M') or an integer number of seconds`
-    )
+  }
+  // Temporal accepts a leading minus, and zero parses fine, but neither
+  // describes a window or a spacing: a negative duration would ask for a range
+  // ending before it starts, and a zero resolution would thin nothing.
+  if (parsed.sign <= 0) {
+    errors.push(`${name} must be a positive duration`)
     return undefined
   }
+  return parsed
 }
 
 const parseInstant = (
@@ -95,20 +105,42 @@ const parseBbox = (
 const qualifyContext = (value: string): Context =>
   (value.includes('.') ? value : `vessels.${value}`) as Context
 
+/** A valueless parameter — `?times` — reads as true, as query strings spell flags. */
+const TRUE_FLAGS = new Set(['true', '1', 'yes', ''])
+const FALSE_FLAGS = new Set(['false', '0', 'no'])
+
 const parseFlag = (
   value: string,
   name: string,
   errors: string[]
 ): boolean | undefined => {
   const flag = value.trim().toLowerCase()
-  if (['true', '1', 'yes', ''].includes(flag)) {
+  if (TRUE_FLAGS.has(flag)) {
     return true
   }
-  if (['false', '0', 'no'].includes(flag)) {
+  if (FALSE_FLAGS.has(flag)) {
     return false
   }
   errors.push(`${name} must be true or false`)
   return undefined
+}
+
+/**
+ * Read a boolean parameter, honouring the valueless form.
+ *
+ * `first()` returns undefined for an empty string, so presence has to be
+ * tested on the raw query rather than on the extracted value; otherwise
+ * `?simplify` would be silently ignored while `?simplify=true` worked.
+ */
+const readFlag = (
+  query: Record<string, unknown>,
+  name: string,
+  errors: string[]
+): boolean | undefined => {
+  if (!Object.prototype.hasOwnProperty.call(query, name)) {
+    return undefined
+  }
+  return parseFlag(first(query[name]) ?? '', name, errors)
 }
 
 export function parseTracksQuery(
@@ -177,31 +209,19 @@ export function parseTracksQuery(
     }
   }
 
-  const simplify = first(query.simplify)
+  const simplify = readFlag(query, 'simplify', errors)
   if (simplify !== undefined) {
-    const flag = parseFlag(simplify, 'simplify', errors)
-    if (flag !== undefined) {
-      request.simplify = flag
-    }
+    request.simplify = simplify
   }
 
-  const times = first(query.times)
-  if (
-    times !== undefined ||
-    Object.prototype.hasOwnProperty.call(query, 'times')
-  ) {
-    const flag = parseFlag(times ?? '', 'times', errors)
-    if (flag !== undefined) {
-      request.times = flag
-    }
+  const times = readFlag(query, 'times', errors)
+  if (times !== undefined) {
+    request.times = times
   }
 
-  const geometry = first(query.geometry)
+  const geometry = readFlag(query, 'geometry', errors)
   if (geometry !== undefined) {
-    const flag = parseFlag(geometry, 'geometry', errors)
-    if (flag !== undefined) {
-      request.geometry = flag
-    }
+    request.geometry = geometry
   }
 
   if (

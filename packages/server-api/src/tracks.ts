@@ -81,7 +81,7 @@ export interface TracksRequest {
   /** Include the recording time of each point as `properties.coordTimes`. */
   times?: boolean
 
-  /** Return metadata only, omitting geometry. */
+  /** Include geometry. Defaults to true; set false to return metadata only. */
   geometry?: boolean
 }
 

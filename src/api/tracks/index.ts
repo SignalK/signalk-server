@@ -67,19 +67,22 @@ export class TrackApiHttpRegistry {
     if (!isTrackProvider(provider)) {
       throw new Error('Invalid track api provider')
     }
-    if (!this.trackProviders.has(pluginId)) {
-      this.trackProviders.set(pluginId, provider)
-    }
-    debug(
-      `Registered track api provider ${pluginId}, total=${this.trackProviders.size}`
-    )
+    // Replace rather than keep the first: a plugin that re-registers after a
+    // restart or a config change means the new provider, and silently serving
+    // the stale one would be very hard to diagnose.
+    this.trackProviders.set(pluginId, provider)
+    debug.enabled &&
+      debug(
+        `Registered track api provider ${pluginId}, total=${this.trackProviders.size}`
+      )
   }
 
   unregisterTrackApiProvider(pluginId: string): void {
     this.trackProviders.delete(pluginId)
-    debug(
-      `Unregistered track api provider ${pluginId}, total=${this.trackProviders.size}`
-    )
+    debug.enabled &&
+      debug(
+        `Unregistered track api provider ${pluginId}, total=${this.trackProviders.size}`
+      )
   }
 
   async start() {
@@ -160,15 +163,26 @@ async function respondWith<T>(
   handler: (provider: TrackProvider) => Promise<T> | undefined,
   res: Response
 ) {
+  // Provider selection and the provider call fail for different reasons and
+  // must not share a status. Naming a provider that does not exist is a client
+  // error; a provider throwing is a server fault, and its message can carry
+  // file paths, connection strings or SQL, so it is logged rather than
+  // returned.
+  let provider: TrackProvider | undefined
   try {
-    const provider = getProvider()
-    if (!provider) {
-      return res.status(501).json({ error: 'No track api provider configured' })
-    }
-    res.json(await handler(provider))
+    provider = getProvider()
   } catch (error) {
-    res.status(400).json({
+    return res.status(400).json({
       error: error instanceof Error ? error.message : 'Invalid request'
     })
+  }
+  if (!provider) {
+    return res.status(501).json({ error: 'No track api provider configured' })
+  }
+  try {
+    res.json(await handler(provider))
+  } catch (error) {
+    console.error('Track api provider failed:', error)
+    res.status(500).json({ error: 'Track api provider failed' })
   }
 }

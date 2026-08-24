@@ -23,6 +23,29 @@ describe('Track API query parsing', () => {
       expect(errorsFrom({ duration: '2h' })).to.match(/ISO 8601 duration/)
     })
 
+    it('rejects a negative duration', () => {
+      // Temporal accepts a leading minus, but a negative window would end
+      // before it starts.
+      expect(errorsFrom({ duration: '-PT1H', context: 'self' })).to.match(
+        /must be a positive duration/
+      )
+    })
+
+    it('rejects a zero duration, in both forms', () => {
+      expect(errorsFrom({ duration: 'PT0S', context: 'self' })).to.match(
+        /must be a positive duration/
+      )
+      expect(errorsFrom({ duration: '0', context: 'self' })).to.match(
+        /must be a positive duration/
+      )
+    })
+
+    it('rejects a non-positive resolution', () => {
+      expect(errorsFrom({ resolution: 'PT0S', duration: 'PT1H' })).to.match(
+        /resolution must be a positive duration/
+      )
+    })
+
     it('accepts ISO 8601 instants for from and to', () => {
       const { request, errors } = parse({
         from: '2026-06-01T00:00:00Z',

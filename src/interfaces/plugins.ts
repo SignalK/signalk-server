@@ -978,6 +978,9 @@ module.exports = (theApp: any) => {
         trackApiRegistry.unregisterTrackApiProvider(plugin.id)
       })
     }
+    appCopy.unregisterTrackApiProvider = () => {
+      trackApiRegistry.unregisterTrackApiProvider(plugin.id)
+    }
 
     const resourcesApi: ResourcesApi = app.resourcesApi
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {

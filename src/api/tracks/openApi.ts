@@ -199,7 +199,12 @@ const tracksApiDoc = {
         in: 'query',
         description:
           'Simplification tolerance in metres. Implies simplify=true.',
-        schema: { type: 'number', minimum: 0, example: 5 }
+        schema: {
+          type: 'number',
+          exclusiveMinimum: true,
+          minimum: 0,
+          example: 5
+        }
       },
       Times: {
         name: 'times',
@@ -264,7 +269,10 @@ const tracksApiDoc = {
       get: {
         tags: ['tracks'],
         summary: 'List contexts with track data in the window',
+        description:
+          'As with the tracks route, a time window is required unless a single context is given, so a bare request with no parameters returns 400.',
         parameters: [
+          { $ref: '#/components/parameters/Contexts' },
           { $ref: '#/components/parameters/From' },
           { $ref: '#/components/parameters/To' },
           { $ref: '#/components/parameters/Duration' },
