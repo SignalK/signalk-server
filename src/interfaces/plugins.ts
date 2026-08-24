@@ -88,6 +88,8 @@ import { queryRequest } from '../requestResponse'
 import { getMetadata } from '@signalk/path-metadata'
 import { HistoryProvider } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
+import { TrackProvider } from '@signalk/server-api/tracks'
+import { TrackApiHttpRegistry } from '../api/tracks'
 import { derivePluginId } from '../pluginid'
 import { atomicWriteFileSync } from '../atomicWrite'
 import { writeBaseDeltasFile, ConfigApp } from '../config/config'
@@ -965,6 +967,15 @@ module.exports = (theApp: any) => {
       historyApiRegistry.registerHistoryApiProvider(plugin.id, provider)
       onStopHandlers[plugin.id].push(() => {
         historyApiRegistry.unregisterHistoryApiProvider(plugin.id)
+      })
+    }
+
+    const trackApiRegistry: TrackApiHttpRegistry = app.trackApiHttpRegistry
+    delete (appCopy as any).trackApiHttpRegistry // expose only the plugin-specific proxy
+    appCopy.registerTrackApiProvider = (provider: TrackProvider) => {
+      trackApiRegistry.registerTrackApiProvider(plugin.id, provider)
+      onStopHandlers[plugin.id].push(() => {
+        trackApiRegistry.unregisterTrackApiProvider(plugin.id)
       })
     }
 
