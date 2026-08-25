@@ -185,11 +185,18 @@ export function parseTracksQuery(
   if (contexts !== undefined && blank(contexts)) {
     errors.push('context must not be empty')
   } else if (contexts !== undefined) {
-    request.contexts = contexts
-      .split(',')
-      .map((c) => c.trim())
-      .filter((c) => c !== '')
-      .map(qualifyContext)
+    // Deduplicated: `contexts=self,self` would otherwise put the same vessel in
+    // the FeatureCollection twice, and after qualification `self` and the
+    // resolved id can arrive as the same context by two names.
+    request.contexts = [
+      ...new Set(
+        contexts
+          .split(',')
+          .map((c) => c.trim())
+          .filter((c) => c !== '')
+          .map(qualifyContext)
+      )
+    ]
     if (request.contexts.length === 0) {
       errors.push('context must not be empty')
     }

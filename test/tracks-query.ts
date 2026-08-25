@@ -115,6 +115,12 @@ describe('Track API query parsing', () => {
       ])
     })
 
+    it('deduplicates repeated contexts', () => {
+      // Otherwise the same vessel appears twice in the FeatureCollection.
+      const { request } = parse({ contexts: 'self,self', duration: 'PT1H' })
+      expect(request.contexts).to.deep.equal(['vessels.self'])
+    })
+
     it('splits a comma-separated list', () => {
       const { request } = parse({
         contexts: 'self, vessels.a ',
