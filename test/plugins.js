@@ -40,6 +40,18 @@ describe('Demo plugin ', () => {
     const optionsTest = plugin.app.readPluginOptions()
     assert(optionsTest.configuration.testOption === 'testValue')
 
+    // Both halves of the provider registries the plugin API declares have to
+    // be present on the app a plugin is handed: the types permit the call, so
+    // a missing assignment is a runtime TypeError at a type-clean call site.
+    assert(
+      typeof plugin.app.registerHistoryApiProvider === 'function',
+      'registerHistoryApiProvider missing from the plugin app'
+    )
+    assert(
+      typeof plugin.app.unregisterHistoryApiProvider === 'function',
+      'unregisterHistoryApiProvider missing from the plugin app'
+    )
+
     assert(server.app.signalk.self.some.path.value === 'someValue')
 
     const outputValues = []
