@@ -261,6 +261,7 @@ const tracksApiDoc = {
             }
           },
           '400': { description: 'Invalid query parameters' },
+          '500': { description: 'The track provider failed' },
           '501': { description: 'No track api provider configured' }
         }
       }
@@ -289,6 +290,7 @@ const tracksApiDoc = {
             }
           },
           '400': { description: 'Invalid query parameters' },
+          '500': { description: 'The track provider failed' },
           '501': { description: 'No track api provider configured' }
         }
       }

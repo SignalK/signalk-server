@@ -35,8 +35,16 @@ const parseDuration = (
   try {
     parsed = Temporal.Duration.from(value)
   } catch {
+    // The seconds fallback has to be guarded too: Temporal refuses a total
+    // above its safe range, so an absurd integer would throw out of the parser
+    // and surface as a 500 for what is really a bad query string.
     if (/^\d+$/.test(value)) {
-      parsed = Temporal.Duration.from({ seconds: Number(value) })
+      try {
+        parsed = Temporal.Duration.from({ seconds: Number(value) })
+      } catch {
+        errors.push(`${name} is out of range`)
+        return undefined
+      }
     } else {
       errors.push(
         `${name} must be an ISO 8601 duration string (e.g. 'PT15M') or an integer number of seconds`
@@ -211,7 +219,13 @@ export function parseTracksQuery(
 
   const simplify = readFlag(query, 'simplify', errors)
   if (simplify !== undefined) {
-    request.simplify = simplify
+    // epsilon sets simplify above, so an explicit simplify=false alongside it
+    // is a contradiction. Rejecting beats silently honouring one of the two.
+    if (simplify === false && request.epsilon !== undefined) {
+      errors.push('simplify=false cannot be combined with epsilon')
+    } else {
+      request.simplify = simplify
+    }
   }
 
   const times = readFlag(query, 'times', errors)

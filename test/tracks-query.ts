@@ -40,6 +40,14 @@ describe('Track API query parsing', () => {
       )
     })
 
+    it('rejects an out-of-range duration rather than throwing', () => {
+      // Temporal refuses a total above its safe range, so the seconds fallback
+      // has to catch: otherwise a bad query string surfaces as a 500.
+      expect(
+        errorsFrom({ duration: '99999999999999999999', context: 'self' })
+      ).to.match(/out of range/)
+    })
+
     it('rejects a non-positive resolution', () => {
       expect(errorsFrom({ resolution: 'PT0S', duration: 'PT1H' })).to.match(
         /resolution must be a positive duration/
@@ -182,6 +190,13 @@ describe('Track API query parsing', () => {
       })
       expect(request.simplify).to.equal(true)
       expect(request.epsilon).to.equal(undefined)
+    })
+
+    it('rejects epsilon combined with simplify=false', () => {
+      // epsilon implies simplification, so asking for both is contradictory.
+      expect(
+        errorsFrom({ epsilon: '5', simplify: 'false', duration: 'PT1H' })
+      ).to.match(/cannot be combined with epsilon/)
     })
 
     it('accepts resolution as a duration', () => {
