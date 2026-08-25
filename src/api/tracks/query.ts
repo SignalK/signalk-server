@@ -242,7 +242,10 @@ export function parseTracksQuery(
 
   const maxPoints = first(query.maxPoints)
   if (maxPoints !== undefined) {
-    const n = blank(maxPoints) ? NaN : Number(maxPoints)
+    // Decimal digits only. Number() would otherwise read hex (0x10 -> 16) and
+    // exponential (1e3 -> 1000) forms, so a typo becomes a silently different
+    // budget. The History API's duration parsing guards the same way.
+    const n = /^\d+$/.test(maxPoints.trim()) ? Number(maxPoints.trim()) : NaN
     if (!Number.isInteger(n) || n <= 0) {
       errors.push('maxPoints must be a positive integer')
     } else {

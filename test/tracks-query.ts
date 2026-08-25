@@ -180,6 +180,17 @@ describe('Track API query parsing', () => {
       expect(request.maxPoints).to.equal(5000)
     })
 
+    it('rejects hex and exponential maxPoints', () => {
+      // Number() reads both, so a typo would silently become a different
+      // budget rather than an error.
+      expect(errorsFrom({ maxPoints: '0x10', duration: 'PT1H' })).to.match(
+        /positive integer/
+      )
+      expect(errorsFrom({ maxPoints: '1e3', duration: 'PT1H' })).to.match(
+        /positive integer/
+      )
+    })
+
     it('rejects a non-positive maxPoints', () => {
       expect(errorsFrom({ maxPoints: '0', duration: 'PT1H' })).to.match(
         /positive integer/
