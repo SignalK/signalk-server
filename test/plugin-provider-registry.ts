@@ -13,6 +13,9 @@ interface PluginInfo {
   app: Record<string, any>
 }
 
+/** Booting a real server with its plugins is slow on a cold cache. */
+const TEST_TIMEOUT_MS = 30000
+
 const CONFIG_DIR = path.join(__dirname, 'plugin-test-config')
 const CONFIG_FILE = path.join(
   CONFIG_DIR,
@@ -34,7 +37,12 @@ const CONFIG_FILE = path.join(
  * rebuilt it would have passed either way.
  */
 describe('Plugin provider registries', () => {
+  let origConfigDir: string | undefined
+
   before(() => {
+    // Restored afterwards: mocha runs every test file in one process, so
+    // leaving this set would point whatever runs next at the plugin fixtures.
+    origConfigDir = process.env.SIGNALK_NODE_CONFIG_DIR
     process.env.SIGNALK_NODE_CONFIG_DIR = CONFIG_DIR
     fs.mkdirSync(path.join(CONFIG_DIR, 'plugin-config-data'), {
       recursive: true
@@ -47,10 +55,15 @@ describe('Plugin provider registries', () => {
 
   after(() => {
     if (fs.existsSync(CONFIG_FILE)) fs.unlinkSync(CONFIG_FILE)
+    if (origConfigDir === undefined) {
+      delete process.env.SIGNALK_NODE_CONFIG_DIR
+    } else {
+      process.env.SIGNALK_NODE_CONFIG_DIR = origConfigDir
+    }
   })
 
   it('gives a plugin both halves of the history provider registry', async function () {
-    this.timeout(30000)
+    this.timeout(TEST_TIMEOUT_MS)
     const port = await freeport()
     const server = new Server({ config: { settings: { port } } })
     await server.start()
@@ -76,7 +89,7 @@ describe('Plugin provider registries', () => {
   })
 
   it('withdraws a provider without stopping the plugin', async function () {
-    this.timeout(30000)
+    this.timeout(TEST_TIMEOUT_MS)
     const port = await freeport()
     const server = new Server({ config: { settings: { port } } })
     await server.start()
