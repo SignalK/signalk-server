@@ -253,7 +253,10 @@ export function parseTracksQuery(
     // exponential (1e3 -> 1000) forms, so a typo becomes a silently different
     // budget. The History API's duration parsing guards the same way.
     const n = /^\d+$/.test(maxPoints.trim()) ? Number(maxPoints.trim()) : NaN
-    if (!Number.isInteger(n) || n <= 0) {
+    // isSafeInteger, not isInteger: above 2^53 Number() rounds, so
+    // 9007199254740993 would be accepted as a different value than was asked
+    // for. A point budget that large is meaningless anyway.
+    if (!Number.isSafeInteger(n) || n <= 0) {
       errors.push('maxPoints must be a positive integer')
     } else {
       request.maxPoints = n

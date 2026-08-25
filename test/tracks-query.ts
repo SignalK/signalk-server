@@ -197,6 +197,14 @@ describe('Track API query parsing', () => {
       )
     })
 
+    it('rejects a maxPoints above the safe integer range', () => {
+      // Number() rounds above 2^53, so this would otherwise be accepted as
+      // 9007199254740992 — a different budget than the one requested.
+      expect(
+        errorsFrom({ maxPoints: '9007199254740993', duration: 'PT1H' })
+      ).to.match(/positive integer/)
+    })
+
     it('rejects a non-positive maxPoints', () => {
       expect(errorsFrom({ maxPoints: '0', duration: 'PT1H' })).to.match(
         /positive integer/
