@@ -14,10 +14,22 @@ export interface ParsedTracksQuery {
   errors: string[]
 }
 
+/**
+ * Extract a scalar query value; express repeats a key into an array.
+ *
+ * Returns undefined only when the parameter is genuinely absent. A present but
+ * empty value is returned as the empty string so callers can reject it —
+ * treating `?duration=` as omitted would quietly skip the window check rather
+ * than telling the client its query was malformed. `readFlag` is the one place
+ * an empty value legitimately means something.
+ */
 const first = (value: unknown): string | undefined => {
   const scalar = Array.isArray(value) ? (value as unknown[])[0] : value
-  return typeof scalar === 'string' && scalar.trim() !== '' ? scalar : undefined
+  return typeof scalar === 'string' ? scalar : undefined
 }
+
+/** A present-but-blank value, which every parameter except a flag rejects. */
+const blank = (value: string): boolean => value.trim() === ''
 
 /**
  * ISO 8601 duration, or a bare integer read as seconds.
@@ -75,6 +87,9 @@ const parseInstant = (
   }
 }
 
+const MAX_LONGITUDE = 180
+const MAX_LATITUDE = 90
+
 /**
  * `west,south,east,north` — GeoJSON coordinate order, as the Resources API
  * uses. A west edge numerically greater than the east edge is a box crossing
@@ -84,8 +99,17 @@ const parseBbox = (
   value: string,
   errors: string[]
 ): TrackBoundingBox | undefined => {
-  const parts = value.split(',').map((p) => Number(p.trim()))
-  if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
+  const raw = value.split(',')
+  // Number('') is 0, not NaN, so a blank component would pass the finite check
+  // and place an edge on the equator or the prime meridian rather than failing.
+  if (raw.length !== 4 || raw.some((p) => p.trim() === '')) {
+    errors.push(
+      'bbox must be four comma-separated numbers: west,south,east,north'
+    )
+    return undefined
+  }
+  const parts = raw.map((p) => Number(p.trim()))
+  if (parts.some((n) => !Number.isFinite(n))) {
     errors.push(
       'bbox must be four comma-separated numbers: west,south,east,north'
     )
@@ -98,11 +122,11 @@ const parseBbox = (
     )
     return undefined
   }
-  if ([west, east].some((n) => n < -180 || n > 180)) {
+  if ([west, east].some((n) => n < -MAX_LONGITUDE || n > MAX_LONGITUDE)) {
     errors.push('bbox longitudes must be between -180 and 180')
     return undefined
   }
-  if ([south, north].some((n) => n < -90 || n > 90)) {
+  if ([south, north].some((n) => n < -MAX_LATITUDE || n > MAX_LATITUDE)) {
     errors.push('bbox latitudes must be between -90 and 90')
     return undefined
   }
@@ -158,7 +182,9 @@ export function parseTracksQuery(
   const request: TracksRequest = {}
 
   const contexts = first(query.contexts) ?? first(query.context)
-  if (contexts !== undefined) {
+  if (contexts !== undefined && blank(contexts)) {
+    errors.push('context must not be empty')
+  } else if (contexts !== undefined) {
     request.contexts = contexts
       .split(',')
       .map((c) => c.trim())
@@ -171,32 +197,52 @@ export function parseTracksQuery(
 
   const from = first(query.from)
   if (from !== undefined) {
-    request.from = parseInstant(from, 'from', errors)
+    if (blank(from)) {
+      errors.push('from must not be empty')
+    } else {
+      request.from = parseInstant(from, 'from', errors)
+    }
   }
 
   const to = first(query.to)
   if (to !== undefined) {
-    request.to = parseInstant(to, 'to', errors)
+    if (blank(to)) {
+      errors.push('to must not be empty')
+    } else {
+      request.to = parseInstant(to, 'to', errors)
+    }
   }
 
   const duration = first(query.duration)
   if (duration !== undefined) {
-    request.duration = parseDuration(duration, 'duration', errors)
+    if (blank(duration)) {
+      errors.push('duration must not be empty')
+    } else {
+      request.duration = parseDuration(duration, 'duration', errors)
+    }
   }
 
   const bbox = first(query.bbox)
   if (bbox !== undefined) {
-    request.bbox = parseBbox(bbox, errors)
+    if (blank(bbox)) {
+      errors.push('bbox must not be empty')
+    } else {
+      request.bbox = parseBbox(bbox, errors)
+    }
   }
 
   const resolution = first(query.resolution)
   if (resolution !== undefined) {
-    request.resolution = parseDuration(resolution, 'resolution', errors)
+    if (blank(resolution)) {
+      errors.push('resolution must not be empty')
+    } else {
+      request.resolution = parseDuration(resolution, 'resolution', errors)
+    }
   }
 
   const maxPoints = first(query.maxPoints)
   if (maxPoints !== undefined) {
-    const n = Number(maxPoints)
+    const n = blank(maxPoints) ? NaN : Number(maxPoints)
     if (!Number.isInteger(n) || n <= 0) {
       errors.push('maxPoints must be a positive integer')
     } else {
@@ -206,7 +252,7 @@ export function parseTracksQuery(
 
   const epsilon = first(query.epsilon)
   if (epsilon !== undefined) {
-    const n = Number(epsilon)
+    const n = blank(epsilon) ? NaN : Number(epsilon)
     if (!Number.isFinite(n) || n <= 0) {
       errors.push('epsilon must be a positive number of metres')
     } else {

@@ -155,6 +155,17 @@ describe('Track API query parsing', () => {
       )
     })
 
+    it('rejects a blank component rather than reading it as zero', () => {
+      // Number('') is 0, not NaN, so a missing value would otherwise pass the
+      // finite check and silently place an edge on the equator.
+      expect(
+        errorsFrom({ bbox: '24.5,,25.2,60.3', duration: 'PT1H' })
+      ).to.match(/four comma-separated numbers/)
+      expect(
+        errorsFrom({ bbox: '24.5, ,25.2,60.3', duration: 'PT1H' })
+      ).to.match(/four comma-separated numbers/)
+    })
+
     it('rejects out-of-range coordinates', () => {
       expect(errorsFrom({ bbox: '24,60,25,120', duration: 'PT1H' })).to.match(
         /latitudes must be between/
@@ -229,6 +240,50 @@ describe('Track API query parsing', () => {
     it('reads geometry=false for a metadata-only listing', () => {
       const { request } = parse({ geometry: 'false', duration: 'PT1H' })
       expect(request.geometry).to.equal(false)
+    })
+  })
+
+  // A present-but-blank value is a malformed query, not an omitted parameter.
+  // Reading `?duration=` as absent would skip the time-window check instead of
+  // telling the client what was wrong.
+  describe('blank values', () => {
+    it('rejects a blank duration rather than treating it as omitted', () => {
+      expect(errorsFrom({ duration: '   ', context: 'self' })).to.match(
+        /duration must not be empty/
+      )
+    })
+
+    it('rejects a blank from and to', () => {
+      expect(errorsFrom({ from: '', duration: 'PT1H' })).to.match(
+        /from must not be empty/
+      )
+      expect(errorsFrom({ to: '', duration: 'PT1H' })).to.match(
+        /to must not be empty/
+      )
+    })
+
+    it('rejects a blank context', () => {
+      expect(errorsFrom({ context: '', duration: 'PT1H' })).to.match(
+        /context must not be empty/
+      )
+    })
+
+    it('rejects a blank bbox, maxPoints and epsilon', () => {
+      expect(errorsFrom({ bbox: '  ', duration: 'PT1H' })).to.match(
+        /bbox must not be empty/
+      )
+      expect(errorsFrom({ maxPoints: ' ', duration: 'PT1H' })).to.match(
+        /positive integer/
+      )
+      expect(errorsFrom({ epsilon: '', duration: 'PT1H' })).to.match(
+        /positive number of metres/
+      )
+    })
+
+    it('still treats an absent parameter as omitted', () => {
+      const { request, errors } = parse({ context: 'self' })
+      expect(errors).to.be.empty
+      expect(request.duration).to.equal(undefined)
     })
   })
 

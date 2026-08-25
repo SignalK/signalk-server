@@ -153,11 +153,16 @@ const tracksApiDoc = {
         name: 'duration',
         in: 'query',
         description:
-          'Length of the time range, as an ISO 8601 duration string or an integer number of seconds. See https://datatracker.ietf.org/doc/html/rfc3339#appendix-A',
+          'Length of the time range, as an ISO 8601 duration string or an integer number of seconds. Must be positive. See https://datatracker.ietf.org/doc/html/rfc3339#appendix-A',
         schema: {
           oneOf: [
-            { type: 'integer', description: 'Duration in seconds' },
-            { type: 'string', format: 'duration', example: 'P7D' }
+            { type: 'integer', minimum: 1, description: 'Duration in seconds' },
+            {
+              type: 'string',
+              format: 'duration',
+              description: 'Positive ISO 8601 duration',
+              example: 'P7D'
+            }
           ]
         }
       },
@@ -172,11 +177,16 @@ const tracksApiDoc = {
         name: 'resolution',
         in: 'query',
         description:
-          'Minimum spacing between returned points, as an ISO 8601 duration or seconds.',
+          'Minimum spacing between returned points, as an ISO 8601 duration or an integer number of seconds. Must be positive.',
         schema: {
           oneOf: [
-            { type: 'integer' },
-            { type: 'string', format: 'duration', example: 'PT1M' }
+            { type: 'integer', minimum: 1 },
+            {
+              type: 'string',
+              format: 'duration',
+              description: 'Positive ISO 8601 duration',
+              example: 'PT1M'
+            }
           ]
         }
       },
