@@ -186,6 +186,9 @@ export interface Config {
     courseApi?: {
       apiOnly?: boolean
     }
+    resourcesApi?: {
+      defaultProviders: { [index: string]: string }
+    }
     historyApi?: {
       /** Plugin id of the History API provider to use as the default.
        * Applied whenever the provider is registered, so the default does
