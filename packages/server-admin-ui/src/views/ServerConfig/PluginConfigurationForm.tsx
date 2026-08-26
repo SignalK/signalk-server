@@ -450,10 +450,7 @@ export default function PluginConfigurationForm({
     }),
     properties: {
       configuration: {
-        // Spread the plugin's schema rather than copying named fields:
-        // cherry-picking `properties` silently dropped `dependencies`,
-        // `oneOf`, `allOf` and `required`, so a plugin that made a field
-        // conditional got a field that rendered in NO state at all.
+        // Spread rather than cherry-pick: forwards conditional keywords and `required`.
         ...(plugin.schema as RJSFSchema),
         type: 'object',
         title: ' ',
