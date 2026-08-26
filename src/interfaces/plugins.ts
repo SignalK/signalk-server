@@ -967,6 +967,13 @@ module.exports = (theApp: any) => {
         historyApiRegistry.unregisterHistoryApiProvider(plugin.id)
       })
     }
+    // Stopping the plugin already unregisters it, but a plugin that loses its
+    // backing store may want to withdraw while staying loaded rather than
+    // answer queries it cannot serve. The registry ignores an unknown id, so
+    // the stop handler firing afterwards is a no-op.
+    appCopy.unregisterHistoryApiProvider = () => {
+      historyApiRegistry.unregisterHistoryApiProvider(plugin.id)
+    }
 
     const resourcesApi: ResourcesApi = app.resourcesApi
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
