@@ -13,7 +13,6 @@ import {
 import { WithSecurityStrategy } from '../../security'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import WebSocket from 'ws'
-import { writeSettingsFile } from '../../config/config'
 import { LocalBLEProvider } from './localProvider'
 import { RemoteGatewayProvider } from './remoteProvider'
 import { bleVendorName } from './bleCompanyIds'
@@ -858,18 +857,10 @@ export class BLEApi implements IBLEApi {
         }
 
         if (changed) {
-          const candidateSettings = structuredClone(
-            this.app.config.settings
-          ) as any
-          candidateSettings.bleApi = { ...candidate }
           try {
-            await new Promise<void>((resolve, reject) => {
-              writeSettingsFile(
-                this.app as any,
-                candidateSettings,
-                (err: any) => (err ? reject(err) : resolve())
-              )
-            })
+            await this.app.updateSettings([
+              { key: 'bleApi', mutator: () => ({ ...candidate }) }
+            ])
           } catch (err: any) {
             debug.enabled && debug(`Error saving BLE settings: ${err.message}`)
             res
@@ -879,7 +870,6 @@ export class BLEApi implements IBLEApi {
           }
 
           this.settings = candidate
-          ;(this.app.config.settings as any).bleApi = { ...candidate }
 
           if (providerChange) {
             await this.shutdownLocalProviders()
