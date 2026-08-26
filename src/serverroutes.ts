@@ -1002,15 +1002,14 @@ module.exports = function (
               res.status(400).send('userId or password missing or too short')
               return
             }
-            const updatedSettings = structuredClone(app.config.settings)
-            updatedSettings.security = { strategy: defaultSecurityStrategy }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            writeSettingsFile(app, updatedSettings, (err: any) => {
-              if (err) {
-                console.log(err)
-                res.status(500).send('Unable to save to settings file')
-              } else {
-                app.config.settings = updatedSettings
+            app
+              .updateSettings([
+                {
+                  key: 'security',
+                  mutator: () => ({ strategy: defaultSecurityStrategy })
+                }
+              ])
+              .then(() => {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const config: any = {}
                 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -1023,8 +1022,11 @@ module.exports = function (
                   config.allow_readonly = true
                 }
                 addUser(req, res, securityStrategy, config)
-              }
-            })
+              })
+              .catch((err) => {
+                console.log(err)
+                res.status(500).send('Unable to save to settings file')
+              })
           } else {
             addUser(req, res, app.securityStrategy)
           }
@@ -1144,131 +1146,144 @@ module.exports = function (
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/settings`)
 
-  app.put(`${SERVERROUTESPREFIX}/settings`, (req: Request, res: Response) => {
-    const settings = req.body
-    const updatedSettings = structuredClone(app.config.settings)
-
-    forIn(settings.interfaces, (enabled, name) => {
-      const interfaces =
-        updatedSettings.interfaces || (updatedSettings.interfaces = {})
-      interfaces[name] = enabled
-    })
-
-    if (!isUndefined(settings.options.mdns)) {
-      updatedSettings.mdns = settings.options.mdns
-    }
-
-    if (!isUndefined(settings.options.ssl)) {
-      updatedSettings.ssl = settings.options.ssl
-    }
-
-    if (!isUndefined(settings.options.wsCompression)) {
-      updatedSettings.wsCompression = settings.options.wsCompression
-    }
-
-    if (!isUndefined(settings.options.wsPingInterval)) {
-      updatedSettings.wsPingInterval = settings.options.wsPingInterval
-    }
-
-    if (!isUndefined(settings.options.accessLogging)) {
-      updatedSettings.accessLogging = settings.options.accessLogging
-    }
-
-    if (!isUndefined(settings.options.enablePluginLogging)) {
-      updatedSettings.enablePluginLogging = settings.options.enablePluginLogging
-    }
-
-    if (!isUndefined(settings.options.trustProxy)) {
-      updatedSettings.trustProxy = settings.options.trustProxy
-    }
-
-    if (!isUndefined(settings.options.useBLEManager)) {
-      updatedSettings.bleApi = {
-        ...(updatedSettings.bleApi ?? {}),
-        localBluetoothManaged: Boolean(settings.options.useBLEManager)
-      }
-    }
-
-    if (!isUndefined(settings.port)) {
-      updatedSettings.port = Number(settings.port)
-    }
-
-    if (!isUndefined(settings.sslport)) {
-      updatedSettings.sslport = Number(settings.sslport)
-    }
-
-    if (!isUndefined(settings.loggingDirectory)) {
-      updatedSettings.loggingDirectory = settings.loggingDirectory
-    }
-
-    if (!isUndefined(settings.pruneContextsMinutes)) {
-      updatedSettings.pruneContextsMinutes = Number(
-        settings.pruneContextsMinutes
-      )
-    }
-
-    if (!isUndefined(settings.keepMostRecentLogsOnly)) {
-      updatedSettings.keepMostRecentLogsOnly = settings.keepMostRecentLogsOnly
-    }
-
-    if (!isUndefined(settings.logCountToKeep)) {
-      updatedSettings.logCountToKeep = Number(settings.logCountToKeep)
-    }
-
-    if (settings.staleness !== undefined) {
-      const r = validateAgainst(
-        stalenessSettingsSchema,
-        settings.staleness,
-        'staleness'
-      )
-      if (!r.ok) {
-        res.status(400).type('text/plain').send(r.error)
-        return
-      }
-      const s = settings.staleness as Record<string, unknown>
-      if (!isUndefined(s.enforceDataTimeouts)) {
-        updatedSettings.enforceDataTimeouts = Boolean(s.enforceDataTimeouts)
-      }
-      if (!isUndefined(s.useDefaultTimeouts)) {
-        updatedSettings.useDefaultTimeouts = Boolean(s.useDefaultTimeouts)
-      }
-      if (!isUndefined(s.defaultTimeout)) {
-        updatedSettings.defaultTimeout = Number(s.defaultTimeout)
-      }
-      if (!isUndefined(s.staleCheckIntervalMs)) {
-        updatedSettings.staleCheckIntervalMs = Number(s.staleCheckIntervalMs)
-      }
-      if (!isUndefined(s.autoTimeoutSamples)) {
-        updatedSettings.autoTimeoutSamples = Number(s.autoTimeoutSamples)
-      }
-      if (!isUndefined(s.autoTimeoutWarmupSeconds)) {
-        updatedSettings.autoTimeoutWarmupSeconds = Number(
-          s.autoTimeoutWarmupSeconds
+  app.put(
+    `${SERVERROUTESPREFIX}/settings`,
+    async (req: Request, res: Response) => {
+      const settings = req.body
+      // Validate up front: a return inside the settings mutator would not
+      // abort the request, so reject a bad staleness payload with 400 before
+      // any write is attempted.
+      if (settings.staleness !== undefined) {
+        const r = validateAgainst(
+          stalenessSettingsSchema,
+          settings.staleness,
+          'staleness'
         )
+        if (!r.ok) {
+          res.status(400).type('text/plain').send(r.error)
+          return
+        }
+      }
+      try {
+        await app.updateSettings((updatedSettings) => {
+          forIn(settings.interfaces, (enabled, name) => {
+            const interfaces =
+              updatedSettings.interfaces || (updatedSettings.interfaces = {})
+            interfaces[name] = enabled
+          })
+
+          if (!isUndefined(settings.options.mdns)) {
+            updatedSettings.mdns = settings.options.mdns
+          }
+
+          if (!isUndefined(settings.options.ssl)) {
+            updatedSettings.ssl = settings.options.ssl
+          }
+
+          if (!isUndefined(settings.options.wsCompression)) {
+            updatedSettings.wsCompression = settings.options.wsCompression
+          }
+
+          if (!isUndefined(settings.options.wsPingInterval)) {
+            updatedSettings.wsPingInterval = settings.options.wsPingInterval
+          }
+
+          if (!isUndefined(settings.options.accessLogging)) {
+            updatedSettings.accessLogging = settings.options.accessLogging
+          }
+
+          if (!isUndefined(settings.options.enablePluginLogging)) {
+            updatedSettings.enablePluginLogging =
+              settings.options.enablePluginLogging
+          }
+
+          if (!isUndefined(settings.options.trustProxy)) {
+            updatedSettings.trustProxy = settings.options.trustProxy
+          }
+
+          if (!isUndefined(settings.options.useBLEManager)) {
+            updatedSettings.bleApi = {
+              ...(updatedSettings.bleApi ?? {}),
+              localBluetoothManaged: Boolean(settings.options.useBLEManager)
+            }
+          }
+
+          if (!isUndefined(settings.port)) {
+            updatedSettings.port = Number(settings.port)
+          }
+
+          if (!isUndefined(settings.sslport)) {
+            updatedSettings.sslport = Number(settings.sslport)
+          }
+
+          if (!isUndefined(settings.loggingDirectory)) {
+            updatedSettings.loggingDirectory = settings.loggingDirectory
+          }
+
+          if (!isUndefined(settings.pruneContextsMinutes)) {
+            updatedSettings.pruneContextsMinutes = Number(
+              settings.pruneContextsMinutes
+            )
+          }
+
+          if (!isUndefined(settings.keepMostRecentLogsOnly)) {
+            updatedSettings.keepMostRecentLogsOnly =
+              settings.keepMostRecentLogsOnly
+          }
+
+          if (!isUndefined(settings.logCountToKeep)) {
+            updatedSettings.logCountToKeep = Number(settings.logCountToKeep)
+          }
+
+          if (settings.staleness !== undefined) {
+            const s = settings.staleness as Record<string, unknown>
+            if (!isUndefined(s.enforceDataTimeouts)) {
+              updatedSettings.enforceDataTimeouts = Boolean(
+                s.enforceDataTimeouts
+              )
+            }
+            if (!isUndefined(s.useDefaultTimeouts)) {
+              updatedSettings.useDefaultTimeouts = Boolean(s.useDefaultTimeouts)
+            }
+            if (!isUndefined(s.defaultTimeout)) {
+              updatedSettings.defaultTimeout = Number(s.defaultTimeout)
+            }
+            if (!isUndefined(s.staleCheckIntervalMs)) {
+              updatedSettings.staleCheckIntervalMs = Number(
+                s.staleCheckIntervalMs
+              )
+            }
+            if (!isUndefined(s.autoTimeoutSamples)) {
+              updatedSettings.autoTimeoutSamples = Number(s.autoTimeoutSamples)
+            }
+            if (!isUndefined(s.autoTimeoutWarmupSeconds)) {
+              updatedSettings.autoTimeoutWarmupSeconds = Number(
+                s.autoTimeoutWarmupSeconds
+              )
+            }
+          }
+
+          forIn(settings.courseApi, (enabled, name) => {
+            const courseApi: { [index: string]: boolean | string | number } =
+              updatedSettings.courseApi || (updatedSettings.courseApi = {})
+            courseApi[name] = enabled
+          })
+
+          forIn(settings.notifications, (enabled, name) => {
+            const notifications: {
+              [index: string]: boolean | string | number
+            } =
+              updatedSettings.notifications ||
+              (updatedSettings.notifications = {})
+            notifications[name] = enabled
+          })
+        })
+        res.type('text/plain').send('Settings changed')
+      } catch {
+        res.status(500).send('Unable to save to settings file')
       }
     }
-
-    forIn(settings.courseApi, (enabled, name) => {
-      const courseApi: { [index: string]: boolean | string | number } =
-        updatedSettings.courseApi || (updatedSettings.courseApi = {})
-      courseApi[name] = enabled
-    })
-
-    forIn(settings.notifications, (enabled, name) => {
-      const notifications: { [index: string]: boolean | string | number } =
-        updatedSettings.notifications || (updatedSettings.notifications = {})
-      notifications[name] = enabled
-    })
-
-    writeSettingsFile(app, updatedSettings, (err: Error) => {
-      if (err) {
-        res.status(500).send('Unable to save to settings file')
-      } else {
-        app.config.settings = updatedSettings
-        res.type('text/plain').send('Settings changed')
-      }
-    })
-  })
+  )
 
   app.get(`${SERVERROUTESPREFIX}/vessel`, (req: Request, res: Response) => {
     const de = app.config.baseDeltaEditor
@@ -1841,7 +1856,7 @@ module.exports = function (
 
   app.put(
     `${SERVERROUTESPREFIX}/sourceAliases`,
-    (req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
       const validation = validateAgainst(
         sourceAliasesSchema,
         req.body,
@@ -1850,21 +1865,21 @@ module.exports = function (
       if (!validation.ok) {
         return res.status(400).send(validation.error)
       }
-      const updatedSettings = structuredClone(app.config.settings)
-      updatedSettings.sourceAliases = validation.value as Record<string, string>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app, updatedSettings, (err: any) => {
-        if (err) {
-          res.status(500).send('Unable to save sourceAliases in settings file')
-        } else {
-          app.config.settings = updatedSettings
-          app.emit('serverAdminEvent', {
-            type: 'SOURCEALIASES',
-            data: validation.value
-          })
-          res.json({ result: 'ok' })
-        }
-      })
+      try {
+        await app.updateSettings([
+          {
+            key: 'sourceAliases',
+            mutator: () => validation.value as Record<string, string>
+          }
+        ])
+        app.emit('serverAdminEvent', {
+          type: 'SOURCEALIASES',
+          data: validation.value
+        })
+        res.json({ result: 'ok' })
+      } catch {
+        res.status(500).send('Unable to save sourceAliases in settings file')
+      }
     }
   )
 
@@ -1883,27 +1898,25 @@ module.exports = function (
     })
   })
 
-  app.put(`${SERVERROUTESPREFIX}/priorities`, (req: Request, res: Response) => {
-    const validation = validatePrioritiesPayload(req.body)
-    if (!validation.ok) {
-      return res.status(400).send(validation.error)
-    }
-    const { groups, overrides, defaults } = validation.value
-    // overrides has been normalised to numbers by validatePrioritiesPayload.
-    const overridesNumeric = overrides as Record<
-      string,
-      Array<{ sourceRef: string; timeout: number }>
-    >
-    const updatedSettings = structuredClone(app.config.settings)
-    updatedSettings.priorityGroups = groups
-    updatedSettings.priorityOverrides = overridesNumeric
-    updatedSettings.priorityDefaults = defaults
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    writeSettingsFile(app, updatedSettings, (err: any) => {
-      if (err) {
-        res.status(500).send('Unable to save priorities in settings file')
-      } else {
-        app.config.settings = updatedSettings
+  app.put(
+    `${SERVERROUTESPREFIX}/priorities`,
+    async (req: Request, res: Response) => {
+      const validation = validatePrioritiesPayload(req.body)
+      if (!validation.ok) {
+        return res.status(400).send(validation.error)
+      }
+      const { groups, overrides, defaults } = validation.value
+      // overrides has been normalised to numbers by validatePrioritiesPayload.
+      const overridesNumeric = overrides as Record<
+        string,
+        Array<{ sourceRef: string; timeout: number }>
+      >
+      try {
+        await app.updateSettings([
+          { key: 'priorityGroups', mutator: () => groups },
+          { key: 'priorityOverrides', mutator: () => overridesNumeric },
+          { key: 'priorityDefaults', mutator: () => defaults }
+        ])
         app.activateSourcePriorities()
         app.emit('serverAdminEvent', {
           type: 'PRIORITYGROUPS',
@@ -1919,9 +1932,11 @@ module.exports = function (
         })
         emitReconciledGroups()
         res.json({ result: 'ok' })
+      } catch {
+        res.status(500).send('Unable to save priorities in settings file')
       }
-    })
-  })
+    }
+  )
 
   app.securityStrategy.addAdminMiddleware(
     `${SERVERROUTESPREFIX}/priorityGroups`
@@ -1936,7 +1951,7 @@ module.exports = function (
 
   app.put(
     `${SERVERROUTESPREFIX}/priorityGroups`,
-    (req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
       const validation = validateAgainst(
         priorityGroupsSchema,
         req.body,
@@ -1945,29 +1960,30 @@ module.exports = function (
       if (!validation.ok) {
         return res.status(400).send(validation.error)
       }
-      const updatedSettings = structuredClone(app.config.settings)
-      updatedSettings.priorityGroups = validation.value as Array<{
-        id: string
-        sources: string[]
-        inactive?: boolean
-      }>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app, updatedSettings, (err: any) => {
-        if (err) {
-          res.status(500).send('Unable to save priorityGroups in settings file')
-        } else {
-          app.config.settings = updatedSettings
-          // Group changes affect engine resolution: a source's group
-          // membership determines which ranking applies to its deltas.
-          app.activateSourcePriorities()
-          app.emit('serverAdminEvent', {
-            type: 'PRIORITYGROUPS',
-            data: validation.value
-          })
-          emitReconciledGroups()
-          res.json({ result: 'ok' })
-        }
-      })
+      try {
+        await app.updateSettings([
+          {
+            key: 'priorityGroups',
+            mutator: () =>
+              validation.value as Array<{
+                id: string
+                sources: string[]
+                inactive?: boolean
+              }>
+          }
+        ])
+        // Group changes affect engine resolution: a source's group
+        // membership determines which ranking applies to its deltas.
+        app.activateSourcePriorities()
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYGROUPS',
+          data: validation.value
+        })
+        emitReconciledGroups()
+        res.json({ result: 'ok' })
+      } catch {
+        res.status(500).send('Unable to save priorityGroups in settings file')
+      }
     }
   )
 
@@ -1984,7 +2000,7 @@ module.exports = function (
 
   app.put(
     `${SERVERROUTESPREFIX}/priorityOverrides`,
-    (req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
       const validation = validateAgainst(
         priorityOverridesSchema,
         req.body,
@@ -2002,25 +2018,22 @@ module.exports = function (
         string,
         Array<{ sourceRef: string; timeout: number }>
       >
-      const updatedSettings = structuredClone(app.config.settings)
-      updatedSettings.priorityOverrides = overridesNumeric
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app, updatedSettings, (err: any) => {
-        if (err) {
-          res
-            .status(500)
-            .send('Unable to save priorityOverrides in settings file')
-        } else {
-          app.config.settings = updatedSettings
-          app.activateSourcePriorities()
-          app.emit('serverevent', {
-            type: 'PRIORITYOVERRIDES',
-            data: overridesNumeric
-          })
-          emitReconciledGroups()
-          res.json({ result: 'ok' })
-        }
-      })
+      try {
+        await app.updateSettings([
+          { key: 'priorityOverrides', mutator: () => overridesNumeric }
+        ])
+        app.activateSourcePriorities()
+        app.emit('serverevent', {
+          type: 'PRIORITYOVERRIDES',
+          data: overridesNumeric
+        })
+        emitReconciledGroups()
+        res.json({ result: 'ok' })
+      } catch {
+        res
+          .status(500)
+          .send('Unable to save priorityOverrides in settings file')
+      }
     }
   )
 
@@ -2037,7 +2050,7 @@ module.exports = function (
 
   app.put(
     `${SERVERROUTESPREFIX}/priorityDefaults`,
-    (req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
       const validation = validateAgainst(
         priorityDefaultsSchema,
         req.body,
@@ -2046,25 +2059,21 @@ module.exports = function (
       if (!validation.ok) {
         return res.status(400).send(validation.error)
       }
-      const updatedSettings = structuredClone(app.config.settings)
-      updatedSettings.priorityDefaults = validation.value as {
-        fallbackMs?: number
+      try {
+        await app.updateSettings([
+          {
+            key: 'priorityDefaults',
+            mutator: () => validation.value as { fallbackMs?: number }
+          }
+        ])
+        app.emit('serverAdminEvent', {
+          type: 'PRIORITYDEFAULTS',
+          data: validation.value
+        })
+        res.json({ result: 'ok' })
+      } catch {
+        res.status(500).send('Unable to save priorityDefaults in settings file')
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app, updatedSettings, (err: any) => {
-        if (err) {
-          res
-            .status(500)
-            .send('Unable to save priorityDefaults in settings file')
-        } else {
-          app.config.settings = updatedSettings
-          app.emit('serverAdminEvent', {
-            type: 'PRIORITYDEFAULTS',
-            data: validation.value
-          })
-          res.json({ result: 'ok' })
-        }
-      })
     }
   )
 
@@ -2081,7 +2090,7 @@ module.exports = function (
 
   app.put(
     `${SERVERROUTESPREFIX}/ignoredInstanceConflicts`,
-    (req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
       const validation = validateAgainst(
         ignoredInstanceConflictsSchema,
         req.body,
@@ -2090,29 +2099,26 @@ module.exports = function (
       if (!validation.ok) {
         return res.status(400).send(validation.error)
       }
-      const updatedSettings = structuredClone(app.config.settings)
-      updatedSettings.ignoredInstanceConflicts = validation.value as Record<
-        string,
-        string
-      >
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeSettingsFile(app, updatedSettings, (err: any) => {
-        if (err) {
-          res
-            .status(500)
-            .send('Unable to save ignoredInstanceConflicts in settings file')
-        } else {
-          app.config.settings = updatedSettings
-          // Match the broadcast pattern used by /sourceAliases and the
-          // priority-related routes so admin-ui subscribers can pick up
-          // changes live without a refetch.
-          app.emit('serverAdminEvent', {
-            type: 'IGNOREDINSTANCECONFLICTS',
-            data: validation.value
-          })
-          res.json({ result: 'ok' })
-        }
-      })
+      try {
+        await app.updateSettings([
+          {
+            key: 'ignoredInstanceConflicts',
+            mutator: () => validation.value as Record<string, string>
+          }
+        ])
+        // Match the broadcast pattern used by /sourceAliases and the
+        // priority-related routes so admin-ui subscribers can pick up
+        // changes live without a refetch.
+        app.emit('serverAdminEvent', {
+          type: 'IGNOREDINSTANCECONFLICTS',
+          data: validation.value
+        })
+        res.json({ result: 'ok' })
+      } catch {
+        res
+          .status(500)
+          .send('Unable to save ignoredInstanceConflicts in settings file')
+      }
     }
   )
 

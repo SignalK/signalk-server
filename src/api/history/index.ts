@@ -21,7 +21,7 @@ import { Context, Path, SourceRef } from '@signalk/server-api'
 import { createDebug } from '../../debug'
 import { Request, Response } from 'express'
 import { WithSecurityStrategy } from '../../security'
-import { ConfigApp, writeSettingsFile } from '../../config/config'
+import { ConfigApp } from '../../config/config'
 
 import { Responses } from '../'
 
@@ -225,21 +225,22 @@ export class HistoryApiHttpRegistry {
             throw new Error('Provider id not supplied!')
           }
           if (this.historyProviders.has(req.params.id)) {
-            this.saveConfiguredProvider(req.params.id, (err) => {
-              if (err) {
-                res.status(500).json({
-                  statusCode: 500,
-                  state: 'FAILED',
-                  message: `Failed to save settings: ${err.message}`
-                })
-              } else {
-                res.status(200).json({
-                  statusCode: 200,
-                  state: 'COMPLETED',
-                  message: `Default provider set to ${req.params.id}.`
-                })
-              }
-            })
+            try {
+              await this.saveConfiguredProvider(req.params.id)
+              res.status(200).json({
+                statusCode: 200,
+                state: 'COMPLETED',
+                message: `Default provider set to ${req.params.id}.`
+              })
+            } catch (err) {
+              res.status(500).json({
+                statusCode: 500,
+                state: 'FAILED',
+                message: `Failed to save settings: ${
+                  err instanceof Error ? err.message : 'Unknown error'
+                }`
+              })
+            }
           } else {
             throw new Error(`Provider ${req.params.id} not found!`)
           }
@@ -296,36 +297,28 @@ export class HistoryApiHttpRegistry {
 
   // Commit the new default only when the write succeeds, so a failed
   // save does not leave the active provider or the in-memory settings
-  // out of sync with the settings file. The write gets an immutable
-  // snapshot; app.config.settings is untouched until the write lands.
-  private saveConfiguredProvider(id: string, cb: (err?: Error) => void) {
-    const settings = this.app.config.settings
-    const snapshot = {
-      ...settings,
-      historyApi: {
-        ...settings.historyApi,
-        defaultProvider: id
+  // out of sync with the settings file. updateSettings clones, writes and
+  // commits historyApi into app.config.settings only after the write lands.
+  private async saveConfiguredProvider(id: string): Promise<void> {
+    await this.app.updateSettings([
+      {
+        key: 'historyApi',
+        mutator: (historyApi) => ({ ...historyApi, defaultProvider: id })
       }
+    ])
+    this.configuredProviderId = id
+    this.clearUnavailableGrace()
+    this.unavailableGraceExpired = false
+    // The route validated the id as registered, but the settings
+    // write is asynchronous — the provider can unregister in the
+    // gap. Re-check before declaring it available, else the UI
+    // would show a false available state with no grace armed.
+    if (this.historyProviders.has(id)) {
+      this.notifyConfiguredAvailable()
+    } else {
+      this.armUnavailableGrace()
     }
-    writeSettingsFile(this.app, snapshot, (err?: Error) => {
-      if (!err) {
-        settings.historyApi = snapshot.historyApi
-        this.configuredProviderId = id
-        this.clearUnavailableGrace()
-        this.unavailableGraceExpired = false
-        // The route validated the id as registered, but the settings
-        // write is asynchronous — the provider can unregister in the
-        // gap. Re-check before declaring it available, else the UI
-        // would show a false available state with no grace armed.
-        if (this.historyProviders.has(id)) {
-          this.notifyConfiguredAvailable()
-        } else {
-          this.armUnavailableGrace()
-        }
-        this.emitProvidersState()
-      }
-      cb(err)
-    })
+    this.emitProvidersState()
   }
 
   /** Cancel the pending grace timer; for shutdown and tests. */
