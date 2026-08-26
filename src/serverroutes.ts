@@ -45,8 +45,7 @@ import {
   readDefaultsFile,
   sendBaseDeltas,
   writeBaseDeltasFile,
-  writeDefaultsFile,
-  writeSettingsFile
+  writeDefaultsFile
 } from './config/config'
 import { resetPriorities } from './config/priorities-file'
 import { buildDeviceIdentities } from './deviceIdentities'
@@ -965,24 +964,24 @@ module.exports = function (
                 }
                 try {
                   fs.renameSync(backupPath, securityConfigPath)
-                  app.config.settings.security = {
-                    strategy: defaultSecurityStrategy
-                  }
-                  writeSettingsFile(
-                    app,
-                    app.config.settings,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (err: any) => {
-                      if (err) {
-                        console.error(err)
-                        fs.renameSync(securityConfigPath, backupPath)
-                        res.status(500).send('Unable to save settings')
-                        return
+                  app
+                    .updateSettings([
+                      {
+                        key: 'security',
+                        mutator: () => ({
+                          strategy: defaultSecurityStrategy
+                        })
                       }
+                    ])
+                    .then(() => {
                       securityWasEnabled = true
                       res.send('Security restored, please restart the server')
-                    }
-                  )
+                    })
+                    .catch((err) => {
+                      console.error(err)
+                      fs.renameSync(securityConfigPath, backupPath)
+                      res.status(500).send('Unable to save settings')
+                    })
                 } catch (err) {
                   console.error(err)
                   res.status(500).send('Unable to restore security')
@@ -1105,18 +1104,20 @@ module.exports = function (
             if (fs.existsSync(securityConfigPath)) {
               fs.renameSync(securityConfigPath, backupPath)
             }
-            delete app.config.settings.security
-            writeSettingsFile(app, app.config.settings, (err: Error) => {
-              if (err) {
+            app
+              .updateSettings((settings) => {
+                delete settings.security
+              })
+              .then(() => {
+                res.send('Security disabled, please restart the server')
+              })
+              .catch((err) => {
                 console.error(err)
                 if (fs.existsSync(backupPath)) {
                   fs.renameSync(backupPath, securityConfigPath)
                 }
                 res.status(500).send('Unable to save settings')
-                return
-              }
-              res.send('Security disabled, please restart the server')
-            })
+              })
           } catch (err) {
             console.error(err)
             res.status(500).send('Unable to disable security')
@@ -1740,11 +1741,7 @@ module.exports = function (
       }
 
       const aliases = app.config.settings.sourceAliases
-      let aliasChanged = false
-      if (aliases && sourceRef in aliases) {
-        delete aliases[sourceRef]
-        aliasChanged = true
-      }
+      const aliasChanged = Boolean(aliases && sourceRef in aliases)
 
       const respondOk = () => {
         res.json({
@@ -1754,22 +1751,29 @@ module.exports = function (
         })
       }
 
-      if (aliasChanged && aliases) {
-        writeSettingsFile(app, app.config.settings, (err: Error) => {
-          if (err) {
-            res.status(500).json({
-              state: 'FAILED',
-              statusCode: 500,
-              message: `Removed source ${sourceRef} from cache, but failed to persist alias cleanup`
-            })
-            return
-          }
+      if (aliasChanged) {
+        try {
+          await app.updateSettings([
+            {
+              key: 'sourceAliases',
+              mutator: (sourceAliases) => {
+                delete sourceAliases![sourceRef]
+              }
+            }
+          ])
           app.emit('serverAdminEvent', {
             type: 'SOURCEALIASES',
-            data: aliases
+            data: app.config.settings.sourceAliases
           })
           respondOk()
-        })
+        } catch (err) {
+          console.error(err)
+          res.status(500).json({
+            state: 'FAILED',
+            statusCode: 500,
+            message: `Removed source ${sourceRef} from cache, but failed to persist alias cleanup`
+          })
+        }
       } else {
         respondOk()
       }

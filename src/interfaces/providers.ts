@@ -15,7 +15,7 @@
  */
 
 import { IRouter, Request, Response } from 'express'
-import { ConfigApp, writeSettingsFile } from '../config/config'
+import { ConfigApp } from '../config/config'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { runDiscovery } = require('../discovery')
 import { SERVERROUTESPREFIX } from '../constants'
@@ -108,14 +108,8 @@ function getProviders(
 
 function applyProviderSettings(
   target: PipedProvider,
-  source: ProviderRequest,
-  res: Response
-): boolean {
-  if (source.type === 'Unknown') {
-    res.status(401).send('Can not update an Unknown type')
-    return false
-  }
-
+  source: ProviderRequest
+): void {
   const options = target.pipeElements[0].options
 
   target.id = source.id
@@ -144,8 +138,6 @@ function applyProviderSettings(
       delete (options.subOptions as Record<string, unknown>)[key]
     }
   }
-
-  return true
 }
 
 function isValidProviderBody(body: unknown): body is ProviderRequest {
@@ -213,7 +205,7 @@ module.exports = function (app: App) {
 
   app.delete(
     `${SERVERROUTESPREFIX}/providers/:id`,
-    (req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
       const idx = app.config.settings.pipedProviders.findIndex(
         (p) => p.id === req.params.id
       )
@@ -221,18 +213,25 @@ module.exports = function (app: App) {
         res.status(401).send(`Connection with name ${req.params.id} not found`)
         return
       }
-      app.config.settings.pipedProviders.splice(idx, 1)
-
-      writeSettingsFile(app, app.config.settings, (err: Error) => {
-        if (err) {
-          console.error(err)
-          res.status(500).send('Unable to save to settings file')
-        } else {
-          app.pipedProviders.stopProvider(req.params.id)
-          res.type('text/plain')
-          res.send('Connection deleted')
-        }
-      })
+      try {
+        await app.updateSettings([
+          {
+            key: 'pipedProviders',
+            mutator: (pipedProviders) => {
+              const i = pipedProviders.findIndex((p) => p.id === req.params.id)
+              if (i !== -1) {
+                pipedProviders.splice(i, 1)
+              }
+            }
+          }
+        ])
+        app.pipedProviders.stopProvider(req.params.id)
+        res.type('text/plain')
+        res.send('Connection deleted')
+      } catch (err) {
+        console.error(err)
+        res.status(500).send('Unable to save to settings file')
+      }
     }
   )
 
@@ -279,17 +278,6 @@ module.exports = function (app: App) {
       })
     }
 
-    const updatedProvider: PipedProvider = existing || {
-      id: '',
-      enabled: true,
-      pipeElements: [
-        {
-          type: 'providers/simple',
-          options: {}
-        }
-      ]
-    }
-
     if (provider.options.type === 'canbus-canboatjs') {
       const uniqueNumber = parseInt(String(provider.options.uniqueNumber), 10)
       if (!isNaN(uniqueNumber)) {
@@ -308,24 +296,46 @@ module.exports = function (app: App) {
       }
     }
 
-    if (applyProviderSettings(updatedProvider, provider, res)) {
-      if (isNew) {
-        app.config.settings.pipedProviders.push(updatedProvider)
-      }
-
-      writeSettingsFile(app, app.config.settings, (err: Error) => {
-        if (err) {
-          console.error(err)
-          res.status(500).send('Unable to save to settings file')
-        } else {
-          if (!isNew && idToUpdate !== provider.id) {
-            app.pipedProviders.stopProvider(idToUpdate!)
-          }
-          app.pipedProviders.restartProvider(provider.id)
-          res.type('text/plain')
-          res.send('Connection ' + (isNew ? 'added' : 'updated'))
-        }
-      })
+    if (provider.type === 'Unknown') {
+      res.status(401).send('Can not update an Unknown type')
+      return
     }
+
+    app
+      .updateSettings([
+        {
+          key: 'pipedProviders',
+          mutator: (pipedProviders) => {
+            const target: PipedProvider = pipedProviders.find(
+              (p) => p.id === (isNew ? provider.id : idToUpdate)
+            ) || {
+              id: '',
+              enabled: true,
+              pipeElements: [
+                {
+                  type: 'providers/simple',
+                  options: {}
+                }
+              ]
+            }
+            applyProviderSettings(target, provider)
+            if (isNew) {
+              pipedProviders.push(target)
+            }
+          }
+        }
+      ])
+      .then(() => {
+        if (!isNew && idToUpdate !== provider.id) {
+          app.pipedProviders.stopProvider(idToUpdate!)
+        }
+        app.pipedProviders.restartProvider(provider.id)
+        res.type('text/plain')
+        res.send('Connection ' + (isNew ? 'added' : 'updated'))
+      })
+      .catch((err) => {
+        console.error(err)
+        res.status(500).send('Unable to save to settings file')
+      })
   }
 }
