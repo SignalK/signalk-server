@@ -51,11 +51,14 @@ export class WebSocketService {
     }
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    // The metadata editor needs to tell a path-specific unit override from a
+    // unit that comes from the applied preset, and the server reports the
+    // override only when asked.
     const url =
       proto +
       '://' +
       window.location.host +
-      `/signalk/v1/stream?serverevents=all&subscribe=none&sendMeta=all`
+      `/signalk/v1/stream?serverevents=all&subscribe=none&sendMeta=all&displayUnitsOverride=true`
 
     this.updateState({ status: 'connecting' })
 

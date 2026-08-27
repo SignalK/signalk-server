@@ -123,6 +123,23 @@ module.exports = {
       headers: { 'Content-Type': 'application/json' }
     })
   },
+  // Starts a server that reads settings from files in configDir instead of
+  // taking them through the constructor. Constructor-supplied settings
+  // disable settings writes and never enter the legacy old-defaults mode
+  // (settings.json with useBaseDeltas: false plus a defaults.json), so that
+  // mode can only be tested this way. The port comes from the settings file.
+  startServerFromConfigP: function startServerFromConfigP(configDir) {
+    const Server = require('../dist')
+    try {
+      require('../dist/requestResponse').resetRequests()
+    } catch (_e) {
+      // ignore - not critical for non-test usage
+    }
+    require('../dist/modules').resetModuleCaches()
+    process.env.SIGNALK_NODE_CONFIG_DIR = configDir
+    process.env.SIGNALK_DISABLE_SERVER_UPDATES = 'true'
+    return new Server({ config: {} }).start()
+  },
   startServerP: function startServerP(
     port,
     enableSecurity,

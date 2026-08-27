@@ -45,7 +45,7 @@ Advanced users can upload **Custom Presets** to define specific combinations of 
 
 In addition to category-wide settings (e.g., "All speeds in Knots"), you can override units for specific data paths. For example, you might want _Boat Speed_ in Knots but _Wind Speed_ in Meters/Second.
 
-These overrides are typically managed by editing the server configuration. When a specific path has an override, it takes precedence over the general category setting in your active preset.
+An override is specific to a single path and is set under **Data → Metadata**. The override can specify either just the category for the path or directly the target unit. An override that names no target unit of its own follows the active preset's target unit choice for its category. An override that specifies the target unit takes precedence over the preset's setting for the category.
 
 ---
 
@@ -129,6 +129,29 @@ The `displayUnits` object provides everything you need to display the value:
 - **inverseFormula**: A Math.js expression to convert back from the display unit to SI (useful for user input).
 - **symbol**: The symbol to display next to the value.
 - **displayFormat**: (Optional) A format pattern for consistency (e.g., "0.0" for one decimal place).
+
+### Asking for Path-Specific Overrides
+
+A resolved response reads the same whether the target unit comes from a
+path-specific override or from the applied preset. An editor has to tell the
+two apart, so it asks for the answer with `displayUnitsOverride=true`:
+
+`GET /signalk/v1/api/vessels/self/navigation/speedOverGround/meta?displayUnitsOverride=true`
+
+The response then carries one more field in `displayUnits`:
+
+- **override**: Path-specific unit override, as `targetUnit` and `displayFormat`. Empty when the path follows the preset.
+
+The same parameter works on the WebSocket stream URL, next to `sendMeta=all`:
+
+`ws://localhost:3000/signalk/v1/stream?subscribe=none&sendMeta=all&displayUnitsOverride=true`
+
+Display code needs none of this, so the field is absent unless it is asked for.
+
+A metadata `PUT` reads `override` even when the request did not ask for one, so
+saving a resolved response back does not turn the preset's current settings into
+a path-specific override. The metadata delta a `PUT` triggers carries the field
+as well.
 
 ### WebSocket Stream
 

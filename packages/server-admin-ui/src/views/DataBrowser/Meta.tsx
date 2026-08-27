@@ -23,7 +23,7 @@ import {
   convertValue,
   getAvailableUnits
 } from '../../utils/unitConversion'
-import type { UnitDefinitions } from '../../utils/unitConversion'
+import type { PresetDetails, UnitDefinitions } from '../../utils/unitConversion'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
@@ -42,9 +42,14 @@ interface DisplayScaleValue {
 interface DisplayUnits {
   category?: string
   targetUnit?: string
+  displayFormat?: string
   formula?: string
   inverseFormula?: string
   symbol?: string
+  override?: {
+    targetUnit?: string
+    displayFormat?: string
+  }
 }
 
 interface MetaData {
@@ -98,6 +103,7 @@ interface MetaFormRowProps {
   categories?: string[]
   siUnit?: string
   unitDefinitions?: UnitDefinitions | null
+  presetDetails?: PresetDetails | null
   description?: string
 }
 
@@ -207,16 +213,21 @@ interface CategorySelectProps extends ValueRenderProps {
   categories?: string[]
   siUnit?: string
   unitDefinitions?: UnitDefinitions | null
+  presetDetails?: PresetDetails | null
 }
 
-const CategorySelect: React.FC<CategorySelectProps> = ({
+// Categories without their own target unit follow the active preset, so the
+// server resolves the conversion; "custom" has no category to fall back on and
+// carries its conversion explicitly.
+export const CategorySelect: React.FC<CategorySelectProps> = ({
   disabled,
   value,
   setValue,
   inputId,
   categories,
   siUnit,
-  unitDefinitions
+  unitDefinitions,
+  presetDetails
 }) => {
   const displayUnits = value as DisplayUnits | undefined
   const category = displayUnits?.category || ''
@@ -224,14 +235,82 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
     categories !== undefined ? categories : DEFAULT_CATEGORIES
   const conversions =
     siUnit && unitDefinitions ? unitDefinitions[siUnit]?.conversions : undefined
+  const isCustom = category === 'custom'
+  const showTargetUnit = category !== '' && category !== 'base'
+
+  const presetTargetUnit = isCustom
+    ? undefined
+    : presetDetails?.categories?.[category]?.targetUnit
+  // A server that reports path-specific overrides settles which target unit
+  // is an override. An older one does not, so a target unit that arrived with
+  // the conversion and matches the preset is read as coming from the preset.
+  const overrideTargetUnit = displayUnits?.override
+    ? displayUnits.override.targetUnit
+    : displayUnits?.formula !== undefined &&
+        displayUnits.targetUnit === presetTargetUnit
+      ? undefined
+      : displayUnits?.targetUnit
+  const presetTargetSymbol = presetTargetUnit
+    ? conversions?.[presetTargetUnit]?.symbol || presetTargetUnit
+    : undefined
+
+  // A display format from a path-specific override outlives a unit edit; one
+  // that comes from the preset is the preset's to change, and the server
+  // reports which is which.
+  const overrideFormat =
+    displayUnits?.override?.displayFormat === undefined
+      ? {}
+      : { displayFormat: displayUnits.override.displayFormat }
+
+  // Only the custom category carries its conversion, so that a unit outside
+  // the server's definitions stays convertible. A named category leaves the
+  // conversion for the server to resolve from the target unit.
+  const displayUnitsFor = (
+    category: string,
+    targetUnit: string | undefined
+  ): DisplayUnits => {
+    if (targetUnit === undefined) {
+      return { category, ...overrideFormat }
+    }
+    if (category !== 'custom') {
+      return { category, targetUnit, ...overrideFormat }
+    }
+    const conv = conversions?.[targetUnit]
+    return {
+      category,
+      targetUnit,
+      ...overrideFormat,
+      formula: conv?.formula,
+      inverseFormula: conv?.inverseFormula,
+      symbol: conv?.symbol || targetUnit
+    }
+  }
+
+  const selectCategory = (nextCategory: string) => {
+    const targetUnit = overrideTargetUnit
+    const keepsTargetUnit =
+      nextCategory !== '' &&
+      nextCategory !== 'base' &&
+      targetUnit !== undefined &&
+      conversions?.[targetUnit] !== undefined
+    setValue(
+      displayUnitsFor(nextCategory, keepsTargetUnit ? targetUnit : undefined)
+    )
+  }
+
+  const selectTargetUnit = (targetUnit: string) => {
+    setValue(displayUnitsFor(category, targetUnit || undefined))
+  }
+
   return (
     <>
       <Form.Select
         id={inputId}
+        aria-label="Display unit category"
         disabled={disabled}
         value={category}
         size="sm"
-        onChange={(e) => setValue({ category: e.target.value })}
+        onChange={(e) => selectCategory(e.target.value)}
       >
         <option value="">-- No category --</option>
         {siUnit && <option value="base">base ({siUnit})</option>}
@@ -242,29 +321,22 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
           </option>
         ))}
       </Form.Select>
-      {category === 'custom' && conversions && (
+      {showTargetUnit && conversions && (
         <Form.Select
+          aria-label="Target unit"
           disabled={disabled}
-          value={displayUnits?.targetUnit || ''}
+          value={overrideTargetUnit || ''}
           size="sm"
           style={{ marginTop: '4px' }}
-          onChange={(e) => {
-            const targetUnit = e.target.value
-            if (!targetUnit) {
-              setValue({ category: 'custom' })
-              return
-            }
-            const conv = conversions[targetUnit]
-            setValue({
-              category: 'custom',
-              targetUnit,
-              formula: conv?.formula,
-              inverseFormula: conv?.inverseFormula,
-              symbol: conv?.symbol || targetUnit
-            })
-          }}
+          onChange={(e) => selectTargetUnit(e.target.value)}
         >
-          <option value="">-- Select unit --</option>
+          <option value="">
+            {isCustom
+              ? '-- Select unit --'
+              : presetTargetSymbol
+                ? `default (${presetTargetSymbol})`
+                : 'default'}
+          </option>
           {Object.entries(conversions).map(([unit, conv]) => (
             <option key={unit} value={unit}>
               {conv.symbol || unit}
@@ -527,6 +599,7 @@ const DisplayUnitsView: React.FC<CategorySelectProps> = (props) => {
       categories={categories}
       siUnit={siUnit}
       unitDefinitions={unitDefinitions}
+      presetDetails={props.presetDetails}
     />
   )
 }
@@ -559,6 +632,7 @@ const METAFIELDRENDERERS: Record<
           categories={props.categories}
           siUnit={props.siUnit}
           unitDefinitions={props.unitDefinitions}
+          presetDetails={props.presetDetails}
         />
       )}
       description={
@@ -584,22 +658,11 @@ const METAFIELDRENDERERS: Record<
 }
 
 const saveMeta = (path: string, meta: MetaData) => {
-  // Mark displayUnits as explicit (manually set) so patterns don't overwrite
-  const metaToSave = {
-    ...meta,
-    displayUnits: meta.displayUnits
-      ? {
-          ...meta.displayUnits,
-          explicit: true
-        }
-      : undefined
-  }
-
   fetch(`/signalk/v1/api/vessels/self/${pathToUrlSegments(path)}/meta`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: metaToSave })
+    body: JSON.stringify({ value: meta })
   })
 }
 
@@ -826,6 +889,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
                     categories: filteredCategories,
                     siUnit,
                     unitDefinitions,
+                    presetDetails,
                     setValue: (metaFieldValue) =>
                       setLocalMeta({ ...localMeta, [key]: metaFieldValue }),
                     setKey: (metaFieldKey) => {
@@ -882,6 +946,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
               idPrefix={idPrefix}
               siUnit={siUnit}
               category={category}
+              targetUnit={localMeta.displayUnits?.targetUnit}
               presetDetails={presetDetails}
               unitDefinitions={unitDefinitions}
             />
@@ -1182,29 +1247,30 @@ interface ZonesProps {
   idPrefix: string
   siUnit: string
   category: string | undefined
+  targetUnit: string | undefined
   presetDetails: ReturnType<typeof usePresetDetails>
   unitDefinitions: UnitDefinitions | null
 }
 
-function Zones({
+export function Zones({
   zones,
   isEditing,
   setZones,
   idPrefix,
   siUnit,
   category,
+  targetUnit,
   presetDetails,
   unitDefinitions
 }: ZonesProps) {
   const availableUnits = getAvailableUnits(siUnit, unitDefinitions)
 
-  // Default display unit: preset's target unit for the category, or SI unit
-  const presetTargetUnit = category
-    ? (presetDetails?.categories?.[category]?.targetUnit ?? '')
-    : ''
+  const preferredUnit =
+    targetUnit ||
+    (category ? (presetDetails?.categories?.[category]?.targetUnit ?? '') : '')
   const defaultUnit =
-    presetTargetUnit && availableUnits.some((u) => u.unit === presetTargetUnit)
-      ? presetTargetUnit
+    preferredUnit && availableUnits.some((u) => u.unit === preferredUnit)
+      ? preferredUnit
       : siUnit
 
   const [displayUnit, setDisplayUnit] = useState(defaultUnit)
@@ -1274,6 +1340,7 @@ function Zones({
                 Unit:
               </Form.Text>
               <Form.Select
+                aria-label="Zone unit"
                 size="sm"
                 style={{ width: 'auto', display: 'inline-block' }}
                 value={displayUnit}
