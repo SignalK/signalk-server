@@ -11,7 +11,7 @@ import {
 } from './types'
 
 /**
- * The path specific unit override, as opposed to what the preset supplied.
+ * The path-specific unit override, as opposed to what the preset supplied.
  *
  * A response this server resolved carries the override in its `override`
  * field; anything else is the stored metadata, where every field present is
@@ -37,7 +37,7 @@ function pathOverride(
  * @param storedDisplayUnits - What's in baseDeltas.json (category, optional targetUnit)
  * @param pathSiUnit - The SI unit for this path (optional)
  * @param username - Username for per-user preset resolution (optional)
- * @param includeOverride - Report the path specific override in an `override` field
+ * @param includeOverride - Report the path-specific override in an `override` field
  * @returns Full displayUnits with formula, or null if can't resolve
  */
 export function resolveDisplayUnits(
@@ -52,7 +52,7 @@ export function resolveDisplayUnits(
 
   const category = storedDisplayUnits.category
   const pathSpecific = pathOverride(storedDisplayUnits)
-  // Only an editor needs to tell a path specific override from the preset's
+  // Only an editor needs to tell a path-specific override from the preset's
   // settings, so the field rides along only where the request asked for it. It
   // stays in the object literal either way to keep one shape; JSON drops it
   // when unset.
@@ -195,8 +195,8 @@ export function resolveDisplayUnits(
  *
  * Clients read metadata back resolved — target unit, formulas and format
  * filled in from the applied preset — so writing it back verbatim would store
- * the preset's current settings as a path specific override and detach the
- * path from the preset. A resolved response reports the path specific override
+ * the preset's current settings as a path-specific override and detach the
+ * path from the preset. A resolved response reports the path-specific override
  * in its `override` field, which settles the question outright. A client that sends
  * neither is read by shape: the resolved shape carries a formula and the
  * stored shape does not, and in a formula-carrying echo a value the preset

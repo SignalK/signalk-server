@@ -69,7 +69,7 @@ export interface DisplayUnitsMetadata {
   override?: DisplayUnitsOverride // Only on the way out, never stored
 }
 
-// The path specific unit override in a resolved response, as opposed to the
+// The path-specific unit override in a resolved response, as opposed to the
 // part the applied preset supplied. Empty when the path follows the preset.
 // Only present when the request asked for it.
 export interface DisplayUnitsOverride {

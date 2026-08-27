@@ -25,7 +25,7 @@ const {
   getDefaultCategory
 } = require('../unitpreferences')
 
-// An editor needs to tell a path specific display unit override from the
+// An editor needs to tell a path-specific display unit override from the
 // preset's setting; nothing else does, so the answer comes only when asked for.
 function wantsDisplayUnitsOverride(req) {
   return req.query.displayUnitsOverride === 'true'

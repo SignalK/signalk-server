@@ -418,7 +418,7 @@ describe('Display unit metadata', function () {
     expect(storedDisplayUnits()).to.deep.equal({ category: 'speed' })
   })
 
-  it('reports the path specific override when the request asks for it', async () => {
+  it('reports the path-specific override when the request asks for it', async () => {
     await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
     expect(await servedDisplayUnits()).to.include({
       targetUnit: 'm/s',
@@ -443,7 +443,7 @@ describe('Display unit metadata', function () {
     expect(displayUnits.override).to.deep.equal({})
   })
 
-  it('reports the path specific override on a stream that asks for it', async () => {
+  it('reports the path-specific override on a stream that asks for it', async () => {
     await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
     expect((await streamedDisplayUnits(true)).override).to.deep.equal({
       targetUnit: 'm/s'
