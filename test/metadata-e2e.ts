@@ -418,7 +418,7 @@ describe('Display unit metadata', function () {
     expect(storedDisplayUnits()).to.deep.equal({ category: 'speed' })
   })
 
-  it('names the path override when the request asks for it', async () => {
+  it('reports the path specific override when the request asks for it', async () => {
     await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
     expect(await servedDisplayUnits()).to.include({
       targetUnit: 'm/s',
@@ -429,7 +429,7 @@ describe('Display unit metadata', function () {
     ).to.deep.equal({ targetUnit: 'm/s' })
   })
 
-  it('names no override unless the request asks for it', async () => {
+  it('reports no override unless the request asks for it', async () => {
     await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
     expect(await servedDisplayUnits()).to.not.have.property('override')
   })
@@ -443,14 +443,14 @@ describe('Display unit metadata', function () {
     expect(displayUnits.override).to.deep.equal({})
   })
 
-  it('names the path override on a stream that asks for it', async () => {
+  it('reports the path specific override on a stream that asks for it', async () => {
     await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
     expect((await streamedDisplayUnits(true)).override).to.deep.equal({
       targetUnit: 'm/s'
     })
   })
 
-  it('names no override on a stream that does not ask for it', async () => {
+  it('reports no override on a stream that does not ask for it', async () => {
     await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
     expect(await streamedDisplayUnits(false)).to.not.have.property('override')
   })
@@ -471,7 +471,7 @@ describe('Display unit metadata', function () {
     })
   })
 
-  it('drops what a resolved response says the path does not own', async () => {
+  it('drops what a resolved response does not mark as an override', async () => {
     await putSpeedMeta({
       category: 'speed',
       targetUnit: 'm/s',

@@ -537,8 +537,9 @@ function wsInterface(app: WsApp): WsApi {
           )
 
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
-          // An editor needs to tell the path's own display unit choices from
-          // the preset's; nothing else does, so it comes only when asked for.
+          // An editor needs to tell a path specific display unit override
+          // from the preset's setting; nothing else does, so it comes only
+          // when asked for.
           spark.sendDisplayUnitsOverride =
             spark.query.displayUnitsOverride === 'true'
           spark.sourcePolicy = spark.query.sourcePolicy || 'preferred'

@@ -11,22 +11,22 @@ import {
 } from './types'
 
 /**
- * What the path itself chose, as opposed to what the preset supplied.
+ * The path specific unit override, as opposed to what the preset supplied.
  *
- * A response this server resolved carries that answer in its `override`
+ * A response this server resolved carries the override in its `override`
  * field; anything else is the stored metadata, where every field present is
- * the path's own.
+ * part of the override.
  */
 function pathOverride(
   displayUnits: DisplayUnitsMetadata
 ): DisplayUnitsOverride {
-  const owned = displayUnits.override ?? displayUnits
+  const source = displayUnits.override ?? displayUnits
   const override: DisplayUnitsOverride = {}
-  if (owned.targetUnit !== undefined) {
-    override.targetUnit = owned.targetUnit
+  if (source.targetUnit !== undefined) {
+    override.targetUnit = source.targetUnit
   }
-  if (owned.displayFormat !== undefined) {
-    override.displayFormat = owned.displayFormat
+  if (source.displayFormat !== undefined) {
+    override.displayFormat = source.displayFormat
   }
   return override
 }
@@ -37,7 +37,7 @@ function pathOverride(
  * @param storedDisplayUnits - What's in baseDeltas.json (category, optional targetUnit)
  * @param pathSiUnit - The SI unit for this path (optional)
  * @param username - Username for per-user preset resolution (optional)
- * @param includeOverride - Name the path's own choices in an `override` field
+ * @param includeOverride - Report the path specific override in an `override` field
  * @returns Full displayUnits with formula, or null if can't resolve
  */
 export function resolveDisplayUnits(
@@ -51,17 +51,18 @@ export function resolveDisplayUnits(
   }
 
   const category = storedDisplayUnits.category
-  const owned = pathOverride(storedDisplayUnits)
-  // Only an editor needs to tell the path's own choices from the preset's, so
-  // the field rides along only where the request asked for it. It stays in
-  // the object literal either way to keep one shape; JSON drops it when unset.
-  const override = includeOverride ? owned : undefined
+  const pathSpecific = pathOverride(storedDisplayUnits)
+  // Only an editor needs to tell a path specific override from the preset's
+  // settings, so the field rides along only where the request asked for it. It
+  // stays in the object literal either way to keep one shape; JSON drops it
+  // when unset.
+  const override = includeOverride ? pathSpecific : undefined
   // Resolving a response this server already resolved is the same job as
   // resolving the stored metadata it came from.
   const stored: DisplayUnitsMetadata = storedDisplayUnits.override
     ? {
         category,
-        ...owned,
+        ...pathSpecific,
         formula: storedDisplayUnits.formula,
         inverseFormula: storedDisplayUnits.inverseFormula,
         symbol: storedDisplayUnits.symbol
@@ -193,10 +194,10 @@ export function resolveDisplayUnits(
  * Reduce displayUnits to the override it expresses.
  *
  * Clients read metadata back resolved — target unit, formulas and format
- * filled in from the active preset — so writing it back verbatim would store
- * the preset's current choices as a path override and detach the path from
- * the preset. A resolved response names the path's own choices in its
- * `override` field, which settles the question outright. A client that sends
+ * filled in from the applied preset — so writing it back verbatim would store
+ * the preset's current settings as a path specific override and detach the
+ * path from the preset. A resolved response reports the path specific override
+ * in its `override` field, which settles the question outright. A client that sends
  * neither is read by shape: the resolved shape carries a formula and the
  * stored shape does not, and in a formula-carrying echo a value the preset
  * would have produced anyway is dropped unless the path already stored it.
