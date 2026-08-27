@@ -241,10 +241,10 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
   const presetTargetUnit = isCustom
     ? undefined
     : presetDetails?.categories?.[category]?.targetUnit
-  // A server that names the path's own choices settles which target unit is
-  // an override. An older one does not, so a target unit that arrived with
-  // the conversion and matches the preset is read as the preset's choice.
-  const pinnedTargetUnit = displayUnits?.override
+  // A server that reports path specific overrides settles which target unit
+  // is an override. An older one does not, so a target unit that arrived with
+  // the conversion and matches the preset is read as coming from the preset.
+  const overrideTargetUnit = displayUnits?.override
     ? displayUnits.override.targetUnit
     : displayUnits?.formula !== undefined &&
         displayUnits.targetUnit === presetTargetUnit
@@ -254,9 +254,10 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
     ? conversions?.[presetTargetUnit]?.symbol || presetTargetUnit
     : undefined
 
-  // A display format the path owns outlives a unit edit; one the preset lends
-  // it is the preset's to change, and the server names which is which.
-  const ownedFormat =
+  // A display format from a path specific override outlives a unit edit; one
+  // that comes from the preset is the preset's to change, and the server
+  // reports which is which.
+  const overrideFormat =
     displayUnits?.override?.displayFormat === undefined
       ? {}
       : { displayFormat: displayUnits.override.displayFormat }
@@ -269,16 +270,16 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
     targetUnit: string | undefined
   ): DisplayUnits => {
     if (targetUnit === undefined) {
-      return { category, ...ownedFormat }
+      return { category, ...overrideFormat }
     }
     if (category !== 'custom') {
-      return { category, targetUnit, ...ownedFormat }
+      return { category, targetUnit, ...overrideFormat }
     }
     const conv = conversions?.[targetUnit]
     return {
       category,
       targetUnit,
-      ...ownedFormat,
+      ...overrideFormat,
       formula: conv?.formula,
       inverseFormula: conv?.inverseFormula,
       symbol: conv?.symbol || targetUnit
@@ -286,7 +287,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
   }
 
   const selectCategory = (nextCategory: string) => {
-    const targetUnit = pinnedTargetUnit
+    const targetUnit = overrideTargetUnit
     const keepsTargetUnit =
       nextCategory !== '' &&
       nextCategory !== 'base' &&
@@ -324,7 +325,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
         <Form.Select
           aria-label="Target unit"
           disabled={disabled}
-          value={pinnedTargetUnit || ''}
+          value={overrideTargetUnit || ''}
           size="sm"
           style={{ marginTop: '4px' }}
           onChange={(e) => selectTargetUnit(e.target.value)}

@@ -27,14 +27,14 @@ const PRESET: PresetDetails = {
 }
 
 describe('convertValue', () => {
-  it('converts to the target unit the path asks for', () => {
+  it('converts to the path specific override unit', () => {
     const converted = convertValue(10, 'm/s', 'speed', PRESET, DEFINITIONS, {
       targetUnit: 'km/h'
     })
     expect(converted).toEqual({ value: 36, unit: 'km/h' })
   })
 
-  it('converts to the preset target unit when the path asks for none', () => {
+  it('converts to the preset target unit when there is no override', () => {
     const converted = convertValue(10, 'm/s', 'speed', PRESET, DEFINITIONS)
     expect(converted?.unit).toBe('kn')
   })

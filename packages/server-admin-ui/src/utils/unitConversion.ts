@@ -72,7 +72,7 @@ export function convertValue(
   if (!unitDefinitions) {
     return null
   }
-  // A target unit on the path overrides the preset's choice for the category.
+  // A path specific target unit takes precedence over the preset's setting.
   const targetUnit =
     displayUnits?.targetUnit ||
     presetDetails?.categories?.[category]?.targetUnit

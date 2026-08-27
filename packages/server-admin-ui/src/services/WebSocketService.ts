@@ -51,8 +51,9 @@ export class WebSocketService {
     }
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    // The metadata editor has to tell a unit the path pinned from one the
-    // preset lends it, and the server names that only when asked.
+    // The metadata editor needs to tell a path specific unit override from a
+    // unit that comes from the applied preset, and the server reports the
+    // override only when asked.
     const url =
       proto +
       '://' +

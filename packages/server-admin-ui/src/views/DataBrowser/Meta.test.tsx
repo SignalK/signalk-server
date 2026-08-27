@@ -43,8 +43,8 @@ const renderSelect = (
   )
 
 // What the server sends back for a path that follows the preset: the target
-// unit comes with the conversion it resolved, and the override it names is
-// empty. An older server names no override at all.
+// unit comes with the conversion it resolved, and the override it reports is
+// empty. An older server reports no override at all.
 const RESOLVED_PRESET_UNITS = {
   category: 'speed',
   targetUnit: 'kn',
@@ -114,12 +114,12 @@ describe('CategorySelect', () => {
     expect(targetSelect()).toHaveValue('m/s')
   })
 
-  it('shows the default as chosen when the named override is empty', () => {
+  it('shows the default as chosen when the reported override is empty', () => {
     renderSelect({ ...RESOLVED_PRESET_UNITS, override: {} })
     expect(targetSelect()).toHaveValue('')
   })
 
-  it('shows a pinned unit as chosen even when the preset agrees with it', () => {
+  it('shows an override unit as chosen even when the preset agrees with it', () => {
     renderSelect({ ...RESOLVED_PRESET_UNITS, override: { targetUnit: 'kn' } })
     expect(targetSelect()).toHaveValue('kn')
   })
@@ -166,7 +166,7 @@ describe('CategorySelect', () => {
     })
   })
 
-  it('keeps a display format the path owns across a unit change', () => {
+  it('keeps a display format from an override across a unit change', () => {
     const setValue = vi.fn()
     renderSelect(
       {
@@ -184,7 +184,7 @@ describe('CategorySelect', () => {
     })
   })
 
-  it('drops a display format the preset lends the path', () => {
+  it('drops a display format that comes from the preset', () => {
     const setValue = vi.fn()
     renderSelect(
       { ...RESOLVED_PRESET_UNITS, displayFormat: '0.0', override: {} },
@@ -227,12 +227,12 @@ const renderZones = (targetUnit?: string) =>
   )
 
 describe('Zones', () => {
-  it('edits thresholds in the unit the path asks for', () => {
+  it('edits thresholds in the path specific override unit', () => {
     renderZones('m/s')
     expect(screen.getByLabelText('Zone unit')).toHaveValue('m/s')
   })
 
-  it('edits thresholds in the preset unit when the path asks for none', () => {
+  it('edits thresholds in the preset unit when there is no override', () => {
     renderZones()
     expect(screen.getByLabelText('Zone unit')).toHaveValue('kn')
   })
