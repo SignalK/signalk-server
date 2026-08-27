@@ -906,7 +906,11 @@ function createPrimusAuthorize(
       isWebSocketUpgrade &&
       (ipConnectionCounts.get(ip) ?? 0) >= maxConnectionsPerIp
     ) {
-      debugConnection('IP %s exceeded max connections (%d)', ip, maxConnectionsPerIp)
+      debugConnection(
+        'IP %s exceeded max connections (%d)',
+        ip,
+        maxConnectionsPerIp
+      )
       const err = Object.assign(
         new Error(
           JSON.stringify({
