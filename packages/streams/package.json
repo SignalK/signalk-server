@@ -79,6 +79,7 @@
     "stream-throttle": "^0.1.3"
   },
   "optionalDependencies": {
+    "@canboat/wasm": "^8.0.0",
     "serialport": "^11.0.1"
   }
 }
