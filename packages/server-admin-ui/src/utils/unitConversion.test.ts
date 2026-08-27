@@ -27,7 +27,7 @@ const PRESET: PresetDetails = {
 }
 
 describe('convertValue', () => {
-  it('converts to the path specific override unit', () => {
+  it('converts to the path-specific override unit', () => {
     const converted = convertValue(10, 'm/s', 'speed', PRESET, DEFINITIONS, {
       targetUnit: 'km/h'
     })

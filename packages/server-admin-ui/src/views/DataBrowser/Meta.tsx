@@ -241,7 +241,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
   const presetTargetUnit = isCustom
     ? undefined
     : presetDetails?.categories?.[category]?.targetUnit
-  // A server that reports path specific overrides settles which target unit
+  // A server that reports path-specific overrides settles which target unit
   // is an override. An older one does not, so a target unit that arrived with
   // the conversion and matches the preset is read as coming from the preset.
   const overrideTargetUnit = displayUnits?.override
@@ -254,7 +254,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
     ? conversions?.[presetTargetUnit]?.symbol || presetTargetUnit
     : undefined
 
-  // A display format from a path specific override outlives a unit edit; one
+  // A display format from a path-specific override outlives a unit edit; one
   // that comes from the preset is the preset's to change, and the server
   // reports which is which.
   const overrideFormat =

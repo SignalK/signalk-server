@@ -227,7 +227,7 @@ const renderZones = (targetUnit?: string) =>
   )
 
 describe('Zones', () => {
-  it('edits thresholds in the path specific override unit', () => {
+  it('edits thresholds in the path-specific override unit', () => {
     renderZones('m/s')
     expect(screen.getByLabelText('Zone unit')).toHaveValue('m/s')
   })

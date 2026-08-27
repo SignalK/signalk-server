@@ -72,7 +72,6 @@ export function convertValue(
   if (!unitDefinitions) {
     return null
   }
-  // A path specific target unit takes precedence over the preset's setting.
   const targetUnit =
     displayUnits?.targetUnit ||
     presetDetails?.categories?.[category]?.targetUnit
