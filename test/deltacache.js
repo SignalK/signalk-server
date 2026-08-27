@@ -160,6 +160,10 @@ const expectedOrder = [
   }
 ]
 
+// Mirrors scheduleLivePreferredEmit's debounce in src/deltacache.ts.
+const EMIT_DEBOUNCE_MS = 1000
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 describe('Deltacache', () => {
   let doStop, theServer, doSendADelta
 
@@ -287,6 +291,51 @@ describe('Deltacache', () => {
     sourceMeta['gps.backup'].lastSeen.should.be.above(0)
   })
 
+  it('ingestDelta drops a delta whose context is a prototype key', function () {
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.ingestDelta({
+      context: '__proto__',
+      updates: [
+        {
+          $source: 'poc',
+          timestamp: '2024-01-15T10:30:02.000Z',
+          values: [{ path: 'pocPollutedFlag', value: 'pwned' }]
+        }
+      ]
+    })
+    // chai's have.property walks the prototype chain, so a polluted
+    // Object.prototype would make this bare object appear to have the key.
+    ;({}).should.not.have.property('pocPollutedFlag')
+  })
+
+  it('ingestDelta drops a delta whose path is a prototype key', function () {
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.ingestDelta({
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: 'poc',
+          timestamp: '2024-01-15T10:30:03.000Z',
+          values: [{ path: '__proto__.enabled', value: true }]
+        }
+      ]
+    })
+    ;({}).should.not.have.property('enabled')
+  })
+
+  it('onValue drops a delta whose context is a prototype key', function () {
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.onValue({
+      context: '__proto__',
+      path: 'pocPollutedFlag2',
+      value: 'pwned',
+      $source: 'poc',
+      timestamp: '2024-01-15T10:30:04.000Z',
+      isMeta: false
+    })
+    ;({}).should.not.have.property('pocPollutedFlag2')
+  })
+
   it('getCachedDeltas fans out unrouted multi-source paths', function () {
     // With no priority configuration, every cached source is delivered
     // — preferredSources stays empty for unrouted paths so the
@@ -339,6 +388,31 @@ describe('Deltacache', () => {
     magVarDeltas.length.should.equal(2)
     const sources = magVarDeltas.map((d) => d.updates[0].$source).sort()
     sources.should.deep.equal(['gps.backup', 'gps.primary'])
+  })
+
+  it('getCachedDeltasForContexts over getMatchingContexts equals getCachedDeltas', function () {
+    // subscribe enumerates matching contexts once and reuses them across
+    // paths — the split path must return exactly what the single-call
+    // path does, for every key mode (all paths, root values, one path)
+    const selfContext = 'vessels.' + theServer.app.selfId
+    const contextFilter = (d) => d.context === selfContext
+    const cache = theServer.app.deltaCache
+
+    for (const key of [undefined, '', 'navigation.speedOverGround']) {
+      const direct = cache.getCachedDeltas(contextFilter, null, key)
+      const viaContexts = cache.getCachedDeltasForContexts(
+        cache.getMatchingContexts(contextFilter),
+        null,
+        key
+      )
+      direct.length.should.be.greaterThan(0)
+      viaContexts.should.deep.equal(direct)
+    }
+
+    cache.getMatchingContexts(() => false).should.deep.equal([])
+    cache
+      .getCachedDeltasForContexts(cache.getMatchingContexts(() => false))
+      .should.deep.equal([])
   })
 
   it('getMultiSourcePaths excludes notifications', function () {
@@ -957,5 +1031,94 @@ describe('Deltacache', () => {
         deltaCache.removeSourceDelta(NUMERIC_A)
         deltaCache.removeSourceDelta(NUMERIC_B)
       })
+  })
+
+  it('deleteContext removes the context entries from preferredSources', function () {
+    // Regression test for a memory leak: preferredSources is keyed
+    // `${context}\0${path}` and previously only grew, since
+    // deleteContext (called by pruneContexts for every aged-out
+    // context) never removed the entries belonging to that context.
+    // Over long uptime with many transient contexts (e.g. AIS
+    // targets) this accumulates unboundedly.
+    const context = 'vessels.urn:mrn:signalk:uuid:prune-leak-test'
+    const path = 'navigation.speedOverGround'
+    const prefKey = context + '\0' + path
+    const deltaCache = theServer.app.deltaCache
+    // onValue only records a winner for paths the priority engine
+    // routes, and a server with no priorities configured gates every
+    // path off — which would leave preferredSources empty and make
+    // this test vacuous. Stand in for a configured engine.
+    deltaCache.setRoutesPathPredicate(() => true)
+
+    return doSendADelta({
+      context,
+      updates: [
+        {
+          $source: 'pruneLeakSource',
+          timestamp: '2024-05-01T10:00:00.000Z',
+          values: [{ path, value: 1 }]
+        }
+      ]
+    })
+      .then(() => {
+        deltaCache.cachedContextPaths.should.have.property(context)
+        deltaCache
+          .getLivePreferredSources()
+          .should.have.property(prefKey, 'pruneLeakSource')
+
+        deltaCache.deleteContext(context)
+
+        deltaCache.cachedContextPaths.should.not.have.property(context)
+        deltaCache.getLivePreferredSources().should.not.have.property(prefKey)
+      })
+      .finally(() => deltaCache.setRoutesPathPredicate(null))
+  })
+
+  it('deleteContext tombstones the removed paths on the live preferred stream', function () {
+    // The admin UI merges LIVEPREFERREDSOURCES over its snapshot and
+    // only forgets a key on an empty-string tombstone, so a silent
+    // server-side delete would move the leak into every long-lived
+    // browser session.
+    const context = 'vessels.urn:mrn:signalk:uuid:prune-tombstone-test'
+    const path = 'navigation.speedOverGround'
+    const prefKey = context + '\0' + path
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.setRoutesPathPredicate(() => true)
+
+    return doSendADelta({
+      context,
+      updates: [
+        {
+          $source: 'pruneTombstoneSource',
+          timestamp: '2024-05-01T10:00:00.000Z',
+          values: [{ path, value: 1 }]
+        }
+      ]
+    })
+      .then(() => {
+        // Ingesting the delta marks the path dirty too, so let that
+        // emit drain before deleting — otherwise the assertion could
+        // race against an event announcing the winner rather than
+        // retiring it.
+        return delay(EMIT_DEBOUNCE_MS + 200)
+      })
+      .then(() => {
+        const tombstoned = new Promise((resolve) => {
+          const onServerEvent = (event) => {
+            if (
+              event.type === 'LIVEPREFERREDSOURCES' &&
+              prefKey in (event.data || {})
+            ) {
+              theServer.app.removeListener('serverevent', onServerEvent)
+              resolve(event.data[prefKey])
+            }
+          }
+          theServer.app.on('serverevent', onServerEvent)
+        })
+        deltaCache.deleteContext(context)
+        return tombstoned
+      })
+      .then((sourceRef) => sourceRef.should.equal(''))
+      .finally(() => deltaCache.setRoutesPathPredicate(null))
   })
 })

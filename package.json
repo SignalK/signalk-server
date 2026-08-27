@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "2.30.0",
+  "version": "2.31.1",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -80,10 +80,10 @@
     "@signalk/course-provider": "^1.4.0",
     "@signalk/n2k-signalk": ">=4.1.0-beta",
     "@signalk/nmea0183-signalk": "^3.20.0",
-    "@signalk/resources-provider": "^1.5.1",
-    "@signalk/server-api": "^2.30.0",
+    "@signalk/resources-provider": "^1.5.2",
+    "@signalk/server-api": "^2.31.1",
     "@signalk/signalk-schema": "1.0.x",
-    "@signalk/streams": "6.8.x",
+    "@signalk/streams": "6.9.x",
     "api-schema-builder": "^2.0.11",
     "archiver": "^7.0.1",
     "as-fetch": "^2.1.4",
@@ -140,11 +140,13 @@
     "ws": "^8.17.0"
   },
   "optionalDependencies": {
+    "@jellybrick/dbus-next": "^0.10.3",
     "@mxtommy/kip": "^4.8.0",
+    "@naugehyde/node-ble": "^1.13.5",
     "@signalk/app-dock": "^1.1.0",
     "@signalk/freeboard-sk": "^2.24.0",
     "@signalk/instrumentpanel": "0.x",
-    "@signalk/server-admin-ui": "^2.30.0",
+    "@signalk/server-admin-ui": "^2.31.2",
     "@signalk/set-system-time": "^1.5.0",
     "@signalk/signalk-to-nmea0183": "^1.18.0",
     "@signalk/udp-nmea-plugin": "^2.0.0",

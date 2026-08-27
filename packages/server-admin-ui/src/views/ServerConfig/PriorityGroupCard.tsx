@@ -367,25 +367,6 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
     [group.newcomerSources]
   )
 
-  // Lookup from path → configured priorities, for paths within this group.
-  // Prefer entries with a populated rank-1 sourceRef when duplicates exist.
-  const pathPrioritiesByPath = useMemo(() => {
-    const map = new Map<
-      string,
-      (typeof sourcePriorities)[number]['priorities']
-    >()
-    for (const pp of sourcePriorities) {
-      if (!groupPathSet.has(pp.path)) continue
-      const existing = map.get(pp.path)
-      const existingHasRankOne = !!existing?.[0]?.sourceRef
-      const incomingHasRankOne = !!pp.priorities?.[0]?.sourceRef
-      if (!existing || (!existingHasRankOne && incomingHasRankOne)) {
-        map.set(pp.path, pp.priorities)
-      }
-    }
-    return map
-  }, [sourcePriorities, groupPathSet])
-
   // Short descriptor per path (PGNs / 0183 sentences).
   const pathKinds: PathKinds = useMemo(() => {
     const map = new Map<string, string[]>()
@@ -636,10 +617,16 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
   // when the contents are unchanged; without this memo dnd-kit's
   // internal registry sees the items reference flicker between drag
   // start and drag end and onDragEnd's `over` can land on a stale node.
+  // The content-derived key is deliberate: memoising on identity would defeat
+  // the purpose, since the array is a fresh reference with identical contents.
+  // JSON.stringify rather than join() so a source ref containing the separator
+  // cannot collide with a differently-split array. Parsing the key back
+  // instead of closing over group.sources keeps the memo's dependency
+  // honest: the value is derived from exactly what it is keyed on.
+  const sourcesKey = JSON.stringify(group.sources)
   const stableSources = useMemo(
-    () => group.sources,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [group.sources.join('|')]
+    () => JSON.parse(sourcesKey) as string[],
+    [sourcesKey]
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -969,7 +956,7 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                 </div>
               ) : (
                 <div className="pg-overrides-list">
-                  {overrideRows.map(({ pp, index }) => {
+                  {overrideRows.map(({ pp }) => {
                     const kinds = pathKinds.get(pp.path) ?? []
                     const isFanOut =
                       pp.priorities.length === 1 &&
@@ -1067,7 +1054,6 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                         <PrefsEditor
                           path={pp.path}
                           priorities={pp.priorities}
-                          pathIndex={index}
                           isSaving={isSaving}
                           sourcesData={sourcesData}
                           multiSourcePaths={multiSourcePaths}

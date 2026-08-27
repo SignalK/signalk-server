@@ -697,3 +697,67 @@ describe('Delta with source.instance', function () {
     expect(sources['ws-pi4']).to.not.have.property('local:3000 (192')
   })
 })
+
+describe('Mixed source shapes for one N2K source', function () {
+  const bareDollarSourceFirst = {
+    context: 'vessels.urn:mrn:imo:mmsi:200000000',
+    updates: [
+      {
+        $source: 'N2000-01.37',
+        timestamp: '2016-07-28T18:18:46.000Z',
+        values: [{ path: 'electrical.batteries.0.voltage', value: 12.6 }]
+      },
+      {
+        source: {
+          label: 'N2000-01',
+          type: 'NMEA2000',
+          src: '37',
+          pgn: 127508
+        },
+        timestamp: '2016-07-28T18:18:47.000Z',
+        values: [{ path: 'electrical.batteries.0.voltage', value: 12.7 }]
+      }
+    ]
+  }
+
+  it('accepts a structured N2K source after a bare $source created the key', function () {
+    const fullSignalK = new FullSignalK('urn:mrn:imo:mmsi:200000000')
+    expect(() => fullSignalK.addDelta(bareDollarSourceFirst)).to.not.throw()
+
+    const entry = fullSignalK.retrieve().sources['N2000-01']['37']
+    expect(entry.n2k.src).to.equal('37')
+    expect(entry.n2k.pgns).to.have.property('127508')
+  })
+})
+
+describe('Mixed source shapes for one NMEA0183 source', function () {
+  const bareDollarSourceFirst = {
+    context: 'vessels.urn:mrn:imo:mmsi:200000000',
+    updates: [
+      {
+        $source: '0183-1.II',
+        timestamp: '2016-07-28T18:18:46.000Z',
+        values: [{ path: 'navigation.headingTrue', value: 0.1 }]
+      },
+      {
+        source: {
+          label: '0183-1',
+          type: 'NMEA0183',
+          talker: 'II',
+          sentence: 'HDM'
+        },
+        timestamp: '2016-07-28T18:18:47.000Z',
+        values: [{ path: 'navigation.headingTrue', value: 0.2 }]
+      }
+    ]
+  }
+
+  it('accepts a structured 0183 source after a bare $source created the key', function () {
+    const fullSignalK = new FullSignalK('urn:mrn:imo:mmsi:200000000')
+    expect(() => fullSignalK.addDelta(bareDollarSourceFirst)).to.not.throw()
+
+    const entry = fullSignalK.retrieve().sources['0183-1']['II']
+    expect(entry.talker).to.equal('II')
+    expect(entry.sentences).to.have.property('HDM', '2016-07-28T18:18:47.000Z')
+  })
+})

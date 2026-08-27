@@ -1,10 +1,10 @@
 import path from 'path'
 import { unlinkSync, existsSync } from 'fs'
-import { freeport } from './ts-servertestutilities'
+import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
 import { startServerP, serverTestConfigDirectory } from './servertestutilities'
 
 describe('SSL certificate generation', function () {
-  this.timeout(15000)
+  this.timeout(SERVER_START_TIMEOUT)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let server: any

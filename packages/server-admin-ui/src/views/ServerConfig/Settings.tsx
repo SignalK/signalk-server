@@ -13,6 +13,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import VesselConfiguration from './VesselConfiguration'
 import Logging from './Logging'
 import { useStore, useLoginStatus } from '../../store'
+import BLESettings from './BLESettings'
 
 interface ServerSettingsData {
   hasData?: boolean
@@ -50,6 +51,32 @@ const SettableInterfaces: Record<string, string> = {
   'nmea-tcp': 'NMEA 0183 over TCP (10110)',
   tcp: 'Signal K over TCP (8375)',
   wasm: 'WebAssembly Runtime'
+}
+
+const OptionDescriptions: Record<string, React.ReactNode> = {
+  mdns: 'Advertise Signal K server over mDNS/DNS-SD',
+  wsCompression: 'Use compression on WebSocket connections',
+  wsPingInterval:
+    'Use WebSocket ping messages to terminate stale, inactive connections',
+  accessLogging: 'Log HTTP requests',
+  enablePluginLogging: "Global flag for plugin's debug logging",
+  trustProxy: (
+    <>
+      Trust proxy headers from a reverse proxy, see{' '}
+      <a href="/admin/#/documentation/Security.html#reverse-proxy-configuration-trust-proxy">
+        documentation
+      </a>
+    </>
+  ),
+  useBLEManager: (
+    <>
+      Server&apos;s Bluetooth Low Energy connection management, see{' '}
+      <a href="/admin/#/documentation/Developing/REST_APIs/BLE_API.html">
+        documentation
+      </a>
+    </>
+  ),
+  ssl: "Server's built-in SSL (HTTPS) support"
 }
 
 const ServerSettings: React.FC = () => {
@@ -91,6 +118,7 @@ const ServerSettings: React.FC = () => {
         .then((data) => setAllowReadonly(data.allow_readonly))
         .catch(() => setAllowReadonly(null))
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllowReadonly(null)
     }
   }, [loginStatus.authenticationRequired])
@@ -296,31 +324,45 @@ const ServerSettings: React.FC = () => {
               <Col xs="12" md={fieldColWidthMd}>
                 {settings.options &&
                   Object.keys(settings.options).map((name) => {
+                    const description = OptionDescriptions[name]
                     return (
-                      <div
-                        key={name}
-                        className="d-flex align-items-center mb-2"
-                      >
-                        <Form.Label
-                          style={{ marginRight: '15px', marginBottom: 0 }}
-                          className="switch switch-text switch-primary"
-                        >
-                          <input
-                            type="checkbox"
-                            id={`option-${name}`}
-                            name={name}
-                            className="switch-input"
-                            onChange={handleOptionChange}
-                            checked={settings.options?.[name] || false}
-                          />
-                          <span
-                            className="switch-label"
-                            data-on="On"
-                            data-off="Off"
-                          />
-                          <span className="switch-handle" />
-                        </Form.Label>
-                        <span>{name}</span>
+                      <div key={name} className="mb-2">
+                        <div className="d-flex align-items-center">
+                          <Form.Label
+                            style={{ marginRight: '15px', marginBottom: 0 }}
+                            className="switch switch-text switch-primary"
+                          >
+                            <input
+                              type="checkbox"
+                              id={`option-${name}`}
+                              name={name}
+                              className="switch-input"
+                              onChange={handleOptionChange}
+                              checked={settings.options?.[name] || false}
+                              aria-labelledby={`option-label-${name}`}
+                              aria-describedby={
+                                description
+                                  ? `option-description-${name}`
+                                  : undefined
+                              }
+                            />
+                            <span
+                              className="switch-label"
+                              data-on="On"
+                              data-off="Off"
+                            />
+                            <span className="switch-handle" />
+                          </Form.Label>
+                          <span id={`option-label-${name}`}>{name}</span>
+                        </div>
+                        {description && (
+                          <Form.Text
+                            id={`option-description-${name}`}
+                            className="text-muted"
+                          >
+                            {description}
+                          </Form.Text>
+                        )}
                       </div>
                     )
                   })}
@@ -611,6 +653,7 @@ const Settings: React.FC = () => {
     <div>
       <VesselConfiguration />
       <ServerSettings />
+      <BLESettings />
       <Logging />
     </div>
   )

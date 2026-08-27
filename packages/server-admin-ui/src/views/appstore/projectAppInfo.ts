@@ -1,5 +1,22 @@
 import type { AppInfo, AppStoreState } from '../../store/types'
 
+// True once an install or update has finished successfully and is only
+// waiting for a server restart. In that window `installedVersion` still
+// reports the version the running plugin was loaded from, so callers should
+// show `pendingVersion` instead. Excludes in-flight, queued, failed and
+// removal states, where nothing new is on disk to advertise.
+export function hasPendingInstall(app: AppInfo): boolean {
+  return !!(
+    app.installing &&
+    app.pendingVersion &&
+    !app.isRemove &&
+    !app.installFailed &&
+    !app.isInstalling &&
+    !app.isWaiting &&
+    !app.isRemoving
+  )
+}
+
 // Build the same synthetic AppInfo shape Apps.tsx projects so consumers
 // (cards, rows, the detail page) see consistent installed / newVersion /
 // installing flags without each rebuilding the merge themselves.
@@ -51,6 +68,7 @@ export function projectAppInfo(
     projected = {
       ...projected,
       installing: true,
+      pendingVersion: installingEntry.pendingVersion,
       isInstalling: installingEntry.isInstalling,
       isWaiting: installingEntry.isWaiting,
       isRemoving: installingEntry.isRemoving,

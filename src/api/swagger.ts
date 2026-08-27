@@ -15,11 +15,13 @@ import { appsApiRecord } from './apps/openApi'
 import { historyApiRecord } from './history/openApi'
 import { radarApiRecord } from './radar/openApi'
 import { sensorsApiRecord } from './sensors/openApi'
+import { bleApiRecord } from './ble/openApi'
 import { courseAsyncApiDoc } from './course/asyncApi'
 import { autopilotAsyncApiDoc } from './autopilot/asyncApi'
 import { notificationsAsyncApiDoc } from './notifications/asyncApi'
 import { radarAsyncApiDoc } from './radar/asyncApi'
 import { resourcesAsyncApiDoc } from './resources/asyncApi'
+import { bleAsyncApiDoc } from './ble/asyncApi'
 import { PluginId, PluginManager } from '../interfaces/plugins'
 import { Brand } from '@signalk/server-api'
 
@@ -46,7 +48,8 @@ const apiDocs = [
   securityApiRecord,
   historyApiRecord,
   radarApiRecord,
-  sensorsApiRecord
+  sensorsApiRecord,
+  bleApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc
@@ -150,6 +153,11 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
       name: 'resources',
       title: 'Resources API',
       doc: resourcesAsyncApiDoc
+    },
+    ble: {
+      name: 'ble',
+      title: 'BLE API',
+      doc: bleAsyncApiDoc
     }
   }
 

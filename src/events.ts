@@ -30,24 +30,61 @@ export function startEvents(
   })
 }
 
+/**
+ * Server event types a non-admin connection may receive.
+ *
+ * The admin UI renders these for every logged-in user: VESSEL_INFO in the
+ * footer on every page, SERVERSTATISTICS and PROVIDERSTATUS on the dashboard,
+ * and RECEIVE_LOGIN_STATUS drives the login state itself (the equivalent REST
+ * route is deliberately public too).
+ *
+ * Everything else - server configuration, source and priority state, debug
+ * settings, plugin and appstore activity - is admin-only. An allowlist rather
+ * than a denylist so a newly introduced event type is withheld by default.
+ */
+const NON_ADMIN_SERVER_EVENTS = new Set([
+  'VESSEL_INFO',
+  'SERVERSTATISTICS',
+  'PROVIDERSTATUS',
+  'RECEIVE_LOGIN_STATUS'
+])
+
 export function startServerEvents(
   app: any,
   spark: EventsSpark,
   onServerEvent: any
 ) {
-  app.on('serverevent', onServerEvent)
+  const isAdmin =
+    app.securityStrategy.isDummy() ||
+    app.securityStrategy.hasAdminAccess?.(spark.request) === true
+
+  const writeIfAllowed = (event: any) => {
+    if (isAdmin || NON_ADMIN_SERVER_EVENTS.has(event?.type)) {
+      spark.write(event)
+    }
+  }
+
+  const onAllowedServerEvent = isAdmin
+    ? onServerEvent
+    : (event: any) => {
+        if (NON_ADMIN_SERVER_EVENTS.has(event?.type)) {
+          onServerEvent(event)
+        }
+      }
+
+  app.on('serverevent', onAllowedServerEvent)
   spark.onDisconnects.push(() => {
-    app.removeListener('serverevent', onServerEvent)
+    app.removeListener('serverevent', onAllowedServerEvent)
   })
 
-  if (app.securityStrategy.hasAdminAccess?.(spark.request)) {
+  if (isAdmin) {
     app.on('serverAdminEvent', onServerEvent)
     spark.onDisconnects.push(() => {
       app.removeListener('serverAdminEvent', onServerEvent)
     })
   }
   try {
-    spark.write({
+    writeIfAllowed({
       type: 'VESSEL_INFO',
       data: {
         name: app.config.vesselName,
@@ -61,39 +98,39 @@ export function startServerEvents(
     }
   }
   Object.keys(app.lastServerEvents).forEach((propName) => {
-    spark.write(app.lastServerEvents[propName])
+    writeIfAllowed(app.lastServerEvents[propName])
   })
-  spark.write({
+  writeIfAllowed({
     type: 'DEBUG_SETTINGS',
     data: app.logging.getDebugSettings()
   })
   if (app.securityStrategy.canAuthorizeWS()) {
-    spark.write({
+    writeIfAllowed({
       type: 'RECEIVE_LOGIN_STATUS',
       data: app.securityStrategy.getLoginStatus(spark.request)
     })
   }
-  spark.write({
+  writeIfAllowed({
     type: 'PRIORITYOVERRIDES',
     data: app.config.settings.priorityOverrides || {}
   })
-  spark.write({
+  writeIfAllowed({
     type: 'SOURCEALIASES',
     data: app.config.settings.sourceAliases || {}
   })
-  spark.write({
+  writeIfAllowed({
     type: 'PRIORITYGROUPS',
     data: app.config.settings.priorityGroups || []
   })
-  spark.write({
+  writeIfAllowed({
     type: 'PRIORITYDEFAULTS',
     data: app.config.settings.priorityDefaults || {}
   })
-  spark.write({
+  writeIfAllowed({
     type: 'MULTISOURCEPATHS',
     data: app.deltaCache?.getMultiSourcePaths?.() || {}
   })
-  spark.write({
+  writeIfAllowed({
     type: 'RECONCILEDGROUPS',
     data: app.deltaCache?.getReconciledGroups?.() || []
   })

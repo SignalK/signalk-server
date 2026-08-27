@@ -866,7 +866,9 @@ module.exports = function (
         enablePluginLogging:
           isUndefined(app.config.settings.enablePluginLogging) ||
           app.config.settings.enablePluginLogging,
-        trustProxy: app.config.settings.trustProxy || false
+        trustProxy: app.config.settings.trustProxy || false,
+        useBLEManager:
+          app.config.settings.bleApi?.localBluetoothManaged || false
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
@@ -1178,6 +1180,13 @@ module.exports = function (
 
     if (!isUndefined(settings.options.trustProxy)) {
       updatedSettings.trustProxy = settings.options.trustProxy
+    }
+
+    if (!isUndefined(settings.options.useBLEManager)) {
+      updatedSettings.bleApi = {
+        ...(updatedSettings.bleApi ?? {}),
+        localBluetoothManaged: Boolean(settings.options.useBLEManager)
+      }
     }
 
     if (!isUndefined(settings.port)) {

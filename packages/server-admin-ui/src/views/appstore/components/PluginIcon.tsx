@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { monogramFor } from '../../../utils/monogram'
 
 interface PluginIconProps {
   name: string
@@ -6,14 +7,6 @@ interface PluginIconProps {
   appIcon?: string
   installedIconUrl?: string
   size?: number
-}
-
-function monogramFor(name: string, displayName?: string): string {
-  const source = (displayName || name).replace(/^@[^/]+\//, '')
-  const words = source.split(/[-_ .]+/).filter(Boolean)
-  if (words.length === 0) return '?'
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return (words[0][0] + words[1][0]).toUpperCase()
 }
 
 // Stable per-name pastel hue so the monogram tile reads as the plugin's
@@ -47,6 +40,9 @@ const PluginIcon: React.FC<PluginIconProps> = ({
     if (typeof IntersectionObserver === 'undefined') {
       // Older browsers / SSR: act as if always visible. Cheaper than
       // shipping a polyfill for what is a progressive enhancement.
+      // Capability probe: IntersectionObserver support can only be checked
+      // once mounted, so this cannot be derived during render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHasBeenVisible(true)
       return
     }
@@ -80,6 +76,7 @@ const PluginIcon: React.FC<PluginIconProps> = ({
   // a new installedIconUrl after install) keeps its old failedIndex and
   // skips straight to the monogram even though the new URL is fine.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFailedIndex(-1)
   }, [installedIconUrl, appIcon])
   const activeSrc = candidates[failedIndex + 1]

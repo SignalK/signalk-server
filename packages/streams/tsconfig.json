@@ -14,7 +14,8 @@
     "files": true,
     "compilerOptions": {
       "module": "commonjs",
-      "moduleResolution": "node"
+      "moduleResolution": "node",
+      "types": ["node", "mocha"]
     }
   }
 }

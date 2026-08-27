@@ -36,7 +36,7 @@ import * as Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 import { createDebug } from './debug'
-import DeltaCache from './deltacache'
+import DeltaCache, { CachedContexts } from './deltacache'
 import { ToPreferredDelta } from './deltaPriority'
 import { StreamBundle, toDelta } from './streambundle'
 import { ContextMatcher } from './types'
@@ -98,6 +98,27 @@ class SubscriptionManager implements ISubscriptionManager {
     sourcePolicy?: 'preferred' | 'all',
     excludeSources?: SourceRef[]
   ) {
+    // The callback is plugin/client code that runs synchronously inside
+    // Bacon dispatches: live bus fan-out, cache bootstrap replay and the
+    // keys announcements new-path attachment rides on. An exception
+    // escaping into a dispatch aborts delivery to every subscriber
+    // registered after this one, and baconjs' Bus drains its re-entrant
+    // push queue in a finally block, so a throw there leaves the bus
+    // permanently stuck swallowing all further pushes — one broken
+    // callback silences other subscriptions' path announcements for good.
+    // Contain it here; the return value must pass through for Bacon.noMore.
+    const guardedCallback: SubscribeCallback = (delta: Delta) => {
+      try {
+        return callback(delta)
+      } catch (err) {
+        try {
+          errorCallback(err)
+        } catch (errorCallbackError) {
+          console.error(err)
+          console.error(errorCallbackError)
+        }
+      }
+    }
     const contextFilter = contextMatcher(
       this.selfContext,
       this.app,
@@ -145,15 +166,21 @@ class SubscriptionManager implements ISubscriptionManager {
         unsubscribes,
         buses,
         contextFilter,
-        callback,
+        guardedCallback,
         errorCallback,
         user,
         sourcePolicy,
         perSubEngine,
-        this.selfContext
+        this.selfContext,
+        true
       )
       // listen to new keys and then use the same logic to check if we
-      // want to subscribe, passing in a map with just that single bus
+      // want to subscribe, passing in a map with just that single bus.
+      // No cache bootstrap here: a keys announcement is triggered by the
+      // delta that is mid-dispatch, already ingested into the delta cache
+      // (index.ts ingests before it emits), and its live push follows the
+      // attach within the same dispatch — a cache replay would deliver
+      // that first delta twice.
       unsubscribes.push(
         this.streambundle.keys.onValue((path) => {
           const newBuses: BusesMap = {}
@@ -166,12 +193,13 @@ class SubscriptionManager implements ISubscriptionManager {
             unsubscribes,
             newBuses,
             contextFilter,
-            callback,
+            guardedCallback,
             errorCallback,
             user,
             sourcePolicy,
             perSubEngine,
-            this.selfContext
+            this.selfContext,
+            false
           )
         })
       )
@@ -210,7 +238,7 @@ class SubscriptionManager implements ISubscriptionManager {
               }
             })
           })
-          callback(filtered)
+          guardedCallback(filtered)
         })
       }
 
@@ -240,9 +268,9 @@ class SubscriptionManager implements ISubscriptionManager {
                   new Date(),
                   this.selfContext
                 )
-                if (filtered) callback(filtered)
+                if (filtered) guardedCallback(filtered)
               } else {
-                callback(delta)
+                guardedCallback(delta)
               }
             })
 
@@ -286,7 +314,8 @@ function handleSubscribeRows(
   user?: string,
   sourcePolicy?: 'preferred' | 'all',
   perSubEngine?: ToPreferredDelta | null,
-  selfContext?: string
+  selfContext?: string,
+  bootstrapFromCache?: boolean
 ) {
   rows.reduce((acc, subscribeRow) => {
     if (subscribeRow.path !== undefined) {
@@ -301,7 +330,8 @@ function handleSubscribeRows(
         user,
         sourcePolicy,
         perSubEngine,
-        selfContext
+        selfContext,
+        bootstrapFromCache
       )
     }
     return acc
@@ -323,9 +353,23 @@ function handleSubscribeRow(
   user?: string,
   sourcePolicy?: 'preferred' | 'all',
   perSubEngine?: ToPreferredDelta | null,
-  selfContext?: string
+  selfContext?: string,
+  bootstrapFromCache?: boolean
 ) {
   const matcher = pathMatcher(subscribeRow.path)
+  // The set of cached contexts matching filter is invariant across this
+  // row's synchronous bus sweep — enumerate it once, lazily, instead of
+  // re-scanning the whole cache and re-running the filter per context
+  // for every matching path, which made a wildcard row's subscribe
+  // O(paths × contexts) (#2874). Lazy: rows that never bootstrap from
+  // the cache don't pay for the scan.
+  let matchingContexts: CachedContexts | null = null
+  const getMatchingContexts = () => {
+    if (matchingContexts === null) {
+      matchingContexts = app.deltaCache.getMatchingContexts(filter)
+    }
+    return matchingContexts
+  }
   // iterate over all the buses, checking if we want to subscribe to its values
   forOwn(buses, (bus, key) => {
     // Root deltas (path '') carry vessel identity fields (name, mmsi,
@@ -447,37 +491,39 @@ function handleSubscribeRow(
         )
       }
 
-      // Bootstrap snapshot: fetch every source's last cached value
-      // (sourcePolicy='all') when a per-subscription engine owns this
-      // subscription, then replay through the engine so the snapshot
-      // honours the exclude mask. Without the override the snapshot
-      // would carry the global preferred winner — which may BE the
-      // excluded source — and the subscriber would see it once on
+      // Bootstrap snapshot at subscribe time only: fetch every source's
+      // last cached value (sourcePolicy='all') when a per-subscription
+      // engine owns this subscription, then replay through the engine so
+      // the snapshot honours the exclude mask. Without the override the
+      // snapshot would carry the global preferred winner — which may BE
+      // the excluded source — and the subscriber would see it once on
       // startup.
-      const cached = app.deltaCache.getCachedDeltas(
-        filter,
-        user,
-        key,
-        perSubEngine ? 'all' : sourcePolicy
-      )
-      const latest =
-        flattenRootValues && cached
-          ? flattenCachedRootDeltas(cached, matcher)
-          : cached
-      if (latest) {
-        if (perSubEngine) {
-          const now = new Date()
-          for (const delta of latest) {
-            const filtered = runPerSubEngine(
-              perSubEngine,
-              delta,
-              now,
-              selfContext ?? ''
-            )
-            if (filtered) callback(filtered)
+      if (bootstrapFromCache) {
+        const cached = app.deltaCache.getCachedDeltasForContexts(
+          getMatchingContexts(),
+          user,
+          key,
+          perSubEngine ? 'all' : sourcePolicy
+        )
+        const latest =
+          flattenRootValues && cached
+            ? flattenCachedRootDeltas(cached, matcher)
+            : cached
+        if (latest) {
+          if (perSubEngine) {
+            const now = new Date()
+            for (const delta of latest) {
+              const filtered = runPerSubEngine(
+                perSubEngine,
+                delta,
+                now,
+                selfContext ?? ''
+              )
+              if (filtered) callback(filtered)
+            }
+          } else {
+            latest.forEach(callback)
           }
-        } else {
-          latest.forEach(callback)
         }
       }
     }

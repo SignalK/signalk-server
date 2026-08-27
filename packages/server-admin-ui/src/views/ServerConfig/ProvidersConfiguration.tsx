@@ -41,7 +41,6 @@ function stripFilterKeys(provider: Provider): void {
     if (!subOpts || !Array.isArray(subOpts.filters)) continue
     subOpts.filters = (subOpts.filters as Array<Record<string, unknown>>).map(
       (f) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { _key, ...rest } = f
         return rest
       }

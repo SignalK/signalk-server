@@ -8,6 +8,7 @@ import {
   Delta,
   hasValues,
   Path,
+  PathValue,
   SourceRef,
   Timestamp,
   Update
@@ -16,7 +17,7 @@ import {
 export interface AccumulatedItem {
   context: Context
   path: Path
-  value: unknown
+  value: PathValue['value']
   $source: SourceRef | undefined
   timestamp: Timestamp | undefined
 }
@@ -57,7 +58,7 @@ export function accumulateLatestValue(
 
 /**
  * Convert accumulated values to spec-compliant deltas.
- * Groups values by context and $source for proper delta structure.
+ * Groups values by context, $source, and timestamp for proper delta structure.
  *
  * @param accumulator - Map of accumulated values
  * @param duration - How long backpressure was active in milliseconds
@@ -71,45 +72,47 @@ export function buildFlushDeltas(
 
   const countBefore = accumulator.size
 
-  // Group by context
-  const byContext = new Map<Context, Map<string, Update>>()
-  for (const [, item] of accumulator) {
-    if (!byContext.has(item.context)) {
-      byContext.set(item.context, new Map())
+  const byContext = new Map<
+    Context,
+    Map<SourceRef | undefined, Map<Timestamp | undefined, Update>>
+  >()
+  for (const item of accumulator.values()) {
+    let bySource = byContext.get(item.context)
+    if (!bySource) {
+      bySource = new Map()
+      byContext.set(item.context, bySource)
     }
-    // Group by $source within context
-    const bySource = byContext.get(item.context)!
-    const sourceKey = item.$source || 'unknown'
-    if (!bySource.has(sourceKey)) {
-      bySource.set(sourceKey, {
-        $source: item.$source as SourceRef,
-        timestamp: item.timestamp as Timestamp,
+    // One update timestamp applies to every path value in that update, so values from different
+    // source frames must remain in separate updates even when their $source is the same.
+    let byTimestamp = bySource.get(item.$source)
+    if (!byTimestamp) {
+      byTimestamp = new Map()
+      bySource.set(item.$source, byTimestamp)
+    }
+    let update = byTimestamp.get(item.timestamp)
+    if (!update) {
+      update = {
+        $source: item.$source,
+        timestamp: item.timestamp,
         values: []
-      })
+      }
+      byTimestamp.set(item.timestamp, update)
     }
-    const update = bySource.get(sourceKey)!
     if (hasValues(update)) {
       update.values.push({
-        path: item.path as Path,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        value: item.value as any
+        path: item.path,
+        value: item.value
       })
-      // Use the most recent timestamp for this source
-      if (
-        item.timestamp &&
-        (!update.timestamp || item.timestamp > update.timestamp)
-      ) {
-        update.timestamp = item.timestamp as Timestamp
-      }
     }
   }
 
-  // Build one delta per context with backpressure indicator
   const deltas: BackpressureDelta[] = []
-  for (const [context, bySourceTime] of byContext) {
+  for (const [context, bySource] of byContext) {
     deltas.push({
       context,
-      updates: Array.from(bySourceTime.values()),
+      updates: Array.from(bySource.values()).flatMap((byTimestamp) =>
+        Array.from(byTimestamp.values())
+      ),
       $backpressure: {
         accumulated: countBefore,
         duration

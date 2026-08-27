@@ -520,7 +520,6 @@ const createLegacyBridge = (
       }
     }, [])
 
-    // eslint-disable-next-line react-hooks/refs
     return React.createElement('div', { ref: containerRef })
   }
   Bridge.displayName = `LegacyBridge(${(RemoteComponent as { displayName?: string }).displayName || RemoteComponent.name || 'Remote'})`

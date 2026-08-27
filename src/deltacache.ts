@@ -24,7 +24,12 @@ import { join } from 'path'
 import { atomicWriteFile } from './atomicWrite'
 import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
-import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
+import {
+  Context,
+  FORBIDDEN_PATH_KEYS,
+  NormalizedDelta,
+  SourceRef
+} from '@signalk/server-api'
 import { isFanOutPriorities } from './deltaPriority'
 
 const SOURCES_CACHE_FILE = 'sources-cache.json'
@@ -43,6 +48,10 @@ const POSITION_SOURCE_SWEEP_MS = 15 * 1000
 interface StringKeyed {
   [key: string]: any
 }
+
+// Opaque handle for consumers: context branches of the cache as returned
+// by getMatchingContexts and consumed by getCachedDeltasForContexts.
+export type CachedContexts = StringKeyed[]
 
 /**
  * Build a `<label>.<src>` → `<label>.<canName>` map from the Signal K
@@ -212,6 +221,7 @@ export default class DeltaCache {
   getContextAndPathParts(msg: NormalizedDelta): string[] {
     let result
     if (
+      !FORBIDDEN_PATH_KEYS.has(msg.context) &&
       this.cachedContextPaths[msg.context] &&
       (result = this.cachedContextPaths[msg.context][msg.path])
     ) {
@@ -221,6 +231,14 @@ export default class DeltaCache {
     let contextAndPathParts = msg.context.split('.')
     if (msg.path.length !== 0) {
       contextAndPathParts = contextAndPathParts.concat(msg.path.split('.'))
+    }
+    // A prototype key anywhere in context or path must never be cached:
+    // this.cachedContextPaths['__proto__'] is Object.prototype, so the
+    // "create if missing" guard below would never fire and the write
+    // would land straight on the shared prototype. Return the parts
+    // uncached; getLeafObject rejects them too.
+    if (contextAndPathParts.some((p) => FORBIDDEN_PATH_KEYS.has(p))) {
+      return contextAndPathParts
     }
     if (!this.cachedContextPaths[msg.context]) {
       this.cachedContextPaths[msg.context] = {}
@@ -252,6 +270,11 @@ export default class DeltaCache {
       this.getContextAndPathParts(msg),
       true
     )
+    // getLeafObject returns null when the context/path contains a
+    // prototype key; drop the delta rather than pollute Object.prototype.
+    if (!leaf) {
+      return
+    }
 
     if (msg.path.length !== 0) {
       const isNewSource = !leaf[sourceRef]
@@ -619,6 +642,11 @@ export default class DeltaCache {
           this.getContextAndPathParts(msg),
           true
         )
+        // Skip deltas whose context/path contains a prototype key rather
+        // than letting the walk mutate Object.prototype.
+        if (!leaf) {
+          continue
+        }
         const isNewSource = !leaf[sourceRef]
         leaf[sourceRef] = msg
         // Populate preferredSources so getCachedDeltas('preferred')
@@ -812,23 +840,71 @@ export default class DeltaCache {
   }
 
   deleteContext(contextKey: string) {
+    this.deleteContextEntries(contextKey)
+    this.prunePreferredSources((context) => context === contextKey)
+  }
+
+  /**
+   * Everything deleteContext drops except the preferredSources sweep,
+   * which walks the whole map and so is batched by pruneContexts.
+   */
+  private deleteContextEntries(contextKey: string) {
     debug('Deleting context ' + contextKey)
     const contextParts = contextKey.split('.')
     if (contextParts.length === 2) {
       delete this.cache[contextParts[0]][contextParts[1]]
     }
+    // Otherwise only cleared by the wholesale 5-minute reset, which
+    // would let a dead context's split-path cache outlive it.
+    delete this.cachedContextPaths[contextKey]
     this.app.stalenessEnforcer?.onContextRemoved(contextKey)
+  }
+
+  /**
+   * Drop every preferredSources entry whose context the predicate
+   * matches.
+   *
+   * preferredSources is keyed `${context}\0${path}` and otherwise never
+   * shrinks: every (context, path) pair the priority engine routes —
+   * e.g. every AIS target that has come into range — would live for the
+   * process lifetime instead of aging out with its context.
+   */
+  private prunePreferredSources(matches: (context: string) => boolean) {
+    let preferredChanged = false
+    for (const key of this.preferredSources.keys()) {
+      const nullIdx = key.indexOf('\0')
+      if (!matches(nullIdx === -1 ? key : key.slice(0, nullIdx))) continue
+      this.preferredSources.delete(key)
+      // The client's mergeLivePreferredSources only forgets a key when
+      // it receives the empty-string tombstone scheduleLivePreferredEmit
+      // sends for a dirty path with no entry left. Without this a
+      // long-lived admin UI session keeps accumulating winners for
+      // contexts the server has already dropped.
+      this.livePreferredDirtyPaths.add(key)
+      preferredChanged = true
+    }
+    if (preferredChanged) {
+      this.scheduleLivePreferredEmit()
+    }
   }
 
   pruneContexts(seconds: number) {
     debug('pruning contexts...')
     const threshold = Date.now() - seconds * 1000
+    const pruned = new Set<string>()
     for (const contextKey in this.lastModifieds) {
       if (this.lastModifieds[contextKey] < threshold) {
-        this.deleteContext(contextKey)
+        this.deleteContextEntries(contextKey)
         delete this.lastModifieds[contextKey]
+        pruned.add(contextKey)
       }
     }
+    if (pruned.size === 0) return
+    // One pass for the whole sweep. Calling deleteContext per context
+    // would rescan all of preferredSources for each one, and a sweep
+    // that evicts hundreds of stale AIS targets at once is exactly the
+    // case this pruning exists for.
+    this.prunePreferredSources((context) => pruned.has(context))
   }
 
   buildFull(user: string, path: string[]) {
@@ -1439,54 +1515,79 @@ export default class DeltaCache {
     return result.concat(Array.from(byPath.values()))
   }
 
+  // Enumerate the context branches matching contextFilter. Subscribe
+  // handling evaluates the filter once per context via this method and
+  // reuses the result across every subscribed path, instead of paying
+  // O(paths × contexts) by re-scanning the whole cache per path. The
+  // returned array holds live references into the cache — hand it to
+  // getCachedDeltasForContexts within the same synchronous task, before
+  // ingestion can add or expire contexts.
+  getMatchingContexts(contextFilter: ContextMatcher): CachedContexts {
+    const contextNodes: StringKeyed[] = []
+    for (const type in this.cache) {
+      const contextsOfType: StringKeyed = this.cache[type]
+      for (const id in contextsOfType) {
+        const context = `${type}.${id}` as Context
+        if (contextFilter({ context })) {
+          contextNodes.push(contextsOfType[id])
+        }
+      }
+    }
+    return contextNodes
+  }
+
   getCachedDeltas(
     contextFilter: ContextMatcher,
     user?: string,
     key?: string,
     sourcePolicy?: 'preferred' | 'all'
   ) {
-    const contexts: Context[] = []
-    _.keys(this.cache).forEach((type) => {
-      _.keys(this.cache[type]).forEach((id) => {
-        const context = `${type}.${id}` as Context
-        if (contextFilter({ context })) {
-          contexts.push(this.cache[type][id])
-        }
-      })
-    })
-
-    const deltas = contexts.reduce(
-      (acc: NormalizedDelta[], context: Context) => {
-        let deltasToProcess
-
-        if (key === undefined) {
-          deltasToProcess = findDeltas(context)
-        } else if (key === '') {
-          // An empty-path subscription targets values stored at the
-          // context root (e.g. mmsi, name), which live intermixed with
-          // nested path branches. Collect every cached delta and keep
-          // only those whose own path is empty. Testing `if (key)` here
-          // would treat '' as "no key" and leak every path into the
-          // bootstrap snapshot.
-          deltasToProcess = findDeltas(context).filter(
-            (delta: NormalizedDelta) => delta.path === ''
-          )
-        } else {
-          deltasToProcess = _.get(context, key)
-        }
-        if (deltasToProcess) {
-          acc = acc.concat(
-            _.values(
-              _.pickBy(deltasToProcess, (val, akey) => {
-                return akey !== 'meta'
-              })
-            )
-          )
-        }
-        return acc
-      },
-      []
+    return this.getCachedDeltasForContexts(
+      this.getMatchingContexts(contextFilter),
+      user,
+      key,
+      sourcePolicy
     )
+  }
+
+  getCachedDeltasForContexts(
+    contextNodes: CachedContexts,
+    user?: string,
+    key?: string,
+    sourcePolicy?: 'preferred' | 'all'
+  ) {
+    // Split the dotted path once per call — lodash _.get would re-parse
+    // it per context, and its 500-entry stringToPath memoize cache is
+    // cleared wholesale on overflow, so a server with more distinct
+    // subscribed paths re-parses continuously.
+    const keyParts: string[] = key ? key.split('.') : []
+
+    const deltas: NormalizedDelta[] = []
+    for (const contextNode of contextNodes) {
+      if (key === undefined) {
+        findDeltas(contextNode, deltas)
+      } else if (key === '') {
+        // An empty-path subscription targets values stored at the
+        // context root (e.g. mmsi, name), which live intermixed with
+        // nested path branches. Collect every cached delta and keep
+        // only those whose own path is empty. Testing `if (key)` here
+        // would treat '' as "no key" and leak every path into the
+        // bootstrap snapshot.
+        findDeltas(contextNode, deltas, hasEmptyPath)
+      } else {
+        let node: StringKeyed | undefined = contextNode
+        for (let i = 0; i < keyParts.length; i++) {
+          node = node?.[keyParts[i]]
+        }
+        if (node) {
+          for (const akey in node) {
+            if (akey !== 'meta') {
+              deltas.push(node[akey])
+            }
+          }
+        }
+      }
+    }
 
     const preferred =
       sourcePolicy === 'all' ? deltas : this.filterDeltasToPreferred(deltas)
@@ -1515,20 +1616,49 @@ function pathToProcessForFull(pathArray: any[]) {
   return pathArray
 }
 
-function pickDeltasFromBranch(acc: any[], obj: any) {
-  if (typeof obj === 'object') {
-    if (isUndefined(obj.path) || isUndefined(obj.value)) {
-      // not a delta, so process possible children
-      _.values(obj).reduce(pickDeltasFromBranch, acc)
-    } else {
-      acc.push(obj)
+const hasEmptyPath = (delta: NormalizedDelta) => delta.path === ''
+
+// A cache leaf carries the delta's own path and value; branch nodes
+// only carry children keyed by path segment or source ref.
+const isCachedDelta = (node: object): node is NormalizedDelta =>
+  'path' in node &&
+  node.path !== undefined &&
+  'value' in node &&
+  node.value !== undefined
+
+function pickDeltasFromBranch(
+  acc: NormalizedDelta[],
+  node: unknown,
+  predicate?: (delta: NormalizedDelta) => boolean
+) {
+  if (typeof node !== 'object' || node === null) {
+    return acc
+  }
+  if (isCachedDelta(node)) {
+    if (predicate === undefined || predicate(node)) {
+      acc.push(node)
+    }
+  } else {
+    // for...in over StringKeyed rather than Object.values(): this
+    // recursion visits the whole cache on connect scans and must not
+    // allocate per branch.
+    const branch: StringKeyed = node
+    for (const key in branch) {
+      pickDeltasFromBranch(acc, branch[key], predicate)
     }
   }
   return acc
 }
 
-function findDeltas(branchOrLeaf: any) {
-  return _.values(branchOrLeaf).reduce(pickDeltasFromBranch, [])
+function findDeltas(
+  branchOrLeaf: StringKeyed,
+  acc: NormalizedDelta[] = [],
+  predicate?: (delta: NormalizedDelta) => boolean
+) {
+  for (const key in branchOrLeaf) {
+    pickDeltasFromBranch(acc, branchOrLeaf[key], predicate)
+  }
+  return acc
 }
 
 function ensureHasDollarSource(normalizedDelta: NormalizedDelta): SourceRef {
@@ -1550,6 +1680,13 @@ function getLeafObject(
 
   for (let i = 0; i < contextAndPathParts.length; i++) {
     const p = contextAndPathParts[i]
+    // A __proto__ / constructor / prototype segment resolves to a live
+    // prototype object that already exists, so the walk would step onto
+    // Object.prototype and the next segment would be written there. Reject
+    // rather than pollute the shared prototype.
+    if (FORBIDDEN_PATH_KEYS.has(p)) {
+      return null
+    }
     if (isUndefined(current[p])) {
       if (createIfMissing) {
         current[p] = {}

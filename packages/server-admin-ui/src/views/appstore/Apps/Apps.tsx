@@ -143,13 +143,13 @@ const Apps: React.FC = () => {
   useEffect(() => {
     fetchAppStore()
   }, [])
-  const [viewMode, setViewModeState] = useState<AppsViewMode>(
+  const [viewMode, setViewModeState] = useState<AppsViewMode>(() =>
     readString<AppsViewMode>(VIEW_MODE_KEY, ['grid', 'list'], 'grid')
   )
-  const [sortMode, setSortModeState] = useState<SortMode>(
+  const [sortMode, setSortModeState] = useState<SortMode>(() =>
     readString<SortMode>(SORT_MODE_KEY, ['recent', 'name', 'score'], 'recent')
   )
-  const [showDeprecated, setShowDeprecatedState] = useState<boolean>(
+  const [showDeprecated, setShowDeprecatedState] = useState<boolean>(() =>
     readBool(SHOW_DEPRECATED_KEY, false)
   )
 
@@ -198,6 +198,7 @@ const Apps: React.FC = () => {
         allApps[app.name] = {
           ...allApps[app.name],
           installing: true,
+          pendingVersion: app.pendingVersion,
           isInstalling: app.isInstalling,
           isWaiting: app.isWaiting,
           isRemoving: app.isRemoving,

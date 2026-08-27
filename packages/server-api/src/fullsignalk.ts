@@ -16,17 +16,12 @@
 
 import { EventEmitter } from 'events'
 import { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
-import { PathValueState } from './deltas'
+import { FORBIDDEN_PATH_KEYS, PathValueState } from './deltas'
 import { metadataRegistry } from '@signalk/path-metadata'
 
 /** @hidden */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObject = Record<string, any>
-
-// A delta path segment of __proto__ / constructor / prototype would let the
-// tree walk in addValue reach and mutate Object.prototype process-wide (#2768).
-// None of these are valid Signal K path segments, so such deltas are dropped.
-const FORBIDDEN_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
 
 export interface SourceMetaEntry {
   lastSeen: number
@@ -42,6 +37,15 @@ function handleNmea2000Source(
   let existing = labelSource[source.src]
   if (!existing) {
     existing = labelSource[source.src] = { n2k: { pgns: {} } }
+  } else if (!existing.n2k) {
+    // The same key may already have been created as a bare {} by
+    // updateDollarSource, which splits a "label.src" $source string into
+    // nested keys without the n2k sub-object. Deltas for one source can
+    // arrive in both shapes, so adopt the existing node rather than
+    // assuming our own initializer created it.
+    existing.n2k = { pgns: {} }
+  } else if (!existing.n2k.pgns) {
+    existing.n2k.pgns = {}
   }
 
   Object.assign(existing.n2k, source)
@@ -81,8 +85,15 @@ function handleNmea0183Source(
   meta: SourceMetaEntry
 ): void {
   const talker = source.talker || 'XX'
-  if (!labelSource[talker]) {
+  const existing = labelSource[talker]
+  if (!existing) {
     labelSource[talker] = { talker, sentences: {} }
+  } else {
+    // As with the N2K node, updateDollarSource may already have created
+    // this key as a bare {} from a "label.talker" $source string, so the
+    // sentences sub-object cannot be assumed to exist.
+    if (!existing.talker) existing.talker = talker
+    if (!existing.sentences) existing.sentences = {}
   }
   labelSource[talker].sentences[source.sentence] = timestamp
   meta.lastSeen = Date.now()

@@ -17,9 +17,7 @@ import {
   useReconciledGroups,
   usePriorityGroups,
   usePriorityDefaults,
-  usePriorityOverrides,
-  useSourceStatus,
-  useSourceStatusLoaded
+  usePriorityOverrides
 } from '../../store'
 import type { SourcesData } from '../../utils/sourceLabels'
 import type { SourcePriority } from '../../store/types'
@@ -327,8 +325,6 @@ const SourcePriorities: React.FC = () => {
   const priorityOverridesData = usePriorityOverrides()
   const multiSourcePaths = useMultiSourcePaths()
   const reconciled = useReconciledGroups()
-  const sourceStatus = useSourceStatus()
-  const sourceStatusLoaded = useSourceStatusLoaded()
 
   const setSaving = useStore((s) => s.setSaving)
   const setSaved = useStore((s) => s.setSaved)
@@ -410,13 +406,13 @@ const SourcePriorities: React.FC = () => {
 
   const [sourcesData, setSourcesData] = useState<SourcesData | null>(null)
   const [deviceIdentityIndex, setDeviceIdentityIndex] =
-    useState<DeviceIdentityIndex>({
+    useState<DeviceIdentityIndex>(() => ({
       canNameBySourceRef: new Map(),
       identityByCanName: new Map()
-    })
+    }))
   const [pathSourceMeta, setPathSourceMeta] = useState<
     Map<string, { pgn?: number; sentence?: string }>
-  >(new Map())
+  >(() => new Map())
   const [helpOpen, setHelpOpen] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -946,7 +942,6 @@ const SourcePriorities: React.FC = () => {
                     <PrefsEditor
                       path={pp.path}
                       priorities={pp.priorities}
-                      pathIndex={index}
                       isSaving={isSaving}
                       sourcesData={sourcesData}
                       multiSourcePaths={multiSourcePaths}

@@ -49,6 +49,8 @@ export default function InstallLogModal({
   useEffect(() => {
     if (!show) return
     const controller = new AbortController()
+    // Stop the previous app's log showing while this request is in flight.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState({ status: 'loading' })
     setCopyFeedback(null)
     fetch(`${window.serverRoutesPrefix}/appstore/installLog/${appName}`, {

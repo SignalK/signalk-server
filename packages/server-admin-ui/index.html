@@ -11,7 +11,43 @@
 
     %ADDONSCRIPTS%
 
-    <link rel="shortcut icon" href="img/favicon.ico" />
+    <link rel="icon" href="img/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="img/favicon-16x16.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="img/favicon-32x32.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="img/apple-touch-icon.png"
+    />
+
+    <!--
+      The manifest declares "display": "browser" and the *-web-app-capable
+      meta tags are deliberately absent: the admin UI needs the browser's
+      back/forward navigation, so a home screen shortcut must not launch it
+      as a standalone web app. Android and iOS through 18 honour this.
+      iOS 26 does not: its Add to Home Screen sheet defaults "Open as Web
+      App" on for every site and offers no way to opt out, so there the
+      user has to toggle it off. use-credentials keeps the manifest
+      fetchable on servers with security enabled.
+    -->
+    <link
+      rel="manifest"
+      href="manifest.webmanifest"
+      crossorigin="use-credentials"
+    />
+    <meta name="apple-mobile-web-app-title" content="Signal K" />
+    <meta name="application-name" content="Signal K" />
+
     <title>Signal K Server</title>
   </head>
   <body

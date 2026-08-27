@@ -464,13 +464,13 @@ const SourceDiscovery: React.FC = () => {
           variant="warning"
           style={{ fontSize: '0.9rem', marginBottom: '16px' }}
         >
-          <FontAwesomeIcon icon={faInfoCircle} /> The server can't currently
-          send ISO Requests on the N2K bus. <strong>Discover Devices</strong>,
-          instance edits and the automatic identity refresh are unavailable.
-          This usually means the N2K connection hasn't completed address claim
-          yet (give it ~5 s after boot) — or, for Yacht Devices YDEN / YDWG
-          gateways over TCP, that <em>Act as N2K device</em> is off on the
-          connection.{' '}
+          <FontAwesomeIcon icon={faInfoCircle} /> The server can&apos;t
+          currently send ISO Requests on the N2K bus.{' '}
+          <strong>Discover Devices</strong>, instance edits and the automatic
+          identity refresh are unavailable. This usually means the N2K
+          connection hasn&apos;t completed address claim yet (give it ~5 s after
+          boot) — or, for Yacht Devices YDEN / YDWG gateways over TCP, that{' '}
+          <em>Act as N2K device</em> is off on the connection.{' '}
           <a href="./#/data/connections/-" className="text-decoration-none">
             Open Connections
           </a>{' '}
@@ -2301,10 +2301,13 @@ const InlineTextField: React.FC<{
   const isMountedRef = useRef(true)
   const refreshTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
   useEffect(() => {
+    // The Set's identity never changes; the copy just satisfies the
+    // effect-cleanup rule about reading refs at cleanup time.
+    const timers = refreshTimersRef.current
     return () => {
       isMountedRef.current = false
-      for (const t of refreshTimersRef.current) clearTimeout(t)
-      refreshTimersRef.current.clear()
+      for (const t of timers) clearTimeout(t)
+      timers.clear()
     }
   }, [])
   const scheduleRefresh = (delay: number, fn: () => void) => {
@@ -2322,6 +2325,7 @@ const InlineTextField: React.FC<{
   // the data-flow explicit.
   useEffect(() => {
     if (!isSaving && editState.syncedFrom !== currentValue) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditState({ value: currentValue, syncedFrom: currentValue })
     }
   }, [isSaving, currentValue, editState.syncedFrom])

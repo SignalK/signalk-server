@@ -197,6 +197,7 @@ interface SecurityStrategy {
     delta: Delta
   ) => Delta | null
   shouldAllowWrite: (req: Spark['request'], msg: WsMessage) => boolean
+  hasAdminAccess?: (req: Spark['request']) => boolean
   supportsLogin: () => boolean
   login: (
     username: string,
@@ -946,6 +947,8 @@ function createPrimusAuthorize(
       ) {
         authorized(error as Error)
       } else {
+        // If the error is not related to token validation, we still want to allow
+        // the connection to proceed to support authentication over WebSocket
         authorized()
       }
     }
@@ -1131,6 +1134,16 @@ function processSubscribe(
     msg.subscribe.length > 0 &&
     msg.subscribe[0].path === 'log'
   ) {
+    if (
+      !app.securityStrategy.isDummy() &&
+      !app.securityStrategy.hasAdminAccess?.(spark.request)
+    ) {
+      debug('server log subscription denied: admin access required')
+      spark.write({
+        errorMessage: 'Server log access requires admin permissions'
+      })
+      return
+    }
     if (!spark.logUnsubscribe) {
       spark.logUnsubscribe = startServerLog(app, spark)
     }
@@ -1359,16 +1372,23 @@ function handleRealtimeConnection(
     sendLatestDeltas(app, app.deltaCache, app.selfContext, spark)
   }
 
+  // Server events are not accumulated by the BackpressureManager (they
+  // are not deltas), but they share the socket with it. Without this
+  // check a client that cannot keep up with a burst of server events
+  // — or a plugin emitting them in a loop — grows the send buffer
+  // without bound and never hits the overflow limit deltas already
+  // enforce.
+  const writeEvent = (event: Delta) => {
+    spark.write(event)
+    spark.backpressureManager?.assertBufferSize()
+  }
+
   if (spark.query.serverevents === 'all') {
     spark.hasServerEvents = true
     startServerEvents(
       app,
       spark,
-      wrapWithVerifyWS(
-        app.securityStrategy,
-        spark,
-        spark.write.bind(spark) as (delta: Delta) => void
-      )
+      wrapWithVerifyWS(app.securityStrategy, spark, writeEvent)
     )
   }
 
@@ -1376,11 +1396,7 @@ function handleRealtimeConnection(
     startEvents(
       app,
       spark,
-      wrapWithVerifyWS(
-        app.securityStrategy,
-        spark,
-        spark.write.bind(spark) as (delta: Delta) => void
-      ),
+      wrapWithVerifyWS(app.securityStrategy, spark, writeEvent),
       spark.query.events
     )
   }

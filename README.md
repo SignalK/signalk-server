@@ -52,7 +52,7 @@ If you are a boat owner, you can easily run Signal K Server on a Victron Cerbo G
 
 For Marine vendors who build marine hardware and software, for example those developing navigation, monitoring and tracking systems, Signal K Server is an opportunity to accelerate development and decrease time to market, by taking advantage of a proven, modern and extensible software platform that is open source and available with a permissive Apache 2.0 license. Signal K Server is implemented in Node.js and is easy to integrate into modern systems that run Linux derivatives.
 
-Signal K Server is already running inside products developed by Victron Energy, Airmar Technology and others.
+Signal K Server is already running inside products developed by Victron Energy, Airmar Technology, Hat Labs and others.
 
 ### Software Developers & Boat Electronics Hobbyists
 
@@ -82,6 +82,7 @@ There is a [Signal K Server FAQ Frequently Asked Questions](https://github.com/S
 
 For the typical boater, not being a software developer nor electrical engineer, the best option is to get a (commercially available) product that already has Signal K Server inside. These are the currently available devices:
 
+- [HALPI2](https://shop.hatlabs.fi/products/halpi2-computer) by Hat Labs, a Raspberry Pi Compute Module 5 boat computer with Signal K Server preconfigured
 - [Cerbo GX](https://www.victronenergy.com/panel-systems-remote-monitoring/cerbo-gx) and other GX Devices by Victron Energy ([see Venus OS Large manual](https://www.victronenergy.com/live/venus-os:large))
 - [SmartBoat module](https://www.airmar.com/Catalog/SmartBoat-SmartFlex) by Airmar
 
@@ -90,6 +91,7 @@ Read [this FAQ entry](https://github.com/SignalK/signalk-server/wiki/FAQ:-Freque
 
 These prebuilt images for RaspberryPis take away most of the complexity involved from the software side:
 
+- [Halos](https://docs.halos.fi/getting-started/choosing-an-image/) by Hat Labs, whose Marine images include Signal K Server
 - [BBN Marine OS](https://github.com/bareboat-necessities/lysmarine_gen#what-is-lysmarine-bbn-edition)
 - [OpenPlotter](https://openmarine.net/openplotter) by OpenMarine
 - [Venus OS for RaspberryPis](https://github.com/victronenergy/venus/wiki/raspberrypi-install-venus-image) by Victron Energy

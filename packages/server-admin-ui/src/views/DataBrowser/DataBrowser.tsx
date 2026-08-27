@@ -1,6 +1,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useRef,
   useMemo,
@@ -25,7 +26,7 @@ import {
   type SourcesData
 } from '../../utils/sourceLabels'
 import granularSubscriptionManager from './GranularSubscriptionManager'
-import { getPath$SourceKey, getPathFromKey, findContextName } from './pathUtils'
+import { getPath$SourceKey, getPathFromKey } from './pathUtils'
 import {
   useWebSocket,
   useDeltaMessages,
@@ -38,7 +39,6 @@ import {
   useConfiguredPriorityPaths,
   usePreferredSourceByPath,
   useLivePreferredSources,
-  useSourcePrioritiesLoaded,
   useDiscoveredAddresses
 } from '../../store'
 
@@ -150,6 +150,7 @@ const DataBrowser: React.FC = () => {
   const contextKeys = useStore(
     useShallow((s) => Object.keys(s.signalkData).sort())
   )
+  const contextNames = useStore((s) => s.contextNames)
 
   const updatePath = useStore((s) => s.updatePath)
   const updateMeta = useStore((s) => s.updateMeta)
@@ -160,7 +161,6 @@ const DataBrowser: React.FC = () => {
   const configuredPriorityPaths = useConfiguredPriorityPaths()
   const preferredSourceByPath = usePreferredSourceByPath()
   const livePreferredSourcesRaw = useLivePreferredSources()
-  const sourcePrioritiesLoaded = useSourcePrioritiesLoaded()
   const discoveredAddresses = useDiscoveredAddresses()
 
   // Paths the user has flagged for fan-out (sentinel '*' override).
@@ -445,13 +445,12 @@ const DataBrowser: React.FC = () => {
   }, [discoveredAddresses, loadSources, pause])
 
   const contextOptions: SelectOption[] = useMemo(() => {
-    const currentData = getSignalkData()
     const options: SelectOption[] = [
       { value: 'all', label: 'ALL', section: 'all' }
     ]
 
     if (contextKeys.includes('self')) {
-      const contextName = findContextName(currentData['self'])
+      const contextName = contextNames['self']
       options.push({
         value: 'self',
         label: `${contextName || ''} self`,
@@ -462,7 +461,7 @@ const DataBrowser: React.FC = () => {
     let isFirst = true
     contextKeys.forEach((key) => {
       if (key !== 'self') {
-        const contextName = findContextName(currentData[key])
+        const contextName = contextNames[key]
         options.push({
           value: key,
           label: `${contextName || ''} ${key}`,
@@ -474,9 +473,7 @@ const DataBrowser: React.FC = () => {
     })
 
     return options
-    // dataVersion is included so the labels pick up a vessel's `name`
-    // leaf, which arrives in a delta after the context key first appears.
-  }, [contextKeys, dataVersion])
+  }, [contextKeys, contextNames])
 
   useEffect(() => {
     subscribeToDataIfNeeded()
@@ -791,7 +788,11 @@ const DataBrowser: React.FC = () => {
 
   // Keep the ref in sync with the current memoised path list so the
   // reconnect handler can read it without taking a dep on the memo.
-  filteredPathKeysRef.current = filteredPathKeys
+  // Layout effect rather than render-phase assignment: the only reader runs
+  // from a post-commit effect, so this always lands first.
+  useLayoutEffect(() => {
+    filteredPathKeysRef.current = filteredPathKeys
+  }, [filteredPathKeys])
 
   const toggleSourceCollapse = useCallback((sourceRef: string) => {
     setCollapsedSources((prev) => {

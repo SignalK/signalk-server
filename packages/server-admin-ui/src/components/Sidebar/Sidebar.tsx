@@ -276,7 +276,8 @@ export default function Sidebar({ location }: SidebarProps) {
               ? { variant: 'warning', text: `${unconfiguredGnssCount}` }
               : null
         },
-        { name: 'Fiddler', url: '/data/fiddler' }
+        { name: 'Fiddler', url: '/data/fiddler' },
+        { name: 'BLE Manager', url: '/data/blemanager' }
       )
     }
 
@@ -464,6 +465,9 @@ export default function Sidebar({ location }: SidebarProps) {
       }
     }
     if (toOpen.length > 0) {
+      // Expansion is a one-shot reaction to a route change that the user can
+      // then override by collapsing, so it cannot be derived during render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpenDropdowns((prev) => {
         if (toOpen.every((url) => prev.has(url))) return prev
         const next = new Set(prev)
@@ -565,9 +569,11 @@ export default function Sidebar({ location }: SidebarProps) {
       return (
         <>
           {item.badges.map(
-            (b, index) =>
+            (b) =>
               b && (
-                <React.Fragment key={`badge-${index}`}>
+                <React.Fragment
+                  key={`${b.variant ?? ''}-${b.class ?? ''}-${b.text ?? ''}`}
+                >
                   {renderBadge(b)}
                 </React.Fragment>
               )

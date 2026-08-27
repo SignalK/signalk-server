@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { formatBytes } from './ActionCellRenderer'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import ActionCellRenderer, {
+  formatBytes,
+  type AppData
+} from './ActionCellRenderer'
 
 describe('formatBytes', () => {
   it('formats bytes', () => {
@@ -23,5 +28,45 @@ describe('formatBytes', () => {
   it('formats gigabytes', () => {
     expect(formatBytes(1073741824)).toBe('1.0 GB')
     expect(formatBytes(2684354560)).toBe('2.5 GB')
+  })
+})
+
+describe('ActionCellRenderer terminal install status', () => {
+  function renderAction(data: Omit<AppData, 'name'>) {
+    return render(
+      <MemoryRouter>
+        <ActionCellRenderer data={{ name: 'signalk-example', ...data }} />
+      </MemoryRouter>
+    )
+  }
+
+  it('names the version an update landed on', () => {
+    renderAction({
+      installing: true,
+      installedVersion: '1.0.0',
+      pendingVersion: '2.0.0'
+    })
+    expect(screen.getByText('Updated v2.0.0')).toBeDefined()
+  })
+
+  it('names the version a first install landed on', () => {
+    renderAction({ installing: true, pendingVersion: '2.0.0' })
+    expect(screen.getByText('Installed v2.0.0')).toBeDefined()
+  })
+
+  it('falls back to a bare verb when no version is known', () => {
+    renderAction({ installing: true, installedVersion: '1.0.0' })
+    expect(screen.getByText('Updated')).toBeDefined()
+  })
+
+  it('reports a failure rather than a version', () => {
+    renderAction({
+      installing: true,
+      installedVersion: '1.0.0',
+      pendingVersion: '2.0.0',
+      installFailed: true
+    })
+    expect(screen.getByText(/Failed/)).toBeDefined()
+    expect(screen.queryByText(/Updated v/)).toBeNull()
   })
 })

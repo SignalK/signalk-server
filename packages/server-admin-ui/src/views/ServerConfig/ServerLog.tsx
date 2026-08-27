@@ -16,7 +16,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import LogFiles from './Logging'
 import Creatable from 'react-select/creatable'
-import { useWebSocket } from '../../hooks/useWebSocket'
+import { useWebSocket, useDeltaMessages } from '../../hooks/useWebSocket'
 
 interface LogEntry {
   i: number
@@ -41,9 +41,22 @@ export default function ServerLogs() {
 
   const [pause, setPause] = useState(false)
   const [debugKeys, setDebugKeys] = useState<string[]>([])
+  const [accessError, setAccessError] = useState<string | null>(null)
   const didSubscribeRef = useRef(false)
   const webSocketRef = useRef<WebSocket | null>(null)
   const unsubscribeRef = useRef<() => void>(() => {})
+
+  // The server rejects a log subscription from a non-admin connection with a
+  // bare { errorMessage } frame, which has no delta content to render. Without
+  // this the log window would just stay empty with no explanation.
+  useDeltaMessages(
+    useCallback((message: unknown) => {
+      const { errorMessage } = (message ?? {}) as { errorMessage?: unknown }
+      if (typeof errorMessage === 'string') {
+        setAccessError(errorMessage)
+      }
+    }, [])
+  )
 
   const subscribeToLogsIfNeeded = useCallback(() => {
     if (
@@ -54,6 +67,11 @@ export default function ServerLogs() {
     ) {
       const sub = { context: 'vessels.self', subscribe: [{ path: 'log' }] }
       webSocket.send(JSON.stringify(sub))
+      // A reconnect gets a fresh principal, so retry rather than keep showing
+      // the refusal from the previous socket.
+      if (webSocket !== webSocketRef.current) {
+        setAccessError(null)
+      }
       webSocketRef.current = webSocket
       didSubscribeRef.current = true
     }
@@ -211,7 +229,7 @@ export default function ServerLogs() {
                 </Form.Label>
               </Col>
             </Form.Group>
-            <LogList value={log} />
+            <LogList value={log} accessError={accessError} />
           </Form>
         </Card.Body>
       </Card>
@@ -222,9 +240,10 @@ export default function ServerLogs() {
 
 interface LogListProps {
   value: LogState
+  accessError: string | null
 }
 
-function LogList({ value }: LogListProps) {
+function LogList({ value, accessError }: LogListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -245,7 +264,9 @@ function LogList({ value }: LogListProps) {
         fontFamily: 'monospace'
       }}
     >
-      {value.entries.length === 0 ? (
+      {accessError ? (
+        <span className="text-danger">{accessError}</span>
+      ) : value.entries.length === 0 ? (
         <span style={{ color: 'grey', fontStyle: 'italic' }}>
           Waiting for log entries...
         </span>

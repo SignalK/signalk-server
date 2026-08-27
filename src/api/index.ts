@@ -7,6 +7,7 @@ import { ResourcesApi } from './resources'
 import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
 import { RadarApi } from './radar'
+import { BLEApi } from './ble'
 import { HistoryApiHttpRegistry, HistoryApplication } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 import { NotificationApi, NotificationApplication } from './notifications'
@@ -94,6 +95,11 @@ export const startApis = (
   ;(app as any).radarApi = radarApi
   apiList.push('radar')
 
+  const bleApi = new BLEApi(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).bleApi = bleApi
+  apiList.push('ble')
+
   const featuresApi = new FeaturesApi(app)
 
   const historyApiHttpRegistry = new HistoryApiHttpRegistry(
@@ -129,7 +135,8 @@ export const startApis = (
     historyApiHttpRegistry.start(),
     notificationApi.start(),
     gnssOffsetCorrector.start(),
-    sensorsApi.start()
+    sensorsApi.start(),
+    bleApi.start()
   ])
   return apiList
 }

@@ -25,7 +25,6 @@ interface SelectOption {
 interface PrefsEditorProps {
   path: string
   priorities: Priority[]
-  pathIndex: number
   isSaving: boolean
   sourcesData: SourcesData | null
   multiSourcePaths: Record<string, string[]>
@@ -85,7 +84,6 @@ const wrappingSelectStyles: StylesConfig<SelectOption, false> = {
 export const PrefsEditor: React.FC<PrefsEditorProps> = ({
   path,
   priorities,
-  pathIndex,
   isSaving,
   sourcesData,
   multiSourcePaths,
@@ -96,20 +94,19 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
   const movePriority = useStore((s) => s.movePriority)
   const setPathPriorities = useStore((s) => s.setPathPriorities)
 
-  // pathIndex is render-local; in grouped overrides multiple editors
-  // can render with the same index, which would collide on the
-  // pg-fanout-* DOM id and let one card's label toggle another's
-  // checkbox. useId gives us a process-stable unique prefix per
-  // editor instance.
+  // In grouped overrides multiple editors can render at the same
+  // position, which would collide on the pg-fanout-* DOM id and let one
+  // card's label toggle another's checkbox. useId gives us a
+  // process-stable unique prefix per editor instance.
   const fanOutId = useId()
 
-  // pathIndex passed in via props is the index in sourcePriorities[] at
-  // render time. It goes stale the moment another override is deleted
-  // — the next click on this card would otherwise reach into the wrong
-  // row. Resolve the current index from path at click time so the slice
-  // action always operates on the right entry. Returns null when the
-  // path has been removed (concurrent delete in another tab) so callers
-  // can no-op rather than mutate an unrelated row.
+  // A render-time index into sourcePriorities[] goes stale the moment
+  // another override is deleted — the next click on this card would
+  // otherwise reach into the wrong row. Resolve the current index from
+  // path at click time so the slice action always operates on the right
+  // entry. Returns null when the path has been removed (concurrent
+  // delete in another tab) so callers can no-op rather than mutate an
+  // unrelated row.
   const resolvePathIndex = (): number | null => {
     const arr = useStore.getState().sourcePrioritiesData.sourcePriorities
     const i = arr.findIndex((p) => p.path === path)

@@ -16,7 +16,6 @@
 
 import { createDebug } from '../debug'
 import fs from 'fs'
-import path from 'path'
 const debug = createDebug('signalk-server:interfaces:appstore')
 
 // Module-scope state for scheduleInstalledDetailRefresh. Lives here
@@ -26,6 +25,13 @@ const debug = createDebug('signalk-server:interfaces:appstore')
 let installedDetailRefreshInFlight = false
 let installedDetailRefreshLastRunAt = 0
 const INSTALLED_DETAIL_REFRESH_COOLDOWN_MS = 5 * 60 * 1000
+let iconProbeInFlight = false
+let iconProbeLastRunAt = 0
+// Bumped by a manual refresh so a pass that started before the caches
+// were cleared cannot claim the cooldown for the state it no longer
+// reflects.
+let iconProbeGeneration = 0
+const ICON_PROBE_COOLDOWN_MS = 5 * 60 * 1000
 const _ = require('lodash')
 const semver = require('semver')
 const { gt } = semver
@@ -56,7 +62,9 @@ const {
   buildPluginDetail,
   readDetailFromCache,
   badgesToIndicators,
-  probeIconUrl
+  probeIconUrl,
+  buildLocalAssetUrls: buildLocalAssetUrlsFor,
+  packageNameIs
 } = require('../appstore')
 
 const bundledAdminUIs = ['@signalk/server-admin-ui']
@@ -120,6 +128,14 @@ module.exports = function (app) {
 
           if (req.params.org) {
             name = req.params.org + '/' + name
+          }
+
+          // npm rejects a bad version too, but only after the install has been
+          // recorded as in-flight, which leaks the bogus value to the UI.
+          if (!semver.valid(version)) {
+            res.status(400)
+            res.json({ error: 'version must be valid semver' })
+            return
           }
 
           findPluginsAndWebapps()
@@ -376,6 +392,8 @@ module.exports = function (app) {
         // warmup and the user sees stale icons immediately after asking
         // the server to refresh.
         installedDetailRefreshLastRunAt = 0
+        iconProbeLastRunAt = 0
+        iconProbeGeneration++
         res.json({ ok: true })
       })
 
@@ -461,6 +479,17 @@ module.exports = function (app) {
       return cached || null
     }
     const pkg = match.package
+    // Serve a cached detail when it was built for the version npm is
+    // currently offering. Rebuilding costs a readme, changelog, metrics
+    // and icon-probe round trip, and the background refresh calls this
+    // once per installed plugin. The version check is what keeps the
+    // short-circuit honest: cache.readPluginDetail() treats an installed
+    // plugin's entry as fresh indefinitely, so without it a newly
+    // published release would never reach the detail page.
+    const cachedDetail = readDetailFromCache(cache, name)
+    if (cachedDetail && cachedDetail.version === pkg.version) {
+      return cachedDetail
+    }
     const isInstalled = !!getPlugin(name) || !!getWebApp(name)
     let pkgForEnrichment = pkg
     // Always try the npm registry first — it has the signalk.* key for
@@ -518,12 +547,14 @@ module.exports = function (app) {
                     t.declaredPath,
                     iconProbe
                   )
-                  if (
-                    resolved &&
-                    t.kind === 'icon' &&
-                    !iconBytes.read(pkg.name)
-                  ) {
-                    await iconBytes.download(pkg.name, pkg.version, resolved)
+                  if (resolved && t.kind === 'icon') {
+                    // Icons are cached per version, so check the version and
+                    // not just presence — otherwise a plugin that changes its
+                    // icon keeps serving the one cached for an older release.
+                    const stored = iconBytes.read(pkg.name)
+                    if (!stored || stored.version !== pkg.version) {
+                      await iconBytes.download(pkg.name, pkg.version, resolved)
+                    }
                   }
                 } catch (err) {
                   debug.enabled &&
@@ -554,7 +585,7 @@ module.exports = function (app) {
           name: pkg.name,
           version: pkg.version,
           displayName: ext.displayName,
-          appIcon: appIconUrlFor(pkg.name, ext.appIcon),
+          appIcon: appIconUrlFor(pkg.name, ext.appIcon, pkg.version),
           screenshots: ext.screenshots || [],
           official: ext.official,
           deprecated: ext.deprecated,
@@ -708,82 +739,29 @@ module.exports = function (app) {
     return undefined
   }
 
-  // Webapps and plugins that ship static assets are mounted by the server at
-  // /<package-name>/, so declared paths that look wrong against unpkg's raw
-  // tarball layout (e.g. freeboard-sk's "./assets/icons/icon-72x72.png" which
-  // is actually at "/public/assets/icons/icon-72x72.png" inside the tarball)
-  // resolve correctly against the mounted serving root. Reuse that URL
-  // scheme for installed plugins so the App Store card matches what Webapps
-  // shows elsewhere in the admin UI.
-  // The webapp mount in webapps.js serves <plugin>/public/ when public/
-  // exists, falling back to the package root otherwise. So a declared
-  // path like "./docs/screenshots/foo.png" is unreachable when the
-  // plugin ships a public/ webapp — the docs/ tree is outside the mount.
-  // Return the on-disk directory the mount actually serves from so we
-  // can stat candidate paths against it before emitting URLs.
-  function getInstalledServedRoot(pkgName) {
-    const plugin = getPlugin(pkgName)
-    const base = plugin?.packageLocation
-      ? path.join(plugin.packageLocation, pkgName)
-      : undefined
-    if (!base) return undefined
-    const publicDir = path.join(base, 'public')
-    return fs.existsSync(publicDir) ? publicDir : base
-  }
-
-  function buildLocalAssetUrl(pkgName, declaredPath, servedRoot) {
-    if (!declaredPath || typeof declaredPath !== 'string') return undefined
-    if (/^(https?:)?\/\//i.test(declaredPath)) return declaredPath
-    if (declaredPath.startsWith('data:')) return declaredPath
-    const cleaned = declaredPath.replace(/^\.\//, '')
-    // declaredPath comes from a plugin's own package.json, so a hostile
-    // or buggy plugin could ask the admin UI to load /admin or
-    // /plugins/somethingelse/... by setting signalk.appIcon to
-    // "../foo.png" or "/admin". Drop anything that doesn't sit cleanly
-    // under the plugin's own /<pkgName>/ mount.
-    if (cleaned.startsWith('/') || cleaned.split('/').includes('..')) {
-      return undefined
-    }
-    // When we know where the mount serves from, drop URLs whose target
-    // file isn't there - the mount would 404 them anyway, and we'd
-    // rather fall back to the CDN URL than ship a broken <img>.
-    if (servedRoot) {
-      const onDisk = path.join(servedRoot, cleaned)
-      if (!fs.existsSync(onDisk)) return undefined
-    }
-    return `/${pkgName}/${cleaned}`
-  }
-
   // When the background probe + downloader has cached a plugin's icon
   // locally, route the card/detail <img> through the server's own icon
   // route so the browser never has to reach unpkg. This makes the grid
   // render instantly on a boat with no internet after a one-time warmup.
   // When bytes aren't cached yet, pass the CDN URL through unchanged.
-  function appIconUrlFor(pkgName, cdnUrl) {
+  // The icon route is versionless and sets a one-hour max-age, so the version
+  // goes in the query string: without it a browser holds the old icon for up
+  // to an hour after the bytes are replaced. Bytes cached for some other
+  // version fall through to the CDN rather than render the wrong icon.
+  function appIconUrlFor(pkgName, cdnUrl, version) {
     if (!pkgName) return cdnUrl
-    if (iconBytes.read(pkgName)) {
-      return `${SERVERROUTESPREFIX}/appstore/icon/${pkgName}`
+    if (iconBytes.read(pkgName)?.version === version) {
+      return `${SERVERROUTESPREFIX}/appstore/icon/${pkgName}?v=${version}`
     }
     return cdnUrl
   }
 
   function buildLocalAssetUrls(pkgName, pkg) {
-    const signalk = pkg && pkg.signalk
-    if (!signalk || typeof signalk !== 'object') return undefined
-    const servedRoot = getInstalledServedRoot(pkgName)
-    const appIcon =
-      typeof signalk.appIcon === 'string' && signalk.appIcon.trim()
-        ? buildLocalAssetUrl(pkgName, signalk.appIcon.trim(), servedRoot)
-        : undefined
-    let screenshots
-    if (Array.isArray(signalk.screenshots)) {
-      screenshots = signalk.screenshots
-        .filter((s) => typeof s === 'string' && s.trim())
-        .map((s) => buildLocalAssetUrl(pkgName, s.trim(), servedRoot))
-        .filter(Boolean)
-    }
-    if (!appIcon && (!screenshots || screenshots.length === 0)) return undefined
-    return { appIcon, screenshots }
+    return buildLocalAssetUrlsFor(
+      pkgName,
+      pkg,
+      getPlugin(pkgName)?.packageLocation
+    )
   }
 
   function resolveLatestVersion(name, plugins, webapps) {
@@ -806,7 +784,7 @@ module.exports = function (app) {
       const ext = enrichEntry(pkg, { iconUrlLookup })
       return {
         displayName: ext.displayName,
-        appIcon: appIconUrlFor(name, ext.appIcon),
+        appIcon: appIconUrlFor(name, ext.appIcon, pkg.version),
         installed
       }
     }
@@ -873,11 +851,20 @@ module.exports = function (app) {
         for (const entry of entries) {
           const key = `${pkg.name}@${pkg.version}@${entry.declaredPath}`
           if (queuedKey.has(key)) continue
-          if (
-            iconProbe.get(pkg.name, pkg.version, entry.declaredPath) !==
-            undefined
+          const probed = iconProbe.get(
+            pkg.name,
+            pkg.version,
+            entry.declaredPath
           )
-            continue
+          // A cached probe result usually means there is nothing left to do,
+          // but the byte download that follows it can fail on its own. Keep
+          // the task when this version's bytes are still missing, so the
+          // worker retries the download against the URL already probed.
+          const bytesMissing =
+            entry.kind === 'icon' &&
+            typeof probed === 'string' &&
+            iconBytes.read(pkg.name)?.version !== pkg.version
+          if (probed !== undefined && !bytesMissing) continue
           queuedKey.add(key)
           tasks.push({
             name: pkg.name,
@@ -911,7 +898,7 @@ module.exports = function (app) {
           // Screenshots stay remote (larger + only viewed on detail).
           if (resolved && t.kind === 'icon') {
             const existing = iconBytes.read(t.name)
-            if (!existing) {
+            if (!existing || existing.version !== t.version) {
               await iconBytes.download(t.name, t.version, resolved)
             }
           }
@@ -923,6 +910,9 @@ module.exports = function (app) {
     await Promise.all(
       Array.from({ length: ICON_PROBE_CONCURRENCY }, () => worker())
     )
+    // The cache coalesces writes on a timer; force the batch out now that
+    // the pass is done rather than leaving it to an unref'd timeout.
+    iconProbe.flush()
   }
 
   // For non-installed plugins whose npm-search entry lacks signalk.* (because
@@ -971,19 +961,42 @@ module.exports = function (app) {
     )
   }
 
+  // Hydration and probing both capture the full plugin/webapp arrays for
+  // the duration of their network I/O. Without a guard, every
+  // /appstore/available hit starts another pass, so overlapping runs pin
+  // several generations of those arrays alive at once and re-issue probes
+  // the previous pass has not yet cached. Guard with the same in-flight
+  // flag plus cooldown pairing scheduleInstalledDetailRefresh uses.
   function scheduleIconProbe(plugins, webapps) {
+    if (iconProbeInFlight) return
+    if (Date.now() - iconProbeLastRunAt < ICON_PROBE_COOLDOWN_MS) return
+    iconProbeInFlight = true
+    const generation = iconProbeGeneration
     setImmediate(async () => {
       try {
-        await hydrateNonInstalledMetadata(plugins, webapps)
-      } catch (err) {
-        debug.enabled && debug('metadata hydration run failed: %O', err)
+        try {
+          await hydrateNonInstalledMetadata(plugins, webapps)
+        } catch (err) {
+          debug.enabled && debug('metadata hydration run failed: %O', err)
+        }
+        // A refresh landing mid-pass invalidated the module list this
+        // pass was built from, so stop before spending the probe I/O;
+        // the next request rebuilds from the refreshed list.
+        if (generation !== iconProbeGeneration) return
+        const tasks = collectIconProbeTasks(plugins, webapps)
+        if (tasks.length === 0) return
+        debug.enabled && debug('scheduling %d icon probes', tasks.length)
+        await runIconProbeTasks(tasks).catch(
+          (err) => debug.enabled && debug('icon probe run failed: %O', err)
+        )
+      } finally {
+        iconProbeInFlight = false
+        // A refresh during this pass already cleared the caches it was
+        // filling, so leave the cooldown open for the next request.
+        if (generation === iconProbeGeneration) {
+          iconProbeLastRunAt = Date.now()
+        }
       }
-      const tasks = collectIconProbeTasks(plugins, webapps)
-      if (tasks.length === 0) return
-      debug.enabled && debug('scheduling %d icon probes', tasks.length)
-      runIconProbeTasks(tasks).catch(
-        (err) => debug.enabled && debug('icon probe run failed: %O', err)
-      )
     })
   }
 
@@ -1207,7 +1220,7 @@ module.exports = function (app) {
           (v) => v === 'signalk-embeddable-webapp'
         ),
         displayName: ext.displayName,
-        appIcon: appIconUrlFor(name, ext.appIcon),
+        appIcon: appIconUrlFor(name, ext.appIcon, plugin.package.version),
         installedIconUrl: localIcons?.appIcon,
         screenshots: ext.screenshots,
         // Only advertise installedScreenshotUrls when the installed version
@@ -1295,10 +1308,23 @@ module.exports = function (app) {
         pluginInfo.installedVersion = installedModule.version
       }
 
-      if (moduleInstallQueue.find((p) => p.name === name)) {
+      const queued = moduleInstallQueue.find((p) => p.name === name)
+      if (queued) {
         pluginInfo.isWaiting = true
+        if (!queued.isRemove && typeof queued.version === 'string') {
+          pluginInfo.pendingVersion = queued.version
+        }
         addIfNotDuplicate(result.installing, pluginInfo)
       } else if (modulesInstalledSinceStartup[name]) {
+        // installedVersion comes from the running plugin registration, which
+        // keeps reporting the version loaded at startup until the server is
+        // restarted. Carry the version npm actually put on disk separately so
+        // the UI can show what the user just installed. Removals carry a null
+        // version, so only installs get the field.
+        const operation = modulesInstalledSinceStartup[name]
+        if (!operation.isRemove && typeof operation.version === 'string') {
+          pluginInfo.pendingVersion = operation.version
+        }
         if (moduleInstalling && moduleInstalling.name === name) {
           if (moduleInstalling.isRemove) {
             pluginInfo.isRemoving = true
@@ -1389,6 +1415,10 @@ module.exports = function (app) {
     // re-reads from disk and reflects the in-progress version, not the
     // pre-change one. Cleared again on completion below.
     installedMetadataCache.delete(module)
+    // The cached detail carries installed-only fields (local icon and
+    // screenshot URLs) that an install or removal invalidates without
+    // changing the npm version loadPluginDetail matches on.
+    cache.invalidatePluginDetail(module)
     moduleInstalling = {
       name: module,
       output: [],
@@ -1411,6 +1441,7 @@ module.exports = function (app) {
       // Re-evict in case anything cached a stale read between the
       // initial delete and the install completing.
       installedMetadataCache.delete(module)
+      cache.invalidatePluginDetail(module)
       debug.enabled && debug('close: ' + module)
       modulesInstalledSinceStartup[module].code = code
       moduleInstalling = undefined
@@ -1447,8 +1478,4 @@ module.exports = function (app) {
       installModule(app.config, module, version, onData, onErr, onClose)
     }
   }
-}
-
-function packageNameIs(name) {
-  return (x) => x.package.name === name
 }
