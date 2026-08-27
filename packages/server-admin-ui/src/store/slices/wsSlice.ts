@@ -87,7 +87,7 @@ export const createWsSlice: StateCreator<WsSlice, [], [], WsSlice> = (
         proto +
         '://' +
         window.location.host +
-        `/signalk/v1/stream?serverevents=all&subscribe=none&sendMeta=all`
+        `/signalk/v1/stream?serverevents=all&subscribe=none&sendMeta=all&displayUnitsOverride=true`
 
       set({ wsStatus: 'connecting' })
 

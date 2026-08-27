@@ -69,12 +69,13 @@ export function convertValue(
       return null
     }
   }
-  if (!presetDetails || !unitDefinitions) {
+  if (!unitDefinitions) {
     return null
   }
-  const targetConfig = presetDetails.categories?.[category]
-  if (!targetConfig?.targetUnit) return null
-  const targetUnit = targetConfig.targetUnit
+  const targetUnit =
+    displayUnits?.targetUnit ||
+    presetDetails?.categories?.[category]?.targetUnit
+  if (!targetUnit) return null
   if (targetUnit === siUnit) return null
   const formula = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.formula
   const symbol =
