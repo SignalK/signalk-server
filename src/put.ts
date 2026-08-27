@@ -106,12 +106,8 @@ interface SkRequest extends Request {
 // Metadata is stored per path but resolved per user, so the handler needs the
 // requesting user that the generic ActionHandler signature does not carry.
 type MetaActionHandler = (
-  context: string,
-  path: string,
-  value: unknown,
-  callback: (result: ActionResult) => void,
-  username?: string
-) => ActionResult | void
+  ...args: [...Parameters<ActionHandler>, username?: string]
+) => ReturnType<ActionHandler>
 
 const actionHandlers: ActionHandlers = {}
 let putMetaHandler: MetaActionHandler
