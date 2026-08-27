@@ -25,7 +25,18 @@ const {
   getDefaultCategory
 } = require('../unitpreferences')
 
-function enhanceMetadataResponse(metadata, signalkPath, username) {
+// An editor needs to tell a path-specific display unit override from the
+// preset's setting; nothing else does, so the answer comes only when asked for.
+function wantsDisplayUnitsOverride(req) {
+  return req.query.displayUnitsOverride === 'true'
+}
+
+function enhanceMetadataResponse(
+  metadata,
+  signalkPath,
+  username,
+  includeOverride
+) {
   if (!metadata) return metadata
 
   let storedDisplayUnits = metadata.displayUnits
@@ -46,7 +57,8 @@ function enhanceMetadataResponse(metadata, signalkPath, username) {
       const enhanced = resolveDisplayUnits(
         storedDisplayUnits,
         metadata.units,
-        username
+        username,
+        includeOverride
       )
       if (enhanced) {
         metadata.displayUnits = enhanced
@@ -69,17 +81,22 @@ const SKIP_KEYS = new Set([
   'values'
 ])
 
-function enhanceTreeMetadata(node, pathParts, username) {
+function enhanceTreeMetadata(node, pathParts, username, includeOverride) {
   if (node === null || typeof node !== 'object') return
   if (node.meta) {
     const signalkPath = pathParts.join('.')
     const metaCopy = structuredClone(node.meta)
-    enhanceMetadataResponse(metaCopy, signalkPath, username)
+    enhanceMetadataResponse(metaCopy, signalkPath, username, includeOverride)
     node.meta = metaCopy
   }
   for (const key in node) {
     if (!SKIP_KEYS.has(key)) {
-      enhanceTreeMetadata(node[key], pathParts.concat(key), username)
+      enhanceTreeMetadata(
+        node[key],
+        pathParts.concat(key),
+        username,
+        includeOverride
+      )
     }
   }
 }
@@ -195,8 +212,14 @@ module.exports = function (app) {
             const result = {}
             const username = req.skPrincipal?.identifier
             collectMeta(vessel, [], result)
+            const includeOverride = wantsDisplayUnitsOverride(req)
             for (const skPath in result) {
-              enhanceMetadataResponse(result[skPath], skPath, username)
+              enhanceMetadataResponse(
+                result[skPath],
+                skPath,
+                username,
+                includeOverride
+              )
             }
             res.json(result)
           } else {
@@ -213,7 +236,14 @@ module.exports = function (app) {
             const metaCopy = structuredClone(meta)
             const signalkPath = metaPath.replace(/^vessels\.[^.]+\./, '')
             const username = req.skPrincipal?.identifier
-            res.json(enhanceMetadataResponse(metaCopy, signalkPath, username))
+            res.json(
+              enhanceMetadataResponse(
+                metaCopy,
+                signalkPath,
+                username,
+                wantsDisplayUnitsOverride(req)
+              )
+            )
             return
           }
         }
@@ -249,7 +279,12 @@ module.exports = function (app) {
               aPath[0] === 'vessels' && aPath.length >= 2
                 ? aPath.slice(2)
                 : aPath.slice()
-            enhanceTreeMetadata(last, baseParts, username)
+            enhanceTreeMetadata(
+              last,
+              baseParts,
+              username,
+              wantsDisplayUnitsOverride(req)
+            )
           }
 
           return res.json(last)

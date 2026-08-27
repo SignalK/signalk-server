@@ -11,7 +11,12 @@ import {
 import * as skConfig from './config/config'
 import { ConfigApp } from './config/config'
 import { getMetadata } from '@signalk/path-metadata'
-import { validateCategoryAssignment } from './unitpreferences'
+import {
+  resolveDisplayUnits,
+  stripResolvedDisplayUnits,
+  validateCategoryAssignment
+} from './unitpreferences'
+import { DisplayUnitsMetadata } from './unitpreferences/types'
 import { WithSecurityStrategy } from './security'
 
 const debug = createDebug('signalk-server:put')
@@ -98,8 +103,14 @@ interface SkRequest extends Request {
   }
 }
 
+// Metadata is stored per path but resolved per user, so the handler needs the
+// requesting user that the generic ActionHandler signature does not carry.
+type MetaActionHandler = (
+  ...args: [...Parameters<ActionHandler>, username?: string]
+) => ReturnType<ActionHandler>
+
 const actionHandlers: ActionHandlers = {}
-let putMetaHandler: ActionHandler
+let putMetaHandler: MetaActionHandler
 let deleteMetaHandler: DeleteHandler
 let putNotificationHandler: (
   context: string,
@@ -181,7 +192,7 @@ export function start(app: PutApp): void {
       })
   })
 
-  putMetaHandler = (context, path, value, cb) => {
+  putMetaHandler = (context, path, value, cb, username) => {
     const parts = path.split('.')
     let metaPath = path
     let metaValue = value as Record<string, unknown>
@@ -234,6 +245,16 @@ export function start(app: PutApp): void {
     }
 
     const previousMeta = app.config.baseDeltaEditor.getMeta(context, metaPath)
+
+    if (metaValue.displayUnits) {
+      metaValue.displayUnits = stripResolvedDisplayUnits(
+        metaValue.displayUnits as DisplayUnitsMetadata,
+        (previousMeta as { displayUnits?: DisplayUnitsMetadata } | null)
+          ?.displayUnits,
+        username
+      )
+    }
+
     app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
 
     // Remove fields that were deleted from the in-memory metadata registry
@@ -250,6 +271,23 @@ export function start(app: PutApp): void {
       }
     }
 
+    // Clients read displayUnits resolved, so the update they get carries the
+    // conversion rather than the override that was stored. This delta also
+    // merges into the metadata registry, which resolves from it again, so it
+    // names the override whether or not any client asked for one.
+    const metaUpdate: Record<string, unknown> = { ...full_meta, ...metaValue }
+    if (metaValue.displayUnits) {
+      const resolved = resolveDisplayUnits(
+        metaValue.displayUnits as DisplayUnitsMetadata,
+        (metaValue.units ?? full_meta?.units) as string | undefined,
+        username,
+        true
+      )
+      if (resolved) {
+        metaUpdate.displayUnits = resolved
+      }
+    }
+
     app.handleMessage('defaults', {
       context: 'vessels.self' as Context,
       updates: [
@@ -257,7 +295,7 @@ export function start(app: PutApp): void {
           meta: [
             {
               path: metaPath as Path,
-              value: { ...full_meta, ...metaValue }
+              value: metaUpdate
             }
           ]
         }
@@ -282,8 +320,10 @@ export function start(app: PutApp): void {
         }
       }
 
-      const pathWithContext = context + '.' + path
-      _set(data, pathWithContext, value)
+      // Write the merged, normalized object rather than the request value:
+      // for a single-field PUT the raw value carries none of the
+      // displayUnits stripping or empty-array normalization done above.
+      _set(data, context + '.' + metaPath + '.meta', metaValue)
 
       skConfig.writeDefaultsFile(
         app as unknown as ConfigApp,
@@ -535,7 +575,9 @@ export function putPath(
           (parts.length > 1 && parts[parts.length - 1] === 'meta') ||
           (parts.length > 1 && parts[parts.length - 2] === 'meta')
         ) {
-          handler = putMetaHandler
+          const username = req?.skPrincipal?.identifier
+          handler = (metaContext, metaPath, value, cb) =>
+            putMetaHandler(metaContext, metaPath, value, cb, username)
         } else {
           const handlers = actionHandlers[context]
             ? actionHandlers[context][path]

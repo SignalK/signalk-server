@@ -130,6 +130,29 @@ The `displayUnits` object provides everything you need to display the value:
 - **symbol**: The symbol to display next to the value.
 - **displayFormat**: (Optional) A format pattern for consistency (e.g., "0.0" for one decimal place).
 
+### Asking for Path-Specific Overrides
+
+A resolved response reads the same whether the target unit comes from a
+path-specific override or from the applied preset. An editor has to tell the
+two apart, so it asks for the answer with `displayUnitsOverride=true`:
+
+`GET /signalk/v1/api/vessels/self/navigation/speedOverGround/meta?displayUnitsOverride=true`
+
+The response then carries one more field in `displayUnits`:
+
+- **override**: Path-specific unit override, as `targetUnit` and `displayFormat`. Empty when the path follows the preset.
+
+The same parameter works on the WebSocket stream URL, next to `sendMeta=all`:
+
+`ws://localhost:3000/signalk/v1/stream?subscribe=none&sendMeta=all&displayUnitsOverride=true`
+
+Display code needs none of this, so the field is absent unless it is asked for.
+
+A metadata `PUT` reads `override` even when the request did not ask for one, so
+saving a resolved response back does not turn the preset's current settings into
+a path-specific override. The metadata delta a `PUT` triggers carries the field
+as well.
+
 ### WebSocket Stream
 
 When subscribing to the WebSocket stream, add `sendMeta=all` to receive metadata once for each path (sent with the first delta for that path, and again only if it changes):
