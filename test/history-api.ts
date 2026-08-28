@@ -633,10 +633,10 @@ describe('History API v2', () => {
       })
     })
 
-    // Drives the POST default-provider route directly: stubs
-    // writeSettingsFile with the given outcome, captures the registry's
-    // route handlers and provides a postDefault(id) helper returning the
-    // response status code. Restores the stub afterwards.
+    // Drives the POST default-provider route directly: installs an
+    // app.updateSettings double with the given outcome, captures the
+    // registry's route handlers and provides a postDefault(id) helper
+    // returning the response status code.
     const withDefaultProviderRoute = async (
       configuredDefault: string | undefined,
       writeSettings: (cb: (err?: Error) => void) => void,
@@ -647,20 +647,43 @@ describe('History API v2', () => {
       }) => Promise<void>,
       unavailableGraceMs?: number
     ) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const config = require('../dist/config/config')
-      const origWriteSettingsFile = config.writeSettingsFile
-      config.writeSettingsFile = (
-        _app: unknown,
-        _settings: unknown,
-        cb: (err?: Error) => void
-      ) => writeSettings(cb)
-      try {
+      {
         const app = makeApp(configuredDefault) as TestApp & {
           securityStrategy: { shouldAllowPut: () => boolean }
           get: (path: string, handler: unknown) => void
           post: (path: string, handler: unknown) => void
+          updateSettings: (
+            updates: Array<{
+              key: string
+              mutator: (draft: unknown) => unknown
+            }>
+          ) => Promise<void>
         }
+        // Mirror applySettingsUpdate for the array form: honour the
+        // simulated write outcome and, on success, commit the mutated keys
+        // into app.config.settings.
+        app.updateSettings = (
+          updates: Array<{
+            key: string
+            mutator: (draft: unknown) => unknown
+          }>
+        ) =>
+          new Promise<void>((resolve, reject) => {
+            writeSettings((err) => {
+              if (err) {
+                reject(err)
+                return
+              }
+              const settings = app.config.settings as Record<string, unknown>
+              for (const { key, mutator } of updates) {
+                const result = mutator(settings[key])
+                if (result !== undefined) {
+                  settings[key] = result
+                }
+              }
+              resolve()
+            })
+          })
         app.securityStrategy = { shouldAllowPut: () => true }
         const postHandlers: Record<
           string,
@@ -693,8 +716,6 @@ describe('History API v2', () => {
         }
 
         await run({ app, registry, postDefault })
-      } finally {
-        config.writeSettingsFile = origWriteSettingsFile
       }
     }
 

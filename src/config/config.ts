@@ -186,6 +186,9 @@ export interface Config {
     courseApi?: {
       apiOnly?: boolean
     }
+    resourcesApi?: {
+      defaultProviders: { [index: string]: string }
+    }
     historyApi?: {
       /** Plugin id of the History API provider to use as the default.
        * Applied whenever the provider is registered, so the default does
@@ -211,6 +214,28 @@ export interface ConfigApp extends ServerApp, WithConfig, SignalKMessageHub {
   env: any
 }
 
+export type Settings = Config['settings']
+
+/** Mutates a deep clone of the whole settings object in place. */
+export type SettingsMutator = (draft: Settings) => void
+
+/** A single scoped update: a settings key together with a mutator that
+ * receives a deep clone of that key's value. The mutator may edit the
+ * clone in place, or return a replacement value to commit under the key.
+ * Returning `undefined` keeps the (possibly mutated) clone. */
+export type SettingsKeyUpdate = {
+  [K in keyof Settings]-?: {
+    key: K
+    mutator: (draft: Settings[K]) => Settings[K] | void
+  }
+}[keyof Settings]
+
+/** Persist a settings change and commit it to `app.config.settings` only
+ * after the file write succeeds. See {@link applySettingsUpdate}. */
+export type UpdateSettings = (
+  update: SettingsMutator | SettingsKeyUpdate[]
+) => Promise<void>
+
 export function load(app: ConfigApp) {
   app.argv = require('minimist')(process.argv.slice(2))
 
@@ -220,6 +245,7 @@ export function load(app: ConfigApp) {
   config.getExternalHostname = getExternalHostname.bind(config, config)
   config.getExternalPort = getExternalPort.bind(config, app)
   config.isExternalSsl = isExternalSsl.bind(null, config)
+  app.updateSettings = (update) => applySettingsUpdate(app, update)
 
   config.appPath = config.appPath || path.normalize(__dirname + '/../../')
   debug('appPath:' + config.appPath)
@@ -647,6 +673,62 @@ function readSettingsFile(app: ConfigApp) {
   }
 }
 
+// Scoped, promise-based settings persistence. Callers describe the part of
+// settings they want changed; this owns the clone, the file write and the
+// commit into app.config.settings.
+//
+// Commit-on-success: app.config.settings is updated only after the file
+// write resolves, so a failed write leaves in-memory state untouched and
+// callers can rely on a single try/catch. The mutator only ever sees a deep
+// clone, so it cannot accidentally alter live state before the write lands.
+//
+// Guarantee: writeSettingsFile persists priorities.json then settings.json
+// sequentially, so this is not a fully atomic two-file write — a crash
+// between the two leaves disk internally inconsistent. What is guaranteed is
+// that the in-memory commit happens only after both writes are attempted and
+// settings.json lands.
+export function applySettingsUpdate(
+  app: ConfigApp,
+  update: SettingsMutator | SettingsKeyUpdate[]
+): Promise<void> {
+  if (typeof update === 'function') {
+    const working = structuredClone(app.config.settings)
+    update(working)
+    return new Promise((resolve, reject) => {
+      writeSettingsFile(app, working, (err?: Error) => {
+        if (err) {
+          reject(err)
+        } else {
+          app.config.settings = working
+          resolve()
+        }
+      })
+    })
+  }
+
+  // Clone only the touched subtrees, then hand the write a shallow-merged
+  // payload. writeSettingsFile snapshots (stringifies) synchronously, so the
+  // merged object does not need to outlive the call.
+  const patched: Partial<Settings> = {}
+  for (const { key, mutator } of update) {
+    const clone = structuredClone(app.config.settings[key])
+    const result = (mutator as (draft: unknown) => unknown)(clone)
+    ;(patched as Record<string, unknown>)[key] =
+      result !== undefined ? result : clone
+  }
+  const payload = { ...app.config.settings, ...patched }
+  return new Promise((resolve, reject) => {
+    writeSettingsFile(app, payload, (err?: Error) => {
+      if (err) {
+        reject(err)
+      } else {
+        Object.assign(app.config.settings, patched)
+        resolve()
+      }
+    })
+  })
+}
+
 export function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
   if (disableWriteSettings) {
     cb()
@@ -823,6 +905,7 @@ const pluginsPackageJsonTemplate = {
 module.exports = {
   load,
   getConfigDirectory,
+  applySettingsUpdate,
   writeSettingsFile,
   writeDefaultsFile,
   readDefaultsFile,

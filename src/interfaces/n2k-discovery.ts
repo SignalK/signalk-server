@@ -14,7 +14,7 @@ import { Request, Response } from 'express'
 import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { SERVERROUTESPREFIX } from '../constants'
-import { writeSettingsFile } from '../config/config'
+import { UpdateSettings } from '../config/config'
 import { atomicWriteFile } from '../atomicWrite'
 import {
   getAllPGNs,
@@ -59,6 +59,7 @@ interface N2kDiscoveryApp extends SignalKServer {
     configPath: string
     settings: { sourceAliases?: Record<string, string> }
   }
+  updateSettings: UpdateSettings
   deltaCache: {
     sourceDeltas: Record<string, unknown>
     removeSourceDelta(key: string): void
@@ -1149,8 +1150,8 @@ module.exports = (app: N2kDiscoveryApp) => {
         if (aliases) {
           for (const ref of allRefs) {
             if (ref in aliases) {
-              delete aliases[ref]
               aliasChanged = true
+              break
             }
           }
         }
@@ -1199,24 +1200,31 @@ module.exports = (app: N2kDiscoveryApp) => {
           })
         }
 
-        if (aliasChanged && aliases) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          writeSettingsFile(app as any, app.config.settings, (err: Error) => {
-            if (err) {
-              debug('Failed to save settings after alias cleanup: %s', err)
-              res.status(500).json({
-                state: 'FAILED',
-                statusCode: 500,
-                message: `Removed source ${sourceRef} from cache, but failed to persist alias cleanup`
-              })
-              return
-            }
+        if (aliasChanged) {
+          try {
+            await app.updateSettings([
+              {
+                key: 'sourceAliases',
+                mutator: (sourceAliases) => {
+                  for (const ref of allRefs) {
+                    delete sourceAliases![ref]
+                  }
+                }
+              }
+            ])
             app.emit('serverAdminEvent', {
               type: 'SOURCEALIASES',
-              data: aliases
+              data: app.config.settings.sourceAliases
             })
             respondOk()
-          })
+          } catch (err) {
+            debug('Failed to save settings after alias cleanup: %s', err)
+            res.status(500).json({
+              state: 'FAILED',
+              statusCode: 500,
+              message: `Removed source ${sourceRef} from cache, but failed to persist alias cleanup`
+            })
+          }
         } else {
           respondOk()
         }
