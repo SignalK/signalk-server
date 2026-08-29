@@ -189,6 +189,22 @@ export interface Plugin {
    */
   registerWithRouter?(router: PluginRouter): void
 
+  /**
+   * OpenAPI description of the routes this plugin serves.
+   *
+   * Honoured whichever way the routes are mounted — {@link registerWithRouter}
+   * under `/plugins/<pluginid>`, or {@link signalKApiRoutes} under
+   * `/signalk/v1/api`. The description is served at
+   * `/skServer/openapi/plugins/<pluginid>` and listed in the server's Swagger
+   * UI alongside the built-in APIs.
+   *
+   * The server fills in `servers` with `/plugins/<pluginid>` when the document
+   * does not declare it. A plugin mounting under `/signalk/v1/api` should
+   * therefore set `servers` itself, or its operations will be documented
+   * against the wrong base path.
+   *
+   * @category Rest API
+   */
   getOpenApi?: () => object
 
   statusMessage?: () => string | void

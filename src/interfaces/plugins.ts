@@ -1286,14 +1286,19 @@ module.exports = (theApp: any) => {
 
     if (typeof plugin.registerWithRouter === 'function') {
       plugin.registerWithRouter(asPluginRouter(app, router, plugin.id))
-      if (typeof plugin.getOpenApi === 'function') {
-        app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
-      }
     }
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
 
     if (typeof plugin.signalKApiRoutes === 'function') {
       app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))
+    }
+
+    // Registered for either way of mounting routes. It used to sit inside the
+    // registerWithRouter branch, so a plugin serving under /signalk/v1/api had
+    // its getOpenApi silently ignored — while the docs recommend implementing
+    // it to anyone who exposes an API, without distinguishing the two.
+    if (typeof plugin.getOpenApi === 'function') {
+      app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
     }
   }
 }
