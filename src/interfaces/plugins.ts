@@ -361,7 +361,12 @@ module.exports = (theApp: any) => {
         )
       ])
         .then(([schema, uiSchema]) => {
-          const status = providerStatus.find((p: any) => p.id === plugin.name)
+          // Match on plugin.id: setPluginStatus/setPluginError write the
+          // entry under plugin.id (see registerPlugin below), while
+          // plugin.name is the human-readable display name. Any plugin whose
+          // package sets a name — most of them — therefore never matched, and
+          // its status silently rendered as empty in the Admin UI.
+          const status = providerStatus.find((p: any) => p.id === plugin.id)
           const statusMessage = status ? status.message : ''
           if (schema === undefined) {
             console.error(
