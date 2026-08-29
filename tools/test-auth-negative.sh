@@ -272,48 +272,51 @@ test_oidc_callback_validation() {
 
     # First check if OIDC is enabled
     status_response=$(curl $CURL_OPTS "$LOGIN_STATUS_URL")
-    if ! echo "$status_response" | grep -q '"oidcEnabled":true'; then
+    if ! echo "$status_response" | grep -q '"id":"oidc"'; then
         log_skip "Skipping OIDC tests (OIDC not enabled on server)"
         ((TESTS_SKIPPED+=7))
         return 0
     fi
 
-    # Test 1: Missing both code and state
+    # Test 1: No code and no error: the strategy treats the request as a
+    # fresh login and sends the browser to the identity provider
     log "Testing OIDC callback with no parameters..."
-    response=$(curl $CURL_OPTS "$OIDC_CALLBACK_URL")
-    assert_response_contains "Missing params redirects with error" "$response" "oidcError=true"
+    response=$(curl $CURL_OPTS -o /dev/null -w '%{http_code} %{redirect_url}' "$OIDC_CALLBACK_URL")
+    assert_response_contains "Callback without parameters starts a new login" "$response" "^302 "
+    assert_response_not_contains "Callback without parameters is not an error" "$response" "authError=true"
 
-    # Test 2: Missing state parameter
-    log "Testing OIDC callback with missing state..."
+    # Test 2: Code without a handshake cookie
+    log "Testing OIDC callback with a code but no handshake cookie..."
     response=$(curl $CURL_OPTS "${OIDC_CALLBACK_URL}?code=fake_auth_code")
-    assert_response_contains "Missing state rejected" "$response" "Missing%20code%20or%20state"
+    assert_response_contains "Code without handshake cookie rejected" "$response" "authError=true"
 
-    # Test 3: Missing code parameter
-    log "Testing OIDC callback with missing code..."
-    response=$(curl $CURL_OPTS "${OIDC_CALLBACK_URL}?state=fake_state")
-    assert_response_contains "Missing code rejected" "$response" "Missing%20code%20or%20state"
+    # Test 3: State only, no code: same as test 1
+    log "Testing OIDC callback with state but no code..."
+    response=$(curl $CURL_OPTS -o /dev/null -w '%{http_code} %{redirect_url}' "${OIDC_CALLBACK_URL}?state=fake_state")
+    assert_response_contains "Callback with state only starts a new login" "$response" "^302 "
+    assert_response_not_contains "Callback with state only is not an error" "$response" "authError=true"
 
     # Test 4: No state cookie
     log "Testing OIDC callback without state cookie..."
     response=$(curl $CURL_OPTS "${OIDC_CALLBACK_URL}?code=fake&state=fake")
-    assert_response_contains "No state cookie rejected" "$response" "Session%20expired"
+    assert_response_contains "No state cookie rejected" "$response" "authError=true"
 
     # Test 5: Invalid/corrupted state cookie
     log "Testing OIDC callback with invalid state cookie..."
-    response=$(curl $CURL_OPTS --cookie "OIDC_STATE=corrupted_state_value" \
+    response=$(curl $CURL_OPTS --cookie "SK_AUTH_HANDSHAKE=corrupted_state_value" \
         "${OIDC_CALLBACK_URL}?code=fake&state=fake")
-    assert_response_contains "Invalid state cookie rejected" "$response" "Session%20expired"
+    assert_response_contains "Invalid state cookie rejected" "$response" "authError=true"
 
     # Test 6: State mismatch (cookie vs URL param)
     log "Testing OIDC callback with state mismatch..."
-    response=$(curl $CURL_OPTS --cookie "OIDC_STATE=state_in_cookie" \
+    response=$(curl $CURL_OPTS --cookie "SK_AUTH_HANDSHAKE=state_in_cookie" \
         "${OIDC_CALLBACK_URL}?code=fake&state=different_state_in_url")
-    assert_response_contains "State mismatch rejected" "$response" "Session%20expired"
+    assert_response_contains "State mismatch rejected" "$response" "authError=true"
 
     # Test 7: OIDC error response from provider
     log "Testing OIDC callback with error from provider..."
     response=$(curl $CURL_OPTS "${OIDC_CALLBACK_URL}?error=access_denied&error_description=User%20denied%20access")
-    assert_response_contains "Provider error forwarded" "$response" "oidcError=true"
+    assert_response_contains "Provider error forwarded" "$response" "authError=true"
 }
 
 # ============================================================================

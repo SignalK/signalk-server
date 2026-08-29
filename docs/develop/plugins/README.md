@@ -329,6 +329,49 @@ wss.on('upgrade', (request, socket, head) => {
 
 Authentication is the plugin's responsibility. The upgrade request carries the same cookies and headers as any other request to the server, so a plugin can apply its own checks before accepting a connection.
 
+### Authentication providers
+
+A plugin can add a login method to the server's login page by registering a [passport](https://www.passportjs.org/) strategy with `app.registerAuthenticationProvider()`. Any redirect-style strategy works: OpenID Connect, OAuth 2.0, GitHub, Google, SAML, ... The server mounts the strategy at `/signalk/v1/auth/{id}/login` and `/signalk/v1/auth/{id}/callback`, hands it an encrypted cookie session for the round trip, and turns the identity the strategy verified into a local Signal K user with the regular session cookies. Users created this way appear in the admin UI with the provider name and can be managed like any other user.
+
+The strategy's verify callback must pass an `ExternalIdentity` as the passport user:
+
+- `subject` (required): stable id of the user at the provider; together with `issuer` (optional) it identifies the local user record
+- `username`: preferred local username for a new user; a taken name gets a suffix
+- `permission`: `readonly` | `readwrite` | `admin`, applied on every login when present
+- `email`, `name`: shown in the admin UI
+
+_Example:_
+
+```javascript
+const { Strategy: GitHubStrategy } = require('passport-github2')
+
+plugin.start = (options) => {
+  app.registerAuthenticationProvider({
+    id: 'github',
+    name: 'Sign in with GitHub',
+    strategy: new GitHubStrategy(
+      {
+        clientID: options.clientId,
+        clientSecret: options.clientSecret,
+        callbackURL: `${options.serverUrl}/signalk/v1/auth/github/callback`
+      },
+      (accessToken, refreshToken, profile, done) =>
+        done(null, {
+          subject: profile.id,
+          username: profile.username,
+          permission: options.admins.includes(profile.username)
+            ? 'admin'
+            : 'readonly'
+        })
+    )
+  })
+}
+```
+
+Optional settings: `autoCreateUsers: false` rejects identities without a local user; `autoLogin: true` sends visitors of the login page straight to the provider; `authenticateOptions` are passed to `passport.authenticate()` on the login leg (e.g. `scope`); `logoutUrl(req, postLogoutRedirect)` lets `/signalk/v1/auth/{id}/logout` end the session at the provider too. Registration requires security to be enabled and the provider is removed automatically when the plugin stops.
+
+The provider must return the browser to the callback with a top-level GET, the default for OAuth 2.0 and OpenID Connect; cross-site `POST` callbacks (`response_mode=form_post`, SAML bindings) are not supported.
+
 ---
 
 ## Add an OpenAPI Definition
