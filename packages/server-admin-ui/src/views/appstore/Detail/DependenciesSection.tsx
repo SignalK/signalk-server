@@ -66,7 +66,7 @@ const DependenciesSection: React.FC<DependenciesSectionProps> = ({
               to={`/apps/store/plugin/${encodeURIComponent(d.name)}`}
               className="text-decoration-none"
             >
-              <div className="plugin-detail__dep-card d-flex align-items-center gap-2">
+              <div className="plugin-detail__dep-card d-flex align-items-center gap-2 text-body bg-body-tertiary border border-secondary-subtle">
                 <PluginIcon
                   name={d.name}
                   displayName={d.displayName}

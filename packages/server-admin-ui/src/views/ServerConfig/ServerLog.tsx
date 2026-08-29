@@ -17,6 +17,7 @@ import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify
 import LogFiles from './Logging'
 import Creatable from 'react-select/creatable'
 import { useWebSocket, useDeltaMessages } from '../../hooks/useWebSocket'
+import { getThemedSelectStyles } from '../../utils/reactSelectTheme'
 
 interface LogEntry {
   i: number
@@ -186,6 +187,29 @@ export default function ServerLogs() {
                             .join(',')
                         : ''
                     doHandleDebug(value)
+                  }}
+                  styles={{
+                    ...getThemedSelectStyles<SelectOption, true>(),
+                    valueContainer: (base) => ({
+                      ...base,
+                      gap: '0.25rem'
+                    }),
+                    multiValue: (base) => ({
+                      ...base,
+                      backgroundColor: 'var(--bs-tertiary-bg)'
+                    }),
+                    multiValueLabel: (base) => ({
+                      ...base,
+                      color: 'var(--bs-body-color)'
+                    }),
+                    multiValueRemove: (base) => ({
+                      ...base,
+                      color: 'var(--bs-secondary-color)',
+                      ':hover': {
+                        backgroundColor: 'var(--bs-danger-bg-subtle)',
+                        color: 'var(--bs-danger)'
+                      }
+                    })
                   }}
                 />
                 <Form.Text
