@@ -5,19 +5,21 @@
  * synchronously, without attaching an `error` listener to it. The underlying
  * `@jellybrick/dbus-next` connection reports transport failures by emitting
  * `error` on that connection rather than by rejecting the pending call, so a
- * missing or unreachable `/var/run/dbus/system_bus_socket` surfaces as an
- * `error` event with no listener — which Node escalates into an uncaught
- * exception. Because it arrives on the event emitter and not through the
- * promise chain, an `await createBluetooth()...` inside `try/catch` never sees
- * it: the process dies with `connect ENOENT /var/run/dbus/system_bus_socket`
- * a few seconds after the server has otherwise started cleanly.
+ * missing or unreachable `/var/run/dbus/system_bus_socket` — a container that
+ * does not bind-mount it, or a host with no D-Bus daemon — surfaces as an
+ * `error` event with no listener, which Node escalates into an uncaught
+ * exception. Arriving on the emitter and not the promise chain, it slips past
+ * the `try/catch` around the awaited call and kills the process seconds after
+ * the server has otherwise started cleanly.
  *
- * This happens on any host without a reachable system bus — most commonly a
- * container that does not bind-mount the socket, but also a stripped-down
- * Linux install with no D-Bus daemon running.
- *
- * Attaching a listener before handing the session back keeps the failure on
- * the promise path, where the existing `try/catch` blocks already handle it.
+ * Swallowing that event alone would trade the crash for a hang: dbus-next
+ * leaves in-flight calls unsettled when the connection dies, so an operation
+ * issued before the failure would never return. So the listener goes on
+ * synchronously — before the caller can await anything, leaving no window for
+ * an early error to escape — and the recorded failure is replayed as a
+ * rejection from every method this codebase calls. Callers already treat "no
+ * usable adapter" as a normal outcome, so it lands in error handling that
+ * exists.
  */
 
 import { createDebug } from '../../debug'
@@ -45,31 +47,6 @@ interface ErrorEmitter {
   off(event: 'error', listener: (err: unknown) => void): void
 }
 
-/**
- * Creates a node-ble session whose D-Bus connection can never raise an
- * unhandled `error` event, and whose pending operations never hang.
- *
- * Two failure modes have to be handled together:
- *
- * 1. `createBluetooth()` opens the system-bus connection eagerly and attaches
- *    no `error` listener. dbus-next reports transport failures by emitting
- *    `error` rather than by rejecting the pending call, so a missing or
- *    unreachable `/var/run/dbus/system_bus_socket` surfaces as an `error`
- *    event with no listener — which Node escalates into an uncaught
- *    exception. Because it arrives on the event emitter and not the promise
- *    chain, `await`ing inside `try/catch` never sees it.
- *
- * 2. Merely swallowing that event is not enough. dbus-next does not settle
- *    in-flight calls when the connection dies, so an operation issued before
- *    the failure stays pending forever and `await bluetooth.activeAdapters()`
- *    never returns — trading a crash for a hang, which is harder to diagnose.
- *
- * So the listener is attached synchronously (before the caller can await
- * anything, leaving no window for an early error to escape) and the recorded
- * failure is replayed as a rejection from every method this codebase calls.
- * Callers already treat "no usable adapter" as a normal outcome, so the
- * rejection lands in error handling that exists.
- */
 export function createBluetoothSafe(): BluetoothSession {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createBluetooth } = require('@naugehyde/node-ble')

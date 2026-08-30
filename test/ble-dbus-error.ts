@@ -3,19 +3,8 @@ import { EventEmitter } from 'node:events'
 import Module from 'node:module'
 
 /**
- * Regression test for the BLE local provider taking the whole server down.
- *
- * `@naugehyde/node-ble`'s `createBluetooth()` opens a D-Bus system-bus
- * connection eagerly and hands it back without an `error` listener. dbus-next
- * reports transport failures by emitting `error` on that connection, so on a
- * host with no reachable `/var/run/dbus/system_bus_socket` (any container that
- * does not mount it) the failure arrives as an unhandled `error` event and
- * Node escalates it to an uncaught exception — several seconds after the
- * server has otherwise started cleanly. The `try/catch` around the awaited
- * calls cannot catch it because it never travels the promise path.
- *
- * `createBluetoothSafe()` attaches the listener synchronously, before the
- * caller can await anything, closing that window.
+ * Regression tests for the BLE local provider taking the whole server down.
+ * See `src/api/ble/safeBluetooth.ts` for the failure this guards against.
  */
 
 // Stand-in for the dbus-next connection: an emitter whose only interesting
@@ -93,8 +82,7 @@ describe('BLE D-Bus transport errors', () => {
       'expected an error listener to be attached synchronously'
     )
 
-    // The real failure: ENOENT on the system bus socket. Without a
-    // listener attached, this emit throws and takes the process down.
+    // The real failure: ENOENT on the system bus socket.
     const emit = () =>
       bus.emit(
         'error',
@@ -110,10 +98,6 @@ describe('BLE D-Bus transport errors', () => {
   })
 
   it('rejects a pending adapter call when the bus fails under it', async () => {
-    // Swallowing the 'error' event is not enough on its own: dbus-next does
-    // not settle in-flight calls when the connection dies, so an operation
-    // issued before the failure would otherwise stay pending forever and
-    // turn the crash into a hang.
     const { result: session, bus } = withStubbedNodeBle(() => {
       const { createBluetoothSafe: make } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -140,9 +124,6 @@ describe('BLE D-Bus transport errors', () => {
       'expected the pending call to reject once the bus failed'
     )
 
-    // The underlying op stays pending forever after a bus failure, so the
-    // listener has to come off on the rejection path too — nothing else
-    // will remove it.
     expect(bus.listenerCount('error')).to.equal(
       baseline,
       'expected the per-call listener to be removed on the bus-error path'
@@ -150,10 +131,6 @@ describe('BLE D-Bus transport errors', () => {
   })
 
   it('does not accumulate bus listeners across calls', async () => {
-    // guard() attaches an 'error' listener per call so a bus failure can
-    // reject the operation under way. Without removing it on settle, a
-    // long-lived session trips Node's max-listeners warning after ten
-    // operations and slowly leaks.
     const { result: session, bus } = withStubbedNodeBle(() => {
       const { createBluetoothSafe: make } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
