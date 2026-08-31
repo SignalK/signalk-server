@@ -1,4 +1,5 @@
 import { expect } from 'chai'
+import { Temporal } from '@js-temporal/polyfill'
 import { parseTracksQuery } from '../dist/api/tracks/query.js'
 
 const parse = (query: Record<string, unknown>) => parseTracksQuery(query)
@@ -68,6 +69,40 @@ describe('Track API query parsing', () => {
       expect(
         errorsFrom({ from: '2026-06-14T00:00:00Z', to: '2026-06-01T00:00:00Z' })
       ).to.match(/from must be before to/)
+    })
+  })
+
+  describe('to defaults to now', () => {
+    // The description always said so; leaving each provider to apply it
+    // independently is how two of them answer the same query differently.
+    const NOW = Temporal.Instant.from('2026-08-31T12:00:00Z')
+
+    it('resolves an omitted to when from is given', () => {
+      const { request } = parseTracksQuery(
+        { from: '2026-08-01T00:00:00Z' },
+        NOW
+      )
+      expect(request.to?.toString()).to.equal(NOW.toString())
+    })
+
+    it('resolves an omitted to when duration is given', () => {
+      const { request } = parseTracksQuery({ duration: 'P7D' }, NOW)
+      expect(request.to?.toString()).to.equal(NOW.toString())
+    })
+
+    it('leaves an explicit to alone', () => {
+      const { request } = parseTracksQuery(
+        { from: '2026-08-01T00:00:00Z', to: '2026-08-02T00:00:00Z' },
+        NOW
+      )
+      expect(request.to?.toString()).to.contain('2026-08-02')
+    })
+
+    it('leaves to unset on an unbounded single-context query', () => {
+      // No window was asked for, so inventing an end would silently bound it.
+      const { request, errors } = parseTracksQuery({ context: 'self' }, NOW)
+      expect(errors).to.be.empty
+      expect(request.to).to.equal(undefined)
     })
   })
 
@@ -242,6 +277,41 @@ describe('Track API query parsing', () => {
       })
       expect(errors).to.be.empty
       expect(request.resolution?.toString()).to.equal('PT1M')
+    })
+  })
+
+  describe('properties', () => {
+    it('splits a comma-separated list of paths', () => {
+      const { request, errors } = parse({
+        properties: 'navigation.speedOverGround,environment.wind.speedApparent',
+        duration: 'PT1H'
+      })
+      expect(errors).to.be.empty
+      expect(request.properties).to.deep.equal([
+        'navigation.speedOverGround',
+        'environment.wind.speedApparent'
+      ])
+    })
+
+    it('trims and deduplicates', () => {
+      const { request } = parse({
+        properties: ' navigation.speedOverGround , navigation.speedOverGround ',
+        duration: 'PT1H'
+      })
+      expect(request.properties).to.deep.equal(['navigation.speedOverGround'])
+    })
+
+    it('is absent when not asked for', () => {
+      expect(parse({ duration: 'PT1H' }).request.properties).to.equal(undefined)
+    })
+
+    it('rejects a blank value', () => {
+      expect(errorsFrom({ properties: '  ', duration: 'PT1H' })).to.match(
+        /properties must not be empty/
+      )
+      expect(errorsFrom({ properties: ' , ', duration: 'PT1H' })).to.match(
+        /properties must not be empty/
+      )
     })
   })
 

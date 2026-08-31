@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill'
-import { Context } from './deltas'
+import { Context, Path } from './deltas'
 
 /**
  * Track API — recorded vessel positions over time.
@@ -81,6 +81,22 @@ export interface TracksRequest {
   /** Include the recording time of each point as `properties.coordTimes`. */
   times?: boolean
 
+  /**
+   * Signal K paths to return alongside each position, as arrays nested to
+   * match `coordinates` in the same way `coordTimes` is.
+   *
+   * A client colouring a track by speed, or deriving a route from a recorded
+   * passage, otherwise has to query the History API for those paths and join
+   * the two responses by timestamp — the row-alignment problem `coordTimes`
+   * exists to remove, reintroduced one level down.
+   *
+   * Optional for a provider: one that cannot co-record other paths returns the
+   * geometry alone and omits them from
+   * {@link TrackProperties.appliedProperties}, so a client can tell what it
+   * actually received rather than inferring it from absent data.
+   */
+  properties?: Path[]
+
   /** Include geometry. Defaults to true; set false to return metadata only. */
   geometry?: boolean
 }
@@ -138,6 +154,25 @@ export interface TrackProperties {
    * LineString.
    */
   coordTimes?: string[][]
+
+  /**
+   * Which of the requested {@link TracksRequest.properties} the provider
+   * actually returned.
+   *
+   * Reported rather than inferred, for the same reason `resolution` and
+   * `epsilon` are: a client must be able to tell "this provider does not have
+   * that path" from "that path had no values in this window".
+   */
+  appliedProperties?: Path[]
+
+  /**
+   * Values for each requested path, keyed by path and nested to match
+   * `coordinates`: `values[path][i][j]` belongs with `coordinates[i][j]`.
+   *
+   * A position with no value for a path at that instant carries null rather
+   * than being omitted, so the arrays stay aligned.
+   */
+  values?: Record<string, (number | string | null)[][]>
 }
 
 /**

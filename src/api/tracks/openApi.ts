@@ -9,7 +9,7 @@ const tracksApiDoc = {
       'API for querying recorded vessel tracks — where vessels have actually been, over time.\n\n' +
       'A track is distinct from a route in `resources/routes`, which is a course someone authored and intends to follow, and from an uploaded GPX track in `resources/tracks`, which is a named document. A track here is recorded position data: unnamed, time-ordered, and queried by time window and area.\n\n' +
       'Storage is not defined by this API. Providers are plugins that record positions and may keep them in SQLite, a time-series database, Parquet files, or anything else.\n\n' +
-      'The time range is given as **from**, **to** and **duration** in any workable combination; omitted **to** defaults to now. A time window is required unless a single **context** is requested, since an unbounded query across every recorded vessel can span years of data.\n\n' +
+      'The time range is given as **from**, **to** and **duration** in any workable combination; an omitted **to** is resolved to now by the server, so every provider sees the same window. A time window is required unless a single **context** is requested, since an unbounded query across every recorded vessel can span years of data.\n\n' +
       'The full time range asked for is always returned. Where a result would be too large, providers reduce the number of *points* — by resolution, point budget or simplification — and report what they applied in the response, rather than silently narrowing the time range.',
     license: {
       name: 'Apache 2.0',
@@ -79,6 +79,27 @@ const tracksApiDoc = {
             items: {
               type: 'array',
               items: { type: 'string', format: 'date-time' }
+            }
+          },
+          appliedProperties: {
+            type: 'array',
+            description:
+              'Which of the requested properties the provider actually returned. Reported rather than inferred, for the same reason resolution and epsilon are: a client must be able to tell "this provider does not have that path" from "that path had no values in this window".',
+            items: { type: 'string' }
+          },
+          values: {
+            type: 'object',
+            description:
+              'Values for each requested path, keyed by path and nested to match geometry.coordinates: values[path][i][j] belongs with coordinates[i][j]. A position with no value for a path at that instant carries null rather than being omitted, so the arrays stay aligned.',
+            additionalProperties: {
+              type: 'array',
+              items: {
+                type: 'array',
+                items: {
+                  nullable: true,
+                  oneOf: [{ type: 'number' }, { type: 'string' }]
+                }
+              }
             }
           }
         }
@@ -216,6 +237,16 @@ const tracksApiDoc = {
           example: 5
         }
       },
+      Properties: {
+        name: 'properties',
+        in: 'query',
+        description:
+          'Comma-separated Signal K paths to return alongside each position, nested to match coordinates the way coordTimes is. Lets a client colour a track by speed, or derive a route from a recorded passage, without querying the History API separately and joining the two responses by timestamp. Provider-optional: what was actually returned is listed in properties.appliedProperties.',
+        schema: {
+          type: 'string',
+          example: 'navigation.speedOverGround,environment.wind.speedApparent'
+        }
+      },
       Times: {
         name: 'times',
         in: 'query',
@@ -258,6 +289,7 @@ const tracksApiDoc = {
           { $ref: '#/components/parameters/Simplify' },
           { $ref: '#/components/parameters/Epsilon' },
           { $ref: '#/components/parameters/Times' },
+          { $ref: '#/components/parameters/Properties' },
           { $ref: '#/components/parameters/Geometry' },
           { $ref: '#/components/parameters/Provider' }
         ],

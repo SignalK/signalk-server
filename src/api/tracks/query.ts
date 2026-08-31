@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill'
-import { Context } from '@signalk/server-api'
+import { Context, Path } from '@signalk/server-api'
 import { TrackBoundingBox, TracksRequest } from '@signalk/server-api/tracks'
 
 /**
@@ -176,7 +176,8 @@ const readFlag = (
 }
 
 export function parseTracksQuery(
-  query: Record<string, unknown>
+  query: Record<string, unknown>,
+  now: Temporal.Instant = Temporal.Now.instant()
 ): ParsedTracksQuery {
   const errors: string[] = []
   const request: TracksRequest = {}
@@ -292,6 +293,27 @@ export function parseTracksQuery(
     request.times = times
   }
 
+  const properties = first(query.properties)
+  if (properties !== undefined) {
+    if (blank(properties)) {
+      errors.push('properties must not be empty')
+    } else {
+      const paths = [
+        ...new Set(
+          properties
+            .split(',')
+            .map((p) => p.trim())
+            .filter((p) => p !== '')
+        )
+      ]
+      if (paths.length === 0) {
+        errors.push('properties must not be empty')
+      } else {
+        request.properties = paths as Path[]
+      }
+    }
+  }
+
   const geometry = readFlag(query, 'geometry', errors)
   if (geometry !== undefined) {
     request.geometry = geometry
@@ -303,6 +325,16 @@ export function parseTracksQuery(
     Temporal.Instant.compare(request.from, request.to) >= 0
   ) {
     errors.push('from must be before to')
+  }
+
+  // Resolved here rather than left to each provider. The description has always
+  // said an omitted `to` means now, and leaving providers to apply that
+  // individually is how two of them come to answer the same query differently.
+  if (
+    request.to === undefined &&
+    (request.from !== undefined || request.duration !== undefined)
+  ) {
+    request.to = now
   }
 
   // An unbounded query is allowed for a single context — "my whole track since
