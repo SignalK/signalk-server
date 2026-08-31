@@ -6,18 +6,30 @@ const parse = (query: Record<string, unknown>) => parseTracksQuery(query)
 const errorsFrom = (query: Record<string, unknown>) =>
   parse(query).errors.join('; ')
 
+const NOW_FIXED = Temporal.Instant.from('2026-08-31T12:00:00Z')
+
 describe('Track API query parsing', () => {
   describe('time window', () => {
+    // A duration is resolved into from/to rather than passed through, so these
+    // assert the window it produces rather than the parsed Duration itself.
+    const windowSeconds = (query: Record<string, unknown>) => {
+      const { request } = parseTracksQuery(query, NOW_FIXED)
+      return request.from && request.to
+        ? request.to.epochMilliseconds / 1000 -
+            request.from.epochMilliseconds / 1000
+        : undefined
+    }
+
     it('accepts an ISO 8601 duration', () => {
-      const { request, errors } = parse({ duration: 'PT2H' })
+      const { errors } = parseTracksQuery({ duration: 'PT2H' }, NOW_FIXED)
       expect(errors).to.be.empty
-      expect(request.duration?.toString()).to.equal('PT2H')
+      expect(windowSeconds({ duration: 'PT2H' })).to.equal(7200)
     })
 
     it('accepts a bare integer as seconds, as the History API does', () => {
-      const { request, errors } = parse({ duration: '900' })
+      const { errors } = parseTracksQuery({ duration: '900' }, NOW_FIXED)
       expect(errors).to.be.empty
-      expect(request.duration?.total({ unit: 'seconds' })).to.equal(900)
+      expect(windowSeconds({ duration: '900' })).to.equal(900)
     })
 
     it('rejects a duration that is neither', () => {
@@ -96,6 +108,46 @@ describe('Track API query parsing', () => {
         NOW
       )
       expect(request.to?.toString()).to.contain('2026-08-02')
+    })
+
+    it('handles day-and-larger durations without throwing', () => {
+      // Temporal.Instant.subtract refuses day units, since their length
+      // depends on a timezone. These windows are absolute, so UTC is the
+      // right frame — and P7D is the OpenAPI's own example.
+      for (const duration of ['P7D', 'P1M', 'P1Y']) {
+        const { errors } = parseTracksQuery({ duration }, NOW)
+        expect(errors, duration).to.be.empty
+      }
+      const { request } = parseTracksQuery({ duration: 'P7D' }, NOW)
+      expect(request.from?.toString()).to.contain('2026-08-24')
+    })
+
+    it('resolves duration into from, so providers see one window', () => {
+      // Three fields describing one window is how two providers answer the
+      // same query differently.
+      const { request } = parseTracksQuery({ duration: 'P7D' }, NOW)
+      expect(request.duration).to.equal(undefined)
+      expect(request.from?.toString()).to.contain('2026-08-24')
+      expect(request.to?.toString()).to.equal(NOW.toString())
+    })
+
+    it('keeps the later start when from and duration disagree', () => {
+      // `from` is a floor the caller set deliberately; a longer duration must
+      // not reach back past it.
+      const { request } = parseTracksQuery(
+        { from: '2026-08-29T00:00:00Z', duration: 'P30D' },
+        NOW
+      )
+      expect(request.from?.toString()).to.contain('2026-08-29')
+      expect(request.duration).to.equal(undefined)
+    })
+
+    it('lets a shorter duration narrow an earlier from', () => {
+      const { request } = parseTracksQuery(
+        { from: '2026-08-01T00:00:00Z', duration: 'P2D' },
+        NOW
+      )
+      expect(request.from?.toString()).to.contain('2026-08-29')
     })
 
     it('leaves to unset on an unbounded single-context query', () => {
@@ -303,6 +355,20 @@ describe('Track API query parsing', () => {
 
     it('is absent when not asked for', () => {
       expect(parse({ duration: 'PT1H' }).request.properties).to.equal(undefined)
+    })
+
+    it('rejects a path that is not a Signal K path', () => {
+      // These arrive from a client, and Path is a branded type whose guarantee
+      // would be hollow if anything were cast into it.
+      expect(
+        errorsFrom({
+          properties: 'navigation/speedOverGround',
+          duration: 'PT1H'
+        })
+      ).to.match(/invalid Signal K path/)
+      expect(errorsFrom({ properties: 'a..b', duration: 'PT1H' })).to.match(
+        /invalid Signal K path/
+      )
     })
 
     it('rejects a blank value', () => {

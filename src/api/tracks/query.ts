@@ -87,6 +87,13 @@ const parseInstant = (
   }
 }
 
+/**
+ * A Signal K path: dot-separated segments of letters, digits, dash and
+ * underscore. Validated rather than cast — these arrive from a client, and
+ * `Path` is a branded type whose guarantee would otherwise be hollow.
+ */
+const PATH_PATTERN = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/
+
 const MAX_LONGITUDE = 180
 const MAX_LATITUDE = 90
 
@@ -306,8 +313,13 @@ export function parseTracksQuery(
             .filter((p) => p !== '')
         )
       ]
+      const invalid = paths.filter((path) => !PATH_PATTERN.test(path))
       if (paths.length === 0) {
         errors.push('properties must not be empty')
+      } else if (invalid.length > 0) {
+        errors.push(
+          `properties contains invalid Signal K path(s): ${invalid.join(', ')}`
+        )
       } else {
         request.properties = paths as Path[]
       }
@@ -327,14 +339,33 @@ export function parseTracksQuery(
     errors.push('from must be before to')
   }
 
-  // Resolved here rather than left to each provider. The description has always
-  // said an omitted `to` means now, and leaving providers to apply that
-  // individually is how two of them come to answer the same query differently.
-  if (
-    request.to === undefined &&
-    (request.from !== undefined || request.duration !== undefined)
-  ) {
-    request.to = now
+  // Resolved to a single `from`/`to` here rather than left to each provider.
+  // Three fields describing one window is how two providers come to answer the
+  // same query differently: given from+duration, one reads from..to and
+  // another duration-before-to. `duration` measures back from the end of the
+  // window, which is what History's description says and what a client asking
+  // for "the last 7 days" means.
+  if (request.from !== undefined || request.duration !== undefined) {
+    if (request.to === undefined) {
+      request.to = now
+    }
+    if (request.duration !== undefined) {
+      // Via UTC rather than Instant.subtract, which refuses day-and-larger
+      // units because their length depends on a timezone. Windows here are
+      // absolute, so UTC is the right frame and `P7D` means 7 × 24h.
+      const start = request.to
+        .toZonedDateTimeISO('UTC')
+        .subtract(request.duration)
+        .toInstant()
+      // With both given, the later start wins: `from` is a floor the caller
+      // set deliberately, so `duration` must not reach back past it.
+      request.from =
+        request.from === undefined ||
+        Temporal.Instant.compare(start, request.from) > 0
+          ? start
+          : request.from
+      delete request.duration
+    }
   }
 
   // An unbounded query is allowed for a single context — "my whole track since

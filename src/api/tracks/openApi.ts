@@ -95,9 +95,13 @@ const tracksApiDoc = {
               type: 'array',
               items: {
                 type: 'array',
+                // nullable on a schema with oneOf but no same-level type is
+                // ambiguous in OpenAPI 3.0; put it on each member instead.
                 items: {
-                  nullable: true,
-                  oneOf: [{ type: 'number' }, { type: 'string' }]
+                  oneOf: [
+                    { type: 'number', nullable: true },
+                    { type: 'string', nullable: true }
+                  ]
                 }
               }
             }
