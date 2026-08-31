@@ -77,6 +77,26 @@ describe('Track API query parsing', () => {
       expect(request.to?.toString()).to.contain('2026-06-14')
     })
 
+    it('rejects a future from once to has defaulted to now', () => {
+      // `to` defaults to now, so a from in the future makes the window run
+      // backwards. Checking order before that default would not see it.
+      expect(errorsFrom({ from: '2027-01-01T00:00:00Z' })).to.match(
+        /from must be before to/
+      )
+      expect(
+        errorsFrom({ from: '2027-01-01T00:00:00Z', duration: 'P7D' })
+      ).to.match(/from must be before to/)
+    })
+
+    it('allows a window that lies entirely in the future', () => {
+      // Legitimate: an empty result, not a malformed query.
+      const { errors } = parseTracksQuery(
+        { from: '2027-01-01T00:00:00Z', to: '2027-02-01T00:00:00Z' },
+        NOW_FIXED
+      )
+      expect(errors).to.be.empty
+    })
+
     it('rejects from later than to', () => {
       expect(
         errorsFrom({ from: '2026-06-14T00:00:00Z', to: '2026-06-01T00:00:00Z' })

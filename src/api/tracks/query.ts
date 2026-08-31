@@ -331,14 +331,6 @@ export function parseTracksQuery(
     request.geometry = geometry
   }
 
-  if (
-    request.from &&
-    request.to &&
-    Temporal.Instant.compare(request.from, request.to) >= 0
-  ) {
-    errors.push('from must be before to')
-  }
-
   // Resolved to a single `from`/`to` here rather than left to each provider.
   // Three fields describing one window is how two providers come to answer the
   // same query differently: given from+duration, one reads from..to and
@@ -366,6 +358,18 @@ export function parseTracksQuery(
           : request.from
       delete request.duration
     }
+  }
+
+  // Checked after the window is resolved, not before: `to` defaults to now, so
+  // a `from` in the future produces a backwards window that an earlier check
+  // would not have seen. Explicit bounds in the wrong order are caught here
+  // too, so one check covers both.
+  if (
+    request.from &&
+    request.to &&
+    Temporal.Instant.compare(request.from, request.to) >= 0
+  ) {
+    errors.push('from must be before to')
   }
 
   // An unbounded query is allowed for a single context — "my whole track since
