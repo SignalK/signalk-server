@@ -110,12 +110,24 @@ export class TrackApiHttpRegistry {
         return
       }
       debug.enabled && debug(JSON.stringify(request, null, 2))
+      // Selection stays inside respondWith's guard: naming a provider that does
+      // not exist throws, and that has to stay a 400 rather than escaping as an
+      // unhandled error. The chosen id is captured for provenance on the way
+      // through.
+      let selectedId: string | undefined
       void respondWith(
-        () => this.useProvider(req),
+        () => {
+          const selected = this.selectProvider(req)
+          selectedId = selected?.id
+          return selected?.provider
+        },
         // geometry=false is a listing rather than a different resource: the
         // provider still decides which contexts match, it just omits the
         // coordinates it would otherwise have to read and thin.
-        (provider) => provider.getTracks(request),
+        (provider) =>
+          provider
+            .getTracks(request)
+            .then((response) => stampProvider(response, selectedId)),
         res
       )
     })
@@ -145,16 +157,52 @@ export class TrackApiHttpRegistry {
   }
 
   private useProvider(req: Request): TrackProvider | undefined {
+    return this.selectProvider(req)?.provider
+  }
+
+  /**
+   * The provider that will answer, and the id it is registered under.
+   *
+   * The id comes from the registry rather than from the provider, so a
+   * provider never has to name itself and cannot name itself wrongly.
+   */
+  private selectProvider(
+    req: Request
+  ): { id: string; provider: TrackProvider } | undefined {
     if (req.query.provider) {
-      const provider = this.trackProviders.get(req.query.provider as string)
+      const id = req.query.provider as string
+      const provider = this.trackProviders.get(id)
       if (!provider) {
-        throw new Error(`Requested provider not found! (${req.query.provider})`)
+        throw new Error(`Requested provider not found! (${id})`)
       }
-      return provider
+      return { id, provider }
     }
-    return this.defaultProviderId
-      ? this.trackProviders.get(this.defaultProviderId)
-      : undefined
+    const id = this.defaultProviderId
+    const provider = id ? this.trackProviders.get(id) : undefined
+    return id && provider ? { id, provider } : undefined
+  }
+}
+
+/**
+ * Record which provider answered, on each feature.
+ *
+ * Costs nothing today with a single provider, and is what lets a client tell
+ * features apart if a query is ever answered by several. Stamped by the server
+ * rather than the provider so the id always matches the registry.
+ */
+function stampProvider(
+  response: TracksResponse,
+  providerId: string | undefined
+): TracksResponse {
+  if (providerId === undefined) {
+    return response
+  }
+  return {
+    ...response,
+    features: response.features.map((feature) => ({
+      ...feature,
+      properties: { ...feature.properties, providerId }
+    }))
   }
 }
 

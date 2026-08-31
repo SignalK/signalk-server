@@ -32,6 +32,11 @@ const tracksApiDoc = {
             type: 'boolean',
             description: "Whether this is the own vessel's track"
           },
+          providerId: {
+            type: 'string',
+            description:
+              'Which registered provider answered for this track. Set by the server from its registry, so a provider neither has to name itself nor can name itself wrongly.'
+          },
           contextName: {
             type: 'string',
             description:

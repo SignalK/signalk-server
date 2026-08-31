@@ -118,6 +118,16 @@ export interface TrackProperties {
   isSelf: boolean
 
   /**
+   * Which registered provider answered for this track.
+   *
+   * Set by the server from the registry, so a provider neither has to name
+   * itself nor can name itself wrongly. Provenance only today, with a single
+   * provider answering any one query; it is what would let a client tell
+   * features apart if that ever changes.
+   */
+  providerId?: string
+
+  /**
    * Name of the vessel, aircraft or other context, when known.
    *
    * Not the name of the track: a track recorded from position data has no name
