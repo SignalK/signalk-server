@@ -149,7 +149,7 @@ Both patterns install into the persisted config directory (`/home/node/.signalk`
 
 ### Behavioral change for non-Docker consumers
 
-The bundled webapps, plugins, the admin UI, `serialport`, and local Bluetooth support are all declared in `optionalDependencies`, not `dependencies`. **Default `npm install` is unaffected** because npm installs optional deps by default — the full Docker image and direct-from-npm installs ship them all. A consumer passing `npm install signalk-server --omit=optional` (CI pipelines, security-conscious deployments, distros) gets a minimal headless server: no admin UI, no serial-port or local Bluetooth support, and none of the bundled webapps or plugins. The core Docker image starts from that minimal set and adds back the admin UI, `serialport`, and the Bluetooth packages — the packages that can't be installed later at the config-directory layer. To get everything, drop the `--omit=optional` flag.
+The bundled webapps, plugins, the admin UI, `serialport`, and local Bluetooth support are all declared in `optionalDependencies`, not `dependencies`. Standard npm installations include optional dependencies, as do the full Docker images. Installations configured to omit them are minimal headless servers: they have no admin UI, serial-port or local Bluetooth support, bundled webapps, or plugins. The core Docker image restores the admin UI, `serialport`, and the Bluetooth packages because they cannot be added at the config-directory layer.
 
 ## Development images
 

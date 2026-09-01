@@ -25,8 +25,8 @@ ARG TAG
 # platforms), but unlike the other optionals they cannot be added back at the
 # .signalk layer — the server serves the admin UI from a fixed path in its own
 # install and require()s serialport, node-ble, and dbus-next directly. Their
-# versions are read from the installed server's optionalDependencies so they
-# cannot drift from the full image.
+# version ranges are read from the installed server's optionalDependencies, so
+# they stay aligned with the server's declared requirements.
 ARG EDITION=full
 
 # npm 12 gates dependency install-time lifecycle scripts behind an allowlist
