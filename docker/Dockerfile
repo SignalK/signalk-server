@@ -22,11 +22,11 @@ COPY --chown=node:node *.tgz .
 
 # EDITION selects the published variant: "full" bundles the optional webapps and
 # plugins; "core" installs the server with --omit=optional, leaving the server,
-# the admin UI, serialport, and required libraries. The admin UI ships in core
-# via its workspace tarball (kept in both editions below); serialport is an
-# external optional package, so core reinstalls it explicitly at the version the
-# server declares. Both stay in optionalDependencies but cannot be added back at
-# the .signalk layer, so the image must carry them.
+# the admin UI, serialport, local Bluetooth support, and required libraries.
+# The admin UI ships in core via its workspace tarball (kept in both editions
+# below); serialport and the Bluetooth packages are external optional packages,
+# so core reinstalls them explicitly at the versions the server declares. They
+# cannot be added back at the .signalk layer, so the image must carry them.
 ARG EDITION=full
 
 # npm 12 gates dependency install-time lifecycle scripts behind an allowlist
@@ -52,7 +52,9 @@ RUN case "$EDITION" in \
   && npm install "$server_tarball" --install-strategy=nested $npm_flags \
   && if [ "$EDITION" = core ]; then \
        serialport_spec=$(node -p "require('signalk-server/package.json').optionalDependencies.serialport") \
-       && npm install $npm_flags "serialport@$serialport_spec"; \
+       && node_ble_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@naugehyde/node-ble']") \
+       && dbus_next_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@jellybrick/dbus-next']") \
+       && npm install $npm_flags "serialport@$serialport_spec" "@naugehyde/node-ble@$node_ble_spec" "@jellybrick/dbus-next@$dbus_next_spec"; \
      fi \
   && if [ -d node_modules/@signalk ]; then \
        mkdir -p node_modules/signalk-server/node_modules/@signalk/ \

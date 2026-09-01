@@ -20,12 +20,13 @@ ARG TAG
 
 # EDITION selects the published variant: "full" bundles the optional webapps
 # and plugins; "core" installs with --omit=optional, then reinstates the admin
-# UI and serialport. Those two stay in optionalDependencies (serialport is a
-# native module that must degrade gracefully on unsupported platforms), but
-# unlike the other optionals they cannot be added back at the .signalk layer —
-# the server serves the admin UI from a fixed path in its own install and
-# require()s serialport directly. Their versions are read from the installed
-# server's optionalDependencies so they cannot drift from the full image.
+# UI, serialport, and local Bluetooth support. These stay in optionalDependencies
+# (serialport is a native module that must degrade gracefully on unsupported
+# platforms), but unlike the other optionals they cannot be added back at the
+# .signalk layer — the server serves the admin UI from a fixed path in its own
+# install and require()s serialport, node-ble, and dbus-next directly. Their
+# versions are read from the installed server's optionalDependencies so they
+# cannot drift from the full image.
 ARG EDITION=full
 
 # npm 12 gates dependency install-time lifecycle scripts behind an allowlist
@@ -49,7 +50,9 @@ RUN case "$EDITION" in \
   && if [ "$EDITION" = core ]; then \
        adminui_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@signalk/server-admin-ui']") \
        && serialport_spec=$(node -p "require('signalk-server/package.json').optionalDependencies.serialport") \
-       && npm install $npm_flags "@signalk/server-admin-ui@$adminui_spec" "serialport@$serialport_spec"; \
+       && node_ble_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@naugehyde/node-ble']") \
+       && dbus_next_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@jellybrick/dbus-next']") \
+       && npm install $npm_flags "@signalk/server-admin-ui@$adminui_spec" "serialport@$serialport_spec" "@naugehyde/node-ble@$node_ble_spec" "@jellybrick/dbus-next@$dbus_next_spec"; \
      fi \
   && mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
   && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
