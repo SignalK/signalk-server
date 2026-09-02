@@ -93,6 +93,7 @@ export async function callRoute(
     params?: Record<string, string>
     query?: Record<string, unknown>
     body?: unknown
+    skPrincipal?: { identifier: string }
   } = {}
 ): Promise<Reply> {
   const handler = app.routes.get(route)
@@ -137,7 +138,8 @@ export async function callRoute(
     path: route.split(' ')[1],
     params: options.params ?? {},
     query: options.query ?? {},
-    body: options.body ?? {}
+    body: options.body ?? {},
+    skPrincipal: options.skPrincipal
   }
   await handler(req as unknown as Request, res as unknown as Response)
   return replied

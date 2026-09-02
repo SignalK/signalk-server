@@ -61,7 +61,7 @@ export const startApis = (
     WithSecurityStrategy &
     IRouter &
     WithConfig &
-    WithFeatures
+    WithFeatures & { selfContext: string }
 ) => {
   const apiList: Array<SignalKApiId> = []
 
