@@ -119,9 +119,9 @@ The core image omits these packages — all declared in `package.json` `optional
 - Webapps: `@signalk/freeboard-sk`, `@signalk/instrumentpanel`, `@mxtommy/kip`, `@signalk/app-dock`
 - Plugins and bridges: `@signalk/set-system-time`, `@signalk/signalk-to-nmea0183`, `@signalk/udp-nmea-plugin`, `signalk-n2kais-to-nmea0183`, `signalk-to-nmea2000`
 
-What the core image ships: the Signal K server, the admin UI (`@signalk/server-admin-ui`) and its app store, serial-port support (`serialport`), `@signalk/server-api`, `@signalk/streams`, `@signalk/signalk-schema`, `@signalk/course-provider`, `@signalk/resources-provider`, and the NMEA0183 / NMEA2000 parser libraries (`@signalk/nmea0183-signalk`, `@signalk/n2k-signalk`).
+What the core image ships: the Signal K server, the admin UI (`@signalk/server-admin-ui`) and its app store, serial-port support (`serialport`), local Bluetooth support (`@naugehyde/node-ble`, `@jellybrick/dbus-next`), `@signalk/server-api`, `@signalk/streams`, `@signalk/signalk-schema`, `@signalk/course-provider`, `@signalk/resources-provider`, and the NMEA0183 / NMEA2000 parser libraries (`@signalk/nmea0183-signalk`, `@signalk/n2k-signalk`).
 
-The admin UI and `serialport` are themselves declared `optionalDependencies`, so `--omit=optional` strips them too — but the core image **reinstates** them, because neither can be added back at the config-directory layer: the server serves the admin UI from a fixed path inside its own install, and it `require`s `serialport` directly. (`serialport` stays optional rather than a hard dependency so direct npm installs degrade gracefully on platforms without prebuilt bindings.)
+The admin UI, `serialport`, and the Bluetooth packages are themselves declared `optionalDependencies`, so `--omit=optional` strips them too — but the core image **reinstates** them, because they cannot be added back at the config-directory layer: the server serves the admin UI from a fixed path inside its own install and it `require`s `serialport`, `node-ble`, and `dbus-next` directly. (`serialport` stays optional rather than a hard dependency so direct npm installs degrade gracefully on unsupported platforms.)
 
 ### App store and plugin installation
 
@@ -149,7 +149,7 @@ Both patterns install into the persisted config directory (`/home/node/.signalk`
 
 ### Behavioral change for non-Docker consumers
 
-The bundled webapps, plugins, the admin UI, and `serialport` are all declared in `optionalDependencies`, not `dependencies`. **Default `npm install` is unaffected** because npm installs optional deps by default — the full Docker image and direct-from-npm installs ship them all. A consumer passing `npm install signalk-server --omit=optional` (CI pipelines, security-conscious deployments, distros) gets a minimal headless server: no admin UI, no serial-port support, and none of the bundled webapps or plugins. The core Docker image starts from that minimal set and adds back the admin UI and `serialport` — the two that can't be installed later at the config-directory layer. To get everything, drop the `--omit=optional` flag.
+The bundled webapps, plugins, the admin UI, `serialport`, and local Bluetooth support are all declared in `optionalDependencies`, not `dependencies`. Standard npm installations include optional dependencies, as do the full Docker images. Installations configured to omit them are minimal headless servers: they have no admin UI, serial-port or local Bluetooth support, bundled webapps, or plugins. The core Docker image restores the admin UI, `serialport`, and the Bluetooth packages because they cannot be added at the config-directory layer.
 
 ## Development images
 
