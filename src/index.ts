@@ -41,6 +41,7 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
+import type { WithAlertsApi } from './api/alerts'
 import type { HistoryApiHttpRegistry } from './api/history'
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
@@ -835,6 +836,11 @@ class Server {
           historyApiHttpRegistry?: HistoryApiHttpRegistry
         }
       ).historyApiHttpRegistry?.stop()
+
+      // Closes the alert database and cancels the escalation, silence,
+      // liveness and retention timers. reload() starts a second manager on
+      // the same file otherwise.
+      await (this.app as unknown as WithAlertsApi).alertsApi?.stop()
 
       if (this.pendingSourceRefMigrations) {
         for (const handle of this.pendingSourceRefMigrations) {
