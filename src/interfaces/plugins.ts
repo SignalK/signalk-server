@@ -43,6 +43,10 @@ import {
   NotificationId,
   AlarmRaiseOptions,
   AlarmUpdateOptions,
+  AlertFilter,
+  AlertHistoryQuery,
+  AlertPriority,
+  RaiseAlertRequest,
   AccessScopedRouter,
   PluginRouter,
   RouteAccessLevel,
@@ -1036,6 +1040,30 @@ module.exports = (theApp: any) => {
       return courseApi.activeRoute(dest)
     }
 
+    // Each plugin gets its own shallow copy of `app`, so a surface one plugin
+    // attaches to its own copy is invisible to every other plugin. The alerts
+    // subsystem lives in core for exactly that reason.
+    appCopy.alerts = {
+      raise: (request: RaiseAlertRequest) =>
+        app.alertsApi.raise(request, plugin.id as SourceRef),
+      // Attributed to the plugin, not to a name the plugin picked: the audit
+      // trail has to say who acted, and a plugin is what acted.
+      acknowledge: (alertId: string) =>
+        app.alertsApi.acknowledge(alertId, plugin.id),
+      silence: (alertId: string, durationSeconds?: number) =>
+        app.alertsApi.silence(alertId, durationSeconds),
+      silenceAll: () => app.alertsApi.silenceAll(),
+      escalate: (alertId: string, priority: AlertPriority) =>
+        app.alertsApi.escalate(alertId, priority),
+      clearCondition: (alertId: string) =>
+        app.alertsApi.clearCondition(alertId, plugin.id as SourceRef),
+      list: (filter?: AlertFilter) => app.alertsApi.list(filter),
+      get: (alertId: string) => app.alertsApi.get(alertId),
+      getByPath: (path: Path, context?: Context) =>
+        app.alertsApi.getByPath(path, context),
+      history: (query?: AlertHistoryQuery) => app.alertsApi.history(query)
+    }
+
     appCopy.notifications = {
       list: () => app.notificationApi.list(),
       getId: (id: NotificationId) => app.notificationApi.getId(id),
@@ -1050,6 +1078,7 @@ module.exports = (theApp: any) => {
       acknowledge: (id: NotificationId) => app.notificationApi.acknowledge(id),
       acknowledgeAll: () => app.notificationApi.acknowledgeAll()
     }
+    delete (appCopy as any).alertsApi // expose only the plugin-specific methods
     delete (appCopy as any).notificationApi // expose only the plugin-specific methods
 
     try {
