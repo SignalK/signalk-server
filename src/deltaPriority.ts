@@ -611,11 +611,16 @@ export const getToPreferredDelta = (
             const canonicalSource = canonicalise(update.$source) as SourceRef
             update.values = update.values.reduce(
               (acc: any, pathValue: PathValue) => {
-                // Notifications are events, not measurements — never subject
-                // to source priority. Every source's notifications are
+                // Notifications and alerts are events, not measurements —
+                // never subject to source priority. Every source's events are
                 // delivered unchanged.
                 const p = pathValue.path as string
-                if (p === 'notifications' || p.startsWith('notifications.')) {
+                if (
+                  p === 'notifications' ||
+                  p.startsWith('notifications.') ||
+                  p === 'alerts' ||
+                  p.startsWith('alerts.')
+                ) {
                   acc.push(pathValue)
                   return acc
                 }
