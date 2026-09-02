@@ -297,6 +297,60 @@ describe('path-level displaces unknown incumbent', () => {
   })
 })
 
+describe('alerts bypass priority', () => {
+  const ALERT = 'alerts.propulsion.port.oilPressureLow'
+
+  it('an alert from a low-priority source is accepted', () => {
+    const pathConfig: SourcePrioritiesData = {
+      [ALERT]: [
+        { sourceRef: 'plotter' as SourceRef, timeout: 5000 },
+        { sourceRef: 'i70' as SourceRef, timeout: 5000 }
+      ]
+    }
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
+    const t = 1000000
+
+    toPreferred(makeDelta('plotter', ALERT, 1), new Date(t), 'self')
+    const r = toPreferred(makeDelta('i70', ALERT, 2), new Date(t + 1), 'self')
+    assert(
+      accepted(r),
+      'i70 alert accepted despite plotter being higher priority'
+    )
+  })
+
+  it('a path merely starting with the word alerts is still prioritised', () => {
+    // The bypass covers `alerts` and `alerts.*`. A path such as
+    // `alertsHistory.count` is an ordinary measurement, and a `startsWith`
+    // that dropped the dot would quietly exempt it.
+    const NEAR_MISS = 'alertsHistory.count'
+    const pathConfig: SourcePrioritiesData = {
+      [NEAR_MISS]: [
+        { sourceRef: 'plotter' as SourceRef, timeout: 5000 },
+        { sourceRef: 'i70' as SourceRef, timeout: 5000 }
+      ]
+    }
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
+    const t = 1000000
+
+    toPreferred(makeDelta('plotter', NEAR_MISS, 1), new Date(t), 'self')
+    const r = toPreferred(
+      makeDelta('i70', NEAR_MISS, 2),
+      new Date(t + 1),
+      'self'
+    )
+    assert(!accepted(r), 'a non-alert path must still obey source priority')
+  })
+
+  it('an alert from a disabled source is still accepted', () => {
+    const pathConfig: SourcePrioritiesData = {
+      [ALERT]: [{ sourceRef: 'i70' as SourceRef, timeout: -1 }]
+    }
+    const toPreferred = getToPreferredDelta({ overrides: pathConfig })
+    const r = toPreferred(makeDelta('i70', ALERT, 1), new Date(1000000), 'self')
+    assert(accepted(r), 'disabled source alert still accepted')
+  })
+})
+
 describe('notifications bypass priority', () => {
   const NOTI = 'notifications.instrument.NoFix'
 

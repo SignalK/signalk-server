@@ -220,6 +220,25 @@ describe('StalenessEnforcer', () => {
     expect(app.captured).to.have.lengthOf(0)
   })
 
+  it('skips alerts.* paths regardless of staleness', () => {
+    const app = makeMockApp({ defaultTimeout: 60 })
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'alerts.propulsion.port.oilPressureLow',
+      'alertsApi',
+      isoSecondsAgo(3600),
+      {
+        priority: 'alarm',
+        state: 'unacknowledged',
+        message: 'Oil pressure low'
+      }
+    )
+    const enforcer = makeEnforcer(app)
+    runTick(enforcer)
+    expect(app.captured).to.have.lengthOf(0)
+  })
+
   it('skips paths classified updateContract=event via shipped defaults', () => {
     const app = makeMockApp({ defaultTimeout: 60 })
     seedLeaf(
