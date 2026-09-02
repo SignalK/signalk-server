@@ -23,7 +23,7 @@ You do not have to install Signal K Server yourself. Several commercially availa
 ## Prerequisites
 
 > [!NOTE]
-> Signal K server requires [NodeJS](https://nodejs.org) version >= 22 (version 24 recommended) be installed on the target system.
+> Signal K server requires [NodeJS](https://nodejs.org) `>=22.13 <23` or `>=23.4` (version 24 recommended) be installed on the target system. The alerts subsystem uses the built-in `node:sqlite` module, which needs a flag on 23.0 to 23.3, so those releases are not supported.
 
 ## Getting Started
 
