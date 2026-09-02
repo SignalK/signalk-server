@@ -12,6 +12,7 @@ import { HistoryApiHttpRegistry, HistoryApplication } from './history'
 import { TrackApiHttpRegistry, TrackApplication } from './tracks'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 import { NotificationApi, NotificationApplication } from './notifications'
+import { AlertsApi, AlertsApplication } from './alerts'
 import {
   GnssOffsetCorrector,
   GnssCorrectorApplication
@@ -120,6 +121,11 @@ export const startApis = (
   ;(app as any).notificationApi = notificationApi
   apiList.push('notifications')
 
+  const alertsApi = new AlertsApi(app as AlertsApplication)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).alertsApi = alertsApi
+  apiList.push('alerts')
+
   const gnssOffsetCorrector = new GnssOffsetCorrector(
     app as GnssCorrectorApplication
   )
@@ -130,6 +136,17 @@ export const startApis = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).sensorsApi = sensorsApi
   apiList.push('sensors')
+
+  // Only the alerts API is awaited: it opens its store and restores the
+  // active set, and a plugin that raises an alert from its own start() would
+  // otherwise find the subsystem missing. Every other API registers its routes
+  // synchronously, so their timing is unchanged.
+  const alertsStarted = alertsApi.start().catch((error: Error) => {
+    // An alarm system that cannot persist must not come up quietly. The
+    // store's own message names the file and the way out.
+    console.error(error.message)
+    process.exit(1)
+  })
 
   Promise.all([
     resourcesApi.start(),
@@ -145,5 +162,5 @@ export const startApis = (
     sensorsApi.start(),
     bleApi.start()
   ])
-  return apiList
+  return alertsStarted.then(() => apiList)
 }
