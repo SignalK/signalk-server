@@ -12,20 +12,10 @@ import { IncomingMessage } from 'http'
 import { Duplex } from 'stream'
 import { Server as HttpServer } from 'http'
 import { Server as HttpsServer } from 'https'
-import { SecurityStrategy, WithSecurityStrategy } from '../../security'
+import { WithSecurityStrategy } from '../../security'
 import { binaryStreamManager, StreamPrincipal } from './binary-stream-manager'
 
 const debug = Debug('signalk:streams')
-
-/**
- * Extended security strategy with WebSocket authentication methods.
- * These methods are implemented by tokensecurity.js and dummysecurity.ts
- * but not declared in the base SecurityStrategy interface.
- */
-interface WebSocketSecurityStrategy extends SecurityStrategy {
-  shouldAllowWrite?: (request: IncomingMessage, requestType: string) => boolean
-  authorizeWS?: (request: IncomingMessage) => void
-}
 
 /**
  * Application with HTTP server for WebSocket upgrades
@@ -37,10 +27,7 @@ interface WithServer {
 /**
  * Application interface for binary stream initialization
  */
-interface StreamApplication
-  extends WithServer, Omit<WithSecurityStrategy, 'securityStrategy'> {
-  securityStrategy: WebSocketSecurityStrategy
-}
+interface StreamApplication extends WithServer, WithSecurityStrategy {}
 
 /**
  * Extended request with SignalK principal attached by security middleware.
@@ -133,35 +120,22 @@ export function initializeBinaryStreams(app: StreamApplication): void {
         }
         authRequest.query = Object.fromEntries(url.searchParams)
 
-        // Check if security is enabled
-        if (
-          app.securityStrategy &&
-          typeof app.securityStrategy.shouldAllowWrite === 'function'
-        ) {
+        if (app.securityStrategy.isDummy()) {
+          debug(
+            'Security disabled, allowing unauthenticated connection to stream: %s',
+            streamId
+          )
+          principal = { identifier: 'unauthenticated' }
+        } else {
           try {
-            // Security is enabled, perform authentication
-            if (app.securityStrategy.authorizeWS) {
-              app.securityStrategy.authorizeWS(request)
-              principal = authRequest.skPrincipal || { identifier: 'unknown' }
-            } else {
-              // Fallback: use shouldAllowWrite for basic auth check
-              if (!app.securityStrategy.shouldAllowWrite(request, 'streams')) {
-                throw new Error('Unauthorized')
-              }
-              principal = authRequest.skPrincipal || { identifier: 'unknown' }
-            }
+            app.securityStrategy.authorizeWS(request)
+            principal = authRequest.skPrincipal || { identifier: 'unknown' }
           } catch (error) {
-            debug(`Authentication failed for stream ${streamId}: ${error}`)
+            debug('Authentication failed for stream %s: %s', streamId, error)
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
             socket.destroy()
             return
           }
-        } else {
-          // Security is disabled, allow connection without authentication
-          debug(
-            `Security disabled, allowing unauthenticated connection to stream: ${streamId}`
-          )
-          principal = { identifier: 'unauthenticated' }
         }
 
         // Create WebSocket connection

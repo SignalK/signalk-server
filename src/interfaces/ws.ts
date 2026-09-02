@@ -22,12 +22,11 @@ import { getMetadata } from '@signalk/path-metadata'
 import {
   requestAccess,
   InvalidTokenError,
+  SecurityStrategy,
+  SkPrincipal,
   WithSecurityStrategy
 } from '../security'
-import {
-  LoginRateLimiter,
-  LOGIN_RATE_LIMIT_MESSAGE
-} from '../login-rate-limiter'
+import { LOGIN_RATE_LIMIT_MESSAGE } from '../login-rate-limiter'
 import { getSourceId } from '@signalk/server-api'
 import { WithConfig } from '../app'
 import {
@@ -74,10 +73,6 @@ function decrementIpCount(
   } else {
     ipConnectionCounts.delete(ip)
   }
-}
-
-interface SkPrincipal {
-  identifier: string
 }
 
 interface SignalKSparkRequest {
@@ -188,29 +183,6 @@ interface PathSources {
   [path: string]: {
     [source: string]: Spark
   }
-}
-
-interface SecurityStrategy {
-  canAuthorizeWS: () => boolean
-  authorizeWS: (req: Spark['request']) => void
-  verifyWS: (req: Spark['request']) => void
-  filterReadDelta: (
-    principal: SkPrincipal | undefined,
-    delta: Delta
-  ) => Delta | null
-  shouldAllowWrite: (req: Spark['request'], msg: WsMessage) => boolean
-  hasAdminAccess?: (req: Spark['request']) => boolean
-  supportsLogin: () => boolean
-  login: (
-    username: string,
-    password: string
-  ) => Promise<{
-    token?: string
-    statusCode: number
-    timeToLive?: number | null
-  }>
-  isDummy: () => boolean
-  loginRateLimiter?: LoginRateLimiter
 }
 
 interface SubscriptionManager {
@@ -843,6 +815,15 @@ function wsInterface(app: WsApp): WsApi {
   }
 
   function processLoginRequest(app: WsApp, spark: Spark, msg: WsMessage): void {
+    if (!app.securityStrategy.login) {
+      spark.write({
+        requestId: msg.requestId,
+        state: 'COMPLETED',
+        statusCode: 501,
+        message: 'Login is not supported'
+      })
+      return
+    }
     const rateLimiter = app.securityStrategy.loginRateLimiter
     if (rateLimiter) {
       const { allowed } = rateLimiter.check(spark.request._resolvedIp)
