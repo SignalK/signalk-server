@@ -5,6 +5,7 @@ import { IRouter, NextFunction, Request, Response } from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
 import { courseApiRecord } from './course/openApi'
+import { alertsApiRecord } from './alerts/openApi'
 import { notificationsApiRecord } from './notifications/openApi'
 import { resourcesApiRecord } from './resources/openApi'
 import { autopilotApiRecord } from './autopilot/openApi'
@@ -43,6 +44,7 @@ const apiDocs = [
   autopilotApiRecord,
   courseApiRecord,
   notificationsApiRecord,
+  alertsApiRecord,
   resourcesApiRecord,
   weatherApiRecord,
   securityApiRecord,
