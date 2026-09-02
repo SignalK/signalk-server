@@ -319,11 +319,20 @@ export function isProprietaryPGN(pgn: string | number): boolean {
 }
 
 /**
- * Temperature/humidity PGNs where the unique key is instance + source,
- * not just instance. Two devices sending the same PGN with the same
- * instance but different source types are NOT in conflict.
+ * Environmental PGNs where the unique key is the published SK leaf
+ * path, not the device instance. Two devices sending the same PGN with
+ * the same instance but different source types (or different populated
+ * fields, for the combined 130310/130311) are NOT in conflict.
  */
 const COMPOUND_KEY_PGNS = new Set([
+  // 130310/130311 (combined Environmental Parameters) carry no
+  // instance field at all, but their fixed fields route to disjoint SK
+  // paths (environment.water.temperature vs environment.outside.*), so
+  // the leaf-path comparison below is the only meaningful key — bare
+  // device instance would flag a sea-temp sender against an air-temp
+  // sender.
+  '130310', // Environmental Parameters (legacy combined)
+  '130311', // Environmental Parameters (combined, source enums)
   '130312', // Temperature
   '130313', // Humidity
   '130316' // Temperature Extended Range
