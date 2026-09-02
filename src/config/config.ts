@@ -191,7 +191,9 @@ export interface Config {
        * Applied whenever the provider is registered, so the default does
        * not depend on plugin load order. When the configured provider is
        * not registered (e.g. plugin disabled), the first registered
-       * provider serves as fallback. */
+       * provider serves as fallback. Set through the History API, or by
+       * the server itself when a provider registers while this key is
+       * absent and safeToPersistSettings is set. */
       defaultProvider?: string
     }
     notifications?: {

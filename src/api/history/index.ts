@@ -66,6 +66,15 @@ export class HistoryApiHttpRegistry {
    * the HISTORYPROVIDERS serverevent. */
   private unavailableGraceExpired = false
   private unavailableGraceTimer: ReturnType<typeof setTimeout> | null = null
+  /** True once a failed recording has been reported for this run. */
+  private recordFailureReported = false
+  /** The provider chosen as default whose write has not landed yet.
+   * Held across later registrations so a failed write is retried by the
+   * next one: without it the arrival of a second provider ends the
+   * attempts, and the default reverts to registration order on every
+   * start. Cleared when that provider unregisters, since recording a
+   * provider that has gone would be worse than the fallback. */
+  private pendingDefaultProviderId?: string
   proxy: HistoryApi
 
   /** The configured provider when it is registered, otherwise the first
@@ -85,7 +94,15 @@ export class HistoryApiHttpRegistry {
     private app: HistoryApplication,
     private unavailableGraceMs: number = UNAVAILABLE_GRACE_MS
   ) {
-    this.configuredProviderId = app.config.settings.historyApi?.defaultProvider
+    // No supported path writes an empty id — the POST route rejects a
+    // falsy one — so an empty value comes from a hand-edited file and
+    // means nothing was chosen. Reading it as absent keeps every
+    // consumer agreeing: defaultProviderId and the notification already
+    // test truthiness, while the grace window and the state event tested
+    // for undefined, so an empty id armed the window and the Admin UI
+    // reported a default named "" as unavailable.
+    this.configuredProviderId =
+      app.config.settings.historyApi?.defaultProvider || undefined
     this.proxy = {
       getValues: (query: ValuesRequest): Promise<ValuesResponse> => {
         return this.defaultProvider().getValues(query)
@@ -128,6 +145,7 @@ export class HistoryApiHttpRegistry {
       this.unavailableGraceExpired = false
       this.notifyConfiguredAvailable()
     }
+    this.recordDefaultIfUnconfigured(pluginId)
     this.emitProvidersState()
     debug(
       `Registered history api provider ${pluginId},`,
@@ -136,11 +154,66 @@ export class HistoryApiHttpRegistry {
     )
   }
 
+  /** Persist the first provider to register when settings name none.
+   *
+   * Unrecorded, the default is resolved from registration order on
+   * every start, and `startPlugins` does not await `start()`: a plugin
+   * that registers once its database answers loses the slot to one that
+   * registers from `start()` itself. Recording it makes the first
+   * outcome the lasting one, so a provider installed later cannot take
+   * the default from the one already serving.
+   */
+  private recordDefaultIfUnconfigured(pluginId: string): void {
+    if (this.configuredProviderId !== undefined) {
+      return
+    }
+    if (!this.app.config.safeToPersistSettings) {
+      debug.enabled &&
+        debug(
+          `Not recording ${pluginId}: settings are not the configured state`
+        )
+      return
+    }
+    if (this.pendingDefaultProviderId === undefined) {
+      // Only the first provider claims the slot; later ones just give a
+      // failed write another chance at the one already claimed.
+      if (this.historyProviders.size !== 1) {
+        return
+      }
+      this.pendingDefaultProviderId = pluginId
+    }
+    const candidate = this.pendingDefaultProviderId
+    this.saveConfiguredProvider(candidate, (err?: Error) => {
+      if (!err) {
+        this.pendingDefaultProviderId = undefined
+        return
+      }
+      // A plugin that reconnects in a loop registers each time, and
+      // console.error reaches the 100-entry log ring the admin UI
+      // subscribes to. Reporting every attempt would push out the
+      // plugin errors that explain the loop, so the retry stays and
+      // only the first report does.
+      if (!this.recordFailureReported) {
+        this.recordFailureReported = true
+        console.error(
+          `Failed to record ${candidate} as the default history provider:`,
+          err.message
+        )
+      } else {
+        debug.enabled &&
+          debug(`Failed to record ${candidate} again: ${err.message}`)
+      }
+    })
+  }
+
   unregisterHistoryApiProvider(pluginId: string): void {
     if (!pluginId || !this.historyProviders.has(pluginId)) {
       return
     }
     this.historyProviders.delete(pluginId)
+    if (pluginId === this.pendingDefaultProviderId) {
+      this.pendingDefaultProviderId = undefined
+    }
     if (pluginId === this.configuredProviderId) {
       this.armUnavailableGrace()
     }
