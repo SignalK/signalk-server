@@ -25,6 +25,7 @@ export * as history from './history'
 export * as typebox from './typebox'
 /** @category Notifications API */
 export * from './notificationsapi'
+export * from './alertsapi'
 export { FullSignalK, SourceMetaEntry } from './fullsignalk'
 export { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
 
