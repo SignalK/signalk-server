@@ -39,6 +39,7 @@ import {
   UpdateOptions
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
+import type { DeviceTracker } from '../deviceTracker'
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -115,6 +116,7 @@ interface Spark {
   sentMetaData: Record<string, boolean>
   backpressureManager?: BackpressureManager
   skPendingAccessRequest?: boolean
+  skTrackedDeviceId?: string
   logUnsubscribe?: () => void
   onDisconnects: Array<() => void>
   hasServerEvents?: boolean
@@ -293,6 +295,7 @@ interface WsApp {
   handleMessage: (source: string, msg: WsMessage) => void
   setProviderError: (provider: string, message: string) => void
   getHello: () => Record<string, unknown>
+  deviceTracker?: DeviceTracker
 }
 
 interface WsApi {
@@ -536,6 +539,8 @@ function wsInterface(app: WsApp): WsApi {
             `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'})`
           )
 
+          trackDeviceConnect(app, spark)
+
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
           // An editor needs to tell a path-specific display unit override
           // from the preset's setting; nothing else does, so it comes only
@@ -680,6 +685,10 @@ function wsInterface(app: WsApp): WsApi {
               `${spark.id} end ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId}`
             )
 
+            if (spark.skTrackedDeviceId && app.deviceTracker) {
+              app.deviceTracker.onDisconnect(spark.skTrackedDeviceId)
+            }
+
             unsubscribes.forEach((unsubscribe) => unsubscribe())
 
             Object.keys(pathSources).forEach((path) => {
@@ -820,6 +829,7 @@ function wsInterface(app: WsApp): WsApi {
               spark.request.source =
                 'ws.' +
                 spark.request.skPrincipal!.identifier.replace(/\./g, '_')
+              trackDeviceConnect(app, spark)
             }
           }
           spark.write(res)
@@ -863,6 +873,7 @@ function wsInterface(app: WsApp): WsApi {
         if (reply.token) {
           spark.request.token = reply.token
           app.securityStrategy.authorizeWS(spark.request)
+          trackDeviceConnect(app, spark)
         }
         spark.write({
           requestId: msg.requestId,
@@ -1230,6 +1241,26 @@ function processUnsubscribe(
 
 const isSelfSubscription = (query: Spark['query']): boolean =>
   !query.subscribe || query.subscribe === 'self'
+
+// A connection may authenticate after the upgrade (login or access-request
+// messages), so device tracking keys on the spark, not on the principal
+// captured at connect time. The anonymous allow_readonly principal (AUTO)
+// is not a device identity: it is skipped, and a later real authentication
+// on the same socket re-keys the tracked connection.
+function trackDeviceConnect(app: WsApp, spark: Spark): void {
+  const principalId = spark.request.skPrincipal?.identifier
+  if (!principalId || principalId === 'AUTO' || !app.deviceTracker) {
+    return
+  }
+  if (spark.skTrackedDeviceId === principalId) {
+    return
+  }
+  if (spark.skTrackedDeviceId) {
+    app.deviceTracker.onDisconnect(spark.skTrackedDeviceId)
+  }
+  spark.skTrackedDeviceId = principalId
+  app.deviceTracker.onConnect(principalId, spark.request._resolvedIp)
+}
 
 function handleVerifyWSError(spark: Spark, error: Error): void {
   if (!spark.skPendingAccessRequest) {
