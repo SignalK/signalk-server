@@ -110,24 +110,17 @@ export class TrackApiHttpRegistry {
         return
       }
       debug.enabled && debug(JSON.stringify(request, null, 2))
-      // Selection stays inside respondWith's guard: naming a provider that does
-      // not exist throws, and that has to stay a 400 rather than escaping as an
-      // unhandled error. The chosen id is captured for provenance on the way
-      // through.
-      let selectedId: string | undefined
-      void respondWith(
-        () => {
-          const selected = this.selectProvider(req)
-          selectedId = selected?.id
-          return selected?.provider
-        },
+      void respondWithAll(
+        () => this.selectProviders(req),
         // geometry=false is a listing rather than a different resource: the
         // provider still decides which contexts match, it just omits the
         // coordinates it would otherwise have to read and thin.
-        (provider) =>
-          provider
-            .getTracks(request)
-            .then((response) => stampProvider(response, selectedId)),
+        ({ id, provider }) =>
+          provider.getTracks(request).then((r) => stampProvider(r, id)),
+        (responses) => ({
+          type: 'FeatureCollection' as const,
+          features: responses.flatMap((r) => r.features)
+        }),
         res
       )
     })
@@ -140,9 +133,14 @@ export class TrackApiHttpRegistry {
           res.status(400).json({ error: errors.join(', ') })
           return
         }
-        void respondWith(
-          () => this.useProvider(req),
-          (provider) => provider.getTrackContexts(request),
+        void respondWithAll(
+          () => this.selectProviders(req),
+          ({ provider }) => provider.getTrackContexts(request),
+          // Deduplicated: the same vessel may be recorded by more than one
+          // provider, and a listing of which contexts exist should name each
+          // once. The tracks themselves stay separate, since two providers
+          // genuinely hold two recordings.
+          (lists) => [...new Set(lists.flat())],
           res
         )
       }
@@ -156,30 +154,33 @@ export class TrackApiHttpRegistry {
     throw new Error('No track api provider configured')
   }
 
-  private useProvider(req: Request): TrackProvider | undefined {
-    return this.selectProvider(req)?.provider
-  }
-
   /**
-   * The provider that will answer, and the id it is registered under.
+   * The providers that will answer, and the ids they are registered under.
    *
-   * The id comes from the registry rather than from the provider, so a
-   * provider never has to name itself and cannot name itself wrongly.
+   * Every registered provider unless `?provider=` names one. Two providers can
+   * legitimately hold tracks for the same vessel — one recording AIS, another
+   * the own vessel, or the same passage imported twice — so their responses are
+   * concatenated rather than merged, and each feature carries the id of the
+   * provider that produced it.
+   *
+   * Ids come from the registry rather than from the providers, so a provider
+   * never has to name itself and cannot name itself wrongly.
    */
-  private selectProvider(
+  private selectProviders(
     req: Request
-  ): { id: string; provider: TrackProvider } | undefined {
+  ): { id: string; provider: TrackProvider }[] {
     if (req.query.provider) {
       const id = req.query.provider as string
       const provider = this.trackProviders.get(id)
       if (!provider) {
         throw new Error(`Requested provider not found! (${id})`)
       }
-      return { id, provider }
+      return [{ id, provider }]
     }
-    const id = this.defaultProviderId
-    const provider = id ? this.trackProviders.get(id) : undefined
-    return id && provider ? { id, provider } : undefined
+    return [...this.trackProviders.entries()].map(([id, provider]) => ({
+      id,
+      provider
+    }))
   }
 }
 
@@ -206,29 +207,40 @@ function stampProvider(
   }
 }
 
-async function respondWith<T>(
-  getProvider: () => TrackProvider | undefined,
-  handler: (provider: TrackProvider) => Promise<T> | undefined,
+/**
+ * Query every selected provider and combine what they return.
+ *
+ * Providers are queried concurrently: one being slow makes that provider slow,
+ * which is its own business, and serialising them would make the response as
+ * slow as the sum rather than the slowest.
+ *
+ * A provider that throws fails the request rather than being dropped from a
+ * partial answer, because a client cannot tell a provider that failed from one
+ * that simply had no data in the window.
+ */
+async function respondWithAll<T, R>(
+  select: () => { id: string; provider: TrackProvider }[],
+  query: (selected: { id: string; provider: TrackProvider }) => Promise<T>,
+  combine: (results: T[]) => R,
   res: Response
 ) {
-  // Provider selection and the provider call fail for different reasons and
-  // must not share a status. Naming a provider that does not exist is a client
-  // error; a provider throwing is a server fault, and its message can carry
-  // file paths, connection strings or SQL, so it is logged rather than
-  // returned.
-  let provider: TrackProvider | undefined
+  // Selection and the provider calls fail for different reasons and must not
+  // share a status: naming a provider that does not exist is a client error,
+  // while a provider throwing is a server fault whose message can carry file
+  // paths, connection strings or SQL.
+  let selected: { id: string; provider: TrackProvider }[]
   try {
-    provider = getProvider()
+    selected = select()
   } catch (error) {
     return res.status(400).json({
       error: error instanceof Error ? error.message : 'Invalid request'
     })
   }
-  if (!provider) {
+  if (selected.length === 0) {
     return res.status(501).json({ error: 'No track api provider configured' })
   }
   try {
-    res.json(await handler(provider))
+    res.json(combine(await Promise.all(selected.map(query))))
   } catch (error) {
     console.error('Track api provider failed:', error)
     res.status(500).json({ error: 'Track api provider failed' })

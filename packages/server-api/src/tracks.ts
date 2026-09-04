@@ -121,9 +121,9 @@ export interface TrackProperties {
    * Which registered provider answered for this track.
    *
    * Set by the server from the registry, so a provider neither has to name
-   * itself nor can name itself wrongly. Provenance only today, with a single
-   * provider answering any one query; it is what would let a client tell
-   * features apart if that ever changes.
+   * itself nor can name itself wrongly. Every registered provider is queried
+   * and their features concatenated, so a vessel recorded by two of them
+   * yields two features, and this is what tells them apart.
    */
   providerId?: string
 

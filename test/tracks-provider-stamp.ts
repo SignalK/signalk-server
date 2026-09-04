@@ -28,23 +28,27 @@ describe('Track API provider stamping', () => {
     }
   })
 
-  const provider = () => ({
+  const provider = (contexts: string[] = ['vessels.a']) => ({
     getTracks: () =>
       Promise.resolve({
         type: 'FeatureCollection' as const,
-        features: [track('vessels.a' as Context)]
+        features: contexts.map((c) => track(c as Context))
       }),
-    getTrackContexts: () => Promise.resolve([])
+    getTrackContexts: () => Promise.resolve(contexts.map((c) => c as Context))
   })
 
   let server: Server | undefined
   let base = ''
 
-  const serve = async () => {
+  const serve = async (
+    providers: Record<string, string[]> = { testprovider: ['vessels.a'] }
+  ) => {
     const app = express()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const registry = new TrackApiHttpRegistry(app as any)
-    registry.registerTrackApiProvider('testprovider', provider())
+    for (const [id, contexts] of Object.entries(providers)) {
+      registry.registerTrackApiProvider(id, provider(contexts))
+    }
     await registry.start()
     await new Promise<void>((resolve) => {
       server = app.listen(0, () => resolve())
@@ -101,5 +105,70 @@ describe('Track API provider stamping', () => {
     const body = (await res.json()) as { error: string }
 
     expect(body.error).to.match(/Requested provider not found/)
+  })
+
+  /**
+   * Fan-out across providers.
+   *
+   * Every registered provider answers and their features are concatenated
+   * verbatim rather than merged: two providers recording the same vessel hold
+   * two recordings, not one, and the server has no basis for reconciling them.
+   * Confirmed by @tkurki in the design discussion.
+   */
+  describe('Track API provider fan-out', () => {
+    const TWO = { alpha: ['vessels.a'], beta: ['vessels.b'] }
+
+    const tracksFrom = async (query = 'duration=PT1H') => {
+      const res = await fetch(`${base}/signalk/v2/api/tracks?${query}`)
+      expect(res.status).to.equal(200)
+      return (await res.json()) as {
+        features: { properties: { context: string; providerId?: string } }[]
+      }
+    }
+
+    it('concatenates features from every provider', async () => {
+      await serve(TWO)
+      const body = await tracksFrom()
+
+      expect(body.features).to.have.length(2)
+      expect(
+        body.features.map((f) => f.properties.providerId).sort()
+      ).to.deep.equal(['alpha', 'beta'])
+    })
+
+    it('keeps two recordings of one vessel separate', async () => {
+      // Not merged: the same passage imported twice, or one provider recording
+      // AIS while another records own vessel, are genuinely two recordings.
+      await serve({ alpha: ['vessels.a'], beta: ['vessels.a'] })
+      const body = await tracksFrom()
+
+      expect(body.features).to.have.length(2)
+      expect(
+        body.features.every((f) => f.properties.context === 'vessels.a')
+      ).to.equal(true)
+      expect(
+        body.features.map((f) => f.properties.providerId).sort()
+      ).to.deep.equal(['alpha', 'beta'])
+    })
+
+    it('queries only the named provider when one is given', async () => {
+      await serve(TWO)
+      const body = await tracksFrom('provider=alpha&duration=PT1H')
+
+      expect(body.features).to.have.length(1)
+      expect(body.features[0]?.properties.providerId).to.equal('alpha')
+    })
+
+    it('names each context once in the contexts listing', async () => {
+      // The tracks stay separate, but a listing of which contexts exist should
+      // not repeat a vessel because two providers both recorded it.
+      await serve({ alpha: ['vessels.a'], beta: ['vessels.a'] })
+      const res = await fetch(
+        `${base}/signalk/v2/api/tracks/contexts?duration=PT1H`
+      )
+      expect(res.status).to.equal(200)
+
+      expect(await res.json()).to.deep.equal(['vessels.a'])
+    })
   })
 })

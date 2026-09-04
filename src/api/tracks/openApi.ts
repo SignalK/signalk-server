@@ -274,7 +274,7 @@ const tracksApiDoc = {
         name: 'provider',
         in: 'query',
         description:
-          'Query a specific track provider rather than the default one.',
+          'Query only this provider. Without it every registered provider is queried and their features concatenated, each carrying the providerId that produced it.',
         schema: { type: 'string' }
       }
     }
@@ -285,7 +285,8 @@ const tracksApiDoc = {
         tags: ['tracks'],
         summary: 'Retrieve recorded tracks',
         description:
-          'Returns a GeoJSON FeatureCollection, one Feature per context.\n\n' +
+          'Returns a GeoJSON FeatureCollection.\n\n' +
+          'Every registered provider is queried and their features concatenated verbatim, so two providers recording the same vessel yield two features for it rather than one merged track — they are two recordings, and each carries the providerId that produced it. Use the provider parameter to query one.\n\n' +
           'A time window is required unless a single context is given: `?context=self` with no window is a legitimate request for an entire recorded history, while the same query across every vessel a server has seen is not.',
         parameters: [
           { $ref: '#/components/parameters/Contexts' },
