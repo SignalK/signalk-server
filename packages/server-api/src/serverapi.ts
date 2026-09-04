@@ -14,6 +14,7 @@ import {
 import { RadarProviderRegistry, WithRadarApi } from './radarapi'
 import { CourseApi } from './course'
 import { HistoryProviderRegistry, WithHistoryApi } from './history'
+import { TrackProviderRegistry, WithTrackApi } from './tracks'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
 import type { WebSocket } from 'ws'
@@ -85,6 +86,8 @@ export interface ServerAPI
     BLEProviderRegistry,
     WithHistoryApi,
     HistoryProviderRegistry,
+    TrackProviderRegistry,
+    WithTrackApi,
     WithFeatures,
     CourseApi,
     WithNotificationsApi,
