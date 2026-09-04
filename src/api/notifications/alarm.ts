@@ -100,10 +100,7 @@ export class Alarm {
 
     this.parseDelta(update, context)
 
-    if (
-      prevState === ALARM_STATE.normal &&
-      this.value.state !== ALARM_STATE.normal
-    ) {
+    if (prevState !== this.value.state){
       this.status.acknowledged = false
       delete this.status.acknowledgedAt
       this.status.silenced = false
