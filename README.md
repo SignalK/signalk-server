@@ -80,56 +80,46 @@ There is a [Signal K Server FAQ Frequently Asked Questions](https://github.com/S
 
 ## How to get Signal K Server?
 
-For the typical boater, not being a software developer nor electrical engineer, the best option is to get a (commercially available) product that already has Signal K Server inside. These are the currently available devices:
+Signal K Server is a server application written in Node.js. There are several methods to get it:
 
-- [HALPI2](https://shop.hatlabs.fi/products/halpi2-computer) by Hat Labs, a Raspberry Pi Compute Module 5 boat computer with Signal K Server preconfigured
-- [Cerbo GX](https://www.victronenergy.com/panel-systems-remote-monitoring/cerbo-gx) and other GX Devices by Victron Energy ([see Venus OS Large manual](https://www.victronenergy.com/live/venus-os:large))
-- [SmartBoat module](https://www.airmar.com/Catalog/SmartBoat-SmartFlex) by Airmar
+- npm install: install Node.js and install the server module from [npm](https://en.wikipedia.org/wiki/Npm)
+- container install: install Docker or Podman and Signal K server container
+- Linux image: download and install a Linux distro with preinstalled Signal K
+- commercial device: purchase a commercial device that has Signal K option
 
-For a more technical DIY oriented boater, a RaspberryPi based setup offers a very cost-attractive alternative.
-Read [this FAQ entry](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus) to learn how to connect a RaspberryPi to an NMEA2000 network.
+### npm install
 
-These prebuilt images for RaspberryPis take away most of the complexity involved from the software side:
+You will need to install or update Node.js and then the server itself from npm (Node package registry).
+
+- One-liner: `sudo npm install -g signalk-server && sudo signalk-server-setup`
+- [Installation on a RaspberryPi](./docs/installation/raspberry_pi_installation.md) - with more details, applicable also to other Linux environments
+- [Windows installer](https://github.com/SignalK/signalk-server-windows)
+
+### Container install
+
+Signal K Server container images include everything needed for running the server. This makes updates easier as you can install a new server version in one go, without updating Node.js or the host operating system separately. On the other hand you need to have a container runtime, such as Docker or Podman. Container install allows also running easily additional services such as databases or data visualisation tools.
+
+- [Docker quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#quickstart)
+- [Universal Installer](https://github.com/dirkwa/signalk-universal-installer#quick-start) - a single command, cross-platform installer to install Signal K Server with associated utility images
+- [Kubernetes quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/kubernetes/README.md#quickstart)
+
+### Linux image
+
+You can download and install these prebuilt Raspberry Pi images that include Signal K.
 
 - [Halos](https://docs.halos.fi/getting-started/choosing-an-image/) by Hat Labs, whose Marine images include Signal K Server
 - [BBN Marine OS](https://github.com/bareboat-necessities/lysmarine_gen#what-is-lysmarine-bbn-edition)
 - [OpenPlotter](https://openmarine.net/openplotter) by OpenMarine
-- [Venus OS for RaspberryPis](https://github.com/victronenergy/venus/wiki/raspberrypi-install-venus-image) by Victron Energy
+- [Venus OS for Raspberry Pis (large image)](https://github.com/victronenergy/venus/wiki/raspberrypi-install-venus-image) by Victron Energy
 - [AvNav Headless/Touch](https://github.com/free-x/AvNav-Image)
 
-You can run Signal K Server in Docker:
+### Commercial device
 
-- [Docker quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#quickstart)
-- For minimal deployments without the bundled webapps/plugins, see the [core image variant](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#core-image-variant)
+There are several commercial devices for boat networking & interfacing with marine electronics that have a Signal K option:
 
-Or in a Kubernetes cluster:
-
-- [Kubernetes quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/kubernetes/README.md#quickstart)
-
-And an installer for Windows:
-
-- [https://github.com/SignalK/signalk-server-windows](https://github.com/SignalK/signalk-server-windows)
-
-Another level up, this document explains how to install Signal K Server, as well as its dependencies, on a RaspberryPi that is already running Raspberry Pi OS:
-
-- [Installation on a RaspberryPi](./docs/installation/raspberry_pi_installation.md)
-
-Last, here is how to install the Signal K Server application from NPM:
-
-Prerequisites:
-
-- Node.js version 24 with latest npm installed
-
-  $ sudo npm install -g signalk-server
-
-Now you can start the server with sample data:
-
-- NMEA0183 sample data: `signalk-server --sample-nmea0183-data`
-- NMEA2000 sample data: `signalk-server --sample-n2k-data`
-
-To generate your own vessel settings file and configure the server to start automatically, run:
-
-    $ sudo signalk-server-setup
+- [HALPI2](https://shop.hatlabs.fi/products/halpi2-computer) by Hat Labs, a Raspberry Pi Compute Module 5 boat computer with Signal K Server preconfigured
+- [Cerbo GX](https://www.victronenergy.com/panel-systems-remote-monitoring/cerbo-gx) and other GX Devices by Victron Energy ([see Venus OS Large manual](https://www.victronenergy.com/live/venus-os:large))
+- [SmartBoat module](https://www.airmar.com/Catalog/SmartBoat-SmartFlex) by Airmar
 
 ## Configuration and use
 
