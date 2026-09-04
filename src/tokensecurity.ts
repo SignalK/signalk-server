@@ -771,7 +771,10 @@ function tokenSecurityFactory(
       '/webapps',
       '/availablePaths',
       '/hasAnalyzer',
-      '/skServer/inputTest'
+      '/inputTest',
+      '/nodeInfo',
+      '/debugKeys',
+      '/paths'
     ].forEach((p) =>
       app.use(`${SERVERROUTESPREFIX}${p}`, http_authorize(false))
     )
