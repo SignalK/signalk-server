@@ -2,6 +2,7 @@
 title: REST APIs
 children:
   - conventions.md
+  - alerts_api.md
   - autopilot_api.md
   - course_api.md
   - history_api.md
@@ -26,6 +27,7 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 
 | API                                       | Description                                                                                                                                          | Endpoint                             |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| [`Alerts`](./alerts_api.md)               | Manage the lifecycle of alerts: raise, acknowledge, silence, escalate, resolve.                                                                      | `alerts`                             |
 | [`Autopilot`](./autopilot_api.md)         | Provide the ability to send common commands to an autopilot via a provider plugin.                                                                   | `vessels/self/autopilot`             |
 | [Course](./course_api.md)                 | Set a course, follow a route, advance to next point, etc.                                                                                            | `vessels/self/navigation/course`     |
 | [History](./history_api.md)               | Query historical data.                                                                                                                               | `history`                            |
