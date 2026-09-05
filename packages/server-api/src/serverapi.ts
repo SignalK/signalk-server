@@ -9,7 +9,8 @@ import {
   Delta,
   MetaValue,
   WithResourcesApi,
-  WithNotificationsApi
+  WithNotificationsApi,
+  WithAlertsApi
 } from '.'
 import { RadarProviderRegistry, WithRadarApi } from './radarapi'
 import { CourseApi } from './course'
@@ -88,6 +89,7 @@ export interface ServerAPI
     WithFeatures,
     CourseApi,
     WithNotificationsApi,
+    WithAlertsApi,
     SelfIdentity {
   /**
    * Returns the entry for the provided path starting from `vessels.self` in the full data model.
