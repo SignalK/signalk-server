@@ -1000,7 +1000,7 @@ The URL is constructed by convention from the host serving the radar list:
 
 ### Connection Logic
 
-This a Javascript example how to set up the connection to receive spokes. It returns the
+This is a JavaScript example of how to set up the connection to receive spokes. It returns the
 socket so the caller can close it when the radar is no longer displayed (see
 [Subscribe only while displaying](#subscribe-only-while-displaying)):
 
