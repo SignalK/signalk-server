@@ -83,6 +83,12 @@ Different manufacturers have vastly different hardware capabilities, control set
 1. **Capabilities** — hardware capabilities (Doppler, dual-range, no-transmit zones, supported ranges)
 2. **Controls** — schema for each control (type, valid values, modes, read-only status)
 
+A provider also treats the spoke stream's subscribers as the measure of whether anyone is
+watching a radar, and may let an unwatched radar stand down. A plugin that relays spokes from
+another provider — a proxy in front of mayara-server, say — must therefore hold its own
+upstream subscription only while it has subscribers of its own; see
+[Subscribe only while displaying](#subscribe-only-while-displaying).
+
 ## Control Categories
 
 | Category       | Description                  | Examples                                           |
@@ -1021,6 +1027,28 @@ async function connectToSpokes() {
   }
 }
 ```
+
+### Subscribe only while displaying
+
+An open spoke stream tells the provider that someone is watching the radar. A provider may
+use that to stop holding an unwatched radar up: mayara-server, for instance, lets a radar
+stand down once nobody has subscribed to its spokes for the period set by its `autoStandby`
+control (a minute by default), so that a headless installation does not keep the magnetron
+transmitting for nobody. Control PUTs and REST reads do not count as watching — only the
+spoke stream does.
+
+So a client must open the spoke stream only while it is actually displaying the radar, and
+close it as soon as it stops — when the radar view is hidden, not merely when the page is
+closed. A subscription held open "just in case" keeps the radar transmitting.
+
+The same rule applies one level up. A provider plugin that relays spokes from another
+source (the mayara-server plugin, or an app-specific bridge such as an ORCA emulator)
+must hold its upstream subscription only while it has subscribers itself, and close it
+when the last one leaves. On the server side `app.binaryStreamManager.getClientCount('radars/{id}')`
+gives the number of clients currently subscribed to a radar's spoke stream; poll it and
+connect on the first subscriber, disconnect after the last. A relay that stays subscribed
+around the clock hides every downstream client from the provider, and the radar never
+stands down.
 
 ### Spoke content and the legend
 
