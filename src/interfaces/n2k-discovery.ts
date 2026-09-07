@@ -25,7 +25,7 @@ import {
   buildPgnSourceKeysFromTree
 } from '../n2k-discovery-instances'
 import { isDeviceStale, ONLINE_THRESHOLD_MS } from '../n2k-discovery-staleness'
-import { WithConfig } from '../app'
+import { WithConfig } from '../config/config'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 

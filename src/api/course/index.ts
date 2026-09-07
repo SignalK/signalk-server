@@ -5,7 +5,8 @@ const debug = createDebug('signalk-server:api:course')
 import { IRouter, Request, Response } from 'express'
 import _ from 'lodash'
 
-import { SignalKMessageHub, WithConfig } from '../../app'
+import { SignalKMessageHub } from '../../app'
+import { WithConfig } from '../../config/config'
 import { Context, Path, getSourceId } from '@signalk/server-api'
 import { WithSecurityStrategy } from '../../security'
 

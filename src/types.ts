@@ -2,7 +2,7 @@
 import { ServerAPI, WithContext, FullSignalK } from '@signalk/server-api'
 import { SecurityStrategy } from './security'
 import type { StalenessEnforcer } from './staleness'
-import { WithConfig } from './app'
+import { WithConfig } from './config/config'
 
 export interface HelloMessage {
   name: string

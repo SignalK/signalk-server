@@ -24,7 +24,7 @@ import _ from 'lodash'
 import path from 'path'
 import semver from 'semver'
 import { v4 as uuidv4 } from 'uuid'
-import { ServerApp, SignalKMessageHub, WithConfig } from '../app'
+import { ServerApp, SignalKMessageHub } from '../app'
 import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
@@ -207,6 +207,15 @@ export interface Config {
     }
   }
   defaults: object
+}
+
+export interface WithConfig {
+  config: Config
+  /** Persist a scoped settings change, committing to `config.settings`
+   * only after the file write succeeds. See `applySettingsUpdate`. */
+  updateSettings: (
+    update: SettingsMutator | SettingsKeyUpdate[]
+  ) => Promise<void>
 }
 
 export interface ConfigApp extends ServerApp, WithConfig, SignalKMessageHub {

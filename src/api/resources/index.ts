@@ -18,7 +18,8 @@ import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
 import { validate } from './validate'
-import { SignalKMessageHub, WithConfig } from '../../app'
+import { SignalKMessageHub } from '../../app'
+import { WithConfig } from '../../config/config'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 

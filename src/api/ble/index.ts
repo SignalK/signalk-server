@@ -11,7 +11,8 @@ import {
   BLEMacParamSchema
 } from '@signalk/server-api/typebox'
 import { WithSecurityStrategy } from '../../security'
-import { SignalKMessageHub, WithConfig } from '../../app'
+import { SignalKMessageHub } from '../../app'
+import { WithConfig } from '../../config/config'
 import WebSocket from 'ws'
 import { LocalBLEProvider } from './localProvider'
 import { createBluetoothSafe } from './safeBluetooth'

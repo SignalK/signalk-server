@@ -1,5 +1,6 @@
 import { IRouter } from 'express'
-import { SignalKMessageHub, WithConfig } from '../app'
+import { SignalKMessageHub } from '../app'
+import { WithConfig } from '../config/config'
 import { WithSecurityStrategy } from '../security'
 import { CourseApi, CourseApplication } from './course'
 import { FeaturesApi } from './discovery'

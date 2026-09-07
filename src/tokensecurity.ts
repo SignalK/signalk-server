@@ -78,7 +78,8 @@ import {
 } from './oidc'
 import { SERVERROUTESPREFIX } from './constants'
 import { ICallback } from './types'
-import { ServerApp, SignalKMessageHub, WithConfig } from './app'
+import { ServerApp, SignalKMessageHub } from './app'
+import { WithConfig } from './config/config'
 
 const debug = createDebug('signalk-server:tokensecurity')
 
