@@ -676,6 +676,17 @@ function readSettingsFile(app: ConfigApp) {
   }
 }
 
+// Serialises whole settings updates end to end. Every update runs one at a
+// time on this queue: the draft clone/build, the file write and the
+// in-memory commit all happen within a single turn, so the next update only
+// starts after the previous one has committed. Without this, concurrent
+// callers each snapshot app.config.settings at call time while an earlier
+// write is still in flight — two updates to different keys would each
+// stringify a full payload missing the other's change and the last write to
+// land would clobber it on disk (and the whole-settings form would clobber
+// it in memory too).
+let settingsUpdateQueue: Promise<void> = Promise.resolve()
+
 // Scoped, promise-based settings persistence. Callers describe the part of
 // settings they want changed; this owns the clone, the file write and the
 // commit into app.config.settings.
@@ -691,6 +702,24 @@ function readSettingsFile(app: ConfigApp) {
 // that the in-memory commit happens only after both writes are attempted and
 // settings.json lands.
 export function applySettingsUpdate(
+  app: ConfigApp,
+  update: SettingsMutator | SettingsKeyUpdate[]
+): Promise<void> {
+  const run = () => performSettingsUpdate(app, update)
+  const done = settingsUpdateQueue.then(run, run)
+  // Reset settingsUpdateQueue to a promise that resolves after this update completes,
+  // no matter if it succeeds or fails.
+  settingsUpdateQueue = done.then(
+    () => undefined, // success
+    () => undefined // failure
+  )
+  return done
+}
+
+// Derives its draft from the current app.config.settings; only ever invoked
+// from the serialised queue in applySettingsUpdate, so that read is never
+// stale relative to an in-flight write.
+function performSettingsUpdate(
   app: ConfigApp,
   update: SettingsMutator | SettingsKeyUpdate[]
 ): Promise<void> {

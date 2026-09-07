@@ -1,4 +1,3 @@
- 
 import { ServerAPI, WithContext, FullSignalK } from '@signalk/server-api'
 import { SecurityStrategy } from './security'
 import type { StalenessEnforcer } from './staleness'

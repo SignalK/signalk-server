@@ -168,4 +168,54 @@ describe('applySettingsUpdate', () => {
       })
     })
   })
+
+  describe('concurrent updates', () => {
+    it('serialises subtree updates to different keys so both survive in memory and on disk', async () => {
+      const app = makeApp(dir, {
+        pipedProviders: [],
+        landingPage: 'old'
+      })
+      // Fire both without awaiting in between. Each must derive its draft
+      // from the other's committed result, not a stale snapshot taken while
+      // the first write was still in flight.
+      await Promise.all([
+        applySettingsUpdate(app, [
+          { key: 'historyApi', mutator: () => ({ defaultProvider: 'p1' }) }
+        ]),
+        applySettingsUpdate(app, [{ key: 'landingPage', mutator: () => 'new' }])
+      ])
+      expect(app.config.settings.historyApi).to.deep.equal({
+        defaultProvider: 'p1'
+      })
+      expect(app.config.settings.landingPage).to.equal('new')
+      const onDisk = readSettings(dir)
+      expect(onDisk.historyApi).to.deep.equal({ defaultProvider: 'p1' })
+      expect(onDisk.landingPage).to.equal('new')
+    })
+
+    it('serialises whole-settings updates so neither clobbers the other', async () => {
+      const app = makeApp(dir, {
+        pipedProviders: [],
+        landingPage: 'old'
+      })
+      // The whole-settings form commits by replacing app.config.settings
+      // outright, so without serialisation the second commit would drop the
+      // first's key in memory as well as on disk.
+      await Promise.all([
+        applySettingsUpdate(app, (s) => {
+          s.historyApi = { defaultProvider: 'p1' }
+        }),
+        applySettingsUpdate(app, (s) => {
+          s.landingPage = 'new'
+        })
+      ])
+      expect(app.config.settings.historyApi).to.deep.equal({
+        defaultProvider: 'p1'
+      })
+      expect(app.config.settings.landingPage).to.equal('new')
+      const onDisk = readSettings(dir)
+      expect(onDisk.historyApi).to.deep.equal({ defaultProvider: 'p1' })
+      expect(onDisk.landingPage).to.equal('new')
+    })
+  })
 })
