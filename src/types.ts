@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ServerAPI, WithContext, FullSignalK } from '@signalk/server-api'
 import { SecurityStrategy } from './security'
 import type { StalenessEnforcer } from './staleness'
+import { WithConfig } from './config/config'
 
 export interface HelloMessage {
   name: string
@@ -20,8 +20,7 @@ export interface HelloMessage {
 
 export type ICallback<T> = (error?: Error | null, result?: T) => void
 
-export interface SignalKServer extends ServerAPI {
-  config: { defaults: any }
+export interface SignalKServer extends ServerAPI, WithConfig {
   getHello: () => HelloMessage
   signalk: FullSignalK
   selfId: string

@@ -2,7 +2,6 @@
 import { Delta, ServerAPI, SKVersion, FullSignalK } from '@signalk/server-api'
 import { EventEmitter } from 'node:events'
 
-import { Config } from './config/config'
 import DeltaCache from './deltacache'
 import { StalenessEnforcer } from './staleness'
 
@@ -34,8 +33,4 @@ export interface SignalKMessageHub extends EventEmitter {
     delta: Partial<Delta>,
     skVersion?: SKVersion
   ) => void
-}
-
-export interface WithConfig {
-  config: Config
 }

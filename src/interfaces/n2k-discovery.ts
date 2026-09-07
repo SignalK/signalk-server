@@ -14,7 +14,6 @@ import { Request, Response } from 'express'
 import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { SERVERROUTESPREFIX } from '../constants'
-import { writeSettingsFile } from '../config/config'
 import { atomicWriteFile } from '../atomicWrite'
 import {
   getAllPGNs,
@@ -26,6 +25,7 @@ import {
   buildPgnSourceKeysFromTree
 } from '../n2k-discovery-instances'
 import { isDeviceStale, ONLINE_THRESHOLD_MS } from '../n2k-discovery-staleness'
+import { WithConfig } from '../config/config'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
@@ -45,7 +45,7 @@ const REDISCOVERY_COOLDOWN_MS = 5 * 60_000
 
 // The app object at runtime is SignalKServer + IRouter + EventEmitter.
 // SignalKServer doesn't include those, so pick the methods we need.
-interface N2kDiscoveryApp extends SignalKServer {
+interface N2kDiscoveryApp extends SignalKServer, WithConfig {
   on(event: string, listener: (...args: unknown[]) => void): this
   removeListener(event: string, listener: (...args: unknown[]) => void): this
   emit(event: string, ...args: unknown[]): boolean
@@ -54,11 +54,6 @@ interface N2kDiscoveryApp extends SignalKServer {
   post(path: string, handler: (req: Request, res: Response) => void): void
   put(path: string, handler: (req: Request, res: Response) => void): void
   delete(path: string, handler: (req: Request, res: Response) => void): void
-  config: {
-    defaults: unknown
-    configPath: string
-    settings: { sourceAliases?: Record<string, string> }
-  }
   deltaCache: {
     sourceDeltas: Record<string, unknown>
     removeSourceDelta(key: string): void
@@ -1149,8 +1144,8 @@ module.exports = (app: N2kDiscoveryApp) => {
         if (aliases) {
           for (const ref of allRefs) {
             if (ref in aliases) {
-              delete aliases[ref]
               aliasChanged = true
+              break
             }
           }
         }
@@ -1199,24 +1194,31 @@ module.exports = (app: N2kDiscoveryApp) => {
           })
         }
 
-        if (aliasChanged && aliases) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          writeSettingsFile(app as any, app.config.settings, (err: Error) => {
-            if (err) {
-              debug('Failed to save settings after alias cleanup: %s', err)
-              res.status(500).json({
-                state: 'FAILED',
-                statusCode: 500,
-                message: `Removed source ${sourceRef} from cache, but failed to persist alias cleanup`
-              })
-              return
-            }
+        if (aliasChanged) {
+          try {
+            await app.updateSettings([
+              {
+                key: 'sourceAliases',
+                mutator: (sourceAliases) => {
+                  for (const ref of allRefs) {
+                    delete sourceAliases![ref]
+                  }
+                }
+              }
+            ])
             app.emit('serverAdminEvent', {
               type: 'SOURCEALIASES',
-              data: aliases
+              data: app.config.settings.sourceAliases
             })
             respondOk()
-          })
+          } catch (err) {
+            debug('Failed to save settings after alias cleanup: %s', err)
+            res.status(500).json({
+              state: 'FAILED',
+              statusCode: 500,
+              message: `Removed source ${sourceRef} from cache, but failed to persist alias cleanup`
+            })
+          }
         } else {
           respondOk()
         }

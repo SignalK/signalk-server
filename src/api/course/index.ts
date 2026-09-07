@@ -5,7 +5,8 @@ const debug = createDebug('signalk-server:api:course')
 import { IRouter, Request, Response } from 'express'
 import _ from 'lodash'
 
-import { SignalKMessageHub, WithConfig } from '../../app'
+import { SignalKMessageHub } from '../../app'
+import { WithConfig } from '../../config/config'
 import { Context, Path, getSourceId } from '@signalk/server-api'
 import { WithSecurityStrategy } from '../../security'
 
@@ -39,7 +40,7 @@ import { buildSchemaSync } from 'api-schema-builder'
 import { courseApiDoc } from './openApi'
 import { crossTrackDistance, rebasePreviousPointFromXte } from './xteGeometry'
 import { ResourcesApi } from '../resources'
-import { ConfigApp, writeSettingsFile } from '../../config/config'
+import { ConfigApp } from '../../config/config'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseApiDoc)
 
@@ -333,10 +334,13 @@ export class CourseApi {
   }
 
   // write to server settings file
-  private saveSettings() {
-    writeSettingsFile(this.app, this.app.config.settings, () =>
-      debug('***SETTINGS SAVED***')
-    )
+  private saveSettings(apiOnly: boolean) {
+    return this.app.updateSettings([
+      {
+        key: 'courseApi',
+        mutator: (courseApi) => ({ ...(courseApi ?? {}), apiOnly })
+      }
+    ])
   }
 
   /** Process deltas for <destination>.nextPoint data
@@ -734,15 +738,10 @@ export class CourseApi {
           return
         }
         try {
-          if (this.app.config.settings.courseApi) {
-            this.app.config.settings.courseApi.apiOnly = true
-          } else {
-            this.app.config.settings.courseApi = { apiOnly: true }
-          }
           if (!this.isAPICmdSource()) {
             this.clearDestination(true)
           }
-          this.saveSettings()
+          await this.saveSettings(true)
           res.status(200).json(Responses.ok)
         } catch {
           res.status(400).json(Responses.invalid)
@@ -760,12 +759,7 @@ export class CourseApi {
           return
         }
         try {
-          if (this.app.config.settings.courseApi) {
-            this.app.config.settings.courseApi.apiOnly = false
-          } else {
-            this.app.config.settings.courseApi = { apiOnly: false }
-          }
-          this.saveSettings()
+          await this.saveSettings(false)
           res.status(200).json(Responses.ok)
         } catch {
           res.status(400).json(Responses.invalid)

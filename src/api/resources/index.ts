@@ -18,8 +18,8 @@ import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
 import { validate } from './validate'
-import { SignalKMessageHub, WithConfig } from '../../app'
-import { writeSettingsFile } from '../../config/config'
+import { SignalKMessageHub } from '../../app'
+import { WithConfig } from '../../config/config'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
@@ -84,9 +84,16 @@ export class ResourcesApi {
 
   saveSettings() {
     if (this.settings) {
-      writeSettingsFile(this.app as any, this.app.config.settings, () =>
-        debug('***SETTINGS SAVED***')
-      )
+      this.app
+        .updateSettings([
+          {
+            key: 'resourcesApi',
+            mutator: () => this.settings
+          }
+        ])
+        .catch((err) => {
+          console.error('Failed to persist resources settings:', err)
+        })
     }
   }
 
