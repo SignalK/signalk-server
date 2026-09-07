@@ -14,7 +14,6 @@ import { Request, Response } from 'express'
 import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { SERVERROUTESPREFIX } from '../constants'
-import { UpdateSettings } from '../config/config'
 import { atomicWriteFile } from '../atomicWrite'
 import {
   getAllPGNs,
@@ -26,6 +25,7 @@ import {
   buildPgnSourceKeysFromTree
 } from '../n2k-discovery-instances'
 import { isDeviceStale, ONLINE_THRESHOLD_MS } from '../n2k-discovery-staleness'
+import { WithConfig } from '../app'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
@@ -45,7 +45,7 @@ const REDISCOVERY_COOLDOWN_MS = 5 * 60_000
 
 // The app object at runtime is SignalKServer + IRouter + EventEmitter.
 // SignalKServer doesn't include those, so pick the methods we need.
-interface N2kDiscoveryApp extends SignalKServer {
+interface N2kDiscoveryApp extends SignalKServer, WithConfig {
   on(event: string, listener: (...args: unknown[]) => void): this
   removeListener(event: string, listener: (...args: unknown[]) => void): this
   emit(event: string, ...args: unknown[]): boolean
@@ -54,12 +54,6 @@ interface N2kDiscoveryApp extends SignalKServer {
   post(path: string, handler: (req: Request, res: Response) => void): void
   put(path: string, handler: (req: Request, res: Response) => void): void
   delete(path: string, handler: (req: Request, res: Response) => void): void
-  config: {
-    defaults: unknown
-    configPath: string
-    settings: { sourceAliases?: Record<string, string> }
-  }
-  updateSettings: UpdateSettings
   deltaCache: {
     sourceDeltas: Record<string, unknown>
     removeSourceDelta(key: string): void

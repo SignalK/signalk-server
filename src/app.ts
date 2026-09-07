@@ -2,7 +2,7 @@
 import { Delta, ServerAPI, SKVersion, FullSignalK } from '@signalk/server-api'
 import { EventEmitter } from 'node:events'
 
-import { Config, UpdateSettings } from './config/config'
+import { Config, SettingsKeyUpdate, SettingsMutator } from './config/config'
 import DeltaCache from './deltacache'
 import { StalenessEnforcer } from './staleness'
 
@@ -40,5 +40,7 @@ export interface WithConfig {
   config: Config
   /** Persist a scoped settings change, committing to `config.settings`
    * only after the file write succeeds. See `applySettingsUpdate`. */
-  updateSettings: UpdateSettings
+  updateSettings: (
+    update: SettingsMutator | SettingsKeyUpdate[]
+  ) => Promise<void>
 }

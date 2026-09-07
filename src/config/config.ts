@@ -230,12 +230,6 @@ export type SettingsKeyUpdate = {
   }
 }[keyof Settings]
 
-/** Persist a settings change and commit it to `app.config.settings` only
- * after the file write succeeds. See {@link applySettingsUpdate}. */
-export type UpdateSettings = (
-  update: SettingsMutator | SettingsKeyUpdate[]
-) => Promise<void>
-
 export function load(app: ConfigApp) {
   app.argv = require('minimist')(process.argv.slice(2))
 
