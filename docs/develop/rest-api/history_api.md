@@ -110,7 +110,7 @@ Returns an array of path strings.
 
 The History API supports the registration of multiple history provider plugins.
 
-The first plugin registered is set as the _default_ provider and all requests will be directed to it.
+The first plugin to register becomes the _default_ provider and all requests are directed to it. When settings name no default, and the settings the server started with are safe to save, it records that first provider — so the choice holds across restarts and a plugin installed later does not take it over. A default already named in settings is never replaced, and a server started with `--data` or sample data records nothing, keeping the first provider for that run only. Change the default in the Admin UI under Apps & Plugins -> Configuration.
 
 Requests can be directed to a specific provider by using the `provider` parameter in the request with the _id_ of the provider plugin.
 
