@@ -746,6 +746,97 @@ describe('detectInstanceConflicts', () => {
       detectInstanceConflicts(devices, undefined, pgnSourceKeys)
     ).toHaveLength(0)
   })
+
+  // PGN 130310 (legacy combined Environmental Parameters) has no
+  // instance or source field — the only meaningful key is which fixed
+  // fields a device populates, visible as disjoint SK leaf paths. A
+  // DST810 (sea temperature) and an SCX-20 (outside temperature +
+  // pressure) both on device instance 0 are not in conflict.
+  it('DST810 vs SCX-20 on instance 0 is not a 130310 conflict', () => {
+    const devices: N2kDeviceEntry[] = [
+      makeDevice({
+        sourceRef: 'IPG100.35',
+        connection: 'IPG100',
+        src: '35',
+        deviceInstance: 0,
+        pgns: { '130310': '' }
+      }),
+      makeDevice({
+        sourceRef: 'IPG100.4',
+        connection: 'IPG100',
+        src: '4',
+        deviceInstance: 0,
+        pgns: { '130310': '' }
+      })
+    ]
+    const pgnSourceKeys = {
+      'IPG100.35': {
+        '130310': ['environment.water.temperature']
+      },
+      'IPG100.4': {
+        '130310': [
+          'environment.outside.pressure',
+          'environment.outside.temperature'
+        ]
+      }
+    }
+    expect(
+      detectInstanceConflicts(devices, undefined, pgnSourceKeys)
+    ).toHaveLength(0)
+  })
+
+  it('still flags 130310 when published leaf paths overlap', () => {
+    const devices: N2kDeviceEntry[] = [
+      makeDevice({
+        sourceRef: 'IPG100.4',
+        connection: 'IPG100',
+        src: '4',
+        deviceInstance: 0,
+        pgns: { '130310': '' }
+      }),
+      makeDevice({
+        sourceRef: 'IPG100.7',
+        connection: 'IPG100',
+        src: '7',
+        deviceInstance: 0,
+        pgns: { '130310': '' }
+      })
+    ]
+    const pgnSourceKeys = {
+      'IPG100.4': {
+        '130310': ['environment.outside.pressure']
+      },
+      'IPG100.7': {
+        '130310': [
+          'environment.outside.pressure',
+          'environment.outside.temperature'
+        ]
+      }
+    }
+    const conflicts = detectInstanceConflicts(devices, undefined, pgnSourceKeys)
+    expect(conflicts).toHaveLength(1)
+    expect(conflicts[0].sharedPGNs).toEqual(['130310'])
+  })
+
+  it('flags 130310 conservatively when no source-key data exists', () => {
+    const devices: N2kDeviceEntry[] = [
+      makeDevice({
+        sourceRef: 'IPG100.35',
+        connection: 'IPG100',
+        src: '35',
+        deviceInstance: 0,
+        pgns: { '130310': '' }
+      }),
+      makeDevice({
+        sourceRef: 'IPG100.4',
+        connection: 'IPG100',
+        src: '4',
+        deviceInstance: 0,
+        pgns: { '130310': '' }
+      })
+    ]
+    expect(detectInstanceConflicts(devices)).toHaveLength(1)
+  })
 })
 
 describe('isProprietaryPGN', () => {
