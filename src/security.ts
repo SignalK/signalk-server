@@ -15,7 +15,7 @@
  * limitations under the License.
 */
 
-import { RoutePermission } from '@signalk/server-api'
+import { AuthenticationProvider, RoutePermission } from '@signalk/server-api'
 import { Request, Response } from 'express'
 import { PartialOIDCConfig } from './oidc/types'
 import {
@@ -42,6 +42,14 @@ export interface WithSecurityStrategy {
   securityStrategy: SecurityStrategy
 }
 
+/** Login method offered on the login page */
+export interface AuthProviderStatus {
+  id: string
+  name: string
+  loginUrl: string
+  autoLogin: boolean
+}
+
 export interface LoginStatusResponse {
   status: string // 'loggedIn' 'notLoggedIn'
   readOnlyAccess?: boolean
@@ -50,6 +58,7 @@ export interface LoginStatusResponse {
   allowDeviceAccessRequests?: boolean
   userLevel?: any
   username?: string
+  authProviders?: AuthProviderStatus[]
 }
 
 export interface ACL {
@@ -63,37 +72,63 @@ export interface ACL {
     }>
   }>
 }
-export interface OIDCUserIdentifier {
-  sub: string
-  issuer: string
-  /** User's email from OIDC claims */
+/**
+ * Link between a local user record and the identity an authentication
+ * provider established for it. Users are matched on provider + issuer +
+ * subject; email and name are informational.
+ */
+export interface ExternalIdentityRecord {
+  provider: string
+  subject: string
+  issuer?: string
   email?: string
-  /** User's display name from OIDC claims */
   name?: string
-  /** User's groups from OIDC claims (used for permission mapping) */
-  groups?: string[]
-}
-
-export function isOIDCUserIdentifier(
-  value: unknown
-): value is OIDCUserIdentifier {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as OIDCUserIdentifier).sub === 'string' &&
-    typeof (value as OIDCUserIdentifier).issuer === 'string'
-  )
 }
 
 export interface User {
   username: string
   type: string
   password?: string
-  oidc?: OIDCUserIdentifier
+  identity?: ExternalIdentityRecord
 }
+
+/** Shape written by servers before external identities became generic */
+interface LegacyOIDCUser extends User {
+  oidc?: { sub?: unknown; issuer?: unknown; email?: unknown; name?: unknown }
+}
+
+/**
+ * Rewrites the `oidc` user field of older security.json files into
+ * `identity`. Applied to every config read; the file itself takes the new
+ * shape on the next save. Malformed legacy records are left untouched.
+ */
+export function migrateLegacyIdentities(users: User[]): void {
+  for (const user of users as LegacyOIDCUser[]) {
+    const legacy = user.oidc
+    if (
+      !legacy ||
+      typeof legacy.sub !== 'string' ||
+      typeof legacy.issuer !== 'string'
+    ) {
+      continue
+    }
+    if (!user.identity) {
+      user.identity = {
+        provider: 'oidc',
+        subject: legacy.sub,
+        issuer: legacy.issuer
+      }
+      if (typeof legacy.email === 'string') user.identity.email = legacy.email
+      if (typeof legacy.name === 'string') user.identity.name = legacy.name
+    }
+    delete user.oidc
+  }
+}
+
 export interface UserData {
   userId: string
   type: string
+  identity?: ExternalIdentityRecord
 }
 export interface UserDataUpdate {
   type?: string
@@ -244,6 +279,14 @@ export interface SecurityStrategy {
   /** Update OIDC config in memory (optional - only available when token security is active) */
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
 
+  /**
+   * Add a passport-backed login method (optional - only available when token
+   * security is active). Returns a function that removes it again.
+   */
+  registerAuthenticationProvider?: (
+    provider: AuthenticationProvider
+  ) => () => void
+
   /** Verify credentials (optional - only available when token security is active) */
   login?: (
     username: string,
@@ -303,7 +346,11 @@ export function getSecurityConfig(
   } else {
     try {
       const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
-      return JSON.parse(optionsAsString)
+      const config = JSON.parse(optionsAsString)
+      if (Array.isArray(config.users)) {
+        migrateLegacyIdentities(config.users)
+      }
+      return config
     } catch (e: any) {
       // Suppress the ENOENT noise when security is off. The strategy may be
       // undefined here because setupCors() reads the security config before

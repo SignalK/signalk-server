@@ -1124,6 +1124,17 @@ module.exports = (theApp: any) => {
       })
     }
 
+    appCopy.registerAuthenticationProvider = (provider) => {
+      if (!app.securityStrategy.registerAuthenticationProvider) {
+        throw new Error(
+          `${plugin.id}: authentication providers require security to be enabled`
+        )
+      }
+      onStopHandlers[plugin.id].push(
+        app.securityStrategy.registerAuthenticationProvider(provider)
+      )
+    }
+
     appCopy.registerWebSocket = (wsPath: string): PluginWebSocketServer => {
       installUpgradeListenerOnce()
       if (typeof wsPath !== 'string') {

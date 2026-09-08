@@ -17,6 +17,7 @@ import { HistoryProviderRegistry, WithHistoryApi } from './history'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
 import type { WebSocket } from 'ws'
+import type { AuthenticationProvider } from './authentication'
 import type { IncomingMessage } from 'http'
 import type { Duplex } from 'stream'
 
@@ -537,6 +538,47 @@ export interface ServerAPI
    * @category Server API
    */
   registerWebSocket(path: string): PluginWebSocketServer
+
+  /**
+   * Adds a login method backed by a
+   * [passport](https://www.passportjs.org/) strategy. The server mounts the
+   * strategy at `/signalk/v1/auth/<id>/login` and
+   * `/signalk/v1/auth/<id>/callback`, lists it on the login page, and turns
+   * the {@link ExternalIdentity} produced by the strategy's verify callback
+   * into a local user with a regular Signal K session. Any redirect-style
+   * passport strategy works (OAuth 2.0, OpenID Connect, GitHub, ...).
+   *
+   * Requires token security to be enabled; throws otherwise. Call in
+   * `plugin.start()`; the provider is removed automatically when the plugin
+   * stops.
+   *
+   * ```typescript
+   * import { Strategy as GitHubStrategy } from 'passport-github2'
+   *
+   * plugin.start = () => {
+   *   app.registerAuthenticationProvider({
+   *     id: 'github',
+   *     name: 'Sign in with GitHub',
+   *     strategy: new GitHubStrategy(
+   *       {
+   *         clientID,
+   *         clientSecret,
+   *         callbackURL: 'https://boat.example.com/signalk/v1/auth/github/callback'
+   *       },
+   *       (_accessToken, _refreshToken, profile, done) =>
+   *         done(null, {
+   *           subject: profile.id,
+   *           username: profile.username,
+   *           permission: 'readwrite'
+   *         })
+   *     )
+   *   })
+   * }
+   * ```
+   *
+   * @category Authentication Providers
+   */
+  registerAuthenticationProvider(provider: AuthenticationProvider): void
 
   /**
    * Returns Ports object which contains information about the serial ports available on the machine.

@@ -18,8 +18,14 @@ const loggedIn: LoginStatus = {
   status: 'loggedIn',
   authenticationRequired: true,
   username: 'admin',
-  oidcEnabled: true,
-  oidcLoginUrl: '/signalk/v1/auth/oidc/login'
+  authProviders: [
+    {
+      id: 'oidc',
+      name: 'SSO Login',
+      loginUrl: '/signalk/v1/auth/oidc/login',
+      autoLogin: false
+    }
+  ]
 }
 
 describe('authFetch 401 handling', () => {
@@ -39,8 +45,7 @@ describe('authFetch 401 handling', () => {
     expect(ls.username).toBeUndefined()
     // Server settings preserved across the credential expiry.
     expect(ls.authenticationRequired).toBe(true)
-    expect(ls.oidcEnabled).toBe(true)
-    expect(ls.oidcLoginUrl).toBe('/signalk/v1/auth/oidc/login')
+    expect(ls.authProviders).toEqual(loggedIn.authProviders)
   })
 
   it('does not touch loginStatus on 401 from /signalk/v1/auth/login', async () => {

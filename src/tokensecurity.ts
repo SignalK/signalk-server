@@ -52,7 +52,7 @@ import {
   RequestStatusData,
   ACL,
   SecurityStrategy,
-  isOIDCUserIdentifier
+  migrateLegacyIdentities
 } from './security'
 // requestResponse is still CommonJS
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -65,17 +65,20 @@ const {
 /* eslint-enable @typescript-eslint/no-require-imports */
 import {
   parseOIDCConfig,
-  registerOIDCRoutes,
   registerOIDCAdminRoutes,
+  createOIDCProvider,
+  OIDC_PROVIDER_ID,
   OIDCConfig,
-  OIDCCryptoService,
-  ExternalUserService,
-  ExternalUser,
-  ProviderUserLookup,
   PartialOIDCConfig,
   OIDCError,
   OIDC_DEFAULTS
 } from './oidc'
+import {
+  AuthenticationProviderRegistry,
+  registerAuthProviderRoutes
+} from './auth/providers'
+import { UserProvisioner } from './auth/provisioning'
+import { createIdentityUserStore } from './auth/identity-store'
 import { SERVERROUTESPREFIX } from './constants'
 import { ICallback } from './types'
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
@@ -288,110 +291,27 @@ function tokenSecurityFactory(
     return createHash('sha256').update(secretKey).update(domain).digest('hex')
   }
 
-  /**
-   * Crypto service for OIDC state encryption.
-   * Provides derived secret - tokensecurity knows nothing about OIDC internals.
-   */
-  const oidcCryptoService: OIDCCryptoService = {
-    getStateEncryptionSecret: () => deriveSecret('signalk-oidc')
-  }
-
-  /**
-   * User service for external authentication providers (OIDC, etc.).
-   * Abstracts user storage so auth providers don't need to know about
-   * the underlying storage mechanism (currently array, could be SQLite etc).
-   */
-  const externalUserService: ExternalUserService = {
-    async findUserByProvider(
-      lookup: ProviderUserLookup
-    ): Promise<ExternalUser | null> {
-      // Currently only OIDC is supported
-      if (lookup.provider === 'oidc') {
-        const { sub, issuer } = lookup.criteria
-        const user = options.users.find(
-          (u) => u.oidc?.sub === sub && u.oidc?.issuer === issuer
-        )
-        if (user) {
-          return {
-            username: user.username,
-            type: user.type,
-            providerData: user.oidc as Record<string, unknown> | undefined
-          }
-        }
-      }
-      return null
-    },
-
-    async findUserByUsername(username: string): Promise<ExternalUser | null> {
-      const user = options.users.find((u) => u.username === username)
-      if (user) {
-        return {
-          username: user.username,
-          type: user.type,
-          providerData: user.oidc as Record<string, unknown> | undefined
-        }
-      }
-      return null
-    },
-
-    async createUser(externalUser: ExternalUser): Promise<void> {
-      const newUser: User = {
-        username: externalUser.username,
-        type: externalUser.type
-      }
-
-      if (isOIDCUserIdentifier(externalUser.providerData?.oidc)) {
-        newUser.oidc = externalUser.providerData.oidc
-      }
-
-      options.users.push(newUser)
-
-      return new Promise((resolve, reject) => {
+  const identityUserStore = createIdentityUserStore({
+    users: () => options.users,
+    persist: (users) =>
+      new Promise((resolve, reject) => {
         saveSecurityConfig(
           app as unknown as Parameters<typeof saveSecurityConfig>[0],
-          options,
-          (err: Error | null) => {
-            if (err) {
-              reject(err)
-            } else {
-              resolve()
-            }
-          }
+          { ...options, users },
+          (err: Error | null) => (err ? reject(err) : resolve())
         )
       })
-    },
+  })
 
-    async updateUser(
-      username: string,
-      updates: { type?: string; providerData?: Record<string, unknown> }
-    ): Promise<void> {
-      const user = options.users.find((u) => u.username === username)
-      if (!user) {
-        throw new Error(`User not found: ${username}`)
-      }
-
-      if (updates.type) {
-        user.type = updates.type
-      }
-
-      if (isOIDCUserIdentifier(updates.providerData?.oidc)) {
-        user.oidc = updates.providerData.oidc
-      }
-
-      return new Promise((resolve, reject) => {
-        saveSecurityConfig(
-          app as unknown as Parameters<typeof saveSecurityConfig>[0],
-          options,
-          (err: Error | null) => {
-            if (err) {
-              reject(err)
-            } else {
-              resolve()
-            }
-          }
-        )
-      })
+  const authProviders = new AuthenticationProviderRegistry()
+  const provisioner = new UserProvisioner(identityUserStore)
+  strategy.registerAuthenticationProvider = (provider) => {
+    if (provider.id === OIDC_PROVIDER_ID) {
+      throw new Error(
+        `Authentication provider id "${OIDC_PROVIDER_ID}" is reserved for the built-in OpenID Connect login`
+      )
     }
+    return authProviders.register(provider)
   }
 
   if (process.env.ADMINUSER) {
@@ -425,7 +345,12 @@ function tokenSecurityFactory(
       process.env.ALLOW_NEW_USER_REGISTRATION === 'true'
   }
 
+  migrateLegacyIdentities(users)
+
+  // Spread the loaded config first so keys this module does not manage
+  // (allowedCorsOrigins, ...) survive saves that are built from `options`
   let options: TokenSecurityOptions = {
+    ...config,
     allow_readonly,
     expiration,
     secretKey,
@@ -446,6 +371,25 @@ function tokenSecurityFactory(
   }
   strategy.getConfiguration = getConfiguration
 
+  // The OIDC login method is a provider like any plugin-registered one; a
+  // configuration change swaps it for one built from the new settings
+  let unregisterOIDCProvider: (() => void) | undefined
+  function syncOIDCProvider(): void {
+    unregisterOIDCProvider?.()
+    unregisterOIDCProvider = undefined
+    const oidcConfig = getOIDCConfig()
+    if (!oidcConfig.enabled) {
+      return
+    }
+    try {
+      unregisterOIDCProvider = authProviders.register(
+        createOIDCProvider(oidcConfig)
+      )
+    } catch (err) {
+      console.error('OIDC login could not be registered:', err)
+    }
+  }
+
   // Parse and cache OIDC configuration eagerly so that invalid config
   // is detected at startup rather than on first request (see #2594)
   let cachedOIDCConfig: OIDCConfig | null = null
@@ -464,6 +408,7 @@ function tokenSecurityFactory(
       }
       cachedOIDCConfig = { ...OIDC_DEFAULTS, enabled: false } as OIDCConfig
     }
+    syncOIDCProvider()
   }
   parseAndCacheOIDCConfig()
 
@@ -784,14 +729,18 @@ function tokenSecurityFactory(
       }
     )
 
-    // Register OIDC authentication routes
-    registerOIDCRoutes(app, {
-      getOIDCConfig,
-      setSessionCookie,
-      clearSessionCookie,
-      generateJWT,
-      cryptoService: oidcCryptoService,
-      userService: externalUserService
+    registerAuthProviderRoutes(app, authProviders, {
+      provisioner,
+      getHandshakeSecret: () => deriveSecret('signalk-auth-handshake'),
+      loginUser: (req, res, user) =>
+        setSessionCookie(
+          res,
+          req,
+          generateJWT(user.username, undefined, true),
+          user.username,
+          { rememberMe: true }
+        ),
+      clearSessionCookie
     })
 
     // Register OIDC admin routes (GET/PUT /security/oidc, POST /security/oidc/test)
@@ -1000,18 +949,13 @@ function tokenSecurityFactory(
   strategy.getLoginStatus = function (req: Request): LoginStatusResponse {
     const skReq = req as SKRequest
     const configuration = getConfiguration()
-    const result: LoginStatusResponse & {
-      noUsers?: boolean
-      oidcEnabled?: boolean
-      oidcAutoLogin?: boolean
-      oidcLoginUrl?: string
-      oidcProviderName?: string
-    } = {
+    const result: LoginStatusResponse & { noUsers?: boolean } = {
       status: skReq.skIsAuthenticated ? 'loggedIn' : 'notLoggedIn',
       readOnlyAccess: configuration.allow_readonly,
       authenticationRequired: true,
       allowNewUserRegistration: configuration.allowNewUserRegistration,
-      allowDeviceAccessRequests: configuration.allowDeviceAccessRequests
+      allowDeviceAccessRequests: configuration.allowDeviceAccessRequests,
+      authProviders: authProviders.status()
     }
     if (skReq.skIsAuthenticated && skReq.skPrincipal) {
       result.userLevel = skReq.skPrincipal.permissions
@@ -1019,16 +963,6 @@ function tokenSecurityFactory(
     }
     if (configuration.users.length === 0) {
       result.noUsers = true
-    }
-    // Add OIDC status
-    const oidcConfig = getOIDCConfig()
-    if (oidcConfig.enabled) {
-      result.oidcEnabled = true
-      result.oidcAutoLogin = oidcConfig.autoLogin || false
-      result.oidcLoginUrl = '/signalk/v1/auth/oidc/login'
-      if (oidcConfig.providerName) {
-        result.oidcProviderName = oidcConfig.providerName
-      }
     }
     return result
   }
@@ -1060,21 +994,12 @@ function tokenSecurityFactory(
   strategy.getUsers = (aConfig: SecurityConfig): UserData[] => {
     if (aConfig && aConfig.users) {
       return aConfig.users.map((user) => {
-        const userData: UserData & {
-          isOIDC?: boolean
-          oidc?: { issuer?: string; email?: string; name?: string }
-        } = {
+        const userData: UserData = {
           userId: user.username,
-          type: user.type,
-          isOIDC: !!user.oidc
+          type: user.type
         }
-        // Include OIDC metadata for OIDC users
-        if (user.oidc) {
-          userData.oidc = {
-            issuer: user.oidc.issuer,
-            email: user.oidc.email,
-            name: user.oidc.name
-          }
+        if (user.identity) {
+          userData.identity = user.identity
         }
         return userData
       })
@@ -1216,12 +1141,9 @@ function tokenSecurityFactory(
     callback: ICallback<SecurityConfig>
   ): void => {
     assertConfigImmutability()
-    for (let i = theConfig.users.length - 1; i >= 0; i--) {
-      if (theConfig.users[i].username === username) {
-        theConfig.users.splice(i, 1)
-        break
-      }
-    }
+    // The API addresses users by name only, so removing every record with
+    // that name is the one outcome that is guaranteed to revoke its access
+    theConfig.users = theConfig.users.filter((u) => u.username !== username)
     options = theConfig as TokenSecurityOptions
     callback(null, theConfig)
   }

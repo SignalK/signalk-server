@@ -17,7 +17,7 @@
 import { Request, Response, IRouter } from 'express'
 import { OIDCError, PartialOIDCConfig } from './types'
 import { parseEnvConfig, validateOIDCConfig, mergeConfigs } from './config'
-import { getDiscoveryDocument } from './discovery'
+import { discoverOIDC, summarizeMetadata } from './provider'
 
 const SERVERROUTESPREFIX = '/skServer'
 
@@ -273,14 +273,10 @@ export function registerOIDCAdminRoutes(
       }
 
       try {
-        const metadata = await getDiscoveryDocument(issuer)
+        const configuration = await discoverOIDC(issuer)
         res.json({
           success: true,
-          issuer: metadata.issuer,
-          authorization_endpoint: metadata.authorization_endpoint,
-          token_endpoint: metadata.token_endpoint,
-          userinfo_endpoint: metadata.userinfo_endpoint,
-          jwks_uri: metadata.jwks_uri
+          ...summarizeMetadata(configuration.serverMetadata())
         })
       } catch (err) {
         console.error('OIDC connection test failed:', err)
