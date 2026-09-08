@@ -8,6 +8,11 @@
 // the Node.js UDP socket sends to the gateway but the YDWG02 does not
 // forward those messages onto the N2K bus.
 
+import {
+  PGN_59904,
+  PGN_126208_NmeaCommandGroupFunction,
+  PGN_126208_NmeaWriteFieldsGroupFunction
+} from '@canboat/ts-pgns'
 import * as fs from 'fs'
 import * as path from 'path'
 import { Request, Response } from 'express'
@@ -167,12 +172,7 @@ function sendISORequest(
   dst: number,
   requestedPgn = 126996
 ): void {
-  app.emit('nmea2000JsonOut', {
-    pgn: 59904,
-    prio: 6,
-    dst,
-    fields: { pgn: requestedPgn }
-  })
+  app.emit('nmea2000JsonOut', new PGN_59904({ pgn: requestedPgn }, dst))
 }
 
 // Request PGN 126996 from each known device individually, spaced 500ms
@@ -1280,21 +1280,21 @@ module.exports = (app: N2kDiscoveryApp) => {
             lower,
             upper
           )
-          app.emit('nmea2000JsonOut', {
-            pgn: 126208,
-            prio: 3,
-            dst,
-            fields: {
-              'Function Code': 'Command',
-              PGN: 60928,
-              priority: 8,
-              numberOfParameters: 2,
-              list: [
-                { parameter: 3, value: lower },
-                { parameter: 4, value: upper }
-              ]
-            }
-          })
+          app.emit(
+            'nmea2000JsonOut',
+            new PGN_126208_NmeaCommandGroupFunction(
+              {
+                pgn: 60928,
+                priority: 8,
+                numberOfParameters: 2,
+                list: [
+                  { parameter: 3, value: lower },
+                  { parameter: 4, value: upper }
+                ]
+              },
+              dst
+            )
+          )
           // Re-request Address Claim so sources data updates
           schedulePendingRequest(() => sendISORequest(app, dst, 60928), 1000)
         } else if (field === 'deviceInstanceLower') {
@@ -1309,18 +1309,18 @@ module.exports = (app: N2kDiscoveryApp) => {
             return
           }
           debug('Sending data instance change to dst %d: %d', dst, lower)
-          app.emit('nmea2000JsonOut', {
-            pgn: 126208,
-            prio: 3,
-            dst,
-            fields: {
-              'Function Code': 'Command',
-              PGN: 60928,
-              priority: 8,
-              numberOfParameters: 1,
-              list: [{ parameter: 3, value: lower }]
-            }
-          })
+          app.emit(
+            'nmea2000JsonOut',
+            new PGN_126208_NmeaCommandGroupFunction(
+              {
+                pgn: 60928,
+                priority: 8,
+                numberOfParameters: 1,
+                list: [{ parameter: 3, value: lower }]
+              },
+              dst
+            )
+          )
           // Re-request Address Claim so sources data updates
           schedulePendingRequest(() => sendISORequest(app, dst, 60928), 1000)
         } else if (
@@ -1338,18 +1338,18 @@ module.exports = (app: N2kDiscoveryApp) => {
             dst,
             text
           )
-          app.emit('nmea2000JsonOut', {
-            pgn: 126208,
-            prio: 3,
-            dst,
-            fields: {
-              'Function Code': 'Command',
-              PGN: 126998,
-              priority: 8,
-              numberOfParameters: 1,
-              list: [{ parameter: fieldOrder, value: text }]
-            }
-          })
+          app.emit(
+            'nmea2000JsonOut',
+            new PGN_126208_NmeaCommandGroupFunction(
+              {
+                pgn: 126998,
+                priority: 8,
+                numberOfParameters: 1,
+                list: [{ parameter: fieldOrder, value: text }]
+              },
+              dst
+            )
+          )
           // Re-request Configuration Information so sources data updates.
           // Two requests: first after 1.5s (device needs time to process
           // the command), second at 3s as a safety net in case the first
@@ -1376,20 +1376,21 @@ module.exports = (app: N2kDiscoveryApp) => {
               currentValue,
               instance
             )
-            app.emit('nmea2000JsonOut', {
-              pgn: 126208,
-              prio: 3,
-              dst,
-              fields: {
-                'Function Code': 'Write Fields',
-                PGN: 127508,
-                uniqueId: 0,
-                numberOfSelectionPairs: 1,
-                numberOfParameters: 1,
-                list: [{ selectionParameter: 1, selectionValue: currentValue }],
-                list2: [{ parameter: 1, value: instance }]
-              }
-            })
+            app.emit(
+              'nmea2000JsonOut',
+              new PGN_126208_NmeaWriteFieldsGroupFunction(
+                {
+                  pgn: 127508,
+                  numberOfSelectionPairs: 1,
+                  numberOfParameters: 1,
+                  list: [
+                    { selectionParameter: 1, selectionValue: currentValue }
+                  ],
+                  list2: [{ parameter: 1, value: instance }]
+                },
+                dst
+              )
+            )
           } else {
             // Command (FC 1) for simple single-instance devices
             debug(
@@ -1397,18 +1398,18 @@ module.exports = (app: N2kDiscoveryApp) => {
               dst,
               instance
             )
-            app.emit('nmea2000JsonOut', {
-              pgn: 126208,
-              prio: 3,
-              dst,
-              fields: {
-                'Function Code': 'Command',
-                PGN: 127508,
-                priority: 8,
-                numberOfParameters: 1,
-                list: [{ parameter: 1, value: instance }]
-              }
-            })
+            app.emit(
+              'nmea2000JsonOut',
+              new PGN_126208_NmeaCommandGroupFunction(
+                {
+                  pgn: 127508,
+                  priority: 8,
+                  numberOfParameters: 1,
+                  list: [{ parameter: 1, value: instance }]
+                },
+                dst
+              )
+            )
           }
         } else if (field === 'dcInstance') {
           // PGN 126208 targeting PGN 127506 (DC Detailed Status):
@@ -1430,35 +1431,36 @@ module.exports = (app: N2kDiscoveryApp) => {
               currentValue,
               instance
             )
-            app.emit('nmea2000JsonOut', {
-              pgn: 126208,
-              prio: 3,
-              dst,
-              fields: {
-                'Function Code': 'Write Fields',
-                PGN: 127506,
-                uniqueId: 0,
-                numberOfSelectionPairs: 1,
-                numberOfParameters: 1,
-                list: [{ selectionParameter: 2, selectionValue: currentValue }],
-                list2: [{ parameter: 2, value: instance }]
-              }
-            })
+            app.emit(
+              'nmea2000JsonOut',
+              new PGN_126208_NmeaWriteFieldsGroupFunction(
+                {
+                  pgn: 127506,
+                  numberOfSelectionPairs: 1,
+                  numberOfParameters: 1,
+                  list: [
+                    { selectionParameter: 2, selectionValue: currentValue }
+                  ],
+                  list2: [{ parameter: 2, value: instance }]
+                },
+                dst
+              )
+            )
           } else {
             // Command (FC 1) for simple single-instance devices
             debug('Sending DC instance change to dst %d: %d', dst, instance)
-            app.emit('nmea2000JsonOut', {
-              pgn: 126208,
-              prio: 3,
-              dst,
-              fields: {
-                'Function Code': 'Command',
-                PGN: 127506,
-                priority: 8,
-                numberOfParameters: 1,
-                list: [{ parameter: 2, value: instance }]
-              }
-            })
+            app.emit(
+              'nmea2000JsonOut',
+              new PGN_126208_NmeaCommandGroupFunction(
+                {
+                  pgn: 127506,
+                  priority: 8,
+                  numberOfParameters: 1,
+                  list: [{ parameter: 2, value: instance }]
+                },
+                dst
+              )
+            )
           }
         } else if (field === 'temperatureInstance') {
           // PGN 126208 Write Fields targeting a temperature PGN
@@ -1488,20 +1490,19 @@ module.exports = (app: N2kDiscoveryApp) => {
             currentValue,
             instance
           )
-          app.emit('nmea2000JsonOut', {
-            pgn: 126208,
-            prio: 3,
-            dst,
-            fields: {
-              'Function Code': 'Write Fields',
-              PGN: pgn,
-              uniqueId: 0,
-              numberOfSelectionPairs: 1,
-              numberOfParameters: 1,
-              list: [{ selectionParameter: 2, selectionValue: currentValue }],
-              list2: [{ parameter: 2, value: instance }]
-            }
-          })
+          app.emit(
+            'nmea2000JsonOut',
+            new PGN_126208_NmeaWriteFieldsGroupFunction(
+              {
+                pgn: pgn,
+                numberOfSelectionPairs: 1,
+                numberOfParameters: 1,
+                list: [{ selectionParameter: 2, selectionValue: currentValue }],
+                list2: [{ parameter: 2, value: instance }]
+              },
+              dst
+            )
+          )
         } else if (field === 'temperatureSource') {
           // PGN 126208 Write Fields targeting a temperature PGN:
           // field 3 = Source (TEMPERATURE_SOURCE enum)
@@ -1532,20 +1533,19 @@ module.exports = (app: N2kDiscoveryApp) => {
             sourceType,
             getEnumerationName('TEMPERATURE_SOURCE', sourceType) || 'unknown'
           )
-          app.emit('nmea2000JsonOut', {
-            pgn: 126208,
-            prio: 3,
-            dst,
-            fields: {
-              'Function Code': 'Write Fields',
-              PGN: pgn,
-              uniqueId: 0,
-              numberOfSelectionPairs: 1,
-              numberOfParameters: 1,
-              list: [{ selectionParameter: 2, selectionValue: currentValue }],
-              list2: [{ parameter: 3, value: sourceType }]
-            }
-          })
+          app.emit(
+            'nmea2000JsonOut',
+            new PGN_126208_NmeaWriteFieldsGroupFunction(
+              {
+                pgn: pgn,
+                numberOfSelectionPairs: 1,
+                numberOfParameters: 1,
+                list: [{ selectionParameter: 2, selectionValue: currentValue }],
+                list2: [{ parameter: 3, value: sourceType }]
+              },
+              dst
+            )
+          )
         } else if (field === 'humidityInstance') {
           // PGN 126208 Write Fields targeting PGN 130313: field 2 = Instance
           const instance = Number(value)
@@ -1571,20 +1571,19 @@ module.exports = (app: N2kDiscoveryApp) => {
             currentValue,
             instance
           )
-          app.emit('nmea2000JsonOut', {
-            pgn: 126208,
-            prio: 3,
-            dst,
-            fields: {
-              'Function Code': 'Write Fields',
-              PGN: 130313,
-              uniqueId: 0,
-              numberOfSelectionPairs: 1,
-              numberOfParameters: 1,
-              list: [{ selectionParameter: 2, selectionValue: currentValue }],
-              list2: [{ parameter: 2, value: instance }]
-            }
-          })
+          app.emit(
+            'nmea2000JsonOut',
+            new PGN_126208_NmeaWriteFieldsGroupFunction(
+              {
+                pgn: 130313,
+                numberOfSelectionPairs: 1,
+                numberOfParameters: 1,
+                list: [{ selectionParameter: 2, selectionValue: currentValue }],
+                list2: [{ parameter: 2, value: instance }]
+              },
+              dst
+            )
+          )
         } else if (field === 'humiditySource') {
           // PGN 126208 Write Fields targeting PGN 130313: field 3 = Source
           const sourceType = Number(value)
@@ -1612,20 +1611,19 @@ module.exports = (app: N2kDiscoveryApp) => {
             sourceType,
             getEnumerationName('HUMIDITY_SOURCE', sourceType) || 'unknown'
           )
-          app.emit('nmea2000JsonOut', {
-            pgn: 126208,
-            prio: 3,
-            dst,
-            fields: {
-              'Function Code': 'Write Fields',
-              PGN: 130313,
-              uniqueId: 0,
-              numberOfSelectionPairs: 1,
-              numberOfParameters: 1,
-              list: [{ selectionParameter: 2, selectionValue: currentValue }],
-              list2: [{ parameter: 3, value: sourceType }]
-            }
-          })
+          app.emit(
+            'nmea2000JsonOut',
+            new PGN_126208_NmeaWriteFieldsGroupFunction(
+              {
+                pgn: 130313,
+                numberOfSelectionPairs: 1,
+                numberOfParameters: 1,
+                list: [{ selectionParameter: 2, selectionValue: currentValue }],
+                list2: [{ parameter: 3, value: sourceType }]
+              },
+              dst
+            )
+          )
         } else if (field === 'switchBankInstance') {
           // PGN 126208 Command targeting PGN 127501: field 1 = Instance
           const instance = Number(value)
@@ -1644,38 +1642,39 @@ module.exports = (app: N2kDiscoveryApp) => {
               currentValue,
               instance
             )
-            app.emit('nmea2000JsonOut', {
-              pgn: 126208,
-              prio: 3,
-              dst,
-              fields: {
-                'Function Code': 'Write Fields',
-                PGN: 127501,
-                uniqueId: 0,
-                numberOfSelectionPairs: 1,
-                numberOfParameters: 1,
-                list: [{ selectionParameter: 1, selectionValue: currentValue }],
-                list2: [{ parameter: 1, value: instance }]
-              }
-            })
+            app.emit(
+              'nmea2000JsonOut',
+              new PGN_126208_NmeaWriteFieldsGroupFunction(
+                {
+                  pgn: 127501,
+                  numberOfSelectionPairs: 1,
+                  numberOfParameters: 1,
+                  list: [
+                    { selectionParameter: 1, selectionValue: currentValue }
+                  ],
+                  list2: [{ parameter: 1, value: instance }]
+                },
+                dst
+              )
+            )
           } else {
             debug(
               'Sending switch bank instance change to dst %d: %d',
               dst,
               instance
             )
-            app.emit('nmea2000JsonOut', {
-              pgn: 126208,
-              prio: 3,
-              dst,
-              fields: {
-                'Function Code': 'Command',
-                PGN: 127501,
-                priority: 8,
-                numberOfParameters: 1,
-                list: [{ parameter: 1, value: instance }]
-              }
-            })
+            app.emit(
+              'nmea2000JsonOut',
+              new PGN_126208_NmeaCommandGroupFunction(
+                {
+                  pgn: 127501,
+                  priority: 8,
+                  numberOfParameters: 1,
+                  list: [{ parameter: 1, value: instance }]
+                },
+                dst
+              )
+            )
           }
         } else {
           res.status(400).json({
