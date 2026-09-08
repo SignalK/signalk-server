@@ -27,6 +27,7 @@ import { faCircleInfo } from '@fortawesome/free-solid-svg-icons/faCircleInfo'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 import HistoryProviderSettings from '../ServerConfig/HistoryProviderSettings'
 import { useStore } from '../../store'
+import { pluginCountLabel } from './pluginCountLabel'
 
 interface PluginSchema {
   properties?: Record<string, unknown>
@@ -67,6 +68,9 @@ export default function PluginConfigurationList() {
   const params = useParams<{ pluginid?: string }>()
 
   const [plugins, setPlugins] = useState<Plugin[]>([])
+  // An empty list means "no plugins installed" only once a load has succeeded;
+  // before that it is indistinguishable from a pending or failed request.
+  const [pluginsLoaded, setPluginsLoaded] = useState(false)
   const [search, setSearch] = useState(
     () => localStorage.getItem(searchStorageKey) || ''
   )
@@ -310,6 +314,7 @@ export default function PluginConfigurationList() {
         }
 
         setPlugins(fetchedPlugins)
+        setPluginsLoaded(true)
         useStore.getState().setPlugins(fetchedPlugins)
         setSelectedPlugin(initialSelectedPlugin)
         setWasmEnabled(wasmInterfaceEnabled)
@@ -333,19 +338,22 @@ export default function PluginConfigurationList() {
     const unsubscribe = useStore.subscribe(
       (state) => state.plugins,
       (storePlugins) => {
-        if (storePlugins.length > 0) {
-          setPlugins(storePlugins as Plugin[])
-          setSelectedPlugin((prev) => {
-            if (!prev) return null
-            return (
-              (storePlugins.find((p) => p.id === prev.id) as Plugin) || null
-            )
-          })
+        // Before the initial load an empty store just means "not loaded yet".
+        // Afterwards it means the last plugin was removed, which must clear
+        // the list rather than leave the removed plugin on screen.
+        if (storePlugins.length === 0 && !pluginsLoaded) {
+          return
         }
+        setPlugins(storePlugins as Plugin[])
+        setPluginsLoaded(true)
+        setSelectedPlugin((prev) => {
+          if (!prev) return null
+          return (storePlugins.find((p) => p.id === prev.id) as Plugin) || null
+        })
       }
     )
     return unsubscribe
-  }, [])
+  }, [pluginsLoaded])
 
   const pluginList = getFilteredPlugins()
   const selectedPluginId = selectedPlugin ? selectedPlugin.id : null
@@ -395,6 +403,16 @@ export default function PluginConfigurationList() {
                   </Form.Select>
                 </Form.Group>
               </Form>
+
+              <div
+                className="text-body-secondary small mb-1"
+                id="pluginCount"
+                role="status"
+              >
+                {pluginsLoaded
+                  ? pluginCountLabel(pluginList.length, plugins.length)
+                  : ''}
+              </div>
 
               <div
                 ref={tableContainerRef}
