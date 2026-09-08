@@ -52,6 +52,8 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **package.json** — `signalk-node-server-plugin` keyword, `main` or `exports` field, `engines.node` declaration
 
+**Shared core package ranges** (Linux desktop jobs only) — Errors when a `dependencies`/`peerDependencies` range on a core package shared across the server ecosystem (`@signalk/server-api`, `@signalk/streams`, `@canboat/canboatjs`, …) excludes the newest release in the major version line the range targets. All plugins on a server share one hoisted copy of these, resolved to the newest version that satisfies every installed plugin's range — a single tight range holds the shared copy back for every other plugin. Exact pins get a warning (they cause the same hold-back on the next release), and a newer major being available is an advisory notice, never an error — staying on the current major is a legitimate compatibility choice. Restricted to the Linux jobs because the registry answer is platform-independent.
+
 **Entry point** — After build, verifies the plugin exports a constructor function
 
 **plugin.schema()** — Calls `schema()` and checks it returns a JSON-serializable schema-like object without crashing (not fully validated against the JSON Schema meta-schema)
