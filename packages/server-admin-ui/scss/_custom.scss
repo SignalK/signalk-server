@@ -276,8 +276,14 @@ form.rjsf {
 }
 
 // Plugin config: scrollable list and connected panels on desktop
+$plugin-list-min-height: 20rem;
+
 @media (min-width: 1200px) {
   .plugin-list-container {
+    // max-height is viewport-relative but this block is gated on width, so a
+    // wide, short window would otherwise collapse the list to a row or two.
+    // Floor the pane and let the page scroll instead.
+    min-height: $plugin-list-min-height;
     max-height: calc(100vh - 280px);
     overflow-y: auto;
   }
