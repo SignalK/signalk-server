@@ -99,9 +99,18 @@ const normalizeDuration = (
   }
   const anchor =
     Temporal.Instant.fromEpochMilliseconds(0).toZonedDateTimeISO('UTC')
-  return anchor.until(anchor.add(duration), {
-    largestUnit: 'hour'
-  })
+  try {
+    return anchor.until(anchor.add(duration), {
+      largestUnit: 'hour'
+    })
+  } catch {
+    // Temporal refuses a date beyond its supported range, so a duration large
+    // enough to overshoot it throws here rather than parsing. That is a bad
+    // query string, not a server fault: guarded the same way parseDuration
+    // guards its own seconds fallback, so it surfaces as a 400.
+    errors.push(`${name} is out of range`)
+    return undefined
+  }
 }
 
 const parseInstant = (

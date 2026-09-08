@@ -397,6 +397,24 @@ describe('Track API query parsing', () => {
       }
     })
 
+    // Temporal refuses a date beyond its supported range, so normalising a
+    // duration large enough to overshoot it throws. That is a bad query string,
+    // and it has to surface as a 400 rather than escaping as a 500.
+    it('rejects a resolution too large to normalise', () => {
+      expect(
+        errorsFrom({ resolution: 'P100000001D', duration: 'PT1H' })
+      ).to.match(/resolution is out of range/)
+    })
+
+    it('still accepts a large but representable resolution', () => {
+      const { request, errors } = parse({
+        resolution: 'P1000000D',
+        duration: 'PT1H'
+      })
+      expect(errors).to.be.empty
+      expect(request.resolution?.toString()).to.equal('PT24000000H')
+    })
+
     // A month is 744h measured from January and 672h from February, so a
     // spacing expressed in one is ambiguous rather than merely awkward.
     it('rejects a resolution in years or months', () => {
