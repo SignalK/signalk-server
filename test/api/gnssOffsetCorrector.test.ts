@@ -152,14 +152,14 @@ describe('leverArm.correctPosition', function () {
   })
 
   it('port-side antenna at midships, vessel pointing north: CCRP is to the east', function () {
-    // antenna at midships (fromBow = length/2 = 10) with fromCenter=2
+    // antenna at midships (fromBow = length/2 = 10) with fromCenter=-2
     // (2m to port of centerline). Physically: heading north -> port
     // is west, so the antenna sits 2m west of the centerline; the
     // CCRP is on the centerline (2m east of antenna). Longitude
     // increases by 2/(R cos lat).
     const out = correctPosition(
       { latitude: 60, longitude: 24 },
-      { fromBow: 10, fromCenter: 2 },
+      { fromBow: 10, fromCenter: -2 },
       20,
       0
     )
@@ -170,16 +170,38 @@ describe('leverArm.correctPosition', function () {
   })
 
   it('starboard-side antenna at midships, vessel pointing north: CCRP is to the west', function () {
-    // Mirror of the previous case: fromCenter=-2 (starboard) ->
+    // Mirror of the previous case: fromCenter=2 (starboard) ->
     // antenna 2m east of centerline at heading north -> CCRP 2m west.
     const out = correctPosition(
       { latitude: 60, longitude: 24 },
-      { fromBow: 10, fromCenter: -2 },
+      { fromBow: 10, fromCenter: 2 },
       20,
       0
     )
     const latRad = (60 * Math.PI) / 180
     const expectedDLon = ((-2 / (R * Math.cos(latRad))) * 180) / Math.PI
+    expect(out.longitude).to.be.closeTo(24 + expectedDLon, 1e-9)
+  })
+
+  it('starboard antenna forward of midships, vessel pointing east', function () {
+    // Both body components non-zero and the heading off-axis, so a sign
+    // error in either term of the rotation shows up. fromBow=5 on a 20m
+    // vessel -> body_x = 5-10 = -5 (CCRP is 5m aft); fromCenter=3
+    // (starboard) -> body_y = -3 (CCRP is 3m to port of the antenna).
+    // Heading 090 (east): the bow points east, so "aft" is west and
+    // "port" is north.
+    //   north = body_x*cos(90) - body_y*sin(90) = 0 - (-3) = +3
+    //   east  = body_x*sin(90) + body_y*cos(90) = -5 + 0    = -5
+    const out = correctPosition(
+      { latitude: 60, longitude: 24 },
+      { fromBow: 5, fromCenter: 3 },
+      20,
+      Math.PI / 2
+    )
+    const latRad = (60 * Math.PI) / 180
+    const expectedDLat = ((3 / R) * 180) / Math.PI
+    const expectedDLon = ((-5 / (R * Math.cos(latRad))) * 180) / Math.PI
+    expect(out.latitude).to.be.closeTo(60 + expectedDLat, 1e-9)
     expect(out.longitude).to.be.closeTo(24 + expectedDLon, 1e-9)
   })
 

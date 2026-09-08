@@ -7,12 +7,17 @@
  * AIS industry convention for the vessel reference point.
  *
  * Body-frame convention (origin at the bow on the centerline):
- *   +x toward bow  -> points OUT through the bow; hull lies at negative x
- *   +y to port     (matches sensors.json "+ve to port, -ve to starboard")
+ *   +x toward bow   -> points OUT through the bow; hull lies at negative x
+ *   +y to starboard (matches sensors.json "+ve to starboard, -ve to port")
+ *
+ * This is a right-handed frame with the same handedness as
+ * navigation.attitude.yaw and navigation.rateOfTurn, both of which are
+ * positive to starboard, so an offset and a heading combine without a
+ * sign correction.
  *
  * Body-frame positions:
  *   Antenna:  x = -fromBow         (fromBow metres aft of the bow)
- *             y = +fromCenter      (fromCenter metres to port of centerline)
+ *             y = +fromCenter      (fromCenter metres to starboard of centerline)
  *   CCRP:     x = -lengthOverall/2 (midships, aft of the bow)
  *             y = 0
  *
@@ -21,22 +26,17 @@
  *               (negative when antenna is forward of midships -> CCRP is aft;
  *                positive when antenna is aft of midships -> CCRP is forward)
  *   body_y = 0 - fromCenter = -fromCenter
- *               (negative when antenna is to port -> CCRP is to starboard;
- *                positive when antenna is to starboard -> CCRP is to port)
+ *               (negative when antenna is to starboard -> CCRP is to port;
+ *                positive when antenna is to port -> CCRP is to starboard)
  *
  * Body→earth rotation for heading θ (true, clockwise from north, bow
- * points along +x body):
- *   At θ=0:  +x body = +north earth, +y body = -east earth (port = west).
- *   The +y body axis lies 90° counterclockwise from +x body in the
- *   horizontal earth plane, i.e. azimuth (θ - 90°).
- *     +x body in earth N/E: ( cos θ,  sin θ)
- *     +y body in earth N/E: ( sin θ, -cos θ)
+ * points along +x body) is the standard NED rotation:
+ *   At θ=0:  +x body = +north earth, +y body = +east earth (starboard = east).
+ *     +x body in earth N/E: ( cos θ, sin θ)
+ *     +y body in earth N/E: (-sin θ, cos θ)
  *   Therefore:
- *     north = body_x * cos θ + body_y * sin θ
- *     east  = body_x * sin θ - body_y * cos θ
- *
- * (Note: this differs from the standard NED rotation matrix because
- * +y body is port here, not starboard.)
+ *     north = body_x * cos θ - body_y * sin θ
+ *     east  = body_x * sin θ + body_y * cos θ
  */
 
 export interface AntennaOffset {
@@ -64,8 +64,8 @@ export function correctPosition(
   const bodyY = -offset.fromCenter
   const cosH = Math.cos(headingTrueRad)
   const sinH = Math.sin(headingTrueRad)
-  const north = bodyX * cosH + bodyY * sinH
-  const east = bodyX * sinH - bodyY * cosH
+  const north = bodyX * cosH - bodyY * sinH
+  const east = bodyX * sinH + bodyY * cosH
   const latRad = antenna.latitude * DEG_TO_RAD
   const dLat = (north / EARTH_RADIUS_M) * RAD_TO_DEG
   const dLon = (east / (EARTH_RADIUS_M * Math.cos(latRad))) * RAD_TO_DEG
