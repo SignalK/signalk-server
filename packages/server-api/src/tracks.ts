@@ -52,10 +52,26 @@ export interface TracksRequest {
    *
    * Intersection, not containment, and not "where the vessel is now": a vessel
    * that crossed the box an hour ago and has since left still matches.
+   *
+   * It selects tracks; it does not clip them. A matching track is returned
+   * whole, including the stretches outside the box, so a client gets the
+   * approach and the departure rather than a line that stops at an invisible
+   * edge. Providers must agree on this or the same query returns different
+   * geometry depending on which one answered.
    */
   bbox?: TrackBoundingBox
 
-  /** Minimum spacing between returned points. */
+  /**
+   * Minimum spacing between returned points.
+   *
+   * Normalised to hours and below before it reaches a provider, so
+   * `total({ unit: 'milliseconds' })` is always safe on it —
+   * `Temporal.Duration` refuses that for day-and-larger units without a
+   * reference date, since their length is timezone-dependent. Windows here are
+   * absolute, so `P1D` means 24h and arrives as `PT24H`. Years and months are
+   * rejected: a month is 744h from January and 672h from February, so it does
+   * not describe a spacing.
+   */
   resolution?: Temporal.Duration
 
   /**
@@ -94,6 +110,14 @@ export interface TracksRequest {
    * geometry alone and omits them from
    * {@link TrackProperties.appliedProperties}, so a client can tell what it
    * actually received rather than inferring it from absent data.
+   *
+   * Values are matched to the *nearest* sample of that path, not to one sharing
+   * the position's timestamp. Paths arrive from different talkers on their own
+   * cadences — position and speed over ground typically a couple of hundred
+   * milliseconds apart — so an equality join returns null for every point while
+   * `appliedProperties` still claims success. A provider that buckets should
+   * match within a tolerance of its bucket width; a value that genuinely has no
+   * nearby sample is null.
    */
   properties?: Path[]
 

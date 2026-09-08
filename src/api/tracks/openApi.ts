@@ -200,14 +200,14 @@ const tracksApiDoc = {
         name: 'bbox',
         in: 'query',
         description:
-          "Only return tracks passing through this box, as west,south,east,north in GeoJSON coordinate order. Matching is intersection anywhere within the time window, not the vessel's current position: a vessel that crossed the box an hour ago and has since left still matches. A west edge numerically greater than the east edge describes a box crossing the antimeridian.",
+          "Only return tracks passing through this box, as west,south,east,north in GeoJSON coordinate order. Matching is intersection anywhere within the time window, not the vessel's current position: a vessel that crossed the box an hour ago and has since left still matches. Matching tracks are returned whole rather than clipped to the box, so a client gets the approach and the departure rather than a line stopping at an invisible edge. A west edge numerically greater than the east edge describes a box crossing the antimeridian.",
         schema: { type: 'string', example: '24.5,59.9,25.2,60.3' }
       },
       Resolution: {
         name: 'resolution',
         in: 'query',
         description:
-          'Minimum spacing between returned points, as an ISO 8601 duration or an integer number of seconds. Must be positive.',
+          'Minimum spacing between returned points, as an ISO 8601 duration or an integer number of seconds. Must be positive. Years and months are not accepted: their length depends on which month you count from, so they do not describe a spacing.',
         schema: {
           oneOf: [
             { type: 'integer', minimum: 1 },
@@ -250,7 +250,7 @@ const tracksApiDoc = {
         name: 'properties',
         in: 'query',
         description:
-          'Comma-separated Signal K paths to return alongside each position, nested to match coordinates the way coordTimes is. Lets a client colour a track by speed, or derive a route from a recorded passage, without querying the History API separately and joining the two responses by timestamp. Provider-optional: what was actually returned is listed in properties.appliedProperties.',
+          'Comma-separated Signal K paths to return alongside each position, nested to match coordinates the way coordTimes is. Lets a client colour a track by speed, or derive a route from a recorded passage, without querying the History API separately and joining the two responses by timestamp. Values are matched to the nearest sample of that path rather than one sharing the position timestamp, because paths arrive from different talkers on their own cadences. Provider-optional: what was actually returned is listed in properties.appliedProperties.',
         schema: {
           type: 'string',
           example: 'navigation.speedOverGround,environment.wind.speedApparent'

@@ -74,6 +74,36 @@ const parseDuration = (
   return parsed
 }
 
+/**
+ * Re-express a duration in hours and below, so a provider can call
+ * `total({ unit: 'milliseconds' })` on it without a reference date.
+ *
+ * Anchored to an arbitrary UTC instant: a spacing is a length, not a position,
+ * so the same query must resolve to the same number of milliseconds whenever it
+ * is asked. That fixes a day at 24h, which is what an absolute window means.
+ */
+const normalizeDuration = (
+  duration: Temporal.Duration,
+  name: string,
+  errors: string[]
+): Temporal.Duration | undefined => {
+  // Years and months have no fixed length — `P1M` is 744h measured from
+  // January and 672h from February — so they are rejected rather than silently
+  // resolved against an arbitrary anchor. A spacing is a length, not a
+  // position: the same query has to mean the same thing whenever it is asked.
+  if (duration.years !== 0 || duration.months !== 0) {
+    errors.push(
+      `${name} must not use years or months, which have no fixed length; use days or smaller`
+    )
+    return undefined
+  }
+  const anchor =
+    Temporal.Instant.fromEpochMilliseconds(0).toZonedDateTimeISO('UTC')
+  return anchor.until(anchor.add(duration), {
+    largestUnit: 'hour'
+  })
+}
+
 const parseInstant = (
   value: string,
   name: string,
@@ -251,7 +281,14 @@ export function parseTracksQuery(
     if (blank(resolution)) {
       errors.push('resolution must not be empty')
     } else {
-      request.resolution = parseDuration(resolution, 'resolution', errors)
+      const parsed = parseDuration(resolution, 'resolution', errors)
+      // Normalised to hours and below before a provider sees it: a provider
+      // needs this as a number of milliseconds, and Temporal.Duration.total()
+      // refuses day-and-larger units without a reference date because their
+      // length is timezone-dependent. Windows here are absolute, so P1D means
+      // 24h, exactly as it does for duration above.
+      request.resolution =
+        parsed && normalizeDuration(parsed, 'resolution', errors)
     }
   }
 

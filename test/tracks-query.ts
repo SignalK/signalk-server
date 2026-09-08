@@ -350,6 +350,63 @@ describe('Track API query parsing', () => {
       expect(errors).to.be.empty
       expect(request.resolution?.toString()).to.equal('PT1M')
     })
+
+    // A provider needs this as a number of milliseconds, and
+    // `Temporal.Duration.total()` refuses day-and-larger units without a
+    // reference date. Both independent provider implementations tripped over
+    // it, so the parser hands over hours-and-below.
+    it('normalises a calendar-unit resolution to hours', () => {
+      for (const [given, expected] of [
+        ['P1D', 'PT24H'],
+        ['P7D', 'PT168H'],
+        ['P1W', 'PT168H']
+      ]) {
+        const { request, errors } = parse({
+          resolution: given,
+          duration: 'PT1H'
+        })
+        expect(errors, given).to.be.empty
+        expect(request.resolution?.toString(), given).to.equal(expected)
+      }
+    })
+
+    it('leaves a resolution that is already hours or below alone', () => {
+      for (const given of ['PT30S', 'PT5M', 'PT2H']) {
+        const { request } = parse({ resolution: given, duration: 'PT1H' })
+        expect(request.resolution?.toString(), given).to.equal(given)
+      }
+    })
+
+    // The property that matters: whatever the parser emits, a provider can call
+    // total() on it without a reference date.
+    it('emits a resolution every provider can total()', () => {
+      for (const given of ['PT30S', 'P1D', 'P7D', 'P1W', '3600']) {
+        const { request, errors } = parse({
+          resolution: given,
+          duration: 'PT1H'
+        })
+        // Asserted before the no-throw check: without these, a query that
+        // failed to parse would leave resolution undefined and the optional
+        // call would pass by doing nothing.
+        expect(errors, given).to.be.empty
+        expect(request.resolution, given).to.not.be.undefined
+        expect(
+          () => request.resolution!.total({ unit: 'milliseconds' }),
+          given
+        ).to.not.throw()
+      }
+    })
+
+    // A month is 744h measured from January and 672h from February, so a
+    // spacing expressed in one is ambiguous rather than merely awkward.
+    it('rejects a resolution in years or months', () => {
+      for (const given of ['P1M', 'P1Y', 'P2M']) {
+        expect(
+          errorsFrom({ resolution: given, duration: 'PT1H' }),
+          given
+        ).to.match(/must not use years or months/)
+      }
+    })
   })
 
   describe('properties', () => {
