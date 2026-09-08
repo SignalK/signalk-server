@@ -10,41 +10,16 @@
  * plugin's 1.x code subscribes to a server 3.x Bus, it receives 3.x Events
  * and crashes with "TypeError: e.isEnd is not a function".
  *
- * This module solves the problem by:
- * 1. Hooking Node's module resolution so ALL require('baconjs') calls in the
- *    process return the server's 3.x version — eliminating version mismatches
- * 2. Patching 3.x to restore the .map('.property') string shorthand that
- *    existed in 1.x (used by plugins like signalk-to-nmea2000)
+ * ./host-modules redirects every require('baconjs') in the process to the
+ * server's 3.x copy, eliminating version mismatches. This module patches
+ * that copy to restore the .map('.property') string shorthand that existed
+ * in 1.x (used by plugins like signalk-to-nmea2000).
  *
- * This module MUST be imported before any other module that uses BaconJS.
+ * This module MUST be imported after ./host-modules and before any other
+ * module that uses BaconJS.
  */
 
-import Module from 'module'
 import * as Bacon from 'baconjs'
-
-const serverBaconPath = require.resolve('baconjs')
-
-type ResolveFilename = (
-  request: string,
-  parent: NodeModule | undefined,
-  isMain: boolean,
-  options: Record<string, unknown>
-) => string
-
-const ModuleInternal = Module as unknown as Record<string, unknown>
-
-const origResolveFilename = ModuleInternal._resolveFilename as ResolveFilename
-ModuleInternal._resolveFilename = function (
-  request: string,
-  parent: NodeModule | undefined,
-  isMain: boolean,
-  options: Record<string, unknown>
-) {
-  if (request === 'baconjs') {
-    return serverBaconPath
-  }
-  return origResolveFilename.call(this, request, parent, isMain, options)
-}
 
 type Mappable = { map: (f: unknown) => unknown }
 
