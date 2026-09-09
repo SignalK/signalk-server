@@ -132,6 +132,12 @@ type EnforcerCtor = new (app: unknown) => StalenessEnforcer
 const NewEnforcer = StalenessEnforcer as unknown as EnforcerCtor
 const makeEnforcer = (app: MockApp): StalenessEnforcer => new NewEnforcer(app)
 
+const samplerKeys = (enforcer: StalenessEnforcer): string[] => [
+  ...(
+    enforcer as unknown as { autoSamplers: Map<string, unknown> }
+  ).autoSamplers.keys()
+]
+
 describe('StalenessEnforcer', () => {
   it('emits null with state.timedOut when a periodic path exceeds the global default', () => {
     const app = makeMockApp({ defaultTimeout: 60 })
@@ -237,6 +243,33 @@ describe('StalenessEnforcer', () => {
     const enforcer = makeEnforcer(app)
     runTick(enforcer)
     expect(app.captured).to.have.lengthOf(0)
+  })
+
+  it('records no auto sampler for event paths', () => {
+    const app = makeMockApp({ defaultTimeout: 60 })
+    const enforcer = makeEnforcer(app)
+    enforcer.onIncoming(
+      SELF_CONTEXT,
+      'notifications',
+      'self.notificationhandler'
+    )
+    enforcer.onIncoming(
+      SELF_CONTEXT,
+      'notifications.mob',
+      'self.notificationhandler'
+    )
+    enforcer.onIncoming(SELF_CONTEXT, 'alerts', 'alertsApi')
+    enforcer.onIncoming(
+      SELF_CONTEXT,
+      'alerts.propulsion.port.oilPressureLow',
+      'alertsApi'
+    )
+    // Control: a measurement path on the same context must still get one,
+    // so the assertion below cannot pass by recording nothing at all.
+    enforcer.onIncoming(SELF_CONTEXT, 'navigation.speedOverGround', 'gps.1')
+    expect(samplerKeys(enforcer)).to.deep.equal([
+      SELF_CONTEXT + '\0navigation.speedOverGround\0gps.1'
+    ])
   })
 
   it('skips paths classified updateContract=event via shipped defaults', () => {
