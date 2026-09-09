@@ -13,6 +13,7 @@ import { discoveryApiRecord } from './discovery/openApi'
 import { weatherApiRecord } from './weather/openApi'
 import { appsApiRecord } from './apps/openApi'
 import { historyApiRecord } from './history/openApi'
+import { tracksApiRecord } from './tracks/openApi'
 import { radarApiRecord } from './radar/openApi'
 import { sensorsApiRecord } from './sensors/openApi'
 import { bleApiRecord } from './ble/openApi'
@@ -47,6 +48,7 @@ const apiDocs = [
   weatherApiRecord,
   securityApiRecord,
   historyApiRecord,
+  tracksApiRecord,
   radarApiRecord,
   sensorsApiRecord,
   bleApiRecord
