@@ -131,7 +131,11 @@ export default class TcpStream extends Transform {
       })
       .on('reconnect', (n: number, delay: number) => {
         const msg = `Reconnect ${this.options.host} ${this.options.port} retry ${n} delay ${delay}`
-        this.options.app.setProviderError(this.options.providerId, msg)
+        if (n === 0) {
+          this.options.app.setProviderStatus(this.options.providerId, msg)
+        } else {
+          this.options.app.setProviderError(this.options.providerId, msg)
+        }
         this.debug(msg)
       })
       .on('disconnect', () => {
