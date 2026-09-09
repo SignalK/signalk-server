@@ -177,6 +177,7 @@ export class StalenessEnforcer {
   onIncoming(context: string, path: string, sourceRef: string): void {
     const key = makeKey(context, path, sourceRef)
     if (this.timedOut.size > 0) this.timedOut.delete(key)
+    if (isEventPath(path)) return
     this.recordAutoSample(key)
   }
 
@@ -289,14 +290,7 @@ export class StalenessEnforcer {
     context: string,
     now: number
   ): void {
-    if (
-      path === NOTIFICATIONS_ROOT ||
-      path.startsWith(NOTIFICATIONS_PREFIX) ||
-      path === ALERTS_ROOT ||
-      path.startsWith(ALERTS_PREFIX)
-    ) {
-      return
-    }
+    if (isEventPath(path)) return
 
     const meta = this.lookupMeta(context, path)
     const updateContract = this.resolveUpdateContract(path, meta)
@@ -453,6 +447,15 @@ export class StalenessEnforcer {
 
 const makeKey = (context: string, path: string, sourceRef: string): string =>
   context + '\0' + path + '\0' + sourceRef
+
+// Event paths carry discrete occurrences, not periodic measurements: they
+// are exempt from timeout enforcement, so neither the sweep nor the auto
+// sampler has anything to do with them.
+const isEventPath = (path: string): boolean =>
+  path === NOTIFICATIONS_ROOT ||
+  path.startsWith(NOTIFICATIONS_PREFIX) ||
+  path === ALERTS_ROOT ||
+  path.startsWith(ALERTS_PREFIX)
 
 // The delta cache stores either ALL leaf entries (sourceRef → leaf) or NO
 // leaf entries at a given node — intermediate paths never share a level
