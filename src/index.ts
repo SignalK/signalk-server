@@ -73,6 +73,7 @@ import { buildProviderTalkerLookups } from './nmea0183TalkerGroups'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { StalenessEnforcer } from './staleness'
+import { ThrottledCaller } from './throttledCaller'
 import { Zones } from './zones'
 import checkNodeVersion from './version'
 import helmet from 'helmet'
@@ -105,6 +106,14 @@ function cloneDelta(delta: any): any {
   }
 }
 
+// setPluginStatus / setProviderStatus each carry the full status list, and
+// serverevents are written to every admin-UI WebSocket without backpressure,
+// so a plugin calling them in a tight loop can push megabytes per second into
+// each socket. Throttling the emit bounds that; the admin UI still sees the
+// latest status within one interval.
+const PROVIDER_STATUS_MIN_INTERVAL_MS = 1000
+const PROVIDER_STATUS_REFRESH_INTERVAL_MS = 5 * 1000
+
 class Server {
   app: ServerApp &
     WithConfig &
@@ -120,6 +129,7 @@ class Server {
   // Pending sourceRef migration timers; cleared on stop() so a deferred
   // migration scheduled before a restart cannot fire on a torn-down app.
   pendingSourceRefMigrations?: Set<NodeJS.Timeout>
+  private providerStatusEmitter: ThrottledCaller
 
   constructor(opts: { securityConfig: SecurityConfig }) {
     checkNodeVersion()
@@ -225,6 +235,15 @@ class Server {
     }
     Object.assign(app, pluginManager)
 
+    const providerStatusEmitter = new ThrottledCaller(() => {
+      app.emit('serverevent', {
+        type: 'PROVIDERSTATUS',
+        from: 'signalk-server',
+        data: app.getProviderStatus()
+      })
+    }, PROVIDER_STATUS_MIN_INTERVAL_MS)
+    this.providerStatusEmitter = providerStatusEmitter
+
     app.setPluginStatus = (providerId: string, statusMessage: string) => {
       doSetProviderStatus(providerId, statusMessage, 'status', 'plugin')
     }
@@ -269,11 +288,7 @@ class Server {
 
       status.message = statusMessage
 
-      app.emit('serverevent', {
-        type: 'PROVIDERSTATUS',
-        from: 'signalk-server',
-        data: app.getProviderStatus()
-      })
+      providerStatusEmitter.request()
     }
 
     app.getProviderStatus = () => {
@@ -670,13 +685,10 @@ class Server {
       app.stalenessEnforcer = undefined
     }
     app.intervals.push(
-      setInterval(() => {
-        app.emit('serverevent', {
-          type: 'PROVIDERSTATUS',
-          from: 'signalk-server',
-          data: app.getProviderStatus()
-        })
-      }, 5 * 1000)
+      setInterval(
+        () => self.providerStatusEmitter.callNow(),
+        PROVIDER_STATUS_REFRESH_INTERVAL_MS
+      )
     )
 
     function serverUpgradeIsAvailable(err: any, newVersion?: string) {
@@ -806,6 +818,7 @@ class Server {
   }
 
   async stop(cb?: () => void) {
+    this.providerStatusEmitter.cancel()
     if (!this.app.started) {
       return this
     }

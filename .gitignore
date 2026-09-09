@@ -60,3 +60,5 @@ nul
 # debug artefacts
 *.sln
 test/server-test-config/debug
+# Per-developer local Makefile (deploy shortcuts, scratch targets)
+Makefile.local
