@@ -100,9 +100,18 @@ const normalizeDuration = (
   const anchor =
     Temporal.Instant.fromEpochMilliseconds(0).toZonedDateTimeISO('UTC')
   try {
-    return anchor.until(anchor.add(duration), {
+    const normalized = anchor.until(anchor.add(duration), {
       largestUnit: 'hour'
     })
+    // A millisecond floor: timestamps carry no finer granularity, so a spacing
+    // below one cannot thin anything, and `PT0.0005S` is a request no store can
+    // act on. Rejected rather than rounded, because silently widening a
+    // client's spacing is worse than telling it the value was unusable.
+    if (normalized.total({ unit: 'milliseconds' }) < 1) {
+      errors.push(`${name} must be at least one millisecond`)
+      return undefined
+    }
+    return normalized
   } catch {
     // Temporal refuses a date beyond its supported range, so a duration large
     // enough to overshoot it throws here rather than parsing. That is a bad

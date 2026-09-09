@@ -415,6 +415,23 @@ describe('Track API query parsing', () => {
       expect(request.resolution?.toString()).to.equal('PT24000000H')
     })
 
+    // Timestamps carry milliseconds, so a finer spacing cannot thin anything.
+    // Accepting it meant handing a provider a value no store could act on.
+    it('rejects a resolution below one millisecond', () => {
+      expect(
+        errorsFrom({ resolution: 'PT0.0005S', duration: 'PT1H' })
+      ).to.match(/resolution must be at least one millisecond/)
+    })
+
+    it('accepts a resolution of exactly one millisecond', () => {
+      const { request, errors } = parse({
+        resolution: 'PT0.001S',
+        duration: 'PT1H'
+      })
+      expect(errors).to.be.empty
+      expect(request.resolution?.total({ unit: 'milliseconds' })).to.equal(1)
+    })
+
     // A month is 744h measured from January and 672h from February, so a
     // spacing expressed in one is ambiguous rather than merely awkward.
     it('rejects a resolution in years or months', () => {

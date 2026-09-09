@@ -207,7 +207,7 @@ const tracksApiDoc = {
         name: 'resolution',
         in: 'query',
         description:
-          'Minimum spacing between returned points, as an ISO 8601 duration or an integer number of seconds. Must be positive. Years and months are not accepted: their length depends on which month you count from, so they do not describe a spacing.',
+          'Minimum spacing between returned points, as an ISO 8601 duration or an integer number of seconds. Must be positive. Years and months are not accepted: their length depends on which month you count from, so they do not describe a spacing. Neither is anything below a millisecond, which is the finest granularity a timestamp carries.',
         schema: {
           oneOf: [
             { type: 'integer', minimum: 1 },

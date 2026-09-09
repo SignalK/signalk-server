@@ -70,7 +70,8 @@ export interface TracksRequest {
    * reference date, since their length is timezone-dependent. Windows here are
    * absolute, so `P1D` means 24h and arrives as `PT24H`. Years and months are
    * rejected: a month is 744h from January and 672h from February, so it does
-   * not describe a spacing.
+   * not describe a spacing. So is anything below a millisecond, which is the
+   * finest granularity a timestamp carries.
    */
   resolution?: Temporal.Duration
 
