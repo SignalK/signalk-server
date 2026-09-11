@@ -22,6 +22,9 @@ const NOTIFICATIONS_ROOT = 'notifications'
 const DEFAULT_TIMEOUT_SECONDS = 60
 const DEFAULT_CHECK_INTERVAL_MS = 1000
 const NEVER_TIMEOUT = 0
+// Paths `fillIdentityField` may write to the vessel context as a bare
+// primitive rather than a value object; see checkLeafGroup.
+const IDENTITY_PATHS = new Set(['uuid', 'mmsi', 'url'])
 // `timeout: 'auto'` derives the effective timeout from observed delta
 // arrival rates. The constants below match the RFC v7 contract: a
 // warm-up window seeded with `defaultTimeout`, a sample ring of fixed
@@ -305,16 +308,15 @@ export class StalenessEnforcer {
       if (!isCacheLeafEntry(leaf)) continue
       if (leaf.isMeta) continue
       if (leaf.value === null) continue
-      // String and boolean leaves are by Signal K convention identity
-      // fields (uuid, mmsi, name, flag) or simple state flags — never
-      // periodic measurements. Emitting a null+timedOut delta for them
-      // also crashes FullSignalK.addValue when the path collides with a
-      // top-level identity scalar that fillIdentityField writes onto the
-      // vessel context (e.g. `vessels.<id>.uuid = '<id>'`): the value
-      // tree carries the identity as a primitive, so walking the path
-      // dereferences a string and addValue's leaf.meta assignment fails.
-      const valueType = typeof leaf.value
-      if (valueType === 'string' || valueType === 'boolean') continue
+      // `fillIdentityField` writes the vessel identity onto the context as a
+      // bare primitive (`vessels.<id>.uuid = '<id>'`), so for these paths the
+      // value tree holds a string where every other leaf holds an object.
+      // FullSignalK.addValue walks the path and assigns `leaf.value`, which
+      // throws on a primitive, so a timeout delta for them is dropped with a
+      // logged TypeError. Only the key matching the selfId form is ever a
+      // primitive, but all three are excluded: which one it is depends on how
+      // this vessel is identified.
+      if (IDENTITY_PATHS.has(path)) continue
       const key = makeKey(context, path, srcRef)
       // The base timeout depends on the source for `meta.timeout: 'auto'`
       // — different sources of the same path can have different update
