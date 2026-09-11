@@ -442,7 +442,7 @@ describe('StalenessEnforcer', () => {
     })
   })
 
-  it('skips string-valued leaves (identity fields collide with FullSignalK)', () => {
+  it('skips the uuid identity path, which FullSignalK cannot represent', () => {
     const app = makeMockApp({ defaultTimeout: 60 })
     seedLeaf(
       app,
@@ -457,7 +457,7 @@ describe('StalenessEnforcer', () => {
     expect(app.captured).to.have.lengthOf(0)
   })
 
-  it('skips boolean-valued leaves (state flags, not measurements)', () => {
+  it('times out a boolean-valued leaf', () => {
     const app = makeMockApp({ defaultTimeout: 60 })
     seedLeaf(
       app,
@@ -469,7 +469,9 @@ describe('StalenessEnforcer', () => {
     )
     const enforcer = makeEnforcer(app)
     runTick(enforcer)
-    expect(app.captured).to.have.lengthOf(0)
+    expect(app.captured).to.have.lengthOf(1)
+    expect(app.captured[0].value).to.equal(null)
+    expect(app.captured[0].state?.lastValue?.value).to.equal(true)
   })
 
   describe('meta.timeout: "auto"', () => {
@@ -647,5 +649,64 @@ describe('StalenessEnforcer', () => {
       runTick(enforcer)
       expect(app.captured).to.have.lengthOf(0)
     })
+  })
+
+  it('times out a string enum path such as navigation.state', () => {
+    const app = makeMockApp({ defaultTimeout: 60 })
+    const ts = isoSecondsAgo(120)
+    seedLeaf(app, SELF_CONTEXT, 'navigation.state', 'autostate', ts, 'moored')
+    const enforcer = makeEnforcer(app)
+
+    runTick(enforcer)
+
+    expect(app.captured).to.have.lengthOf(1)
+    const [msg] = app.captured
+    expect(msg.providerId).to.equal(STALENESS_PLUGIN_ID)
+    expect(msg.path).to.equal('navigation.state')
+    expect(msg.value).to.equal(null)
+    expect(msg.state?.timedOut).to.equal(true)
+    expect(msg.state?.lastValue?.value).to.equal('moored')
+  })
+
+  it('honours a plugin-declared meta.timeout on a string path', () => {
+    // metaByPath models persisted baseDeltas meta, the only store the
+    // enforcer consults for a per-path timeout.
+    const app = makeMockApp({
+      defaultTimeout: 60,
+      metaByPath: { 'navigation.state': { timeout: 900 } }
+    })
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'navigation.state',
+      'autostate',
+      isoSecondsAgo(120),
+      'moored'
+    )
+    const enforcer = makeEnforcer(app)
+
+    runTick(enforcer)
+
+    expect(app.captured).to.be.empty
+  })
+
+  it('still times out a path whose last segment is an identity name', () => {
+    // The exclusion is on the whole path, not a trailing segment: a nested
+    // `...url` is an ordinary leaf and must not inherit the exemption.
+    const app = makeMockApp({ defaultTimeout: 60 })
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'network.services.signalk.url',
+      'srv.1',
+      isoSecondsAgo(120),
+      'http://example.com'
+    )
+    const enforcer = makeEnforcer(app)
+
+    runTick(enforcer)
+
+    expect(app.captured).to.have.lengthOf(1)
+    expect(app.captured[0].path).to.equal('network.services.signalk.url')
   })
 })
