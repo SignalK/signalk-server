@@ -59,6 +59,7 @@ interface MetaData {
   longName?: string
   shortName?: string
   timeout?: number
+  updateContract?: string
   displayScale?: DisplayScaleValue
   displayUnits?: DisplayUnits
   zones?: Zone[]
@@ -145,6 +146,7 @@ const METAFIELDS = [
   'longName',
   'shortName',
   'timeout',
+  'updateContract',
   'displayScale',
   'displayUnits',
   'zones',
@@ -372,6 +374,35 @@ const UnitSelect: React.FC<ValueRenderProps> = ({
     {Object.entries(UNITS).map(([unit, description]) => (
       <option key={unit} value={unit}>
         {unit}:{description}
+      </option>
+    ))}
+  </Form.Select>
+)
+
+const UPDATE_CONTRACTS: Array<[string, string]> = [
+  ['', 'Use the shipped classification'],
+  ['periodic', 'periodic: regular updates expected'],
+  ['event', 'event: emits only on change, never stale']
+]
+
+export const UpdateContractSelect: React.FC<ValueRenderProps> = ({
+  disabled,
+  value,
+  setValue,
+  inputId
+}) => (
+  <Form.Select
+    id={inputId}
+    disabled={disabled}
+    value={(value as string) ?? ''}
+    size="sm"
+    onChange={(e) =>
+      setValue(e.target.value === '' ? undefined : e.target.value)
+    }
+  >
+    {UPDATE_CONTRACTS.map(([contract, label]) => (
+      <option key={contract || 'unset'} value={contract}>
+        {label}
       </option>
     ))}
   </Form.Select>
@@ -620,6 +651,13 @@ const METAFIELDRENDERERS: Record<
   longName: (props) => <MetaFormRow {...props} renderValue={Text} />,
   shortName: (props) => <MetaFormRow {...props} renderValue={Text} />,
   timeout: (props) => <MetaFormRow {...props} renderValue={NumberValue} />,
+  updateContract: (props) => (
+    <MetaFormRow
+      {...props}
+      renderValue={UpdateContractSelect}
+      description="Whether silence on this path means a failure (periodic) or simply no change (event)"
+    />
+  ),
   displayScale: (props) => (
     <MetaFormRow {...props} renderValue={DisplaySelect} />
   ),
@@ -657,12 +695,25 @@ const METAFIELDRENDERERS: Record<
   )
 }
 
+// `Add Field` seeds a new key with an empty string, so a contract the user
+// never chose would otherwise be persisted as `updateContract: ''`. Only the
+// two valid contracts are sent; anything else drops the key so the shipped
+// classification keeps applying.
+const UPDATE_CONTRACT_VALUES = ['periodic', 'event']
+
+export const normalizeMetaForSave = (meta: MetaData): MetaData => {
+  if (meta.updateContract === undefined) return meta
+  if (UPDATE_CONTRACT_VALUES.includes(meta.updateContract)) return meta
+  const { updateContract: _dropped, ...rest } = meta
+  return rest
+}
+
 const saveMeta = (path: string, meta: MetaData) => {
   fetch(`/signalk/v1/api/vessels/self/${pathToUrlSegments(path)}/meta`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: meta })
+    body: JSON.stringify({ value: normalizeMetaForSave(meta) })
   })
 }
 

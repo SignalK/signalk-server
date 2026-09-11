@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { CategorySelect, Zones } from './Meta'
+import {
+  CategorySelect,
+  normalizeMetaForSave,
+  UpdateContractSelect,
+  Zones
+} from './Meta'
 import type { PresetDetails, UnitDefinitions } from '../../utils/unitConversion'
 
 const DEFINITIONS: UnitDefinitions = {
@@ -235,5 +240,92 @@ describe('Zones', () => {
   it('edits thresholds in the preset unit when there is no override', () => {
     renderZones()
     expect(screen.getByLabelText('Zone unit')).toHaveValue('kn')
+  })
+})
+
+describe('UpdateContractSelect', () => {
+  const renderContract = (
+    value: unknown,
+    setValue: (value: unknown) => void = () => {}
+  ) =>
+    render(
+      <UpdateContractSelect
+        disabled={false}
+        value={value}
+        setValue={setValue}
+        inputId="contract"
+      />
+    )
+
+  it('offers unset, periodic and event', () => {
+    renderContract(undefined)
+    const options = screen.getAllByRole('option').map((o) => o.textContent)
+    expect(options).to.deep.equal([
+      'Use the shipped classification',
+      'periodic: regular updates expected',
+      'event: emits only on change, never stale'
+    ])
+  })
+
+  it('shows the unset option when the path has no contract', () => {
+    renderContract(undefined)
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).to.equal(
+      ''
+    )
+  })
+
+  it('reflects a contract already set on the path', () => {
+    renderContract('event')
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).to.equal(
+      'event'
+    )
+  })
+
+  it('reports a chosen contract to the editor', () => {
+    const setValue = vi.fn()
+    renderContract(undefined, setValue)
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'event' }
+    })
+    expect(setValue).toHaveBeenCalledWith('event')
+  })
+
+  it('clears the field rather than storing an empty string', () => {
+    // An empty selection must remove the key so the shipped classification
+    // applies again, not persist '' as the contract.
+    const setValue = vi.fn()
+    renderContract('event', setValue)
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '' } })
+    expect(setValue).toHaveBeenCalledWith(undefined)
+  })
+})
+
+describe('normalizeMetaForSave', () => {
+  it('drops a contract the user never chose', () => {
+    // Add Field seeds '' — saving without touching the select must not
+    // persist that as the contract.
+    expect(
+      normalizeMetaForSave({ description: 'x', updateContract: '' })
+    ).to.deep.equal({ description: 'x' })
+  })
+
+  it('keeps periodic and event', () => {
+    expect(normalizeMetaForSave({ updateContract: 'periodic' })).to.deep.equal({
+      updateContract: 'periodic'
+    })
+    expect(normalizeMetaForSave({ updateContract: 'event' })).to.deep.equal({
+      updateContract: 'event'
+    })
+  })
+
+  it('drops an unrecognised contract', () => {
+    expect(normalizeMetaForSave({ updateContract: 'sometimes' })).to.deep.equal(
+      {}
+    )
+  })
+
+  it('leaves metadata without a contract untouched', () => {
+    const meta = { description: 'x', timeout: 900 }
+    expect(normalizeMetaForSave(meta)).to.equal(meta)
   })
 })
