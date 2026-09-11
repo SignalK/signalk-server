@@ -318,6 +318,27 @@ The method is **idempotent**: on subsequent server starts, fields already persis
 
 The `displayUnits.category` is validated against the path's SI unit. If the category doesn't match, the method returns `false` and logs a debug message.
 
+### Declaring stale data behaviour
+
+The same method is how a plugin tells [Stale Data Detection](../../setup/staleness.md) how its paths behave. Declare it once at plugin start — metadata attached to individual deltas is not used to resolve timeouts, and repeating it on every delta would only add traffic.
+
+```javascript
+plugin.start = async (options) => {
+  // Republished every 10 minutes, so the 60s default would flag it as stale.
+  await app.setDefaultMetadata('navigation.state', { timeout: 900 })
+
+  // Emitted only when the value changes; silence means unchanged.
+  await app.setDefaultMetadata('propulsion.port.state', {
+    updateContract: 'event'
+  })
+
+  // Never meaningful to time out.
+  await app.setDefaultMetadata('design.airHeight', { timeout: 0 })
+}
+```
+
+Per-field merge applies here too: if the user has set a `timeout` for the path in the Data Browser, theirs wins and the plugin's suggestion is ignored.
+
 ## Correction and transform plugins
 
 There are essentially two strategies a plugin can employ to change a value for a path:
