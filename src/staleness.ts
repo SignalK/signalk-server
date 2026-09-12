@@ -5,13 +5,12 @@ import {
   Path,
   PathValue,
   SourceRef,
-  UpdateContract,
   Timestamp
 } from '@signalk/server-api'
 
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { createDebug } from './debug'
-import updateContractDefaults from './defaults/updateContracts.json'
+import { resolveUpdateContract } from './updateContracts'
 
 const debug = createDebug('signalk-server:staleness')
 
@@ -76,40 +75,6 @@ const isCacheLeafEntry = (v: unknown): v is CacheLeafEntry =>
   isObject(v) &&
   typeof (v as { path?: unknown }).path === 'string' &&
   'value' in v
-
-type UpdateContractDefaults = ReadonlyArray<readonly [string, UpdateContract]>
-
-/**
- * Build a longest-prefix-match table from the shipped updateContracts.json so a
- * single defaults lookup decides whether a path is event-driven without the
- * enforcer special-casing prefixes inline.
- */
-const buildUpdateContractDefaults = (
-  raw: Record<string, string>
-): UpdateContractDefaults => {
-  const entries: Array<[string, UpdateContract]> = []
-  for (const prefix of Object.keys(raw)) {
-    const t = raw[prefix]
-    if (t === 'periodic' || t === 'event') {
-      entries.push([prefix, t])
-    }
-  }
-  entries.sort((a, b) => b[0].length - a[0].length)
-  return entries
-}
-
-const DEFAULT_UPDATE_CONTRACTS = buildUpdateContractDefaults(
-  updateContractDefaults as Record<string, string>
-)
-
-const resolveUpdateContractFromDefaults = (
-  path: string
-): UpdateContract | undefined => {
-  for (const [prefix, updateContract] of DEFAULT_UPDATE_CONTRACTS) {
-    if (path === prefix || path.startsWith(prefix + '.')) return updateContract
-  }
-  return undefined
-}
 
 /**
  * Server-side enforcer for `meta.timeout`. Walks the delta cache once per
@@ -292,7 +257,7 @@ export class StalenessEnforcer {
     }
 
     const meta = this.lookupMeta(context, path)
-    const updateContract = this.resolveUpdateContract(path, meta)
+    const updateContract = resolveUpdateContract(path, meta)
     if (updateContract !== 'periodic') return
 
     const baseTimeoutMs = this.resolveBaseTimeoutMs(context, path, meta)
@@ -346,16 +311,6 @@ export class StalenessEnforcer {
     if (meta?.timeout !== 'auto') return baseTimeoutMs
     const derived = this.deriveAutoTimeoutMs(key)
     return derived ?? baseTimeoutMs
-  }
-
-  private resolveUpdateContract(
-    path: string,
-    meta: MetaValue | undefined
-  ): UpdateContract {
-    if (meta?.updateContract) return meta.updateContract
-    const fromDefaults = resolveUpdateContractFromDefaults(path)
-    if (fromDefaults) return fromDefaults
-    return 'periodic'
   }
 
   // Resolves the base timeout (ms) ignoring `meta.timeout: 'auto'` —

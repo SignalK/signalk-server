@@ -1,22 +1,30 @@
-const chai = require('chai')
-chai.Should()
-chai.use(require('chai-things'))
-chai.use(require('@signalk/signalk-schema').chaiModule)
-const { freeport } = require('./ts-servertestutilities')
-const { startServerP, sendDelta } = require('./servertestutilities')
-const uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
+import chai, { expect } from 'chai'
+// @ts-expect-error no type declarations available
+import chaiThings from 'chai-things'
+// @ts-expect-error no type declarations available
+import { chaiModule } from '@signalk/signalk-schema'
+import { freeport } from './ts-servertestutilities'
+import { removeServerResolvedMeta } from './serverResolvedMeta'
+import { startServerP, sendDelta } from './servertestutilities'
 
-const delta = {
+chai.should()
+chai.use(chaiThings)
+chai.use(chaiModule)
+
+const uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
+const DELTA_ROUNDTRIP_TIMEOUT_MS = 4000
+
+const makeDelta = (tripLog: number, src: string) => ({
   context: 'vessels.' + uuid,
   updates: [
     {
       source: {
         pgn: 128275,
         label: '/dev/actisense',
-        src: '115'
+        src
       },
       values: [
-        { path: 'navigation.trip.log', value: 43374 },
+        { path: 'navigation.trip.log', value: tripLog },
         { path: 'navigation.log', value: 17404540 }
       ]
     },
@@ -32,18 +40,63 @@ const delta = {
       ]
     }
   ]
+})
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Chai {
+    interface Assertion {
+      // Added by @signalk/signalk-schema's chai plugin, which ships no types.
+      validSignalK: Assertion
+    }
+  }
 }
 
-function removeDisplayUnits(tree) {
+interface MetaBearingNode {
+  meta?: Record<string, unknown>
+  values?: Record<string, { value: unknown }>
+}
+
+interface FullModel {
+  vessels: Record<
+    string,
+    {
+      navigation: Record<string, MetaBearingNode & Record<string, unknown>> & {
+        trip: { log: MetaBearingNode }
+      }
+    }
+  >
+}
+
+const readFullModel = async (restUrl: string): Promise<FullModel> => {
+  const res = await fetch(restUrl)
+  const body = await res.text()
+  expect(res.ok, `GET ${restUrl} returned ${res.status}: ${body}`).to.equal(
+    true
+  )
+  const parsed: unknown = JSON.parse(body)
+  expect(parsed).to.be.an('object')
+  const model = parsed as FullModel
+  expect(
+    model.vessels?.[uuid]?.navigation,
+    `response has no vessels[${uuid}].navigation`
+  ).to.be.an('object')
+  return model
+}
+
+const stripServerResolvedMeta = (tree: FullModel): void => {
   const nav = tree.vessels[uuid].navigation
-  delete nav.trip.log.meta.displayUnits
-  delete nav.log.meta.displayUnits
-  delete nav.courseOverGroundTrue.meta.displayUnits
-  delete nav.speedOverGround.meta.displayUnits
+  removeServerResolvedMeta([
+    nav.trip.log,
+    nav.log,
+    nav.courseOverGroundTrue,
+    nav.speedOverGround
+  ])
 }
 
 describe('Server', function () {
-  let server, port
+  let server: Awaited<ReturnType<typeof startServerP>> | undefined
+  let port: number
 
   before(async function () {
     port = await freeport()
@@ -51,7 +104,7 @@ describe('Server', function () {
   })
 
   after(async function () {
-    await server.stop()
+    await server?.stop()
   })
 
   it('handles two deltas with signalk path', function () {
@@ -59,14 +112,9 @@ describe('Server', function () {
     const deltaUrl = host + '/signalk/v1/api/_test/delta'
     const restUrl = host + '/signalk/v1/api/'
 
-    console.log('send')
-    return sendDelta(delta, deltaUrl)
-      .then(function () {
-        console.log('back1')
-        return fetch(restUrl).then((r) => r.json())
-      })
-      .then(function (treeAfterFirstDelta) {
-        console.log('back2')
+    return sendDelta(makeDelta(43374, '115'), deltaUrl)
+      .then(() => readFullModel(restUrl))
+      .then((treeAfterFirstDelta) => {
         treeAfterFirstDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           43374
@@ -76,16 +124,13 @@ describe('Server', function () {
           'deltaFromHttp.115'
         )
         delete treeAfterFirstDelta.vessels[uuid].navigation.course //FIXME until in schema
-        removeDisplayUnits(treeAfterFirstDelta)
+        stripServerResolvedMeta(treeAfterFirstDelta)
         treeAfterFirstDelta.should.be.validSignalK
 
-        delta.updates[0].values[0].value = 1
-        return sendDelta(delta, deltaUrl)
+        return sendDelta(makeDelta(1, '115'), deltaUrl)
       })
-      .then(function () {
-        return fetch(restUrl).then((r) => r.json())
-      })
-      .then(function (treeAfterSecondDelta) {
+      .then(() => readFullModel(restUrl))
+      .then((treeAfterSecondDelta) => {
         treeAfterSecondDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           1
@@ -95,17 +140,13 @@ describe('Server', function () {
           'deltaFromHttp.115'
         )
         delete treeAfterSecondDelta.vessels[uuid].navigation.course //FIXME until in schema
-        removeDisplayUnits(treeAfterSecondDelta)
+        stripServerResolvedMeta(treeAfterSecondDelta)
         treeAfterSecondDelta.should.be.validSignalK
 
-        delta.updates[0].values[0].value = 2
-        delta.updates[0].source.src = '116'
-        return sendDelta(delta, deltaUrl)
+        return sendDelta(makeDelta(2, '116'), deltaUrl)
       })
-      .then(function () {
-        return fetch(restUrl).then((r) => r.json())
-      })
-      .then(function (treeAfterOtherSourceDelta) {
+      .then(() => readFullModel(restUrl))
+      .then((treeAfterOtherSourceDelta) => {
         treeAfterOtherSourceDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           2
@@ -114,17 +155,20 @@ describe('Server', function () {
           'navigation.trip.log.$source',
           'deltaFromHttp.116'
         )
-        treeAfterOtherSourceDelta.vessels[uuid].navigation.trip.log.values[
-          'deltaFromHttp.115'
-        ].value.should.equal(1)
-        treeAfterOtherSourceDelta.vessels[uuid].navigation.trip.log.values[
-          'deltaFromHttp.116'
-        ].value.should.equal(2)
+        // The superseded source keeps its own value alongside the new one.
+        treeAfterOtherSourceDelta.vessels[uuid].should.have.nested.property(
+          'navigation.trip.log.values.deltaFromHttp\\.115.value',
+          1
+        )
+        treeAfterOtherSourceDelta.vessels[uuid].should.have.nested.property(
+          'navigation.trip.log.values.deltaFromHttp\\.116.value',
+          2
+        )
         delete treeAfterOtherSourceDelta.vessels[uuid].navigation.course //FIXME until in schema
-        removeDisplayUnits(treeAfterOtherSourceDelta)
+        stripServerResolvedMeta(treeAfterOtherSourceDelta)
         treeAfterOtherSourceDelta.should.be.validSignalK
       })
-  }).timeout(4000)
+  }).timeout(DELTA_ROUNDTRIP_TIMEOUT_MS)
 
   it('preserves a schema-conformant upstream label', function () {
     const host = 'http://localhost:' + port
@@ -148,12 +192,12 @@ describe('Server', function () {
     }
 
     return sendDelta(forwarded, deltaUrl)
-      .then(() => fetch(restUrl).then((r) => r.json()))
+      .then(() => readFullModel(restUrl))
       .then((tree) => {
         tree.vessels[uuid].should.have.nested.property(
           'navigation.position.$source',
           'canhat.c0788c00e7e04312'
         )
       })
-  }).timeout(4000)
+  }).timeout(DELTA_ROUNDTRIP_TIMEOUT_MS)
 })

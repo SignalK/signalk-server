@@ -20,6 +20,7 @@ const express = require('express')
 const { getMetadata } = require('@signalk/path-metadata')
 const ports = require('../ports')
 const { serveStaticFiles } = require('../staticfiles')
+const { resolveUpdateContract } = require('../updateContracts')
 const {
   resolveDisplayUnits,
   getDefaultCategory
@@ -38,6 +39,14 @@ function enhanceMetadataResponse(
   includeOverride
 ) {
   if (!metadata) return metadata
+
+  // Stale data detection resolves the contract server-side from an explicit
+  // meta.updateContract, then the shipped classification, then periodic.
+  // Reporting the result lets a client show which contract is in force
+  // without reimplementing that precedence.
+  if (signalkPath) {
+    metadata.updateContract = resolveUpdateContract(signalkPath, metadata)
+  }
 
   let storedDisplayUnits = metadata.displayUnits
 
