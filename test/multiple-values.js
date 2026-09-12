@@ -34,12 +34,20 @@ const delta = {
   ]
 }
 
-function removeDisplayUnits(tree) {
+// The server reports resolved `displayUnits` and `updateContract` in meta.
+// Neither is part of the Signal K meta schema, so strip them before the
+// full model is validated against it.
+function removeServerResolvedMeta(tree) {
   const nav = tree.vessels[uuid].navigation
-  delete nav.trip.log.meta.displayUnits
-  delete nav.log.meta.displayUnits
-  delete nav.courseOverGroundTrue.meta.displayUnits
-  delete nav.speedOverGround.meta.displayUnits
+  for (const node of [
+    nav.trip.log,
+    nav.log,
+    nav.courseOverGroundTrue,
+    nav.speedOverGround
+  ]) {
+    delete node.meta.displayUnits
+    delete node.meta.updateContract
+  }
 }
 
 describe('Server', function () {
@@ -76,7 +84,7 @@ describe('Server', function () {
           'deltaFromHttp.115'
         )
         delete treeAfterFirstDelta.vessels[uuid].navigation.course //FIXME until in schema
-        removeDisplayUnits(treeAfterFirstDelta)
+        removeServerResolvedMeta(treeAfterFirstDelta)
         treeAfterFirstDelta.should.be.validSignalK
 
         delta.updates[0].values[0].value = 1
@@ -95,7 +103,7 @@ describe('Server', function () {
           'deltaFromHttp.115'
         )
         delete treeAfterSecondDelta.vessels[uuid].navigation.course //FIXME until in schema
-        removeDisplayUnits(treeAfterSecondDelta)
+        removeServerResolvedMeta(treeAfterSecondDelta)
         treeAfterSecondDelta.should.be.validSignalK
 
         delta.updates[0].values[0].value = 2
@@ -121,7 +129,7 @@ describe('Server', function () {
           'deltaFromHttp.116'
         ].value.should.equal(2)
         delete treeAfterOtherSourceDelta.vessels[uuid].navigation.course //FIXME until in schema
-        removeDisplayUnits(treeAfterOtherSourceDelta)
+        removeServerResolvedMeta(treeAfterOtherSourceDelta)
         treeAfterOtherSourceDelta.should.be.validSignalK
       })
   }).timeout(4000)
