@@ -327,6 +327,11 @@ plugin.start = async (options) => {
   // Republished every 10 minutes, so the 60s default would flag it as stale.
   await app.setDefaultMetadata('navigation.state', { timeout: 900 })
 
+  // Or let the server derive the timeout from the observed update rate.
+  await app.setDefaultMetadata('environment.inside.temperature', {
+    timeout: 'auto'
+  })
+
   // Emitted only when the value changes; silence means unchanged.
   await app.setDefaultMetadata('propulsion.port.state', {
     updateContract: 'event'
