@@ -708,13 +708,17 @@ export const normalizeMetaForSave = (meta: MetaData): MetaData => {
   return rest
 }
 
-const saveMeta = (path: string, meta: MetaData) => {
-  fetch(`/signalk/v1/api/vessels/self/${pathToUrlSegments(path)}/meta`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: normalizeMetaForSave(meta) })
-  })
+const saveMeta = async (path: string, meta: MetaData): Promise<boolean> => {
+  const res = await fetch(
+    `/signalk/v1/api/vessels/self/${pathToUrlSegments(path)}/meta`,
+    {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: normalizeMetaForSave(meta) })
+    }
+  ).catch(() => null)
+  return res?.ok ?? false
 }
 
 const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
@@ -776,7 +780,21 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   }
 
   const handleSave = () => {
-    saveMeta(path, localMeta)
+    const saved = normalizeMetaForSave(localMeta)
+    const cleared = Object.keys(meta).filter((key) => !(key in saved))
+    saveMeta(path, localMeta).then((ok) => {
+      // The server drops a key the save omits, but its meta delta is merged
+      // into the store rather than replacing the entry, so a cleared field
+      // would linger in this session until a reload. Only drop it locally
+      // once the server has accepted the save, or the two would disagree.
+      if (ok && cleared.length > 0) {
+        // saveMeta always writes to vessels/self, and signalkMeta is keyed by
+        // the full context, so the local drop has to name the same entry.
+        useStore
+          .getState()
+          .removeMetaKeys(context || 'vessels.self', path, cleared)
+      }
+    })
     setIsEditing(false)
   }
 
