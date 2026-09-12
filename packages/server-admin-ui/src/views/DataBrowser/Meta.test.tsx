@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import {
+import { useStore } from '../../store'
+import Meta, {
   CategorySelect,
   normalizeMetaForSave,
   UpdateContractSelect,
@@ -327,5 +328,67 @@ describe('normalizeMetaForSave', () => {
   it('leaves metadata without a contract untouched', () => {
     const meta = { description: 'x', timeout: 900 }
     expect(normalizeMetaForSave(meta)).to.equal(meta)
+  })
+})
+
+describe('Meta save clears removed fields', () => {
+  const path = 'navigation.state'
+  const meta = { description: 'Navigational state', updateContract: 'event' }
+
+  const renderMeta = () =>
+    render(<Meta meta={meta} path={path} context="vessels.self" />)
+
+  const openEditorAndDeleteContract = async () => {
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    const selects = screen
+      .getAllByRole('combobox')
+      .filter((s) =>
+        [...(s as HTMLSelectElement).options].some(
+          (o) => o.value === 'description'
+        )
+      )
+    const contractRow = selects.find(
+      (s) => (s as HTMLSelectElement).value === 'updateContract'
+    )
+    expect(contractRow).to.not.equal(undefined)
+    const trash = contractRow!
+      .closest('div')!
+      .parentElement!.querySelector('button')
+    fireEvent.click(trash!)
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    useStore.getState().clearData()
+  })
+
+  it('keeps the field locally when the save is rejected', async () => {
+    useStore.getState().updateMeta('vessels.self', path, meta)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    )
+
+    renderMeta()
+    await openEditorAndDeleteContract()
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(
+      useStore.getState().getMeta('vessels.self', path)?.updateContract
+    ).to.equal('event')
+  })
+
+  it('drops the field locally once the save succeeds', async () => {
+    useStore.getState().updateMeta('vessels.self', path, meta)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }))
+
+    renderMeta()
+    await openEditorAndDeleteContract()
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(
+      useStore.getState().getMeta('vessels.self', path)?.updateContract
+    ).to.equal(undefined)
   })
 })
