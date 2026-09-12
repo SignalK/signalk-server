@@ -403,6 +403,7 @@ const ServerSettings: React.FC = () => {
                                 : settings.interfaces?.[name] || false
                             }
                             disabled={disabled}
+                            aria-labelledby={`interface-label-${name}`}
                           />
                           <span
                             className="switch-label"
@@ -411,7 +412,9 @@ const ServerSettings: React.FC = () => {
                           />
                           <span className="switch-handle" />
                         </Form.Label>
-                        <span>{SettableInterfaces[name]}</span>
+                        <span id={`interface-label-${name}`}>
+                          {SettableInterfaces[name]}
+                        </span>
                       </div>
                       {disabled && (
                         <Alert
