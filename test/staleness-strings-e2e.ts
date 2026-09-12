@@ -15,7 +15,7 @@ const SETTLE_MS = 3000
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 describe('staleness on string-valued paths', function () {
-  let server: Awaited<ReturnType<typeof startServerP>>
+  let server: Awaited<ReturnType<typeof startServerP>> | undefined
   let port: number
 
   before(async function () {
@@ -31,7 +31,9 @@ describe('staleness on string-valued paths', function () {
   })
 
   after(async function () {
-    await server.stop()
+    // A rejected before hook leaves server undefined; Mocha still runs this,
+    // and an unguarded stop() would mask the real setup failure.
+    await server?.stop()
   })
 
   it('emits null and state.timedOut for a stale string enum path', async function () {
