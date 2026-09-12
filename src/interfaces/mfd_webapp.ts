@@ -1,3 +1,8 @@
+/**
+ * Advertises the built-in "Signal K" tile to Navico/B&G MFDs
+ * (UDP multicast 239.2.1.1:2053).
+ * Can be enabled/disabled via settings.interfaces.mfd_webapp
+ */
 import dgram from 'dgram'
 import { promisify } from 'util'
 import { exec } from 'child_process'
