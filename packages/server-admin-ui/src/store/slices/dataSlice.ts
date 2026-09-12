@@ -64,6 +64,7 @@ export interface DataSliceActions {
     path: string,
     metaData: Partial<MetaData>
   ) => void
+  removeMetaKeys: (context: string, path: string, keys: string[]) => void
   getPathData: (context: string, path$SourceKey: string) => PathData | undefined
   getMeta: (context: string, path: string) => MetaData | undefined
   getPath$SourceKeys: (context: string) => string[]
@@ -146,6 +147,32 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
         signalkMeta: {
           ...state.signalkMeta,
           [context]: newContextMeta
+        }
+      }
+    })
+  },
+
+  // Meta deltas are merged, because some carry only the field they change
+  // (registerPutHandler sends `{ supportsPut: true }`). A field the user
+  // cleared in the editor therefore survives the save it was removed in, so
+  // the editor drops it here explicitly.
+  removeMetaKeys: (context, path, keys) => {
+    set((state) => {
+      const existing = state.signalkMeta[context]?.[path]
+      if (!existing) return state
+      const remaining = { ...existing }
+      let changed = false
+      for (const key of keys) {
+        if (key in remaining) {
+          delete remaining[key as keyof MetaData]
+          changed = true
+        }
+      }
+      if (!changed) return state
+      return {
+        signalkMeta: {
+          ...state.signalkMeta,
+          [context]: { ...state.signalkMeta[context], [path]: remaining }
         }
       }
     })
