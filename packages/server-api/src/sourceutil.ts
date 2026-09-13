@@ -1,4 +1,4 @@
-import type { SourceRef } from './deltas'
+import type { Path, SourceRef } from './deltas'
 
 /**
  * Extract a normalised SourceRef string from a source object.
@@ -43,6 +43,27 @@ export function getSourceId(source: any): SourceRef {
 
 const MMSI_PREFIX = 'urn:mrn:imo:mmsi:'
 
+// Property names `fillIdentityField` writes onto a vessel context.
+const IDENTITY_FIELD_MMSI = 'mmsi'
+const IDENTITY_FIELD_UUID = 'uuid'
+const IDENTITY_FIELD_URL = 'url'
+
+// Vessel identity paths `fillIdentityField` may write as a bare primitive
+// rather than a value object.
+const IDENTITY_PATHS = new Set<string>([
+  IDENTITY_FIELD_MMSI,
+  IDENTITY_FIELD_UUID,
+  IDENTITY_FIELD_URL
+])
+
+/**
+ * True when `path` is a vessel identity path that `fillIdentityField`
+ * may write onto the vessel context as a bare primitive.
+ */
+export function isIdentityPath(path: Path): boolean {
+  return IDENTITY_PATHS.has(path)
+}
+
 /**
  * Set the identity field (mmsi, uuid, or url) on a vessel data object
  * based on the identity string format.
@@ -53,11 +74,11 @@ export function fillIdentityField(
   identity: string
 ): void {
   if (identity.startsWith(MMSI_PREFIX)) {
-    vesselData.mmsi = identity.substring(MMSI_PREFIX.length)
+    vesselData[IDENTITY_FIELD_MMSI] = identity.substring(MMSI_PREFIX.length)
   } else if (identity.startsWith('urn:mrn:signalk')) {
-    vesselData.uuid = identity
+    vesselData[IDENTITY_FIELD_UUID] = identity
   } else {
-    vesselData.url = identity
+    vesselData[IDENTITY_FIELD_URL] = identity
   }
 }
 

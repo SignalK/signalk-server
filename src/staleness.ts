@@ -1,6 +1,7 @@
 import { getMetadata } from '@signalk/path-metadata'
 import {
   Context,
+  isIdentityPath,
   MetaValue,
   Path,
   PathValue,
@@ -22,9 +23,6 @@ const NOTIFICATIONS_ROOT = 'notifications'
 const DEFAULT_TIMEOUT_SECONDS = 60
 const DEFAULT_CHECK_INTERVAL_MS = 1000
 const NEVER_TIMEOUT = 0
-// Paths `fillIdentityField` may write to the vessel context as a bare
-// primitive rather than a value object; see checkLeafGroup.
-const IDENTITY_PATHS = new Set(['uuid', 'mmsi', 'url'])
 // `timeout: 'auto'` derives the effective timeout from observed delta
 // arrival rates. The constants below match the RFC v7 contract: a
 // warm-up window seeded with `defaultTimeout`, a sample ring of fixed
@@ -316,7 +314,7 @@ export class StalenessEnforcer {
       // logged TypeError. Only the key matching the selfId form is ever a
       // primitive, but all three are excluded: which one it is depends on how
       // this vessel is identified.
-      if (IDENTITY_PATHS.has(path)) continue
+      if (isIdentityPath(path as Path)) continue
       const key = makeKey(context, path, srcRef)
       // The base timeout depends on the source for `meta.timeout: 'auto'`
       // — different sources of the same path can have different update
