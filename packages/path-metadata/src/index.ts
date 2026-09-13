@@ -6,6 +6,7 @@
  */
 
 import type { PathMetadataEntry } from './types'
+import { updateContractForPath } from './updateContracts'
 
 import { rootMetadata } from './root'
 import { navigationMetadata } from './navigation'
@@ -22,7 +23,8 @@ import { communicationMetadata } from './communication'
 import { sensorsMetadata } from './sensors'
 import { notificationsMetadata } from './notifications'
 
-export type { PathMetadataEntry } from './types'
+export type { PathMetadataEntry, UpdateContract } from './types'
+export { updateContracts, updateContractForPath } from './updateContracts'
 export { getAISShipTypeName } from './ais-ship-types'
 export { getAtonTypeName } from './aton-types'
 
@@ -93,6 +95,36 @@ function toMatchKey(key: string): string {
 // lookup for those, so this strip does not need to handle them.
 function toLookupPath(path: string): string {
   return '/*/' + path.split('.').slice(2).join('/')
+}
+
+// A subtree's update contract is inherited by every path under it, but the
+// matcher returns shared template entries, so the contract is merged into a
+// copy rather than written onto the template — otherwise one lookup would
+// stamp a contract onto every path that shares the entry.
+function withUpdateContract(
+  entry: PathMetadataEntry | undefined,
+  path: string
+): PathMetadataEntry | undefined {
+  // An explicit contract on the entry is the more specific declaration, so it
+  // wins over the one inherited from the subtree. Only the two valid values
+  // count: an unrecognised one set at runtime must not suppress inheritance.
+  if (
+    entry?.updateContract === 'event' ||
+    entry?.updateContract === 'periodic'
+  ) {
+    return entry
+  }
+  const contract = updateContractForPath(stripContextRoot(path))
+  if (!contract) return entry
+  return { ...(entry ?? { description: '' }), updateContract: contract }
+}
+
+// Contracts are declared on context-independent paths, so a lookup for
+// `vessels.self.navigation.anchor.position` has to shed its context root and
+// identity first. A path with fewer than three segments is already bare.
+function stripContextRoot(path: string): string {
+  const parts = path.split('.')
+  return parts.length >= 3 ? parts.slice(2).join('.') : path
 }
 
 function buildRegexArray(
@@ -188,10 +220,10 @@ export class MetadataRegistry {
     // /version — still resolve when looked up bare; those keys are not
     // '/<root>/*/<tail>'-shaped, so they never participate in the
     // path-only matcher.
-    return (
+    const entry =
       this.getMetadataForLookupPath(toLookupPath(path)) ??
       this.getMetadataForLookupPath('/' + path.replace(/\./g, '/'))
-    )
+    return withUpdateContract(entry, path)
   }
 
   // Match an already-normalized '/*/<tail>' lookup path against the regex

@@ -202,3 +202,59 @@ describe('getMetadata', () => {
     })
   })
 })
+
+describe('updateContract inheritance', () => {
+  const contractFor = (path: string) => getMetadata(path)?.updateContract
+
+  it('inherits a subtree contract on a path that has its own entry', () => {
+    expect(contractFor('vessels.self.navigation.anchor.position')).to.equal(
+      'event'
+    )
+  })
+
+  it('inherits on a subtree with no registry entry of its own', () => {
+    // navigation.home ships no per-path metadata, so its classification can
+    // only come from the subtree declaration.
+    expect(contractFor('vessels.self.navigation.home')).to.equal('event')
+  })
+
+  it('leaves a path no subtree covers unclassified', () => {
+    expect(contractFor('vessels.self.navigation.speedOverGround')).to.equal(
+      undefined
+    )
+  })
+
+  it('does not treat a longer path name as being inside the subtree', () => {
+    // navigation.course is event-driven; courseOverGroundTrue is not part of
+    // it despite sharing a prefix string.
+    expect(
+      contractFor('vessels.self.navigation.courseOverGroundTrue')
+    ).to.equal(undefined)
+  })
+
+  it('resolves the same contract under any context root', () => {
+    // A non-vessel root, so this shows the contract is keyed by path rather
+    // than resolved per context.
+    expect(
+      contractFor('aircraft.urn:mrn:imo:mmsi:123.notifications.mob')
+    ).to.equal('event')
+  })
+
+  it('lets an explicit contract on the path win over the subtree', () => {
+    // The per-path declaration is the more specific one: a path inside an
+    // event subtree can still be declared periodic.
+    metadataRegistry.addMetaData('vessels.self', 'notifications.mob', {
+      updateContract: 'periodic'
+    })
+    expect(getMetadata(self('notifications.mob'))?.updateContract).to.equal(
+      'periodic'
+    )
+  })
+
+  it('does not write the contract onto the shared template entry', () => {
+    getMetadata('vessels.self.navigation.anchor.position')
+    const other = getMetadata('vessels.self.navigation.speedOverGround')
+    expect(other?.updateContract).to.equal(undefined)
+    expect(other?.units).to.equal('m/s')
+  })
+})
