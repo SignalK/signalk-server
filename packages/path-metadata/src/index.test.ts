@@ -251,6 +251,20 @@ describe('updateContract inheritance', () => {
     )
   })
 
+  it('resolves contracts for the getAllMetadata view too', () => {
+    // The paths reference is served from getAllMetadata, so it has to show
+    // the same contract getMetadata resolves.
+    const all = metadataRegistry.getAllMetadata()
+    expect(
+      all['/vessels/*/navigation/anchor/position']?.updateContract
+    ).to.equal('event')
+    // Assert the entry exists first, so this cannot pass by the key simply
+    // being absent from the view.
+    const sog = all['/vessels/*/navigation/speedOverGround']
+    if (!sog) throw new Error('speedOverGround missing from the /paths view')
+    expect(sog.updateContract).to.equal(undefined)
+  })
+
   it('does not write the contract onto the shared template entry', () => {
     getMetadata('vessels.self.navigation.anchor.position')
     const other = getMetadata('vessels.self.navigation.speedOverGround')

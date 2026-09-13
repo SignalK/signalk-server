@@ -11,12 +11,20 @@ import { startServerP, sendDelta, WsPromiser } from './servertestutilities'
 const SERVER_START_TIMEOUT_MS = 90000
 const TEST_TIMEOUT_MS = 30000
 const SETTLE_MS = 1500
+const POLL_INTERVAL_MS = 100
+// Leaves room for the assertions and teardown after polling stops.
+const POST_POLL_MARGIN_MS = 1000
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 describe('update contracts in path metadata', function () {
   let server: Awaited<ReturnType<typeof startServerP>> | undefined
   let port: number
+
+  const runningServer = () => {
+    if (!server) throw new Error('server was not started')
+    return server
+  }
 
   before(async function () {
     this.timeout(SERVER_START_TIMEOUT_MS)
@@ -45,7 +53,7 @@ describe('update contracts in path metadata', function () {
     this.timeout(TEST_TIMEOUT_MS)
     await sendDelta(
       {
-        context: `vessels.${server!.app.selfId}`,
+        context: `vessels.${runningServer().app.selfId}`,
         updates: [
           {
             source: { label: 'contract-e2e' },
@@ -86,7 +94,7 @@ describe('update contracts in path metadata', function () {
 
     await sendDelta(
       {
-        context: `vessels.${server!.app.selfId}`,
+        context: `vessels.${runningServer().app.selfId}`,
         updates: [
           {
             source: { label: 'contract-ws' },
@@ -102,8 +110,8 @@ describe('update contracts in path metadata', function () {
       },
       `http://localhost:${port}/signalk/v1/api/_test/delta`
     )
-    await delay(SETTLE_MS)
-
+    // A fixed delay races the delta under CI load, so wait for the message
+    // itself and let the test timeout bound it.
     interface MetaEntry {
       path?: string
       value?: { updateContract?: unknown }
@@ -112,15 +120,28 @@ describe('update contracts in path metadata', function () {
       updates?: Array<{ meta?: MetaEntry[] }>
     }
 
-    const contracts: Record<string, unknown> = {}
-    for (const msg of promiser.parsedMessages() as DeltaMessage[]) {
-      for (const update of msg?.updates ?? []) {
-        for (const entry of update?.meta ?? []) {
-          if (entry?.path && entry.value?.updateContract !== undefined) {
-            contracts[entry.path] = entry.value.updateContract
+    const contractsSoFar = (): Record<string, unknown> => {
+      const found: Record<string, unknown> = {}
+      for (const msg of promiser.parsedMessages() as DeltaMessage[]) {
+        for (const update of msg?.updates ?? []) {
+          for (const entry of update?.meta ?? []) {
+            if (entry?.path && entry.value?.updateContract !== undefined) {
+              found[entry.path] = entry.value.updateContract
+            }
           }
         }
       }
+      return found
+    }
+
+    let contracts = contractsSoFar()
+    const deadline = Date.now() + TEST_TIMEOUT_MS - POST_POLL_MARGIN_MS
+    while (
+      contracts['navigation.anchor.position'] === undefined &&
+      Date.now() < deadline
+    ) {
+      await delay(POLL_INTERVAL_MS)
+      contracts = contractsSoFar()
     }
     promiser.close()
 
