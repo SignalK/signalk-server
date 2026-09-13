@@ -135,7 +135,14 @@ function withUpdateContract(
   path: string
 ): PathMetadataEntry | undefined {
   const contract = contractForEntry(entry, stripContextRoot(path))
-  if (!contract) return entry
+  if (!contract) {
+    // No subtree covers the path, so a contract on the entry can only have
+    // come from a runtime addition. Drop an unrecognised one rather than
+    // handing a consumer a value the contract type does not allow.
+    if (entry?.updateContract === undefined) return entry
+    const { updateContract: _unsupported, ...rest } = entry
+    return rest
+  }
   if (entry?.updateContract === contract) return entry
   return { ...(entry ?? { description: '' }), updateContract: contract }
 }
