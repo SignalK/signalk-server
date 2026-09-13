@@ -43,7 +43,9 @@ export function getSourceId(source: any): SourceRef {
 
 const MMSI_PREFIX = 'urn:mrn:imo:mmsi:'
 
-// Property names `fillIdentityField` writes onto a vessel context.
+// Shared by the writer and the reader below: fillIdentityField sets these
+// properties and isIdentityPath recognises them, so naming them once keeps a
+// bare-primitive identity field from being missed if one side changes.
 const IDENTITY_FIELD_MMSI = 'mmsi'
 const IDENTITY_FIELD_UUID = 'uuid'
 const IDENTITY_FIELD_URL = 'url'
