@@ -180,7 +180,12 @@ describe('Track API writes', () => {
     // belongs to which point and neither can the provider.
     await serve()
     const res = await post({
-      coordinates: [[[24.9, 60.1], [25.0, 60.2]]],
+      coordinates: [
+        [
+          [24.9, 60.1],
+          [25.0, 60.2]
+        ]
+      ],
       coordTimes: [['2026-08-01T00:00:00Z']]
     })
     expect(res.status).to.equal(400)
@@ -341,15 +346,16 @@ describe('Track API writes', () => {
   it('reports a provider refusing the track as a client error', async () => {
     // "This track cannot be kept here" is not "the store broke": a provider
     // that only keeps timed tracks refusing an untimed one is a 400.
-    const { TrackRejectedError } = await import(
-      '../packages/server-api/dist/tracks.js'
-    )
+    const { TrackRejectedError } =
+      await import('../packages/server-api/dist/tracks.js')
     await serve({
       getTracks: () =>
         Promise.resolve({ type: 'FeatureCollection' as const, features: [] }),
       getTrackContexts: () => Promise.resolve([] as Context[]),
       storeTrack: () =>
-        Promise.reject(new TrackRejectedError('this store keeps timed tracks only'))
+        Promise.reject(
+          new TrackRejectedError('this store keeps timed tracks only')
+        )
     })
     const res = await post({ coordinates: [[[24.9, 60.1]]] })
     expect(res.status).to.equal(400)
@@ -378,30 +384,27 @@ describe('Track API writes', () => {
 
   it('deletes a track by id', async () => {
     await serve()
-    const res = await fetch(
-      `${base}/signalk/v2/api/tracks/imported:known`,
-      { method: 'DELETE' }
-    )
+    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`, {
+      method: 'DELETE'
+    })
 
     expect(res.status).to.equal(200)
   })
 
   it('reports deleting an unknown id as not found', async () => {
     await serve()
-    const res = await fetch(
-      `${base}/signalk/v2/api/tracks/imported:missing`,
-      { method: 'DELETE' }
-    )
+    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:missing`, {
+      method: 'DELETE'
+    })
 
     expect(res.status).to.equal(404)
   })
 
   it('refuses a delete without authority', async () => {
     await serve(writingProvider(), false, false)
-    const res = await fetch(
-      `${base}/signalk/v2/api/tracks/imported:known`,
-      { method: 'DELETE' }
-    )
+    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`, {
+      method: 'DELETE'
+    })
 
     expect(res.status).to.equal(403)
   })

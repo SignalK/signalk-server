@@ -86,7 +86,7 @@ export class TrackApiHttpRegistry {
         return typeof provider?.deleteTrack === 'function'
           ? provider.deleteTrack.bind(provider)
           : undefined
-      },
+      }
       // Absent rather than throwing once the last provider unregisters: a
       // caller holding the proxy is asking what can be done, and "nothing"
       // is an answer.
@@ -231,65 +231,62 @@ export class TrackApiHttpRegistry {
         res,
         (provider) => provider.storeTrack,
         (provider, id) =>
-          provider
-            .storeTrack!(track)
-            .then((feature) => stampProvider(single(feature), id).features[0]),
+          provider.storeTrack!(track).then(
+            (feature) => stampProvider(single(feature), id).features[0]
+          ),
         201
       )
     })
 
-    this.app.delete(
-      `${TRACKS_API_PATH}/:id`,
-      (req: Request, res: Response) => {
-        void (async () => {
-          // Resolved before the check, and deleted from the provider that
-          // answered. Authorising against `vessels.self` would let anyone who
-          // may write their own vessel delete another vessel's track by id,
-          // and deleting from the default provider would address whichever
-          // track happened to share the id there.
-          // Deletion is destructive, irreversible and addressed only by an
-          // id, and a track carries no record of who uploaded it — so an
-          // imported track has no owner to check a requester against.
-          // Requiring admin answers that without inventing an identity the
-          // API does not have.
-          //
-          // On a server with security disabled there is no admin to be:
-          // `allowConfigure` is false for everyone, so requiring it would
-          // make deletion impossible rather than safe. There the ordinary
-          // write check applies, which is how the rest of the server treats
-          // an unsecured install.
-          const security = this.app.securityStrategy
-          const permitted = security.isDummy()
-            ? writeAllowed(req, 'vessels.self')
-            : security.allowConfigure(req)
-          if (!permitted) {
-            res.status(403).json(Responses.unauthorised)
+    this.app.delete(`${TRACKS_API_PATH}/:id`, (req: Request, res: Response) => {
+      void (async () => {
+        // Resolved before the check, and deleted from the provider that
+        // answered. Authorising against `vessels.self` would let anyone who
+        // may write their own vessel delete another vessel's track by id,
+        // and deleting from the default provider would address whichever
+        // track happened to share the id there.
+        // Deletion is destructive, irreversible and addressed only by an
+        // id, and a track carries no record of who uploaded it — so an
+        // imported track has no owner to check a requester against.
+        // Requiring admin answers that without inventing an identity the
+        // API does not have.
+        //
+        // On a server with security disabled there is no admin to be:
+        // `allowConfigure` is false for everyone, so requiring it would
+        // make deletion impossible rather than safe. There the ordinary
+        // write check applies, which is how the rest of the server treats
+        // an unsecured install.
+        const security = this.app.securityStrategy
+        const permitted = security.isDummy()
+          ? writeAllowed(req, 'vessels.self')
+          : security.allowConfigure(req)
+        if (!permitted) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+        const found = await this.locate(req, res, true)
+        if (!found) {
+          return
+        }
+        if (typeof found.provider.deleteTrack !== 'function') {
+          res.status(501).json({
+            error: `Provider '${found.id}' does not support this operation`
+          })
+          return
+        }
+        try {
+          const deleted = await found.provider.deleteTrack(req.params.id)
+          if (!deleted) {
+            res.status(404).json({ error: 'Track not found' })
             return
           }
-          const found = await this.locate(req, res, true)
-          if (!found) {
-            return
-          }
-          if (typeof found.provider.deleteTrack !== 'function') {
-            res.status(501).json({
-              error: `Provider '${found.id}' does not support this operation`
-            })
-            return
-          }
-          try {
-            const deleted = await found.provider.deleteTrack(req.params.id)
-            if (!deleted) {
-              res.status(404).json({ error: 'Track not found' })
-              return
-            }
-            res.status(200).json({})
-          } catch (error) {
-            console.error('Track api provider failed:', error)
-            res.status(500).json({ error: 'Track api provider failed' })
-          }
-        })()
-      }
-    )
+          res.status(200).json({})
+        } catch (error) {
+          console.error('Track api provider failed:', error)
+          res.status(500).json({ error: 'Track api provider failed' })
+        }
+      })()
+    })
   }
 
   /**
@@ -359,7 +356,12 @@ export class TrackApiHttpRegistry {
             return track ? { id, provider, track } : undefined
           })
         )
-      ).filter((m): m is { id: string; provider: TrackProvider; track: TrackFeature } => !!m)
+      ).filter(
+        (
+          m
+        ): m is { id: string; provider: TrackProvider; track: TrackFeature } =>
+          !!m
+      )
 
       if (matches.length > 1) {
         res.status(409).json({
@@ -452,18 +454,22 @@ export class TrackApiHttpRegistry {
       return
     }
     if (typeof capability(target.provider) !== 'function') {
-      res
-        .status(501)
-        .json({ error: `Provider '${target.id}' does not support this operation` })
+      res.status(501).json({
+        error: `Provider '${target.id}' does not support this operation`
+      })
       return
     }
     try {
       const result = await run(target.provider, target.id)
       // Where the new track lives, so a client need not parse the body to
       // find out. The provider assigns the id, so only the response knows it.
-      const created = (result as { properties?: { id?: string } })?.properties?.id
+      const created = (result as { properties?: { id?: string } })?.properties
+        ?.id
       if (successStatus === 201 && created) {
-        res.setHeader('Location', `${TRACKS_API_PATH}/${encodeURIComponent(created)}`)
+        res.setHeader(
+          'Location',
+          `${TRACKS_API_PATH}/${encodeURIComponent(created)}`
+        )
       }
       res.status(successStatus).json(result)
     } catch (error) {

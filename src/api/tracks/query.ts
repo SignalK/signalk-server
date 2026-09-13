@@ -1,6 +1,10 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { Context, Path } from '@signalk/server-api'
-import { TrackBoundingBox, TrackImport, TracksRequest } from '@signalk/server-api/tracks'
+import {
+  TrackBoundingBox,
+  TrackImport,
+  TracksRequest
+} from '@signalk/server-api/tracks'
 
 /**
  * Query parsing for the Track API.
@@ -500,7 +504,12 @@ export function parseTracksQuery(
   return { request, errors }
 }
 
-const KNOWN_IMPORT_FIELDS = new Set(['coordinates', 'coordTimes', 'name', 'context'])
+const KNOWN_IMPORT_FIELDS = new Set([
+  'coordinates',
+  'coordTimes',
+  'name',
+  'context'
+])
 
 /**
  * Collects problems, stopping at the cap.
@@ -574,17 +583,26 @@ export function parseTrackImport(body: unknown): {
   const segments: [number, number][][] = []
   coordinates.forEach((segment, i) => {
     if (!Array.isArray(segment) || segment.length === 0) {
-      errors.add(() => `coordinates[${i}] must be a non-empty array of positions`)
+      errors.add(
+        () => `coordinates[${i}] must be a non-empty array of positions`
+      )
       return
     }
     const points: [number, number][] = []
     segment.forEach((point, j) => {
       if (!Array.isArray(point) || point.length !== 2) {
-        errors.add(() => `coordinates[${i}][${j}] must be [longitude, latitude]`)
+        errors.add(
+          () => `coordinates[${i}][${j}] must be [longitude, latitude]`
+        )
         return
       }
       const [lon, lat] = point as unknown[]
-      if (typeof lon !== 'number' || typeof lat !== 'number' || !Number.isFinite(lon) || !Number.isFinite(lat)) {
+      if (
+        typeof lon !== 'number' ||
+        typeof lat !== 'number' ||
+        !Number.isFinite(lon) ||
+        !Number.isFinite(lat)
+      ) {
         errors.add(() => `coordinates[${i}][${j}] must be two finite numbers`)
         return
       }
@@ -610,7 +628,9 @@ export function parseTrackImport(body: unknown): {
     } else {
       coordTimes = []
       times.forEach((segment, i) => {
-        const expected = Array.isArray(coordinates[i]) ? (coordinates[i] as unknown[]).length : 0
+        const expected = Array.isArray(coordinates[i])
+          ? (coordinates[i] as unknown[]).length
+          : 0
         if (!Array.isArray(segment) || segment.length !== expected) {
           errors.add(() => `coordTimes[${i}] must have one time per position`)
           return

@@ -32,8 +32,7 @@ const tracksApiDoc = {
         properties: {
           coordinates: {
             type: 'array',
-            description:
-              `[longitude, latitude] positions, per segment. A gap in recording starts a new segment. At most ${MAX_IMPORT_SEGMENTS} segments and ${MAX_IMPORT_POINTS} points in total.`,
+            description: `[longitude, latitude] positions, per segment. A gap in recording starts a new segment. At most ${MAX_IMPORT_SEGMENTS} segments and ${MAX_IMPORT_POINTS} points in total.`,
             minItems: 1,
             maxItems: MAX_IMPORT_SEGMENTS,
             items: {
@@ -51,7 +50,10 @@ const tracksApiDoc = {
             type: 'array',
             description:
               'Recording time of every point, nested to match coordinates. Optional: not every GPX carries <time>, but a track without times cannot answer a time window query and a provider may refuse it.',
-            items: { type: 'array', items: { type: 'string', format: 'date-time' } }
+            items: {
+              type: 'array',
+              items: { type: 'string', format: 'date-time' }
+            }
           },
           name: {
             type: 'string',
@@ -61,7 +63,7 @@ const tracksApiDoc = {
           context: {
             type: 'string',
             description:
-              'The vessel this track belongs to, when the client knows. Associates the import with a vessel; it does not merge it into that vessel\'s recorded track.',
+              "The vessel this track belongs to, when the client knows. Associates the import with a vessel; it does not merge it into that vessel's recorded track.",
             example: 'vessels.urn:mrn:imo:mmsi:123456789'
           }
         }
@@ -406,7 +408,9 @@ const tracksApiDoc = {
               'The id exists in more than one provider; name one with provider'
           },
           500: { description: 'The provider failed to delete the track' },
-          501: { description: 'No provider, or the provider does not delete tracks' }
+          501: {
+            description: 'No provider, or the provider does not delete tracks'
+          }
         }
       }
     },
@@ -482,7 +486,9 @@ const tracksApiDoc = {
           },
           403: { description: 'Not authorised to write tracks' },
           500: { description: 'The provider failed to store the track' },
-          501: { description: 'No provider, or the provider does not store tracks' }
+          501: {
+            description: 'No provider, or the provider does not store tracks'
+          }
         }
       }
     },
