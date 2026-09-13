@@ -727,6 +727,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   const unitDefinitions = useUnitDefinitions()
   const [isExpanded, setIsExpanded] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const saveGeneration = useRef(0)
   const [localMeta, setLocalMeta] = useState<MetaData>(meta)
   const [categoryToBaseUnit, setCategoryToBaseUnit] = useState<
     Record<string, string>
@@ -782,7 +783,12 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   const handleSave = () => {
     const saved = normalizeMetaForSave(localMeta)
     const cleared = Object.keys(meta).filter((key) => !(key in saved))
+    // Editing reopens as soon as the request is sent, so a second save can
+    // start while this one is pending. Only the newest save may prune the
+    // store, or an older callback would drop a key the newer one restored.
+    const generation = ++saveGeneration.current
     saveMeta(path, localMeta).then((ok) => {
+      if (generation !== saveGeneration.current) return
       // The server drops a key the save omits, but its meta delta is merged
       // into the store rather than replacing the entry, so a cleared field
       // would linger in this session until a reload. Only drop it locally
@@ -1077,7 +1083,12 @@ const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
       </Col>
       <Col xs="1" md="1">
         {!disabled && (
-          <Button variant="outline-danger" size="sm" onClick={deleteKey}>
+          <Button
+            variant="outline-danger"
+            size="sm"
+            onClick={deleteKey}
+            aria-label={`Delete ${fieldKey}`}
+          >
             <FontAwesomeIcon icon={faTrashCan} />
           </Button>
         )}
