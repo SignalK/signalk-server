@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { Context, Path } from '@signalk/server-api'
-import { TrackBoundingBox, TracksRequest } from '@signalk/server-api/tracks'
+import { TrackBoundingBox, TrackImport, TracksRequest } from '@signalk/server-api/tracks'
 
 /**
  * Query parsing for the Track API.
@@ -142,6 +142,26 @@ const parseInstant = (
  */
 const PATH_PATTERN = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/
 
+/**
+ * How many problems one malformed import reports.
+ *
+ * Every bad position would otherwise add a message, and the route joins them
+ * into the response body — so an import at the point cap could answer a 400
+ * with megabytes of text. A client needs enough to find the mistake, not a
+ * census of it.
+ */
+const MAX_REPORTED_ERRORS = 20
+
+/**
+ * Caps on an imported track.
+ *
+ * An authorised POST otherwise hands a provider an arbitrarily large geometry,
+ * and validation holds a second copy of it while checking. Express's JSON body
+ * limit is the only other bound and says nothing a client can read.
+ */
+export const MAX_IMPORT_SEGMENTS = 10_000
+export const MAX_IMPORT_POINTS = 1_000_000
+
 const MAX_LONGITUDE = 180
 const MAX_LATITUDE = 90
 
@@ -230,12 +250,50 @@ const readFlag = (
   return parseFlag(first(query[name]) ?? '', name, errors)
 }
 
+/**
+ * Every parameter the query route understands.
+ *
+ * An unknown one is rejected rather than ignored: a client that sends a filter
+ * this server does not implement would otherwise receive an unfiltered 200 and
+ * have no way to tell. That failure is the reason spatial parameters are being
+ * unified across the v2 APIs — see #3021 — and it costs nothing to not repeat
+ * it here.
+ */
+const KNOWN_PARAMS = new Set([
+  'contexts',
+  // Singular as well as plural: the parser accepts both, and an unbounded
+  // query is permitted only for a single `context`. Rejecting it here would
+  // have broken a documented, tested input -- which is the same failure this
+  // check exists to prevent, pointed the other way.
+  'context',
+  'from',
+  'to',
+  'duration',
+  'bbox',
+  'resolution',
+  'maxPoints',
+  'simplify',
+  'epsilon',
+  'times',
+  'properties',
+  'geometry',
+  'provider'
+])
+
 export function parseTracksQuery(
   query: Record<string, unknown>,
   now: Temporal.Instant = Temporal.Now.instant()
 ): ParsedTracksQuery {
   const errors: string[] = []
   const request: TracksRequest = {}
+
+  // Before any value is parsed: a query naming a parameter this server does
+  // not implement is wrong whatever its other values say.
+  for (const name of Object.keys(query)) {
+    if (!KNOWN_PARAMS.has(name)) {
+      errors.push(`unknown query parameter: ${name}`)
+    }
+  }
 
   const contexts = first(query.contexts) ?? first(query.context)
   if (contexts !== undefined && blank(contexts)) {
@@ -440,4 +498,178 @@ export function parseTracksQuery(
   }
 
   return { request, errors }
+}
+
+const KNOWN_IMPORT_FIELDS = new Set(['coordinates', 'coordTimes', 'name', 'context'])
+
+/**
+ * Collects problems, stopping at the cap.
+ *
+ * Counting rather than trimming at the end: an import at the point cap could
+ * otherwise build a million interpolated strings before all but twenty were
+ * discarded, which is the allocation the cap exists to prevent. The messages
+ * are also not built once the limit is reached, so a caller passes a thunk.
+ */
+class ErrorReport {
+  private readonly messages: string[] = []
+  private suppressed = 0
+
+  add(message: () => string): void {
+    if (this.messages.length < MAX_REPORTED_ERRORS) {
+      this.messages.push(message())
+    } else {
+      this.suppressed += 1
+    }
+  }
+
+  get length(): number {
+    return this.messages.length + this.suppressed
+  }
+
+  list(): string[] {
+    return this.suppressed === 0
+      ? this.messages
+      : [...this.messages, `and ${this.suppressed} further problems`]
+  }
+}
+
+/**
+ * Validate a track a client is asking the server to store.
+ *
+ * Geometry is checked rather than trusted: coordinates in range, `coordTimes`
+ * nested exactly like the coordinates it dates, and every time parseable. A
+ * provider receiving this should not have to re-derive whether the client sent
+ * something coherent, and a malformed upload is a client error, not a 500 from
+ * inside a store.
+ */
+export function parseTrackImport(body: unknown): {
+  track?: TrackImport
+  errors: string[]
+} {
+  const errors = new ErrorReport()
+  if (typeof body !== 'object' || body === null) {
+    return { errors: ['body must be a JSON object'] }
+  }
+  const input = body as Record<string, unknown>
+
+  const coordinates = input.coordinates
+  if (!Array.isArray(coordinates) || coordinates.length === 0) {
+    errors.add(() => 'coordinates must be a non-empty array of segments')
+    return { errors: errors.list() }
+  }
+  if (coordinates.length > MAX_IMPORT_SEGMENTS) {
+    return {
+      errors: [`coordinates must have at most ${MAX_IMPORT_SEGMENTS} segments`]
+    }
+  }
+  const totalPoints = coordinates.reduce(
+    (n: number, segment) => n + (Array.isArray(segment) ? segment.length : 0),
+    0
+  )
+  if (totalPoints > MAX_IMPORT_POINTS) {
+    return {
+      errors: [`coordinates must have at most ${MAX_IMPORT_POINTS} points`]
+    }
+  }
+  const segments: [number, number][][] = []
+  coordinates.forEach((segment, i) => {
+    if (!Array.isArray(segment) || segment.length === 0) {
+      errors.add(() => `coordinates[${i}] must be a non-empty array of positions`)
+      return
+    }
+    const points: [number, number][] = []
+    segment.forEach((point, j) => {
+      if (!Array.isArray(point) || point.length !== 2) {
+        errors.add(() => `coordinates[${i}][${j}] must be [longitude, latitude]`)
+        return
+      }
+      const [lon, lat] = point as unknown[]
+      if (typeof lon !== 'number' || typeof lat !== 'number' || !Number.isFinite(lon) || !Number.isFinite(lat)) {
+        errors.add(() => `coordinates[${i}][${j}] must be two finite numbers`)
+        return
+      }
+      if (
+        lon < -MAX_LONGITUDE ||
+        lon > MAX_LONGITUDE ||
+        lat < -MAX_LATITUDE ||
+        lat > MAX_LATITUDE
+      ) {
+        errors.add(() => `coordinates[${i}][${j}] is out of range`)
+        return
+      }
+      points.push([lon, lat])
+    })
+    segments.push(points)
+  })
+
+  let coordTimes: string[][] | undefined
+  if (input.coordTimes !== undefined) {
+    const times = input.coordTimes
+    if (!Array.isArray(times) || times.length !== coordinates.length) {
+      errors.add(() => 'coordTimes must have one array per coordinates segment')
+    } else {
+      coordTimes = []
+      times.forEach((segment, i) => {
+        const expected = Array.isArray(coordinates[i]) ? (coordinates[i] as unknown[]).length : 0
+        if (!Array.isArray(segment) || segment.length !== expected) {
+          errors.add(() => `coordTimes[${i}] must have one time per position`)
+          return
+        }
+        segment.forEach((time, j) => {
+          if (typeof time !== 'string') {
+            errors.add(() => `coordTimes[${i}][${j}] must be an ISO 8601 time`)
+            return
+          }
+          try {
+            // Not Date.parse: it accepts a date-only `2024-01-01` as midnight
+            // UTC, so a client sending dates instead of timestamps would have
+            // them silently become instants. The rest of this parser already
+            // holds instants to the same contract.
+            Temporal.Instant.from(time)
+          } catch {
+            errors.add(() => `coordTimes[${i}][${j}] must be an ISO 8601 time`)
+          }
+        })
+        coordTimes!.push(segment as string[])
+      })
+    }
+  }
+
+  // The same rule the query parser applies: a client that misspells
+  // `coordTimes` would otherwise get a 201 and discover later that the times
+  // it thought it stored were never there.
+  for (const field of Object.keys(input)) {
+    if (!KNOWN_IMPORT_FIELDS.has(field)) {
+      errors.add(() => `unknown property: ${field}`)
+    }
+  }
+
+  if (input.name !== undefined && typeof input.name !== 'string') {
+    errors.add(() => 'name must be a string')
+  }
+  if (
+    input.context !== undefined &&
+    (typeof input.context !== 'string' || blank(input.context))
+  ) {
+    // Blank is not an association: cast as-is it would reach a provider as a
+    // context that matches no vessel and cannot be queried back.
+    errors.add(() => 'context must be a non-empty string')
+  }
+  if (errors.length > 0) {
+    return { errors: errors.list() }
+  }
+  return {
+    track: {
+      coordinates: segments,
+      ...(coordTimes ? { coordTimes } : {}),
+      ...(typeof input.name === 'string' ? { name: input.name } : {}),
+      // Qualified the way a query would qualify it: a bare `123456789` stored
+      // raw is unreachable, because a later `?context=123456789` asks for
+      // `vessels.123456789` and never matches what was written.
+      ...(typeof input.context === 'string'
+        ? { context: qualifyContext(input.context.trim()) }
+        : {})
+    },
+    errors: errors.list()
+  }
 }

@@ -1,4 +1,5 @@
 import { OpenApiDescription } from '../swagger'
+import { MAX_IMPORT_POINTS, MAX_IMPORT_SEGMENTS } from './query'
 
 const tracksApiDoc = {
   openapi: '3.0.0',
@@ -7,7 +8,7 @@ const tracksApiDoc = {
     title: 'Signal K Track API',
     description:
       'API for querying recorded vessel tracks — where vessels have actually been, over time.\n\n' +
-      'A track is distinct from a route in `resources/routes`, which is a course someone authored and intends to follow, and from an uploaded GPX track in `resources/tracks`, which is a named document. A track here is recorded position data: unnamed, time-ordered, and queried by time window and area.\n\n' +
+      'A track is where a vessel actually went, whoever recorded it. A GPX a friend sent is a track here too: it is imported, kept and queried like any other, because on a plotter a track is a track regardless of who logged it. What makes something a route is an intention to follow it \u2014 trimming a track, reversing it or taking one leg produces a route in `resources/routes`, which is a separate thing this API does not serve.\n\n' +
       'Storage is not defined by this API. Providers are plugins that record positions and may keep them in SQLite, a time-series database, Parquet files, or anything else.\n\n' +
       'The time range is given as **from**, **to** and **duration** in any workable combination; an omitted **to** is resolved to now by the server, so every provider sees the same window. A time window is required unless a single **context** is requested, since an unbounded query across every recorded vessel can span years of data.\n\n' +
       'The full time range asked for is always returned. Where a result would be too large, providers reduce the number of *points* — by resolution, point budget or simplification — and report what they applied in the response, rather than silently narrowing the time range.',
@@ -19,18 +20,78 @@ const tracksApiDoc = {
   servers: [{ url: '/signalk/v2/api/tracks' }],
   components: {
     schemas: {
-      TrackProperties: {
+      TrackImport: {
         type: 'object',
-        required: ['context', 'isSelf', 'from', 'to', 'pointCount'],
+        required: ['coordinates'],
+        // The parser rejects an unknown field, so the schema must not permit
+        // one: a client generated from this document would otherwise send it
+        // and be refused.
+        additionalProperties: false,
+        description:
+          'A track offered for storage. Geometry and times only: the bounding box, point count and time range are derived by the provider from what was actually sent.',
         properties: {
+          coordinates: {
+            type: 'array',
+            description:
+              `[longitude, latitude] positions, per segment. A gap in recording starts a new segment. At most ${MAX_IMPORT_SEGMENTS} segments and ${MAX_IMPORT_POINTS} points in total.`,
+            minItems: 1,
+            maxItems: MAX_IMPORT_SEGMENTS,
+            items: {
+              type: 'array',
+              minItems: 1,
+              items: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 2,
+                maxItems: 2
+              }
+            }
+          },
+          coordTimes: {
+            type: 'array',
+            description:
+              'Recording time of every point, nested to match coordinates. Optional: not every GPX carries <time>, but a track without times cannot answer a time window query and a provider may refuse it.',
+            items: { type: 'array', items: { type: 'string', format: 'date-time' } }
+          },
+          name: {
+            type: 'string',
+            description: "The track's own name, typically a GPX <trk><name>",
+            example: 'Crossing to Gotland'
+          },
           context: {
             type: 'string',
-            description: 'Signal K context this track belongs to',
+            description:
+              'The vessel this track belongs to, when the client knows. Associates the import with a vessel; it does not merge it into that vessel\'s recorded track.',
+            example: 'vessels.urn:mrn:imo:mmsi:123456789'
+          }
+        }
+      },
+      TrackProperties: {
+        type: 'object',
+        required: ['id', 'pointCount'],
+        properties: {
+          id: {
+            type: 'string',
+            description:
+              'Identifies this track and is what DELETE /tracks/{id} addresses. Unique within the provider holding it.',
+            example: 'imported:0f0f2a1e-8f1e-4a6f-9a1e-2c9b1d3e4f50'
+          },
+          context: {
+            type: 'string',
+            description:
+              'Signal K context this track belongs to, when it has one. Absent for an imported track that names no vessel.',
             example: 'vessels.urn:mrn:imo:mmsi:123456789'
           },
           isSelf: {
             type: 'boolean',
-            description: "Whether this is the own vessel's track"
+            description:
+              "Whether this is the own vessel's track. Absent along with context."
+          },
+          name: {
+            type: 'string',
+            description:
+              "The track's own name, typically from a GPX <trk><name>. Distinct from contextName, which names the vessel.",
+            example: 'Crossing to Gotland'
           },
           providerId: {
             type: 'string',
@@ -46,12 +107,14 @@ const tracksApiDoc = {
           from: {
             type: 'string',
             format: 'date-time',
-            description: 'Time of the first returned point'
+            description:
+              'Time of the first returned point. Absent for a track whose points carry no times.'
           },
           to: {
             type: 'string',
             format: 'date-time',
-            description: 'Time of the last returned point'
+            description:
+              'Time of the last returned point. Absent whenever from is.'
           },
           bbox: {
             type: 'array',
@@ -280,6 +343,74 @@ const tracksApiDoc = {
     }
   },
   paths: {
+    '/{id}': {
+      get: {
+        tags: ['tracks'],
+        summary: 'Fetch one track by id',
+        description:
+          'Returns the track with this id. Every other way of finding a track filters by something a track might not have — a time window needs times, a context query needs a context — so an imported track with neither is reachable only here.\n\nAsked of every provider unless **provider** names one, since an id identifies a track wherever it is stored.',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Track id, as returned in properties.id'
+          },
+          { $ref: '#/components/parameters/Provider' }
+        ],
+        responses: {
+          200: {
+            description: 'The track',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/TrackFeature' }
+              }
+            }
+          },
+          400: { description: 'An unknown provider was named' },
+          404: { description: 'No track with that id' },
+          409: {
+            description:
+              'The id exists in more than one provider; name one with provider'
+          },
+          500: { description: 'The provider failed' },
+          501: { description: 'No track api provider configured' }
+        }
+      },
+      delete: {
+        tags: ['tracks'],
+        summary: 'Delete a stored track',
+        description:
+          'Removes the track with this id from the provider that holds it. Addressed by id rather than by context, because an imported track may name no vessel and a context may hold more than one track.\n\n**Requires administrative permission.** Deletion is irreversible and a track records no uploader, so an imported track has no owner to authorise a requester against. On a server with security disabled the ordinary write permission applies, since there is no administrator to be.',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Track id, as returned in properties.id'
+          },
+          { $ref: '#/components/parameters/Provider' }
+        ],
+        responses: {
+          200: { description: 'Deleted' },
+          400: { description: 'An unknown provider was named' },
+          403: {
+            description:
+              'Administrative permission is required to delete a track'
+          },
+          404: { description: 'No track with that id' },
+          409: {
+            description:
+              'The id exists in more than one provider; name one with provider'
+          },
+          500: { description: 'The provider failed to delete the track' },
+          501: { description: 'No provider, or the provider does not delete tracks' }
+        }
+      }
+    },
+
     '/': {
       get: {
         tags: ['tracks'],
@@ -315,6 +446,43 @@ const tracksApiDoc = {
           '400': { description: 'Invalid query parameters' },
           '500': { description: 'The track provider failed' },
           '501': { description: 'No track api provider configured' }
+        }
+      },
+      post: {
+        tags: ['tracks'],
+        summary: 'Store a track',
+        description:
+          'Imports a track and keeps it alongside recorded ones. A GPX someone sends you is a track like any other: it is stored, listed and queried the same way, and carries its own name and id.\n\nThe provider assigns the id, so two clients importing the same file cannot collide and an import can never overwrite a recorded track by naming its context. Goes to the provider named by **provider**, or to the default. A provider that does not store imports answers 501.',
+        parameters: [{ $ref: '#/components/parameters/Provider' }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/TrackImport' }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'The track as stored, carrying the id assigned to it',
+            headers: {
+              Location: {
+                description: 'Where the created track can be fetched',
+                schema: { type: 'string' }
+              }
+            },
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/TrackFeature' }
+              }
+            }
+          },
+          400: {
+            description: 'Malformed track, or an unknown provider was named'
+          },
+          403: { description: 'Not authorised to write tracks' },
+          500: { description: 'The provider failed to store the track' },
+          501: { description: 'No provider, or the provider does not store tracks' }
         }
       }
     },

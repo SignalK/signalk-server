@@ -136,11 +136,39 @@ export interface TracksRequest {
  * @category Track API
  */
 export interface TrackProperties {
-  /** The Signal K context this track belongs to. */
-  context: Context
+  /**
+   * Identifies this track, and is what `GET` and `DELETE /tracks/{id}` address.
+   *
+   * Stable for as long as the track exists, and unique **within the provider
+   * that holds it** — two providers may mint the same id for different tracks,
+   * which is why the server resolves a track and then acts on the provider
+   * that answered rather than on the default one. `?provider=` narrows the
+   * search when a client knows where the track lives.
+   *
+   * A recorded track may derive it from the context; an imported one has
+   * nothing to derive it from and gets an opaque id.
+   */
+  id: string
 
-  /** Whether this is the own vessel's track. */
-  isSelf: boolean
+  /**
+   * The Signal K context this track belongs to, when it has one.
+   *
+   * Absent for an imported track that names no vessel — a GPX a friend sent,
+   * with no MMSI in it. Such a track is still a track: a recorded series of
+   * positions, which is what this API serves. What it is not is a claim about
+   * a vessel in the data model, so it carries no context rather than an
+   * invented one.
+   */
+  context?: Context
+
+  /**
+   * Whether this is the own vessel's track.
+   *
+   * Absent along with `context`: a track that names no vessel cannot be the
+   * own vessel's, and saying `false` would imply the question was asked of a
+   * vessel that exists.
+   */
+  isSelf?: boolean
 
   /**
    * Which registered provider answered for this track.
@@ -155,16 +183,31 @@ export interface TrackProperties {
   /**
    * Name of the vessel, aircraft or other context, when known.
    *
-   * Not the name of the track: a track recorded from position data has no name
-   * of its own. Named tracks are `resources/tracks`.
+   * Not the name of the track — see `name` for that. A track recorded from
+   * position data has no name of its own; an imported one usually does.
    */
   contextName?: string
 
-  /** Time of the first returned point. */
-  from: string
+  /**
+   * The track's own name, when it has one.
+   *
+   * A GPX `<trk><name>` survives an import here. Recorded tracks have no name
+   * until someone gives them one, which is why this is separate from
+   * `contextName` rather than overloading it.
+   */
+  name?: string
 
-  /** Time of the last returned point. */
-  to: string
+  /**
+   * Time of the first returned point.
+   *
+   * Absent for a track whose points carry no times — an imported GPX without
+   * `<time>` is a shape someone sailed, with no recording times to report.
+   * Present for everything a provider recorded itself.
+   */
+  from?: string
+
+  /** Time of the last returned point, absent whenever `from` is. */
+  to?: string
 
   /** Bounding box of the returned geometry, `[west, south, east, north]`. */
   bbox?: TrackBoundingBox
@@ -261,6 +304,118 @@ export interface TrackApi {
    * geometry.
    */
   getTrackContexts(query: TracksRequest): Promise<Context[]>
+
+  /**
+   * Returns one stored track by id, or undefined when no such track exists.
+   *
+   * Optional, like the writes. Every other way of finding a track filters by
+   * something a track might not have — a time window needs times, a context
+   * query needs a context — so a track imported with neither would be
+   * unreachable without this.
+   */
+  getTrack?(id: string): Promise<TrackFeature | undefined>
+
+  /**
+   * Stores a track the client supplied, and returns it as stored.
+   *
+   * Optional: a provider that only records what it observes does not implement
+   * this, and the server answers 501 rather than refusing its registration.
+   *
+   * The returned feature carries the `id` the provider assigned, which is what
+   * a later `DELETE` addresses. A provider assigns the id rather than accepting
+   * one, so two clients importing the same file cannot collide, and an import
+   * can never overwrite a recorded track by naming its context.
+   */
+  storeTrack?(track: TrackImport): Promise<TrackFeature>
+
+  /**
+   * Deletes a stored track by id, resolving false when no such track exists.
+   *
+   * Optional, and independent of `storeTrack`: a provider may accept imports
+   * without allowing recorded tracks to be deleted, or the reverse.
+   */
+  deleteTrack?(id: string): Promise<boolean>
+}
+
+/**
+ * Thrown by {@link TrackApi.storeTrack} when the track itself is unacceptable
+ * to that provider — an import carrying no `coordTimes` offered to a store
+ * that only keeps timed tracks, say.
+ *
+ * Distinct from a store that failed: this says the client sent something this
+ * provider will not keep, which is a 400 rather than a 500. A provider that
+ * rejects for any other reason should throw an ordinary error.
+ */
+export class TrackRejectedError extends Error {
+  /**
+   * Marks the error across module boundaries.
+   *
+   * A plugin resolving `@signalk/server-api` gets its own copy of this class,
+   * so `instanceof` against the server's copy fails and a deliberate refusal
+   * would be reported as a store failure. The flag survives that.
+   */
+  readonly isTrackRejected = true as const
+
+  constructor(message?: string) {
+    super(message)
+    this.name = 'TrackRejectedError'
+  }
+}
+
+/** Whether a provider refused the track, whichever copy of the class it used. */
+export function isTrackRejectedError(
+  error: unknown
+): error is { message: string } {
+  if (error instanceof TrackRejectedError) {
+    return true
+  }
+  // The message is part of what is proved, not assumed: a duck-typed refusal
+  // without one would otherwise narrow to Error and answer 400 with an empty
+  // body, telling the client nothing about what it sent.
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { isTrackRejected?: unknown }).isTrackRejected === true &&
+    typeof (error as { message?: unknown }).message === 'string'
+  )
+}
+
+/**
+ * A track offered to a provider for storage.
+ *
+ * Geometry and times only, plus what the source said about it. Everything a
+ * provider computes for itself — the bounding box, the point count, the time
+ * range — is absent here, because a client cannot be trusted to have derived
+ * it from the geometry it actually sent.
+ *
+ * @category Track API
+ */
+export interface TrackImport {
+  /** `[longitude, latitude]` positions, per segment. */
+  coordinates: [number, number][][]
+
+  /**
+   * Recording time of every point, nested to match `coordinates`.
+   *
+   * Optional because not every GPX carries `<time>`. A track without times is
+   * still a track — a shape someone sailed — but it cannot answer a time
+   * window query, and a provider may refuse it for that reason. A provider
+   * that accepts one returns it with no `from` or `to`, which are optional
+   * for exactly this case.
+   */
+  coordTimes?: string[][]
+
+  /** The track's own name, typically a GPX `<trk><name>`. */
+  name?: string
+
+  /**
+   * The vessel this track belongs to, when the client knows.
+   *
+   * Supplying it associates the import with a vessel in the data model; it
+   * does not merge the import into that vessel's recorded track, which stays
+   * separate and separately addressable.
+   */
+  context?: Context
 }
 
 /** @category Track API */
