@@ -434,7 +434,7 @@ const lookupSchemaMeta = (
   const full = getMetadata(ctxPath + '.' + path) as
     Record<string, unknown> | undefined
   if (!full) return undefined
-  const meta: Record<string, unknown> = {}
+  const meta: Pick<MetaValue, 'timeout' | 'updateContract'> = {}
   if (typeof full.timeout === 'number') meta.timeout = full.timeout
   // The registry inherits a subtree's contract onto every path under it, so
   // this is where the shipped classification now comes from. Anything other
@@ -443,5 +443,5 @@ const lookupSchemaMeta = (
   if (full.updateContract === 'event' || full.updateContract === 'periodic') {
     meta.updateContract = full.updateContract
   }
-  return Object.keys(meta).length > 0 ? (meta as MetaValue) : undefined
+  return Object.keys(meta).length > 0 ? meta : undefined
 }

@@ -290,6 +290,15 @@ export default function PathReference() {
                     </td>
                     <td>
                       {meta.units && <Badge bg="info">{meta.units}</Badge>}
+                      {meta.updateContract === 'event' && (
+                        <Badge
+                          bg="secondary"
+                          className="ms-1"
+                          title="Emitted only when the value changes, so it is never marked stale"
+                        >
+                          event
+                        </Badge>
+                      )}
                     </td>
                   </tr>
                 )
