@@ -14,7 +14,11 @@ import { IRouter, Request, Response } from 'express'
 import { createDebug } from '../../debug'
 import { WithSecurityStrategy } from '../../security'
 import { ConfigApp } from '../../config/config'
-import { parseTracksQuery, parseTrackImport } from './query'
+import {
+  parseTracksQuery,
+  parseTrackImport,
+  rejectUnknownParams
+} from './query'
 import { Responses } from '../'
 
 const debug = createDebug('signalk-server:api:tracks')
@@ -200,10 +204,20 @@ export class TrackApiHttpRegistry {
     // segments under this prefix: express matches in registration order, so a
     // wildcard added first would swallow both.
     this.app.get(`${TRACKS_API_PATH}/:id`, (req: Request, res: Response) => {
+      const unknown = rejectUnknownParams(req.query, ['provider'])
+      if (unknown.length > 0) {
+        res.status(400).json({ error: unknown.join(', ') })
+        return
+      }
       void this.readOneFromProviders(req, res)
     })
 
     this.app.post(TRACKS_API_PATH, (req: Request, res: Response) => {
+      const unknown = rejectUnknownParams(req.query, ['provider'])
+      if (unknown.length > 0) {
+        res.status(400).json({ error: unknown.join(', ') })
+        return
+      }
       // Parsed before the check, because what is being authorised depends on
       // what was sent: a track declaring a context is a write against *that*
       // vessel, and checking `vessels.self` first would let anyone permitted
@@ -239,6 +253,11 @@ export class TrackApiHttpRegistry {
     })
 
     this.app.delete(`${TRACKS_API_PATH}/:id`, (req: Request, res: Response) => {
+      const unknown = rejectUnknownParams(req.query, ['provider'])
+      if (unknown.length > 0) {
+        res.status(400).json({ error: unknown.join(', ') })
+        return
+      }
       void (async () => {
         // Resolved before the check, and deleted from the provider that
         // answered. Authorising against `vessels.self` would let anyone who

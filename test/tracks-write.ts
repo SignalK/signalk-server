@@ -382,6 +382,52 @@ describe('Track API writes', () => {
     )
   })
 
+  it('reports a flag-based refusal as a client error', async () => {
+    // The other refusal test throws the class from the same module the server
+    // uses, so instanceof succeeds and the cross-module branch never runs. A
+    // plugin resolving its own copy of server-api produces this shape.
+    await serve({
+      getTracks: () =>
+        Promise.resolve({ type: 'FeatureCollection' as const, features: [] }),
+      getTrackContexts: () => Promise.resolve([] as Context[]),
+      storeTrack: () =>
+        Promise.reject({
+          isTrackRejected: true,
+          message: 'this store keeps timed tracks only'
+        })
+    })
+    const res = await post({ coordinates: [[[24.9, 60.1]]] })
+    expect(res.status).to.equal(400)
+    const body = (await res.json()) as { error: string }
+
+    expect(body.error).to.match(/timed tracks only/)
+  })
+
+  // A typo in `provider` would otherwise be dropped and the track stored in,
+  // or deleted from, whichever provider happens to be the default.
+  it('rejects a misspelled provider parameter on the write routes', async () => {
+    await serve()
+    const created = await fetch(
+      `${base}/signalk/v2/api/tracks?provdier=testprovider`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validTrack)
+      }
+    )
+    const read = await fetch(
+      `${base}/signalk/v2/api/tracks/imported:known?provdier=testprovider`
+    )
+    const removed = await fetch(
+      `${base}/signalk/v2/api/tracks/imported:known?provdier=testprovider`,
+      { method: 'DELETE' }
+    )
+
+    expect([created.status, read.status, removed.status]).to.deep.equal([
+      400, 400, 400
+    ])
+  })
+
   it('deletes a track by id', async () => {
     await serve()
     const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`, {

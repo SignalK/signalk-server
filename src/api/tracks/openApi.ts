@@ -484,6 +484,10 @@ const tracksApiDoc = {
           400: {
             description: 'Malformed track, or an unknown provider was named'
           },
+          413: {
+            description:
+              "The body exceeds the server's JSON limit, which is 10 MB by default and configurable with FILEUPLOADSIZELIMIT. Applied by middleware before this route, so an import inside the documented caps can still be refused here."
+          },
           403: { description: 'Not authorised to write tracks' },
           500: { description: 'The provider failed to store the track' },
           501: {

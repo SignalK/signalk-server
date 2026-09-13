@@ -263,6 +263,24 @@ const readFlag = (
  * unified across the v2 APIs — see #3021 — and it costs nothing to not repeat
  * it here.
  */
+/**
+ * Reject any query parameter a route does not understand.
+ *
+ * The single-track routes take only `provider`, so they cannot use the query
+ * parser's list — `?bbox=` on a POST is meaningless, not merely unused. They
+ * still need the check: `?provdier=parquet` would otherwise be dropped and the
+ * track stored in, or deleted from, whichever provider is the default.
+ */
+export function rejectUnknownParams(
+  query: Record<string, unknown>,
+  allowed: string[]
+): string[] {
+  const permitted = new Set(allowed)
+  return Object.keys(query)
+    .filter((name) => !permitted.has(name))
+    .map((name) => `unknown query parameter: ${name}`)
+}
+
 const KNOWN_PARAMS = new Set([
   'contexts',
   // Singular as well as plural: the parser accepts both, and an unbounded
