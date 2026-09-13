@@ -351,10 +351,9 @@ describe('Meta save clears removed fields', () => {
       (s) => (s as HTMLSelectElement).value === 'updateContract'
     )
     expect(contractRow).to.not.equal(undefined)
-    const trash = contractRow!
-      .closest('div')!
-      .parentElement!.querySelector('button')
-    fireEvent.click(trash!)
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Delete updateContract' })
+    )
     fireEvent.click(screen.getByRole('button', { name: /save/i }))
   }
 
