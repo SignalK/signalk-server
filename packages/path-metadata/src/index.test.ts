@@ -265,6 +265,17 @@ describe('updateContract inheritance', () => {
     expect(sog.updateContract).to.equal(undefined)
   })
 
+  it('drops an unsupported contract set at runtime on an uncovered path', () => {
+    // No subtree covers speedOverGround, so nothing sanitises the value
+    // unless getMetadata does it.
+    metadataRegistry.addMetaData('vessels.self', 'navigation.speedOverGround', {
+      updateContract: 'manual'
+    })
+    const entry = getMetadata(self('navigation.speedOverGround'))
+    if (!entry) throw new Error('speedOverGround has no metadata entry')
+    expect(entry.updateContract).to.equal(undefined)
+  })
+
   it('does not write the contract onto the shared template entry', () => {
     getMetadata('vessels.self.navigation.anchor.position')
     const other = getMetadata('vessels.self.navigation.speedOverGround')
