@@ -821,7 +821,7 @@ describe('isRemoveSourceFailure', () => {
 describe('lookupSourceStatus', () => {
   it('falls back from canName sourceRef to connection.src', () => {
     const status = {
-      'can0.c03c8c0022702edb': {
+      'can0.37': {
         online: true,
         pluginId: 'signalk-naviop-plugin'
       }

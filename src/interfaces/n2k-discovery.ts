@@ -39,6 +39,9 @@ const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
 const REQUEST_INTERVAL_MS = 500
 const STATUS_TICK_MS = 5_000
+// Auto-request product info after the bus comes up. YDEN/YDWG drop
+// discovery under load; a full sweep is ~54s at 500 ms pacing.
+const DISCOVERY_SWEEP_DELAYS_MS = [5_000, 180_000, 600_000] as const
 // Delay before re-asking a device for identity after we observe a frame
 // from it without a known manufacturer in the live tree. Long enough
 // that the boot sweep has time to fire first; short enough that a
@@ -740,9 +743,9 @@ module.exports = (app: N2kDiscoveryApp) => {
     }
     if (!discoverySweepsScheduled) {
       discoverySweepsScheduled = true
-      sweepAfter(5_000)
-      sweepAfter(180_000)
-      sweepAfter(600_000)
+      for (const delayMs of DISCOVERY_SWEEP_DELAYS_MS) {
+        sweepAfter(delayMs)
+      }
     }
   }
 

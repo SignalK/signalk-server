@@ -90,8 +90,9 @@ export interface ServerAPI
     WithNotificationsApi,
     SelfIdentity {
   /**
-   * Plugin id. Set on the `app` object passed to a plugin's constructor
-   * and `start`; undefined on the root server instance.
+   * Plugin id on the `app` object passed into `start`. Undefined during
+   * plugin construction (`pluginConstructor(app)` runs before this is set)
+   * and on the root server instance.
    */
   pluginId?: string
 

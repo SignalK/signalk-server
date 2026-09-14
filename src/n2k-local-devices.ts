@@ -1,5 +1,3 @@
-export const N2K_CLAIM_ASSOCIATE_MS = 15_000
-
 export interface Nmea2000OutAvailablePayload {
   src?: number
   uniqueNumber?: number
@@ -75,41 +73,6 @@ export function rebindLocalDevicesByUniqueNumber(
     devices.delete(src)
     devices.set(realSrc, { ...local, src: realSrc })
   }
-}
-
-/**
- * SimpleCan drops own frames after address claim, so n2k-discovery never
- * sees later TX from that src. When nmea2000OutAvailable carries a
- * pluginId but no src, bind it once to the most recently observed address
- * that is not already a local device (and not the canbus preferredAddress).
- * Repeat emits from the same plugin must not consume the rest of the bus.
- */
-export function associatePluginWithRecentAddress(
-  devices: Map<number, LocalN2kDevice>,
-  pluginId: string,
-  frameLastSeenBySrc: Map<number, number>,
-  now: number,
-  windowMs: number = N2K_CLAIM_ASSOCIATE_MS,
-  reservedSrcs: number[] = []
-): LocalN2kDevice | undefined {
-  const existing = findLocalDeviceByPluginId(devices, pluginId)
-  if (existing) return existing
-  let bestSrc: number | undefined
-  let bestSeen = -1
-  for (const [src, seen] of frameLastSeenBySrc) {
-    if (devices.has(src)) continue
-    if (reservedSrcs.includes(src)) continue
-    if (!isN2kAddress(src)) continue
-    if (now - seen > windowMs) continue
-    if (seen >= bestSeen) {
-      bestSrc = src
-      bestSeen = seen
-    }
-  }
-  if (bestSrc === undefined) return undefined
-  const next: LocalN2kDevice = { src: bestSrc, pluginId }
-  devices.set(bestSrc, next)
-  return next
 }
 
 export function canbusPreferredAddress(

@@ -1,6 +1,5 @@
 import { expect } from 'chai'
 import {
-  associatePluginWithRecentAddress,
   canbusPreferredAddress,
   isLocalN2kDeviceRunning,
   parseNmea2000OutAvailablePayload,
@@ -96,80 +95,6 @@ describe('n2k-local-devices', function () {
       expect(devices.get(166)?.pluginId).to.equal(
         'signalk-bandg-performance-plugin'
       )
-    })
-  })
-
-  describe('associatePluginWithRecentAddress', function () {
-    it('binds pluginId to the newest non-local address', function () {
-      const devices = new Map<number, LocalN2kDevice>([[30, { src: 30 }]])
-      const lastSeen = new Map<number, number>([
-        [30, 1_000],
-        [37, 5_000],
-        [115, 4_000]
-      ])
-      const bound = associatePluginWithRecentAddress(
-        devices,
-        'signalk-naviop-plugin',
-        lastSeen,
-        5_500,
-        15_000
-      )
-      expect(bound).to.deep.equal({
-        src: 37,
-        pluginId: 'signalk-naviop-plugin'
-      })
-      expect(devices.get(37)?.pluginId).to.equal('signalk-naviop-plugin')
-    })
-
-    it('ignores addresses outside the claim window', function () {
-      const devices = new Map<number, LocalN2kDevice>()
-      const lastSeen = new Map<number, number>([[37, 1_000]])
-      expect(
-        associatePluginWithRecentAddress(
-          devices,
-          'signalk-naviop-plugin',
-          lastSeen,
-          20_000,
-          15_000
-        )
-      ).to.equal(undefined)
-    })
-
-    it('does not bind a second address for the same plugin', function () {
-      const devices = new Map<number, LocalN2kDevice>([
-        [37, { src: 37, pluginId: 'signalk-naviop-plugin' }]
-      ])
-      const lastSeen = new Map<number, number>([
-        [37, 5_000],
-        [22, 6_000]
-      ])
-      const bound = associatePluginWithRecentAddress(
-        devices,
-        'signalk-naviop-plugin',
-        lastSeen,
-        6_500,
-        15_000
-      )
-      expect(bound?.src).to.equal(37)
-      expect(devices.has(22)).to.equal(false)
-    })
-
-    it('skips the canbus preferred address', function () {
-      const devices = new Map<number, LocalN2kDevice>()
-      const lastSeen = new Map<number, number>([
-        [30, 6_000],
-        [37, 5_000]
-      ])
-      const bound = associatePluginWithRecentAddress(
-        devices,
-        'signalk-naviop-plugin',
-        lastSeen,
-        6_500,
-        15_000,
-        [30]
-      )
-      expect(bound?.src).to.equal(37)
-      expect(devices.has(30)).to.equal(false)
     })
   })
 

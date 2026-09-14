@@ -521,7 +521,7 @@ const SourceDiscovery: React.FC = () => {
                     devices.filter(
                       (d) =>
                         !wsConnectionIds.has(d.connection) &&
-                        sourceStatus[d.sourceRef]?.online === true
+                        lookupSourceStatus(sourceStatus, d)?.online === true
                     ).length
                   }{' '}
                   online
@@ -531,7 +531,7 @@ const SourceDiscovery: React.FC = () => {
                     devices.filter(
                       (d) =>
                         !wsConnectionIds.has(d.connection) &&
-                        sourceStatus[d.sourceRef]?.online === false
+                        lookupSourceStatus(sourceStatus, d)?.online === false
                     ).length
                   }{' '}
                   offline
