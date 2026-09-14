@@ -330,6 +330,32 @@ The method is **idempotent**: on subsequent server starts, fields already persis
 
 The `displayUnits.category` is validated against the path's SI unit. If the category doesn't match, the method returns `false` and logs a debug message.
 
+### Declaring stale data behaviour
+
+The same method is how a plugin tells [Stale Data Detection](../../setup/staleness.md) how its paths behave. Declare it once at plugin start — metadata attached to individual deltas is not used to resolve timeouts, and repeating it on every delta would only add traffic.
+
+```javascript
+plugin.start = async (options) => {
+  // Republished every 10 minutes, so the 60s default would flag it as stale.
+  await app.setDefaultMetadata('navigation.state', { timeout: 900 })
+
+  // Or let the server derive the timeout from the observed update rate.
+  await app.setDefaultMetadata('environment.inside.temperature', {
+    timeout: 'auto'
+  })
+
+  // Emitted only when the value changes; silence means unchanged.
+  await app.setDefaultMetadata('propulsion.port.state', {
+    updateContract: 'event'
+  })
+
+  // Never meaningful to time out.
+  await app.setDefaultMetadata('design.airHeight', { timeout: 0 })
+}
+```
+
+Per-field merge applies here too: if the user has set a `timeout` for the path in the Data Browser, theirs wins and the plugin's suggestion is ignored.
+
 ## Display Units
 
 A plugin that writes text for people, such as an alert message or a notification, can show values in the units the user has chosen with `convertToDisplayUnits()`. It converts a value from the path's SI unit and returns the converted value with its unit symbol and display format, or `undefined` when the path has no display units:
