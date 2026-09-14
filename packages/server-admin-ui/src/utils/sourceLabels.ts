@@ -206,6 +206,37 @@ export interface N2kDeviceEntry extends N2kDeviceInfo {
   srcAddr: string
 }
 
+export function lookupSourceStatus<T>(
+  sourceStatus: Record<string, T>,
+  device: Pick<N2kDeviceEntry, 'sourceRef' | 'connection' | 'srcAddr'> & {
+    src?: string
+  }
+): T | undefined {
+  return (
+    sourceStatus[device.sourceRef] ??
+    (device.src !== undefined
+      ? sourceStatus[`${device.connection}.${device.src}`]
+      : undefined) ??
+    sourceStatus[`${device.connection}.${device.srcAddr}`]
+  )
+}
+
+export function pluginForSource(
+  pluginId: string | undefined,
+  plugins: Array<{ id: string; name?: string; packageName?: string }>
+): { id: string; name: string } | undefined {
+  if (!pluginId) return undefined
+  const match = plugins.find(
+    (p) => p.id === pluginId || p.packageName === pluginId
+  )
+  if (match) return { id: match.id, name: match.name || match.id }
+  return { id: pluginId, name: pluginId }
+}
+
+export function pluginConfigurationPath(pluginId: string): string {
+  return `/apps/configuration/${encodeURIComponent(pluginId)}`
+}
+
 /**
  * Extract a flat list of N2K devices from the sources API response.
  * Sorted by manufacturer, then model, then bus address.

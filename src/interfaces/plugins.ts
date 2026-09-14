@@ -1079,6 +1079,22 @@ module.exports = (theApp: any) => {
       `plugin:${plugin.id}` as EventsActorId
     )
     _.assign(appCopy, boundEventMethods)
+    appCopy.pluginId = plugin.id
+    const pluginEmit = boundEventMethods.emit
+    ;(appCopy as { emit: typeof pluginEmit }).emit = (
+      eventName: string,
+      ...args: unknown[]
+    ) => {
+      if (eventName === 'nmea2000OutAvailable') {
+        const raw = args[0]
+        const base =
+          raw !== null && typeof raw === 'object' && !Array.isArray(raw)
+            ? { ...(raw as Record<string, unknown>) }
+            : {}
+        return pluginEmit(eventName, { ...base, pluginId: plugin.id })
+      }
+      return pluginEmit(eventName, ...args)
+    }
 
     appCopy.savePluginOptions = (configuration, cb) => {
       savePluginOptions(

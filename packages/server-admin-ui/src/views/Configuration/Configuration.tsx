@@ -301,8 +301,11 @@ export default function PluginConfigurationList() {
 
         if (currentPluginId && currentPluginId !== '-') {
           initialSelectedPlugin =
-            fetchedPlugins.find((plugin) => plugin.id === currentPluginId) ||
-            null
+            fetchedPlugins.find(
+              (plugin) =>
+                plugin.id === currentPluginId ||
+                plugin.packageName === currentPluginId
+            ) || null
         } else if (lastOpenPluginId) {
           initialSelectedPlugin =
             fetchedPlugins.find((plugin) => plugin.id === lastOpenPluginId) ||
@@ -314,11 +317,11 @@ export default function PluginConfigurationList() {
         setSelectedPlugin(initialSelectedPlugin)
         setWasmEnabled(wasmInterfaceEnabled)
 
-        // Scroll to the initially selected plugin if one exists (from URL/bookmark)
         if (initialSelectedPlugin) {
-          requestAnimationFrame(() => {
-            scrollToSelectedPlugin(initialSelectedPlugin!.id)
-          })
+          localStorage.setItem(
+            openPluginStorageKey,
+            initialSelectedPlugin.id
+          )
         }
       } catch (error) {
         console.error(error)
@@ -327,7 +330,23 @@ export default function PluginConfigurationList() {
     }
 
     fetchData()
-  }, [params.pluginid, scrollToSelectedPlugin])
+  }, [params.pluginid])
+
+  useEffect(() => {
+    if (!selectedPlugin) return
+    if (!params.pluginid || params.pluginid === '-') return
+    const pluginId = selectedPlugin.id
+    const frame = requestAnimationFrame(() => {
+      scrollToSelectedPlugin(pluginId)
+      scrollToConfigCard()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [
+    selectedPlugin?.id,
+    params.pluginid,
+    scrollToSelectedPlugin,
+    scrollToConfigCard
+  ])
 
   useEffect(() => {
     const unsubscribe = useStore.subscribe(

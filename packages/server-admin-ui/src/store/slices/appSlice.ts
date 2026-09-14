@@ -121,7 +121,10 @@ export interface AppSliceState {
    */
   n2kOutAvailable: boolean
   n2kDeviceStatusLoaded: boolean
-  sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
+  sourceStatus: Record<
+    string,
+    { online: boolean; lastSeen?: number; pluginId?: string }
+  >
   sourceStatusLoaded: boolean
   /**
    * Registered History API providers and the effective/configured
@@ -173,6 +176,7 @@ export interface AppSliceActions {
       src: string
       online: boolean
       lastSeen?: number
+      pluginId?: string
     }[]
   }) => void
   setMultiSourcePaths: (paths: Record<string, string[]>) => void
@@ -195,6 +199,7 @@ export interface AppSliceActions {
       src: string
       online: boolean
       lastSeen?: number
+      pluginId?: string
     }[]
   ) => void
   setHistoryProviders: (data: HistoryProvidersState) => void
@@ -381,7 +386,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
       discoveredAddresses: number[]
       n2kOutAvailable: boolean
       n2kDeviceStatusLoaded: boolean
-      sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
+      sourceStatus: Record<
+        string,
+        { online: boolean; lastSeen?: number; pluginId?: string }
+      >
       sourceStatusLoaded: boolean
     }> = {
       pgnDataInstances: status.pgnDataInstances ?? {},
@@ -393,11 +401,15 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
     if (status.sourceStatuses) {
       const sourceStatus: Record<
         string,
-        { online: boolean; lastSeen?: number }
+        { online: boolean; lastSeen?: number; pluginId?: string }
       > = {}
       for (const s of status.sourceStatuses) {
         const key = s.sourceRef ?? `${s.providerId}.${s.src}`
-        sourceStatus[key] = { online: s.online, lastSeen: s.lastSeen }
+        sourceStatus[key] = {
+          online: s.online,
+          lastSeen: s.lastSeen,
+          pluginId: s.pluginId
+        }
       }
       patch.sourceStatus = sourceStatus
       patch.sourceStatusLoaded = true
@@ -463,15 +475,18 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
     // the client store. With buildSourceStatuses now also surfacing
     // frame-only devices (via frameLastSeenBySrc), the snapshot is
     // authoritative — a sourceRef that disappears really is gone.
-    const sourceStatus: Record<string, { online: boolean; lastSeen?: number }> =
-      {}
+    const sourceStatus: Record<
+      string,
+      { online: boolean; lastSeen?: number; pluginId?: string }
+    > = {}
     for (const s of statuses) {
       // Prefer the canonical sourceRef field; fall back to providerId+src
       // for older server payloads that didn't include it.
       const key = s.sourceRef ?? `${s.providerId}.${s.src}`
       sourceStatus[key] = {
         online: s.online,
-        lastSeen: s.lastSeen
+        lastSeen: s.lastSeen,
+        pluginId: s.pluginId
       }
     }
     set({ sourceStatus, sourceStatusLoaded: true })

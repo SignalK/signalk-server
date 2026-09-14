@@ -26,6 +26,14 @@ import {
   buildPgnSourceKeysFromTree
 } from '../n2k-discovery-instances'
 import { isDeviceStale, ONLINE_THRESHOLD_MS } from '../n2k-discovery-staleness'
+import {
+  canbusPreferredAddress,
+  isLocalN2kDeviceRunning,
+  parseNmea2000OutAvailablePayload,
+  rebindLocalDevicesByUniqueNumber,
+  recordLocalN2kDevice,
+  type LocalN2kDevice
+} from '../n2k-local-devices'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
@@ -57,12 +65,22 @@ interface N2kDiscoveryApp extends SignalKServer {
   config: {
     defaults: unknown
     configPath: string
-    settings: { sourceAliases?: Record<string, string> }
+    settings: {
+      sourceAliases?: Record<string, string>
+      pipedProviders?: Array<{
+        enabled?: boolean
+        pipeElements?: Array<{
+          type?: string
+          options?: { preferredAddress?: number }
+        }>
+      }>
+    }
   }
   deltaCache: {
     sourceDeltas: Record<string, unknown>
     removeSourceDelta(key: string): void
   }
+  providerStatus?: Record<string, { message?: string }>
 }
 
 interface SourceStatus {
@@ -75,6 +93,7 @@ interface SourceStatus {
   src: string
   online: boolean
   lastSeen: number | undefined
+  pluginId?: string
 }
 
 interface N2kPGN {
@@ -227,6 +246,7 @@ function requestProductInfo(
 
 module.exports = (app: N2kDiscoveryApp) => {
   let n2kOutAvailable = false
+  let discoverySweepsScheduled = false
   const knownAddresses = new Set<number>()
   const discoveredAddresses = new Set<number>()
   // Timers for in-flight per-address ISO Requests inside a sweep.
@@ -262,6 +282,10 @@ module.exports = (app: N2kDiscoveryApp) => {
   // "online" reflects "alive on the bus", not "currently producing
   // mappable Signal K values".
   const frameLastSeenBySrc = new Map<number, number>()
+  // N2K nodes this process owns (canbus CanDevice + plugin SimpleCan).
+  // Their TX is dropped on receive, so liveness has to come from the
+  // nmea2000OutAvailable claim rather than inbound frames.
+  const localN2kDevices = new Map<number, LocalN2kDevice>()
   // Per-address bookkeeping for auto-rediscovery: when we observe a
   // frame from an address that has no manufacturer/model populated in
   // app.signalk.sources we schedule one debounced ISO Request burst.
@@ -337,6 +361,71 @@ module.exports = (app: N2kDiscoveryApp) => {
     return undefined
   }
 
+  function canonicalRefForAddr(
+    addr: number
+  ): { sourceRef: string; providerId: string } | undefined {
+    const providerId = findProviderIdForAddress(addr)
+    if (providerId === undefined) return undefined
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sources = (app.signalk as any)?.sources
+    const n2k = sources?.[providerId]?.[String(addr)]?.n2k
+    const canName = n2k?.canName
+    const suffix =
+      typeof canName === 'string' && canName.length > 0 ? canName : String(addr)
+    return { sourceRef: `${providerId}.${suffix}`, providerId }
+  }
+
+  function uniqueNumberToSrcFromSources(): Map<number, number> {
+    const out = new Map<number, number>()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sources = (app.signalk as any)?.sources
+    if (!sources || typeof sources !== 'object') return out
+    for (const conn of Object.values(sources) as Array<
+      Record<string, { n2k?: { uniqueNumber?: number } }> | undefined
+    >) {
+      if (!conn || typeof conn !== 'object') continue
+      for (const [k, v] of Object.entries(conn)) {
+        if (!/^\d+$/.test(k)) continue
+        const uniq = v?.n2k?.uniqueNumber
+        if (typeof uniq === 'number') out.set(uniq, Number(k))
+      }
+    }
+    return out
+  }
+
+  function touchLocalN2kDevices(now: number): void {
+    rebindLocalDevicesByUniqueNumber(
+      localN2kDevices,
+      uniqueNumberToSrcFromSources()
+    )
+    for (const [src, local] of localN2kDevices) {
+      if (!isLocalN2kDeviceRunning(local, app.providerStatus)) continue
+      frameLastSeenBySrc.set(src, now)
+      knownAddresses.add(src)
+    }
+  }
+
+  function localStatus(
+    srcAddr: number | undefined,
+    lastSeen: number | undefined,
+    now: number
+  ): { online: boolean; lastSeen: number | undefined; pluginId?: string } {
+    const local =
+      srcAddr !== undefined ? localN2kDevices.get(srcAddr) : undefined
+    const running =
+      local !== undefined && isLocalN2kDeviceRunning(local, app.providerStatus)
+    return {
+      online:
+        running ||
+        (lastSeen !== undefined && now - lastSeen < ONLINE_THRESHOLD_MS),
+      lastSeen:
+        running && srcAddr !== undefined
+          ? (frameLastSeenBySrc.get(srcAddr) ?? lastSeen)
+          : lastSeen,
+      pluginId: local?.pluginId
+    }
+  }
+
   // Has the device at this bus address been identified? "Identified"
   // means manufacturerCode is populated in the live sources tree,
   // which only happens once we've received and parsed PGN 60928
@@ -391,6 +480,7 @@ module.exports = (app: N2kDiscoveryApp) => {
 
   function buildSourceStatuses(): SourceStatus[] {
     const now = Date.now()
+    touchLocalN2kDevices(now)
     const statuses: SourceStatus[] = []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sourceMeta = (app.signalk as any)?.sourceMeta as
@@ -400,6 +490,7 @@ module.exports = (app: N2kDiscoveryApp) => {
     // "derived-data") matching getSourceId(). Walk it directly so we
     // cover N2K, NMEA0183 and $source-only (plugin) sources alike.
     const seenAddresses = new Set<number>()
+    const seenRefs = new Set<string>()
     if (sourceMeta) {
       for (const sourceRef of Object.keys(sourceMeta)) {
         const metaLastSeen = sourceMeta[sourceRef]?.lastSeen
@@ -416,13 +507,20 @@ module.exports = (app: N2kDiscoveryApp) => {
           metaLastSeen !== undefined && frameLastSeen !== undefined
             ? Math.max(metaLastSeen, frameLastSeen)
             : (metaLastSeen ?? frameLastSeen)
-        const online =
-          lastSeen !== undefined && now - lastSeen < ONLINE_THRESHOLD_MS
+        const local = localStatus(srcAddr, lastSeen, now)
         const dotIdx = sourceRef.indexOf('.')
         const providerId =
           dotIdx === -1 ? sourceRef : sourceRef.slice(0, dotIdx)
         const src = dotIdx === -1 ? '' : sourceRef.slice(dotIdx + 1)
-        statuses.push({ sourceRef, providerId, src, online, lastSeen })
+        seenRefs.add(sourceRef)
+        statuses.push({
+          sourceRef,
+          providerId,
+          src,
+          online: local.online,
+          lastSeen: local.lastSeen,
+          pluginId: local.pluginId
+        })
       }
     }
     // Pick up devices we have seen frames for but that never landed in
@@ -432,17 +530,33 @@ module.exports = (app: N2kDiscoveryApp) => {
     // status for those devices.
     for (const [srcAddr, frameLastSeen] of frameLastSeenBySrc) {
       if (seenAddresses.has(srcAddr)) continue
-      const providerId = findProviderIdForAddress(srcAddr)
-      if (providerId === undefined) continue
-      const src = String(srcAddr)
-      const sourceRef = `${providerId}.${src}`
-      const online = now - frameLastSeen < ONLINE_THRESHOLD_MS
+      const canonical = canonicalRefForAddr(srcAddr)
+      if (canonical === undefined) continue
+      seenAddresses.add(srcAddr)
+      seenRefs.add(canonical.sourceRef)
+      const local = localStatus(srcAddr, frameLastSeen, now)
       statuses.push({
-        sourceRef,
-        providerId,
-        src,
-        online,
-        lastSeen: frameLastSeen
+        sourceRef: canonical.sourceRef,
+        providerId: canonical.providerId,
+        src: String(srcAddr),
+        online: local.online,
+        lastSeen: local.lastSeen,
+        pluginId: local.pluginId
+      })
+    }
+    for (const [srcAddr, localDevice] of localN2kDevices) {
+      if (seenAddresses.has(srcAddr)) continue
+      const canonical = canonicalRefForAddr(srcAddr)
+      if (canonical === undefined) continue
+      if (seenRefs.has(canonical.sourceRef)) continue
+      if (!isLocalN2kDeviceRunning(localDevice, app.providerStatus)) continue
+      statuses.push({
+        sourceRef: canonical.sourceRef,
+        providerId: canonical.providerId,
+        src: String(srcAddr),
+        online: true,
+        lastSeen: frameLastSeenBySrc.get(srcAddr),
+        pluginId: localDevice.pluginId
       })
     }
     return statuses
@@ -580,8 +694,26 @@ module.exports = (app: N2kDiscoveryApp) => {
     }
   }
 
-  const n2kOutListener = () => {
+  const ensureCanbusLocal = (): number | undefined => {
+    const preferred = canbusPreferredAddress(
+      app.config.settings.pipedProviders
+    )
+    if (preferred === undefined) return undefined
+    if (!localN2kDevices.has(preferred)) {
+      recordLocalN2kDevice(localN2kDevices, { src: preferred })
+    }
+    return preferred
+  }
+
+  const n2kOutListener = (...args: unknown[]) => {
     n2kOutAvailable = true
+    ensureCanbusLocal()
+    const payload = parseNmea2000OutAvailablePayload(args[0])
+    const local = recordLocalN2kDevice(localN2kDevices, payload)
+    if (local) {
+      knownAddresses.add(local.src)
+      frameLastSeenBySrc.set(local.src, Date.now())
+    }
     // discoveredAddresses is initialised empty at module scope and
     // then accumulates for the lifetime of the gateway connection.
     // We don't clear it here because nmea2000OutAvailable can fire
@@ -608,12 +740,16 @@ module.exports = (app: N2kDiscoveryApp) => {
       }, delayMs)
       sweepTimers.add(timer)
     }
-    sweepAfter(5_000)
-    sweepAfter(180_000)
-    sweepAfter(600_000)
+    if (!discoverySweepsScheduled) {
+      discoverySweepsScheduled = true
+      sweepAfter(5_000)
+      sweepAfter(180_000)
+      sweepAfter(600_000)
+    }
   }
 
   api.start = () => {
+    ensureCanbusLocal()
     app.on('N2KAnalyzerOut', n2kListener)
     app.on('nmea2000OutAvailable', n2kOutListener)
     app.on('sourceRefChanged', sourceRefChangedListener)
@@ -1719,6 +1855,9 @@ module.exports = (app: N2kDiscoveryApp) => {
     }
     onlineStates.clear()
     frameLastSeenBySrc.clear()
+    localN2kDevices.clear()
+    n2kOutAvailable = false
+    discoverySweepsScheduled = false
     app.removeListener('N2KAnalyzerOut', n2kListener)
     app.removeListener('nmea2000OutAvailable', n2kOutListener)
     app.removeListener('sourceRefChanged', sourceRefChangedListener)

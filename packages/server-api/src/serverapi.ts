@@ -90,6 +90,12 @@ export interface ServerAPI
     WithNotificationsApi,
     SelfIdentity {
   /**
+   * Plugin id. Set on the `app` object passed to a plugin's constructor
+   * and `start`; undefined on the root server instance.
+   */
+  pluginId?: string
+
+  /**
    * Returns the entry for the provided path starting from `vessels.self` in the full data model.
    *
    * @remarks

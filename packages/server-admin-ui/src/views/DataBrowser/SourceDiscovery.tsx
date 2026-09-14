@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import Alert from 'react-bootstrap/Alert'
 import Badge from 'react-bootstrap/Badge'
 import Button from 'react-bootstrap/Button'
@@ -20,7 +21,10 @@ import {
   type InstanceConflict,
   extractN2kDevices,
   detectInstanceConflicts,
-  conflictKey
+  conflictKey,
+  lookupSourceStatus,
+  pluginForSource,
+  pluginConfigurationPath
 } from '../../utils/sourceLabels'
 import {
   useSourcesData,
@@ -28,6 +32,7 @@ import {
   useIgnoredInstanceConflicts,
   useSourceStatus,
   useSourceStatusLoaded,
+  usePlugins,
   usePgnDataInstances,
   usePgnSourceKeys,
   useN2kOutAvailable,
@@ -92,6 +97,7 @@ const SourceDiscovery: React.FC = () => {
   const setIgnoredConflicts = useStore((s) => s.setIgnoredInstanceConflicts)
   const sourceStatus = useSourceStatus()
   const sourceStatusLoaded = useSourceStatusLoaded()
+  const plugins = usePlugins()
   const [isResetting, setIsResetting] = useState(false)
   const pgnDataInstances = usePgnDataInstances()
   const pgnSourceKeys = usePgnSourceKeys()
@@ -721,9 +727,14 @@ const SourceDiscovery: React.FC = () => {
                           wsConnectionIds.has(device.connection)
                             ? null
                             : sourceStatusLoaded
-                              ? (sourceStatus[device.sourceRef]?.online ?? null)
+                              ? (lookupSourceStatus(sourceStatus, device)
+                                  ?.online ?? null)
                               : null
                         }
+                        plugin={pluginForSource(
+                          lookupSourceStatus(sourceStatus, device)?.pluginId,
+                          plugins
+                        )}
                         onRemove={handleRemoveDevice}
                         readOnly={wsConnectionIds.has(device.connection)}
                       />
@@ -862,6 +873,7 @@ interface DeviceRowsProps {
   hasConflict: boolean
   conflictPGNs?: Set<string>
   isOnline: boolean | null
+  plugin?: { id: string; name: string }
   onRemove: (sourceRef: string) => void
   readOnly: boolean
 }
@@ -874,6 +886,7 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
   hasConflict,
   conflictPGNs,
   isOnline,
+  plugin,
   onRemove,
   readOnly
 }) => {
@@ -957,7 +970,25 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
           hasConflict={false}
           readOnly={readOnly}
         />
-        <td>{device.installationDescription1 || ''}</td>
+        <td>
+          {plugin ? (
+            <span onClick={(e) => e.stopPropagation()}>
+              <Link
+                to={pluginConfigurationPath(plugin.id)}
+                title={`Plugin configuration: ${plugin.name}`}
+              >
+                {plugin.name}
+              </Link>
+              {device.installationDescription1 &&
+                device.installationDescription1 !== plugin.id &&
+                device.installationDescription1 !== plugin.name && (
+                  <> · {device.installationDescription1}</>
+                )}
+            </span>
+          ) : (
+            device.installationDescription1 || ''
+          )}
+        </td>
         <td>{device.src || ''}</td>
       </tr>
       {isExpanded && (
