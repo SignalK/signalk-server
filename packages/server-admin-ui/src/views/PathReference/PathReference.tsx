@@ -308,14 +308,15 @@ export default function PathReference() {
                       )}
                     </td>
                     <td>
-                      {meta.updateContract === 'event' ? (
+                      {meta.updateContract === 'event' && (
                         <Badge
                           bg="secondary"
                           title="Emitted only when it changes, so silence means unchanged and it is never marked stale"
                         >
                           event
                         </Badge>
-                      ) : (
+                      )}
+                      {meta.updateContract === 'periodic' && (
                         <Badge
                           bg="light"
                           text="dark"
@@ -323,6 +324,14 @@ export default function PathReference() {
                         >
                           periodic
                         </Badge>
+                      )}
+                      {!meta.updateContract && (
+                        <span
+                          className="text-muted"
+                          title="Not a path that updates — a container shape or registry entry"
+                        >
+                          —
+                        </span>
                       )}
                     </td>
                     <td>
