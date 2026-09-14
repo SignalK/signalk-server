@@ -9,7 +9,11 @@ const PATHS = {
   },
   '/vessels/*/navigation/speedOverGround': {
     description: 'Speed over ground',
-    units: 'm/s'
+    units: 'm/s',
+    updateContract: 'periodic'
+  },
+  '/vessels/*/electrical/batteries/RegExp': {
+    description: 'Battery shape'
   }
 }
 
@@ -47,6 +51,20 @@ describe('PathReference update contracts', () => {
 
     expect(screen.queryAllByText('event')).to.have.lengthOf(1)
     expect(screen.queryAllByText('periodic')).to.have.lengthOf(1)
+  })
+
+  it('marks an entry with no contract as not applicable', async () => {
+    // Container shapes and registry scaffolding are not paths that update,
+    // so they must not be shown as periodic.
+    renderReference()
+    await waitFor(() => {
+      expect(screen.getByText('Battery shape')).to.not.equal(null)
+    })
+
+    expect(screen.queryAllByText('periodic')).to.have.lengthOf(1)
+    expect(screen.queryAllByTitle(/Not a path that updates/)).to.have.lengthOf(
+      1
+    )
   })
 
   it('links to the stale data detection documentation', async () => {
