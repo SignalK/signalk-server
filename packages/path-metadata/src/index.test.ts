@@ -258,11 +258,9 @@ describe('updateContract inheritance', () => {
     expect(
       all['/vessels/*/navigation/anchor/position']?.updateContract
     ).to.equal('event')
-    // Assert the entry exists first, so this cannot pass by the key simply
-    // being absent from the view.
     const sog = all['/vessels/*/navigation/speedOverGround']
     if (!sog) throw new Error('speedOverGround missing from the /paths view')
-    expect(sog.updateContract).to.equal(undefined)
+    expect(sog.updateContract).to.equal('periodic')
   })
 
   it('drops an unsupported contract set at runtime on an uncovered path', () => {

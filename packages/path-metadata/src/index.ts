@@ -376,8 +376,14 @@ export class MetadataRegistry {
   getAllMetadata(): Record<string, PathMetadataEntry> {
     const resolved: Record<string, PathMetadataEntry> = {}
     for (const [key, entry] of Object.entries(this.allMetadata)) {
-      const contract = contractForEntry(entry, dotPathForKey(key))
-      resolved[key] = contract ? { ...entry, updateContract: contract } : entry
+      // Every entry carries a contract here, `periodic` included, so the
+      // paths reference can show the classification for all of them rather
+      // than tagging only the exceptions.
+      const contract = contractForEntry(entry, dotPathForKey(key)) ?? 'periodic'
+      resolved[key] =
+        entry.updateContract === contract
+          ? entry
+          : { ...entry, updateContract: contract }
     }
     return resolved
   }
