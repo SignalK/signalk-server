@@ -255,15 +255,6 @@ const readFlag = (
 }
 
 /**
- * Every parameter the query route understands.
- *
- * An unknown one is rejected rather than ignored: a client that sends a filter
- * this server does not implement would otherwise receive an unfiltered 200 and
- * have no way to tell. That failure is the reason spatial parameters are being
- * unified across the v2 APIs — see #3021 — and it costs nothing to not repeat
- * it here.
- */
-/**
  * Reject any query parameter a route does not understand.
  *
  * The single-track routes take only `provider`, so they cannot use the query
@@ -281,6 +272,15 @@ export function rejectUnknownParams(
     .map((name) => `unknown query parameter: ${name}`)
 }
 
+/**
+ * Every parameter the query route understands.
+ *
+ * An unknown one is rejected rather than ignored: a client that sends a filter
+ * this server does not implement would otherwise receive an unfiltered 200 and
+ * have no way to tell. That failure is the reason spatial parameters are being
+ * unified across the v2 APIs — see #3021 — and it costs nothing to not repeat
+ * it here.
+ */
 const KNOWN_PARAMS = new Set([
   'contexts',
   // Singular as well as plural: the parser accepts both, and an unbounded
