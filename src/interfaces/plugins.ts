@@ -1081,7 +1081,7 @@ module.exports = (theApp: any) => {
     _.assign(appCopy, boundEventMethods)
     appCopy.pluginId = plugin.id
     const pluginEmit = boundEventMethods.emit
-    ;(appCopy as { emit: typeof pluginEmit }).emit = (
+    ;(appCopy as unknown as { emit: typeof pluginEmit }).emit = (
       eventName: string,
       ...args: unknown[]
     ) => {
