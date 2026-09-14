@@ -318,10 +318,7 @@ export default function PluginConfigurationList() {
         setWasmEnabled(wasmInterfaceEnabled)
 
         if (initialSelectedPlugin) {
-          localStorage.setItem(
-            openPluginStorageKey,
-            initialSelectedPlugin.id
-          )
+          localStorage.setItem(openPluginStorageKey, initialSelectedPlugin.id)
         }
       } catch (error) {
         console.error(error)

@@ -695,9 +695,7 @@ module.exports = (app: N2kDiscoveryApp) => {
   }
 
   const ensureCanbusLocal = (): number | undefined => {
-    const preferred = canbusPreferredAddress(
-      app.config.settings.pipedProviders
-    )
+    const preferred = canbusPreferredAddress(app.config.settings.pipedProviders)
     if (preferred === undefined) return undefined
     if (!localN2kDevices.has(preferred)) {
       recordLocalN2kDevice(localN2kDevices, { src: preferred })
