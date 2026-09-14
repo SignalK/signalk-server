@@ -2,11 +2,6 @@ import { expect } from 'chai'
 import { freeport } from './ts-servertestutilities'
 import { startServerP, sendDelta } from './servertestutilities'
 
-// The unit tests drive StalenessEnforcer against a mock app. This exercises
-// the real server end to end: once a string-valued path stops updating, the
-// REST snapshot must report `value: null` with `state.timedOut` set and the
-// last good reading preserved in `state.lastValue`.
-
 const SERVER_START_TIMEOUT_MS = 90000
 const TEST_TIMEOUT_MS = 30000
 const STALE_TIMEOUT_S = 1

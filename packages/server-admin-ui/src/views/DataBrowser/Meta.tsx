@@ -708,7 +708,7 @@ export const normalizeMetaForSave = (meta: MetaData): MetaData => {
   return rest
 }
 
-const saveMeta = async (path: string, meta: MetaData): Promise<boolean> => {
+const putMeta = async (path: string, meta: MetaData): Promise<boolean> => {
   const res = await fetch(
     `/signalk/v1/api/vessels/self/${pathToUrlSegments(path)}/meta`,
     {
@@ -719,6 +719,35 @@ const saveMeta = async (path: string, meta: MetaData): Promise<boolean> => {
     }
   ).catch(() => null)
   return res?.ok ?? false
+}
+
+// The metadata PUT returns before the defaults file write completes, so two
+// saves of one path can be persisted in the order the writes finish rather
+// than the order they were sent — a later restore can land before an earlier
+// clear and be undone by it. Queue per path so each save is sent only once
+// the previous has settled. Same shape as applySettingsUpdate in #2999.
+// putMeta resolves false rather than rejecting, so the second `run` and the
+// swallowing `.then` below are defensive only: they keep one failure from
+// wedging the queue if that ever changes.
+const saveQueues = new Map<string, Promise<unknown>>()
+
+export const saveMeta = (path: string, meta: MetaData): Promise<boolean> => {
+  const run = () => putMeta(path, meta)
+  const previous = saveQueues.get(path) ?? Promise.resolve()
+  const done = previous.then(run, run)
+  const queued = done.then(
+    () => undefined,
+    () => undefined
+  )
+  saveQueues.set(path, queued)
+  // Drop the entry once it settles, but only if no later save has already
+  // replaced it — otherwise the map grows one entry per path edited.
+  void queued.then(() => {
+    if (saveQueues.get(path) === queued) {
+      saveQueues.delete(path)
+    }
+  })
+  return done
 }
 
 const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {

@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { useStore } from '../../store'
 import Meta, {
   CategorySelect,
+  saveMeta,
   normalizeMetaForSave,
   UpdateContractSelect,
   Zones
@@ -331,6 +332,39 @@ describe('normalizeMetaForSave', () => {
   })
 })
 
+describe('Meta save queue', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+    useStore.getState().clearData()
+  })
+
+  it('does not send a second PUT until the first has settled', async () => {
+    // The server responds before its write lands, so overlapping PUTs could
+    // otherwise be persisted out of order.
+    let releaseFirst: (value: { ok: boolean }) => void = () => {}
+    const first = new Promise<{ ok: boolean }>((resolve) => {
+      releaseFirst = resolve
+    })
+    const fetchMock = vi
+      .fn()
+      .mockReturnValueOnce(first)
+      .mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const a = saveMeta('navigation.state', { updateContract: 'event' })
+    const b = saveMeta('navigation.state', { updateContract: 'periodic' })
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(fetchMock.mock.calls).to.have.lengthOf(1)
+
+    releaseFirst({ ok: true })
+    await Promise.all([a, b])
+
+    expect(fetchMock.mock.calls).to.have.lengthOf(2)
+  })
+})
+
 describe('Meta save clears removed fields', () => {
   const path = 'navigation.state'
   const meta = { description: 'Navigational state', updateContract: 'event' }
@@ -359,6 +393,7 @@ describe('Meta save clears removed fields', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     useStore.getState().clearData()
   })
 
