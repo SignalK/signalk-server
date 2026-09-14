@@ -120,7 +120,9 @@ export interface Config {
     logCountToKeep?: number
     enablePluginLogging?: boolean
     loggingDirectory?: string
-    /** Master switch for the staleness enforcer */
+    /** Master switch for the staleness enforcer. Seeded `true` when no
+     * settings file exists (fresh installation); absent — and therefore
+     * off — on installations that predate the enforcer. */
     enforceDataTimeouts?: boolean
     /** When true, paths without an explicit numeric `meta.timeout`
      * fall back to `defaultTimeout` instead of being skipped. Default
@@ -607,6 +609,10 @@ function readSettingsFile(app: ConfigApp) {
   if (!app.argv.s && !fs.existsSync(settings)) {
     console.log('Settings file does not exist, using empty settings')
     app.config.settings = {
+      // No settings file means a fresh installation: enforce staleness
+      // from the start. Installations that predate the enforcer have a
+      // settings file without the key and stay opt-in.
+      enforceDataTimeouts: true,
       pipedProviders: []
     }
   } else {
