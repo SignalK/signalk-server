@@ -118,7 +118,7 @@ Returns an array of path strings.
 
 The History API supports the registration of multiple history provider plugins.
 
-The first plugin registered is set as the _default_ provider and all requests will be directed to it.
+The first plugin registered is set as the _default_ provider, the setting is saved and all requests that don't specify the provider will be directed to it.
 
 Requests can be directed to a specific provider by using the `provider` parameter in the request with the _id_ of the provider plugin.
 
