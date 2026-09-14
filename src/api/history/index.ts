@@ -86,7 +86,8 @@ export class HistoryApiHttpRegistry {
     private unavailableGraceMs: number = UNAVAILABLE_GRACE_MS
   ) {
     // treat empty string (and all falsy values) as undefined
-    this.configuredProviderId = app.config.settings.historyApi?.defaultProvider || undefined
+    this.configuredProviderId =
+      app.config.settings.historyApi?.defaultProvider || undefined
     this.proxy = {
       getValues: (query: ValuesRequest): Promise<ValuesResponse> => {
         return this.defaultProvider().getValues(query)
@@ -124,7 +125,20 @@ export class HistoryApiHttpRegistry {
     if (!this.historyProviders.has(pluginId)) {
       this.historyProviders.set(pluginId, provider)
     }
-    if (pluginId === this.configuredProviderId) {
+    // Persist the first registered provider as the configured default
+    if (
+      this.configuredProviderId === undefined &&
+      this.app.config.safeToPersistSettings
+    ) {
+      this.saveConfiguredProvider(pluginId, (err) => {
+        if (err) {
+          debug(
+            `Failed to persist default history provider ${pluginId}:`,
+            err.message
+          )
+        }
+      })
+    } else if (pluginId === this.configuredProviderId) {
       this.clearUnavailableGrace()
       this.unavailableGraceExpired = false
       this.notifyConfiguredAvailable()
