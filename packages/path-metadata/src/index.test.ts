@@ -274,6 +274,21 @@ describe('updateContract inheritance', () => {
     expect(entry.updateContract).to.equal(undefined)
   })
 
+  it('treats commanded autopilot paths as event-driven', () => {
+    // A command is an event: the latest one persists rather than going stale.
+    expect(contractFor(self('steering.autopilot.state'))).to.equal('event')
+    expect(contractFor(self('steering.autopilot.mode'))).to.equal('event')
+    expect(contractFor(self('steering.autopilot.target.headingTrue'))).to.equal(
+      'event'
+    )
+  })
+
+  it('leaves a measured steering path periodic', () => {
+    // rudderAngle is outside the autopilot subtree: it reports where the
+    // rudder is, so silence there really is a dead sensor.
+    expect(contractFor(self('steering.rudderAngle'))).to.equal(undefined)
+  })
+
   it('does not write the contract onto the shared template entry', () => {
     getMetadata('vessels.self.navigation.anchor.position')
     const other = getMetadata('vessels.self.navigation.speedOverGround')

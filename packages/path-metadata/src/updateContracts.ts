@@ -19,6 +19,11 @@ export const updateContracts: Readonly<Record<string, UpdateContract>> =
     notifications: 'event',
     design: 'event',
     'navigation.anchor': 'event',
+    // Autopilot settings and targets are commanded, not measured: the last
+    // command stands until superseded, so silence means unchanged. Note this
+    // covers the subtree only — steering.rudderAngle is outside it and stays
+    // periodic, because it is a measurement of where the rudder actually is.
+    'steering.autopilot': 'event',
     'navigation.home': 'event',
     'navigation.course': 'event',
     uuid: 'event',
