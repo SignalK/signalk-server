@@ -377,7 +377,10 @@ const tracksApiDoc = {
               'The id exists in more than one provider; name one with provider'
           },
           500: { description: 'The provider failed' },
-          501: { description: 'No track api provider configured' }
+          501: {
+            description:
+              'No provider, or the provider does not serve single tracks'
+          }
         }
       },
       delete: {

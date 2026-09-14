@@ -430,6 +430,17 @@ export class TrackApiHttpRegistry {
         })
         return undefined
       }
+      // Nothing registered can even look a track up by id, so absence is not
+      // something this server can establish -- the same configuration the GET
+      // path already reports as unsupported. Answering 404 here would tell a
+      // client the track does not exist when the truth is that no provider
+      // can say.
+      if (readable.length === 0) {
+        res.status(501).json({
+          error: 'No track api provider supports addressing a track by id'
+        })
+        return undefined
+      }
       res.status(404).json({ error: 'Track not found' })
     } catch (error) {
       console.error('Track api provider failed:', error)

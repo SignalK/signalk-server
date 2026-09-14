@@ -311,9 +311,19 @@ export function parseTracksQuery(
 
   // Before any value is parsed: a query naming a parameter this server does
   // not implement is wrong whatever its other values say.
-  for (const name of Object.keys(query)) {
+  for (const [name, value] of Object.entries(query)) {
     if (!KNOWN_PARAMS.has(name)) {
       errors.push(`unknown query parameter: ${name}`)
+      continue
+    }
+    // A known name is not enough: express parses `?maxPoints[x]=1` into an
+    // object, `first()` returns undefined for it, and the value is silently
+    // dropped -- the very failure this check exists to prevent. Flags are
+    // worse, since readFlag substitutes '' for a missing scalar and '' reads
+    // as true, so `?geometry[x]=1` would mean geometry=true. A valueless
+    // parameter still arrives as '', so the flag form keeps working.
+    if (first(value) === undefined) {
+      errors.push(`${name} must be a single value`)
     }
   }
 

@@ -405,6 +405,35 @@ describe('Track API writes', () => {
 
   // A typo in `provider` would otherwise be dropped and the track stored in,
   // or deleted from, whichever provider happens to be the default.
+  // A known name with a non-scalar value slips past a names-only check:
+  // express parses `?maxPoints[x]=1` into an object, and the value is then
+  // dropped rather than refused. Flags are worse -- a missing scalar reads as
+  // '' which is truthy, so `?geometry[x]=1` would mean geometry=true.
+  it('rejects a known parameter whose value is not a single scalar', async () => {
+    await serve()
+    const value = await fetch(
+      `${base}/signalk/v2/api/tracks?duration=PT1H&maxPoints[x]=1`
+    )
+    const flag = await fetch(
+      `${base}/signalk/v2/api/tracks?duration=PT1H&geometry[x]=1`
+    )
+
+    expect([value.status, flag.status]).to.deep.equal([400, 400])
+    const body = (await flag.json()) as { error: string }
+    expect(body.error).to.match(/must be a single value/)
+  })
+
+  // Nothing registered can address a track by id, so absence is not something
+  // this server can establish -- and GET already says so for the same setup.
+  it('reports delete-by-id as unsupported when no provider can address one', async () => {
+    await serve(readOnlyProvider())
+    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`, {
+      method: 'DELETE'
+    })
+
+    expect(res.status).to.equal(501)
+  })
+
   it('rejects a misspelled provider parameter on the write routes', async () => {
     await serve()
     const created = await fetch(
