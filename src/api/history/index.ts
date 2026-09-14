@@ -85,7 +85,8 @@ export class HistoryApiHttpRegistry {
     private app: HistoryApplication,
     private unavailableGraceMs: number = UNAVAILABLE_GRACE_MS
   ) {
-    this.configuredProviderId = app.config.settings.historyApi?.defaultProvider
+    // treat empty string (and all falsy values) as undefined
+    this.configuredProviderId = app.config.settings.historyApi?.defaultProvider || undefined
     this.proxy = {
       getValues: (query: ValuesRequest): Promise<ValuesResponse> => {
         return this.defaultProvider().getValues(query)
