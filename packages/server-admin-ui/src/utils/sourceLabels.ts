@@ -221,22 +221,6 @@ export function lookupSourceStatus<T>(
   )
 }
 
-export function pluginForSource(
-  pluginId: string | undefined,
-  plugins: Array<{ id: string; name?: string; packageName?: string }>
-): { id: string; name: string } | undefined {
-  if (!pluginId) return undefined
-  const match = plugins.find(
-    (p) => p.id === pluginId || p.packageName === pluginId
-  )
-  if (match) return { id: match.id, name: match.name || match.id }
-  return { id: pluginId, name: pluginId }
-}
-
-export function pluginConfigurationPath(pluginId: string): string {
-  return `/apps/configuration/${encodeURIComponent(pluginId)}`
-}
-
 /**
  * Extract a flat list of N2K devices from the sources API response.
  * Sorted by manufacturer, then model, then bus address.

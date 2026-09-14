@@ -6,8 +6,6 @@ import {
   buildSourceLabelMap,
   canonicaliseSourceRef,
   lookupSourceStatus,
-  pluginForSource,
-  pluginConfigurationPath,
   detectInstanceConflicts,
   isProprietaryPGN,
   isRemoveSourceFailure,
@@ -822,8 +820,7 @@ describe('lookupSourceStatus', () => {
   it('falls back from canName sourceRef to connection.src', () => {
     const status = {
       'can0.37': {
-        online: true,
-        pluginId: 'signalk-naviop-plugin'
+        online: true
       }
     }
     expect(
@@ -832,30 +829,7 @@ describe('lookupSourceStatus', () => {
         connection: 'can0',
         src: '37',
         srcAddr: '37'
-      })?.pluginId
-    ).toBe('signalk-naviop-plugin')
-  })
-})
-
-describe('pluginForSource', () => {
-  it('resolves a SimpleCan plugin id to its display name', () => {
-    expect(
-      pluginForSource('signalk-naviop-plugin', [
-        { id: 'signalk-naviop-plugin', name: 'Naviop' }
-      ])
-    ).toEqual({ id: 'signalk-naviop-plugin', name: 'Naviop' })
-  })
-
-  it('still links an unknown plugin id', () => {
-    expect(pluginForSource('signalk-naviop-plugin', [])).toEqual({
-      id: 'signalk-naviop-plugin',
-      name: 'signalk-naviop-plugin'
-    })
-  })
-
-  it('builds the plugin configuration route', () => {
-    expect(pluginConfigurationPath('signalk-naviop-plugin')).toBe(
-      '/apps/configuration/signalk-naviop-plugin'
-    )
+      })?.online
+    ).toBe(true)
   })
 })
