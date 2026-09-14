@@ -12,7 +12,6 @@ import {
 
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { createDebug } from './debug'
-import updateContractDefaults from './defaults/updateContracts.json'
 
 const debug = createDebug('signalk-server:staleness')
 
@@ -77,40 +76,6 @@ const isCacheLeafEntry = (v: unknown): v is CacheLeafEntry =>
   isObject(v) &&
   typeof (v as { path?: unknown }).path === 'string' &&
   'value' in v
-
-type UpdateContractDefaults = ReadonlyArray<readonly [string, UpdateContract]>
-
-/**
- * Build a longest-prefix-match table from the shipped updateContracts.json so a
- * single defaults lookup decides whether a path is event-driven without the
- * enforcer special-casing prefixes inline.
- */
-const buildUpdateContractDefaults = (
-  raw: Record<string, string>
-): UpdateContractDefaults => {
-  const entries: Array<[string, UpdateContract]> = []
-  for (const prefix of Object.keys(raw)) {
-    const t = raw[prefix]
-    if (t === 'periodic' || t === 'event') {
-      entries.push([prefix, t])
-    }
-  }
-  entries.sort((a, b) => b[0].length - a[0].length)
-  return entries
-}
-
-const DEFAULT_UPDATE_CONTRACTS = buildUpdateContractDefaults(
-  updateContractDefaults as Record<string, string>
-)
-
-const resolveUpdateContractFromDefaults = (
-  path: string
-): UpdateContract | undefined => {
-  for (const [prefix, updateContract] of DEFAULT_UPDATE_CONTRACTS) {
-    if (path === prefix || path.startsWith(prefix + '.')) return updateContract
-  }
-  return undefined
-}
 
 /**
  * Server-side enforcer for `meta.timeout`. Walks the delta cache once per
@@ -293,7 +258,7 @@ export class StalenessEnforcer {
     }
 
     const meta = this.lookupMeta(context, path)
-    const updateContract = this.resolveUpdateContract(path, meta)
+    const updateContract = this.resolveUpdateContract(context, path, meta)
     if (updateContract !== 'periodic') return
 
     const baseTimeoutMs = this.resolveBaseTimeoutMs(context, path, meta)
@@ -349,13 +314,12 @@ export class StalenessEnforcer {
   }
 
   private resolveUpdateContract(
+    context: string,
     path: string,
     meta: MetaValue | undefined
   ): UpdateContract {
     if (meta?.updateContract) return meta.updateContract
-    const fromDefaults = resolveUpdateContractFromDefaults(path)
-    if (fromDefaults) return fromDefaults
-    return 'periodic'
+    return lookupSchemaMeta(context, path)?.updateContract ?? 'periodic'
   }
 
   // Resolves the base timeout (ms) ignoring `meta.timeout: 'auto'` —
@@ -470,7 +434,14 @@ const lookupSchemaMeta = (
   const full = getMetadata(ctxPath + '.' + path) as
     Record<string, unknown> | undefined
   if (!full) return undefined
-  const timeout = full.timeout
-  if (typeof timeout !== 'number') return undefined
-  return { timeout } as MetaValue
+  const meta: Pick<MetaValue, 'timeout' | 'updateContract'> = {}
+  if (typeof full.timeout === 'number') meta.timeout = full.timeout
+  // The registry inherits a subtree's contract onto every path under it, so
+  // this is where the shipped classification now comes from. Anything other
+  // than the two contracts is ignored: an unrecognised value would fail the
+  // `!== 'periodic'` check in checkLeafGroup and silently exempt the path.
+  if (full.updateContract === 'event' || full.updateContract === 'periodic') {
+    meta.updateContract = full.updateContract
+  }
+  return Object.keys(meta).length > 0 ? meta : undefined
 }
