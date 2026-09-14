@@ -5,7 +5,8 @@
  * via regex-based matching. Supports runtime additions from meta deltas.
  */
 
-import type { PathMetadataEntry } from './types'
+import type { PathMetadataEntry, UpdateContract } from './types'
+import { updateContractForPath } from './updateContracts'
 
 import { rootMetadata } from './root'
 import { navigationMetadata } from './navigation'
@@ -22,7 +23,8 @@ import { communicationMetadata } from './communication'
 import { sensorsMetadata } from './sensors'
 import { notificationsMetadata } from './notifications'
 
-export type { PathMetadataEntry } from './types'
+export type { PathMetadataEntry, UpdateContract } from './types'
+export { updateContracts, updateContractForPath } from './updateContracts'
 export { getAISShipTypeName } from './ais-ship-types'
 export { getAtonTypeName } from './aton-types'
 
@@ -76,6 +78,11 @@ interface RegexEntry {
 // single path-keyed matcher '/*/<path>'. Non-context keys (/self, /version,
 // the /resources/* tree) are not '/<root>/*/<path>'-shaped and pass through
 // unchanged, so they keep literal matching and cannot leak across roots.
+// A context-prefixed path opens with a context root and an identity
+// (vessels.self.<path>, meteo.<id>.<path>), so a bare path is what remains
+// after those two segments.
+const CONTEXT_ROOT_SEGMENTS = 2
+
 const CONTEXT_ROOT_PREFIX = /^\/(?:vessels|aircraft|aton|sar)\/\*\//
 function toMatchKey(key: string): string {
   return key.replace(CONTEXT_ROOT_PREFIX, '/*/')
@@ -92,7 +99,62 @@ function toMatchKey(key: string): string {
 // form that matches nothing. getMetadata falls back to a literal-path
 // lookup for those, so this strip does not need to handle them.
 function toLookupPath(path: string): string {
-  return '/*/' + path.split('.').slice(2).join('/')
+  return '/*/' + path.split('.').slice(CONTEXT_ROOT_SEGMENTS).join('/')
+}
+
+// Registry keys are '/vessels/*/navigation/anchor/position'-shaped; contracts
+// are declared on the context-independent dot path they describe.
+function dotPathForKey(key: string): string {
+  return key
+    .replace(CONTEXT_ROOT_PREFIX, '')
+    .replace(/^\//, '')
+    .replace(/\//g, '.')
+}
+
+// A subtree's update contract is inherited by every path under it, but the
+// matcher returns shared template entries, so the contract is merged into a
+// copy rather than written onto the template — otherwise one lookup would
+// stamp a contract onto every path that shares the entry.
+// The contract in force for an entry at `barePath` (context root already
+// removed): an explicit one on the entry wins over the inherited subtree.
+function contractForEntry(
+  entry: PathMetadataEntry | undefined,
+  barePath: string
+): UpdateContract | undefined {
+  if (
+    entry?.updateContract === 'event' ||
+    entry?.updateContract === 'periodic'
+  ) {
+    return entry.updateContract
+  }
+  return updateContractForPath(barePath)
+}
+
+function withUpdateContract(
+  entry: PathMetadataEntry | undefined,
+  path: string
+): PathMetadataEntry | undefined {
+  const contract = contractForEntry(entry, stripContextRoot(path))
+  if (!contract) {
+    // No subtree covers the path, so a contract on the entry can only have
+    // come from a runtime addition. Drop an unrecognised one rather than
+    // handing a consumer a value the contract type does not allow.
+    if (entry?.updateContract === undefined) return entry
+    const { updateContract: _unsupported, ...rest } = entry
+    return rest
+  }
+  if (entry?.updateContract === contract) return entry
+  return { ...(entry ?? { description: '' }), updateContract: contract }
+}
+
+// Contracts are declared on context-independent paths, so a lookup for
+// `vessels.self.navigation.anchor.position` has to shed its context root and
+// identity first. A path with fewer than three segments is already bare.
+function stripContextRoot(path: string): string {
+  const parts = path.split('.')
+  return parts.length > CONTEXT_ROOT_SEGMENTS
+    ? parts.slice(CONTEXT_ROOT_SEGMENTS).join('.')
+    : path
 }
 
 function buildRegexArray(
@@ -188,10 +250,10 @@ export class MetadataRegistry {
     // /version — still resolve when looked up bare; those keys are not
     // '/<root>/*/<tail>'-shaped, so they never participate in the
     // path-only matcher.
-    return (
+    const entry =
       this.getMetadataForLookupPath(toLookupPath(path)) ??
       this.getMetadataForLookupPath('/' + path.replace(/\./g, '/'))
-    )
+    return withUpdateContract(entry, path)
   }
 
   // Match an already-normalized '/*/<tail>' lookup path against the regex
@@ -308,8 +370,22 @@ export class MetadataRegistry {
   }
 
   /** Return all registered metadata entries (for the /paths endpoint). */
+  // The /paths reference is served from here, so it has to show the same
+  // contract getMetadata resolves — including the inherited ones, which no
+  // seed entry carries. Resolved into a copy so the seed entries stay clean.
   getAllMetadata(): Record<string, PathMetadataEntry> {
-    return this.allMetadata
+    const resolved: Record<string, PathMetadataEntry> = {}
+    for (const [key, entry] of Object.entries(this.allMetadata)) {
+      // Every entry carries a contract here, `periodic` included, so the
+      // paths reference can show the classification for all of them rather
+      // than tagging only the exceptions.
+      const contract = contractForEntry(entry, dotPathForKey(key)) ?? 'periodic'
+      resolved[key] =
+        entry.updateContract === contract
+          ? entry
+          : { ...entry, updateContract: contract }
+    }
+    return resolved
   }
 }
 
