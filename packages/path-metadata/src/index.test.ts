@@ -289,6 +289,19 @@ describe('updateContract inheritance', () => {
     expect(contractFor(self('steering.rudderAngle'))).to.equal(undefined)
   })
 
+  it('leaves registry scaffolding unclassified in the /paths view', () => {
+    // /self and /vessels are not paths under a context, so a contract says
+    // nothing about them and staleness never applies.
+    const all = metadataRegistry.getAllMetadata()
+    expect(all['/self']?.updateContract).to.equal(undefined)
+    expect(all['/vessels']?.updateContract).to.equal(undefined)
+    // A container shape defines what a battery looks like; it is not a path
+    // that updates, so it must not be advertised as periodically updated.
+    expect(
+      all['/vessels/*/electrical/batteries/RegExp']?.updateContract
+    ).to.equal(undefined)
+  })
+
   it('does not write the contract onto the shared template entry', () => {
     getMetadata('vessels.self.navigation.anchor.position')
     const other = getMetadata('vessels.self.navigation.speedOverGround')

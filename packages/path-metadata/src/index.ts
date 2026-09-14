@@ -102,6 +102,16 @@ function toLookupPath(path: string): string {
   return '/*/' + path.split('.').slice(CONTEXT_ROOT_SEGMENTS).join('/')
 }
 
+// Only '/<root>/*/<path>'-shaped keys describe a path under a context. Bare
+// keys like /self and /vessels are registry scaffolding rather than data.
+function isContextDataKey(key: string): boolean {
+  // Container shapes are skipped for the same reason buildRegexArray skips
+  // them: `.../electrical/batteries/RegExp` defines "a battery", not a path
+  // that updates, so a contract would advertise a shape as timeout-able.
+  if (key.endsWith('/*') || key.endsWith('/RegExp')) return false
+  return /^\/[a-z]+\/\*\//.test(key)
+}
+
 // Registry keys are '/vessels/*/navigation/anchor/position'-shaped; contracts
 // are declared on the context-independent dot path they describe.
 function dotPathForKey(key: string): string {
@@ -376,12 +386,16 @@ export class MetadataRegistry {
   getAllMetadata(): Record<string, PathMetadataEntry> {
     const resolved: Record<string, PathMetadataEntry> = {}
     for (const [key, entry] of Object.entries(this.allMetadata)) {
-      // Every entry carries a contract here, `periodic` included, so the
-      // paths reference can show the classification for all of them rather
-      // than tagging only the exceptions.
-      const contract = contractForEntry(entry, dotPathForKey(key)) ?? 'periodic'
+      // Data paths all carry a contract here, `periodic` included, so the
+      // paths reference can classify every row rather than tagging only the
+      // exceptions. Registry scaffolding such as /self and /vessels is not a
+      // data path and is left unclassified — a contract would be meaningless
+      // for it, and staleness only ever applies under a context.
+      const contract = isContextDataKey(key)
+        ? (contractForEntry(entry, dotPathForKey(key)) ?? 'periodic')
+        : contractForEntry(entry, dotPathForKey(key))
       resolved[key] =
-        entry.updateContract === contract
+        !contract || entry.updateContract === contract
           ? entry
           : { ...entry, updateContract: contract }
     }
