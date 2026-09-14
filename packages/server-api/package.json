@@ -33,12 +33,16 @@
   "exports": {
     ".": "./dist/index.js",
     "./history": "./dist/history.js",
+    "./tracks": "./dist/tracks.js",
     "./typebox": "./dist/typebox/index.js"
   },
   "typesVersions": {
     "*": {
       "history": [
         "dist/history.d.ts"
+      ],
+      "tracks": [
+        "dist/tracks.d.ts"
       ],
       "typebox": [
         "dist/typebox/index.d.ts"

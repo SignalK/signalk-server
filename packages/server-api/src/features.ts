@@ -70,6 +70,7 @@ export type SignalKApiId =
   | 'course'
   | 'resources'
   | 'history'
+  | 'tracks'
   | 'autopilot'
   | 'anchor'
   | 'logbook'

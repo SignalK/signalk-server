@@ -17,6 +17,8 @@ export * from './streambundle'
 export * from './subscriptionmanager'
 /** @category History API */
 export * as history from './history'
+/** @category Track API */
+export * as tracks from './tracks'
 /**
  * TypeBox schemas — the source of truth for OpenAPI generation and
  * runtime validation across the v2 APIs.
