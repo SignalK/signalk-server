@@ -39,12 +39,23 @@ describe('PathReference update contracts', () => {
     expect(badge.getAttribute('title')).to.contain('never marked stale')
   })
 
-  it('leaves a periodic path unmarked', async () => {
+  it('labels a path with no declared contract as periodic', async () => {
     renderReference()
     await waitFor(() => {
       expect(screen.getByText('Speed over ground')).to.not.equal(null)
     })
 
     expect(screen.queryAllByText('event')).to.have.lengthOf(1)
+    expect(screen.queryAllByText('periodic')).to.have.lengthOf(1)
+  })
+
+  it('links to the stale data detection documentation', async () => {
+    renderReference()
+    await waitFor(() => {
+      expect(screen.getByText('Anchor position')).to.not.equal(null)
+    })
+
+    const link = screen.getByRole('link', { name: 'About update contracts' })
+    expect(link.getAttribute('href')).to.contain('Stale_Data_Detection')
   })
 })
