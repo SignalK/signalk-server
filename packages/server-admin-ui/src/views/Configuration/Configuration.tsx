@@ -342,7 +342,7 @@ export default function PluginConfigurationList() {
     })
     return () => cancelAnimationFrame(frame)
   }, [
-    selectedPlugin?.id,
+    selectedPlugin,
     params.pluginid,
     scrollToSelectedPlugin,
     scrollToConfigCard
