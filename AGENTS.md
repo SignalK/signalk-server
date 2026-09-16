@@ -22,6 +22,7 @@ Do not add error handling, fallbacks, or validation for scenarios that cannot ha
 ### General Standards
 
 - Write self-documenting code; comments explain "why", not "what" - no echo comments restating what the code already says
+- Comments describe the code as it is now, not how it used to behave. Do not explain bugs being fixed, previous implementations, or what changed - that belongs in the commit message and PR description, not the source. Only add a comment when the new logic is non-obvious to a reader, and then state the reason or motivation for the current behavior - reference past behavior only when it is truly indispensable to understanding the present code
 - Keep functions small and focused on a single responsibility
 - Prefer composition over inheritance
 - Handle errors explicitly at system boundaries
