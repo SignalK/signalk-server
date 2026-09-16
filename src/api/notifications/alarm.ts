@@ -115,7 +115,7 @@ export class Alarm {
       delete this.status.acknowledgedAt
       this.status.silenced = false
     }
-    
+
     if (
       !this.status.acknowledged &&
       this.value &&
