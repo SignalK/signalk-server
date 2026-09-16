@@ -311,7 +311,8 @@ export default function BLEManager() {
         <Card.Body>
           {!hasConsumers ? (
             <p className="text-body-secondary mb-0">
-              No consumer plugins registered.
+              No consumer plugins registered. Install a BLE consumer plugin such
+              as signalk-victron-ble-consumer.
             </p>
           ) : (
             <Table hover responsive striped size="sm">
