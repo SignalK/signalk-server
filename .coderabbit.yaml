@@ -55,6 +55,14 @@ reviews:
         Architecture decisions and design rationale are fine. Build narratives
         are not.
 
+        ## Bug-history comments in code
+        Flag any code comment that narrates what the code used to do, why a
+        previous version was wrong, or what a fix changed (e.g. "previously
+        matched on name, so this never worked"). That history belongs in the
+        commit message and PR description, not in the source. A comment must
+        earn its place for a reader who never saw the bug: keep only
+        current-state rationale and request removal of the rest.
+
         ## What NOT to flag
         Do not flag the following patterns — they are intentional:
         - Constant names that are descriptive in their own context (e.g.
