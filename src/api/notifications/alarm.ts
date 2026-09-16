@@ -100,7 +100,13 @@ export class Alarm {
 
     this.parseDelta(update, context)
 
-    const weights = { normal: 0, alert: 1, warn: 2, alarm: 3, emergency: 4 }
+    const weights = {
+      normal: 0,
+      alert: 1,
+      warn: 2,
+      alarm: 3,
+      emergency: 4
+    }
     if (
       (weights[this.value.state as keyof typeof weights] || 0) >
       (weights[prevState as keyof typeof weights] || 0)
@@ -108,8 +114,8 @@ export class Alarm {
       this.status.acknowledged = false
       delete this.status.acknowledgedAt
       this.status.silenced = false
-    }    
-
+    }
+    
     if (
       !this.status.acknowledged &&
       this.value &&
