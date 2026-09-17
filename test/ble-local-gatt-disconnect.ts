@@ -24,6 +24,13 @@ const NOTIFY_UUID = '0000ff01-0000-1000-8000-00805f9b34fb'
 const MAX_SLOTS = 3
 // Covers the provider's first reconnect backoff
 const RECONNECT_TEST_TIMEOUT_MS = 15000
+// Covers the provider's device-watch interval, which also resumes discovery
+const RESUME_TEST_TIMEOUT_MS = 15000
+const RESUME_POLL_MS = 100
+// Two device-watch ticks, and well inside the test's timeout
+const RESUME_DEADLINE_MS = 11000
+// Long enough for one device-watch tick to have run
+const WATCH_TICK_MS = 5500
 // A setup that waits on a dead link would otherwise run into mocha's default
 const SETUP_TEST_TIMEOUT_MS = 5000
 
@@ -141,8 +148,15 @@ const Device = require('@naugehyde/node-ble/src/Device') as DeviceCtor
 
 const startProvider = async () => {
   const bus = new FakeBus()
+  const adapterCalls: string[] = []
   const adapter = {
     isPowered: async () => true,
+    devices: async () => [],
+    helper: {
+      callMethod: async (method: string) => {
+        adapterCalls.push(method)
+      }
+    },
     // A fresh Device per lookup, as node-ble's Adapter.waitDevice() returns
     waitDevice: async () => new Device(bus, ADAPTER, DEVICE_NODE)
   }
@@ -172,7 +186,7 @@ const startProvider = async () => {
   }
   await ready
 
-  return { provider, bus }
+  return { provider, bus, adapterCalls }
 }
 
 describe('Local BLE provider GATT link loss', () => {
@@ -380,5 +394,50 @@ describe('Local BLE provider GATT link loss', () => {
     started.bus.restartBluetoothd()
 
     expect(disconnects).to.equal(0)
+  })
+})
+
+describe('Local BLE provider discovery', () => {
+  let provider: LocalBLEProvider | undefined
+
+  afterEach(() => {
+    provider?.shutdown()
+    provider = undefined
+  })
+
+  it('is asked of the new bluetoothd again after a restart', async function () {
+    this.timeout(RESUME_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    await provider.startDiscovery()
+    const discoveryStarts = () =>
+      started.adapterCalls.filter((m) => m === 'StartDiscovery').length
+    expect(discoveryStarts()).to.equal(1)
+
+    started.bus.restartBluetoothd()
+
+    // Ends the polling itself: mocha failing the test on its timeout would
+    // leave the loop running for the rest of the run
+    const deadline = Date.now() + RESUME_DEADLINE_MS
+    while (discoveryStarts() < 2 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, RESUME_POLL_MS))
+    }
+    expect(discoveryStarts()).to.equal(2)
+  })
+
+  it('is not asked for twice when stopped and started around a restart', async function () {
+    this.timeout(RESUME_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    await provider.startDiscovery()
+    started.bus.restartBluetoothd()
+    await provider.stopDiscovery()
+    await provider.startDiscovery()
+
+    await new Promise((resolve) => setTimeout(resolve, WATCH_TICK_MS))
+
+    expect(
+      started.adapterCalls.filter((m) => m === 'StartDiscovery')
+    ).to.have.length(2)
   })
 })
