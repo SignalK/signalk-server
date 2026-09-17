@@ -107,6 +107,9 @@ export class LocalBLEProvider {
   private watcherTimer?: ReturnType<typeof setInterval>
   private rawConnections = 0
   private scanning = false
+  // Set when bluetoothd exits while scanning: its successor has to be asked
+  // for discovery again
+  private discoveryLost = false
   // One per live GATT link, run when the link is lost
   private linkLostHandlers: Set<() => void> = new Set()
   private adapterReady = false
@@ -189,16 +192,18 @@ export class LocalBLEProvider {
     }
   }
 
-  // bluetoothd takes every GATT link down with it and is not around to say so
+  // bluetoothd takes every GATT link and the running discovery down with it,
+  // and is not around to say so. The provider's proxies stay valid for its
+  // successor: same bus name, same object paths.
   private handleBluetoothdExit() {
     debug.enabled && debug('bluetoothd left the bus')
+    this.discoveryLost = this.scanning
     for (const linkLost of [...this.linkLostHandlers]) {
       linkLost()
     }
   }
 
-  async startDiscovery(): Promise<void> {
-    if (!this.adapterReady || this.scanning) return
+  private async beginDiscovery(): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Variant } = require('@jellybrick/dbus-next')
     await this.adapter.helper.callMethod('SetDiscoveryFilter', {
@@ -206,6 +211,11 @@ export class LocalBLEProvider {
       DuplicateData: new Variant('b', true)
     })
     await this.adapter.helper.callMethod('StartDiscovery')
+  }
+
+  async startDiscovery(): Promise<void> {
+    if (!this.adapterReady || this.scanning) return
+    await this.beginDiscovery()
     this.scanning = true
     debug('Discovery started')
 
@@ -221,6 +231,7 @@ export class LocalBLEProvider {
       debug.enabled && debug(`Error stopping discovery: ${e.message}`)
     }
     this.scanning = false
+    this.discoveryLost = false
     this.clearWatcherTimer()
     for (const cleanup of this.deviceListeners.values()) {
       cleanup()
@@ -267,6 +278,13 @@ export class LocalBLEProvider {
     const watchDevices = async () => {
       if (!this.scanning) return
       try {
+        if (this.discoveryLost) {
+          // Fails, and is retried on the next tick, until the new bluetoothd
+          // has its adapter up
+          await this.beginDiscovery()
+          this.discoveryLost = false
+          debug.enabled && debug('Discovery resumed')
+        }
         const macs = await this.adapter.devices()
         for (const mac of macs) {
           if (!this.deviceListeners.has(mac)) {
