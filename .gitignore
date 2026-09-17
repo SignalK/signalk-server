@@ -33,6 +33,9 @@ test/plugin-test-config/baseDeltas.json
 test/plugin-test-config/unitpreferences/
 
 test/server-test-config/applicationData/
+# Written by the appstore interface during test runs; the npm metadata it
+# caches carries third-party maintainer emails and machine-local paths.
+test/server-test-config/appstore-cache/
 test/server-test-config/unitpreferences/
 test/server-test-config/ssl-cert.pem
 test/server-test-config/ssl-key.pem
