@@ -1414,8 +1414,8 @@ module.exports = function (
       delete app.config.vesselUUID
     }
 
-    function makeNumber(num: string) {
-      return !isUndefined(num) && (isNumber(num) || num.length)
+    function makeNumber(num: string | number | null | undefined) {
+      return !isUndefined(num) && num !== null && (isNumber(num) || num.length)
         ? Number(num)
         : undefined
     }
