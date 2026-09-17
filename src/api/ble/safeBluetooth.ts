@@ -39,12 +39,33 @@ export interface SafeBluetooth {
 export interface BluetoothSession {
   bluetooth: SafeBluetooth
   destroy: () => void
+  /**
+   * Calls `listener` whenever bluetoothd leaves the bus — stopped, restarted
+   * or crashed. Its D-Bus objects die with it, and with them every GATT link
+   * and the running discovery, none of which it is around to report.
+   */
+  onBluetoothdExit(listener: () => void): Promise<void>
 }
 
-/** The only part of the dbus-next connection this module touches. */
+const DBUS_SERVICE = 'org.freedesktop.DBus'
+const DBUS_PATH = '/org/freedesktop/DBus'
+const BLUEZ_SERVICE = 'org.bluez'
+
+interface NameOwnerSignals {
+  on(
+    event: 'NameOwnerChanged',
+    listener: (name: string, oldOwner: string, newOwner: string) => void
+  ): void
+}
+
+/** The only parts of the dbus-next connection this module touches. */
 interface ErrorEmitter {
   on(event: 'error', listener: (err: unknown) => void): void
   off(event: 'error', listener: (err: unknown) => void): void
+  getProxyObject(
+    service: string,
+    path: string
+  ): Promise<{ getInterface(name: string): NameOwnerSignals }>
 }
 
 export function createBluetoothSafe(): BluetoothSession {
@@ -117,5 +138,17 @@ export function createBluetoothSafe(): BluetoothSession {
       guard(() => session.bluetooth.getAdapter(adapter))
   }
 
-  return { bluetooth, destroy: session.destroy }
+  const onBluetoothdExit = (listener: () => void): Promise<void> => {
+    if (!canListen) return Promise.resolve()
+    return guard(async () => {
+      const daemon = await bus.getProxyObject(DBUS_SERVICE, DBUS_PATH)
+      daemon
+        .getInterface(DBUS_SERVICE)
+        .on('NameOwnerChanged', (name, oldOwner) => {
+          if (name === BLUEZ_SERVICE && oldOwner !== '') listener()
+        })
+    })
+  }
+
+  return { bluetooth, destroy: session.destroy, onBluetoothdExit }
 }
