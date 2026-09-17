@@ -110,4 +110,50 @@ describe('Sensors API - gnss', () => {
     expect(body.message).to.match(/fromBow 99 out of range/)
     await stop()
   })
+
+  it('PUT /skServer/vessel accepts null GNSS offsets', async function () {
+    const { host, stop } = await startServer()
+    const put = await fetch(`${host}/skServer/vessel`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        length: 20,
+        beam: 6,
+        gpsFromBow: null,
+        gpsFromCenter: null
+      }),
+      headers: { 'Content-Type': 'application/json' }
+    })
+    expect(put.status).to.equal(200)
+
+    const vessel = (await (await fetch(`${host}/skServer/vessel`)).json()) as {
+      gpsFromBow?: number
+      gpsFromCenter?: number
+    }
+    expect(vessel.gpsFromBow).to.equal(undefined)
+    expect(vessel.gpsFromCenter).to.equal(undefined)
+    await stop()
+  })
+
+  it('PUT /skServer/vessel keeps a zero GNSS offset as zero', async function () {
+    const { host, stop } = await startServer()
+    const put = await fetch(`${host}/skServer/vessel`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        length: 20,
+        beam: 6,
+        gpsFromBow: 0,
+        gpsFromCenter: 0
+      }),
+      headers: { 'Content-Type': 'application/json' }
+    })
+    expect(put.status).to.equal(200)
+
+    const vessel = (await (await fetch(`${host}/skServer/vessel`)).json()) as {
+      gpsFromBow?: number
+      gpsFromCenter?: number
+    }
+    expect(vessel.gpsFromBow).to.equal(0)
+    expect(vessel.gpsFromCenter).to.equal(0)
+    await stop()
+  })
 })
