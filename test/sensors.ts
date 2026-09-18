@@ -232,8 +232,11 @@ describe('Sensors API - gnss with a legacy defaults file', function () {
   let configDir: string | undefined
 
   const storedOffsets = () => {
+    if (configDir === undefined) {
+      throw new Error('before hook did not create a configuration directory')
+    }
     const defaults = JSON.parse(
-      fs.readFileSync(path.join(configDir as string, 'defaults.json'), 'utf8')
+      fs.readFileSync(path.join(configDir, 'defaults.json'), 'utf8')
     )
     return defaults?.vessels?.self?.sensors?.gps
   }
