@@ -1,0 +1,29 @@
+name: Refresh BLE company identifiers
+
+on:
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    if: github.repository == 'SignalK/signalk-server'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+      - run: node tools/update-ble-company-ids.mjs
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          branch: chore/refresh-ble-company-ids
+          delete-branch: true
+          commit-message: 'chore(ble): refresh Bluetooth SIG company identifier list'
+          title: 'chore(ble): refresh Bluetooth SIG company identifier list'
+          body: Automated refresh from the Bluetooth SIG assigned-numbers list.
