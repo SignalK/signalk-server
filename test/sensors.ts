@@ -288,3 +288,75 @@ describe('Sensors API - gnss with a legacy defaults file', function () {
     expect(storedOffsets()?.fromCenter?.value).to.equal(0)
   })
 })
+
+// The same legacy defaults file, but with a GNSS row configured. The row owns
+// the offsets, so a vessel save must not copy them into the singleton the
+// sensors API does not sweep -- the drift that removing these writes was meant
+// to stop.
+describe('Sensors API - gnss with a legacy defaults file and a sensor row', function () {
+  this.timeout(SERVER_START_TIMEOUT)
+
+  const HULL_LENGTH_M = 20
+
+  let port: number
+  let server: ServerHandle | undefined
+  let configDir: string | undefined
+
+  const storedOffsets = () => {
+    if (configDir === undefined) {
+      throw new Error('before hook did not create a configuration directory')
+    }
+    const defaults = JSON.parse(
+      fs.readFileSync(path.join(configDir, 'defaults.json'), 'utf8')
+    )
+    return defaults?.vessels?.self?.sensors?.gps
+  }
+
+  before(async () => {
+    port = await freeport()
+    configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-gnss-legacy-row-'))
+    fs.writeFileSync(
+      path.join(configDir, 'settings.json'),
+      JSON.stringify({
+        port,
+        interfaces: { plugins: false },
+        useBaseDeltas: false,
+        pipedProviders: [],
+        gnssSensors: [
+          { sensorId: 'gnss1', $source: 'test.1', fromBow: 3, fromCenter: 1 }
+        ]
+      })
+    )
+    fs.writeFileSync(
+      path.join(configDir, 'defaults.json'),
+      JSON.stringify({ vessels: { self: { name: 'legacy' } } })
+    )
+    server = await startServerFromConfigP(configDir)
+  })
+
+  after(async () => {
+    try {
+      await server?.stop()
+    } finally {
+      if (configDir !== undefined) {
+        await rimraf(configDir)
+      }
+    }
+  })
+
+  it('leaves the defaults file singleton alone', async () => {
+    const put = await fetch(`http://localhost:${port}/skServer/vessel`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        length: HULL_LENGTH_M,
+        gpsFromBow: 9,
+        gpsFromCenter: 9
+      }),
+      headers: { 'Content-Type': 'application/json' }
+    })
+    expect(put.status).to.equal(200)
+
+    expect(storedOffsets()?.fromBow?.value).to.equal(undefined)
+    expect(storedOffsets()?.fromCenter?.value).to.equal(undefined)
+  })
+})
