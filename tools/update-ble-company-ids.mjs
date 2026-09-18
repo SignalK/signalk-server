@@ -17,10 +17,13 @@ const unquote = (s) =>
 
 const yaml = await (await fetch(SOURCE)).text()
 const upstream = new Map()
-for (const m of yaml.matchAll(/^\s*- value:\s*(0x[0-9A-Fa-f]+)\s*\n\s*name:\s*(.+?)\s*$/gm)) {
+for (const m of yaml.matchAll(
+  /^\s*- value:\s*(0x[0-9A-Fa-f]+)\s*\n\s*name:\s*(.+?)\s*$/gm
+)) {
   upstream.set(parseInt(m[1], 16), unquote(m[2]))
 }
-if (upstream.size < 4000) throw new Error(`only ${upstream.size} identifiers parsed`)
+if (upstream.size < 4000)
+  throw new Error(`only ${upstream.size} identifiers parsed`)
 
 const current = JSON.parse(readFileSync(TARGET, 'utf8')).company_identifiers
 const merged = new Map(current.map(({ value, name }) => [value, name]))
@@ -37,4 +40,6 @@ const company_identifiers = [...merged]
   .sort(([a], [b]) => b - a)
   .map(([value, name]) => ({ value, name }))
 writeFileSync(TARGET, JSON.stringify({ company_identifiers }, null, 2) + '\n')
-console.log(`upstream ${upstream.size}, added ${added}, renamed ${renamed}, retired kept ${retired}, total ${company_identifiers.length}`)
+console.log(
+  `upstream ${upstream.size}, added ${added}, renamed ${renamed}, retired kept ${retired}, total ${company_identifiers.length}`
+)
