@@ -707,6 +707,10 @@ export class LocalBLEProvider {
             // state does not accumulate across retries
             session.connected = false
             this.clearSessionTimers(session)
+            // Disconnecting a link that is still up is not a link loss to
+            // report, nor a reason for a second reconnect chain
+            session.removeDisconnectListener?.()
+            session.removeDisconnectListener = undefined
             try {
               await session.device?.disconnect?.()
             } catch (_e) {
