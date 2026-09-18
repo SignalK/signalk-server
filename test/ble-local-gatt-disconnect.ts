@@ -31,6 +31,9 @@ const RESUME_POLL_MS = 100
 const RESUME_DEADLINE_MS = 11000
 // Long enough for one device-watch tick to have run
 const WATCH_TICK_MS = 5500
+// Polling for the provider's cleanup disconnect, ending before the timeout
+const CLEANUP_POLL_MS = 100
+const CLEANUP_MARGIN_MS = 3000
 // A setup that waits on a dead link would otherwise run into mocha's default
 const SETUP_TEST_TIMEOUT_MS = 5000
 
@@ -267,6 +270,36 @@ describe('Local BLE provider GATT link loss', () => {
 
     started.bus.loseLink()
     expect(disconnects).to.equal(2)
+
+    await handle.close()
+  })
+
+  it('does not report its own cleanup after a failed reconnect as a link loss', async function () {
+    this.timeout(RECONNECT_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    const handle = await provider.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID, notify: [NOTIFY_UUID] },
+      () => undefined
+    )
+    let disconnects = 0
+    handle.onDisconnect(() => disconnects++)
+    bus.loseLink()
+    expect(disconnects).to.equal(1)
+
+    // The reconnect gets its link, then fails setup with that link still up,
+    // so the provider disconnects it itself
+    bus.onStartNotify = () => {
+      throw new Error('ATT error 0x0e')
+    }
+    const deadline = Date.now() + RECONNECT_TEST_TIMEOUT_MS - CLEANUP_MARGIN_MS
+    while (bus.disconnectCalls < 1 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, CLEANUP_POLL_MS))
+    }
+
+    expect(bus.disconnectCalls).to.equal(1)
+    expect(disconnects).to.equal(1)
 
     await handle.close()
   })
