@@ -291,8 +291,7 @@ describe('Sensors API - gnss with a legacy defaults file', function () {
 
 // The same legacy defaults file, but with a GNSS row configured. The row owns
 // the offsets, so a vessel save must not copy them into the singleton the
-// sensors API does not sweep -- the drift that removing these writes was meant
-// to stop.
+// sensors API does not sweep.
 describe('Sensors API - gnss with a legacy defaults file and a sensor row', function () {
   this.timeout(SERVER_START_TIMEOUT)
 
