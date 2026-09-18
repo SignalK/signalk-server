@@ -1,6 +1,11 @@
 import { expect } from 'chai'
 import { startServer } from './ts-servertestutilities'
 
+/** The slice of the server's base-delta editor these tests read. */
+interface BaseDeltaEditor {
+  getSelfValue(path: string): unknown
+}
+
 describe('Sensors API - gnss', () => {
   it('GET returns the default (off, no sensors) config with status', async function () {
     const { selfGetJson, stop } = await startServer()
@@ -132,6 +137,45 @@ describe('Sensors API - gnss', () => {
     expect(vessel.gpsFromBow).to.equal(undefined)
     expect(vessel.gpsFromCenter).to.equal(undefined)
     await stop()
+  })
+
+  it('does not write legacy offsets once a sensor row owns them', async function () {
+    const { host, server, selfPut, stop } = await startServer()
+    try {
+      await selfPut('sensors/gnss', {
+        correction: 'off',
+        sensors: [
+          { sensorId: 'gnss1', $source: 'test.1', fromBow: 3, fromCenter: 1 }
+        ]
+      })
+
+      const put = await fetch(`${host}/skServer/vessel`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: 'Renamed',
+          gpsFromBow: 9,
+          gpsFromCenter: 9
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      expect(put.status).to.equal(200)
+
+      // The sensor row is the single owner, so the legacy singleton stays
+      // empty rather than becoming a second copy that can disagree with it.
+      const { baseDeltaEditor } = (
+        server as unknown as {
+          app: { config: { baseDeltaEditor: BaseDeltaEditor } }
+        }
+      ).app.config
+      expect(baseDeltaEditor.getSelfValue('sensors.gps.fromBow')).to.equal(
+        undefined
+      )
+      expect(baseDeltaEditor.getSelfValue('sensors.gps.fromCenter')).to.equal(
+        undefined
+      )
+    } finally {
+      await stop()
+    }
   })
 
   it('PUT /skServer/vessel keeps a zero GNSS offset as zero', async function () {
