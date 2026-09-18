@@ -5,6 +5,7 @@ import {
   buildSourceLabel,
   buildSourceLabelMap,
   canonicaliseSourceRef,
+  lookupSourceStatus,
   detectInstanceConflicts,
   isProprietaryPGN,
   isRemoveSourceFailure,
@@ -812,5 +813,23 @@ describe('isRemoveSourceFailure', () => {
     expect(isRemoveSourceFailure(401, false, false)).toBe(true)
     expect(isRemoveSourceFailure(403, false, false)).toBe(true)
     expect(isRemoveSourceFailure(500, false, false)).toBe(true)
+  })
+})
+
+describe('lookupSourceStatus', () => {
+  it('falls back from canName sourceRef to connection.src', () => {
+    const status = {
+      'can0.37': {
+        online: true
+      }
+    }
+    expect(
+      lookupSourceStatus(status, {
+        sourceRef: 'can0.c03c8c0022702edb',
+        connection: 'can0',
+        src: '37',
+        srcAddr: '37'
+      })?.online
+    ).toBe(true)
   })
 })
