@@ -107,6 +107,11 @@ export class LocalBLEProvider {
   private watcherTimer?: ReturnType<typeof setInterval>
   private rawConnections = 0
   private scanning = false
+  // Set when bluetoothd exits while scanning: its successor has to be asked
+  // for discovery again
+  private discoveryLost = false
+  // One per live GATT link, run when the link is lost
+  private linkLostHandlers: Set<() => void> = new Set()
   private adapterReady = false
 
   readonly providerId: string
@@ -135,6 +140,8 @@ export class LocalBLEProvider {
           )
         throw new Error(`Adapter ${this.adapterName} not powered`)
       }
+
+      await bt.onBluetoothdExit(() => this.handleBluetoothdExit())
 
       this.adapterReady = true
       debug.enabled &&
@@ -185,8 +192,18 @@ export class LocalBLEProvider {
     }
   }
 
-  async startDiscovery(): Promise<void> {
-    if (!this.adapterReady || this.scanning) return
+  // bluetoothd takes every GATT link and the running discovery down with it,
+  // and is not around to say so. The provider's proxies stay valid for its
+  // successor: same bus name, same object paths.
+  private handleBluetoothdExit() {
+    debug.enabled && debug('bluetoothd left the bus')
+    this.discoveryLost = this.scanning
+    for (const linkLost of [...this.linkLostHandlers]) {
+      linkLost()
+    }
+  }
+
+  private async beginDiscovery(): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Variant } = require('@jellybrick/dbus-next')
     await this.adapter.helper.callMethod('SetDiscoveryFilter', {
@@ -194,6 +211,11 @@ export class LocalBLEProvider {
       DuplicateData: new Variant('b', true)
     })
     await this.adapter.helper.callMethod('StartDiscovery')
+  }
+
+  async startDiscovery(): Promise<void> {
+    if (!this.adapterReady || this.scanning) return
+    await this.beginDiscovery()
     this.scanning = true
     debug('Discovery started')
 
@@ -209,6 +231,7 @@ export class LocalBLEProvider {
       debug.enabled && debug(`Error stopping discovery: ${e.message}`)
     }
     this.scanning = false
+    this.discoveryLost = false
     this.clearWatcherTimer()
     for (const cleanup of this.deviceListeners.values()) {
       cleanup()
@@ -255,6 +278,13 @@ export class LocalBLEProvider {
     const watchDevices = async () => {
       if (!this.scanning) return
       try {
+        if (this.discoveryLost) {
+          // Fails, and is retried on the next tick, until the new bluetoothd
+          // has its adapter up
+          await this.beginDiscovery()
+          this.discoveryLost = false
+          debug.enabled && debug('Discovery resumed')
+        }
         const macs = await this.adapter.devices()
         for (const mac of macs) {
           if (!this.deviceListeners.has(mac)) {
@@ -487,8 +517,8 @@ export class LocalBLEProvider {
     const mac = session.descriptor.mac.toUpperCase()
     const descriptor = session.descriptor
 
-    await this.connectQueue.enqueue(async () => {
-      if (session.closed) return
+    const link = await this.connectQueue.enqueue(async () => {
+      if (session.closed) return undefined
 
       debug.enabled && debug(`GATT connecting to ${mac}`)
 
@@ -496,9 +526,23 @@ export class LocalBLEProvider {
       const device = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_MS)
       session.device = device
 
-      // 2. Connect
-      await device.helper.callMethod('Connect')
+      // 2. Connect — node-ble only emits 'disconnect' for a device connected
+      // through connect()
+      await device.connect()
+      if (session.closed) {
+        // closeSession() only disconnects a link it knows to be up, and this
+        // one came up after it ran
+        try {
+          await device.disconnect()
+        } catch (_e) {
+          // ignore
+        }
+        return undefined
+      }
       session.connected = true
+      // Before anything else is awaited, so that a link lost during setup
+      // does not go unnoticed
+      const lost = this.watchSessionLink(session, device)
       debug.enabled && debug(`GATT connected to ${mac}`)
 
       // 3. Restart scanning (BlueZ suspends during GATT connections) —
@@ -511,12 +555,15 @@ export class LocalBLEProvider {
           // Ignorable
         }
       }
+      // Wrapped: enqueue() would otherwise adopt, and wait on, the promise
+      return { lost }
     })
 
-    if (session.closed) return
+    if (!link || session.closed) return
 
-    // 4. Discover service
-    const gattServer = await session.device.gatt()
+    // 4. Discover service — node-ble waits for ServicesResolved without a
+    // timeout, which never comes once the link is gone
+    const gattServer = await Promise.race([session.device.gatt(), link.lost])
     session.gattServer = gattServer
     const service = await gattServer.getPrimaryService(descriptor.service)
 
@@ -543,6 +590,12 @@ export class LocalBLEProvider {
           session.callback(charUuid, buffer)
         })
       }
+    }
+
+    // BlueZ serves steps 4-6 from its cache, so they can succeed on a link
+    // that has gone in the meantime
+    if (!session.connected) {
+      throw new Error(`GATT link to ${mac} lost during setup`)
     }
 
     // 7. Set up poll intervals
@@ -589,12 +642,38 @@ export class LocalBLEProvider {
       }
     }
 
-    // Bind the disconnect handler to *this* device instance.  On reconnect
-    // adapter.waitDevice() may return a different object, so we always
-    // re-attach and clear the previous device's listener to prevent leaks.
+    for (const cb of session.connectCallbacks) {
+      try {
+        cb()
+      } catch (_e) {
+        // ignore
+      }
+    }
+  }
+
+  // Reports a lost link to the session's plugin and starts reconnecting. The
+  // returned promise rejects on that loss, for setup steps that would wait on
+  // the dead link indefinitely.
+  private watchSessionLink(
+    session: LocalGATTSession,
+    device: any
+  ): Promise<never> {
+    const mac = session.descriptor.mac.toUpperCase()
+    let failSetup: (e: Error) => void = () => undefined
+    const lost = new Promise<never>((_resolve, reject) => {
+      failSetup = reject
+    })
+    // Once setup is over nobody awaits it
+    lost.catch(() => undefined)
+
     const onDisconnect = () => {
       if (session.closed) return
+      this.linkLostHandlers.delete(onDisconnect)
+      // The reconnect gets a new Device object for the same D-Bus path; this
+      // one must stop listening or it reports the next link loss as well
+      device.helper.removeListeners()
       session.connected = false
+      failSetup(new Error(`GATT link to ${mac} lost`))
       debug.enabled && debug(`GATT disconnected from ${mac}`)
       for (const cb of session.disconnectCallbacks) {
         try {
@@ -647,25 +726,16 @@ export class LocalBLEProvider {
       }
       attemptReconnect(1)
     }
-    if (session.removeDisconnectListener) {
-      session.removeDisconnectListener()
-    }
-    session.device.on('disconnect', onDisconnect)
+    // Bound to this device instance: a reconnect gets a different one, and the
+    // previous listener has to come off the device it was put on
+    session.removeDisconnectListener?.()
+    device.on('disconnect', onDisconnect)
+    this.linkLostHandlers.add(onDisconnect)
     session.removeDisconnectListener = () => {
-      try {
-        session.device?.removeListener?.('disconnect', onDisconnect)
-      } catch (_e) {
-        // ignore
-      }
+      this.linkLostHandlers.delete(onDisconnect)
+      device.removeListener('disconnect', onDisconnect)
     }
-
-    for (const cb of session.connectCallbacks) {
-      try {
-        cb()
-      } catch (_e) {
-        // ignore
-      }
-    }
+    return lost
   }
 
   private clearSessionTimers(session: LocalGATTSession) {
@@ -712,15 +782,60 @@ export class LocalBLEProvider {
 
     // Reserve slot before async connect to prevent concurrent oversubscription
     this.rawConnections++
+    let slotHeld = true
     const releaseSlot = () => {
+      if (!slotHeld) return
+      slotHeld = false
       this.rawConnections = Math.max(0, this.rawConnections - 1)
     }
+
+    let connected = false
+    const disconnectCallbacks: Array<() => void> = []
+    let failSetup: (e: Error) => void = () => undefined
+    // Rejects when the link is lost, for setup steps that would wait on the
+    // dead link indefinitely
+    const lost = new Promise<never>((_resolve, reject) => {
+      failSetup = reject
+    })
+    // Once setup is over nobody awaits it
+    lost.catch(() => undefined)
+    const linkLostHandlers = this.linkLostHandlers
+    // Detaches the link-loss handler once this connection is over, however
+    // it ends
+    let unwatchLink: () => void = () => undefined
 
     let device: any
     try {
       device = await this.connectQueue.enqueue(async () => {
         const dev = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_MS)
-        await dev.helper.callMethod('Connect')
+        // node-ble only emits 'disconnect' for a device connected through
+        // connect()
+        await dev.connect()
+        connected = true
+        // Before anything else is awaited, so that a link lost during setup
+        // does not go unnoticed
+        const onLinkLost = () => {
+          unwatchLink()
+          // A later connectGATT() to the same device gets its own Device
+          // object; this one must not report that connection's link loss too
+          dev.helper.removeListeners()
+          connected = false
+          releaseSlot()
+          failSetup(new Error(`GATT link to ${mac} lost`))
+          for (const cb of disconnectCallbacks) {
+            try {
+              cb()
+            } catch (_e) {
+              // ignore
+            }
+          }
+        }
+        dev.on('disconnect', onLinkLost)
+        linkLostHandlers.add(onLinkLost)
+        unwatchLink = () => {
+          linkLostHandlers.delete(onLinkLost)
+          dev.removeListener('disconnect', onLinkLost)
+        }
         if (this.scanning) {
           try {
             await this.adapter.helper.callMethod('StopDiscovery')
@@ -738,34 +853,11 @@ export class LocalBLEProvider {
 
     let gattServer: any
     try {
-      gattServer = await device.gatt()
+      // node-ble waits for ServicesResolved without a timeout, which never
+      // comes once the link is gone
+      gattServer = await Promise.race([device.gatt(), lost])
     } catch (e) {
-      releaseSlot()
-      try {
-        await device.disconnect()
-      } catch (_e) {
-        // ignore
-      }
-      throw e
-    }
-    let connected = true
-    const disconnectCallbacks: Array<() => void> = []
-
-    try {
-      device.on('disconnect', () => {
-        if (connected) {
-          connected = false
-          releaseSlot()
-        }
-        for (const cb of disconnectCallbacks) {
-          try {
-            cb()
-          } catch (_e) {
-            // ignore
-          }
-        }
-      })
-    } catch (e) {
+      unwatchLink()
       connected = false
       releaseSlot()
       try {
@@ -843,6 +935,9 @@ export class LocalBLEProvider {
       },
 
       async disconnect(): Promise<void> {
+        // BlueZ can signal the disconnect before its reply to the call, and
+        // an intended close is not a lost link
+        unwatchLink()
         try {
           await device.disconnect()
         } catch (_e) {

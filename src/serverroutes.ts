@@ -1360,16 +1360,6 @@ module.exports = function (
     setNumber('design.length.value.overall', 'design.length', newVessel.length)
     setNumber('design.beam.value', 'design.beam', newVessel.beam)
     setNumber('design.airHeight.value', 'design.airHeight', newVessel.height)
-    setNumber(
-      'sensors.gps.fromBow.value',
-      'sensors.gps.fromBow',
-      newVessel.gpsFromBow
-    )
-    setNumber(
-      'sensors.gps.fromCenter.value',
-      'sensors.gps.fromCenter',
-      newVessel.gpsFromCenter
-    )
 
     if (newVessel.aisShipType) {
       set(data.vessels.self, 'design.aisShipType.value', {
@@ -1414,8 +1404,8 @@ module.exports = function (
       delete app.config.vesselUUID
     }
 
-    function makeNumber(num: string) {
-      return !isUndefined(num) && (isNumber(num) || num.length)
+    function makeNumber(num: string | number | null | undefined) {
+      return !isUndefined(num) && num !== null && (isNumber(num) || num.length)
         ? Number(num)
         : undefined
     }
@@ -1432,8 +1422,6 @@ module.exports = function (
     )
     de.setSelfValue('design.beam', makeNumber(vessel.beam))
     de.setSelfValue('design.airHeight', makeNumber(vessel.height))
-    de.setSelfValue('sensors.gps.fromBow', makeNumber(vessel.gpsFromBow))
-    de.setSelfValue('sensors.gps.fromCenter', makeNumber(vessel.gpsFromCenter))
     de.setSelfValue(
       'design.aisShipType',
       !isUndefined(vessel.aisShipType)
