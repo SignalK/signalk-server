@@ -213,7 +213,9 @@ export class TrackApiHttpRegistry {
     // segments under this prefix: express matches in registration order, so a
     // wildcard added first would swallow both.
     this.app.get(`${TRACKS_API_PATH}/:id`, (req: Request, res: Response) => {
-      const unknown = rejectUnknownParams(req.query, ['provider'])
+      // No `provider`: the id names it. Accepting one that the addressing
+      // ignores would let a client believe it had chosen where to look.
+      const unknown = rejectUnknownParams(req.query, [])
       if (unknown.length > 0) {
         res.status(400).json({ error: unknown.join(', ') })
         return
@@ -270,7 +272,8 @@ export class TrackApiHttpRegistry {
     })
 
     this.app.delete(`${TRACKS_API_PATH}/:id`, (req: Request, res: Response) => {
-      const unknown = rejectUnknownParams(req.query, ['provider'])
+      // As for the GET above: the id names the provider.
+      const unknown = rejectUnknownParams(req.query, [])
       if (unknown.length > 0) {
         res.status(400).json({ error: unknown.join(', ') })
         return

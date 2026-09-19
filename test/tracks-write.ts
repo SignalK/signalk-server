@@ -276,6 +276,25 @@ describe('Track API writes', () => {
     ).to.throw(/must not contain/)
   })
 
+  // The id names the provider, so a `provider` parameter has nothing to
+  // select. Accepted silently it would let a client believe it had chosen
+  // where to look while the id decided.
+  it('rejects a provider parameter on the id routes', async () => {
+    await serve()
+    const id = 'testprovider:imported:known'
+
+    const read = await fetch(
+      `${base}/signalk/v2/api/tracks/${id}?provider=testprovider`
+    )
+    expect(read.status).to.equal(400)
+
+    const removed = await fetch(
+      `${base}/signalk/v2/api/tracks/${id}?provider=testprovider`,
+      { method: 'DELETE' }
+    )
+    expect(removed.status).to.equal(400)
+  })
+
   it('rejects an id that names no provider', async () => {
     await serve()
     const res = await fetch(`${base}/signalk/v2/api/tracks/imported`)

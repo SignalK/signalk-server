@@ -23,10 +23,10 @@ const tracksApiDoc = {
       TrackImport: {
         type: 'object',
         required: ['coordinates'],
-        // The parser rejects an unknown field, so the schema must not permit
-        // one: a client generated from this document would otherwise send it
-        // and be refused.
-        additionalProperties: false,
+        // A property this API does not define is stored as posted, so the
+        // schema permits one: a generated client that carries its own
+        // metadata on a track must be able to send it.
+        additionalProperties: true,
         description:
           'A track offered for storage. Geometry and times only: the bounding box, point count and time range are derived by the provider from what was actually sent.',
         properties: {
@@ -70,13 +70,17 @@ const tracksApiDoc = {
       },
       TrackProperties: {
         type: 'object',
-        required: ['id', 'pointCount'],
+        // Only pointCount is guaranteed: a provider serving a time-and-context
+        // query out of history identifies no tracks as objects, so it returns
+        // results with no id. A stored track always carries one, which the
+        // POST response documents.
+        required: ['pointCount'],
         properties: {
           id: {
             type: 'string',
             description:
-              'Identifies this track and is what DELETE /tracks/{id} addresses. Unique within the provider holding it.',
-            example: 'imported:0f0f2a1e-8f1e-4a6f-9a1e-2c9b1d3e4f50'
+              'Identifies this track, written providerId:trackId, and is what GET and DELETE /tracks/{id} address. Absent when the provider does not identify tracks as objects; always present on a stored track.',
+            example: 'tracks:imported:0f0f2a1e-8f1e-4a6f-9a1e-2c9b1d3e4f50'
           },
           context: {
             type: 'string',
@@ -467,7 +471,8 @@ const tracksApiDoc = {
         },
         responses: {
           201: {
-            description: 'The track as stored, carrying the id assigned to it',
+            description:
+              'The track as stored. Always carries properties.id — the providerId:trackId that GET and DELETE address — even though the shared schema marks it optional for query results.',
             headers: {
               Location: {
                 description: 'Where the created track can be fetched',
