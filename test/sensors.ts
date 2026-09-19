@@ -1,5 +1,24 @@
 import { expect } from 'chai'
-import { startServer } from './ts-servertestutilities'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { rimraf } from 'rimraf'
+import { startServerFromConfigP } from './servertestutilities'
+import {
+  freeport,
+  SERVER_START_TIMEOUT,
+  startServer
+} from './ts-servertestutilities'
+
+/** The slice of a started server these tests need for teardown. */
+interface ServerHandle {
+  stop: () => Promise<unknown>
+}
+
+/** The slice of the server's base-delta editor these tests read. */
+interface BaseDeltaEditor {
+  getSelfValue(path: string): unknown
+}
 
 describe('Sensors API - gnss', () => {
   it('GET returns the default (off, no sensors) config with status', async function () {
@@ -134,6 +153,45 @@ describe('Sensors API - gnss', () => {
     await stop()
   })
 
+  it('does not write legacy offsets once a sensor row owns them', async function () {
+    const { host, server, selfPut, stop } = await startServer()
+    try {
+      await selfPut('sensors/gnss', {
+        correction: 'off',
+        sensors: [
+          { sensorId: 'gnss1', $source: 'test.1', fromBow: 3, fromCenter: 1 }
+        ]
+      })
+
+      const put = await fetch(`${host}/skServer/vessel`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: 'Renamed',
+          gpsFromBow: 9,
+          gpsFromCenter: 9
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      expect(put.status).to.equal(200)
+
+      // The sensor row is the single owner, so the legacy singleton stays
+      // empty rather than becoming a second copy that can disagree with it.
+      const { baseDeltaEditor } = (
+        server as unknown as {
+          app: { config: { baseDeltaEditor: BaseDeltaEditor } }
+        }
+      ).app.config
+      expect(baseDeltaEditor.getSelfValue('sensors.gps.fromBow')).to.equal(
+        undefined
+      )
+      expect(baseDeltaEditor.getSelfValue('sensors.gps.fromCenter')).to.equal(
+        undefined
+      )
+    } finally {
+      await stop()
+    }
+  })
+
   it('PUT /skServer/vessel keeps a zero GNSS offset as zero', async function () {
     const { host, stop } = await startServer()
     const put = await fetch(`${host}/skServer/vessel`, {
@@ -155,5 +213,149 @@ describe('Sensors API - gnss', () => {
     expect(vessel.gpsFromBow).to.equal(0)
     expect(vessel.gpsFromCenter).to.equal(0)
     await stop()
+  })
+})
+
+// An install predating baseDeltas.json keeps a defaults.json and opts out of
+// conversion with useBaseDeltas: false, so PUT /skServer/vessel persists
+// through writeOldDefaults rather than the base-delta editor. With no GNSS
+// sensor row that file is the only place the offsets can live.
+describe('Sensors API - gnss with a legacy defaults file', function () {
+  this.timeout(SERVER_START_TIMEOUT)
+
+  // PUT /vessel rejects an offset outside the hull, so the payload has to
+  // carry a length for a zero offset to be inside it.
+  const HULL_LENGTH_M = 20
+
+  let port: number
+  let server: ServerHandle | undefined
+  let configDir: string | undefined
+
+  const storedOffsets = () => {
+    if (configDir === undefined) {
+      throw new Error('before hook did not create a configuration directory')
+    }
+    const defaults = JSON.parse(
+      fs.readFileSync(path.join(configDir, 'defaults.json'), 'utf8')
+    )
+    return defaults?.vessels?.self?.sensors?.gps
+  }
+
+  before(async () => {
+    port = await freeport()
+    configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-gnss-legacy-'))
+    fs.writeFileSync(
+      path.join(configDir, 'settings.json'),
+      JSON.stringify({
+        port,
+        interfaces: { plugins: false },
+        useBaseDeltas: false,
+        pipedProviders: []
+      })
+    )
+    fs.writeFileSync(
+      path.join(configDir, 'defaults.json'),
+      JSON.stringify({ vessels: { self: { name: 'legacy' } } })
+    )
+    server = await startServerFromConfigP(configDir)
+  })
+
+  // A rejected `before` still runs this hook, so an unassigned server must
+  // not throw here and mask the setup failure, nor strand the temp directory.
+  after(async () => {
+    try {
+      await server?.stop()
+    } finally {
+      if (configDir !== undefined) {
+        await rimraf(configDir)
+      }
+    }
+  })
+
+  it('keeps a zero GNSS offset in the defaults file', async () => {
+    const put = await fetch(`http://localhost:${port}/skServer/vessel`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        length: HULL_LENGTH_M,
+        gpsFromBow: 0,
+        gpsFromCenter: 0
+      }),
+      headers: { 'Content-Type': 'application/json' }
+    })
+    expect(put.status).to.equal(200)
+
+    expect(storedOffsets()?.fromBow?.value).to.equal(0)
+    expect(storedOffsets()?.fromCenter?.value).to.equal(0)
+  })
+})
+
+// The same legacy defaults file, but with a GNSS row configured. The row owns
+// the offsets, so a vessel save must not copy them into the singleton the
+// sensors API does not sweep.
+describe('Sensors API - gnss with a legacy defaults file and a sensor row', function () {
+  this.timeout(SERVER_START_TIMEOUT)
+
+  const HULL_LENGTH_M = 20
+
+  let port: number
+  let server: ServerHandle | undefined
+  let configDir: string | undefined
+
+  const storedOffsets = () => {
+    if (configDir === undefined) {
+      throw new Error('before hook did not create a configuration directory')
+    }
+    const defaults = JSON.parse(
+      fs.readFileSync(path.join(configDir, 'defaults.json'), 'utf8')
+    )
+    return defaults?.vessels?.self?.sensors?.gps
+  }
+
+  before(async () => {
+    port = await freeport()
+    configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-gnss-legacy-row-'))
+    fs.writeFileSync(
+      path.join(configDir, 'settings.json'),
+      JSON.stringify({
+        port,
+        interfaces: { plugins: false },
+        useBaseDeltas: false,
+        pipedProviders: [],
+        gnssSensors: [
+          { sensorId: 'gnss1', $source: 'test.1', fromBow: 3, fromCenter: 1 }
+        ]
+      })
+    )
+    fs.writeFileSync(
+      path.join(configDir, 'defaults.json'),
+      JSON.stringify({ vessels: { self: { name: 'legacy' } } })
+    )
+    server = await startServerFromConfigP(configDir)
+  })
+
+  after(async () => {
+    try {
+      await server?.stop()
+    } finally {
+      if (configDir !== undefined) {
+        await rimraf(configDir)
+      }
+    }
+  })
+
+  it('leaves the defaults file singleton alone', async () => {
+    const put = await fetch(`http://localhost:${port}/skServer/vessel`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        length: HULL_LENGTH_M,
+        gpsFromBow: 9,
+        gpsFromCenter: 9
+      }),
+      headers: { 'Content-Type': 'application/json' }
+    })
+    expect(put.status).to.equal(200)
+
+    expect(storedOffsets()?.fromBow?.value).to.equal(undefined)
+    expect(storedOffsets()?.fromCenter?.value).to.equal(undefined)
   })
 })

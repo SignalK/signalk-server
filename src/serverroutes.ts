@@ -1360,6 +1360,20 @@ module.exports = function (
     setNumber('design.length.value.overall', 'design.length', newVessel.length)
     setNumber('design.beam.value', 'design.beam', newVessel.beam)
     setNumber('design.airHeight.value', 'design.airHeight', newVessel.height)
+    // A sensor row owns these offsets when one exists; this legacy defaults
+    // file is where they live only in its absence.
+    if (!app.config.settings.gnssSensors?.[0]) {
+      setNumber(
+        'sensors.gps.fromBow.value',
+        'sensors.gps.fromBow',
+        newVessel.gpsFromBow
+      )
+      setNumber(
+        'sensors.gps.fromCenter.value',
+        'sensors.gps.fromCenter',
+        newVessel.gpsFromCenter
+      )
+    }
 
     if (newVessel.aisShipType) {
       set(data.vessels.self, 'design.aisShipType.value', {
@@ -1422,6 +1436,18 @@ module.exports = function (
     )
     de.setSelfValue('design.beam', makeNumber(vessel.beam))
     de.setSelfValue('design.airHeight', makeNumber(vessel.height))
+    // `settings.gnssSensors` owns these offsets whenever it holds a row, so
+    // the legacy singleton is written only in its absence -- two stores for
+    // one value would otherwise disagree. Without a row it is the only place
+    // they can live, and a zero is a real offset, meaning "at the reference
+    // point" rather than "unset".
+    if (!app.config.settings.gnssSensors?.[0]) {
+      de.setSelfValue('sensors.gps.fromBow', makeNumber(vessel.gpsFromBow))
+      de.setSelfValue(
+        'sensors.gps.fromCenter',
+        makeNumber(vessel.gpsFromCenter)
+      )
+    }
     de.setSelfValue(
       'design.aisShipType',
       !isUndefined(vessel.aisShipType)
