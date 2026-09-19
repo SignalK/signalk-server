@@ -44,7 +44,8 @@ export type HistorySourcePolicy = 'all'
 
 /**
  * A row of historical data: first element is timestamp, followed by aggregated values.
- * Values can be primitives, objects (like navigation.position), or null depending on the path.
+ * Values can be primitives, `[longitude, latitude]` pairs (navigation.position, in GeoJSON
+ * order), or null depending on the path.
  */
 export type DataRow = [Timestamp, ...unknown[]]
 
