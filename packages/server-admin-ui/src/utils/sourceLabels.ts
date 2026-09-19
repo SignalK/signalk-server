@@ -334,8 +334,14 @@ const COMPOUND_KEY_PGNS = new Set([
 
 /**
  * Detect N2K devices that share the same device instance and send
- * overlapping data PGNs. This can confuse instruments that rely on
- * instance numbers to distinguish data sources.
+ * overlapping data PGNs. Instruments that select sources by instance
+ * number cannot tell such devices apart; instruments that select by
+ * device name are unaffected.
+ *
+ * The detection is failsafe by design. The consuming instrument is often
+ * invisible to the server (or not on the bus at all), so every overlap
+ * the standard permits a consumer to resolve ambiguously is reported and
+ * the judgement is left to the user, who can Ignore a pair.
  *
  * Protocol/management PGNs (ISO Address Claim, Heartbeat, Product Info,
  * etc.) are excluded — every device sends those and they do not represent
