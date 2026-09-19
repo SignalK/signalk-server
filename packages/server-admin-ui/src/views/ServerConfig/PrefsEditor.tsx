@@ -11,6 +11,7 @@ import { useStore, useSourceStatus, useSourceStatusLoaded } from '../../store'
 import { type SourcesData } from '../../utils/sourceLabels'
 import { DEFAULT_FALLBACK_MS } from '../../utils/sourceGroups'
 import { useSourceAliases } from '../../hooks/useSourceAliases'
+import { getThemedSelectStyles } from '../../utils/reactSelectTheme'
 
 interface Priority {
   sourceRef: string
@@ -59,22 +60,26 @@ const MENU_PORTAL_Z_INDEX = 9999
 // otherwise get clipped to a single line. Let the selected value and the
 // menu options wrap so the full name + sourceRef stays readable in the
 // narrow priorities column, and grow the control vertically to fit.
+const themedStyles = getThemedSelectStyles<SelectOption>()
+
 const wrappingSelectStyles: StylesConfig<SelectOption, false> = {
-  control: (base) => ({
-    ...base,
+  ...themedStyles,
+  control: (base, state) => ({
+    ...themedStyles.control(base, state),
     minHeight: SELECT_MIN_HEIGHT,
     height: 'auto'
   }),
   valueContainer: (base) => ({ ...base, flexWrap: 'wrap' }),
   singleValue: (base) => ({
     ...base,
+    color: 'var(--bs-body-color)',
     whiteSpace: 'normal',
     overflow: 'visible',
     textOverflow: 'clip',
     wordBreak: 'break-word'
   }),
-  option: (base) => ({
-    ...base,
+  option: (base, state) => ({
+    ...themedStyles.option(base, state),
     whiteSpace: 'normal',
     wordBreak: 'break-word'
   }),

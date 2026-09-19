@@ -176,7 +176,7 @@ const BackupRestore: React.FC = () => {
                   </Form.Label>
                 </Col>
                 <Col xs="2" md={fieldColWidthMd}>
-                  <Form.Label className="switch switch-text switch-primary">
+                  <Form.Label className="switch switch-text switch-primary me-2">
                     <Form.Control
                       type="checkbox"
                       id="backup-includePlugins"

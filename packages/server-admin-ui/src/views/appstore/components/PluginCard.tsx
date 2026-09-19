@@ -194,7 +194,7 @@ const PluginCard: React.FC<PluginCardProps> = ({
                 {app.author}
               </button>
             )}
-            <p className="mb-0 mt-2 plugin-card__description">
+            <p className="mb-0 mt-2 plugin-card__description text-body-secondary">
               {app.description}
             </p>
           </div>
