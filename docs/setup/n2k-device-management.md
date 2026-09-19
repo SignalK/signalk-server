@@ -72,11 +72,11 @@ Whether that is safe depends on the consumer:
 - **Instruments that select sources by device name** are generally unaffected. Most Navico and Furuno displays let you pick a preferred source (and often a backup) per data point, regardless of instance numbers. Two devices both reporting heel on the same instance will not confuse them.
 - **Instruments that select sources by instance number** are affected, and the symptoms look like a data problem rather than a configuration one. Maretron equipment depends on instance numbers for source selection and expects them to be unique across the bus. TimeZero Pro picks the lowest available instance per sensor type and per consumed PGN, so several GPS units sharing one instance make the boat jump around on the chart.
 
-If you are sure your instruments cope, use **Ignore** on the pair (see below). If you are unsure, giving the devices distinct instances is harmless and removes the ambiguity permanently.
+If you are sure your instruments cope, use **Ignore** on the pair (see below). If you are unsure, giving the devices distinct instances removes the ambiguity permanently — but check the device documentation first, because some manufacturers use Device Instance for internal coordination.
 
 ### Assigning distinct instances anyway
 
-Even when your current display does not care, distinct instance numbers cost nothing and make the bus self-describing. A practical scheme is to number sensors of the same kind in order of preference, for example a primary GPS at instance 1, a secondary GPS at 2 and an AIS-internal GPS at 3. Consumers that fall back to the lowest instance then pick your preferred source by default, and future equipment behaves predictably.
+Even when your current display does not care, distinct instance numbers make the bus self-describing. A practical scheme is to number sensors of the same kind in order of preference, for example a primary GPS at instance 1, a secondary GPS at 2 and an AIS-internal GPS at 3. Consumers that fall back to the lowest instance then pick your preferred source by default, and future equipment behaves predictably.
 
 Changing an instance is not always the right answer, though. Victron equipment uses Device Instance for internal coordination between chargers — see the manufacturer caveats above before editing.
 
