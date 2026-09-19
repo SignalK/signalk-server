@@ -25,7 +25,7 @@ The time range for queries can be defined as a combination of **from**, **to** a
 To retrieve historical data series for specific paths, submit a HTTP `GET` request to `/signalk/v2/api/history/values`.
 
 ```typescript
-HTTP GET 'http://hostname:3000/signalk/v2/api/history/values?paths=navigation.speedOverGround&duration=PT1H'
+HTTP GET 'http://hostname:3000/signalk/v2/api/history/values?paths=navigation.speedOverGround,navigation.position:first&duration=PT1H'
 ```
 
 ### Query Parameters
@@ -55,16 +55,22 @@ The response contains the requested data series with header information.
     {
       "path": "navigation.speedOverGround",
       "method": "average"
+    },
+    {
+      "path": "navigation.position",
+      "method": "first"
     }
   ],
   "data": [
-    ["2023-11-09T02:45:38.160Z", 13.2],
-    ["2023-11-09T02:45:39.160Z", 13.4]
+    ["2023-11-09T02:45:38.160Z", 13.2, [24.94, 60.17]],
+    ["2023-11-09T02:45:39.160Z", 13.4, null]
   ]
 }
 ```
 
 The `data` array contains arrays where the first element is the timestamp in ISO 8601 format, and subsequent elements correspond to the values for the requested paths in order. Missing data for a path is returned as `null`.
+
+A `navigation.position` value is a `[longitude, latitude]` pair, in GeoJSON coordinate order — not the `{"latitude", "longitude"}` object the path carries in the data model.
 
 ## Listing Available Contexts
 
