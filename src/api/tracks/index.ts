@@ -115,6 +115,15 @@ export class TrackApiHttpRegistry {
     if (!isTrackProvider(provider)) {
       throw new Error('Invalid track api provider')
     }
+    // A track is addressed `providerId:trackId` and split on the first colon,
+    // so an id containing one would silently make every track this provider
+    // holds unreachable: the prefix would name a provider that is not
+    // registered. Refused at registration, where it is diagnosable.
+    if (pluginId.includes(':')) {
+      throw new Error(
+        `Invalid track api provider id '${pluginId}': must not contain ':'`
+      )
+    }
     // Replace rather than keep the first: a plugin that re-registers after a
     // restart or a config change means the new provider, and silently serving
     // the stale one would be very hard to diagnose.

@@ -262,6 +262,20 @@ describe('Track API writes', () => {
   // window query needs the first, a context query the second.
   // A track is identified by the provider holding it and the id that provider
   // minted, so half an id addresses nothing.
+  // The composite splits on the first colon, so a provider id containing one
+  // would name a provider that is not registered and strand every track it
+  // holds.
+  it('refuses to register a provider whose id contains a colon', () => {
+    const app = express()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const registry = new TrackApiHttpRegistry(app as any)
+
+    expect(() =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      registry.registerTrackApiProvider('bad:id', readOnlyProvider() as any)
+    ).to.throw(/must not contain/)
+  })
+
   it('rejects an id that names no provider', async () => {
     await serve()
     const res = await fetch(`${base}/signalk/v2/api/tracks/imported`)
