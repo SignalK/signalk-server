@@ -5,6 +5,8 @@ import {
   useDeferredValue,
   useCallback
 } from 'react'
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons/faCircleInfo'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Badge from 'react-bootstrap/Badge'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
@@ -14,6 +16,13 @@ import Row from 'react-bootstrap/Row'
 import type { PathMetadataEntry } from '@signalk/path-metadata'
 
 type AllMetadata = Record<string, PathMetadataEntry>
+
+const STALENESS_DOCS_URL =
+  '/admin/#/documentation/Configuration/Stale_Data_Detection.html'
+
+// Path, Description, Update contract, Units — the empty-state row spans them
+// all, so it has to move whenever a column is added or removed.
+const TABLE_COLUMN_COUNT = 4
 
 const GROUP_LABELS: Record<string, string> = {
   navigation: 'Navigation',
@@ -208,9 +217,19 @@ export default function PathReference() {
               }}
             >
               <tr>
-                <th style={{ width: '40%' }}>Path</th>
-                <th style={{ width: '45%' }}>Description</th>
-                <th style={{ width: '15%' }}>Units</th>
+                <th style={{ width: '38%' }}>Path</th>
+                <th style={{ width: '37%' }}>Description</th>
+                <th style={{ width: '13%' }}>
+                  Update contract{' '}
+                  <a
+                    href={STALENESS_DOCS_URL}
+                    title="What update contracts mean for stale data detection"
+                    aria-label="About update contracts"
+                  >
+                    <FontAwesomeIcon icon={faCircleInfo} />
+                  </a>
+                </th>
+                <th style={{ width: '12%' }}>Units</th>
               </tr>
             </thead>
             <tbody>
@@ -289,6 +308,33 @@ export default function PathReference() {
                       )}
                     </td>
                     <td>
+                      {meta.updateContract === 'event' && (
+                        <Badge
+                          bg="secondary"
+                          title="Emitted only when it changes, so silence means unchanged and it is never marked stale"
+                        >
+                          event
+                        </Badge>
+                      )}
+                      {meta.updateContract === 'periodic' && (
+                        <Badge
+                          bg="light"
+                          text="dark"
+                          title="Regular updates expected, so silence past the timeout marks the value stale"
+                        >
+                          periodic
+                        </Badge>
+                      )}
+                      {!meta.updateContract && (
+                        <span
+                          className="text-muted"
+                          title="Not a path that updates — a container shape or registry entry"
+                        >
+                          —
+                        </span>
+                      )}
+                    </td>
+                    <td>
                       {meta.units && <Badge bg="info">{meta.units}</Badge>}
                     </td>
                   </tr>
@@ -296,7 +342,10 @@ export default function PathReference() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="text-center text-muted py-4">
+                  <td
+                    colSpan={TABLE_COLUMN_COUNT}
+                    className="text-center text-muted py-4"
+                  >
                     No paths match your search
                   </td>
                 </tr>

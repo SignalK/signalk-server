@@ -47,6 +47,8 @@ Well-known event-driven paths are pre-classified by the server: notifications, n
 
 To classify a custom path, set `updateContract` in the path's metadata (Data Browser meta editor or the meta API). An explicit `updateContract` always wins over the shipped classification.
 
+A plugin can declare the contract for paths it publishes by calling `setDefaultMetadata()` once at start-up; see [Setting Default Metadata](../develop/plugins/deltas.md#setting-default-metadata). A value set by the user always takes precedence over the plugin's suggestion.
+
 ## Timeout Resolution
 
 For a `periodic` path, the effective timeout is resolved in this order:
@@ -57,6 +59,8 @@ For a `periodic` path, the effective timeout is resolved in this order:
 4. **Global default timeout** (`defaultTimeout`) when _Use default timeouts_ is enabled.
 
 If none of these produce a timeout, the path is not monitored.
+
+A plugin that publishes a path updating more slowly than the global default should declare its own `timeout` the same way, rather than relying on the user to adjust it.
 
 When [Source Priority](./source-priority.md) is active for a path, the effective timeout never undercuts the configured failover window, so staleness does not fire while a lower-priority source is still legitimately waiting to take over.
 
