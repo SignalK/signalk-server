@@ -25,7 +25,7 @@ The time range for queries can be defined as a combination of **from**, **to** a
 To retrieve historical data series for specific paths, submit a HTTP `GET` request to `/signalk/v2/api/history/values`.
 
 ```typescript
-HTTP GET 'http://hostname:3000/signalk/v2/api/history/values?paths=navigation.speedOverGround&duration=PT1H'
+HTTP GET 'http://hostname:3000/signalk/v2/api/history/values?paths=navigation.speedOverGround,navigation.position:first&duration=PT1H'
 ```
 
 ### Query Parameters
