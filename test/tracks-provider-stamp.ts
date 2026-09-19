@@ -20,6 +20,7 @@ describe('Track API provider stamping', () => {
       coordinates: [[[24.9, 60.1] as [number, number]]]
     },
     properties: {
+      id: `recorded:${context}`,
       context,
       isSelf: false,
       from: '2026-08-01T00:00:00Z',
