@@ -354,7 +354,7 @@ const tracksApiDoc = {
         tags: ['tracks'],
         summary: 'Fetch one track by id',
         description:
-          'Returns the track with this id. Every other way of finding a track filters by something a track might not have — a time window needs times, a context query needs a context — so an imported track with neither is reachable only here.\n\nAsked of every provider unless **provider** names one, since an id identifies a track wherever it is stored.',
+          'Returns the track with this id. Every other way of finding a track filters by something a track might not have — a time window needs times, a context query needs a context — so an imported track with neither is reachable only here.\n\nThe id is written `providerId:trackId`, so it names both the provider and the track within it. Only the first colon separates them: a provider id may not contain one, a track id may.',
         parameters: [
           {
             name: 'id',

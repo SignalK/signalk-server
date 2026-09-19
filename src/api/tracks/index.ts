@@ -422,8 +422,9 @@ export class TrackApiHttpRegistry {
   /**
    * Run a write against one provider.
    *
-   * One, not the fan-out the reads use: a write has to land somewhere definite,
-   * so it goes to the provider named by `?provider=` or to the default. A
+   * One, not the fan-out a listing uses: a write has to land somewhere
+   * definite, so it goes to the provider named by `?provider=` or to the
+   * default. A
    * provider that does not implement the operation is a 501 rather than a
    * failure, since a recorder with no storage for imported tracks is a
    * legitimate provider, not a broken one.
