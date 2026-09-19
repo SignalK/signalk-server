@@ -582,6 +582,7 @@ class ErrorReport {
 export function parseTrackImport(body: unknown): {
   track?: TrackImport
   errors: string[]
+  unknownProperties?: string[]
 } {
   const errors = new ErrorReport()
   if (typeof body !== 'object' || body === null) {
@@ -683,15 +684,6 @@ export function parseTrackImport(body: unknown): {
     }
   }
 
-  // The same rule the query parser applies: a client that misspells
-  // `coordTimes` would otherwise get a 201 and discover later that the times
-  // it thought it stored were never there.
-  for (const field of Object.keys(input)) {
-    if (!KNOWN_IMPORT_FIELDS.has(field)) {
-      errors.add(() => `unknown property: ${field}`)
-    }
-  }
-
   if (input.name !== undefined && typeof input.name !== 'string') {
     errors.add(() => 'name must be a string')
   }
@@ -706,8 +698,17 @@ export function parseTrackImport(body: unknown): {
   if (errors.length > 0) {
     return { errors: errors.list() }
   }
+  // Carried through rather than dropped: the core shape is what this API
+  // defines, and the rest is the client's own data to get back unchanged.
+  // A misspelling therefore survives as an extra property rather than
+  // vanishing, which is what `unknown properties` in the result reports.
+  const extras = Object.fromEntries(
+    Object.entries(input).filter(([field]) => !KNOWN_IMPORT_FIELDS.has(field))
+  )
   return {
+    unknownProperties: Object.keys(extras),
     track: {
+      ...extras,
       coordinates: segments,
       ...(coordTimes ? { coordTimes } : {}),
       ...(typeof input.name === 'string' ? { name: input.name } : {}),

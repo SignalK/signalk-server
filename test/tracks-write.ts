@@ -131,7 +131,7 @@ describe('Track API writes', () => {
     // The id comes from the provider, not the client: two clients importing
     // the same file must not collide, and an import must not be able to name
     // an existing track.
-    expect(body.properties.id).to.equal('imported:generated-id')
+    expect(body.properties.id).to.equal('testprovider:imported:generated-id')
     expect(body.properties.providerId).to.equal('testprovider')
   })
 
@@ -260,15 +260,52 @@ describe('Track API writes', () => {
 
   // The only way to reach a track that has neither times nor a context: a
   // window query needs the first, a context query the second.
+  // A track is identified by the provider holding it and the id that provider
+  // minted, so half an id addresses nothing.
+  it('rejects an id that names no provider', async () => {
+    await serve()
+    const res = await fetch(`${base}/signalk/v2/api/tracks/imported`)
+
+    expect(res.status).to.equal(400)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).to.match(/providerId:trackId/)
+  })
+
+  it('reports an unregistered provider as not found', async () => {
+    await serve()
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/nosuchprovider:imported:known`
+    )
+
+    expect(res.status).to.equal(404)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).to.match(/nosuchprovider/)
+  })
+
+  // A provider id cannot contain a colon, a track id can: splitting on the
+  // last one would address a provider that does not exist.
+  it('splits on the first colon only', async () => {
+    await serve()
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/testprovider:imported:known`
+    )
+
+    expect(res.status).to.equal(200)
+    const body = (await res.json()) as { properties: { id: string } }
+    expect(body.properties.id).to.equal('testprovider:imported:known')
+  })
+
   it('fetches a track by id', async () => {
     await serve()
-    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`)
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/testprovider:imported:known`
+    )
     expect(res.status).to.equal(200)
     const body = (await res.json()) as {
       properties: { id: string; providerId?: string }
     }
 
-    expect(body.properties.id).to.equal('imported:known')
+    expect(body.properties.id).to.equal('testprovider:imported:known')
     expect(body.properties.providerId).to.equal('testprovider')
   })
 
@@ -292,18 +329,17 @@ describe('Track API writes', () => {
     expect(providers.status).to.equal(200)
   })
 
-  it('rejects an unknown property rather than silently dropping it', async () => {
-    // A misspelled coordTimes would otherwise return 201 and lose the times
-    // the client believed it had stored.
+  // The core shape is this API's; everything else is the client's own data,
+  // kept as posted so a client that carries its own metadata gets it back.
+  it('stores a property this API does not define', async () => {
     await serve()
     const res = await post({
       coordinates: [[[24.9, 60.1]]],
-      coordtimes: [['2026-08-01T00:00:00Z']]
+      fromChartplotter: 'Raymarine Axiom'
     })
-    expect(res.status).to.equal(400)
-    const body = (await res.json()) as { error: string }
 
-    expect(body.error).to.match(/unknown property: coordtimes/)
+    expect(res.status).to.equal(201)
+    expect(stored[0]).to.deep.include({ fromChartplotter: 'Raymarine Axiom' })
   })
 
   // At the parser rather than over HTTP: a payload big enough to trip the cap
@@ -368,7 +404,9 @@ describe('Track API writes', () => {
     // Not a 404: the track is not absent, the server simply has nothing
     // registered that can look one up by id.
     await serve(readOnlyProvider())
-    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`)
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/testprovider:imported:known`
+    )
 
     expect(res.status).to.equal(501)
   })
@@ -378,7 +416,7 @@ describe('Track API writes', () => {
     const res = await post(validTrack)
 
     expect(res.headers.get('location')).to.equal(
-      '/signalk/v2/api/tracks/imported%3Agenerated-id'
+      '/signalk/v2/api/tracks/testprovider%3Aimported%3Agenerated-id'
     )
   })
 
@@ -427,9 +465,12 @@ describe('Track API writes', () => {
   // this server can establish -- and GET already says so for the same setup.
   it('reports delete-by-id as unsupported when no provider can address one', async () => {
     await serve(readOnlyProvider())
-    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`, {
-      method: 'DELETE'
-    })
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/testprovider:imported:known`,
+      {
+        method: 'DELETE'
+      }
+    )
 
     expect(res.status).to.equal(501)
   })
@@ -445,10 +486,10 @@ describe('Track API writes', () => {
       }
     )
     const read = await fetch(
-      `${base}/signalk/v2/api/tracks/imported:known?provdier=testprovider`
+      `${base}/signalk/v2/api/tracks/testprovider:imported:known?provdier=testprovider`
     )
     const removed = await fetch(
-      `${base}/signalk/v2/api/tracks/imported:known?provdier=testprovider`,
+      `${base}/signalk/v2/api/tracks/testprovider:imported:known?provdier=testprovider`,
       { method: 'DELETE' }
     )
 
@@ -459,9 +500,12 @@ describe('Track API writes', () => {
 
   it('deletes a track by id', async () => {
     await serve()
-    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`, {
-      method: 'DELETE'
-    })
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/testprovider:imported:known`,
+      {
+        method: 'DELETE'
+      }
+    )
 
     expect(res.status).to.equal(200)
   })
@@ -477,9 +521,12 @@ describe('Track API writes', () => {
 
   it('refuses a delete without authority', async () => {
     await serve(writingProvider(), false, false)
-    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`, {
-      method: 'DELETE'
-    })
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/testprovider:imported:known`,
+      {
+        method: 'DELETE'
+      }
+    )
 
     expect(res.status).to.equal(403)
   })
@@ -489,7 +536,7 @@ describe('Track API writes', () => {
   // write permission delete a track someone else brought aboard.
   // A provider may delete without being able to read back, and registering a
   // readable provider alongside it must not make it unreachable.
-  it('deletes through a delete-only provider when another can read', async () => {
+  it('deletes through a provider that cannot read back', async () => {
     let deleted: string | undefined
     const app = express()
     app.use(express.json())
@@ -523,9 +570,10 @@ describe('Track API writes', () => {
         ? `http://localhost:${address.port}`
         : ''
 
-    const res = await fetch(`${url}/signalk/v2/api/tracks/imported:known`, {
-      method: 'DELETE'
-    })
+    const res = await fetch(
+      `${url}/signalk/v2/api/tracks/remover:imported:known`,
+      { method: 'DELETE' }
+    )
 
     expect(res.status).to.equal(200)
     expect(deleted).to.equal('imported:known')
@@ -533,9 +581,12 @@ describe('Track API writes', () => {
 
   it('requires administrative permission to delete', async () => {
     await serve(writingProvider(), true, false)
-    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:known`, {
-      method: 'DELETE'
-    })
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/testprovider:imported:known`,
+      {
+        method: 'DELETE'
+      }
+    )
 
     expect(res.status).to.equal(403)
   })
@@ -543,7 +594,7 @@ describe('Track API writes', () => {
   it('does not consult the write permission when deleting', async () => {
     // Write access to your own vessel is not authority to remove a track.
     await serve(writingProvider(), true, false)
-    await fetch(`${base}/signalk/v2/api/tracks/imported:known`, {
+    await fetch(`${base}/signalk/v2/api/tracks/testprovider:imported:known`, {
       method: 'DELETE'
     })
 

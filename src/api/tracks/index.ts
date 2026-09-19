@@ -222,7 +222,7 @@ export class TrackApiHttpRegistry {
       // what was sent: a track declaring a context is a write against *that*
       // vessel, and checking `vessels.self` first would let anyone permitted
       // to write their own vessel store a track under someone else's.
-      const { track, errors } = parseTrackImport(req.body)
+      const { track, errors, unknownProperties } = parseTrackImport(req.body)
       if (errors.length > 0) {
         res.status(400).json({ error: errors.join(', ') })
         return
@@ -233,6 +233,14 @@ export class TrackApiHttpRegistry {
       if (!writeAllowed(req, track?.context ?? 'vessels.self')) {
         res.status(403).json(Responses.unauthorised)
         return
+      }
+      // Stored as sent, but said out loud: a misspelled `coordTimes` is kept
+      // rather than rejected, and without this nothing would distinguish that
+      // from the times having been understood.
+      if (unknownProperties && unknownProperties.length > 0) {
+        debug(
+          `track import carried unknown properties: ${unknownProperties.join(', ')}`
+        )
       }
       if (!track) {
         // Unreachable in practice: no parser branch reports success without a
@@ -294,7 +302,7 @@ export class TrackApiHttpRegistry {
           return
         }
         try {
-          const deleted = await found.provider.deleteTrack(req.params.id)
+          const deleted = await found.provider.deleteTrack(found.trackId)
           if (!deleted) {
             res.status(404).json({ error: 'Track not found' })
             return
@@ -309,13 +317,7 @@ export class TrackApiHttpRegistry {
   }
 
   /**
-   * Find one track by id across the providers.
-   *
-   * Asked of every provider rather than just the default, because an id names
-   * a track wherever it lives and a client holding one from a listing has no
-   * reason to know which provider answered. An id is unique only within a
-   * provider, so two of them holding the same one is a 409 naming both rather
-   * than a silent pick by registration order.
+   * One track, addressed as `providerId:trackId`.
    */
   private async readOneFromProviders(req: Request, res: Response) {
     const found = await this.locate(req, res)
@@ -330,12 +332,15 @@ export class TrackApiHttpRegistry {
   }
 
   /**
-   * Find the track with this id, and the provider holding it.
+   * The provider named by a composite id, and the track it holds.
    *
-   * An id is unique within a provider, not across them, so the provider is
-   * part of the answer: acting on a track found in one provider while writing
-   * to another would address a different track that happens to share an id.
-   * `?provider=` narrows the search when a client knows where to look.
+   * A track is identified by the provider holding it and the id that provider
+   * minted, written `providerId:trackId`. The provider is therefore addressed
+   * directly: an id names one track in one place, so there is nothing to
+   * search for and no way for two providers to answer for the same id.
+   *
+   * Only the first colon separates the two: a provider id may not contain one,
+   * a track id may.
    *
    * Responds with the failure itself — 400, 404, 500, 501 — and resolves
    * undefined, so callers only handle the success.
@@ -345,103 +350,56 @@ export class TrackApiHttpRegistry {
     res: Response,
     forDeletion = false
   ): Promise<
-    | { id: string; provider: TrackProvider; track: TrackFeature | undefined }
+    | {
+        id: string
+        trackId: string
+        provider: TrackProvider
+        track: TrackFeature | undefined
+      }
     | undefined
   > {
-    let selected: { id: string; provider: TrackProvider }[]
-    try {
-      selected = this.selectProviders(req)
-    } catch (error) {
+    const composite = req.params.id
+    const separator = composite.indexOf(':')
+    if (separator < 1 || separator === composite.length - 1) {
       res.status(400).json({
-        error: error instanceof Error ? error.message : 'Invalid request'
+        error: `Track id '${composite}' must be written providerId:trackId`
       })
       return undefined
     }
-    if (selected.length === 0) {
-      res.status(501).json({ error: 'No track api provider configured' })
+    const id = composite.slice(0, separator)
+    const trackId = composite.slice(separator + 1)
+
+    const provider = this.trackProviders.get(id)
+    if (!provider) {
+      res.status(404).json({ error: `Provider '${id}' is not registered` })
       return undefined
     }
-    try {
-      const readable = selected.filter(
-        (s) => typeof s.provider.getTrack === 'function'
-      )
-      // Every provider is asked, not just until one answers: an id is unique
-      // within a provider and two of them may mint the same one, so stopping
-      // at the first match would act on whichever registered earlier.
-      const matches = (
-        await Promise.all(
-          readable.map(async ({ id, provider }) => {
-            const track = await provider.getTrack!(req.params.id)
-            return track ? { id, provider, track } : undefined
-          })
-        )
-      ).filter(
-        (
-          m
-        ): m is { id: string; provider: TrackProvider; track: TrackFeature } =>
-          !!m
-      )
 
-      if (matches.length > 1) {
-        res.status(409).json({
-          error: `Track id '${req.params.id}' exists in more than one provider (${matches
-            .map((m) => m.id)
-            .join(', ')}); name one with ?provider=`
-        })
-        return undefined
+    // Reading and deleting are independent in the provider contract, so a
+    // provider that can delete without reading back is a legitimate target
+    // for a delete even though a GET against it cannot be answered.
+    if (typeof provider.getTrack !== 'function') {
+      if (forDeletion && typeof provider.deleteTrack === 'function') {
+        return { id, trackId, provider, track: undefined }
       }
-      if (matches.length === 1) {
-        return matches[0]
-      }
-      // A provider may delete without being able to read back — the two are
-      // independent in the contract — so an unreadable single provider is
-      // still a legitimate target rather than an automatic 404.
-      const deleteOnly = selected.filter(
-        (s) =>
-          typeof s.provider.getTrack !== 'function' &&
-          typeof s.provider.deleteTrack === 'function'
-      )
-      // Only for a delete. A provider that cannot read cannot answer a GET,
-      // so letting it stand in there would turn "no readable track" into a
-      // 409 or a phantom hit.
-      if (!forDeletion) {
-        // Nothing registered can read a track by id: that is an operation
-        // this server does not support, not a track that is absent.
-        if (readable.length === 0) {
-          res.status(501).json({
-            error: 'No track api provider supports reading a track by id'
-          })
-          return undefined
+      res.status(501).json({
+        error: `Provider '${id}' does not support this operation`
+      })
+      return undefined
+    }
+
+    try {
+      const track = await provider.getTrack(trackId)
+      if (!track) {
+        // For a delete this is still a legitimate target: the provider may
+        // hold a track it cannot read back, and only deleteTrack can say.
+        if (forDeletion && typeof provider.deleteTrack === 'function') {
+          return { id, trackId, provider, track: undefined }
         }
         res.status(404).json({ error: 'Track not found' })
         return undefined
       }
-      // A provider that deletes without reading is a legitimate target once
-      // the readable ones have found nothing, whether or not any are
-      // registered alongside it.
-      if (deleteOnly.length === 1) {
-        return { ...deleteOnly[0], track: undefined }
-      }
-      if (deleteOnly.length > 1) {
-        res.status(409).json({
-          error: `Track id '${req.params.id}' may be held by more than one provider (${deleteOnly
-            .map((d) => d.id)
-            .join(', ')}); name one with ?provider=`
-        })
-        return undefined
-      }
-      // Nothing registered can even look a track up by id, so absence is not
-      // something this server can establish -- the same configuration the GET
-      // path already reports as unsupported. Answering 404 here would tell a
-      // client the track does not exist when the truth is that no provider
-      // can say.
-      if (readable.length === 0) {
-        res.status(501).json({
-          error: 'No track api provider supports addressing a track by id'
-        })
-        return undefined
-      }
-      res.status(404).json({ error: 'Track not found' })
+      return { id, trackId, provider, track }
     } catch (error) {
       console.error('Track api provider failed:', error)
       res.status(500).json({ error: 'Track api provider failed' })
@@ -495,6 +453,8 @@ export class TrackApiHttpRegistry {
       // find out. The provider assigns the id, so only the response knows it.
       const created = (result as { properties?: { id?: string } })?.properties
         ?.id
+      // `created` is already the composite the stamping in the caller
+      // produced, so it addresses the track as posted back to the client.
       if (successStatus === 201 && created) {
         res.setHeader(
           'Location',
@@ -575,7 +535,17 @@ function stampProvider(
     ...response,
     features: response.features.map((feature) => ({
       ...feature,
-      properties: { ...feature.properties, providerId }
+      properties: {
+        ...feature.properties,
+        providerId,
+        // Composed here rather than by the provider: a provider mints an id
+        // unique within itself and never has to know its own registry name,
+        // so it cannot compose this wrongly. Absent when the provider does
+        // not identify its tracks at all.
+        ...(feature.properties.id === undefined
+          ? {}
+          : { id: `${providerId}:${feature.properties.id}` })
+      }
     }))
   }
 }

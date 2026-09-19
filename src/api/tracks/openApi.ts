@@ -357,9 +357,9 @@ const tracksApiDoc = {
             in: 'path',
             required: true,
             schema: { type: 'string' },
-            description: 'Track id, as returned in properties.id'
-          },
-          { $ref: '#/components/parameters/Provider' }
+            description:
+              'Track id as returned in properties.id, written providerId:trackId. Only the first colon separates the two, so a track id may itself contain one.'
+          }
         ],
         responses: {
           200: {
@@ -370,11 +370,9 @@ const tracksApiDoc = {
               }
             }
           },
-          400: { description: 'An unknown provider was named' },
-          404: { description: 'No track with that id' },
-          409: {
-            description:
-              'The id exists in more than one provider; name one with provider'
+          400: { description: 'The id is not written providerId:trackId' },
+          404: {
+            description: 'No such provider, or no track with that id in it'
           },
           500: { description: 'The provider failed' },
           501: {
@@ -394,21 +392,19 @@ const tracksApiDoc = {
             in: 'path',
             required: true,
             schema: { type: 'string' },
-            description: 'Track id, as returned in properties.id'
-          },
-          { $ref: '#/components/parameters/Provider' }
+            description:
+              'Track id as returned in properties.id, written providerId:trackId. Only the first colon separates the two, so a track id may itself contain one.'
+          }
         ],
         responses: {
           200: { description: 'Deleted' },
-          400: { description: 'An unknown provider was named' },
+          400: { description: 'The id is not written providerId:trackId' },
           403: {
             description:
               'Administrative permission is required to delete a track'
           },
-          404: { description: 'No track with that id' },
-          409: {
-            description:
-              'The id exists in more than one provider; name one with provider'
+          404: {
+            description: 'No such provider, or no track with that id in it'
           },
           500: { description: 'The provider failed to delete the track' },
           501: {

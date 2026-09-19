@@ -137,18 +137,22 @@ export interface TracksRequest {
  */
 export interface TrackProperties {
   /**
-   * Identifies this track, and is what `GET` and `DELETE /tracks/{id}` address.
+   * Identifies this track within the provider that holds it.
    *
-   * Stable for as long as the track exists, and unique **within the provider
-   * that holds it** — two providers may mint the same id for different tracks,
-   * which is why the server resolves a track and then acts on the provider
-   * that answered rather than on the default one. `?provider=` narrows the
-   * search when a client knows where the track lives.
+   * Stable for as long as the track exists. A provider mints it and receives
+   * it back unchanged in `getTrack` and `deleteTrack`; the server prefixes its
+   * registry name to form the `providerId:trackId` a client addresses, so a
+   * provider never has to know what it is registered as.
    *
    * A recorded track may derive it from the context; an imported one has
    * nothing to derive it from and gets an opaque id.
+   *
+   * Optional because not every provider identifies tracks as objects. One
+   * serving a time-and-context query out of history has no handle to mint and
+   * implements neither `getTrack` nor `deleteTrack`; requiring an id there
+   * would mean inventing one that addresses nothing.
    */
-  id: string
+  id?: string
 
   /**
    * The Signal K context this track belongs to, when it has one.
@@ -416,6 +420,15 @@ export interface TrackImport {
    * separate and separately addressable.
    */
   context?: Context
+
+  /**
+   * Whatever else the client sent.
+   *
+   * The core shape above is validated; the rest is carried through and stored
+   * as posted. A client that keeps its own metadata on a track gets it back,
+   * and the API does not have to grow a field for every such use.
+   */
+  [key: string]: unknown
 }
 
 /** @category Track API */
