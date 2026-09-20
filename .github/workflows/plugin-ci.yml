@@ -137,6 +137,35 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
 
+      # npm 10.9.x crashes with "Cannot read properties of null (reading
+      # 'edgesOut')" while resolving an optional peer that is not being
+      # installed (npm/cli#9960, #9787 — both open). Any plugin depending on
+      # vitest reaches it through @vitest/browser-playwright, and the crash
+      # is deterministic, so the install retry below cannot clear it. Node 22
+      # ships 10.9.x and is the version this hits; Node 20 ships 10.8.2,
+      # which resolves the same tree cleanly, and Node 24 ships npm 11 or
+      # newer. Only the broken minor is replaced, so a caller pinning an
+      # older Node keeps its bundled npm rather than being handed one its
+      # engine range refuses.
+      #
+      # The range stops at 11 rather than tracking npm@latest: npm 12
+      # requires Node ^22.22.2, and `npm install -g` enforces that with a
+      # hard `notsup` failure, so @latest would fail this step outright on a
+      # caller pinning an earlier 22.x. npm 11 needs only >=22.9.0 and fixes
+      # the crash. Within 11 the range floats, so patch releases arrive
+      # without a change here.
+      #
+      # Replacing npm rather than dropping Node 22 from the matrix keeps the
+      # job testing a runtime plugins are still installed on: the crash is
+      # npm's, not Node's.
+      - name: Replace npm 10.9.x (arborist peer-resolution crash)
+        shell: bash
+        run: |
+          case "$(npm --version)" in
+            10.9.*) npm install -g 'npm@^11' ;;
+          esac
+          npm --version
+
       - name: Validate plugin package.json
         id: validate-pkg
         shell: bash
@@ -1788,6 +1817,35 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      # npm 10.9.x crashes with "Cannot read properties of null (reading
+      # 'edgesOut')" while resolving an optional peer that is not being
+      # installed (npm/cli#9960, #9787 — both open). Any plugin depending on
+      # vitest reaches it through @vitest/browser-playwright, and the crash
+      # is deterministic, so the install retry below cannot clear it. Node 22
+      # ships 10.9.x and is the version this hits; Node 20 ships 10.8.2,
+      # which resolves the same tree cleanly, and Node 24 ships npm 11 or
+      # newer. Only the broken minor is replaced, so a caller pinning an
+      # older Node keeps its bundled npm rather than being handed one its
+      # engine range refuses.
+      #
+      # The range stops at 11 rather than tracking npm@latest: npm 12
+      # requires Node ^22.22.2, and `npm install -g` enforces that with a
+      # hard `notsup` failure, so @latest would fail this step outright on a
+      # caller pinning an earlier 22.x. npm 11 needs only >=22.9.0 and fixes
+      # the crash. Within 11 the range floats, so patch releases arrive
+      # without a change here.
+      #
+      # Replacing npm rather than dropping Node 22 from the matrix keeps the
+      # job testing a runtime plugins are still installed on: the crash is
+      # npm's, not Node's.
+      - name: Replace npm 10.9.x (arborist peer-resolution crash)
+        shell: bash
+        run: |
+          case "$(npm --version)" in
+            10.9.*) npm install -g 'npm@^11' ;;
+          esac
+          npm --version
 
       - name: Install SignalK server ${{ matrix.signalk-server-version }}
         run: |
