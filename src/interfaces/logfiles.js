@@ -31,6 +31,7 @@ module.exports = function (app) {
 
 function mountApi(app) {
   app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/logfiles/`)
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/ziplogs`)
   app.get(`${SERVERROUTESPREFIX}/logfiles/`, function (req, res) {
     listLogFiles(app, (err, files) => {
       if (err) {
