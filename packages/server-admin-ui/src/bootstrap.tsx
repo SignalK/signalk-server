@@ -4,6 +4,7 @@ import * as ReactDOMClient from 'react-dom/client'
 import * as ReactJSXRuntime from 'react/jsx-runtime'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Routes, Route } from 'react-router-dom'
+import { ROUTER_FUTURE_FLAGS } from './routerFuture'
 
 import 'simple-line-icons/css/simple-line-icons.css'
 import '../scss/style.scss'
@@ -38,7 +39,7 @@ const container = document.getElementById('root')!
 const root = createRoot(container)
 root.render(
   <WebSocketProvider>
-    <HashRouter>
+    <HashRouter future={ROUTER_FUTURE_FLAGS}>
       <Routes>
         <Route path="/*" element={<Full />} />
       </Routes>

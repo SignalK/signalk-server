@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { ROUTER_FUTURE_FLAGS } from '../../../routerFuture'
 import DetailView from './DetailView'
 
 interface DetailPayload {
@@ -62,6 +63,7 @@ function renderDetail(name: string) {
     '/signalk/v1'
   return render(
     <MemoryRouter
+      future={ROUTER_FUTURE_FLAGS}
       initialEntries={[`/apps/store/plugin/${encodeURIComponent(name)}`]}
     >
       <Routes>

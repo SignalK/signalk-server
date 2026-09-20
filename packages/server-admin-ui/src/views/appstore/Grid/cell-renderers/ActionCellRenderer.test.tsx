@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { ROUTER_FUTURE_FLAGS } from '../../../../routerFuture'
 import ActionCellRenderer, {
   formatBytes,
   type AppData
@@ -34,7 +35,7 @@ describe('formatBytes', () => {
 describe('ActionCellRenderer terminal install status', () => {
   function renderAction(data: Omit<AppData, 'name'>) {
     return render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <ActionCellRenderer data={{ name: 'signalk-example', ...data }} />
       </MemoryRouter>
     )

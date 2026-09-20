@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { ROUTER_FUTURE_FLAGS } from '../../../routerFuture'
 import { useStore } from '../../../store'
 import type { AppStoreState } from '../../../store/types'
 
@@ -47,7 +48,7 @@ describe('Apps auto-jump on install completion', () => {
 
   function renderApps() {
     return render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <Apps />
       </MemoryRouter>
     )
@@ -176,7 +177,7 @@ describe('Apps view/search state survives the detail round trip', () => {
 
   function renderApps() {
     return render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <Apps />
       </MemoryRouter>
     )
@@ -277,7 +278,7 @@ describe('Apps projects the pending version onto installing rows', () => {
       installing: [{ name: 'plugin-a', pendingVersion: '2.0.0' }]
     })
     render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <Apps />
       </MemoryRouter>
     )
