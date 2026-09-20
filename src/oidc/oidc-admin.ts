@@ -206,21 +206,18 @@ export function registerOIDCAdminRoutes(
         newOidcConfig.readwriteGroups = readwriteGroups
       }
 
-      // Fill in values from existing config or environment variables
-      // for fields the form left empty (e.g., secrets set via env var)
-      const envConfig = parseEnvConfig()
-      if (!newOidcConfig.clientSecret) {
-        newOidcConfig.clientSecret =
-          config.oidc?.clientSecret || envConfig.clientSecret
-      }
-      if (!newOidcConfig.redirectUri) {
-        newOidcConfig.redirectUri =
-          config.oidc?.redirectUri || envConfig.redirectUri
+      // The GET endpoint redacts the client secret, so an empty field means
+      // "unchanged" rather than "cleared"
+      if (!newOidcConfig.clientSecret && config.oidc?.clientSecret) {
+        newOidcConfig.clientSecret = config.oidc.clientSecret
       }
 
-      // Validate the configuration
+      // Environment variables take precedence at runtime, so validate what the
+      // server will actually use. Only the submitted values are persisted,
+      // keeping env-provided secrets out of security.json.
+      const envConfig = parseEnvConfig()
       try {
-        validateOIDCConfig(newOidcConfig)
+        validateOIDCConfig(mergeConfigs(newOidcConfig, envConfig))
       } catch (err) {
         if (err instanceof OIDCError) {
           res.status(400).json({ error: err.message })
