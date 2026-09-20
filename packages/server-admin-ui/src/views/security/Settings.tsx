@@ -105,7 +105,7 @@ export default function Settings() {
                 className="form-horizontal"
               >
                 <Form.Group as={Row}>
-                  <Col xs="0" md="3">
+                  <Col md="3">
                     <span className="col-form-label">
                       Allow Readonly Access
                     </span>
@@ -135,7 +135,7 @@ export default function Settings() {
                   </Col>
                 </Form.Group>
                 <Form.Group as={Row}>
-                  <Col xs="0" md="3">
+                  <Col md="3">
                     <span className="col-form-label">
                       Allow New User Registration
                     </span>
@@ -165,7 +165,7 @@ export default function Settings() {
                   </Col>
                 </Form.Group>
                 <Form.Group as={Row}>
-                  <Col xs="0" md="3">
+                  <Col md="3">
                     <span className="col-form-label">
                       Allow New Device Registration
                     </span>

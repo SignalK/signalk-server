@@ -269,7 +269,7 @@ const ServerSettings: React.FC = () => {
                 </Col>
                 <Col xs="12" md={fieldColWidthMd}>
                   <Form.Control
-                    size={5}
+                    htmlSize={5}
                     style={{ width: 'auto' }}
                     type="text"
                     id="port"
@@ -302,7 +302,7 @@ const ServerSettings: React.FC = () => {
                 </Col>
                 <Col xs="12" md={fieldColWidthMd}>
                   <Form.Control
-                    size={5}
+                    htmlSize={5}
                     style={{ width: 'auto' }}
                     type="text"
                     id="sslport"

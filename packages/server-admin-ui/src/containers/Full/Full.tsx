@@ -33,8 +33,8 @@ const CHUNK_RELOAD_FLAG = 'signalk:chunkReloaded'
 // One retry covers transient network blips; persistent failures (e.g. stale
 // chunk hashes after a redeploy) fall through to the ErrorBoundary, which
 // triggers a one-shot reload.
-function lazyWithRetry<T extends ComponentType<unknown>>(
-  importer: () => Promise<{ default: T }>
+function lazyWithRetry<P extends object>(
+  importer: () => Promise<{ default: ComponentType<P> }>
 ) {
   return React.lazy(() =>
     importer()

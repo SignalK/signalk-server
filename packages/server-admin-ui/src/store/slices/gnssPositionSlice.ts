@@ -24,7 +24,7 @@ export const EMPTY_GNSS_CONFIG: Readonly<GnssConfigPayload> = Object.freeze({
   // Freeze the array too: it is shared by reference into every
   // setGnssSensors(EMPTY_GNSS_CONFIG) call, so a shallow freeze would still
   // let a stray push/sort corrupt the shared default.
-  sensors: Object.freeze([]) as GnssSensorConfig[]
+  sensors: Object.freeze([]) as unknown as GnssSensorConfig[]
 })
 
 function isGnssCorrectionMode(v: unknown): v is GnssCorrectionMode {

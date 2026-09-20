@@ -97,13 +97,18 @@ export default function Devices() {
     }
   }, [loginStatus.authenticationRequired, loadDevices])
 
-  const handleDeviceChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleDeviceChange = (
+    event: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const target = event.target
     const value =
-      event.target.type === 'checkbox'
-        ? event.target.checked
-        : event.target.value
+      target instanceof HTMLInputElement && target.type === 'checkbox'
+        ? target.checked
+        : target.value
     setSelectedDevice((prev) =>
-      prev ? { ...prev, [event.target.name]: value } : null
+      prev ? { ...prev, [target.name]: value } : null
     )
   }
 
@@ -232,7 +237,7 @@ export default function Devices() {
                     </Col>
                     <Col xs="12" md="9">
                       <Form.Control
-                        size={60}
+                        htmlSize={60}
                         style={{ width: 'auto' }}
                         type="text"
                         id="description"

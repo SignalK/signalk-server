@@ -350,7 +350,7 @@ export class WebSocketService {
             defaultId: undefined,
             configuredId: undefined,
             configuredAvailable: false
-          }) as Parameters<SignalKStore['setHistoryProviders']>[0]
+          }) as unknown as Parameters<SignalKStore['setHistoryProviders']>[0]
         )
         break
       case 'N2KDEVICESTATUS':
@@ -400,12 +400,16 @@ export class WebSocketService {
       case 'APP_STORE_CHANGED':
         useStore
           .getState()
-          .setAppStore(data as Parameters<SignalKStore['setAppStore']>[0])
+          .setAppStore(
+            data as unknown as Parameters<SignalKStore['setAppStore']>[0]
+          )
         break
       case 'PLUGINS_CHANGED':
         useStore
           .getState()
-          .setPlugins(data as Parameters<SignalKStore['setPlugins']>[0])
+          .setPlugins(
+            data as unknown as Parameters<SignalKStore['setPlugins']>[0]
+          )
         break
       default:
         console.debug('Unhandled server event:', eventType)

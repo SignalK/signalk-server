@@ -40,12 +40,17 @@ const VesselConfiguration: React.FC = () => {
   }, [fetchVessel])
 
   const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (
+      event: React.ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >
+    ) => {
+      const target = event.target
       const value =
-        event.target.type === 'checkbox'
-          ? event.target.checked
-          : event.target.value
-      setVesselData((prev) => ({ ...prev, [event.target.name]: value }))
+        target instanceof HTMLInputElement && target.type === 'checkbox'
+          ? target.checked
+          : target.value
+      setVesselData((prev) => ({ ...prev, [target.name]: value }))
     },
     []
   )
