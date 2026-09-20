@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, type Location } from 'react-router-dom'
+import { ROUTER_FUTURE_FLAGS } from '../../routerFuture'
 import Sidebar from './Sidebar'
 
 vi.mock('../../store', () => ({
@@ -34,7 +35,7 @@ function renderSidebar(pathname = '/dashboard') {
     key: 'test'
   } as Location
   return render(
-    <MemoryRouter initialEntries={[pathname]}>
+    <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={[pathname]}>
       <Sidebar location={location} />
     </MemoryRouter>
   )

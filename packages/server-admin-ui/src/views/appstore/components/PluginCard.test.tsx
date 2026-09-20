@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { ROUTER_FUTURE_FLAGS } from '../../../routerFuture'
 import PluginCard from './PluginCard'
 import type { AppInfo } from '../../../store/types'
 
@@ -13,7 +14,7 @@ function renderCard(app: Partial<AppInfo>) {
     ...app
   }
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
       <PluginCard app={merged} />
     </MemoryRouter>
   )
