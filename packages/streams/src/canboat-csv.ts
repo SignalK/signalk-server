@@ -19,7 +19,7 @@
  *
  * The first line it sends on connect is the canboat `# format=FAST`
  * header. Injecting frames onto the bus goes through a separate
- * write-only input port (2600 by default) that accepts the same
+ * write-only output port (2600 by default) that accepts the same
  * PLAIN/FAST lines and never sends anything back; the raw port
  * discards whatever a client writes to it.
  *
