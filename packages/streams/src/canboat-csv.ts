@@ -9,35 +9,34 @@
  */
 
 /**
- * Bidirectional TCP provider for `canboat-pipeline`'s CSV R/W port.
+ * TCP provider for `canboat-pipeline`'s raw CSV ports.
  *
- * canboat-pipeline (https://github.com/canboat/canboat-rs) exposes
- * a "Canboat Raw CSV" port (port 2603 by default) that streams every
- * N2K frame as a canboat PLAIN/FAST line:
+ * canboat-pipeline (https://github.com/canboat/canboat) streams every
+ * N2K frame as a canboat PLAIN/FAST line on its read-only raw port
+ * (2603 by default):
  *
  *   2026-05-29T19:16:04.826Z,2,127251,14,255,8,ff,5e,7d,00,00,ff,ff,ff
  *
- * Clients can also write PLAIN/FAST lines back to inject PGNs into
- * the N2K bus. The first line the server sends on connect is the
- * canboat `# format=FAST` header.
+ * The first line it sends on connect is the canboat `# format=FAST`
+ * header. Injecting frames onto the bus goes through a separate
+ * write-only input port (2600 by default) that accepts the same
+ * PLAIN/FAST lines and never sends anything back; the raw port
+ * discards whatever a client writes to it.
  *
  * This stream:
  *
- *  * Opens a TCP connection (with reconnect) to host:port.
- *  * Pipes received bytes downstream — the pipeline then runs them
- *    through `Liner` and `CanboatJs` which parses each line via
+ *  * Opens a TCP connection (with reconnect) to host:port and pipes
+ *    received bytes downstream — the pipeline then runs them through
+ *    `Liner` and `CanboatJs` which parses each line via
  *    `parseActisense` and emits N2K objects.
+ *  * Opens a second TCP connection (with reconnect) to
+ *    host:inputPort for outbound frames, and signals
+ *    `nmea2000OutAvailable` once it is up.
  *  * Listens on `nmea2000out` / `nmea2000JsonOut` (or the events
  *    named in `options.outEvent` / `options.jsonOutEvent`).
  *    String messages are sent as-is; objects are formatted with
  *    `encodeActisense` first. Each outbound line is terminated with
- *    `\r\n` and sent over the same socket.
- *
- * The wire format is identical in both directions, so the same
- * socket carries read + write traffic. canboat-pipeline parses each
- * inbound line through its standalone `parse_plain` and pushes the
- * resulting `RawFrame` to its configured device writer
- * (NGT-1 / iKonvert / Maretron).
+ *    `\r\n` and sent over the input-port connection.
  */
 
 import { encodeActisense, toPgn } from '@canboat/canboatjs'
@@ -49,6 +48,7 @@ import type { CreateDebug, DebugLogger } from './types'
 interface CanboatCsvOptions {
   host: string
   port: number
+  inputPort?: string | number
   app: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
@@ -79,9 +79,12 @@ export default class CanboatCsvStream extends Transform {
   private readonly debugData: DebugLogger
   private readonly debugOut: DebugLogger
   private static readonly DEFAULT_TIMEOUT_SECONDS = 60
+  private static readonly DEFAULT_INPUT_PORT = 2600
   private readonly noDataReceivedTimeout: number
-  private tcpStream: net.Socket | undefined
-  private reconnector: { disconnect(): void } | null = null
+  private readonly inputPort: number
+  private readStream: net.Socket | undefined
+  private writeStream: net.Socket | undefined
+  private readonly reconnectors: Array<{ disconnect(): void }> = []
 
   constructor(options: CanboatCsvOptions) {
     super()
@@ -93,6 +96,12 @@ export default class CanboatCsvStream extends Transform {
       (isNaN(parsedTimeout)
         ? CanboatCsvStream.DEFAULT_TIMEOUT_SECONDS
         : parsedTimeout) * 1000
+    const parsedInputPort = Number.parseInt(
+      (this.options.inputPort + '').trim()
+    )
+    this.inputPort = isNaN(parsedInputPort)
+      ? CanboatCsvStream.DEFAULT_INPUT_PORT
+      : parsedInputPort
 
     const createDebug = options.createDebug ?? require('debug')
     this.debug = createDebug('signalk:streams:canboat-csv')
@@ -110,7 +119,7 @@ export default class CanboatCsvStream extends Transform {
 
   /**
    * Wire app-side events (`nmea2000out`, `nmea2000JsonOut`) to the
-   * TCP write side. Strings get sent verbatim (assumed to already be
+   * input-port connection. Strings get sent verbatim (assumed to already be
    * canboat PLAIN/FAST). Objects get encoded via `encodeActisense`.
    *
    * Mirrors actisense-serial.ts in canboatjs, minus the NGT-1 binary
@@ -121,8 +130,8 @@ export default class CanboatCsvStream extends Transform {
     const outEvents = outName.split(',').map((e) => e.trim())
     for (const ev of outEvents) {
       this.options.app.on(ev, (msg: string | PgnObject) => {
-        if (!this.tcpStream) {
-          this.debug('write while disconnected — dropping')
+        if (!this.writeStream) {
+          this.debug('write while input port disconnected — dropping')
           return
         }
         if (typeof msg === 'string') {
@@ -137,7 +146,7 @@ export default class CanboatCsvStream extends Transform {
     const jsonEvents = jsonName.split(',').map((e) => e.trim())
     for (const ev of jsonEvents) {
       this.options.app.on(ev, (msg: PgnObject) => {
-        if (!this.tcpStream) return
+        if (!this.writeStream) return
         this.writeObject(msg)
       })
     }
@@ -149,7 +158,7 @@ export default class CanboatCsvStream extends Transform {
    * choice is cosmetic but matches what its own write_plain emits.
    */
   private writeRawLine(line: string): void {
-    if (!this.tcpStream) return
+    if (!this.writeStream) return
     const out = line.endsWith('\n') ? line : line + '\r\n'
     // Guard the `.trim()` so it doesn't run when debug logging is
     // disabled — the `debug` package returns a function whose
@@ -158,7 +167,7 @@ export default class CanboatCsvStream extends Transform {
     if (this.debugOut.enabled) {
       this.debugOut('sending %s', out.trim())
     }
-    this.tcpStream.write(out)
+    this.writeStream.write(out)
     if ((this.options.app.listenerCount?.('canboatjs:rawsend') ?? 0) > 0) {
       this.options.app.emit('canboatjs:rawsend', { data: line })
     }
@@ -182,50 +191,90 @@ export default class CanboatCsvStream extends Transform {
   }
 
   private connectAndStart(): void {
-    this.reconnector = reconnect((opts: object) => {
-      return net.connect(opts as { host: string; port: number })
-    })({ maxDelay: 5 * 1000 }, (tcpStream: net.Socket) => {
-      if (this.noDataReceivedTimeout > 0) {
-        tcpStream.setTimeout(this.noDataReceivedTimeout)
-        this.debug(
-          `Setting socket idle timeout ${this.options.host}:${this.options.port} ${this.noDataReceivedTimeout}`
-        )
-        tcpStream.on('timeout', () => {
+    const { host, port } = this.options
+    this.connect(
+      port,
+      false,
+      (socket) => {
+        if (this.noDataReceivedTimeout > 0) {
+          socket.setTimeout(this.noDataReceivedTimeout)
           this.debug(
-            `Idle timeout, closing socket ${this.options.host}:${this.options.port}`
+            `Setting socket idle timeout ${host}:${port} ${this.noDataReceivedTimeout}`
           )
-          tcpStream.end()
+          socket.on('timeout', () => {
+            this.debug(`Idle timeout, closing socket ${host}:${port}`)
+            socket.end()
+          })
+        }
+        socket.on('data', (data: Buffer) => {
+          if (this.debugData.enabled) {
+            this.debugData(data.toString())
+          }
+          // Push bytes downstream — the pipeline factory adds a
+          // `Liner` after us, then canboatjs parses each line.
+          this.write(data)
         })
+      },
+      (socket) => {
+        this.readStream = socket
+        this.reportConnected()
+      },
+      () => {
+        this.readStream = undefined
       }
+    )
+    // canboat-pipeline shuts down its sending side of every input-port
+    // connection as soon as it accepts it. Staying half-open keeps our
+    // write side usable, and dropping reconnect-core's 'end' handler
+    // stops it treating that EOF as a disconnect. A real disconnect
+    // still surfaces as 'error' / 'close'.
+    this.connect(
+      this.inputPort,
+      true,
+      (socket) => {
+        socket.removeAllListeners('end')
+      },
+      (socket) => {
+        this.writeStream = socket
+        this.reportConnected()
+        this.options.app.emit('nmea2000OutAvailable')
+      },
+      () => {
+        this.writeStream = undefined
+      }
+    )
+  }
+
+  private connect(
+    port: number,
+    allowHalfOpen: boolean,
+    onSocket: (socket: net.Socket) => void,
+    onConnect: (socket: net.Socket) => void,
+    onDisconnect: () => void
+  ): void {
+    const { host, providerId, app } = this.options
+    const reconnector = reconnect((opts: object) => {
+      return net.connect({
+        ...(opts as { host: string; port: number }),
+        allowHalfOpen
+      })
+    })({ maxDelay: 5 * 1000 }, (socket: net.Socket) => {
       // Disable Nagle so our small per-PGN writes flush immediately
       // — matches the TCP_NODELAY setting canboat-pipeline applies
       // on its side.
-      tcpStream.setNoDelay(true)
-      tcpStream.on('data', (data: Buffer) => {
-        if (this.debugData.enabled) {
-          this.debugData(data.toString())
-        }
-        // Push bytes downstream — the pipeline factory adds a
-        // `Liner` after us, then canboatjs parses each line.
-        this.write(data)
-      })
+      socket.setNoDelay(true)
+      onSocket(socket)
     })
-      .on('connect', (con: net.Socket) => {
-        this.tcpStream = con
-        const msg = `Connected to canboat-pipeline ${this.options.host}:${this.options.port}`
-        this.options.app.setProviderStatus(this.options.providerId, msg)
-        this.options.app.emit('nmea2000OutAvailable')
-        this.debug(msg)
-      })
+      .on('connect', onConnect)
       .on('reconnect', (n: number, delay: number) => {
-        const msg = `Reconnect ${this.options.host}:${this.options.port} retry ${n} delay ${delay}`
-        this.options.app.setProviderError(this.options.providerId, msg)
+        const msg = `Reconnect ${host}:${port} retry ${n} delay ${delay}`
+        app.setProviderError(providerId, msg)
         this.debug(msg)
       })
       .on('disconnect', () => {
-        this.tcpStream = undefined
-        const msg = `Disconnected ${this.options.host}:${this.options.port}`
-        this.options.app.setProviderError(this.options.providerId, msg)
+        onDisconnect()
+        const msg = `Disconnected ${host}:${port}`
+        app.setProviderError(providerId, msg)
         this.debug(msg)
       })
       .on('error', (err: Error & { errors?: string[] }) => {
@@ -237,15 +286,25 @@ export default class CanboatCsvStream extends Transform {
         } else {
           msg = err.toString()
         }
-        this.options.app.setProviderError(this.options.providerId, msg)
+        app.setProviderError(providerId, `${host}:${port} ${msg}`)
         console.error('CanboatCsvProvider:' + msg)
       })
-      .connect(this.options)
+      .connect({ host, port })
+    this.reconnectors.push(reconnector)
+  }
+
+  private reportConnected(): void {
+    const { host, port } = this.options
+    const state = (socket: net.Socket | undefined) =>
+      socket ? 'connected' : 'connecting'
+    const msg = `canboat-pipeline ${host}: port ${port} ${state(this.readStream)}, input port ${this.inputPort} ${state(this.writeStream)}`
+    this.options.app.setProviderStatus(this.options.providerId, msg)
+    this.debug(msg)
   }
 
   end(): this {
-    if (this.reconnector) {
-      this.reconnector.disconnect()
+    for (const reconnector of this.reconnectors) {
+      reconnector.disconnect()
     }
     return this
   }

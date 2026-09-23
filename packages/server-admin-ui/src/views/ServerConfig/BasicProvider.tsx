@@ -23,6 +23,7 @@ interface ProviderOptions {
   device?: string
   baudrate?: number
   port?: string
+  inputPort?: string
   host?: string
   interface?: string
   uniqueNumber?: string
@@ -1696,7 +1697,7 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             <option value="ikonvert-canboatjs">iKonvert (canboatjs)</option>
             <option value="navlink2-tcp-canboatjs">NavLink2 (canboatjs)</option>
             <option value="canboat-csv-canboatjs">
-              canboat-pipeline CSV R/W (canboatjs)
+              canboat-pipeline CSV (canboatjs)
             </option>
             <option value="ydwg02-canboatjs">
               Yacht Devices RAW TCP (canboatjs)
@@ -1772,6 +1773,13 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
+          <TextInput
+            title="Input Port"
+            name="options.inputPort"
+            helpText="Write-only port for sending PGNs to the bus. Leave empty for the default 2600."
+            value={value.options.inputPort}
+            onChange={onChange}
+          />
           <NoDataReceivedTimeoutInput
             value={value.options}
             onChange={onChange}
