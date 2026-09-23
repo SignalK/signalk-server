@@ -204,7 +204,11 @@ export default function PluginConfigurationList() {
   }, [])
 
   const handleStatusFilter = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
+    (
+      event: ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >
+    ) => {
       const value = event.target.value
       startFilterTransition(() => {
         setStatusFilter(value)

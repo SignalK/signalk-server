@@ -160,8 +160,9 @@ describe('appSlice', () => {
   describe('setBackpressureWarning', () => {
     it('should set backpressure warning', () => {
       const warning = {
-        message: 'High backpressure detected',
-        timestamp: new Date().toISOString()
+        accumulated: 1024,
+        duration: 5000,
+        timestamp: Date.now()
       }
 
       useStore.getState().setBackpressureWarning(warning)
@@ -171,8 +172,9 @@ describe('appSlice', () => {
 
     it('should clear backpressure warning with null', () => {
       useStore.getState().setBackpressureWarning({
-        message: 'test',
-        timestamp: ''
+        accumulated: 1,
+        duration: 1,
+        timestamp: 1
       })
       useStore.getState().setBackpressureWarning(null)
 

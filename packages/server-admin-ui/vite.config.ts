@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import { compression } from 'vite-plugin-compression2'
+import checker from 'vite-plugin-checker'
 
 import '@signalk/server-admin-ui-dependencies'
 
@@ -82,6 +83,7 @@ export default defineConfig({
   base: './',
   publicDir: 'public_src',
   plugins: [
+    checker({ typescript: true }),
     replaceAddonScripts(),
     stripSvgFonts(),
     react(),

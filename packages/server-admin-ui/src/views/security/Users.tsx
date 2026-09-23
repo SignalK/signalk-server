@@ -81,14 +81,17 @@ export default function Users() {
     }
   }, [loginStatus.authenticationRequired, loadUsers])
 
-  const handleUserChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleUserChange = (
+    event: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const target = event.target
     const value =
-      event.target.type === 'checkbox'
-        ? event.target.checked
-        : event.target.value
-    setSelectedUser((prev) =>
-      prev ? { ...prev, [event.target.name]: value } : null
-    )
+      target instanceof HTMLInputElement && target.type === 'checkbox'
+        ? target.checked
+        : target.value
+    setSelectedUser((prev) => (prev ? { ...prev, [target.name]: value } : null))
   }
 
   const handleAddUser = () => {

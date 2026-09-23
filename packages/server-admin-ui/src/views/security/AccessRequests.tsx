@@ -112,13 +112,18 @@ export default function AccessRequests() {
     }, 0)
   }
 
-  const handleRequestChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleRequestChange = (
+    event: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const target = event.target
     const value =
-      event.target.type === 'checkbox'
-        ? event.target.checked
-        : event.target.value
+      target instanceof HTMLInputElement && target.type === 'checkbox'
+        ? target.checked
+        : target.value
     setSelectedRequest((prev) =>
-      prev ? { ...prev, [event.target.name]: value } : null
+      prev ? { ...prev, [target.name]: value } : null
     )
   }
 
@@ -260,7 +265,6 @@ export default function AccessRequests() {
                   >
                     <Col xs="4" md="4" lg="2" className={'ps-0 pe-0 pe-md-2'}>
                       <Button
-                        size="md"
                         variant="success"
                         onClick={() =>
                           handleAccessRequest(
@@ -299,7 +303,6 @@ export default function AccessRequests() {
                       className={'ps-2 ps-lg-1 pe-0 pe-md-2'}
                     >
                       <Button
-                        size="md"
                         variant="danger"
                         className="float-end float-sm-start"
                         onClick={() =>

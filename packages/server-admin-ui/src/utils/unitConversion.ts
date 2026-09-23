@@ -44,7 +44,7 @@ export type UnitDefinitions = Record<string, UnitDefinition>
 export function convertValue(
   value: unknown,
   siUnit: string,
-  category: string,
+  category: string | undefined,
   presetDetails: PresetDetails | null,
   unitDefinitions: UnitDefinitions | null,
   displayUnits?: { targetUnit?: string; formula?: string; symbol?: string }

@@ -283,7 +283,7 @@ const OIDCSettings: React.FC = () => {
               className="form-horizontal"
             >
               <Form.Group as={Row}>
-                <Col xs="0" md="3">
+                <Col md="3">
                   <span className="col-form-label">Enable OIDC</span>
                   {renderEnvBadge('enabled')}
                 </Col>
@@ -568,7 +568,7 @@ const OIDCSettings: React.FC = () => {
               <h5>User Settings</h5>
 
               <Form.Group as={Row}>
-                <Col xs="0" md="3">
+                <Col md="3">
                   <span className="col-form-label">Auto-Create Users</span>
                   {renderEnvBadge('autoCreateUsers')}
                 </Col>
@@ -602,7 +602,7 @@ const OIDCSettings: React.FC = () => {
               </Form.Group>
 
               <Form.Group as={Row}>
-                <Col xs="0" md="3">
+                <Col md="3">
                   <span className="col-form-label">Auto-Login</span>
                   {renderEnvBadge('autoLogin')}
                 </Col>

@@ -218,6 +218,7 @@ describe('detectInstanceConflicts', () => {
     }
   ): N2kDeviceEntry => ({
     src: '0',
+    srcAddr: '0',
     ...overrides
   })
 

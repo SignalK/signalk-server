@@ -66,10 +66,10 @@
   },
   "workspaces": [
     "packages/server-admin-ui-dependencies",
+    "packages/path-metadata",
     "packages/server-admin-ui",
     "packages/streams",
     "packages/server-api",
-    "packages/path-metadata",
     "packages/resources-provider-plugin",
     "packages/typedoc-theme",
     "packages/assemblyscript-plugin-sdk"

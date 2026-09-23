@@ -1493,7 +1493,7 @@ const MIN_SYSTEM_INSTANCE = 0
 const MAX_SYSTEM_INSTANCE = 15
 
 function clampedInstanceChange(
-  event: ChangeEvent<HTMLInputElement>,
+  event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   onChange: OnChangeHandler,
   min: number,
   max: number
@@ -2010,7 +2010,7 @@ function SignalK({ value, onChange }: TypeComponentProps) {
             <PortInput value={value.options} onChange={onChange} />
             {value.options.type === 'wss' && (
               <Form.Group as={Row} className="mb-3">
-                <Col xs="0" md="3">
+                <Col md="3">
                   <Form.Label htmlFor="provider-selfsignedcert">
                     Allow self signed certificates
                   </Form.Label>

@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand'
+import type { BackpressureWarning } from '../types'
 
 export type WebSocketStatus =
   'initial' | 'connecting' | 'open' | 'closed' | 'error'
@@ -172,11 +173,7 @@ export const createWsSlice: StateCreator<WsSlice, [], [], WsSlice> = (
         if ('setBackpressureWarning' in state) {
           const fullState = state as WsSlice & {
             setBackpressureWarning: (
-              warning: {
-                accumulated: number
-                duration: number
-                timestamp: number
-              } | null
+              warning: BackpressureWarning | null
             ) => void
           }
           fullState.setBackpressureWarning({
