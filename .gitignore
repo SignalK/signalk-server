@@ -31,6 +31,10 @@ test/plugin-test-config/ssl-cert.pem
 test/plugin-test-config/ssl-key.pem
 test/plugin-test-config/baseDeltas.json
 test/plugin-test-config/unitpreferences/
+test/shutdown-test-config/.npmrc
+test/shutdown-test-config/package.json
+test/shutdown-test-config/unitpreferences/
+test/shutdown-test-config/*.tmp
 
 test/server-test-config/applicationData/
 test/server-test-config/unitpreferences/
