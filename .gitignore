@@ -1,5 +1,6 @@
 node_modules
 !test/plugin-test-config/node_modules/
+!test/plugin-stop-config/node_modules/
 
 package-lock.json
 
@@ -31,6 +32,10 @@ test/plugin-test-config/ssl-cert.pem
 test/plugin-test-config/ssl-key.pem
 test/plugin-test-config/baseDeltas.json
 test/plugin-test-config/unitpreferences/
+test/plugin-stop-config/.npmrc
+test/plugin-stop-config/package.json
+test/plugin-stop-config/unitpreferences/
+test/plugin-stop-config/*.tmp
 
 test/server-test-config/applicationData/
 test/server-test-config/unitpreferences/
