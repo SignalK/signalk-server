@@ -86,6 +86,49 @@ describe('dataSlice', () => {
     })
   })
 
+  describe('removeMetaKeys', () => {
+    it('drops a key a merged delta would otherwise preserve', () => {
+      useStore.getState().updateMeta('vessels.self', 'navigation.state', {
+        description: 'Navigational state',
+        updateContract: 'event'
+      } as Partial<MetaData>)
+
+      useStore
+        .getState()
+        .removeMetaKeys('vessels.self', 'navigation.state', ['updateContract'])
+
+      const meta = useStore
+        .getState()
+        .getMeta('vessels.self', 'navigation.state')
+      expect(meta).toEqual({ description: 'Navigational state' })
+    })
+
+    it('leaves the entry alone when the key is not present', () => {
+      useStore
+        .getState()
+        .updateMeta('vessels.self', 'navigation.state', { units: 'm/s' })
+      const before = useStore
+        .getState()
+        .getMeta('vessels.self', 'navigation.state')
+
+      useStore
+        .getState()
+        .removeMetaKeys('vessels.self', 'navigation.state', ['updateContract'])
+
+      expect(
+        useStore.getState().getMeta('vessels.self', 'navigation.state')
+      ).toBe(before)
+    })
+
+    it('ignores a path it has no metadata for', () => {
+      expect(() =>
+        useStore
+          .getState()
+          .removeMetaKeys('vessels.self', 'navigation.unknown', ['units'])
+      ).not.toThrow()
+    })
+  })
+
   describe('updateMeta', () => {
     it('should add metadata for a path', () => {
       const metaData: MetaData = {
