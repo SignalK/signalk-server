@@ -3,7 +3,7 @@
   width: 1em;
   height: 1em;
   border-radius: 50%;
-  background-color: red;
+  background-color: var(--bs-red);
   animation: blinking-circle 0.65s infinite ease-in-out;
 }
 

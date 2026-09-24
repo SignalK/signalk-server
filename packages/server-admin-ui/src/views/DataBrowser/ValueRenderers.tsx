@@ -6,7 +6,7 @@ import { faEyeSlash } from '@fortawesome/free-solid-svg-icons/faEyeSlash'
 import { faBell } from '@fortawesome/free-solid-svg-icons/faBell'
 import { faBellSlash } from '@fortawesome/free-solid-svg-icons/faBellSlash'
 
-import '../../blinking-circle.css'
+import '../../../src/styles/blinking-circle.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import type { MetaData } from '../../store'
 

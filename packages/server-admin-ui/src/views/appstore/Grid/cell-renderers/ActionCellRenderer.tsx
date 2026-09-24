@@ -365,7 +365,7 @@ export default function ActionCellRenderer({
           {loadingVersions ? (
             <div className="text-center">
               <div className="spinner-border text-primary" role="status">
-                <span className="sr-only">Loading...</span>
+                <span className="visually-hidden">Loading...</span>
               </div>
               <p className="mt-2">Loading versions...</p>
             </div>
@@ -375,7 +375,7 @@ export default function ActionCellRenderer({
                 style={{
                   maxHeight: '450px',
                   overflowY: 'auto',
-                  border: '1px solid #ccc'
+                  border: '1px solid var(--bs-border-color)'
                 }}
               >
                 <ListGroup>
