@@ -325,25 +325,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-/**
- * Every sourceRef the device currently publishes under, in both the canName
- * and the bus-address form, on every connection. Read from the sources tree
- * and from the per-source identity deltas, which can know the canName before
- * the tree does.
- */
-export function findDeviceSourceRefs(
-  deviceKey: string,
+type SourceRefVisitor = (ref: string, src: number, deviceKey: string) => void
+
+// Every NMEA 2000 sourceRef with a known identity, in both the canName and
+// the bus-address form, on every connection. Read from the sources tree and
+// from the per-source identity deltas, which can know the canName before the
+// tree does.
+function forEachIdentifiedSourceRef(
   sources: unknown,
-  sourceDeltas: Record<string, unknown>
-): DeviceSourceRef[] {
-  const refs = new Map<string, number>()
+  sourceDeltas: Record<string, unknown>,
+  visit: SourceRefVisitor
+): void {
   const add = (provider: unknown, canName: unknown, src: unknown) => {
     if (typeof provider !== 'string' || typeof canName !== 'string') return
     const address = Number(src)
     if (src === undefined || src === null || !Number.isInteger(address)) return
-    if (deviceKeyFromCanName(canName) !== deviceKey) return
-    refs.set(`${provider}.${canName}`, address)
-    refs.set(`${provider}.${address}`, address)
+    const deviceKey = deviceKeyFromCanName(canName)
+    if (deviceKey === undefined) return
+    visit(`${provider}.${canName}`, address, deviceKey)
+    visit(`${provider}.${address}`, address, deviceKey)
   }
 
   if (isRecord(sources)) {
@@ -363,8 +363,44 @@ export function findDeviceSourceRefs(
     const source = isRecord(first) ? first.source : undefined
     if (isRecord(source)) add(source.label, source.canName, source.src)
   }
+}
 
+/** Every sourceRef the device currently publishes under. */
+export function findDeviceSourceRefs(
+  deviceKey: string,
+  sources: unknown,
+  sourceDeltas: Record<string, unknown>
+): DeviceSourceRef[] {
+  const refs = new Map<string, number>()
+  forEachIdentifiedSourceRef(sources, sourceDeltas, (ref, src, key) => {
+    if (key === deviceKey) refs.set(ref, src)
+  })
   return [...refs].map(([ref, src]) => ({ ref, src }))
+}
+
+/** The rules of the device behind a sourceRef, and its bus address. */
+export interface MappedSource {
+  readonly rules: readonly N2kInstanceRule[]
+  readonly src: number
+}
+
+export type MappedSources = ReadonlyMap<string, MappedSource>
+
+const NO_MAPPED_SOURCES: MappedSources = new Map()
+
+/** Every current sourceRef whose device has rules. */
+export function mappedSourceRefs(
+  mappings: N2kInstanceMappings | undefined,
+  sources: unknown,
+  sourceDeltas: Record<string, unknown>
+): MappedSources {
+  if (!mappings || Object.keys(mappings).length === 0) return NO_MAPPED_SOURCES
+  const mapped = new Map<string, MappedSource>()
+  forEachIdentifiedSourceRef(sources, sourceDeltas, (ref, src, deviceKey) => {
+    const rules = storedRules(mappings, deviceKey)
+    if (rules.length > 0) mapped.set(ref, { rules, src })
+  })
+  return mapped
 }
 
 type RouteHandler = (req: Request, res: Response) => void

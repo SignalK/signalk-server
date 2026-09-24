@@ -1,3 +1,19 @@
+import {
+  classifyInstance,
+  defaultPrefixes,
+  isAtOrUnder,
+  N2K_INSTANCE_GROUPS,
+  N2kFrame,
+  N2kInstanceGroupId
+} from '@signalk/streams/n2k-instance-groups'
+import {
+  getAllPGNs,
+  getEnumerationName,
+  getEnumerationValue
+} from '@canboat/ts-pgns'
+import type { MappedSources } from './n2k-instance-mappings'
+import { TargetEditor, targetEditor } from './n2k-target-policy'
+
 /**
  * Walk the self-vessel Signal K tree and derive, for each PGN known to
  * carry a `instance` primary key, which `(sourceRef, instance)` tuples
@@ -14,6 +30,12 @@
  * actively publishing instance `<n>`. Reading instances from there
  * matches what users see in the data browser and the per-PGN editors,
  * and there is nothing to decay.
+ *
+ * A device with instance mappings writes some instances at user-chosen
+ * paths instead. Leaves at or under one of its rule targets are credited to
+ * that rule's instance and keyed as the default-path leaf would be, so
+ * conflict detection compares mapped and unmapped devices on the same raw
+ * instances.
  *
  * Path conventions per PGN follow the @signalk/n2k-signalk mapping
  * package. Most are `<prefix>.<instance>.<...>`; PGN 130312/130316
@@ -50,6 +72,30 @@ const PGN_TREE_PATHS: Record<
   130316: [{ prefix: 'environment', shape: 'source-inst' }]
 }
 
+type PgnTreePath = (typeof PGN_TREE_PATHS)[number][number]
+
+// Per instance group, the tracked PGNs a mapped instance is reported under.
+const TRACKED_PGNS_BY_GROUP = new Map<N2kInstanceGroupId, string[]>(
+  N2K_INSTANCE_GROUPS.map((group) => [
+    group.id,
+    group.pgns.filter((pgn) => pgn in PGN_TREE_PATHS).map(String)
+  ])
+)
+
+// A leaf that a rule of its source's device moved off the default paths.
+function isMovedLeaf(
+  mapped: MappedSources | undefined,
+  sourceRef: string,
+  path: string
+): boolean {
+  const source = mapped?.get(sourceRef)
+  if (!source) return false
+  for (const rule of source.rules) {
+    if (isAtOrUnder(path, rule.target)) return true
+  }
+  return false
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getAt(root: any, dotPath: string): any {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,6 +107,40 @@ function getAt(root: any, dotPath: string): any {
   return cursor
 }
 
+type Accumulator<T> = Record<string, Record<string, Set<T>>>
+
+function add<T>(out: Accumulator<T>, sourceRef: string, pgn: string, v: T) {
+  let pgnMap = out[sourceRef]
+  if (!pgnMap) {
+    pgnMap = {}
+    out[sourceRef] = pgnMap
+  }
+  let set = pgnMap[pgn]
+  if (!set) {
+    set = new Set()
+    pgnMap[pgn] = set
+  }
+  set.add(v)
+}
+
+function materialise<T>(
+  out: Accumulator<T>,
+  compare?: (a: T, b: T) => number
+): Record<string, Record<string, T[]>> {
+  const final: Record<string, Record<string, T[]>> = {}
+  for (const [src, pgnMap] of Object.entries(out)) {
+    const dst: Record<string, T[]> = {}
+    for (const [pgn, set] of Object.entries(pgnMap)) {
+      dst[pgn] = Array.from(set).sort(compare)
+    }
+    final[src] = dst
+  }
+  return final
+}
+
+const hasMappings = (mapped: MappedSources | undefined) =>
+  mapped !== undefined && mapped.size > 0
+
 /**
  * Build sourceRef → pgn → list of currently-published instance numbers.
  * Used by the admin UI conflict detector. The shape mirrors the legacy
@@ -68,10 +148,12 @@ function getAt(root: any, dotPath: string): any {
  */
 export function buildPgnDataInstancesFromTree(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  selfTree: any
+  selfTree: any,
+  mapped?: MappedSources
 ): Record<string, Record<string, number[]>> {
-  const out: Record<string, Record<string, Set<number>>> = {}
+  const out: Accumulator<number> = {}
   if (!selfTree || typeof selfTree !== 'object') return {}
+  const filter = hasMappings(mapped) ? mapped : undefined
 
   for (const [pgn, paths] of Object.entries(PGN_TREE_PATHS)) {
     for (const { prefix, shape } of paths) {
@@ -83,79 +165,88 @@ export function buildPgnDataInstancesFromTree(
         for (const [instKey, instSubtree] of Object.entries(node)) {
           const inst = Number(instKey)
           if (!Number.isFinite(inst)) continue
-          collectSourcesForInstance(instSubtree, inst, pgn, out)
+          const path = filter && `${prefix}.${instKey}`
+          for (const ref of collectSources(instSubtree, path, filter)) {
+            add(out, ref, pgn, inst)
+          }
         }
       } else {
         // Compound: <prefix>.<source>.<instance>.<...>
-        for (const sourceSubtree of Object.values(node)) {
+        for (const [sourceKey, sourceSubtree] of Object.entries(node)) {
           if (!sourceSubtree || typeof sourceSubtree !== 'object') continue
           for (const [instKey, instSubtree] of Object.entries(sourceSubtree)) {
             const inst = Number(instKey)
             if (!Number.isFinite(inst)) continue
-            collectSourcesForInstance(instSubtree, inst, pgn, out)
+            const path = filter && `${prefix}.${sourceKey}.${instKey}`
+            for (const ref of collectSources(instSubtree, path, filter)) {
+              add(out, ref, pgn, inst)
+            }
           }
         }
       }
     }
   }
 
-  // Materialise sets into sorted arrays.
-  const final: Record<string, Record<string, number[]>> = {}
-  for (const [src, pgnMap] of Object.entries(out)) {
-    const dst: Record<string, number[]> = {}
-    for (const [pgn, set] of Object.entries(pgnMap)) {
-      dst[pgn] = Array.from(set).sort((a, b) => a - b)
+  if (filter) {
+    for (const [ref, { rules }] of filter) {
+      for (const rule of rules) {
+        const pgns = TRACKED_PGNS_BY_GROUP.get(rule.group)
+        if (!pgns || pgns.length === 0) continue
+        if (!collectSources(getAt(selfTree, rule.target)).has(ref)) continue
+        for (const pgn of pgns) add(out, ref, pgn, rule.instance)
+      }
     }
-    final[src] = dst
   }
-  return final
+
+  return materialise(out, (a, b) => a - b)
 }
 
-function collectSourcesForInstance(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  instSubtree: any,
-  inst: number,
-  pgn: string,
-  out: Record<string, Record<string, Set<number>>>
-): void {
-  const sources = collectSources(instSubtree)
-  for (const sourceRef of sources) {
-    let pgnMap = out[sourceRef]
-    if (!pgnMap) {
-      pgnMap = {}
-      out[sourceRef] = pgnMap
-    }
-    let set = pgnMap[pgn]
-    if (!set) {
-      set = new Set()
-      pgnMap[pgn] = set
-    }
-    set.add(inst)
-  }
+function isTreeNode(node: unknown): node is Record<string, unknown> {
+  return typeof node === 'object' && node !== null
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function collectSources(node: any): Set<string> {
+// Sources publishing anywhere in the subtree. With `mapped`, `path` is the
+// subtree's path and leaves its sources' rules moved away are skipped.
+function collectSources(
+  node: unknown,
+  path?: string,
+  mapped?: MappedSources
+): Set<string> {
   const out = new Set<string>()
-  visit(node, out)
+  visit(node, out, path, mapped)
   return out
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function visit(node: any, out: Set<string>): void {
-  if (!node || typeof node !== 'object') return
-  if (typeof node.$source === 'string') out.add(node.$source)
+function visit(
+  node: unknown,
+  out: Set<string>,
+  path: string | undefined,
+  mapped: MappedSources | undefined
+): void {
+  if (!isTreeNode(node)) return
+  const include = (ref: string) => {
+    if (path === undefined || !isMovedLeaf(mapped, ref, path)) out.add(ref)
+  }
+  if (typeof node.$source === 'string') include(node.$source)
   const values = node.values
-  if (values && typeof values === 'object') {
-    for (const ref of Object.keys(values)) out.add(ref)
+  if (isTreeNode(values)) {
+    for (const ref of Object.keys(values)) include(ref)
   }
   for (const [k, v] of Object.entries(node)) {
     if (k === 'meta' || k === 'value' || k === 'values' || k === 'timestamp')
       continue
     if (k === '$source' || k === 'pgn' || k === 'sentence') continue
-    visit(v, out)
+    visit(v, out, path === undefined ? undefined : `${path}.${k}`, mapped)
   }
 }
+
+const SOURCE_KEY_PATHS: ReadonlyArray<[string, PgnTreePath]> = Object.entries(
+  PGN_TREE_PATHS
+).flatMap(([pgn, paths]) =>
+  paths
+    .filter(({ shape }) => shape === 'source-inst')
+    .map((p): [string, PgnTreePath] => [pgn, p])
+)
 
 /**
  * Build sourceRef → pgn → list of compound keys for temperature/humidity
@@ -173,63 +264,166 @@ function visit(node: any, out: Set<string>): void {
  */
 export function buildPgnSourceKeysFromTree(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  selfTree: any
+  selfTree: any,
+  mapped?: MappedSources
 ): Record<string, Record<string, string[]>> {
-  const out: Record<string, Record<string, Set<string>>> = {}
+  const out: Accumulator<string> = {}
   if (!selfTree || typeof selfTree !== 'object') return {}
+  const filter = hasMappings(mapped) ? mapped : undefined
 
-  for (const [pgn, paths] of Object.entries(PGN_TREE_PATHS)) {
-    for (const { prefix, shape } of paths) {
-      if (shape !== 'source-inst') continue
-      const node = getAt(selfTree, prefix)
-      if (!node || typeof node !== 'object') continue
-      collectLeafPaths(node, prefix, pgn, out)
+  for (const [pgn, { prefix }] of SOURCE_KEY_PATHS) {
+    forEachLeaf(getAt(selfTree, prefix), prefix, (leaf, path) => {
+      for (const ref of collectSources(leaf)) {
+        if (!isMovedLeaf(filter, ref, path)) add(out, ref, pgn, path)
+      }
+    })
+  }
+
+  if (filter) {
+    for (const [ref, { rules, src }] of filter) {
+      for (const rule of rules) {
+        const [defaultPrefix] = defaultPrefixes(
+          rule.group,
+          rule.discriminator,
+          rule.instance,
+          src
+        )
+        if (defaultPrefix === undefined) continue
+        const covering = SOURCE_KEY_PATHS.filter(([, { prefix }]) =>
+          isAtOrUnder(defaultPrefix, prefix)
+        )
+        if (covering.length === 0) continue
+        forEachLeaf(getAt(selfTree, rule.target), rule.target, (leaf, path) => {
+          if (!collectSources(leaf).has(ref)) return
+          const key = defaultPrefix + path.slice(rule.target.length)
+          for (const [pgn] of covering) add(out, ref, pgn, key)
+        })
+      }
     }
   }
 
-  const final: Record<string, Record<string, string[]>> = {}
-  for (const [src, pgnMap] of Object.entries(out)) {
-    const dst: Record<string, string[]> = {}
-    for (const [pgn, set] of Object.entries(pgnMap)) {
-      dst[pgn] = Array.from(set).sort()
-    }
-    final[src] = dst
-  }
-  return final
+  return materialise(out)
 }
 
-// Walk the subtree under a PGN's prefix and, for every leaf that carries
-// data, record its full SK path against each contributing sourceRef.
-function collectLeafPaths(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  node: any,
+// Every leaf that carries data in the subtree, with its full SK path.
+function forEachLeaf(
+  node: unknown,
   path: string,
-  pgn: string,
-  out: Record<string, Record<string, Set<string>>>
+  onLeaf: (leaf: Record<string, unknown>, path: string) => void
 ): void {
-  if (!node || typeof node !== 'object') return
+  if (!isTreeNode(node)) return
   const isLeaf =
     Object.prototype.hasOwnProperty.call(node, 'value') ||
     Object.prototype.hasOwnProperty.call(node, 'values') ||
     typeof node.$source === 'string'
   if (isLeaf) {
-    for (const sourceRef of collectSources(node)) {
-      let pgnMap = out[sourceRef]
-      if (!pgnMap) {
-        pgnMap = {}
-        out[sourceRef] = pgnMap
-      }
-      let set = pgnMap[pgn]
-      if (!set) {
-        set = new Set()
-        pgnMap[pgn] = set
-      }
-      set.add(path)
-    }
+    onLeaf(node, path)
     return
   }
   for (const [k, v] of Object.entries(node)) {
     if (k === 'meta' || k === 'timestamp') continue
-    collectLeafPaths(v, `${path}.${k}`, pgn, out)
+    forEachLeaf(v, `${path}.${k}`, onLeaf)
   }
+}
+
+// PGNs whose instance is qualified by a temperature or humidity source.
+const DATA_INSTANCE_PGNS = new Set<number>()
+
+for (const def of getAllPGNs()) {
+  const hasInstanceKey = def.Fields.some(
+    (f) => f.Id === 'instance' && f.PartOfPrimaryKey
+  )
+  if (!hasInstanceKey) continue
+
+  const hasSourceKey = def.Fields.some(
+    (f) =>
+      f.Id === 'source' &&
+      f.PartOfPrimaryKey &&
+      (f.LookupEnumeration === 'TEMPERATURE_SOURCE' ||
+        f.LookupEnumeration === 'HUMIDITY_SOURCE')
+  )
+  if (hasSourceKey) DATA_INSTANCE_PGNS.add(def.PGN)
+}
+
+const HUMIDITY_PGN = 130313
+
+/**
+ * One data instance a device publishes, as the NMEA Discovery page lists it.
+ * `group`, `discriminator` and `editor` are present for PGNs whose instances
+ * can be mapped to other Signal K paths.
+ */
+export interface DiscoveredInstance {
+  pgn: number
+  instance: number
+  sourceLabel: string
+  sourceEnum?: number
+  label?: string
+  hardwareChannelId?: number
+  group?: N2kInstanceGroupId
+  discriminator?: number
+  editor?: TargetEditor
+}
+
+function sensorSource(
+  pgn: number,
+  fields: Record<string, unknown>
+): { sourceLabel: string; sourceEnum?: number } {
+  const [enumName, fallback] =
+    pgn === HUMIDITY_PGN
+      ? ['HUMIDITY_SOURCE', 'Humidity Source']
+      : ['TEMPERATURE_SOURCE', 'Temperature Source']
+  const srcField = fields.source ?? fields.Source
+  if (typeof srcField === 'string') {
+    return {
+      sourceLabel: srcField,
+      sourceEnum: getEnumerationValue(enumName, srcField)
+    }
+  }
+  if (typeof srcField === 'number') {
+    return {
+      sourceLabel:
+        getEnumerationName(enumName, srcField) || `${fallback} ${srcField}`,
+      sourceEnum: srcField
+    }
+  }
+  return { sourceLabel: '' }
+}
+
+/**
+ * Describe a decoded frame as a discovered data instance: the temperature and
+ * humidity PGNs, and every PGN of the instance group table. Undefined for any
+ * other frame.
+ */
+export function discoveredInstance(
+  frame: N2kFrame
+): DiscoveredInstance | undefined {
+  const pgn = Number(frame.pgn)
+  const fields = frame.fields
+  if (!fields) return undefined
+  const classification = classifyInstance(frame)
+
+  let entry: DiscoveredInstance
+  if (DATA_INSTANCE_PGNS.has(pgn)) {
+    const instance = Number(fields.instance ?? fields.Instance)
+    if (isNaN(instance)) return undefined
+    entry = { pgn, instance, ...sensorSource(pgn, fields) }
+  } else if (classification) {
+    entry = { pgn, instance: classification.instance, sourceLabel: '' }
+  } else {
+    return undefined
+  }
+
+  if (classification) {
+    entry.group = classification.group
+    if (classification.discriminator !== undefined) {
+      entry.discriminator = classification.discriminator
+    }
+    entry.editor = targetEditor(
+      classification.group,
+      classification.discriminator,
+      classification.instance,
+      Number(frame.src)
+    )
+  }
+  return entry
 }
