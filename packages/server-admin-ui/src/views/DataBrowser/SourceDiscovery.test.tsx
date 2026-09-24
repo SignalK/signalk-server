@@ -3,6 +3,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { PgnInstanceField } from './SourceDiscovery'
 import { useStore } from '../../store'
 import type { N2kDeviceEntry } from '../../utils/sourceLabels'
+import { deviceKeyFromCanName } from '../../utils/n2kDeviceKey'
 
 const DEVICE: N2kDeviceEntry = {
   sourceRef: 'can0.c0788c00112a04d6',
@@ -69,6 +70,34 @@ describe('PgnInstanceField', () => {
     renderField()
     expect(screen.getByText(/^3/)).toBeTruthy()
     expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('notes a path mapping on a mapped instance', () => {
+    const canName = 'c0788c00112a04d6'
+    useStore.setState({
+      pgnDataInstances: { [DEVICE.sourceRef]: { '127508': [3, 4] } },
+      n2kDeviceStatusLoaded: true,
+      n2kInstanceMappings: {
+        [deviceKeyFromCanName(canName) as string]: [
+          {
+            group: 'battery',
+            instance: 3,
+            target: 'electrical.batteries.house'
+          }
+        ]
+      }
+    })
+    render(
+      <PgnInstanceField
+        device={{ ...DEVICE, canName }}
+        field="batteryInstance"
+        label="Battery Instance (PGN 127508)"
+        max={252}
+      />
+    )
+    expect(
+      screen.getAllByText(/path mapping exists for this instance/)
+    ).toHaveLength(1)
   })
 
   it('waits for the device status to load', () => {
