@@ -34,6 +34,7 @@
     "./mdns-ws": "./dist/mdns-ws.js",
     "./multiplexedlog": "./dist/multiplexedlog.js",
     "./n2kAnalyzer": "./dist/n2kAnalyzer.js",
+    "./n2k-instance-groups": "./dist/n2k-instance-groups.js",
     "./n2k-signalk": "./dist/n2k-signalk.js",
     "./nmea0183-signalk": "./dist/nmea0183-signalk.js",
     "./nullprovider": "./dist/nullprovider.js",
