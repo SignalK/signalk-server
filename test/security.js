@@ -1280,6 +1280,46 @@ describe('Plugin route permissions', () => {
     result.status.should.equal(401)
   })
 
+  // The token pluginFetch attaches internally. Minted the same way here so the
+  // escalation tests below exercise the real credential, not a stand-in.
+  function selfToken() {
+    return server.app.securityStrategy.getPluginSelfAuthToken('testplugin')
+  }
+
+  it('pluginFetch authenticates a call to another plugin readonly route', async function () {
+    const result = await fetch(`${url}/plugins/testplugin/selfCall`, {
+      headers: { Authorization: `Bearer ${readToken}` }
+    })
+    result.status.should.equal(200)
+    const body = await result.json()
+    // Unauthenticated, this inner request is the 401 case asserted above.
+    body.status.should.equal(200)
+  })
+
+  it('the pluginFetch credential does not grant admin access', async function () {
+    const token = selfToken()
+    // Guard against a vacuous pass: `Bearer undefined` would 401 regardless.
+    token.should.be.a('string').and.not.equal('')
+    const result = await fetch(`${url}/plugins/testplugin/config`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    result.status.should.equal(401)
+  })
+
+  it('the pluginFetch credential does not grant write access', async function () {
+    const token = selfToken()
+    token.should.be.a('string').and.not.equal('')
+    const result = await fetch(`${url}/plugins/testplugin/writeData`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ value: 1 })
+    })
+    result.status.should.equal(401)
+  })
+
   it('readonly user can access parameterized route declared as readonly', async function () {
     const result = await fetch(
       `${url}/plugins/testplugin/sensorData/temperature`,
