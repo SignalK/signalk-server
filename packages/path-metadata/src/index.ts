@@ -149,6 +149,12 @@ function buildRegexArray(
   return result
 }
 
+// Lookup keys are context-free for vessel-style paths, so the memo is
+// bounded by the number of distinct paths in practice. The cap guards
+// against unbounded growth from literal-path fallback lookups, whose keys
+// carry the context identity (e.g. one per passing AIS target).
+const MAX_LOOKUP_CACHE_ENTRIES = 10000
+
 export class MetadataRegistry {
   // allMetadata stays keyed by the original on-disk keys (/vessels/*/...,
   // /resources/*, /self, /version) and backs getAllMetadata() -> /paths, so
@@ -158,6 +164,11 @@ export class MetadataRegistry {
   private allMetadata: Record<string, PathMetadataEntry>
   private runtimeClones: Record<string, PathMetadataEntry>
   private regexEntries: RegexEntry[]
+  // A lookup is a linear regex scan, and a path with no match scans the
+  // whole array twice. Callers such as the staleness sweep look up the same
+  // paths every second, so results (misses included, as null) are memoised
+  // until regexEntries changes.
+  private readonly lookupCache = new Map<string, PathMetadataEntry | null>()
   private readonly seedEntries: Record<string, PathMetadataEntry>
 
   constructor(entries: Record<string, PathMetadataEntry>) {
@@ -176,6 +187,7 @@ export class MetadataRegistry {
     this.allMetadata = { ...this.seedEntries }
     this.runtimeClones = {}
     this.regexEntries = buildRegexArray(this.allMetadata)
+    this.lookupCache.clear()
   }
 
   /**
@@ -200,12 +212,27 @@ export class MetadataRegistry {
   private getMetadataForLookupPath(
     slashPath: string
   ): PathMetadataEntry | undefined {
+    const cached = this.lookupCache.get(slashPath)
+    if (cached !== undefined) {
+      return cached ?? undefined
+    }
     const result = this.regexEntries.find((entry) =>
       entry.pattern.test(slashPath)
     )
-    return result && result.metadata && Object.keys(result.metadata).length > 0
-      ? result.metadata
-      : undefined
+    const metadata =
+      result && result.metadata && Object.keys(result.metadata).length > 0
+        ? result.metadata
+        : undefined
+    if (this.lookupCache.size >= MAX_LOOKUP_CACHE_ENTRIES) {
+      this.lookupCache.clear()
+    }
+    this.lookupCache.set(slashPath, metadata ?? null)
+    return metadata
+  }
+
+  private prependRegexEntry(entry: RegexEntry): void {
+    this.regexEntries.unshift(entry)
+    this.lookupCache.clear()
   }
 
   /**
@@ -249,7 +276,7 @@ export class MetadataRegistry {
     // and so a later addMetaData that merges into this same clone (e.g. a
     // PUT meta displayUnits override) is found ahead of the spec entry.
     const escaped = key.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    this.regexEntries.unshift({
+    this.prependRegexEntry({
       pattern: new RegExp(`^${escaped.replace(/\*/g, '[^/]+')}$`),
       key,
       metadata: cloned
@@ -300,7 +327,7 @@ export class MetadataRegistry {
     // Escape special chars first, then replace wildcard. The entry fronts
     // the generic spec wildcard for EVERY context, not just one root.
     const escaped = key.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    this.regexEntries.unshift({
+    this.prependRegexEntry({
       pattern: new RegExp(`^${escaped.replace(/\*/g, '[^/]+')}$`),
       key,
       metadata: entry
