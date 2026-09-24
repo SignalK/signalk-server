@@ -16,7 +16,18 @@
 
 import { EventEmitter } from 'events'
 import { Transform, TransformCallback } from 'stream'
-import { N2kMapper } from '@signalk/n2k-signalk'
+import { N2kMapper, type InstancePrefixRule } from '@signalk/n2k-signalk'
+import {
+  N2K_INSTANCE_GROUPS,
+  N2K_INSTANCE_MAPPINGS_EVENT,
+  defaultPrefixes,
+  deviceKeyFromCanName,
+  checkDeviceRules,
+  instanceRuleKey,
+  isAtOrUnder,
+  type N2kInstanceMappings,
+  type N2kInstanceRule
+} from './n2k-instance-groups'
 import type { DeltaCache } from './types'
 
 interface N2kFilter {
@@ -29,6 +40,11 @@ interface N2kToSignalKOptions {
     selfContext: string
     isNmea2000OutAvailable: boolean
     deltaCache: DeltaCache
+    config?: {
+      settings?: {
+        n2kInstanceMappings?: N2kInstanceMappings
+      }
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
     emit(event: string, ...args: unknown[]): void
@@ -56,10 +72,16 @@ interface N2kToSignalKOptions {
 // for its own address) still reports under its numeric ref.
 const CANNAME_WARMUP_MS = 10000
 
+// An alarm the device stops repeating for this long returns to normal; the
+// check runs at the second interval.
+const AUTO_NORMAL_QUIET_MS = 10000
+const AUTO_NORMAL_CHECK_MS = 5000
+
 interface N2kMessage {
   src: string | number
   pgn: string | number
   timestamp: string
+  fields?: Record<string, unknown>
 }
 
 interface DeltaSource {
@@ -93,6 +115,114 @@ interface SourceMeta {
 interface NotificationEntry {
   lastTime: number
   interval: ReturnType<typeof setInterval>
+  readonly context: string
+  readonly source: DeltaSource
+  readonly value: DeltaValue
+}
+
+function normalDelta(entry: NotificationEntry): Delta {
+  const copy = structuredClone(entry.value)
+  copy.value.state = 'normal'
+  return {
+    context: entry.context,
+    updates: [{ source: entry.source, values: [copy] }]
+  }
+}
+
+const NOTIFICATIONS = 'notifications.'
+
+const INSTANCE_PGNS: ReadonlySet<number> = new Set(
+  N2K_INSTANCE_GROUPS.flatMap((group) => group.pgns)
+)
+
+interface DeviceRules {
+  readonly rules: readonly N2kInstanceRule[]
+  readonly targets: ReadonlyMap<string, string>
+}
+
+interface StoredRule {
+  readonly deviceKey: string
+  readonly rule: N2kInstanceRule
+  readonly prefixRule: InstancePrefixRule
+}
+
+// settings.json is hand-editable: a stored entry n2k-signalk cannot apply
+// is reported, by device key and position, and skipped.
+function storedRules(mappings: unknown): StoredRule[] {
+  if (typeof mappings !== 'object' || mappings === null) return []
+  const stored: StoredRule[] = []
+  for (const [deviceKey, entries] of Object.entries(mappings)) {
+    const { rules, prefixRules, problems } = checkDeviceRules(
+      deviceKey,
+      entries
+    )
+    for (const { index, message } of problems) {
+      const at = index < 0 ? '' : `[${index}]`
+      console.error(`n2kInstanceMappings["${deviceKey}"]${at}: ${message}`)
+    }
+    rules.forEach((rule, index) =>
+      stored.push({ deviceKey, rule, prefixRule: prefixRules[index]! })
+    )
+  }
+  return stored
+}
+
+function byDevice(stored: readonly StoredRule[]): Map<string, DeviceRules> {
+  const devices = new Map<
+    string,
+    { rules: N2kInstanceRule[]; targets: Map<string, string> }
+  >()
+  for (const { deviceKey, rule } of stored) {
+    let device = devices.get(deviceKey)
+    if (!device) {
+      device = { rules: [], targets: new Map() }
+      devices.set(deviceKey, device)
+    }
+    device.rules.push(rule)
+    device.targets.set(
+      instanceRuleKey(rule.group, rule.discriminator, rule.instance),
+      rule.target
+    )
+  }
+  return devices
+}
+
+// A rule whose target moved, or that was added or removed: the paths its
+// instance may have been written under before the change.
+interface MovedRule {
+  readonly rule: N2kInstanceRule
+  readonly previousTarget: string | undefined
+}
+
+function movedRules(
+  before: Map<string, DeviceRules>,
+  after: Map<string, DeviceRules>
+): Map<string, MovedRule[]> {
+  const moved = new Map<string, MovedRule[]>()
+  for (const deviceKey of new Set([...before.keys(), ...after.keys()])) {
+    const old = before.get(deviceKey)
+    const next = after.get(deviceKey)
+    const changes: MovedRule[] = []
+    // A target another rule of the device still writes is not vacated.
+    const nextTargets = new Set(next?.targets.values())
+    for (const rule of old?.rules ?? []) {
+      const key = instanceRuleKey(rule.group, rule.discriminator, rule.instance)
+      if (next?.targets.get(key) !== rule.target) {
+        changes.push({
+          rule,
+          previousTarget: nextTargets.has(rule.target) ? undefined : rule.target
+        })
+      }
+    }
+    for (const rule of next?.rules ?? []) {
+      const key = instanceRuleKey(rule.group, rule.discriminator, rule.instance)
+      if (!old?.targets.has(key)) {
+        changes.push({ rule, previousTarget: undefined })
+      }
+    }
+    if (changes.length > 0) moved.set(deviceKey, changes)
+  }
+  return moved
 }
 
 export default class N2kToSignalK extends Transform {
@@ -109,12 +239,25 @@ export default class N2kToSignalK extends Transform {
   // Set on the first frame; src-only deltas are held back until this time
   // to give the canName time to resolve. Undefined until traffic starts.
   private warmupUntil?: number
+  // The rules the mapper applies, by device key.
+  private instanceRules = new Map<string, DeviceRules>()
+  private hasInstanceRules = false
+  // Device key per bus address, known once the address claim resolves.
+  private readonly deviceKeys = new Map<number, string>()
+  // While rules exist, frames of instance PGNs from an address without a
+  // device key are held back until this time, set on its first such frame.
+  private readonly sourceWarmupUntil = new Map<number, number>()
 
   constructor(options: N2kToSignalKOptions) {
     super({ objectMode: true })
     this.options = options
     this.canNameWarmupMs = options.canNameWarmupMs ?? CANNAME_WARMUP_MS
     this.app = options.app
+    this.app.on('serverAdminEvent', (event: { type?: unknown } | undefined) => {
+      if (event?.type === N2K_INSTANCE_MAPPINGS_EVENT) {
+        this.reloadInstanceRules()
+      }
+    })
 
     if (options.filters && options.filtersEnabled) {
       this.filters = options.filters.filter(
@@ -126,6 +269,7 @@ export default class N2kToSignalK extends Transform {
       ...options,
       sendMetaData: true
     }) as N2kMapper & EventEmitter
+    this.applyInstanceRules()
 
     const n2kOutEvent = 'nmea2000JsonOut'
 
@@ -150,6 +294,15 @@ export default class N2kToSignalK extends Transform {
             ? (meta.canName as string)
             : undefined
         this.sourceMeta[src] = { ...existing, ...meta }
+        if (newCanName) {
+          const deviceKey = deviceKeyFromCanName(newCanName)
+          if (deviceKey !== undefined) {
+            this.deviceKeys.set(src, deviceKey)
+            if (newCanName !== prevCanName) {
+              this.pruneUnmappedPaths(src, deviceKey)
+            }
+          }
+        }
         // When a CAN Name resolves for the first time (or replaces a
         // previously stamped "unknown") and useCanName is active, deltas
         // that have already flowed as "<providerId>.<src>" need to
@@ -211,6 +364,8 @@ export default class N2kToSignalK extends Transform {
         if (this.sourceMeta[srcNum]) {
           delete this.sourceMeta[srcNum]
         }
+        this.deviceKeys.delete(srcNum)
+        this.sourceWarmupUntil.delete(srcNum)
         // Notify server so persistent settings can be migrated
         const oldRef = `${this.options.providerId}.${from}`
         const newRef = `${this.options.providerId}.${to}`
@@ -225,6 +380,106 @@ export default class N2kToSignalK extends Transform {
         this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent)
       )
     }
+  }
+
+  // Hands the stored rules to the mapper, which applies them from the next
+  // frame on, and keeps the ones it applies.
+  private applyInstanceRules(): void {
+    const stored = storedRules(this.app.config?.settings?.n2kInstanceMappings)
+    this.n2kMapper.setInstancePrefixRules(
+      stored.map(({ prefixRule }) => prefixRule)
+    )
+    this.instanceRules = byDevice(stored)
+    this.hasInstanceRules = this.instanceRules.size > 0
+  }
+
+  private reloadInstanceRules(): void {
+    const previous = this.instanceRules
+    this.applyInstanceRules()
+    // Without identity these addresses could not be held back while there
+    // were no rules, so their frames already landed at the default paths.
+    // An expired window gets those paths pruned once the identity resolves.
+    for (const key of Object.keys(this.sourceMeta)) {
+      const src = Number(key)
+      if (!this.deviceKeys.has(src) && !this.sourceWarmupUntil.has(src)) {
+        this.sourceWarmupUntil.set(src, 0)
+      }
+    }
+    this.settleMovedNotifications(movedRules(previous, this.instanceRules))
+  }
+
+  private settleMovedNotifications(moved: Map<string, MovedRule[]>): void {
+    if (moved.size === 0) return
+    for (const [src, deviceKey] of this.deviceKeys) {
+      const changes = moved.get(deviceKey)
+      if (!changes) continue
+      const prefixes: string[] = []
+      for (const { rule, previousTarget } of changes) {
+        if (previousTarget !== undefined) prefixes.push(previousTarget)
+        prefixes.push(
+          ...defaultPrefixes(rule.group, rule.discriminator, rule.instance, src)
+        )
+      }
+      this.settleNotifications(src, prefixes)
+    }
+  }
+
+  // Emits now the normal a pending auto-normal under one of the prefixes
+  // would emit later, and drops its tracker: the leaf is about to move or
+  // be pruned, and a later auto-normal would recreate it at the old path.
+  private settleNotifications(src: number, prefixes: readonly string[]): void {
+    for (const [path, pathNotifs] of Object.entries(this.notifications)) {
+      const entry = pathNotifs[src]
+      if (
+        !entry ||
+        !prefixes.some(
+          (p) => isAtOrUnder(path, p) || isAtOrUnder(path, NOTIFICATIONS + p)
+        )
+      ) {
+        continue
+      }
+      clearInterval(entry.interval)
+      delete pathNotifs[src]
+      this.app.handleMessage(this.options.providerId, normalDelta(entry))
+    }
+  }
+
+  // Frames from this address passed at the default paths before its
+  // identity resolved; drop those leaves now that rules move them. An
+  // instance without a rule that shares a default rewrites it on its next
+  // frame.
+  private pruneUnmappedPaths(src: number, deviceKey: string): void {
+    const deviceRules = this.instanceRules.get(deviceKey)
+    const warmupUntil = this.sourceWarmupUntil.get(src)
+    if (!deviceRules || warmupUntil === undefined || Date.now() < warmupUntil) {
+      return
+    }
+    const defaults: string[] = []
+    for (const rule of deviceRules.rules) {
+      defaults.push(
+        ...defaultPrefixes(rule.group, rule.discriminator, rule.instance, src)
+      )
+    }
+    if (defaults.length === 0) return
+    this.settleNotifications(src, defaults)
+    const prefixes: string[] = []
+    for (const prefix of defaults) prefixes.push(prefix, NOTIFICATIONS + prefix)
+    // Deltas without identity carry the address form of the source ref,
+    // whether or not useCanName is on.
+    this.app.deltaCache.removeSource?.(
+      `${this.options.providerId}.${src}`,
+      prefixes
+    )
+  }
+
+  private inSourceWarmup(src: number): boolean {
+    const now = Date.now()
+    let until = this.sourceWarmupUntil.get(src)
+    if (until === undefined) {
+      until = now + this.canNameWarmupMs
+      this.sourceWarmupUntil.set(src, until)
+    }
+    return now < until
   }
 
   private isFiltered(source: DeltaSource): N2kFilter | undefined {
@@ -283,6 +538,14 @@ export default class N2kToSignalK extends Transform {
           delete firstUpdate.source.canName
         }
 
+        if (this.hasInstanceRules && INSTANCE_PGNS.has(Number(chunk.pgn))) {
+          const deviceKey = this.deviceKeys.get(src)
+          if (deviceKey === undefined && this.inSourceWarmup(src)) {
+            done()
+            return
+          }
+        }
+
         const canName = firstUpdate.source.canName
 
         // Hold src-only deltas back only during the warmup window, so the
@@ -315,32 +578,26 @@ export default class N2kToSignalK extends Transform {
                 }
                 const currentPathNotifs = this.notifications[kv.path]!
                 if (!currentPathNotifs[src]) {
-                  const interval = setInterval(() => {
-                    const entry = currentPathNotifs[src]
-                    if (entry && Date.now() - entry.lastTime > 10000) {
-                      const copy = JSON.parse(JSON.stringify(kv)) as DeltaValue
-                      copy.value.state = 'normal'
-                      const normalDelta = {
-                        context: delta.context,
-                        updates: [
-                          {
-                            source: update.source,
-                            values: [copy]
-                          }
-                        ]
-                      }
-                      delete currentPathNotifs[src]
-                      clearInterval(interval)
-                      this.app.handleMessage(
-                        this.options.providerId,
-                        normalDelta
-                      )
-                    }
-                  }, 5000)
-                  currentPathNotifs[src] = {
+                  const entry: NotificationEntry = {
                     lastTime: Date.now(),
-                    interval
+                    interval: setInterval(() => {
+                      if (
+                        currentPathNotifs[src] === entry &&
+                        Date.now() - entry.lastTime > AUTO_NORMAL_QUIET_MS
+                      ) {
+                        delete currentPathNotifs[src]
+                        clearInterval(entry.interval)
+                        this.app.handleMessage(
+                          this.options.providerId,
+                          normalDelta(entry)
+                        )
+                      }
+                    }, AUTO_NORMAL_CHECK_MS),
+                    context: delta.context,
+                    source: update.source,
+                    value: kv
                   }
+                  currentPathNotifs[src] = entry
                 } else {
                   currentPathNotifs[src].lastTime = Date.now()
                 }
