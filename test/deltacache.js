@@ -1121,4 +1121,330 @@ describe('Deltacache', () => {
       .then((sourceRef) => sourceRef.should.equal(''))
       .finally(() => deltaCache.setRoutesPathPredicate(null))
   })
+
+  describe('removeSource with prefixes', () => {
+    const SCOPED = 'scopedPruneA'
+    const OTHER = 'scopedPruneB'
+    const at = (ts) => `2024-06-01T10:00:${ts}.000Z`
+    const sendValues = (sourceRef, ts, values) =>
+      doSendADelta({
+        context: 'vessels.self',
+        updates: [{ $source: sourceRef, timestamp: at(ts), values }]
+      })
+    const selfParts = () => theServer.app.selfContext.split('.')
+    const cacheHas = (path, sourceRef) =>
+      _.get(theServer.app.deltaCache.cache, [
+        ...selfParts(),
+        ...path.split('.'),
+        sourceRef
+      ]) !== undefined
+    const treeHas = (path, sourceRef) => {
+      const leaf = _.get(theServer.app.signalk.root, [
+        ...selfParts(),
+        ...path.split('.')
+      ])
+      if (!leaf) return false
+      if (leaf.values && leaf.values[sourceRef] !== undefined) return true
+      return leaf.$source === sourceRef && leaf.value !== undefined
+    }
+    const alarm = { state: 'alarm', method: [], message: 'hot' }
+
+    beforeEach(() =>
+      sendValues(SCOPED, '01', [
+        { path: 'propulsion.port.revolutions', value: 20 },
+        { path: 'propulsion.port.temperature', value: 350 },
+        { path: 'navigation.headingTrue', value: 1.5 },
+        { path: 'notifications.propulsion.port.overTemperature', value: alarm },
+        { path: 'environment.inside.engineRoom.temperature', value: 310 },
+        { path: 'environment.inside.engineRoomAft.temperature', value: 305 }
+      ]).then(() =>
+        sendValues(OTHER, '02', [
+          { path: 'propulsion.port.revolutions', value: 21 },
+          { path: 'navigation.headingTrue', value: 1.6 }
+        ])
+      )
+    )
+
+    afterEach(() => {
+      theServer.app.deltaCache.removeSource(SCOPED)
+      theServer.app.deltaCache.removeSource(OTHER)
+      theServer.app.deltaCache.setRoutesPathPredicate(null)
+    })
+
+    it('removes only the leaves under the prefix from cache and full tree', function () {
+      theServer.app.deltaCache.removeSource(SCOPED, ['propulsion.port'])
+
+      cacheHas('propulsion.port.revolutions', SCOPED).should.equal(false)
+      cacheHas('propulsion.port.temperature', SCOPED).should.equal(false)
+      treeHas('propulsion.port.revolutions', SCOPED).should.equal(false)
+      treeHas('propulsion.port.temperature', SCOPED).should.equal(false)
+
+      cacheHas('navigation.headingTrue', SCOPED).should.equal(true)
+      treeHas('navigation.headingTrue', SCOPED).should.equal(true)
+      // A bare prefix does not reach the notifications tree.
+      cacheHas(
+        'notifications.propulsion.port.overTemperature',
+        SCOPED
+      ).should.equal(true)
+    })
+
+    it('removes notifications leaves when the notifications prefix is in scope', function () {
+      theServer.app.deltaCache.removeSource(SCOPED, [
+        'propulsion.port',
+        'notifications.propulsion.port'
+      ])
+
+      cacheHas(
+        'notifications.propulsion.port.overTemperature',
+        SCOPED
+      ).should.equal(false)
+      treeHas(
+        'notifications.propulsion.port.overTemperature',
+        SCOPED
+      ).should.equal(false)
+      cacheHas('navigation.headingTrue', SCOPED).should.equal(true)
+    })
+
+    it('leaves the same paths from another source untouched', function () {
+      theServer.app.deltaCache.removeSource(SCOPED, ['propulsion.port'])
+
+      cacheHas('propulsion.port.revolutions', OTHER).should.equal(true)
+      treeHas('propulsion.port.revolutions', OTHER).should.equal(true)
+      _.get(theServer.app.signalk.root, [
+        ...selfParts(),
+        'propulsion',
+        'port',
+        'revolutions',
+        'value'
+      ]).should.equal(21)
+    })
+
+    it('matches prefixes on segment boundaries only', function () {
+      theServer.app.deltaCache.removeSource(SCOPED, [
+        'environment.inside.engineRoom'
+      ])
+
+      cacheHas(
+        'environment.inside.engineRoom.temperature',
+        SCOPED
+      ).should.equal(false)
+      treeHas('environment.inside.engineRoom.temperature', SCOPED).should.equal(
+        false
+      )
+      cacheHas(
+        'environment.inside.engineRoomAft.temperature',
+        SCOPED
+      ).should.equal(true)
+      treeHas(
+        'environment.inside.engineRoomAft.temperature',
+        SCOPED
+      ).should.equal(true)
+    })
+
+    it('falls back to another source for preferredSources of pruned paths only', function () {
+      const deltaCache = theServer.app.deltaCache
+      deltaCache.setRoutesPathPredicate(() => true)
+      const key = (path) => `${theServer.app.selfContext}\0${path}`
+      // Re-send from SCOPED last so it is the recorded winner on both
+      // shared paths.
+      return sendValues(SCOPED, '03', [
+        { path: 'propulsion.port.revolutions', value: 22 },
+        { path: 'navigation.headingTrue', value: 1.7 }
+      ]).then(() => {
+        const before = deltaCache.getLivePreferredSources()
+        before[key('propulsion.port.revolutions')].should.equal(SCOPED)
+        before[key('navigation.headingTrue')].should.equal(SCOPED)
+
+        deltaCache.removeSource(SCOPED, ['propulsion.port'])
+
+        const after = deltaCache.getLivePreferredSources()
+        after[key('propulsion.port.revolutions')].should.equal(OTHER)
+        after[key('navigation.headingTrue')].should.equal(SCOPED)
+      })
+    })
+
+    it('treats a full leaf path as a prefix covering just that leaf', function () {
+      const deltaCache = theServer.app.deltaCache
+      const LEAF = 'environment.inside.engineRoom.temperature'
+      const SIBLING = 'environment.inside.engineRoom.relativeHumidity'
+      deltaCache.setRoutesPathPredicate(() => true)
+      const key = (path) => `${theServer.app.selfContext}\0${path}`
+      return sendValues(OTHER, '03', [{ path: LEAF, value: 311 }])
+        .then(() =>
+          sendValues(SCOPED, '04', [
+            { path: LEAF, value: 312 },
+            { path: SIBLING, value: 0.4 }
+          ])
+        )
+        .then(() => {
+          deltaCache.getLivePreferredSources()[key(LEAF)].should.equal(SCOPED)
+
+          deltaCache.removeSource(SCOPED, [LEAF])
+
+          cacheHas(LEAF, SCOPED).should.equal(false)
+          treeHas(LEAF, SCOPED).should.equal(false)
+          cacheHas(SIBLING, SCOPED).should.equal(true)
+          treeHas(SIBLING, SCOPED).should.equal(true)
+          cacheHas(LEAF, OTHER).should.equal(true)
+          const leaf = _.get(theServer.app.signalk.root, [
+            ...selfParts(),
+            ...LEAF.split('.')
+          ])
+          leaf.$source.should.equal(OTHER)
+          leaf.value.should.equal(311)
+          const preferred = deltaCache.getLivePreferredSources()
+          preferred[key(LEAF)].should.equal(OTHER)
+          preferred[key(SIBLING)].should.equal(SCOPED)
+        })
+    })
+
+    const selfTree = () => _.get(theServer.app.signalk.root, selfParts())
+    const selfCache = () => _.get(theServer.app.deltaCache.cache, selfParts())
+
+    it('removes prefix nodes and parents emptied by the prune', function () {
+      return sendValues(SCOPED, '05', [
+        { path: 'pruneEmptyTop.inner.leaf', value: 1 }
+      ])
+        .then(() => {
+          theServer.app.deltaCache.removeSource(SCOPED, ['pruneEmptyTop.inner'])
+
+          selfTree().should.not.have.property('pruneEmptyTop')
+          selfCache().should.not.have.property('pruneEmptyTop')
+        })
+        .then(() =>
+          sendValues(SCOPED, '06', [
+            { path: 'pruneEmptyTop.inner.leaf', value: 2 }
+          ])
+        )
+        .then(() => {
+          // Later deltas rebuild the removed nodes rather than writing
+          // into detached ones.
+          treeHas('pruneEmptyTop.inner.leaf', SCOPED).should.equal(true)
+          cacheHas('pruneEmptyTop.inner.leaf', SCOPED).should.equal(true)
+        })
+    })
+
+    it('keeps a prefix node that still holds another source', function () {
+      return sendValues(SCOPED, '05', [
+        { path: 'pruneSharedTop.inner.leaf', value: 1 }
+      ])
+        .then(() =>
+          sendValues(OTHER, '06', [
+            { path: 'pruneSharedTop.inner.leaf', value: 2 }
+          ])
+        )
+        .then(() => {
+          theServer.app.deltaCache.removeSource(SCOPED, [
+            'pruneSharedTop.inner'
+          ])
+
+          treeHas('pruneSharedTop.inner.leaf', OTHER).should.equal(true)
+          cacheHas('pruneSharedTop.inner.leaf', OTHER).should.equal(true)
+        })
+    })
+
+    it('removes an emptied prefix node but keeps a parent with siblings', function () {
+      return sendValues(SCOPED, '05', [
+        { path: 'pruneSiblingTop.a.leaf', value: 1 },
+        { path: 'pruneSiblingTop.b.leaf', value: 2 }
+      ]).then(() => {
+        theServer.app.deltaCache.removeSource(SCOPED, ['pruneSiblingTop.a'])
+
+        selfTree().pruneSiblingTop.should.not.have.property('a')
+        selfCache().pruneSiblingTop.should.not.have.property('a')
+        treeHas('pruneSiblingTop.b.leaf', SCOPED).should.equal(true)
+        cacheHas('pruneSiblingTop.b.leaf', SCOPED).should.equal(true)
+      })
+    })
+
+    it('keeps a tree leaf that retains schema meta', function () {
+      return sendValues(SCOPED, '05', [
+        { path: 'propulsion.pruneMeta.revolutions', value: 20 }
+      ]).then(() => {
+        theServer.app.deltaCache.removeSource(SCOPED, ['propulsion.pruneMeta'])
+
+        const leaf = selfTree().propulsion.pruneMeta.revolutions
+        leaf.should.have.property('meta')
+        leaf.should.not.have.property('value')
+        selfCache().propulsion.should.not.have.property('pruneMeta')
+      })
+    })
+
+    it('removes a pruned NMEA 2000 leaf that carries a pgn', function () {
+      const N2K_LABEL = 'scopedPruneN2k'
+      const N2K_REF = `${N2K_LABEL}.9`
+      const LEAF = 'generic.temperatures.userDefinedPrune.1.temperature'
+      return doSendADelta({
+        context: 'vessels.self',
+        updates: [
+          {
+            source: {
+              label: N2K_LABEL,
+              type: 'NMEA2000',
+              pgn: 130312,
+              src: '9'
+            },
+            timestamp: at('05'),
+            values: [{ path: LEAF, value: 300 }]
+          }
+        ]
+      })
+        .then(() => {
+          _.get(theServer.app.signalk.root, [
+            ...selfParts(),
+            ...LEAF.split('.')
+          ]).should.have.property('pgn', 130312)
+
+          theServer.app.deltaCache.removeSource(N2K_REF, [LEAF])
+
+          selfTree().should.not.have.property('generic')
+        })
+        .finally(() => theServer.app.deltaCache.removeSource(N2K_REF))
+    })
+
+    it('emits SOURCEPATHSEVICTED, not SOURCEEVICTED, carrying the prefixes', function () {
+      const events = []
+      const onEvent = (e) => {
+        if (e.type === 'SOURCEEVICTED' || e.type === 'SOURCEPATHSEVICTED') {
+          events.push(e)
+        }
+      }
+      theServer.app.on('serverevent', onEvent)
+      try {
+        theServer.app.deltaCache.removeSource(SCOPED, [
+          'propulsion.port',
+          'notifications.propulsion.port'
+        ])
+      } finally {
+        theServer.app.removeListener('serverevent', onEvent)
+      }
+      events.should.have.length(1)
+      events[0].type.should.equal('SOURCEPATHSEVICTED')
+      events[0].data.should.deep.equal({
+        sourceRef: SCOPED,
+        prefixes: ['propulsion.port', 'notifications.propulsion.port']
+      })
+    })
+
+    it('emits SOURCEEVICTED with only sourceRef when no prefixes are given', function () {
+      const events = []
+      const onEvent = (e) => {
+        if (e.type === 'SOURCEEVICTED' || e.type === 'SOURCEPATHSEVICTED') {
+          events.push(e)
+        }
+      }
+      theServer.app.on('serverevent', onEvent)
+      try {
+        theServer.app.deltaCache.removeSource(SCOPED)
+      } finally {
+        theServer.app.removeListener('serverevent', onEvent)
+      }
+      events.should.have.length(1)
+      events[0].type.should.equal('SOURCEEVICTED')
+      events[0].data.should.deep.equal({ sourceRef: SCOPED })
+      events[0].data.should.not.have.property('prefixes')
+      cacheHas('navigation.headingTrue', SCOPED).should.equal(false)
+      treeHas('navigation.headingTrue', SCOPED).should.equal(false)
+    })
+  })
 })
