@@ -10,8 +10,10 @@ function createAutodetectApp() {
     selfContext: 'vessels.urn:mrn:imo:mmsi:000000000',
     isNmea2000OutAvailable: false,
     deltaCache: {
-      setSourceDelta(_key: string, _delta: object): void {}
+      setSourceDelta(_key: string, _delta: object): void {},
+      removeSource(_sourceRef: string, _prefixes?: readonly string[]): void {}
     } as DeltaCache,
+    config: { settings: {} },
     handleMessage(_id: string, _delta: object): void {},
     signalk
   })
