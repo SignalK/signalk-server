@@ -381,6 +381,15 @@ export class WebSocketService {
             (data ?? {}) as Parameters<SignalKStore['setN2kDeviceStatus']>[0]
           )
         break
+      case 'N2KINSTANCEMAPPINGS':
+        useStore
+          .getState()
+          .setN2kInstanceMappings(
+            (data ?? {}) as Parameters<
+              SignalKStore['setN2kInstanceMappings']
+            >[0]
+          )
+        break
       case 'POSITION_SOURCES':
         useStore
           .getState()

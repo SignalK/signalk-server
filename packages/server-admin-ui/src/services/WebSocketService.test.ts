@@ -154,6 +154,18 @@ describe('WebSocketService serverStartId tracking', () => {
     expect(useStore.getState().signalkData.self).toEqual({})
   })
 
+  it('stores N2KINSTANCEMAPPINGS serverevents in the store', () => {
+    service.setZustandState(useStore.setState)
+    useStore.setState({ n2kInstanceMappings: {} })
+    const rules = [{ group: 'engine', instance: 0, target: 'propulsion.main' }]
+
+    ws.receive({ type: 'N2KINSTANCEMAPPINGS', data: { '137:656598': rules } })
+
+    expect(useStore.getState().n2kInstanceMappings).toEqual({
+      '137:656598': rules
+    })
+  })
+
   it('stores HISTORYPROVIDERS serverevents as a full snapshot', () => {
     // handleServerEvent no-ops until the zustand setter is registered
     // (done by the app bootstrap in production).

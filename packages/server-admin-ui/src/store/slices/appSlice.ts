@@ -7,6 +7,7 @@ import type {
   Addon,
   AppStoreState,
   LoginStatus,
+  N2kInstanceRule,
   ServerSpecification,
   ProviderStatus,
   AccessRequest,
@@ -121,6 +122,12 @@ export interface AppSliceState {
    */
   n2kOutAvailable: boolean
   n2kDeviceStatusLoaded: boolean
+  /**
+   * Stored instance path mapping rules by device key
+   * (`<manufacturer code>:<unique number>`). A device absent from the map
+   * has not been loaded yet; one with no rules maps to an empty list.
+   */
+  n2kInstanceMappings: Record<string, N2kInstanceRule[]>
   sourceStatus: Record<string, { online: boolean; lastSeen?: number }>
   sourceStatusLoaded: boolean
   /**
@@ -176,6 +183,12 @@ export interface AppSliceActions {
     }[]
   }) => void
   setMultiSourcePaths: (paths: Record<string, string[]>) => void
+  /** Replace every device's rules, as the N2KINSTANCEMAPPINGS event does. */
+  setN2kInstanceMappings: (mappings: Record<string, N2kInstanceRule[]>) => void
+  setN2kDeviceInstanceMappings: (
+    deviceKey: string,
+    rules: N2kInstanceRule[]
+  ) => void
   setReconciledGroups: (
     groups: Array<{
       id: string
@@ -260,6 +273,7 @@ const initialAppState: AppSliceState = {
   discoveredAddresses: [],
   n2kOutAvailable: false,
   n2kDeviceStatusLoaded: false,
+  n2kInstanceMappings: {},
   sourceStatus: {},
   sourceStatusLoaded: false,
   historyProviders: null,
@@ -407,6 +421,24 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setMultiSourcePaths: (multiSourcePaths) => {
     set({ multiSourcePaths })
+  },
+
+  setN2kInstanceMappings: (mappings) => {
+    // The server omits devices without rules; a device already loaded
+    // here stays loaded, with no rules.
+    set((state) => {
+      const n2kInstanceMappings: Record<string, N2kInstanceRule[]> = {}
+      for (const deviceKey of Object.keys(state.n2kInstanceMappings)) {
+        n2kInstanceMappings[deviceKey] = []
+      }
+      return { n2kInstanceMappings: { ...n2kInstanceMappings, ...mappings } }
+    })
+  },
+
+  setN2kDeviceInstanceMappings: (deviceKey, rules) => {
+    set((state) => ({
+      n2kInstanceMappings: { ...state.n2kInstanceMappings, [deviceKey]: rules }
+    }))
   },
 
   setReconciledGroups: (reconciledGroups) => {
