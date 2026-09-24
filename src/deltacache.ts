@@ -963,7 +963,8 @@ export default class DeltaCache {
         const child = node[key]
         if (!child || typeof child !== 'object') continue
         if (child.path !== undefined && child.value !== undefined) {
-          if (pathParts[0] === 'notifications') return
+          if (pathParts[0] === 'notifications' || pathParts[0] === 'alerts')
+            return
           const sources = Object.keys(node).filter((k) => {
             const v = node[k]
             return (
@@ -1012,10 +1013,11 @@ export default class DeltaCache {
           const child = node[key]
           if (!child || typeof child !== 'object') continue
           if (child.path !== undefined && child.value !== undefined) {
-            // Notifications are events, not measurements — the priority
+            // Notifications and alerts are events, not measurements — the priority
             // engine never dedupes them (see deltaPriority.ts), so they
             // must not surface as multi-source paths in the priorities UI.
-            if (pathParts[0] === 'notifications') return
+            if (pathParts[0] === 'notifications' || pathParts[0] === 'alerts')
+              return
             const sources = Object.keys(node).filter((k) => {
               const v = node[k]
               return (
@@ -1047,7 +1049,12 @@ export default class DeltaCache {
     if (persisted) {
       for (const [path, entries] of Object.entries(persisted)) {
         if (!Array.isArray(entries)) continue
-        if (path === 'notifications' || path.startsWith('notifications.')) {
+        if (
+          path === 'notifications' ||
+          path.startsWith('notifications.') ||
+          path === 'alerts' ||
+          path.startsWith('alerts.')
+        ) {
           continue
         }
         // Fan-out path (sentinel `*` entry): keep the path anchored to
@@ -1194,7 +1201,8 @@ export default class DeltaCache {
         const child = node[key]
         if (!child || typeof child !== 'object') continue
         if (child.path !== undefined && child.value !== undefined) {
-          if (pathParts[0] === 'notifications') return
+          if (pathParts[0] === 'notifications' || pathParts[0] === 'alerts')
+            return
           const path = pathParts.join('.')
           const pathLive =
             livePublishers[path] ?? (livePublishers[path] = new Set<string>())
