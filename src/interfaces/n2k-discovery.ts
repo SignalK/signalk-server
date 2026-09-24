@@ -16,18 +16,20 @@ import { Interface, SignalKServer } from '../types'
 import { SERVERROUTESPREFIX } from '../constants'
 import { ConfigApp, writeSettingsFile } from '../config/config'
 import { atomicWriteFile } from '../atomicWrite'
-import {
-  getAllPGNs,
-  getEnumerationName,
-  getEnumerationValue
-} from '@canboat/ts-pgns'
+import { getEnumerationName } from '@canboat/ts-pgns'
 import {
   buildPgnDataInstancesFromTree,
-  buildPgnSourceKeysFromTree
+  buildPgnSourceKeysFromTree,
+  DiscoveredInstance,
+  discoveredInstance
 } from '../n2k-discovery-instances'
 import { isDeviceStale, ONLINE_THRESHOLD_MS } from '../n2k-discovery-staleness'
 import type { N2kInstanceMappings } from '@signalk/streams/n2k-instance-groups'
-import { registerN2kInstanceMappingRoutes } from '../n2k-instance-mappings'
+import {
+  mappedSourceRefs,
+  MappedSources,
+  registerN2kInstanceMappingRoutes
+} from '../n2k-instance-mappings'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
@@ -89,35 +91,6 @@ interface N2kPGN {
   fields?: Record<string, unknown>
 }
 
-// Derive temp/humidity PGN set from canboat.json — used by the
-// instance-discovery endpoint to decide which frames to listen for.
-const DATA_INSTANCE_PGNS = new Set<number>()
-
-for (const def of getAllPGNs()) {
-  const hasInstanceKey = def.Fields.some(
-    (f) => f.Id === 'instance' && f.PartOfPrimaryKey
-  )
-  if (!hasInstanceKey) continue
-
-  const hasSourceKey = def.Fields.some(
-    (f) =>
-      f.Id === 'source' &&
-      f.PartOfPrimaryKey &&
-      (f.LookupEnumeration === 'TEMPERATURE_SOURCE' ||
-        f.LookupEnumeration === 'HUMIDITY_SOURCE')
-  )
-  if (hasSourceKey) DATA_INSTANCE_PGNS.add(def.PGN)
-}
-
-interface DataInstance {
-  pgn: number
-  instance: number
-  sourceLabel: string
-  sourceEnum?: number
-  label?: string
-  hardwareChannelId?: number
-}
-
 interface ChannelLabel {
   hardwareChannelId: number
   pgn?: number
@@ -126,7 +99,7 @@ interface ChannelLabel {
 }
 
 interface DiscoverResult {
-  instances: DataInstance[]
+  instances: DiscoveredInstance[]
   channelLabels: ChannelLabel[]
 }
 
@@ -505,6 +478,15 @@ module.exports = (app: N2kDiscoveryApp) => {
     }
   }
 
+  function currentMappedSources(): MappedSources {
+    return mappedSourceRefs(
+      app.config.settings.n2kInstanceMappings,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (app.signalk as any)?.sources,
+      app.deltaCache.sourceDeltas
+    )
+  }
+
   // Push pgnDataInstances + pgnSourceKeys to admin-ui clients when the
   // tree-derived inputs change. Without this the conflict-detection
   // badge in SourceDiscovery only updates on full page reload, even
@@ -516,8 +498,9 @@ module.exports = (app: N2kDiscoveryApp) => {
   function checkDeviceStatus(): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const selfTree = (app.signalk as any)?.self
-    const pgnDataInstances = buildPgnDataInstancesFromTree(selfTree)
-    const pgnSourceKeys = buildPgnSourceKeysFromTree(selfTree)
+    const mapped = currentMappedSources()
+    const pgnDataInstances = buildPgnDataInstancesFromTree(selfTree, mapped)
+    const pgnSourceKeys = buildPgnSourceKeysFromTree(selfTree, mapped)
     // Stable JSON: tree walkers already produce sorted maps/arrays,
     // so JSON.stringify is a deterministic fingerprint and we don't
     // need to canonicalise further.
@@ -686,8 +669,9 @@ module.exports = (app: N2kDiscoveryApp) => {
         // emitted briefly during boot can't haunt conflict detection.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const selfTree = (app.signalk as any)?.self
-        const instanceData = buildPgnDataInstancesFromTree(selfTree)
-        const sourceKeyData = buildPgnSourceKeysFromTree(selfTree)
+        const mapped = currentMappedSources()
+        const instanceData = buildPgnDataInstancesFromTree(selfTree, mapped)
+        const sourceKeyData = buildPgnSourceKeysFromTree(selfTree, mapped)
         const sourceStatuses = buildSourceStatuses()
         res.json({
           knownAddresses: Array.from(knownAddresses),
@@ -718,7 +702,7 @@ module.exports = (app: N2kDiscoveryApp) => {
         }
 
         const localLabels = sourceRef ? loadLabels(app) : {}
-        const instances: DataInstance[] = []
+        const instances: DiscoveredInstance[] = []
         const seen = new Set<string>()
         // PGN 130060 labels keyed by "instance" (dataSourceInstanceValue)
         const n2kLabels = new Map<string, string>()
@@ -771,49 +755,12 @@ module.exports = (app: N2kDiscoveryApp) => {
             return
           }
 
-          if (!DATA_INSTANCE_PGNS.has(n2k.pgn)) return
-
-          const inst = Number(n2k.fields.instance ?? n2k.fields.Instance)
-          if (isNaN(inst)) return
-
-          let sourceLabel = ''
-          let sourceEnum: number | undefined
-
-          if (n2k.pgn === 130313) {
-            // Humidity
-            const srcField = n2k.fields.source ?? n2k.fields.Source
-            if (typeof srcField === 'string') {
-              sourceLabel = srcField
-              sourceEnum = getEnumerationValue('HUMIDITY_SOURCE', srcField)
-            } else if (typeof srcField === 'number') {
-              sourceEnum = srcField
-              sourceLabel =
-                getEnumerationName('HUMIDITY_SOURCE', srcField) ||
-                `Humidity Source ${srcField}`
-            }
-          } else {
-            // Temperature PGNs (130312, 130316, 130823, etc.)
-            const srcField = n2k.fields.source ?? n2k.fields.Source
-            if (typeof srcField === 'string') {
-              sourceLabel = srcField
-              sourceEnum = getEnumerationValue('TEMPERATURE_SOURCE', srcField)
-            } else if (typeof srcField === 'number') {
-              sourceEnum = srcField
-              sourceLabel =
-                getEnumerationName('TEMPERATURE_SOURCE', srcField) ||
-                `Temperature Source ${srcField}`
-            }
-          }
-
-          const key = `${n2k.pgn}:${inst}:${sourceLabel}`
+          const entry = discoveredInstance(n2k)
+          if (!entry) return
+          const key = `${entry.pgn}:${entry.instance}:${entry.sourceLabel}:${entry.discriminator ?? ''}`
           if (!seen.has(key)) {
             seen.add(key)
-            instances.push({
-              pgn: n2k.pgn,
-              instance: inst,
-              sourceLabel,
-              sourceEnum
-            })
+            instances.push(entry)
           }
         }
 

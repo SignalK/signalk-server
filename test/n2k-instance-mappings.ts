@@ -4,6 +4,7 @@ import { Request, Response } from 'express'
 import {
   findDeviceSourceRefs,
   isDeviceKey,
+  mappedSourceRefs,
   N2kInstanceMappingsApp,
   prunePrefixes,
   registerN2kInstanceMappingRoutes,
@@ -16,6 +17,7 @@ import type {
 import { freeport } from './ts-servertestutilities'
 import { FORBIDDEN_PATH_KEYS } from '@signalk/server-api'
 import { FORBIDDEN_TARGET_SEGMENTS } from '../src/n2k-target-policy'
+import { FromPgn, pgnToActisenseSerialFormat } from '@canboat/canboatjs'
 import {
   startServerP,
   getAdminToken,
@@ -657,6 +659,32 @@ describe('n2k instance mappings', function () {
     })
   })
 
+  describe('mappedSourceRefs', function () {
+    const sources = {
+      can0: {
+        '5': { n2k: { src: '5', canName: CAN_NAME_A } },
+        '6': { n2k: { src: '6', canName: CAN_NAME_B } }
+      }
+    }
+    const rules: N2kInstanceRule[] = [
+      { group: 'engine', instance: 0, target: 'propulsion.main' }
+    ]
+
+    it("maps every ref of a device with rules to the device's rules", function () {
+      const mapped = mappedSourceRefs({ [DEVICE_A]: rules }, sources, {})
+      _.sortBy([...mapped.keys()]).should.deep.equal([
+        'can0.5',
+        `can0.${CAN_NAME_A}`
+      ])
+      mapped.get('can0.5')!.should.deep.equal({ rules, src: 5 })
+    })
+
+    it('is empty without mappings', function () {
+      mappedSourceRefs(undefined, sources, {}).size.should.equal(0)
+      mappedSourceRefs({}, sources, {}).size.should.equal(0)
+    })
+  })
+
   describe('route handlers', function () {
     type Handler = (req: Request, res: Response) => void
 
@@ -918,6 +946,197 @@ describe('n2k instance mappings', function () {
 
       cacheHas(refA).should.equal(false)
       cacheHas(refB).should.equal(true)
+    })
+  })
+
+  // The rule applies in the real conversion stream: frames posted as decoded
+  // canboat JSON run through the n2k-signalk pipe element into the server.
+  describe('NMEA 2000 provider pipeline', function () {
+    // Two of the discovery interface's 5 s status ticks.
+    const STATUS_PUSH_WAIT_MS = 11_000
+    const PROVIDER = 'n2kPipe'
+    const ENGINE_SRC = 50
+    const OTHER_SRC = 51
+    const refA = `${PROVIDER}.${ENGINE_SRC}`
+    const refB = `${PROVIDER}.${OTHER_SRC}`
+    const parser = new FromPgn({})
+    let url: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let server: any
+    let adminToken: string
+    type Instances = Record<string, Record<string, number[]>>
+    const pushedInstances: Instances[] = []
+    const onAdminEvent = (e: {
+      type: string
+      data: { pgnDataInstances: Instances }
+    }) => {
+      if (e.type === 'N2KDEVICESTATUS') {
+        pushedInstances.push(e.data.pgnDataInstances)
+      }
+    }
+
+    before(async function () {
+      const port = await freeport()
+      url = `http://0.0.0.0:${port}`
+      server = await startServerP(port, true, {
+        settings: {
+          pipedProviders: [
+            {
+              id: PROVIDER,
+              pipeElements: [
+                { type: '../test/httpprovider' },
+                { type: 'providers/n2k-signalk' }
+              ]
+            }
+          ]
+        }
+      })
+      adminToken = await getAdminToken(server)
+      server.app.on('serverAdminEvent', onAdminEvent)
+    })
+
+    after(async function () {
+      server.app.removeListener('serverAdminEvent', onAdminEvent)
+      await server.stop()
+    })
+
+    function frame(pgn: number, src: number, fields: Record<string, unknown>) {
+      const encoded = pgnToActisenseSerialFormat({
+        pgn,
+        src,
+        dst: 255,
+        prio: 2,
+        fields
+      } as unknown as Parameters<typeof pgnToActisenseSerialFormat>[0])
+      const decoded: unknown = parser.parseString(encoded!)
+      if (!decoded) throw new Error(`canboat could not decode PGN ${pgn}`)
+      return decoded
+    }
+
+    const addressClaim = (src: number, manufacturerCode: number) =>
+      frame(60928, src, {
+        uniqueNumber: 656598,
+        manufacturerCode,
+        deviceInstanceLower: 0,
+        deviceInstanceUpper: 0,
+        deviceFunction: 140,
+        deviceClass: 50,
+        systemInstance: 0,
+        industryGroup: 4,
+        arbitraryAddressCapable: 1
+      })
+    const engine = (src: number) =>
+      frame(127488, src, { instance: 0, speed: 1000 })
+    const battery = (src: number) =>
+      frame(127508, src, { instance: 3, voltage: 12.5 })
+
+    async function send(...frames: unknown[]) {
+      for (const f of frames) {
+        const res = await fetch(`${url}/signalk/v1/api/_test/delta`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: `JAUTHENTICATION=${adminToken}`
+          },
+          body: JSON.stringify(f)
+        })
+        res.status.should.equal(200)
+      }
+    }
+
+    async function until(
+      what: string,
+      condition: () => boolean,
+      timeoutMs = 2000
+    ) {
+      const deadline = Date.now() + timeoutMs
+      while (!condition()) {
+        if (Date.now() > deadline) throw new Error(`timed out: ${what}`)
+        await new Promise((resolve) => setTimeout(resolve, 25))
+      }
+    }
+
+    it('writes the next frame at the target and prunes the default leaf', async function () {
+      // Device keys 137:656598 and 381:656598.
+      await send(
+        addressClaim(ENGINE_SRC, 137),
+        addressClaim(OTHER_SRC, 381),
+        engine(ENGINE_SRC),
+        battery(ENGINE_SRC),
+        battery(OTHER_SRC)
+      )
+      const at = (...path: string[]) =>
+        _.get(server.app.signalk.self, path) as
+          { $source?: string; values?: Record<string, unknown> } | undefined
+      const publishes = (ref: string, ...path: string[]) => {
+        const leaf = at(...path)
+        return leaf?.$source === ref || leaf?.values?.[ref] !== undefined
+      }
+      await until('default-path engine leaf', () =>
+        publishes(refA, 'propulsion', 'port', 'revolutions')
+      )
+
+      const put = await fetch(
+        `${url}/skServer/n2kInstanceMappings/137:656598`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: `JAUTHENTICATION=${adminToken}`
+          },
+          body: JSON.stringify([
+            { group: 'engine', instance: 0, target: 'propulsion.main' },
+            {
+              group: 'battery',
+              instance: 3,
+              target: 'electrical.batteries.house'
+            }
+          ])
+        }
+      )
+      put.status.should.equal(200)
+
+      await send(engine(ENGINE_SRC), battery(ENGINE_SRC))
+      await until('mapped engine leaf', () =>
+        publishes(refA, 'propulsion', 'main', 'revolutions')
+      )
+      publishes(refA, 'propulsion', 'port', 'revolutions').should.equal(false)
+      publishes(
+        refA,
+        'electrical',
+        'batteries',
+        'house',
+        'voltage'
+      ).should.equal(true)
+      publishes(refA, 'electrical', 'batteries', '3', 'voltage').should.equal(
+        false
+      )
+      publishes(refB, 'electrical', 'batteries', '3', 'voltage').should.equal(
+        true
+      )
+    })
+
+    it('still reports raw instances, so the shared battery conflicts', async function () {
+      const hasRawInstances = (instances: Instances | undefined) =>
+        _.isEqual(instances?.[refA]?.['127488'], [0]) &&
+        _.isEqual(instances?.[refA]?.['127508'], [3]) &&
+        _.isEqual(instances?.[refB]?.['127508'], [3])
+
+      const res = await fetch(`${url}/skServer/n2kDeviceStatus`, {
+        headers: { Cookie: `JAUTHENTICATION=${adminToken}` }
+      })
+      res.status.should.equal(200)
+      const status = await res.json()
+      hasRawInstances(status.pgnDataInstances).should.equal(
+        true,
+        JSON.stringify(status.pgnDataInstances)
+      )
+
+      await until(
+        'N2KDEVICESTATUS push with the mapped instances',
+        () => hasRawInstances(pushedInstances[pushedInstances.length - 1]),
+        STATUS_PUSH_WAIT_MS
+      )
     })
   })
 })
