@@ -28,6 +28,7 @@ import { ServerApp, SignalKMessageHub, WithConfig } from '../app'
 import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
+import type { N2kInstanceMappings } from '@signalk/streams/n2k-instance-groups'
 import { atomicWriteFile } from '../atomicWrite'
 import {
   getPrioritiesFilePath,
@@ -170,6 +171,9 @@ export interface Config {
     /** Map of "sourceRefA+sourceRefB" (sorted) → ISO timestamp when the
      * conflict was dismissed by the user */
     ignoredInstanceConflicts?: Record<string, string>
+    /** Per NMEA 2000 device ("<manufacturer code>:<unique number>"), rules
+     * that move an instance group's paths to a user-chosen prefix */
+    n2kInstanceMappings?: N2kInstanceMappings
     gnssSensors?: {
       sensorId: string
       $source: string
