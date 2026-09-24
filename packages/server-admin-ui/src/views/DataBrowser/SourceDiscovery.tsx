@@ -34,6 +34,18 @@ import {
   useN2kDeviceStatusLoaded
 } from '../../store'
 import SourceLabel from './SourceLabel'
+import InstanceMappingSection, {
+  MappedInstanceNotice
+} from './InstanceMappingSection'
+import {
+  HUMIDITY_SOURCE_LABELS,
+  TEMPERATURE_SOURCE_LABELS,
+  hasMappablePgn,
+  useN2kInstanceScan,
+  type DiscoveredInstance,
+  type DiscoverResult,
+  type InstanceScan
+} from './n2kInstances'
 
 type N2kDeviceStatusSetter = ReturnType<
   typeof useStore.getState
@@ -1047,9 +1059,11 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
                   readOnly={readOnly}
                 />
               )}
-              {hasDataInstancePGN && isExpanded && (
-                <DataInstanceSection device={device} readOnly={readOnly} />
-              )}
+              <DeviceInstanceSections
+                device={device}
+                showDataInstances={hasDataInstancePGN}
+                readOnly={readOnly}
+              />
               {allPgnKeys.length > 0 && (
                 <div style={{ gridColumn: '1 / -1' }}>
                   <span
@@ -1109,6 +1123,30 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
           </td>
         </tr>
       )}
+    </>
+  )
+}
+
+/**
+ * Data Instances and path mapping share one instance scan of the device,
+ * started when its detail opens.
+ */
+const DeviceInstanceSections: React.FC<{
+  device: N2kDeviceEntry
+  showDataInstances: boolean
+  readOnly: boolean
+}> = ({ device, showDataInstances, readOnly }) => {
+  const mappable = hasMappablePgn(device)
+  const scan = useN2kInstanceScan(device, showDataInstances || mappable)
+  return (
+    <>
+      {showDataInstances && (
+        <DataInstanceSection device={device} scan={scan} readOnly={readOnly} />
+      )}
+      <InstanceMappingSection
+        device={device}
+        scan={mappable ? scan : undefined}
+      />
     </>
   )
 }
@@ -1645,56 +1683,15 @@ export const PgnInstanceField: React.FC<{
             currentValue={inst}
             readOnly={readOnly}
           />
+          <MappedInstanceNotice
+            device={device}
+            group="battery"
+            instance={inst}
+          />
         </div>
       ))}
     </div>
   )
-}
-
-// NMEA 2000 TEMPERATURE_SOURCE enum labels (matches canboat)
-const TEMPERATURE_SOURCE_LABELS: Record<number, string> = {
-  0: 'Sea Temperature',
-  1: 'Outside Temperature',
-  2: 'Inside Temperature',
-  3: 'Engine Room Temperature',
-  4: 'Main Cabin Temperature',
-  5: 'Live Well Temperature',
-  6: 'Bait Well Temperature',
-  7: 'Refrigeration Temperature',
-  8: 'Heating System Temperature',
-  9: 'Dew Point Temperature',
-  10: 'Apparent Wind Chill Temperature',
-  11: 'Theoretical Wind Chill Temperature',
-  12: 'Heat Index Temperature',
-  13: 'Freezer Temperature',
-  14: 'Exhaust Gas Temperature',
-  15: 'Shaft Seal Temperature'
-}
-
-const HUMIDITY_SOURCE_LABELS: Record<number, string> = {
-  0: 'Inside',
-  1: 'Outside'
-}
-
-interface DataInstance {
-  pgn: number
-  instance: number
-  sourceLabel: string
-  sourceEnum?: number
-  label?: string
-  hardwareChannelId?: number
-}
-
-interface ChannelLabel {
-  hardwareChannelId: number
-  pgn?: number
-  instance?: number
-  label: string
-}
-
-interface DiscoverResult {
-  instances: DataInstance[]
-  channelLabels: ChannelLabel[]
 }
 
 const PGN_LABELS: Record<number, string> = {
@@ -1710,69 +1707,21 @@ function fieldForPgn(pgn: number): string {
 }
 
 /**
- * Discovers and displays per-channel data instances for a device.
- * Calls GET /skServer/n2kDiscoverInstances?src=X which listens to
- * the N2K bus for ~6 seconds and returns all instance/source tuples
- * seen from that device.
+ * Displays and edits the per-channel temperature and humidity data
+ * instances the device scan heard.
  */
 const DataInstanceSection: React.FC<{
   device: N2kDeviceEntry
+  scan: InstanceScan
   readOnly?: boolean
-}> = ({ device, readOnly }) => {
-  const [instances, setInstances] = useState<DataInstance[] | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchInstances = useCallback(() => {
-    return fetch(
-      `${window.serverRoutesPrefix}/n2kDiscoverInstances?src=${device.src}&sourceRef=${encodeURIComponent(device.sourceRef)}`,
-      { credentials: 'include' }
-    )
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json() as Promise<DiscoverResult>
-      })
-      .then((data) => ({
-        ...data,
-        // The scan also lists mappable instances of other PGNs; these rows
-        // edit temperature and humidity instances only.
-        instances: data.instances.filter((inst) => inst.pgn in PGN_LABELS)
-      }))
-  }, [device.src, device.sourceRef])
-
-  const discover = useCallback(() => {
-    setLoading(true)
-    setError(null)
-    fetchInstances()
-      .then((data) => {
-        setInstances(data.instances)
-        setLoading(false)
-      })
-      .catch((err) => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [fetchInstances])
-
-  useEffect(() => {
-    let cancelled = false
-    fetchInstances()
-      .then((data) => {
-        if (!cancelled) {
-          setInstances(data.instances)
-          setLoading(false)
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err.message)
-          setLoading(false)
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [fetchInstances])
+}> = ({ device, scan, readOnly }) => {
+  const { loading, error, rescan: discover } = scan
+  // The scan also lists mappable instances of other PGNs; these rows edit
+  // temperature and humidity instances only.
+  const instances = useMemo(
+    () => scan.instances?.filter((inst) => inst.pgn in PGN_LABELS) ?? null,
+    [scan.instances]
+  )
 
   const labelStyle = {
     fontWeight: 500 as const,
@@ -1841,7 +1790,7 @@ const DataInstanceSection: React.FC<{
     )
   }
 
-  const byPgn = new Map<number, DataInstance[]>()
+  const byPgn = new Map<number, DiscoveredInstance[]>()
   if (instances) {
     for (const inst of instances) {
       const arr = byPgn.get(inst.pgn)
@@ -1885,12 +1834,23 @@ const DataInstanceSection: React.FC<{
             {PGN_LABELS[pgn] || `PGN ${pgn}`} (PGN {pgn}):
           </span>
           {insts.map((inst) => (
-            <DataInstanceRow
+            <React.Fragment
               key={`${inst.pgn}-${inst.instance}-${inst.sourceEnum ?? inst.sourceLabel ?? ''}`}
-              device={device}
-              inst={inst}
-              readOnly={readOnly}
-            />
+            >
+              <DataInstanceRow
+                device={device}
+                inst={inst}
+                readOnly={readOnly}
+              />
+              {inst.group && (
+                <MappedInstanceNotice
+                  device={device}
+                  group={inst.group}
+                  discriminator={inst.discriminator}
+                  instance={inst.instance}
+                />
+              )}
+            </React.Fragment>
           ))}
         </div>
       ))}
@@ -1904,7 +1864,7 @@ const DataInstanceSection: React.FC<{
  */
 const DataInstanceRow: React.FC<{
   device: N2kDeviceEntry
-  inst: DataInstance
+  inst: DiscoveredInstance
   readOnly?: boolean
 }> = ({ device, inst, readOnly }) => {
   const [editInstance, setEditInstance] = useState('')

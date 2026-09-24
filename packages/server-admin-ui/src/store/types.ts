@@ -80,6 +80,18 @@ export interface LoginStatus {
   [key: string]: unknown
 }
 
+/**
+ * A path mapping rule for one NMEA 2000 data instance of a device, as
+ * GET/PUT /n2kInstanceMappings/:deviceKey carry it. Codes are numeric;
+ * `discriminator` is the tank type or sensor source code.
+ */
+export interface N2kInstanceRule {
+  group: string
+  discriminator?: number
+  instance: number
+  target: string
+}
+
 export interface ServerSpecification {
   endpoints?: Record<string, unknown>
   server?: {
