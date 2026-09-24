@@ -336,6 +336,21 @@ export class WebSocketService {
         }
         break
       }
+      case 'SOURCEPATHSEVICTED': {
+        // Server cleared only the `prefixes` subtrees of a source
+        // (instance path mapping moved them); its other leaves stay.
+        const payload = (data ?? {}) as {
+          sourceRef?: string
+          prefixes?: unknown
+        }
+        if (payload.sourceRef && Array.isArray(payload.prefixes)) {
+          const prefixes = payload.prefixes.filter(
+            (p): p is string => typeof p === 'string'
+          )
+          useStore.getState().evictSource(payload.sourceRef, prefixes)
+        }
+        break
+      }
       case 'SOURCESTATUS':
         useStore
           .getState()

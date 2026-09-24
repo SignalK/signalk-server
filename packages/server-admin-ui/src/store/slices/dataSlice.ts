@@ -69,7 +69,11 @@ export interface DataSliceActions {
   getPath$SourceKeys: (context: string) => string[]
   getContexts: () => string[]
   removePath: (context: string, path$SourceKey: string) => void
-  evictSource: (sourceRef: string) => void
+  /**
+   * Drop the leaves cached for `sourceRef`; with `prefixes`, only those
+   * whose path equals a prefix or lies below it on a segment boundary.
+   */
+  evictSource: (sourceRef: string, prefixes?: readonly string[]) => void
   clearData: () => void
 }
 
@@ -186,13 +190,22 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
     })
   },
 
-  evictSource: (sourceRef) => {
+  evictSource: (sourceRef, prefixes) => {
     set((state) => {
       // Drop every leaf this client cached for the evicted sourceRef.
       // Triggered by the server's SOURCEEVICTED event after the trash
-      // action clears the source-side cache. Keys are `path$source`,
+      // action clears the source-side cache, or by SOURCEPATHSEVICTED
+      // with `prefixes` for a scoped removal. Keys are `path$source`,
       // so a sourceRef match shows up as a `$<ref>` suffix.
       const suffix = `$${sourceRef}`
+      const inScope = (key: string): boolean => {
+        if (!key.endsWith(suffix)) return false
+        if (prefixes === undefined) return true
+        const path = key.slice(0, key.length - suffix.length)
+        return prefixes.some(
+          (prefix) => path === prefix || path.startsWith(prefix + '.')
+        )
+      }
       let changed = false
       let contextNames = state.contextNames
       const next: typeof state.signalkData = {}
@@ -202,7 +215,7 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
         let ctxChanged = false
         let nameDropped = false
         for (const key of Object.keys(contextData)) {
-          if (key.endsWith(suffix)) {
+          if (inScope(key)) {
             ctxChanged = true
             changed = true
             if (isNameKey(key)) nameDropped = true
