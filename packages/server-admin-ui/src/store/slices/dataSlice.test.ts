@@ -380,5 +380,59 @@ describe('dataSlice', () => {
       expect(useStore.getState().signalkData).toBe(before.signalkData)
       expect(useStore.getState().dataVersion).toBe(before.dataVersion)
     })
+
+    it('with a full leaf path as prefix drops only that leaf', () => {
+      const ctx = 'vessels.self'
+      const leaf = 'environment.inside.engineRoom.temperature'
+      const sibling = 'environment.inside.engineRoom.relativeHumidity'
+      const seed = (path: string, source: string): void => {
+        useStore.getState().updatePath(ctx, `${path}$${source}`, {
+          path,
+          $source: source,
+          value: 1
+        })
+      }
+      seed(leaf, 'can0.a')
+      seed(sibling, 'can0.a')
+      seed(leaf, 'can0.b')
+
+      useStore.getState().evictSource('can0.a', [leaf])
+
+      expect(Object.keys(useStore.getState().signalkData[ctx]).sort()).toEqual(
+        [`${sibling}$can0.a`, `${leaf}$can0.b`].sort()
+      )
+    })
+
+    it("with prefixes drops only that source's leaves under them", () => {
+      const seed = (key: string, source: string): void => {
+        const path = key.slice(0, key.indexOf('$'))
+        useStore
+          .getState()
+          .updatePath('vessels.self', key, { path, $source: source, value: 1 })
+      }
+      seed('propulsion.port.revolutions$can0.a', 'can0.a')
+      seed('propulsion.port$can0.a', 'can0.a')
+      seed('notifications.propulsion.port.overTemperature$can0.a', 'can0.a')
+      seed('navigation.headingTrue$can0.a', 'can0.a')
+      seed('propulsion.portAux.revolutions$can0.a', 'can0.a')
+      seed('propulsion.port.revolutions$can0.b', 'can0.b')
+      const before = useStore.getState().dataVersion
+
+      useStore
+        .getState()
+        .evictSource('can0.a', [
+          'propulsion.port',
+          'notifications.propulsion.port'
+        ])
+
+      expect(
+        Object.keys(useStore.getState().signalkData['vessels.self']).sort()
+      ).toEqual([
+        'navigation.headingTrue$can0.a',
+        'propulsion.port.revolutions$can0.b',
+        'propulsion.portAux.revolutions$can0.a'
+      ])
+      expect(useStore.getState().dataVersion).toBe(before + 1)
+    })
   })
 })

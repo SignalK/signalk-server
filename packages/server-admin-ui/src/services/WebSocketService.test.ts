@@ -116,6 +116,44 @@ describe('WebSocketService serverStartId tracking', () => {
     ).toHaveLength(1)
   })
 
+  it('scopes a SOURCEPATHSEVICTED serverevent to its prefixes', () => {
+    service.setZustandState(useStore.setState)
+    seedPath('propulsion.port.revolutions')
+    seedPath('navigation.speedOverGround')
+
+    ws.receive({
+      type: 'SOURCEPATHSEVICTED',
+      data: { sourceRef: 'nmea0183.0', prefixes: ['propulsion.port'] }
+    })
+
+    expect(Object.keys(useStore.getState().signalkData.self ?? {})).toEqual([
+      'navigation.speedOverGround$nmea0183.0'
+    ])
+  })
+
+  it('evicts every leaf of a source on SOURCEEVICTED', () => {
+    service.setZustandState(useStore.setState)
+    seedPath('propulsion.port.revolutions')
+    seedPath('navigation.speedOverGround')
+
+    ws.receive({ type: 'SOURCEEVICTED', data: { sourceRef: 'nmea0183.0' } })
+
+    expect(useStore.getState().signalkData.self).toEqual({})
+  })
+
+  it('ignores a stray prefixes field on SOURCEEVICTED', () => {
+    service.setZustandState(useStore.setState)
+    seedPath('propulsion.port.revolutions')
+    seedPath('navigation.speedOverGround')
+
+    ws.receive({
+      type: 'SOURCEEVICTED',
+      data: { sourceRef: 'nmea0183.0', prefixes: ['propulsion.port'] }
+    })
+
+    expect(useStore.getState().signalkData.self).toEqual({})
+  })
+
   it('stores HISTORYPROVIDERS serverevents as a full snapshot', () => {
     // handleServerEvent no-ops until the zustand setter is registered
     // (done by the app bootstrap in production).
