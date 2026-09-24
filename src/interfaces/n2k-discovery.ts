@@ -14,7 +14,7 @@ import { Request, Response } from 'express'
 import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { SERVERROUTESPREFIX } from '../constants'
-import { writeSettingsFile } from '../config/config'
+import { ConfigApp, writeSettingsFile } from '../config/config'
 import { atomicWriteFile } from '../atomicWrite'
 import {
   getAllPGNs,
@@ -26,6 +26,8 @@ import {
   buildPgnSourceKeysFromTree
 } from '../n2k-discovery-instances'
 import { isDeviceStale, ONLINE_THRESHOLD_MS } from '../n2k-discovery-staleness'
+import type { N2kInstanceMappings } from '@signalk/streams/n2k-instance-groups'
+import { registerN2kInstanceMappingRoutes } from '../n2k-instance-mappings'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
@@ -57,11 +59,15 @@ interface N2kDiscoveryApp extends SignalKServer {
   config: {
     defaults: unknown
     configPath: string
-    settings: { sourceAliases?: Record<string, string> }
+    settings: {
+      sourceAliases?: Record<string, string>
+      n2kInstanceMappings?: N2kInstanceMappings
+    }
   }
   deltaCache: {
     sourceDeltas: Record<string, unknown>
     removeSourceDelta(key: string): void
+    removeSource(sourceRef: string, prefixes?: readonly string[]): void
   }
 }
 
@@ -636,6 +642,9 @@ module.exports = (app: N2kDiscoveryApp) => {
     )
     app.securityStrategy.addAdminMiddleware(
       `${SERVERROUTESPREFIX}/n2kChannelLabel`
+    )
+    registerN2kInstanceMappingRoutes(app, (settings, cb) =>
+      writeSettingsFile(app as unknown as ConfigApp, settings, cb)
     )
 
     app.post(

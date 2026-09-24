@@ -22,6 +22,23 @@ export type N2kFrame = Parameters<typeof classifyInstance>[0]
  */
 export { classifyInstance }
 
+/**
+ * Grammar of a rule target, defined here so the admin UI's drift test can
+ * compare its copy without importing server code.
+ */
+export const MAX_TARGET_LENGTH = 128
+export const MAX_TARGET_SEGMENTS = 8
+export const NOTIFICATIONS_ROOT = 'notifications'
+/**
+ * Path segments the server drops from every delta (FORBIDDEN_PATH_KEYS in
+ * @signalk/server-api); a target containing one would silently lose its data.
+ */
+export const FORBIDDEN_TARGET_SEGMENTS: ReadonlySet<string> = new Set([
+  '__proto__',
+  'constructor',
+  'prototype'
+])
+
 /** The server event that announces every device's rules. */
 export const N2K_INSTANCE_MAPPINGS_EVENT = 'N2KINSTANCEMAPPINGS'
 
