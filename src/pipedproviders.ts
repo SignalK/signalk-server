@@ -17,7 +17,8 @@
 import { PropertyValues, PropertyValuesCallback } from '@signalk/server-api'
 import _ from 'lodash'
 import { Duplex, Writable } from 'stream'
-import { SignalKMessageHub, WithConfig } from './app'
+import { SignalKMessageHub } from './app'
+import { WithConfig } from './config/config'
 import { createDebug } from './debug'
 import { EventsActorId, WithWrappedEmitter } from './events'
 
