@@ -1458,7 +1458,8 @@ const InstanceRow: React.FC<{
   max: number
   currentValue: number | null
   readOnly?: boolean
-}> = ({ device, field, max, currentValue, readOnly }) => {
+  onMappingWarning: (warning: string | undefined) => void
+}> = ({ device, field, max, currentValue, readOnly, onMappingWarning }) => {
   const setN2kDeviceStatus = useStore((s) => s.setN2kDeviceStatus)
   const [editValue, setEditValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -1496,6 +1497,7 @@ const InstanceRow: React.FC<{
     if (isNaN(num) || num < 0 || num > max) return
     setIsSaving(true)
     setSaveResult(null)
+    onMappingWarning(undefined)
     const body: Record<string, unknown> = {
       dst: Number(device.src),
       field,
@@ -1510,8 +1512,11 @@ const InstanceRow: React.FC<{
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     })
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) throw new Error()
+        const { warning } = (await res.json()) as { warning?: string }
+        onMappingWarning(warning)
+        if (!isMountedRef.current) return
         // Poll the device status, the source of the displayed instances,
         // to verify the instance changed.
         const sourceRef = device.sourceRef
@@ -1623,6 +1628,12 @@ const InstanceRow: React.FC<{
   )
 }
 
+const mappingWarningStyle = {
+  fontSize: '0.8rem',
+  color: 'var(--bs-warning-text-emphasis, #997404)',
+  marginLeft: '8px'
+}
+
 const NO_INSTANCES: number[] = []
 
 /**
@@ -1640,6 +1651,12 @@ export const PgnInstanceField: React.FC<{
 }> = ({ device, field, label, max, readOnly }) => {
   const pgnDataInstances = usePgnDataInstances()
   const loaded = useN2kDeviceStatusLoaded()
+  // Held here, not in the row: the row of a renumbered instance unmounts
+  // once the new instance is confirmed.
+  const [mappingWarning, setMappingWarning] = useState<string>()
+  const warning = mappingWarning && (
+    <div style={mappingWarningStyle}>{mappingWarning}</div>
+  )
   const currentInstances =
     pgnDataInstances[device.sourceRef]?.[FIELD_PGNS[field]] ?? NO_INSTANCES
 
@@ -1666,7 +1683,9 @@ export const PgnInstanceField: React.FC<{
           max={max}
           currentValue={null}
           readOnly={readOnly}
+          onMappingWarning={setMappingWarning}
         />
+        {warning}
       </div>
     )
   }
@@ -1682,14 +1701,17 @@ export const PgnInstanceField: React.FC<{
             max={max}
             currentValue={inst}
             readOnly={readOnly}
+            onMappingWarning={setMappingWarning}
           />
           <MappedInstanceNotice
             device={device}
             group="battery"
             instance={inst}
+            followsRenumber
           />
         </div>
       ))}
+      {warning}
     </div>
   )
 }
