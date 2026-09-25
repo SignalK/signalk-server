@@ -26,9 +26,11 @@ import {
 import { isDeviceStale, ONLINE_THRESHOLD_MS } from '../n2k-discovery-staleness'
 import type { N2kInstanceMappings } from '@signalk/streams/n2k-instance-groups'
 import {
+  createInstanceRuleFollower,
   mappedSourceRefs,
   MappedSources,
-  registerN2kInstanceMappingRoutes
+  registerN2kInstanceMappingRoutes,
+  SettingsWriter
 } from '../n2k-instance-mappings'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
@@ -263,6 +265,9 @@ module.exports = (app: N2kDiscoveryApp) => {
   let lastDeviceStatusFingerprint: string | undefined
   let firstDeviceStatusEmit = true
   const api = new Interface()
+  const writeSettings: SettingsWriter = (settings, cb) =>
+    writeSettingsFile(app as unknown as ConfigApp, settings, cb)
+  const instanceRuleFollower = createInstanceRuleFollower(app, writeSettings)
 
   // Look up the numeric bus address that currently corresponds to the
   // given sourceRef. The sources summary tree (populated by fullsignalk
@@ -534,6 +539,7 @@ module.exports = (app: N2kDiscoveryApp) => {
 
   const n2kListener = (pgn: unknown) => {
     const n2k = pgn as N2kPGN
+    instanceRuleFollower.onFrame(n2k)
     if (typeof n2k.src === 'number' && n2k.src >= 0 && n2k.src < 254) {
       knownAddresses.add(n2k.src)
       frameLastSeenBySrc.set(n2k.src, Date.now())
@@ -626,9 +632,7 @@ module.exports = (app: N2kDiscoveryApp) => {
     app.securityStrategy.addAdminMiddleware(
       `${SERVERROUTESPREFIX}/n2kChannelLabel`
     )
-    registerN2kInstanceMappingRoutes(app, (settings, cb) =>
-      writeSettingsFile(app as unknown as ConfigApp, settings, cb)
-    )
+    registerN2kInstanceMappingRoutes(app, writeSettings)
 
     app.post(
       `${SERVERROUTESPREFIX}/n2kDiscoverDevices`,
@@ -1215,6 +1219,19 @@ module.exports = (app: N2kDiscoveryApp) => {
           return
         }
 
+        // Why a path mapping keyed on the edited instance stays behind.
+        let mappingWarning: string | undefined
+        const followRenumber = (pgn: number, to: number) => {
+          if (Number.isInteger(currentValue)) {
+            mappingWarning = instanceRuleFollower.expectRenumber({
+              dst,
+              pgn,
+              from: currentValue as number,
+              to
+            })
+          }
+        }
+
         if (field === 'deviceInstance') {
           // PGN 126208 Command targeting PGN 60928:
           // field 3 = deviceInstanceLower (3 bits), field 4 = deviceInstanceUpper (5 bits)
@@ -1366,6 +1383,7 @@ module.exports = (app: N2kDiscoveryApp) => {
               }
             })
           }
+          followRenumber(127508, instance)
         } else if (field === 'dcInstance') {
           // PGN 126208 targeting PGN 127506 (DC Detailed Status):
           // field order 2 = instance (8 bits, 0-252)
@@ -1416,6 +1434,7 @@ module.exports = (app: N2kDiscoveryApp) => {
               }
             })
           }
+          followRenumber(127506, instance)
         } else if (field === 'temperatureInstance') {
           // PGN 126208 Write Fields targeting a temperature PGN
           // (130312, 130316, or 130823): field 2 = Instance
@@ -1645,7 +1664,8 @@ module.exports = (app: N2kDiscoveryApp) => {
         res.json({
           state: 'COMPLETED',
           statusCode: 200,
-          message: `Configuration command sent to device ${dst}`
+          message: `Configuration command sent to device ${dst}`,
+          warning: mappingWarning
         })
       }
     )

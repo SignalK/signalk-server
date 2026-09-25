@@ -2,6 +2,7 @@ import chai, { expect } from 'chai'
 import _ from 'lodash'
 import { Request, Response } from 'express'
 import {
+  createInstanceRuleFollower,
   findDeviceSourceRefs,
   isDeviceKey,
   mappedSourceRefs,
@@ -693,7 +694,11 @@ describe('n2k instance mappings', function () {
       body: unknown
     }
 
-    function fakeApp(writeError?: Error) {
+    function fakeApp(
+      writeError?: Error,
+      now: () => number = Date.now,
+      deferWrites = false
+    ) {
       const handlers: Record<string, Handler> = {}
       const events: Array<{ type: string; data: unknown }> = []
       const removed: Array<{ ref: string; prefixes?: readonly string[] }> = []
@@ -722,7 +727,17 @@ describe('n2k instance mappings', function () {
           }
         }
       }
-      registerN2kInstanceMappingRoutes(app, (_settings, cb) => cb(writeError))
+      // With deferWrites, each write completes when the test calls it.
+      const deferredWrites: Array<() => void> = []
+      const writeSettings = (
+        _settings: object,
+        cb: (err?: unknown) => void
+      ) => {
+        if (deferWrites) deferredWrites.push(() => cb(writeError))
+        else cb(writeError)
+      }
+      registerN2kInstanceMappingRoutes(app, writeSettings)
+      const follower = createInstanceRuleFollower(app, writeSettings, now)
       const call = (method: 'GET' | 'PUT', deviceKey: string, body?: unknown) =>
         new Promise<FakeResponse>((resolve) => {
           const out: FakeResponse = { statusCode: 200, body: undefined }
@@ -742,7 +757,7 @@ describe('n2k instance mappings', function () {
             res as unknown as Response
           )
         })
-      return { app, events, removed, call }
+      return { app, events, removed, call, follower, deferredWrites }
     }
 
     const rules = [{ group: 'engine', instance: 0, target: 'propulsion.main' }]
@@ -804,6 +819,189 @@ describe('n2k instance mappings', function () {
         { group: 'engine', instance: 0, target: 'constructor.x' }
       ])
       res.statusCode.should.equal(400)
+    })
+
+    describe('rule following a renumbered instance', function () {
+      const house = {
+        group: 'battery',
+        instance: 0,
+        target: 'electrical.batteries.house'
+      }
+      const renumber = { dst: 5, pgn: 127508, from: 0, to: 1 }
+      const batteryFrame = (pgn: number, instance: number, src = 5) => ({
+        pgn,
+        src,
+        fields: { instance, voltage: 12.5 }
+      })
+      const storedRules = (app: N2kInstanceMappingsApp) =>
+        app.config.settings.n2kInstanceMappings?.[DEVICE_A]
+
+      it('moves the rule once the device reports the new instance', async function () {
+        const { app, events, removed, call, follower } = fakeApp()
+        await call('PUT', DEVICE_A, [house])
+        events.length = 0
+        removed.length = 0
+
+        expect(follower.expectRenumber(renumber)).to.equal(undefined)
+        follower.onFrame(batteryFrame(127508, 0))
+        follower.onFrame(batteryFrame(127506, 1))
+        follower.onFrame(batteryFrame(127508, 1, 6))
+        storedRules(app)!.should.deep.equal([house])
+        events.should.deep.equal([])
+
+        follower.onFrame(batteryFrame(127508, 1))
+        storedRules(app)!.should.deep.equal([{ ...house, instance: 1 }])
+        events.should.deep.equal([
+          {
+            type: 'N2KINSTANCEMAPPINGS',
+            data: { [DEVICE_A]: [{ ...house, instance: 1 }] }
+          }
+        ])
+        removed
+          .find((r) => r.ref === 'can0.5')!
+          .prefixes!.should.deep.equal([
+            'electrical.batteries.1',
+            'notifications.electrical.batteries.1'
+          ])
+      })
+
+      it('moves the group rule when the DC instance is renumbered', async function () {
+        const { app, follower, call } = fakeApp()
+        await call('PUT', DEVICE_A, [house])
+        follower.expectRenumber({ ...renumber, pgn: 127506 })
+        follower.onFrame(batteryFrame(127506, 1))
+        storedRules(app)!.should.deep.equal([{ ...house, instance: 1 }])
+      })
+
+      it('moves the rule only once', async function () {
+        const { follower, call, events } = fakeApp()
+        await call('PUT', DEVICE_A, [house])
+        events.length = 0
+        follower.expectRenumber(renumber)
+        follower.onFrame(batteryFrame(127508, 1))
+        follower.onFrame(batteryFrame(127508, 1))
+        events.length.should.equal(1)
+      })
+
+      it('does not move the rule onto an instance the device already reports', async function () {
+        const { app, follower, call, events } = fakeApp()
+        await call('PUT', DEVICE_A, [house])
+        events.length = 0
+        follower.onFrame(batteryFrame(127508, 0))
+        follower.onFrame(batteryFrame(127508, 1))
+        expect(follower.expectRenumber(renumber)).to.equal(
+          'battery instance 1 is already in use on this device; the path set for instance 0 stays there'
+        )
+        // The device rejects the command and keeps reporting both batteries.
+        follower.onFrame(batteryFrame(127508, 0))
+        follower.onFrame(batteryFrame(127508, 1))
+        storedRules(app)!.should.deep.equal([house])
+        events.should.deep.equal([])
+      })
+
+      it('moves the rule onto an instance the device stopped reporting', async function () {
+        let time = 0
+        const { app, follower, call } = fakeApp(undefined, () => time)
+        await call('PUT', DEVICE_A, [house])
+        follower.onFrame(batteryFrame(127508, 1))
+        time = 120_000
+        expect(follower.expectRenumber(renumber)).to.equal(undefined)
+        follower.onFrame(batteryFrame(127508, 1))
+        storedRules(app)!.should.deep.equal([{ ...house, instance: 1 }])
+      })
+
+      it('moves both rules of two renumberings on one PGN', async function () {
+        const { app, follower, call, deferredWrites } = fakeApp(
+          undefined,
+          Date.now,
+          true
+        )
+        const aft = {
+          group: 'battery',
+          instance: 1,
+          target: 'electrical.batteries.aft'
+        }
+        const put = call('PUT', DEVICE_A, [house, aft])
+        deferredWrites.shift()!()
+        await put
+        follower.expectRenumber({ ...renumber, from: 0, to: 2 })
+        follower.expectRenumber({ ...renumber, from: 1, to: 3 })
+        follower.onFrame(batteryFrame(127508, 2))
+        follower.onFrame(batteryFrame(127508, 3))
+        while (deferredWrites.length > 0) deferredWrites.shift()!()
+        storedRules(app)!.should.deep.equal([
+          { ...house, instance: 2 },
+          { ...aft, instance: 3 }
+        ])
+      })
+
+      it('warns that another PGN of the group still reports the old instance', async function () {
+        const { app, follower, call } = fakeApp()
+        await call('PUT', DEVICE_A, [house])
+        follower.onFrame(batteryFrame(127506, 0))
+        follower.onFrame(batteryFrame(127508, 0))
+        expect(follower.expectRenumber(renumber)).to.equal(
+          'PGN 127506 still reports battery instance 0; after the path moves to instance 1, its data stops following that path until its instance is changed too'
+        )
+        follower.onFrame(batteryFrame(127508, 1))
+        storedRules(app)!.should.deep.equal([{ ...house, instance: 1 }])
+      })
+
+      it('does nothing without a rule for the old instance', async function () {
+        const { app, follower, events } = fakeApp()
+        expect(follower.expectRenumber(renumber)).to.equal(undefined)
+        follower.onFrame(batteryFrame(127508, 1))
+        expect(storedRules(app)).to.equal(undefined)
+        events.should.deep.equal([])
+      })
+
+      it('keeps both rules and warns when the new instance has a rule', async function () {
+        const { app, follower, call, events } = fakeApp()
+        const aft = {
+          group: 'battery',
+          instance: 1,
+          target: 'electrical.batteries.aft'
+        }
+        await call('PUT', DEVICE_A, [house, aft])
+        events.length = 0
+        const warning = follower.expectRenumber(renumber)
+        expect(warning).to.match(/battery instance 1/)
+        expect(warning).to.match(/electrical\.batteries\.house/)
+        follower.onFrame(batteryFrame(127508, 1))
+        storedRules(app)!.should.deep.equal([house, aft])
+        events.should.deep.equal([])
+      })
+
+      it('does not move the rule after the confirmation window', async function () {
+        let time = 0
+        const { app, follower, call } = fakeApp(undefined, () => time)
+        await call('PUT', DEVICE_A, [house])
+        follower.expectRenumber(renumber)
+        time = 60_000
+        follower.onFrame(batteryFrame(127508, 1))
+        storedRules(app)!.should.deep.equal([house])
+      })
+
+      it('warns when it cannot tell which device sits at the address', async function () {
+        const { app, follower, call } = fakeApp()
+        await call('PUT', DEVICE_A, [house])
+        app.signalk!.sources = {
+          can0: { '5': { n2k: { src: '5', canName: CAN_NAME_A } } },
+          can1: { '5': { n2k: { src: '5', canName: CAN_NAME_B } } }
+        }
+        expect(follower.expectRenumber(renumber)).to.match(/address 5/)
+        follower.onFrame(batteryFrame(127508, 1))
+        storedRules(app)!.should.deep.equal([house])
+      })
+
+      it('uses the rules current when the new instance arrives', async function () {
+        const { app, follower, call } = fakeApp()
+        await call('PUT', DEVICE_A, [house])
+        follower.expectRenumber(renumber)
+        await call('PUT', DEVICE_A, [])
+        follower.onFrame(batteryFrame(127508, 1))
+        expect(storedRules(app)).to.equal(undefined)
+      })
     })
 
     it('rejects an invalid device key on GET and PUT', async function () {
@@ -1027,8 +1225,8 @@ describe('n2k instance mappings', function () {
       })
     const engine = (src: number) =>
       frame(127488, src, { instance: 0, speed: 1000 })
-    const battery = (src: number) =>
-      frame(127508, src, { instance: 3, voltage: 12.5 })
+    const battery = (src: number, instance = 3) =>
+      frame(127508, src, { instance, voltage: 12.5 })
 
     async function send(...frames: unknown[]) {
       for (const f of frames) {
@@ -1137,6 +1335,71 @@ describe('n2k instance mappings', function () {
         () => hasRawInstances(pushedInstances[pushedInstances.length - 1]),
         STATUS_PUSH_WAIT_MS
       )
+    })
+
+    it('carries the rule along when the Discovery page renumbers the instance', async function () {
+      const adminFetch = (path: string, body?: unknown) =>
+        fetch(`${url}${path}`, {
+          method: body === undefined ? 'GET' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: `JAUTHENTICATION=${adminToken}`
+          },
+          body: body === undefined ? undefined : JSON.stringify(body)
+        })
+      // The gateway's canboatjs element reports each frame before converting it.
+      const fromBus = async (f: unknown) => {
+        server.app.emit('N2KAnalyzerOut', f)
+        await send(f)
+      }
+      const instancesOf = async (ref: string) => {
+        const status = await (
+          await adminFetch('/skServer/n2kDeviceStatus')
+        ).json()
+        return status.pgnDataInstances[ref]?.['127508']
+      }
+      server.app.emit('nmea2000OutAvailable')
+      await fromBus(battery(ENGINE_SRC, 3))
+      ;(await instancesOf(refA)).should.deep.equal([3])
+
+      const res = await adminFetch('/skServer/n2kConfigDevice', {
+        dst: ENGINE_SRC,
+        field: 'batteryInstance',
+        value: 4,
+        currentValue: 3
+      })
+      res.status.should.equal(200)
+      expect((await res.json()).warning).to.equal(undefined)
+
+      await fromBus(battery(ENGINE_SRC, 4))
+      await until('rule moved to instance 4', () =>
+        _.isEqual(
+          server.app.config.settings.n2kInstanceMappings?.['137:656598'],
+          [
+            { group: 'engine', instance: 0, target: 'propulsion.main' },
+            {
+              group: 'battery',
+              instance: 4,
+              target: 'electrical.batteries.house'
+            }
+          ]
+        )
+      )
+      await fromBus(battery(ENGINE_SRC, 4))
+      const leaf = (...path: string[]) =>
+        _.get(server.app.signalk.self, path) as
+          { $source?: string; values?: Record<string, unknown> } | undefined
+      await until(
+        'instance 4 at the target',
+        () => leaf('electrical', 'batteries', 'house', 'voltage') !== undefined
+      )
+      expect(
+        leaf('electrical', 'batteries', '4', 'voltage')?.values?.[refA]
+      ).to.equal(undefined)
+      expect(
+        leaf('electrical', 'batteries', '4', 'voltage')?.$source
+      ).to.not.equal(refA)
+      ;(await instancesOf(refA)).should.deep.equal([4])
     })
   })
 })

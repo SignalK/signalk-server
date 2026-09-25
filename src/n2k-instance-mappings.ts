@@ -8,14 +8,17 @@
 import { Request, Response } from 'express'
 import { Type } from '@sinclair/typebox'
 import { Value } from '@sinclair/typebox/value'
+import { createDebug } from './debug'
 import { getEnumerationName } from '@canboat/ts-pgns'
 import {
+  classifyInstance,
   defaultPrefixes,
   deviceKeyFromCanName,
   instanceRuleKey,
   isAtOrUnder,
   N2K_INSTANCE_GROUPS,
   N2K_INSTANCE_MAPPINGS_EVENT,
+  N2kFrame,
   N2kInstanceGroup,
   N2kInstanceGroupId,
   N2kInstanceMappings,
@@ -31,6 +34,8 @@ import {
   targetEditor,
   targetError
 } from './n2k-target-policy'
+
+const debug = createDebug('signalk-server:n2k-instance-mappings')
 
 const MAX_RULES = 64
 const TARGET_PATTERN = new RegExp(
@@ -435,6 +440,59 @@ function fail(res: Response, statusCode: number, message: string): void {
   res.status(statusCode).json({ state: 'FAILED', statusCode, message })
 }
 
+/**
+ * Store a device's complete, validated rule list, announce every device's
+ * rules and prune the cached leaves the device stops writing.
+ */
+export function replaceDeviceRules(
+  app: N2kInstanceMappingsApp,
+  writeSettings: SettingsWriter,
+  deviceKey: string,
+  newRules: N2kInstanceRule[],
+  done: (err?: unknown) => void
+): void {
+  const oldRules = storedRules(
+    app.config.settings.n2kInstanceMappings,
+    deviceKey
+  )
+
+  const updatedSettings = structuredClone(app.config.settings)
+  const stored: unknown = updatedSettings.n2kInstanceMappings
+  // settings.json is hand-editable; an array would drop the keyed rules
+  // when serialised.
+  const mappings: N2kInstanceMappings =
+    isRecord(stored) && !Array.isArray(stored)
+      ? (stored as N2kInstanceMappings)
+      : {}
+  if (newRules.length > 0) {
+    mappings[deviceKey] = newRules
+  } else {
+    delete mappings[deviceKey]
+  }
+  updatedSettings.n2kInstanceMappings = mappings
+
+  writeSettings(updatedSettings, (err) => {
+    if (err) {
+      done(err)
+      return
+    }
+    app.config.settings = updatedSettings
+    app.emit('serverAdminEvent', {
+      type: N2K_INSTANCE_MAPPINGS_EVENT,
+      data: mappings
+    })
+    for (const { ref, src } of findDeviceSourceRefs(
+      deviceKey,
+      app.signalk?.sources,
+      app.deltaCache.sourceDeltas
+    )) {
+      const prefixes = prunePrefixes(oldRules, newRules, src)
+      if (prefixes.length > 0) app.deltaCache.removeSource(ref, prefixes)
+    }
+    done()
+  })
+}
+
 const INVALID_DEVICE_KEY =
   'deviceKey must be <manufacturer code>:<unique number>'
 
@@ -466,46 +524,249 @@ export function registerN2kInstanceMappingRoutes(
       fail(res, 400, validation.error)
       return
     }
-    const newRules = validation.value
-    const oldRules = storedRules(
-      app.config.settings.n2kInstanceMappings,
-      deviceKey
-    )
-
-    const updatedSettings = structuredClone(app.config.settings)
-    const stored: unknown = updatedSettings.n2kInstanceMappings
-    // settings.json is hand-editable; an array would drop the keyed rules
-    // when serialised.
-    const mappings: N2kInstanceMappings =
-      isRecord(stored) && !Array.isArray(stored)
-        ? (stored as N2kInstanceMappings)
-        : {}
-    if (newRules.length > 0) {
-      mappings[deviceKey] = newRules
-    } else {
-      delete mappings[deviceKey]
-    }
-    updatedSettings.n2kInstanceMappings = mappings
-
-    writeSettings(updatedSettings, (err) => {
-      if (err) {
-        fail(res, 500, 'Unable to save n2kInstanceMappings in settings file')
-        return
+    replaceDeviceRules(
+      app,
+      writeSettings,
+      deviceKey,
+      validation.value,
+      (err) => {
+        if (err) {
+          fail(res, 500, 'Unable to save n2kInstanceMappings in settings file')
+          return
+        }
+        res.json({ state: 'COMPLETED', statusCode: 200 })
       }
-      app.config.settings = updatedSettings
-      app.emit('serverAdminEvent', {
-        type: N2K_INSTANCE_MAPPINGS_EVENT,
-        data: mappings
-      })
-      for (const { ref, src } of findDeviceSourceRefs(
-        deviceKey,
+    )
+  })
+}
+
+/** An instance renumbering sent to a device through PGN 126208. */
+export interface InstanceRenumber {
+  dst: number
+  pgn: number
+  from: number
+  to: number
+}
+
+interface PendingRenumber {
+  readonly dst: number
+  readonly pgn: number
+  readonly deviceKey: string
+  readonly group: N2kInstanceGroupId
+  readonly from: number
+  readonly to: number
+  readonly expiresAt: number
+}
+
+// Longer than a device takes to apply a command and send the renumbered
+// PGN at its slowest regular interval.
+const RENUMBER_CONFIRM_MS = 30_000
+// A device that sent an instance this recently still reports it.
+const INSTANCE_SEEN_MS = 60_000
+
+// The PGNs whose instances the NMEA Discovery page edits.
+const FOLLOWED_PGNS: ReadonlySet<number> = new Set([127506, 127508])
+const FOLLOWED_GROUPS = new Map<number, N2kInstanceGroup>(
+  N2K_INSTANCE_GROUPS.flatMap((group) =>
+    group.pgns
+      .filter((pgn) => FOLLOWED_PGNS.has(pgn))
+      .map((pgn): [number, N2kInstanceGroup] => [pgn, group])
+  )
+)
+// Every PGN of those groups: renumbering one PGN moves the group's rule.
+const TRACKED_PGNS: ReadonlySet<number> = new Set(
+  [...FOLLOWED_GROUPS.values()].flatMap((group) => group.pgns)
+)
+
+type RekeyResult =
+  | { kind: 'none' }
+  | { kind: 'moved'; rules: N2kInstanceRule[] }
+  | { kind: 'kept'; reason: string }
+
+// The device's rules with the group's rule for `from` moved to `to`.
+function rekeyRule(
+  rules: readonly N2kInstanceRule[],
+  group: N2kInstanceGroupId,
+  from: number,
+  to: number
+): RekeyResult {
+  const rule = rules.find((r) => r.group === group && r.instance === from)
+  if (!rule || from === to) return { kind: 'none' }
+  const moved = { ...rule, instance: to }
+  if (rules.some((r) => ruleKey(r) === ruleKey(moved))) {
+    return {
+      kind: 'kept',
+      reason: `${describeRule(moved)} already has its own path, so the path ${rule.target} stays on instance ${from}`
+    }
+  }
+  const validation = validateInstanceMappings(
+    rules.map((r) => (r === rule ? moved : r))
+  )
+  if (!validation.ok) {
+    return {
+      kind: 'kept',
+      reason: `The path ${rule.target} stays on instance ${from}: ${validation.error}`
+    }
+  }
+  return { kind: 'moved', rules: validation.value }
+}
+
+function deviceKeysAtAddress(
+  address: number,
+  sources: unknown,
+  sourceDeltas: Record<string, unknown>
+): Set<string> {
+  const keys = new Set<string>()
+  forEachIdentifiedSourceRef(sources, sourceDeltas, (_ref, src, deviceKey) => {
+    if (src === address) keys.add(deviceKey)
+  })
+  return keys
+}
+
+/**
+ * Moves a device's rule along when the Discovery page renumbers the instance
+ * it is keyed on. The rule moves once the device sends the edited PGN with
+ * the new instance: the device has then applied the command, and its frames
+ * with the old instance, which would otherwise land at the default path,
+ * have already arrived.
+ */
+export function createInstanceRuleFollower(
+  app: N2kInstanceMappingsApp,
+  writeSettings: SettingsWriter,
+  now: () => number = Date.now
+) {
+  let pending: PendingRenumber[] = []
+  // Moves are written one at a time, each from the rules the previous one
+  // stored.
+  const queue: PendingRenumber[] = []
+  let writing = false
+  // src -> pgn -> instance -> when it was last seen.
+  const seen = new Map<number, Map<number, Map<number, number>>>()
+  const rulesOf = (deviceKey: string) =>
+    storedRules(app.config.settings.n2kInstanceMappings, deviceKey)
+
+  function record(src: number, pgn: number, instance: number, at: number) {
+    let byPgn = seen.get(src)
+    if (!byPgn) {
+      byPgn = new Map()
+      seen.set(src, byPgn)
+    }
+    let byInstance = byPgn.get(pgn)
+    if (!byInstance) {
+      byInstance = new Map()
+      byPgn.set(pgn, byInstance)
+    }
+    byInstance.set(instance, at)
+  }
+
+  function reports(src: number, pgn: number, instance: number): boolean {
+    const at = seen.get(src)?.get(pgn)?.get(instance)
+    return at !== undefined && now() - at <= INSTANCE_SEEN_MS
+  }
+
+  function drain(): void {
+    if (writing) return
+    const renumber = queue.shift()
+    if (!renumber) return
+    const { deviceKey, group, from, to } = renumber
+    const result = rekeyRule(rulesOf(deviceKey), group, from, to)
+    if (result.kind === 'kept') debug('%s: %s', deviceKey, result.reason)
+    if (result.kind !== 'moved') {
+      drain()
+      return
+    }
+    writing = true
+    replaceDeviceRules(app, writeSettings, deviceKey, result.rules, (err) => {
+      if (err) debug('%s: could not save the moved mapping: %s', deviceKey, err)
+      writing = false
+      drain()
+    })
+  }
+
+  return {
+    /**
+     * Arms the rule move for a renumbering the device was just sent.
+     * Returns why the rule will not move, or what stays behind when it
+     * does, when the device has a rule to move.
+     */
+    expectRenumber({
+      dst,
+      pgn,
+      from,
+      to
+    }: InstanceRenumber): string | undefined {
+      const group = FOLLOWED_GROUPS.get(pgn)
+      if (group === undefined) return undefined
+      const deviceKeys = deviceKeysAtAddress(
+        dst,
         app.signalk?.sources,
         app.deltaCache.sourceDeltas
-      )) {
-        const prefixes = prunePrefixes(oldRules, newRules, src)
-        if (prefixes.length > 0) app.deltaCache.removeSource(ref, prefixes)
+      )
+      const affected = [...deviceKeys]
+        .map((deviceKey) => ({
+          deviceKey,
+          result: rekeyRule(rulesOf(deviceKey), group.id, from, to)
+        }))
+        .filter(({ result }) => result.kind !== 'none')
+      if (affected.length === 0) return undefined
+      if (deviceKeys.size > 1) {
+        return `More than one device uses bus address ${dst}, so the path set for instance ${from} was not moved to instance ${to}`
       }
-      res.json({ state: 'COMPLETED', statusCode: 200 })
-    })
-  })
+      const { deviceKey, result } = affected[0]
+      if (result.kind === 'kept') return result.reason
+      // The device already sending the new instance would confirm a
+      // command it may have rejected.
+      if (reports(dst, pgn, to)) {
+        return `${describeRule({ group: group.id, instance: to })} is already in use on this device; the path set for instance ${from} stays there`
+      }
+      pending = pending.filter(
+        (p) => !(p.dst === dst && p.pgn === pgn && p.from === from)
+      )
+      pending.push({
+        dst,
+        pgn,
+        deviceKey,
+        group: group.id,
+        from,
+        to,
+        expiresAt: now() + RENUMBER_CONFIRM_MS
+      })
+      const stillOld = group.pgns.filter(
+        (other) => other !== pgn && reports(dst, other, from)
+      )
+      if (stillOld.length === 0) return undefined
+      const pgns =
+        stillOld.length === 1
+          ? `PGN ${stillOld[0]} still reports`
+          : `PGNs ${stillOld.join(', ')} still report`
+      return `${pgns} ${describeRule({ group: group.id, instance: from })}; after the path moves to instance ${to}, its data stops following that path until its instance is changed too`
+    },
+
+    /** Called for every decoded frame on the bus. */
+    onFrame(frame: N2kFrame): void {
+      const pgn = Number(frame.pgn)
+      if (!TRACKED_PGNS.has(pgn)) return
+      const instance = classifyInstance(frame)?.instance
+      if (instance === undefined) return
+      const src = Number(frame.src)
+      const at = now()
+      record(src, pgn, instance, at)
+      if (pending.length === 0) return
+      const waiting: PendingRenumber[] = []
+      for (const renumber of pending) {
+        if (at > renumber.expiresAt) continue
+        if (
+          renumber.dst === src &&
+          renumber.pgn === pgn &&
+          renumber.to === instance
+        ) {
+          queue.push(renumber)
+        } else {
+          waiting.push(renumber)
+        }
+      }
+      pending = waiting
+      drain()
+    }
+  }
 }

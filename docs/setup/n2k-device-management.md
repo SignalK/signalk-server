@@ -80,7 +80,9 @@ For example:
 
 With the first rule the engine writes `propulsion.main.revolutions`, and an engine alarm is raised at `notifications.propulsion.main.overTemperature`. With the second, the instance 0 sensor keeps its path and the instance 1 sensor gets its own.
 
-Mapping and editing instances are independent. A rule is keyed on the instance number, so if you later change a battery or data instance on the device, the rule for the old number stops applying.
+A rule is keyed on the instance number. When you change a device's Battery Instance or DC Instance on the NMEA Discovery page, the device's battery rule for the old number moves to the new number, keeping its path. The rule moves once the device sends data with the new instance; if the device does not do so within 30 seconds, the rule stays on the old number. The battery group covers PGNs 127506, 127508 and 127513, so renumbering either of the two instances moves the one rule for the group, and the page warns when the device still sends another of these PGNs with the old number, whose data then goes to the path it has without a rule until that instance is changed too. If the new number already has a rule, or the device already sends it, the rule is left as it is and the page shows a warning.
+
+Instances changed anywhere else, such as a data instance or temperature instance on the NMEA Discovery page, or any instance changed with the device's own configuration tool, do not move the rule: it stays on the old number and stops applying.
 
 ### What Can Be Mapped
 
