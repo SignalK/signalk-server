@@ -70,6 +70,7 @@ class FakeBus extends EventEmitter {
   private readonly subscribers = new Map<string, Set<EventEmitter>>()
   private connectGate?: Promise<void>
   private connectStarted?: () => void
+  private servicesResolvedGate?: Promise<void>
 
   async getProxyObject(service: string, path: string) {
     if (service === BUS_DAEMON) {
@@ -111,6 +112,15 @@ class FakeBus extends EventEmitter {
     return { connecting, release }
   }
 
+  // Keeps ServicesResolved reads unanswered until the returned release()
+  holdServicesResolvedRead() {
+    let release: () => void = () => undefined
+    this.servicesResolvedGate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    return release
+  }
+
   // Lets later Connect calls through while an earlier held one stays pending
   stopHoldingConnect() {
     this.connectGate = undefined
@@ -121,6 +131,7 @@ class FakeBus extends EventEmitter {
       Get: async (iface: string, name: string) => {
         if (name === 'ServicesResolved') {
           this.onServicesResolvedRead?.()
+          await this.servicesResolvedGate
           return { value: this.servicesResolved }
         }
         return { value: OBJECTS[path]?.[iface]?.[name] }
@@ -402,7 +413,27 @@ describe('Local BLE provider GATT link loss', () => {
     expect(error?.message).to.match(/resolving services of .* timed out/)
     expect(bus.disconnectCalls).to.equal(1)
     expect(provider.availableGATTSlots()).to.equal(MAX_SLOTS)
-    // Nor is anything left waiting for ServicesResolved
+    expect(bus.deviceListeners()).to.equal(0)
+  })
+
+  it('does not start waiting for ServicesResolved once connectGATT() has given up', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider(SETUP_DEADLINE_MS)
+    provider = started.provider
+    const { bus } = started
+    bus.servicesResolved = false
+    const releaseRead = bus.holdServicesResolvedRead()
+
+    const error = await provider.connectGATT(MAC).then(
+      () => undefined,
+      (e: Error) => e
+    )
+    expect(error?.message).to.match(/resolving services of .* timed out/)
+
+    // The read answers only after the deadline, and says to wait
+    releaseRead()
+    await new Promise((resolve) => setImmediate(resolve))
+
     expect(bus.deviceListeners()).to.equal(0)
   })
 

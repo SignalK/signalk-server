@@ -997,13 +997,24 @@ export class LocalBLEProvider {
       device.adapter,
       device.device
     )
+    // init() reads ServicesResolved before it waits on it, and a read that
+    // answers after the deadline must not subscribe again
+    const helper = gattServer.helper
+    const waitPropChange = helper.waitPropChange.bind(helper)
+    let abandoned = false
+    helper.waitPropChange = async (propName: string) => {
+      await helper._prepare()
+      if (abandoned) return new Promise<never>(() => undefined)
+      return waitPropChange(propName)
+    }
     try {
       await this.withSetupDeadline(
         Promise.race([gattServer.init(), lost]),
         `resolving services of ${mac}`
       )
     } catch (e) {
-      gattServer.helper.removeListeners()
+      abandoned = true
+      helper.removeListeners()
       throw e
     }
     return gattServer
