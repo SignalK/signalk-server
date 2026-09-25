@@ -213,6 +213,25 @@ describe('History API v2', () => {
       const body = await res.json()
       body.should.be.an('array')
       body.should.include('navigation.position')
+      body.should.include('navigation.speedOverGround')
+    })
+
+    it('passes context to the paths provider', async function () {
+      const res = await fetch(
+        `${api}/history/paths?from=${FROM}&to=${TO}&context=vessels.other`
+      )
+      res.status.should.equal(200)
+      const body = await res.json()
+      body.should.deep.equal(['navigation.position'])
+    })
+
+    it('rejects repeated context parameters on paths', async function () {
+      const res = await fetch(
+        `${api}/history/paths?from=${FROM}&to=${TO}&context=vessels.self&context=vessels.other`
+      )
+      res.status.should.equal(400)
+      const body = await res.json()
+      body.error.should.contain('context parameter must be a single string')
     })
 
     it('returns contexts from the provider', async function () {
