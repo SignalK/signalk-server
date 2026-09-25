@@ -32,6 +32,11 @@ const DEVICE_ATTACH_TIMEOUT_MS = 5000
 // waitDevice timeout (ms) when establishing a GATT connection. Same
 // discoveryInterval-race constraint as above applies.
 const GATT_CONNECT_TIMEOUT_MS = 30000
+// Deadline (ms) for each connectGATT() setup step that can otherwise wait
+// forever: BlueZ's Connect call, and node-ble's wait for ServicesResolved.
+// Until connectGATT() settles, the BLE API keeps the device reserved for the
+// caller, and releaseGATTDevice() cannot free it.
+const GATT_SETUP_TIMEOUT_MS = 60000
 // GATT reconnect exponential backoff bounds
 const RECONNECT_BACKOFF_BASE_MS = 5000
 const RECONNECT_BACKOFF_MAX_MS = 60000
@@ -119,7 +124,8 @@ export class LocalBLEProvider {
   constructor(
     private adapterName: string = 'hci0',
     maxSlots: number = 3,
-    providerId?: string
+    providerId?: string,
+    private gattSetupTimeoutMs: number = GATT_SETUP_TIMEOUT_MS
   ) {
     this.providerId = providerId ?? `_localBLE:${adapterName}`
     this.maxGATTSlots = maxSlots
@@ -813,8 +819,22 @@ export class LocalBLEProvider {
       device = await this.connectQueue.enqueue(async () => {
         const dev = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_MS)
         // node-ble only emits 'disconnect' for a device connected through
-        // connect()
-        await dev.connect()
+        // connect(). Bounded: a Connect call BlueZ never answers would
+        // otherwise hold this queue, and the device's reservation, forever.
+        const connecting = dev.connect()
+        try {
+          await this.withSetupDeadline(connecting, `connecting to ${mac}`)
+        } catch (e) {
+          // Once given up on, the call's own outcome no longer matters
+          connecting.catch(() => undefined)
+          try {
+            // Makes BlueZ abandon the pending Connect
+            await dev.disconnect()
+          } catch (_e) {
+            // ignore
+          }
+          throw e
+        }
         connected = true
         // Before anything else is awaited, so that a link lost during setup
         // does not go unnoticed
@@ -858,8 +878,12 @@ export class LocalBLEProvider {
     let gattServer: any
     try {
       // node-ble waits for ServicesResolved without a timeout, which never
-      // comes once the link is gone
-      gattServer = await Promise.race([device.gatt(), lost])
+      // comes once the link is gone - nor from a device that stays connected
+      // but never finishes service discovery
+      gattServer = await this.withSetupDeadline(
+        Promise.race([device.gatt(), lost]),
+        `resolving services of ${mac}`
+      )
     } catch (e) {
       unwatchLink()
       connected = false
@@ -968,6 +992,21 @@ export class LocalBLEProvider {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  // Settles as `step` does, or rejects once gattSetupTimeoutMs has passed
+  private withSetupDeadline<T>(step: Promise<T>, what: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(
+        () =>
+          reject(
+            new Error(`${what} timed out after ${this.gattSetupTimeoutMs}ms`)
+          ),
+        this.gattSetupTimeoutMs
+      )
+    })
+    return Promise.race([step, deadline]).finally(() => clearTimeout(timer))
+  }
 
   private unwrapVariant(v: any): any {
     if (v === undefined || v === null) return v

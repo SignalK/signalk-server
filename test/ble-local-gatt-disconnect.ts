@@ -36,6 +36,8 @@ const CLEANUP_POLL_MS = 100
 const CLEANUP_MARGIN_MS = 3000
 // A setup that waits on a dead link would otherwise run into mocha's default
 const SETUP_TEST_TIMEOUT_MS = 5000
+// The provider's deadline for a connectGATT() setup step, well inside the above
+const SETUP_DEADLINE_MS = 300
 
 const PROPERTIES_IFACE = 'org.freedesktop.DBus.Properties'
 const DEVICE_IFACE = 'org.bluez.Device1'
@@ -105,6 +107,11 @@ class FakeBus extends EventEmitter {
     return { connecting, release }
   }
 
+  // Lets later Connect calls through while an earlier held one stays pending
+  stopHoldingConnect() {
+    this.connectGate = undefined
+  }
+
   private propertiesProxy(path: string) {
     const proxy = Object.assign(new EventEmitter(), {
       Get: async (iface: string, name: string) => {
@@ -163,7 +170,12 @@ const startProvider = async () => {
     // A fresh Device per lookup, as node-ble's Adapter.waitDevice() returns
     waitDevice: async () => new Device(bus, ADAPTER, DEVICE_NODE)
   }
-  const provider = new LocalBLEProvider(ADAPTER, MAX_SLOTS)
+  const provider = new LocalBLEProvider(
+    ADAPTER,
+    MAX_SLOTS,
+    undefined,
+    SETUP_DEADLINE_MS
+  )
 
   patchable.prototype.require = function (
     this: unknown,
@@ -335,6 +347,47 @@ describe('Local BLE provider GATT link loss', () => {
     )
 
     expect(error?.message).to.match(/lost/)
+    expect(provider.availableGATTSlots()).to.equal(MAX_SLOTS)
+  })
+
+  it('gives up on a connectGATT() whose Connect call BlueZ never answers', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    bus.holdConnect()
+
+    const error = await provider.connectGATT(MAC).then(
+      () => undefined,
+      (e: Error) => e
+    )
+
+    expect(error?.message).to.match(/connecting to .* timed out/)
+    // Disconnect is what makes BlueZ abandon the pending Connect
+    expect(bus.disconnectCalls).to.equal(1)
+    expect(provider.availableGATTSlots()).to.equal(MAX_SLOTS)
+
+    // The connect queue is free again for the next caller
+    bus.stopHoldingConnect()
+    const conn = await provider.connectGATT(MAC)
+    expect(conn.connected).to.equal(true)
+    await conn.disconnect()
+  })
+
+  it('gives up on a connectGATT() whose services never resolve on a live link', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    bus.servicesResolved = false
+
+    const error = await provider.connectGATT(MAC).then(
+      () => undefined,
+      (e: Error) => e
+    )
+
+    expect(error?.message).to.match(/resolving services of .* timed out/)
+    expect(bus.disconnectCalls).to.equal(1)
     expect(provider.availableGATTSlots()).to.equal(MAX_SLOTS)
   })
 
