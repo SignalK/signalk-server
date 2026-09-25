@@ -34,7 +34,6 @@ describe('Track API writes', () => {
     }
   })
 
-  /** A provider that stores, one that cannot, and one that deletes. */
   const writingProvider = () => ({
     getTracks: () =>
       Promise.resolve({ type: 'FeatureCollection' as const, features: [] }),
@@ -258,10 +257,6 @@ describe('Track API writes', () => {
     expect(stored[0]).to.deep.include({ context: 'vessels.123456789' })
   })
 
-  // The only way to reach a track that has neither times nor a context: a
-  // window query needs the first, a context query the second.
-  // A track is identified by the provider holding it and the id that provider
-  // minted, so half an id addresses nothing.
   // The composite splits on the first colon, so a provider id containing one
   // would name a provider that is not registered and strand every track it
   // holds.
@@ -295,6 +290,8 @@ describe('Track API writes', () => {
     expect(removed.status).to.equal(400)
   })
 
+  // A track is identified by the provider holding it and the id that provider
+  // minted, so half an id addresses nothing.
   it('rejects an id that names no provider', async () => {
     await serve()
     const res = await fetch(`${base}/signalk/v2/api/tracks/imported`)
@@ -328,6 +325,8 @@ describe('Track API writes', () => {
     expect(body.properties.id).to.equal('testprovider:imported:known')
   })
 
+  // The only way to reach a track that has neither times nor a context: a
+  // window query needs the first, a context query the second.
   it('fetches a track by id', async () => {
     await serve()
     const res = await fetch(
@@ -344,9 +343,15 @@ describe('Track API writes', () => {
 
   it('reports an unknown id as not found', async () => {
     await serve()
-    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:missing`)
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/testprovider:imported:missing`
+    )
 
     expect(res.status).to.equal(404)
+    // Not the unregistered-provider 404, which has the same status.
+    expect(((await res.json()) as { error: string }).error).to.equal(
+      'Track not found'
+    )
   })
 
   it('does not let the id route shadow the contexts listing', async () => {
@@ -474,8 +479,6 @@ describe('Track API writes', () => {
     expect(body.error).to.match(/timed tracks only/)
   })
 
-  // A typo in `provider` would otherwise be dropped and the track stored in,
-  // or deleted from, whichever provider happens to be the default.
   // A known name with a non-scalar value slips past a names-only check:
   // express parses `?maxPoints[x]=1` into an object, and the value is then
   // dropped rather than refused. Flags are worse -- a missing scalar reads as
@@ -494,6 +497,22 @@ describe('Track API writes', () => {
     expect(body.error).to.match(/must be a single value/)
   })
 
+  // Express turns a repeated key into an array. Taking its first element would
+  // answer a query the client did not send, with every later value dropped.
+  it('rejects a repeated parameter rather than keeping its first value', async () => {
+    await serve()
+    const contexts = await fetch(
+      `${base}/signalk/v2/api/tracks?duration=PT1H&contexts=self&contexts=vessels.x`
+    )
+    const bbox = await fetch(
+      `${base}/signalk/v2/api/tracks?duration=PT1H&bbox=0,0,1,1&bbox=2,2,3,3`
+    )
+
+    expect([contexts.status, bbox.status]).to.deep.equal([400, 400])
+    const body = (await bbox.json()) as { error: string }
+    expect(body.error).to.match(/bbox must be a single value/)
+  })
+
   // Nothing registered can address a track by id, so absence is not something
   // this server can establish -- and GET already says so for the same setup.
   it('reports delete-by-id as unsupported when no provider can address one', async () => {
@@ -508,6 +527,8 @@ describe('Track API writes', () => {
     expect(res.status).to.equal(501)
   })
 
+  // A typo in `provider` on a POST would otherwise be dropped and the track
+  // stored in whichever provider happens to be the default.
   it('rejects a misspelled provider parameter on the write routes', async () => {
     await serve()
     const created = await fetch(
@@ -545,11 +566,18 @@ describe('Track API writes', () => {
 
   it('reports deleting an unknown id as not found', async () => {
     await serve()
-    const res = await fetch(`${base}/signalk/v2/api/tracks/imported:missing`, {
-      method: 'DELETE'
-    })
+    const res = await fetch(
+      `${base}/signalk/v2/api/tracks/testprovider:imported:missing`,
+      {
+        method: 'DELETE'
+      }
+    )
 
     expect(res.status).to.equal(404)
+    // Not the unregistered-provider 404, which has the same status.
+    expect(((await res.json()) as { error: string }).error).to.equal(
+      'Track not found'
+    )
   })
 
   it('refuses a delete without authority', async () => {
@@ -564,9 +592,6 @@ describe('Track API writes', () => {
     expect(res.status).to.equal(403)
   })
 
-  // An imported track records no uploader, so there is no owner to check a
-  // requester against -- which would otherwise let anyone with own-vessel
-  // write permission delete a track someone else brought aboard.
   // A provider may delete without being able to read back, and registering a
   // readable provider alongside it must not make it unreachable.
   it('deletes through a provider that cannot read back', async () => {
@@ -612,6 +637,9 @@ describe('Track API writes', () => {
     expect(deleted).to.equal('imported:known')
   })
 
+  // An imported track records no uploader, so there is no owner to check a
+  // requester against -- which would otherwise let anyone with own-vessel
+  // write permission delete a track someone else brought aboard.
   it('requires administrative permission to delete', async () => {
     await serve(writingProvider(), true, false)
     const res = await fetch(

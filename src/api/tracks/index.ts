@@ -279,11 +279,6 @@ export class TrackApiHttpRegistry {
         return
       }
       void (async () => {
-        // Resolved before the check, and deleted from the provider that
-        // answered. Authorising against `vessels.self` would let anyone who
-        // may write their own vessel delete another vessel's track by id,
-        // and deleting from the default provider would address whichever
-        // track happened to share the id there.
         // Deletion is destructive, irreversible and addressed only by an
         // id, and a track carries no record of who uploaded it — so an
         // imported track has no owner to check a requester against.

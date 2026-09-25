@@ -257,10 +257,11 @@ const readFlag = (
 /**
  * Reject any query parameter a route does not understand.
  *
- * The single-track routes take only `provider`, so they cannot use the query
- * parser's list — `?bbox=` on a POST is meaningless, not merely unused. They
- * still need the check: `?provdier=parquet` would otherwise be dropped and the
- * track stored in, or deleted from, whichever provider is the default.
+ * The single-track routes cannot use the query parser's list — `?bbox=` on a
+ * POST is meaningless, not merely unused. `POST` takes only `provider`, which
+ * chooses where to store; `GET` and `DELETE /{id}` take nothing, since the id
+ * names the provider. The check still matters: `?provdier=parquet` on a POST
+ * would otherwise be dropped and the track stored in the default provider.
  */
 export function rejectUnknownParams(
   query: Record<string, unknown>,
@@ -317,12 +318,13 @@ export function parseTracksQuery(
       continue
     }
     // A known name is not enough: express parses `?maxPoints[x]=1` into an
-    // object, `first()` returns undefined for it, and the value is silently
-    // dropped -- the very failure this check exists to prevent. Flags are
-    // worse, since readFlag substitutes '' for a missing scalar and '' reads
-    // as true, so `?geometry[x]=1` would mean geometry=true. A valueless
-    // parameter still arrives as '', so the flag form keeps working.
-    if (first(value) === undefined) {
+    // object and a repeated key into an array, and `first()` would drop the
+    // one and keep only the first element of the other -- answering a query
+    // the client did not send. Flags are worse, since readFlag substitutes ''
+    // for a missing scalar and '' reads as true, so `?geometry[x]=1` would
+    // mean geometry=true. A valueless parameter still arrives as the string
+    // '', so the flag form keeps working.
+    if (typeof value !== 'string') {
       errors.push(`${name} must be a single value`)
     }
   }
