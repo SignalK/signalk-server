@@ -87,8 +87,11 @@ export interface TracksRequest {
    * Simplify the geometry, dropping points that do not change the line's shape
    * beyond `epsilon`.
    *
-   * With a bounding box and no explicit `epsilon`, an implementation should
-   * choose a tolerance suited to the size of the box.
+   * With no explicit `epsilon` the provider chooses the tolerance and reports
+   * it as `properties.epsilon`. It need not follow the query's `bbox`: a
+   * provider may size it to the track it returns, which stays the same however
+   * far a client zooms in. A client that wants detail to follow its view sends
+   * `epsilon` itself, for example the ground distance one screen pixel covers.
    */
   simplify?: boolean
 
