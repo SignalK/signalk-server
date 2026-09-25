@@ -28,15 +28,16 @@ function renderField() {
   )
 }
 
-// n2kConfigDevice accepts the write; n2kDeviceStatus reports `instances`.
-function stubServer(instances: number[]) {
+// n2kConfigDevice accepts the write, with `configResponse` as its body;
+// n2kDeviceStatus reports `instances`.
+function stubServer(instances: number[], configResponse: object = {}) {
   const fetchMock = vi.fn(async (url: string) => ({
     ok: true,
     status: 200,
     json: async () =>
       url.endsWith('/n2kDeviceStatus')
         ? { pgnDataInstances: { [DEVICE.sourceRef]: { '127508': instances } } }
-        : {}
+        : configResponse
   }))
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
@@ -72,7 +73,7 @@ describe('PgnInstanceField', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it('notes a path mapping on a mapped instance', () => {
+  it('notes a stored Signal K path on the instance', () => {
     const canName = 'c0788c00112a04d6'
     useStore.setState({
       pgnDataInstances: { [DEVICE.sourceRef]: { '127508': [3, 4] } },
@@ -96,7 +97,9 @@ describe('PgnInstanceField', () => {
       />
     )
     expect(
-      screen.getAllByText(/path mapping exists for this instance/)
+      screen.getAllByText(
+        /has a Signal K path set below; renumbering it here moves that path/
+      )
     ).toHaveLength(1)
   })
 
@@ -151,6 +154,30 @@ describe('PgnInstanceField', () => {
       expect(useStore.getState().pgnDataInstances).toEqual({
         [DEVICE.sourceRef]: { '127508': [3] }
       })
+    })
+
+    it('shows why a path stayed on the old instance', async () => {
+      const warning =
+        'battery instance 4 already has its own path, so the path electrical.batteries.house stays on instance 3'
+      stubServer([3, 4], { warning })
+      renderField()
+      await saveInstance('4')
+      expect(screen.getByText(warning)).toBeTruthy()
+    })
+
+    it('keeps the warning after the confirmed instance replaces the row, until the next save', async () => {
+      const warning =
+        'PGN 127506 still reports battery instance 3; after the path moves to instance 4, its data stops following that path until its instance is changed too'
+      stubServer([4], { warning })
+      renderField()
+      await saveInstance('4')
+      expect(screen.getByText(/^4/)).toBeTruthy()
+      expect(screen.getByText(warning)).toBeTruthy()
+
+      stubServer([5])
+      await saveInstance('5')
+      expect(screen.getByText(/^5/)).toBeTruthy()
+      expect(screen.queryByText(warning)).toBeNull()
     })
   })
 })
