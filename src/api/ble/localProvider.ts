@@ -827,12 +827,8 @@ export class LocalBLEProvider {
         } catch (e) {
           // Once given up on, the call's own outcome no longer matters
           connecting.catch(() => undefined)
-          try {
-            // Makes BlueZ abandon the pending Connect
-            await dev.disconnect()
-          } catch (_e) {
-            // ignore
-          }
+          // Makes BlueZ abandon the pending Connect
+          await this.abandonDevice(dev, mac)
           throw e
         }
         connected = true
@@ -880,19 +876,12 @@ export class LocalBLEProvider {
       // node-ble waits for ServicesResolved without a timeout, which never
       // comes once the link is gone - nor from a device that stays connected
       // but never finishes service discovery
-      gattServer = await this.withSetupDeadline(
-        Promise.race([device.gatt(), lost]),
-        `resolving services of ${mac}`
-      )
+      gattServer = await this.resolveServices(device, lost, mac)
     } catch (e) {
       unwatchLink()
       connected = false
       releaseSlot()
-      try {
-        await device.disconnect()
-      } catch (_e) {
-        // ignore
-      }
+      await this.abandonDevice(device, mac)
       throw e
     }
 
@@ -993,7 +982,46 @@ export class LocalBLEProvider {
   // Helpers
   // -------------------------------------------------------------------------
 
-  // Settles as `step` does, or rejects once gattSetupTimeoutMs has passed
+  // device.gatt(), but able to give up on its wait for ServicesResolved: that
+  // wait listens on a D-Bus proxy of its own, which device.disconnect() leaves
+  // subscribed
+  private async resolveServices(
+    device: any,
+    lost: Promise<never>,
+    mac: string
+  ): Promise<any> {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const GattServer = require('@naugehyde/node-ble/src/GattServer')
+    const gattServer = new GattServer(
+      device.dbus,
+      device.adapter,
+      device.device
+    )
+    try {
+      await this.withSetupDeadline(
+        Promise.race([gattServer.init(), lost]),
+        `resolving services of ${mac}`
+      )
+    } catch (e) {
+      gattServer.helper.removeListeners()
+      throw e
+    }
+    return gattServer
+  }
+
+  // Cleanup after a failed setup, bounded as well: it runs while the connect
+  // queue, or the caller's reservation of the device, is still held
+  private async abandonDevice(device: any, mac: string): Promise<void> {
+    const disconnecting = device.disconnect()
+    try {
+      await this.withSetupDeadline(disconnecting, `disconnecting ${mac}`)
+    } catch (_e) {
+      disconnecting.catch(() => undefined)
+      // node-ble drops these only once Disconnect is answered
+      device.helper.removeListeners()
+    }
+  }
+
   private withSetupDeadline<T>(step: Promise<T>, what: string): Promise<T> {
     let timer: ReturnType<typeof setTimeout> | undefined
     const deadline = new Promise<never>((_resolve, reject) => {
