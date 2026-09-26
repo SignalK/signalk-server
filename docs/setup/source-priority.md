@@ -83,15 +83,11 @@ All source data is preserved in the server's data model regardless of priority c
 
 ## NMEA 0183 Output
 
-Sentences received on an NMEA 0183 connection are forwarded as they are to the NMEA 0183 TCP server on port 10110, before they are converted to Signal K. Source priority does not apply to this pass-through: with two GPS receivers connected, a client on port 10110 receives the sentences of both.
+Sentences received on an NMEA 0183 connection are forwarded as raw NMEA 0183 to the NMEA 0183 TCP server on port 10110, independently of their conversion to Signal K. Source priority works on the converted Signal K data, so it never applies to this pass-through: with two GPS receivers connected, a client on port 10110 receives the sentences of both.
 
-To send only the preferred source over NMEA 0183:
+A priority-filtered NMEA 0183 feed is therefore built from the Signal K data rather than passed through. The _signalk-to-nmea0183_ plugin generates its sentences from the same priority-filtered values that subscribers receive, so its output follows the preferred source and the fallback behaviour described in [How Rankings Work](#how-rankings-work). For that output to be the only copy of the data on port 10110, the pass-through of the original sentences is switched off on the connections that carry them, see [NMEA 0183 Options](./configuration.md#nmea-0183-options).
 
-1. Rank the sources in their priority group.
-2. Turn on _Suppress nmea0183 event_ for the connections whose sentences should not be forwarded as they are. See [NMEA 0183 Options](./configuration.md#nmea-0183-options).
-3. Enable the sentences you need, for example RMC, GGA and HDT, in the _signalk-to-nmea0183_ plugin. The plugin builds its sentences from the priority-filtered data and sends them on port 10110.
-
-A client on port 10110 then sees one source per path and follows the fallback behaviour described in [How Rankings Work](#how-rankings-work). While the preferred source is silent and no backup has taken over yet, the plugin has no new data and sends nothing for the affected sentences. A shorter _Fallback after_ value shortens that gap.
+While the preferred source is silent and no backup has taken over yet, its paths receive no new priority-filtered values. The gap lasts as long as the backup's _Fallback after_ time.
 
 ## Source Priority in the Data Browser
 
