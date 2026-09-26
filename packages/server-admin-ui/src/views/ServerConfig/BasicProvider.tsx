@@ -41,6 +41,7 @@ interface ProviderOptions {
   useDiscovery?: boolean
   toStdout?: string | string[]
   ignoredSentences?: string | string[]
+  suppress0183eventSentences?: string[]
   sentenceEvent?: string
   validateChecksum?: boolean
   appendChecksum?: boolean
@@ -1019,16 +1020,20 @@ function StdOutInput({
   )
 }
 
-function IgnoredSentences({
+function SentenceListInput({
+  title,
+  field,
   value,
   onChange,
   helpText
 }: {
+  title: string
+  field: 'ignoredSentences' | 'suppress0183eventSentences'
   value: ProviderOptions
   onChange: OnChangeHandler
   helpText: string
 }) {
-  let displayValue = value.ignoredSentences
+  let displayValue = value[field]
   if (Array.isArray(displayValue)) {
     displayValue = displayValue.join(',')
   }
@@ -1046,8 +1051,8 @@ function IgnoredSentences({
 
   return (
     <TextInput
-      title="Ignored Sentences"
-      name="options.ignoredSentences"
+      title={title}
+      name={`options.${field}`}
       helpText={helpText}
       value={displayValue as string}
       onChange={handleChange}
@@ -1962,6 +1967,15 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
       <div>
         <Suppress0183Checkbox value={value.options} onChange={onChange} />
       </div>
+      {!value.options.suppress0183event && (
+        <SentenceListInput
+          title="Suppress nmea0183 event for"
+          field="suppress0183eventSentences"
+          value={value.options}
+          onChange={onChange}
+          helpText="Sentences that are still converted to Signal K but not emitted as nmea0183 events, so they do not appear on the NMEA0183 TCP service. Example: RMC,GGA,HDT"
+        />
+      )}
       {value.options.type === 'udp' && (
         <PortInput value={value.options} onChange={onChange} />
       )}
@@ -1969,7 +1983,9 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
       <ValidateChecksumInput value={value.options} onChange={onChange} />
       <AppendChecksum value={value.options} onChange={onChange} />
       <RemoveNullsInput value={value.options} onChange={onChange} />
-      <IgnoredSentences
+      <SentenceListInput
+        title="Ignored Sentences"
+        field="ignoredSentences"
         value={value.options}
         onChange={onChange}
         helpText="NMEA0183 sentences to throw away from the input data. Example: RMC,ROT"
@@ -2156,7 +2172,9 @@ function Seatalk({ value, onChange }: TypeComponentProps) {
           </Form.Label>
         </Col>
       </Form.Group>
-      <IgnoredSentences
+      <SentenceListInput
+        title="Ignored Sentences"
+        field="ignoredSentences"
         value={value.options}
         onChange={onChange}
         helpText="SeaTalk1 command bytes (hex) to throw away from the input data. Example: 84,9C,11"

@@ -60,6 +60,8 @@ Once your NMEA 2000 devices are connected, you can view and manage them from _Da
 
 - _Suppress nmea0183 event_ - All incoming NMEA0183 data is made available over TCP on port 10110 by default. This happens by incoming data being emitted as _nmea0183_ events. Selecting this option will prevent data from this connection appearing on the NEMA0183 TCP service.
 
+- _Suppress nmea0183 event for_ - A comma separated list of sentence IDs, e.g. `RMC,GGA,HDT`. On this connection, these sentences are still converted to Signal K but are not emitted as _nmea0183_ events, so they do not appear on the NMEA0183 TCP service. Other sentences from the connection, such as AIS `VDM`, are still forwarded. To send only the preferred source's navigation data over NMEA 0183, set this on every connection that carries those sentences and combine it with [Source Priority](./source-priority.md) and the _signalk-to-nmea0183_ plugin. The _Input Event_ is emitted for every sentence regardless of this setting.
+
 - _Input Event_ - By default, data received on this connection will cause the nmea0183 event to be emitted. In order to distinguish input from this connection from other NMEA 0183 connections, enter an input event name which will be emitted (in addition to the nmea0183 event) when data is received on this connection.
 
 - _Validate checksum_ - Usually [NMEA 0183 sentences](https://en.wikipedia.org/wiki/NMEA_0183) contain a checksum that can be used to check that the data is not garbled so that erroneous data is discarded. However some data sources do not include the checksum or it is simply wrong. Unchecking this option will disable validating the checksum.
