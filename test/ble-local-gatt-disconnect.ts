@@ -112,7 +112,6 @@ class FakeBus extends EventEmitter {
     return { connecting, release }
   }
 
-  // Keeps ServicesResolved reads unanswered until the returned release()
   holdServicesResolvedRead() {
     let release: () => void = () => undefined
     this.servicesResolvedGate = new Promise<void>((resolve) => {
