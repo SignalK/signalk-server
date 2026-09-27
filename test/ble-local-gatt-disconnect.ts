@@ -36,6 +36,10 @@ const CLEANUP_POLL_MS = 100
 const CLEANUP_MARGIN_MS = 3000
 // A setup that waits on a dead link would otherwise run into mocha's default
 const SETUP_TEST_TIMEOUT_MS = 5000
+const WRITE_INTERVAL_MS = 10
+// Waiting for a write, well inside mocha's default timeout
+const WRITE_POLL_MS = 5
+const WRITE_DEADLINE_MS = 1000
 
 const PROPERTIES_IFACE = 'org.freedesktop.DBus.Properties'
 const DEVICE_IFACE = 'org.bluez.Device1'
@@ -57,6 +61,7 @@ const OBJECTS: Record<string, Record<string, Props>> = {
 // proxy dropping its listeners leaves the other subscribers of that path alone.
 class FakeBus extends EventEmitter {
   disconnectCalls = 0
+  writeTypes: string[] = []
   servicesResolved = true
   // Lets a test lose the link at a chosen point of the connection setup
   onServicesResolvedRead?: () => void
@@ -87,7 +92,14 @@ class FakeBus extends EventEmitter {
               },
               StartNotify: async () => {
                 this.onStartNotify?.()
-              }
+              },
+              WriteValue: async (
+                _data: number[],
+                options: { type: { value: string } }
+              ) => {
+                this.writeTypes.push(options.type.value)
+              },
+              ReadValue: async () => []
             }
     }
   }
@@ -474,3 +486,107 @@ describe('Local BLE provider discovery', () => {
     ).to.have.length(2)
   })
 })
+
+describe('Local BLE provider GATT writes', () => {
+  let provider: LocalBLEProvider | undefined
+
+  afterEach(() => {
+    provider?.shutdown()
+    provider = undefined
+  })
+
+  it('sends a connectGATT() write as an acknowledged request, not a reliable write', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    const conn = await provider.connectGATT(MAC)
+
+    await conn.write(SERVICE_UUID, NOTIFY_UUID, Buffer.from([1]))
+    await conn.write(SERVICE_UUID, NOTIFY_UUID, Buffer.from([2]), true)
+    await conn.write(SERVICE_UUID, NOTIFY_UUID, Buffer.from([3]), false)
+
+    expect(started.bus.writeTypes).to.deep.equal([
+      'request',
+      'request',
+      'command'
+    ])
+  })
+
+  it('sends a subscribeGATT() write as an acknowledged request, not a reliable write', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    const handle = await provider.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID },
+      () => undefined
+    )
+
+    await handle.write(NOTIFY_UUID, Buffer.from([1]))
+    await handle.write(NOTIFY_UUID, Buffer.from([2]), false)
+
+    expect(started.bus.writeTypes).to.deep.equal(['request', 'command'])
+  })
+
+  it('sends subscribeGATT() init writes as acknowledged requests unless unacknowledged', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.subscribeGATT(
+      {
+        mac: MAC,
+        service: SERVICE_UUID,
+        init: [
+          { uuid: NOTIFY_UUID, data: '01' },
+          { uuid: NOTIFY_UUID, data: '02', withResponse: false }
+        ]
+      },
+      () => undefined
+    )
+
+    expect(started.bus.writeTypes).to.deep.equal(['request', 'command'])
+  })
+
+  it('sends a subscribeGATT() periodic write as an acknowledged request', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.subscribeGATT(
+      {
+        mac: MAC,
+        service: SERVICE_UUID,
+        periodicWrite: [
+          { uuid: NOTIFY_UUID, data: '01', intervalMs: WRITE_INTERVAL_MS }
+        ]
+      },
+      () => undefined
+    )
+
+    await waitForWrite(started.bus)
+    expect(started.bus.writeTypes[0]).to.equal('request')
+  })
+
+  it("sends a subscribeGATT() poll's write-before-read as an acknowledged request", async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.subscribeGATT(
+      {
+        mac: MAC,
+        service: SERVICE_UUID,
+        poll: [
+          {
+            uuid: NOTIFY_UUID,
+            intervalMs: WRITE_INTERVAL_MS,
+            writeBeforeRead: '01'
+          }
+        ]
+      },
+      () => undefined
+    )
+
+    await waitForWrite(started.bus)
+    expect(started.bus.writeTypes[0]).to.equal('request')
+  })
+})
+
+const waitForWrite = async (bus: FakeBus) => {
+  const deadline = Date.now() + WRITE_DEADLINE_MS
+  while (bus.writeTypes.length === 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, WRITE_POLL_MS))
+  }
+}

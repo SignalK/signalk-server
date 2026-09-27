@@ -94,6 +94,27 @@ interface LocalGATTSession {
 // LocalBLEProvider
 // ---------------------------------------------------------------------------
 
+interface WritableCharacteristic {
+  writeValueWithResponse(value: Buffer): Promise<void>
+  writeValueWithoutResponse(value: Buffer): Promise<void>
+}
+
+/**
+ * Writes to a characteristic, acknowledged unless `withResponse` is false. An
+ * acknowledged write is an ordinary write request: node-ble's plain
+ * writeValue() defaults to a "reliable" (prepared) write, which many
+ * peripherals reject with ATT error 0x0e.
+ */
+function writeCharacteristic(
+  char: WritableCharacteristic,
+  data: Buffer,
+  withResponse?: boolean
+): Promise<void> {
+  return withResponse === false
+    ? char.writeValueWithoutResponse(data)
+    : char.writeValueWithResponse(data)
+}
+
 export class LocalBLEProvider {
   private adapter: any
   private bluetooth: any
@@ -488,11 +509,7 @@ export class LocalBLEProvider {
           descriptor.service
         )
         const char = await service.getCharacteristic(charUuid)
-        if (withResponse === false) {
-          await char.writeValueWithoutResponse(data)
-        } else {
-          await char.writeValue(data)
-        }
+        await writeCharacteristic(char, data, withResponse)
       },
       close: async () => {
         session.closed = true
@@ -571,13 +588,11 @@ export class LocalBLEProvider {
     if (descriptor.init) {
       for (const initWrite of descriptor.init) {
         const char = await service.getCharacteristic(initWrite.uuid)
-        if (initWrite.withResponse === false) {
-          await char.writeValueWithoutResponse(
-            Buffer.from(initWrite.data, 'hex')
-          )
-        } else {
-          await char.writeValue(Buffer.from(initWrite.data, 'hex'))
-        }
+        await writeCharacteristic(
+          char,
+          Buffer.from(initWrite.data, 'hex'),
+          initWrite.withResponse
+        )
       }
     }
 
@@ -606,7 +621,8 @@ export class LocalBLEProvider {
           try {
             const char = await service.getCharacteristic(pollEntry.uuid)
             if (pollEntry.writeBeforeRead) {
-              await char.writeValue(
+              await writeCharacteristic(
+                char,
                 Buffer.from(pollEntry.writeBeforeRead, 'hex')
               )
             }
@@ -628,11 +644,11 @@ export class LocalBLEProvider {
           if (!session.connected || session.closed) return
           try {
             const char = await service.getCharacteristic(pw.uuid)
-            if (pw.withResponse === false) {
-              await char.writeValueWithoutResponse(Buffer.from(pw.data, 'hex'))
-            } else {
-              await char.writeValue(Buffer.from(pw.data, 'hex'))
-            }
+            await writeCharacteristic(
+              char,
+              Buffer.from(pw.data, 'hex'),
+              pw.withResponse
+            )
           } catch (e: any) {
             debug.enabled &&
               debug(`Periodic write error for ${pw.uuid}: ${e.message}`)
@@ -887,11 +903,7 @@ export class LocalBLEProvider {
       ): Promise<void> {
         const service = await gattServer.getPrimaryService(serviceUuid)
         const char = await service.getCharacteristic(charUuid)
-        if (withResponse === false) {
-          await char.writeValueWithoutResponse(data)
-        } else {
-          await char.writeValue(data)
-        }
+        await writeCharacteristic(char, data, withResponse)
       },
 
       async startNotifications(
