@@ -1,5 +1,6 @@
 import { expect } from 'chai'
 import { EventEmitter } from 'node:events'
+import { mock } from 'node:test'
 import Module from 'node:module'
 import { LocalBLEProvider } from '../src/api/ble/localProvider'
 
@@ -36,6 +37,16 @@ const CLEANUP_POLL_MS = 100
 const CLEANUP_MARGIN_MS = 3000
 // A setup that waits on a dead link would otherwise run into mocha's default
 const SETUP_TEST_TIMEOUT_MS = 5000
+// Waiting for discovery to be resumed, which happens after the call that ends
+// a pause has returned
+const DISCOVERY_POLL_MS = 5
+const DISCOVERY_DEADLINE_MS = 1000
+// The longest one connection's setup holds discovery off
+const DISCOVERY_PAUSE_MAX_MS = 60000
+// A D-Bus round trip long enough for calls from two connections to overlap
+const DISCOVERY_CALL_LATENCY_MS = 5
+// Enough event-loop turns for the provider's pending D-Bus work to run
+const SETTLE_TURNS = 20
 
 const PROPERTIES_IFACE = 'org.freedesktop.DBus.Properties'
 const DEVICE_IFACE = 'org.bluez.Device1'
@@ -61,6 +72,7 @@ class FakeBus extends EventEmitter {
   // Lets a test lose the link at a chosen point of the connection setup
   onServicesResolvedRead?: () => void
   onStartNotify?: () => void
+  onConnect?: () => void
   private readonly busDaemon = new EventEmitter()
   private readonly subscribers = new Map<string, Set<EventEmitter>>()
   private connectGate?: Promise<void>
@@ -77,6 +89,7 @@ class FakeBus extends EventEmitter {
           ? this.propertiesProxy(path)
           : {
               Connect: async () => {
+                this.onConnect?.()
                 this.connectStarted?.()
                 await this.connectGate
               },
@@ -163,6 +176,51 @@ const startProvider = async () => {
     // A fresh Device per lookup, as node-ble's Adapter.waitDevice() returns
     waitDevice: async () => new Device(bus, ADAPTER, DEVICE_NODE)
   }
+  const provider = await initProvider(bus, adapter)
+  return { provider, bus, adapterCalls }
+}
+
+// An adapter with bluetoothd's discovery semantics: each call takes effect in
+// the order sent, after one D-Bus round trip, and StopDiscovery without a
+// discovery session fails as BlueZ's "No discovery started" does
+const startProviderWithDiscoveryState = async (latencyMs = 0) => {
+  const bus = new FakeBus()
+  const state = {
+    discovering: false,
+    discoveringAtWaitDevice: [] as boolean[],
+    calls: [] as string[]
+  }
+  const roundTrip = () =>
+    new Promise<void>((resolve) =>
+      latencyMs === 0 ? setImmediate(resolve) : setTimeout(resolve, latencyMs)
+    )
+  const adapter = {
+    isPowered: async () => true,
+    devices: async () => [],
+    helper: {
+      callMethod: async (method: string) => {
+        await roundTrip()
+        if (method === 'StartDiscovery') state.discovering = true
+        if (method === 'StopDiscovery') {
+          if (!state.discovering) {
+            state.calls.push(`${method}!`)
+            throw new Error('No discovery started')
+          }
+          state.discovering = false
+        }
+        state.calls.push(method)
+      }
+    },
+    waitDevice: async () => {
+      state.discoveringAtWaitDevice.push(state.discovering)
+      return new Device(bus, ADAPTER, DEVICE_NODE)
+    }
+  }
+  const provider = await initProvider(bus, adapter)
+  return { provider, bus, state }
+}
+
+const initProvider = async (bus: FakeBus, adapter: object) => {
   const provider = new LocalBLEProvider(ADAPTER, MAX_SLOTS)
 
   patchable.prototype.require = function (
@@ -188,8 +246,7 @@ const startProvider = async () => {
     patchable.prototype.require = realRequire
   }
   await ready
-
-  return { provider, bus, adapterCalls }
+  return provider
 }
 
 describe('Local BLE provider GATT link loss', () => {
@@ -472,5 +529,178 @@ describe('Local BLE provider discovery', () => {
     expect(
       started.adapterCalls.filter((m) => m === 'StartDiscovery')
     ).to.have.length(2)
+  })
+})
+
+describe('Local BLE provider discovery during GATT connections', () => {
+  let provider: LocalBLEProvider | undefined
+
+  afterEach(() => {
+    mock.timers.reset()
+    provider?.shutdown()
+    provider = undefined
+  })
+
+  const discoveryCalls = (started: { adapterCalls: string[] }) => ({
+    starts: started.adapterCalls.filter((m) => m === 'StartDiscovery').length,
+    stops: started.adapterCalls.filter((m) => m === 'StopDiscovery').length
+  })
+
+  const waitFor = async (done: () => boolean) => {
+    const deadline = Date.now() + DISCOVERY_DEADLINE_MS
+    while (!done() && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, DISCOVERY_POLL_MS))
+    }
+  }
+
+  const waitForStarts = (started: { adapterCalls: string[] }, starts: number) =>
+    waitFor(() => discoveryCalls(started).starts >= starts)
+
+  // For tests on mocked timers, where waitFor()'s polling would not run
+  const settle = async () => {
+    for (let i = 0; i < SETTLE_TURNS; i++) {
+      await new Promise((resolve) => setImmediate(resolve))
+    }
+  }
+
+  it('holds discovery off from just before a connectGATT() Connect until services resolve', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.startDiscovery()
+    const held = started.bus.holdConnect()
+
+    const connecting = provider.connectGATT(MAC)
+    await held.connecting
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 1, stops: 1 })
+
+    held.release()
+    const conn = await connecting
+    await waitForStarts(started, 2)
+    // Resumed while the connection is still open
+    expect(conn.connected).to.equal(true)
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 2, stops: 1 })
+  })
+
+  it('holds discovery off from just before a subscribeGATT() Connect until services resolve', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.startDiscovery()
+    const held = started.bus.holdConnect()
+
+    const subscribing = provider.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID, notify: [NOTIFY_UUID] },
+      () => undefined
+    )
+    await held.connecting
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 1, stops: 1 })
+
+    held.release()
+    await subscribing
+    await waitForStarts(started, 2)
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 2, stops: 1 })
+  })
+
+  it('resumes discovery when a connectGATT() setup fails', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    await provider.startDiscovery()
+    bus.servicesResolved = false
+    bus.onServicesResolvedRead = () => setImmediate(() => bus.loseLink())
+
+    const error = await provider.connectGATT(MAC).then(
+      () => undefined,
+      (e: Error) => e
+    )
+
+    expect(error?.message).to.match(/lost/)
+    await waitForStarts(started, 2)
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 2, stops: 1 })
+  })
+
+  it('starts discovery asked for during a pause once the pause is over', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    const held = started.bus.holdConnect()
+    const connecting = provider.connectGATT(MAC)
+    await held.connecting
+
+    await provider.startDiscovery()
+    expect(discoveryCalls(started).starts).to.equal(0)
+
+    held.release()
+    await connecting
+    await waitForStarts(started, 1)
+    expect(discoveryCalls(started).starts).to.equal(1)
+  })
+
+  it('keeps discovery off at the Connect of a connectGATT() made straight after another', async () => {
+    const started = await startProviderWithDiscoveryState(
+      DISCOVERY_CALL_LATENCY_MS
+    )
+    provider = started.provider
+    const { state } = started
+    const discoveringAtConnect: boolean[] = []
+    started.bus.onConnect = () => discoveringAtConnect.push(state.discovering)
+    await provider.startDiscovery()
+
+    const first = await provider.connectGATT(MAC)
+    await first.disconnect()
+    const second = await provider.connectGATT(MAC)
+    await second.disconnect()
+    await waitFor(() => state.discovering)
+
+    expect(discoveringAtConnect).to.deep.equal([false, false])
+    expect(state.calls).to.not.include('StopDiscovery!')
+    expect(state.discovering).to.equal(true)
+  })
+
+  it('looks a device up with discovery running', async () => {
+    const started = await startProviderWithDiscoveryState()
+    provider = started.provider
+    await provider.startDiscovery()
+
+    const conn = await provider.connectGATT(MAC)
+    await conn.disconnect()
+    await provider.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID },
+      () => undefined
+    )
+
+    expect(started.state.discoveringAtWaitDevice).to.deep.equal([true, true])
+  })
+
+  it('resumes discovery when a subscribeGATT() setup never sees its services resolve', async () => {
+    const started = await startProviderWithDiscoveryState()
+    provider = started.provider
+    const { state } = started
+    await provider.startDiscovery()
+    started.bus.servicesResolved = false
+    mock.timers.enable({ apis: ['setTimeout'] })
+
+    provider
+      .subscribeGATT({ mac: MAC, service: SERVICE_UUID }, () => undefined)
+      .catch(() => undefined)
+    await settle()
+    expect(state.discovering).to.equal(false)
+
+    mock.timers.tick(DISCOVERY_PAUSE_MAX_MS)
+    await settle()
+    expect(state.discovering).to.equal(true)
+  })
+
+  it('leaves discovery alone when it is not running', async () => {
+    const started = await startProvider()
+    provider = started.provider
+
+    const conn = await provider.connectGATT(MAC)
+    await conn.disconnect()
+    await provider.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID },
+      () => undefined
+    )
+
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 0, stops: 0 })
   })
 })
