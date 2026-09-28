@@ -91,7 +91,7 @@ plugin.stop = async function () {
 
 The descriptor declares notifications, polled reads (optionally with a write-before-read), one-time init writes, and periodic writes. The provider executes the full lifecycle (connect → discover → subscribe → reads/writes) and re-runs it on disconnect. See `GATTSubscriptionDescriptor` and `GATTSubscriptionHandle` in `@signalk/server-api` for the full type definitions.
 
-Close your handles in `plugin.stop()`, as above. Once `stop()` has completed, the server releases any GATT claims the plugin still holds, and closes connections that come up after that.
+Release your devices in `plugin.stop()`, as above. Once `stop()` has returned or failed, the server also releases any GATT claims the plugin still holds, and closes connections that come up after that.
 
 ### Raw GATT Connection
 
