@@ -563,7 +563,14 @@ export class BLEApi implements IBLEApi {
       }
 
       const provider = this.bleProviders.get(providerId)!
-      const handle = await provider.methods.subscribeGATT(descriptor, callback)
+      // Notifications can arrive while the session is still being set up,
+      // and once the claim is released they are no longer the plugin's
+      const handle = await provider.methods.subscribeGATT(
+        descriptor,
+        (charUuid, data) => {
+          if (!pending.released) callback(charUuid, data)
+        }
+      )
       if (pending.released) {
         await handle.close()
         throw releasedWhileConnecting(mac)
