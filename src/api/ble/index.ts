@@ -732,6 +732,27 @@ export class BLEApi implements IBLEApi {
     }
   }
 
+  /**
+   * Release every GATT claim the given plugin holds, including ones still
+   * connecting. Called once the plugin has stopped: nothing is left to close
+   * its connections, and its own claims would refuse it when it restarts.
+   */
+  releaseGATTClaimsForPlugin(pluginId: string) {
+    for (const [mac, claim] of this.gattClaims) {
+      if (claim.pluginId === pluginId) {
+        debug.enabled &&
+          debug(`GATT claim released (plugin stopped): ${mac} was ${pluginId}`)
+        claim.handle.close().catch(() => {})
+        this.gattClaims.delete(mac)
+      }
+    }
+    for (const pending of this.pendingGattClaims.values()) {
+      if (pending.pluginId === pluginId) {
+        pending.released = true
+      }
+    }
+  }
+
   private selectGATTProvider(mac: string): string | undefined {
     const device = this.deviceTable.get(mac)
     if (!device) return undefined

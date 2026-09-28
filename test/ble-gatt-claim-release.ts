@@ -8,13 +8,13 @@ import {
 import { BLEApi } from '../src/api/ble'
 
 /**
- * A plugin that gives up on a GATT connection before it is up releases the
- * device. The connection must not end up claimed by the plugin when it
- * arrives later: nothing would ever close it, and the plugin's next attempt
- * would be refused as a claim of its own.
+ * A GATT connection must not stay claimed by a plugin that has given up on
+ * it, by releasing the device or by stopping: nothing would ever close it,
+ * and the plugin's next attempt would be refused as a claim of its own.
  */
 
 const MAC = 'AA:BB:CC:DD:EE:FF'
+const OTHER_MAC = '11:22:33:44:55:66'
 const PROVIDER_ID = 'test-gateway'
 const PLUGIN_ID = 'consumer-plugin'
 const OTHER_PLUGIN_ID = 'other-plugin'
@@ -98,14 +98,16 @@ const startApi = () => {
     }
   }
   api.register(PROVIDER_ID, provider)
-  // The device has to be seen by a provider before it can be claimed
-  advertise({
-    mac: MAC,
-    rssi: RSSI,
-    providerId: PROVIDER_ID,
-    timestamp: Date.now(),
-    connectable: true
-  })
+  // A device has to be seen by a provider before it can be claimed
+  for (const mac of [MAC, OTHER_MAC]) {
+    advertise({
+      mac,
+      rssi: RSSI,
+      providerId: PROVIDER_ID,
+      timestamp: Date.now(),
+      connectable: true
+    })
+  }
   return { api, connects, subscribes }
 }
 
@@ -167,5 +169,57 @@ describe('BLE GATT claim released while connecting', () => {
     await connecting
     expect(arriving.closes()).to.equal(0)
     expect(api.getGATTClaims().get(MAC)).to.equal(PLUGIN_ID)
+  })
+})
+
+describe('BLE GATT claims of a stopped plugin', () => {
+  it('closes the connections and sessions the plugin left open', async () => {
+    const { api, connects, subscribes } = startApi()
+    const connecting = api.connectGATT(MAC, PLUGIN_ID)
+    const raw = fakeConnection()
+    connects[0].resolve(raw.connection)
+    await connecting
+    const subscribing = api.subscribeGATT(
+      { mac: OTHER_MAC, service: SERVICE_UUID },
+      PLUGIN_ID,
+      () => undefined
+    )
+    const session = fakeSession()
+    subscribes[0].resolve(session.handle)
+    await subscribing
+
+    api.releaseGATTClaimsForPlugin(PLUGIN_ID)
+
+    expect(raw.closes()).to.equal(1)
+    expect(session.closes()).to.equal(1)
+    expect(api.getGATTClaims().size).to.equal(0)
+  })
+
+  it('closes a connection that comes up after the plugin stopped', async () => {
+    const { api, connects } = startApi()
+    const connecting = api.connectGATT(MAC, PLUGIN_ID)
+
+    api.releaseGATTClaimsForPlugin(PLUGIN_ID)
+    const late = fakeConnection()
+    connects[0].resolve(late.connection)
+
+    expect((await rejection(connecting))?.message).to.match(
+      /released while connecting/
+    )
+    expect(late.closes()).to.equal(1)
+    expect(api.getGATTClaims().size).to.equal(0)
+  })
+
+  it("leaves other plugins' claims alone", async () => {
+    const { api, connects } = startApi()
+    const connecting = api.connectGATT(MAC, OTHER_PLUGIN_ID)
+    const other = fakeConnection()
+    connects[0].resolve(other.connection)
+    await connecting
+
+    api.releaseGATTClaimsForPlugin(PLUGIN_ID)
+
+    expect(other.closes()).to.equal(0)
+    expect(api.getGATTClaims().get(MAC)).to.equal(OTHER_PLUGIN_ID)
   })
 })
