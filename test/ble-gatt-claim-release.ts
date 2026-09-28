@@ -21,6 +21,7 @@ const OTHER_PLUGIN_ID = 'other-plugin'
 const GATT_SLOTS = 3
 const RSSI = -60
 const SERVICE_UUID = '0000180f-0000-1000-8000-00805f9b34fb'
+const CHAR_UUID = '00002a19-0000-1000-8000-00805f9b34fb'
 
 // Settled by the test, standing in for a connection that takes a while
 class Deferred<T> {
@@ -72,6 +73,7 @@ const startApi = () => {
   } as unknown as ConstructorParameters<typeof BLEApi>[0])
   const connects: Deferred<BLEGattConnection>[] = []
   const subscribes: Deferred<GATTSubscriptionHandle>[] = []
+  const notify: ((charUuid: string, data: Buffer) => void)[] = []
   let advertise: (adv: BLEAdvertisement) => void = () => undefined
   const provider: BLEProvider = {
     name: 'Test gateway',
@@ -85,7 +87,8 @@ const startApi = () => {
       },
       supportsGATT: () => true,
       availableGATTSlots: () => GATT_SLOTS,
-      subscribeGATT: () => {
+      subscribeGATT: (_descriptor, callback) => {
+        notify.push(callback)
         const subscribing = new Deferred<GATTSubscriptionHandle>()
         subscribes.push(subscribing)
         return subscribing.promise
@@ -106,7 +109,7 @@ const startApi = () => {
     timestamp: Date.now(),
     connectable: true
   })
-  return { api, connects, subscribes }
+  return { api, connects, subscribes, notify }
 }
 
 const rejection = (promise: Promise<unknown>) =>
@@ -154,6 +157,27 @@ describe('BLE GATT claim released while connecting', () => {
     )
     expect(late.closes()).to.equal(1)
     expect(api.getGATTClaims().size).to.equal(0)
+  })
+
+  it('stops passing on notifications of a subscribeGATT() session once released', async () => {
+    const { api, subscribes, notify } = startApi()
+    const received: number[] = []
+    const subscribing = api.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID },
+      PLUGIN_ID,
+      (_charUuid, data) => received.push(data[0])
+    )
+
+    // A provider notifies as soon as it has subscribed, before it returns
+    notify[0](CHAR_UUID, Buffer.from([1]))
+    await api.releaseGATTDevice(MAC, PLUGIN_ID)
+    notify[0](CHAR_UUID, Buffer.from([2]))
+    subscribes[0].resolve(fakeSession().handle)
+
+    expect((await rejection(subscribing))?.message).to.match(
+      /released while connecting/
+    )
+    expect(received).to.deep.equal([1])
   })
 
   it('leaves a claim in progress alone when another plugin releases the device', async () => {
