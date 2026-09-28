@@ -66,8 +66,8 @@ interface GATTClaim {
 
 interface PendingGATTClaim {
   pluginId: string
-  // Set when the plugin gives up on the claim before its connection is up;
-  // the connection is closed as soon as it arrives
+  // Set once the plugin gives up on the claim: a connection still coming up
+  // is closed as soon as it arrives, and notifications stop reaching it
   released: boolean
 }
 
@@ -563,8 +563,9 @@ export class BLEApi implements IBLEApi {
       }
 
       const provider = this.bleProviders.get(providerId)!
-      // Notifications can arrive while the session is still being set up,
-      // and once the claim is released they are no longer the plugin's
+      // Notifications can arrive while the session is still being set up or
+      // already being closed, and once the claim is released they are no
+      // longer the plugin's
       const handle = await provider.methods.subscribeGATT(
         descriptor,
         (charUuid, data) => {
@@ -608,6 +609,7 @@ export class BLEApi implements IBLEApi {
 
       const origClose = handle.close.bind(handle)
       handle.close = async () => {
+        pending.released = true
         clearInterval(keepAliveTimer)
         this.gattClaims.delete(mac)
         debug.enabled && debug(`GATT released: ${mac} (was ${pluginId})`)
