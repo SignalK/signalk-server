@@ -93,6 +93,8 @@ const data = await conn.read(serviceUuid, charUuid)
 await conn.disconnect()
 ```
 
+Setting up a connection can take a while. A plugin that stops waiting for one, for instance on a timeout of its own, should release the device with `app.bleApi.releaseGATTDevice(mac, plugin.id)`. The connection is then closed as soon as it comes up and the pending `connectGATT` or `subscribeGATT` call rejects. Otherwise a connection that comes up late stays claimed by the plugin, and its next attempt fails with `already claimed`.
+
 ### BLE API Mode Detection
 
 Consumer plugins that can also operate with a direct BlueZ connection should auto-detect which mode to use:
