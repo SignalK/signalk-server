@@ -41,34 +41,41 @@ module.exports = function (app) {
 For sensors that require a persistent GATT connection, use `subscribeGATT`. Provide a declarative descriptor — the server selects the best provider (strongest RSSI, available slots) and manages connect/reconnect autonomously.
 
 ```javascript
+const MAC = 'AA:BB:CC:DD:EE:FF'
 let gattHandle = null
 
 plugin.start = async function () {
   const descriptor = {
-    mac: 'AA:BB:CC:DD:EE:FF',
+    mac: MAC,
     service: '0000180f-0000-1000-8000-00805f9b34fb', // Battery Service
     notify: ['00002a19-0000-1000-8000-00805f9b34fb'] // Battery Level
   }
 
-  gattHandle = await app.bleApi.subscribeGATT(
-    descriptor,
-    plugin.id,
-    (charUuid, data) => {
-      const level = data.readUInt8(0)
-      app.handleMessage(plugin.id, {
-        updates: [
-          {
-            values: [
-              {
-                path: 'electrical.batteries.0.capacity.stateOfCharge',
-                value: level / 100
-              }
-            ]
-          }
-        ]
-      })
-    }
-  )
+  try {
+    gattHandle = await app.bleApi.subscribeGATT(
+      descriptor,
+      plugin.id,
+      (charUuid, data) => {
+        const level = data.readUInt8(0)
+        app.handleMessage(plugin.id, {
+          updates: [
+            {
+              values: [
+                {
+                  path: 'electrical.batteries.0.capacity.stateOfCharge',
+                  value: level / 100
+                }
+              ]
+            }
+          ]
+        })
+      }
+    )
+  } catch (err) {
+    // Also rejects when plugin.stop() released the device while connecting
+    app.debug(`GATT subscription failed: ${err.message}`)
+    return
+  }
 
   gattHandle.onDisconnect(() => {
     app.debug('GATT disconnected — server will reconnect automatically')
@@ -76,7 +83,9 @@ plugin.start = async function () {
 }
 
 plugin.stop = async function () {
-  if (gattHandle) await gattHandle.close()
+  // Also cancels a subscription that is still connecting
+  await app.bleApi.releaseGATTDevice(MAC, plugin.id)
+  gattHandle = null
 }
 ```
 
