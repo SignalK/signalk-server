@@ -25,7 +25,8 @@ export interface BackpressureOptions {
   exitThreshold: number
   maxBufferSize: number
   maxBufferCheckTime: number
-  beforeWrite?: (delta: Delta) => void
+  /** Runs before each write; the delta it returns is the one written. */
+  beforeWrite?: (delta: Delta) => Delta
 }
 
 export interface BackpressureThresholds {
@@ -91,8 +92,7 @@ export class BackpressureManager {
       }
       accumulateLatestValue(this.accumulator, delta)
     } else {
-      this.options.beforeWrite?.(delta)
-      this.transport.write(delta)
+      this.transport.write(this.options.beforeWrite?.(delta) ?? delta)
     }
     this.assertBufferSize(bufferLength)
   }
@@ -103,8 +103,9 @@ export class BackpressureManager {
     const duration = this.since ? Date.now() - this.since : 0
     const deltas = buildFlushDeltas(this.accumulator, duration)
     for (const delta of deltas) {
-      this.options.beforeWrite?.(delta as Delta)
-      this.transport.write(delta as Delta)
+      this.transport.write(
+        this.options.beforeWrite?.(delta as Delta) ?? (delta as Delta)
+      )
     }
     this.accumulator.clear()
     this.active = false
