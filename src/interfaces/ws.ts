@@ -51,7 +51,7 @@ import {
   getDefaultCategory,
   DisplayUnitsMetadata
 } from '../unitpreferences'
-import { Delta, hasValues } from '@signalk/server-api'
+import { Delta, hasMeta, hasValues } from '@signalk/server-api'
 
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
@@ -537,7 +537,10 @@ function wsInterface(app: WsApp): WsApi {
             },
             {
               ...backpressureThresholds,
-              beforeWrite: (delta) => sendMetaData(app, spark, delta)
+              beforeWrite: (delta) => {
+                sendMetaData(app, spark, delta)
+                return withMetaResolvedForSpark(spark, delta)
+              }
             }
           )
 
@@ -1024,6 +1027,88 @@ interface MetaHandlerContext {
   timestamp?: string
 }
 
+/**
+ * Clone a path's metadata with its displayUnits resolved for the
+ * connection's user, as every metadata object sent to a client must be.
+ * A meta delta carries only the fields it changes, so `registered` supplies
+ * the path's stored displayUnits and units where the delta leaves them out.
+ */
+function resolveMetaForSpark(
+  spark: Spark,
+  path: string,
+  meta: Record<string, unknown>,
+  registered?: Record<string, unknown> | null
+): Record<string, unknown> {
+  const metaClone = structuredClone(meta)
+  const units = (metaClone.units ?? registered?.units) as string | undefined
+  let storedDisplayUnits = (metaClone.displayUnits ??
+    registered?.displayUnits) as DisplayUnitsMetadata | undefined
+  const username = spark.request.skPrincipal?.identifier
+  if (!storedDisplayUnits?.category && path) {
+    const defaultCategory = getDefaultCategory(path, units, username)
+    if (defaultCategory) {
+      storedDisplayUnits = { category: defaultCategory }
+    }
+  }
+  if (storedDisplayUnits?.category) {
+    const enhanced = resolveDisplayUnits(
+      storedDisplayUnits,
+      units,
+      username,
+      spark.sendDisplayUnitsOverride
+    )
+    if (enhanced) {
+      metaClone.displayUnits = enhanced
+    }
+  }
+  return metaClone
+}
+
+function carriesMeta(delta: Delta): boolean {
+  if (!delta.updates) return false
+  for (const update of delta.updates) {
+    if (hasMeta(update)) return true
+  }
+  return false
+}
+
+/**
+ * Metadata deltas from providers and PUT handlers are fanned out to every
+ * connection as sent, so their displayUnits are either missing or resolved
+ * for someone else. Only deltas carrying metadata are copied.
+ */
+function withMetaResolvedForSpark(spark: Spark, delta: Delta): Delta {
+  if (!carriesMeta(delta)) {
+    return delta
+  }
+  const context = delta.context || ''
+  return {
+    ...delta,
+    updates: delta.updates!.map((update) =>
+      hasMeta(update)
+        ? {
+            ...update,
+            meta: update.meta.map((entry) =>
+              entry.value && typeof entry.value === 'object'
+                ? {
+                    path: entry.path,
+                    value: resolveMetaForSpark(
+                      spark,
+                      entry.path,
+                      entry.value as Record<string, unknown>,
+                      getMetadata(
+                        getContextPathMetaKey(context, entry.path)
+                      ) as Record<string, unknown> | null
+                    ) as typeof entry.value
+                  }
+                : entry
+            )
+          }
+        : update
+    )
+  }
+}
+
 function handleValuesMeta(
   this: MetaHandlerContext,
   kp: { path: string }
@@ -1043,39 +1128,7 @@ function handleValuesMeta(
           unknown
         > | null
         if (meta) {
-          // Clone and enhance metadata with displayUnits formulas
-          const metaClone = structuredClone(meta) as Record<string, unknown>
-          let storedDisplayUnits = metaClone.displayUnits as
-            Record<string, unknown> | undefined
-          const username = this.spark.request.skPrincipal?.identifier
-          if (!storedDisplayUnits?.category && path) {
-            const defaultCategory = getDefaultCategory(
-              path,
-              metaClone.units as string | undefined,
-              username
-            )
-            if (defaultCategory) {
-              storedDisplayUnits = { category: defaultCategory }
-            }
-          }
-          if (storedDisplayUnits?.category) {
-            const enhanced = resolveDisplayUnits(
-              storedDisplayUnits as {
-                category: string
-                targetUnit?: string
-                formula?: string
-                inverseFormula?: string
-                symbol?: string
-                displayFormat?: string
-              },
-              metaClone.units as string | undefined,
-              username,
-              this.spark.sendDisplayUnitsOverride
-            )
-            if (enhanced) {
-              metaClone.displayUnits = enhanced
-            }
-          }
+          const metaClone = resolveMetaForSpark(this.spark, path, meta)
           this.spark.write({
             context: this.context,
             updates: [
