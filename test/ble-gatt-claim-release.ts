@@ -182,6 +182,31 @@ describe('BLE GATT claim released while connecting', () => {
     expect(received).to.deep.equal([1])
   })
 
+  it('stops passing on notifications of an established subscribeGATT() session once released', async () => {
+    const { api, subscribes, notify } = startApi()
+    const received: number[] = []
+    const subscribing = api.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID },
+      PLUGIN_ID,
+      (_charUuid, data) => received.push(data[0])
+    )
+    // The provider takes the link down some time after close() is called
+    const linkDown = new Deferred<void>()
+    subscribes[0].resolve({
+      ...fakeSession().handle,
+      close: () => linkDown.promise
+    })
+    await subscribing
+
+    notify[0](CHAR_UUID, Buffer.from([1]))
+    const releasing = api.releaseGATTDevice(MAC, PLUGIN_ID)
+    notify[0](CHAR_UUID, Buffer.from([2]))
+    linkDown.resolve()
+    await releasing
+
+    expect(received).to.deep.equal([1])
+  })
+
   it('leaves a claim in progress alone when another plugin releases the device', async () => {
     const { api, connects } = startApi()
     const connecting = api.connectGATT(MAC, PLUGIN_ID)
