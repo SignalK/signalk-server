@@ -1049,6 +1049,9 @@ module.exports = (theApp: any) => {
     appCopy.activateRoute = (dest: RouteDestination | null) => {
       return courseApi.activeRoute(dest)
     }
+    appCopy.restartCourse = () => {
+      return courseApi.restartCourse()
+    }
 
     appCopy.notifications = {
       list: () => app.notificationApi.list(),

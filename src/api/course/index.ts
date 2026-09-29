@@ -614,6 +614,22 @@ export class CourseApi {
     this.emitCourseInfo(!persistState)
   }
 
+  /** Start the current leg at the vessel position (exposed to plugins) */
+  async restartCourse(): Promise<void> {
+    if (!this.courseInfo.nextPoint) {
+      throw new Error('No active destination!')
+    }
+    const position: any = this.getVesselPosition()
+    if (!position?.value) {
+      throw new Error('Vessel position unavailable!')
+    }
+    this.courseInfo.previousPoint = {
+      position: position.value,
+      type: VesselPosition
+    }
+    this.emitCourseInfo(false, 'previousPoint')
+  }
+
   /** Set course (exposed to plugins)
    * @param dest Setting to null clears the current destination
    */
@@ -814,36 +830,14 @@ export class CourseApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        if (!this.courseInfo.nextPoint) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `No active destination!`
-          })
-          return
-        }
-        // set previousPoint to vessel position
         try {
-          const position: any = this.getVesselPosition()
-          if (position && position.value) {
-            this.courseInfo.previousPoint = {
-              position: position.value,
-              type: VesselPosition
-            }
-            this.emitCourseInfo(false, 'previousPoint')
-            res.status(200).json(Responses.ok)
-          } else {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: `Vessel position unavailable!`
-            })
-          }
-        } catch (_err) {
+          await this.restartCourse()
+          res.status(200).json(Responses.ok)
+        } catch (err) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
-            message: `Vessel position unavailable!`
+            message: (err as Error).message
           })
         }
       }

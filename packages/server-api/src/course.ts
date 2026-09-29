@@ -41,4 +41,15 @@ export interface CourseApi {
    * @category Course API
    */
   activateRoute(dest: RouteDestination | null): Promise<void>
+
+  /**
+   * Start the current leg of the course at the vessel's position: the vessel
+   * position becomes the course's previous point, as the Course REST API's
+   * `restart` does. The destination and any active route are unchanged.
+   *
+   * - returns: Rejected Promise when there is no destination or no vessel position.
+   *
+   * @category Course API
+   */
+  restartCourse(): Promise<void>
 }
