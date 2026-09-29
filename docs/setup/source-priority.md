@@ -83,7 +83,7 @@ All source data is preserved in the server's data model regardless of priority c
 
 ## NMEA 0183 Output
 
-Sentences received on an NMEA 0183 connection are forwarded as raw NMEA 0183 to the NMEA 0183 TCP server on port 10110, independently of their conversion to Signal K. Source priority works on the converted Signal K data, so it never applies to this pass-through: with two GPS receivers connected, a client on port 10110 receives the sentences of both.
+Sentences received on NMEA 0183 connections are forwarded as raw NMEA 0183 to the NMEA 0183 TCP server on port 10110, independently of their conversion to Signal K. Source priority works on the converted Signal K data, so it never applies to this pass-through: with two GPS receivers connected, a client on port 10110 receives the sentences of both.
 
 A priority-filtered NMEA 0183 feed is therefore built from the Signal K data rather than passed through. The _signalk-to-nmea0183_ plugin generates its sentences from the same priority-filtered values that subscribers receive, so its output follows the preferred source and the fallback behaviour described in [How Rankings Work](#how-rankings-work). For that output to be the only copy of the data on port 10110, the pass-through of the original sentences is switched off on the connections that carry them, see [NMEA 0183 Options](./configuration.md#nmea-0183-options).
 
