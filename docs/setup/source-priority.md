@@ -77,7 +77,16 @@ Data from a source that is not listed in the priority table for a path is held b
 
 `notifications.*` paths bypass source priority entirely — every source's notifications are delivered unchanged. Notifications are events, not measurements, so suppressing one source's alarm because another source is "preferred" is never the right behaviour.
 
+Raw NMEA 0183 sentences forwarded to the NMEA 0183 TCP server on port 10110 are not filtered either. See [NMEA 0183 Output](#nmea-0183-output).
+
 All source data is preserved in the server's data model regardless of priority configuration. Priority only affects which source's values are delivered to subscribers by default. See [Source Priority in the Data Browser](#source-priority-in-the-data-browser) for how to view every source's data.
+
+## NMEA 0183 Output
+
+Sentences received on NMEA 0183 connections are forwarded as raw NMEA 0183 to the NMEA 0183 TCP server on port 10110, independently of their conversion to Signal K. Source priority works on the converted Signal K data, so it never applies to this pass-through: with two GPS receivers connected, a client on port 10110 receives the sentences of both.
+
+Therefore outputs that take source priorities into account need to be built from the Signal K data rather than passed through. The _signalk-to-nmea0183_ plugin generates its sentences from the priority-filtered values, so its output follows the preferred source and the fallback behaviour described in [How Rankings Work](#how-rankings-work). For that output to be the only copy of the data on port 10110, the pass-through of the original sentences is switched off on the connections that carry them, see [NMEA 0183 Options](./configuration.md#nmea-0183-options).
+
 
 ## Source Priority in the Data Browser
 
