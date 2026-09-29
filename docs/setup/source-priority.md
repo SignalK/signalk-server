@@ -87,7 +87,6 @@ Sentences received on NMEA 0183 connections are forwarded as raw NMEA 0183 to th
 
 Therefore outputs that take source priorities into account need to be built from the Signal K data rather than passed through. The _signalk-to-nmea0183_ plugin generates its sentences from the priority-filtered values, so its output follows the preferred source and the fallback behaviour described in [How Rankings Work](#how-rankings-work). For that output to be the only copy of the data on port 10110, the pass-through of the original sentences is switched off on the connections that carry them, see [NMEA 0183 Options](./configuration.md#nmea-0183-options).
 
-
 ## Source Priority in the Data Browser
 
 The Data Browser (_Data -> Browser_) has a **Sources** dropdown that controls which source's data is displayed:
