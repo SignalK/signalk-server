@@ -620,7 +620,7 @@ export class CourseApi {
       throw new Error('No active destination!')
     }
     const position: any = this.getVesselPosition()
-    if (!position?.value) {
+    if (!position?.value || !this.isValidPosition(position.value)) {
       throw new Error('Vessel position unavailable!')
     }
     this.courseInfo.previousPoint = {
