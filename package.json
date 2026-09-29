@@ -10,7 +10,7 @@
     "build:workspaces": "npm run build --workspaces --if-present",
     "watch": "tsc --build -w",
     "prettier": "prettier --write .",
-    "lint": "eslint --fix",
+    "lint": "eslint --fix --cache",
     "format": "npm run prettier && npm run lint",
     "ci-lint": "eslint && prettier --check .",
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
