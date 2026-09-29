@@ -8,5 +8,9 @@ public
 # dir is under prettier's scan, so a freshly-written cache trips
 # prettier --check during npm test.
 **/sources-cache.json
+# App store cache from dev server starts
+appstore-cache
+# Application data from dev server starts
+applicationData
 # AssemblyScript build outputs
 packages/assemblyscript-plugin-sdk/build
