@@ -687,7 +687,6 @@ describe('Course Api', () => {
     })
     expect(data.nextPoint?.position).to.deep.equal(destination)
 
-    // the method offered to plugins does the same
     await sendDelta('navigation.position', {
       latitude: -35.47,
       longitude: 138.2
@@ -699,6 +698,16 @@ describe('Course Api', () => {
       type: 'VesselPosition'
     })
     expect(data.nextPoint?.position).to.deep.equal(destination)
+
+    await sendDelta('navigation.position', { latitude: 95, longitude: 138.2 })
+    await selfPut('navigation/course/restart', {}).then((response) =>
+      response.status.should.equal(400)
+    )
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint?.position).to.deep.equal({
+      latitude: -35.47,
+      longitude: 138.2
+    })
 
     await selfDelete('navigation/course').then((response) =>
       response.status.should.equal(200)
