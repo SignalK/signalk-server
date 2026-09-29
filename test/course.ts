@@ -659,4 +659,58 @@ describe('Course Api', () => {
 
     stop()
   })
+
+  it('can restart the course from the vessel position', async function () {
+    const { server, selfGetJson, selfPut, selfDelete, sendDelta, stop } =
+      await startServer()
+    const destination = { latitude: -35.5, longitude: 138.7 }
+
+    await sendDelta('navigation.position', {
+      latitude: -35.45,
+      longitude: 138.0
+    })
+    await selfPut('navigation/course/destination', {
+      position: destination
+    }).then((response) => response.status.should.equal(200))
+
+    await sendDelta('navigation.position', {
+      latitude: -35.46,
+      longitude: 138.1
+    })
+    await selfPut('navigation/course/restart', {}).then((response) =>
+      response.status.should.equal(200)
+    )
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint).to.deep.equal({
+      position: { latitude: -35.46, longitude: 138.1 },
+      type: 'VesselPosition'
+    })
+    expect(data.nextPoint?.position).to.deep.equal(destination)
+
+    // the method offered to plugins does the same
+    await sendDelta('navigation.position', {
+      latitude: -35.47,
+      longitude: 138.2
+    })
+    await server.app.courseApi.restartCourse()
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint).to.deep.equal({
+      position: { latitude: -35.47, longitude: 138.2 },
+      type: 'VesselPosition'
+    })
+    expect(data.nextPoint?.position).to.deep.equal(destination)
+
+    await selfDelete('navigation/course').then((response) =>
+      response.status.should.equal(200)
+    )
+    await selfPut('navigation/course/restart', {}).then((response) =>
+      response.status.should.equal(400)
+    )
+    await server.app.courseApi.restartCourse().then(
+      () => assert.fail('restartCourse without a destination resolved'),
+      (err: Error) => err.message.should.equal('No active destination!')
+    )
+
+    stop()
+  })
 })
