@@ -24,11 +24,11 @@ jobs:
     uses: SignalK/signalk-server/.github/workflows/plugin-ci.yml@master
 ```
 
-Push to GitHub — your plugin is now tested on Linux (x64 + arm64), macOS, Windows, and armv7 (Cerbo GX).
+Push to GitHub — your plugin is now tested on Linux (x64 + arm64), macOS, and Windows.
 
 ## Manual Trigger with Custom Settings
 
-Add `workflow_dispatch` to get a **"Run workflow"** button in the GitHub Actions UI where you can override Node versions, toggle armv7/Cerbo GX testing, enable integration tests, and more — without editing your workflow file.
+Add `workflow_dispatch` to get a **"Run workflow"** button in the GitHub Actions UI where you can override Node versions, enable integration tests, and more — without editing your workflow file.
 
 Because `workflow_call` and `workflow_dispatch` inputs are separate namespaces in GitHub Actions, the workflow needs two jobs: one for automatic runs (push/PR) with hardcoded defaults, and one for manual runs that passes through your form inputs.
 
@@ -38,13 +38,14 @@ See [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) f
 
 ### Platforms
 
-| Platform | Architecture     | Node versions | Notes                                            |
-| -------- | ---------------- | ------------- | ------------------------------------------------ |
-| Linux    | x64              | 22, 24        | GitHub-hosted runner                             |
-| Linux    | arm64            | 22, 24        | GitHub-hosted runner — Raspberry Pi 4/5          |
-| macOS    | arm64            | 22, 24        | GitHub-hosted runner                             |
-| Windows  | x64              | 22, 24        | GitHub-hosted runner                             |
-| Linux    | armv7 (Cerbo GX) | 20            | QEMU emulation — matches Venus OS 3.70 (Node 20) |
+| Platform | Architecture | Node versions | Notes                                   |
+| -------- | ------------ | ------------- | --------------------------------------- |
+| Linux    | x64          | 22, 24        | GitHub-hosted runner                    |
+| Linux    | arm64        | 22, 24        | GitHub-hosted runner — Raspberry Pi 4/5 |
+| macOS    | arm64        | 22, 24        | GitHub-hosted runner                    |
+| Windows  | x64          | 22, 24        | GitHub-hosted runner                    |
+
+There is no 32-bit ARM (armv7) platform: Signal K Server requires Node.js 22 or later and no longer supports armv7, as described in [Breaking Changes](../../breaking_changes.md).
 
 ### Validation Checks
 
@@ -86,7 +87,6 @@ jobs:
     with:
       test-command: 'npm run test:ci'
       build-command: 'npm run build:plugin'
-      enable-armv7: false
       enable-signalk-integration: true
       node-versions: '["22"]'
 ```
@@ -98,7 +98,7 @@ jobs:
 | `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty                           |
 | `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary |
 | `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms                                                                                      |
-| `enable-armv7`               | `true`                       | Test on armv7 (Cerbo GX) via QEMU                                                                                        |
+| `enable-armv7`               | `false`                      | Deprecated and ignored — there is no armv7 platform                                                                      |
 | `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                               |
 | `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                            |
 
@@ -123,17 +123,6 @@ The CI validates the same fields described in the [publishing guide](./publishin
 - `engines.node` should declare the minimum Node.js version (required if you use `node:sqlite` or other version-specific built-in modules)
 
 Plugins without a `test` script still get all validation checks — tests are skipped with a notice.
-
-## armv7 / Cerbo GX Testing
-
-The Cerbo GX runs an Allwinner dual-core Cortex-A7 (ARMv7, 32-bit) with Venus OS. The CI emulates this environment using QEMU with a `node:20-bookworm-slim` Docker image plus `python3`, `make`, and `g++` — matching Venus OS 3.70 which ships Node 20 and has build tools available via opkg.
-
-The armv7 job runs install, build, and tests — it does not repeat the full validation suite (that's covered by the desktop jobs). The armv7 Node version is fixed to match the Cerbo GX and is not user-configurable. Expect armv7 jobs to take 3-5x longer than native x64. armv7 failures are **advisory and non-blocking**.
-
-### Limitations
-
-- **Native addons** compile for armv7 inside the container (slow but works — pre-built binaries rarely exist for ARM32)
-- **Hardware peripherals** (GPIO, CAN bus, serial) are not emulated — use a self-hosted runner for those
 
 ## Integration Tests
 
