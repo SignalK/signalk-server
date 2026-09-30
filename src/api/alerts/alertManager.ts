@@ -8,7 +8,7 @@
  */
 
 import { EventEmitter } from 'events'
-import type { Context, Path, SourceRef, Value } from '@signalk/server-api'
+import type { Context, Path, SourceRef } from '@signalk/server-api'
 import {
   PRIORITY_RANK,
   type Alert,
@@ -63,7 +63,8 @@ const DEFAULT_RETENTION_DAYS = 90
 const DEFAULT_MAX_ACTIVE_ALERTS = 1000
 
 /**
- * How long a delta source may stay quiet before its alerts are marked stale.
+ * How long a source may go without repeating an active alert before the alert
+ * is marked stale.
  * A stale alert stays visible and actionable: silence is not evidence that the
  * condition resolved.
  */
@@ -122,19 +123,20 @@ function sameDescription(before: Alert, after: Alert): boolean {
 }
 
 /**
- * What a source may refresh on an alert without re-announcing it.
+ * Whether a raise repeats an active alert rather than announcing anything.
  *
- * Priority and message are absent on purpose: those are what an operator
- * reads, so a change to either is a fresh annunciation and belongs in
- * raiseAlert.
+ * Priority and message are what an operator reads, so only a change to either
+ * is news. A priority at or below the alert's own changes nothing, because the
+ * manager never lowers one: a source keeps repeating the warning it began with
+ * after the escalation timer has raised the alert to alarm. A raise for an
+ * alert whose condition has ended says the condition is back.
  */
-export interface AlertDescription {
-  $source?: SourceRef
-  source?: Record<string, unknown>
-  group?: string
-  latching?: boolean
-  references?: Path[]
-  data?: Record<string, Value>
+function isRepeat(existing: Alert, params: CreateAlertParams): boolean {
+  return (
+    existing.condition &&
+    params.message === existing.message &&
+    PRIORITY_RANK[params.priority] <= PRIORITY_RANK[existing.priority]
+  )
 }
 
 /**
@@ -155,8 +157,8 @@ export interface AlertManagerConfig {
   /** Most alerts that may be active at once. Defaults to 1000. */
   maxActiveAlerts?: number
   /**
-   * Seconds a delta source may go quiet before its alerts are stale.
-   * Defaults to 60.
+   * Seconds a source may go without repeating an alert whose condition is
+   * active before the alert is stale. Defaults to 60.
    */
   sourceTimeoutSeconds?: number
 }
@@ -241,10 +243,11 @@ export class AlertManager extends EventEmitter {
   private readonly maxActiveAlerts: number
   private readonly sourceTimeoutSeconds: number
   /**
-   * One timer per alert whose source re-emits it, armed afresh on every
-   * re-emission. Only delta ingress enrols an alert here: re-emission is its
-   * heartbeat, and a REST or plugin alert raised once would go stale for no
-   * reason.
+   * One timer per alert whose condition is active, armed afresh on every
+   * raise. Every source repeats its alert while the condition lasts, whatever
+   * surface it raises through, so a raise is also the heartbeat (proposal
+   * §15). An alert held after its condition ended has nothing left for its
+   * source to vouch for, and is not timed.
    */
   private livenessTimers = new Map<string, TimerHandle>()
   /** Whether the full active set has already been reported. */
@@ -330,6 +333,11 @@ export class AlertManager extends EventEmitter {
     for (const stored of alerts) {
       this.resumeEscalation(stored)
       await this.resumeSilence(stored.id)
+      // The source has to repeat a restored alert like any other; one that
+      // does not come back after the restart is stale.
+      if (stored.condition) {
+        this.armLivenessTimer(stored.id)
+      }
     }
 
     // Armed only once the load has succeeded, so a store this server has
@@ -342,9 +350,21 @@ export class AlertManager extends EventEmitter {
    *
    * If an active alert with the same path (and context) already exists, it is
    * updated rather than duplicated. An omitted optional field leaves the
-   * existing value alone; a caller clears a field by sending it empty.
+   * existing value alone; a caller clears a field by sending it empty. A raise
+   * that only repeats an active alert refreshes it without re-alerting, and
+   * every raise counts as the source's heartbeat.
    */
   async raiseAlert(params: CreateAlertParams): Promise<Alert> {
+    const alert = await this.applyRaise(params)
+    // A clear can land while the raise awaits its write, and a liveness timer
+    // armed for an alert whose condition has gone would mark it stale.
+    if (this.alerts.get(alert.id)?.condition) {
+      this.armLivenessTimer(alert.id)
+    }
+    return alert
+  }
+
+  private async applyRaise(params: CreateAlertParams): Promise<Alert> {
     const context = params.context || undefined
     const existingId = this.alertIndex.get(
       this.getIndexKey(params.path, context)
@@ -353,7 +373,7 @@ export class AlertManager extends EventEmitter {
     if (existingId) {
       const existing = this.alerts.get(existingId)
       if (existing) {
-        return this.updateExistingAlert(existing, params)
+        return this.raiseExisting(existing, params)
       }
     }
 
@@ -373,7 +393,7 @@ export class AlertManager extends EventEmitter {
       )
       const raced = racedId ? this.alerts.get(racedId) : undefined
       if (raced) {
-        return this.updateExistingAlert(raced, params)
+        return this.raiseExisting(raced, params)
       }
     }
 
@@ -602,41 +622,50 @@ export class AlertManager extends EventEmitter {
   }
 
   /**
-   * Apply what a source says about an alert that is otherwise unchanged.
-   *
-   * A re-emission with the same priority and message is not news, so it must
-   * not travel through raiseAlert: that reactivates an acknowledged alert and
-   * strips its silencing. The descriptive fields still moved, though, and the
-   * model and the store should carry what the source last said.
+   * Route a raise for an alert that already exists: a repeat refreshes it, and
+   * anything the operator would read differently re-announces it.
    */
-  async updateDescription(
-    alertId: string,
-    description: AlertDescription
+  private raiseExisting(
+    existing: Alert,
+    params: CreateAlertParams
   ): Promise<Alert> {
-    const alert = this.alerts.get(alertId)
-    if (!alert) {
-      throw new AlertNotFoundError(alertId)
-    }
+    return isRepeat(existing, params)
+      ? this.refreshAlert(existing, params)
+      : this.updateExistingAlert(existing, params)
+  }
 
-    // An omitted field means unchanged, as it does for a raise.
+  /**
+   * Apply a repeat: what the source says about an alert that is otherwise
+   * unchanged.
+   *
+   * A repeat is not news, so it must not travel through updateExistingAlert:
+   * that reactivates an acknowledged alert and strips its silencing. The
+   * descriptive fields can still have moved, and the model and the store
+   * should carry what the source last said.
+   */
+  private async refreshAlert(
+    alert: Alert,
+    params: CreateAlertParams
+  ): Promise<Alert> {
+    // An omitted field means unchanged, as it does for any raise.
     const updated: Alert = {
       ...alert,
-      $source: description.$source ?? alert.$source,
-      source: description.source ?? alert.source,
-      group: description.group ?? alert.group,
-      latching: description.latching ?? alert.latching,
-      references: description.references ?? alert.references,
-      data: description.data ?? alert.data,
+      $source: params.$source,
+      source: params.source ?? alert.source,
+      group: params.group ?? alert.group,
+      latching: params.latching ?? alert.latching,
+      references: params.references ?? alert.references,
+      data: params.data ?? alert.data,
       lastSourceUpdate: new Date().toISOString(),
       sourceOnline: true,
       stale: false
     }
 
-    // A source that re-emits an identical alert is the common case, and it
+    // A source that repeats an identical alert is the common case, and it
     // must stay free: no delta to every subscriber and no durable write for a
     // message that says nothing new.
     //
-    // A source that re-emits after going quiet is not that case. The alert is
+    // A source that repeats after going quiet is not that case. The alert is
     // marked stale and its source offline, and saying so again is exactly what
     // clears both, so that one is published and stored.
     const wasOffline = alert.stale || !alert.sourceOnline
@@ -644,12 +673,22 @@ export class AlertManager extends EventEmitter {
       return alert
     }
 
-    this.alerts.set(alertId, updated)
-    // No audit entry and no state change: nothing happened to the alert, the
-    // source merely said the same thing again with fresher detail.
+    this.alerts.set(alert.id, updated)
+    // Nothing happened to the alert itself, so only a source taking it over
+    // is worth an audit entry.
+    const history =
+      params.$source === alert.$source
+        ? []
+        : [
+            this.historyEntry('raise', updated, {
+              previousState: alert.state,
+              newState: updated.state,
+              details: { previousSource: alert.$source }
+            })
+          ]
     this.emitEvent('updated', updated)
 
-    await this.commit({ alertId, alert: updated, history: [] })
+    await this.commit({ alertId: alert.id, alert: updated, history })
 
     return updated
   }
@@ -684,12 +723,24 @@ export class AlertManager extends EventEmitter {
     }
 
     if (result.alert) {
-      const updated = result.alert
-      // A repeat clear on an already-cleared condition changes nothing.
-      // Logging and re-emitting it would flood the audit trail, because a
-      // delta source re-emits a null value as its liveness heartbeat.
+      // Held for acknowledgment, the alert has no condition left for its
+      // source to vouch for, and the report that the condition ended is the
+      // source speaking, so an alert that had gone stale is live again.
+      this.cancelLivenessTimer(alertId)
+      const updated: Alert = alert.stale
+        ? {
+            ...result.alert,
+            lastSourceUpdate: new Date().toISOString(),
+            sourceOnline: true,
+            stale: false
+          }
+        : result.alert
+      // A repeat clear on an already-cleared condition changes nothing, and
+      // logging and re-emitting it would flood the audit trail.
       const changed =
-        updated.state !== alert.state || updated.condition !== alert.condition
+        updated.state !== alert.state ||
+        updated.condition !== alert.condition ||
+        updated.stale !== alert.stale
 
       this.alerts.set(alertId, updated)
       this.syncEscalationTimer(updated)
@@ -774,14 +825,8 @@ export class AlertManager extends EventEmitter {
       .length
   }
 
-  /**
-   * Record that an alert's source re-emitted it.
-   *
-   * Delta ingress calls this: re-emission of the alert value is the heartbeat
-   * (proposal §15). The raise itself already refreshed the timestamps, so this
-   * only enrols the alert in liveness checking.
-   */
-  noteSourceUpdate(alertId: string): void {
+  /** Give the alert's source one timeout from now to repeat it. */
+  private armLivenessTimer(alertId: string): void {
     if (this.stopped) {
       return
     }

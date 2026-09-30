@@ -19,10 +19,15 @@ import {
   captureConsole,
   FailingAlertStore,
   MockAlertStore,
-  presentAlert,
   raiseParams,
   storedAlert
 } from './helpers/fixtures'
+
+/**
+ * Every raise arms its alert's liveness timer, so a pending count is the timers
+ * under test plus one for each alert whose condition is active.
+ */
+const LIVENESS_TIMER = 1
 
 /**
  * Assert that a promise rejects with an error whose message contains `message`.
@@ -426,7 +431,7 @@ describe('AlertManager', () => {
         raiseParams({ priority: 'warning', message: 'Test warning' })
       )
 
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       // Advance time to trigger escalation
       fakeTimers.advanceTime(300 * 1000)
@@ -438,7 +443,7 @@ describe('AlertManager', () => {
     it('should not start escalation timer for alarm priority', async () => {
       await manager.raiseAlert(raiseParams({ message: 'Test alarm' }))
 
-      expect(fakeTimers.getPendingCount()).to.equal(0)
+      expect(fakeTimers.getPendingCount()).to.equal(LIVENESS_TIMER)
     })
 
     it('should support optional group and data', async () => {
@@ -489,11 +494,11 @@ describe('AlertManager', () => {
         raiseParams({ priority: 'warning', message: 'Test warning' })
       )
 
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       await manager.acknowledgeAlert(alert.id)
 
-      expect(fakeTimers.getPendingCount()).to.equal(0)
+      expect(fakeTimers.getPendingCount()).to.equal(LIVENESS_TIMER)
     })
 
     it('should clear RTN-unacknowledged alert on acknowledge', async () => {
@@ -705,7 +710,7 @@ describe('AlertManager', () => {
         raiseParams({ priority: 'warning', message: 'Test warning' })
       )
 
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       await manager.clearCondition(alert.id)
 
@@ -720,7 +725,7 @@ describe('AlertManager', () => {
     })
   })
 
-  describe('updateDescription', () => {
+  describe('repeated raise', () => {
     it('refreshes the descriptive fields without re-alerting', async () => {
       const alert = await manager.raiseAlert(
         raiseParams({ group: 'engine', data: { rpm: 1000 } })
@@ -728,19 +733,67 @@ describe('AlertManager', () => {
       await manager.acknowledgeAlert(alert.id, 'operator')
       events.length = 0
 
-      const updated = await manager.updateDescription(alert.id, {
-        data: { rpm: 1200 },
-        references: [asPath('propulsion.port.revolutions')]
-      })
+      const updated = await manager.raiseAlert(
+        raiseParams({
+          data: { rpm: 1200 },
+          references: ['propulsion.port.revolutions']
+        })
+      )
 
       expect(updated.data).to.deep.equal({ rpm: 1200 })
       expect(updated.references).to.deep.equal([
         asPath('propulsion.port.revolutions')
       ])
-      // The point of the method: an acknowledged alert stays acknowledged.
       expect(updated.state).to.equal('acknowledged')
       expect(updated.group).to.equal('engine')
       expect(events.map((event) => event.type)).to.deep.equal(['updated'])
+    })
+
+    it('leaves a silenced alert silenced', async () => {
+      const alert = await manager.raiseAlert(raiseParams())
+      await manager.silenceAlert(alert.id, 60 * 1000)
+
+      const repeated = await manager.raiseAlert(raiseParams())
+
+      expect(repeated.silenced).to.equal(true)
+    })
+
+    it('keeps an escalated priority when the source repeats a lower one', async () => {
+      const alert = await manager.raiseAlert(
+        raiseParams({ priority: 'warning' })
+      )
+      await manager.escalateAlert(alert.id, 'alarm')
+      await manager.acknowledgeAlert(alert.id, 'operator')
+
+      const repeated = await manager.raiseAlert(
+        raiseParams({ priority: 'warning' })
+      )
+
+      expect(repeated.priority).to.equal('alarm')
+      expect(repeated.state).to.equal('acknowledged')
+    })
+
+    it('re-alerts when the message changes', async () => {
+      const alert = await manager.raiseAlert(raiseParams())
+      await manager.acknowledgeAlert(alert.id, 'operator')
+
+      const changed = await manager.raiseAlert(
+        raiseParams({ message: 'Something else' })
+      )
+
+      expect(changed.state).to.equal('unacknowledged')
+      expect(changed.message).to.equal('Something else')
+    })
+
+    it('reports a returning condition when the condition had ended', async () => {
+      const alert = await manager.raiseAlert(raiseParams())
+      await manager.clearCondition(alert.id)
+      expect(manager.getAlert(alert.id)?.state).to.equal('rtn-unacknowledged')
+
+      const back = await manager.raiseAlert(raiseParams())
+
+      expect(back.state).to.equal('unacknowledged')
+      expect(back.condition).to.equal(true)
     })
 
     it('does nothing at all when the description is unchanged', async () => {
@@ -754,56 +807,24 @@ describe('AlertManager', () => {
       const commitsAfterRaise = store.commitCount
       events.length = 0
 
-      const same = await manager.updateDescription(alert.id, {
-        $source: alert.$source,
-        group: 'engine',
-        data: { rpm: 1000 }
-      })
+      const same = await manager.raiseAlert(
+        raiseParams({ group: 'engine', data: { rpm: 1000 } })
+      )
 
-      // A source re-emitting an identical alert is the common case. It must
+      // A source repeating an identical alert is the common case. It must
       // cost neither a delta to every subscriber nor a durable write.
       expect(same).to.equal(alert)
       expect(events).to.have.lengthOf(0)
       expect(store.commitCount).to.equal(commitsAfterRaise)
     })
 
-    it('brings a stale alert back when its source speaks again', async () => {
-      const store = new MockAlertStore()
-      manager.stop()
-      manager = new AlertManager(
-        { ...defaultConfig, sourceTimeoutSeconds: 60 },
-        fakeTimers,
-        store
-      )
-      manager.on('alert', (event: AlertEvent) => events.push(event))
-      const alert = await manager.raiseAlert(
-        raiseParams({ data: { rpm: 1000 } })
-      )
-      manager.noteSourceUpdate(alert.id)
-      fakeTimers.advanceTime(60 * 1000)
-      expect(presentAlert(manager.getAlert(alert.id)).stale).to.equal(true)
-      events.length = 0
-
-      // The description has not moved, but the source coming back is the
-      // whole point of the message: staying stale would misreport a live
-      // source for as long as it keeps saying the same thing.
-      const recovered = await manager.updateDescription(alert.id, {
-        data: { rpm: 1000 }
-      })
-
-      expect(recovered.stale).to.equal(false)
-      expect(recovered.sourceOnline).to.equal(true)
-      expect(events.map((event) => event.type)).to.deep.equal(['updated'])
-      expect(store.getStoredAlert(alert.id)?.stale).to.equal(false)
-    })
-
     it('publishes a changed structured source', async () => {
-      const alert = await manager.raiseAlert(raiseParams())
+      await manager.raiseAlert(raiseParams())
       events.length = 0
 
-      const updated = await manager.updateDescription(alert.id, {
-        source: { label: 'n2k', pgn: 127489 }
-      })
+      const updated = await manager.raiseAlert(
+        raiseParams({ source: { label: 'n2k', pgn: 127489 } })
+      )
 
       expect(updated.source).to.deep.equal({ label: 'n2k', pgn: 127489 })
       expect(events.map((event) => event.type)).to.deep.equal(['updated'])
@@ -816,17 +837,22 @@ describe('AlertManager', () => {
       const alert = await manager.raiseAlert(raiseParams())
       store.resetHistory()
 
-      await manager.updateDescription(alert.id, { data: { rpm: 1200 } })
+      await manager.raiseAlert(raiseParams({ data: { rpm: 1200 } }))
 
       expect(store.eventTypes()).to.deep.equal([])
       expect(store.getStoredAlert(alert.id)?.data).to.deep.equal({ rpm: 1200 })
     })
 
-    it('rejects an unknown alert', async () => {
-      await expectRejection(
-        manager.updateDescription('non-existent', { data: {} }),
-        'Alert not found'
-      )
+    it('records a source taking the alert over', async () => {
+      const store = new MockAlertStore()
+      manager.stop()
+      manager = new AlertManager(defaultConfig, fakeTimers, store)
+      await manager.raiseAlert(raiseParams({ $source: 'source-a' }))
+      store.resetHistory()
+
+      await manager.raiseAlert(raiseParams({ $source: 'source-b' }))
+
+      expect(store.eventTypes()).to.deep.equal(['raise'])
     })
   })
 
@@ -881,7 +907,7 @@ describe('AlertManager', () => {
       expect(escalated.stateChangedAt).to.not.equal(alert.stateChangedAt)
     })
 
-    it('still announces an unchanged re-raise as updated', async () => {
+    it('announces nothing for an unchanged repeat', async () => {
       await manager.raiseAlert(
         raiseParams({ priority: 'warning', message: 'Test warning' })
       )
@@ -891,7 +917,7 @@ describe('AlertManager', () => {
         raiseParams({ priority: 'warning', message: 'Test warning' })
       )
 
-      expect(events.map((event) => event.type)).to.deep.equal(['updated'])
+      expect(events).to.deep.equal([])
     })
 
     it('should escalate warning to alarm after timeout', async () => {
@@ -904,8 +930,11 @@ describe('AlertManager', () => {
 
       const updated = manager.getAlert(alert.id)
       expect(updated?.priority).to.equal('alarm')
-      expect(events).to.have.lengthOf(1)
-      expect(events[0].type).to.equal('escalated')
+      // The source never repeated the alert, so it also went stale.
+      expect(events.map((event) => event.type)).to.deep.equal([
+        'updated',
+        'escalated'
+      ])
     })
 
     it('advances stateChangedAt when the escalation timer fires', async () => {
@@ -954,13 +983,14 @@ describe('AlertManager', () => {
       expect(escalated?.priority).to.equal('alarm')
       expect(escalated?.silenced).to.equal(false)
       expect(escalated?.silencedUntil).to.be.undefined
-      expect(events).to.have.lengthOf(1)
-      expect(events[0].type).to.equal('escalated')
-      expect(events[0].alert.silenced).to.equal(false)
+      const escalations = () => events.filter((e) => e.type === 'escalated')
+      expect(escalations()).to.have.lengthOf(1)
+      expect(escalations()[0].alert.silenced).to.equal(false)
+      const eventsAtEscalation = events.length
 
       // The pending unsilence timer went with it, so nothing fires later.
       fakeTimers.advanceTime(600 * 1000)
-      expect(events).to.have.lengthOf(1)
+      expect(events).to.have.lengthOf(eventsAtEscalation)
     })
 
     it('should not escalate if acknowledged before timeout', async () => {
@@ -984,7 +1014,7 @@ describe('AlertManager', () => {
         })
       )
 
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       await manager.clearCondition(alert.id)
       events = []
@@ -1022,27 +1052,20 @@ describe('AlertManager', () => {
   })
 
   describe('source liveness', () => {
-    /** Raise through the delta convention: re-emission is the heartbeat. */
-    async function raiseFromDelta(overrides = {}) {
-      const alert = await manager.raiseAlert(raiseParams(overrides))
-      manager.noteSourceUpdate(alert.id)
-      return alert
-    }
-
-    it('keeps an alert fresh while its source keeps re-emitting', async () => {
-      const alert = await raiseFromDelta()
+    it('keeps an alert fresh while its source keeps repeating it', async () => {
+      const alert = await manager.raiseAlert(raiseParams())
 
       for (let i = 0; i < 4; i++) {
         fakeTimers.advanceTime(30 * 1000)
-        await raiseFromDelta()
+        await manager.raiseAlert(raiseParams())
       }
       fakeTimers.advanceTime(30 * 1000)
 
       expect(manager.getAlert(alert.id)?.stale).to.equal(false)
     })
 
-    it('marks an alert stale when its source goes quiet', async () => {
-      const alert = await raiseFromDelta()
+    it('marks an alert stale when its source stops repeating it', async () => {
+      const alert = await manager.raiseAlert(raiseParams())
       events = []
 
       fakeTimers.advanceTime(61 * 1000)
@@ -1055,36 +1078,36 @@ describe('AlertManager', () => {
       expect(events.map((e) => e.type)).to.deep.equal(['updated'])
     })
 
-    it('clears staleness when the source comes back', async () => {
-      const alert = await raiseFromDelta()
+    it('clears staleness when the source repeats again', async () => {
+      const store = new MockAlertStore()
+      manager.stop()
+      manager = new AlertManager(defaultConfig, fakeTimers, store)
+      manager.on('alert', (event: AlertEvent) => events.push(event))
+      const alert = await manager.raiseAlert(raiseParams())
       fakeTimers.advanceTime(61 * 1000)
       await Promise.resolve()
       expect(manager.getAlert(alert.id)?.stale).to.equal(true)
+      events.length = 0
 
-      await raiseFromDelta()
+      // The description has not moved, but the source coming back is the
+      // whole point of the repeat: staying stale would misreport a live
+      // source for as long as it keeps saying the same thing.
+      const recovered = await manager.raiseAlert(raiseParams())
 
-      const recovered = manager.getAlert(alert.id)
-      expect(recovered?.stale).to.equal(false)
-      expect(recovered?.sourceOnline).to.equal(true)
-    })
-
-    it('never marks a REST or plugin alert stale', async () => {
-      // Neither surface has a re-emission convention, so silence says nothing.
-      const alert = await manager.raiseAlert(raiseParams())
-
-      fakeTimers.advanceTime(600 * 1000)
-      await Promise.resolve()
-
-      expect(manager.getAlert(alert.id)?.stale).to.equal(false)
+      expect(recovered.stale).to.equal(false)
+      expect(recovered.sourceOnline).to.equal(true)
+      expect(events.map((event) => event.type)).to.deep.equal(['updated'])
+      expect(store.getStoredAlert(alert.id)?.stale).to.equal(false)
     })
 
     it('follows the source that owns the alert now', async () => {
-      const alert = await raiseFromDelta({ $source: 'source-a' })
+      const alert = await manager.raiseAlert(
+        raiseParams({ $source: 'source-a' })
+      )
 
       for (let i = 0; i < 3; i++) {
         fakeTimers.advanceTime(30 * 1000)
-        // Source B takes the path over and keeps it alive.
-        await raiseFromDelta({ $source: 'source-b' })
+        await manager.raiseAlert(raiseParams({ $source: 'source-b' }))
       }
       await Promise.resolve()
 
@@ -1094,7 +1117,7 @@ describe('AlertManager', () => {
     })
 
     it('does not touch lifecycle state, silencing or the condition', async () => {
-      const alert = await raiseFromDelta()
+      const alert = await manager.raiseAlert(raiseParams())
       await manager.silenceAlert(alert.id, 300 * 1000)
       const before = manager.getAlert(alert.id)
 
@@ -1106,6 +1129,71 @@ describe('AlertManager', () => {
       expect(after?.silenced).to.equal(true)
       expect(after?.condition).to.equal(true)
       expect(after?.stale).to.equal(true)
+    })
+
+    it('stops timing an alert once its condition has ended', async () => {
+      // Held for acknowledgment, the alert has no condition left for its
+      // source to vouch for, so the source stops repeating it.
+      const alert = await manager.raiseAlert(raiseParams())
+      await manager.clearCondition(alert.id)
+
+      fakeTimers.advanceTime(600 * 1000)
+      await Promise.resolve()
+
+      expect(manager.getAlert(alert.id)?.stale).to.equal(false)
+    })
+
+    it('stops timing a latched alert once its condition has ended', async () => {
+      const alert = await manager.raiseAlert(raiseParams({ latching: true }))
+      await manager.clearCondition(alert.id)
+
+      fakeTimers.advanceTime(600 * 1000)
+      await Promise.resolve()
+
+      expect(manager.getAlert(alert.id)?.stale).to.equal(false)
+    })
+
+    it('is no longer stale once the source reports the condition ended', async () => {
+      const alert = await manager.raiseAlert(raiseParams())
+      fakeTimers.advanceTime(61 * 1000)
+      await Promise.resolve()
+      expect(manager.getAlert(alert.id)?.stale).to.equal(true)
+
+      await manager.clearCondition(alert.id)
+
+      const held = manager.getAlert(alert.id)
+      expect(held?.stale).to.equal(false)
+      expect(held?.sourceOnline).to.equal(true)
+    })
+
+    it('times a restored alert whose condition is active', async () => {
+      const store = new MockAlertStore()
+      store.prePopulate([storedAlert({ condition: true })])
+      manager.stop()
+      manager = new AlertManager(defaultConfig, fakeTimers, store)
+      await manager.loadFromStore()
+      const [restored] = manager.getAlerts()
+
+      fakeTimers.advanceTime(61 * 1000)
+      await Promise.resolve()
+
+      expect(manager.getAlert(restored.id)?.stale).to.equal(true)
+    })
+
+    it('does not time a restored alert whose condition has ended', async () => {
+      const store = new MockAlertStore()
+      store.prePopulate([
+        storedAlert({ condition: false, state: 'rtn-unacknowledged' })
+      ])
+      manager.stop()
+      manager = new AlertManager(defaultConfig, fakeTimers, store)
+      await manager.loadFromStore()
+      const [restored] = manager.getAlerts()
+
+      fakeTimers.advanceTime(600 * 1000)
+      await Promise.resolve()
+
+      expect(manager.getAlert(restored.id)?.stale).to.equal(false)
     })
   })
 
@@ -1220,9 +1308,16 @@ describe('AlertManager', () => {
         })
       )
 
-      // Only alert1 follows the delta convention, so only it can go stale.
-      manager.noteSourceUpdate(alert1.id)
-      fakeTimers.advanceTime(61 * 1000)
+      // Only alert2's source keeps repeating, so only alert1 goes stale.
+      fakeTimers.advanceTime(40 * 1000)
+      await manager.raiseAlert(
+        raiseParams({
+          path: 'test.alert.2',
+          $source: 'source-2',
+          message: 'Alert 2'
+        })
+      )
+      fakeTimers.advanceTime(21 * 1000)
       await Promise.resolve()
 
       expect(manager.getAlerts({ stale: true }).map((a) => a.id)).to.deep.equal(
@@ -1400,14 +1495,13 @@ describe('AlertManager', () => {
       expect(manager.getAlerts()).to.have.lengthOf(2)
     })
 
-    it('should emit alert-updated event for duplicate', async () => {
+    it('should emit nothing for an identical duplicate', async () => {
       await manager.raiseAlert(raiseParams({ priority: 'warning' }))
       events = []
 
       await manager.raiseAlert(raiseParams({ priority: 'warning' }))
 
-      expect(events).to.have.lengthOf(1)
-      expect(events[0].type).to.equal('updated')
+      expect(events).to.have.lengthOf(0)
     })
 
     it('should dedup by path regardless of message', async () => {
@@ -1762,7 +1856,7 @@ describe('AlertManager', () => {
       expect(alert.message).to.equal('Test warning')
       expect(manager.getAlert(alert.id)?.message).to.equal('Test warning')
       expect(events.filter((e) => e.type === 'raised')).to.have.lengthOf(1)
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
       expect(manager.isStoreDegraded()).to.equal(true)
       expect(errors).to.have.lengthOf(1)
     })
@@ -2054,7 +2148,6 @@ describe('AlertManager', () => {
 
     it('should commit a stale mark as a transition with no audit entries', async () => {
       const alert = await manager.raiseAlert(raiseParams())
-      manager.noteSourceUpdate(alert.id)
       store.resetHistory()
       const commitsAfterRaise = store.commitCount
 
@@ -2087,7 +2180,7 @@ describe('AlertManager', () => {
         })
       )
 
-      expect(fakeTimers.getPendingCount()).to.equal(2)
+      expect(fakeTimers.getPendingCount()).to.equal(2 + 2 * LIVENESS_TIMER)
 
       manager.stop()
 
@@ -2098,7 +2191,7 @@ describe('AlertManager', () => {
       const alert = await manager.raiseAlert(raiseParams())
       await manager.silenceAlert(alert.id, 5000)
 
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       manager.stop()
 
@@ -2360,7 +2453,7 @@ describe('AlertManager', () => {
       )
 
       await manager.silenceAlert(alert.id, 5000)
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       const result = await manager.clearCondition(alert.id)
 
@@ -2443,12 +2536,12 @@ describe('AlertManager', () => {
     it('should cancel escalation timer when priority is escalated by source', async () => {
       await manager.raiseAlert(raiseParams({ priority: 'warning' }))
 
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       await manager.raiseAlert(raiseParams())
 
       // Escalation timer should be cancelled since priority was manually escalated
-      expect(fakeTimers.getPendingCount()).to.equal(0)
+      expect(fakeTimers.getPendingCount()).to.equal(LIVENESS_TIMER)
     })
 
     it('should start escalation timer when a re-raise promotes caution to warning', async () => {
@@ -2457,7 +2550,7 @@ describe('AlertManager', () => {
       )
 
       // Caution does not escalate
-      expect(fakeTimers.getPendingCount()).to.equal(0)
+      expect(fakeTimers.getPendingCount()).to.equal(LIVENESS_TIMER)
 
       const updated = await manager.raiseAlert(
         raiseParams({ priority: 'warning' })
@@ -2465,7 +2558,7 @@ describe('AlertManager', () => {
 
       expect(updated.id).to.equal(alert.id)
       expect(updated.priority).to.equal('warning')
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       fakeTimers.advanceTime(300 * 1000)
       expect(manager.getAlert(alert.id)?.priority).to.equal('alarm')
@@ -2513,11 +2606,11 @@ describe('AlertManager', () => {
         raiseParams({ priority: 'warning' })
       )
 
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       await manager.escalateAlert(alert.id, 'alarm')
 
-      expect(fakeTimers.getPendingCount()).to.equal(0)
+      expect(fakeTimers.getPendingCount()).to.equal(LIVENESS_TIMER)
     })
 
     it('should emit escalated event', async () => {
@@ -2583,12 +2676,12 @@ describe('AlertManager', () => {
       )
 
       // Caution does not start an escalation timer
-      expect(fakeTimers.getPendingCount()).to.equal(0)
+      expect(fakeTimers.getPendingCount()).to.equal(LIVENESS_TIMER)
 
       await manager.escalateAlert(alert.id, 'warning')
 
       // Warning should start an escalation timer
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       // Advance time to trigger escalation to alarm
       fakeTimers.advanceTime(300 * 1000)
@@ -2713,7 +2806,9 @@ describe('AlertManager', () => {
       await manager.loadFromStore()
 
       // Should have started an escalation timer
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS + 1)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + 1 + LIVENESS_TIMER
+      )
 
       // Advance time to trigger escalation
       fakeTimers.advanceTime(TIMEOUT_MS)
@@ -2739,7 +2834,9 @@ describe('AlertManager', () => {
       await manager.loadFromStore()
 
       // Timer should be set for remaining ~50 seconds, not full 300 seconds
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS + 1)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + 1 + LIVENESS_TIMER
+      )
 
       // Should NOT escalate after 40 seconds (still 10 seconds remaining)
       fakeTimers.advanceTime(40 * 1000)
@@ -2768,12 +2865,16 @@ describe('AlertManager', () => {
 
       // A spent window escalates through a zero-delay timer, so the restore
       // finishes before the escalation rather than inside it.
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS + 1)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + 1 + LIVENESS_TIMER
+      )
       expect(manager.getAlert('very-old-warning')?.priority).to.equal('warning')
 
       fakeTimers.advanceTime(0)
 
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + LIVENESS_TIMER
+      )
       expect(manager.getAlert('very-old-warning')?.priority).to.equal('alarm')
     })
 
@@ -2793,7 +2894,9 @@ describe('AlertManager', () => {
 
       await manager.loadFromStore()
 
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS + 1)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + 1 + LIVENESS_TIMER
+      )
       expect(manager.getAlert('future-warning')?.priority).to.equal('warning')
 
       fakeTimers.advanceTime(TIMEOUT_MS - 2000)
@@ -2815,7 +2918,9 @@ describe('AlertManager', () => {
 
       await manager.loadFromStore()
 
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS + 1)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + 1 + LIVENESS_TIMER
+      )
 
       fakeTimers.advanceTime(TIMEOUT_MS - 2000)
       expect(manager.getAlert('malformed-warning')?.priority).to.equal(
@@ -2873,7 +2978,9 @@ describe('AlertManager', () => {
       await manager.loadFromStore()
 
       // Caution alerts don't escalate
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + LIVENESS_TIMER
+      )
     })
 
     it('should not start escalation timers for rtn-unacknowledged state', async () => {
@@ -2888,7 +2995,9 @@ describe('AlertManager', () => {
       await manager.loadFromStore()
 
       // RTN alerts have cleared condition, no need to escalate
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + LIVENESS_TIMER
+      )
     })
 
     it('should not start escalation timers for acknowledged alerts', async () => {
@@ -2903,7 +3012,9 @@ describe('AlertManager', () => {
       await manager.loadFromStore()
 
       // Should not have started an escalation timer
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + LIVENESS_TIMER
+      )
     })
 
     it('should not start escalation timers for a latched warning whose condition cleared', async () => {
@@ -2988,7 +3099,9 @@ describe('AlertManager', () => {
       await manager.loadFromStore()
 
       // Should have started a silence timer
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS + 1)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + 1 + LIVENESS_TIMER
+      )
 
       // Verify it unsilences when time expires
       fakeTimers.advanceTime(16000)
@@ -3007,7 +3120,9 @@ describe('AlertManager', () => {
 
       await manager.loadFromStore()
 
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS + 1)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + 1 + LIVENESS_TIMER
+      )
 
       fakeTimers.advanceTime(119_000)
       expect(manager.getAlert('over-silenced')?.silenced).to.equal(true)
@@ -3046,7 +3161,9 @@ describe('AlertManager', () => {
       const loaded = manager.getAlert('malformed-silenced')
       expect(loaded?.silenced).to.equal(false)
       expect(loaded?.silencedUntil).to.be.undefined
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + LIVENESS_TIMER
+      )
     })
 
     it('should emit unsilenced event for expired silences', async () => {
@@ -3106,7 +3223,9 @@ describe('AlertManager', () => {
 
       // Should remain silenced (no timer started, no unsilencing)
       expect(manager.getAlert('silenced-no-until')?.silenced).to.equal(true)
-      expect(fakeTimers.getPendingCount()).to.equal(RETENTION_TIMERS)
+      expect(fakeTimers.getPendingCount()).to.equal(
+        RETENTION_TIMERS + LIVENESS_TIMER
+      )
     })
 
     it('should handle empty store gracefully', async () => {
@@ -3691,10 +3810,10 @@ describe('AlertManager', () => {
         raiseParams({ priority: 'warning', message: 'Test warning' })
       )
 
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       await manager.acknowledgeAlert(alert.id)
-      expect(fakeTimers.getPendingCount()).to.equal(0)
+      expect(fakeTimers.getPendingCount()).to.equal(LIVENESS_TIMER)
 
       await manager.raiseAlert(
         raiseParams({
@@ -3704,7 +3823,7 @@ describe('AlertManager', () => {
       )
 
       // Escalation timer should be restarted
-      expect(fakeTimers.getPendingCount()).to.equal(1)
+      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
       // Verify it fires
       fakeTimers.advanceTime(300 * 1000)
