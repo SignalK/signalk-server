@@ -102,7 +102,10 @@ export interface Alert {
   /** Whether the triggering condition is currently active */
   condition: boolean
 
-  /** Whether alert latches (stays active after condition clears) */
+  /**
+   * Whether the alert reports a momentary event: raised with its condition
+   * already ended, it waits for acknowledgment at any priority
+   */
   latching: boolean
 
   /** Whether audible indicators are silenced */
@@ -125,14 +128,9 @@ export interface Alert {
 
   /**
    * ISO timestamp of the last lifecycle state change
-   * (raise/ack/clear/reactivate/escalate). A warning→alarm escalation bumps it,
-   * but a latching alarm whose condition clears does NOT (its state stays
-   * `unacknowledged`), and silence/unsilence never bump it. Used for
-   * IEC 62923-1 6.4.2.2 list ordering.
-   *
-   * The latching case is deliberately asymmetric. A condition going away is not
-   * a new annunciation, so a held alarm keeps its place in the list; the same
-   * condition coming back is, so it rises.
+   * (raise/ack/clear/reactivate/escalate). A warning→alarm escalation and a
+   * new occurrence of a latching alert bump it; silence/unsilence never do.
+   * Used for IEC 62923-1 6.4.2.2 list ordering.
    */
   stateChangedAt: string
 

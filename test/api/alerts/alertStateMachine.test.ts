@@ -54,9 +54,12 @@ describe('AlertStateMachine', () => {
       expect(alert.latching).to.equal(false)
     })
 
-    it('should accept latching parameter', () => {
+    it('should create a latching alert with its condition already ended', () => {
       const alert = makeAlert({ latching: true })
       expect(alert.latching).to.equal(true)
+      expect(alert.state).to.equal('unacknowledged')
+      expect(alert.condition).to.equal(false)
+      expect(alert.clearedAt).to.be.a('string')
     })
 
     it('should set sourceOnline to true', () => {
@@ -127,26 +130,11 @@ describe('AlertStateMachine', () => {
       expect(result.alert).to.be.null
     })
 
-    it('should clear latched alert with cleared condition', () => {
-      const alert = makeAlert({ latching: true })
-      const latchedAlert: Alert = {
-        ...alert,
-        condition: false
-      }
-
-      const result = stateMachine.acknowledge(latchedAlert)
+    it('should clear a latching alert', () => {
+      const result = stateMachine.acknowledge(makeAlert({ latching: true }))
 
       expect(result.cleared).to.equal(true)
       expect(result.alert).to.be.null
-    })
-
-    it('should transition latched alert with active condition to acknowledged', () => {
-      const alert = makeAlert({ latching: true })
-
-      const result = stateMachine.acknowledge(alert)
-
-      expect(result.cleared).to.equal(false)
-      expect(result.alert?.state).to.equal('acknowledged')
     })
   })
 
@@ -224,25 +212,23 @@ describe('AlertStateMachine', () => {
     })
 
     describe('for latched alerts', () => {
-      it('should keep latched alert in unacknowledged state when condition clears', () => {
-        const alert = makeAlert({ latching: true, priority: 'alarm' })
+      const priorities: AlertPriority[] = [
+        'emergency',
+        'alarm',
+        'warning',
+        'caution'
+      ]
 
-        const result = stateMachine.clearCondition(alert)
+      for (const priority of priorities) {
+        it(`should leave a latching ${priority} waiting for acknowledgment`, () => {
+          const alert = makeAlert({ latching: true, priority })
 
-        expect(result.cleared).to.equal(false)
-        expect(result.alert?.state).to.equal('unacknowledged')
-        expect(result.alert?.condition).to.equal(false)
-      })
+          const result = stateMachine.clearCondition(alert)
 
-      it('should clear acknowledged latched alert when condition clears', () => {
-        const alert = makeAlert({ latching: true, priority: 'alarm' })
-        const acked = presentAlert(stateMachine.acknowledge(alert).alert)
-
-        const result = stateMachine.clearCondition(acked)
-
-        expect(result.cleared).to.equal(true)
-        expect(result.alert).to.be.null
-      })
+          expect(result.cleared).to.equal(false)
+          expect(result.alert).to.deep.equal(alert)
+        })
+      }
     })
 
     it('should be idempotent on already-cleared condition', () => {
@@ -481,21 +467,6 @@ describe('AlertStateMachine', () => {
       // manages the silence expiration timers.
       expect(result.alert?.silenced).to.equal(true)
       expect(result.alert?.silencedUntil).to.not.be.undefined
-    })
-
-    it('should transition latching acknowledged to unacknowledged', () => {
-      const alert = makeAlert({ latching: true })
-      const acked = presentAlert(
-        stateMachine.acknowledge(alert, 'user-1').alert
-      )
-
-      const result = stateMachine.reactivate(acked)
-
-      expect(result.cleared).to.equal(false)
-      expect(result.previousState).to.equal('acknowledged')
-      expect(result.alert?.state).to.equal('unacknowledged')
-      expect(result.alert?.condition).to.equal(true)
-      expect(result.alert?.latching).to.equal(true)
     })
 
     it('should reactivate a latched alert held with condition=false', () => {

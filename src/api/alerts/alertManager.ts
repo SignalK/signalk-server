@@ -622,16 +622,91 @@ export class AlertManager extends EventEmitter {
   }
 
   /**
-   * Route a raise for an alert that already exists: a repeat refreshes it, and
-   * anything the operator would read differently re-announces it.
+   * Route a raise for an alert that already exists: a latching raise is a new
+   * occurrence, a repeat refreshes the alert, and anything the operator would
+   * read differently re-announces it.
    */
   private raiseExisting(
     existing: Alert,
     params: CreateAlertParams
   ): Promise<Alert> {
+    if (params.latching ?? existing.latching) {
+      return this.raiseOccurrence(existing, params)
+    }
     return isRepeat(existing, params)
       ? this.refreshAlert(existing, params)
       : this.updateExistingAlert(existing, params)
+  }
+
+  /**
+   * Announce a momentary event again on the alert still waiting for
+   * acknowledgment of the last one.
+   *
+   * A source sends each occurrence once, so a latching raise is never a
+   * repeat: it is news, and the operator hears it however the alert stood.
+   */
+  private async raiseOccurrence(
+    existing: Alert,
+    params: CreateAlertParams
+  ): Promise<Alert> {
+    const now = new Date().toISOString()
+    const priority =
+      PRIORITY_RANK[params.priority] > PRIORITY_RANK[existing.priority]
+        ? params.priority
+        : existing.priority
+
+    // An omitted optional field means unchanged, as it does for any raise.
+    const occurrence: Alert = {
+      ...this.clearSilencingIfSuperseded(existing.id, existing),
+      references: params.references ?? existing.references,
+      $source: params.$source,
+      source: params.source ?? existing.source,
+      priority,
+      message: params.message,
+      group: params.group ?? existing.group,
+      latching: true,
+      data: params.data ?? existing.data,
+      state: 'unacknowledged',
+      condition: false,
+      clearedAt: now,
+      stateChangedAt: now,
+      acknowledgedAt: undefined,
+      acknowledgedBy: undefined,
+      lastSourceUpdate: now,
+      sourceOnline: true,
+      stale: false
+    }
+
+    this.alerts.set(existing.id, occurrence)
+    // An ongoing alert turned momentary has no condition left to time.
+    this.cancelLivenessTimer(existing.id)
+    this.escalationTimer.cancelTimer(existing.id)
+    this.syncEscalationTimer(occurrence)
+
+    const history: Omit<HistoryEntry, 'id'>[] = []
+    if (priority !== existing.priority) {
+      history.push(
+        this.historyEntry('escalate', occurrence, {
+          previousPriority: existing.priority,
+          newPriority: priority
+        })
+      )
+    }
+    history.push(
+      this.historyEntry('raise', occurrence, {
+        previousState: existing.state,
+        newState: occurrence.state,
+        details:
+          params.$source === existing.$source
+            ? undefined
+            : { previousSource: existing.$source }
+      })
+    )
+    this.emitEvent('raised', occurrence, existing.state)
+
+    await this.commit({ alertId: existing.id, alert: occurrence, history })
+
+    return occurrence
   }
 
   /**

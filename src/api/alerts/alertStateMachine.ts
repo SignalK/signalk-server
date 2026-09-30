@@ -31,7 +31,11 @@ export interface CreateAlertParams {
   message: string
   /** Optional free-text UI grouping */
   group?: string
-  /** Whether alert latches (stays active after condition clears) */
+  /**
+   * Whether the raise reports a momentary event: its condition is over as
+   * soon as it is raised, and the alert waits for acknowledgment at any
+   * priority. Every latching raise is a new occurrence.
+   */
   latching?: boolean
   /** Additional context data */
   data?: Record<string, Value>
@@ -64,6 +68,7 @@ export interface KeepingTransitionResult extends StateTransitionResult {
  */
 export function createAlert(params: CreateAlertParams): Alert {
   const now = new Date().toISOString()
+  const latching = params.latching ?? false
 
   return {
     id: crypto.randomUUID(),
@@ -73,8 +78,10 @@ export function createAlert(params: CreateAlertParams): Alert {
     source: params.source,
     priority: params.priority,
     state: 'unacknowledged',
-    condition: true,
-    latching: params.latching ?? false,
+    // A momentary event is over by the time anyone hears of it.
+    condition: !latching,
+    ...(latching ? { clearedAt: now } : {}),
+    latching,
     silenced: false,
     message: params.message,
     group: params.group,
@@ -178,8 +185,8 @@ export class AlertStateMachine {
    * Clear the alert condition.
    *
    * Transitions (for ack-required priorities: emergency, alarm, warning):
-   * - unacknowledged → rtn-unacknowledged (unless latching)
-   * - unacknowledged + latching → unacknowledged (stays, but condition=false)
+   * - unacknowledged → rtn-unacknowledged
+   * - a latching alert, whose condition ended at its raise → unchanged
    * - acknowledged → cleared
    * - rtn-unacknowledged → rtn-unacknowledged (idempotent)
    *
@@ -192,8 +199,12 @@ export class AlertStateMachine {
 
     // Caution priority: auto-clears without requiring acknowledgment. Ahead of
     // the idempotence check, so a caution never lingers on a cleared condition
-    // whatever state it arrived in.
-    if (!AlertStateMachine.requiresAcknowledgment(alert.priority)) {
+    // whatever state it arrived in. A latching caution is the exception: a
+    // momentary event would otherwise vanish before anyone saw it.
+    if (
+      !AlertStateMachine.requiresAcknowledgment(alert.priority) &&
+      !alert.latching
+    ) {
       return {
         alert: null,
         cleared: true,
@@ -215,19 +226,6 @@ export class AlertStateMachine {
       return {
         alert: null,
         cleared: true,
-        previousState
-      }
-    }
-
-    // Latched alert: stays in unacknowledged but condition becomes false
-    if (alert.latching) {
-      return {
-        alert: {
-          ...alert,
-          condition: false,
-          clearedAt: now
-        },
-        cleared: false,
         previousState
       }
     }

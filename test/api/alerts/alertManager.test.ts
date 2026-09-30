@@ -1005,7 +1005,7 @@ describe('AlertManager', () => {
       expect(updated?.priority).to.equal('warning')
     })
 
-    it('should not escalate a latched warning whose condition cleared', async () => {
+    it('should not escalate a latching warning', async () => {
       const alert = await manager.raiseAlert(
         raiseParams({
           priority: 'warning',
@@ -1014,20 +1014,11 @@ describe('AlertManager', () => {
         })
       )
 
-      expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
-
-      await manager.clearCondition(alert.id)
-      events = []
-
-      // Still unacknowledged and still a warning, but the condition is gone:
-      // the alert waits for acknowledgment, not for urgency.
-      expect(manager.getAlert(alert.id)?.state).to.equal('unacknowledged')
+      // A momentary event has no condition left: the alert waits for
+      // acknowledgment, not for urgency.
       expect(fakeTimers.getPendingCount()).to.equal(0)
-
-      fakeTimers.advanceTime(300 * 1000)
-
+      fakeTimers.advanceTime(600 * 1000)
       expect(manager.getAlert(alert.id)?.priority).to.equal('warning')
-      expect(events.filter((e) => e.type === 'escalated')).to.have.lengthOf(0)
     })
 
     it('should not escalate if disabled in config', async () => {
@@ -1143,16 +1134,6 @@ describe('AlertManager', () => {
       expect(manager.getAlert(alert.id)?.stale).to.equal(false)
     })
 
-    it('stops timing a latched alert once its condition has ended', async () => {
-      const alert = await manager.raiseAlert(raiseParams({ latching: true }))
-      await manager.clearCondition(alert.id)
-
-      fakeTimers.advanceTime(600 * 1000)
-      await Promise.resolve()
-
-      expect(manager.getAlert(alert.id)?.stale).to.equal(false)
-    })
-
     it('is no longer stale once the source reports the condition ended', async () => {
       const alert = await manager.raiseAlert(raiseParams())
       fakeTimers.advanceTime(61 * 1000)
@@ -1194,6 +1175,110 @@ describe('AlertManager', () => {
       await Promise.resolve()
 
       expect(manager.getAlert(restored.id)?.stale).to.equal(false)
+    })
+  })
+
+  describe('latching (momentary events)', () => {
+    it('raises the alert with its condition already ended', async () => {
+      const alert = await manager.raiseAlert(raiseParams({ latching: true }))
+
+      expect(alert.state).to.equal('unacknowledged')
+      expect(alert.condition).to.equal(false)
+      expect(alert.clearedAt).to.be.a('string')
+      expect(events.map((e) => e.type)).to.deep.equal(['raised'])
+    })
+
+    it('holds a latching caution until it is acknowledged', async () => {
+      const alert = await manager.raiseAlert(
+        raiseParams({ priority: 'caution', latching: true })
+      )
+      await manager.clearCondition(alert.id)
+      expect(manager.getAlert(alert.id)?.state).to.equal('unacknowledged')
+
+      await manager.acknowledgeAlert(alert.id, 'operator')
+
+      expect(manager.getAlert(alert.id)).to.equal(null)
+    })
+
+    it('resolves when acknowledged', async () => {
+      const alert = await manager.raiseAlert(raiseParams({ latching: true }))
+
+      await manager.acknowledgeAlert(alert.id, 'operator')
+
+      expect(manager.getAlert(alert.id)).to.equal(null)
+    })
+
+    it('is not timed, so it never goes stale', async () => {
+      const alert = await manager.raiseAlert(raiseParams({ latching: true }))
+
+      fakeTimers.advanceTime(600 * 1000)
+      await Promise.resolve()
+
+      expect(manager.getAlert(alert.id)?.stale).to.equal(false)
+    })
+
+    it('ignores a report that the condition ended', async () => {
+      const alert = await manager.raiseAlert(raiseParams({ latching: true }))
+      events.length = 0
+
+      await manager.clearCondition(alert.id)
+
+      expect(manager.getAlert(alert.id)?.state).to.equal('unacknowledged')
+      expect(events).to.deep.equal([])
+    })
+
+    it('announces a resend while held as a new occurrence', async () => {
+      const alert = await manager.raiseAlert(raiseParams({ latching: true }))
+      await manager.silenceAlert(alert.id, 60 * 1000)
+      await new Promise((resolve) => setTimeout(resolve, 2))
+      events.length = 0
+
+      const again = await manager.raiseAlert(raiseParams({ latching: true }))
+
+      expect(again.id).to.equal(alert.id)
+      expect(again.state).to.equal('unacknowledged')
+      expect(again.condition).to.equal(false)
+      expect(again.silenced).to.equal(false)
+      expect(again.stateChangedAt > alert.stateChangedAt).to.equal(true)
+      expect(events.map((e) => e.type)).to.deep.equal(['raised'])
+    })
+
+    it('records each occurrence in the audit trail', async () => {
+      const store = new MockAlertStore()
+      manager.stop()
+      manager = new AlertManager(defaultConfig, fakeTimers, store)
+      await manager.raiseAlert(raiseParams({ latching: true }))
+      store.resetHistory()
+
+      await manager.raiseAlert(raiseParams({ latching: true }))
+
+      expect(store.eventTypes()).to.deep.equal(['raise'])
+    })
+
+    it('raises a new alert for a resend after acknowledgment', async () => {
+      const alert = await manager.raiseAlert(raiseParams({ latching: true }))
+      await manager.acknowledgeAlert(alert.id, 'operator')
+
+      const again = await manager.raiseAlert(raiseParams({ latching: true }))
+
+      expect(again.id).to.not.equal(alert.id)
+      expect(again.state).to.equal('unacknowledged')
+    })
+
+    it('turns an ongoing alert into an occurrence rather than a repeat', async () => {
+      const alert = await manager.raiseAlert(raiseParams())
+      await manager.acknowledgeAlert(alert.id, 'operator')
+
+      const occurrence = await manager.raiseAlert(
+        raiseParams({ latching: true })
+      )
+
+      expect(occurrence.state).to.equal('unacknowledged')
+      expect(occurrence.condition).to.equal(false)
+      expect(occurrence.latching).to.equal(true)
+      fakeTimers.advanceTime(600 * 1000)
+      await Promise.resolve()
+      expect(manager.getAlert(alert.id)?.stale).to.equal(false)
     })
   })
 
