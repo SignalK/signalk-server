@@ -336,6 +336,21 @@ export class WebSocketService {
         }
         break
       }
+      case 'SOURCEPATHSEVICTED': {
+        // Server cleared only the `prefixes` subtrees of a source
+        // (instance path mapping moved them); its other leaves stay.
+        const payload = (data ?? {}) as {
+          sourceRef?: string
+          prefixes?: unknown
+        }
+        if (payload.sourceRef && Array.isArray(payload.prefixes)) {
+          const prefixes = payload.prefixes.filter(
+            (p): p is string => typeof p === 'string'
+          )
+          useStore.getState().evictSource(payload.sourceRef, prefixes)
+        }
+        break
+      }
       case 'SOURCESTATUS':
         useStore
           .getState()
@@ -364,6 +379,15 @@ export class WebSocketService {
           .getState()
           .setN2kDeviceStatus(
             (data ?? {}) as Parameters<SignalKStore['setN2kDeviceStatus']>[0]
+          )
+        break
+      case 'N2KINSTANCEMAPPINGS':
+        useStore
+          .getState()
+          .setN2kInstanceMappings(
+            (data ?? {}) as Parameters<
+              SignalKStore['setN2kInstanceMappings']
+            >[0]
           )
         break
       case 'POSITION_SOURCES':

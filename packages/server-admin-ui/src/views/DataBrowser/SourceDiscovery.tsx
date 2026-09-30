@@ -34,6 +34,42 @@ import {
   useN2kDeviceStatusLoaded
 } from '../../store'
 import SourceLabel from './SourceLabel'
+import InstanceMappingSection, {
+  MappedInstanceNotice
+} from './InstanceMappingSection'
+import {
+  HUMIDITY_SOURCE_LABELS,
+  TEMPERATURE_SOURCE_LABELS,
+  hasMappablePgn,
+  useN2kInstanceScan,
+  type DiscoveredInstance,
+  type DiscoverResult,
+  type InstanceScan
+} from './n2kInstances'
+
+type N2kDeviceStatusSetter = ReturnType<
+  typeof useStore.getState
+>['setN2kDeviceStatus']
+
+type N2kDeviceStatus = Parameters<N2kDeviceStatusSetter>[0]
+
+// Resolves to undefined when the request fails.
+function requestN2kDeviceStatus(): Promise<N2kDeviceStatus | undefined> {
+  return fetch(`${window.serverRoutesPrefix}/n2kDeviceStatus`, {
+    credentials: 'include'
+  })
+    .then((res) => res.json() as Promise<N2kDeviceStatus>)
+    .catch((err) => {
+      console.warn('Failed to load N2K device status:', err)
+      return undefined
+    })
+}
+
+function fetchN2kDeviceStatus(setStatus: N2kDeviceStatusSetter) {
+  return requestN2kDeviceStatus().then((status) => {
+    if (status) setStatus(status)
+  })
+}
 
 function isVictronDevice(device: N2kDeviceEntry): boolean {
   return device.manufacturerCode === 'Victron Energy'
@@ -311,18 +347,10 @@ const SourceDiscovery: React.FC = () => {
     [sourcesData]
   )
 
-  const loadDeviceStatus = useCallback(() => {
-    return fetch(`${window.serverRoutesPrefix}/n2kDeviceStatus`, {
-      credentials: 'include'
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setN2kDeviceStatus(data)
-      })
-      .catch((err) => {
-        console.warn('Failed to load N2K device status:', err)
-      })
-  }, [setN2kDeviceStatus])
+  const loadDeviceStatus = useCallback(
+    () => fetchN2kDeviceStatus(setN2kDeviceStatus),
+    [setN2kDeviceStatus]
+  )
 
   useEffect(() => {
     loadDeviceStatus()
@@ -1019,7 +1047,6 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
                   field="batteryInstance"
                   label="Battery Instance (PGN 127508)"
                   max={252}
-                  signalkPaths={['electrical/batteries']}
                   readOnly={readOnly}
                 />
               )}
@@ -1029,13 +1056,14 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
                   field="dcInstance"
                   label="DC Instance (PGN 127506)"
                   max={252}
-                  signalkPaths={['electrical/dc']}
                   readOnly={readOnly}
                 />
               )}
-              {hasDataInstancePGN && isExpanded && (
-                <DataInstanceSection device={device} readOnly={readOnly} />
-              )}
+              <DeviceInstanceSections
+                device={device}
+                showDataInstances={hasDataInstancePGN}
+                readOnly={readOnly}
+              />
               {allPgnKeys.length > 0 && (
                 <div style={{ gridColumn: '1 / -1' }}>
                   <span
@@ -1097,6 +1125,36 @@ const DeviceRows: React.FC<DeviceRowsProps> = ({
       )}
     </>
   )
+}
+
+/**
+ * Data Instances and path mapping share one instance scan of the device,
+ * started when its detail opens.
+ */
+const DeviceInstanceSections: React.FC<{
+  device: N2kDeviceEntry
+  showDataInstances: boolean
+  readOnly: boolean
+}> = ({ device, showDataInstances, readOnly }) => {
+  const mappable = hasMappablePgn(device)
+  const scan = useN2kInstanceScan(device, showDataInstances || mappable)
+  return (
+    <>
+      {showDataInstances && (
+        <DataInstanceSection device={device} scan={scan} readOnly={readOnly} />
+      )}
+      <InstanceMappingSection
+        device={device}
+        scan={mappable ? scan : undefined}
+      />
+    </>
+  )
+}
+
+// The PGN whose data instances each field edits.
+const FIELD_PGNS: Record<'batteryInstance' | 'dcInstance', string> = {
+  batteryInstance: '127508',
+  dcInstance: '127506'
 }
 
 const VERIFY_INTERVAL_MS = 1000
@@ -1399,18 +1457,10 @@ const InstanceRow: React.FC<{
   field: 'batteryInstance' | 'dcInstance'
   max: number
   currentValue: number | null
-  signalkPaths: string[]
-  onInstancesChanged: () => void
   readOnly?: boolean
-}> = ({
-  device,
-  field,
-  max,
-  currentValue,
-  signalkPaths,
-  onInstancesChanged,
-  readOnly
-}) => {
+  onMappingWarning: (warning: string | undefined) => void
+}> = ({ device, field, max, currentValue, readOnly, onMappingWarning }) => {
+  const setN2kDeviceStatus = useStore((s) => s.setN2kDeviceStatus)
   const [editValue, setEditValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [saveResult, setSaveResult] = useState<'ok' | 'fail' | null>(null)
@@ -1447,6 +1497,7 @@ const InstanceRow: React.FC<{
     if (isNaN(num) || num < 0 || num > max) return
     setIsSaving(true)
     setSaveResult(null)
+    onMappingWarning(undefined)
     const body: Record<string, unknown> = {
       dst: Number(device.src),
       field,
@@ -1461,49 +1512,31 @@ const InstanceRow: React.FC<{
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     })
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) throw new Error()
-        // Poll SignalK data to verify the instance changed
+        const { warning } = (await res.json()) as { warning?: string }
+        onMappingWarning(warning)
+        if (!isMountedRef.current) return
+        // Poll the device status, the source of the displayed instances,
+        // to verify the instance changed.
         const sourceRef = device.sourceRef
         const deadline = Date.now() + VERIFY_TIMEOUT_MS
         const poll = () => {
           if (!isMountedRef.current) return
-          Promise.all(
-            signalkPaths.map((p) =>
-              fetch(`/signalk/v1/api/vessels/self/${p}`, {
-                credentials: 'include'
-              })
-                .then((r) => (r.ok ? r.json() : {}))
-                .catch(() => ({}))
-            )
-          ).then((results) => {
+          requestN2kDeviceStatus().then((status) => {
             if (!isMountedRef.current) return
-            const allInstances = new Set<number>()
-            for (const data of results) {
-              for (const [instKey, instData] of Object.entries(data)) {
-                const inst = Number(instKey)
-                if (isNaN(inst)) continue
-                const values = (instData as Record<string, unknown>) || {}
-                for (const pathData of Object.values(values)) {
-                  const pd = pathData as Record<string, unknown>
-                  if (pd?.['$source'] === sourceRef) {
-                    allInstances.add(inst)
-                  }
-                  const nested = pd?.values as Record<string, unknown>
-                  if (nested?.[sourceRef]) {
-                    allInstances.add(inst)
-                  }
-                }
-              }
-            }
+            const allInstances = new Set(
+              status?.pgnDataInstances?.[sourceRef]?.[FIELD_PGNS[field]]
+            )
             const targetExists = allInstances.has(num)
             const oldGone =
               currentValue === null || !allInstances.has(currentValue)
-            if (targetExists && oldGone) {
+            if (status && targetExists && oldGone) {
               setSaveResult('ok')
               setIsSaving(false)
               setEditValue('')
-              onInstancesChanged()
+              // Last: the rows are keyed by instance, so this one unmounts.
+              setN2kDeviceStatus(status)
             } else if (Date.now() < deadline) {
               setTimeout(poll, VERIFY_INTERVAL_MS)
             } else {
@@ -1595,82 +1628,37 @@ const InstanceRow: React.FC<{
   )
 }
 
+const mappingWarningStyle = {
+  fontSize: '0.8rem',
+  color: 'var(--bs-warning-text-emphasis, #997404)',
+  marginLeft: '8px'
+}
+
+const NO_INSTANCES: number[] = []
+
 /**
  * Shows current battery/DC instance values for a device and allows editing.
- * Fetches from SignalK data model to find which instances this device reports.
- * Each instance gets its own edit row with "current → new" controls.
+ * The instances come from the N2K device status, which the server derives
+ * from the tree, including instances that a path mapping moved to a named
+ * path. Each instance gets its own edit row with "current → new" controls.
  */
-const PgnInstanceField: React.FC<{
+export const PgnInstanceField: React.FC<{
   device: N2kDeviceEntry
   field: 'batteryInstance' | 'dcInstance'
   label: string
   max: number
-  signalkPaths: string[]
   readOnly?: boolean
-}> = ({ device, field, label, max, signalkPaths, readOnly }) => {
-  const [currentInstances, setCurrentInstances] = useState<number[]>([])
-  const [loaded, setLoaded] = useState(false)
-  const [reloadKey, setReloadKey] = useState(0)
-
-  const fetchInstances = useCallback(() => {
-    const sourceRef = device.sourceRef
-    const matchesSource = (obj: unknown): boolean => {
-      if (!obj || typeof obj !== 'object') return false
-      const entries = Object.entries(obj as Record<string, unknown>)
-      for (const [, v] of entries) {
-        if (!v || typeof v !== 'object') continue
-        const rec = v as Record<string, unknown>
-        if (rec.$source === sourceRef) return true
-        for (const sv of Object.values(rec)) {
-          if (
-            sv &&
-            typeof sv === 'object' &&
-            (sv as Record<string, unknown>).$source === sourceRef
-          )
-            return true
-        }
-      }
-      return false
-    }
-    return Promise.all(
-      signalkPaths.map((p) =>
-        fetch(`/signalk/v1/api/vessels/self/${p}`, {
-          credentials: 'include'
-        }).then((res) => (res.ok ? res.json() : null))
-      )
-    ).then((results) => {
-      const instanceSet = new Set<number>()
-      for (const data of results) {
-        if (!data) continue
-        for (const [instKey, instData] of Object.entries(data)) {
-          if (matchesSource(instData)) {
-            instanceSet.add(Number(instKey))
-          }
-        }
-      }
-      return Array.from(instanceSet).sort((a, b) => a - b)
-    })
-  }, [device.sourceRef, signalkPaths])
-
-  useEffect(() => {
-    let cancelled = false
-    fetchInstances()
-      .then((instances) => {
-        if (!cancelled) {
-          setCurrentInstances(instances)
-          setLoaded(true)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCurrentInstances([])
-          setLoaded(true)
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [fetchInstances, reloadKey])
+}> = ({ device, field, label, max, readOnly }) => {
+  const pgnDataInstances = usePgnDataInstances()
+  const loaded = useN2kDeviceStatusLoaded()
+  // Held here, not in the row: the row of a renumbered instance unmounts
+  // once the new instance is confirmed.
+  const [mappingWarning, setMappingWarning] = useState<string>()
+  const warning = mappingWarning && (
+    <div style={mappingWarningStyle}>{mappingWarning}</div>
+  )
+  const currentInstances =
+    pgnDataInstances[device.sourceRef]?.[FIELD_PGNS[field]] ?? NO_INSTANCES
 
   const labelStyle = {
     fontWeight: 500 as const,
@@ -1694,10 +1682,10 @@ const PgnInstanceField: React.FC<{
           field={field}
           max={max}
           currentValue={null}
-          signalkPaths={signalkPaths}
-          onInstancesChanged={() => setReloadKey((k) => k + 1)}
           readOnly={readOnly}
+          onMappingWarning={setMappingWarning}
         />
+        {warning}
       </div>
     )
   }
@@ -1712,60 +1700,20 @@ const PgnInstanceField: React.FC<{
             field={field}
             max={max}
             currentValue={inst}
-            signalkPaths={signalkPaths}
-            onInstancesChanged={() => setReloadKey((k) => k + 1)}
             readOnly={readOnly}
+            onMappingWarning={setMappingWarning}
+          />
+          <MappedInstanceNotice
+            device={device}
+            group="battery"
+            instance={inst}
+            followsRenumber
           />
         </div>
       ))}
+      {warning}
     </div>
   )
-}
-
-// NMEA 2000 TEMPERATURE_SOURCE enum labels (matches canboat)
-const TEMPERATURE_SOURCE_LABELS: Record<number, string> = {
-  0: 'Sea Temperature',
-  1: 'Outside Temperature',
-  2: 'Inside Temperature',
-  3: 'Engine Room Temperature',
-  4: 'Main Cabin Temperature',
-  5: 'Live Well Temperature',
-  6: 'Bait Well Temperature',
-  7: 'Refrigeration Temperature',
-  8: 'Heating System Temperature',
-  9: 'Dew Point Temperature',
-  10: 'Apparent Wind Chill Temperature',
-  11: 'Theoretical Wind Chill Temperature',
-  12: 'Heat Index Temperature',
-  13: 'Freezer Temperature',
-  14: 'Exhaust Gas Temperature',
-  15: 'Shaft Seal Temperature'
-}
-
-const HUMIDITY_SOURCE_LABELS: Record<number, string> = {
-  0: 'Inside',
-  1: 'Outside'
-}
-
-interface DataInstance {
-  pgn: number
-  instance: number
-  sourceLabel: string
-  sourceEnum?: number
-  label?: string
-  hardwareChannelId?: number
-}
-
-interface ChannelLabel {
-  hardwareChannelId: number
-  pgn?: number
-  instance?: number
-  label: string
-}
-
-interface DiscoverResult {
-  instances: DataInstance[]
-  channelLabels: ChannelLabel[]
 }
 
 const PGN_LABELS: Record<number, string> = {
@@ -1781,62 +1729,21 @@ function fieldForPgn(pgn: number): string {
 }
 
 /**
- * Discovers and displays per-channel data instances for a device.
- * Calls GET /skServer/n2kDiscoverInstances?src=X which listens to
- * the N2K bus for ~6 seconds and returns all instance/source tuples
- * seen from that device.
+ * Displays and edits the per-channel temperature and humidity data
+ * instances the device scan heard.
  */
 const DataInstanceSection: React.FC<{
   device: N2kDeviceEntry
+  scan: InstanceScan
   readOnly?: boolean
-}> = ({ device, readOnly }) => {
-  const [instances, setInstances] = useState<DataInstance[] | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchInstances = useCallback(() => {
-    return fetch(
-      `${window.serverRoutesPrefix}/n2kDiscoverInstances?src=${device.src}&sourceRef=${encodeURIComponent(device.sourceRef)}`,
-      { credentials: 'include' }
-    ).then((res) => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return res.json() as Promise<DiscoverResult>
-    })
-  }, [device.src, device.sourceRef])
-
-  const discover = useCallback(() => {
-    setLoading(true)
-    setError(null)
-    fetchInstances()
-      .then((data) => {
-        setInstances(data.instances)
-        setLoading(false)
-      })
-      .catch((err) => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [fetchInstances])
-
-  useEffect(() => {
-    let cancelled = false
-    fetchInstances()
-      .then((data) => {
-        if (!cancelled) {
-          setInstances(data.instances)
-          setLoading(false)
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err.message)
-          setLoading(false)
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [fetchInstances])
+}> = ({ device, scan, readOnly }) => {
+  const { loading, error, rescan: discover } = scan
+  // The scan also lists mappable instances of other PGNs; these rows edit
+  // temperature and humidity instances only.
+  const instances = useMemo(
+    () => scan.instances?.filter((inst) => inst.pgn in PGN_LABELS) ?? null,
+    [scan.instances]
+  )
 
   const labelStyle = {
     fontWeight: 500 as const,
@@ -1905,7 +1812,7 @@ const DataInstanceSection: React.FC<{
     )
   }
 
-  const byPgn = new Map<number, DataInstance[]>()
+  const byPgn = new Map<number, DiscoveredInstance[]>()
   if (instances) {
     for (const inst of instances) {
       const arr = byPgn.get(inst.pgn)
@@ -1949,12 +1856,23 @@ const DataInstanceSection: React.FC<{
             {PGN_LABELS[pgn] || `PGN ${pgn}`} (PGN {pgn}):
           </span>
           {insts.map((inst) => (
-            <DataInstanceRow
+            <React.Fragment
               key={`${inst.pgn}-${inst.instance}-${inst.sourceEnum ?? inst.sourceLabel ?? ''}`}
-              device={device}
-              inst={inst}
-              readOnly={readOnly}
-            />
+            >
+              <DataInstanceRow
+                device={device}
+                inst={inst}
+                readOnly={readOnly}
+              />
+              {inst.group && (
+                <MappedInstanceNotice
+                  device={device}
+                  group={inst.group}
+                  discriminator={inst.discriminator}
+                  instance={inst.instance}
+                />
+              )}
+            </React.Fragment>
           ))}
         </div>
       ))}
@@ -1968,7 +1886,7 @@ const DataInstanceSection: React.FC<{
  */
 const DataInstanceRow: React.FC<{
   device: N2kDeviceEntry
-  inst: DataInstance
+  inst: DiscoveredInstance
   readOnly?: boolean
 }> = ({ device, inst, readOnly }) => {
   const [editInstance, setEditInstance] = useState('')
