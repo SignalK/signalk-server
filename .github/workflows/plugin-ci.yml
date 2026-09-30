@@ -8,8 +8,6 @@
 #   - Linux arm64  (Node 22, 24) — Raspberry Pi 4/5
 #   - macOS        (Node 22, 24)
 #   - Windows      (Node 22, 24)
-#   - armv7/armhf  (Node 20 — matches Venus OS 3.70 on Cerbo GX)
-#                    Runs under QEMU emulation with python3, make, g++
 #
 # Usage in your plugin repo:
 #   See docs/develop/plugins/examples/plugin-caller-example.yml
@@ -47,11 +45,11 @@ on:
         type: string
         default: '["22", "24"]'
 
-      # ── armv7 / Cerbo GX options ────────────────────────────
+      # Accepted so callers that still pass it stay valid; it has no effect.
       enable-armv7:
-        description: 'Run armv7 (Cerbo GX) tests via QEMU emulation'
+        description: 'Deprecated and ignored: there is no armv7 (Cerbo GX) job'
         type: boolean
-        default: true
+        default: false
 
       # ── SignalK integration test ────────────────────────────
       enable-signalk-integration:
@@ -1662,136 +1660,6 @@ jobs:
           retention-days: 7
 
   # ════════════════════════════════════════════════════════════
-  #  armv7 — Cerbo GX / Raspberry Pi (32-bit ARM via QEMU)
-  # ════════════════════════════════════════════════════════════
-  armv7:
-    name: armv7 (Cerbo GX) / Node 20
-    runs-on: ubuntu-latest
-    needs: validate-inputs
-    timeout-minutes: 30
-    if: ${{ inputs.enable-armv7 }}
-    # Advisory: armv7 is non-blocking. continue-on-error at the job level lets
-    # the job show its true red/green status in the GitHub UI while keeping the
-    # overall workflow check green so it never blocks a PR merge.
-    continue-on-error: true
-    outputs:
-      advisory-outcome: ${{ steps.armv7-test.outcome }}
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
-    steps:
-      - name: Checkout plugin
-        uses: actions/checkout@v7
-
-      - name: Set up QEMU for ARM emulation
-        # Advisory: a QEMU setup failure must not block the workflow — the
-        # job-level continue-on-error handles this; if QEMU truly didn't
-        # initialize, docker run will fail there instead.
-        continue-on-error: true
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: linux/arm/v7
-
-      - name: Cache npm for armv7
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.npm-armv7-cache
-          key: armv7-npm-${{ hashFiles('**/package-lock.json', '**/package.json') }}
-          restore-keys: |
-            armv7-npm-
-
-      - name: Test on armv7 via QEMU
-        id: armv7-test
-        # The job-level continue-on-error keeps the workflow green; this step
-        # intentionally has no continue-on-error so that a failure shows the
-        # job as truly red rather than emitting a confusing red annotation
-        # under a green check.
-        env:
-          BUILD_CMD: ${{ inputs.build-command }}
-          TEST_CMD: ${{ inputs.test-command }}
-          PLUGIN_DIR: ${{ inputs.working-directory }}
-        run: |
-          docker run --rm --platform linux/arm/v7 \
-            -v "${{ github.workspace }}:/plugin" \
-            -v "/tmp/.npm-armv7-cache:/root/.npm" \
-            -w "/plugin/$PLUGIN_DIR" \
-            -e BUILD_CMD \
-            -e TEST_CMD \
-            node:20-bookworm-slim \
-            bash -c '
-              set -e
-              echo "── System info ──"
-              echo "arch: $(uname -m)  node: $(node -v)  npm: $(npm -v)"
-              echo "── Installing build tools (python3, make, g++) ──"
-              apt-get update -qq && apt-get install -y -qq python3 make g++ > /dev/null 2>&1
-              echo "── Installing dependencies ──"
-              if [ -f package-lock.json ]; then
-                npm ci --ignore-scripts
-              else
-                npm install --ignore-scripts
-              fi
-              npm rebuild
-              echo "── Building ──"
-              eval "$BUILD_CMD"
-
-              echo "── Checking for native addons ──"
-              node -e "
-                const fs = require(\"fs\"), path = require(\"path\");
-                const nm = [];
-                function scan(dir) {
-                  if (!fs.existsSync(dir)) return;
-                  for (const e of fs.readdirSync(dir)) {
-                    if (e === \".package-lock.json\") continue;
-                    const f = path.join(dir, e);
-                    if (e.startsWith(\"@\")) { scan(f); continue; }
-                    if (fs.existsSync(path.join(f, \"binding.gyp\"))) nm.push(e);
-                    const n = path.join(f, \"node_modules\");
-                    if (fs.existsSync(n)) scan(n);
-                  }
-                }
-                scan(\"./node_modules\");
-                if (nm.length === 0) { console.log(\"No native addons\"); process.exit(0); }
-                console.log(\"Native addons compiled for armv7: \" + nm.join(\", \"));
-              "
-
-              echo "── Running tests ──"
-              HAS_TESTS=$(node -e "
-                const pkg = require(\"./package.json\");
-                const test = pkg.scripts && pkg.scripts.test;
-                if (!test || test.includes(\"no test specified\")) process.exit(1);
-              " && echo "yes" || echo "no")
-              if [ "$HAS_TESTS" = "yes" ]; then
-                eval "$TEST_CMD"
-              else
-                echo "::notice::No test script defined — skipping tests"
-              fi
-            '
-
-      - name: Write job summary
-        if: always()
-        shell: bash
-        run: |
-          PLUGIN_NAME=$(node -e "console.log(require('./package.json').name)" 2>/dev/null || echo "unknown")
-          PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
-          # Use the test-step outcome — the job-level continue-on-error means
-          # job.status is always success; the step outcome carries the true result.
-          RESULT="${{ steps.armv7-test.outcome }}"
-
-          {
-            echo "### armv7 (Cerbo GX) / Node 20 — ${PLUGIN_NAME}@${PLUGIN_VER}"
-            echo ""
-            echo "**Environment**: Venus OS 3.70 emulation (QEMU armv7, Debian Bookworm, python3, make, g++)"
-            echo ""
-            if [[ "$RESULT" == "success" ]]; then
-              echo "Install, build, and tests completed successfully under armv7 emulation."
-            else
-              echo "The armv7 job **failed**. Your plugin may not work on 32-bit ARM devices (Cerbo GX, Raspberry Pi OS 32-bit)."
-            fi
-            echo ""
-            echo "> This test is **advisory and non-blocking** — armv7 failures do not fail the overall CI."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  # ════════════════════════════════════════════════════════════
   #  Optional: SignalK server integration test
   # ════════════════════════════════════════════════════════════
   signalk-integration:
@@ -2027,7 +1895,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
-    needs: [validate-inputs, desktop, armv7, signalk-integration]
+    needs: [validate-inputs, desktop, signalk-integration]
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -2044,11 +1912,6 @@ jobs:
       - name: Write CI summary report
         env:
           DESKTOP_RESULT: ${{ needs.desktop.result }}
-          # Prefer the armv7 test-step outcome when the job ran — it records
-          # whether the advisory tests actually passed. Falls back to
-          # needs.armv7.result when the job was skipped/cancelled and no
-          # step outcome exists.
-          ARMV7_RESULT: ${{ needs.armv7.outputs.advisory-outcome || needs.armv7.result }}
           INTEGRATION_RESULT: ${{ needs.signalk-integration.result }}
           VALIDATE_RESULT: ${{ needs.validate-inputs.result }}
         shell: bash
@@ -2082,7 +1945,6 @@ jobs:
             echo "| Job | Result | Notes |"
             echo "|-----|--------|-------|"
             echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24 |"
-            echo "| armv7 — Cerbo GX (QEMU) | $(icon "$ARMV7_RESULT") | Node 20 (Venus OS 3.70) — advisory, non-blocking |"
             if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
               echo "| SignalK integration | $(icon "$INTEGRATION_RESULT") | Server install + plugin load |"
             fi
@@ -2115,17 +1977,8 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          if [[ "$ARMV7_RESULT" == "failure" ]]; then
-            {
-              echo ""
-              echo "> **Note**: armv7 (Cerbo GX) failed but this is non-blocking."
-              echo "> Your plugin may not work on 32-bit ARM devices (Cerbo GX, Raspberry Pi OS 32-bit)."
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-
           echo ""
           echo "Desktop:              $DESKTOP_RESULT"
-          echo "armv7 (Cerbo GX):     $ARMV7_RESULT"
           echo "SignalK integration:  $INTEGRATION_RESULT"
 
           # Desktop is mandatory
@@ -2133,12 +1986,6 @@ jobs:
             echo "::error::Desktop tests failed"
             exit 1
           fi
-
-          # armv7 is advisory (non-blocking)
-          case "$ARMV7_RESULT" in
-            failure) echo "::warning::armv7 (Cerbo GX) tests failed — plugin may not work on 32-bit ARM devices" ;;
-            skipped) echo "armv7 tests were skipped" ;;
-          esac
 
           # Integration is mandatory if enabled
           if [[ "$INTEGRATION_RESULT" == "failure" ]]; then
