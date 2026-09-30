@@ -75,6 +75,7 @@ import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { StalenessEnforcer } from './staleness'
 import { ThrottledCaller } from './throttledCaller'
 import { Zones } from './zones'
+import { isManagingNotifications } from './api/notifications'
 import checkNodeVersion from './version'
 import helmet from 'helmet'
 const debug = createDebug('signalk-server')
@@ -606,11 +607,15 @@ class Server {
     }
 
     app.streambundle = new StreamBundle(app.selfId)
-    new Zones(app.streambundle, (delta: Delta) =>
-      process.nextTick(() =>
-        app.handleMessage('self.notificationhandler', delta)
+    // With management off an external handler owns notifications, and
+    // legacy zone deltas would compete with it on the same paths.
+    if (isManagingNotifications(app.config.settings)) {
+      new Zones(app.streambundle, (delta: Delta) =>
+        process.nextTick(() =>
+          app.handleMessage('self.notificationhandler', delta)
+        )
       )
-    )
+    }
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
     app.signalk.on(
       'unfilteredDelta',
