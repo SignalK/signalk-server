@@ -78,9 +78,10 @@ export interface AlertsApi {
    *
    * Repeat the raise every 10 seconds while the condition is active, and stop
    * once `clearCondition` reports that it ended. The repeat is the plugin's
-   * heartbeat: the same message at the alert's priority or below keeps the
-   * alert live without re-alerting, and an alert not repeated for 60 seconds
-   * is marked stale. A `latching` raise reports a momentary event instead:
+   * heartbeat: a raise at the alert's priority or below keeps the alert live
+   * without re-alerting, even when its message changes, and an alert not
+   * repeated for 60 seconds is marked stale. Raise the priority to make an
+   * active alert demand attention again. A `latching` raise reports a momentary event instead:
    * send it once per occurrence, and never repeat or clear it.
    *
    * @example
