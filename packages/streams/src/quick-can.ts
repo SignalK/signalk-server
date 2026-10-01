@@ -67,4 +67,16 @@ export default class QuickCanStream extends Transform {
     this.quickCan.stop()
     return super.end()
   }
+
+  _destroy(error: Error | null, callback: (error: Error | null) => void): void {
+    // destroy() does not go through end(), so the CAN channel would keep
+    // receiving frames after the stream is torn down. stop() clears its
+    // channel reference, so calling it from both paths is safe.
+    try {
+      this.quickCan.stop()
+      callback(error)
+    } catch (e) {
+      callback(e as Error)
+    }
+  }
 }
