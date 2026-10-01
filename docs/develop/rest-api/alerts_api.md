@@ -37,7 +37,7 @@ Silencing is orthogonal to all of it: it quiets the annunciator for a bounded ti
 
 A source repeats its alert every 10 seconds for as long as the condition is active, whether it raised the alert by delta, over REST or through the plugin API. The repeat is the source's heartbeat. An alert whose source has not repeated it within the source timeout of 60 seconds (`src/api/alerts/alertManager.ts`) is marked `stale`. It stays visible and stays actionable: a source going quiet is not evidence that the condition resolved.
 
-A repeat with the same message at the alert's current priority or below keeps it live without re-alerting, so it stays acknowledged and silenced, even after the escalation window has raised it above what the source sends. A higher priority escalates it, and a different message re-alerts.
+A repeat at the alert's current priority or below keeps it live without re-alerting, so it stays acknowledged and silenced, even after the escalation window has raised it above what the source sends. The repeat may change the message, for example to carry the latest reading; the alert shows the new message without re-alerting. A higher priority escalates it.
 
 The source stops repeating when it reports that the condition ended. An alert held for acknowledgment after that is not timed and does not go stale, and neither is a latching alert. A raise arriving after the condition ended reports that the condition is back.
 
