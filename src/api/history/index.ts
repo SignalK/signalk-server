@@ -302,7 +302,15 @@ export class HistoryApiHttpRegistry {
             throw new Error(`Validation errors: ${errors.join(', ')}`)
           }
           debug.enabled && debug(JSON.stringify(timeRangeParams, null, 2))
-          return provider.getPaths(timeRangeParams)
+          const context = req.query.context
+          if (context !== undefined && typeof context !== 'string') {
+            throw new Error('context parameter must be a single string')
+          }
+          return provider.getPaths(
+            context
+              ? { ...timeRangeParams, context: context as Context }
+              : timeRangeParams
+          )
         },
         res
       )

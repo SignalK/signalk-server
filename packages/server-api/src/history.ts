@@ -126,7 +126,9 @@ export type ValuesRequestQueryParams = TimeRangeQueryParams & {
   sourcePolicy?: HistorySourcePolicy
 }
 
-export type PathsRequestQueryParams = TimeRangeQueryParams
+export type PathsRequestQueryParams = TimeRangeQueryParams & {
+  context?: string
+}
 export type PathsResponse = Path[]
 
 export type ContextsRequestQueryParams = TimeRangeQueryParams
@@ -282,5 +284,7 @@ export type ValuesRequest = TimeRangeParams & {
   pathSpecs: PathSpec[]
 }
 
-export type PathsRequest = TimeRangeParams
+export type PathsRequest = TimeRangeParams & {
+  context?: Context
+}
 export type ContextsRequest = TimeRangeParams
