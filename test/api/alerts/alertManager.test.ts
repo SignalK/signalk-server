@@ -773,16 +773,21 @@ describe('AlertManager', () => {
       expect(repeated.state).to.equal('acknowledged')
     })
 
-    it('re-alerts when the message changes', async () => {
+    it('updates a changed message without re-alerting', async () => {
       const alert = await manager.raiseAlert(raiseParams())
       await manager.acknowledgeAlert(alert.id, 'operator')
+      await manager.silenceAlert(alert.id, 60 * 1000)
+      events.length = 0
 
       const changed = await manager.raiseAlert(
         raiseParams({ message: 'Something else' })
       )
 
-      expect(changed.state).to.equal('unacknowledged')
+      expect(changed.state).to.equal('acknowledged')
+      expect(changed.silenced).to.equal(true)
       expect(changed.message).to.equal('Something else')
+      expect(manager.getAlert(alert.id)?.message).to.equal('Something else')
+      expect(events.map((event) => event.type)).to.deep.equal(['updated'])
     })
 
     it('reports a returning condition when the condition had ended', async () => {
@@ -816,6 +821,21 @@ describe('AlertManager', () => {
       expect(same).to.equal(alert)
       expect(events).to.have.lengthOf(0)
       expect(store.commitCount).to.equal(commitsAfterRaise)
+    })
+
+    it('stores a changed message without a history entry', async () => {
+      const store = new MockAlertStore()
+      manager.stop()
+      manager = new AlertManager(defaultConfig, fakeTimers, store)
+      const alert = await manager.raiseAlert(raiseParams())
+      const commitsAfterRaise = store.commitCount
+      store.resetHistory()
+
+      await manager.raiseAlert(raiseParams({ message: 'Reading now 11.2 V' }))
+
+      expect(store.commitCount).to.equal(commitsAfterRaise + 1)
+      expect(store.history).to.have.lengthOf(0)
+      expect(manager.getAlert(alert.id)?.message).to.equal('Reading now 11.2 V')
     })
 
     it('publishes a changed structured source', async () => {
@@ -3836,14 +3856,14 @@ describe('AlertManager', () => {
   })
 
   describe('re-raise reactivation', () => {
-    it('should reactivate acknowledged alert to unacknowledged on re-raise', async () => {
+    it('should reactivate acknowledged alert to unacknowledged on a higher priority', async () => {
       const alert = await manager.raiseAlert(raiseParams())
 
       await manager.acknowledgeAlert(alert.id, 'user-1')
       expect(manager.getAlert(alert.id)?.state).to.equal('acknowledged')
 
       const reraised = await manager.raiseAlert(
-        raiseParams({ message: 'Test alert re-raised' })
+        raiseParams({ priority: 'emergency' })
       )
 
       expect(reraised.id).to.equal(alert.id)
@@ -3858,9 +3878,7 @@ describe('AlertManager', () => {
       await manager.clearCondition(alert.id)
       expect(manager.getAlert(alert.id)?.state).to.equal('rtn-unacknowledged')
 
-      const reraised = await manager.raiseAlert(
-        raiseParams({ message: 'Test alert re-raised' })
-      )
+      const reraised = await manager.raiseAlert(raiseParams())
 
       expect(reraised.id).to.equal(alert.id)
       expect(reraised.state).to.equal('unacknowledged')
@@ -3873,7 +3891,7 @@ describe('AlertManager', () => {
       await manager.acknowledgeAlert(alert.id)
       events = []
 
-      await manager.raiseAlert(raiseParams({ message: 'Test alert re-raised' }))
+      await manager.raiseAlert(raiseParams({ priority: 'emergency' }))
 
       expect(events).to.have.lengthOf(1)
       expect(events[0].type).to.equal('raised')
@@ -3890,21 +3908,18 @@ describe('AlertManager', () => {
       expect(events[0].type).to.equal('updated')
     })
 
-    it('should restart escalation timer for reactivated warning', async () => {
+    it('should restart escalation timer for a warning whose condition returns', async () => {
       const alert = await manager.raiseAlert(
         raiseParams({ priority: 'warning', message: 'Test warning' })
       )
 
       expect(fakeTimers.getPendingCount()).to.equal(1 + LIVENESS_TIMER)
 
-      await manager.acknowledgeAlert(alert.id)
-      expect(fakeTimers.getPendingCount()).to.equal(LIVENESS_TIMER)
+      await manager.clearCondition(alert.id)
+      expect(fakeTimers.getPendingCount()).to.equal(0)
 
       await manager.raiseAlert(
-        raiseParams({
-          priority: 'warning',
-          message: 'Test warning re-raised'
-        })
+        raiseParams({ priority: 'warning', message: 'Test warning' })
       )
 
       // Escalation timer should be restarted
@@ -3915,7 +3930,7 @@ describe('AlertManager', () => {
       expect(manager.getAlert(alert.id)?.priority).to.equal('alarm')
     })
 
-    it('should un-silence and cancel silence timer on re-raise', async () => {
+    it('should un-silence and cancel silence timer on a higher priority', async () => {
       const alert = await manager.raiseAlert(raiseParams())
 
       await manager.acknowledgeAlert(alert.id)
@@ -3923,7 +3938,7 @@ describe('AlertManager', () => {
       await manager.silenceAlert(alert.id, 30000)
       expect(manager.getAlert(alert.id)?.silenced).to.equal(true)
 
-      await manager.raiseAlert(raiseParams({ message: 'Test alert re-raised' }))
+      await manager.raiseAlert(raiseParams({ priority: 'emergency' }))
 
       const reactivated = manager.getAlert(alert.id)
       expect(reactivated?.silenced).to.equal(false)
@@ -3935,7 +3950,7 @@ describe('AlertManager', () => {
       expect(events.filter((e) => e.type === 'unsilenced')).to.have.lengthOf(0)
     })
 
-    it('should un-silence on idempotent re-raise of unacknowledged alert', async () => {
+    it('should un-silence an unacknowledged alert on a higher priority', async () => {
       const alert = await manager.raiseAlert(raiseParams())
 
       // Silence without acknowledging first
@@ -3943,8 +3958,7 @@ describe('AlertManager', () => {
       expect(manager.getAlert(alert.id)?.silenced).to.equal(true)
       expect(manager.getAlert(alert.id)?.state).to.equal('unacknowledged')
 
-      // Re-raise the same alert (idempotent reactivation)
-      await manager.raiseAlert(raiseParams({ message: 'Test alert re-raised' }))
+      await manager.raiseAlert(raiseParams({ priority: 'emergency' }))
 
       const reactivated = manager.getAlert(alert.id)
       expect(reactivated?.state).to.equal('unacknowledged')
@@ -3964,7 +3978,7 @@ describe('AlertManager', () => {
       await manager.acknowledgeAlert(alert.id)
 
       const reraised = await manager.raiseAlert(
-        raiseParams({ message: 'Test alert re-raised' })
+        raiseParams({ priority: 'emergency' })
       )
 
       expect(reraised.raisedAt).to.equal(originalRaisedAt)
@@ -3980,7 +3994,7 @@ describe('AlertManager', () => {
       await manager.acknowledgeAlert(alert.id)
       store.resetHistory()
 
-      await manager.raiseAlert(raiseParams({ message: 'Test alert re-raised' }))
+      await manager.raiseAlert(raiseParams({ priority: 'emergency' }))
 
       const raiseEntries = store.entriesOfType('raise')
       expect(raiseEntries).to.have.lengthOf(1)

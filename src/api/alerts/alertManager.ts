@@ -114,6 +114,7 @@ function resolveSourceTimeoutSeconds(configured?: number): number {
 function sameDescription(before: Alert, after: Alert): boolean {
   return (
     before.$source === after.$source &&
+    before.message === after.message &&
     JSON.stringify(before.source) === JSON.stringify(after.source) &&
     before.group === after.group &&
     before.latching === after.latching &&
@@ -125,16 +126,17 @@ function sameDescription(before: Alert, after: Alert): boolean {
 /**
  * Whether a raise repeats an active alert rather than announcing anything.
  *
- * Priority and message are what an operator reads, so only a change to either
- * is news. A priority at or below the alert's own changes nothing, because the
- * manager never lowers one: a source keeps repeating the warning it began with
- * after the escalation timer has raised the alert to alarm. A raise for an
- * alert whose condition has ended says the condition is back.
+ * Only a higher priority is news. A source that wants an active alert to
+ * demand attention again raises its priority; a changed message, such as one
+ * carrying a live reading, updates the alert without re-alerting. A priority
+ * at or below the alert's own changes nothing, because the manager never
+ * lowers one: a source keeps repeating the warning it began with after the
+ * escalation timer has raised the alert to alarm. A raise for an alert whose
+ * condition has ended says the condition is back.
  */
 function isRepeat(existing: Alert, params: CreateAlertParams): boolean {
   return (
     existing.condition &&
-    params.message === existing.message &&
     PRIORITY_RANK[params.priority] <= PRIORITY_RANK[existing.priority]
   )
 }
@@ -623,8 +625,8 @@ export class AlertManager extends EventEmitter {
 
   /**
    * Route a raise for an alert that already exists: a latching raise is a new
-   * occurrence, a repeat refreshes the alert, and anything the operator would
-   * read differently re-announces it.
+   * occurrence, a repeat refreshes the alert, and a higher priority or a
+   * returning condition re-announces it.
    */
   private raiseExisting(
     existing: Alert,
@@ -726,6 +728,7 @@ export class AlertManager extends EventEmitter {
     const updated: Alert = {
       ...alert,
       $source: params.$source,
+      message: params.message,
       source: params.source ?? alert.source,
       group: params.group ?? alert.group,
       latching: params.latching ?? alert.latching,
