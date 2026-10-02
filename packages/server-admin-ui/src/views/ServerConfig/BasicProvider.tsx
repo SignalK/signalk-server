@@ -41,6 +41,7 @@ interface ProviderOptions {
   useDiscovery?: boolean
   toStdout?: string | string[]
   ignoredSentences?: string | string[]
+  quirks?: string | string[]
   sentenceEvent?: string
   validateChecksum?: boolean
   appendChecksum?: boolean
@@ -1643,6 +1644,50 @@ function CamelCaseCompatInput({
   )
 }
 
+/**
+ * canboatjs device quirks, as canboat's --quirk takes them: entries
+ * separated by whitespace, but whitespace next to a comma stays inside a
+ * device list ("gps-rollover=4, 1851:491603" is one entry). Empty entries
+ * are kept so the field can be typed into; the server drops them.
+ */
+function splitQuirksField(text: string): string[] {
+  return text.split(/(?<!,)\s+(?!,)/)
+}
+
+function QuirksInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  let displayValue = value.quirks
+  if (Array.isArray(displayValue)) {
+    displayValue = displayValue.join(' ')
+  }
+
+  const handleChange: OnChangeHandler = (e) => {
+    const target = e.target as { type?: string; name: string; value: unknown }
+    onChange({
+      target: {
+        type: target.type,
+        name: target.name,
+        value: splitQuirksField(String(target.value))
+      }
+    })
+  }
+
+  return (
+    <TextInput
+      title="Quirks"
+      name="options.quirks"
+      helpText="Workarounds for known device misbehaviour, applied by canboatjs. gps-rollover corrects GNSS dates from a receiver that missed the GPS week rollover; gps-rollover=4,1851:491603 also corrects every date the listed devices send (a source address, manufacturer:unique number, or 0x NAME); gps-rollover=all every date. Separate several with spaces. Leave empty unless a device needs it, and never for replaying a pre-2019 log. An invalid value stops this connection and is shown as its error."
+      value={(displayValue as string) ?? ''}
+      onChange={handleChange}
+    />
+  )
+}
+
 function CollectNetworkStatsInput({
   value,
   onChange
@@ -1817,6 +1862,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         value.options.type === 'navlink2-tcp-canboatjs' ||
         value.options.type === 'canboat-csv-canboatjs') && (
         <CollectNetworkStatsInput value={value.options} onChange={onChange} />
+      )}
+      {value.options.type?.endsWith('-canboatjs') && (
+        <QuirksInput value={value.options} onChange={onChange} />
       )}
       {(value.options.type === 'w2k-1-n2k-ascii-canboatjs' ||
         value.options.type === 'w2k-1-n2k-actisense-canboatjs') && (

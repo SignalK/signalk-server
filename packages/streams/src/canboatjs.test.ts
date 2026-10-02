@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import CanboatJs from './canboatjs'
+import CanboatJs, { cleanQuirks } from './canboatjs'
 import {
   createMockApp,
   collectStreamOutput,
@@ -96,5 +96,22 @@ describe('CanboatJs', () => {
 
     await outputPromise
     expect(unparsed).to.have.length(1)
+  })
+})
+
+describe('cleanQuirks', () => {
+  it('drops the empty entries a trailing space leaves', () => {
+    expect(cleanQuirks(['gps-rollover=4,1851:491603', '', ' '])).to.deep.equal([
+      'gps-rollover=4,1851:491603'
+    ])
+  })
+
+  it('takes a single string as a list of one', () => {
+    expect(cleanQuirks(' gps-rollover ')).to.deep.equal(['gps-rollover'])
+  })
+
+  it('leaves no quirks as none', () => {
+    expect(cleanQuirks(undefined)).to.equal(undefined)
+    expect(cleanQuirks([])).to.deep.equal([])
   })
 })
