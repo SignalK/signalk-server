@@ -20,6 +20,9 @@ import { SubscriptionManager } from './subscriptionmanager'
 import type { WebSocket } from 'ws'
 import type { IncomingMessage } from 'http'
 import type { Duplex } from 'stream'
+import type { EnhancedDisplayUnits } from './typebox/protocol-schemas'
+
+export type { EnhancedDisplayUnits } from './typebox/protocol-schemas'
 
 /**
  * A WebSocket endpoint under the plugin's route, returned by
@@ -170,6 +173,77 @@ export interface ServerAPI
    * @category Data Model
    */
   setDefaultMetadata(path: string, value: MetaValue): Promise<boolean>
+
+  /**
+   * Resolve the display units for a path: the target unit, conversion
+   * formulas, symbol and display format that clients receive in the path's
+   * `meta.displayUnits`.
+   *
+   * Without a username, resolves under the active preset the admin chose,
+   * so output the plugin produces for everyone (an alert message, a
+   * notification) reads the same for every reader. With a username,
+   * resolves as REST and WebSocket metadata do for that user: under the
+   * user's own preset, and with the user's primary category for an SI unit
+   * that several categories share. A plugin answering a request on its own
+   * routes can pass `req.skPrincipal?.identifier`.
+   *
+   * The preset is read on each call, so a preset change applies to the
+   * next call.
+   *
+   * @example
+   * ```javascript
+   * const displayUnits = app.getDisplayUnits('navigation.speedOverGround')
+   * // { category: 'speed', targetUnit: 'kn', formula: 'value * 1.94384',
+   * //   inverseFormula: 'value * 0.514444', symbol: 'kn', displayFormat: '0.0' }
+   * ```
+   *
+   * @param path - Signal K path relative to `vessels.self` (e.g., 'navigation.speedOverGround')
+   * @param username - Resolve under this user's unit preferences instead of the admin's
+   * @returns The resolved display units, or undefined when the path has no
+   * unit category, the category has no target unit, or the conversion is unknown
+   * @category Data Model
+   */
+  getDisplayUnits(
+    path: string,
+    username?: string
+  ): EnhancedDisplayUnits | undefined
+
+  /**
+   * Convert a value from the path's SI unit to its display unit, as resolved
+   * by {@link ServerAPI.getDisplayUnits}.
+   *
+   * Convert only a value of the path's quantity itself. A difference, such
+   * as a 5 K temperature rise, must stay in SI: the conversion formulas can
+   * include an offset (Kelvin to Celsius subtracts 273.15).
+   *
+   * Only arithmetic formulas are evaluated: the operators `+ - * / ^`,
+   * numbers, parentheses and the value. The time category's formatted
+   * targets, such as `HH:MM:SS`, are client-side formatters, so they return
+   * undefined.
+   *
+   * @example
+   * ```javascript
+   * const converted = app.convertToDisplayUnits(
+   *   'environment.outside.temperature',
+   *   288.15
+   * )
+   * // { value: 15, symbol: '°C', displayFormat: '0.0' }
+   * ```
+   *
+   * @param path - Signal K path relative to `vessels.self` (e.g., 'environment.outside.temperature')
+   * @param value - The value in the path's SI unit
+   * @param username - Convert under this user's unit preferences instead of the admin's
+   * @returns The converted value with its unit symbol, or undefined when the
+   * value is not a finite number, the path has no display units, or the
+   * conversion formula is not plain
+   * arithmetic, fails, or yields a number that is not finite
+   * @category Data Model
+   */
+  convertToDisplayUnits(
+    path: string,
+    value: number,
+    username?: string
+  ): DisplayUnitsValue | undefined
 
   /**
    * Call the PUT handler for a path on the vessel's own context.
@@ -603,6 +677,21 @@ export interface SelfIdentity {
 export interface Metadata {
   units?: string
   description?: string
+}
+
+/**
+ * A value converted to its path's display unit by
+ * {@link ServerAPI.convertToDisplayUnits}.
+ *
+ * @category Server API
+ */
+export interface DisplayUnitsValue {
+  /** The converted value */
+  value: number
+  /** Unit symbol for display (e.g. "kn", "°C") */
+  symbol: string
+  /** Display format string from the preset or the path (e.g. "0.0") */
+  displayFormat?: string
 }
 
 /**

@@ -47,7 +47,8 @@ import {
   PluginRouter,
   RouteAccessLevel,
   RoutePermission,
-  PluginWebSocketServer
+  PluginWebSocketServer,
+  EnhancedDisplayUnits
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { IRouter, Request, RequestHandler, Response } from 'express'
@@ -94,7 +95,12 @@ import { derivePluginId } from '../pluginid'
 import { atomicWriteFileSync } from '../atomicWrite'
 import { writeBaseDeltasFile, ConfigApp } from '../config/config'
 import DeltaEditor from '../deltaeditor'
-import { validateCategoryAssignment } from '../unitpreferences'
+import {
+  convertWithDisplayUnits,
+  PathUnitsMetadata,
+  resolvePathDisplayUnits,
+  validateCategoryAssignment
+} from '../unitpreferences'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -147,6 +153,21 @@ function mergeExcludeSelf(
   }
   if (excludeSelf) merged.add(pluginId)
   return merged.size > 0 ? (Array.from(merged) as SourceRef[]) : undefined
+}
+
+function selfDisplayUnits(
+  skPath: string,
+  username?: string
+): EnhancedDisplayUnits | undefined {
+  const metadata = getMetadata('vessels.self.' + skPath) as
+    PathUnitsMetadata | undefined
+  const resolved = resolvePathDisplayUnits(skPath, metadata ?? {}, username)
+  if (!resolved) {
+    return undefined
+  }
+  // Only an editor asks for the override, so plugins get the public shape.
+  const { override: _override, ...displayUnits } = resolved
+  return displayUnits
 }
 
 module.exports = (theApp: any) => {
@@ -890,6 +911,17 @@ module.exports = (theApp: any) => {
         })
 
         return true
+      },
+      getDisplayUnits: selfDisplayUnits,
+      convertToDisplayUnits: (
+        skPath: string,
+        value: number,
+        username?: string
+      ) => {
+        const displayUnits = selfDisplayUnits(skPath, username)
+        return displayUnits
+          ? convertWithDisplayUnits(displayUnits, value)
+          : undefined
       },
       reportOutputMessages: (count?: number) => {
         app.emit(CONNECTION_WRITE_EVENT_NAME, {
