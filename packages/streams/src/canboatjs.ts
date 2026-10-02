@@ -50,6 +50,8 @@ const QUIRKS_ERROR = 'Invalid quirks option: '
  * thrown while the connection's pipeline is built, so it becomes the
  * connection's provider error on the Dashboard (see pipedproviders.ts).
  *
+ * - A setting that is not a list (cleanQuirks has made a string one) is
+ *   refused here, so it cannot slip past the next check.
  * - A canboatjs without quirk support (3.20 and earlier) would silently ignore
  *   them, leaving the user believing their dates are corrected: refuse.
  * - canboatjs refuses an invalid quirk; from canboat/canboatjs#475 on its
@@ -60,7 +62,14 @@ export function createParser<T>(
   opts: { quirks?: unknown },
   supportsQuirks: boolean
 ): T {
-  const quirks = Array.isArray(opts.quirks) ? opts.quirks : []
+  if (
+    opts.quirks !== undefined &&
+    opts.quirks !== null &&
+    !Array.isArray(opts.quirks)
+  ) {
+    throw new Error(QUIRKS_ERROR + 'expected a string or a list of strings')
+  }
+  const quirks = opts.quirks ?? []
   if (quirks.length > 0 && !supportsQuirks) {
     throw new Error(
       QUIRKS_ERROR +
