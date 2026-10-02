@@ -23,6 +23,24 @@ type ParsedPgnData = ReturnType<InstanceType<typeof FromPgn>['parse']> & {
   providerId?: string
 }
 
+/**
+ * The connection's `quirks` setting as canboatjs takes it: a list of
+ * `gps-rollover[=...]` strings. The admin UI stores the field split on
+ * whitespace, so drop the empty entries a trailing space leaves; canboatjs
+ * would refuse an empty quirk name.
+ */
+export function cleanQuirks(quirks: unknown): unknown {
+  if (typeof quirks === 'string') {
+    quirks = [quirks]
+  }
+  if (!Array.isArray(quirks)) {
+    return quirks
+  }
+  return quirks
+    .map((q) => (typeof q === 'string' ? q.trim() : q))
+    .filter((q) => q !== '')
+}
+
 export default class CanboatJs extends Transform {
   private readonly fromPgn: InstanceType<typeof FromPgn>
   private readonly app: CanboatJsOptions['app']
@@ -34,8 +52,11 @@ export default class CanboatJs extends Transform {
 
     const opts = {
       ...options,
-      useCamelCompat: options.useCamelCompat ?? false
+      useCamelCompat: options.useCamelCompat ?? false,
+      quirks: cleanQuirks(options.quirks)
     }
+    // An invalid quirk makes FromPgn throw; the error ends up as this
+    // connection's provider error (see pipedproviders.ts).
     this.fromPgn = new FromPgn(opts)
     const createDebug = options.createDebug ?? require('debug')
     const debug = createDebug('signalk:streams:canboatjs')
