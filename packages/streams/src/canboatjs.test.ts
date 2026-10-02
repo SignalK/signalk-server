@@ -139,6 +139,14 @@ describe('createParser', () => {
     expect(parser.options).to.deep.equal({ quirks: ['gps-rollover'] })
   })
 
+  it('refuses quirks that are not a list, whatever canboatjs supports', () => {
+    for (const supports of [false, true]) {
+      expect(() => createParser(Accepts, { quirks: 4 }, supports)).to.throw(
+        /^Invalid quirks option: expected a string or a list of strings$/
+      )
+    }
+  })
+
   it('refuses quirks a canboatjs without quirk support would ignore', () => {
     expect(() =>
       createParser(Accepts, { quirks: ['gps-rollover'] }, false)

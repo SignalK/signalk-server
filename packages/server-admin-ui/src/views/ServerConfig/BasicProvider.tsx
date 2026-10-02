@@ -17,6 +17,7 @@ import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTrian
 import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
 import N2KFilters from './N2KFilters'
+import { splitQuirksField } from '../../utils/quirks'
 
 interface ProviderOptions {
   type?: string
@@ -1642,16 +1643,6 @@ function CamelCaseCompatInput({
       </Col>
     </Form.Group>
   )
-}
-
-/**
- * canboatjs device quirks, as canboat's --quirk takes them: entries
- * separated by whitespace, but whitespace next to a comma stays inside a
- * device list ("gps-rollover=4, 1851:491603" is one entry). Empty entries
- * are kept so the field can be typed into; the server drops them.
- */
-function splitQuirksField(text: string): string[] {
-  return text.split(/(?<!,)\s+(?!,)/)
 }
 
 function QuirksInput({
