@@ -1,4 +1,5 @@
 import { Transform, TransformCallback } from 'stream'
+import * as canboatjs from '@canboat/canboatjs'
 import { FromPgn } from '@canboat/canboatjs'
 import type { CreateDebug } from './types'
 
@@ -41,6 +42,47 @@ export function cleanQuirks(quirks: unknown): unknown {
     .filter((q) => q !== '')
 }
 
+const QUIRKS_ERROR = 'Invalid quirks option: '
+
+/**
+ * Create the canboatjs parser so that a quirks problem always surfaces as
+ * one clear error, whatever canboatjs version is installed. The error is
+ * thrown while the connection's pipeline is built, so it becomes the
+ * connection's provider error on the Dashboard (see pipedproviders.ts).
+ *
+ * - A canboatjs without quirk support (3.20 and earlier) would silently ignore
+ *   them, leaving the user believing their dates are corrected: refuse.
+ * - canboatjs refuses an invalid quirk; from canboat/canboatjs#475 on its
+ *   message says it is the quirks option, before that it does not: add it.
+ */
+export function createParser<T>(
+  Parser: new (options: object) => T,
+  opts: { quirks?: unknown },
+  supportsQuirks: boolean
+): T {
+  const quirks = Array.isArray(opts.quirks) ? opts.quirks : []
+  if (quirks.length > 0 && !supportsQuirks) {
+    throw new Error(
+      QUIRKS_ERROR +
+        'the installed @canboat/canboatjs does not support quirks; ' +
+        'update it, or remove the quirks from this connection'
+    )
+  }
+  try {
+    return new Parser(opts)
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    if (quirks.length > 0 && !message.startsWith(QUIRKS_ERROR)) {
+      throw new Error(QUIRKS_ERROR + message)
+    }
+    throw e
+  }
+}
+
+/** Whether the installed canboatjs knows quirks (canboat/canboatjs#464). */
+const canboatjsSupportsQuirks =
+  typeof (canboatjs as { parseQuirks?: unknown }).parseQuirks === 'function'
+
 export default class CanboatJs extends Transform {
   private readonly fromPgn: InstanceType<typeof FromPgn>
   private readonly app: CanboatJsOptions['app']
@@ -55,9 +97,7 @@ export default class CanboatJs extends Transform {
       useCamelCompat: options.useCamelCompat ?? false,
       quirks: cleanQuirks(options.quirks)
     }
-    // An invalid quirk makes FromPgn throw; the error ends up as this
-    // connection's provider error (see pipedproviders.ts).
-    this.fromPgn = new FromPgn(opts)
+    this.fromPgn = createParser(FromPgn, opts, canboatjsSupportsQuirks)
     const createDebug = options.createDebug ?? require('debug')
     const debug = createDebug('signalk:streams:canboatjs')
 

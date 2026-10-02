@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import CanboatJs, { cleanQuirks } from './canboatjs'
+import CanboatJs, { cleanQuirks, createParser } from './canboatjs'
 import {
   createMockApp,
   collectStreamOutput,
@@ -113,5 +113,59 @@ describe('cleanQuirks', () => {
   it('leaves no quirks as none', () => {
     expect(cleanQuirks(undefined)).to.equal(undefined)
     expect(cleanQuirks([])).to.deep.equal([])
+  })
+})
+
+describe('createParser', () => {
+  class Accepts {
+    constructor(public options: object) {}
+  }
+  const refusing = (message: string) =>
+    class {
+      constructor() {
+        throw new Error(message)
+      }
+    }
+
+  it('creates the parser when there are no quirks', () => {
+    expect(createParser(Accepts, {}, false)).to.be.instanceOf(Accepts)
+    expect(createParser(Accepts, { quirks: [] }, false)).to.be.instanceOf(
+      Accepts
+    )
+  })
+
+  it('passes quirks to a canboatjs that supports them', () => {
+    const parser = createParser(Accepts, { quirks: ['gps-rollover'] }, true)
+    expect(parser.options).to.deep.equal({ quirks: ['gps-rollover'] })
+  })
+
+  it('refuses quirks a canboatjs without quirk support would ignore', () => {
+    expect(() =>
+      createParser(Accepts, { quirks: ['gps-rollover'] }, false)
+    ).to.throw(/^Invalid quirks option: the installed @canboat\/canboatjs/)
+  })
+
+  it('names the quirks option when canboatjs does not', () => {
+    expect(() =>
+      createParser(
+        refusing("'vhf' is not a device"),
+        { quirks: ['gps-rollover=vhf'] },
+        true
+      )
+    ).to.throw("Invalid quirks option: 'vhf' is not a device")
+  })
+
+  it('does not name it twice when canboatjs already does', () => {
+    expect(() =>
+      createParser(
+        refusing("Invalid quirks option: 'vhf' is not a device"),
+        { quirks: ['gps-rollover=vhf'] },
+        true
+      )
+    ).to.throw(/^Invalid quirks option: 'vhf' is not a device$/)
+  })
+
+  it('leaves an error that has nothing to do with quirks alone', () => {
+    expect(() => createParser(refusing('boom'), {}, true)).to.throw(/^boom$/)
   })
 })
