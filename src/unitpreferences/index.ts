@@ -21,6 +21,7 @@ export {
 } from './loader'
 export {
   resolveDisplayUnits,
+  resolvePathDisplayUnits,
   stripResolvedDisplayUnits,
   validateCategoryAssignment
 } from './resolver'

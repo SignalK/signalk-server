@@ -455,6 +455,57 @@ describe('Display unit metadata', function () {
     expect(await streamedDisplayUnits(false)).to.not.have.property('override')
   })
 
+  it('keeps the path override when re-sending meta after a preset change', async () => {
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+    // The re-send covers the paths that have values.
+    const sender = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=none&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await sender.nextMsg() // hello
+    await sender.send({
+      context: 'vessels.self',
+      updates: [{ values: [{ path: SPEED_PATH_DOTS, value: 1 }] }]
+    })
+
+    const receiver = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=none&sendMeta=all&sendCachedValues=false&displayUnitsOverride=true`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await receiver.nextMsg() // hello
+    const sentBeforeChange = receiver.parsedMessages().length
+
+    const setActivePreset = (activePreset: string) =>
+      fetch(`http://localhost:${port}/signalk/v1/unitpreferences/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activePreset })
+      })
+
+    let resent: DisplayUnitsMetadata | undefined
+    try {
+      expect((await setActivePreset('imperial-us')).status).to.equal(200)
+      const until = Date.now() + REQUEST_DEADLINE_MS
+      while (!resent && Date.now() < until) {
+        for (const msg of receiver.parsedMessages().slice(sentBeforeChange)) {
+          for (const update of msg.updates ?? []) {
+            for (const entry of update.meta ?? []) {
+              if (entry.path === SPEED_PATH_DOTS) {
+                resent = entry.value.displayUnits
+              }
+            }
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, REQUEST_POLL_MS))
+      }
+    } finally {
+      await setActivePreset('nautical-metric')
+    }
+
+    expect(resent).to.include({ category: 'speed', targetUnit: 'm/s' })
+    expect(resent?.override).to.deep.equal({ targetUnit: 'm/s' })
+  })
+
   it('keeps the override a resolved response is saved back with', async () => {
     await putSpeedMeta({
       category: 'speed',
