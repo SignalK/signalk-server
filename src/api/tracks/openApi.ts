@@ -231,7 +231,7 @@ const tracksApiDoc = {
         name: 'simplify',
         in: 'query',
         description:
-          'Simplify the geometry, dropping points that do not change the shape of the line. With a bounding box and no explicit epsilon, the provider chooses a tolerance suited to the size of the box.',
+          'Simplify the geometry, dropping points that do not change the shape of the line. With no explicit epsilon the provider chooses the tolerance and reports it as properties.epsilon. It need not follow the bbox: a provider may size it to the returned track, which stays the same however far a client zooms in. A client that wants detail to follow its view sends epsilon itself, for example the ground distance one screen pixel covers.',
         schema: { type: 'boolean' }
       },
       Epsilon: {
