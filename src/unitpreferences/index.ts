@@ -25,4 +25,5 @@ export {
   stripResolvedDisplayUnits,
   validateCategoryAssignment
 } from './resolver'
+export { convertWithDisplayUnits } from './conversion'
 export * from './types'
