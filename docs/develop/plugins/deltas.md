@@ -318,6 +318,33 @@ The method is **idempotent**: on subsequent server starts, fields already persis
 
 The `displayUnits.category` is validated against the path's SI unit. If the category doesn't match, the method returns `false` and logs a debug message.
 
+## Display Units
+
+A plugin that writes text for people, such as an alert message or a notification, can show values in the units the user has chosen with `convertToDisplayUnits()`. It converts a value from the path's SI unit and returns the converted value with its unit symbol and display format, or `undefined` when the path has no display units:
+
+```javascript
+const converted = app.convertToDisplayUnits(
+  'environment.outside.temperature',
+  288.15
+)
+// { value: 15, symbol: '°C', displayFormat: '0.0' }
+const text = converted
+  ? `${converted.value.toFixed(1)} ${converted.symbol}`
+  : '288.15 K'
+```
+
+`getDisplayUnits()` returns the resolved display units for a path without converting anything, the same object clients receive in the path's `meta.displayUnits`. Use it for a label or a column header that needs only the unit symbol.
+
+Both methods resolve under the active preset the admin has chosen, so output that every reader sees is the same for everyone. To resolve under a particular user's preferences, for example when answering a request on the plugin's own routes, pass the username as the last argument: `app.convertToDisplayUnits(path, value, req.skPrincipal?.identifier)`. The preset is read on each call, so a change applies to the next call.
+
+The value must be in the path's own SI unit. Some conversions include an offset (Kelvin to Celsius subtracts 273.15), so they are wrong for a rate or an integral of the path's quantity; keep such values in SI.
+
+The server evaluates only arithmetic formulas: the operators `+ - * / ^`, numbers, parentheses and the value. A path whose custom formula does anything else converts to `undefined`. So do the time category's formatted targets, such as `HH:MM:SS` or `duration-verbose`, which clients format themselves.
+
+Servers older than these methods lack them. Check `typeof app.convertToDisplayUnits === 'function'` and fall back to SI.
+
+See [Unit Preferences](../../guides/unitpreferences.md) for how categories, presets and path overrides decide the display unit.
+
 ## Correction and transform plugins
 
 There are essentially two strategies a plugin can employ to change a value for a path:
