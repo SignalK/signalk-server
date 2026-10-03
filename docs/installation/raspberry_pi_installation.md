@@ -55,6 +55,12 @@ Once the OS installation has been completed, you are ready to commence.
 
    Ensure the reported versions are equal to or greater than `v24.0.0, 11.0.0` respectively.
 
+1. Install pnpm, which the App Store uses to install plugins and webapps.
+
+   ```
+   sudo npm install -g pnpm@11
+   ```
+
 1. Install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server.
    ```
    sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev

@@ -58,6 +58,14 @@ It is also recommended to update the version of the Node Package Manager (NPM).
 sudo npm install -g npm@latest
 ```
 
+The App Store installs plugins and webapps with pnpm. Install it, or update it to the latest supported version, with:
+
+```shell
+sudo npm install -g pnpm@11
+```
+
+The first install or removal of a plugin after switching to pnpm rebuilds the `node_modules` directory in the server's configuration directory from its `package.json`, which takes longer than usual.
+
 ## Update Signal K Server
 
 When an update is available for Signal K Server a visual indication is displayed in the Admin UI.

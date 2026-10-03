@@ -233,7 +233,7 @@ export default function ActionCellRenderer({
             type="button"
             className={`${statusClasses} border-0 w-100`}
             onClick={() => setShowLogModal(true)}
-            title="Show the npm log for this failure"
+            title="Show the install log for this failure"
           >
             {status} — view log
           </button>

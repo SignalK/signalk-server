@@ -15,7 +15,7 @@
  * limitations under the License.
 */
 
-import { spawn } from 'child_process'
+import { ChildProcess, spawn } from 'child_process'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
@@ -184,7 +184,7 @@ function installModule(
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
-  runNpm(config, name, version, 'install', onData, onErr, onClose)
+  runPackageManager(config, name, version, 'install', onData, onErr, onClose)
 }
 
 function removeModule(
@@ -197,22 +197,43 @@ function removeModule(
   pluginId?: string,
   deleteData: boolean = false
 ) {
-  runNpm(config, name, null, 'remove', onData, onErr, (code: number) => {
-    cleanupAfterRemove(config.configPath, name, pluginId, deleteData)
-    onClose(code)
-  })
+  // require.cache is keyed by real paths, and pnpm links packages into
+  // node_modules from its store, so resolve the link while it still exists.
+  const moduleDir = path.join(config.configPath, 'node_modules', name)
+  const loadedDir = fs.existsSync(moduleDir)
+    ? fs.realpathSync(moduleDir)
+    : moduleDir
+  runPackageManager(
+    config,
+    name,
+    null,
+    'remove',
+    onData,
+    onErr,
+    (code: number) => {
+      cleanupAfterRemove(
+        config.configPath,
+        name,
+        loadedDir,
+        pluginId,
+        deleteData
+      )
+      onClose(code)
+    }
+  )
 }
 
 function cleanupAfterRemove(
   configPath: string,
   packageName: string,
+  loadedDir: string,
   pluginId?: string,
   deleteData: boolean = false
 ) {
   const moduleDir = path.join(configPath, 'node_modules', packageName)
   if (fs.existsSync(moduleDir)) {
     console.warn(
-      `${packageName}: directory still exists after npm remove, cleaning up`
+      `${packageName}: directory still exists after pnpm remove, cleaning up`
     )
     try {
       fs.rmSync(moduleDir, { recursive: true, force: true })
@@ -221,7 +242,7 @@ function cleanupAfterRemove(
     }
   }
 
-  const resolvedDir = path.resolve(moduleDir)
+  const resolvedDir = path.resolve(loadedDir)
   for (const key of Object.keys(require.cache)) {
     if (key.startsWith(resolvedDir)) {
       delete require.cache[key]
@@ -328,20 +349,37 @@ export function restoreModules(
   onErr: (err: Error) => void,
   onClose: (code: number) => any
 ) {
-  runNpm(config, null, null, 'remove', onData, onErr, onClose)
+  runConfigDirPnpm(config.configPath, 'install', '', onData, onErr, onClose)
 }
 
 // An npm package name: an optional scope and URL-safe lowercase characters.
-// Anything else (a path, URL or git spec) would make npm install from
-// outside the registry.
+// Anything else (a path, URL or git spec) would make the package manager
+// install from outside the registry.
 const PACKAGE_NAME_PATTERN =
   /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
 
-export function runNpm(
+type ModuleCommand = 'install' | 'update' | 'remove'
+
+const PNPM_MISSING_MESSAGE =
+  'pnpm is required for installing plugins and webapps. Install it with: npm install -g pnpm@11'
+
+// Plugins are installed without running their dependencies' build scripts.
+// No pnpm-lock.yaml is written to the config directory; pnpm still reuses the
+// resolutions it records in node_modules. Installing a version published only
+// recently adds an exclusion for it to pnpm-workspace.yaml, pruned again once
+// the version has aged past pnpm's minimum release age. The settings use the
+// --config form because not every pnpm command accepts them as options.
+const PNPM_CONFIG_DIR_ARGS = [
+  '--config.ignore-scripts=true',
+  '--config.lockfile=false',
+  '--config.minimum-release-age-exclude-prune=true'
+]
+
+export function runPackageManager(
   config: Config,
   name: any,
   version: string | null,
-  command: string,
+  command: ModuleCommand,
   onData: (output: any) => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
@@ -356,32 +394,41 @@ export function runNpm(
     onClose(-1)
     return
   }
-  let npm
 
-  const opts: { cwd?: string; shell?: boolean } = {}
-  let packageString
-
-  if (process.platform === 'win32') {
-    opts['shell'] = true
-  }
-
-  if (name) {
-    packageString = version ? `${name}@${version}` : name
-  } else {
-    packageString = ''
-  }
-
+  const packageString = name ? (version ? `${name}@${version}` : name) : ''
   debug(`${command}: ${packageString}`)
 
+  if (isTheServerModule(name, config)) {
+    runServerNpm(command, packageString, onData, onErr, onClose)
+  } else {
+    runConfigDirPnpm(
+      config.configPath,
+      command,
+      packageString,
+      onData,
+      onErr,
+      onClose
+    )
+  }
+}
+
+// The server is installed globally with npm, and only npm can update that
+// install in place.
+function runServerNpm(
+  command: ModuleCommand,
+  packageString: string,
+  onData: (output: any) => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
   // npm 12 blocks dependency install scripts unless allowlisted. The server
   // depends on @canboat/canboatjs, which builds its native SocketCAN addon from
   // an install script; without this the CAN interface disappears after a global
   // self-update. Older npm ignores the flag with a warning.
-  const npmArgs = isTheServerModule(name, config)
-    ? command === 'install' || command === 'update'
+  const npmArgs =
+    command === 'install' || command === 'update'
       ? [command, '-g', '--allow-scripts=@canboat/canboatjs']
       : [command, '-g']
-    : ['--save', '--ignore-scripts', command]
 
   // npm allows a name to start with a hyphen, so the package follows -- to
   // keep npm from ever reading it as an option
@@ -389,28 +436,102 @@ export function runNpm(
     npmArgs.push('--', packageString)
   }
 
-  if (isTheServerModule(name, config)) {
-    if (process.platform === 'win32') {
-      npm = spawn('npm.cmd', npmArgs, opts)
-    } else {
-      npm = spawn('sudo', ['npm', ...npmArgs], opts)
-    }
-  } else {
-    opts.cwd = config.configPath
+  const npm =
+    process.platform === 'win32'
+      ? spawn('npm.cmd', npmArgs, { shell: true })
+      : spawn('sudo', ['npm', ...npmArgs], {})
+  attachHandlers(npm, onData, onErr, onClose)
+}
 
-    if (process.platform === 'win32') {
-      npm = spawn('npm.cmd', npmArgs, opts)
-    } else {
-      npm = spawn('npm', npmArgs, opts)
-    }
+function runConfigDirPnpm(
+  configPath: string,
+  command: ModuleCommand,
+  packageString: string,
+  onData: (output: any) => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
+  const pnpmCommand =
+    command === 'remove' ? 'remove' : packageString ? 'add' : 'install'
+  const pnpmArgs = [pnpmCommand, ...PNPM_CONFIG_DIR_ARGS]
+  if (packageString) {
+    pnpmArgs.push(packageString)
   }
 
-  npm.stdout.on('data', onData)
-  npm.stderr.on('data', onErr)
-  npm.on('close', onClose)
-  npm.on('error', (err: Error) => {
+  let finishMigration: (code: number) => void
+  try {
+    finishMigration = setAsideNpmModules(configPath)
+  } catch (err: any) {
     onErr(err)
     onClose(-1)
+    return
+  }
+
+  const pnpm =
+    process.platform === 'win32'
+      ? spawn('pnpm.cmd', pnpmArgs, { cwd: configPath, shell: true })
+      : spawn('pnpm', pnpmArgs, { cwd: configPath })
+  attachHandlers(pnpm, onData, onErr, (code: number) => {
+    try {
+      finishMigration(code)
+    } catch (err: any) {
+      onErr(err)
+    }
+    onClose(code)
+  })
+}
+
+const NPM_MODULES_BACKUP = 'node_modules.npm'
+
+// pnpm adopts a node_modules directory created by npm only partly and leaves
+// npm's hoisted packages behind. Move such a directory aside so that pnpm
+// rebuilds it from package.json, and put it back if pnpm fails.
+function setAsideNpmModules(configPath: string): (code: number) => void {
+  const modulesDir = path.join(configPath, 'node_modules')
+  if (
+    !fs.existsSync(modulesDir) ||
+    fs.existsSync(path.join(modulesDir, '.modules.yaml'))
+  ) {
+    return () => {}
+  }
+
+  const backupDir = path.join(configPath, NPM_MODULES_BACKUP)
+  fs.rmSync(backupDir, { recursive: true, force: true })
+  fs.renameSync(modulesDir, backupDir)
+  return (code) => {
+    if (code === 0) {
+      fs.rmSync(backupDir, { recursive: true, force: true })
+    } else {
+      fs.rmSync(modulesDir, { recursive: true, force: true })
+      fs.renameSync(backupDir, modulesDir)
+    }
+  }
+}
+
+function attachHandlers(
+  child: ChildProcess,
+  onData: (output: any) => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
+  // A process that fails to start emits both 'error' and 'close'
+  let closed = false
+  const close = (code: number) => {
+    if (!closed) {
+      closed = true
+      onClose(code)
+    }
+  }
+  child.stdout?.on('data', onData)
+  child.stderr?.on('data', onErr)
+  child.on('close', close)
+  child.on('error', (err: NodeJS.ErrnoException) => {
+    onErr(
+      err.code === 'ENOENT' && err.path === 'pnpm'
+        ? new Error(PNPM_MISSING_MESSAGE)
+        : err
+    )
+    close(-1)
   })
 }
 
@@ -723,7 +844,7 @@ module.exports = {
   getKeywords,
   restoreModules,
   importOrRequire,
-  runNpm,
+  runPackageManager,
   getPluginDataSize,
   resetModuleCaches
 }
