@@ -61,6 +61,39 @@ describe('Userinfo Validation Security', () => {
       expect(idTokenClaims.email_verified).to.equal(true)
     })
 
+    it('should NOT keep the ID token email_verified for a different userinfo email', () => {
+      const idTokenClaims: Record<string, unknown> = {
+        sub: 'user-123',
+        iss: 'https://auth.example.com',
+        email: 'verified@example.com',
+        email_verified: true
+      }
+      const userinfoClaims = {
+        sub: 'user-123',
+        email: 'other@example.com'
+      }
+
+      validateAndMergeUserinfoClaims(idTokenClaims, userinfoClaims)
+
+      expect(idTokenClaims.email).to.equal('other@example.com')
+      expect(idTokenClaims.email_verified).to.equal(undefined)
+    })
+
+    it('should keep ID token email and email_verified when userinfo has no email', () => {
+      const idTokenClaims: Record<string, unknown> = {
+        sub: 'user-123',
+        iss: 'https://auth.example.com',
+        email: 'verified@example.com',
+        email_verified: true
+      }
+      const userinfoClaims = { sub: 'user-123', email_verified: false }
+
+      validateAndMergeUserinfoClaims(idTokenClaims, userinfoClaims)
+
+      expect(idTokenClaims.email).to.equal('verified@example.com')
+      expect(idTokenClaims.email_verified).to.equal(true)
+    })
+
     it('should NOT merge security-critical claims from userinfo', () => {
       const idTokenClaims: Record<string, unknown> = {
         sub: 'user-123',

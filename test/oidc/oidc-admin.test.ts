@@ -203,5 +203,37 @@ describe('OIDC Admin Routes: environment variable values', () => {
         'mate@example.com'
       ])
     })
+
+    it('clears an identity list when a client sends an empty string', async () => {
+      const oidc = await startAdminRoutes({
+        oidc: { adminUsers: ['owner@example.com'] }
+      })
+
+      const response = await oidc.put(
+        formBody({
+          clientSecret: 'secret-from-form',
+          redirectUri: FORM_REDIRECT_URI,
+          adminUsers: ''
+        })
+      )
+
+      expect(response.status).to.equal(200)
+      expect(oidc.savedOidc()?.adminUsers).to.deep.equal([])
+    })
+
+    it('rejects non-string identity list entries', async () => {
+      const oidc = await startAdminRoutes()
+
+      const response = await oidc.put(
+        formBody({
+          clientSecret: 'secret-from-form',
+          redirectUri: FORM_REDIRECT_URI,
+          adminUsers: ['owner@example.com', 123]
+        })
+      )
+
+      expect(response.status).to.equal(400)
+      expect(oidc.savedOidc()).to.equal(undefined)
+    })
   })
 })

@@ -14,7 +14,7 @@ OIDC authentication provides:
 - **Modern authentication methods**: The IdP may support modern authentication methods such as [Passkey](https://safety.google/safety/authentication/passkey/) and Multi-factor authentication without implementing everything within Signal K
 - **Centralized User Management**: Manage users in your identity provider, not in Signal K
 - **Group-Based Permissions**: Map identity provider groups to Signal K permission levels
-- **Identity-Based Permissions**: Grant admin or read/write to specific users by email address, without depending on group claims
+- **Identity-Based Permissions**: Grant admin or read/write to specific users by email address, username or subject identifier, without depending on group claims
 - **Auto-Provisioning**: Automatically create Signal K users on first OIDC login
 
 OIDC works alongside local authentication. You can have both local users and OIDC users simultaneously.
@@ -179,7 +179,9 @@ SIGNALK_OIDC_IDENTITY_CLAIM=preferred_username
 
 Supported claims are `email`, `preferred_username`, and `sub`. Matching is
 case-insensitive for `email` and `preferred_username`; `sub` is an opaque
-identifier and is compared exactly.
+identifier and is compared exactly. OIDC does not guarantee that
+`preferred_username` is unique or stable, and some providers let users edit
+it; where that is the case, prefer `sub`.
 
 Group mappings take priority over the identity allowlists, and users on an
 identity allowlist can log in even when `autoCreateUsers` is disabled —
@@ -394,7 +396,9 @@ For production use, always run Signal K behind HTTPS. OIDC cookies are marked as
 3. Ensure the user is in a group listed in `adminGroups`
 4. Some providers require explicit configuration to include groups in tokens
 5. If using `adminUsers` with the default `email` identity claim, the token
-   must contain `email_verified: true` — an unverified email never matches
+   must contain `email_verified: true` — an unverified email never matches.
+   With `autoCreateUsers` disabled this surfaces as "User auto-creation is
+   disabled" on first login, because the unmatched user is not on any list
 
 ### "State mismatch" or "Invalid state"
 

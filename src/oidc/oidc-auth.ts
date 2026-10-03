@@ -85,19 +85,20 @@ export function validateAndMergeUserinfoClaims(
 
   // Only merge specific safe claims - don't allow userinfo to overwrite
   // security-critical claims like sub, iss, aud, nonce, etc.
-  // email and email_verified are merged together so they stay consistent.
-  const safeClaims = [
-    'email',
-    'email_verified',
-    'name',
-    'preferred_username',
-    groupsAttribute
-  ]
+  const safeClaims = ['name', 'preferred_username', groupsAttribute]
 
   for (const claim of safeClaims) {
     if (userinfoClaims[claim] !== undefined) {
       idTokenClaims[claim] = userinfoClaims[claim]
     }
+  }
+
+  // email_verified describes the address it arrived with, so the pair is
+  // replaced as a unit: a userinfo email without a verification flag must
+  // not inherit the ID token's email_verified for a different address.
+  if (userinfoClaims.email !== undefined) {
+    idTokenClaims.email = userinfoClaims.email
+    idTokenClaims.email_verified = userinfoClaims.email_verified
   }
 }
 
@@ -160,8 +161,9 @@ function isSafeRelativeUrl(url: unknown): url is string {
  * a new user if auto-creation is enabled.
  *
  * For existing users, permissions are recalculated on each login based on
- * current group memberships. This allows permission changes to take effect
- * when group assignments change in the identity provider.
+ * current group memberships and identity allowlists. This allows permission
+ * changes to take effect when group assignments change in the identity
+ * provider or the allowlists are edited.
  */
 export async function findOrCreateOIDCUser(
   userInfo: OIDCUserInfo,

@@ -426,6 +426,28 @@ describe('OIDC Configuration', () => {
       )
     })
 
+    it('should throw if adminUsers contains a non-string entry', () => {
+      const config = {
+        ...validConfig,
+        adminUsers: ['owner@example.com', 123] as unknown as string[]
+      }
+      expect(() => validateOIDCConfig(config)).to.throw(
+        OIDCError,
+        /adminUsers must be a list of strings/
+      )
+    })
+
+    it('should throw if readwriteUsers is not an array', () => {
+      const config = {
+        ...validConfig,
+        readwriteUsers: 'crew@example.com' as unknown as string[]
+      }
+      expect(() => validateOIDCConfig(config)).to.throw(
+        OIDCError,
+        /readwriteUsers must be a list of strings/
+      )
+    })
+
     it('should pass for valid identityClaim', () => {
       const withClaim = {
         ...validConfig,

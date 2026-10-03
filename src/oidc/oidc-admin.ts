@@ -151,10 +151,11 @@ function checkAllowConfigure(
 }
 
 /**
- * Parse a list field from comma-separated string if provided that way
+ * Parse a list field from comma-separated string if provided that way.
+ * An empty string is an explicit empty list, so a client can clear a field.
  */
 function parseListIfString(list: unknown): string[] | undefined {
-  if (typeof list === 'string' && list) {
+  if (typeof list === 'string') {
     return list
       .split(',')
       .map((item) => item.trim())

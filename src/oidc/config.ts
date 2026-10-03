@@ -113,6 +113,10 @@ export function parseEnvConfig(): PartialOIDCConfig {
     const match = IDENTITY_CLAIMS.find((valid) => valid === claim)
     if (match) {
       config.identityClaim = match
+    } else {
+      console.warn(
+        `Ignoring invalid SIGNALK_OIDC_IDENTITY_CLAIM "${process.env.SIGNALK_OIDC_IDENTITY_CLAIM}"; expected one of: ${IDENTITY_CLAIMS.join(', ')}`
+      )
     }
   }
 
@@ -282,6 +286,21 @@ export function validateOIDCConfig(
       `OIDC identityClaim must be one of: ${IDENTITY_CLAIMS.join(', ')}`,
       'CONFIG_INVALID'
     )
+  }
+
+  // Identity list entries are matched with string operations at login, so a
+  // non-string entry would fail every login that reaches the identity check
+  for (const field of ['adminUsers', 'readwriteUsers'] as const) {
+    const list = config[field]
+    if (
+      list !== undefined &&
+      (!Array.isArray(list) || list.some((entry) => typeof entry !== 'string'))
+    ) {
+      throw new OIDCError(
+        `OIDC ${field} must be a list of strings`,
+        'CONFIG_INVALID'
+      )
+    }
   }
 }
 
