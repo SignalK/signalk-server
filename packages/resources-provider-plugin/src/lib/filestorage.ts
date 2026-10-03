@@ -138,7 +138,9 @@ export class FileStore implements IResourceStore {
       }
     } catch (e: any) {
       if (e.code === 'ENOENT') {
-        throw new Error(`No such resource ${type} ${itemUuid}`)
+        throw Object.assign(new Error(`No such resource ${type} ${itemUuid}`), {
+          code: 'ENOENT'
+        })
       }
       console.error(e)
       throw new Error(`Error retrieving resource ${type} ${itemUuid}`)

@@ -19,6 +19,8 @@ import {
   TileLayerSourceSchema,
   MapServerSourceSchema,
   ChartSchema,
+  LogEntrySchema,
+  LogEntryTelemetryValueSchema,
   BaseResponseModelSchema
 } from '@signalk/server-api/typebox'
 
@@ -71,6 +73,10 @@ export const resourcesApiDoc: any = {
     {
       name: 'charts',
       description: 'Chart operations'
+    },
+    {
+      name: 'logentries',
+      description: 'Logbook entry operations'
     }
   ],
   security: [
@@ -102,6 +108,8 @@ export const resourcesApiDoc: any = {
         TileLayerSourceSchema,
         MapServerSourceSchema,
         ChartSchema,
+        LogEntryTelemetryValueSchema,
+        LogEntrySchema,
         BaseResponseModelSchema
       ]),
       RouteResponseModel: {
@@ -131,6 +139,12 @@ export const resourcesApiDoc: any = {
       ChartResponseModel: {
         allOf: [
           { $ref: '#/components/schemas/Chart' },
+          { $ref: '#/components/schemas/BaseResponseModel' }
+        ]
+      },
+      LogEntryResponseModel: {
+        allOf: [
+          { $ref: '#/components/schemas/LogEntry' },
           { $ref: '#/components/schemas/BaseResponseModel' }
         ]
       }
@@ -258,6 +272,16 @@ export const resourcesApiDoc: any = {
             }
           }
         }
+      },
+      LogEntryResponse: {
+        description: 'Log entry record response',
+        content: {
+          'application/json': {
+            schema: {
+              $ref: '#/components/schemas/LogEntryResponseModel'
+            }
+          }
+        }
       }
     },
     parameters: {
@@ -355,6 +379,75 @@ export const resourcesApiDoc: any = {
         schema: {
           type: 'string',
           example: 'my-provider'
+        }
+      },
+      DateParam: {
+        in: 'query',
+        name: 'date',
+        description: 'Limit results to a single UTC day.',
+        schema: {
+          type: 'string',
+          pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+          example: '2026-01-17'
+        }
+      },
+      FromParam: {
+        in: 'query',
+        name: 'from',
+        description:
+          'Limit results to entries from this datetime (RFC 3339 UTC, inclusive). Combined with `to` for a range that may span days.',
+        schema: {
+          type: 'string',
+          format: 'date-time',
+          example: '2026-01-01T00:00:00.000Z'
+        }
+      },
+      ToParam: {
+        in: 'query',
+        name: 'to',
+        description:
+          'Limit results to entries up to this datetime (RFC 3339 UTC, inclusive). Combined with `from` for a range that may span days.',
+        schema: {
+          type: 'string',
+          format: 'date-time',
+          example: '2026-01-31T23:59:59.999Z'
+        }
+      },
+      CategoryParam: {
+        in: 'query',
+        name: 'category',
+        description: 'Limit results to entries with the supplied category.',
+        schema: {
+          type: 'string',
+          example: 'navigation'
+        }
+      },
+      OriginParam: {
+        in: 'query',
+        name: 'origin',
+        description: 'Limit results to entries with the supplied origin.',
+        schema: {
+          type: 'string',
+          example: 'manual'
+        }
+      },
+      AuthorParam: {
+        in: 'query',
+        name: 'author',
+        description:
+          'Limit results to entries attributed to the supplied author.',
+        schema: {
+          type: 'string',
+          example: 'Alice'
+        }
+      },
+      DatesParam: {
+        in: 'query',
+        name: 'dates',
+        description:
+          'Return a day-calendar summary instead of entries: an object keyed by YYYY-MM-DD with the count of entries on each day, for the requested range or all history. Exempts the listing from the date/limit window requirement, since the summary is always complete.',
+        schema: {
+          type: 'boolean'
         }
       }
     },
@@ -1057,6 +1150,176 @@ export const resourcesApiDoc: any = {
       delete: {
         tags: ['charts'],
         summary: 'Remove Chart source with supplied id',
+        responses: {
+          '200': {
+            $ref: '#/components/responses/200ActionResponse'
+          },
+          default: {
+            $ref: '#/components/responses/ErrorResponse'
+          }
+        }
+      }
+    },
+    '/resources/logentries': {
+      parameters: [
+        {
+          $ref: '#/components/parameters/ProviderParam'
+        }
+      ],
+      get: {
+        tags: ['logentries'],
+        summary: 'Retrieve log entry resources',
+        description:
+          'Log entries are time-anchored, so a listing must carry at least one of `date`, `from`/`to` or `limit` — otherwise the request is rejected, since the response cannot distinguish "nothing older" from "a window was applied". `dates=true` alone is exempt: the day-calendar summary is always complete. Entries are ordered chronologically ascending by `datetime`, ties broken by id; `limit` selects the N most recent matches before the ordering.',
+        parameters: [
+          {
+            $ref: '#/components/parameters/DateParam'
+          },
+          {
+            $ref: '#/components/parameters/FromParam'
+          },
+          {
+            $ref: '#/components/parameters/ToParam'
+          },
+          {
+            $ref: '#/components/parameters/BoundingBoxParam'
+          },
+          {
+            $ref: '#/components/parameters/CategoryParam'
+          },
+          {
+            $ref: '#/components/parameters/OriginParam'
+          },
+          {
+            $ref: '#/components/parameters/AuthorParam'
+          },
+          {
+            $ref: '#/components/parameters/LimitParam'
+          },
+          {
+            $ref: '#/components/parameters/DatesParam'
+          }
+        ],
+        responses: {
+          default: {
+            description:
+              'An object containing Log entry resources, keyed by their UUID. With `dates=true`, a day-calendar summary instead: an object keyed by YYYY-MM-DD with the count of entries on each day.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    {
+                      type: 'object',
+                      additionalProperties: {
+                        allOf: [
+                          {
+                            $ref: '#/components/schemas/LogEntryResponseModel'
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      type: 'object',
+                      description: 'Day-calendar summary (dates=true)',
+                      additionalProperties: {
+                        type: 'object',
+                        properties: {
+                          count: {
+                            type: 'integer',
+                            description: 'Number of entries on the day'
+                          }
+                        },
+                        required: ['count']
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['logentries'],
+        summary: 'Add a new Log entry',
+        description:
+          'The server generates the entry UUID. The body needs no `id` and no `datetime`: an omitted datetime defaults to now. POST is not idempotent — a client retrying after a lost response may create a duplicate line; consumers needing idempotency PUT their own UUID.',
+        requestBody: {
+          description: 'Log entry resource entry',
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/LogEntry'
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            $ref: '#/components/responses/201ActionResponse'
+          },
+          default: {
+            $ref: '#/components/responses/ErrorResponse'
+          }
+        }
+      }
+    },
+    '/resources/logentries/{id}': {
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          description: 'log entry id',
+          required: true,
+          schema: {
+            $ref: '#/components/schemas/SignalKUuid'
+          }
+        },
+        {
+          $ref: '#/components/parameters/ProviderParam'
+        }
+      ],
+      get: {
+        tags: ['logentries'],
+        summary: 'Retrieve log entry with supplied id',
+        responses: {
+          '200': {
+            $ref: '#/components/responses/LogEntryResponse'
+          },
+          default: {
+            $ref: '#/components/responses/ErrorResponse'
+          }
+        }
+      },
+      put: {
+        tags: ['logentries'],
+        summary: 'Add / update a Log entry with supplied id',
+        description:
+          "Create-or-replace upsert on the entry id: editing an entry's content or its datetime is a single call. A payload `id`, if present, must equal the resource id.",
+        requestBody: {
+          description: 'Log entry resource entry',
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/LogEntry'
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            $ref: '#/components/responses/200ActionResponse'
+          },
+          default: {
+            $ref: '#/components/responses/ErrorResponse'
+          }
+        }
+      },
+      delete: {
+        tags: ['logentries'],
+        summary: 'Remove Log entry with supplied id',
         responses: {
           '200': {
             $ref: '#/components/responses/200ActionResponse'
