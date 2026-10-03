@@ -10,7 +10,7 @@ const radarIdParam = {
   example: 'nav1034A'
 }
 
-const radarApiDoc = {
+export const radarApiDoc = {
   openapi: '3.0.0',
   info: {
     title: 'Signal K Radar API',
@@ -364,16 +364,16 @@ const radarApiDoc = {
       AcquireTargetResponse: {
         type: 'object',
         properties: {
+          state: { type: 'string', enum: ['COMPLETED'] },
+          statusCode: { type: 'number', enum: [201] },
+          message: { type: 'string', example: 'OK' },
           targetId: {
             type: 'integer',
-            description: 'Assigned target ID (0 until confirmed by tracker)'
-          },
-          radarId: {
-            type: 'string',
-            description: 'Radar tracking this target'
+            description:
+              'Assigned target ID (0 until confirmed by tracker), needed to cancel tracking'
           }
         },
-        required: ['targetId', 'radarId']
+        required: ['state', 'statusCode', 'message', 'targetId']
       }
     }
   },
@@ -616,7 +616,7 @@ const radarApiDoc = {
           }
         },
         responses: {
-          '200': {
+          '201': {
             description: 'Target acquired',
             content: {
               'application/json': {
