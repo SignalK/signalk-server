@@ -102,6 +102,7 @@ interface SubOptions {
   validateChecksum?: boolean
   useCanboatjs?: boolean
   suppress0183event?: boolean
+  suppress0183eventSentences?: string[]
   sentenceEvent?: string | string[]
   appendChecksum?: boolean
   filters?: Array<{ source?: string; pgn?: string }>
