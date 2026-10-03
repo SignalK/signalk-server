@@ -40,6 +40,11 @@ describe('Demo plugin ', () => {
     const optionsTest = plugin.app.readPluginOptions()
     assert(optionsTest.configuration.testOption === 'testValue')
 
+    // With no security configured there is no credential to mint; pluginFetch
+    // must still reach the route rather than depending on one existing.
+    const res = await plugin.app.pluginFetch('testplugin', '/readonlyData')
+    assert.strictEqual(res.status, 200)
+
     assert(server.app.signalk.self.some.path.value === 'someValue')
 
     const outputValues = []
