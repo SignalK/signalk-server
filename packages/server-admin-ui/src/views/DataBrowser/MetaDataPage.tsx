@@ -12,6 +12,7 @@ import VirtualizedMetaTable from './VirtualizedMetaTable'
 import type { PathData } from '../../store'
 import { useStore } from '../../store'
 import { useSignalKData, type SelectOption } from './useSignalKData'
+import { getThemedSelectStyles } from '../../utils/reactSelectTheme'
 
 const getSignalkData = () => useStore.getState().signalkData
 
@@ -101,15 +102,10 @@ const MetaDataPage: React.FC = () => {
                   noOptionsMessage={() => 'No contexts available'}
                   components={{ Option: ContextOption }}
                   styles={{
-                    menu: (base) => ({ ...base, zIndex: 100 }),
-                    option: (base, state) => ({
+                    ...getThemedSelectStyles<SelectOption>(),
+                    singleValue: (base) => ({
                       ...base,
-                      backgroundColor: state.isSelected
-                        ? base.backgroundColor
-                        : 'transparent',
-                      ':hover': {
-                        backgroundColor: '#deebff'
-                      }
+                      color: 'var(--bs-body-color)'
                     })
                   }}
                 />

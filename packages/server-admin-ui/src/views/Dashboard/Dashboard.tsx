@@ -7,7 +7,7 @@ import Col from 'react-bootstrap/Col'
 import Table from 'react-bootstrap/Table'
 import { useServerStats, useWsStatus, useStore } from '../../store'
 import type { ProviderStatistics, ProviderStatus } from '../../store/types'
-import '../../fa-pulse.css'
+import '../../styles/fa-pulse.css'
 
 export default function Dashboard() {
   const serverStatistics = useServerStats()
@@ -240,7 +240,8 @@ export default function Dashboard() {
 
           <Card>
             <Card.Header>
-              Connection & Plugin Status <p className="text-danger">{errors}</p>
+              Connection & Plugin Status{' '}
+              {errors && <p className="text-danger">{errors}</p>}
             </Card.Header>
             <Card.Body>
               <Row>
