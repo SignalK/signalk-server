@@ -21,6 +21,18 @@ import {
   PartialOIDCConfig
 } from './types'
 
+const IDENTITY_CLAIMS = ['email', 'preferred_username', 'sub'] as const
+
+/**
+ * Split a comma-separated string into a list of trimmed, non-empty entries
+ */
+export function parseCommaList(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+}
+
 /**
  * Parse OIDC configuration from environment variables
  */
@@ -65,9 +77,7 @@ export function parseEnvConfig(): PartialOIDCConfig {
 
   // Parse admin groups from comma-separated string
   if (process.env.SIGNALK_OIDC_ADMIN_GROUPS) {
-    const groups = process.env.SIGNALK_OIDC_ADMIN_GROUPS.split(',')
-      .map((g) => g.trim())
-      .filter((g) => g.length > 0)
+    const groups = parseCommaList(process.env.SIGNALK_OIDC_ADMIN_GROUPS)
     if (groups.length > 0) {
       config.adminGroups = groups
     }
@@ -75,11 +85,40 @@ export function parseEnvConfig(): PartialOIDCConfig {
 
   // Parse readwrite groups from comma-separated string
   if (process.env.SIGNALK_OIDC_READWRITE_GROUPS) {
-    const groups = process.env.SIGNALK_OIDC_READWRITE_GROUPS.split(',')
-      .map((g) => g.trim())
-      .filter((g) => g.length > 0)
+    const groups = parseCommaList(process.env.SIGNALK_OIDC_READWRITE_GROUPS)
     if (groups.length > 0) {
       config.readwriteGroups = groups
+    }
+  }
+
+  // Parse admin users from comma-separated string
+  if (process.env.SIGNALK_OIDC_ADMIN_USERS) {
+    const users = parseCommaList(process.env.SIGNALK_OIDC_ADMIN_USERS)
+    if (users.length > 0) {
+      config.adminUsers = users
+    }
+  }
+
+  // Parse readwrite users from comma-separated string
+  if (process.env.SIGNALK_OIDC_READWRITE_USERS) {
+    const users = parseCommaList(process.env.SIGNALK_OIDC_READWRITE_USERS)
+    if (users.length > 0) {
+      config.readwriteUsers = users
+    }
+  }
+
+  // Parse identity claim (claim to match adminUsers/readwriteUsers against)
+  if (process.env.SIGNALK_OIDC_IDENTITY_CLAIM) {
+    const claim = process.env.SIGNALK_OIDC_IDENTITY_CLAIM.toLowerCase()
+    const match = IDENTITY_CLAIMS.find((valid) => valid === claim)
+    if (match) {
+      config.identityClaim = match
+    } else {
+      console.warn(
+        `OIDC: invalid SIGNALK_OIDC_IDENTITY_CLAIM "${process.env.SIGNALK_OIDC_IDENTITY_CLAIM}", ` +
+          `expected one of ${IDENTITY_CLAIMS.join(', ')}. Ignoring it and using ` +
+          `the identityClaim from security.json, or "email" if that is not set`
+      )
     }
   }
 
@@ -132,6 +171,10 @@ export function mergeConfigs(
       envConfig.readwriteGroups ?? securityJsonConfig.readwriteGroups,
     groupsAttribute:
       envConfig.groupsAttribute ?? securityJsonConfig.groupsAttribute,
+    adminUsers: envConfig.adminUsers ?? securityJsonConfig.adminUsers,
+    readwriteUsers:
+      envConfig.readwriteUsers ?? securityJsonConfig.readwriteUsers,
+    identityClaim: envConfig.identityClaim ?? securityJsonConfig.identityClaim,
     providerName:
       envConfig.providerName ??
       securityJsonConfig.providerName ??
@@ -237,6 +280,29 @@ export function validateOIDCConfig(
       `OIDC defaultPermission must be one of: readonly, readwrite, admin`,
       'CONFIG_INVALID'
     )
+  }
+
+  // Validate identityClaim
+  if (config.identityClaim && !IDENTITY_CLAIMS.includes(config.identityClaim)) {
+    throw new OIDCError(
+      `OIDC identityClaim must be one of: ${IDENTITY_CLAIMS.join(', ')}`,
+      'CONFIG_INVALID'
+    )
+  }
+
+  // Identity list entries are matched with string operations at login, so a
+  // non-string entry would fail every login that reaches the identity check
+  for (const field of ['adminUsers', 'readwriteUsers'] as const) {
+    const list = config[field]
+    if (
+      list !== undefined &&
+      (!Array.isArray(list) || list.some((entry) => typeof entry !== 'string'))
+    ) {
+      throw new OIDCError(
+        `OIDC ${field} must be a list of strings`,
+        'CONFIG_INVALID'
+      )
+    }
   }
 }
 
