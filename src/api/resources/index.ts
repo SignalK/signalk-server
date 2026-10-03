@@ -27,12 +27,11 @@ export const CHART_TILE_REGEX = /\/charts\/[^?]+\/\d+\/\d+\/\d+$/
 
 export const skUuid = () => `${uuidv4()}`
 
-/** Providers signal an absent resource by rejecting getResource with a
- * not-found style error (Node's ENOENT convention); anything else is a real
- * retrieval failure and must not be mistaken for "not found". */
+/** Providers signal an absent resource by rejecting getResource with an
+ * error whose code is 'ENOENT' (Node's not-found convention); anything else
+ * is a real retrieval failure and must not be mistaken for "not found". */
 const isResourceNotFound = (e: unknown): boolean =>
-  (e as { code?: string })?.code === 'ENOENT' ||
-  (e instanceof Error && /enoent|no such resource|not found/i.test(e.message))
+  (e as { code?: string })?.code === 'ENOENT'
 
 /** Singular of a resource type name for descriptions: routes -> route,
  * logentries -> logentry. */
@@ -249,7 +248,11 @@ export class ResourcesApi {
         .then(async (r) => {
           // the delta carries the stored entry, which providers may have
           // normalized or completed beyond the request payload
-          const stored = await methods.getResource(resId)
+          const stored = await this.storedResourceOrWritten(
+            resId,
+            methods,
+            data
+          )
           this.app.handleMessage(
             provider as string,
             this.buildDeltaMsg(resType, resId, stored),
@@ -263,6 +266,23 @@ export class ResourcesApi {
         })
     } else {
       return Promise.reject(new Error(`No provider for ${resType}`))
+    }
+  }
+
+  /** After a successful write, the delta is built from the stored resource so
+   * it carries what the provider actually persisted. A failing follow-up read
+   * must not turn a successful write into a failed one: the delta falls back
+   * to the written payload (with any server-supplied fields already set). */
+  private async storedResourceOrWritten(
+    resId: string,
+    methods: ResourceProviderMethods,
+    written: object
+  ): Promise<object> {
+    try {
+      return await methods.getResource(resId)
+    } catch (e) {
+      debug.enabled && debug(`Post-write read failed, using written payload`, e)
+      return written
     }
   }
 
@@ -845,7 +865,11 @@ export class ResourcesApi {
           await methods.setResource(id, req.body)
           // the delta carries the stored entry, which providers may have
           // normalized or completed beyond the request payload
-          const stored = await methods.getResource(id)
+          const stored = await this.storedResourceOrWritten(
+            id,
+            methods,
+            req.body
+          )
 
           server.handleMessage(
             provider as string,
@@ -948,7 +972,11 @@ export class ResourcesApi {
           await methods.setResource(req.params.resourceId, req.body)
           // the delta carries the stored entry, which providers may have
           // normalized or completed beyond the request payload
-          const stored = await methods.getResource(req.params.resourceId)
+          const stored = await this.storedResourceOrWritten(
+            req.params.resourceId,
+            methods,
+            req.body
+          )
 
           server.handleMessage(
             provider as string,
