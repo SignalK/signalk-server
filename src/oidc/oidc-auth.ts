@@ -37,7 +37,11 @@ import { getDiscoveryDocument } from './discovery'
 import { buildAuthorizationUrl } from './authorization'
 import { exchangeAuthorizationCode, fetchUserinfo } from './token-exchange'
 import { validateIdToken } from './id-token-validation'
-import { mapUserToPermission, matchIdentityList } from './permission-mapping'
+import {
+  matchIdentityList,
+  PermissionGrant,
+  resolveUserPermission
+} from './permission-mapping'
 
 const debug = createDebug('signalk-server:oidc-auth')
 const skAuthPrefix = '/signalk/v1/auth'
@@ -63,6 +67,8 @@ function arraysEqualIgnoringOrder(
  * Security considerations:
  * - Validates that userinfo sub matches ID token sub (OIDC Core spec requirement)
  * - Only merges safe claims (email, email_verified, name, preferred_username, groups)
+ * - Merges email_verified only together with email, so a verified flag from
+ *   the ID token is never attached to a different address from userinfo
  * - Does NOT allow userinfo to overwrite security-critical claims (sub, iss, aud, nonce)
  *
  * @param idTokenClaims The validated claims from the ID token
@@ -173,7 +179,8 @@ export async function findOrCreateOIDCUser(
   const issuer = oidcConfig.issuer
 
   // Calculate permission based on user's groups and identity allowlists
-  const mappedPermission = mapUserToPermission(userInfo, oidcConfig)
+  const grant = resolveUserPermission(userInfo, oidcConfig)
+  const mappedPermission = grant.permission
 
   // Build OIDC metadata to store with user
   const oidcMetadata = {
@@ -223,6 +230,7 @@ export async function findOrCreateOIDCUser(
       }
     }
 
+    logPermissionGrant(userInfo.sub, grant)
     return user
   }
 
@@ -264,7 +272,25 @@ export async function findOrCreateOIDCUser(
     throw err
   }
 
+  logPermissionGrant(userInfo.sub, grant)
   return newUser
+}
+
+/**
+ * Log, once per login, which rule granted the user's permission. Logs the
+ * claim type that matched, never the claim value, so email addresses stay
+ * out of the default log.
+ */
+function logPermissionGrant(sub: string, grant: PermissionGrant): void {
+  const rule =
+    grant.source === 'identity list'
+      ? `identity list (claim: ${grant.identityClaim})`
+      : grant.source === 'group'
+        ? 'group'
+        : 'default permission'
+  console.log(
+    `OIDC: login for subject ${sub} granted ${grant.permission} by ${rule}`
+  )
 }
 
 /**

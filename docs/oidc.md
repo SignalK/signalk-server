@@ -72,7 +72,7 @@ export SIGNALK_OIDC_CLIENT_SECRET=your-client-secret
 | `SIGNALK_OIDC_CLIENT_SECRET`      | Yes      | -                      | Client secret from the provider                                                |
 | `SIGNALK_OIDC_SCOPE`              | No       | `openid email profile` | OAuth scopes to request (add `groups` for permission mapping)                  |
 | `SIGNALK_OIDC_DEFAULT_PERMISSION` | No       | `readonly`             | Default permission for new users                                               |
-| `SIGNALK_OIDC_AUTO_CREATE_USERS`  | No       | `true`                 | Auto-create users on first login                                               |
+| `SIGNALK_OIDC_AUTO_CREATE_USERS`  | No       | `true`                 | Auto-create users on first login. Identity-list users are always created       |
 | `SIGNALK_OIDC_ADMIN_GROUPS`       | No       | -                      | Comma-separated groups that grant admin                                        |
 | `SIGNALK_OIDC_READWRITE_GROUPS`   | No       | -                      | Comma-separated groups that grant readwrite                                    |
 | `SIGNALK_OIDC_GROUPS_ATTRIBUTE`   | No       | `groups`               | ID token claim containing groups                                               |
@@ -178,15 +178,17 @@ a different `identityClaim`:
 SIGNALK_OIDC_IDENTITY_CLAIM=preferred_username
 ```
 
+Note that `preferred_username` is not verified and may not be unique. Some
+providers also let users edit it. Use it only with a provider that
+guarantees it is verified and unique. Otherwise, use `sub`.
+
 Supported claims are `email`, `preferred_username`, and `sub`. Matching is
 case-insensitive for `email` and `preferred_username`; `sub` is an opaque
-identifier and is compared exactly. OIDC does not guarantee that
-`preferred_username` is unique or stable, and some providers let users edit
-it; where that is the case, prefer `sub`.
+identifier and is compared exactly.
 
 Group mappings take priority over the identity allowlists, and users on an
-identity allowlist can log in even when `autoCreateUsers` is disabled —
-being listed is the preconfiguration.
+identity allowlist can log in even when `autoCreateUsers` is disabled. The
+list entry is the configuration that admits them.
 
 ## Provider Setup Guides
 

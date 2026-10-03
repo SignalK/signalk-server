@@ -2,7 +2,8 @@ import { expect } from 'chai'
 
 import {
   mapUserToPermission,
-  matchIdentityList
+  matchIdentityList,
+  resolveUserPermission
 } from '../../src/oidc/permission-mapping'
 import type { OIDCConfig } from '../../src/oidc/types'
 
@@ -386,6 +387,40 @@ describe('OIDC Permission Mapping', () => {
         }
         const user = { ...verifiedUser, groups: ['admins'] }
         expect(matchIdentityList(user, config)).to.equal(undefined)
+      })
+    })
+  })
+
+  describe('resolveUserPermission', () => {
+    const config: OIDCConfig = {
+      ...baseConfig,
+      adminGroups: ['admins'],
+      readwriteUsers: ['crew@example.com']
+    }
+
+    it('reports a group grant', () => {
+      expect(
+        resolveUserPermission({ sub: 'u1', groups: ['admins'] }, config)
+      ).to.deep.equal({ permission: 'admin', source: 'group' })
+    })
+
+    it('reports an identity list grant with the claim type', () => {
+      expect(
+        resolveUserPermission(
+          { sub: 'u2', email: 'crew@example.com', emailVerified: true },
+          config
+        )
+      ).to.deep.equal({
+        permission: 'readwrite',
+        source: 'identity list',
+        identityClaim: 'email'
+      })
+    })
+
+    it('reports a default grant', () => {
+      expect(resolveUserPermission({ sub: 'u3' }, config)).to.deep.equal({
+        permission: 'readonly',
+        source: 'default'
       })
     })
   })

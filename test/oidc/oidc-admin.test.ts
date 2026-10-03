@@ -221,6 +221,21 @@ describe('OIDC Admin Routes: environment variable values', () => {
       expect(oidc.savedOidc()?.adminUsers).to.deep.equal([])
     })
 
+    it('trims array entries and drops empty ones', async () => {
+      const oidc = await startAdminRoutes()
+
+      const response = await oidc.put(
+        formBody({
+          clientSecret: 'secret-from-form',
+          redirectUri: FORM_REDIRECT_URI,
+          adminUsers: [' owner@example.com ', '', '  ']
+        })
+      )
+
+      expect(response.status).to.equal(200)
+      expect(oidc.savedOidc()?.adminUsers).to.deep.equal(['owner@example.com'])
+    })
+
     it('rejects non-string identity list entries', async () => {
       const oidc = await startAdminRoutes()
 

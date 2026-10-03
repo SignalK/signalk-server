@@ -16,7 +16,12 @@
 
 import { Request, Response, IRouter } from 'express'
 import { OIDCError, PartialOIDCConfig } from './types'
-import { parseEnvConfig, validateOIDCConfig, mergeConfigs } from './config'
+import {
+  parseCommaList,
+  parseEnvConfig,
+  validateOIDCConfig,
+  mergeConfigs
+} from './config'
 import { getDiscoveryDocument } from './discovery'
 
 const SERVERROUTESPREFIX = '/skServer'
@@ -151,18 +156,21 @@ function checkAllowConfigure(
 }
 
 /**
- * Parse a list field from comma-separated string if provided that way.
- * An empty string is an explicit empty list, so a client can clear a field.
+ * Parse a list field from the settings API into trimmed, non-empty entries.
+ * Accepts a comma-separated string or an array of strings. An empty string
+ * is an explicit empty list, so a client can clear a field. An array with a
+ * non-string entry is left unchanged for validateOIDCConfig to reject.
  */
 function parseListIfString(list: unknown): string[] | undefined {
   if (typeof list === 'string') {
-    return list
-      .split(',')
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
+    return parseCommaList(list)
   }
-  if (Array.isArray(list)) {
-    return list as string[]
+  if (
+    Array.isArray(list) &&
+    list.every((item): item is string => typeof item === 'string')
+  ) {
+    // Entries are not split on commas: a group name may contain one
+    return list.map((item) => item.trim()).filter((item) => item.length > 0)
   }
   return undefined
 }

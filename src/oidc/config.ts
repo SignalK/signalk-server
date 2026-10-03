@@ -24,9 +24,9 @@ import {
 const IDENTITY_CLAIMS = ['email', 'preferred_username', 'sub'] as const
 
 /**
- * Parse a comma-separated environment variable into a list
+ * Split a comma-separated string into a list of trimmed, non-empty entries
  */
-function parseListEnv(value: string): string[] {
+export function parseCommaList(value: string): string[] {
   return value
     .split(',')
     .map((item) => item.trim())
@@ -77,7 +77,7 @@ export function parseEnvConfig(): PartialOIDCConfig {
 
   // Parse admin groups from comma-separated string
   if (process.env.SIGNALK_OIDC_ADMIN_GROUPS) {
-    const groups = parseListEnv(process.env.SIGNALK_OIDC_ADMIN_GROUPS)
+    const groups = parseCommaList(process.env.SIGNALK_OIDC_ADMIN_GROUPS)
     if (groups.length > 0) {
       config.adminGroups = groups
     }
@@ -85,7 +85,7 @@ export function parseEnvConfig(): PartialOIDCConfig {
 
   // Parse readwrite groups from comma-separated string
   if (process.env.SIGNALK_OIDC_READWRITE_GROUPS) {
-    const groups = parseListEnv(process.env.SIGNALK_OIDC_READWRITE_GROUPS)
+    const groups = parseCommaList(process.env.SIGNALK_OIDC_READWRITE_GROUPS)
     if (groups.length > 0) {
       config.readwriteGroups = groups
     }
@@ -93,7 +93,7 @@ export function parseEnvConfig(): PartialOIDCConfig {
 
   // Parse admin users from comma-separated string
   if (process.env.SIGNALK_OIDC_ADMIN_USERS) {
-    const users = parseListEnv(process.env.SIGNALK_OIDC_ADMIN_USERS)
+    const users = parseCommaList(process.env.SIGNALK_OIDC_ADMIN_USERS)
     if (users.length > 0) {
       config.adminUsers = users
     }
@@ -101,7 +101,7 @@ export function parseEnvConfig(): PartialOIDCConfig {
 
   // Parse readwrite users from comma-separated string
   if (process.env.SIGNALK_OIDC_READWRITE_USERS) {
-    const users = parseListEnv(process.env.SIGNALK_OIDC_READWRITE_USERS)
+    const users = parseCommaList(process.env.SIGNALK_OIDC_READWRITE_USERS)
     if (users.length > 0) {
       config.readwriteUsers = users
     }
@@ -115,7 +115,9 @@ export function parseEnvConfig(): PartialOIDCConfig {
       config.identityClaim = match
     } else {
       console.warn(
-        `Ignoring invalid SIGNALK_OIDC_IDENTITY_CLAIM "${process.env.SIGNALK_OIDC_IDENTITY_CLAIM}"; expected one of: ${IDENTITY_CLAIMS.join(', ')}`
+        `OIDC: invalid SIGNALK_OIDC_IDENTITY_CLAIM "${process.env.SIGNALK_OIDC_IDENTITY_CLAIM}", ` +
+          `expected one of ${IDENTITY_CLAIMS.join(', ')}. Ignoring it and using ` +
+          `the identityClaim from security.json, or "email" if that is not set`
       )
     }
   }

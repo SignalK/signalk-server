@@ -134,10 +134,21 @@ describe('OIDC Configuration', () => {
       expect(config.identityClaim).to.equal('preferred_username')
     })
 
-    it('should ignore invalid identity claim values', () => {
+    it('should ignore invalid identity claim values with a warning', () => {
       process.env.SIGNALK_OIDC_IDENTITY_CLAIM = 'nickname'
-      const config = parseEnvConfig()
+      const warnings: string[] = []
+      const originalWarn = console.warn
+      console.warn = (message: string) => warnings.push(message)
+      let config
+      try {
+        config = parseEnvConfig()
+      } finally {
+        console.warn = originalWarn
+      }
       expect(config.identityClaim).to.equal(undefined)
+      expect(warnings).to.have.length(1)
+      expect(warnings[0]).to.include('"nickname"')
+      expect(warnings[0]).to.include('"email"')
     })
 
     it('should parse provider name', () => {

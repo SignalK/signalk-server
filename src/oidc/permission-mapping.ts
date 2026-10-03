@@ -130,8 +130,19 @@ export function matchIdentityList(
   return undefined
 }
 
+/** Which rule produced a user's permission */
+export type PermissionSource = 'group' | 'identity list' | 'default'
+
+export interface PermissionGrant {
+  permission: SignalKPermission
+  source: PermissionSource
+  /** The claim matched against the identity list, when source is 'identity list' */
+  identityClaim?: OIDCIdentityClaim
+}
+
 /**
- * Map an authenticated OIDC user to a Signal K permission level
+ * Map an authenticated OIDC user to a Signal K permission level, and report
+ * which rule granted it.
  *
  * Priority:
  * 1. Group mappings (adminGroups, then readwriteGroups)
@@ -143,15 +154,34 @@ export function matchIdentityList(
  *
  * @param userInfo - User information extracted from validated OIDC claims
  * @param config - OIDC configuration with permission mappings
- * @returns The mapped permission level
+ * @returns The mapped permission level and the rule that granted it
+ */
+export function resolveUserPermission(
+  userInfo: OIDCUserInfo,
+  config: OIDCConfig
+): PermissionGrant {
+  const fromGroups = matchGroups(userInfo.groups, config)
+  if (fromGroups) {
+    return { permission: fromGroups, source: 'group' }
+  }
+  const fromIdentity = matchIdentityList(userInfo, config)
+  if (fromIdentity) {
+    return {
+      permission: fromIdentity,
+      source: 'identity list',
+      identityClaim: config.identityClaim ?? DEFAULT_IDENTITY_CLAIM
+    }
+  }
+  return { permission: config.defaultPermission, source: 'default' }
+}
+
+/**
+ * Map an authenticated OIDC user to a Signal K permission level.
+ * See resolveUserPermission for the priority order.
  */
 export function mapUserToPermission(
   userInfo: OIDCUserInfo,
   config: OIDCConfig
 ): SignalKPermission {
-  return (
-    matchGroups(userInfo.groups, config) ??
-    matchIdentityList(userInfo, config) ??
-    config.defaultPermission
-  )
+  return resolveUserPermission(userInfo, config).permission
 }
