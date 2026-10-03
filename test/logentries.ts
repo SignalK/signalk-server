@@ -164,6 +164,31 @@ describe('Logentries resource type', () => {
     })
   })
 
+  it('the delta carries the stored entry, not the request body', async function () {
+    const { provider, createWsPromiser, post, put } = await startWithProvider()
+    const wsPromiser = createWsPromiser()
+    await wsPromiser.nthMessage(1)
+
+    // simulate a provider that preserves omitted fields on replace
+    const setStored = provider.methods.setResource.bind(provider.methods)
+    provider.methods.setResource = (id: string, value: object) =>
+      setStored(id, { ...provider.store[id], ...value })
+
+    const response = await post('/resources/logentries', {
+      text: 'Anchored in Högsåra cove',
+      author: 'alice',
+      telemetry: [{ path: 'navigation.state', value: 'anchored' }]
+    })
+    const { id } = (await response.json()) as { id: string }
+
+    await put(`/resources/logentries/${id}`, { text: 'Weighed anchor' })
+
+    const resourceDelta = JSON.parse(await wsPromiser.nthMessage(3))
+    const { value } = resourceDelta.updates[0].values[0]
+    value.should.deep.equal(provider.store[id])
+    value.author.should.equal('alice')
+  })
+
   it('rejects a POST carrying a payload id', async function () {
     const { post } = await startWithProvider()
     const response = await post(

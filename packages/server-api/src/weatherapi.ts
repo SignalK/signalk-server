@@ -344,8 +344,6 @@ export interface WeatherData {
     swellHeight?: number
     swellPeriod?: number
     swellDirection?: number
-    /** Sea state as a Beaufort scale label; the numeric code is on seaStateValue */
-    seaState?: string
     /** Sea state (Beaufort) */
     seaStateValue?: number
   }
