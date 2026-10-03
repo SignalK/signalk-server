@@ -382,7 +382,7 @@ const GnssPositionSettings: React.FC = () => {
           Accurate antenna positions improve position data by accounting for the
           offset between GNSS receiver and vessel reference point (CCRP:
           Consistent Common Reference Point). Positive &quot;From Center&quot;
-          values indicate port, negative indicate starboard (per Signal K
+          values indicate starboard, negative values indicate port (per Signal K
           specification). Configure a detected source by editing one of its
           fields.
         </Alert>

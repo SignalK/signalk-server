@@ -58,14 +58,14 @@ const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
   const svgRef = useRef<SVGSVGElement>(null)
   const [dragging, setDragging] = useState<number | null>(null)
 
-  // SK spec: positive fromCenter is port, negative is starboard, but SVG
-  // x grows rightward (starboard) — flip the sign when mapping into SVG.
+  // SK spec: positive fromCenter is starboard, and SVG x increases to the
+  // right, so the mapping is direct.
   const toSvgCoords = useCallback(
     (fromBow: number | null, fromCenter: number | null) => {
       const bow = fromBow ?? 0
       const center = fromCenter ?? 0
       const y = HULL_TOP + (bow / vesselLength) * HULL_H
-      const x = HULL_CX - (center / (vesselBeam / 2)) * (HULL_W / 2)
+      const x = HULL_CX + (center / (vesselBeam / 2)) * (HULL_W / 2)
       return {
         x: Math.max(HULL_LEFT, Math.min(HULL_RIGHT, x)),
         y: Math.max(HULL_TOP, Math.min(HULL_BOTTOM, y))
@@ -82,7 +82,7 @@ const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
         Math.round(((clampedY - HULL_TOP) / HULL_H) * vesselLength * 10) / 10
       const fromCenter =
         Math.round(
-          -((clampedX - HULL_CX) / (HULL_W / 2)) * (vesselBeam / 2) * 10
+          ((clampedX - HULL_CX) / (HULL_W / 2)) * (vesselBeam / 2) * 10
         ) / 10
       return { fromBow, fromCenter }
     },
