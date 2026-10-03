@@ -248,7 +248,7 @@
 
 // Re-enable pointer events on the controls that need to be clickable
 // in their own right (the author filter button and the failed-install
-// pill that opens the npm log — the chevron, other state pills, and
+// pill that opens the install log — the chevron, other state pills, and
 // badges are decorative and the link below them handles the click).
 .plugin-card .plugin-card__author-button,
 .plugin-card .plugin-card__state-pill-button {

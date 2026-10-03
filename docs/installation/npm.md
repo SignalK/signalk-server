@@ -12,6 +12,12 @@ Signal K Server can be installed directly using NPM.
 sudo npm install -g signalk-server
 ```
 
+The App Store installs plugins and webapps with [pnpm](https://pnpm.io), so install it as well:
+
+```shell
+sudo npm install -g pnpm@11
+```
+
 Once installation is complete, enter the following in a terminal window, to generate a settings file and configure the server to start automatically:
 
 ```shell

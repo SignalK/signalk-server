@@ -28,27 +28,26 @@ interface AppStoreResponse {
   installing: AppInfo[]
 }
 
-// The install path shells out to `npm`. Putting a stub earlier on PATH keeps
+// The install path shells out to `pnpm`. Putting a stub earlier on PATH keeps
 // the whole server pipeline real — HTTP endpoint, install state machine,
 // APP_STORE_CHANGED refresh — while the "install" itself is just a local
 // package.json rewrite, so the test never touches the network.
-function writeNpmStub(binDir: string, configDir: string) {
+function writePnpmStub(binDir: string, configDir: string) {
   fs.mkdirSync(binDir, { recursive: true })
-  const stub = path.join(binDir, 'npm')
+  const stub = path.join(binDir, 'pnpm')
   const moduleDir = path.join(configDir, 'node_modules', PLUGIN_NAME)
   fs.writeFileSync(
     stub,
     `#!/bin/sh
-# The server also probes "npm --version" at startup, so only an actual
-# install may touch the plugin on disk.
+# Only an actual install may touch the plugin on disk.
 for arg in "$@"; do
-  if [ "$arg" = "install" ]; then
+  if [ "$arg" = "add" ]; then
     # While the block file exists the install stays in flight, which lets a
     # test observe a second install sitting in the queue behind this one.
     while [ -f ${JSON.stringify(blockFilePath(binDir))} ]; do
       sleep 0.05
     done
-    # Emulate "npm --save --ignore-scripts install <name>@<version>" by
+    # Emulate "pnpm add <name>@<version>" by
     # bumping the on-disk package.json to the requested version.
     cat > ${JSON.stringify(path.join(moduleDir, 'package.json'))} <<'EOF'
 ${JSON.stringify(pluginPackageJson(AVAILABLE_VERSION), null, 2)}
@@ -57,7 +56,7 @@ EOF
     exit 0
   fi
 done
-echo "0.0.0-npm-stub"
+echo "0.0.0-pnpm-stub"
 exit 0
 `
   )
@@ -82,6 +81,8 @@ function pluginPackageJson(version: string) {
 function seedConfigDir(configDir: string) {
   const moduleDir = path.join(configDir, 'node_modules', PLUGIN_NAME)
   fs.mkdirSync(moduleDir, { recursive: true })
+  // Marks node_modules as managed by pnpm rather than created by npm
+  fs.writeFileSync(path.join(configDir, 'node_modules', '.modules.yaml'), '')
   fs.writeFileSync(
     path.join(configDir, 'package.json'),
     JSON.stringify(
@@ -160,7 +161,7 @@ async function getAppStore(host: string): Promise<AppStoreResponse> {
   return (await res.json()) as AppStoreResponse
 }
 
-// npm runs in a child process, so the endpoints are polled rather than awaited.
+// pnpm runs in a child process, so the endpoints are polled rather than awaited.
 const POLL_INTERVAL_MS = 100
 const POLL_ATTEMPTS = 100
 const SUITE_TIMEOUT_MS = 60000
@@ -184,7 +185,7 @@ async function waitForEntry(
 }
 
 describe('appstore reports the just-installed version (issue #2791)', function () {
-  // Real npm-stub subprocess plus a full server start.
+  // Real pnpm-stub subprocess plus a full server start.
   this.timeout(SUITE_TIMEOUT_MS)
 
   let stop: (() => Promise<unknown>) | undefined
@@ -202,7 +203,7 @@ describe('appstore reports the just-installed version (issue #2791)', function (
     seedConfigDir(configDir)
 
     binDir = path.join(configDir, 'bin')
-    writeNpmStub(binDir, configDir)
+    writePnpmStub(binDir, configDir)
     originalPath = process.env.PATH
     process.env.PATH = `${binDir}${path.delimiter}${process.env.PATH}`
 
@@ -267,7 +268,7 @@ describe('appstore reports the just-installed version (issue #2791)', function (
 
     // The regression in #2791: the Installs & Removes screen rendered
     // installedVersion, which is the version the *running* plugin was loaded
-    // from and stays stale until restart. pendingVersion carries what npm
+    // from and stays stale until restart. pendingVersion carries what pnpm
     // actually put on disk.
     expect(entry.pendingVersion).to.equal(AVAILABLE_VERSION)
     expect(entry.installedVersion).to.equal(INSTALLED_VERSION)
