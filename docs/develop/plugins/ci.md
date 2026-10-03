@@ -72,7 +72,7 @@ The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if 
 
 **npm pack** — Verifies all files referenced by `main`/`exports` are included in the published package
 
-**App Store compatibility** — Installs the plugin with `--ignore-scripts` (as the App Store does) and checks for native addon dependencies
+**App Store compatibility** — Installs the plugin with pnpm and `--ignore-scripts` (as the App Store does) and checks for native addon dependencies
 
 **Stray files** — Warns when build and test steps leave untracked files
 
