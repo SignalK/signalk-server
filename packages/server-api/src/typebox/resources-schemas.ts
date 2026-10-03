@@ -316,6 +316,112 @@ export const ChartSchema = Type.Intersect(
 )
 export type ChartResource = Static<typeof ChartSchema>
 
+/** Log entry telemetry pathvalue — a flattened delta pathvalue observed at
+ * the entry datetime. Unknown members are preserved verbatim. */
+export const LogEntryTelemetryValueSchema = Type.Object(
+  {
+    path: Type.String({ description: 'Signal K path of the observed value' }),
+    value: Type.Unknown({
+      description:
+        'Value of the path, in Signal K SI units and the specification value shapes'
+    }),
+    $source: Type.Optional(
+      Type.String({
+        description: 'Source the value was sampled from (a sourceRef)'
+      })
+    ),
+    timestamp: Type.Optional(
+      Type.String({
+        format: 'date-time',
+        description: 'When the value was sampled'
+      })
+    )
+  },
+  {
+    $id: 'LogEntryTelemetryValue',
+    additionalProperties: true,
+    description:
+      'A flattened delta pathvalue observed at the entry datetime. The same path may appear more than once, each pathvalue with its own $source.'
+  }
+)
+export type LogEntryTelemetryValueType = Static<
+  typeof LogEntryTelemetryValueSchema
+>
+
+/** Log entry resource — a line in the vessel's logbook, time-anchored by
+ * `datetime` and carrying an optional snapshot of Signal K paths observed at
+ * that moment.
+ *
+ * Open content model: consumers must ignore unknown fields and providers must
+ * preserve them on write; top-level extension fields should be prefixed with
+ * the writing application's namespace (e.g. `x-stylusapp-ink`), and telemetry
+ * extension paths should use a namespaced root segment. `origin` and
+ * `category` are open enumerations: the listed values are the recommended
+ * vocabulary, unknown values must not be rejected. */
+export const LogEntrySchema = Type.Object(
+  {
+    id: Type.Optional(
+      Type.String({
+        pattern: `^${SignalKUuidPattern}$`,
+        description:
+          'Entry UUID. Equals the resource id; the resource id is canonical.'
+      })
+    ),
+    datetime: Type.Optional(
+      Type.String({
+        format: 'date-time',
+        description:
+          'RFC 3339 UTC datetime of the entry, the chronological sort key. Defaults to now on create and is preserved on replace.'
+      })
+    ),
+    text: Type.String({ description: 'The log line itself' }),
+    telemetry: Type.Optional(
+      Type.Array(LogEntryTelemetryValueSchema, {
+        description:
+          'Snapshot of Signal K paths observed at the entry datetime: vessel state, engines, radio and crew context alike. Absent when nothing was captured.'
+      })
+    ),
+    end: Type.Optional(
+      Type.Boolean({
+        description: 'true marks the end of a voyage — trip end, never day end'
+      })
+    ),
+    author: Type.Optional(
+      Type.String({
+        description:
+          'Crew member the line is attributed to. Free text, not an audit identity: delegation is a feature.'
+      })
+    ),
+    origin: Type.Optional(
+      Type.String({
+        description:
+          'How the line came to be. Open enumeration; the recommended vocabulary is manual (typed in a UI), auto (trigger/hourly/notification) and agent (machine writing on behalf of a human).',
+        examples: ['manual', 'auto', 'agent']
+      })
+    ),
+    category: Type.Optional(
+      Type.String({
+        description:
+          'Entry category. Open enumeration; the recommended vocabulary is navigation, engine, radio and maintenance.',
+        examples: ['navigation', 'engine', 'radio', 'maintenance']
+      })
+    ),
+    schemaVersion: Type.Optional(
+      Type.Integer({
+        minimum: 1,
+        description:
+          'Reserved for future revisions of the entry schema; absent = 1. Other writers must not use the name for anything else.'
+      })
+    )
+  },
+  {
+    $id: 'LogEntry',
+    additionalProperties: true,
+    description: 'A log entry resource'
+  }
+)
+export type LogEntryResource = Static<typeof LogEntrySchema>
+
 /**
  * 200 success response with resource ID.
  */

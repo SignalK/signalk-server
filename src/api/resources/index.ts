@@ -27,6 +27,15 @@ export const CHART_TILE_REGEX = /\/charts\/[^?]+\/\d+\/\d+\/\d+$/
 
 export const skUuid = () => `${uuidv4()}`
 
+/** Singular of a resource type name for descriptions: routes -> route,
+ * logentries -> logentry. */
+const singularResourceType = (type: string): string =>
+  type.endsWith('ies')
+    ? `${type.slice(0, -3)}y`
+    : type.endsWith('s')
+      ? type.slice(0, -1)
+      : type
+
 interface DefaultProviders {
   [index: string]: string
 }
@@ -968,9 +977,7 @@ export class ResourcesApi {
     for (const i in this.resProvider) {
       if (this.resProvider.hasOwnProperty(i)) {
         resPaths[i] = {
-          description: `Path containing ${
-            i.slice(-1) === 's' ? i.slice(0, i.length - 1) : i
-          } resources`
+          description: `Path containing ${singularResourceType(i)} resources`
         }
       }
     }
