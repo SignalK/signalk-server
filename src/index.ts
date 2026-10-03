@@ -144,7 +144,11 @@ class Server {
         xDnsPrefetchControl: true,
         xDownloadOptions: true,
         xPermittedCrossDomainPolicies: true,
-        referrerPolicy: true,
+        // Send the origin, never the path, to other sites. `no-referrer` (helmet's
+        // default) makes webapps fetch tile.openstreetmap.org without a Referer,
+        // and OSM's tile usage policy then serves an "Access blocked" image for
+        // every tile.
+        referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
         hsts: true,
 
         // DISABLED (would break chart plotters, plugins, webapps):
