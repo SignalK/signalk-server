@@ -62,6 +62,18 @@ export function createParser<T>(
   opts: { quirks?: unknown },
   supportsQuirks: boolean
 ): T {
+  return createParserWith((o) => new Parser(o), opts, supportsQuirks)
+}
+
+/**
+ * createParser for a canboatjs stream that builds its parser itself and
+ * takes more than the options (Ydwg02): `make` constructs it.
+ */
+export function createParserWith<T>(
+  make: (options: object) => T,
+  opts: { quirks?: unknown },
+  supportsQuirks: boolean
+): T {
   if (
     opts.quirks !== undefined &&
     opts.quirks !== null &&
@@ -78,7 +90,7 @@ export function createParser<T>(
     )
   }
   try {
-    return new Parser(opts)
+    return make(opts)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e)
     if (quirks.length > 0 && !message.startsWith(QUIRKS_ERROR)) {
@@ -89,7 +101,7 @@ export function createParser<T>(
 }
 
 /** Whether the installed canboatjs knows quirks (canboat/canboatjs#464). */
-const canboatjsSupportsQuirks =
+export const canboatjsSupportsQuirks =
   typeof (canboatjs as { parseQuirks?: unknown }).parseQuirks === 'function'
 
 export default class CanboatJs extends Transform {
