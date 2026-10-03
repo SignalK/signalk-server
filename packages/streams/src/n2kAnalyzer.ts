@@ -1,6 +1,7 @@
 import { ChildProcess, spawn } from 'child_process'
 import { createInterface } from 'readline'
 import { Transform, TransformCallback, Writable } from 'stream'
+import { unwrapAnalyzerOutput } from './analyzerOutput'
 interface N2kAnalyzerOptions {
   app: {
     emit(event: string, ...args: unknown[]): void
@@ -24,10 +25,15 @@ export default class N2kAnalyzer extends Transform {
 
     this.analyzerOutEvent = options.analyzerOutEvent ?? 'N2KAnalyzerOut'
 
+    // -camel wraps each message in a {"camelPgnId": {...}} envelope (canboat
+    // >= 6.0.0) and -nv emits lookup fields as {value, name} pairs; both are
+    // undone by unwrapAnalyzerOutput below, which needs -nv to rebuild
+    // canboatjs's per-field name-or-number convention.
+    const analyzerCommand = 'analyzer -json -si -camel -nv'
     if (process.platform === 'win32') {
-      this.analyzerProcess = spawn('cmd', ['/c', 'analyzer -json -si -camel'])
+      this.analyzerProcess = spawn('cmd', ['/c', analyzerCommand])
     } else {
-      this.analyzerProcess = spawn('sh', ['-c', 'analyzer -json -si -camel'])
+      this.analyzerProcess = spawn('sh', ['-c', analyzerCommand])
     }
 
     this.analyzerProcess.stderr?.on('data', (data: Buffer) => {
@@ -50,8 +56,9 @@ export default class N2kAnalyzer extends Transform {
           console.log('Connected to analyzer v' + parsed.version)
           return
         }
-        this.push(parsed)
-        options.app.emit(this.analyzerOutEvent, parsed)
+        const flat = unwrapAnalyzerOutput(parsed)
+        this.push(flat)
+        options.app.emit(this.analyzerOutEvent, flat)
       } catch (ex: unknown) {
         console.error(data)
         if (ex instanceof Error) {
