@@ -641,6 +641,7 @@ class Server {
     })
 
     installProcessErrorHandlers(app)
+    installShutdownHandlers(this)
   }
 
   start() {
@@ -903,6 +904,74 @@ function identifyPluginFromStack(
     }
   }
   return undefined
+}
+
+// Below a container runtime's default stop grace period, so the process can
+// exit on its own before the runtime escalates to SIGKILL.
+const SHUTDOWN_TIMEOUT_MS = 8000
+
+let currentShutdownHandlers:
+  { sigterm: () => void; sigint: () => void } | undefined
+
+// In a container the server runs as PID 1, and the kernel does not apply
+// default signal dispositions to PID 1 — a signal with no handler installed
+// is discarded. Without these handlers SIGTERM does nothing, so every `docker
+// stop` / `systemctl stop` waits out its grace period and ends in SIGKILL,
+// which reports exit 137 and reads as a crash rather than the clean stop it
+// was. Handling the signal also lets interfaces and providers close first.
+function installShutdownHandlers(server: { stop: () => Promise<unknown> }) {
+  // Process-wide listeners, so the most recently constructed Server owns
+  // them: tests build several instances in one process, and a stopped
+  // instance's stop() resolves immediately, which would exit the process
+  // while the active one is still shutting down.
+  if (currentShutdownHandlers) {
+    process.off('SIGTERM', currentShutdownHandlers.sigterm)
+    process.off('SIGINT', currentShutdownHandlers.sigint)
+  }
+
+  let shuttingDown = false
+
+  const shutdown = (signal: NodeJS.Signals) => {
+    // A repeated signal means the caller is no longer waiting for an orderly
+    // shutdown, so stop waiting for one.
+    if (shuttingDown) {
+      process.exit(128 + (signal === 'SIGINT' ? 2 : 15))
+    }
+    shuttingDown = true
+    console.log(`${signal} received, shutting down`)
+
+    // Bounded: a provider or interface whose stop() never settles must not
+    // turn a graceful shutdown into an indefinite one. The deadline sits
+    // below a container runtime's default stop grace period (10s for Docker
+    // and podman) so the process exits on its own terms rather than being
+    // SIGKILLed at the same moment, which would report 137 regardless.
+    // unref() so the timer does not itself keep the process alive.
+    const forceExit = setTimeout(() => {
+      console.error(
+        `Shutdown did not complete within ${SHUTDOWN_TIMEOUT_MS}ms, exiting`
+      )
+      process.exit(1)
+    }, SHUTDOWN_TIMEOUT_MS)
+    forceExit.unref()
+
+    server
+      .stop()
+      .then(() => {
+        clearTimeout(forceExit)
+        process.exit(0)
+      })
+      .catch((err) => {
+        console.error('Error during shutdown:', err)
+        clearTimeout(forceExit)
+        process.exit(1)
+      })
+  }
+
+  const sigterm = () => shutdown('SIGTERM')
+  const sigint = () => shutdown('SIGINT')
+  currentShutdownHandlers = { sigterm, sigint }
+  process.on('SIGTERM', sigterm)
+  process.on('SIGINT', sigint)
 }
 
 function installProcessErrorHandlers(app: any) {
