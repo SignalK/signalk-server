@@ -5,7 +5,7 @@ import { createDebug } from '../../debug'
 import { resourcesApiDoc } from './openApi'
 const debug = createDebug('signalk-server:api:resources:validate')
 
-class ValidationError extends Error {}
+export class ValidationError extends Error {}
 
 // RFC 3339 with a UTC (Z) designator, per the logentries contract
 const RFC3339_UTC_REGEX =

@@ -17,7 +17,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
-import { validate } from './validate'
+import { validate, ValidationError } from './validate'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { writeSettingsFile } from '../../config/config'
 
@@ -221,7 +221,7 @@ export class ResourcesApi {
       }
       if (!isValidId) {
         return Promise.reject(
-          new Error(`Invalid resource id provided (${resId})`)
+          new ValidationError(`Invalid resource id provided (${resId})`)
         )
       }
       validate.resource(resType as SignalKResourceType, resId, 'PUT', data)
@@ -236,6 +236,7 @@ export class ResourcesApi {
       ? this.resProvider[resType]?.get(provider)
       : undefined
     if (provider && methods) {
+      await this.applyLogEntryDatetime(resType, resId, methods, data)
       return methods
         .setResource(resId, data)
         .then((r) => {
@@ -253,6 +254,26 @@ export class ResourcesApi {
     } else {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
+  }
+
+  /** Log entry `datetime` is the chronological sort key: when a write omits
+   * it, a replacement retains the stored value and a create defaults to now.
+   * Applied before the payload reaches the provider, so what is stored and
+   * what the emitted delta carries agree. */
+  private async applyLogEntryDatetime(
+    resType: SignalKResourceType,
+    resId: string,
+    methods: ResourceProviderMethods,
+     
+    data: { [key: string]: any }
+  ) {
+    if (resType !== 'logentries' || data.datetime !== undefined) {
+      return
+    }
+    const existing = (await methods
+      .getResource(resId)
+      .catch(() => undefined)) as { datetime?: string } | undefined
+    data.datetime = existing?.datetime ?? new Date().toISOString()
   }
 
   async deleteResource(
@@ -791,9 +812,20 @@ export class ResourcesApi {
         }
 
         try {
-          await this.resProvider[req.params.resourceType]
-            ?.get(provider)
-            ?.setResource(id, req.body)
+          const methods =
+            this.resProvider[req.params.resourceType]?.get(provider)
+          if (!methods) {
+            debug('** No provider found... calling next()...')
+            next()
+            return
+          }
+          await this.applyLogEntryDatetime(
+            req.params.resourceType as SignalKResourceType,
+            id,
+            methods,
+            req.body
+          )
+          await methods.setResource(id, req.body)
 
           server.handleMessage(
             provider as string,
@@ -880,9 +912,20 @@ export class ResourcesApi {
             next()
             return
           }
-          await this.resProvider[req.params.resourceType]
-            ?.get(provider)
-            ?.setResource(req.params.resourceId, req.body)
+          const methods =
+            this.resProvider[req.params.resourceType]?.get(provider)
+          if (!methods) {
+            debug('** No provider found... calling next()...')
+            next()
+            return
+          }
+          await this.applyLogEntryDatetime(
+            req.params.resourceType as SignalKResourceType,
+            req.params.resourceId,
+            methods,
+            req.body
+          )
+          await methods.setResource(req.params.resourceId, req.body)
 
           server.handleMessage(
             provider as string,
