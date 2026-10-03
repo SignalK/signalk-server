@@ -25,7 +25,11 @@ const makeProvider = () => {
       getResource: (id: string) =>
         store[id]
           ? Promise.resolve(store[id])
-          : Promise.reject(new Error(`ENOENT: no log entry ${id}`)),
+          : Promise.reject(
+              Object.assign(new Error(`No log entry ${id}`), {
+                code: 'ENOENT'
+              })
+            ),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setResource: (id: string, value: any) => {
         store[id] = value
@@ -297,6 +301,28 @@ describe('Logentries resource type', () => {
     })
     response.status.should.equal(500)
     Object.keys(provider.store).should.be.empty
+  })
+
+  it('a failing post-write read still completes the write and emits the payload delta', async function () {
+    const { provider, createWsPromiser, selfPutV1 } = await startWithProvider()
+    const wsPromiser = createWsPromiser()
+    await wsPromiser.nthMessage(1)
+    provider.methods.getResource = () =>
+      Promise.reject(
+        Object.assign(new Error('storage backend unreachable'), {
+          code: 'EACCES'
+        })
+      )
+
+    const id = uuidv4()
+    const response = await selfPutV1(`resources.logentries.${id}`, {
+      value: entry()
+    })
+    response.status.should.equal(200)
+    provider.store[id].should.deep.equal(entry())
+
+    const resourceDelta = JSON.parse(await wsPromiser.nthMessage(2))
+    resourceDelta.updates[0].values[0].value.should.deep.equal(entry())
   })
 
   it('websocket PUT routes to the resource provider', async function () {

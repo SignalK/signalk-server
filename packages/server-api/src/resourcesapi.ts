@@ -303,6 +303,8 @@ export interface ResourceProviderMethods {
    * }
    * ```
    *
+   * Rejects with an error whose `code` is `ENOENT` when the resource does
+   * not exist; other rejections signal retrieval failures.
    */
   getResource(id: string, property?: string): Promise<object>
 
