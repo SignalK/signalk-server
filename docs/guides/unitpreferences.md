@@ -150,8 +150,9 @@ Display code needs none of this, so the field is absent unless it is asked for.
 
 A metadata `PUT` reads `override` even when the request did not ask for one, so
 saving a resolved response back does not turn the preset's current settings into
-a path-specific override. The metadata delta a `PUT` triggers carries the field
-as well.
+a path-specific override. Metadata deltas, including the one a `PUT` triggers,
+are resolved for each connection and carry the field only on streams that ask
+for it as shown above.
 
 ### WebSocket Stream
 

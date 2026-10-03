@@ -504,11 +504,115 @@ describe('Display unit metadata', function () {
       symbol: 'm/s',
       formula: 'value'
     })
-    // The metadata registry resolves from this delta again, so it names the
-    // override whether or not any client asked for one.
-    expect(metaUpdate.value.displayUnits.override).to.deep.equal({
+    expect(metaUpdate.value.displayUnits).to.not.have.property('override')
+  })
+
+  it('resolves the metadata a PUT sends for each stream', async () => {
+    const plain = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    const editor = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false&displayUnitsOverride=true`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await plain.nextMsg() // hello
+    await editor.nextMsg() // hello
+    const plainMsg = plain.nextMsg()
+    const editorMsg = editor.nextMsg()
+
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+
+    const plainMeta = JSON.parse(await plainMsg).updates[0].meta[0]
+    const editorMeta = JSON.parse(await editorMsg).updates[0].meta[0]
+    expect(plainMeta.value.displayUnits).to.not.have.property('override')
+    expect(editorMeta.value.displayUnits.override).to.deep.equal({
       targetUnit: 'm/s'
     })
+    expect(storedDisplayUnits()).to.deep.equal({
+      category: 'speed',
+      targetUnit: 'm/s'
+    })
+  })
+
+  it('keeps the stored target unit when a meta delta leaves display units out', async () => {
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+    const receiver = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await receiver.nextMsg() // hello
+    const metaMsg = receiver.nextMsg()
+
+    const sender = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=none&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await sender.nextMsg() // hello
+    await sender.send({
+      context: 'vessels.self',
+      updates: [
+        {
+          meta: [
+            { path: SPEED_PATH_DOTS, value: { description: 'from a plugin' } }
+          ]
+        }
+      ]
+    })
+
+    const metaUpdate = JSON.parse(await metaMsg).updates[0].meta[0]
+    expect(metaUpdate.path).to.equal(SPEED_PATH_DOTS)
+    expect(metaUpdate.value.displayUnits).to.include({
+      category: 'speed',
+      targetUnit: 'm/s'
+    })
+  })
+
+  it('resolves display units in metadata that arrives after a value', async () => {
+    // A path no spec entry covers, so nothing is registered for it until the
+    // meta delta below, as for a plugin that describes a path it has just
+    // started to emit.
+    const latePath = 'a.test.lateMeta.angle'
+    const receiver = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await receiver.nextMsg() // hello
+
+    const sender = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=none&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await sender.nextMsg() // hello
+    await sender.send({
+      context: 'vessels.self',
+      updates: [{ values: [{ path: latePath, value: 1 }] }]
+    })
+    await sender.send({
+      context: 'vessels.self',
+      updates: [{ meta: [{ path: latePath, value: { units: 'rad' } }] }]
+    })
+
+    const until = Date.now() + REQUEST_DEADLINE_MS
+    let streamed: Record<string, unknown> | undefined
+    while (Date.now() < until && !streamed) {
+      for (const msg of receiver.parsedMessages()) {
+        for (const update of msg.updates ?? []) {
+          for (const entry of update.meta ?? []) {
+            if (entry.path === latePath) {
+              streamed = entry.value
+            }
+          }
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, REQUEST_POLL_MS))
+    }
+
+    expect(streamed).to.not.equal(undefined)
+    expect(streamed!.displayUnits).to.deep.equal(
+      await servedDisplayUnits('a/test/lateMeta/angle')
+    )
+    expect(streamed!.displayUnits).to.include({ category: 'angle' })
   })
 
   it('stores a custom unit with its conversion', async () => {
