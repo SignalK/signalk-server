@@ -167,7 +167,8 @@ SIGNALK_OIDC_READWRITE_USERS=crew@example.com,mate@example.com
 ```
 
 By default identities are matched against the `email` claim. **An email
-identity only matches when the token also asserts `email_verified: true`.**
+identity only matches when the provider also asserts `email_verified: true`,
+in the ID token or in the userinfo response that supplied the email.**
 Without that requirement, any provider that accepts unverified,
 user-entered email addresses could be used to claim an allowlisted identity
 and escalate to admin. If your provider does not send `email_verified`, use
@@ -395,8 +396,9 @@ For production use, always run Signal K behind HTTPS. OIDC cookies are marked as
 2. Verify `groupsAttribute` matches your provider's claim name
 3. Ensure the user is in a group listed in `adminGroups`
 4. Some providers require explicit configuration to include groups in tokens
-5. If using `adminUsers` with the default `email` identity claim, the token
-   must contain `email_verified: true` — an unverified email never matches.
+5. If using `adminUsers` with the default `email` identity claim, the provider
+   must assert `email_verified: true` alongside the email, in the ID token or
+   the userinfo response — an unverified email never matches.
    With `autoCreateUsers` disabled this surfaces as "User auto-creation is
    disabled" on first login, because the unmatched user is not on any list
 
