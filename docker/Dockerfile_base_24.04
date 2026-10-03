@@ -18,11 +18,10 @@ RUN groupadd -r docker -g 991 \
 
 RUN curl -fsSL https://deb.nodesource.com/setup_$NODE | bash - \
   && apt-get -y install --no-install-recommends nodejs \
-  && npm config rm proxy \
-  && npm config rm https-proxy \
-  && npm config set fetch-retries 5 \
-  && npm config set fetch-retry-mintimeout 60000 \
-  && npm config set fetch-retry-maxtimeout 120000 \
-  && npm cache clean -f \
-  && npm install npm@latest -g \
+  && npm install -g pnpm@11 \
+  && npm cache clean --force \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+ENV pnpm_config_fetch_retries=5 \
+  pnpm_config_fetch_retry_mintimeout=60000 \
+  pnpm_config_fetch_retry_maxtimeout=120000
