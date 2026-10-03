@@ -1,4 +1,5 @@
 import { Transform, TransformCallback } from 'stream'
+import * as canboatjs from '@canboat/canboatjs'
 import { FromPgn } from '@canboat/canboatjs'
 import type { CreateDebug } from './types'
 
@@ -23,6 +24,86 @@ type ParsedPgnData = ReturnType<InstanceType<typeof FromPgn>['parse']> & {
   providerId?: string
 }
 
+/**
+ * The connection's `quirks` setting as canboatjs takes it: a list of
+ * `gps-rollover[=...]` strings. The admin UI stores the field split on
+ * whitespace, so drop the empty entries a trailing space leaves; canboatjs
+ * would refuse an empty quirk name.
+ */
+export function cleanQuirks(quirks: unknown): unknown {
+  if (typeof quirks === 'string') {
+    quirks = [quirks]
+  }
+  if (!Array.isArray(quirks)) {
+    return quirks
+  }
+  return quirks
+    .map((q) => (typeof q === 'string' ? q.trim() : q))
+    .filter((q) => q !== '')
+}
+
+const QUIRKS_ERROR = 'Invalid quirks option: '
+
+/**
+ * Create the canboatjs parser so that a quirks problem always surfaces as
+ * one clear error, whatever canboatjs version is installed. The error is
+ * thrown while the connection's pipeline is built, so it becomes the
+ * connection's provider error on the Dashboard (see pipedproviders.ts).
+ *
+ * - A setting that is not a list (cleanQuirks has made a string one) is
+ *   refused here, so it cannot slip past the next check.
+ * - A canboatjs without quirk support (3.20 and earlier) would silently ignore
+ *   them, leaving the user believing their dates are corrected: refuse.
+ * - canboatjs refuses an invalid quirk; from canboat/canboatjs#475 on its
+ *   message says it is the quirks option, before that it does not: add it.
+ */
+export function createParser<T>(
+  Parser: new (options: object) => T,
+  opts: { quirks?: unknown },
+  supportsQuirks: boolean
+): T {
+  return createParserWith((o) => new Parser(o), opts, supportsQuirks)
+}
+
+/**
+ * createParser for a canboatjs stream that builds its parser itself and
+ * takes more than the options (Ydwg02): `make` constructs it.
+ */
+export function createParserWith<T>(
+  make: (options: object) => T,
+  opts: { quirks?: unknown },
+  supportsQuirks: boolean
+): T {
+  if (
+    opts.quirks !== undefined &&
+    opts.quirks !== null &&
+    !Array.isArray(opts.quirks)
+  ) {
+    throw new Error(QUIRKS_ERROR + 'expected a string or a list of strings')
+  }
+  const quirks = opts.quirks ?? []
+  if (quirks.length > 0 && !supportsQuirks) {
+    throw new Error(
+      QUIRKS_ERROR +
+        'the installed @canboat/canboatjs does not support quirks; ' +
+        'update it, or remove the quirks from this connection'
+    )
+  }
+  try {
+    return make(opts)
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    if (quirks.length > 0 && !message.startsWith(QUIRKS_ERROR)) {
+      throw new Error(QUIRKS_ERROR + message)
+    }
+    throw e
+  }
+}
+
+/** Whether the installed canboatjs knows quirks (canboat/canboatjs#464). */
+export const canboatjsSupportsQuirks =
+  typeof (canboatjs as { parseQuirks?: unknown }).parseQuirks === 'function'
+
 export default class CanboatJs extends Transform {
   private readonly fromPgn: InstanceType<typeof FromPgn>
   private readonly app: CanboatJsOptions['app']
@@ -34,9 +115,10 @@ export default class CanboatJs extends Transform {
 
     const opts = {
       ...options,
-      useCamelCompat: options.useCamelCompat ?? false
+      useCamelCompat: options.useCamelCompat ?? false,
+      quirks: cleanQuirks(options.quirks)
     }
-    this.fromPgn = new FromPgn(opts)
+    this.fromPgn = createParser(FromPgn, opts, canboatjsSupportsQuirks)
     const createDebug = options.createDebug ?? require('debug')
     const debug = createDebug('signalk:streams:canboatjs')
 

@@ -224,10 +224,20 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
       Ydwg02: unknown
     }
     const Ydwg02Ctor = canboatjs.Ydwg02 as unknown as CanboatCtor
+    const { createParserWith, cleanQuirks, canboatjsSupportsQuirks } =
+      require('./canboatjs') as typeof import('./canboatjs')
+    const kind =
+      options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network'
+    // Ydwg02 makes its own canboatjs parser, so check the quirks here as
+    // the CanboatJs stream does for every other NMEA 2000 connection.
     const result: PipeElement[] = [
-      new Ydwg02Ctor(
-        { ...options.subOptions },
-        options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network'
+      createParserWith(
+        (o) => new Ydwg02Ctor(o, kind),
+        {
+          ...options.subOptions,
+          quirks: cleanQuirks(options.subOptions.quirks)
+        },
+        canboatjsSupportsQuirks
       )
     ]
     if (options.type === 'FileStream') {
