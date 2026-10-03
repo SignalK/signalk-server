@@ -1,7 +1,7 @@
 import { LogEntry } from '@signalk/server-api'
 import chai from 'chai'
 import { v4 as uuidv4 } from 'uuid'
-import { startServer } from './ts-servertestutilities'
+import { startServer, DATETIME_REGEX } from './ts-servertestutilities'
 
 chai.should()
 
@@ -11,8 +11,6 @@ const PROVIDER_ID = 'logbooktest'
 // cannot leak one into the next test.
 const runningServers: (() => unknown)[] = []
 
-// An in-memory logentries provider: stores verbatim, records the last
-// listing query so tests can assert what the server forwarded.
 const makeProvider = () => {
   const store: { [id: string]: object } = {}
   let lastQuery: unknown
@@ -136,6 +134,33 @@ describe('Logentries resource type', () => {
     provider.store[id].should.deep.equal(entry())
   })
 
+  it('defaults datetime to now on create and retains it when a PUT omits it', async function () {
+    const { provider, createWsPromiser, post, put } = await startWithProvider()
+    const wsPromiser = createWsPromiser()
+    await wsPromiser.nthMessage(1)
+
+    const response = await post('/resources/logentries', {
+      text: 'Reefed main'
+    })
+    response.status.should.equal(201)
+    const { id } = (await response.json()) as { id: string }
+    const created = provider.store[id] as LogEntry
+    created.datetime!.should.match(DATETIME_REGEX)
+
+    await put(`/resources/logentries/${id}`, { text: 'Main reefed twice' })
+    const replaced = provider.store[id] as LogEntry
+    replaced.datetime!.should.equal(created.datetime)
+    replaced.text.should.equal('Main reefed twice')
+
+    const resourceDelta = JSON.parse(await wsPromiser.nthMessage(3))
+    const { path, value } = resourceDelta.updates[0].values[0]
+    path.should.equal(`resources.logentries.${id}`)
+    value.should.deep.equal({
+      text: 'Main reefed twice',
+      datetime: created.datetime
+    })
+  })
+
   it('rejects a POST carrying a payload id', async function () {
     const { post } = await startWithProvider()
     const response = await post(
@@ -216,6 +241,22 @@ describe('Logentries resource type', () => {
     })
     response.status.should.equal(200)
     provider.store[id].should.deep.equal(entry())
+  })
+
+  it('v1 api path PUT distinguishes invalid payloads from provider write failures', async function () {
+    const { provider, selfPutV1 } = await startWithProvider()
+    provider.methods.setResource = () =>
+      Promise.reject(new Error('provider write failed'))
+
+    let response = await selfPutV1(`resources.logentries.${uuidv4()}`, {
+      value: entry()
+    })
+    response.status.should.equal(500)
+
+    response = await selfPutV1(`resources.logentries.${uuidv4()}`, {
+      value: { datetime: '2026-01-17T09:01:00.000Z' }
+    })
+    response.status.should.equal(400)
   })
 
   it('websocket PUT routes to the resource provider', async function () {

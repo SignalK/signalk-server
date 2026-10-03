@@ -24,6 +24,7 @@ import {
 import { DisplayUnitsMetadata } from './unitpreferences/types'
 import { WithSecurityStrategy } from './security'
 import type { ResourcesApi } from './api/resources'
+import { ValidationError } from './api/resources/validate'
 
 const debug = createDebug('signalk-server:put')
 
@@ -757,7 +758,7 @@ const resourcesPutHandler =
         () => ({ state: 'COMPLETED' as RequestState, statusCode: 200 }),
         (err: Error) => ({
           state: 'COMPLETED' as RequestState,
-          statusCode: 400,
+          statusCode: err instanceof ValidationError ? 400 : 500,
           message: err.message
         })
       )
