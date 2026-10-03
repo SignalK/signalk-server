@@ -1,5 +1,10 @@
 import { Request, Response, Application } from 'express'
-import { Context, Path, SourceRef } from '@signalk/server-api'
+import {
+  Context,
+  Path,
+  SignalKResourceType,
+  SourceRef
+} from '@signalk/server-api'
 import { get as _get, set as _set } from 'lodash'
 import { createDebug } from './debug'
 import {
@@ -18,6 +23,7 @@ import {
 } from './unitpreferences'
 import { DisplayUnitsMetadata } from './unitpreferences/types'
 import { WithSecurityStrategy } from './security'
+import type { ResourcesApi } from './api/resources'
 
 const debug = createDebug('signalk-server:put')
 
@@ -52,6 +58,7 @@ interface PathApp {
   intervals: NodeJS.Timeout[]
   interfaces: PutAppInterfaces
   securityStrategy: WithSecurityStrategy['securityStrategy']
+  resourcesApi?: ResourcesApi
 }
 
 interface NotificationApp {
@@ -76,7 +83,7 @@ type ActionHandler = (
   path: string,
   value: unknown,
   callback: ActionCallback
-) => ActionResult | void
+) => ActionResult | Promise<ActionResult> | void
 
 type DeleteHandler = (
   context: string,
@@ -603,6 +610,17 @@ export function putPath(
           if (!handler && parts[0] === 'notifications') {
             handler = putNotificationHandler
           }
+
+          // A websocket source that claims the path takes priority over
+          // the resources fallback.
+          if (
+            !handler &&
+            parts[0] === 'resources' &&
+            parts.length === 3 &&
+            !app.interfaces.ws?.canHandlePut(path, body.source)
+          ) {
+            handler = resourcesPutHandler(app.resourcesApi, parts[1], parts[2])
+          }
         }
 
         if (handler) {
@@ -715,6 +733,35 @@ export function deRegisterActionHandler(
     debug(`de-registered action handler for ${context} ${path} ${source}`)
   }
 }
+
+/** Writes `resources.<type>.<id>` through the Resources API provider, so v1
+ * api path and websocket PUTs get the same validation, delta emission and
+ * provider routing as the v2 resources REST route. */
+const resourcesPutHandler =
+  (
+    resourcesApi: ResourcesApi | undefined,
+    resType: string,
+    resId: string
+  ): ActionHandler =>
+  (_context, _path, value) => {
+    if (!resourcesApi) {
+      return {
+        state: 'COMPLETED',
+        statusCode: 405,
+        message: 'Resources api is not available'
+      }
+    }
+    return resourcesApi
+      .setResource(resType as SignalKResourceType, resId, value as object)
+      .then(
+        () => ({ state: 'COMPLETED' as RequestState, statusCode: 200 }),
+        (err: Error) => ({
+          state: 'COMPLETED' as RequestState,
+          statusCode: 400,
+          message: err.message
+        })
+      )
+  }
 
 function putNotification(
   app: NotificationApp,
