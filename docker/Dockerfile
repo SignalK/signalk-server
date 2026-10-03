@@ -9,62 +9,60 @@ RUN mkdir -p /home/node/.signalk/ \
 
 WORKDIR /home/node/signalk
 
-RUN npm config rm proxy \
-  && npm config rm https-proxy \
-  && npm config set fetch-retries 5 \
-  && npm config set fetch-retry-mintimeout 60000 \
-  && npm config set fetch-retry-maxtimeout 120000 \
-  && npm cache clean -f
-
 FROM base AS tarballs_installed
 WORKDIR /home/node/signalk
 COPY --chown=node:node *.tgz .
 
 # EDITION selects the published variant: "full" bundles the optional webapps and
-# plugins; "core" installs the server with --omit=optional, leaving the server,
-# the admin UI, serialport, local Bluetooth support, and required libraries.
-# The admin UI ships in core via its workspace tarball (kept in both editions
-# below); serialport and the Bluetooth packages are external optional packages,
-# so core reinstalls them explicitly at the versions the server declares. They
-# cannot be added back at the .signalk layer, so the image must carry them.
+# plugins; "core" leaves out optional dependencies, keeping the server, the
+# admin UI, serialport, local Bluetooth support, and required libraries.
+# The admin UI ships in core via its workspace tarball (installed in both
+# editions below); serialport and the Bluetooth packages are external optional
+# packages, so core reinstalls them explicitly at the versions the server
+# declares. They cannot be added back at the .signalk layer, so the image must
+# carry them.
 ARG EDITION=full
 
-# npm 12 gates dependency install-time lifecycle scripts behind an allowlist
-# (allow-scripts defaults to empty). @canboat/canboatjs builds its native
-# SocketCAN addon (canSocket.node) from an "install" script and ships no
-# prebuilt binaries, so without this the CAN interface silently disappears.
-# The install is asserted below so a future regression fails the build loudly.
-RUN printf 'allow-scripts[]=@canboat/canboatjs\n' > /home/node/signalk/.npmrc
-
-# Install workspace tarballs locally (not globally) to avoid permission issues,
-# then install signalk-server. The grep excludes the top-level signalk-server
-# tarball (installed separately below); the admin UI tarball is intentionally
-# kept in both editions. The @signalk relocation is guarded on presence.
+# pnpm runs dependency install scripts only for approved packages.
+# @canboat/canboatjs builds its native SocketCAN addon (canSocket.node) from an
+# "install" script and ships no prebuilt binaries, so without approval the CAN
+# interface silently disappears. The build is asserted below so a regression
+# fails loudly. Other dependencies' scripts are not needed at runtime and are
+# skipped instead of failing the build.
+# "optional: false" keeps the core edition's later additions from bringing the
+# optional dependencies back. The overrides make the server's dependencies on
+# the workspace packages resolve to these tarballs instead of the registry.
 RUN case "$EDITION" in \
-      full) npm_flags="" ;; \
-      core) npm_flags="--omit=optional" ;; \
+      full) optional=true ;; \
+      core) optional=false ;; \
       *) echo "Unknown EDITION: $EDITION" >&2; exit 1 ;; \
     esac \
-  && npm init -y \
-  && workspace_tarballs=$(ls *.tgz 2>/dev/null | grep -Ev '^signalk-server-[0-9]' || true) \
-  && if [ -n "$workspace_tarballs" ]; then npm install $workspace_tarballs; fi \
-  && server_tarball=$(ls signalk-server-[0-9]*.tgz) \
-  && npm install "$server_tarball" --install-strategy=nested $npm_flags \
+  && printf '%s\n' \
+       "optional: $optional" \
+       'strictDepBuilds: false' \
+       'allowBuilds:' \
+       "  '@canboat/canboatjs': true" \
+       "  '@serialport/bindings-cpp': true" \
+       'minimumReleaseAgeExclude:' \
+       "  - '@signalk/*'" \
+       "  - '@canboat/*'" \
+       'overrides:' > pnpm-workspace.yaml \
+  && for tgz in *.tgz; do \
+       name=$(tar -xOzf "$tgz" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).name') \
+       && printf "  '%s': file:./%s\n" "$name" "$tgz" >> pnpm-workspace.yaml; \
+     done \
+  && printf '{"name":"signalk","private":true}\n' > package.json \
+  && pnpm add ./*.tgz \
   && if [ "$EDITION" = core ]; then \
        serialport_spec=$(node -p "require('signalk-server/package.json').optionalDependencies.serialport") \
        && node_ble_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@naugehyde/node-ble']") \
        && dbus_next_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@jellybrick/dbus-next']") \
-       && npm install $npm_flags "serialport@$serialport_spec" "@naugehyde/node-ble@$node_ble_spec" "@jellybrick/dbus-next@$dbus_next_spec"; \
-     fi \
-  && if [ -d node_modules/@signalk ]; then \
-       mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
-       && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
-       && rm -rf node_modules/@signalk/; \
+       && pnpm add "serialport@$serialport_spec" "@naugehyde/node-ble@$node_ble_spec" "@jellybrick/dbus-next@$dbus_next_spec"; \
      fi \
   && rm *.tgz \
   && can_socket=$(find node_modules -path '*/@canboat/canboatjs/build/Release/canSocket.node' -print -quit) \
   && if [ -z "$can_socket" ]; then \
-       echo "canSocket.node missing — canboatjs install script did not build the native CAN addon (npm allow-scripts gate skipped it, or node-gyp rebuild failed)" >&2; \
+       echo "canSocket.node missing — canboatjs install script did not build the native CAN addon (not approved in allowBuilds, or node-gyp rebuild failed)" >&2; \
        exit 1; \
      fi
 
