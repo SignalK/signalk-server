@@ -14,13 +14,13 @@ interface Dirs {
   sawAtRemove: string
 }
 
-// npm removes a package from disk but leaves its running instance alone, so
+// pnpm removes a package from disk but leaves its running instance alone, so
 // the plugin has to be stopped first or it keeps running until the next
-// restart. The plugin's stop() writes a marker; the npm stub records whether
-// that marker already existed when `npm remove` ran.
-function writeNpmStub(binDir: string, configDir: string, dirs: Dirs) {
+// restart. The plugin's stop() writes a marker; the pnpm stub records whether
+// that marker already existed when `pnpm remove` ran.
+function writePnpmStub(binDir: string, configDir: string, dirs: Dirs) {
   fs.mkdirSync(binDir, { recursive: true })
-  const stub = path.join(binDir, 'npm')
+  const stub = path.join(binDir, 'pnpm')
   fs.writeFileSync(
     stub,
     `#!/bin/sh
@@ -35,7 +35,7 @@ for arg in "$@"; do
     exit 0
   fi
 done
-echo "0.0.0-npm-stub"
+echo "0.0.0-pnpm-stub"
 exit 0
 `
   )
@@ -149,7 +149,7 @@ describe('appstore remove', function () {
     }
     seedConfigDir(configDir, dirs)
     const binDir = path.join(configDir, 'bin')
-    writeNpmStub(binDir, configDir, dirs)
+    writePnpmStub(binDir, configDir, dirs)
     originalPath = process.env.PATH
     process.env.PATH = `${binDir}${path.delimiter}${process.env.PATH}`
     restoreFetch = stubNpmSearch()
@@ -173,7 +173,7 @@ describe('appstore remove', function () {
     if (configDir) fs.rmSync(configDir, { recursive: true, force: true })
   })
 
-  it('stops a running plugin before npm removes it', async function () {
+  it('stops a running plugin before pnpm removes it', async function () {
     expect(fs.existsSync(dirs.stopMarker), 'plugin stopped too early').to.equal(
       false
     )

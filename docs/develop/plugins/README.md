@@ -424,16 +424,13 @@ Keep settings, user data, and data that cannot be downloaded again without inter
 
 Plugins can be removed via the AppStore.
 
-You can also remove a plugin manually by:
-
-1. Deleting it's folder under `~/.signalk/node_modules`
-1. Deleting it's entry from `~/.signalk/package.json`
-1. Run `npm prune` from the `~/.signalk/` directory.
+You can also remove a plugin manually by running `pnpm remove <plugin-name>` from the `~/.signalk/` directory.
 
 Alternatively you can:
 
+1. Delete the plugin's entry from `~/.signalk/package.json`
 1. Remove the folder `~/.signalk/node_modules`
-1. Run `npm install` from the `~/.signalk/` directory.
+1. Run `pnpm install --config.ignore-scripts=true` from the `~/.signalk/` directory.
 
 Finally you can remove the plugin setting file in `~/.signalk/plugin-config-data/`.
 

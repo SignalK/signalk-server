@@ -7,7 +7,7 @@ const {
   checkForNewServerVersion,
   getLatestServerVersion,
   importOrRequire,
-  runNpm,
+  runPackageManager,
   getPluginDataSize,
   getAuthor
 } = require('../dist/modules')
@@ -225,11 +225,18 @@ describe('importOrRequire', () => {
   })
 })
 
-describe('runNpm version validation', () => {
-  const config = {
-    configPath: '/tmp',
-    name: 'signalk-server'
-  }
+describe('runPackageManager version validation', () => {
+  const config = { configPath: '', name: 'signalk-server' }
+
+  before(() => {
+    config.configPath = fs.mkdtempSync(
+      path.join(require('os').tmpdir(), '_skservertest_version')
+    )
+  })
+
+  after(() => {
+    fs.rmSync(config.configPath, { recursive: true, force: true })
+  })
 
   const testVersion = (version, shouldPass) => {
     return new Promise((resolve, reject) => {
@@ -265,7 +272,7 @@ describe('runNpm version validation', () => {
       })
 
       try {
-        runNpm(
+        runPackageManager(
           config,
           'some-package',
           version,

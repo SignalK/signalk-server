@@ -475,15 +475,6 @@ function setConfigDirectory(app: ConfigApp) {
         JSON.stringify(pluginsPackageJsonTemplate, null, 2)
       )
     }
-    const npmrcPath = path.join(app.config.configPath, '.npmrc')
-    if (!fs.existsSync(npmrcPath)) {
-      fs.writeFileSync(npmrcPath, 'package-lock=false\n')
-    } else {
-      const contents = fs.readFileSync(npmrcPath)
-      if (contents.indexOf('package-lock=') === -1) {
-        fs.appendFileSync(npmrcPath, '\npackage-lock=false\n')
-      }
-    }
   }
 }
 
