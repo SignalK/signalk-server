@@ -381,11 +381,6 @@ export const LogEntrySchema = Type.Object(
           'Snapshot of Signal K paths observed at the entry datetime: vessel state, engines, radio and crew context alike. Absent when nothing was captured.'
       })
     ),
-    end: Type.Optional(
-      Type.Boolean({
-        description: 'true marks the end of a voyage — trip end, never day end'
-      })
-    ),
     author: Type.Optional(
       Type.String({
         description:

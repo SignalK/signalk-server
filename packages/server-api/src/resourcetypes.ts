@@ -107,8 +107,6 @@ export interface LogEntry {
   text: string
   /** Snapshot of Signal K paths observed at the entry datetime. */
   telemetry?: LogEntryTelemetryValue[]
-  /** true marks the end of a voyage — trip end, never day end. */
-  end?: boolean
   /** Crew member the line is attributed to. Free text, not an audit
    * identity: delegation is a feature. */
   author?: string
