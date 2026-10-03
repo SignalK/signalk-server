@@ -1457,10 +1457,11 @@ jobs:
         env:
           APPSTORE_DIR: ${{ runner.temp }}/appstore-test
         run: |
-          # SignalK server installs plugins with --ignore-scripts (src/modules.ts:223)
-          # This means native addons (better-sqlite3, serialport, etc.) are NOT compiled.
-          # This test catches plugins that will break when installed via the App Store.
-          echo "Simulating SignalK App Store install (npm install --ignore-scripts)..."
+          # SignalK server installs plugins with pnpm and --ignore-scripts
+          # (runConfigDirPnpm in src/modules.ts). This means native addons
+          # (better-sqlite3, serialport, etc.) are NOT compiled. This test
+          # catches plugins that will break when installed via the App Store.
+          echo "Simulating SignalK App Store install (pnpm add --ignore-scripts)..."
           # Read the tarball name from --json: a plugin "prepare" script (e.g. tsc)
           # prints a lifecycle banner to stdout that would pollute a bare
           # $(npm pack) capture (npm < 11 runs prepare here despite --ignore-scripts).
@@ -1469,55 +1470,67 @@ jobs:
 
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
-          npm init -y > /dev/null 2>&1
-          npm install --ignore-scripts "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")" 2>&1
+          printf '{"name":"signalk-server-config","version":"0.0.1","private":true}\n' > package.json
+          npx --yes pnpm@11 add --config.ignore-scripts=true --config.lockfile=false "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")" 2>&1
 
           # Scan for native addon dependencies (binding.gyp = needs compilation)
           # Uses Node.js for cross-platform compatibility (works on Linux, macOS, Windows)
           cat << 'CHECKSCRIPT' > "$RUNNER_TEMP/check-native.js"
           const fs = require('fs');
           const path = require('path');
-          const nmDir = path.join(process.env.APPSTORE_DIR, 'node_modules');
-          const nativeModules = [];
+          const storeDir = path.join(process.env.APPSTORE_DIR, 'node_modules', '.pnpm');
+          const nativeModules = new Set();
 
-          function findNativeModules(dir) {
-            if (!fs.existsSync(dir)) return;
-            for (const entry of fs.readdirSync(dir)) {
-              if (entry === '.package-lock.json') continue;
-              const full = path.join(dir, entry);
-              if (entry.startsWith('@')) {
-                findNativeModules(full);
-                continue;
+          // Every installed package is a real directory at
+          // .pnpm/<id>/node_modules/<name>; its dependencies next to it are links.
+          function checkPackageDirs(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.name.startsWith('@') && entry.isDirectory()) {
+                checkPackageDirs(full);
+              } else if (entry.isDirectory() && fs.existsSync(path.join(full, 'binding.gyp'))) {
+                nativeModules.add(entry.name);
               }
-              if (fs.existsSync(path.join(full, 'binding.gyp'))) {
-                nativeModules.push(entry);
-              }
-              const nested = path.join(full, 'node_modules');
-              if (fs.existsSync(nested)) findNativeModules(nested);
             }
           }
 
-          findNativeModules(nmDir);
+          if (fs.existsSync(storeDir)) {
+            for (const id of fs.readdirSync(storeDir)) {
+              const modules = path.join(storeDir, id, 'node_modules');
+              if (fs.existsSync(modules)) checkPackageDirs(modules);
+            }
+          }
 
-          if (nativeModules.length === 0) {
+          if (nativeModules.size === 0) {
             console.log('No native addons found — App Store install is safe');
             process.exit(0);
           }
 
-          // Classify native modules as required vs optional using the lockfile
+          // Classify native modules as required vs optional using the
+          // snapshots that pnpm records in node_modules/.pnpm/lock.yaml
           const optionalSet = new Set();
-          const lockPath = path.join(nmDir, '.package-lock.json');
+          const lockPath = path.join(storeDir, 'lock.yaml');
           if (fs.existsSync(lockPath)) {
-            try {
-              const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
-              for (const [key, meta] of Object.entries(lock.packages || {})) {
-                if (meta.optional) optionalSet.add(path.basename(key));
+            let inSnapshots = false;
+            let current;
+            for (const line of fs.readFileSync(lockPath, 'utf8').split('\n')) {
+              if (/^\S/.test(line)) {
+                inSnapshots = line === 'snapshots:';
+                continue;
               }
-            } catch (e) { /* ignore parse errors — treat all as required */ }
+              if (!inSnapshots) continue;
+              const key = line.match(/^  (\S.*):$/);
+              if (key) {
+                const id = key[1].replace(/^'|'$/g, '').replace(/\(.*$/, '');
+                current = path.basename(id.slice(0, id.lastIndexOf('@')));
+              } else if (line === '    optional: true' && current) {
+                optionalSet.add(current);
+              }
+            }
           }
 
-          const requiredNative = nativeModules.filter(m => !optionalSet.has(m));
-          const optionalNative = nativeModules.filter(m => optionalSet.has(m));
+          const requiredNative = [...nativeModules].filter(m => !optionalSet.has(m));
+          const optionalNative = [...nativeModules].filter(m => optionalSet.has(m));
 
           if (optionalNative.length > 0) {
             console.log('::warning::Optional native addons found: ' + optionalNative.join(', ') + '. App Store uses --ignore-scripts so these will not be compiled. The parent package declares them optional, so the plugin may still work — verify it works without them.');
