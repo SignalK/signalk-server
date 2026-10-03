@@ -245,13 +245,6 @@ export const WeatherDataModelSchema = Type.Object(
             )
           })
         ),
-        seaState: Type.Optional(
-          Type.String({
-            description:
-              'Sea state as a Beaufort scale label. The numeric Beaufort code is on seaStateValue.',
-            examples: ['slight']
-          })
-        ),
         seaStateValue: Type.Optional(
           Type.Number({
             description: 'Sea state (Beaufort)',

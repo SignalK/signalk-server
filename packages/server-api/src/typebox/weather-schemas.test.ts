@@ -16,19 +16,10 @@ const weather = (water: object) => ({
   water
 })
 
-describe('WeatherDataModelSchema water.seaState', () => {
-  it('accepts a Beaufort label with the numeric code on seaStateValue', () => {
+describe('WeatherDataModelSchema water.seaStateValue', () => {
+  it('accepts a numeric Beaufort sea state', () => {
     expect(
-      Value.Check(
-        WeatherDataModelSchema,
-        weather({ seaState: 'slight', seaStateValue: 3 })
-      )
+      Value.Check(WeatherDataModelSchema, weather({ seaStateValue: 3 }))
     ).to.equal(true)
-  })
-
-  it('rejects a numeric seaState', () => {
-    expect(
-      Value.Check(WeatherDataModelSchema, weather({ seaState: 3 }))
-    ).to.equal(false)
   })
 })

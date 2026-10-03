@@ -246,10 +246,13 @@ export class ResourcesApi {
       await this.applyLogEntryDatetime(resType, resId, methods, data)
       return methods
         .setResource(resId, data)
-        .then((r) => {
+        .then(async (r) => {
+          // the delta carries the stored entry, which providers may have
+          // normalized or completed beyond the request payload
+          const stored = await methods.getResource(resId)
           this.app.handleMessage(
             provider as string,
-            this.buildDeltaMsg(resType, resId, data),
+            this.buildDeltaMsg(resType, resId, stored),
             SKVersion.v2
           )
           return r
@@ -840,13 +843,16 @@ export class ResourcesApi {
             req.body
           )
           await methods.setResource(id, req.body)
+          // the delta carries the stored entry, which providers may have
+          // normalized or completed beyond the request payload
+          const stored = await methods.getResource(id)
 
           server.handleMessage(
             provider as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
               id,
-              req.body
+              stored
             ),
             SKVersion.v2
           )
@@ -940,13 +946,16 @@ export class ResourcesApi {
             req.body
           )
           await methods.setResource(req.params.resourceId, req.body)
+          // the delta carries the stored entry, which providers may have
+          // normalized or completed beyond the request payload
+          const stored = await methods.getResource(req.params.resourceId)
 
           server.handleMessage(
             provider as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
               req.params.resourceId,
-              req.body
+              stored
             ),
             SKVersion.v2
           )

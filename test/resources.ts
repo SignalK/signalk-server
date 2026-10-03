@@ -41,7 +41,12 @@ describe('Resources Api', () => {
     const resourceDelta = JSON.parse(await wsPromiser.nthMessage(2))
     const { path, value } = resourceDelta.updates[0].values[0]
     path.should.equal(`resources.waypoints.${resId}`)
-    value.should.deep.equal(waypoint)
+    // the delta carries the stored resource, timestamp and source included
+    value.should.deep.equal({
+      ...waypoint,
+      timestamp: value.timestamp,
+      $source: 'resources-provider'
+    })
     response = await get(`/resources/waypoints/${resId}`)
     const resData = (await response.json()) as Resource<Waypoint>
     resData.should.deep.equal({
