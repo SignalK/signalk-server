@@ -2,7 +2,7 @@
   "$schema": "https://typedoc.org/schema.json",
   "name": "Signal K",
   "entryPointStrategy": "packages",
-  "entryPoints": ["."],
+  "entryPoints": ["packages/*"],
   "packagesRequiringDocumentation": ["signalk-server", "@signalk/server-api"],
   "out": "docs/dist",
   "readme": "docs/README.md",
