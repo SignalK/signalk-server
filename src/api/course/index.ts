@@ -678,11 +678,24 @@ export class CourseApi {
 
     if (
       (await this.isValidRouteCourse(info)) ||
-      (await this.isValidWaypointCourse(info))
+      (await this.isValidWaypointCourse(info)) ||
+      this.isValidPositionCourse(info)
     ) {
       return info
     }
     return NO_COURSE_INFO
+  }
+
+  // A destination set by position refers to no resource, so its points are
+  // all there is to validate.
+  private isValidPositionCourse(info: CourseInfo): boolean {
+    return (
+      !info.activeRoute &&
+      !info.nextPoint?.href &&
+      this.isValidPosition(info.nextPoint?.position as Position) &&
+      (!info.previousPoint ||
+        this.isValidPosition(info.previousPoint.position as Position))
+    )
   }
 
   private async isValidRouteCourse(info: CourseInfo): Promise<boolean> {
