@@ -9,7 +9,8 @@ import {
   Timestamp
 } from '@signalk/server-api'
 
-import { ServerApp, SignalKMessageHub, WithConfig } from './app'
+import { ServerApp, SignalKMessageHub } from './app'
+import { WithConfig } from './config/config'
 import { createDebug } from './debug'
 import updateContractDefaults from './defaults/updateContracts.json'
 
