@@ -8,6 +8,7 @@ import {
   getInstalledServedRoot,
   packageNameIs
 } from '../../dist/appstore/local-assets'
+import { WEB_MOUNT_KEYWORDS } from '../../dist/interfaces/webapps'
 
 // buildLocalAssetUrl stats the filesystem when a served root is known,
 // so the existence-dependent cases need real files on disk.
@@ -156,20 +157,58 @@ describe('appstore/local-assets', () => {
   })
 
   describe('buildLocalAssetUrls', () => {
+    const keywords = ['signalk-webapp']
+
     it('returns undefined when the package declares no signalk block', () => {
-      expect(buildLocalAssetUrls('pkg', {}, undefined)).to.be.undefined
+      expect(buildLocalAssetUrls('pkg', { keywords }, undefined)).to.be
+        .undefined
       expect(buildLocalAssetUrls('pkg', undefined, undefined)).to.be.undefined
     })
 
     it('returns undefined when nothing usable is declared', () => {
-      expect(buildLocalAssetUrls('pkg', { signalk: {} }, undefined)).to.be
-        .undefined
+      expect(buildLocalAssetUrls('pkg', { keywords, signalk: {} }, undefined))
+        .to.be.undefined
+    })
+
+    it('returns undefined for a plugin the server does not mount', () => {
+      makeFile('pkg/icon.svg')
+      expect(
+        buildLocalAssetUrls(
+          'pkg',
+          {
+            keywords: ['signalk-node-server-plugin'],
+            signalk: { appIcon: './icon.svg' }
+          },
+          tmpRoot
+        )
+      ).to.be.undefined
+      expect(
+        buildLocalAssetUrls(
+          'pkg',
+          { signalk: { appIcon: './icon.svg' } },
+          tmpRoot
+        )
+      ).to.be.undefined
+    })
+
+    it('builds URLs for every mounted package kind', () => {
+      for (const keyword of Object.values(WEB_MOUNT_KEYWORDS)) {
+        const result = buildLocalAssetUrls(
+          'pkg',
+          {
+            keywords: ['signalk-node-server-plugin', keyword],
+            signalk: { appIcon: 'icon.png' }
+          },
+          undefined
+        )
+        expect(result?.appIcon, keyword).to.equal('/pkg/icon.png')
+      }
     })
 
     it('builds the appIcon URL', () => {
       const result = buildLocalAssetUrls(
         'pkg',
-        { signalk: { appIcon: './icon.png' } },
+        { keywords, signalk: { appIcon: './icon.png' } },
         undefined
       )
       expect(result?.appIcon).to.equal('/pkg/icon.png')
@@ -178,7 +217,10 @@ describe('appstore/local-assets', () => {
     it('builds screenshot URLs and drops unusable entries', () => {
       const result = buildLocalAssetUrls(
         'pkg',
-        { signalk: { screenshots: ['a.png', '../escape.png', '', 7] } },
+        {
+          keywords,
+          signalk: { screenshots: ['a.png', '../escape.png', '', 7] }
+        },
         undefined
       )
       expect(result?.screenshots).to.deep.equal(['/pkg/a.png'])
@@ -188,7 +230,10 @@ describe('appstore/local-assets', () => {
       makeFile('pkg/public/icon.png')
       const result = buildLocalAssetUrls(
         'pkg',
-        { signalk: { appIcon: 'icon.png', screenshots: ['nope.png'] } },
+        {
+          keywords,
+          signalk: { appIcon: 'icon.png', screenshots: ['nope.png'] }
+        },
         tmpRoot
       )
       expect(result?.appIcon).to.equal('/pkg/icon.png')
