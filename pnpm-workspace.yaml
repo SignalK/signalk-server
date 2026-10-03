@@ -1,0 +1,32 @@
+packages:
+  - packages/server-admin-ui-dependencies
+  - packages/path-metadata
+  - packages/server-admin-ui
+  - packages/streams
+  - packages/server-api
+  - packages/resources-provider-plugin
+  - packages/typedoc-theme
+  - packages/assemblyscript-plugin-sdk
+
+# Workspace packages refer to each other with plain semver ranges so that
+# the published manifests stay valid for npm users as well.
+linkWorkspacePackages: true
+
+allowBuilds:
+  # Builds the native SocketCAN addon; no prebuilt binaries are shipped
+  '@canboat/canboatjs': true
+  '@serialport/bindings-cpp': true
+  # Only builds from source when explicitly requested
+  '@parcel/watcher': false
+  # Install-time telemetry and banners
+  '@scarf/scarf': false
+  core-js: false
+  es5-ext: false
+  # Selects a React Native storage backend
+  storage-engine: false
+
+# Packages published by the Signal K and Canboat projects are released and
+# adopted together, so they are not held back by minimumReleaseAge.
+minimumReleaseAgeExclude:
+  - '@signalk/*'
+  - '@canboat/*'

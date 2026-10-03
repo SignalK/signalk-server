@@ -5,23 +5,23 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc --build",
-    "build:all": "npm run build:workspaces && npm run build && npm run build:docs",
+    "build:all": "pnpm build:workspaces && pnpm build && pnpm build:docs",
     "build:docs": "typedoc",
-    "build:workspaces": "npm run build --workspaces --if-present",
+    "build:workspaces": "pnpm -r --if-present build",
     "watch": "tsc --build -w",
     "prettier": "prettier --write .",
     "lint": "eslint --fix --cache",
-    "format": "npm run prettier && npm run lint",
+    "format": "pnpm prettier && pnpm lint",
     "ci-lint": "eslint && prettier --check .",
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
     "start": "node bin/signalk-server",
     "test-only": "NODE_ENV=test mocha 'test/**/*.[jt]s'",
-    "test:admin-ui": "npm run test -w @signalk/server-admin-ui",
-    "test:server-api": "npm run test -w @signalk/server-api",
-    "test:streams": "npm run test -w @signalk/streams",
-    "test:path-metadata": "npm run test -w @signalk/path-metadata",
-    "test": "npm run build && npm run test-only && npm run ci-lint && npm run test:admin-ui && npm run test:server-api && npm run test:streams && npm run test:path-metadata",
-    "heroku-postbuild": "npm run build:all",
+    "test:admin-ui": "pnpm --filter @signalk/server-admin-ui test",
+    "test:server-api": "pnpm --filter @signalk/server-api test",
+    "test:streams": "pnpm --filter @signalk/streams test",
+    "test:path-metadata": "pnpm --filter @signalk/path-metadata test",
+    "test": "pnpm build && pnpm test-only && pnpm ci-lint && pnpm test:admin-ui && pnpm test:server-api && pnpm test:streams && pnpm test:path-metadata",
+    "heroku-postbuild": "pnpm build:all",
     "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
   },
   "bin": {
@@ -64,16 +64,7 @@
   "engines": {
     "node": ">=22"
   },
-  "workspaces": [
-    "packages/server-admin-ui-dependencies",
-    "packages/path-metadata",
-    "packages/server-admin-ui",
-    "packages/streams",
-    "packages/server-api",
-    "packages/resources-provider-plugin",
-    "packages/typedoc-theme",
-    "packages/assemblyscript-plugin-sdk"
-  ],
+  "packageManager": "pnpm@11.28.3",
   "dependencies": {
     "@assemblyscript/loader": "^0.28.19",
     "@astronautlabs/mdns": "^1.0.10",
