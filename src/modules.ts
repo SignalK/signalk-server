@@ -21,6 +21,7 @@ import _ from 'lodash'
 import path from 'path'
 import semver, { SemVer } from 'semver'
 import { atomicWriteFileSync } from './atomicWrite'
+import { findBundledPackages } from './bundled-packages'
 import { Config } from './config/config'
 import { createDebug } from './debug'
 import { pluginConfigPath, pluginDataDir } from './plugin-paths'
@@ -141,6 +142,20 @@ function getModulePaths(config: Config) {
   )
 }
 
+// Bundled packages outside appPath/node_modules, where hoisting or a pnpm
+// store places them, are not found by scanning the module paths.
+function findBundledModules(config: Config, keyword: string): ModuleData[] {
+  const result: ModuleData[] = []
+  for (const { name, location } of findBundledPackages(config.appPath)) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const metadata = require(path.join(location, name, 'package.json'))
+    if (metadata.keywords?.includes(keyword)) {
+      result.push({ module: metadata.name, metadata, location })
+    }
+  }
+  return result
+}
+
 const getModuleSortName = (x: ModuleData) =>
   (x.module || '').replace('@signalk', ' ')
 
@@ -152,11 +167,12 @@ const priorityPrefix = (a: ModuleData, b: ModuleData) =>
 export function modulesWithKeyword(config: Config, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
-    _.flatten(
-      getModulePaths(config).map((pathOption) =>
+    _.flatten([
+      ...getModulePaths(config).map((pathOption) =>
         findModulesInDir(pathOption, keyword)
-      )
-    ),
+      ),
+      findBundledModules(config, keyword)
+    ]),
     (moduleData) => moduleData.module
   ).sort(priorityPrefix)
 }
