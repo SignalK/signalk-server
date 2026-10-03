@@ -611,6 +611,8 @@ settings (Server -> Settings in the admin UI, restart required) takes the core
 notification manager out of the notification path so an external handler can
 own the lifecycle instead. `notifications.*` deltas then flow to the data
 model unmodified — no server-assigned `id` or `status` is embedded in values.
+The built-in zones engine does not run either, so `zones` in path metadata no
+longer raise notifications; evaluating them is up to the external handler.
 
 With management disabled the API surface stays mounted but behaves as follows:
 

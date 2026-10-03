@@ -600,7 +600,9 @@ const ServerSettings: React.FC = () => {
                   Run the built-in notification manager. Turn off to let an
                   external notification handler own notification lifecycle and
                   avoid conflicts. Disabling stops core silence/acknowledge
-                  handling; those operations return 501.
+                  handling; those operations return 501. It also stops the
+                  built-in zones engine, so zones set in path metadata no longer
+                  raise notifications.
                 </Form.Text>
               </Col>
             </Form.Group>
