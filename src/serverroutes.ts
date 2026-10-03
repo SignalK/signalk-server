@@ -36,6 +36,7 @@ import moment from 'moment'
 import ncpI from 'ncp'
 import os from 'os'
 import path from 'path'
+import { findPackageLocation } from './bundled-packages'
 import unzipper from 'unzipper'
 import util from 'util'
 import { mountSwaggerUi } from './api/swagger'
@@ -82,6 +83,7 @@ import { Value } from '@sinclair/typebox/value'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
+const ADMIN_UI_PACKAGE = '@signalk/server-admin-ui'
 
 // Schemas for the atomic priorities payload and its sub-documents. These are
 // the same shapes the delta engine and the persisted settings.json already
@@ -405,17 +407,19 @@ module.exports = function (
     )
   }
 
+  const adminUiPath = path.join(
+    findPackageLocation(app.config.appPath, ADMIN_UI_PACKAGE) ??
+      path.join(app.config.appPath, 'node_modules'),
+    ADMIN_UI_PACKAGE,
+    'public'
+  )
+
   // Vite 8 (Rolldown) changed CSS url() rewriting for publicDir assets: the built CSS
   // references logos as url(public_src/img/...) which resolves to assets/public_src/img/
   // relative to the CSS file, not the actual img/ location. Serve default logos from there.
   app.use(
     '/admin/assets/public_src/img',
-    express.static(
-      path.join(
-        __dirname,
-        '/../node_modules/@signalk/server-admin-ui/public/img'
-      )
-    )
+    express.static(path.join(adminUiPath, 'img'))
   )
 
   // mount before the main /admin
@@ -434,11 +438,6 @@ module.exports = function (
       res.redirect(301, to)
     })
   }
-
-  const adminUiPath = path.join(
-    __dirname,
-    '/../node_modules/@signalk/server-admin-ui/public'
-  )
 
   function serveIndexWithAddonScripts(indexPath: string, res: Response) {
     fs.readFile(indexPath, (err, indexContent) => {
