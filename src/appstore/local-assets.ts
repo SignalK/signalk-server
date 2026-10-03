@@ -22,7 +22,27 @@ interface SignalKAssetDeclaration {
 }
 
 interface PackageWithSignalK {
+  keywords?: unknown
   signalk?: SignalKAssetDeclaration
+}
+
+/**
+ * The keywords `interfaces/webapps.ts` mounts at `/<package-name>/`.
+ * A package without one of them (a plain `signalk-node-server-plugin`)
+ * has no static mount, so every local asset URL for it would 404.
+ */
+const WEB_MOUNT_KEYWORDS = new Set([
+  'signalk-webapp',
+  'signalk-embeddable-webapp',
+  'signalk-node-server-addon',
+  'signalk-plugin-configurator'
+])
+
+function hasWebMount(pkg: PackageWithSignalK): boolean {
+  return (
+    Array.isArray(pkg.keywords) &&
+    pkg.keywords.some((k) => WEB_MOUNT_KEYWORDS.has(k))
+  )
 }
 
 /**
@@ -133,7 +153,7 @@ export function buildLocalAssetUrl(
 /**
  * Build the local `appIcon` / `screenshots` URLs declared by an
  * installed package, or `undefined` when the package declares neither
- * usable asset.
+ * usable asset or the server does not mount it.
  */
 export function buildLocalAssetUrls(
   pkgName: string,
@@ -142,6 +162,7 @@ export function buildLocalAssetUrls(
 ): LocalAssetUrls | undefined {
   const signalk = pkg?.signalk
   if (!signalk || typeof signalk !== 'object') return undefined
+  if (!hasWebMount(pkg)) return undefined
   const servedRoot = getInstalledServedRoot(pkgName, packageLocation)
   const appIcon =
     typeof signalk.appIcon === 'string' && signalk.appIcon.trim()
