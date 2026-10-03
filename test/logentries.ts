@@ -1,7 +1,7 @@
 import { LogEntry } from '@signalk/server-api'
 import chai from 'chai'
 import { v4 as uuidv4 } from 'uuid'
-import { startServer, DATETIME_REGEX } from './ts-servertestutilities'
+import { startServer } from './ts-servertestutilities'
 
 chai.should()
 
@@ -145,7 +145,10 @@ describe('Logentries resource type', () => {
     response.status.should.equal(201)
     const { id } = (await response.json()) as { id: string }
     const created = provider.store[id] as LogEntry
-    created.datetime!.should.match(DATETIME_REGEX)
+    // the server-generated default must be a UTC (Z) instant
+    created.datetime!.should.match(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/
+    )
 
     await put(`/resources/logentries/${id}`, { text: 'Main reefed twice' })
     const replaced = provider.store[id] as LogEntry
@@ -257,6 +260,18 @@ describe('Logentries resource type', () => {
       value: { datetime: '2026-01-17T09:01:00.000Z' }
     })
     response.status.should.equal(400)
+  })
+
+  it('a read failure while filling datetime fails the write without defaults', async function () {
+    const { provider, selfPutV1 } = await startWithProvider()
+    provider.methods.getResource = () =>
+      Promise.reject(new Error('storage backend unreachable'))
+
+    const response = await selfPutV1(`resources.logentries.${uuidv4()}`, {
+      value: { text: 'Should not be stored' }
+    })
+    response.status.should.equal(500)
+    Object.keys(provider.store).should.be.empty
   })
 
   it('websocket PUT routes to the resource provider', async function () {

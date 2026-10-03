@@ -27,6 +27,13 @@ export const CHART_TILE_REGEX = /\/charts\/[^?]+\/\d+\/\d+\/\d+$/
 
 export const skUuid = () => `${uuidv4()}`
 
+/** Providers signal an absent resource by rejecting getResource with a
+ * not-found style error (Node's ENOENT convention); anything else is a real
+ * retrieval failure and must not be mistaken for "not found". */
+const isResourceNotFound = (e: unknown): boolean =>
+  (e as { code?: string })?.code === 'ENOENT' ||
+  (e instanceof Error && /enoent|no such resource|not found/i.test(e.message))
+
 /** Singular of a resource type name for descriptions: routes -> route,
  * logentries -> logentry. */
 const singularResourceType = (type: string): string =>
@@ -264,16 +271,23 @@ export class ResourcesApi {
     resType: SignalKResourceType,
     resId: string,
     methods: ResourceProviderMethods,
-     
+
     data: { [key: string]: any }
   ) {
     if (resType !== 'logentries' || data.datetime !== undefined) {
       return
     }
-    const existing = (await methods
-      .getResource(resId)
-      .catch(() => undefined)) as { datetime?: string } | undefined
-    data.datetime = existing?.datetime ?? new Date().toISOString()
+    try {
+      const existing = (await methods.getResource(resId)) as {
+        datetime?: string
+      }
+      data.datetime = existing?.datetime ?? new Date().toISOString()
+    } catch (e) {
+      if (!isResourceNotFound(e)) {
+        throw e
+      }
+      data.datetime = new Date().toISOString()
+    }
   }
 
   async deleteResource(
