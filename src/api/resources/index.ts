@@ -223,10 +223,12 @@ export class ResourcesApi {
     }
 
     const provider = await this.getProviderForWrite(resType, resId, providerId)
-    if (provider) {
-      this.resProvider[resType]
-        ?.get(provider)
-        ?.setResource(resId, data)
+    const methods = provider
+      ? this.resProvider[resType]?.get(provider)
+      : undefined
+    if (provider && methods) {
+      return methods
+        .setResource(resId, data)
         .then((r) => {
           this.app.handleMessage(
             provider as string,
@@ -257,10 +259,12 @@ export class ResourcesApi {
     } else {
       provider = await this.getProviderForResourceId(resType, resId)
     }
-    if (provider) {
-      this.resProvider[resType]
-        ?.get(provider)
-        ?.deleteResource(resId)
+    const methods = provider
+      ? this.resProvider[resType]?.get(provider)
+      : undefined
+    if (provider && methods) {
+      return methods
+        .deleteResource(resId)
         .then((r) => {
           this.app.handleMessage(
             provider as string,
