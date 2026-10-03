@@ -144,7 +144,7 @@
     "@mxtommy/kip": "^4.8.0",
     "@naugehyde/node-ble": "^1.13.5",
     "@signalk/app-dock": "^1.1.0",
-    "@signalk/freeboard-sk": "^2.24.0",
+    "@signalk/freeboard-sk": "^3.2.0",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/server-admin-ui": "^2.33.0",
     "@signalk/set-system-time": "^1.5.0",
