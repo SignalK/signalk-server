@@ -14,7 +14,17 @@
  * limitations under the License.
  */
 
-import type { OIDCConfig, SignalKPermission } from './types'
+import type {
+  OIDCConfig,
+  OIDCIdentityClaim,
+  OIDCUserInfo,
+  SignalKPermission
+} from './types'
+
+const DEFAULT_IDENTITY_CLAIM: OIDCIdentityClaim = 'email'
+
+/** Permission levels that can be granted by a mapping rule (never 'readonly') */
+type MappedPermission = 'admin' | 'readwrite'
 
 /**
  * Check if two arrays have any common elements
@@ -25,29 +35,21 @@ function hasIntersection(arr1: string[], arr2: string[]): boolean {
 }
 
 /**
- * Map OIDC groups to Signal K permission level
- *
- * Priority:
- * 1. If user is in any admin group → 'admin'
- * 2. Else if user is in any readwrite group → 'readwrite'
- * 3. Else → defaultPermission (typically 'readonly')
+ * Match the user's groups against adminGroups/readwriteGroups.
  *
  * **Limitations:**
  * - Group matching is **case-sensitive** (e.g., 'Admins' ≠ 'admins')
  * - Groups must be present in the **ID token** (not userinfo endpoint)
  * - Use `groupsAttribute` config to specify a custom claim name
  *
- * @param userGroups - Groups the user belongs to (from OIDC claims)
- * @param config - OIDC configuration with group mappings
- * @returns The mapped permission level
+ * @returns The matched permission, or undefined if no group matched
  */
-export function mapGroupsToPermission(
+function matchGroups(
   userGroups: string[] | undefined,
   config: OIDCConfig
-): SignalKPermission {
-  // If user has no groups, return default permission
+): MappedPermission | undefined {
   if (!userGroups || userGroups.length === 0) {
-    return config.defaultPermission
+    return undefined
   }
 
   // Check admin groups first (highest priority)
@@ -64,6 +66,92 @@ export function mapGroupsToPermission(
     }
   }
 
-  // Fall back to default permission
-  return config.defaultPermission
+  return undefined
+}
+
+/**
+ * Resolve the identity value to match adminUsers/readwriteUsers against.
+ *
+ * When the identity claim is 'email', the token must assert
+ * `email_verified: true`. Without this gate, any provider that lets a user
+ * enter an arbitrary, unverified email address could be used to claim an
+ * allowlisted identity and escalate to admin.
+ *
+ * @returns The identity value, or undefined if unavailable or unverified
+ */
+function resolveIdentity(
+  userInfo: OIDCUserInfo,
+  config: OIDCConfig
+): string | undefined {
+  const claim = config.identityClaim ?? DEFAULT_IDENTITY_CLAIM
+  switch (claim) {
+    case 'email':
+      return userInfo.emailVerified === true ? userInfo.email : undefined
+    case 'preferred_username':
+      return userInfo.preferredUsername
+    case 'sub':
+      return userInfo.sub
+  }
+}
+
+/**
+ * Match the user's identity (per identityClaim) against the
+ * adminUsers/readwriteUsers allowlists.
+ *
+ * Matching is case-insensitive for 'email' and 'preferred_username'.
+ * 'sub' is an opaque, case-sensitive identifier (OIDC Core §2) and is
+ * compared exactly.
+ *
+ * @returns The matched permission, or undefined if no list matched
+ */
+export function matchIdentityList(
+  userInfo: OIDCUserInfo,
+  config: OIDCConfig
+): MappedPermission | undefined {
+  const identity = resolveIdentity(userInfo, config)
+  if (!identity) {
+    return undefined
+  }
+
+  const caseSensitive =
+    (config.identityClaim ?? DEFAULT_IDENTITY_CLAIM) === 'sub'
+  const normalize = (value: string) =>
+    caseSensitive ? value.trim() : value.trim().toLowerCase()
+  const normalizedIdentity = normalize(identity)
+  const listContainsIdentity = (list: string[] | undefined) =>
+    !!list && list.some((entry) => normalize(entry) === normalizedIdentity)
+
+  if (listContainsIdentity(config.adminUsers)) {
+    return 'admin'
+  }
+  if (listContainsIdentity(config.readwriteUsers)) {
+    return 'readwrite'
+  }
+  return undefined
+}
+
+/**
+ * Map an authenticated OIDC user to a Signal K permission level
+ *
+ * Priority:
+ * 1. Group mappings (adminGroups, then readwriteGroups)
+ * 2. Identity allowlists (adminUsers, then readwriteUsers)
+ * 3. defaultPermission (typically 'readonly')
+ *
+ * Behavior is unchanged from group-only mapping when the identity
+ * allowlists are not configured.
+ *
+ * @param userInfo - User information extracted from validated OIDC claims
+ * @param config - OIDC configuration with permission mappings
+ * @returns The mapped permission level
+ */
+export function mapUserToPermission(
+  userInfo: OIDCUserInfo,
+  config: OIDCConfig
+): SignalKPermission {
+  return (
+    matchGroups(userInfo.groups, config) ??
+    matchIdentityList(userInfo, config) ??
+    config.defaultPermission
+  )
 }

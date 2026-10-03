@@ -37,7 +37,7 @@ import { getDiscoveryDocument } from './discovery'
 import { buildAuthorizationUrl } from './authorization'
 import { exchangeAuthorizationCode, fetchUserinfo } from './token-exchange'
 import { validateIdToken } from './id-token-validation'
-import { mapGroupsToPermission } from './permission-mapping'
+import { mapUserToPermission, matchIdentityList } from './permission-mapping'
 
 const debug = createDebug('signalk-server:oidc-auth')
 const skAuthPrefix = '/signalk/v1/auth'
@@ -62,7 +62,7 @@ function arraysEqualIgnoringOrder(
  *
  * Security considerations:
  * - Validates that userinfo sub matches ID token sub (OIDC Core spec requirement)
- * - Only merges safe claims (email, name, preferred_username, groups)
+ * - Only merges safe claims (email, email_verified, name, preferred_username, groups)
  * - Does NOT allow userinfo to overwrite security-critical claims (sub, iss, aud, nonce)
  *
  * @param idTokenClaims The validated claims from the ID token
@@ -85,7 +85,14 @@ export function validateAndMergeUserinfoClaims(
 
   // Only merge specific safe claims - don't allow userinfo to overwrite
   // security-critical claims like sub, iss, aud, nonce, etc.
-  const safeClaims = ['email', 'name', 'preferred_username', groupsAttribute]
+  // email and email_verified are merged together so they stay consistent.
+  const safeClaims = [
+    'email',
+    'email_verified',
+    'name',
+    'preferred_username',
+    groupsAttribute
+  ]
 
   for (const claim of safeClaims) {
     if (userinfoClaims[claim] !== undefined) {
@@ -163,8 +170,8 @@ export async function findOrCreateOIDCUser(
 ): Promise<ExternalUser | null> {
   const issuer = oidcConfig.issuer
 
-  // Calculate permission based on user's groups
-  const mappedPermission = mapGroupsToPermission(userInfo.groups, oidcConfig)
+  // Calculate permission based on user's groups and identity allowlists
+  const mappedPermission = mapUserToPermission(userInfo, oidcConfig)
 
   // Build OIDC metadata to store with user
   const oidcMetadata = {
@@ -217,8 +224,11 @@ export async function findOrCreateOIDCUser(
     return user
   }
 
-  // User not found - check if auto-creation is enabled
-  if (!oidcConfig.autoCreateUsers) {
+  // User not found - check if auto-creation is enabled.
+  // Users on an identity allowlist are explicitly preconfigured, so they
+  // may still be created - otherwise a server with auto-creation disabled
+  // could never admit the admin named in its own configuration.
+  if (!oidcConfig.autoCreateUsers && !matchIdentityList(userInfo, oidcConfig)) {
     debug('OIDC: user not found and auto-creation disabled')
     return null
   }
@@ -421,6 +431,10 @@ export function registerOIDCRoutes(
         const userInfo: OIDCUserInfo = {
           sub: claims.sub as string,
           email: claims.email as string | undefined,
+          emailVerified:
+            typeof claims.email_verified === 'boolean'
+              ? claims.email_verified
+              : undefined,
           name: claims.name as string | undefined,
           preferredUsername: claims.preferred_username as string | undefined,
           groups

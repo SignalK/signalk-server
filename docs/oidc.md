@@ -14,6 +14,7 @@ OIDC authentication provides:
 - **Modern authentication methods**: The IdP may support modern authentication methods such as [Passkey](https://safety.google/safety/authentication/passkey/) and Multi-factor authentication without implementing everything within Signal K
 - **Centralized User Management**: Manage users in your identity provider, not in Signal K
 - **Group-Based Permissions**: Map identity provider groups to Signal K permission levels
+- **Identity-Based Permissions**: Grant admin or read/write to specific users by email address, without depending on group claims
 - **Auto-Provisioning**: Automatically create Signal K users on first OIDC login
 
 OIDC works alongside local authentication. You can have both local users and OIDC users simultaneously.
@@ -75,6 +76,9 @@ export SIGNALK_OIDC_CLIENT_SECRET=your-client-secret
 | `SIGNALK_OIDC_ADMIN_GROUPS`       | No       | -                      | Comma-separated groups that grant admin                                        |
 | `SIGNALK_OIDC_READWRITE_GROUPS`   | No       | -                      | Comma-separated groups that grant readwrite                                    |
 | `SIGNALK_OIDC_GROUPS_ATTRIBUTE`   | No       | `groups`               | ID token claim containing groups                                               |
+| `SIGNALK_OIDC_ADMIN_USERS`        | No       | -                      | Comma-separated identities that grant admin                                    |
+| `SIGNALK_OIDC_READWRITE_USERS`    | No       | -                      | Comma-separated identities that grant readwrite                                |
+| `SIGNALK_OIDC_IDENTITY_CLAIM`     | No       | `email`                | Claim to match user identities against (`email`, `preferred_username`, `sub`)  |
 | `SIGNALK_OIDC_PROVIDER_NAME`      | No       | `SSO Login`            | Button text on login page                                                      |
 | `SIGNALK_OIDC_AUTO_LOGIN`         | No       | `false`                | Auto-redirect to OIDC provider                                                 |
 | `SIGNALK_OIDC_REDIRECT_URI`       | **Yes**  | -                      | Full callback URL (e.g., `https://myserver.com/signalk/v1/auth/oidc/callback`) |
@@ -97,6 +101,9 @@ OIDC can also be configured in `security.json`:
     "adminGroups": ["admins", "sk-admin"],
     "readwriteGroups": ["users"],
     "groupsAttribute": "groups",
+    "adminUsers": ["owner@example.com"],
+    "readwriteUsers": ["crew@example.com"],
+    "identityClaim": "email",
     "providerName": "Corporate SSO",
     "autoLogin": false
   }
@@ -107,11 +114,13 @@ OIDC can also be configured in `security.json`:
 
 ## Permission Mapping
 
-Signal K maps OIDC groups to permission levels in this priority order:
+Signal K maps OIDC users to permission levels in this priority order:
 
 1. **Admin**: User belongs to any group in `adminGroups`
 2. **Read/Write**: User belongs to any group in `readwriteGroups`
-3. **Default**: User gets `defaultPermission` (default: `readonly`)
+3. **Admin**: User's identity is listed in `adminUsers`
+4. **Read/Write**: User's identity is listed in `readwriteUsers`
+5. **Default**: User gets `defaultPermission` (default: `readonly`)
 
 ### Example Configuration
 
@@ -144,6 +153,37 @@ Configure the claim name:
 ```bash
 SIGNALK_OIDC_GROUPS_ATTRIBUTE=cognito:groups
 ```
+
+### Identity-Based Permissions
+
+Not every provider can send group claims: Google sends none, and GitHub only
+exposes organization/team membership. `adminUsers` and `readwriteUsers` grant
+permissions to specific users instead, so a server can be preconfigured with
+its administrators without managing groups in the provider:
+
+```bash
+SIGNALK_OIDC_ADMIN_USERS=owner@example.com
+SIGNALK_OIDC_READWRITE_USERS=crew@example.com,mate@example.com
+```
+
+By default identities are matched against the `email` claim. **An email
+identity only matches when the token also asserts `email_verified: true`.**
+Without that requirement, any provider that accepts unverified,
+user-entered email addresses could be used to claim an allowlisted identity
+and escalate to admin. If your provider does not send `email_verified`, use
+a different `identityClaim`:
+
+```bash
+SIGNALK_OIDC_IDENTITY_CLAIM=preferred_username
+```
+
+Supported claims are `email`, `preferred_username`, and `sub`. Matching is
+case-insensitive for `email` and `preferred_username`; `sub` is an opaque
+identifier and is compared exactly.
+
+Group mappings take priority over the identity allowlists, and users on an
+identity allowlist can log in even when `autoCreateUsers` is disabled —
+being listed is the preconfiguration.
 
 ## Provider Setup Guides
 
@@ -353,6 +393,8 @@ For production use, always run Signal K behind HTTPS. OIDC cookies are marked as
 2. Verify `groupsAttribute` matches your provider's claim name
 3. Ensure the user is in a group listed in `adminGroups`
 4. Some providers require explicit configuration to include groups in tokens
+5. If using `adminUsers` with the default `email` identity claim, the token
+   must contain `email_verified: true` — an unverified email never matches
 
 ### "State mismatch" or "Invalid state"
 

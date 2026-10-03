@@ -44,6 +44,23 @@ describe('Userinfo Validation Security', () => {
       expect(idTokenClaims.groups).to.deep.equal(['admin', 'users'])
     })
 
+    it('should merge email_verified together with email', () => {
+      const idTokenClaims: Record<string, unknown> = {
+        sub: 'user-123',
+        iss: 'https://auth.example.com'
+      }
+      const userinfoClaims = {
+        sub: 'user-123',
+        email: 'user@example.com',
+        email_verified: true
+      }
+
+      validateAndMergeUserinfoClaims(idTokenClaims, userinfoClaims)
+
+      expect(idTokenClaims.email).to.equal('user@example.com')
+      expect(idTokenClaims.email_verified).to.equal(true)
+    })
+
     it('should NOT merge security-critical claims from userinfo', () => {
       const idTokenClaims: Record<string, unknown> = {
         sub: 'user-123',

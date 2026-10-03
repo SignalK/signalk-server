@@ -1,6 +1,9 @@
 import { expect } from 'chai'
 
-import { mapGroupsToPermission } from '../../src/oidc/permission-mapping'
+import {
+  mapUserToPermission,
+  matchIdentityList
+} from '../../src/oidc/permission-mapping'
 import type { OIDCConfig } from '../../src/oidc/types'
 
 describe('OIDC Permission Mapping', () => {
@@ -16,6 +19,13 @@ describe('OIDC Permission Mapping', () => {
     providerName: 'SSO Login',
     autoLogin: false
   }
+
+  // Group mapping behavior predates identity allowlists; exercise it
+  // through mapUserToPermission with a groups-only user
+  const mapGroupsToPermission = (
+    groups: string[] | undefined,
+    config: OIDCConfig
+  ) => mapUserToPermission({ sub: 'test-sub', groups }, config)
 
   describe('mapGroupsToPermission', () => {
     describe('with no group configuration', () => {
@@ -196,6 +206,186 @@ describe('OIDC Permission Mapping', () => {
         }
         const result = mapGroupsToPermission(['Signal K Admins'], config)
         expect(result).to.equal('admin')
+      })
+    })
+  })
+
+  describe('identity allowlists', () => {
+    const verifiedUser = {
+      sub: 'user-123',
+      email: 'owner@example.com',
+      emailVerified: true
+    }
+
+    describe('with adminUsers configured', () => {
+      const config: OIDCConfig = {
+        ...baseConfig,
+        adminUsers: ['owner@example.com']
+      }
+
+      it('should return admin for a listed, verified email', () => {
+        expect(mapUserToPermission(verifiedUser, config)).to.equal('admin')
+      })
+
+      it('should NOT match when email_verified is false', () => {
+        const user = { ...verifiedUser, emailVerified: false }
+        expect(mapUserToPermission(user, config)).to.equal('readonly')
+      })
+
+      it('should NOT match when email_verified is absent', () => {
+        const user = { sub: 'user-123', email: 'owner@example.com' }
+        expect(mapUserToPermission(user, config)).to.equal('readonly')
+      })
+
+      it('should return defaultPermission for an unlisted email', () => {
+        const user = { ...verifiedUser, email: 'other@example.com' }
+        expect(mapUserToPermission(user, config)).to.equal('readonly')
+      })
+
+      it('should match email case-insensitively', () => {
+        const user = { ...verifiedUser, email: 'Owner@Example.COM' }
+        expect(mapUserToPermission(user, config)).to.equal('admin')
+      })
+
+      it('should match case-insensitively when the list is mixed case', () => {
+        const mixedCaseConfig: OIDCConfig = {
+          ...baseConfig,
+          adminUsers: ['Owner@Example.com']
+        }
+        expect(mapUserToPermission(verifiedUser, mixedCaseConfig)).to.equal(
+          'admin'
+        )
+      })
+
+      it('should ignore surrounding whitespace in list entries', () => {
+        const paddedConfig: OIDCConfig = {
+          ...baseConfig,
+          adminUsers: [' owner@example.com ']
+        }
+        expect(mapUserToPermission(verifiedUser, paddedConfig)).to.equal(
+          'admin'
+        )
+      })
+    })
+
+    describe('with readwriteUsers configured', () => {
+      const config: OIDCConfig = {
+        ...baseConfig,
+        adminUsers: ['owner@example.com'],
+        readwriteUsers: ['crew@example.com']
+      }
+
+      it('should return readwrite for a listed, verified email', () => {
+        const user = { ...verifiedUser, email: 'crew@example.com' }
+        expect(mapUserToPermission(user, config)).to.equal('readwrite')
+      })
+
+      it('should prioritize adminUsers over readwriteUsers', () => {
+        const bothConfig: OIDCConfig = {
+          ...config,
+          readwriteUsers: ['owner@example.com']
+        }
+        expect(mapUserToPermission(verifiedUser, bothConfig)).to.equal('admin')
+      })
+    })
+
+    describe('precedence between groups and identity lists', () => {
+      it('should let group mappings win over identity lists', () => {
+        const config: OIDCConfig = {
+          ...baseConfig,
+          readwriteGroups: ['crew'],
+          adminUsers: ['owner@example.com']
+        }
+        const user = { ...verifiedUser, groups: ['crew'] }
+        expect(mapUserToPermission(user, config)).to.equal('readwrite')
+      })
+
+      it('should fall through to identity lists when no group matches', () => {
+        const config: OIDCConfig = {
+          ...baseConfig,
+          adminGroups: ['admins'],
+          adminUsers: ['owner@example.com']
+        }
+        const user = { ...verifiedUser, groups: ['viewers'] }
+        expect(mapUserToPermission(user, config)).to.equal('admin')
+      })
+    })
+
+    describe('with identityClaim preferred_username', () => {
+      const config: OIDCConfig = {
+        ...baseConfig,
+        identityClaim: 'preferred_username',
+        adminUsers: ['skipper']
+      }
+
+      it('should match preferred_username without requiring email_verified', () => {
+        const user = { sub: 'user-123', preferredUsername: 'skipper' }
+        expect(mapUserToPermission(user, config)).to.equal('admin')
+      })
+
+      it('should match preferred_username case-insensitively', () => {
+        const user = { sub: 'user-123', preferredUsername: 'Skipper' }
+        expect(mapUserToPermission(user, config)).to.equal('admin')
+      })
+
+      it('should NOT match against email when claim is preferred_username', () => {
+        const user = {
+          sub: 'user-123',
+          email: 'skipper',
+          emailVerified: true
+        }
+        expect(mapUserToPermission(user, config)).to.equal('readonly')
+      })
+    })
+
+    describe('with identityClaim sub', () => {
+      const config: OIDCConfig = {
+        ...baseConfig,
+        identityClaim: 'sub',
+        adminUsers: ['User-123']
+      }
+
+      it('should match sub exactly', () => {
+        expect(mapUserToPermission({ sub: 'User-123' }, config)).to.equal(
+          'admin'
+        )
+      })
+
+      it('should compare sub case-sensitively (opaque identifier)', () => {
+        expect(mapUserToPermission({ sub: 'user-123' }, config)).to.equal(
+          'readonly'
+        )
+      })
+    })
+
+    describe('matchIdentityList', () => {
+      it('should return the matched permission', () => {
+        const config: OIDCConfig = {
+          ...baseConfig,
+          adminUsers: ['owner@example.com']
+        }
+        expect(matchIdentityList(verifiedUser, config)).to.equal('admin')
+      })
+
+      it('should return undefined when no list matches', () => {
+        const config: OIDCConfig = {
+          ...baseConfig,
+          adminUsers: ['other@example.com']
+        }
+        expect(matchIdentityList(verifiedUser, config)).to.equal(undefined)
+      })
+
+      it('should return undefined when no lists are configured', () => {
+        expect(matchIdentityList(verifiedUser, baseConfig)).to.equal(undefined)
+      })
+
+      it('should ignore groups entirely', () => {
+        const config: OIDCConfig = {
+          ...baseConfig,
+          adminGroups: ['admins']
+        }
+        const user = { ...verifiedUser, groups: ['admins'] }
+        expect(matchIdentityList(user, config)).to.equal(undefined)
       })
     })
   })
