@@ -7,8 +7,8 @@ import { HashRouter, Routes, Route } from 'react-router-dom'
 import { ROUTER_FUTURE_FLAGS } from './routerFuture'
 
 import 'simple-line-icons/css/simple-line-icons.css'
-import '../scss/style.scss'
-import '../scss/core/_dropdown-menu-right.scss'
+import './styles/style.scss'
+import './styles/core/_dropdown-menu-right.scss'
 
 import Full from './containers/Full/Full'
 import { WebSocketProvider } from './contexts/WebSocketContext'

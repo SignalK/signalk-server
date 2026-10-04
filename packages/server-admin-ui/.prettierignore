@@ -1,0 +1,3 @@
+# server-admin-ui/.prettierignore
+src/styles/core/**
+public/

@@ -28,7 +28,7 @@ const CSS_CLASSES = {
   FORM_CHECK_INPUT: 'form-check-input',
   FORM_CHECK_LABEL: 'form-check-label',
   BTN_INFO: 'btn btn-info',
-  BTN_OUTLINE_DARK: 'btn btn-outline-dark',
+  BTN_OUTLINE_SECONDARY: 'btn btn-outline-secondary',
   BTN_DANGER: 'btn btn-danger',
   ARRAY_ITEM: 'row array-item',
   ARRAY_ITEM_TOOLBOX: 'array-item-toolbox',
@@ -365,7 +365,7 @@ const customTemplates: any = {
       ),
     MoveUpButton: (props: ButtonProps) =>
       createButton(
-        `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
+        `${CSS_CLASSES.BTN_OUTLINE_SECONDARY} ${props.className || ''}`,
         props.onClick,
         props.disabled,
         undefined,
@@ -374,7 +374,7 @@ const customTemplates: any = {
       ),
     MoveDownButton: (props: ButtonProps) =>
       createButton(
-        `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
+        `${CSS_CLASSES.BTN_OUTLINE_SECONDARY} ${props.className || ''}`,
         props.onClick,
         props.disabled,
         undefined,
