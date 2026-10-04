@@ -31,6 +31,7 @@ import commandExists from 'command-exists'
 import express, { IRouter, NextFunction, Request, Response } from 'express'
 import { sendZip } from './zip'
 import fs from 'fs'
+import jwt from 'jsonwebtoken'
 import { forIn, get, isNumber, isUndefined, set, uniq, unset } from 'lodash'
 import moment from 'moment'
 import ncpI from 'ncp'
@@ -60,6 +61,7 @@ import { getHttpPort, getSslPort } from './ports'
 import { queryRequest } from './requestResponse'
 import {
   Device,
+  DeviceDashboard,
   getRateLimitValidationOptions,
   pathForSecurityConfig,
   SecurityConfig,
@@ -260,6 +262,26 @@ type HttpRateLimitOverrides = {
 const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
 const DEFAULT_HTTP_RATE_LIMIT_API_MAX = 1000
 const DEFAULT_HTTP_RATE_LIMIT_LOGIN_STATUS_MAX = 1000
+
+function isValidDeviceDashboard(
+  value: unknown
+): value is DeviceDashboard | undefined {
+  if (value === undefined) {
+    return true
+  }
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+  const { mode, url, metadata } = value as Record<string, unknown>
+  return (
+    (mode === 'redirect' || mode === 'metadata') &&
+    (url === undefined || typeof url === 'string') &&
+    (metadata === undefined ||
+      (typeof metadata === 'object' &&
+        metadata !== null &&
+        !Array.isArray(metadata)))
+  )
+}
 
 function getHttpRateLimitOverridesFromEnv(): HttpRateLimitOverrides {
   const raw = process.env.HTTP_RATE_LIMITS
@@ -490,8 +512,9 @@ module.exports = function (
       typeof req.query?.token === 'string' ? req.query.token : undefined
     if (queryToken) {
       try {
-        const payload: unknown = JSON.parse(
-          Buffer.from(queryToken.split('.')[1], 'base64url').toString()
+        const payload: unknown = jwt.verify(
+          queryToken,
+          getSecurityConfig(app).secretKey
         )
         const deviceId = (payload as { device?: unknown } | null)?.device
         if (typeof deviceId === 'string') {
@@ -695,7 +718,7 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/security/devices`,
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
-        const { displayName, permissions } = req.body
+        const { displayName, permissions, expiration } = req.body
         if (typeof displayName !== 'string' || !displayName.trim()) {
           res.status(400).json({ error: 'displayName is required' })
           return
@@ -704,10 +727,23 @@ module.exports = function (
           res.status(400).json({ error: 'Invalid permissions value' })
           return
         }
+        if (expiration !== undefined && typeof expiration !== 'string') {
+          res.status(400).json({ error: 'Invalid expiration value' })
+          return
+        }
+        if (!isValidDeviceDashboard(req.body.dashboard)) {
+          res.status(400).json({ error: 'Invalid dashboard value' })
+          return
+        }
         const config = getSecurityConfig(app)
         app.securityStrategy.createDevice(
           config,
-          req.body,
+          {
+            displayName,
+            permissions,
+            expiration,
+            dashboard: req.body.dashboard
+          },
           (err, updatedConfig, result) => {
             if (err) {
               console.log(err)
@@ -736,6 +772,13 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/security/devices/:uuid`,
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
+        if (
+          req.body.dashboard !== null &&
+          !isValidDeviceDashboard(req.body.dashboard)
+        ) {
+          res.status(400).json({ error: 'Invalid dashboard value' })
+          return
+        }
         const config = getSecurityConfig(app)
         app.securityStrategy.updateDevice(
           config,

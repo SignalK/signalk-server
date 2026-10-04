@@ -9,7 +9,7 @@ import {
   getReadOnlyToken,
   serverTestConfigDirectory
 } from './servertestutilities'
-import type { DeviceStateEvent } from '../src/deviceTracker'
+import { DeviceTracker, type DeviceStateEvent } from '../src/deviceTracker'
 
 const expect = chai.expect
 
@@ -196,6 +196,32 @@ describe('Device Manager', function () {
       expect(device.dashboard.url).to.equal('/@signalk/freeboard-sk/')
     })
 
+    it('rejects a device with an invalid dashboard', async function () {
+      const result = await fetch(`${url}/skServer/security/devices`, {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          displayName: 'Bad Dashboard',
+          permissions: 'readonly',
+          dashboard: { mode: 'popup', url: 42 }
+        })
+      })
+      expect(result.status).to.equal(400)
+    })
+
+    it('rejects a device with a non-string expiration', async function () {
+      const result = await fetch(`${url}/skServer/security/devices`, {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          displayName: 'Bad Expiration',
+          permissions: 'readonly',
+          expiration: { days: 1 }
+        })
+      })
+      expect(result.status).to.equal(400)
+    })
+
     it('updates a device', async function () {
       const createResult = await fetch(`${url}/skServer/security/devices`, {
         method: 'POST',
@@ -360,6 +386,7 @@ describe('Device Manager', function () {
 
   describe('Dashboard redirect', function () {
     let redirectDeviceToken: string
+    let redirectDeviceId: string
 
     before(async function () {
       const result = await fetch(`${url}/skServer/security/devices`, {
@@ -373,6 +400,17 @@ describe('Device Manager', function () {
       })
       const body = await result.json()
       redirectDeviceToken = body.token
+      redirectDeviceId = body.clientId
+    })
+
+    it('does not redirect a token with an invalid signature', async function () {
+      const forged = jwt.sign({ device: redirectDeviceId }, 'not-the-secret')
+      const result = await fetch(`${url}/?token=${forged}`, {
+        redirect: 'manual'
+      })
+      expect(result.status).to.equal(302)
+      const location = result.headers.get('location')
+      expect(location).to.not.include('freeboard')
     })
 
     it('redirects device with dashboard to assigned URL', async function () {
@@ -491,6 +529,27 @@ describe('Device Manager', function () {
       expect(body).to.deep.equal(data)
     })
 
+    it('readonly device cannot write own applicationData', async function () {
+      const createResult = await fetch(`${url}/skServer/security/devices`, {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          displayName: 'Readonly AppData Device',
+          permissions: 'readonly'
+        })
+      })
+      const { clientId, token } = await createResult.json()
+      const result = await fetch(
+        `${url}/signalk/v1/applicationData/device/${clientId}/testapp/1.0.0`,
+        {
+          method: 'POST',
+          headers: tokenHeaders(token),
+          body: JSON.stringify({ dashboard: 'helm' })
+        }
+      )
+      expect(result.status).to.equal(401)
+    })
+
     it('device cannot access another device scope', async function () {
       const result = await fetch(
         `${url}/signalk/v1/applicationData/device/${deviceClientId}/testapp/1.0.0`,
@@ -604,11 +663,6 @@ describe('Device Manager', function () {
 })
 
 describe('DeviceTracker', function () {
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  const { DeviceTracker } =
-    require('../dist/deviceTracker') as typeof import('../src/deviceTracker')
-  /* eslint-enable @typescript-eslint/no-require-imports */
-
   interface AdminDeviceEvent {
     type: string
     data: Partial<DeviceStateEvent>
