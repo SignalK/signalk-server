@@ -138,6 +138,7 @@ interface AuthenticatedRequest {
 interface JWTPayload {
   id?: string
   device?: string
+  ver?: number
   exp?: number
   iat?: number
   rememberMe?: boolean
@@ -1312,15 +1313,18 @@ function tokenSecurityFactory(
     theConfig: SecurityConfig,
     clientId: string
   ): string | null => {
+    assertConfigImmutability()
     const device = theConfig.devices?.find((d) => d.clientId === clientId)
     if (!device) return null
-    const payload: JWTPayload = { device: clientId }
     const jwtOptions: SignOptions = {}
     if (device.tokenExpiry) {
       const remaining = device.tokenExpiry - Math.floor(Date.now() / 1000)
       if (remaining <= 0) return null
       jwtOptions.expiresIn = remaining
     }
+    device.tokenVersion = (device.tokenVersion ?? 0) + 1
+    const payload: JWTPayload = { device: clientId, ver: device.tokenVersion }
+    options = theConfig as TokenSecurityOptions
     return jwt.sign(payload, theConfig.secretKey, jwtOptions)
   }
 
@@ -1743,7 +1747,7 @@ function tokenSecurityFactory(
       const device = options.devices.find(
         (aDevice) => aDevice.clientId === payload.device
       )
-      if (device) {
+      if (device && (payload.ver ?? 0) === (device.tokenVersion ?? 0)) {
         principal = {
           identifier: device.clientId,
           permissions: device.permissions

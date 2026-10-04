@@ -516,11 +516,13 @@ module.exports = function (
           queryToken,
           getSecurityConfig(app).secretKey
         )
-        const deviceId = (payload as { device?: unknown } | null)?.device
+        const { device: deviceId, ver } =
+          (payload as { device?: unknown; ver?: unknown } | null) ?? {}
         if (typeof deviceId === 'string') {
           const config = getSecurityConfig(app)
           const device = config.devices?.find(
-            (d: Device) => d.clientId === deviceId
+            (d: Device) =>
+              d.clientId === deviceId && (ver ?? 0) === (d.tokenVersion ?? 0)
           )
           if (device?.dashboard?.mode === 'redirect' && device.dashboard.url) {
             const rawUrl = device.dashboard.url.trim()
@@ -835,11 +837,18 @@ module.exports = function (
           config,
           req.params.uuid
         )
-        if (token) {
-          res.json({ token })
-        } else {
+        if (!token) {
           res.status(404).json({ error: 'Device not found' })
+          return
         }
+        saveSecurityConfig(app, config, (saveErr) => {
+          if (saveErr) {
+            console.log(saveErr)
+            res.status(500).json({ error: 'Unable to save configuration' })
+            return
+          }
+          res.json({ token })
+        })
       }
     }
   )

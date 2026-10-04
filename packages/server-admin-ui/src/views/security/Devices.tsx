@@ -304,6 +304,13 @@ export default function Devices() {
 
   const handleShowToken = async () => {
     if (!selectedDevice) return
+    if (
+      !confirm(
+        'Generate a new token URL? The device stops working with its current token until it is given the new one.'
+      )
+    ) {
+      return
+    }
     const response = await fetch(
       `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}/token`,
       {
@@ -651,7 +658,7 @@ export default function Devices() {
                       variant="outline-info"
                       onClick={handleShowToken}
                     >
-                      Show Token URL
+                      Generate New Token URL
                     </Button>
                     <Button
                       size="sm"

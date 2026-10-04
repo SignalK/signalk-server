@@ -131,6 +131,9 @@ export interface Device {
   description: string
   requestedPermissions: string
   tokenExpiry?: number
+  // Bumped on every token regeneration; tokens carrying an older version
+  // are rejected, so regenerating revokes earlier tokens.
+  tokenVersion?: number
   displayName?: string
   createdAt?: string
   registrationInfo?: DeviceRegistrationInfo
