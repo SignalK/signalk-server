@@ -134,6 +134,7 @@ module.exports = function (app) {
   }
 
   deviceApplicationDataUrls.forEach((url) => {
+    app.securityStrategy.addWriteMiddleware(url)
     app.use(url, deviceAuthMiddleware)
   })
 
