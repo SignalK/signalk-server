@@ -155,7 +155,8 @@ const TYPE_COMPONENTS: Record<
   NMEA0183: NMEA0183,
   SignalK: SignalK,
   Seatalk: Seatalk,
-  FileStream: FileStream
+  FileStream: FileStream,
+  QuickPCS: QuickPCS
 }
 
 export default function BasicProvider({
@@ -196,6 +197,9 @@ export default function BasicProvider({
               <option value="SignalK">Signal K</option>
               <option value="Seatalk">Seatalk (GPIO)</option>
               <option value="FileStream">File Stream</option>
+              <option value="QuickPCS">
+                Quick Proportional Control Systems (PCS)
+              </option>
             </Form.Select>
           ) : (
             value.type
@@ -1905,6 +1909,38 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         /^ydwg02/.test(value.options.type) && (
           <CreateDeviceInput value={value.options} onChange={onChange} />
         )}
+    </div>
+  )
+}
+
+function QuickPCS({ value, onChange }: TypeComponentProps) {
+  return (
+    <div>
+      <Form.Group as={Row} className="mb-3">
+        <Col md="3">
+          <Form.Label htmlFor="quickpcs-source-type">Quick PCS Source</Form.Label>
+        </Col>
+        <Col xs="12" md="3">
+          <Form.Select
+            id="quickpcs-source-type"
+            value={value.options.type || 'none'}
+            name="options.type"
+            onChange={(event) => onChange(event)}
+          >
+            <option value="none">Select a source</option>
+            <option value="canbus-canboatjs">Canbus (canboatjs)</option>
+          </Form.Select>
+        </Col>
+      </Form.Group>
+      {value.options.type === 'canbus-canboatjs' && (
+        <TextInput
+          title="Interface"
+          name="options.interface"
+          helpText="Example: can0"
+          value={value.options.interface}
+          onChange={onChange}
+        />
+      )}
     </div>
   )
 }

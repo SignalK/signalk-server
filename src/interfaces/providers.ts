@@ -290,7 +290,13 @@ module.exports = function (app: App) {
       ]
     }
 
-    if (provider.options.type === 'canbus-canboatjs') {
+    // uniqueNumber/mfgCode are NMEA 2000 address-claim identity. The Quick
+    // PCS data type also uses the canbus-canboatjs source, but has no such
+    // identity, so restrict this to NMEA 2000 connections only.
+    if (
+      provider.type === 'NMEA2000' &&
+      provider.options.type === 'canbus-canboatjs'
+    ) {
       const uniqueNumber = parseInt(String(provider.options.uniqueNumber), 10)
       if (!isNaN(uniqueNumber)) {
         provider.options.uniqueNumber = uniqueNumber
