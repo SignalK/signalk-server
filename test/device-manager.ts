@@ -321,6 +321,37 @@ describe('Device Manager', function () {
       expect(status.status).to.equal('loggedIn')
     })
 
+    it('revokes earlier tokens when a token is regenerated', async function () {
+      const createResult = await fetch(`${url}/skServer/security/devices`, {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          displayName: 'Token Revoke Test',
+          permissions: 'readonly'
+        })
+      })
+      const { clientId, token: originalToken } = await createResult.json()
+
+      const regenerate = async (): Promise<string> => {
+        const result = await fetch(
+          `${url}/skServer/security/devices/${clientId}/token`,
+          { method: 'POST', headers: adminHeaders() }
+        )
+        return (await result.json()).token
+      }
+      const loginStatus = async (token: string): Promise<string> => {
+        const result = await fetch(`${url}/skServer/loginStatus?token=${token}`)
+        return (await result.json()).status
+      }
+
+      const firstRegenerated = await regenerate()
+      const secondRegenerated = await regenerate()
+
+      expect(await loginStatus(originalToken)).to.equal('notLoggedIn')
+      expect(await loginStatus(firstRegenerated)).to.equal('notLoggedIn')
+      expect(await loginStatus(secondRegenerated)).to.equal('loggedIn')
+    })
+
     it('returns 404 for nonexistent device', async function () {
       const result = await fetch(
         `${url}/skServer/security/devices/nonexistent-id/token`,
