@@ -353,7 +353,7 @@ export default function Devices() {
   }
 
   const getTokenUrl = (token: string) => {
-    return `${window.location.origin}/?token=${token}`
+    return `${window.location.origin}/?token=${encodeURIComponent(token)}`
   }
 
   // navigator.clipboard is undefined outside secure contexts (plain-HTTP LAN),
