@@ -65,7 +65,7 @@ function startPluginCapturingDelta(opts: StartOptions = {}): {
     opts.calcsImpl ?? (() => fixed)
   )
   restoreCourse = mockModule(
-    '../../packages/course-provider-plugin/src/lib/course',
+    '../../packages/course-provider-plugin/src/course',
     {
       calcs: calcsSpy,
       parseSKPaths: opts.parseSKPaths ?? (() => true),

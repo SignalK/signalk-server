@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { buildDeltaMsg } from '../../packages/course-provider-plugin/src/lib/delta-msg'
+import { buildDeltaMsg } from '../../packages/course-provider-plugin/src/delta-msg'
 import { CourseData } from '../../packages/course-provider-plugin/src/types'
 
 function fullCourseData(): CourseData {

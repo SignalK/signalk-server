@@ -1,9 +1,9 @@
 import { expect } from 'chai'
-import { calcs } from '../../packages/course-provider-plugin/src/lib/course'
+import { calcs } from '../../packages/course-provider-plugin/src/course'
 import {
   computeCourseGeometry,
   wrap2Pi
-} from '../../packages/course-provider-plugin/src/lib/course-math'
+} from '../../packages/course-provider-plugin/src/course-math'
 import type { SKPaths } from '../../packages/course-provider-plugin/src/types'
 
 const TO_RAD = Math.PI / 180

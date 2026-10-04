@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { Watcher } from '../../packages/course-provider-plugin/src/lib/alarms'
+import { Watcher } from '../../packages/course-provider-plugin/src/alarms'
 
 describe('Watcher', () => {
   it('emits enter when value moves into range', () => {

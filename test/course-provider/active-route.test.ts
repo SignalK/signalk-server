@@ -41,7 +41,7 @@ function startPlugin(
     passedPerpendicular: false
   }))
   restoreCourse = mockModule(
-    '../../packages/course-provider-plugin/src/lib/course',
+    '../../packages/course-provider-plugin/src/course',
     {
       calcs: calcsSpy,
       parseSKPaths: () => true,
@@ -307,7 +307,7 @@ describe('navigation.course.activeRoute dispatch', () => {
     expect(afterA.activeRoute.href).to.equal('/resources/routes/route-a')
     expect(afterA.activeRoute.waypoints).to.deep.equal(waypointsA)
 
-    // Switch to route B. Without the fix, srcPaths.activeRoute remains A.
+    // Switch to route B.
     deltaCallback({
       updates: [
         {

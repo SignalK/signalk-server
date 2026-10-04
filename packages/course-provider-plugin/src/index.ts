@@ -14,11 +14,11 @@ import {
   PathValue
 } from '@signalk/server-api'
 import { Application, Request, Response } from 'express'
-import { NotificationMgr, Watcher, WatchEvent } from './lib/alarms'
-import { buildDeltaMsg, CalcMethod } from './lib/delta-msg'
+import { NotificationMgr, Watcher, WatchEvent } from './alarms'
+import { buildDeltaMsg, CalcMethod } from './delta-msg'
 import { CourseData, SKPaths } from './types'
 // Course-calculation helpers.
-import { calcs, emptyCourseData, parseSKPaths, resetCaches } from './lib/course'
+import { calcs, emptyCourseData, parseSKPaths, resetCaches } from './course'
 
 import { Subscription } from 'rxjs'
 

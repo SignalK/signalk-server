@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { computeCourseGeometry } from '../../packages/course-provider-plugin/src/lib/course-math'
+import { computeCourseGeometry } from '../../packages/course-provider-plugin/src/course-math'
 
 const TO_RAD = Math.PI / 180
 

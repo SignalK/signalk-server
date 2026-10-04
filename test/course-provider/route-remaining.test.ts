@@ -62,11 +62,11 @@ let restoreCourseMath: () => void = () => {}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function loadRouteRemaining(): (src: any, useRhumbLine: boolean) => number {
-  resetModuleCache('../../packages/course-provider-plugin/src/lib/course')
+  resetModuleCache('../../packages/course-provider-plugin/src/course')
 
   const mod =
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-    require('../../packages/course-provider-plugin/src/lib/course') as any
+    require('../../packages/course-provider-plugin/src/course') as any
   return mod.routeRemaining
 }
 
@@ -99,9 +99,9 @@ describe('routeRemaining cache and segment summation', () => {
     // Preserve the real exports (calcs needs computeCourseGeometry) and
     // override only the two distance helpers with counting stubs.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const realCourseMath = require('../../packages/course-provider-plugin/src/lib/course-math')
+    const realCourseMath = require('../../packages/course-provider-plugin/src/course-math')
     restoreCourseMath = mockModule(
-      '../../packages/course-provider-plugin/src/lib/course-math',
+      '../../packages/course-provider-plugin/src/course-math',
       {
         ...realCourseMath,
         greatCircleDistance: stubGreatCircleDistance,
@@ -112,7 +112,7 @@ describe('routeRemaining cache and segment summation', () => {
 
   after(() => {
     restoreCourseMath()
-    resetModuleCache('../../packages/course-provider-plugin/src/lib/course')
+    resetModuleCache('../../packages/course-provider-plugin/src/course')
   })
 
   beforeEach(() => {
@@ -247,7 +247,7 @@ describe('routeRemaining cache and segment summation', () => {
 
     const { resetCaches } =
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('../../packages/course-provider-plugin/src/lib/course') as {
+      require('../../packages/course-provider-plugin/src/course') as {
         resetCaches: () => void
       }
     resetCaches()

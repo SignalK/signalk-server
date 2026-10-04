@@ -1,6 +1,5 @@
 /*
- * Tiny test helpers replacing the vitest API surface (vi.fn / vi.mock /
- * vi.resetModules) with mocha + chai equivalents. Keeps the dependency
+ * Tiny test helpers.  Keeps the dependency
  * footprint minimal — no sinon, no proxyquire — and matches the manual
  * stub pattern used by the other six plugins in the family.
  */

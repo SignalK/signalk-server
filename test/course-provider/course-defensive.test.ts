@@ -4,11 +4,11 @@ import { resetModuleCache } from './helpers'
 // Force-reload the course module so this suite gets a fresh closure; the
 // require cache may already hold a copy loaded (and mocked) by an earlier
 // suite.
-resetModuleCache('../../packages/course-provider-plugin/src/lib/course')
+resetModuleCache('../../packages/course-provider-plugin/src/course')
 
 const courseModule =
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../../packages/course-provider-plugin/src/lib/course') as {
+  require('../../packages/course-provider-plugin/src/course') as {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     parseSKPaths: (src: any) => boolean
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,8 +155,7 @@ describe('course calculations defensive guards', () => {
 })
 
 describe('timeCalcs / targetSpeed positive paths', () => {
-  // Pins the arithmetic so the Date-allocation refactor can't change
-  // observable outputs (TTG seconds, ETA ISO string, targetSpeed).
+  // Pins observable outputs: TTG seconds, ETA ISO string, targetSpeed.
 
   it('timeCalcs derives TTG and ETA from an ISO datetime', () => {
     // 1000 m at 10 m/s = 100 s -> ETA = base + 100 s
