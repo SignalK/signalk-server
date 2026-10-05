@@ -496,8 +496,16 @@ module.exports = (server: CourseComputerApp): Plugin => {
     if (server.debug.enabled) {
       server.debug(JSON.stringify(result))
     }
+
+    const arrivalCircle = srcPaths['navigation.course.arrivalCircle']
+    const arrivalCircleRange = Number(arrivalCircle)
     watchArrival.rangeMax =
-      Number(srcPaths['navigation.course.arrivalCircle']) ?? -1
+      arrivalCircle === null ||
+      arrivalCircle === undefined ||
+      !Number.isFinite(arrivalCircleRange)
+        ? -1
+        : arrivalCircleRange
+
     watchArrival.value = result.gc?.distance ?? -1
     watchPassedDest.value = result.passedPerpendicular ? 1 : 0
     courseCalcs = result

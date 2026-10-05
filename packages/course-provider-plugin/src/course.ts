@@ -311,8 +311,9 @@ export function routeRemaining(src: SKPaths, rhumbLine?: boolean): number {
   }
 
   const reverse = !!srcActiveRoute.reverse
-  const ptIndex = srcActiveRoute.pointIndex
   const lastIndex = waypoints.length - 1
+  let ptIndex = srcActiveRoute.pointIndex ?? 0
+  ptIndex = ptIndex > lastIndex ? lastIndex : ptIndex
   const useRhumbLine = !!rhumbLine
 
   // determine segments to sum
