@@ -27,6 +27,9 @@ Sources: `docs/develop/plugins/`, `docs/develop/webapps.md`, `docs/develop/plugi
 5. **Replace external spec deep-links** (8 files) with internal pages where content now lives; keep external links only for v1-only spec areas. *(depends on steps 2, 4)*
 6. **Remove v1 schema usage** — replace `@signalk/signalk-schema` `getMetadata()` in `packages/streams/src/mdns-ws.ts` with the path-metadata registry; drop the declaration in `vendor.d.ts` and the `package.json` dependency.
 7. **Hosting** — confirm demo.signalk.org serves `docs/dist` via the existing `/documentation` route (`src/serverroutes.ts` L424) and ensure `build:docs` runs in the release pipeline.
+8. **Fix Keys Reference content** — replace the generic "Data should be of type number" description on ~126 `@signalk/path-metadata` paths with real descriptions, add the 14 missing `course*.nextPoint.*` paths, and add a test that every path has a specific description. Makes path-metadata fit to be the canonical Keys Reference. *(independent; prerequisite for relying on the registry in step 6)*
+9. **Author a "Build a Client" guide** in the Protocol section — discovery, connecting, subscribing, authentication and REST access for non-JavaScript clients, linking into the HTTP and WebSocket API references. *(depends on steps 2, 3)*
+10. **Check links in CI** — fail `build:docs` on broken internal links and on external links pinned to versioned spec URLs (`signalk.org/specification/1.x.y/`). Guards step 5. *(after step 5)*
 
 ## Relevant files
 - `typedoc.json` — nav/projectDocuments, section landing pages
@@ -38,10 +41,12 @@ Sources: `docs/develop/plugins/`, `docs/develop/webapps.md`, `docs/develop/plugi
 1. `npm run build:docs` passes (with `treatWarningsAsErrors`).
 2. Nav shows 3 sections; links to `/documentation/paths`, `/doc/openapi`, `/asyncapi` resolve.
 3. `grep -r "@signalk/signalk-schema" src packages` returns nothing; dependency removed; `npm test` passes.
-4. Manual: `demo.signalk.org/documentation` renders the new structure.
+4. path-metadata test fails on any path without a specific description.
+5. CI link check passes; no versioned spec links remain outside v1-only areas.
+6. Manual: `demo.signalk.org/documentation` renders the new structure.
 
 ## Decisions & assumptions
-- **Included**: reorganization, overview authoring, full-model de-emphasis, v1 schema removal, cross-linking.
+- **Included**: reorganization, overview authoring, full-model de-emphasis, v1 schema removal, cross-linking, Keys Reference content fixes, client guide, link checking.
 - **Excluded**: rewriting the external spec repo; replacing TypeDoc; merging viewers into one page.
 - **Assumed**: port essential Data Model prose into this repo (not link-only); path-metadata is the canonical Keys Reference.
 
