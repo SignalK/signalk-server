@@ -15,7 +15,7 @@ This plugin populates the course data paths found under [`navigation.course.calc
 Additionally it will populate `performance.velocityMadeGoodToWaypoint` as well as
 allow the following notifications to be raised:
 
-- **`notifications.navigation.arrivalCircleEntered`**: _alert_ message is sent when the value of `distance` falls below the value of `navigation.course.arrivalCircle`.
+- **`notifications.navigation.course.arrivalCircleEntered`**: _alert_ message is sent when the value of `distance` falls below the value of `navigation.course.arrivalCircle`.
 
 - **`notifications.navigation.perpendicularPassed`**: _alert_ message is sent when the perpendicular line (relative to `navigation.course.previousPoint.position` at the destination has been passed by the vessel.
 

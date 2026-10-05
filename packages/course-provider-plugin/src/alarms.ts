@@ -123,12 +123,9 @@ export class Watcher {
     const testInRange: boolean = this.isInRange(val)
 
     if (testInRange) {
-      // new value is in range
       if (this._inRange) {
-        // and was already in range
         this.changeSource.next({ type: 'in', value: val })
       } else {
-        // and was previously outside range
         this.changeSource.next({
           type: 'enter',
           value: val,
@@ -136,9 +133,7 @@ export class Watcher {
         })
       }
     } else {
-      // new value is out of range
       if (this._inRange) {
-        // and was previously in range
         this.changeSource.next({
           type: 'exit',
           value: val,
@@ -154,12 +149,9 @@ export class Watcher {
   private _setRange() {
     const testInRange: boolean = this.isInRange()
     if (testInRange) {
-      // value is in new range
       if (this._inRange) {
-        // and was already in range
         this.changeSource.next({ type: 'in', value: this._val })
       } else {
-        // and was previously outside range
         this.changeSource.next({
           type: 'enter',
           value: this._val,
@@ -167,16 +159,12 @@ export class Watcher {
         })
       }
     } else {
-      // value is out of new range
       if (this._inRange) {
-        // and was previously in range
         this.changeSource.next({
           type: 'exit',
           value: this._val,
           isBelow: this._val < this.rangeMin ? true : false
         })
-      } else {
-        // and was previously out of range
       }
     }
     this._inRange = testInRange
