@@ -1,6 +1,6 @@
 /*
- * Tiny test helpers.  Keeps the dependency
- * footprint minimal — no sinon, no proxyquire — and matches the manual
+ * Tiny test helpers.  Keeps the dependency footprint minimal
+ * — no sinon, no proxyquire — and matches the manual
  * stub pattern used by the other six plugins in the family.
  */
 

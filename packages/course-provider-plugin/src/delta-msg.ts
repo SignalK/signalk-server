@@ -29,8 +29,7 @@ const VALUES_LENGTH = 16
  *
  * Note the intentional quirk: `velocityMadeGood` (and the performance
  * mirror) publish `source.velocityMadeGoodToCourse`, not `velocityMadeGood`,
- * preserved verbatim from the original implementation to keep the delta
- * stream byte-compatible with existing subscribers.
+ * because existing subscribers expect these paths to carry the VMC value.
  */
 export function buildDeltaMsg(course: CourseData, method: CalcMethod) {
   const source = method === 'Rhumbline' ? course.rl : course.gc

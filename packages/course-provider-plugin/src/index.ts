@@ -143,7 +143,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
   watchPassedDest.rangeMax = 2
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let unsubscribes: any[] = [] // delta stream subscriptions
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let obs: any[] = [] // Observables subscription
 
   const SIGNALK_API_PATH = `/signalk/v2/api`
@@ -216,7 +216,6 @@ module.exports = (server: CourseComputerApp): Plugin => {
       metaSent = false
       resetCaches()
 
-      // setup subscriptions
       initSubscriptions(SRC_PATHS)
       // setup routes
       initEndpoints()
@@ -228,7 +227,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       const msg = 'Started with errors!'
       server.setPluginError(msg)
       server.error('** EXCEPTION: **')
-       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       server.error((error as any).stack)
       return error
     }
@@ -247,7 +246,6 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
   // *****************************************
 
-  // register DELTA stream message handler
   const initSubscriptions = (skPaths: string[]) => {
     server.debug('Initialising Stream Subscriptions....')
     getPaths(skPaths)
@@ -276,11 +274,11 @@ module.exports = (server: CourseComputerApp): Plugin => {
           if (!u || !hasValues(u)) {
             continue
           }
-           // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const values = (u as any).values
 
           for (let j = 0, vLen = values.length; j < vLen; j++) {
-             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const v: any = values[j]
             const p = v.path
             if (p === PATH_POSITION) {
@@ -292,9 +290,19 @@ module.exports = (server: CourseComputerApp): Plugin => {
               srcPaths[p] = v.value
               calc()
             } else if (p === PATH_ACTIVE_ROUTE) {
-              handleActiveRoute(v.value ? { ...v.value } : null)
+              handleActiveRoute(v.value ? { ...v.value } : null).catch(() => {
+                if (server.debug.enabled) {
+                  server.debug(
+                    `Error processing navigation.course.activeRoute delta.`
+                  )
+                }
+              })
             } else if (p.startsWith(PATH_RESOURCES_ROUTE_PREFIX)) {
-              handleRouteUpdate(v)
+              handleRouteUpdate(v).catch(() => {
+                if (server.debug.enabled) {
+                  server.debug(`Error processing resources.routes delta.`)
+                }
+              })
             } else {
               srcPaths[p] = v.value
             }
@@ -315,7 +323,6 @@ module.exports = (server: CourseComputerApp): Plugin => {
     )
   }
 
-  // initialise api endpoints
   const initEndpoints = () => {
     server.debug('Initialising API endpoint(s)....')
     server.get(`${COURSE_CALCS_PATH}`, async (_req: Request, res: Response) => {
@@ -343,35 +350,43 @@ module.exports = (server: CourseComputerApp): Plugin => {
   // retrieve initial values of target paths
   const getPaths = async (paths: string[]) => {
     paths.forEach((path) => {
-       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const v = server.getSelfPath(path) as any
       srcPaths[path] = v?.value ?? null
     })
-    const ci = await server.getCourse()
-    if (server.debug.enabled) {
-      server.debug(`*** getPaths() ${JSON.stringify(ci)}`)
-    }
-    if (ci) {
-      srcPaths['navigation.course.nextPoint'] = ci.nextPoint
-      srcPaths['navigation.course.previousPoint'] = ci.previousPoint
-      srcPaths['activeRoute'] = ci.activeRoute
-      if (ci.activeRoute) {
-        // split('/').slice(-1)[0] is structurally always defined on a
-        // non-empty string, but `noUncheckedIndexedAccess` types it as
-        // `string | undefined`. Empty fallback is unreachable in practice.
-        activeRouteId = ci.activeRoute.href.split('/').slice(-1)[0] ?? ''
-        const myToken = ++routeFetchToken
-        const waypoints = await getWaypoints(activeRouteId)
-        // initSubscriptions does not await getPaths, so a delta fired during
-        // startup can complete its fetch first; drop our result if so.
-        if (myToken !== routeFetchToken) {
-          return
-        }
-        srcPaths['activeRoute'].waypoints = waypoints
+    try {
+      const ci = await server.getCourse()
+      if (server.debug.enabled) {
+        server.debug(`*** getPaths() ${JSON.stringify(ci)}`)
       }
-    }
-    if (server.debug.enabled) {
-      server.debug(`[srcPaths]: ${JSON.stringify(srcPaths)}`)
+      if (ci) {
+        srcPaths['navigation.course.nextPoint'] = ci.nextPoint
+        srcPaths['navigation.course.previousPoint'] = ci.previousPoint
+        srcPaths['activeRoute'] = ci.activeRoute
+        if (ci.activeRoute) {
+          // split('/').slice(-1)[0] is structurally always defined on a
+          // non-empty string, but `noUncheckedIndexedAccess` types it as
+          // `string | undefined`. Empty fallback is unreachable in practice.
+          activeRouteId = ci.activeRoute.href.split('/').slice(-1)[0] ?? ''
+          const myToken = ++routeFetchToken
+          const waypoints = await getWaypoints(activeRouteId)
+          // initSubscriptions does not await getPaths, so a delta fired during
+          // startup can complete its fetch first; drop our result if so.
+          if (myToken !== routeFetchToken) {
+            return
+          }
+          srcPaths['activeRoute'].waypoints = waypoints
+        }
+      }
+      if (server.debug.enabled) {
+        server.debug(`[srcPaths]: ${JSON.stringify(srcPaths)}`)
+      }
+    } catch {
+      if (server.debug.enabled) {
+        server.debug(
+          `Error retrieving target paths!\r\n${JSON.stringify(srcPaths)}`
+        )
+      }
     }
   }
 
@@ -404,13 +419,13 @@ module.exports = (server: CourseComputerApp): Plugin => {
   }
 
   // 'navigation.course.activeRoute' delta handler
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleActiveRoute = async (value: any) => {
     if (server.debug.enabled) {
       server.debug(`*** handleActiveRoute *** ${JSON.stringify(value)}`)
     }
 
-    if (!value) {
+    if (!value || typeof value?.href !== 'string') {
       // Bump the token so any in-flight fetch from a previous activation is
       // ignored when it eventually resolves.
       routeFetchToken++
@@ -421,7 +436,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
     // Always derive activeRouteId from the incoming value so a switch from
     // one route to another takes effect.
-    const newId = value.href.split('/').slice(-1)[0] ?? ''
+    const newId = value.href?.split('/')?.slice(-1)[0] ?? ''
     activeRouteId = newId
     const myToken = ++routeFetchToken
     const waypoints = await getWaypoints(newId)
@@ -500,9 +515,9 @@ module.exports = (server: CourseComputerApp): Plugin => {
     }
   }
 
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buildMetaDeltaMsg = (): any => {
-     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const metas: Array<{ path: string; value: any }> = []
     const calcPath = 'navigation.course.calcValues'
     server.debug(`*** building meta delta ***`)

@@ -123,12 +123,12 @@ export class Watcher {
     const testInRange: boolean = this.isInRange(val)
 
     if (testInRange) {
-      //console.log(`** new value is in range`)
+      // new value is in range
       if (this._inRange) {
-        //console.log(`** and was already in range`)
+        // and was already in range
         this.changeSource.next({ type: 'in', value: val })
       } else {
-        //console.log(`** and was previously outside range`)
+        // and was previously outside range
         this.changeSource.next({
           type: 'enter',
           value: val,
@@ -136,9 +136,9 @@ export class Watcher {
         })
       }
     } else {
-      // console.log(`** new value is out of  range`)
+      // new value is out of range
       if (this._inRange) {
-        //console.log(`** and was previously in range`)
+        // and was previously in range
         this.changeSource.next({
           type: 'exit',
           value: val,
@@ -154,12 +154,12 @@ export class Watcher {
   private _setRange() {
     const testInRange: boolean = this.isInRange()
     if (testInRange) {
-      //console.log(`** value is in new range`)
+      // value is in new range
       if (this._inRange) {
-        //console.log(`** and was already in range`)
+        // and was already in range
         this.changeSource.next({ type: 'in', value: this._val })
       } else {
-        //console.log(`** and was previously outside range`)e)
+        // and was previously outside range
         this.changeSource.next({
           type: 'enter',
           value: this._val,
@@ -167,16 +167,16 @@ export class Watcher {
         })
       }
     } else {
-      //console.log(`** value is out of new range`)
+      // value is out of new range
       if (this._inRange) {
-        //console.log(`** and was previously in range`)
+        // and was previously in range
         this.changeSource.next({
           type: 'exit',
           value: this._val,
           isBelow: this._val < this.rangeMin ? true : false
         })
       } else {
-        //console.log(`** and was previously out of range`)
+        // and was previously out of range
       }
     }
     this._inRange = testInRange

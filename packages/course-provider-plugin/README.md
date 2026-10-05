@@ -10,31 +10,12 @@ _Note: This plugin should ONLY be installed on Signal K Server version 2.0 or la
 
 ---
 
-This plugin populates the following course data paths found under `navigation.course.calcValues` as well as providing an API endpoint at `/signalk/v2/api/vessels/self/navigation/course/calcValues`:
+This plugin populates the course data paths found under [`navigation.course.calcValues`](https://demo.signalk.org/doc/openapi/?urls.primaryName=course#/calculations/get_course_calcValues) as well as providing an API endpoint at `/signalk/v2/api/vessels/self/navigation/course/calcValues`
 
-- `calcMethod`
-- `bearingTrackTrue`
-- `bearingTrackMagnetic`
-- `crossTrackError`
-- `previousPoint.distance`
-- `distance`
-- `bearingTrue`
-- `bearingMagnetic`
-- `velocityMadeGood`
-- `timeToGo`
-- `estimatedTimeOfArrival`
-- `targetSpeed`
-- `route.distance`
-- `route.timeToGo`
-- `route.estimatedTimeOfArrival`
+Additionally it will populate `performance.velocityMadeGoodToWaypoint` as well as
+allow the following notifications to be raised:
 
-AND
-
-- `performance.velocityMadeGoodToWaypoint`
-
-Additionally it will raise the following notification:
-
-- **`notifications.navigation.arrivalCircleEntered`**: _alert_ message is sent when the value of `distance` falls below the value of `navigation.course.nextPoint.arrivalCircle`.
+- **`notifications.navigation.arrivalCircleEntered`**: _alert_ message is sent when the value of `distance` falls below the value of `navigation.course.arrivalCircle`.
 
 - **`notifications.navigation.perpendicularPassed`**: _alert_ message is sent when the perpendicular line (relative to `navigation.course.previousPoint.position` at the destination has been passed by the vessel.
 

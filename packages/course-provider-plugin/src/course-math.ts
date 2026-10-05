@@ -202,7 +202,7 @@ export function computeCourseGeometry(
  *
  * computeCourseGeometry inlines its own fused copy of this on the per-tick
  * hot path. This standalone form serves the cold-path route loop
- * (`routeRemaining` in src/lib/course.ts), which sums many segments,
+ * (`routeRemaining` in src/course.ts), which sums many segments,
  * and only on a cache miss.
  */
 export function greatCircleDistance(

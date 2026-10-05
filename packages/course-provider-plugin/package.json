@@ -2,8 +2,8 @@
   "name": "@signalk/course-provider",
   "version": "1.5.0",
   "description": "Course data provider plugin for SignalK Server.",
-  "main": "plugin/index.js",
-  "types": "plugin/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "keywords": [
     "signalk-node-server-plugin",
     "signalk-category-utility",
@@ -11,7 +11,7 @@
     "course"
   ],
   "repository": {
-    "url": "git+https://github.com/SignalK/coursedata-provider-plugin.git",
+    "url": "git+https://github.com/SignalK/signalk-server.git",
     "type": "git",
     "directory": "packages/course-provider-plugin"
   },
