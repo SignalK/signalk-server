@@ -11,7 +11,8 @@ import {
   GeoJsonLinestring,
   ALARM_STATE,
   ALARM_METHOD,
-  PathValue
+  PathValue,
+  ActiveRoute
 } from '@signalk/server-api'
 import { Application, Request, Response } from 'express'
 import { NotificationMgr, Watcher, WatchEvent } from './alarms'
@@ -375,7 +376,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
           if (myToken !== routeFetchToken) {
             return
           }
-          srcPaths['activeRoute'].waypoints = waypoints
+          ;(srcPaths['activeRoute'] as ActiveRoute).waypoints = waypoints
         }
       }
       if (server.debug.enabled) {
@@ -414,7 +415,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       if (myToken !== routeFetchToken) {
         return
       }
-      srcPaths['activeRoute'].waypoints = waypoints
+      ;(srcPaths['activeRoute'] as ActiveRoute).waypoints = waypoints
     }
   }
 
@@ -495,7 +496,8 @@ module.exports = (server: CourseComputerApp): Plugin => {
     if (server.debug.enabled) {
       server.debug(JSON.stringify(result))
     }
-    watchArrival.rangeMax = srcPaths['navigation.course.arrivalCircle'] ?? -1
+    watchArrival.rangeMax =
+      Number(srcPaths['navigation.course.arrivalCircle']) ?? -1
     watchArrival.value = result.gc?.distance ?? -1
     watchPassedDest.value = result.passedPerpendicular ? 1 : 0
     courseCalcs = result

@@ -5,11 +5,12 @@ import {
   rhumbDistance,
   wrap2Pi
 } from './course-math'
+import { ActiveRoute, NextPreviousPoint, Position } from '@signalk/server-api'
 
 export function parseSKPaths(src: SKPaths): boolean {
   return src['navigation.position'] &&
-    src['navigation.course.nextPoint']?.position &&
-    src['navigation.course.previousPoint']?.position
+    (src['navigation.course.nextPoint'] as NextPreviousPoint)?.position &&
+    (src['navigation.course.previousPoint'] as NextPreviousPoint)?.position
     ? true
     : false
 }
@@ -31,9 +32,9 @@ export function emptyCourseData(): CourseData {
 // passedPerpendicular in one pass over pre-converted radian scalars, with
 // no allocations on the hot path.
 export function calcs(src: SKPaths): CourseData {
-  const pos = src['navigation.position']
-  const next = src['navigation.course.nextPoint']
-  const prev = src['navigation.course.previousPoint']
+  const pos = src['navigation.position'] as Position
+  const next = src['navigation.course.nextPoint'] as NextPreviousPoint
+  const prev = src['navigation.course.previousPoint'] as NextPreviousPoint
 
   const res: CourseData = emptyCourseData()
   if (!pos || !next?.position || !prev?.position) {
@@ -49,7 +50,7 @@ export function calcs(src: SKPaths): CourseData {
     prev.position.longitude * TO_RAD
   )
 
-  const magVar = src['navigation.magneticVariation'] ?? 0.0
+  const magVar = Number(src['navigation.magneticVariation']) ?? 0.0
   const vmgValue = vmg(src)
 
   // GreatCircle
@@ -189,8 +190,8 @@ export function timeCalcs(
   rhumbLine: boolean
 ): CourseTimes {
   const isRoute =
-    Array.isArray(src['activeRoute']?.waypoints) &&
-    src['activeRoute']?.waypoints.length !== 0
+    Array.isArray((src['activeRoute'] as ActiveRoute)?.waypoints) &&
+    (src['activeRoute'] as ActiveRoute)?.waypoints?.length !== 0
 
   const result: CourseTimes = {
     nextPoint: { ttg: null, eta: null },
@@ -248,7 +249,7 @@ export function targetSpeed(
   }
 
   // if route totalDistance = distance plus + length of remaining route segments
-  if (src['activeRoute']?.waypoints) {
+  if ((src['activeRoute'] as ActiveRoute)?.waypoints) {
     distance += routeRemaining(src, rhumbLine)
   }
 
@@ -297,19 +298,20 @@ export function resetCaches(): void {
 
 // total distance in meters of remaining route segments
 export function routeRemaining(src: SKPaths, rhumbLine?: boolean): number {
+  const srcActiveRoute = src['activeRoute'] as ActiveRoute
   if (
-    src['activeRoute']?.pointIndex === null ||
-    !Array.isArray(src['activeRoute']?.waypoints)
+    srcActiveRoute?.pointIndex === null ||
+    !Array.isArray(srcActiveRoute?.waypoints)
   ) {
     return 0
   }
-  const waypoints = src['activeRoute'].waypoints as Array<[number, number]>
+  const waypoints = srcActiveRoute.waypoints as Array<[number, number]>
   if (waypoints.length < 2) {
     return 0
   }
 
-  const reverse = !!src['activeRoute'].reverse
-  const ptIndex = src['activeRoute'].pointIndex
+  const reverse = !!srcActiveRoute.reverse
+  const ptIndex = srcActiveRoute.pointIndex
   const lastIndex = waypoints.length - 1
   const useRhumbLine = !!rhumbLine
 
