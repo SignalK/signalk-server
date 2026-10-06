@@ -1020,20 +1020,16 @@ function StdOutInput({
   )
 }
 
-function SentenceListInput({
-  title,
-  field,
+function IgnoredSentences({
   value,
   onChange,
   helpText
 }: {
-  title: string
-  field: 'ignoredSentences' | 'suppress0183eventSentences'
   value: ProviderOptions
   onChange: OnChangeHandler
   helpText: string
 }) {
-  let displayValue = value[field]
+  let displayValue = value.ignoredSentences
   if (Array.isArray(displayValue)) {
     displayValue = displayValue.join(',')
   }
@@ -1051,8 +1047,8 @@ function SentenceListInput({
 
   return (
     <TextInput
-      title={title}
-      name={`options.${field}`}
+      title="Ignored Sentences"
+      name="options.ignoredSentences"
       helpText={helpText}
       value={displayValue as string}
       onChange={handleChange}
@@ -1341,38 +1337,74 @@ function RemoteSelfInput({
   )
 }
 
-function Suppress0183Checkbox({
+function Suppress0183EventInput({
   value,
   onChange
 }: {
   value: ProviderOptions
   onChange: OnChangeHandler
 }) {
+  const allSentences = value.suppress0183event === true
+
+  const setAllSentences = (suppressAll: boolean) =>
+    onChange({
+      target: { name: 'options.suppress0183event', value: suppressAll }
+    })
+
   return (
     <Form.Group as={Row} className="mb-3">
-      <Col xs="3" md="3">
-        <Form.Label htmlFor="provider-suppress0183event">
+      <Col md="3">
+        <Form.Label id="provider-suppress0183event-label">
           Suppress nmea0183 event
         </Form.Label>
       </Col>
-      <Col xs="1" md="1">
-        <Form.Label className="switch switch-text switch-primary">
-          <input
-            type="checkbox"
-            id="provider-suppress0183event"
-            name="options.suppress0183event"
-            className="switch-input"
-            onChange={(event) => onChange(event)}
-            checked={value.suppress0183event}
+      <Col
+        xs="12"
+        md="9"
+        role="radiogroup"
+        aria-labelledby="provider-suppress0183event-label"
+      >
+        <Form.Check
+          type="radio"
+          id="provider-suppress0183event-all"
+          name="provider-suppress0183event"
+          label="All sentences"
+          checked={allSentences}
+          onChange={() => setAllSentences(true)}
+        />
+        <div className="d-flex align-items-center flex-wrap gap-2">
+          <Form.Check
+            type="radio"
+            id="provider-suppress0183event-individual"
+            name="provider-suppress0183event"
+            className="mb-0"
+            label="Individual sentences"
+            checked={!allSentences}
+            onChange={() => setAllSentences(false)}
           />
-          <span className="switch-label" data-on="Yes" data-off="No" />
-          <span className="switch-handle" />
-        </Form.Label>
-      </Col>
-      <Col xs="12" md="6">
-        <label className="text-muted small">
-          Supress sending the default nmea0183 event for incoming sentences
-        </label>
+          <Form.Control
+            type="text"
+            name="options.suppress0183eventSentences"
+            aria-label="Sentences to suppress"
+            className="w-auto"
+            value={value.suppress0183eventSentences?.join(',') ?? ''}
+            disabled={allSentences}
+            onChange={(event) =>
+              onChange({
+                target: {
+                  name: event.target.name,
+                  value: event.target.value.split(',')
+                }
+              })
+            }
+          />
+        </div>
+        <Form.Text muted>
+          Suppressed sentences are still converted to Signal K but are not
+          emitted as nmea0183 events, so they do not appear on the NMEA0183 TCP
+          service. Leave the list empty to forward every sentence. Example:
+          RMC,GGA,HDT
+        </Form.Text>
       </Col>
     </Form.Group>
   )
@@ -1965,17 +1997,8 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
         </div>
       )}
       <div>
-        <Suppress0183Checkbox value={value.options} onChange={onChange} />
+        <Suppress0183EventInput value={value.options} onChange={onChange} />
       </div>
-      {!value.options.suppress0183event && (
-        <SentenceListInput
-          title="Suppress nmea0183 event for"
-          field="suppress0183eventSentences"
-          value={value.options}
-          onChange={onChange}
-          helpText="Sentences that are still converted to Signal K but not emitted as nmea0183 events, so they do not appear on the NMEA0183 TCP service. Example: RMC,GGA,HDT"
-        />
-      )}
       {value.options.type === 'udp' && (
         <PortInput value={value.options} onChange={onChange} />
       )}
@@ -1983,9 +2006,7 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
       <ValidateChecksumInput value={value.options} onChange={onChange} />
       <AppendChecksum value={value.options} onChange={onChange} />
       <RemoveNullsInput value={value.options} onChange={onChange} />
-      <SentenceListInput
-        title="Ignored Sentences"
-        field="ignoredSentences"
+      <IgnoredSentences
         value={value.options}
         onChange={onChange}
         helpText="NMEA0183 sentences to throw away from the input data. Example: RMC,ROT"
@@ -2172,9 +2193,7 @@ function Seatalk({ value, onChange }: TypeComponentProps) {
           </Form.Label>
         </Col>
       </Form.Group>
-      <SentenceListInput
-        title="Ignored Sentences"
-        field="ignoredSentences"
+      <IgnoredSentences
         value={value.options}
         onChange={onChange}
         helpText="SeaTalk1 command bytes (hex) to throw away from the input data. Example: 84,9C,11"
