@@ -484,7 +484,15 @@ export default class DeltaCache {
     }
   }
 
-  removeSource(sourceRef: SourceRef) {
+  /**
+   * Remove cached data for `sourceRef` and notify WS clients. With
+   * `prefixes`, only leaves at or below each prefix (matched on path
+   * segment boundaries) are removed and the source's other paths stay;
+   * notifications are covered only by an explicit `notifications.<p>`
+   * prefix. An empty `prefixes` list removes nothing.
+   */
+  removeSource(sourceRef: SourceRef, prefixes?: readonly string[]) {
+    if (prefixes !== undefined && prefixes.length === 0) return
     const removeFromNode = (node: any): void => {
       for (const key of Object.keys(node)) {
         if (key === 'meta') continue
@@ -497,23 +505,39 @@ export default class DeltaCache {
         }
       }
     }
-    removeFromNode(this.cache)
+    if (prefixes === undefined) {
+      removeFromNode(this.cache)
+    } else {
+      for (const subtree of prefixSubtrees(this.cache, prefixes)) {
+        removeFromNode(subtree)
+      }
+      removeEmptyNodesAlongPrefixes(this.cache, prefixes, isCacheBranch)
+    }
     // The FullSignalK tree (app.signalk.root) is a parallel
     // representation written to by addDelta. The Data Browser, REST
     // /signalk/v1/api, and the WS subscription replay all read from
     // it. Without pruning here, evicted sources keep showing fresh
     // timestamps in the UI even though deltacache is empty —
     // because cached values keep being served from this tree.
-    pruneSourceFromFullSignalK((this.app.signalk as any)?.root, sourceRef)
+    pruneSourceFromFullSignalK(
+      (this.app.signalk as any)?.root,
+      sourceRef,
+      prefixes
+    )
     // Tell WS clients (notably the admin-ui Data Browser) to drop
-    // every leaf they have for this source. Without this signal the
+    // the leaves they have for this source. Without this signal the
     // client's signalkData mirror keeps showing stale values until
     // the next reconnect, because the Signal K WS protocol only
-    // streams new values and has no native delete primitive.
-    ;(this.app as any).emit('serverevent', {
-      type: 'SOURCEEVICTED',
-      data: { sourceRef }
-    })
+    // streams new values and has no native delete primitive. A scoped
+    // removal uses its own event type: SOURCEEVICTED means "whole
+    // source gone", and a client unaware of a prefixes field on it
+    // would evict the source's surviving paths too.
+    ;(this.app as any).emit(
+      'serverevent',
+      prefixes === undefined
+        ? { type: 'SOURCEEVICTED', data: { sourceRef } }
+        : { type: 'SOURCEPATHSEVICTED', data: { sourceRef, prefixes } }
+    )
     // preferredSources stores canonical (canName) refs since onValue
     // canonicalised on write, so compare in the same form whether the
     // caller passed a raw or canonical ref.
@@ -524,6 +548,9 @@ export default class DeltaCache {
       const nullIdx = key.indexOf('\0')
       const context = nullIdx === -1 ? key : key.slice(0, nullIdx)
       const path = nullIdx === -1 ? '' : key.slice(nullIdx + 1)
+      if (prefixes !== undefined && !isUnderAnyPrefix(path, prefixes)) {
+        continue
+      }
       const replacement = this.pickReplacementSource(context, path)
       if (replacement) {
         this.preferredSources.set(
@@ -1713,11 +1740,17 @@ function getLeafObject(
  * REST and WS-replay views keep serving stale values for the evicted
  * source even though the deltacache is empty.
  */
-function pruneSourceFromFullSignalK(root: any, sourceRef: string): void {
+function pruneSourceFromFullSignalK(
+  root: any,
+  sourceRef: string,
+  prefixes?: readonly string[]
+): void {
   if (!root || typeof root !== 'object') return
+  const scoped = prefixes !== undefined
   const visit = (node: any): void => {
     if (!node || typeof node !== 'object') return
     if (Array.isArray(node)) return
+    let cleared = false
     // Multi-source leaf: { values: { <sourceRef>: {...}, ... }, ... }
     if (node.values && typeof node.values === 'object') {
       if (node.values[sourceRef] !== undefined) {
@@ -1743,6 +1776,7 @@ function pruneSourceFromFullSignalK(root: any, sourceRef: string): void {
             delete node['$source']
             delete node.timestamp
             delete node.values
+            cleared = true
           }
         } else if (remainingRefs.length === 0) {
           delete node.values
@@ -1759,6 +1793,13 @@ function pruneSourceFromFullSignalK(root: any, sourceRef: string): void {
       delete node.value
       delete node['$source']
       delete node.timestamp
+      cleared = true
+    }
+    // pgn and sentence describe the cleared value; dropping them lets the
+    // empty-node pass remove a leaf a scoped prune moved elsewhere.
+    if (scoped && cleared && !node.values && !node.meta) {
+      delete node.pgn
+      delete node.sentence
     }
     for (const key of Object.keys(node)) {
       // Skip leaf-internal fields and the source-meta tree (cleaned
@@ -1781,8 +1822,126 @@ function pruneSourceFromFullSignalK(root: any, sourceRef: string): void {
   // caller (n2k-discovery and the generic removeSource endpoint
   // already prune sources[connection][addr] explicitly). Walking it
   // here would also race the caller's prune logic.
+  if (prefixes !== undefined) {
+    for (const subtree of prefixSubtrees(root, prefixes)) visit(subtree)
+    removeEmptyNodesAlongPrefixes(root, prefixes, isFullTreeBranch)
+    return
+  }
   for (const key of Object.keys(root)) {
     if (key === 'sources') continue
     visit(root[key])
   }
+}
+
+function isUnderAnyPrefix(path: string, prefixes: readonly string[]): boolean {
+  return prefixes.some(
+    (prefix) => path === prefix || path.startsWith(prefix + '.')
+  )
+}
+
+/**
+ * Nodes at each prefix path under every `<contextType>.<id>` context of
+ * a cache or FullSignalK root. Descending by path segment is what makes
+ * the match segment-bounded: `a.b` never reaches `a.bc`.
+ */
+function prefixSubtrees(
+  root: Record<string, unknown>,
+  prefixes: readonly string[]
+): object[] {
+  const out: object[] = []
+  const segmentLists = prefixes.map((prefix) => prefix.split('.'))
+  for (const [contextType, contexts] of Object.entries(root)) {
+    if (contextType === 'sources') continue
+    if (!contexts || typeof contexts !== 'object') continue
+    for (const contextNode of Object.values(contexts)) {
+      for (const segments of segmentLists) {
+        const node = descend(contextNode, segments)
+        if (node) out.push(node)
+      }
+    }
+  }
+  return out
+}
+
+type BranchPredicate = (key: string, child: unknown) => boolean
+
+const FULL_TREE_LEAF_KEYS = new Set([
+  'value',
+  'values',
+  '$source',
+  'timestamp',
+  'meta',
+  'pgn',
+  'sentence'
+])
+
+const isFullTreeBranch: BranchPredicate = (key, child) =>
+  !FULL_TREE_LEAF_KEYS.has(key) && isPlainNode(child)
+
+const isCacheBranch: BranchPredicate = (key, child) =>
+  key !== 'meta' && isPlainNode(child) && !('path' in child && 'value' in child)
+
+/**
+ * Drop the path nodes a scoped prune left without any own keys: empty
+ * branches inside each prefix subtree, then the prefix node and its
+ * ancestors up to, but never including, the context node. Without
+ * this a moved path keeps an empty node that REST and the Data Browser
+ * still list.
+ */
+function removeEmptyNodesAlongPrefixes(
+  root: Record<string, unknown>,
+  prefixes: readonly string[],
+  isBranch: BranchPredicate
+): void {
+  const segmentLists = prefixes.map((prefix) => prefix.split('.'))
+  for (const [contextType, contexts] of Object.entries(root)) {
+    if (contextType === 'sources') continue
+    if (!isPlainNode(contexts)) continue
+    for (const contextNode of Object.values(contexts)) {
+      for (const segments of segmentLists) {
+        const chain: Record<string, unknown>[] = []
+        let node: unknown = contextNode
+        for (const segment of segments) {
+          if (!isPlainNode(node)) break
+          chain.push(node as Record<string, unknown>)
+          node = Object.hasOwn(node, segment)
+            ? (node as Record<string, unknown>)[segment]
+            : undefined
+        }
+        if (chain.length !== segments.length || !isPlainNode(node)) continue
+        removeEmptyBranches(node as Record<string, unknown>, isBranch)
+        for (let i = segments.length - 1; i >= 0; i--) {
+          const child = chain[i]![segments[i]!] as Record<string, unknown>
+          if (Object.keys(child).length > 0) break
+          delete chain[i]![segments[i]!]
+        }
+      }
+    }
+  }
+}
+
+function removeEmptyBranches(
+  node: Record<string, unknown>,
+  isBranch: BranchPredicate
+): void {
+  for (const key of Object.keys(node)) {
+    const child = node[key]
+    if (!isBranch(key, child)) continue
+    const branch = child as Record<string, unknown>
+    removeEmptyBranches(branch, isBranch)
+    if (Object.keys(branch).length === 0) delete node[key]
+  }
+}
+
+function descend(node: unknown, segments: readonly string[]): object | null {
+  let current = node
+  for (const segment of segments) {
+    if (!isPlainNode(current) || !Object.hasOwn(current, segment)) return null
+    current = (current as Record<string, unknown>)[segment]
+  }
+  return isPlainNode(current) ? current : null
+}
+
+function isPlainNode(node: unknown): node is object {
+  return !!node && typeof node === 'object' && !Array.isArray(node)
 }
