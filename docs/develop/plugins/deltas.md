@@ -341,7 +341,7 @@ Convert only a value of the path's quantity itself. A difference, such as a 5 K 
 
 A value that is not a finite number, such as `null` or a string, converts to `undefined`.
 
-The server evaluates only arithmetic formulas: the operators `+ - * / ^`, numbers, parentheses and the value. A path whose custom formula does anything else converts to `undefined`. So do the time category's formatted targets, such as `HH:MM:SS` or `duration-verbose`, which clients format themselves.
+The server evaluates only formulas built from the operators `+ - * / ^`, the functions `exp`, `log` and `log10`, numbers, parentheses and the value. A path whose custom formula does anything else converts to `undefined`. So do the time category's formatted targets, such as `HH:MM:SS` or `duration-verbose`, which clients format themselves.
 
 See [Unit Preferences](../../guides/unitpreferences.md) for how categories, presets and path overrides decide the display unit.
 

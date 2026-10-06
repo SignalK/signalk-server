@@ -216,8 +216,9 @@ export interface ServerAPI
    * as a 5 K temperature rise, must stay in SI: the conversion formulas can
    * include an offset (Kelvin to Celsius subtracts 273.15).
    *
-   * Only arithmetic formulas are evaluated: the operators `+ - * / ^`,
-   * numbers, parentheses and the value. The time category's formatted
+   * Only formulas built from the operators `+ - * / ^`, the functions
+   * `exp`, `log` and `log10`, numbers, parentheses and the value are
+   * evaluated. The time category's formatted
    * targets, such as `HH:MM:SS`, are client-side formatters, so they return
    * undefined.
    *
@@ -235,8 +236,8 @@ export interface ServerAPI
    * @param username - Convert under this user's unit preferences instead of the admin's
    * @returns The converted value with its unit symbol, or undefined when the
    * value is not a finite number, the path has no display units, or the
-   * conversion formula is not plain
-   * arithmetic, fails, or yields a number that is not finite
+   * conversion formula uses more than the allowed operations, fails, or
+   * yields a number that is not finite
    * @category Data Model
    */
   convertToDisplayUnits(

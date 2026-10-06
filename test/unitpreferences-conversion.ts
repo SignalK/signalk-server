@@ -53,13 +53,30 @@ describe('Display unit conversion', function () {
     )
   })
 
-  it('rejects formulas beyond arithmetic on the value', function () {
+  it('evaluates exponential and logarithmic formulas', () => {
+    expect(convert('10 * log10(value / 0.001)', 1)).to.be.closeTo(30, 1e-9)
+    expect(convert('0.001 * 10 ^ (value / 10)', 30)).to.be.closeTo(1, 1e-9)
+    expect(convert('log(value)', Math.E)).to.be.closeTo(1, 1e-9)
+    expect(convert('log(value, 2)', 8)).to.be.closeTo(3, 1e-9)
+    expect(convert('exp(value)', 0)).to.equal(1)
+  })
+
+  it('returns nothing for the logarithm of a negative value', () => {
+    expect(convert('log10(value)', -1)).to.equal(undefined)
+    expect(convert('log(value)', -1)).to.equal(undefined)
+  })
+
+  it('rejects formulas beyond the allowed operations', function () {
     this.timeout(REJECTION_BUDGET_MS)
     for (const formula of [
       'zeros(30000, 30000)',
       'sum(ones(1000))',
       'value > 0',
       'sqrt(value)',
+      'sin(value)',
+      'log10(sqrt(value))',
+      'zeros(30000, 30000).log(value)',
+      'exp',
       'pi * value',
       'value x',
       'x = value',
