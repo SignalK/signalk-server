@@ -294,6 +294,14 @@ export function parseTracksQuery(
     }
   }
 
+  // Resolved here so every provider gets an explicit answer and none has to
+  // know the default. Without a bbox there is nothing to clip to, so the flag
+  // is dropped rather than passed on.
+  const clip = readFlag(query, 'clip', errors)
+  if (request.bbox !== undefined) {
+    request.clip = clip ?? true
+  }
+
   const resolution = first(query.resolution)
   if (resolution !== undefined) {
     if (blank(resolution)) {
