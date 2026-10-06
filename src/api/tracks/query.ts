@@ -230,12 +230,57 @@ const readFlag = (
   return parseFlag(first(query[name]) ?? '', name, errors)
 }
 
+/**
+ * Every parameter the query route understands.
+ *
+ * An unknown one is rejected rather than ignored: a client that sends a filter
+ * this server does not implement would otherwise receive an unfiltered 200 and
+ * have no way to tell.
+ */
+const KNOWN_PARAMS = new Set([
+  'contexts',
+  // Singular as well as plural: the parser accepts both, and an unbounded
+  // query is permitted only for a single `context`.
+  'context',
+  'from',
+  'to',
+  'duration',
+  'bbox',
+  'resolution',
+  'maxPoints',
+  'simplify',
+  'epsilon',
+  'times',
+  'properties',
+  'geometry',
+  'provider'
+])
+
 export function parseTracksQuery(
   query: Record<string, unknown>,
   now: Temporal.Instant = Temporal.Now.instant()
 ): ParsedTracksQuery {
   const errors: string[] = []
   const request: TracksRequest = {}
+
+  // Before any value is parsed: a query naming a parameter this server does
+  // not implement is wrong whatever its other values say.
+  for (const [name, value] of Object.entries(query)) {
+    if (!KNOWN_PARAMS.has(name)) {
+      errors.push(`unknown query parameter: ${name}`)
+      continue
+    }
+    // A known name is not enough: express parses `?maxPoints[x]=1` into an
+    // object and a repeated key into an array, and `first()` would drop the
+    // one and keep only the first element of the other -- answering a query
+    // the client did not send. Flags are worse, since readFlag substitutes ''
+    // for a missing scalar and '' reads as true, so `?geometry[x]=1` would
+    // mean geometry=true. A valueless parameter still arrives as the string
+    // '', so the flag form keeps working.
+    if (typeof value !== 'string') {
+      errors.push(`${name} must be a single value`)
+    }
+  }
 
   const contexts = first(query.contexts) ?? first(query.context)
   if (contexts !== undefined && blank(contexts)) {
