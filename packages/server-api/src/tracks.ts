@@ -53,13 +53,27 @@ export interface TracksRequest {
    * Intersection, not containment, and not "where the vessel is now": a vessel
    * that crossed the box an hour ago and has since left still matches.
    *
-   * It selects tracks; it does not clip them. A matching track is returned
-   * whole, including the stretches outside the box, so a client gets the
-   * approach and the departure rather than a line that stops at an invisible
-   * edge. Providers must agree on this or the same query returns different
-   * geometry depending on which one answered.
+   * What comes back of a matching track is set by {@link TracksRequest.clip}.
    */
   bbox?: TrackBoundingBox
+
+  /**
+   * Return only the parts of each track inside `bbox`.
+   *
+   * A client showing a view gets the points it can draw, not every point of
+   * every vessel that once crossed it. Each stretch inside the box becomes its
+   * own segment, so a track that leaves and re-enters is not joined across the
+   * outside. Each segment keeps the recorded point just outside the box at
+   * either crossing, so the line reaches the edge of the view without
+   * interpolated points. A box crossing the antimeridian clips the same way.
+   * Clipping comes before `resolution`, `maxPoints` and simplification, so
+   * those budgets are spent on the part that is returned.
+   *
+   * Resolved by the server before a provider sees it: true when `bbox` is
+   * given unless the client sent `clip=false`, which returns matching tracks
+   * whole. Absent when there is no `bbox`, since there is nothing to clip to.
+   */
+  clip?: boolean
 
   /**
    * Minimum spacing between returned points.

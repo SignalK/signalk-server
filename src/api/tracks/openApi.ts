@@ -306,8 +306,15 @@ const tracksApiDoc = {
         name: 'bbox',
         in: 'query',
         description:
-          "Only return tracks passing through this box, as west,south,east,north in GeoJSON coordinate order. Matching is intersection anywhere within the time window, not the vessel's current position: a vessel that crossed the box an hour ago and has since left still matches. Matching tracks are returned whole rather than clipped to the box, so a client gets the approach and the departure rather than a line stopping at an invisible edge. A west edge numerically greater than the east edge describes a box crossing the antimeridian.",
+          "Only return tracks passing through this box, as west,south,east,north in GeoJSON coordinate order. Matching is intersection anywhere within the time window, not the vessel's current position: a vessel that crossed the box an hour ago and has since left still matches. What is returned of a matching track is set by clip. A west edge numerically greater than the east edge describes a box crossing the antimeridian.",
         schema: { type: 'string', example: '24.5,59.9,25.2,60.3' }
+      },
+      Clip: {
+        name: 'clip',
+        in: 'query',
+        description:
+          'With a bbox, return only the parts of each track inside it. Defaults to true when bbox is given; clip=false returns matching tracks whole. Each stretch inside the box is its own segment, so a track that leaves and re-enters is not joined across the outside, and each segment keeps the recorded point just outside the box at either crossing so the line reaches the edge of the view. Clipping is applied before resolution, maxPoints and simplification. Ignored without bbox.',
+        schema: { type: 'boolean', default: true }
       },
       Resolution: {
         name: 'resolution',
@@ -468,6 +475,7 @@ const tracksApiDoc = {
           { $ref: '#/components/parameters/To' },
           { $ref: '#/components/parameters/Duration' },
           { $ref: '#/components/parameters/Bbox' },
+          { $ref: '#/components/parameters/Clip' },
           { $ref: '#/components/parameters/Resolution' },
           { $ref: '#/components/parameters/MaxPoints' },
           { $ref: '#/components/parameters/Simplify' },

@@ -286,6 +286,43 @@ describe('Track API query parsing', () => {
     })
   })
 
+  describe('clip', () => {
+    const BOX = '24.5,59.9,25.2,60.3'
+
+    it('clips by default when a bbox is given', () => {
+      const { request, errors } = parse({ bbox: BOX, duration: 'PT1H' })
+      expect(errors).to.be.empty
+      expect(request.clip).to.equal(true)
+    })
+
+    it('returns whole tracks with clip=false', () => {
+      const { request, errors } = parse({
+        bbox: BOX,
+        clip: 'false',
+        duration: 'PT1H'
+      })
+      expect(errors).to.be.empty
+      expect(request.clip).to.equal(false)
+    })
+
+    it('accepts the valueless form as true', () => {
+      const { request } = parse({ bbox: BOX, clip: '', duration: 'PT1H' })
+      expect(request.clip).to.equal(true)
+    })
+
+    it('passes nothing to clip to without a bbox', () => {
+      const { request, errors } = parse({ clip: 'true', duration: 'PT1H' })
+      expect(errors).to.be.empty
+      expect(request).to.not.have.property('clip')
+    })
+
+    it('rejects a value that is not a boolean', () => {
+      expect(
+        errorsFrom({ bbox: BOX, clip: 'sometimes', duration: 'PT1H' })
+      ).to.match(/clip must be true or false/)
+    })
+  })
+
   describe('thinning', () => {
     it('accepts maxPoints as a point budget', () => {
       const { request, errors } = parse({ maxPoints: '5000', duration: 'PT1H' })
