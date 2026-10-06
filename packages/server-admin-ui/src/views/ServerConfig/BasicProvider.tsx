@@ -1400,10 +1400,11 @@ function Suppress0183EventInput({
           />
         </div>
         <Form.Text muted>
-          Suppressed sentences are still converted to Signal K but are not
-          emitted as nmea0183 events, so they do not appear on the NMEA0183 TCP
-          service. Leave the list empty to forward every sentence. Example:
-          RMC,GGA,HDT
+          Selecting All sentences keeps every sentence from this connection off
+          the NMEA0183 TCP service. With Individual sentences selected, the
+          listed sentences are still converted to Signal K but are not emitted
+          as nmea0183 events, and an empty list forwards every sentence.
+          Example: RMC,GGA,HDT
         </Form.Text>
       </Col>
     </Form.Group>
