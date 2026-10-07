@@ -23,7 +23,7 @@ targets.<type>:<id>
 - `<type>` is the kind of sensor, e.g. `radar` or `camera`. AIS is not published here; it stays under `vessels.*`.
 - `<id>` must be unique for that sensor type and must not contain a `.`. Include something unique to your plugin or device, e.g. a radar id and the radar's target number.
 - Use the paths vessels use: `navigation.position`, `navigation.courseOverGroundTrue`, `navigation.speedOverGround` and `navigation.headingTrue`. When the sensor itself has identified the vessel (a camera reading the hull, a radar matching its AIS overlay), also set `name` or `mmsi` at the root of the context.
-- Stamp each update with the time of the observation.
+- Stamp each update with the time of the observation. If the sensor's clock may differ from the server's, leave the timestamp out and the server stamps the update on arrival.
 - When the sensor loses a track, publish `null` for `navigation.position`. A context that stops updating is removed from the data model by the server's context pruning, the same as an inactive vessel (_Server → Settings → Maximum age of inactive vessels' data_).
 
 ```javascript
