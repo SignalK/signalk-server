@@ -1,5 +1,3 @@
-import { Subject, Observable } from 'rxjs'
-
 import { ALARM_METHOD, ALARM_STATE, Path, PathValue } from '@signalk/server-api'
 
 export class NotificationMgr {
@@ -40,17 +38,19 @@ export interface WatchEvent {
 
 // ** watch a value within a range (min-max)
 export class Watcher {
-  private changeSource: Subject<WatchEvent> = new Subject()
-  public change$: Observable<WatchEvent> = this.changeSource.asObservable()
-
   private _rangeMin = 0
   private _rangeMax = 100
   private _sampleCount = 0 // number of values sampled
   private _sampleSize = 1 // number of values to sample before range test
   private _val: number = -1
   private _inRange: boolean = false
+  private _callback!: (evt: WatchEvent) => void
 
   constructor() {}
+
+  register(callback: (evt: WatchEvent) => void) {
+    this._callback = callback
+  }
 
   set value(val: number) {
     if (typeof val !== 'number') {
@@ -117,16 +117,16 @@ export class Watcher {
       return
     }
     if (typeof val !== 'number') {
-      this.changeSource.next({ type: 'exit', value: val })
+      this._callback({ type: 'exit', value: val })
       return
     }
     const testInRange: boolean = this.isInRange(val)
 
     if (testInRange) {
       if (this._inRange) {
-        this.changeSource.next({ type: 'in', value: val })
+        this._callback({ type: 'in', value: val })
       } else {
-        this.changeSource.next({
+        this._callback({
           type: 'enter',
           value: val,
           fromBelow: this._val < this.rangeMin ? true : false
@@ -134,7 +134,7 @@ export class Watcher {
       }
     } else {
       if (this._inRange) {
-        this.changeSource.next({
+        this._callback({
           type: 'exit',
           value: val,
           isBelow: val < this.rangeMin ? true : false
@@ -150,9 +150,9 @@ export class Watcher {
     const testInRange: boolean = this.isInRange()
     if (testInRange) {
       if (this._inRange) {
-        this.changeSource.next({ type: 'in', value: this._val })
+        this._callback({ type: 'in', value: this._val })
       } else {
-        this.changeSource.next({
+        this._callback({
           type: 'enter',
           value: this._val,
           fromBelow: this._val < this.rangeMin ? true : false
@@ -160,7 +160,7 @@ export class Watcher {
       }
     } else {
       if (this._inRange) {
-        this.changeSource.next({
+        this._callback({
           type: 'exit',
           value: this._val,
           isBelow: this._val < this.rangeMin ? true : false

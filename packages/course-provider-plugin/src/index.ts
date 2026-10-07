@@ -21,8 +21,6 @@ import { CourseData, SKPaths } from './types'
 // Course-calculation helpers.
 import { calcs, emptyCourseData, parseSKPaths, resetCaches } from './course'
 
-import { Subscription } from 'rxjs'
-
 type CourseComputerApp = Application & ServerAPI
 
 interface CourseAppConfig {
@@ -144,8 +142,6 @@ module.exports = (server: CourseComputerApp): Plugin => {
   watchPassedDest.rangeMax = 2
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let unsubscribes: any[] = [] // delta stream subscriptions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let obs: any[] = [] // Observables subscription
 
   const SIGNALK_API_PATH = `/signalk/v2/api`
   const COURSE_CALCS_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course/calcValues`
@@ -239,8 +235,6 @@ module.exports = (server: CourseComputerApp): Plugin => {
     server.debug('** Un-subscribing from events **')
     unsubscribes.forEach((s) => s())
     unsubscribes = []
-    obs.forEach((o: Subscription) => o.unsubscribe())
-    obs = []
     const msg = 'Stopped'
     server.setPluginStatus(msg)
   }
@@ -312,16 +306,12 @@ module.exports = (server: CourseComputerApp): Plugin => {
       }
     )
 
-    obs.push(
-      watchArrival.change$.subscribe((event: WatchEvent) => {
-        onArrivalCircleEvent(event)
-      })
-    )
-    obs.push(
-      watchPassedDest.change$.subscribe((event: WatchEvent) => {
-        onPassedDestEvent(event)
-      })
-    )
+    watchArrival.register((event: WatchEvent) => {
+      onArrivalCircleEvent(event)
+    })
+    watchPassedDest.register((event: WatchEvent) => {
+      onPassedDestEvent(event)
+    })
   }
 
   const initEndpoints = () => {

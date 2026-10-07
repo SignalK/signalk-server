@@ -36,8 +36,7 @@
     "test": "npm run build"
   },
   "dependencies": {
-    "@signalk/server-api": "^2.24.0",
-    "rxjs": "^7.5.2"
+    "@signalk/server-api": "^2.24.0"
   },
   "devDependencies": {},
   "signalk-plugin-enabled-by-default": true
