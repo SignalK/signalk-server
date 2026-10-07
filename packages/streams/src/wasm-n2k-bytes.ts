@@ -75,7 +75,7 @@ export default class WasmN2kBytes extends Transform {
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)
         console.error(`wasm-n2k-bytes tx: ${message}`)
-        options.app.emit('canboatjs:error', err)
+        options.app.emit('wasm-n2k:error', err)
       }
     }
     options.app.on('nmea2000JsonOut', this.txHandler)
@@ -203,12 +203,12 @@ export default class WasmN2kBytes extends Transform {
         }
         for (const error of this.decoder.takeErrors()) {
           this.debug(`[error] ${error}`)
-          this.options.app.emit('canboatjs:error', new Error(error))
+          this.options.app.emit('wasm-n2k:error', new Error(error))
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)
         this.debug(`[decode] ${message}`)
-        this.options.app.emit('canboatjs:error', err)
+        this.options.app.emit('wasm-n2k:error', err)
       }
     })
 

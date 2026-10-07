@@ -84,7 +84,7 @@ export default class WasmN2k extends Transform {
         const message = err instanceof Error ? err.message : String(err)
         this.debug(`[error] ${String(line)} ${message}`)
       }
-      options.app.emit('canboatjs:error', err)
+      options.app.emit('wasm-n2k:error', err)
     })
 
     this.app = options.app
@@ -102,7 +102,7 @@ export default class WasmN2k extends Transform {
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err)
           console.error(`wasm-n2k tx: ${message}`)
-          options.app.emit('canboatjs:error', err)
+          options.app.emit('wasm-n2k:error', err)
         }
       }
       options.app.on('nmea2000JsonOut', this.txHandler)
