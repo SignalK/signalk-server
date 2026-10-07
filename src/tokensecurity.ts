@@ -765,6 +765,7 @@ function tokenSecurityFactory(
       '/webapps',
       '/availablePaths',
       '/hasAnalyzer',
+      '/hasWasm',
       '/inputTest',
       '/nodeInfo',
       '/debugKeys',
