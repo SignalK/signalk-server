@@ -8,7 +8,7 @@ describe('Watcher', () => {
     watcher.rangeMax = 20
 
     const events: string[] = []
-    watcher.change$.subscribe((event) => events.push(event.type))
+    watcher.register((event) => events.push(event.type))
 
     watcher.value = 5
     watcher.value = 15
@@ -22,7 +22,7 @@ describe('Watcher', () => {
     watcher.rangeMax = 20
 
     const events: string[] = []
-    watcher.change$.subscribe((event) => events.push(event.type))
+    watcher.register((event) => events.push(event.type))
 
     watcher.value = 15
     watcher.value = 25
