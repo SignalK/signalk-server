@@ -5,7 +5,7 @@ import {
   SIGNALKRESOURCETYPES
 } from '@signalk/server-api'
 
-import { FileStore, getUuid } from './lib/filestorage'
+import { FileStore, getUuid } from './filestorage'
 import { StoreRequestParams } from './types'
 import { IRouter, Request, Response } from 'express'
 import * as openapi from './openApi.json'

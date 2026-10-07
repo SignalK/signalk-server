@@ -25,6 +25,10 @@
     }
   ],
   "license": "Apache-20",
+  "signalk": {
+    "displayName": "Resources Provider",
+    "appIcon": "./logo.svg"
+  },
   "scripts": {
     "build": "tsc",
     "watch": "npm run build -- -w",
