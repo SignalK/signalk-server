@@ -144,7 +144,6 @@ interface TypeComponentProps {
   value: ProviderValue
   onChange: OnChangeHandler
   hasAnalyzer?: boolean
-  hasWasm?: boolean
 }
 
 // Defined outside component to avoid recreation on render
@@ -166,7 +165,6 @@ export default function BasicProvider({
   onPropChange
 }: BasicProviderProps) {
   const [hasAnalyzer, setHasAnalyzer] = useState(false)
-  const [hasWasm, setHasWasm] = useState(false)
 
   useEffect(() => {
     fetch(`${window.serverRoutesPrefix}/hasAnalyzer`, {
@@ -176,17 +174,6 @@ export default function BasicProvider({
       .then((data) => {
         setHasAnalyzer(data)
       })
-    fetch(`${window.serverRoutesPrefix}/hasWasm`, {
-      credentials: 'include'
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setHasWasm(data)
-      })
-      // Capability probe: a failure means "no wasm", which is already the
-      // initial state. Swallow it rather than leaving an unhandled
-      // rejection in the console — the wasm options stay hidden either way.
-      .catch(() => setHasWasm(false))
   }, [])
 
   const TypeComponent = TYPE_COMPONENTS[value.type]
@@ -206,11 +193,7 @@ export default function BasicProvider({
               onChange={(event) => onChange(event)}
             >
               <option value="NMEA2000">NMEA 2000</option>
-              {/* J1939 has no canboatjs fallback — without wasm there
-                  is no source that could serve the connection. */}
-              <option value="J1939" disabled={!hasWasm}>
-                J1939
-              </option>
+              <option value="J1939">J1939</option>
               <option value="NMEA0183">NMEA 0183</option>
               <option value="SignalK">Signal K</option>
               <option value="Seatalk">Seatalk (GPIO)</option>
@@ -277,7 +260,6 @@ export default function BasicProvider({
           value={value}
           onChange={onChange}
           hasAnalyzer={hasAnalyzer}
-          hasWasm={hasWasm}
         />
       )}
       <OverrideTimestamps value={value.options} onChange={onChange} />
@@ -933,7 +915,6 @@ function DataTypeInput({
   value: ProviderValue
   onChange: OnChangeHandler
   hasAnalyzer?: boolean
-  hasWasm?: boolean
 }) {
   return (
     <Form.Group as={Row} className="mb-3">
@@ -1698,12 +1679,7 @@ function CollectNetworkStatsInput({
   )
 }
 
-function NMEA2000({
-  value,
-  onChange,
-  hasAnalyzer,
-  hasWasm
-}: TypeComponentProps) {
+function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
   return (
     <div>
       <Form.Group as={Row} className="mb-3">
@@ -1722,9 +1698,7 @@ function NMEA2000({
             <option value="ngt-1" disabled={!hasAnalyzer}>
               Actisense NGT-1 (canboat)
             </option>
-            <option value="ngt-1-wasm" disabled={!hasWasm}>
-              Actisense NGT-1 (canboat wasm)
-            </option>
+            <option value="ngt-1-wasm">Actisense NGT-1 (canboat wasm)</option>
             <option value="ikonvert-canboatjs">iKonvert (canboatjs)</option>
             <option value="navlink2-tcp-canboatjs">NavLink2 (canboatjs)</option>
             <option value="canboat-csv-canboatjs">
@@ -1733,7 +1707,7 @@ function NMEA2000({
             <option value="ydwg02-canboatjs">
               Yacht Devices RAW TCP (canboatjs)
             </option>
-            <option value="ydwg02-wasm" disabled={!hasWasm}>
+            <option value="ydwg02-wasm">
               Yacht Devices RAW TCP (canboat wasm)
             </option>
             <option value="ydwg02-udp-canboatjs">
@@ -1743,16 +1717,14 @@ function NMEA2000({
               Yacht Devices RAW USB (canboatjs)
             </option>
             <option value="canbus-canboatjs">Canbus (canboatjs)</option>
-            <option value="canbus-wasm" disabled={!hasWasm}>
-              Canbus (canboat wasm)
-            </option>
+            <option value="canbus-wasm">Canbus (canboat wasm)</option>
             <option value="n2k-ip-gateway-canboatjs">
               N2K IP Gateway (canboatjs)
             </option>
             <option value="w2k-1-n2k-ascii-canboatjs">
               W2K-1 N2K ASCII (canboatjs)
             </option>
-            <option value="w2k-1-n2k-ascii-wasm" disabled={!hasWasm}>
+            <option value="w2k-1-n2k-ascii-wasm">
               W2K-1 N2K ASCII (canboat wasm)
             </option>
             <option value="w2k-1-n2k-actisense-canboatjs">
@@ -1761,10 +1733,10 @@ function NMEA2000({
             <option value="maretron-ipg-canboatjs">
               Maretron IPG 100 (canboatjs)
             </option>
-            <option value="maretron-ipg-wasm" disabled={!hasWasm}>
+            <option value="maretron-ipg-wasm">
               Maretron IPG 100 (canboat wasm)
             </option>
-            <option value="w2k-1-n2k-actisense-wasm" disabled={!hasWasm}>
+            <option value="w2k-1-n2k-actisense-wasm">
               W2K-1 N2K ACTISENSE (canboat wasm)
             </option>
             <option value="canbus" disabled={!hasAnalyzer}>
@@ -1970,7 +1942,7 @@ function NMEA2000({
   )
 }
 
-function J1939({ value, onChange, hasWasm }: TypeComponentProps) {
+function J1939({ value, onChange }: TypeComponentProps) {
   return (
     <div>
       <Form.Group as={Row} className="mb-3">
@@ -1985,7 +1957,7 @@ function J1939({ value, onChange, hasWasm }: TypeComponentProps) {
             onChange={(event) => onChange(event)}
           >
             <option value="none">Select a source</option>
-            <option value="j1939-wasm" disabled={!hasWasm}>
+            <option value="j1939-wasm">
               Canbus listen-only (canboat wasm)
             </option>
           </Form.Select>

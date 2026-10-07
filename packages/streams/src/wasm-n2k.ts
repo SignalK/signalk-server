@@ -1,4 +1,5 @@
 import { Transform, TransformCallback } from 'stream'
+import { FromPgn, TxEncoder } from '@canboat/wasm'
 import type { CreateDebug, DebugLogger } from './types'
 
 /*
@@ -21,9 +22,6 @@ import type { CreateDebug, DebugLogger } from './types'
  * encoded to the gateway's transmit dialect (ydwg-raw with fast-packet
  * fragmentation, n2k-ascii, plain) and emitted line-by-line on txEvent
  * for the transport element to write.
- *
- * @canboat/wasm is resolved lazily so the server runs fine without it;
- * the admin UI gates these connection subtypes on availability.
  */
 
 interface WasmN2kOptions {
@@ -57,30 +55,6 @@ interface CanFrameChunk {
   data: Buffer
 }
 
-interface WasmCompat {
-  FromPgn: new (options?: { j1939?: boolean }) => {
-    on(event: string, cb: (...args: unknown[]) => void): void
-    parseString(
-      line: string
-    ):
-      | ({ timestamp?: string; providerId?: string } & Record<string, unknown>)
-      | undefined
-  }
-  TxEncoder: new (si: boolean) => {
-    encode(json: string, format: string): string[]
-  }
-}
-
-function requireWasm(): WasmCompat {
-  try {
-    return require('@canboat/wasm') as WasmCompat
-  } catch {
-    throw new Error(
-      '@canboat/wasm is not installed; wasm connection types need it'
-    )
-  }
-}
-
 const isCanFrameChunk = (chunk: unknown): chunk is CanFrameChunk =>
   typeof chunk === 'object' &&
   chunk !== null &&
@@ -89,7 +63,7 @@ const isCanFrameChunk = (chunk: unknown): chunk is CanFrameChunk =>
   Buffer.isBuffer((chunk as CanFrameChunk).data)
 
 export default class WasmN2k extends Transform {
-  private readonly fromPgn: InstanceType<WasmCompat['FromPgn']>
+  private readonly fromPgn: FromPgn
   private readonly app: WasmN2kOptions['app']
   private readonly analyzerOutEvent: string
   private readonly providerId: string | undefined
@@ -99,7 +73,6 @@ export default class WasmN2k extends Transform {
   constructor(options: WasmN2kOptions) {
     super({ objectMode: true })
 
-    const { FromPgn, TxEncoder } = requireWasm()
     const createDebug = options.createDebug ?? require('debug')
     this.debug = createDebug('signalk:streams:wasm-n2k')
 

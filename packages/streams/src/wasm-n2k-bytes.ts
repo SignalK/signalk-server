@@ -1,5 +1,6 @@
 import { Transform, TransformCallback } from 'stream'
 import { Socket } from 'net'
+import { ByteDecoder, unwrapAnalyzerOutput } from '@canboat/wasm'
 import type { CreateDebug, DebugLogger } from './types'
 
 /*
@@ -40,36 +41,6 @@ interface WasmN2kBytesOptions {
   [key: string]: unknown
 }
 
-interface WasmByteApi {
-  ByteDecoder: new (
-    kind: string,
-    camel: boolean,
-    nameValue: boolean,
-    si: boolean
-  ) => {
-    initBytes(password: string): Uint8Array
-    keepaliveBytes(): Uint8Array | undefined
-    decodeBytes(bytes: Uint8Array): string[]
-    takePendingTx(): Uint8Array
-    takeErrors(): string[]
-    encodeFrame(json: string, si: boolean): Uint8Array
-  }
-  unwrapAnalyzerOutput(parsed: unknown): {
-    timestamp?: string
-    providerId?: string
-  } & Record<string, unknown>
-}
-
-function requireWasm(): WasmByteApi {
-  try {
-    return require('@canboat/wasm') as WasmByteApi
-  } catch {
-    throw new Error(
-      '@canboat/wasm is not installed; wasm connection types need it'
-    )
-  }
-}
-
 const RECONNECT_DELAY = 3000
 const KEEPALIVE_INTERVAL = 20000
 const DEFAULT_IDLE_TIMEOUT_SECONDS = 60
@@ -81,8 +52,7 @@ interface ByteTransport {
 
 export default class WasmN2kBytes extends Transform {
   private readonly options: WasmN2kBytesOptions
-  private readonly wasm: WasmByteApi
-  private decoder!: InstanceType<WasmByteApi['ByteDecoder']>
+  private decoder!: ByteDecoder
   private socket: ByteTransport | null = null
   private keepaliveTimer: NodeJS.Timeout | null = null
   private reconnectTimer: NodeJS.Timeout | null = null
@@ -95,7 +65,6 @@ export default class WasmN2kBytes extends Transform {
   constructor(options: WasmN2kBytesOptions) {
     super({ objectMode: true })
     this.options = options
-    this.wasm = requireWasm()
     const createDebug = options.createDebug ?? require('debug')
     this.debug = createDebug('signalk:streams:wasm-n2k-bytes')
 
@@ -153,12 +122,7 @@ export default class WasmN2kBytes extends Transform {
     }
     // A fresh decoder per connection: framing and session state must
     // not leak across reconnects.
-    this.decoder = new this.wasm.ByteDecoder(
-      this.options.byteKind,
-      true,
-      true,
-      true
-    )
+    this.decoder = new ByteDecoder(this.options.byteKind, true, true, true)
 
     const onOpen = (transport: ByteTransport) => {
       this.status('Connected')
@@ -224,7 +188,7 @@ export default class WasmN2kBytes extends Transform {
         const records = this.decoder.decodeBytes(buf)
         const timestamp = new Date().toISOString()
         for (const record of records) {
-          const pgnData = this.wasm.unwrapAnalyzerOutput(JSON.parse(record))
+          const pgnData = unwrapAnalyzerOutput(JSON.parse(record))
           pgnData.timestamp = timestamp
           pgnData.providerId = this.options.providerId
           this.push(pgnData)

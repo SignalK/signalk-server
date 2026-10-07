@@ -136,9 +136,10 @@ interface PipeElement {
 
 type PipelineFactory = (options: SimpleOptions) => PipeElement[]
 
-// The wasm-backed elements load lazily (the server runs without
-// @canboat/wasm), so their constructor types are pulled from the
-// modules statically to keep the dynamic requires strictly typed.
+// The wasm-backed elements load lazily, so the wasm module is only
+// instantiated when a wasm connection is configured; their constructor
+// types are pulled from the modules statically to keep the dynamic
+// requires strictly typed.
 type WasmN2kCtor = typeof import('./wasm-n2k').default
 type WasmN2kOptions = ConstructorParameters<WasmN2kCtor>[0]
 type J1939CanCtor = typeof import('./j1939-can').default
