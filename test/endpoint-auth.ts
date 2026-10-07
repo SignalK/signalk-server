@@ -97,6 +97,7 @@ describe('Endpoint authentication', function () {
         path: '/skServer/rememberDebug',
         body: { value: 'test:*' }
       },
+      { method: 'DELETE', path: '/skServer/log', body: {} },
       {
         method: 'DELETE',
         path: '/skServer/removeSource?sourceRef=test',

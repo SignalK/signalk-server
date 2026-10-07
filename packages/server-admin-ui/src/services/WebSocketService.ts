@@ -262,6 +262,9 @@ export class WebSocketService {
         useStore.getState().addLogEntry(logData)
         break
       }
+      case 'LOG_CLEARED':
+        useStore.getState().clearLogEntries()
+        break
       case 'ACCESS_REQUEST':
         this.zustandSetState({ accessRequests: data } as Partial<SignalKStore>)
         break
