@@ -36,7 +36,7 @@
     "test": "npm run build"
   },
   "dependencies": {
-    "@signalk/server-api": "^2.24.0"
+    "@signalk/server-api": "^2.33.0"
   },
   "devDependencies": {},
   "signalk-plugin-enabled-by-default": true

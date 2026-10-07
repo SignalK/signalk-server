@@ -253,6 +253,13 @@ module.exports = (server: CourseComputerApp): Plugin => {
       })) as SubscriptionOptions[]
     }
 
+    watchArrival.register((event: WatchEvent) => {
+      onArrivalCircleEvent(event)
+    })
+    watchPassedDest.register((event: WatchEvent) => {
+      onPassedDestEvent(event)
+    })
+
     server.subscriptionmanager.subscribe(
       subscription,
       unsubscribes,
@@ -305,13 +312,6 @@ module.exports = (server: CourseComputerApp): Plugin => {
         }
       }
     )
-
-    watchArrival.register((event: WatchEvent) => {
-      onArrivalCircleEvent(event)
-    })
-    watchPassedDest.register((event: WatchEvent) => {
-      onPassedDestEvent(event)
-    })
   }
 
   const initEndpoints = () => {
