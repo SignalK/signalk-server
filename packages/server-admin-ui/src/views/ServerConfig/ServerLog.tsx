@@ -158,7 +158,7 @@ export default function ServerLogs() {
     if (
       clearing ||
       !window.confirm(
-        'Clear the server log? This empties it for every connected admin.'
+        'Clear the server log? This empties it for all admins, including those who connect later.'
       )
     ) {
       return
