@@ -10,7 +10,7 @@ import {
   writeFile
 } from 'fs/promises'
 import path from 'path'
-import { IResourceStore, StoreRequestParams } from '../types'
+import { IResourceStore, StoreRequestParams } from './types'
 import { passFilter, processParameters } from './utils'
 import { Resource } from '@signalk/server-api'
 
@@ -48,7 +48,9 @@ export class FileStore implements IResourceStore {
     return this.initPromise
   }
 
-  private async doInit(config: any): Promise<{ error: boolean; message: string }> {
+  private async doInit(
+    config: any
+  ): Promise<{ error: boolean; message: string }> {
     if (typeof config.settings.path === 'undefined') {
       this.savePath = config.basePath + '/resources'
     } else if (config.settings.path[0] === '/') {

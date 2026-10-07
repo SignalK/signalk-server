@@ -2,10 +2,6 @@
 
 **Signal K server plugin that implements the Resource Provider API**.
 
-_Note: This plugin requires Signal K Server v2.0 or later!_
-
----
-
 This plugin is a resource provider, facilitating the storage and retrieval of the following resource types defined by the Signal K specification:
 
 - `resources/routes`
