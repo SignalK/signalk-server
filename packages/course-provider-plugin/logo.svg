@@ -1,46 +1,248 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Course Provider">
-  <defs>
-    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1b6ea8"/>
-      <stop offset="1" stop-color="#0b3a5e"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 128 128"
+   role="img"
+   aria-label="Course Provider"
+   version="1.1"
+   id="svg356"
+   sodipodi:docname="logo.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview358"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="4.4746601"
+     inkscape:cx="88.833563"
+     inkscape:cy="57.881491"
+     inkscape:window-width="1920"
+     inkscape:window-height="1012"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer3" />
+  <defs
+     id="defs316">
+    <linearGradient
+       id="sea"
+       x1="0"
+       y1="0"
+       x2="0"
+       y2="128"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         offset="0"
+         stop-color="#1b6ea8"
+         id="stop308" />
+      <stop
+         offset="1"
+         stop-color="#0b3a5e"
+         id="stop310" />
     </linearGradient>
-    <clipPath id="card">
-      <rect x="0" y="0" width="128" height="128" rx="22"/>
+    <clipPath
+       id="card">
+      <rect
+         x="0"
+         y="0"
+         width="128"
+         height="128"
+         rx="22"
+         id="rect313" />
     </clipPath>
+    <clipPath
+       id="SVGID_2_">
+      <use
+         xlink:href="#SVGID_1_"
+         style="overflow:visible"
+         id="use415" />
+    </clipPath>
+    <clipPath
+       id="SVGID_4_">
+      <use
+         xlink:href="#SVGID_3_"
+         style="overflow:visible"
+         id="use421" />
+    </clipPath>
+    <clipPath
+       id="clipPath711">
+      <use
+         xlink:href="#SVGID_3_"
+         style="overflow:visible"
+         id="use709" />
+    </clipPath>
+    <clipPath
+       id="clipPath715">
+      <use
+         xlink:href="#SVGID_3_"
+         style="overflow:visible"
+         id="use713" />
+    </clipPath>
+    <rect
+       id="SVGID_1_"
+       x="0"
+       y="-0.59799999"
+       width="157.19701"
+       height="111.402" />
+    <rect
+       id="SVGID_3_"
+       x="0"
+       y="-0.59799999"
+       width="157.19701"
+       height="111.402" />
   </defs>
-
-  <g clip-path="url(#card)">
-    <rect width="128" height="128" fill="url(#sea)"/>
-
-    <g stroke="#bee3f4" stroke-opacity="0.25" stroke-width="1" fill="none">
-      <path d="M0 24 H128 M0 48 H128 M0 72 H128 M0 96 H128"/>
-      <path d="M24 0 V128 M48 0 V128 M72 0 V128 M96 0 V128"/>
-    </g>
-
-    <!-- plotted course from the vessel to the destination waypoint -->
-    <path d="M38 92 L88 40" fill="none" stroke="#e63946" stroke-width="3.4" stroke-linecap="round"/>
-
-    <!-- intermediate waypoint on the course -->
-    <circle cx="63" cy="66" r="3.4" fill="#e2e8f0" stroke="#0b3a5e" stroke-width="1.4"/>
-
-    <!-- destination waypoint with arrival circle -->
-    <circle cx="88" cy="40" r="14" fill="none" stroke="#bee3f4" stroke-width="1.8" stroke-dasharray="4.5 3.5"/>
-    <circle cx="88" cy="40" r="4.2" fill="#e63946" stroke="#0b3a5e" stroke-width="1.3"/>
-
-    <!-- vessel at the start of the course, heading along the bearing -->
-    <g transform="translate(38 92) rotate(45)">
-      <polygon points="0,-13 8,9 -8,9" fill="#e2e8f0" stroke="#0b3a5e" stroke-width="1.6" stroke-linejoin="round"/>
-      <circle cx="0" cy="-1" r="2.4" fill="#0b3a5e"/>
-    </g>
-
-    <!-- compass rose -->
-    <g transform="translate(104 104)">
-      <circle r="11" fill="#0b3a5e" fill-opacity="0.7" stroke="#bee3f4" stroke-width="0.8"/>
-      <polygon points="0,-9 2.2,0 0,0" fill="#e63946"/>
-      <polygon points="0,-9 -2.2,0 0,0" fill="#b5232f"/>
-      <polygon points="0,9 2.2,0 0,0" fill="#e2e8f0"/>
-      <polygon points="0,9 -2.2,0 0,0" fill="#cbd5e1"/>
-      <circle r="1.1" fill="#e2e8f0"/>
+  <g
+     id="g438"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer4"
+     inkscape:label="sklogo 1"
+     style="fill:none">
+    <rect
+       style="display:inline;fill:none;fill-opacity:1;stroke:#243db6;stroke-width:0.53067;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+       id="rect1005"
+       width="126.42477"
+       height="126.24439"
+       x="0.73962623"
+       y="0.88982177"
+       ry="21.649538" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer1"
+     inkscape:label="sklogo">
+    <g
+       id="g436"
+       transform="matrix(0.78872022,0,0,0.75757948,1.7049141,19.716708)">
+      <g
+         id="g434">
+        <g
+           id="g432">
+          <defs
+             id="defs413">
+            <rect
+               id="rect889"
+               x="0"
+               y="-0.59799999"
+               width="157.19701"
+               height="111.402" />
+          </defs>
+          <clipPath
+             id="clipPath723">
+            <use
+               xlink:href="#SVGID_1_"
+               style="overflow:visible"
+               id="use721" />
+          </clipPath>
+          <g
+             class="st1"
+             clip-path="url(#SVGID_2_)"
+             id="g430">
+            <defs
+               id="defs419">
+              <rect
+                 id="rect894"
+                 x="0"
+                 y="-0.59799999"
+                 width="157.19701"
+                 height="111.402" />
+            </defs>
+            <clipPath
+               id="clipPath729">
+              <use
+                 xlink:href="#SVGID_3_"
+                 style="overflow:visible"
+                 id="use727" />
+            </clipPath>
+            <path
+               class="st2"
+               d="m 0.607,75.285 c 2.957,-1.872 10.882,6.629 21.713,14.362 7.039,5.026 18.661,8.853 28.952,8.143 16.757,-1.156 23.71,-4.386 37.85,-11.763 11.088,-5.785 22.27,-13.948 31.82,-19.767 5.646,-3.441 12.449,-6.567 20.107,-8.932 9.948,-3.071 16.148,-0.501 16.148,0.494 0,1.708 -11.752,7.285 -20.688,13.323 -11.49,7.764 -16.879,11.531 -19.509,13.257 -7.518,4.935 -20.387,13.411 -25.948,16.092 -8.695,4.192 -18.633,8.229 -30.899,9.782 C 44.08,112.311 26.842,108.394 15.435,99.718 1.721,89.287 -1.548,76.65 0.607,75.285"
+               clip-path="url(#SVGID_4_)"
+               id="path424"
+               style="fill:#003399" />
+            <path
+               class="st2"
+               d="m 23.112,84.347 c 0,0 12.419,-32.107 14.23,-36.798 5.747,-14.886 8.213,-22.798 17.158,-26.123 4.664,-1.734 13.022,-0.163 16.008,0.066 4.411,0.339 5.467,-0.955 6.464,-3.449 C 79.094,12.74 80.926,8.497 80.636,7.629 80.563,7.41 79.162,7.037 78.997,6.376 c -0.096,-0.386 2.626,-6.609 3.278,-6.963 0.676,-0.365 23.721,8.409 23.914,9.374 0.179,0.896 -1.929,6.653 -2.797,7.135 -0.678,0.377 -1.84,-0.767 -2.7,-0.289 -0.607,0.337 -1.472,2.853 -4.242,9.931 -0.868,2.218 -0.169,4.714 2.218,6.653 3.085,2.507 9.103,6.307 11.956,11.282 3.761,6.557 1.929,10.501 -3.568,24.202 l -0.385,1.061 c 0,0 -9.427,7.917 -26.617,16.06 -10.066,4.768 -19.451,7.009 -26.897,7.863 -1.202,0.138 -4.739,-2.688 -7.6,-2.967 C 42.7,89.438 34.906,90.587 34.248,90.356 28.789,88.433 23.112,84.347 23.112,84.347"
+               clip-path="url(#SVGID_4_)"
+               id="path426"
+               style="fill:#003399" />
+            <path
+               class="st3"
+               d="m 74.562,38.485 c 0,0 -12.623,-6.709 -17.562,-2.973 -4.817,3.645 -22.751,54.866 -22.751,54.866 0,0 2.231,0.89 6.573,1.863 2.821,0.632 5.248,0.791 8.143,0.746 2.306,-0.036 4.192,-0.279 4.192,-0.279 z"
+               clip-path="url(#SVGID_4_)"
+               id="path428"
+               style="fill:#ffcc00" />
+          </g>
+        </g>
+      </g>
     </g>
   </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="text">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke:#000201;stroke-width:0.5;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+       x="55.068741"
+       y="118.63288"
+       id="text1679"><tspan
+         sodipodi:role="line"
+         id="tspan1677"
+         x="55.068741"
+         y="118.63288"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke:#000201;stroke-opacity:1">BUILT-IN</tspan></text>
+  </g>
+  <g
+     id="g440"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g442"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g444"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g446"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g448"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g450"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g452"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g454"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g456"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g458"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g460"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g462"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g464"
+     transform="translate(10.369401,19.958755)" />
+  <g
+     id="g466"
+     transform="translate(10.369401,19.958755)" />
 </svg>

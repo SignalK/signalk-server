@@ -4,13 +4,9 @@
 [![npm version](https://img.shields.io/npm/v/@signalk/course-provider.svg)](https://www.npmjs.com/package/@signalk/course-provider)
 [![License](https://img.shields.io/npm/l/@signalk/course-provider.svg)](https://github.com/SignalK/course-provider-plugin/blob/master/LICENSE)
 
-**Signal K server plugin that acts as a Course data provider**.
+**Signal K server Course data provider plugin**.
 
-_Note: This plugin should ONLY be installed on Signal K Server version 2.0 or later!_
-
----
-
-This plugin populates the course data paths found under [`navigation.course.calcValues`](https://demo.signalk.org/doc/openapi/?urls.primaryName=course#/calculations/get_course_calcValues) as well as providing an API endpoint at `/signalk/v2/api/vessels/self/navigation/course/calcValues`
+This plugin is included with Signal K Server and populates the course data paths found under [`navigation.course.calcValues`](https://demo.signalk.org/doc/openapi/?urls.primaryName=course#/calculations/get_course_calcValues) as well as providing an API endpoint at `/signalk/v2/api/vessels/self/navigation/course/calcValues`
 
 Additionally it will populate `performance.velocityMadeGoodToWaypoint` as well as
 allow the following notifications to be raised:
@@ -20,8 +16,6 @@ allow the following notifications to be raised:
 - **`notifications.navigation.perpendicularPassed`**: _alert_ message is sent when the perpendicular line (relative to `navigation.course.previousPoint.position` at the destination has been passed by the vessel.
 
 ## Configuration
-
----
 
 **Notifications:** provides configuration for generated notifications.
 
