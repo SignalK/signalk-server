@@ -167,7 +167,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
   // ******** REQUIRED PLUGIN DEFINITION *******
   const plugin: Plugin = {
     id: 'course-provider',
-    name: 'Course Data provider',
+    name: 'Course Data provider (built-in)',
     schema: () => CONFIG_SCHEMA,
     uiSchema: () => CONFIG_UISCHEMA,
     start: (options: CourseAppConfig) => {
