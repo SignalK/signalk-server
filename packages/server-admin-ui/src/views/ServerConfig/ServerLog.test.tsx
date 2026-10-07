@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, act, fireEvent } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import ServerLog from './ServerLog'
 import { useStore } from '../../store'
 
@@ -74,9 +75,11 @@ describe('ServerLog access denial', () => {
 
 describe('ServerLog clear button', () => {
   let fetchMock: ReturnType<typeof vi.fn>
+  let user: ReturnType<typeof userEvent.setup>
 
   beforeEach(() => {
     deltaHandlers.clear()
+    user = userEvent.setup()
     fetchMock = vi.fn((_url: string, init?: RequestInit) =>
       Promise.resolve(
         init?.method === 'DELETE'
@@ -104,14 +107,10 @@ describe('ServerLog clear button', () => {
     })
 
   const clickClear = () =>
-    act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /clear server log/i }))
-    })
+    user.click(screen.getByRole('button', { name: /clear server log/i }))
 
   const togglePause = (container: HTMLElement) =>
-    act(() => {
-      fireEvent.click(container.querySelector('#Pause') as HTMLElement)
-    })
+    user.click(container.querySelector('#Pause') as HTMLElement)
 
   it('asks the server to clear the log after confirmation', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
@@ -127,24 +126,24 @@ describe('ServerLog clear button', () => {
   it('empties a paused window once the server has cleared', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const { container } = render(<ServerLog />)
-    togglePause(container)
+    await togglePause(container)
     addEntry('old line')
     await clickClear()
     expect(screen.queryByText('old line')).toBeNull()
   })
 
-  it('drops stale lines when resuming, before the server replays', () => {
+  it('drops stale lines when resuming, before the server replays', async () => {
     const { container } = render(<ServerLog />)
     addEntry('stale line')
-    togglePause(container)
-    togglePause(container)
+    await togglePause(container)
+    await togglePause(container)
     expect(screen.queryByText('stale line')).toBeNull()
   })
 
-  it('does nothing when the confirmation is declined', () => {
+  it('does nothing when the confirmation is declined', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false)
     render(<ServerLog />)
-    fireEvent.click(screen.getByRole('button', { name: /clear server log/i }))
+    await clickClear()
     expect(deleteCalls()).toHaveLength(0)
   })
 
@@ -187,7 +186,7 @@ describe('ServerLog clear button', () => {
     const { container } = render(<ServerLog />)
     addEntry('old line')
     await clickClear()
-    togglePause(container)
+    await togglePause(container)
     await act(async () => {
       finishDelete()
     })
@@ -204,9 +203,7 @@ describe('ServerLog clear button', () => {
       )
     )
     render(<ServerLog />)
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /clear server log/i }))
-    })
+    await clickClear()
     expect(
       screen.getByText('Failed to clear the server log: 401 Unauthorized')
     ).toBeInTheDocument()
