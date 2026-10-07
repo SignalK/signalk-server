@@ -14,8 +14,8 @@ import type { CreateDebug, DebugLogger } from './types'
  *  - text lines (plain/Actisense serial, YDWG RAW, iKonvert, Actisense
  *    ASCII — the wasm decoder sniffs the format like the native reader)
  *  - canboatjs canbus frame objects ({ pgn: header, length, data }),
- *    synthesized into plain wire lines so the wasm reassembler handles
- *    fast-packets
+ *    passed to the wasm decoder as header plus payload bytes; its
+ *    reassembler handles fast-packets
  *  - file-log chunks ({ fromFile, data, timestamp })
  *
  * TX: when txFormat/txEvent are configured, nmea2000JsonOut records are
@@ -79,10 +79,10 @@ export default class WasmN2k extends Transform {
     this.fromPgn = new FromPgn(
       options.j1939 === true ? { j1939: true } : undefined
     )
-    this.fromPgn.on('error', (line: unknown, err: unknown) => {
+    this.fromPgn.on('error', (input: unknown, err: unknown) => {
       if (this.debug.enabled) {
         const message = err instanceof Error ? err.message : String(err)
-        this.debug(`[error] ${String(line)} ${message}`)
+        this.debug('[error] %o %s', input, message)
       }
       options.app.emit('wasm-n2k:error', err)
     })
@@ -123,7 +123,13 @@ export default class WasmN2k extends Transform {
   }
 
   private parseLine(line: string, timestamp?: string): void {
-    const pgnData = this.fromPgn.parseString(line)
+    this.emitPgn(this.fromPgn.parseString(line), timestamp)
+  }
+
+  private emitPgn(
+    pgnData: ReturnType<FromPgn['parseString']>,
+    timestamp?: string
+  ): void {
     if (pgnData) {
       if (timestamp) {
         pgnData.timestamp = timestamp
@@ -143,15 +149,9 @@ export default class WasmN2k extends Transform {
   ): void {
     if (isCanFrameChunk(chunk)) {
       // A frame from canboatjs's canbus transport (the canSocket
-      // AF_CAN shim): header already decomposed, payload raw. Render
-      // it as a plain wire line; the wasm reassembler does the rest.
+      // AF_CAN shim): header already decomposed, payload raw.
       const { prio, pgn, src, dst } = chunk.pgn
-      // Hot path (one call per CAN frame): native hex conversion, then
-      // one pass to insert the separators.
-      const hex = chunk.data.toString('hex').replace(/(..)(?=.)/g, '$1,')
-      this.parseLine(
-        `,${prio},${pgn},${src},${dst},${chunk.data.length},${hex}`
-      )
+      this.emitPgn(this.fromPgn.parseFrame(prio, pgn, src, dst, chunk.data))
     } else if (
       typeof chunk === 'object' &&
       chunk !== null &&
