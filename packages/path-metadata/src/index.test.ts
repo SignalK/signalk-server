@@ -289,6 +289,19 @@ describe('updateContract inheritance', () => {
     expect(contractFor(self('steering.rudderAngle'))).to.equal(undefined)
   })
 
+  it('treats sensor antenna offsets as event-driven', () => {
+    // Installation geometry does not go stale between restatements, whether
+    // it comes from base data or an AIS static report.
+    expect(contractFor(self('sensors.gps.fromBow'))).to.equal('event')
+    expect(contractFor(self('sensors.gps.fromCenter'))).to.equal('event')
+    expect(contractFor(self('sensors.ais.fromBow'))).to.equal('event')
+    expect(contractFor(self('sensors.ais.fromCenter'))).to.equal('event')
+  })
+
+  it('leaves live sensor data periodic', () => {
+    expect(contractFor(self('sensors.gps.sensorData'))).to.equal(undefined)
+  })
+
   it('leaves registry scaffolding unclassified in the /paths view', () => {
     // /self and /vessels are not paths under a context, so a contract says
     // nothing about them and staleness never applies.
