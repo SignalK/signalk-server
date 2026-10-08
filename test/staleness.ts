@@ -365,6 +365,34 @@ describe('StalenessEnforcer', () => {
     expect(app.captured[0].$source).to.equal('gps.1')
   })
 
+  it('never times out server base data from the defaults source', () => {
+    const app = makeMockApp({ defaultTimeout: 60 })
+    // Published once at startup from baseDeltas.json and never again.
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'sensors.gps.fromBow',
+      'defaults',
+      isoSecondsAgo(3600),
+      19
+    )
+    // A live source in the same group is still enforced: the skip is per
+    // source, not per path.
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'sensors.gps.fromBow',
+      'can0.43',
+      isoSecondsAgo(3600),
+      12
+    )
+    const enforcer = makeEnforcer(app)
+    runTick(enforcer)
+    expect(app.captured).to.have.lengthOf(1)
+    expect(app.captured[0].path).to.equal('sensors.gps.fromBow')
+    expect(app.captured[0].$source).to.equal('can0.43')
+  })
+
   it('does not re-emit when the cached value is already null (sensor-null)', () => {
     const app = makeMockApp({ defaultTimeout: 60 })
     seedLeaf(

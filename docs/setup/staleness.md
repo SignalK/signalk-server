@@ -34,6 +34,8 @@ Clients that do not understand `state` simply see `null` — the safe interpreta
 
 A sensor that legitimately reports `value: null` itself (for example an echo sounder with no bottom fix) is a regular update and is never flagged with `state.timedOut`.
 
+Values the server publishes from its own base data — the vessel dimensions and GPS antenna offsets from _Server → Settings → Vessel_, and anything else stored in `baseDeltas.json` — are configuration rather than measurements. They carry the `defaults` source and are never timed out.
+
 ## Update Contracts
 
 Not all paths update periodically. Each path has an update contract, declared with `meta.updateContract`:

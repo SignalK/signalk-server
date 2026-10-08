@@ -17,6 +17,13 @@ const debug = createDebug('signalk-server:staleness')
 
 export const STALENESS_PLUGIN_ID = 'staleness'
 
+// Provider id of the server's own base data (baseDeltas.json, the Vessel
+// settings page, meta set from the Data Browser). These values are
+// configuration rather than observations: nothing publishes them on a rate,
+// so they cannot go stale. Timing them out would also null static self data
+// that staticDataFilter protects, since the timeout delta carries the
+// original `defaults` $source and the filter lets that through.
+const DEFAULTS_SOURCE = 'defaults'
 const NOTIFICATIONS_PREFIX = 'notifications.'
 const NOTIFICATIONS_ROOT = 'notifications'
 const DEFAULT_TIMEOUT_SECONDS = 60
@@ -304,6 +311,7 @@ export class StalenessEnforcer {
       const leaf = leafGroup[srcRef]
       if (!isCacheLeafEntry(leaf)) continue
       if (leaf.isMeta) continue
+      if (srcRef === DEFAULTS_SOURCE) continue
       if (leaf.value === null) continue
       // String and boolean leaves are by Signal K convention identity
       // fields (uuid, mmsi, name, flag) or simple state flags — never
