@@ -54,6 +54,17 @@ const value = app.getSelfPath('uuid')
 app.debug(value) // Should output something like urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60
 ```
 
+A value can be `null`. A source may report `null` itself (for example an echo sounder with no bottom fix), and when [Stale Data Detection](../../setup/staleness.md) is enabled the server replaces a self value that stopped updating with `null`. Treat `null` as a missing value, the same as `undefined`, rather than checking for `undefined` only:
+
+```javascript
+const sog = app.getSelfPath('navigation.speedOverGround.value')
+if (sog == null) {
+  // unknown: never received, or timed out
+}
+```
+
+Deltas received through a subscription carry the same `null`; one produced by a timeout also has `state.timedOut` set.
+
 - `getPath(path)` returns the value of the path (including the context) starting from the _root_ of the full data model.
 
 ```javascript
