@@ -32,6 +32,8 @@ Sources: `docs/develop/plugins/`, `docs/develop/webapps.md`, `docs/develop/plugi
 8. **Fix Keys Reference content** — replace the generic "Data should be of type number" description on ~126 `@signalk/path-metadata` paths with real descriptions, add the 14 missing `course*.nextPoint.*` paths, and add a test that every path has a specific description. Makes path-metadata fit to be the canonical Keys Reference. _(independent; prerequisite for relying on the registry in step 6)_
 9. **Author a "Build a Client" guide** in the Protocol section — discovery, connecting, subscribing, authentication and REST access for non-JavaScript clients, linking into the HTTP and WebSocket API references. _(depends on steps 2, 3)_
 10. **Check links in CI** — fail `build:docs` on broken internal links and on external links pinned to versioned spec URLs (`signalk.org/specification/1.x.y/`). Guards step 5. _(after step 5)_
+11. **Use `@signalk/path-metadata` in test code** for path validation, replacing `@signalk/signalk-schema` use.
+12. **Update spec repository** to reflect the new organisation and consider archiving it.
 
 ## Relevant files
 
@@ -57,7 +59,7 @@ Sources: `docs/develop/plugins/`, `docs/develop/webapps.md`, `docs/develop/plugi
 
 ## Further considerations
 
-1. **Scope of v1 schema removal** — `@signalk/signalk-schema` is only used in `mdns-ws.ts` for path validation. Recommendation: **Option A** swap to path-metadata registry. (A: full removal now / B: defer removal to a separate PR to keep the docs PR focused).
+1. **Scope of v1 schema removal** — `@signalk/signalk-schema` is only used in `mdns-ws.ts` for path validation. Recommendation: **Option A** swap to path-metadata registry. (A: full removal now / B: defer removal to a separate PR to keep the docs PR focused). Additionally it is used widely in **test code for path validation**
 2. **Spec content ownership** — Recommendation: **Option A** port a concise Data Model page here and deep-link the external spec for formal detail. (A: port essentials / B: link-only / C: fully absorb the spec).
 
 ## PR split (per repo guidelines)
