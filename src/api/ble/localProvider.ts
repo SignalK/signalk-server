@@ -32,6 +32,11 @@ const DEVICE_ATTACH_TIMEOUT_MS = 5000
 // waitDevice timeout (ms) when establishing a GATT connection. Same
 // discoveryInterval-race constraint as above applies.
 const GATT_CONNECT_TIMEOUT_MS = 30000
+// Deadline (ms) for each connectGATT() setup step that can otherwise wait
+// forever: BlueZ's Connect call, and node-ble's wait for ServicesResolved.
+// Until connectGATT() settles, the BLE API keeps the device reserved for the
+// caller, and releaseGATTDevice() cannot free it.
+const GATT_SETUP_TIMEOUT_MS = 60000
 // GATT reconnect exponential backoff bounds
 const RECONNECT_BACKOFF_BASE_MS = 5000
 const RECONNECT_BACKOFF_MAX_MS = 60000
@@ -808,13 +813,48 @@ export class LocalBLEProvider {
     // it ends
     let unwatchLink: () => void = () => undefined
 
+    // Phase timings, to show where a slow or failed setup spent its time
+    const phaseNames = ['queue', 'waitDevice', 'Connect', 'services']
+    const started = Date.now()
+    let mark = started
+    const phases: string[] = []
+    const endPhase = () => {
+      const now = Date.now()
+      phases.push(`${phaseNames[phases.length]} ${now - mark}ms`)
+      mark = now
+    }
+    const logPhases = (outcome: 'ready' | 'failed') => {
+      if (!debug.enabled) return
+      if (outcome === 'failed') {
+        phases.push(
+          `${phaseNames[phases.length]} ${Date.now() - mark}ms unfinished`
+        )
+      }
+      debug(
+        `connectGATT ${mac} ${outcome} after ${Date.now() - started}ms: ${phases.join(', ')}`
+      )
+    }
+
     let device: any
     try {
       device = await this.connectQueue.enqueue(async () => {
+        endPhase()
         const dev = await this.adapter.waitDevice(mac, GATT_CONNECT_TIMEOUT_MS)
+        endPhase()
         // node-ble only emits 'disconnect' for a device connected through
-        // connect()
-        await dev.connect()
+        // connect(). Bounded: a Connect call BlueZ never answers would
+        // otherwise hold this queue, and the device's reservation, forever.
+        const connecting = dev.connect()
+        try {
+          await this.withSetupDeadline(connecting, `connecting to ${mac}`)
+        } catch (e) {
+          // Once given up on, the call's own outcome no longer matters
+          connecting.catch(() => undefined)
+          // Makes BlueZ abandon the pending Connect
+          await this.abandonDevice(dev, mac)
+          throw e
+        }
+        endPhase()
         connected = true
         // Before anything else is awaited, so that a link lost during setup
         // does not go unnoticed
@@ -852,25 +892,26 @@ export class LocalBLEProvider {
       })
     } catch (e) {
       releaseSlot()
+      logPhases('failed')
       throw e
     }
 
     let gattServer: any
     try {
       // node-ble waits for ServicesResolved without a timeout, which never
-      // comes once the link is gone
-      gattServer = await Promise.race([device.gatt(), lost])
+      // comes once the link is gone - nor from a device that stays connected
+      // but never finishes service discovery
+      gattServer = await this.resolveServices(device, lost, mac)
+      endPhase()
     } catch (e) {
       unwatchLink()
       connected = false
       releaseSlot()
-      try {
-        await device.disconnect()
-      } catch (_e) {
-        // ignore
-      }
+      await this.abandonDevice(device, mac)
+      logPhases('failed')
       throw e
     }
+    logPhases('ready')
 
     const conn: BLEGattConnection = {
       async read(serviceUuid: string, charUuid: string): Promise<Buffer> {
@@ -968,6 +1009,66 @@ export class LocalBLEProvider {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  // Waits for ServicesResolved on the Device's own helper, whose listeners the
+  // provider already manages, so device.gatt() then only reads the services
+  // instead of starting a wait of its own that cannot be cancelled
+  private async resolveServices(
+    device: any,
+    lost: Promise<never>,
+    mac: string
+  ): Promise<any> {
+    let onChange: (props: any) => void = () => undefined
+    const resolved = new Promise<void>((resolve) => {
+      onChange = (props: any) => {
+        if (props.ServicesResolved?.value === true) resolve()
+      }
+    })
+    device.helper.on('PropertiesChanged', onChange)
+    try {
+      return await this.withSetupDeadline(
+        Promise.race([
+          (async () => {
+            if (!(await device.helper.prop('ServicesResolved'))) {
+              await resolved
+            }
+            return device.gatt()
+          })(),
+          lost
+        ]),
+        `resolving services of ${mac}`
+      )
+    } finally {
+      device.helper.removeListener('PropertiesChanged', onChange)
+    }
+  }
+
+  // Cleanup after a failed setup, bounded as well: it runs while the connect
+  // queue, or the caller's reservation of the device, is still held
+  private async abandonDevice(device: any, mac: string): Promise<void> {
+    const disconnecting = device.disconnect()
+    try {
+      await this.withSetupDeadline(disconnecting, `disconnecting ${mac}`)
+    } catch (_e) {
+      disconnecting.catch(() => undefined)
+      // node-ble drops these only once Disconnect is answered
+      device.helper.removeListeners()
+    }
+  }
+
+  private withSetupDeadline<T>(step: Promise<T>, what: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(
+        () =>
+          reject(
+            new Error(`${what} timed out after ${GATT_SETUP_TIMEOUT_MS}ms`)
+          ),
+        GATT_SETUP_TIMEOUT_MS
+      )
+    })
+    return Promise.race([step, deadline]).finally(() => clearTimeout(timer))
+  }
 
   private unwrapVariant(v: any): any {
     if (v === undefined || v === null) return v
