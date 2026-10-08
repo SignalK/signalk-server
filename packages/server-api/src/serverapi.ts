@@ -99,6 +99,10 @@ export interface ServerAPI
    * Returns `unknown` because the Signal K data model is dynamic and path-dependent.
    * Callers should validate the returned type at runtime.
    *
+   * A value can be `null`: reported as such by its source, or set by the server
+   * when the path timed out under stale data detection. Treat `null` as a
+   * missing value, the same as `undefined`.
+   *
    * @example
    * ```ts
    * let uuid = app.getSelfPath('uuid');
