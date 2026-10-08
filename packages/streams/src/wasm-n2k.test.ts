@@ -91,4 +91,43 @@ describe('WasmN2k', () => {
     expect(await outputPromise).to.have.length(0)
     expect(errors).to.have.length(1)
   })
+
+  it('emits CRLF-terminated YDWG RAW frames for nmea2000JsonOut', () => {
+    const app = createMockApp()
+    const sent: string[] = []
+    app.on('ydwg02-out', (line: string) => sent.push(line))
+    const stream = new WasmN2k({
+      app,
+      txFormat: 'ydwg-raw',
+      txEvent: 'ydwg02-out',
+      createDebug: createDebugStub()
+    })
+
+    app.emit('nmea2000JsonOut', {
+      pgn: 127508,
+      prio: 2,
+      dst: 255,
+      fields: { instance: 0, voltage: 26.27, current: -63.9 }
+    })
+    stream.end()
+
+    expect(sent).to.deep.equal(['09F21400 00 43 0A 81 FD FF FF FF\r\n'])
+  })
+
+  it('stops transmitting once ended', () => {
+    const app = createMockApp()
+    const sent: string[] = []
+    app.on('w2k-1-out', (line: string) => sent.push(line))
+    const stream = new WasmN2k({
+      app,
+      txFormat: 'n2k-ascii',
+      txEvent: 'w2k-1-out',
+      createDebug: createDebugStub()
+    })
+    stream.end()
+
+    app.emit('nmea2000JsonOut', { pgn: 127508, fields: { instance: 0 } })
+
+    expect(sent).to.have.length(0)
+  })
 })

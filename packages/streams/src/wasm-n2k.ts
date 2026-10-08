@@ -96,8 +96,10 @@ export default class WasmN2k extends Transform {
       const { txFormat, txEvent } = options
       this.txHandler = (pgn: unknown) => {
         try {
+          // The TCP transport writes txEvent payloads verbatim, and the
+          // gateways only act on CRLF-terminated lines.
           for (const line of tx.encode(JSON.stringify(pgn), txFormat)) {
-            options.app.emit(txEvent, line)
+            options.app.emit(txEvent, line + '\r\n')
           }
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err)
