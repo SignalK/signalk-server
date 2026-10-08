@@ -170,6 +170,21 @@ const ProvidersConfiguration: React.FC = () => {
           set(updatedProvider, 'options.createDevice', true)
         }
       }
+      // Switching the Data Type restarts the options from that type's
+      // seed. Options are type-specific (source type, N2K identity,
+      // filters); carrying them across silently persists settings the
+      // new type's form never shows — e.g. useCanName on a J1939
+      // connection, or a source type the target type's select doesn't
+      // list. The type select only renders for new connections, so
+      // nothing configured is lost. J1939 hides the logging control, so
+      // a logging flag set before the switch is cleared with it.
+      if (target.name === 'type' && typeof value === 'string') {
+        updatedProvider.options =
+          value === 'NMEA2000' ? { useCanName: true } : {}
+        if (value === 'J1939') {
+          updatedProvider.logging = false
+        }
+      }
       setSelectedProvider(updatedProvider)
     },
     [selectedProvider]
