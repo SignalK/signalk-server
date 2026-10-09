@@ -2342,9 +2342,12 @@ module.exports = function (
           { filename }
         ) => {
           try {
+            // busboy passes an application/octet-stream part without a
+            // filename as a file too.
             if (
-              !filename.endsWith('.backup') &&
-              !filename.endsWith('.backup.zip')
+              !filename ||
+              (!filename.endsWith('.backup') &&
+                !filename.endsWith('.backup.zip'))
             ) {
               res
                 .status(400)
