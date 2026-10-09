@@ -97,7 +97,7 @@ Supported runtimes: `docker`, `podman`, `kubernetes`, `containerd`, `crio`, `lxc
 
 ## Release images
 
-Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs.
+Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs. `Dockerfile_rel` also builds server versions published before the server moved to pnpm: those versions look for the admin UI and bundled plugins under their own `node_modules`, which the image provides through a compatibility symlink.
 
 ## Core image variant
 
@@ -131,7 +131,7 @@ Because the admin UI ships in core, its **app store is available** — the omitt
 
 ```Dockerfile
 FROM cr.signalk.io/signalk/signalk-server:core
-RUN pnpm --dir /home/node/.signalk add --ignore-scripts --config.lockfile=false @signalk/some-plugin
+RUN pnpm --dir /home/node/.signalk add --config.ignore-scripts=true --config.minimum-release-age=0 @signalk/some-plugin
 ```
 
 Build with `docker build -t my-signalk-core .` and run as you would the base core image.
@@ -141,7 +141,7 @@ Build with `docker build -t my-signalk-core .` and run as you would the base cor
 Mount `/home/node/.signalk` as a persistent volume, then `exec` into the running container to install:
 
 ```sh
-docker exec my-container pnpm --dir /home/node/.signalk add --ignore-scripts --config.lockfile=false @signalk/some-plugin
+docker exec my-container pnpm --dir /home/node/.signalk add --config.ignore-scripts=true --config.minimum-release-age=0 @signalk/some-plugin
 docker restart my-container
 ```
 
@@ -169,7 +169,6 @@ To build a docker image locally from source, first build and pack the server:
 pnpm install
 pnpm build:all
 pnpm -r pack --pack-destination .
-pnpm pack
 ```
 
 Then build the docker image:

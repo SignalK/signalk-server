@@ -55,7 +55,6 @@ jobs:
           pnpm build:all
           pnpm -r pack --pack-destination "$PWD"
           rm signalk-typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
-          pnpm pack
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
