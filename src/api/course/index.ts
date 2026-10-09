@@ -603,8 +603,11 @@ export class CourseApi {
     return this.courseInfo
   }
 
-  /** Clear destination / route (exposed to plugins) */
-  async clearDestination(persistState?: boolean): Promise<void> {
+  /** Clear destination / route (exposed to plugins)
+   * @param persistState Saved by default: a plugin's clear is a command like
+   * the REST DELETE, and an unsaved clear brings the old course back on restart
+   */
+  async clearDestination(persistState = true): Promise<void> {
     this.clearExternalNavigationState()
     this.courseInfo = {
       ...NO_COURSE_INFO,
