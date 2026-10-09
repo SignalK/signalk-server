@@ -605,7 +605,7 @@ Common issues:
 Check server logs:
 
 ```bash
-DEBUG=signalk:wasm:* npm start
+DEBUG=signalk:wasm:* pnpm start
 ```
 
 ## Additional Resources

@@ -2,7 +2,7 @@
 
 ### (0) Update submodule versions
 
-Update package.jsons of individual modules under `packages` as well as dependent module package.jsons and root package.json.
+Update package.jsons of individual modules under `packages` as well as dependent module package.jsons and root package.json. The dependent ranges must keep matching the new versions: pnpm links a workspace package only while its version satisfies the range declared for it, and falls back to the registry copy otherwise.
 
 Npm Packages are:
 
