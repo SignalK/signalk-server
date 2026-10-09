@@ -3,7 +3,7 @@
   "name": "Signal K",
   "entryPointStrategy": "packages",
   "entryPoints": ["packages/*"],
-  "packagesRequiringDocumentation": ["signalk-server", "@signalk/server-api"],
+  "packagesRequiringDocumentation": ["@signalk/server-api"],
   "out": "docs/dist",
   "readme": "docs/README.md",
   "projectDocuments": [
