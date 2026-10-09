@@ -373,6 +373,12 @@ const PNPM_MODULES_MARKER = '.modules.yaml'
 export const PREVIOUS_MODULES_BACKUP = 'node_modules.previous'
 export const DISCARDED_MODULES = 'node_modules.discarded'
 
+// An npm package name: an optional scope and URL-safe lowercase characters.
+// Anything else (a path, URL or git spec) would make pnpm install from
+// outside the registry.
+const PACKAGE_NAME_PATTERN =
+  /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
+
 // Plugins are installed without running their dependencies' build scripts.
 // The pnpm-lock.yaml kept in the config directory lets a plugin be removed,
 // and the installed set be restored, without the registry. Release age gating
@@ -397,6 +403,11 @@ export function runPackageManager(
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
+  if (name && !PACKAGE_NAME_PATTERN.test(name)) {
+    onErr(new Error('Invalid package name: ' + name))
+    onClose(-1)
+    return
+  }
   if (version && version !== '' && !semver.valid(version)) {
     onErr(new Error('Invalid version: ' + version))
     onClose(-1)

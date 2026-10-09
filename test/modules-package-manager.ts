@@ -153,6 +153,22 @@ describe('runPackageManager', () => {
     })
   })
 
+  describe('package names', () => {
+    for (const name of ['../evil', 'file:./evil', 'https://x/evil.tgz']) {
+      it(`rejects ${name} without running a package manager`, async () => {
+        const result = await run(name, null, 'install')
+        expect(spawned).to.have.length(0)
+        expect(result.errors).to.deep.equal([`Invalid package name: ${name}`])
+        expect(result.codes).to.deep.equal([-1])
+      })
+    }
+
+    it('accepts scoped names', async () => {
+      await run('@scope/some-plugin', '1.2.3', 'install')
+      expect(spawned[0].args).to.include('@scope/some-plugin@1.2.3')
+    })
+  })
+
   describe('config directory', () => {
     const pnpmOptions = [
       '--config.ignore-scripts=true',
