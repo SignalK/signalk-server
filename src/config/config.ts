@@ -427,7 +427,7 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
   const location = findPackageLocation(appPath, name)
   if (!location) {
     if (isOptional) {
-      // Optional package not installed (e.g. core image with --omit=optional).
+      // Optional package not installed, as in the core Docker edition
       return
     }
     throw new Error(`${name} is not installed`)

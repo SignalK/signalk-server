@@ -135,6 +135,7 @@ export interface VesselInfo {
 export interface NodeInfo {
   nodeVersion?: string
   npmVersion?: string
+  pnpmVersion?: string
   recommendedNodeVersion?: string
 }
 
