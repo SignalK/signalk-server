@@ -3,8 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import BasicProvider from './BasicProvider'
 
 const ALL = 'All sentences'
-const INDIVIDUAL = 'Individual sentences'
-const SENTENCES = 'Sentences to suppress'
+const NONE = 'No sentences'
+const LISTED = 'These sentences'
+const SENTENCES = 'Sentences to send'
 
 function renderNmea0183(options: Record<string, unknown>, onChange = vi.fn()) {
   render(
@@ -28,7 +29,7 @@ function changedTarget(name: string, value: unknown) {
   })
 }
 
-describe('BasicProvider NMEA 0183 suppress nmea0183 event', () => {
+describe('BasicProvider NMEA 0183 send nmea0183 event for', () => {
   beforeEach(() => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(false))
@@ -38,49 +39,74 @@ describe('BasicProvider NMEA 0183 suppress nmea0183 event', () => {
     vi.restoreAllMocks()
   })
 
-  it('selects individual sentences and shows the saved list', () => {
-    renderNmea0183({ suppress0183eventSentences: ['RMC', 'GGA'] })
-    expect(screen.getByLabelText(INDIVIDUAL)).toHaveProperty('checked', true)
-    expect(screen.getByLabelText(ALL)).toHaveProperty('checked', false)
+  it('selects all sentences by default with the list disabled', () => {
+    renderNmea0183({})
+    expect(screen.getByLabelText(ALL)).toHaveProperty('checked', true)
+    expect(screen.getByLabelText(SENTENCES)).toHaveProperty('disabled', true)
+  })
+
+  it('selects no sentences when suppress0183event is set', () => {
+    renderNmea0183({ suppress0183event: true, nmea0183eventSentences: ['VDM'] })
+    expect(screen.getByLabelText(NONE)).toHaveProperty('checked', true)
     const list = screen.getByLabelText(SENTENCES)
-    expect(list).toHaveProperty('value', 'RMC,GGA')
+    expect(list).toHaveProperty('value', 'VDM')
+    expect(list).toHaveProperty('disabled', true)
+  })
+
+  it('selects these sentences and shows the saved list', () => {
+    renderNmea0183({ nmea0183eventSentences: ['VDM', 'VDO'] })
+    expect(screen.getByLabelText(LISTED)).toHaveProperty('checked', true)
+    const list = screen.getByLabelText(SENTENCES)
+    expect(list).toHaveProperty('value', 'VDM,VDO')
     expect(list).toHaveProperty('disabled', false)
   })
 
   it('reports the edited list as an array of sentence IDs', () => {
-    const onChange = renderNmea0183({})
+    const onChange = renderNmea0183({ nmea0183eventSentences: [] })
     fireEvent.change(screen.getByLabelText(SENTENCES), {
-      target: { value: 'RMC,HDT' }
+      target: { value: 'VDM,VDO' }
     })
     expect(onChange).toHaveBeenCalledWith(
-      changedTarget('options.suppress0183eventSentences', ['RMC', 'HDT'])
+      changedTarget('options.nmea0183eventSentences', ['VDM', 'VDO'])
     )
   })
 
-  it('switches to all sentences', () => {
+  it('switches to no sentences and keeps the list', () => {
+    const onChange = renderNmea0183({ nmea0183eventSentences: ['VDM'] })
+    fireEvent.click(screen.getByLabelText(NONE))
+    expect(onChange).toHaveBeenLastCalledWith(
+      changedTarget(
+        'options',
+        expect.objectContaining({
+          suppress0183event: true,
+          nmea0183eventSentences: ['VDM']
+        })
+      )
+    )
+  })
+
+  it('switches to these sentences with an empty list', () => {
     const onChange = renderNmea0183({})
-    fireEvent.click(screen.getByLabelText(ALL))
+    fireEvent.click(screen.getByLabelText(LISTED))
     expect(onChange).toHaveBeenLastCalledWith(
-      changedTarget('options.suppress0183event', true)
+      changedTarget(
+        'options',
+        expect.objectContaining({
+          suppress0183event: false,
+          nmea0183eventSentences: []
+        })
+      )
     )
   })
 
-  it('switches back to individual sentences', () => {
-    const onChange = renderNmea0183({ suppress0183event: true })
-    fireEvent.click(screen.getByLabelText(INDIVIDUAL))
-    expect(onChange).toHaveBeenLastCalledWith(
-      changedTarget('options.suppress0183event', false)
-    )
-  })
-
-  it('keeps the list visible but disabled while all sentences are suppressed', () => {
-    renderNmea0183({
+  it('switches to all sentences and drops the list', () => {
+    const onChange = renderNmea0183({
       suppress0183event: true,
-      suppress0183eventSentences: ['RMC']
+      nmea0183eventSentences: ['VDM']
     })
-    expect(screen.getByLabelText(ALL)).toHaveProperty('checked', true)
-    const list = screen.getByLabelText(SENTENCES)
-    expect(list).toHaveProperty('value', 'RMC')
-    expect(list).toHaveProperty('disabled', true)
+    fireEvent.click(screen.getByLabelText(ALL))
+    const options = onChange.mock.lastCall?.[0].target.value
+    expect(options).toMatchObject({ suppress0183event: false })
+    expect(options).not.toHaveProperty('nmea0183eventSentences')
   })
 })

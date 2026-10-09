@@ -41,7 +41,7 @@ interface ProviderOptions {
   useDiscovery?: boolean
   toStdout?: string | string[]
   ignoredSentences?: string | string[]
-  suppress0183eventSentences?: string[]
+  nmea0183eventSentences?: string[]
   sentenceEvent?: string
   validateChecksum?: boolean
   appendChecksum?: boolean
@@ -1337,58 +1337,73 @@ function RemoteSelfInput({
   )
 }
 
-function Suppress0183EventInput({
+type Nmea0183EventMode = 'all' | 'none' | 'listed'
+
+function Nmea0183EventInput({
   value,
   onChange
 }: {
   value: ProviderOptions
   onChange: OnChangeHandler
 }) {
-  const allSentences = value.suppress0183event === true
+  const mode: Nmea0183EventMode =
+    value.suppress0183event === true
+      ? 'none'
+      : Array.isArray(value.nmea0183eventSentences)
+        ? 'listed'
+        : 'all'
 
-  const setAllSentences = (suppressAll: boolean) =>
-    onChange({
-      target: { name: 'options.suppress0183event', value: suppressAll }
-    })
+  // Both settings change together in one update, since the parent applies
+  // each change to the provider it last rendered.
+  const setMode = (next: Nmea0183EventMode) => {
+    const options: ProviderOptions = {
+      ...value,
+      suppress0183event: next === 'none'
+    }
+    if (next === 'all') {
+      delete options.nmea0183eventSentences
+    } else if (next === 'listed') {
+      options.nmea0183eventSentences = value.nmea0183eventSentences ?? []
+    }
+    onChange({ target: { name: 'options', value: options } })
+  }
+
+  const radio = (id: Nmea0183EventMode, label: string) => (
+    <Form.Check
+      type="radio"
+      id={`provider-nmea0183event-${id}`}
+      name="provider-nmea0183event"
+      className="mb-0"
+      label={label}
+      checked={mode === id}
+      onChange={() => setMode(id)}
+    />
+  )
 
   return (
     <Form.Group as={Row} className="mb-3">
       <Col md="3">
-        <Form.Label id="provider-suppress0183event-label">
-          Suppress nmea0183 event
+        <Form.Label id="provider-nmea0183event-label">
+          Send nmea0183 event for
         </Form.Label>
       </Col>
       <Col
         xs="12"
         md="9"
         role="radiogroup"
-        aria-labelledby="provider-suppress0183event-label"
+        aria-labelledby="provider-nmea0183event-label"
       >
-        <Form.Check
-          type="radio"
-          id="provider-suppress0183event-all"
-          name="provider-suppress0183event"
-          label="All sentences"
-          checked={allSentences}
-          onChange={() => setAllSentences(true)}
-        />
+        {radio('all', 'All sentences')}
+        {radio('none', 'No sentences')}
         <div className="d-flex align-items-center flex-wrap gap-2">
-          <Form.Check
-            type="radio"
-            id="provider-suppress0183event-individual"
-            name="provider-suppress0183event"
-            className="mb-0"
-            label="Individual sentences"
-            checked={!allSentences}
-            onChange={() => setAllSentences(false)}
-          />
+          {radio('listed', 'These sentences')}
           <Form.Control
             type="text"
-            name="options.suppress0183eventSentences"
-            aria-label="Sentences to suppress"
+            name="options.nmea0183eventSentences"
+            aria-label="Sentences to send"
             className="w-auto"
-            value={value.suppress0183eventSentences?.join(',') ?? ''}
-            disabled={allSentences}
+            value={value.nmea0183eventSentences?.join(',') ?? ''}
+            disabled={mode !== 'listed'}
             onChange={(event) =>
               onChange({
                 target: {
@@ -1400,11 +1415,9 @@ function Suppress0183EventInput({
           />
         </div>
         <Form.Text muted>
-          Selecting All sentences keeps every sentence from this connection off
-          the NMEA0183 TCP service. With Individual sentences selected, the
-          listed sentences are still converted to Signal K but are not emitted
-          as nmea0183 events, and an empty list forwards every sentence.
-          Example: RMC,GGA,HDT
+          Sentences sent as nmea0183 events appear on the NMEA0183 TCP service.
+          With These sentences selected, only the listed sentences are sent; the
+          others are still converted to Signal K. Example: VDM,VDO
         </Form.Text>
       </Col>
     </Form.Group>
@@ -1998,7 +2011,7 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
         </div>
       )}
       <div>
-        <Suppress0183EventInput value={value.options} onChange={onChange} />
+        <Nmea0183EventInput value={value.options} onChange={onChange} />
       </div>
       {value.options.type === 'udp' && (
         <PortInput value={value.options} onChange={onChange} />

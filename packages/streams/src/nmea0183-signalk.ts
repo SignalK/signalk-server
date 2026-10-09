@@ -46,7 +46,7 @@ interface Nmea0183ToSignalKOptions {
   providerId: string
   createDebug?: CreateDebug
   suppress0183event?: boolean
-  suppress0183eventSentences?: string[]
+  nmea0183eventSentences?: string[]
   appendChecksum?: boolean
   sentenceEvent?: string | string[]
   [key: string]: unknown
@@ -102,7 +102,7 @@ export default class Nmea0183ToSignalK extends Transform {
   private readonly n2kState: Record<string, unknown> = {}
   private readonly app: Nmea0183ToSignalKOptions['app']
   private readonly sentenceEvents: string[]
-  private readonly suppressedEventSentences: Set<string>
+  private readonly defaultEventSentences: Set<string> | undefined
   private readonly appendChecksumFlag: boolean
   private readonly options: Nmea0183ToSignalKOptions
 
@@ -121,11 +121,15 @@ export default class Nmea0183ToSignalK extends Transform {
     this.sentenceEvents = options.suppress0183event
       ? []
       : [DEFAULT_SENTENCE_EVENT]
-    this.suppressedEventSentences = new Set(
-      (options.suppress0183eventSentences ?? [])
-        .map((id) => id.trim().toUpperCase())
-        .filter((id) => id.length > 0)
-    )
+    // A list, even an empty one, limits the default event to the listed
+    // sentences; without one every sentence gets it.
+    this.defaultEventSentences = Array.isArray(options.nmea0183eventSentences)
+      ? new Set(
+          options.nmea0183eventSentences
+            .map((id) => id.trim().toUpperCase())
+            .filter((id) => id.length > 0)
+        )
+      : undefined
 
     if (options.sentenceEvent) {
       if (Array.isArray(options.sentenceEvent)) {
@@ -181,8 +185,8 @@ export default class Nmea0183ToSignalK extends Transform {
           sentence = appendChecksum(sentence)
         }
         const suppressDefaultEvent =
-          this.suppressedEventSentences.size > 0 &&
-          this.suppressedEventSentences.has(sentenceId(sentence) ?? '')
+          this.defaultEventSentences !== undefined &&
+          !this.defaultEventSentences.has(sentenceId(sentence) ?? '')
         this.sentenceEvents.forEach((eventName) => {
           if (suppressDefaultEvent && eventName === DEFAULT_SENTENCE_EVENT) {
             return

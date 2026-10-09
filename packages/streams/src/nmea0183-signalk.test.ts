@@ -80,12 +80,12 @@ describe('Nmea0183ToSignalK', () => {
     expect(app.nmea0183Events).to.have.length(0)
   })
 
-  it('suppresses the nmea0183 event only for sentences in suppress0183eventSentences', async () => {
+  it('emits the nmea0183 event only for sentences in nmea0183eventSentences', async () => {
     const app = createNmeaApp()
     const stream = new Nmea0183ToSignalK({
       app,
       providerId: 'test',
-      suppress0183eventSentences: ['RMC', 'GGA']
+      nmea0183eventSentences: ['VDM', 'GGA']
     })
 
     const outputPromise = collectStreamOutput(stream)
@@ -99,12 +99,30 @@ describe('Nmea0183ToSignalK', () => {
     expect(app.signalkEvents).to.deep.equal([AIS_SENTENCE])
   })
 
+  it('emits no nmea0183 event for an empty nmea0183eventSentences', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test',
+      nmea0183eventSentences: []
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(RMC_SENTENCE)
+    stream.write(AIS_SENTENCE)
+    stream.end()
+
+    await outputPromise
+    expect(app.nmea0183Events).to.have.length(0)
+  })
+
   it('still converts sentences whose nmea0183 event is suppressed', async () => {
     const app = createNmeaApp()
     const stream = new Nmea0183ToSignalK({
       app,
       providerId: 'test',
-      suppress0183eventSentences: ['RMC']
+      nmea0183eventSentences: ['VDM']
     })
 
     const outputPromise = collectStreamOutput(stream)
@@ -132,7 +150,7 @@ describe('Nmea0183ToSignalK', () => {
       app,
       providerId: 'test',
       sentenceEvent: 'gps-in',
-      suppress0183eventSentences: ['RMC']
+      nmea0183eventSentences: ['VDM']
     })
 
     const outputPromise = collectStreamOutput(stream)
@@ -145,12 +163,12 @@ describe('Nmea0183ToSignalK', () => {
     expect(app.nmea0183Events).to.have.length(0)
   })
 
-  it('matches suppress0183eventSentences behind a tag block', async () => {
+  it('matches nmea0183eventSentences behind a tag block', async () => {
     const app = createNmeaApp()
     const stream = new Nmea0183ToSignalK({
       app,
       providerId: 'test',
-      suppress0183eventSentences: ['RMC']
+      nmea0183eventSentences: ['VDM']
     })
 
     const outputPromise = collectStreamOutput(stream)
@@ -163,12 +181,12 @@ describe('Nmea0183ToSignalK', () => {
     expect(app.nmea0183Events).to.deep.equal([TAG_BLOCK + AIS_SENTENCE])
   })
 
-  it('ignores whitespace and case in suppress0183eventSentences entries', async () => {
+  it('ignores whitespace and case in nmea0183eventSentences entries', async () => {
     const app = createNmeaApp()
     const stream = new Nmea0183ToSignalK({
       app,
       providerId: 'test',
-      suppress0183eventSentences: [' rmc ', '']
+      nmea0183eventSentences: [' vdm ', '']
     })
 
     const outputPromise = collectStreamOutput(stream)
