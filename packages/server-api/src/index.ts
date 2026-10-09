@@ -28,7 +28,12 @@ export * as typebox from './typebox'
 /** @category Notifications API */
 export * from './notificationsapi'
 export { FullSignalK, SourceMetaEntry } from './fullsignalk'
-export { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
+export {
+  getSourceId,
+  fillIdentity,
+  fillIdentityField,
+  isIdentityPath
+} from './sourceutil'
 
 /** @category  Server API */
 export interface Position {
