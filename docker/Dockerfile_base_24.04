@@ -24,4 +24,5 @@ RUN curl -fsSL https://deb.nodesource.com/setup_$NODE | bash - \
 
 ENV pnpm_config_fetch_retries=5 \
   pnpm_config_fetch_retry_mintimeout=60000 \
-  pnpm_config_fetch_retry_maxtimeout=120000
+  pnpm_config_fetch_retry_maxtimeout=120000 \
+  pnpm_config_update_notifier=false

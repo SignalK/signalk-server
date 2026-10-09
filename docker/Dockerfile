@@ -1,7 +1,11 @@
 ARG REGISTRY="cr.signalk.io"
-ARG BASE_IMAGE="24.04-22.x"
+ARG BASE_IMAGE="24.04-24.x"
 
 FROM ${REGISTRY}/signalk/signalk-server-base:latest-${BASE_IMAGE} AS base
+
+# Base images published before pnpm was added to them lack it, and the App
+# Store needs it at runtime too.
+RUN command -v pnpm >/dev/null || (npm install -g pnpm@11 && npm cache clean --force)
 
 USER node
 RUN mkdir -p /home/node/.signalk/ \
@@ -16,11 +20,10 @@ COPY --chown=node:node *.tgz .
 # EDITION selects the published variant: "full" bundles the optional webapps and
 # plugins; "core" leaves out optional dependencies, keeping the server, the
 # admin UI, serialport, local Bluetooth support, and required libraries.
-# The admin UI ships in core via its workspace tarball (installed in both
-# editions below); serialport and the Bluetooth packages are external optional
-# packages, so core reinstalls them explicitly at the versions the server
-# declares. They cannot be added back at the .signalk layer, so the image must
-# carry them.
+# The admin UI ships in core as a direct dependency from its workspace tarball;
+# serialport and the Bluetooth packages are external optional packages, so core
+# reinstalls them explicitly at the versions the server declares. They cannot
+# be added back at the .signalk layer, so the image must carry them.
 ARG EDITION=full
 
 # pnpm runs dependency install scripts only for approved packages.
@@ -28,10 +31,16 @@ ARG EDITION=full
 # "install" script and ships no prebuilt binaries, so without approval the CAN
 # interface silently disappears. The build is asserted below so a regression
 # fails loudly. Other dependencies' scripts are not needed at runtime and are
-# skipped instead of failing the build.
+# skipped instead of failing the build; the explicit "false" entries keep pnpm
+# from reporting them as ignored.
+# Release-age gating is off because an image build must install the versions
+# the packages declare, which pnpm would otherwise silently replace with older
+# ones when they are less than a day old.
 # "optional: false" keeps the core edition's later additions from bringing the
 # optional dependencies back. The overrides make the server's dependencies on
-# the workspace packages resolve to these tarballs instead of the registry.
+# the workspace packages resolve to these tarballs instead of the registry, so
+# only the server — and in core the admin UI, which "optional: false" would
+# otherwise leave out — is added as a direct dependency.
 RUN case "$EDITION" in \
       full) optional=true ;; \
       core) optional=false ;; \
@@ -43,16 +52,23 @@ RUN case "$EDITION" in \
        'allowBuilds:' \
        "  '@canboat/canboatjs': true" \
        "  '@serialport/bindings-cpp': true" \
-       'minimumReleaseAgeExclude:' \
-       "  - '@signalk/*'" \
-       "  - '@canboat/*'" \
+       "  '@parcel/watcher': false" \
+       "  '@scarf/scarf': false" \
+       '  core-js: false' \
+       '  es5-ext: false' \
+       '  storage-engine: false' \
+       'minimumReleaseAge: 0' \
        'overrides:' > pnpm-workspace.yaml \
   && for tgz in *.tgz; do \
        name=$(tar -xOzf "$tgz" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).name') \
-       && printf "  '%s': file:./%s\n" "$name" "$tgz" >> pnpm-workspace.yaml; \
+       && printf "  '%s': file:./%s\n" "$name" "$tgz" >> pnpm-workspace.yaml \
+       && case "$name" in \
+            signalk-server) direct="$direct ./$tgz" ;; \
+            @signalk/server-admin-ui) if [ "$EDITION" = core ]; then direct="$direct ./$tgz"; fi ;; \
+          esac; \
      done \
   && printf '{"name":"signalk","private":true}\n' > package.json \
-  && pnpm add ./*.tgz \
+  && pnpm add $direct \
   && if [ "$EDITION" = core ]; then \
        serialport_spec=$(node -p "require('signalk-server/package.json').optionalDependencies.serialport") \
        && node_ble_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@naugehyde/node-ble']") \
