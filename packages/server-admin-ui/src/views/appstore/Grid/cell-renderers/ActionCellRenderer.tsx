@@ -210,7 +210,7 @@ export default function ActionCellRenderer({
       status = 'Removed'
     } else {
       // app.installedVersion is the running plugin's version and stays stale
-      // until restart; pendingVersion is what npm just wrote to disk.
+      // until restart; pendingVersion is what pnpm just wrote to disk.
       const verb = app.installedVersion ? 'Updated' : 'Installed'
       status = app.pendingVersion ? `${verb} v${app.pendingVersion}` : verb
     }
