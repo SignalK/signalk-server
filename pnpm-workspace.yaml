@@ -12,6 +12,12 @@ packages:
 # the published manifests stay valid for npm users as well.
 linkWorkspacePackages: true
 
+# Bundled plugins depend on these from the registry; development uses the
+# in-tree copies instead so that only one copy of each is installed.
+overrides:
+  '@signalk/server-api': link:packages/server-api
+  '@signalk/path-metadata': link:packages/path-metadata
+
 allowBuilds:
   # Builds the native SocketCAN addon; no prebuilt binaries are shipped
   '@canboat/canboatjs': true
