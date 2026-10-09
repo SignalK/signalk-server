@@ -131,10 +131,11 @@ function applyProviderSettings(
 
   // Keys that mean "the client owns the entire value, including emptiness".
   // Object.assign cannot delete keys the client omitted, so a delete-all
-  // edit on a field like talkerGroups would keep the previous saved value.
-  // Replace these explicitly: if the client sent the key, write it; if not,
-  // drop it from the saved options.
-  const REPLACE_KEYS = ['talkerGroups']
+  // edit on a field like talkerGroups would keep the previous saved value,
+  // and a kept nmea0183eventSentences would turn All sentences back into
+  // These sentences. Replace these explicitly: if the client sent the key,
+  // write it; if not, drop it from the saved options.
+  const REPLACE_KEYS = ['talkerGroups', 'nmea0183eventSentences']
   for (const key of REPLACE_KEYS) {
     if (key in source.options) {
       ;(options.subOptions as Record<string, unknown>)[key] = (
