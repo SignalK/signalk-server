@@ -45,6 +45,16 @@ function requireN2kToSignalK(): new (options: object) => PipeElement {
   return n2k.default ?? n2k
 }
 
+function requireQuickToSignalK(): new (options: object) => PipeElement {
+  const quick = require('./quick-signalk')
+  return quick.default ?? quick
+}
+
+function requireQuickCan(): new (options: object) => PipeElement {
+  const quickCan = require('./quick-can')
+  return quickCan.default ?? quickCan
+}
+
 function requireNmea0183ToSignalK(): new (options: object) => PipeElement {
   const mod = require('./nmea0183-signalk')
   return mod.default ?? mod
@@ -145,7 +155,8 @@ const discriminatorByDataType: Record<string, string> = {
   NMEA2000: 'A',
   NMEA0183: 'N',
   SignalK: 'I',
-  Seatalk: 'N'
+  Seatalk: 'N',
+  QuickPCS: 'A'
 }
 
 const dataTypeMapping: Record<string, PipelineFactory> = {
@@ -263,7 +274,15 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     }
     return [...result, new N2kCtor(options.subOptions)]
   },
-  Multiplexed: (options) => [new MultiplexedLog(options.subOptions)]
+  Multiplexed: (options) => [new MultiplexedLog(options.subOptions)],
+  QuickPCS: (options) => {
+    const { CanboatJs } = requireN2K()
+    const QuickToSignalK = requireQuickToSignalK()
+    return [
+      new CanboatJs(options.subOptions),
+      new QuickToSignalK(options.subOptions)
+    ]
+  }
 }
 
 function nmea2000input(
@@ -496,6 +515,19 @@ function signalKInput(subOptions: SubOptions): PipeElement[] {
   throw new Error(`unknown SignalK type: ${subOptions.type}`)
 }
 
+function quickInput(subOptions: SubOptions): PipeElement[] {
+  if (subOptions.type === 'canbus-canboatjs') {
+    const QuickCanCtor = requireQuickCan()
+    return [
+      new QuickCanCtor({
+        ...subOptions,
+        canDevice: subOptions.interface
+      })
+    ]
+  }
+  throw new Error(`unknown QuickPCS type ${subOptions.type}`)
+}
+
 function seatalkInput(subOptions: SubOptions): PipeElement[] {
   const pipePart: PipeElement[] = []
   if (subOptions.type === 'gpiod') {
@@ -552,7 +584,8 @@ const pipeStartByType: Record<string, PipeStartFactory> = {
   Execute: executeInput,
   FileStream: fileInput,
   SignalK: signalKInput,
-  Seatalk: seatalkInput
+  Seatalk: seatalkInput,
+  QuickPCS: quickInput
 }
 
 function getLoggerPipeline(
