@@ -1,4 +1,11 @@
-import { Delta, Path, PathValue, SourceRef, Update } from '@signalk/server-api'
+import {
+  Context,
+  Delta,
+  Path,
+  PathValue,
+  SourceRef,
+  Update
+} from '@signalk/server-api'
 import { IRouter } from 'express'
 import { get as _get } from 'lodash'
 import { SignalKMessageHub, WithConfig } from '../../app'
@@ -26,6 +33,15 @@ const MAX_CORRECTABLE_LATITUDE = 89.999999
 // Cleared when heading returns.
 const HEADING_NOTIFICATION_PATH =
   'notifications.navigation.gnss.headingUnavailable' as Path
+
+// The single-GPS antenna offsets that predate gnssSensors. Consumers such as
+// AIS reporting and anchor alarms read them to place the hull around
+// navigation.position (see referencePoint).
+const GPS_FROM_BOW_PATH = 'sensors.gps.fromBow' as Path
+const GPS_FROM_CENTER_PATH = 'sensors.gps.fromCenter' as Path
+// staticDataFilter only lets these paths through from the server's own base
+// data source, and the staleness enforcer never times that source out.
+const DEFAULTS_SOURCE = 'defaults' as SourceRef
 
 export type GnssCorrectionMode = 'off' | 'replace' | 'both'
 
@@ -71,9 +87,15 @@ interface SensorEntry {
 // (already in Server -> Settings -> Vessel Configuration). When length or
 // heading is unavailable, the delta passes through unmodified.
 //
-// app.deltaCache stores the raw per-source value because it ingests
-// before the chain runs - that is intentional and matches the Data Browser
-// expectation that the per-source view shows what each antenna reports.
+// The corrector is a delta input handler, so it runs before the delta
+// cache and source priority (see handleMessage). In 'replace' mode every
+// consumer, including the per-source view in the Data Browser, sees the
+// corrected value, and source priority chooses among positions that are
+// already at the CCRP.
+//
+// When gnssSensors has rows, the legacy sensors.gps.fromBow/fromCenter
+// offsets describe where navigation.position is on the hull, as single-GPS
+// consumers assume (see referencePoint).
 export class GnssOffsetCorrector {
   private lookup: Map<string, SensorEntry> = new Map()
   private mode: GnssCorrectionMode = 'off'
@@ -82,6 +104,7 @@ export class GnssOffsetCorrector {
   // the notification is emitted only on transition (raise/clear), keeping
   // the per-delta path free of a delta on every position message.
   private headingNotificationActive = false
+  private referenceUpdateScheduled = false
 
   constructor(private app: GnssCorrectorApplication) {}
 
@@ -94,6 +117,11 @@ export class GnssOffsetCorrector {
         // Config changed (mode/sensors); clear any stale heading warning so
         // the next correction attempt re-evaluates and re-raises if needed.
         this.clearHeadingNotification()
+        this.scheduleReferenceUpdate()
+      } else if (e?.type === 'VESSEL_INFO') {
+        // The vessel length may have changed, and the base data is re-sent
+        // right after this event, possibly carrying stale legacy offsets.
+        this.scheduleReferenceUpdate()
       } else if (e?.type === 'POSITION_SOURCES') {
         // The alias -> canName mapping can resolve after the last
         // config save (cold boot, late address claim). POSITION_SOURCES
@@ -107,6 +135,7 @@ export class GnssOffsetCorrector {
         next(this.handle(delta))
       }
     )
+    this.scheduleReferenceUpdate()
   }
 
   // Report whether correction can currently run. When a mode is selected
@@ -277,6 +306,7 @@ export class GnssOffsetCorrector {
   private raiseHeadingNotification(): void {
     if (this.headingNotificationActive) return
     this.headingNotificationActive = true
+    this.scheduleReferenceUpdate()
     this.emitHeadingNotification(
       'warn',
       'GNSS vessel reference point (CCRP) correction inactive: no true heading available'
@@ -286,6 +316,7 @@ export class GnssOffsetCorrector {
   private clearHeadingNotification(): void {
     if (!this.headingNotificationActive) return
     this.headingNotificationActive = false
+    this.scheduleReferenceUpdate()
     this.emitHeadingNotification(
       'normal',
       'GNSS vessel reference point (CCRP) correction resumed: true heading available'
@@ -301,6 +332,70 @@ export class GnssOffsetCorrector {
               path: HEADING_NOTIFICATION_PATH,
               value: { state, method: ['visual'], message }
             }
+          ]
+        }
+      ]
+    })
+  }
+
+  // Where navigation.position is on the hull. The CCRP while 'replace'
+  // corrects positions; otherwise the antenna position, which is only known
+  // when there is a single one. null means several antennas may publish, so
+  // no single offset is right. undefined means gnssSensors has no rows and
+  // the base data values stand.
+  private referencePoint(): AntennaOffset | null | undefined {
+    const rows = this.app.config.settings.gnssSensors ?? []
+    if (rows.length === 0) return undefined
+    const lengthOverall = this.readLengthOverall()
+    if (
+      this.mode === 'replace' &&
+      lengthOverall !== undefined &&
+      !this.headingNotificationActive
+    ) {
+      return { fromBow: lengthOverall / 2, fromCenter: 0 }
+    }
+    if (rows.length === 1 && this.lookup.size === 1) {
+      return [...this.lookup.values()][0].offset
+    }
+    return null
+  }
+
+  // Deferred so it runs outside the delta chain (heading transitions are
+  // detected inside it) and after a VESSEL_INFO event's base data re-send.
+  private scheduleReferenceUpdate(): void {
+    if (this.referenceUpdateScheduled) return
+    this.referenceUpdateScheduled = true
+    setImmediate(() => {
+      this.referenceUpdateScheduled = false
+      this.publishReferencePoint()
+    })
+  }
+
+  // Compared with the data model rather than the last published value, so
+  // the offsets are restored after the base data is re-sent.
+  private publishReferencePoint(): void {
+    const reference = this.referencePoint()
+    if (reference === undefined) return
+    const fromBow = reference?.fromBow ?? null
+    const fromCenter = reference?.fromCenter ?? null
+    const self = this.app.signalk.self
+    // An absent value already means "not provided".
+    const holds = (path: Path, value: number | null) =>
+      (_get(self, `${path}.value`) ?? null) === value
+    if (
+      holds(GPS_FROM_BOW_PATH, fromBow) &&
+      holds(GPS_FROM_CENTER_PATH, fromCenter)
+    ) {
+      return
+    }
+    this.app.handleMessage(CORRECTOR_ID, {
+      context: this.app.selfContext as Context,
+      updates: [
+        {
+          $source: DEFAULTS_SOURCE,
+          values: [
+            { path: GPS_FROM_BOW_PATH, value: fromBow },
+            { path: GPS_FROM_CENTER_PATH, value: fromCenter }
           ]
         }
       ]
