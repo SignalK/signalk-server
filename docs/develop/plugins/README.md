@@ -60,7 +60,7 @@ If your plugin provides an API you should consider providing an OpenApi descript
 To get started developing your plugin you will need the following:
 
 - Signal K server instance on your device _(clone of GIT repository or docker instance)_
-- NodeJs version 20 or later and NPM installed
+- NodeJs version 22 or later with npm, and pnpm 11 or later (`npm install -g pnpm@11`)
 - SignalK server configuration folder. _(Created when Signal K server is started. default location is `$HOME/.signalk`)_.
 
 ---
@@ -120,28 +120,22 @@ npm i
 
 ### Link your project to Signal K server.
 
-Once you have developed your plugin code and are ready to debug, the most convenient way is to use `npm link` to link your plugin code to your instance of Signal K server.
+Once you have developed your plugin code and are ready to debug, the most convenient way is to link your plugin directory into your instance of Signal K server with `pnpm link`.
 
 To do this, from within a terminal window (if you are using Docker, the following must be executed from the container terminal):
 
 ```shell
-# Ensure you are in the folder containing your built plugin code
-cd my_plugin_src
-
-# Create a link (may require the use of sudo)
-npm link
-
 # Change to the Signal K server configuration directory
 cd ~/.signalk
 
-# Link your plugin using the name in the package.json file
-#(may require the use of sudo)
-npm link my-signalk-plugin-app
+# Link the folder containing your built plugin code
+# (may require the use of sudo)
+pnpm link /path/to/my_plugin_src
 ```
 
 When you start Signal K server the plugin will now appear in the **Plugin Config** screen where it can be configured and enabled.
 
-Updating and/or installing new plugins will remove the link and you need to re-link your plugin.
+The link stays in place when other plugins are installed or removed. Remove it with `pnpm remove <plugin-name>` in the configuration directory.
 
 ### Debugging
 
