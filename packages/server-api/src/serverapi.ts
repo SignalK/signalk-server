@@ -21,6 +21,16 @@ import type { WebSocket } from 'ws'
 import type { IncomingMessage } from 'http'
 import type { Duplex } from 'stream'
 
+/** Metadata for a standalone webapp registered by a plugin. @category Server API */
+export interface WebappRegistration {
+  /** Nonempty label displayed in the webapp list. */
+  displayName: string
+  /** Optional description; must be a string when supplied. */
+  description?: string
+  /** Relative icon path using letters, digits, _, -, . and /, without .. segments. */
+  appIcon?: string
+}
+
 /**
  * A WebSocket endpoint under the plugin's route, returned by
  * {@link ServerAPI.registerWebSocket}. A subset of
@@ -544,6 +554,37 @@ export interface ServerAPI
    * @category Server API
    */
   registerWebSocket(path: string): PluginWebSocketServer
+
+  /**
+   * Adds or updates a standalone webapp owned by this plugin. Returns its
+   * URL, `/plugins/<pluginId>/webapps/<id>/`. The plugin serves this route
+   * and any relative appIcon through registerWithRouter(). Call in start()
+   * or later while the plugin is active; registrations are removed on stop.
+   * Functions retained from an earlier start and asynchronous work originating
+   * in that start cannot register entries after stop or restart.
+   *
+   * Ids use letters, digits, underscores or hyphens, start with a letter or
+   * digit, and are at most 128 characters. Invalid metadata or registration
+   * outside the active lifecycle throws an error.
+   *
+   * @example
+   * ```typescript
+   * app.registerWebapp('battery', {
+   *   displayName: 'Battery Monitor',
+   *   description: 'Battery monitoring interface',
+   *   appIcon: 'icon.png'
+   * })
+   * ```
+   * @category Server API
+   */
+  registerWebapp(id: string, options: WebappRegistration): string
+
+  /**
+   * Removes one of this plugin's dynamic webapps. Calls from stopped or stale
+   * lifecycles have no effect, including when made by the plugin's stop handler.
+   * @category Server API
+   */
+  unregisterWebapp(id: string): void
 
   /**
    * Returns Ports object which contains information about the serial ports available on the machine.
