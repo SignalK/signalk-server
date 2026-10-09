@@ -1,7 +1,11 @@
 ARG REGISTRY="cr.signalk.io"
-ARG BASE_IMAGE="24.04-22.x"
+ARG BASE_IMAGE="24.04-24.x"
 
 FROM ${REGISTRY}/signalk/signalk-server-base:latest-${BASE_IMAGE}
+
+# Base images published before pnpm was added to them lack it, and the App
+# Store needs it at runtime too.
+RUN command -v pnpm >/dev/null || (npm install -g pnpm@11 && npm cache clean --force)
 
 USER node
 RUN mkdir -p /home/node/.signalk/ \
@@ -27,7 +31,11 @@ ARG EDITION=full
 # "install" script and ships no prebuilt binaries, so without approval the CAN
 # interface silently disappears. The build is asserted below so a regression
 # fails loudly. Other dependencies' scripts are not needed at runtime and are
-# skipped instead of failing the build.
+# skipped instead of failing the build; the explicit "false" entries keep pnpm
+# from reporting them as ignored.
+# Release-age gating is off because an image build must install the versions
+# the packages declare, which pnpm would otherwise silently replace with older
+# ones when they are less than a day old.
 # "optional: false" keeps the core edition's later additions from bringing the
 # optional dependencies back.
 RUN case "$EDITION" in \
@@ -41,9 +49,12 @@ RUN case "$EDITION" in \
        'allowBuilds:' \
        "  '@canboat/canboatjs': true" \
        "  '@serialport/bindings-cpp': true" \
-       'minimumReleaseAgeExclude:' \
-       "  - '@signalk/*'" \
-       "  - '@canboat/*'" > pnpm-workspace.yaml \
+       "  '@parcel/watcher': false" \
+       "  '@scarf/scarf': false" \
+       '  core-js: false' \
+       '  es5-ext: false' \
+       '  storage-engine: false' \
+       'minimumReleaseAge: 0' > pnpm-workspace.yaml \
   && printf '{"name":"signalk","private":true}\n' > package.json \
   && pnpm add "signalk-server@$TAG" \
   && if [ "$EDITION" = core ]; then \
@@ -53,11 +64,22 @@ RUN case "$EDITION" in \
        && dbus_next_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@jellybrick/dbus-next']") \
        && pnpm add "@signalk/server-admin-ui@$adminui_spec" "serialport@$serialport_spec" "@naugehyde/node-ble@$node_ble_spec" "@jellybrick/dbus-next@$dbus_next_spec"; \
      fi \
+  # Server versions that locate the admin UI and bundled plugins under their
+  # own node_modules find them through this link: the server's real directory
+  # sits in the virtual store, where ".." holds its dependencies. pnpm keeps
+  # only bin shims for package scripts there, which the image never runs.
+  && if [ ! -f node_modules/signalk-server/dist/bundled-packages.js ]; then \
+       real=$(readlink -f node_modules/signalk-server) \
+       && rm -rf "$real/node_modules" \
+       && ln -s .. "$real/node_modules"; \
+     fi \
   && can_socket=$(find node_modules -path '*/@canboat/canboatjs/build/Release/canSocket.node' -print -quit) \
   && if [ -z "$can_socket" ]; then \
        echo "canSocket.node missing — canboatjs install script did not build the native CAN addon (not approved in allowBuilds, or node-gyp rebuild failed)" >&2; \
        exit 1; \
-     fi
+     fi \
+  # node_modules holds hard links into the store, so the content survives.
+  && rm -rf "$(pnpm store path)" "$HOME/.cache"
 
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
