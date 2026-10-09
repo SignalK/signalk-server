@@ -4,6 +4,10 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@signalk/server-api': link:packages/server-api
+  '@signalk/path-metadata': link:packages/path-metadata
+
 importers:
 
   .:
@@ -33,13 +37,13 @@ importers:
         specifier: ^3.20.0
         version: 3.22.1(supports-color@8.1.1)
       '@signalk/path-metadata':
-        specifier: ^1.0.1
+        specifier: link:packages/path-metadata
         version: link:packages/path-metadata
       '@signalk/resources-provider':
         specifier: ^1.5.2
         version: link:packages/resources-provider-plugin
       '@signalk/server-api':
-        specifier: ^2.33.0
+        specifier: link:packages/server-api
         version: link:packages/server-api
       '@signalk/signalk-schema':
         specifier: 1.0.x
@@ -416,7 +420,7 @@ importers:
   packages/resources-provider-plugin:
     dependencies:
       '@signalk/server-api':
-        specifier: ^2.5.0
+        specifier: link:../server-api
         version: link:../server-api
       geolib:
         specifier: ^3.3.14
@@ -484,7 +488,7 @@ importers:
         specifier: ^0.2.3
         version: 0.2.4(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.7)(rolldown@1.2.12)(vite@8.3.2(@types/node@24.19.1)(sass@1.105.1)(yaml@2.9.1))
       '@signalk/path-metadata':
-        specifier: ^1.0.1
+        specifier: link:../path-metadata
         version: link:../path-metadata
       '@signalk/server-admin-ui-dependencies':
         specifier: 2.23.0
@@ -665,7 +669,7 @@ importers:
         specifier: ^0.5.1
         version: 0.5.1
       '@signalk/path-metadata':
-        specifier: ^1.0.1
+        specifier: link:../path-metadata
         version: link:../path-metadata
       '@sinclair/typebox':
         specifier: ^0.34.49
@@ -1656,12 +1660,6 @@ packages:
   '@signalk/nmea0183-utilities@1.2.0':
     resolution: {integrity: sha512-ygmYgo0ceQ+QiOul3WSlwwQ52sbcSS1jI1VfnR0lpMOZQWJrI27Wv/rWLCaNCNXhYUnko7N1iLlT/JLFmGXT4A==}
     engines: {node: '>=24'}
-
-  '@signalk/path-metadata@1.0.1':
-    resolution: {integrity: sha512-5ih3edDBK1dR2WD90OTqxoKMDpqBL99vVCcDe/0gw5fGTMaQESFinPWw2S9JTZ3qDPOJEGwNM8yYgqbiwhYfww==}
-
-  '@signalk/server-api@2.33.0':
-    resolution: {integrity: sha512-ukahgHWPkoZmoADKj1ZA5XoVGmvQro82q7bxcWGu4zwp7MTM6Bsl5NFAjEDo7gorgzk9DLlKHVi0XvCzCZ+peg==}
 
   '@signalk/set-system-time@1.5.0':
     resolution: {integrity: sha512-aNmBvp5HDUI1XOoSdJu/OMV7k9YIB5dboi7ZbQw7pnDi2E8QIv9U/lqzsXzKOhLocn6wHBRt+WWSbGGRQirlVg==}
@@ -6845,7 +6843,7 @@ snapshots:
 
   '@mxtommy/kip@4.8.5':
     dependencies:
-      '@signalk/server-api': 2.33.0
+      '@signalk/server-api': link:packages/server-api
       sk-ais-status-plugin: 1.0.0
     optional: true
 
@@ -7153,12 +7151,12 @@ snapshots:
 
   '@signalk/course-provider@1.4.0':
     dependencies:
-      '@signalk/server-api': 2.33.0
+      '@signalk/server-api': link:packages/server-api
       rxjs: 7.8.2
 
   '@signalk/freeboard-sk@3.2.1(supports-color@8.1.1)':
     dependencies:
-      '@signalk/server-api': 2.33.0
+      '@signalk/server-api': link:packages/server-api
       geolib: 3.3.14
       google-protobuf: 4.0.3
       remark-gfm: 4.0.1(supports-color@8.1.1)
@@ -7199,15 +7197,6 @@ snapshots:
       - supports-color
 
   '@signalk/nmea0183-utilities@1.2.0': {}
-
-  '@signalk/path-metadata@1.0.1': {}
-
-  '@signalk/server-api@2.33.0':
-    dependencies:
-      '@js-temporal/polyfill': 0.5.1
-      '@signalk/path-metadata': 1.0.1
-      '@sinclair/typebox': 0.34.52
-      baconjs: 3.0.23
 
   '@signalk/set-system-time@1.5.0':
     optional: true
@@ -11610,7 +11599,7 @@ snapshots:
 
   sk-ais-status-plugin@1.0.0:
     dependencies:
-      '@signalk/server-api': 2.33.0
+      '@signalk/server-api': link:packages/server-api
     optional: true
 
   source-map-js@1.2.2: {}
