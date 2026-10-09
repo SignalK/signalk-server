@@ -91,7 +91,7 @@ Signal K Server is a server application written in Node.js. There are several me
 
 You will need to install or update Node.js and then the server itself from npm (Node package registry).
 
-- One-liner: `sudo npm install -g signalk-server pnpm@11 && sudo signalk-server-setup` (the App Store uses [pnpm](https://pnpm.io) to install plugins and webapps)
+- One-liner: `sudo npm install -g signalk-server pnpm@11 --allow-scripts=@canboat/canboatjs && sudo signalk-server-setup` (the App Store uses [pnpm](https://pnpm.io) to install plugins and webapps; `--allow-scripts` lets npm 12 and later build the server's native CAN bus support)
 - [Installation on a RaspberryPi](./docs/installation/raspberry_pi_installation.md) - with more details, applicable also to other Linux environments
 - [Windows installer](https://github.com/SignalK/signalk-server-windows)
 
