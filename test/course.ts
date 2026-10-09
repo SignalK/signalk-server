@@ -752,6 +752,28 @@ describe('Course Api', () => {
     })
   })
 
+  it('keeps a destination cleared by a plugin cleared after a restart', async function () {
+    const first = await startServer()
+    await first.sendDelta('navigation.position', {
+      latitude: -35.45,
+      longitude: 138.0
+    })
+    await first
+      .selfPut('navigation/course/destination', {
+        position: { latitude: -35.5, longitude: 138.7 }
+      })
+      .then((response) => response.status.should.equal(200))
+    await persistedCourse((course) => course?.nextPoint?.position)
+
+    // What a plugin's app.clearDestination() calls.
+    await first.server.app.courseApi.clearDestination()
+    await persistedCourse((course) => course?.nextPoint === null)
+    await first.stop()
+
+    const course = await courseAfterRestart()
+    expect(course.nextPoint).to.equal(null)
+  })
+
   it('drops a persisted destination with an invalid position', async function () {
     const first = await startServer()
     await first.stop()
