@@ -199,6 +199,24 @@ describe('Nmea0183ToSignalK', () => {
     expect(app.nmea0183Events).to.deep.equal([AIS_SENTENCE])
   })
 
+  it('skips non-string nmea0183eventSentences entries', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test',
+      nmea0183eventSentences: [42, 'VDM'] as unknown as string[]
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(RMC_SENTENCE)
+    stream.write(AIS_SENTENCE)
+    stream.end()
+
+    await outputPromise
+    expect(app.nmea0183Events).to.deep.equal([AIS_SENTENCE])
+  })
+
   it('handles TimestampedChunk input', async () => {
     const app = createNmeaApp()
     const stream = new Nmea0183ToSignalK({

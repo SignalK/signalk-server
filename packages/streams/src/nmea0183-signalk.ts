@@ -121,11 +121,11 @@ export default class Nmea0183ToSignalK extends Transform {
     this.sentenceEvents = options.suppress0183event
       ? []
       : [DEFAULT_SENTENCE_EVENT]
-    // A list, even an empty one, limits the default event to the listed
-    // sentences; without one every sentence gets it.
+    // An empty list is the user's choice to send no sentences.
     this.defaultEventSentences = Array.isArray(options.nmea0183eventSentences)
       ? new Set(
           options.nmea0183eventSentences
+            .filter((id): id is string => typeof id === 'string')
             .map((id) => id.trim().toUpperCase())
             .filter((id) => id.length > 0)
         )
