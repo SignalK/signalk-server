@@ -59,6 +59,23 @@ Generate **both** `.br` and `.gz` sidecars: browsers only advertise brotli suppo
 
 Make sure sidecars are always regenerated together with the files they accompany: a stale sidecar takes precedence over a fresh plain file.
 
+## Dynamic Webapps Provided by a Plugin
+
+A plugin can publish several standalone webapps without creating additional npm
+packages. Each entry belongs to that plugin, with its URL under
+`/plugins/<pluginId>/webapps/<id>/`. Reusing an id updates the same entry.
+
+The plugin serves its pages and icons through its router, with the appropriate
+access permissions. The registration API publishes metadata, not page content.
+See the {@link @signalk/server-api!ServerAPI.registerWebapp | registration contract}
+for input rules, lifecycle behavior and an example.
+
+Entries appear in the existing webapp list APIs, using the registering package's
+version, license and author. Existing npm webapps are unchanged. Entries can be
+withdrawn individually and are removed automatically when the plugin stops,
+including a failed start. No restart is needed; reopen or refresh the Webapps
+page to fetch the updated list.
+
 ## Application Data: Storing Webapp Data on the Server
 
 Application Data is only supported if security is turned on. It supports two namespaces, one for _global data_ and one for _user specific data_. For example, a client might want to store boat specific gauge configuration globally so that other users have access to it. Otherwise, it could use the user area to store user specific preferences.
