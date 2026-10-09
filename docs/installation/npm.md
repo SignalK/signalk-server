@@ -9,8 +9,10 @@ Signal K Server can be installed directly using NPM.
 ## Linux / macOS
 
 ```shell
-sudo npm install -g signalk-server
+sudo npm install -g signalk-server --allow-scripts=@canboat/canboatjs
 ```
+
+npm 12 and later block install scripts they are not told to allow, so `--allow-scripts` lets npm run the one that builds the server's native CAN bus support. npm 11 runs install scripts by default, and older npm ignores the option.
 
 Once installation is complete, enter the following in a terminal window, to generate a settings file and configure the server to start automatically:
 
