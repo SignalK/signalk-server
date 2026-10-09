@@ -37,6 +37,8 @@ Don't worry if some of the instructions seem overly specific or prescriptive - t
    npm install -g pnpm@11
    ```
 
+   Any pnpm 10 or later switches to the version pinned in `package.json` when run in this repository.
+
 1. Install dependencies:
 
    ```shell
