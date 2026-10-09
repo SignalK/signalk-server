@@ -19,9 +19,9 @@ All Plugins, WebApps and Components can be installed via the _Appstore_.
 
 ## WebApp Structure
 
-All WebApps (like plugins) are installed with `npm`, either from the npm registry or from your own Github repository. Only WebApps that are relevant for all users should be published to `npm` to be made available in the _Appstore_ of all Signal K Servers.
+WebApps distributed through the _Appstore_ (like plugins) are installed with pnpm from the npm registry. Only WebApps that are relevant for all users should be published to `npm` to be made available in the _Appstore_ of all Signal K Servers.
 
-_Note: Private plugins need not be published to `npm` - see the documentation for [npm install](https://docs.npmjs.com/cli/v6/commands/npm-install) for details._
+_Note: Private WebApps need not be published to `npm`: run `pnpm add /path/to/webapp` in the server's configuration directory to install one from a local directory or tarball._
 
 The basic structure of a webapp is:
 
