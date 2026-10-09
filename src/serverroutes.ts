@@ -37,9 +37,9 @@ import ncpI from 'ncp'
 import os from 'os'
 import path from 'path'
 import { findPackageLocation } from './bundled-packages'
-import unzipper from 'unzipper'
 import util from 'util'
 import { mountSwaggerUi } from './api/swagger'
+import unzipper from 'unzipper'
 import { serveStaticFiles } from './staticfiles'
 import {
   ConfigApp,
@@ -56,7 +56,14 @@ import { readDesignLengthOverall } from './api/sensors/vesselDimensions'
 import { handleAdminUICORSOrigin } from './cors'
 import { createDebug, listKnownDebugs } from './debug'
 import { PluginManager } from './interfaces/plugins'
-import { getAuthor, Package, restoreModules } from './modules'
+import {
+  getAuthor,
+  getPnpmInfo,
+  Package,
+  PREVIOUS_MODULES_BACKUP,
+  DISCARDED_MODULES,
+  restoreModules
+} from './modules'
 import { getHttpPort, getSslPort } from './ports'
 import { queryRequest } from './requestResponse'
 import {
@@ -2184,14 +2191,19 @@ module.exports = function (
     }
   })()
 
-  app.get(`${SERVERROUTESPREFIX}/nodeInfo`, (_req: Request, res: Response) => {
-    res.json({
-      nodeVersion: process.version,
-      npmVersion,
-      recommendedNodeVersion,
-      testedNodeVersions
-    })
-  })
+  app.get(
+    `${SERVERROUTESPREFIX}/nodeInfo`,
+    async (_req: Request, res: Response) => {
+      const pnpm = await getPnpmInfo()
+      res.json({
+        nodeVersion: process.version,
+        npmVersion,
+        pnpmVersion: pnpm?.version,
+        recommendedNodeVersion,
+        testedNodeVersions
+      })
+    }
+  )
 
   app.securityStrategy.addAdminWriteMiddleware(
     `${SERVERROUTESPREFIX}/rememberDebug`
@@ -2483,6 +2495,8 @@ module.exports = function (
             (file !== 'node_modules' ||
               (file === 'node_modules' &&
                 req.query.includePlugins === 'true')) &&
+            file !== PREVIOUS_MODULES_BACKUP &&
+            file !== DISCARDED_MODULES &&
             !file.endsWith('.log') &&
             file !== 'signalk-server' &&
             file !== '.npmrc'

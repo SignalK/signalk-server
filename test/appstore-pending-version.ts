@@ -39,6 +39,15 @@ function writePnpmStub(binDir: string, configDir: string) {
   fs.writeFileSync(
     stub,
     `#!/bin/sh
+# The server probes the version and the store before the first install.
+if [ "$1" = "--version" ]; then
+  echo "11.0.0"
+  exit 0
+fi
+if [ "$1" = "store" ]; then
+  echo "$HOME/.local/share/pnpm/store/v11"
+  exit 0
+fi
 # Only an actual install may touch the plugin on disk.
 for arg in "$@"; do
   if [ "$arg" = "add" ]; then
