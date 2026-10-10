@@ -144,7 +144,9 @@ class Server {
         xDnsPrefetchControl: true,
         xDownloadOptions: true,
         xPermittedCrossDomainPolicies: true,
-        referrerPolicy: true,
+        // Other sites get the origin only (scheme, host, port), never the path
+        // or query; tile servers that require a Referer accept webapp requests.
+        referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
         hsts: true,
 
         // DISABLED (would break chart plotters, plugins, webapps):

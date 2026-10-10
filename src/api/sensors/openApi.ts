@@ -70,8 +70,8 @@ export const sensorsApiDoc: any = {
             type: 'number',
             nullable: true,
             description:
-              'Metres to port (positive) or starboard (negative) of the centerline.',
-            example: -0.5
+              'Metres to starboard (positive) or port (negative) of the centerline.',
+            example: 0.5
           }
         }
       },

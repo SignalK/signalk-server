@@ -1,10 +1,14 @@
 import { strict as assert } from 'assert'
 import chai, { expect } from 'chai'
+import { mkdir, readFile, writeFile } from 'fs/promises'
+import path from 'path'
 import {
   DATETIME_REGEX,
   deltaHasPathValue,
+  freeport,
   startServer
 } from './ts-servertestutilities'
+import { serverTestConfigDirectory, startServerP } from './servertestutilities'
 import { CourseInfo, Position } from '@signalk/server-api'
 import { crossTrackDistance } from '../src/api/course/xteGeometry'
 chai.should()
@@ -659,4 +663,188 @@ describe('Course Api', () => {
 
     stop()
   })
+
+  it('can restart the course from the vessel position', async function () {
+    const { server, selfGetJson, selfPut, selfDelete, sendDelta, stop } =
+      await startServer()
+    const destination = { latitude: -35.5, longitude: 138.7 }
+
+    await sendDelta('navigation.position', {
+      latitude: -35.45,
+      longitude: 138.0
+    })
+    await selfPut('navigation/course/destination', {
+      position: destination
+    }).then((response) => response.status.should.equal(200))
+
+    await sendDelta('navigation.position', {
+      latitude: -35.46,
+      longitude: 138.1
+    })
+    await selfPut('navigation/course/restart', {}).then((response) =>
+      response.status.should.equal(200)
+    )
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint).to.deep.equal({
+      position: { latitude: -35.46, longitude: 138.1 },
+      type: 'VesselPosition'
+    })
+    expect(data.nextPoint?.position).to.deep.equal(destination)
+
+    await sendDelta('navigation.position', {
+      latitude: -35.47,
+      longitude: 138.2
+    })
+    await server.app.courseApi.restartCourse()
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint).to.deep.equal({
+      position: { latitude: -35.47, longitude: 138.2 },
+      type: 'VesselPosition'
+    })
+    expect(data.nextPoint?.position).to.deep.equal(destination)
+
+    await sendDelta('navigation.position', { latitude: 95, longitude: 138.2 })
+    await selfPut('navigation/course/restart', {}).then((response) =>
+      response.status.should.equal(400)
+    )
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.previousPoint?.position).to.deep.equal({
+      latitude: -35.47,
+      longitude: 138.2
+    })
+
+    await selfDelete('navigation/course').then((response) =>
+      response.status.should.equal(200)
+    )
+    await selfPut('navigation/course/restart', {}).then((response) =>
+      response.status.should.equal(400)
+    )
+    await server.app.courseApi.restartCourse().then(
+      () => assert.fail('restartCourse without a destination resolved'),
+      (err: Error) => err.message.should.equal('No active destination!')
+    )
+
+    stop()
+  })
+
+  it('restores a destination set by position after a restart', async function () {
+    const first = await startServer()
+    await first.sendDelta('navigation.position', {
+      latitude: -35.45,
+      longitude: 138.0
+    })
+    await first
+      .selfPut('navigation/course/destination', {
+        position: { latitude: -35.5, longitude: 138.7 }
+      })
+      .then((response) => response.status.should.equal(200))
+    await persistedCourse((course) => course?.nextPoint?.position)
+    await first.stop()
+
+    const course = await courseAfterRestart()
+    expect(course.nextPoint?.position).to.deep.equal({
+      latitude: -35.5,
+      longitude: 138.7
+    })
+    expect(course.previousPoint?.position).to.deep.equal({
+      latitude: -35.45,
+      longitude: 138.0
+    })
+  })
+
+  it('keeps a destination cleared by a plugin cleared after a restart', async function () {
+    const first = await startServer()
+    await first.sendDelta('navigation.position', {
+      latitude: -35.45,
+      longitude: 138.0
+    })
+    await first
+      .selfPut('navigation/course/destination', {
+        position: { latitude: -35.5, longitude: 138.7 }
+      })
+      .then((response) => response.status.should.equal(200))
+    await persistedCourse((course) => course?.nextPoint?.position)
+
+    // What a plugin's app.clearDestination() calls.
+    await first.server.app.courseApi.clearDestination()
+    await persistedCourse((course) => course?.nextPoint === null)
+    await first.stop()
+
+    const course = await courseAfterRestart()
+    expect(course.nextPoint).to.equal(null)
+  })
+
+  it('drops a persisted destination with an invalid position', async function () {
+    const first = await startServer()
+    await first.stop()
+    await mkdir(path.dirname(courseFile()), { recursive: true })
+    await writeFile(
+      courseFile(),
+      JSON.stringify({
+        startTime: new Date().toISOString(),
+        targetArrivalTime: null,
+        arrivalCircle: 0,
+        activeRoute: null,
+        nextPoint: {
+          position: { latitude: 95, longitude: 138.7 },
+          type: 'Location'
+        },
+        previousPoint: null
+      })
+    )
+
+    const course = await courseAfterRestart()
+    expect(course.nextPoint).to.equal(null)
+  })
 })
+
+const courseFile = () =>
+  path.join(
+    serverTestConfigDirectory(),
+    'serverState',
+    'course',
+    'settings.json'
+  )
+
+// The course is written to disk after the request that changed it has been
+// answered; wait for it before stopping the server.
+async function persistedCourse(
+  done: (course: CourseInfo | undefined) => unknown
+): Promise<void> {
+  const deadline = Date.now() + 5000
+  for (;;) {
+    const course = await readFile(courseFile(), 'utf8')
+      .then((text) => JSON.parse(text) as CourseInfo)
+      .catch(() => undefined)
+    if (done(course)) return
+    if (Date.now() > deadline) throw new Error('course was not persisted')
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+}
+
+// Starts a server on the existing configuration directory, as a restart does,
+// and returns the course it serves once restored. The Course API restores the
+// persisted course after the server has started and subscribes to external
+// navigation data only once that is done, so its first subscription marks the
+// restore as finished, whether the course was kept or dropped.
+async function courseAfterRestart(): Promise<CourseInfo> {
+  const port = await freeport()
+  const server = await startServerP(port, false, {
+    settings: { interfaces: { plugins: true } }
+  })
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const deadline = Date.now() + 5000
+    while (courseApi.unsubscribes.length === 0) {
+      if (Date.now() > deadline) throw new Error('course was not restored')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    }
+    const response = await fetch(
+      `http://localhost:${port}/signalk/v2/api/vessels/self/navigation/course`
+    )
+    return (await response.json()) as CourseInfo
+  } finally {
+    await server.stop()
+  }
+}

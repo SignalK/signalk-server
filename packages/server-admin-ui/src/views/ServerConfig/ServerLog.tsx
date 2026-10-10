@@ -8,12 +8,14 @@ import {
 } from 'react'
 import parse from 'html-react-parser'
 import { useLogEntries, useClearLogEntries } from '../../store'
+import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
+import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import LogFiles from './Logging'
 import Creatable from 'react-select/creatable'
 import { useWebSocket, useDeltaMessages } from '../../hooks/useWebSocket'
@@ -40,8 +42,12 @@ export default function ServerLogs() {
   const { ws: webSocket, isConnected } = useWebSocket()
 
   const [pause, setPause] = useState(false)
+  // Read when a clear settles, since the user may pause while it is pending.
+  const pauseRef = useRef(false)
   const [debugKeys, setDebugKeys] = useState<string[]>([])
   const [accessError, setAccessError] = useState<string | null>(null)
+  const [clearError, setClearError] = useState<string | null>(null)
+  const [clearing, setClearing] = useState(false)
   const didSubscribeRef = useRef(false)
   const webSocketRef = useRef<WebSocket | null>(null)
   const unsubscribeRef = useRef<() => void>(() => {})
@@ -65,6 +71,9 @@ export default function ServerLogs() {
       isConnected &&
       (webSocket !== webSocketRef.current || !didSubscribeRef.current)
     ) {
+      // Every subscribe replays the server's whole buffer, so start empty to
+      // avoid duplicates and drop lines cleared while this window was away.
+      clearLogEntries()
       const sub = { context: 'vessels.self', subscribe: [{ path: 'log' }] }
       webSocket.send(JSON.stringify(sub))
       // A reconnect gets a fresh principal, so retry rather than keep showing
@@ -75,7 +84,7 @@ export default function ServerLogs() {
       webSocketRef.current = webSocket
       didSubscribeRef.current = true
     }
-  }, [pause, webSocket, isConnected])
+  }, [pause, webSocket, isConnected, clearLogEntries])
 
   const unsubscribeToLogs = useCallback(() => {
     if (webSocket && webSocket.readyState === WebSocket.OPEN) {
@@ -137,11 +146,45 @@ export default function ServerLogs() {
   const handlePause = (event: ChangeEvent<HTMLInputElement>) => {
     const newPause = event.target.checked
     setPause(newPause)
+    pauseRef.current = newPause
     if (newPause) {
       unsubscribeToLogs()
     } else {
       subscribeToLogsIfNeeded()
     }
+  }
+
+  const handleClearLog = () => {
+    if (
+      clearing ||
+      !window.confirm(
+        'Clear the server log? This empties it for all admins, including those who connect later.'
+      )
+    ) {
+      return
+    }
+    setClearError(null)
+    setClearing(true)
+    fetch(`${window.serverRoutesPrefix}/log`, {
+      method: 'DELETE',
+      credentials: 'include'
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`${response.status} ${response.statusText}`)
+        }
+        // A live window clears on the LOG_CLEARED broadcast; clearing here too
+        // could drop lines that arrived after it. A paused one is unsubscribed.
+        if (pauseRef.current) {
+          clearLogEntries()
+        }
+      })
+      .catch((err: Error) => {
+        setClearError(`Failed to clear the server log: ${err.message}`)
+      })
+      .finally(() => {
+        setClearing(false)
+      })
   }
 
   const handleSubmit = (e: FormEvent) => {
@@ -230,6 +273,21 @@ export default function ServerLogs() {
               </Col>
             </Form.Group>
             <LogList value={log} accessError={accessError} />
+            <div style={{ marginTop: '10px' }}>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={handleClearLog}
+                disabled={accessError !== null || clearing}
+              >
+                <FontAwesomeIcon icon={faTrash} /> Clear Server Log
+              </Button>
+              {clearError && (
+                <span className="text-danger" style={{ marginLeft: '10px' }}>
+                  {clearError}
+                </span>
+              )}
+            </div>
           </Form>
         </Card.Body>
       </Card>

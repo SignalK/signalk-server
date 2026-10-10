@@ -4,6 +4,7 @@ import Badge from 'react-bootstrap/Badge'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
 import Form from 'react-bootstrap/Form'
+import InputGroup from 'react-bootstrap/InputGroup'
 import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
@@ -21,6 +22,11 @@ import {
   EMPTY_GNSS_CONFIG,
   GNSS_API_PATH
 } from '../../store/slices/gnssPositionSlice'
+import {
+  type CenterlineSide,
+  fromCenterFor,
+  sideOfFromCenter
+} from '../../utils/fromCenterSide'
 import BoatSchematicEditor from './BoatSchematicEditor'
 
 const CORRECTION_OPTIONS: {
@@ -52,6 +58,7 @@ interface VesselDimensions {
 
 const COLORS = ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#0dcaf0']
 const SAVE_ERROR_CLEAR_MS = 8000
+const DEFAULT_SIDE: CenterlineSide = 'starboard'
 
 const GnssPositionSettings: React.FC = () => {
   const gnssSensorsData = useGnssSensorsData()
@@ -107,6 +114,13 @@ const GnssPositionSettings: React.FC = () => {
     ($source: string, field: 'fromBow' | 'fromCenter') => `${$source}.${field}`,
     []
   )
+  // The side picked for each $source. A nonzero fromCenter carries its side
+  // in its sign, so this only decides while the antenna is on the
+  // centerline or not yet placed, which is when the user picks a side
+  // before typing the distance.
+  const [sideChoices, setSideChoices] = useState<
+    Record<string, CenterlineSide>
+  >({})
 
   useEffect(() => {
     fetch(`${window.serverRoutesPrefix}/vessel`, { credentials: 'include' })
@@ -252,6 +266,7 @@ const GnssPositionSettings: React.FC = () => {
       // there is nothing left for unsaved local edits to apply to.
       useStore.getState().setGnssSensors(EMPTY_GNSS_CONFIG, true)
       setDrafts({})
+      setSideChoices({})
     } catch (e) {
       setResetError(`Reset failed: ${(e as Error).message}`)
     } finally {
@@ -259,16 +274,22 @@ const GnssPositionSettings: React.FC = () => {
     }
   }, [])
 
-  // Clear in-flight draft strings keyed by $source. Drafts hold partial
-  // user input like "-" or "-2." so the typed value survives null commits
-  // mid-edit; without this clear, a stale draft would shadow the fresh
-  // store value if the same $source came back into the table.
-  const clearDraftsForSource = useCallback(
+  // Clear in-flight draft strings and the picked side keyed by $source.
+  // Drafts hold partial user input like "2." so the typed value survives
+  // null commits mid-edit; without this clear, a stale draft would shadow
+  // the fresh store value if the same $source came back into the table.
+  const clearEditStateForSource = useCallback(
     ($source: string) => {
       setDrafts((d) => {
         const next = { ...d }
         delete next[draftKey($source, 'fromBow')]
         delete next[draftKey($source, 'fromCenter')]
+        return next
+      })
+      setSideChoices((c) => {
+        if (c[$source] === undefined) return c
+        const next = { ...c }
+        delete next[$source]
         return next
       })
     },
@@ -277,18 +298,18 @@ const GnssPositionSettings: React.FC = () => {
 
   const handleConfigure = useCallback(
     ($source: string) => {
-      clearDraftsForSource($source)
+      clearEditStateForSource($source)
       addGnssSensor($source)
     },
-    [addGnssSensor, clearDraftsForSource]
+    [addGnssSensor, clearEditStateForSource]
   )
 
   const handleRemove = useCallback(
     (index: number, $source: string) => {
-      clearDraftsForSource($source)
+      clearEditStateForSource($source)
       removeGnssSensor(index)
     },
-    [removeGnssSensor, clearDraftsForSource]
+    [removeGnssSensor, clearEditStateForSource]
   )
 
   const handleFieldChange = useCallback(
@@ -331,6 +352,46 @@ const GnssPositionSettings: React.FC = () => {
       scheduleSaveErrorClear,
       clearGnssSaveFailed
     ]
+  )
+
+  // The From Center input holds the distance and the side selector holds
+  // the sign, so a negative distance is never committed: it stays a draft,
+  // like a partial number, and blur snaps it back to the stored value.
+  const handleFromCenterChange = useCallback(
+    (index: number, $source: string, value: string, side: CenterlineSide) => {
+      setDrafts((d) => ({ ...d, [draftKey($source, 'fromCenter')]: value }))
+      // Pin the displayed side: clearing the field to retype it leaves no
+      // sign behind to read the side from.
+      setSideChoices((c) =>
+        c[$source] === side ? c : { ...c, [$source]: side }
+      )
+      if (value === '') {
+        updateGnssSensor(index, { fromCenter: null })
+        return
+      }
+      const distance = Number(value)
+      if (Number.isFinite(distance) && distance >= 0) {
+        updateGnssSensor(index, { fromCenter: fromCenterFor(distance, side) })
+      }
+    },
+    [updateGnssSensor, draftKey]
+  )
+
+  const handleSideChange = useCallback(
+    (
+      index: number,
+      $source: string,
+      fromCenter: number | null,
+      side: CenterlineSide
+    ) => {
+      setSideChoices((c) => ({ ...c, [$source]: side }))
+      if (fromCenter !== null && fromCenter !== 0) {
+        updateGnssSensor(index, {
+          fromCenter: fromCenterFor(Math.abs(fromCenter), side)
+        })
+      }
+    },
+    [updateGnssSensor]
   )
 
   const handleFieldBlur = useCallback(
@@ -381,10 +442,9 @@ const GnssPositionSettings: React.FC = () => {
           Configure the physical location of each GNSS antenna on your vessel.
           Accurate antenna positions improve position data by accounting for the
           offset between GNSS receiver and vessel reference point (CCRP:
-          Consistent Common Reference Point). Positive &quot;From Center&quot;
-          values indicate port, negative indicate starboard (per Signal K
-          specification). Configure a detected source by editing one of its
-          fields.
+          Consistent Common Reference Point). &quot;From Center&quot; is the
+          distance from the centerline, to port or starboard. Configure a
+          detected source by editing one of its fields.
         </Alert>
 
         <Form.Group className="mb-3">
@@ -462,7 +522,7 @@ const GnssPositionSettings: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {mergedRows.map((row) => {
+              {mergedRows.map((row, rowNumber) => {
                 const color =
                   row.sensor !== null
                     ? COLORS[row.index % COLORS.length]
@@ -474,6 +534,16 @@ const GnssPositionSettings: React.FC = () => {
                 const configureOnFocus = isUnconfigured
                   ? () => handleConfigure(row.$source)
                   : undefined
+                const fromCenter = row.sensor ? row.sensor.fromCenter : null
+                const side = sideOfFromCenter(
+                  fromCenter,
+                  sideChoices[row.$source] ?? DEFAULT_SIDE
+                )
+                const fromCenterDraft =
+                  drafts[draftKey(row.$source, 'fromCenter')]
+                const fromCenterInvalid =
+                  fromCenterDraft !== undefined && Number(fromCenterDraft) < 0
+                const fromCenterErrorId = `gnss-from-center-error-${rowNumber}`
 
                 return (
                   <tr
@@ -563,43 +633,73 @@ const GnssPositionSettings: React.FC = () => {
                       />
                     </td>
                     <td>
-                      <Form.Control
-                        type="number"
-                        size="sm"
-                        aria-label={`From center in meters for ${row.$source}`}
-                        step="0.1"
-                        min={
-                          vesselDimensions.beam !== null
-                            ? -vesselDimensions.beam / 2
-                            : undefined
-                        }
-                        max={
-                          vesselDimensions.beam !== null
-                            ? vesselDimensions.beam / 2
-                            : undefined
-                        }
-                        value={
-                          drafts[draftKey(row.$source, 'fromCenter')] ??
-                          (row.sensor && row.sensor.fromCenter !== null
-                            ? row.sensor.fromCenter
-                            : '')
-                        }
-                        disabled={mutationBusy}
-                        onFocus={configureOnFocus}
-                        onChange={(e) =>
-                          row.sensor &&
-                          handleFieldChange(
-                            row.index,
-                            row.$source,
-                            'fromCenter',
-                            e.target.value
-                          )
-                        }
-                        onBlur={() =>
-                          handleFieldBlur(row.$source, 'fromCenter')
-                        }
-                        style={{ width: 100 }}
-                      />
+                      <InputGroup size="sm" className="flex-nowrap">
+                        <Form.Control
+                          type="number"
+                          aria-label={`From center in meters for ${row.$source}`}
+                          step="0.1"
+                          min={0}
+                          max={
+                            vesselDimensions.beam !== null
+                              ? vesselDimensions.beam / 2
+                              : undefined
+                          }
+                          value={
+                            fromCenterDraft ??
+                            (fromCenter !== null ? Math.abs(fromCenter) : '')
+                          }
+                          isInvalid={fromCenterInvalid}
+                          aria-invalid={fromCenterInvalid}
+                          aria-describedby={
+                            fromCenterInvalid ? fromCenterErrorId : undefined
+                          }
+                          disabled={mutationBusy}
+                          onFocus={configureOnFocus}
+                          onChange={(e) =>
+                            row.sensor &&
+                            handleFromCenterChange(
+                              row.index,
+                              row.$source,
+                              e.target.value,
+                              side
+                            )
+                          }
+                          onBlur={() =>
+                            handleFieldBlur(row.$source, 'fromCenter')
+                          }
+                          style={{ width: 80 }}
+                        />
+                        <Form.Select
+                          aria-label={`Side of the centerline for ${row.$source}`}
+                          value={side}
+                          disabled={mutationBusy}
+                          onFocus={configureOnFocus}
+                          onChange={(e) =>
+                            row.sensor &&
+                            handleSideChange(
+                              row.index,
+                              row.$source,
+                              fromCenter,
+                              e.target.value === 'starboard'
+                                ? 'starboard'
+                                : 'port'
+                            )
+                          }
+                          style={{ width: 'auto' }}
+                        >
+                          <option value="port">Port</option>
+                          <option value="starboard">Starboard</option>
+                        </Form.Select>
+                      </InputGroup>
+                      {fromCenterInvalid && (
+                        <Form.Control.Feedback
+                          type="invalid"
+                          id={fromCenterErrorId}
+                          className="d-block"
+                        >
+                          Enter the distance without a sign and pick the side.
+                        </Form.Control.Feedback>
+                      )}
                     </td>
                     <td>
                       {row.online ? (

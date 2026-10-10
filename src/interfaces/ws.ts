@@ -46,11 +46,7 @@ import {
   parseBackpressureThresholds
 } from '../BackpressureManager'
 import { getExternalPort } from '../ports'
-import {
-  resolveDisplayUnits,
-  getDefaultCategory,
-  DisplayUnitsMetadata
-} from '../unitpreferences'
+import { resolvePathDisplayUnits, PathUnitsMetadata } from '../unitpreferences'
 import { Delta, hasValues } from '@signalk/server-api'
 
 const debug = createDebug('signalk-server:interfaces:ws')
@@ -1045,36 +1041,14 @@ function handleValuesMeta(
         if (meta) {
           // Clone and enhance metadata with displayUnits formulas
           const metaClone = structuredClone(meta) as Record<string, unknown>
-          let storedDisplayUnits = metaClone.displayUnits as
-            Record<string, unknown> | undefined
-          const username = this.spark.request.skPrincipal?.identifier
-          if (!storedDisplayUnits?.category && path) {
-            const defaultCategory = getDefaultCategory(
-              path,
-              metaClone.units as string | undefined,
-              username
-            )
-            if (defaultCategory) {
-              storedDisplayUnits = { category: defaultCategory }
-            }
-          }
-          if (storedDisplayUnits?.category) {
-            const enhanced = resolveDisplayUnits(
-              storedDisplayUnits as {
-                category: string
-                targetUnit?: string
-                formula?: string
-                inverseFormula?: string
-                symbol?: string
-                displayFormat?: string
-              },
-              metaClone.units as string | undefined,
-              username,
-              this.spark.sendDisplayUnitsOverride
-            )
-            if (enhanced) {
-              metaClone.displayUnits = enhanced
-            }
+          const enhanced = resolvePathDisplayUnits(
+            path,
+            metaClone as PathUnitsMetadata,
+            this.spark.request.skPrincipal?.identifier,
+            this.spark.sendDisplayUnitsOverride
+          )
+          if (enhanced) {
+            metaClone.displayUnits = enhanced
           }
           this.spark.write({
             context: this.context,
@@ -1319,25 +1293,14 @@ function handleRealtimeConnection(
           const fullPath = 'vessels.self.' + path
           const pathMeta =
             (getMetadata(fullPath) as Record<string, unknown>) || {}
-          const storedDU = pathMeta.displayUnits as
-            DisplayUnitsMetadata | undefined
-          const category =
-            storedDU?.category ||
-            getDefaultCategory(
-              path,
-              pathMeta.units as string | undefined,
-              username
-            )
-          if (category) {
-            const displayUnits = resolveDisplayUnits(
-              { ...storedDU, category },
-              pathMeta.units as string | undefined,
-              username,
-              spark.sendDisplayUnitsOverride
-            )
-            if (displayUnits) {
-              acc.push({ path, value: { ...pathMeta, displayUnits } })
-            }
+          const displayUnits = resolvePathDisplayUnits(
+            path,
+            pathMeta as PathUnitsMetadata,
+            username,
+            spark.sendDisplayUnitsOverride
+          )
+          if (displayUnits) {
+            acc.push({ path, value: { ...pathMeta, displayUnits } })
           }
           return acc
         },

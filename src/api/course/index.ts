@@ -603,8 +603,11 @@ export class CourseApi {
     return this.courseInfo
   }
 
-  /** Clear destination / route (exposed to plugins) */
-  async clearDestination(persistState?: boolean): Promise<void> {
+  /** Clear destination / route (exposed to plugins)
+   * @param persistState Saved by default: a plugin's clear is a command like
+   * the REST DELETE, and an unsaved clear brings the old course back on restart
+   */
+  async clearDestination(persistState = true): Promise<void> {
     this.clearExternalNavigationState()
     this.courseInfo = {
       ...NO_COURSE_INFO,
@@ -612,6 +615,22 @@ export class CourseApi {
     }
     this.cmdSource = null
     this.emitCourseInfo(!persistState)
+  }
+
+  /** Start the current leg at the vessel position (exposed to plugins) */
+  async restartCourse(): Promise<void> {
+    if (!this.courseInfo.nextPoint) {
+      throw new Error('No active destination!')
+    }
+    const position: any = this.getVesselPosition()
+    if (!position?.value || !this.isValidPosition(position.value)) {
+      throw new Error('Vessel position unavailable!')
+    }
+    this.courseInfo.previousPoint = {
+      position: position.value,
+      type: VesselPosition
+    }
+    this.emitCourseInfo(false, 'previousPoint')
   }
 
   /** Set course (exposed to plugins)
@@ -662,11 +681,24 @@ export class CourseApi {
 
     if (
       (await this.isValidRouteCourse(info)) ||
-      (await this.isValidWaypointCourse(info))
+      (await this.isValidWaypointCourse(info)) ||
+      this.isValidPositionCourse(info)
     ) {
       return info
     }
     return NO_COURSE_INFO
+  }
+
+  // A destination set by position refers to no resource, so its points are
+  // all there is to validate.
+  private isValidPositionCourse(info: CourseInfo): boolean {
+    return (
+      !info.activeRoute &&
+      !info.nextPoint?.href &&
+      this.isValidPosition(info.nextPoint?.position as Position) &&
+      (!info.previousPoint ||
+        this.isValidPosition(info.previousPoint.position as Position))
+    )
   }
 
   private async isValidRouteCourse(info: CourseInfo): Promise<boolean> {
@@ -814,36 +846,14 @@ export class CourseApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        if (!this.courseInfo.nextPoint) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `No active destination!`
-          })
-          return
-        }
-        // set previousPoint to vessel position
         try {
-          const position: any = this.getVesselPosition()
-          if (position && position.value) {
-            this.courseInfo.previousPoint = {
-              position: position.value,
-              type: VesselPosition
-            }
-            this.emitCourseInfo(false, 'previousPoint')
-            res.status(200).json(Responses.ok)
-          } else {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: `Vessel position unavailable!`
-            })
-          }
-        } catch (_err) {
+          await this.restartCourse()
+          res.status(200).json(Responses.ok)
+        } catch (err) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
-            message: `Vessel position unavailable!`
+            message: (err as Error).message
           })
         }
       }

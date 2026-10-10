@@ -10,6 +10,7 @@
 
 import fs from 'fs'
 import path from 'path'
+import { hasWebMount } from '../interfaces/webapps'
 
 export interface LocalAssetUrls {
   appIcon?: string
@@ -22,6 +23,7 @@ interface SignalKAssetDeclaration {
 }
 
 interface PackageWithSignalK {
+  keywords?: unknown
   signalk?: SignalKAssetDeclaration
 }
 
@@ -133,7 +135,7 @@ export function buildLocalAssetUrl(
 /**
  * Build the local `appIcon` / `screenshots` URLs declared by an
  * installed package, or `undefined` when the package declares neither
- * usable asset.
+ * usable asset or the server does not mount it.
  */
 export function buildLocalAssetUrls(
   pkgName: string,
@@ -142,6 +144,7 @@ export function buildLocalAssetUrls(
 ): LocalAssetUrls | undefined {
   const signalk = pkg?.signalk
   if (!signalk || typeof signalk !== 'object') return undefined
+  if (!hasWebMount(pkg.keywords)) return undefined
   const servedRoot = getInstalledServedRoot(pkgName, packageLocation)
   const appIcon =
     typeof signalk.appIcon === 'string' && signalk.appIcon.trim()
