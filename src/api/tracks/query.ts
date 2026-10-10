@@ -1,6 +1,10 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { Context, Path } from '@signalk/server-api'
-import { TrackBoundingBox, TracksRequest } from '@signalk/server-api/tracks'
+import {
+  TrackBoundingBox,
+  TrackImport,
+  TracksRequest
+} from '@signalk/server-api/tracks'
 
 /**
  * Query parsing for the Track API.
@@ -142,6 +146,26 @@ const parseInstant = (
  */
 const PATH_PATTERN = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/
 
+/**
+ * How many problems one malformed import reports.
+ *
+ * Every bad position would otherwise add a message, and the route joins them
+ * into the response body — so an import at the point cap could answer a 400
+ * with megabytes of text. A client needs enough to find the mistake, not a
+ * census of it.
+ */
+const MAX_REPORTED_ERRORS = 20
+
+/**
+ * Caps on an imported track.
+ *
+ * An authorised POST otherwise hands a provider an arbitrarily large geometry,
+ * and validation holds a second copy of it while checking. Express's JSON body
+ * limit is the only other bound and says nothing a client can read.
+ */
+export const MAX_IMPORT_SEGMENTS = 10_000
+export const MAX_IMPORT_POINTS = 1_000_000
+
 const MAX_LONGITUDE = 180
 const MAX_LATITUDE = 90
 
@@ -230,12 +254,76 @@ const readFlag = (
   return parseFlag(first(query[name]) ?? '', name, errors)
 }
 
+/**
+ * Reject any query parameter a route does not understand.
+ *
+ * The single-track routes cannot use the query parser's list — `?bbox=` on a
+ * POST is meaningless, not merely unused. `POST` takes only `provider`, which
+ * chooses where to store; `GET` and `DELETE /{id}` take nothing, since the id
+ * names the provider. The check still matters: `?provdier=parquet` on a POST
+ * would otherwise be dropped and the track stored in the default provider.
+ */
+export function rejectUnknownParams(
+  query: Record<string, unknown>,
+  allowed: string[]
+): string[] {
+  const permitted = new Set(allowed)
+  return Object.keys(query)
+    .filter((name) => !permitted.has(name))
+    .map((name) => `unknown query parameter: ${name}`)
+}
+
+/**
+ * Every parameter the query route understands.
+ *
+ * An unknown one is rejected rather than ignored: a client that sends a filter
+ * this server does not implement would otherwise receive an unfiltered 200 and
+ * have no way to tell.
+ */
+const KNOWN_PARAMS = new Set([
+  'contexts',
+  // Singular as well as plural: the parser accepts both, and an unbounded
+  // query is permitted only for a single `context`.
+  'context',
+  'from',
+  'to',
+  'duration',
+  'bbox',
+  'resolution',
+  'maxPoints',
+  'simplify',
+  'epsilon',
+  'times',
+  'properties',
+  'geometry',
+  'provider'
+])
+
 export function parseTracksQuery(
   query: Record<string, unknown>,
   now: Temporal.Instant = Temporal.Now.instant()
 ): ParsedTracksQuery {
   const errors: string[] = []
   const request: TracksRequest = {}
+
+  // Before any value is parsed: a query naming a parameter this server does
+  // not implement is wrong whatever its other values say.
+  for (const [name, value] of Object.entries(query)) {
+    if (!KNOWN_PARAMS.has(name)) {
+      errors.push(`unknown query parameter: ${name}`)
+      continue
+    }
+    // A known name is not enough: express parses `?maxPoints[x]=1` into an
+    // object and a repeated key into an array, and `first()` would drop the
+    // one and keep only the first element of the other -- answering a query
+    // the client did not send. Flags are worse, since readFlag substitutes ''
+    // for a missing scalar and '' reads as true, so `?geometry[x]=1` would
+    // mean geometry=true. A valueless parameter still arrives as the string
+    // '', so the flag form keeps working.
+    if (typeof value !== 'string') {
+      errors.push(`${name} must be a single value`)
+    }
+  }
 
   const contexts = first(query.contexts) ?? first(query.context)
   if (contexts !== undefined && blank(contexts)) {
@@ -440,4 +528,337 @@ export function parseTracksQuery(
   }
 
   return { request, errors }
+}
+
+/**
+ * GeoJSON's own optional members, which a track fetched from this API carries.
+ * Ignored on import: the provider assigns the id and derives the bounding box.
+ */
+const IGNORED_FEATURE_MEMBERS = new Set(['id', 'bbox'])
+
+/** The properties an import says something with, validated before storing. */
+const IMPORT_PROPERTIES = new Set(['coordTimes', 'name', 'context'])
+
+/**
+ * Properties a provider derives for itself, or the server adds on the way out.
+ * Dropped from an import rather than refused, so a track fetched from this API
+ * can be posted back exactly as it came.
+ */
+const DERIVED_PROPERTIES = new Set([
+  'id',
+  'providerId',
+  'isSelf',
+  'contextName',
+  'from',
+  'to',
+  'bbox',
+  'pointCount',
+  'resolution',
+  'epsilon',
+  'appliedProperties',
+  'values'
+])
+
+/**
+ * Collects problems, stopping at the cap.
+ *
+ * Counting rather than trimming at the end: an import at the point cap could
+ * otherwise build a million interpolated strings before all but twenty were
+ * discarded, which is the allocation the cap exists to prevent. The messages
+ * are also not built once the limit is reached, so a caller passes a thunk.
+ */
+class ErrorReport {
+  private readonly messages: string[] = []
+  private suppressed = 0
+
+  add(message: () => string): void {
+    if (this.messages.length < MAX_REPORTED_ERRORS) {
+      this.messages.push(message())
+    } else {
+      this.suppressed += 1
+    }
+  }
+
+  get length(): number {
+    return this.messages.length + this.suppressed
+  }
+
+  list(): string[] {
+    return this.suppressed === 0
+      ? this.messages
+      : [...this.messages, `and ${this.suppressed} further problems`]
+  }
+}
+
+/**
+ * Validate a track a client is asking the server to store.
+ *
+ * The body is a GeoJSON Feature, the shape a query returns, so a track fetched
+ * from one provider can be posted to another unchanged. A `LineString`, which
+ * converters produce for a track of one segment, is accepted as a single
+ * segment, with `coordTimes` as a flat array to match it.
+ *
+ * Geometry is checked rather than trusted: coordinates in range, `coordTimes`
+ * nested exactly like the coordinates it dates, and every time parseable. A
+ * provider receiving this should not have to re-derive whether the client sent
+ * something coherent, and a malformed upload is a client error, not a 500 from
+ * inside a store.
+ */
+export function parseTrackImport(body: unknown): {
+  track?: TrackImport
+  errors: string[]
+} {
+  const errors = new ErrorReport()
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return { errors: ['body must be a GeoJSON Feature'] }
+  }
+  const input = body as Record<string, unknown>
+
+  // Checked first: a FeatureCollection, which is what a GPX converter returns
+  // for a whole file, would otherwise be reported as an unknown `features`
+  // member and send the client looking in the wrong place.
+  if (input.type !== 'Feature') {
+    return {
+      errors: [
+        input.type === 'FeatureCollection'
+          ? 'type must be "Feature": post the tracks of a FeatureCollection one at a time'
+          : 'type must be "Feature"'
+      ]
+    }
+  }
+
+  // Refused rather than stored: the Feature's own members are fixed, and
+  // anything else at this level is a misplaced property or a misspelling,
+  // which kept silently would look like the import had been understood.
+  const unknownMembers = Object.keys(input).filter(
+    (member) =>
+      !['type', 'geometry', 'properties'].includes(member) &&
+      !IGNORED_FEATURE_MEMBERS.has(member)
+  )
+  if (unknownMembers.length > 0) {
+    return {
+      errors: [
+        `unknown member${unknownMembers.length > 1 ? 's' : ''} ${unknownMembers.join(', ')}: a track's own data belongs in properties`
+      ]
+    }
+  }
+
+  const geometry = input.geometry as Record<string, unknown> | null | undefined
+  const kind =
+    typeof geometry === 'object' && geometry !== null
+      ? geometry.type
+      : undefined
+  if (kind !== 'MultiLineString' && kind !== 'LineString') {
+    return { errors: ['geometry must be a MultiLineString or a LineString'] }
+  }
+  const single = kind === 'LineString'
+  const coordinates = single ? [geometry!.coordinates] : geometry!.coordinates
+  // Paths in messages name what the client sent, not the normalised segments.
+  const position = (i: number, j: number) =>
+    single ? `[${j}]` : `[${i}][${j}]`
+
+  const rawProperties = input.properties
+  if (
+    rawProperties !== undefined &&
+    rawProperties !== null &&
+    (typeof rawProperties !== 'object' || Array.isArray(rawProperties))
+  ) {
+    return { errors: ['properties must be an object'] }
+  }
+  const properties = (rawProperties ?? {}) as Record<string, unknown>
+
+  if (
+    !Array.isArray(coordinates) ||
+    coordinates.length === 0 ||
+    (single && !Array.isArray(coordinates[0]))
+  ) {
+    return {
+      errors: [
+        single
+          ? 'geometry.coordinates must be a non-empty array of positions'
+          : 'geometry.coordinates must be a non-empty array of segments'
+      ]
+    }
+  }
+  if (coordinates.length > MAX_IMPORT_SEGMENTS) {
+    return {
+      errors: [
+        `geometry.coordinates must have at most ${MAX_IMPORT_SEGMENTS} segments`
+      ]
+    }
+  }
+  const totalPoints = coordinates.reduce(
+    (n: number, segment) => n + (Array.isArray(segment) ? segment.length : 0),
+    0
+  )
+  if (totalPoints > MAX_IMPORT_POINTS) {
+    return {
+      errors: [
+        `geometry.coordinates must have at most ${MAX_IMPORT_POINTS} points`
+      ]
+    }
+  }
+  const segments: [number, number][][] = []
+  coordinates.forEach((segment, i) => {
+    if (!Array.isArray(segment) || segment.length === 0) {
+      errors.add(() =>
+        single
+          ? 'geometry.coordinates must be a non-empty array of positions'
+          : `geometry.coordinates[${i}] must be a non-empty array of positions`
+      )
+      return
+    }
+    const points: [number, number][] = []
+    segment.forEach((point, j) => {
+      if (!Array.isArray(point) || point.length !== 2) {
+        errors.add(
+          () =>
+            `geometry.coordinates${position(i, j)} must be [longitude, latitude]`
+        )
+        return
+      }
+      const [lon, lat] = point as unknown[]
+      if (
+        typeof lon !== 'number' ||
+        typeof lat !== 'number' ||
+        !Number.isFinite(lon) ||
+        !Number.isFinite(lat)
+      ) {
+        errors.add(
+          () =>
+            `geometry.coordinates${position(i, j)} must be two finite numbers`
+        )
+        return
+      }
+      if (
+        lon < -MAX_LONGITUDE ||
+        lon > MAX_LONGITUDE ||
+        lat < -MAX_LATITUDE ||
+        lat > MAX_LATITUDE
+      ) {
+        errors.add(
+          () => `geometry.coordinates${position(i, j)} is out of range`
+        )
+        return
+      }
+      points.push([lon, lat])
+    })
+    segments.push(points)
+  })
+
+  // Where GPX converters put the times. Refused rather than kept as metadata:
+  // stored that way the track has no times, answers no time window, and the
+  // client is never told its times were not understood.
+  const converted = properties.coordinateProperties as
+    Record<string, unknown> | undefined
+  if (
+    properties.coordTimes === undefined &&
+    typeof converted === 'object' &&
+    converted !== null &&
+    converted.times !== undefined
+  ) {
+    return {
+      errors: [
+        'times found in properties.coordinateProperties.times: send them as properties.coordTimes'
+      ]
+    }
+  }
+
+  let coordTimes: string[][] | undefined
+  if (properties.coordTimes !== undefined) {
+    const times = single ? [properties.coordTimes] : properties.coordTimes
+    if (
+      !Array.isArray(times) ||
+      times.length !== coordinates.length ||
+      (single && !Array.isArray(times[0]))
+    ) {
+      errors.add(() =>
+        single
+          ? 'properties.coordTimes must be an array of times, one per position'
+          : 'properties.coordTimes must have one array per coordinates segment'
+      )
+    } else {
+      coordTimes = []
+      times.forEach((segment, i) => {
+        const expected = Array.isArray(coordinates[i])
+          ? (coordinates[i] as unknown[]).length
+          : 0
+        if (!Array.isArray(segment) || segment.length !== expected) {
+          errors.add(() =>
+            single
+              ? 'properties.coordTimes must have one time per position'
+              : `properties.coordTimes[${i}] must have one time per position`
+          )
+          return
+        }
+        // Stored as the instant each time parses to, in UTC: a provider that
+        // sorts or compares times as text would otherwise misorder a track
+        // whose times carry different offsets.
+        const normalised: string[] = []
+        segment.forEach((time, j) => {
+          if (typeof time !== 'string') {
+            errors.add(
+              () =>
+                `properties.coordTimes${position(i, j)} must be an ISO 8601 time`
+            )
+            return
+          }
+          try {
+            // Not Date.parse: it accepts a date-only `2024-01-01` as midnight
+            // UTC, so a client sending dates instead of timestamps would have
+            // them silently become instants. The rest of this parser already
+            // holds instants to the same contract.
+            normalised.push(Temporal.Instant.from(time).toString())
+          } catch {
+            errors.add(
+              () =>
+                `properties.coordTimes${position(i, j)} must be an ISO 8601 time`
+            )
+          }
+        })
+        coordTimes!.push(normalised)
+      })
+    }
+  }
+
+  if (properties.name !== undefined && typeof properties.name !== 'string') {
+    errors.add(() => 'properties.name must be a string')
+  }
+  if (
+    properties.context !== undefined &&
+    (typeof properties.context !== 'string' || blank(properties.context))
+  ) {
+    // Blank is not an association: cast as-is it would reach a provider as a
+    // context that matches no vessel and cannot be queried back.
+    errors.add(() => 'properties.context must be a non-empty string')
+  }
+  if (errors.length > 0) {
+    return { errors: errors.list() }
+  }
+  // The client's own metadata, carried through to be returned as posted.
+  const metadata = Object.fromEntries(
+    Object.entries(properties).filter(
+      ([key]) => !IMPORT_PROPERTIES.has(key) && !DERIVED_PROPERTIES.has(key)
+    )
+  )
+  return {
+    track: {
+      type: 'Feature',
+      geometry: { type: 'MultiLineString', coordinates: segments },
+      properties: {
+        ...metadata,
+        ...(coordTimes ? { coordTimes } : {}),
+        ...(typeof properties.name === 'string'
+          ? { name: properties.name }
+          : {}),
+        // Qualified the way a query would qualify it: a bare `123456789`
+        // stored raw is unreachable, because a later `?context=123456789`
+        // asks for `vessels.123456789` and never matches what was written.
+        ...(typeof properties.context === 'string'
+          ? { context: qualifyContext(properties.context.trim()) }
+          : {})
+      }
+    },
+    errors: errors.list()
+  }
 }
