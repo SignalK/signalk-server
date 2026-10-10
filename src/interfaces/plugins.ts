@@ -672,7 +672,17 @@ module.exports = (theApp: any) => {
       }
     })
     onStopHandlers[plugin.id] = []
-    const result = Promise.resolve(plugin.stop())
+    // Not before stop(), which may still be talking to its devices, and
+    // after a failed stop() too, which is the likeliest to leave them open
+    const releaseGATTClaims = () =>
+      theApp.bleApi.releaseGATTClaimsForPlugin(plugin.id)
+    let result: Promise<any>
+    try {
+      result = Promise.resolve(plugin.stop())
+    } catch (e) {
+      releaseGATTClaims()
+      throw e
+    }
     result.then(() => {
       theApp.setPluginStatus(plugin.id, 'Stopped')
       debug('Stopped plugin ' + plugin.name)
@@ -680,6 +690,7 @@ module.exports = (theApp: any) => {
         theApp.deltaCache.removeSource(plugin.id)
       }
     })
+    result.then(releaseGATTClaims, releaseGATTClaims)
     return result
   }
 

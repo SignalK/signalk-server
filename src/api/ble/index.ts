@@ -64,6 +64,16 @@ interface GATTClaim {
   keepAliveTimer?: ReturnType<typeof setInterval>
 }
 
+interface PendingGATTClaim {
+  pluginId: string
+  // Set once the plugin gives up on the claim: a connection still coming up
+  // is closed as soon as it arrives, and notifications stop reaching it
+  released: boolean
+}
+
+const releasedWhileConnecting = (mac: string) =>
+  new Error(`GATT claim on ${mac} was released while connecting`)
+
 const DEFAULT_BLE_SETTINGS: BLESettings = {
   localBluetoothManaged: false,
   localAdapters: [],
@@ -75,7 +85,7 @@ export class BLEApi implements IBLEApi {
   private providerUnsubscribers: Map<string, () => void> = new Map()
   private deviceTable: Map<string, BLEDeviceInfo> = new Map()
   private gattClaims: Map<string, GATTClaim> = new Map()
-  private pendingGattClaims: Set<string> = new Set()
+  private pendingGattClaims: Map<string, PendingGATTClaim> = new Map()
   private advertisementCallbacks: Map<string, (adv: BLEAdvertisement) => void> =
     new Map()
   private wsClients: Set<WebSocket> = new Set()
@@ -524,7 +534,7 @@ export class BLEApi implements IBLEApi {
    * subscribeGATT/connectGATT calls for the same device cannot both pass
    * the claim check. Throws when the device is claimed or being claimed.
    */
-  private reserveGATTClaim(mac: string) {
+  private reserveGATTClaim(mac: string, pluginId: string): PendingGATTClaim {
     const existing = this.gattClaims.get(mac)
     if (existing) {
       throw new Error(`Device ${mac} already claimed by ${existing.pluginId}`)
@@ -532,7 +542,9 @@ export class BLEApi implements IBLEApi {
     if (this.pendingGattClaims.has(mac)) {
       throw new Error(`Device ${mac} has a GATT claim in progress`)
     }
-    this.pendingGattClaims.add(mac)
+    const pending: PendingGATTClaim = { pluginId, released: false }
+    this.pendingGattClaims.set(mac, pending)
+    return pending
   }
 
   async subscribeGATT(
@@ -541,7 +553,7 @@ export class BLEApi implements IBLEApi {
     callback: (charUuid: string, data: Buffer) => void
   ): Promise<GATTSubscriptionHandle> {
     const mac = descriptor.mac.toUpperCase()
-    this.reserveGATTClaim(mac)
+    const pending = this.reserveGATTClaim(mac, pluginId)
     try {
       const providerId = this.selectGATTProvider(mac)
       if (!providerId) {
@@ -551,7 +563,19 @@ export class BLEApi implements IBLEApi {
       }
 
       const provider = this.bleProviders.get(providerId)!
-      const handle = await provider.methods.subscribeGATT(descriptor, callback)
+      // Notifications can arrive while the session is still being set up or
+      // already being closed, and once the claim is released they are no
+      // longer the plugin's
+      const handle = await provider.methods.subscribeGATT(
+        descriptor,
+        (charUuid, data) => {
+          if (!pending.released) callback(charUuid, data)
+        }
+      )
+      if (pending.released) {
+        await handle.close()
+        throw releasedWhileConnecting(mac)
+      }
 
       debug.enabled &&
         debug(`GATT claim: ${mac} → ${pluginId} via ${providerId}`)
@@ -585,6 +609,7 @@ export class BLEApi implements IBLEApi {
 
       const origClose = handle.close.bind(handle)
       handle.close = async () => {
+        pending.released = true
         clearInterval(keepAliveTimer)
         this.gattClaims.delete(mac)
         debug.enabled && debug(`GATT released: ${mac} (was ${pluginId})`)
@@ -599,7 +624,7 @@ export class BLEApi implements IBLEApi {
 
   async connectGATT(mac: string, pluginId: string): Promise<BLEGattConnection> {
     mac = mac.toUpperCase()
-    this.reserveGATTClaim(mac)
+    const pending = this.reserveGATTClaim(mac, pluginId)
     try {
       const providerId = this.selectGATTProvider(mac)
       if (!providerId) {
@@ -614,6 +639,10 @@ export class BLEApi implements IBLEApi {
       }
 
       const conn = await provider.methods.connectGATT(mac)
+      if (pending.released) {
+        await conn.disconnect()
+        throw releasedWhileConnecting(mac)
+      }
 
       const syntheticHandle: GATTSubscriptionHandle = {
         read: async () => Buffer.alloc(0),
@@ -652,7 +681,13 @@ export class BLEApi implements IBLEApi {
   async releaseGATTDevice(mac: string, pluginId: string): Promise<void> {
     mac = mac.toUpperCase()
     const claim = this.gattClaims.get(mac)
-    if (!claim) return
+    if (!claim) {
+      const pending = this.pendingGattClaims.get(mac)
+      if (pending?.pluginId === pluginId) {
+        pending.released = true
+      }
+      return
+    }
     if (claim.pluginId !== pluginId) {
       throw new Error(
         `Device ${mac} is claimed by ${claim.pluginId}, not ${pluginId}`
@@ -702,6 +737,27 @@ export class BLEApi implements IBLEApi {
         // another provider. Don't call handle.close() — the WS is already
         // dead and close() does not fire disconnectCallbacks.
         claim.handle._fireDisconnect?.()
+      }
+    }
+  }
+
+  /**
+   * Release every GATT claim the given plugin holds, including ones still
+   * connecting. Called once the plugin has stopped: nothing is left to close
+   * its connections, and its own claims would refuse it when it restarts.
+   */
+  releaseGATTClaimsForPlugin(pluginId: string) {
+    for (const [mac, claim] of this.gattClaims) {
+      if (claim.pluginId === pluginId) {
+        debug.enabled &&
+          debug(`GATT claim released (plugin stopped): ${mac} was ${pluginId}`)
+        claim.handle.close().catch(() => {})
+        this.gattClaims.delete(mac)
+      }
+    }
+    for (const pending of this.pendingGattClaims.values()) {
+      if (pending.pluginId === pluginId) {
+        pending.released = true
       }
     }
   }
