@@ -430,9 +430,9 @@ const tracksApiDoc = {
       },
       delete: {
         tags: ['tracks'],
-        summary: 'Delete a stored track',
+        summary: 'Delete a stored track, or part of it',
         description:
-          'Removes the track with this id from the provider that holds it. Addressed by id rather than by context, because an imported track may name no vessel and a context may hold more than one track.\n\n**Requires administrative permission.** Deletion is irreversible and a track records no uploader, so an imported track has no owner to authorise a requester against. On a server with security disabled the ordinary write permission applies, since there is no administrator to be.',
+          'Removes the track with this id from the provider that holds it. Addressed by id rather than by context, because an imported track may name no vessel and a context may hold more than one track.\n\nWith **from** or **to**, only the points recorded within that span are removed and the rest of the track stays, so a GPS glitch or a test run in the marina can go without the passage around it. An omitted bound reaches the start or the end of the track. Not every provider can delete part of a track; one that cannot answers 501 and deletes nothing.\n\n**Requires administrative permission.** Deletion is irreversible and a track records no uploader, so an imported track has no owner to authorise a requester against. On a server with security disabled the ordinary write permission applies, since there is no administrator to be.',
         parameters: [
           {
             name: 'id',
@@ -441,11 +441,30 @@ const tracksApiDoc = {
             schema: { type: 'string' },
             description:
               'Track id as returned in properties.id, written providerId:trackId. Only the first colon separates the two, so a track id may itself contain one.'
+          },
+          {
+            name: 'from',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'date-time' },
+            description:
+              'Delete only the points recorded at or after this instant (ISO 8601).'
+          },
+          {
+            name: 'to',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'date-time' },
+            description:
+              'Delete only the points recorded at or before this instant (ISO 8601).'
           }
         ],
         responses: {
           200: { description: 'Deleted' },
-          400: { description: 'The id is not written providerId:trackId' },
+          400: {
+            description:
+              'The id is not written providerId:trackId, from or to is not a valid time, from is later than to, or the track has no times to delete a span of'
+          },
           403: {
             description:
               'Administrative permission is required to delete a track'
@@ -455,7 +474,8 @@ const tracksApiDoc = {
           },
           500: { description: 'The provider failed to delete the track' },
           501: {
-            description: 'The named provider does not delete tracks'
+            description:
+              'The named provider does not delete tracks, or cannot delete part of one'
           }
         }
       }

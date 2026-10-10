@@ -3,6 +3,7 @@ import { Context, Path } from '@signalk/server-api'
 import {
   TrackBoundingBox,
   TrackImport,
+  TrackSpan,
   TracksRequest
 } from '@signalk/server-api/tracks'
 
@@ -596,6 +597,48 @@ class ErrorReport {
       ? this.messages
       : [...this.messages, `and ${this.suppressed} further problems`]
   }
+}
+
+/**
+ * The part of a track a `DELETE /{id}` names, or undefined for the whole
+ * track.
+ *
+ * Only `from` and `to`: a span to delete is two instants, and a `duration`
+ * relative to now would make the same request delete a different stretch
+ * each time it was retried.
+ */
+export function parseTrackSpan(query: Record<string, unknown>): {
+  span?: TrackSpan
+  errors: string[]
+} {
+  const errors = rejectUnknownParams(query, ['from', 'to'])
+  const bounds: { from?: Temporal.Instant; to?: Temporal.Instant } = {}
+  for (const name of ['from', 'to'] as const) {
+    if (query[name] === undefined) {
+      continue
+    }
+    // A bound that is present but unreadable, `from[x]=1` say, must fail
+    // the request: read as absent it would widen the delete to the whole
+    // track.
+    const value = first(query[name])
+    if (value === undefined) {
+      errors.push(`${name} must be a single time`)
+    } else if (blank(value)) {
+      errors.push(`${name} must not be empty`)
+    } else {
+      bounds[name] = parseInstant(value, name, errors)
+    }
+  }
+  const { from, to } = bounds
+  if (from && to && Temporal.Instant.compare(from, to) > 0) {
+    errors.push('from must not be later than to')
+  }
+  const span: TrackSpan | undefined = from
+    ? { from, ...(to ? { to } : {}) }
+    : to
+      ? { to }
+      : undefined
+  return { ...(span ? { span } : {}), errors }
 }
 
 /**
