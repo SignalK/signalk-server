@@ -18,6 +18,8 @@ describe('Track API writes', () => {
   let base = ''
   let stored: unknown[] = []
   let authorisedFor: string[] = []
+  let deletedSpans: { id: string; from?: string; to?: string }[] = []
+  let deletedWhole: string[] = []
 
   const feature = (id: string, context?: string) => ({
     type: 'Feature' as const,
@@ -42,7 +44,21 @@ describe('Track API writes', () => {
       stored.push(track)
       return Promise.resolve('imported:generated-id')
     },
-    deleteTrack: (id: string) => Promise.resolve(id === 'imported:known'),
+    deleteTrack: (id: string) => {
+      deletedWhole.push(id)
+      return Promise.resolve(id === 'imported:known')
+    },
+    deleteTrackSpan: (
+      id: string,
+      span: { from?: { toString(): string }; to?: { toString(): string } }
+    ) => {
+      deletedSpans.push({
+        id,
+        ...(span.from ? { from: span.from.toString() } : {}),
+        ...(span.to ? { to: span.to.toString() } : {})
+      })
+      return Promise.resolve(id === 'imported:known')
+    },
     getTrack: (id: string) =>
       Promise.resolve(
         id === 'imported:known'
@@ -64,6 +80,8 @@ describe('Track API writes', () => {
   ) => {
     stored = []
     authorisedFor = []
+    deletedSpans = []
+    deletedWhole = []
     const app = express()
     app.use(express.json())
     // securityStrategy is always present on a real server -- startSecurity
@@ -862,5 +880,125 @@ describe('Track API writes', () => {
     })
 
     expect(authorisedFor).to.be.empty
+  })
+  describe('deleting part of a track', () => {
+    const remove = (query: string, id = 'testprovider:imported:known') =>
+      fetch(`${base}/signalk/v2/api/tracks/${id}${query}`, {
+        method: 'DELETE'
+      })
+
+    it('hands the span to the provider as UTC instants', async () => {
+      await serve()
+      const res = await remove(
+        '?from=2026-08-01T12:00:00%2B02:00&to=2026-08-01T14:00:00Z'
+      )
+
+      expect(res.status).to.equal(200)
+      expect(deletedSpans).to.deep.equal([
+        {
+          id: 'imported:known',
+          from: '2026-08-01T10:00:00Z',
+          to: '2026-08-01T14:00:00Z'
+        }
+      ])
+      expect(deletedWhole).to.be.empty
+    })
+
+    it('leaves an omitted bound open', async () => {
+      await serve()
+      const res = await remove('?from=2026-08-01T12:00:00Z')
+
+      expect(res.status).to.equal(200)
+      expect(deletedSpans).to.deep.equal([
+        { id: 'imported:known', from: '2026-08-01T12:00:00Z' }
+      ])
+    })
+
+    it('reads the first of a repeated bound', async () => {
+      await serve()
+      const res = await remove(
+        '?from=2026-08-01T12:00:00Z&from=2026-08-02T12:00:00Z'
+      )
+
+      expect(res.status).to.equal(200)
+      expect(deletedSpans).to.deep.equal([
+        { id: 'imported:known', from: '2026-08-01T12:00:00Z' }
+      ])
+    })
+
+    it('deletes the whole track when no span is given', async () => {
+      await serve()
+      await remove('')
+
+      expect(deletedWhole).to.deep.equal(['imported:known'])
+      expect(deletedSpans).to.be.empty
+    })
+
+    // Falling back to deleteTrack would remove the whole track when the
+    // client asked for an afternoon of it.
+    it('reports a provider that cannot delete a span as not implemented', async () => {
+      const provider: Record<string, unknown> = writingProvider()
+      delete provider.deleteTrackSpan
+      await serve(provider)
+      const res = await remove('?to=2026-08-01T12:00:00Z')
+
+      expect(res.status).to.equal(501)
+      expect(deletedWhole).to.be.empty
+    })
+
+    it('reports a span of an unknown track as not found', async () => {
+      await serve()
+      const res = await remove(
+        '?from=2026-08-01T12:00:00Z',
+        'testprovider:imported:missing'
+      )
+
+      expect(res.status).to.equal(404)
+    })
+
+    it('rejects a span that is not two valid instants in order', async () => {
+      await serve()
+      const statuses = await Promise.all(
+        [
+          '?from=yesterday',
+          '?from=',
+          '?from=2026-08-01',
+          '?from=2026-08-02T00:00:00Z&to=2026-08-01T00:00:00Z',
+          '?duration=PT1H',
+          '?from[at]=2026-08-01T00:00:00Z',
+          '?to[0][at]=2026-08-01T00:00:00Z'
+        ].map(async (query) => (await remove(query)).status)
+      )
+
+      expect(statuses).to.deep.equal([400, 400, 400, 400, 400, 400, 400])
+      expect(deletedSpans).to.be.empty
+      expect(deletedWhole).to.be.empty
+    })
+
+    it('reports a provider refusing the span as a client error', async () => {
+      await serve({
+        ...writingProvider(),
+        deleteTrackSpan: () =>
+          Promise.reject(
+            Object.assign(new Error('this track has no times'), {
+              isTrackRejected: true
+            })
+          )
+      })
+      const res = await remove('?from=2026-08-01T12:00:00Z')
+
+      expect(res.status).to.equal(400)
+      expect(((await res.json()) as { error: string }).error).to.equal(
+        'this track has no times'
+      )
+    })
+
+    it('requires administrative permission', async () => {
+      await serve(writingProvider(), true, false)
+      const res = await remove('?from=2026-08-01T12:00:00Z')
+
+      expect(res.status).to.equal(403)
+      expect(deletedSpans).to.be.empty
+    })
   })
 })
