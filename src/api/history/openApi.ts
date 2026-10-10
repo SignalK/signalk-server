@@ -277,11 +277,18 @@ historyApiDoc.paths = {
     get: {
       summary: 'Get paths that have some historical data',
       description:
-        'Returns an array of path that have some historical data to query with /values for the specified time range',
+        'Returns an array of paths that have some historical data to query with /values for the specified time range. Providers that support context filtering return only paths for the specified context; other providers may return paths from all contexts.',
       parameters: [
         { $ref: '#/components/parameters/TimeRangeFrom' },
         { $ref: '#/components/parameters/TimeRangeDuration' },
         { $ref: '#/components/parameters/TimeRangeTo' },
+        {
+          name: 'context',
+          in: 'query',
+          description: 'Optional Signal K context to filter available paths',
+          example: 'vessels.urn:mrn:imo:mmsi:123456789',
+          schema: { type: 'string' }
+        },
         { $ref: '#/components/parameters/ProviderIdQuery' }
       ],
       responses: {
