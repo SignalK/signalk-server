@@ -3,6 +3,7 @@ import express from 'express'
 import type { AddressInfo } from 'node:net'
 import type { radar } from '@signalk/server-api'
 import { RadarApi, unwrapControlPayload } from '../../src/api/radar'
+import { radarApiDoc } from '../../src/api/radar/openApi'
 
 // Every shape in the "Setting a Control Value" section of radar_api.md.
 //
@@ -340,6 +341,33 @@ describe('Radar API: mutation response shape', () => {
       message: 'OK',
       targetId: 5
     })
+  })
+
+  // A client generated from the OpenAPI document must get what the server
+  // sends, so the documented acquisition response is checked against a real one.
+  it('documents the acquisition response it sends', async () => {
+    const { post } = await start({
+      acquireTarget: async () => ({ success: true, targetId: 5 })
+    })
+
+    const res = await post(`${base}/targets`, {
+      bearing: 0.785,
+      distance: 2000
+    })
+    const body = await res.json()
+
+    const documentedSuccess = Object.keys(
+      radarApiDoc.paths[
+        '/signalk/v2/api/vessels/self/radars/{radar_id}/targets'
+      ].post.responses
+    ).filter((status) => status.startsWith('2'))
+    const schema = radarApiDoc.components.schemas.AcquireTargetResponse
+
+    expect(documentedSuccess).to.deep.equal([String(res.status)])
+    expect(Object.keys(schema.properties)).to.have.members(Object.keys(body))
+    expect(schema.required).to.have.members(Object.keys(body))
+    expect(schema.properties.state.enum).to.include(body.state)
+    expect(schema.properties.statusCode.enum).to.include(body.statusCode)
   })
 
   // Reads answer failure in the same shape as writes. They used to answer
