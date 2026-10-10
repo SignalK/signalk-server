@@ -1,0 +1,43 @@
+{
+  "name": "@signalk/course-provider",
+  "version": "1.5.0",
+  "description": "Course data provider plugin for SignalK Server.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "signalk-node-server-plugin",
+    "signalk-category-utility",
+    "signalk",
+    "course"
+  ],
+  "repository": {
+    "url": "git+https://github.com/SignalK/signalk-server.git",
+    "type": "git",
+    "directory": "packages/course-provider-plugin"
+  },
+  "author": "AdrianP",
+  "contributors": [
+    {
+      "name": "panaaj@hotmail.com"
+    }
+  ],
+  "license": "Apache-2.0",
+  "signalk": {
+    "displayName": "Course Provider",
+    "appIcon": "./logo.svg"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "npm run build -- -w",
+    "prettier": "prettier -w ./src",
+    "lint": "eslint --fix",
+    "format": "npm run prettier  && npm run lint",
+    "prepublishOnly": "npm run build",
+    "test": "npm run build"
+  },
+  "dependencies": {
+    "@signalk/server-api": "^2.33.0"
+  },
+  "devDependencies": {},
+  "signalk-plugin-enabled-by-default": true
+}

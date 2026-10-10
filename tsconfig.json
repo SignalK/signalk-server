@@ -9,6 +9,9 @@
       "path": "./packages/resources-provider-plugin"
     },
     {
+      "path": "./packages/course-provider-plugin"
+    },
+    {
       "path": "./packages/streams"
     }
   ]
