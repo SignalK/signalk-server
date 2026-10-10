@@ -318,6 +318,7 @@ interface App
     WithWrappedEmitter {
   webapps: Package[]
   logging: {
+    clearLog: () => void
     rememberDebug: (r: boolean) => void
     enableDebug: (r: string) => boolean
     addDebug: (name: string) => void
@@ -2154,6 +2155,13 @@ module.exports = function (
     } else {
       res.status(200).send()
     }
+  })
+
+  app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/log`)
+
+  app.delete(`${SERVERROUTESPREFIX}/log`, (_req: Request, res: Response) => {
+    app.logging.clearLog()
+    res.status(204).send()
   })
 
   app.get(`${SERVERROUTESPREFIX}/debugKeys`, (req: Request, res: Response) => {

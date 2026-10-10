@@ -94,6 +94,10 @@ module.exports = function (app) {
     getLog: () => {
       return log
     },
+    clearLog: () => {
+      log.length = 0
+      app.emit('serverlog', { type: 'LOG_CLEARED' })
+    },
     enableDebug: enableDebug,
     getDebugSettings: () => {
       return { debugEnabled, rememberDebug }
