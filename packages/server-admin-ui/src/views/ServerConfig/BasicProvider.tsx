@@ -41,6 +41,7 @@ interface ProviderOptions {
   useDiscovery?: boolean
   toStdout?: string | string[]
   ignoredSentences?: string | string[]
+  nmea0183eventSentences?: string[]
   sentenceEvent?: string
   validateChecksum?: boolean
   appendChecksum?: boolean
@@ -1336,38 +1337,88 @@ function RemoteSelfInput({
   )
 }
 
-function Suppress0183Checkbox({
+type Nmea0183EventMode = 'all' | 'none' | 'listed'
+
+function Nmea0183EventInput({
   value,
   onChange
 }: {
   value: ProviderOptions
   onChange: OnChangeHandler
 }) {
+  const mode: Nmea0183EventMode =
+    value.suppress0183event === true
+      ? 'none'
+      : Array.isArray(value.nmea0183eventSentences)
+        ? 'listed'
+        : 'all'
+
+  // Both settings change together in one update, since the parent applies
+  // each change to the provider it last rendered.
+  const setMode = (next: Nmea0183EventMode) => {
+    const options: ProviderOptions = {
+      ...value,
+      suppress0183event: next === 'none'
+    }
+    if (next === 'all') {
+      delete options.nmea0183eventSentences
+    } else if (next === 'listed') {
+      options.nmea0183eventSentences = value.nmea0183eventSentences ?? []
+    }
+    onChange({ target: { name: 'options', value: options } })
+  }
+
+  const radio = (id: Nmea0183EventMode, label: string) => (
+    <Form.Check
+      type="radio"
+      id={`provider-nmea0183event-${id}`}
+      name="provider-nmea0183event"
+      className="mb-0"
+      label={label}
+      checked={mode === id}
+      onChange={() => setMode(id)}
+    />
+  )
+
   return (
     <Form.Group as={Row} className="mb-3">
-      <Col xs="3" md="3">
-        <Form.Label htmlFor="provider-suppress0183event">
-          Suppress nmea0183 event
+      <Col md="3">
+        <Form.Label id="provider-nmea0183event-label">
+          Send nmea0183 event for
         </Form.Label>
       </Col>
-      <Col xs="1" md="1">
-        <Form.Label className="switch switch-text switch-primary">
-          <input
-            type="checkbox"
-            id="provider-suppress0183event"
-            name="options.suppress0183event"
-            className="switch-input"
-            onChange={(event) => onChange(event)}
-            checked={value.suppress0183event}
+      <Col
+        xs="12"
+        md="9"
+        role="radiogroup"
+        aria-labelledby="provider-nmea0183event-label"
+      >
+        {radio('all', 'All sentences')}
+        {radio('none', 'No sentences')}
+        <div className="d-flex align-items-center flex-wrap gap-2">
+          {radio('listed', 'These sentences')}
+          <Form.Control
+            type="text"
+            name="options.nmea0183eventSentences"
+            aria-label="Sentences to send"
+            className="w-auto"
+            value={value.nmea0183eventSentences?.join(',') ?? ''}
+            disabled={mode !== 'listed'}
+            onChange={(event) =>
+              onChange({
+                target: {
+                  name: event.target.name,
+                  value: event.target.value.split(',')
+                }
+              })
+            }
           />
-          <span className="switch-label" data-on="Yes" data-off="No" />
-          <span className="switch-handle" />
-        </Form.Label>
-      </Col>
-      <Col xs="12" md="6">
-        <label className="text-muted small">
-          Supress sending the default nmea0183 event for incoming sentences
-        </label>
+        </div>
+        <Form.Text muted>
+          Sentences sent as nmea0183 events appear on the NMEA0183 TCP service.
+          With These sentences selected, only the listed sentences are sent; the
+          others are still converted to Signal K. Example: VDM,VDO
+        </Form.Text>
       </Col>
     </Form.Group>
   )
@@ -1960,7 +2011,7 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
         </div>
       )}
       <div>
-        <Suppress0183Checkbox value={value.options} onChange={onChange} />
+        <Nmea0183EventInput value={value.options} onChange={onChange} />
       </div>
       {value.options.type === 'udp' && (
         <PortInput value={value.options} onChange={onChange} />

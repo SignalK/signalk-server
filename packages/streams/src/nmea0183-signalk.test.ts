@@ -22,6 +22,8 @@ function createNmeaApp() {
 
 const RMC_SENTENCE =
   '$IIRMC,120000,A,6000.0000,N,02400.0000,E,5.0,45.0,150124,,,A*53'
+const AIS_SENTENCE = '!AIVDM,1,1,,A,13u?etPv2;0n:dDPwUM1U1Cb069D,0*24'
+const TAG_BLOCK = '\\s:test,c:1700000000*2C\\'
 
 describe('Nmea0183ToSignalK', () => {
   it('parses NMEA0183 sentence into Signal K delta', async () => {
@@ -76,6 +78,143 @@ describe('Nmea0183ToSignalK', () => {
 
     await outputPromise
     expect(app.nmea0183Events).to.have.length(0)
+  })
+
+  it('emits the nmea0183 event only for sentences in nmea0183eventSentences', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test',
+      nmea0183eventSentences: ['VDM', 'GGA']
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(RMC_SENTENCE)
+    stream.write(AIS_SENTENCE)
+    stream.end()
+
+    await outputPromise
+    expect(app.nmea0183Events).to.deep.equal([AIS_SENTENCE])
+    expect(app.signalkEvents).to.deep.equal([AIS_SENTENCE])
+  })
+
+  it('emits no nmea0183 event for an empty nmea0183eventSentences', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test',
+      nmea0183eventSentences: []
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(RMC_SENTENCE)
+    stream.write(AIS_SENTENCE)
+    stream.end()
+
+    await outputPromise
+    expect(app.nmea0183Events).to.have.length(0)
+  })
+
+  it('still converts sentences whose nmea0183 event is suppressed', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test',
+      nmea0183eventSentences: ['VDM']
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(RMC_SENTENCE)
+    stream.end()
+
+    const results = await outputPromise
+    expect(results).to.have.length(1)
+    const delta = results[0] as {
+      updates: Array<{ values: Array<{ path: string; value: unknown }> }>
+    }
+    const position = delta.updates[0]!.values.find(
+      (v) => v.path === 'navigation.position'
+    )
+    expect(position?.value).to.deep.equal({ latitude: 60, longitude: 24 })
+    expect(app.nmea0183Events).to.have.length(0)
+  })
+
+  it('keeps emitting the input event for sentences whose nmea0183 event is suppressed', async () => {
+    const app = createNmeaApp()
+    const inputEvents: string[] = []
+    app.on('gps-in', (s: string) => inputEvents.push(s))
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test',
+      sentenceEvent: 'gps-in',
+      nmea0183eventSentences: ['VDM']
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(RMC_SENTENCE)
+    stream.end()
+
+    await outputPromise
+    expect(inputEvents).to.deep.equal([RMC_SENTENCE])
+    expect(app.nmea0183Events).to.have.length(0)
+  })
+
+  it('matches nmea0183eventSentences behind a tag block', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test',
+      nmea0183eventSentences: ['VDM']
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(TAG_BLOCK + RMC_SENTENCE)
+    stream.write(TAG_BLOCK + AIS_SENTENCE)
+    stream.end()
+
+    await outputPromise
+    expect(app.nmea0183Events).to.deep.equal([TAG_BLOCK + AIS_SENTENCE])
+  })
+
+  it('ignores whitespace and case in nmea0183eventSentences entries', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test',
+      nmea0183eventSentences: [' vdm ', '']
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(RMC_SENTENCE)
+    stream.write(AIS_SENTENCE)
+    stream.end()
+
+    await outputPromise
+    expect(app.nmea0183Events).to.deep.equal([AIS_SENTENCE])
+  })
+
+  it('skips non-string nmea0183eventSentences entries', async () => {
+    const app = createNmeaApp()
+    const stream = new Nmea0183ToSignalK({
+      app,
+      providerId: 'test',
+      nmea0183eventSentences: [42, 'VDM'] as unknown as string[]
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(RMC_SENTENCE)
+    stream.write(AIS_SENTENCE)
+    stream.end()
+
+    await outputPromise
+    expect(app.nmea0183Events).to.deep.equal([AIS_SENTENCE])
   })
 
   it('handles TimestampedChunk input', async () => {

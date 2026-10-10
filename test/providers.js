@@ -256,6 +256,32 @@ describe('Providers', (_) => {
     )
     saved.pipeElements[0].options.subOptions.talkerGroups.should.deep.equal({})
   })
+
+  it('Omitting nmea0183eventSentences via PUT removes the list', async function () {
+    const put = (options) =>
+      fetch(`${url}/skServer/providers/testProvider`, {
+        method: 'put',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: 'testProvider',
+          enabled: false,
+          type: 'simple',
+          options: { type: 'NMEA0183', device: '/dev/usb0', ...options }
+        })
+      })
+    const savedOptions = () =>
+      server.app.config.settings.pipedProviders.find(
+        (p) => p.id === 'testProvider'
+      ).pipeElements[0].options.subOptions
+
+    let res = await put({ nmea0183eventSentences: ['VDM', 'VDO'] })
+    res.status.should.equal(200)
+    savedOptions().nmea0183eventSentences.should.deep.equal(['VDM', 'VDO'])
+
+    res = await put({ suppress0183event: false })
+    res.status.should.equal(200)
+    savedOptions().should.not.have.property('nmea0183eventSentences')
+  })
 })
 
 function checkExistingProvider(existing) {
