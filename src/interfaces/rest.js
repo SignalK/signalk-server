@@ -20,10 +20,7 @@ const express = require('express')
 const { getMetadata } = require('@signalk/path-metadata')
 const ports = require('../ports')
 const { serveStaticFiles } = require('../staticfiles')
-const {
-  resolveDisplayUnits,
-  getDefaultCategory
-} = require('../unitpreferences')
+const { resolvePathDisplayUnits } = require('../unitpreferences')
 
 // An editor needs to tell a path-specific display unit override from the
 // preset's setting; nothing else does, so the answer comes only when asked for.
@@ -39,33 +36,18 @@ function enhanceMetadataResponse(
 ) {
   if (!metadata) return metadata
 
-  let storedDisplayUnits = metadata.displayUnits
-
-  if (!storedDisplayUnits?.category && signalkPath) {
-    const defaultCategory = getDefaultCategory(
+  try {
+    const enhanced = resolvePathDisplayUnits(
       signalkPath,
-      metadata.units,
-      username
+      metadata,
+      username,
+      includeOverride
     )
-    if (defaultCategory) {
-      storedDisplayUnits = { category: defaultCategory }
+    if (enhanced) {
+      metadata.displayUnits = enhanced
     }
-  }
-
-  if (storedDisplayUnits?.category) {
-    try {
-      const enhanced = resolveDisplayUnits(
-        storedDisplayUnits,
-        metadata.units,
-        username,
-        includeOverride
-      )
-      if (enhanced) {
-        metadata.displayUnits = enhanced
-      }
-    } catch (err) {
-      debug('Error enhancing metadata with displayUnits:', err)
-    }
+  } catch (err) {
+    debug('Error enhancing metadata with displayUnits:', err)
   }
 
   return metadata
