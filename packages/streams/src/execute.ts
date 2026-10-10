@@ -14,7 +14,7 @@ interface ExecuteOptions {
     setProviderError(id: string, msg: string): void
   }
   providerId: string
-  toChildProcess?: string
+  toChildProcess?: string | false
   restartOnClose?: boolean
   restartThrottleTime?: number
   createDebug?: CreateDebug
@@ -49,6 +49,15 @@ export default class Execute extends Transform {
   pipe<T extends NodeJS.WritableStream>(pipeTo: T): T {
     this.pipeTo = pipeTo as unknown as Writable
     this.startProcess(this.options.command)
+
+    // `false` disables stdin wiring entirely, for gateways that cannot
+    // transmit (the YDWG-02's receive-only UDP mode). Leaving the
+    // option undefined subscribes to the default event instead, so
+    // absence alone would still write to the child's stdin.
+    if (this.options.toChildProcess === false) {
+      this.debug('Receive-only provider: not wiring the child process stdin')
+      return super.pipe(pipeTo)
+    }
 
     const stdOutEvent = this.options.toChildProcess ?? 'toChildProcess'
     this.debug(
