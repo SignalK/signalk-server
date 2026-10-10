@@ -98,13 +98,22 @@ function makeApp(opts: AppEnvOptions = {}) {
     registeredHandler = handler
   }
   const emitted: Array<{ id: string; delta: Partial<Delta> }> = []
+  // The legacy sensors.gps offsets are kept apart so tests of positions and
+  // notifications need not account for them.
+  const offsetsEmitted: Array<{ id: string; delta: Partial<Delta> }> = []
   app.handleMessage = (id: string, delta: Partial<Delta>) => {
-    emitted.push({ id, delta })
+    const isOffsets = (delta.updates ?? []).some((u) =>
+      ((u as { values?: Array<{ path: string }> }).values ?? []).some((v) =>
+        v.path.startsWith('sensors.gps.')
+      )
+    )
+    ;(isOffsets ? offsetsEmitted : emitted).push({ id, delta })
   }
   return {
     app,
     bus,
     emitted,
+    offsetsEmitted,
     process(delta: Delta): Delta {
       // Mirror the chain's invocation pattern: handler calls next(delta).
       // next() in the real chain forwards to the next handler; here we
@@ -1013,5 +1022,237 @@ describe('GnssOffsetCorrector heading-unavailable notification', function () {
 
     process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
     expect(notifs(emitted)).to.have.length(0)
+  })
+})
+
+describe('GnssOffsetCorrector legacy GPS offsets', function () {
+  // The offsets are published from a setImmediate callback.
+  const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+  const GNSS1 = {
+    sensorId: 'gnss1',
+    $source: 'n2k.0.5',
+    fromBow: 18,
+    fromCenter: -4
+  }
+  const GNSS2 = {
+    sensorId: 'gnss2',
+    $source: 'n2k.0.6',
+    fromBow: 15,
+    fromCenter: 3
+  }
+  const LENGTH = { 'design.length.value': { overall: 20 } }
+
+  const offsets = (emitted: Array<{ id: string; delta: Partial<Delta> }>) =>
+    emitted
+      .flatMap((e) => e.delta.updates ?? [])
+      .filter((u) =>
+        ((u as { values?: Array<{ path: string }> }).values ?? []).some(
+          (v) => v.path === 'sensors.gps.fromBow'
+        )
+      )
+      .map((u) => {
+        const values = (
+          u as { values: Array<{ path: string; value: number | null }> }
+        ).values
+        const get = (path: string) => values.find((v) => v.path === path)?.value
+        return {
+          $source: (u as { $source?: string }).$source,
+          fromBow: get('sensors.gps.fromBow'),
+          fromCenter: get('sensors.gps.fromCenter')
+        }
+      })
+
+  async function startWith(opts: AppEnvOptions) {
+    const env = makeApp(opts)
+    const corrector = new GnssOffsetCorrector(env.app)
+    await corrector.start()
+    await flush()
+    return env
+  }
+
+  it("points at the CCRP in 'replace' mode", async function () {
+    const { offsetsEmitted: emitted } = await startWith({
+      gnssSensors: [GNSS1, GNSS2],
+      gnssCorrection: 'replace',
+      selfPaths: LENGTH
+    })
+    expect(offsets(emitted)).to.deep.equal([
+      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+    ])
+  })
+
+  it("uses the single antenna's offsets when correction is off", async function () {
+    const { offsetsEmitted: emitted } = await startWith({
+      gnssSensors: [GNSS1],
+      selfPaths: LENGTH
+    })
+    expect(offsets(emitted)).to.deep.equal([
+      { $source: 'defaults', fromBow: 18, fromCenter: -4 }
+    ])
+  })
+
+  it("uses the single antenna's offsets in 'both' mode", async function () {
+    const { offsetsEmitted: emitted } = await startWith({
+      gnssSensors: [GNSS1],
+      gnssCorrection: 'both',
+      selfPaths: LENGTH
+    })
+    expect(offsets(emitted)).to.deep.equal([
+      { $source: 'defaults', fromBow: 18, fromCenter: -4 }
+    ])
+  })
+
+  it('withdraws stale offsets when several antennas may publish', async function () {
+    const { offsetsEmitted: emitted } = await startWith({
+      gnssSensors: [GNSS1, GNSS2],
+      gnssCorrection: 'both',
+      selfPaths: {
+        ...LENGTH,
+        'sensors.gps.fromBow.value': 19,
+        'sensors.gps.fromCenter.value': -4
+      }
+    })
+    expect(offsets(emitted)).to.deep.equal([
+      { $source: 'defaults', fromBow: null, fromCenter: null }
+    ])
+  })
+
+  it('publishes nothing when several antennas may publish and no offsets are set', async function () {
+    const { offsetsEmitted: emitted } = await startWith({
+      gnssSensors: [GNSS1, GNSS2],
+      selfPaths: LENGTH
+    })
+    expect(offsets(emitted)).to.have.length(0)
+  })
+
+  it("treats 'replace' without vessel length like 'off'", async function () {
+    const { offsetsEmitted: emitted } = await startWith({
+      gnssSensors: [GNSS1],
+      gnssCorrection: 'replace'
+    })
+    expect(offsets(emitted)).to.deep.equal([
+      { $source: 'defaults', fromBow: 18, fromCenter: -4 }
+    ])
+  })
+
+  it('leaves the base data alone without gnssSensors rows', async function () {
+    const { offsetsEmitted: emitted } = await startWith({
+      gnssCorrection: 'replace',
+      selfPaths: {
+        ...LENGTH,
+        'sensors.gps.fromBow.value': 19,
+        'sensors.gps.fromCenter.value': -4
+      }
+    })
+    expect(offsets(emitted)).to.have.length(0)
+  })
+
+  it('publishes nothing when the data model already holds the reference point', async function () {
+    const { offsetsEmitted: emitted } = await startWith({
+      gnssSensors: [GNSS1, GNSS2],
+      gnssCorrection: 'replace',
+      selfPaths: {
+        ...LENGTH,
+        'sensors.gps.fromBow.value': 10,
+        'sensors.gps.fromCenter.value': 0
+      }
+    })
+    expect(offsets(emitted)).to.have.length(0)
+  })
+
+  it('follows heading loss and return in replace mode', async function () {
+    const {
+      app,
+      process,
+      offsetsEmitted: emitted
+    } = await startWith({
+      gnssSensors: [GNSS1, GNSS2],
+      gnssCorrection: 'replace',
+      selfPaths: LENGTH
+    })
+    expect(offsets(emitted)).to.deep.equal([
+      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+    ])
+    // The mock model does not apply what is published; mirror it.
+    app.signalk.self.sensors = {
+      gps: { fromBow: { value: 10 }, fromCenter: { value: 0 } }
+    }
+
+    process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
+    await flush()
+    expect(offsets(emitted).slice(1)).to.deep.equal([
+      { $source: 'defaults', fromBow: null, fromCenter: null }
+    ])
+    app.signalk.self.sensors.gps = {
+      fromBow: { value: null },
+      fromCenter: { value: null }
+    }
+
+    app.signalk.self.navigation = { headingTrue: { value: 0 } }
+    process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
+    await flush()
+    expect(offsets(emitted).slice(2)).to.deep.equal([
+      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+    ])
+  })
+
+  it("falls back to the single antenna's offsets when heading is lost", async function () {
+    const { process, offsetsEmitted: emitted } = await startWith({
+      gnssSensors: [GNSS1],
+      gnssCorrection: 'replace',
+      selfPaths: LENGTH
+    })
+    process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
+    await flush()
+    expect(offsets(emitted)).to.deep.equal([
+      { $source: 'defaults', fromBow: 10, fromCenter: 0 },
+      { $source: 'defaults', fromBow: 18, fromCenter: -4 }
+    ])
+  })
+
+  it('restores the offsets after the base data is re-sent', async function () {
+    const {
+      app,
+      bus,
+      offsetsEmitted: emitted
+    } = await startWith({
+      gnssSensors: [GNSS1, GNSS2],
+      gnssCorrection: 'replace',
+      selfPaths: {
+        ...LENGTH,
+        'sensors.gps.fromBow.value': 10,
+        'sensors.gps.fromCenter.value': 0
+      }
+    })
+    bus.emit('serverevent', { type: 'VESSEL_INFO' })
+    // sendBaseDeltas runs right after the event and brings back the
+    // values saved before multi-GNSS was configured.
+    app.signalk.self.sensors.gps = {
+      fromBow: { value: 19 },
+      fromCenter: { value: -4 }
+    }
+    await flush()
+    expect(offsets(emitted)).to.deep.equal([
+      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+    ])
+  })
+
+  it('follows a GNSS configuration change', async function () {
+    const {
+      app,
+      bus,
+      offsetsEmitted: emitted
+    } = await startWith({
+      gnssSensors: [GNSS1],
+      selfPaths: LENGTH
+    })
+    app.config.settings.gnssCorrection = 'replace'
+    bus.emit('serverevent', { type: 'GNSS_SENSORS' })
+    await flush()
+    expect(offsets(emitted)).to.deep.equal([
+      { $source: 'defaults', fromBow: 18, fromCenter: -4 },
+      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+    ])
   })
 })
