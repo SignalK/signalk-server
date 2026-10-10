@@ -129,11 +129,19 @@ jobs:
       - name: Checkout plugin
         uses: actions/checkout@v7
 
+      # setup-node looks for a lock file only at the repository root unless
+      # cache-dependency-path names one, so point it at the plugin's own lock
+      # file and at a root one, which is where npm workspaces keep theirs.
+      # Caching is on when one of those two exists, not when any lock file
+      # anywhere in the tree does.
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
-          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+          cache: ${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory), 'package-lock.json') != '' && 'npm' || '' }}
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/package-lock.json
+            package-lock.json
 
       # npm 10.9.x crashes with "Cannot read properties of null (reading
       # 'edgesOut')" while resolving an optional peer that is not being
@@ -1680,11 +1688,15 @@ jobs:
       - name: Checkout plugin
         uses: actions/checkout@v7
 
+      # Same lock file lookup as the desktop job.
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
-          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+          cache: ${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory), 'package-lock.json') != '' && 'npm' || '' }}
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/package-lock.json
+            package-lock.json
 
       # npm 10.9.x crashes with "Cannot read properties of null (reading
       # 'edgesOut')" while resolving an optional peer that is not being
