@@ -3,9 +3,13 @@ ARG BASE_IMAGE="24.04-24.x"
 
 FROM ${REGISTRY}/signalk/signalk-server-base:latest-${BASE_IMAGE} AS base
 
-# Base images published before pnpm was added to them lack it, and the App
-# Store needs it at runtime too.
+# Base images published before pnpm and tini were added to them lack them; the
+# App Store needs pnpm at runtime too.
 RUN command -v pnpm >/dev/null || (npm install -g pnpm@11 && npm cache clean --force)
+RUN command -v tini >/dev/null \
+  || (apt-get update \
+    && apt-get -y install --no-install-recommends tini \
+    && rm -rf /var/lib/apt/lists/*)
 
 USER node
 RUN mkdir -p /home/node/.signalk/ \
@@ -92,4 +96,7 @@ COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 EXPOSE 3000
 ENV SKIP_ADMINUI_VERSION_CHECK=true
 WORKDIR /home/node/.signalk
-ENTRYPOINT ["/home/node/signalk/startup.sh"]
+# tini as PID 1 forwards the SIGTERM of "docker stop" to the server; node as
+# PID 1 ignores it and is killed after the grace period. -s keeps tini working
+# without a warning when "docker run --init" already provides a PID 1.
+ENTRYPOINT ["tini", "-s", "--", "/home/node/signalk/startup.sh"]
