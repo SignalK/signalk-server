@@ -289,6 +289,7 @@ const KNOWN_PARAMS = new Set([
   'to',
   'duration',
   'bbox',
+  'clip',
   'resolution',
   'maxPoints',
   'simplify',
