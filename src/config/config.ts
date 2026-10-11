@@ -443,7 +443,7 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
 }
 
 // Establish what the config directory path is.
-function getConfigDirectory({ argv, config, env }: any) {
+export function getConfigDirectory({ argv, config, env }: any) {
   // Possible paths in order of priority.
   const configPaths = [
     env.SIGNALK_NODE_CONDFIG_DIR,
@@ -468,13 +468,19 @@ function setConfigDirectory(app: ConfigApp) {
       fs.mkdirSync(app.config.configPath)
       debug(`configDir Created: ${app.config.configPath}`)
     }
-    const configPackage = path.join(app.config.configPath, 'package.json')
-    if (!fs.existsSync(configPackage)) {
-      fs.writeFileSync(
-        configPackage,
-        JSON.stringify(pluginsPackageJsonTemplate, null, 2)
-      )
-    }
+    ensureConfigPackageJson(app.config.configPath)
+  }
+}
+
+// The package.json that records the plugins and webapps installed in a
+// configuration directory
+export function ensureConfigPackageJson(configPath: string) {
+  const configPackage = path.join(configPath, 'package.json')
+  if (!fs.existsSync(configPackage)) {
+    fs.writeFileSync(
+      configPackage,
+      JSON.stringify(pluginsPackageJsonTemplate, null, 2)
+    )
   }
 }
 
@@ -810,6 +816,7 @@ const pluginsPackageJsonTemplate = {
 module.exports = {
   load,
   getConfigDirectory,
+  ensureConfigPackageJson,
   writeSettingsFile,
   writeDefaultsFile,
   readDefaultsFile,

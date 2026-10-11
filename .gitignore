@@ -60,6 +60,8 @@ docs/built
 jco-output/
 obj/
 bin/
+# but not the server's commands
+!/bin/
 Debug/
 Release/
 *.ps1

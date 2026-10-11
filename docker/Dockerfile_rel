@@ -85,6 +85,9 @@ RUN case "$EDITION" in \
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
+# The server's commands, such as signalk-pnpm for installing plugins from a
+# shell or a derived image
+ENV PATH="/home/node/signalk/node_modules/.bin:${PATH}"
 WORKDIR /home/node/.signalk
 # tini as PID 1 forwards the signals of "docker stop" to the server, also
 # before the server has installed its handlers, and reaps the orphaned
