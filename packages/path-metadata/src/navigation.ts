@@ -8,6 +8,25 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/navigation/lights': {
     description: 'Current state of the vessels navigation lights'
   },
+  '/vessels/*/navigation/course.arrivalCircle': {
+    description: 'Radius of circle centered around a destination point',
+    units: 'm'
+  },
+  '/vessels/*/navigation/course.startTime': {
+    description: 'The time this course was activated'
+  },
+  '/vessels/*/navigation/course.targetArrivalTime': {
+    description: 'The desired time at which to arrive at the destination point'
+  },
+  '/vessels/*/navigation/course.activeRoute': {
+    description: 'Details of the presently active route'
+  },
+  '/vessels/*/navigation/course.nextPoint': {
+    description: 'The point on earth the vessel is presently navigating towards'
+  },
+  '/vessels/*/navigation/course.previousPoint': {
+    description: 'The point on earth the vessel is presently navigating from'
+  },
   '/vessels/*/navigation/courseOverGroundMagnetic': {
     description: 'Course over ground (magnetic)',
     units: 'rad'
