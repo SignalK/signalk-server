@@ -60,7 +60,7 @@ If your plugin provides an API you should consider providing an OpenApi descript
 To get started developing your plugin you will need the following:
 
 - Signal K server instance on your device _(clone of GIT repository or docker instance)_
-- NodeJs version 22 or later with npm, and pnpm 11 or later (`npm install -g pnpm@11`)
+- NodeJs version 22.13 or later with npm
 - SignalK server configuration folder. _(Created when Signal K server is started. default location is `$HOME/.signalk`)_.
 
 ---

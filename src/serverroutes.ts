@@ -57,7 +57,7 @@ import { createDebug, listKnownDebugs } from './debug'
 import { PluginManager } from './interfaces/plugins'
 import {
   getAuthor,
-  getPnpmInfo,
+  bundledPnpmVersion,
   Package,
   PREVIOUS_MODULES_BACKUP,
   DISCARDED_MODULES,
@@ -2191,19 +2191,15 @@ module.exports = function (
     }
   })()
 
-  app.get(
-    `${SERVERROUTESPREFIX}/nodeInfo`,
-    async (_req: Request, res: Response) => {
-      const pnpm = await getPnpmInfo()
-      res.json({
-        nodeVersion: process.version,
-        npmVersion,
-        pnpmVersion: pnpm?.version,
-        recommendedNodeVersion,
-        testedNodeVersions
-      })
-    }
-  )
+  app.get(`${SERVERROUTESPREFIX}/nodeInfo`, (_req: Request, res: Response) => {
+    res.json({
+      nodeVersion: process.version,
+      npmVersion,
+      pnpmVersion: bundledPnpmVersion(),
+      recommendedNodeVersion,
+      testedNodeVersions
+    })
+  })
 
   app.securityStrategy.addAdminWriteMiddleware(
     `${SERVERROUTESPREFIX}/rememberDebug`

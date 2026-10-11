@@ -3,8 +3,9 @@ ARG BASE_IMAGE="24.04-24.x"
 
 FROM ${REGISTRY}/signalk/signalk-server-base:latest-${BASE_IMAGE} AS base
 
-# Base images published before pnpm was added to them lack it, and the App
-# Store needs it at runtime too.
+# Base images published before pnpm was added to them lack it. The image
+# installs the server with pnpm; the App Store uses the pnpm that comes with
+# the server.
 RUN command -v pnpm >/dev/null || (npm install -g pnpm@11 && npm cache clean --force)
 
 USER node
