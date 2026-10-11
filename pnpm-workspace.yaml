@@ -31,8 +31,9 @@ allowBuilds:
   # Selects a React Native storage backend
   storage-engine: false
 
-# Packages published by the Signal K and Canboat projects are released and
-# adopted together, so they are not held back by minimumReleaseAge.
-minimumReleaseAgeExclude:
-  - '@signalk/*'
-  - '@canboat/*'
+# Versions install as soon as they are published, as in the App Store. What
+# CI, release and image builds install is the committed lockfile, which pull
+# requests review; pnpm's one-day release age gate, which it also applies to a
+# frozen lockfile, would only hold back a release or a dependency update that
+# picks up a version published the same day.
+minimumReleaseAge: 0
