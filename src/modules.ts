@@ -669,9 +669,11 @@ function runConfigDirPnpm(
 ) {
   const pnpmCommand =
     command === 'remove' ? 'remove' : packageString ? 'add' : 'install'
+  // npm allows a name to start with a hyphen, so the package follows -- to
+  // keep pnpm from ever reading it as an option
   queueConfigDirPnpm(
     configPath,
-    packageString ? [pnpmCommand, packageString] : [pnpmCommand],
+    packageString ? [pnpmCommand, '--', packageString] : [pnpmCommand],
     onData,
     onErr,
     onClose
