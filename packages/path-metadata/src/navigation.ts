@@ -8,24 +8,188 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/navigation/lights': {
     description: 'Current state of the vessels navigation lights'
   },
-  '/vessels/*/navigation/course.arrivalCircle': {
-    description: 'Radius of circle centered around a destination point',
+  '/vessels/*/navigation/course/arrivalCircle': {
+    description: 'Radius of arrival zone in meters',
+    type: 'number',
     units: 'm'
   },
-  '/vessels/*/navigation/course.startTime': {
-    description: 'The time this course was activated'
+  '/vessels/*/navigation/course/startTime': {
+    description: 'ISO 8601 timestamp when the course was set'
   },
-  '/vessels/*/navigation/course.targetArrivalTime': {
-    description: 'The desired time at which to arrive at the destination point'
+  '/vessels/*/navigation/course/targetArrivalTime': {
+    description:
+      'ISO 8601 timestamp of the targeted time to arrive at the destination point (used to calculate `calcValues/targetSpeed`)'
   },
-  '/vessels/*/navigation/course.activeRoute': {
-    description: 'Details of the presently active route'
+  '/vessels/*/navigation/course/activeRoute': {
+    description: 'Details of the active route',
+    properties: {
+      href: {
+        description:
+          'Reference to a related route resource. A pointer to the resource UUID',
+        type: 'string',
+        example: '/resources/routes/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+      },
+      name: {
+        description: 'The name of this route',
+        type: 'string'
+      },
+      pointIndex: {
+        description:
+          'Zero (0) based index of the point in the route to set as the destination',
+        type: 'number'
+      },
+      pointTotal: {
+        description: 'Number of points in the route',
+        type: 'number'
+      },
+      reverse: {
+        description:
+          'Set to true when navigating the route points in reverse order',
+        type: 'boolean'
+      }
+    }
   },
-  '/vessels/*/navigation/course.nextPoint': {
-    description: 'The point on earth the vessel is presently navigating towards'
+  '/vessels/*/navigation/course/nextPoint': {
+    description:
+      'The point on earth the vessel is presently navigating towards',
+    properties: {
+      type: {
+        description: 'Type of course point',
+        type: 'string',
+        enum: ['VesselPosition', 'RoutePoint', 'Location']
+      },
+      href: {
+        description:
+          'Reference to a related waypoint resource. A pointer to the resource UUID',
+        type: 'string',
+        example: '/resources/waypoints/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+      },
+      name: {
+        description: 'The name of this point',
+        type: 'string'
+      },
+      position: {
+        description: 'The position of previousPoint in two dimensions'
+      }
+    }
   },
-  '/vessels/*/navigation/course.previousPoint': {
-    description: 'The point on earth the vessel is presently navigating from'
+  '/vessels/*/navigation/course/previousPoint': {
+    description: 'The point on earth the vessel is presently navigating from',
+    properties: {
+      type: {
+        description: 'Type of course point',
+        type: 'string',
+        enum: ['VesselPosition', 'RoutePoint', 'Location']
+      },
+      href: {
+        description:
+          'Reference to a related waypoint resource. A pointer to the resource UUID',
+        type: 'string',
+        example: '/resources/waypoints/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+      },
+      name: {
+        description: 'The name of this point',
+        type: 'string'
+      },
+      position: {
+        description: 'The position of previousPoint in two dimensions'
+      }
+    }
+  },
+  '/vessels/*/navigation/course/calcValues/': {
+    description: 'Calculated course data values'
+  },
+  '/vessels/*/navigation/course/calcValues/calcMethod': {
+    description: 'Calculated course data values',
+    type: 'string',
+    enum: ['GreatCircle', 'Rhumbline']
+  },
+  '/vessels/*/navigation/course/calcValues/crossTrackError': {
+    description:
+      "The distance from the vessel's present position to the closest point on a line (track) between previousPoint and nextPoint. A negative number indicates that the vessel is currently to the left of this line (and thus must steer right to compensate), a positive number means the vessel is to the right of the line (steer left to compensate).",
+    type: 'number',
+    units: 'm'
+  },
+  '/vessels/*/navigation/course/calcValues/bearingTrackTrue': {
+    description:
+      'The bearing of a line between previousPoint and nextPoint, relative to true north.',
+    type: 'number',
+    units: 'rad'
+  },
+  '/vessels/*/navigation/course/calcValues/bearingTrackMagnetic': {
+    description:
+      'The bearing of a line between previousPoint and nextPoint, relative to magnetic north.',
+    type: 'number',
+    units: 'rad'
+  },
+  '/vessels/*/navigation/course/calcValues/estimatedTimeOfArrival': {
+    description: 'The estimated time of arrival at the nextPoint position'
+  },
+  '/vessels/*/navigation/course/calcValues/distance': {
+    description:
+      'The distance between the current vessel position and nextPoint position',
+    type: 'number',
+    units: 'm'
+  },
+  '/vessels/*/navigation/course/calcValues/bearingTrue': {
+    description:
+      'The bearing of a line between the current vessel position and nextPoint, relative to true north',
+    type: 'number',
+    units: 'rad'
+  },
+  '/vessels/*/navigation/course/calcValues/bearingMagnetic': {
+    description:
+      'The bearing of a line between the current vessel position and nextPoint, relative to magnetic north',
+    type: 'number',
+    units: 'rad'
+  },
+  '/vessels/*/navigation/course/calcValues/velocityMadeGood': {
+    description: 'The velocity component of the vessel towards the nextPoint',
+    type: 'number',
+    units: 'm/s'
+  },
+  '/vessels/*/navigation/course/calcValues/timeToGo': {
+    description:
+      'Time to reach nextPoint perpendicular with current speed and direction',
+    type: 'number',
+    units: 's'
+  },
+  '/vessels/*/navigation/course/calcValues/targetSpeed': {
+    description:
+      'The average velocity required to reach the destination at the targetArrivalTime',
+    type: 'number',
+    units: 'm/s'
+  },
+  '/vessels/*/navigation/course/calcValues/previousPoint': {
+    description: 'Calculations relative to previousPoint position',
+    properties: {
+      distance: {
+        description:
+          "The distance in meters between previousPoint and the vessel's present position",
+        type: 'number',
+        units: 'm'
+      }
+    }
+  },
+  '/vessels/*/navigation/course/calcValues/route': {
+    description: 'Calculations relative to previousPoint position',
+    properties: {
+      distance: {
+        description:
+          'The distance along the route from the current vessel position to the last point',
+        type: 'number',
+        units: 'm'
+      },
+      timeToGo: {
+        description:
+          'ime to reach perpendicular of last point in route with current speed and direction',
+        type: 'number',
+        units: 's'
+      },
+      estimatedTimeOfArrival: {
+        description: 'The estimated time of arrival at the last point in route'
+      }
+    }
   },
   '/vessels/*/navigation/courseOverGroundMagnetic': {
     description: 'Course over ground (magnetic)',
