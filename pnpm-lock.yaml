@@ -168,6 +168,9 @@ importers:
       path-to-regexp:
         specifier: ^0.1.12
         version: 0.1.13
+      pnpm:
+        specifier: ^11.28.5
+        version: 11.28.5
       primus:
         specifier: ^7.3.5
         version: 7.3.5
@@ -4761,6 +4764,11 @@ packages:
   pify@4.0.1:
     resolution: {integrity: sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g==}
     engines: {node: '>=6'}
+
+  pnpm@11.28.5:
+    resolution: {integrity: sha512-SEVj0wtMKtJ8tIqpT/KzAtvOvI/2vyiBbCWJiG4UbOf3bzVPO8GkOOb16XaMMCqgpvet2CMpA81M+BQmy8FNng==}
+    engines: {node: '>=22.13'}
+    hasBin: true
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -10932,6 +10940,8 @@ snapshots:
 
   pify@4.0.1:
     optional: true
+
+  pnpm@11.28.5: {}
 
   possible-typed-array-names@1.1.0: {}
 

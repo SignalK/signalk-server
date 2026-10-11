@@ -1,7 +1,9 @@
 import { expect } from 'chai'
+import { EventEmitter } from 'events'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { getBundledPnpm } from '../src/modules'
 import { freeport } from './ts-servertestutilities'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -28,52 +30,77 @@ interface AppStoreResponse {
   installing: AppInfo[]
 }
 
-// The install path shells out to `pnpm`. Putting a stub earlier on PATH keeps
-// the whole server pipeline real — HTTP endpoint, install state machine,
-// APP_STORE_CHANGED refresh — while the "install" itself is just a local
-// package.json rewrite, so the test never touches the network.
-function writePnpmStub(binDir: string, configDir: string) {
-  fs.mkdirSync(binDir, { recursive: true })
-  const stub = path.join(binDir, 'pnpm')
+// The App Store runs the pnpm bundled with the server through the spawn and
+// execFile of child_process. Replacing them for that pnpm on the mutable
+// CommonJS module object keeps the whole server pipeline real — HTTP
+// endpoint, install state machine, APP_STORE_CHANGED refresh — while the
+// "install" itself is just a local package.json rewrite, so the test never
+// touches the network.
+function fakeBundledPnpm(configDir: string): () => void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const childProcess = require('child_process')
+  const { spawn, execFile } = childProcess
+  const pnpmBin = getBundledPnpm().bin
+  const isPnpm = (command: string, args: string[]) =>
+    command === process.execPath && args[0] === pnpmBin
   const moduleDir = path.join(configDir, 'node_modules', PLUGIN_NAME)
-  fs.writeFileSync(
-    stub,
-    `#!/bin/sh
-# The server probes the version and the store before the first install.
-if [ "$1" = "--version" ]; then
-  echo "11.0.0"
-  exit 0
-fi
-if [ "$1" = "store" ]; then
-  echo "$HOME/.local/share/pnpm/store/v11"
-  exit 0
-fi
-# Only an actual install may touch the plugin on disk.
-for arg in "$@"; do
-  if [ "$arg" = "add" ]; then
-    # While the block file exists the install stays in flight, which lets a
-    # test observe a second install sitting in the queue behind this one.
-    while [ -f ${JSON.stringify(blockFilePath(binDir))} ]; do
-      sleep 0.05
-    done
-    # Emulate "pnpm add <name>@<version>" by
-    # bumping the on-disk package.json to the requested version.
-    cat > ${JSON.stringify(path.join(moduleDir, 'package.json'))} <<'EOF'
-${JSON.stringify(pluginPackageJson(AVAILABLE_VERSION), null, 2)}
-EOF
-    echo "added 1 package"
-    exit 0
-  fi
-done
-echo "0.0.0-pnpm-stub"
-exit 0
-`
-  )
-  fs.chmodSync(stub, 0o755)
+
+  childProcess.execFile = (
+    command: string,
+    args: string[],
+    ...rest: unknown[]
+  ) => {
+    if (!isPnpm(command, args)) {
+      return execFile(command, args, ...rest)
+    }
+    // The server asks for the store before the first install
+    const callback = rest.at(-1) as (err: null, stdout: string) => void
+    callback(null, path.join(configDir, '.pnpm-store', 'v11') + '\n')
+  }
+  childProcess.spawn = (
+    command: string,
+    args: string[],
+    ...rest: unknown[]
+  ) => {
+    if (!isPnpm(command, args)) {
+      return spawn(command, args, ...rest)
+    }
+    const child = Object.assign(new EventEmitter(), {
+      stdout: new EventEmitter(),
+      stderr: new EventEmitter()
+    })
+    const run = async () => {
+      // The server attaches its listeners once spawn has returned
+      await new Promise((resolve) => setImmediate(resolve))
+      // Only an actual install may touch the plugin on disk
+      if (args.includes('add')) {
+        // While the block file exists the install stays in flight, which
+        // lets a test observe a second install sitting in the queue behind
+        // this one.
+        while (fs.existsSync(blockFilePath(configDir))) {
+          await new Promise((resolve) => setTimeout(resolve, 50))
+        }
+        // Emulate "pnpm add <name>@<version>" by bumping the on-disk
+        // package.json to the requested version.
+        fs.writeFileSync(
+          path.join(moduleDir, 'package.json'),
+          JSON.stringify(pluginPackageJson(AVAILABLE_VERSION), null, 2)
+        )
+        child.stdout.emit('data', Buffer.from('added 1 package\n'))
+      }
+      child.emit('close', 0)
+    }
+    run()
+    return child
+  }
+  return () => {
+    childProcess.spawn = spawn
+    childProcess.execFile = execFile
+  }
 }
 
-function blockFilePath(binDir: string) {
-  return path.join(binDir, 'block-install')
+function blockFilePath(configDir: string) {
+  return path.join(configDir, 'block-install')
 }
 
 function pluginPackageJson(version: string) {
@@ -90,8 +117,11 @@ function pluginPackageJson(version: string) {
 function seedConfigDir(configDir: string) {
   const moduleDir = path.join(configDir, 'node_modules', PLUGIN_NAME)
   fs.mkdirSync(moduleDir, { recursive: true })
-  // Marks node_modules as managed by pnpm rather than created by npm
-  fs.writeFileSync(path.join(configDir, 'node_modules', '.modules.yaml'), '')
+  // Marks node_modules as managed by the bundled pnpm and its store
+  fs.writeFileSync(
+    path.join(configDir, 'node_modules', '.modules.yaml'),
+    JSON.stringify({ storeDir: path.join(configDir, '.pnpm-store', 'v11') })
+  )
   fs.writeFileSync(
     path.join(configDir, 'package.json'),
     JSON.stringify(
@@ -194,28 +224,20 @@ async function waitForEntry(
 }
 
 describe('appstore reports the just-installed version (issue #2791)', function () {
-  // Real pnpm-stub subprocess plus a full server start.
+  // A full server start.
   this.timeout(SUITE_TIMEOUT_MS)
 
   let stop: (() => Promise<unknown>) | undefined
   let restoreFetch: (() => void) | undefined
+  let restorePnpm: (() => void) | undefined
   let configDir: string
-  let binDir: string
   let host: string
-  let originalPath: string | undefined
 
   before(async function () {
-    if (process.platform === 'win32') {
-      this.skip()
-    }
     configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-pending-version-'))
     seedConfigDir(configDir)
 
-    binDir = path.join(configDir, 'bin')
-    writePnpmStub(binDir, configDir)
-    originalPath = process.env.PATH
-    process.env.PATH = `${binDir}${path.delimiter}${process.env.PATH}`
-
+    restorePnpm = fakeBundledPnpm(configDir)
     restoreFetch = stubNpmSearch()
 
     const port = await freeport()
@@ -233,7 +255,7 @@ describe('appstore reports the just-installed version (issue #2791)', function (
   after(async function () {
     if (stop) await stop()
     if (restoreFetch) restoreFetch()
-    if (originalPath !== undefined) process.env.PATH = originalPath
+    if (restorePnpm) restorePnpm()
     if (configDir) fs.rmSync(configDir, { recursive: true, force: true })
   })
 
@@ -296,7 +318,7 @@ describe('appstore reports the just-installed version (issue #2791)', function (
 
   it('reports the target version of an install still sitting in the queue', async function () {
     // Hold the first install open so the second one has to queue behind it.
-    fs.writeFileSync(blockFilePath(binDir), '')
+    fs.writeFileSync(blockFilePath(configDir), '')
     try {
       const first = await fetch(
         `${host}/skServer/appstore/install/${PLUGIN_NAME}/${AVAILABLE_VERSION}`,
@@ -319,7 +341,7 @@ describe('appstore reports the just-installed version (issue #2791)', function (
       const queued = await waitForEntry(host, (e) => !!e.isWaiting, 'queueing')
       expect(queued.pendingVersion).to.equal(AVAILABLE_VERSION)
     } finally {
-      fs.rmSync(blockFilePath(binDir), { force: true })
+      fs.rmSync(blockFilePath(configDir), { force: true })
     }
 
     await waitForEntry(host, (e) => !e.isInstalling && !e.isWaiting, 'install')

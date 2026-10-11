@@ -21,7 +21,7 @@ import _ from 'lodash'
 import path from 'path'
 import semver, { SemVer } from 'semver'
 import { atomicWriteFileSync } from './atomicWrite'
-import { findBundledPackages } from './bundled-packages'
+import { findBundledPackages, findPackageLocation } from './bundled-packages'
 import { Config } from './config/config'
 import { createDebug } from './debug'
 import { pluginConfigPath, pluginDataDir } from './plugin-paths'
@@ -364,10 +364,8 @@ export function restoreModules(
 
 type ModuleCommand = 'install' | 'update' | 'remove'
 
-const PNPM_COMMAND = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
-const PNPM_MINIMUM_MAJOR = 11
 const PNPM_MISSING_MESSAGE =
-  'pnpm is required for installing plugins and webapps. Install it with: npm install -g pnpm@11'
+  'The pnpm that ships with the server is missing, so plugins and webapps cannot be installed. Reinstall signalk-server to restore it.'
 // pnpm writes this into every node_modules directory it manages
 const PNPM_MODULES_MARKER = '.modules.yaml'
 export const PREVIOUS_MODULES_BACKUP = 'node_modules.previous'
@@ -461,44 +459,68 @@ function runServerNpm(
   attachHandlers(npm, onData, onErr, onClose)
 }
 
-export interface PnpmInfo {
+export interface BundledPnpm {
   version: string
-  storeDir?: string
+  /** The script that starts pnpm */
+  bin: string
+  /** The Node.js versions that this pnpm runs on */
+  node: string
 }
 
-let pnpmInfo: Promise<PnpmInfo | undefined> | undefined
+let bundledPnpm: BundledPnpm | undefined
 
-// The pnpm on PATH and its store do not change while the server runs, so they
-// are probed once. A failed probe is retried so that installing pnpm after the
-// server started takes effect without a restart.
-export function getPnpmInfo(): Promise<PnpmInfo | undefined> {
-  if (!pnpmInfo) {
-    pnpmInfo = probePnpm().then((info) => {
-      if (!info) {
-        pnpmInfo = undefined
-      }
-      return info
-    })
+// Plugins are installed with the pnpm that ships with the server, run by the
+// server's own Node.js: the App Store needs no pnpm on PATH, and installs with
+// the pnpm version that the server was released with.
+export function getBundledPnpm(): BundledPnpm {
+  if (!bundledPnpm) {
+    const location = findPackageLocation(__dirname, 'pnpm')
+    if (!location) {
+      throw new Error(PNPM_MISSING_MESSAGE)
+    }
+    const dir = path.join(location, 'pnpm')
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
+    )
+    const bin =
+      typeof manifest.bin === 'string' ? manifest.bin : manifest.bin.pnpm
+    bundledPnpm = {
+      version: manifest.version,
+      bin: path.join(dir, bin),
+      node: manifest.engines?.node ?? '*'
+    }
   }
-  return pnpmInfo
+  return bundledPnpm
 }
 
-async function probePnpm(): Promise<PnpmInfo | undefined> {
+export function bundledPnpmVersion(): string | undefined {
   try {
-    const version = await pnpmOutput(['--version'])
-    const storeDir = await pnpmOutput(['store', 'path']).catch(() => undefined)
-    return { version, storeDir }
+    return getBundledPnpm().version
   } catch {
     return undefined
   }
 }
 
+let storeDir: Promise<string | undefined> | undefined
+
+// The store does not change while the server runs, so it is probed once. A
+// failed probe is retried.
+function getStoreDir(): Promise<string | undefined> {
+  if (!storeDir) {
+    storeDir = pnpmOutput(['store', 'path']).catch(() => {
+      storeDir = undefined
+      return undefined
+    })
+  }
+  return storeDir
+}
+
 function pnpmOutput(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
-      PNPM_COMMAND,
-      args,
-      { shell: process.platform === 'win32' },
+      process.execPath,
+      [getBundledPnpm().bin, ...args],
+      {},
       (err, stdout) => (err ? reject(err) : resolve(stdout.trim()))
     )
   })
@@ -540,20 +562,16 @@ async function runPnpm(
   onData: (output: any) => any,
   onErr: (err: Error) => any
 ): Promise<number> {
-  const pnpm = await getPnpmInfo()
-  if (!pnpm) {
-    throw new Error(PNPM_MISSING_MESSAGE)
-  }
-  if ((semver.coerce(pnpm.version)?.major ?? 0) < PNPM_MINIMUM_MAJOR) {
+  const pnpm = getBundledPnpm()
+  if (!semver.satisfies(process.versions.node, pnpm.node)) {
     throw new Error(
-      `pnpm ${pnpm.version} is installed but pnpm ${PNPM_MINIMUM_MAJOR} or newer is required. Update it with: npm install -g pnpm@11`
+      `Installing plugins and webapps needs Node.js ${pnpm.node}, but the server runs on Node.js ${process.versions.node}`
     )
   }
-  const finish = await setAsideForeignModules(configPath, pnpm.storeDir)
+  const finish = await setAsideForeignModules(configPath, await getStoreDir())
   const code = await new Promise<number>((resolve) => {
-    const child = spawn(PNPM_COMMAND, args, {
-      cwd: configPath,
-      shell: process.platform === 'win32'
+    const child = spawn(process.execPath, [pnpm.bin, ...args], {
+      cwd: configPath
     })
     attachHandlers(child, onData, onErr, resolve)
   })
@@ -707,11 +725,7 @@ function attachHandlers(
   child.on('close', close)
   child.on('error', (err: NodeJS.ErrnoException) => {
     try {
-      onErr(
-        err.code === 'ENOENT' && err.path === PNPM_COMMAND
-          ? new Error(PNPM_MISSING_MESSAGE)
-          : err
-      )
+      onErr(err)
     } finally {
       close(-1)
     }
@@ -753,7 +767,8 @@ export function resetModuleCaches() {
   }
   searchInFlight.clear()
   distTagsCache = { time: 0, data: {} }
-  pnpmInfo = undefined
+  bundledPnpm = undefined
+  storeDir = undefined
 }
 
 async function findModulesWithKeyword(
@@ -1031,7 +1046,8 @@ module.exports = {
   runPackageManager,
   getPluginDataSize,
   resetModuleCaches,
-  getPnpmInfo,
+  getBundledPnpm,
+  bundledPnpmVersion,
   PREVIOUS_MODULES_BACKUP,
   DISCARDED_MODULES
 }

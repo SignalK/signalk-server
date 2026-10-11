@@ -3,8 +3,9 @@ ARG BASE_IMAGE="24.04-24.x"
 
 FROM ${REGISTRY}/signalk/signalk-server-base:latest-${BASE_IMAGE}
 
-# Base images published before pnpm and tini were added to them lack them; the
-# App Store needs pnpm at runtime too.
+# Base images published before pnpm and tini were added to them lack them. The
+# image installs the server with pnpm; the App Store uses the pnpm that comes
+# with the server.
 RUN command -v pnpm >/dev/null || (npm install -g pnpm@11 && npm cache clean --force)
 RUN command -v tini >/dev/null \
   || (apt-get update \
