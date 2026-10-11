@@ -131,7 +131,7 @@ Because the admin UI ships in core, its **app store is available** — the omitt
 
 ```Dockerfile
 FROM cr.signalk.io/signalk/signalk-server:core
-RUN pnpm --dir /home/node/.signalk add --config.ignore-scripts=true --config.minimum-release-age=0 @signalk/some-plugin
+RUN signalk-pnpm add @signalk/some-plugin
 ```
 
 Build with `docker build -t my-signalk-core .` and run as you would the base core image.
@@ -141,11 +141,11 @@ Build with `docker build -t my-signalk-core .` and run as you would the base cor
 Mount `/home/node/.signalk` as a persistent volume, then `exec` into the running container to install:
 
 ```sh
-docker exec my-container pnpm --dir /home/node/.signalk add --config.ignore-scripts=true --config.minimum-release-age=0 @signalk/some-plugin
+docker exec my-container signalk-pnpm add @signalk/some-plugin
 docker restart my-container
 ```
 
-Both patterns install into the persisted config directory (`/home/node/.signalk`), which the server scans for modules carrying the `signalk-node-server-plugin` or `signalk-webapp` keyword.
+Both patterns install into the persisted config directory (`/home/node/.signalk`), which the server scans for modules carrying the `signalk-node-server-plugin` or `signalk-webapp` keyword. `signalk-pnpm` comes with the server and installs the way the App Store does, with the same pnpm and settings, keeping the pnpm store in `/home/node/.signalk/.pnpm-store`. The server prunes the store after every install and leaves it out of its settings backups; leave it out of your own backups of the volume as well, since pnpm refills it from the registry. `docker exec my-container signalk-pnpm --help` describes the command.
 
 ### Behavioral change for non-Docker consumers
 

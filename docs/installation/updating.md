@@ -62,6 +62,13 @@ The App Store installs plugins and webapps with the [pnpm](https://pnpm.io) that
 
 The first install, update or removal of a plugin after switching to pnpm rebuilds the `node_modules` directory in the server's configuration directory from its `package.json`, keeping the installed plugin versions, which takes longer than usual. If the rebuild is interrupted, for example by a power cut, the server puts the previous `node_modules` back when it next starts. Plugins that were copied into `node_modules` by hand are not listed in `package.json` and have to be installed again. From then on the App Store records the exact version of each plugin in `package.json` and in a `pnpm-lock.yaml` next to it, and keeps the packages in a `.pnpm-store` directory there, which settings backups leave out.
 
+`npm install` no longer works in the configuration directory once pnpm manages it. To install or remove a plugin from the command line, run `signalk-pnpm`, which comes with the server, as the user that the server runs as:
+
+```shell
+signalk-pnpm add <plugin>
+signalk-pnpm remove <plugin>
+```
+
 ## Update Signal K Server
 
 When an update is available for Signal K Server a visual indication is displayed in the Admin UI.

@@ -91,6 +91,9 @@ COPY --from=tarballs_installed --chown=node:node /home/node/signalk /home/node/s
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
+# The server's commands, such as signalk-pnpm for installing plugins from a
+# shell or a derived image
+ENV PATH="/home/node/signalk/node_modules/.bin:${PATH}"
 ENV SKIP_ADMINUI_VERSION_CHECK=true
 WORKDIR /home/node/.signalk
 # tini as PID 1 forwards the signals of "docker stop" to the server, also
