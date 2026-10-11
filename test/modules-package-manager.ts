@@ -10,6 +10,7 @@ import {
   PREVIOUS_MODULES_BACKUP,
   removeModule,
   resetModuleCaches,
+  restoreModules,
   runPackageManager
 } from '../src/modules'
 import { Config } from '../src/config/config'
@@ -26,6 +27,11 @@ interface Spawned {
   args: string[]
   cwd?: string
   child: ChildProcess
+}
+
+interface Probe {
+  args: string[]
+  cwd?: string
 }
 
 interface Result {
@@ -49,13 +55,19 @@ describe('runPackageManager', () => {
   let originalSpawn: typeof childProcess.spawn
   let originalExecFile: typeof childProcess.execFile
   let spawned: Spawned[]
+  let pruned: string[]
+  let probes: Probe[]
   let closed: Set<ChildProcess>
+  let succeeded: number
 
   beforeEach(() => {
     configPath = fs.mkdtempSync(path.join(os.tmpdir(), '_skservertest_pm'))
     config = { configPath, name: 'signalk-server' } as Config
     spawned = []
+    pruned = []
+    probes = []
     closed = new Set()
+    succeeded = 0
     resetModuleCaches()
     originalSpawn = childProcess.spawn
     originalExecFile = childProcess.execFile
@@ -68,16 +80,31 @@ describe('runPackageManager', () => {
         stdout: new EventEmitter(),
         stderr: new EventEmitter()
       }) as unknown as ChildProcess
-      child.on('close', () => closed.add(child))
-      spawned.push({ command, args, cwd: opts.cwd, child })
+      // Pruning follows every successful run; it completes on its own so
+      // that the tests deal with the runs they start
+      if (args.at(-2) === 'store' && args.at(-1) === 'prune') {
+        pruned.push(opts.cwd ?? '')
+        setImmediate(() => child.emit('close', 0))
+      } else {
+        child.on('close', (code: number) => {
+          closed.add(child)
+          if (code === 0 && command === process.execPath) {
+            succeeded++
+          }
+        })
+        spawned.push({ command, args, cwd: opts.cwd, child })
+      }
       return child
     }
     childProcess.execFile = (
       _command: string,
-      _args: string[],
-      _opts: object,
+      args: string[],
+      opts: { cwd?: string },
       callback: (err: Error | null, stdout: string) => void
-    ) => callback(null, `${STORE_DIR}\n`)
+    ) => {
+      probes.push({ args, cwd: opts.cwd })
+      callback(null, `${STORE_DIR}\n`)
+    }
   })
 
   afterEach(async () => {
@@ -88,6 +115,7 @@ describe('runPackageManager', () => {
       }
     }
     await settled(() => spawned.every(({ child }) => closed.has(child)))
+    await settled(() => pruned.length >= succeeded)
     childProcess.spawn = originalSpawn
     childProcess.execFile = originalExecFile
     fs.rmSync(configPath, { recursive: true, force: true })
@@ -157,12 +185,17 @@ describe('runPackageManager', () => {
   })
 
   describe('config directory', () => {
-    const pnpmOptions = [
+    const pnpmOptions = () => [
       '--config.ignore-scripts=true',
       '--config.minimum-release-age=0',
       '--config.block-exotic-subdeps=false',
       '--config.confirm-modules-purge=false',
-      '--config.optimistic-repeat-install=false'
+      '--config.optimistic-repeat-install=false',
+      '--config.modules-cache-max-age=0',
+      '--config.enable-global-virtual-store=false',
+      '--config.update-notifier=false',
+      `--config.store-dir=${path.join(configPath, '.pnpm-store')}`,
+      `--config.cache-dir=${path.join(configPath, '.pnpm-store', 'cache')}`
     ]
 
     it('adds a plugin with the bundled pnpm in the config directory', async () => {
@@ -171,8 +204,8 @@ describe('runPackageManager', () => {
       expect(spawned[0].cwd).to.equal(configPath)
       expect(spawned[0].args).to.deep.equal([
         getBundledPnpm().bin,
+        ...pnpmOptions(),
         'add',
-        ...pnpmOptions,
         'some-plugin@1.2.3'
       ])
     })
@@ -181,19 +214,70 @@ describe('runPackageManager', () => {
       await run('some-plugin', null, 'remove')
       expect(spawned[0].args).to.deep.equal([
         getBundledPnpm().bin,
+        ...pnpmOptions(),
         'remove',
-        ...pnpmOptions,
         'some-plugin'
       ])
     })
 
-    it('restores the plugins listed in package.json with pnpm install', async () => {
-      await run(null, null, 'install')
+    it('restores the plugins of a restored backup with pnpm install', async () => {
+      restoreModules(
+        config,
+        () => {},
+        () => {},
+        () => {}
+      )
+      await settled(() => spawned.length > 0)
+      expect(spawned[0].command).to.equal(process.execPath)
+      expect(spawned[0].cwd).to.equal(configPath)
       expect(spawned[0].args).to.deep.equal([
         getBundledPnpm().bin,
-        'install',
-        ...pnpmOptions
+        ...pnpmOptions(),
+        'install'
       ])
+    })
+
+    it('asks pnpm for the store from the config directory', async () => {
+      await run('some-plugin', '1.2.3', 'install')
+      expect(probes).to.deep.equal([
+        {
+          args: [getBundledPnpm().bin, ...pnpmOptions(), 'store', 'path'],
+          cwd: configPath
+        }
+      ])
+    })
+
+    it('prunes the store after a run that succeeded', async () => {
+      const result = await run('some-plugin', '1.2.3', 'install')
+      await finish(result, 0)
+      await settled(() => pruned.length > 0)
+      expect(pruned).to.deep.equal([configPath])
+    })
+
+    it('leaves the store alone after a run that failed', async () => {
+      const result = await run('some-plugin', '1.2.3', 'install')
+      await finish(result, 1)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(pruned).to.deep.equal([])
+    })
+
+    it('refuses to run on a Node.js that the bundled pnpm does not support', async () => {
+      const original = Object.getOwnPropertyDescriptor(
+        process.versions,
+        'node'
+      )!
+      Object.defineProperty(process.versions, 'node', { value: '18.0.0' })
+      let result: Result
+      try {
+        result = await run('some-plugin', '1.2.3', 'install')
+      } finally {
+        Object.defineProperty(process.versions, 'node', original)
+      }
+      expect(spawned).to.have.length(0)
+      expect(result.errors).to.deep.equal([
+        `Installing plugins and webapps needs Node.js ${getBundledPnpm().node}, but the server runs on Node.js 18.0.0`
+      ])
+      expect(result.codes).to.deep.equal([-1])
     })
 
     it('runs one pnpm at a time', async () => {
@@ -259,25 +343,6 @@ describe('runPackageManager', () => {
       await settled(() => codes.length > 0)
       expect(codes).to.deep.equal([-1])
     })
-
-    it('refuses to run on a Node.js that the bundled pnpm does not support', async () => {
-      const original = Object.getOwnPropertyDescriptor(
-        process.versions,
-        'node'
-      )!
-      Object.defineProperty(process.versions, 'node', { value: '18.0.0' })
-      let result: Result
-      try {
-        result = await run('some-plugin', '1.2.3', 'install')
-      } finally {
-        Object.defineProperty(process.versions, 'node', original)
-      }
-      expect(spawned).to.have.length(0)
-      expect(result.errors).to.deep.equal([
-        `Installing plugins and webapps needs Node.js ${getBundledPnpm().node}, but the server runs on Node.js 18.0.0`
-      ])
-      expect(result.codes).to.deep.equal([-1])
-    })
   })
 
   describe('node_modules created by npm', () => {
@@ -306,12 +371,21 @@ describe('runPackageManager', () => {
       )
     })
 
+    // What pnpm leaves once it has linked every package
+    const rebuild = () => {
+      fs.mkdirSync(modulesDir())
+      fs.writeFileSync(
+        path.join(modulesDir(), '.modules.yaml'),
+        JSON.stringify({ storeDir: STORE_DIR })
+      )
+    }
+
     it('is set aside so that pnpm rebuilds it, and dropped on success', async () => {
       const result = await run('some-plugin', '1.2.3', 'install')
       expect(fs.existsSync(modulesDir())).to.equal(false)
       expect(fs.existsSync(backupDir())).to.equal(true)
 
-      fs.mkdirSync(modulesDir())
+      rebuild()
       await finish(result, 0)
       expect(fs.existsSync(backupDir())).to.equal(false)
       expect(fs.existsSync(discardedDir())).to.equal(false)
