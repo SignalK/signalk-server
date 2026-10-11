@@ -27,6 +27,7 @@ import { createDebug } from './debug'
 import { pluginConfigPath, pluginDataDir } from './plugin-paths'
 const debug = createDebug('signalk:modules')
 const npmDebug = createDebug('signalk:modules:npm')
+const pnpmDebug = createDebug('signalk:modules:pnpm')
 
 interface ModuleData {
   module: string
@@ -370,29 +371,56 @@ const PACKAGE_NAME_PATTERN =
 
 type ModuleCommand = 'install' | 'update' | 'remove'
 
+// pnpm writes this into a node_modules directory once it has linked every
+// package there
+const PNPM_MODULES_MARKER = '.modules.yaml'
 const PNPM_MISSING_MESSAGE =
   'The pnpm that ships with the server is missing, so plugins and webapps cannot be installed. Reinstall signalk-server to restore it.'
-// pnpm writes this into every node_modules directory it manages
-const PNPM_MODULES_MARKER = '.modules.yaml'
 export const PREVIOUS_MODULES_BACKUP = 'node_modules.previous'
 export const DISCARDED_MODULES = 'node_modules.discarded'
+// The pnpm store and cache of the config directory. Kept inside it, the store
+// is on the file system of node_modules however the directory is mounted, so
+// packages are hard linked rather than copied, and only the server's installs
+// use it, so pruning it affects nothing else. Settings backups leave it out,
+// as pnpm refills it from the registry.
+export const PNPM_STORE = '.pnpm-store'
 
-// Plugins are installed without running their dependencies' build scripts.
+// How the App Store runs pnpm, which plugin CI repeats to install a plugin the
+// same way:
+// - dependencies' build scripts are not run
+// - a version installs as soon as it is published
+// - a plugin's dependencies may themselves depend on git or URL packages, as
+//   they may with npm
+// - a node_modules left by another pnpm is rebuilt without a prompt, and a
+//   repeated install re-links packages that have gone missing
+// - a version that an update replaces leaves node_modules at once rather than
+//   a week later, so that pruning the store frees it
+// - packages are linked from the config directory's own node_modules even
+//   when the user's pnpm config turns on its global virtual store
+// - pnpm does not announce its own updates in the install log
 // The pnpm-lock.yaml kept in the config directory lets a plugin be removed,
-// and the installed set be restored, without the registry. Release age gating
-// is off so that a version can be installed as soon as it is published. A
-// plugin's dependencies may themselves depend on git or URL packages, as they
-// may with npm. A node_modules directory left by another pnpm is rebuilt
-// without a prompt, and a repeated install re-links packages that have gone
-// missing. The settings use the --config form because not every pnpm command
-// accepts them as options.
-const PNPM_CONFIG_DIR_ARGS = [
+// and the installed set be restored, without the registry. The settings use
+// the --config form because not every pnpm command accepts them as options,
+// and go before the command so that they never reach a script it runs.
+export const PNPM_APP_STORE_SETTINGS = [
   '--config.ignore-scripts=true',
   '--config.minimum-release-age=0',
   '--config.block-exotic-subdeps=false',
   '--config.confirm-modules-purge=false',
-  '--config.optimistic-repeat-install=false'
+  '--config.optimistic-repeat-install=false',
+  '--config.modules-cache-max-age=0',
+  '--config.enable-global-virtual-store=false',
+  '--config.update-notifier=false'
 ]
+
+function pnpmSettings(configPath: string): string[] {
+  const store = path.join(configPath, PNPM_STORE)
+  return [
+    ...PNPM_APP_STORE_SETTINGS,
+    `--config.store-dir=${store}`,
+    `--config.cache-dir=${path.join(store, 'cache')}`
+  ]
+}
 
 export function runPackageManager(
   config: Config,
@@ -504,26 +532,33 @@ export function bundledPnpmVersion(): string | undefined {
   }
 }
 
-let storeDir: Promise<string | undefined> | undefined
+function pnpmArgs(configPath: string, args: string[]): string[] {
+  return [getBundledPnpm().bin, ...pnpmSettings(configPath), ...args]
+}
 
-// The store does not change while the server runs, so it is probed once. A
-// failed probe is retried.
-function getStoreDir(): Promise<string | undefined> {
+const storeDirs = new Map<string, Promise<string | undefined>>()
+
+// pnpm resolves its store from the project it runs in, so it is asked from
+// the config directory, with the settings that the installs there use. The
+// store does not change while the server runs; a failed probe is retried.
+function getStoreDir(configPath: string): Promise<string | undefined> {
+  let storeDir = storeDirs.get(configPath)
   if (!storeDir) {
-    storeDir = pnpmOutput(['store', 'path']).catch(() => {
-      storeDir = undefined
+    storeDir = pnpmOutput(configPath, ['store', 'path']).catch(() => {
+      storeDirs.delete(configPath)
       return undefined
     })
+    storeDirs.set(configPath, storeDir)
   }
   return storeDir
 }
 
-function pnpmOutput(args: string[]): Promise<string> {
+function pnpmOutput(configPath: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       process.execPath,
-      [getBundledPnpm().bin, ...args],
-      {},
+      pnpmArgs(configPath, args),
+      { cwd: configPath },
       (err, stdout) => (err ? reject(err) : resolve(stdout.trim()))
     )
   })
@@ -545,18 +580,24 @@ function runConfigDirPnpm(
 ) {
   const pnpmCommand =
     command === 'remove' ? 'remove' : packageString ? 'add' : 'install'
-  const pnpmArgs = [pnpmCommand, ...PNPM_CONFIG_DIR_ARGS]
-  if (packageString) {
-    pnpmArgs.push(packageString)
-  }
-  configDirRun = configDirRun.then(() =>
-    runPnpm(configPath, pnpmArgs, onData, onErr)
-      .then(onClose, (err) => {
-        onErr(err)
-        onClose(-1)
-      })
-      .catch((err) => console.error(err))
-  )
+  const args = packageString ? [pnpmCommand, packageString] : [pnpmCommand]
+  configDirRun = configDirRun
+    .then(async () => {
+      const code = await runPnpm(configPath, args, onData, onErr).catch(
+        (err) => {
+          onErr(err)
+          return -1
+        }
+      )
+      try {
+        onClose(code)
+      } finally {
+        if (code === 0) {
+          await pruneStore(configPath)
+        }
+      }
+    })
+    .catch((err) => console.error(err))
 }
 
 async function runPnpm(
@@ -571,19 +612,42 @@ async function runPnpm(
       `Installing plugins and webapps needs Node.js ${pnpm.node}, but the server runs on Node.js ${process.versions.node}`
     )
   }
-  const finish = await setAsideForeignModules(configPath, await getStoreDir())
-  const code = await new Promise<number>((resolve) => {
-    const child = spawn(process.execPath, [pnpm.bin, ...args], {
-      cwd: configPath
-    })
-    attachHandlers(child, onData, onErr, resolve)
-  })
+  const finish = await setAsideForeignModules(
+    configPath,
+    await getStoreDir(configPath)
+  )
+  const code = await spawnPnpm(configPath, args, onData, onErr)
   try {
     await finish(code)
   } catch (err) {
     onErr(err instanceof Error ? err : new Error(String(err)))
   }
   return code
+}
+
+function spawnPnpm(
+  configPath: string,
+  args: string[],
+  onData: (output: any) => any,
+  onErr: (err: Error) => any
+): Promise<number> {
+  return new Promise<number>((resolve) => {
+    const child = spawn(process.execPath, pnpmArgs(configPath, args), {
+      cwd: configPath
+    })
+    attachHandlers(child, onData, onErr, resolve)
+  })
+}
+
+// Nothing else removes packages from the store, which updates and removals
+// would otherwise grow for good. pnpm keeps every package that node_modules
+// still links to.
+async function pruneStore(configPath: string) {
+  const log = (output: any) => pnpmDebug(String(output))
+  const code = await spawnPnpm(configPath, ['store', 'prune'], log, log)
+  if (code !== 0) {
+    console.error(`Pruning the pnpm store of ${configPath} failed (${code})`)
+  }
 }
 
 // pnpm only adopts a node_modules directory that it created itself with the
@@ -771,7 +835,7 @@ export function resetModuleCaches() {
   searchInFlight.clear()
   distTagsCache = { time: 0, data: {} }
   bundledPnpm = undefined
-  storeDir = undefined
+  storeDirs.clear()
 }
 
 async function findModulesWithKeyword(
@@ -1051,6 +1115,8 @@ module.exports = {
   resetModuleCaches,
   getBundledPnpm,
   bundledPnpmVersion,
+  PNPM_APP_STORE_SETTINGS,
   PREVIOUS_MODULES_BACKUP,
-  DISCARDED_MODULES
+  DISCARDED_MODULES,
+  PNPM_STORE
 }

@@ -61,6 +61,7 @@ import {
   Package,
   PREVIOUS_MODULES_BACKUP,
   DISCARDED_MODULES,
+  PNPM_STORE,
   restoreModules
 } from './modules'
 import { getHttpPort, getSslPort } from './ports'
@@ -2223,6 +2224,12 @@ module.exports = function (
     'package.json',
     'baseDeltas.json'
   ]
+  // Rebuilt by pnpm rather than restored, should a backup contain them
+  const unrestoredDirs = new Set([
+    PNPM_STORE,
+    PREVIOUS_MODULES_BACKUP,
+    DISCARDED_MODULES
+  ])
   function listSafeRestoreFiles(restorePath: string): Promise<string[]> {
     return new Promise((resolve, reject) => {
       readdir(restorePath)
@@ -2233,7 +2240,7 @@ module.exports = function (
           filenames?.forEach((name) => {
             try {
               const stats = fs.lstatSync(path.join(restorePath, name))
-              if (stats.isDirectory()) {
+              if (stats.isDirectory() && !unrestoredDirs.has(name)) {
                 goodFiles.push(name + '/')
               }
               resolve(goodFiles)
@@ -2427,6 +2434,7 @@ module.exports = function (
                 req.query.includePlugins === 'true')) &&
             file !== PREVIOUS_MODULES_BACKUP &&
             file !== DISCARDED_MODULES &&
+            file !== PNPM_STORE &&
             !file.endsWith('.log') &&
             file !== 'signalk-server' &&
             file !== '.npmrc'
