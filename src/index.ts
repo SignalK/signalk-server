@@ -54,7 +54,7 @@ import {
 } from './deltaPriority'
 import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
-import { checkForNewServerVersion } from './modules'
+import { checkForNewServerVersion, recoverConfigDirModules } from './modules'
 import { ConnectionTracker } from './connectionTracker'
 import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
 import {
@@ -762,6 +762,9 @@ class Server {
 
         sendBaseDeltas(app as unknown as ConfigApp)
 
+        await recoverConfigDirModules(app.config.configPath).catch((err) =>
+          console.error(`Recovering ${app.config.configPath}: ${err.message}`)
+        )
         app.apis = await startApis(app)
         await startInterfaces(app)
         startMdns(app)

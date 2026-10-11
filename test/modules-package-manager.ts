@@ -8,6 +8,7 @@ import {
   DISCARDED_MODULES,
   getBundledPnpm,
   PREVIOUS_MODULES_BACKUP,
+  recoverConfigDirModules,
   removeModule,
   resetModuleCaches,
   restoreModules,
@@ -466,6 +467,56 @@ describe('runPackageManager', () => {
       expect(result.errors).to.deep.equal([])
     })
 
+    it('takes the package-lock.json that npm kept of it along', async () => {
+      const npmLockfile = path.join(configPath, 'package-lock.json')
+      fs.writeFileSync(npmLockfile, '{}')
+      const result = await run('some-plugin', '1.2.3', 'install')
+      rebuild()
+      await finish(result, 0)
+      expect(fs.existsSync(npmLockfile)).to.equal(false)
+    })
+
+    it('keeps the package-lock.json of npm while it stays', async () => {
+      const npmLockfile = path.join(configPath, 'package-lock.json')
+      fs.writeFileSync(npmLockfile, '{}')
+      const result = await run('some-plugin', '1.2.3', 'install')
+      await finish(result, 1)
+      expect(fs.existsSync(npmLockfile)).to.equal(true)
+    })
+
+    it('is put back when a command installs nothing', async () => {
+      const result = await run('some-plugin', '1.2.3', 'install')
+      await finish(result, 0)
+      expect(fs.existsSync(npmPlugin())).to.equal(true)
+      expect(fs.existsSync(backupDir())).to.equal(false)
+      expect(dependencies()['npm-plugin']).to.equal('^1.0.0')
+    })
+
+    it('is dropped once a rebuild leaves nothing to install', async () => {
+      const result = await run('npm-plugin', null, 'remove')
+      fs.mkdirSync(modulesDir())
+      fs.writeFileSync(packageJsonPath(), JSON.stringify({ dependencies: {} }))
+      await finish(result, 0)
+      expect(fs.existsSync(npmPlugin())).to.equal(false)
+      expect(fs.existsSync(backupDir())).to.equal(false)
+    })
+
+    it('is not settled at startup while its rebuild is still running', async () => {
+      const result = await run('some-plugin', '1.2.3', 'install')
+      const recovery = recoverConfigDirModules(configPath)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(fs.existsSync(backupDir())).to.equal(true)
+      expect(fs.existsSync(modulesDir())).to.equal(false)
+
+      rebuild()
+      await finish(result, 0)
+      await recovery
+      expect(fs.existsSync(path.join(modulesDir(), '.modules.yaml'))).to.equal(
+        true
+      )
+      expect(fs.existsSync(backupDir())).to.equal(false)
+    })
+
     it('is put back when pnpm fails', async () => {
       const result = await run('some-plugin', '1.2.3', 'install')
       fs.mkdirSync(modulesDir())
@@ -552,6 +603,54 @@ describe('runPackageManager', () => {
       expect(fs.existsSync(rebuiltMarker)).to.equal(true)
       expect(fs.existsSync(backupDir())).to.equal(false)
       expect(fs.existsSync(discardedDir())).to.equal(false)
+    })
+  })
+
+  describe('recoverConfigDirModules', () => {
+    const modulesDir = () => path.join(configPath, 'node_modules')
+    const backupDir = () => path.join(configPath, PREVIOUS_MODULES_BACKUP)
+    const discardedDir = () => path.join(configPath, DISCARDED_MODULES)
+    const npmPlugin = () => path.join(modulesDir(), 'npm-plugin')
+
+    beforeEach(() => {
+      fs.mkdirSync(path.join(backupDir(), 'npm-plugin'), { recursive: true })
+      fs.writeFileSync(
+        path.join(configPath, 'package.json'),
+        JSON.stringify({ dependencies: { 'npm-plugin': '1.2.0' } })
+      )
+    })
+
+    it('puts back the installation that an interrupted rebuild set aside', async () => {
+      fs.mkdirSync(path.join(modulesDir(), 'half-linked'), { recursive: true })
+      await recoverConfigDirModules(configPath)
+      expect(fs.existsSync(npmPlugin())).to.equal(true)
+      expect(fs.existsSync(path.join(modulesDir(), 'half-linked'))).to.equal(
+        false
+      )
+      expect(fs.existsSync(backupDir())).to.equal(false)
+      await settled(() => !fs.existsSync(discardedDir()))
+      expect(fs.existsSync(discardedDir())).to.equal(false)
+    })
+
+    it('keeps a rebuild that completed and drops the old installation', async () => {
+      fs.mkdirSync(modulesDir())
+      const rebuiltMarker = path.join(modulesDir(), '.modules.yaml')
+      fs.writeFileSync(rebuiltMarker, JSON.stringify({ storeDir: STORE_DIR }))
+      const npmLockfile = path.join(configPath, 'package-lock.json')
+      fs.writeFileSync(npmLockfile, '{}')
+      await recoverConfigDirModules(configPath)
+      expect(fs.existsSync(rebuiltMarker)).to.equal(true)
+      expect(fs.existsSync(backupDir())).to.equal(false)
+      expect(fs.existsSync(npmLockfile)).to.equal(false)
+      await settled(() => !fs.existsSync(discardedDir()))
+      expect(fs.existsSync(discardedDir())).to.equal(false)
+    })
+
+    it('leaves a config directory without a backup alone', async () => {
+      fs.rmSync(backupDir(), { recursive: true })
+      fs.mkdirSync(path.join(modulesDir(), 'npm-plugin'), { recursive: true })
+      await recoverConfigDirModules(configPath)
+      expect(fs.existsSync(npmPlugin())).to.equal(true)
     })
   })
 
