@@ -647,39 +647,64 @@ async function pruneStore(configPath: string) {
   }
 }
 
+interface ModulesDirs {
+  modules: string
+  backup: string
+  discarded: string
+}
+
+function modulesDirs(configPath: string): ModulesDirs {
+  return {
+    modules: path.join(configPath, 'node_modules'),
+    backup: path.join(configPath, PREVIOUS_MODULES_BACKUP),
+    discarded: path.join(configPath, DISCARDED_MODULES)
+  }
+}
+
+// A rebuild that a power cut or crash interrupted is settled when the server
+// starts, before anything loads from node_modules, rather than leaving plugins
+// missing until the next install. It takes its turn behind any pnpm run, as a
+// server restarted within the same process can start while one is still
+// rebuilding. Nothing has loaded addons from the discarded tree yet, so even
+// on Windows it can be deleted, which finishes in the background.
+export function recoverConfigDirModules(configPath: string): Promise<void> {
+  const dirs = modulesDirs(configPath)
+  const recovery = configDirRun.then(() =>
+    settleInterruptedRebuild(configPath, dirs)
+  )
+  configDirRun = recovery.catch(() => undefined)
+  return recovery.then(() => {
+    fs.promises
+      .rm(dirs.discarded, { recursive: true, force: true })
+      .catch((err) =>
+        console.error(`Removing ${dirs.discarded}: ${err.message}`)
+      )
+  })
+}
+
 // pnpm only adopts a node_modules directory that it created itself with the
 // store it uses now: packages installed by npm are moved to
 // node_modules/.ignored and a directory bound to another store stops the
 // install. Such a directory is moved aside so that pnpm rebuilds it from
 // package.json, with the installed plugin versions pinned there first so that
-// the rebuild keeps them. If pnpm fails, both are put back as they were.
+// the rebuild keeps them. Unless pnpm succeeds and completes the rebuild, both
+// are put back as they were, so a command that installs nothing leaves them
+// alone.
 async function setAsideForeignModules(
   configPath: string,
   storeDir?: string
 ): Promise<(code: number) => Promise<void>> {
-  const modulesDir = path.join(configPath, 'node_modules')
-  const backupDir = path.join(configPath, PREVIOUS_MODULES_BACKUP)
-  const discardedDir = path.join(configPath, DISCARDED_MODULES)
-  // Left behind when removing the backup of a completed rebuild failed or was
-  // cut short. Nothing needs it, so it does not hold up this run if it still
-  // cannot be removed, as on Windows while the server has its addons loaded.
+  const dirs = modulesDirs(configPath)
+  await settleInterruptedRebuild(configPath, dirs)
+  // Nothing needs a discarded tree, so it does not hold up this run if it
+  // cannot be removed, as on Windows while the server has its addons loaded
   await fs.promises
-    .rm(discardedDir, { recursive: true, force: true })
+    .rm(dirs.discarded, { recursive: true, force: true })
     .catch(() => undefined)
-  if (fs.existsSync(backupDir)) {
-    if (isManagedByThisPnpm(modulesDir, storeDir)) {
-      // pnpm writes its manifest only once every package is linked, so the
-      // rebuild completed and only discarding the backup did not. Like the
-      // removal above, that is retried on the next run if it fails again.
-      await discardBackup(backupDir, discardedDir).catch(() => undefined)
-    } else {
-      // The rebuild did not complete: the backup holds the user's
-      // installation and whatever the rebuild left behind is discarded
-      await fs.promises.rm(modulesDir, { recursive: true, force: true })
-      fs.renameSync(backupDir, modulesDir)
-    }
-  }
-  if (!fs.existsSync(modulesDir) || isManagedByThisPnpm(modulesDir, storeDir)) {
+  if (
+    !fs.existsSync(dirs.modules) ||
+    isManagedByThisPnpm(dirs.modules, storeDir)
+  ) {
     return async () => {}
   }
   const packageJsonPath = path.join(configPath, 'package.json')
@@ -693,27 +718,76 @@ async function setAsideForeignModules(
   }
   pinInstalledVersions(configPath)
   try {
-    fs.renameSync(modulesDir, backupDir)
+    fs.renameSync(dirs.modules, dirs.backup)
   } catch (err) {
     restorePackageJson()
     throw err
   }
   return async (code: number) => {
-    if (code === 0) {
-      await discardBackup(backupDir, discardedDir)
+    if (code === 0 && rebuildCompleted(configPath)) {
+      await retireBackup(configPath, dirs)
+      await fs.promises.rm(dirs.discarded, { recursive: true, force: true })
     } else {
-      await fs.promises.rm(modulesDir, { recursive: true, force: true })
-      fs.renameSync(backupDir, modulesDir)
+      await putBackupBack(dirs)
       restorePackageJson()
+      await fs.promises
+        .rm(dirs.discarded, { recursive: true, force: true })
+        .catch(() => undefined)
     }
   }
 }
 
-// Removal takes a while and can be cut short, so the backup is renamed first:
-// a partial one must never be taken for the user's installation
-async function discardBackup(backupDir: string, discardedDir: string) {
-  fs.renameSync(backupDir, discardedDir)
-  await fs.promises.rm(discardedDir, { recursive: true, force: true })
+// An interrupted rebuild leaves the backup of the user's installation beside
+// whatever the rebuild got to. A rebuild that did not complete gives way to
+// the backup; after one that did, only dropping the backup was cut short.
+async function settleInterruptedRebuild(configPath: string, dirs: ModulesDirs) {
+  if (!fs.existsSync(dirs.backup)) {
+    return
+  }
+  if (rebuildCompleted(configPath)) {
+    await retireBackup(configPath, dirs)
+  } else {
+    await putBackupBack(dirs)
+  }
+}
+
+// Once a rebuild has replaced the user's earlier installation, that goes,
+// and with it the package-lock.json that npm kept of it. The lockfile goes
+// first, so that a cut short retirement is completed by the next run.
+async function retireBackup(configPath: string, dirs: ModulesDirs) {
+  fs.rmSync(path.join(configPath, 'package-lock.json'), { force: true })
+  await discard(dirs.backup, dirs.discarded)
+}
+
+async function putBackupBack(dirs: ModulesDirs) {
+  if (fs.existsSync(dirs.modules)) {
+    await discard(dirs.modules, dirs.discarded)
+  }
+  fs.renameSync(dirs.backup, dirs.modules)
+}
+
+// A tree is renamed out of the way before it is deleted: deleting takes a
+// while and can be cut short, and a partial tree must never be taken for the
+// user's installation
+async function discard(dir: string, discardedDir: string) {
+  if (fs.existsSync(discardedDir)) {
+    await fs.promises.rm(discardedDir, { recursive: true, force: true })
+  }
+  fs.renameSync(dir, discardedDir)
+}
+
+// pnpm writes its manifest last, once every package is linked, but writes
+// none when there is nothing to install
+function rebuildCompleted(configPath: string): boolean {
+  return (
+    fs.existsSync(path.join(configPath, 'node_modules', PNPM_MODULES_MARKER)) ||
+    !hasDependencies(configPath)
+  )
+}
+
+function hasDependencies(configPath: string): boolean {
+  const packageJson = readJson(path.join(configPath, 'package.json'))
+  return Object.keys(packageJson?.dependencies ?? {}).length > 0
 }
 
 function isManagedByThisPnpm(modulesDir: string, storeDir?: string): boolean {
@@ -1112,6 +1186,7 @@ module.exports = {
   resetModuleCaches,
   getBundledPnpm,
   bundledPnpmVersion,
+  recoverConfigDirModules,
   PNPM_APP_STORE_SETTINGS,
   PREVIOUS_MODULES_BACKUP,
   DISCARDED_MODULES,
