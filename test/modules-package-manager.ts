@@ -8,6 +8,7 @@ import lockfile from 'proper-lockfile'
 import {
   DISCARDED_MODULES,
   getBundledPnpm,
+  getPendingRebuild,
   PREVIOUS_MODULES_BACKUP,
   recoverConfigDirModules,
   removeModule,
@@ -712,6 +713,71 @@ describe('runPackageManager', () => {
       expect(fs.existsSync(rebuiltMarker)).to.equal(true)
       expect(fs.existsSync(backupDir())).to.equal(false)
       expect(fs.existsSync(discardedDir())).to.equal(false)
+    })
+  })
+
+  describe('getPendingRebuild', () => {
+    const modulesDir = () => path.join(configPath, 'node_modules')
+
+    beforeEach(() => {
+      fs.mkdirSync(modulesDir())
+      fs.writeFileSync(
+        path.join(configPath, 'package.json'),
+        JSON.stringify({ dependencies: { 'some-plugin': '^1.0.0' } })
+      )
+    })
+
+    it('counts the packages that npm installed', async () => {
+      fs.writeFileSync(
+        path.join(modulesDir(), '.package-lock.json'),
+        JSON.stringify({
+          packages: {
+            '': {},
+            'node_modules/some-plugin': {},
+            'node_modules/dependency': {},
+            'node_modules/some-plugin/node_modules/dependency': {}
+          }
+        })
+      )
+      expect(await getPendingRebuild(configPath)).to.deep.equal({
+        packages: 3
+      })
+    })
+
+    it('counts the packages of a node_modules that another store holds', async () => {
+      fs.writeFileSync(
+        path.join(modulesDir(), '.modules.yaml'),
+        'storeDir: /elsewhere/store/v10\n'
+      )
+      for (const dir of ['some-plugin@1.0.0', 'dependency@2.0.0']) {
+        fs.mkdirSync(path.join(modulesDir(), '.pnpm', dir), { recursive: true })
+      }
+      expect(await getPendingRebuild(configPath)).to.deep.equal({
+        packages: 2
+      })
+    })
+
+    it('gives no count when npm lists no packages for the declared plugins', async () => {
+      fs.writeFileSync(
+        path.join(modulesDir(), '.package-lock.json'),
+        JSON.stringify({ packages: { '': {} } })
+      )
+      expect(await getPendingRebuild(configPath)).to.deep.equal({
+        packages: undefined
+      })
+    })
+
+    it('reports nothing once this pnpm manages node_modules', async () => {
+      fs.writeFileSync(
+        path.join(modulesDir(), '.modules.yaml'),
+        JSON.stringify({ storeDir: STORE_DIR })
+      )
+      expect(await getPendingRebuild(configPath)).to.equal(undefined)
+    })
+
+    it('reports nothing when no plugin is installed', async () => {
+      fs.writeFileSync(path.join(configPath, 'package.json'), '{}')
+      expect(await getPendingRebuild(configPath)).to.equal(undefined)
     })
   })
 
