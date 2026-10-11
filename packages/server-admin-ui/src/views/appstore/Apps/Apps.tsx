@@ -312,6 +312,13 @@ const Apps: React.FC = () => {
   } else if (appStore.installing.length > 0) {
     warning =
       'Please restart the server after installing, updating or deleting a plugin'
+  } else if (appStore.pendingRebuild) {
+    const packages = appStore.pendingRebuild.packages
+    const what =
+      packages === undefined
+        ? 'every package'
+        : `the ${packages} ${packages === 1 ? 'package' : 'packages'}`
+    warning = `The next install, update or removal downloads ${what} that the installed plugins and webapps use again, as the App Store now installs with pnpm. On a metered connection, run it when data is cheap.`
   }
 
   return (
