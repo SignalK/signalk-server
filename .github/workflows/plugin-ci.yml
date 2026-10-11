@@ -1457,11 +1457,12 @@ jobs:
         env:
           APPSTORE_DIR: ${{ runner.temp }}/appstore-test
         run: |
-          # SignalK server installs plugins with pnpm, ignoring install scripts
-          # and release-age gating (runConfigDirPnpm in src/modules.ts). This
-          # means native addons (better-sqlite3, serialport, etc.) are NOT
-          # compiled. This test catches plugins that will break when installed
-          # via the App Store.
+          # SignalK server installs plugins with pnpm and the settings in
+          # PNPM_APP_STORE_SETTINGS (src/modules.ts), which ignore install
+          # scripts; test/plugin-ci.ts keeps the command below in step with
+          # them. This means native addons (better-sqlite3, serialport, etc.)
+          # are NOT compiled. This test catches plugins that will break when
+          # installed via the App Store.
           echo "Simulating SignalK App Store install (pnpm add --config.ignore-scripts=true)..."
           # Read the tarball name from --json: a plugin "prepare" script (e.g. tsc)
           # prints a lifecycle banner to stdout that would pollute a bare
@@ -1472,7 +1473,7 @@ jobs:
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
           printf '{"name":"signalk-server-config","version":"0.0.1","private":true}\n' > package.json
-          npx --yes pnpm@11 add --config.ignore-scripts=true --config.minimum-release-age=0 --config.block-exotic-subdeps=false "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")" 2>&1
+          npx --yes pnpm@11 --config.ignore-scripts=true --config.minimum-release-age=0 --config.block-exotic-subdeps=false --config.confirm-modules-purge=false --config.optimistic-repeat-install=false --config.modules-cache-max-age=0 --config.enable-global-virtual-store=false --config.update-notifier=false add "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")" 2>&1
 
           # Scan for native addon dependencies (binding.gyp = needs compilation)
           # Uses Node.js for cross-platform compatibility (works on Linux, macOS, Windows)
