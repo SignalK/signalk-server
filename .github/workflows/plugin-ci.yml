@@ -1472,7 +1472,7 @@ jobs:
           mkdir -p "$APPSTORE_DIR"
           cd "$APPSTORE_DIR"
           printf '{"name":"signalk-server-config","version":"0.0.1","private":true}\n' > package.json
-          npx --yes pnpm@11 add --config.ignore-scripts=true --config.minimum-release-age=0 "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")" 2>&1
+          npx --yes pnpm@11 add --config.ignore-scripts=true --config.minimum-release-age=0 --config.block-exotic-subdeps=false "$RUNNER_TEMP/$(basename "$PLUGIN_TGZ")" 2>&1
 
           # Scan for native addon dependencies (binding.gyp = needs compilation)
           # Uses Node.js for cross-platform compatibility (works on Linux, macOS, Windows)
