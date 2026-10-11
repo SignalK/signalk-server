@@ -42,7 +42,8 @@ const {
   fetchDistTagsForPackages,
   getLatestServerVersion,
   getAuthor,
-  getKeywords
+  getKeywords,
+  getPendingRebuild
 } = require('../modules')
 const { SERVERROUTESPREFIX } = require('../constants')
 const {
@@ -280,10 +281,17 @@ module.exports = function (app) {
           }),
           getLatestServerVersion(app.config.version).catch(() => '0.0.0'),
           fetchDistTagsForPackages(installedNames).catch(() => ({})),
-          registry.getIndex().catch(() => undefined)
+          registry.getIndex().catch(() => undefined),
+          getPendingRebuild(app.config.configPath).catch(() => undefined)
         ])
           .then(
-            ([[plugins, webapps], serverVersion, distTagsMap, regIndex]) => {
+            ([
+              [plugins, webapps],
+              serverVersion,
+              distTagsMap,
+              regIndex,
+              pendingRebuild
+            ]) => {
               const result = getAllModuleInfo(
                 plugins,
                 webapps,
@@ -292,6 +300,7 @@ module.exports = function (app) {
                 regIndex
               )
               result.storeAvailable = storeAvailable
+              result.pendingRebuild = pendingRebuild
               if (!storeAvailable) {
                 result.available = []
                 result.updates = []

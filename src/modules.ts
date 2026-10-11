@@ -926,6 +926,51 @@ function hasDependencies(configPath: string): boolean {
   return Object.keys(packageJson?.dependencies ?? {}).length > 0
 }
 
+export interface PendingRebuild {
+  /** How many packages the rebuild downloads again, when that is known */
+  packages?: number
+}
+
+// The next run in the config directory rebuilds a node_modules that npm or
+// another pnpm store created, downloading every package that the installed
+// plugins and webapps use again, which the App Store warns about
+export async function getPendingRebuild(
+  configPath: string
+): Promise<PendingRebuild | undefined> {
+  const modulesDir = path.join(configPath, 'node_modules')
+  if (
+    !fs.existsSync(modulesDir) ||
+    !hasDependencies(configPath) ||
+    isManagedByThisPnpm(modulesDir, await getStoreDir(configPath))
+  ) {
+    return undefined
+  }
+  // With plugins declared, finding no packages means that node_modules does
+  // not match package.json, so the count is no guide
+  return { packages: countInstalledPackages(modulesDir) || undefined }
+}
+
+// npm lists every package it installed in node_modules/.package-lock.json,
+// and pnpm keeps each one in a directory of its own in node_modules/.pnpm
+function countInstalledPackages(modulesDir: string): number | undefined {
+  const npmPackages = readJson(
+    path.join(modulesDir, '.package-lock.json')
+  )?.packages
+  if (npmPackages) {
+    return Object.keys(npmPackages).filter((key) =>
+      key.includes('node_modules/')
+    ).length
+  }
+  try {
+    return fs
+      .readdirSync(path.join(modulesDir, '.pnpm'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== 'node_modules')
+      .length
+  } catch {
+    return undefined
+  }
+}
+
 function isManagedByThisPnpm(modulesDir: string, storeDir?: string): boolean {
   const markerPath = path.join(modulesDir, PNPM_MODULES_MARKER)
   if (!fs.existsSync(markerPath)) {
@@ -1324,6 +1369,7 @@ module.exports = {
   bundledPnpmVersion,
   runPnpmInConfigDir,
   recoverConfigDirModules,
+  getPendingRebuild,
   PNPM_APP_STORE_SETTINGS,
   PREVIOUS_MODULES_BACKUP,
   DISCARDED_MODULES,

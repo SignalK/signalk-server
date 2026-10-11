@@ -19,6 +19,13 @@ export interface AppStoreState {
   canUpdateServer?: boolean
   serverUpdate?: string
   isInDocker?: boolean
+  pendingRebuild?: PendingRebuild
+}
+
+// The next install, update or removal rebuilds node_modules with pnpm
+export interface PendingRebuild {
+  /** How many packages the rebuild downloads again, when the server knows */
+  packages?: number
 }
 
 export interface AppInfo {
