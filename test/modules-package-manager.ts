@@ -6,6 +6,7 @@ import os from 'os'
 import path from 'path'
 import {
   DISCARDED_MODULES,
+  getBundledPnpm,
   PREVIOUS_MODULES_BACKUP,
   removeModule,
   resetModuleCaches,
@@ -49,14 +50,12 @@ describe('runPackageManager', () => {
   let originalExecFile: typeof childProcess.execFile
   let spawned: Spawned[]
   let closed: Set<ChildProcess>
-  let pnpmVersion: string | undefined
 
   beforeEach(() => {
     configPath = fs.mkdtempSync(path.join(os.tmpdir(), '_skservertest_pm'))
     config = { configPath, name: 'signalk-server' } as Config
     spawned = []
     closed = new Set()
-    pnpmVersion = '11.28.3'
     resetModuleCaches()
     originalSpawn = childProcess.spawn
     originalExecFile = childProcess.execFile
@@ -74,23 +73,11 @@ describe('runPackageManager', () => {
       return child
     }
     childProcess.execFile = (
-      command: string,
-      args: string[],
+      _command: string,
+      _args: string[],
       _opts: object,
       callback: (err: Error | null, stdout: string) => void
-    ) => {
-      if (pnpmVersion === undefined) {
-        const enoent = Object.assign(new Error(`spawn ${command} ENOENT`), {
-          code: 'ENOENT',
-          path: command
-        })
-        callback(enoent, '')
-      } else if (args[0] === '--version') {
-        callback(null, `${pnpmVersion}\n`)
-      } else {
-        callback(null, `${STORE_DIR}\n`)
-      }
-    }
+    ) => callback(null, `${STORE_DIR}\n`)
   })
 
   afterEach(async () => {
@@ -162,11 +149,12 @@ describe('runPackageManager', () => {
       '--config.optimistic-repeat-install=false'
     ]
 
-    it('adds a plugin with pnpm in the config directory', async () => {
+    it('adds a plugin with the bundled pnpm in the config directory', async () => {
       await run('some-plugin', '1.2.3', 'install')
-      expect(spawned[0].command).to.match(/^pnpm/)
+      expect(spawned[0].command).to.equal(process.execPath)
       expect(spawned[0].cwd).to.equal(configPath)
       expect(spawned[0].args).to.deep.equal([
+        getBundledPnpm().bin,
         'add',
         ...pnpmOptions,
         'some-plugin@1.2.3'
@@ -176,6 +164,7 @@ describe('runPackageManager', () => {
     it('removes a plugin with pnpm', async () => {
       await run('some-plugin', null, 'remove')
       expect(spawned[0].args).to.deep.equal([
+        getBundledPnpm().bin,
         'remove',
         ...pnpmOptions,
         'some-plugin'
@@ -184,7 +173,11 @@ describe('runPackageManager', () => {
 
     it('restores the plugins listed in package.json with pnpm install', async () => {
       await run(null, null, 'install')
-      expect(spawned[0].args).to.deep.equal(['install', ...pnpmOptions])
+      expect(spawned[0].args).to.deep.equal([
+        getBundledPnpm().bin,
+        'install',
+        ...pnpmOptions
+      ])
     })
 
     it('runs one pnpm at a time', async () => {
@@ -251,21 +244,22 @@ describe('runPackageManager', () => {
       expect(codes).to.deep.equal([-1])
     })
 
-    it('explains how to install pnpm when it is missing', async () => {
-      pnpmVersion = undefined
-      const result = await run('some-plugin', '1.2.3', 'install')
+    it('refuses to run on a Node.js that the bundled pnpm does not support', async () => {
+      const original = Object.getOwnPropertyDescriptor(
+        process.versions,
+        'node'
+      )!
+      Object.defineProperty(process.versions, 'node', { value: '18.0.0' })
+      let result: Result
+      try {
+        result = await run('some-plugin', '1.2.3', 'install')
+      } finally {
+        Object.defineProperty(process.versions, 'node', original)
+      }
       expect(spawned).to.have.length(0)
       expect(result.errors).to.deep.equal([
-        'pnpm is required for installing plugins and webapps. Install it with: npm install -g pnpm@11'
+        `Installing plugins and webapps needs Node.js ${getBundledPnpm().node}, but the server runs on Node.js 18.0.0`
       ])
-      expect(result.codes).to.deep.equal([-1])
-    })
-
-    it('refuses to run a pnpm older than 11', async () => {
-      pnpmVersion = '10.28.0'
-      const result = await run('some-plugin', '1.2.3', 'install')
-      expect(spawned).to.have.length(0)
-      expect(result.errors[0]).to.match(/^pnpm 10.28.0 is installed/)
       expect(result.codes).to.deep.equal([-1])
     })
   })

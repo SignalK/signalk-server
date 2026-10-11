@@ -14,12 +14,6 @@ sudo npm install -g signalk-server --allow-scripts=@canboat/canboatjs
 
 npm 12 and later block install scripts they are not told to allow, so `--allow-scripts` lets npm run the one that builds the server's native CAN bus support. npm 11 runs install scripts by default, and older npm ignores the option.
 
-The App Store installs plugins and webapps with [pnpm](https://pnpm.io), so install it as well:
-
-```shell
-sudo npm install -g pnpm@11
-```
-
 Once installation is complete, enter the following in a terminal window, to generate a settings file and configure the server to start automatically:
 
 ```shell

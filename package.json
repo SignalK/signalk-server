@@ -62,7 +62,7 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "packageManager": "pnpm@11.28.3",
   "dependencies": {
@@ -118,6 +118,7 @@
     "openid-client": "^6.8.4",
     "ora": "^5.4.1",
     "path-to-regexp": "^0.1.12",
+    "pnpm": "^11.28.5",
     "primus": "^7.3.5",
     "prompts": "^2.4.2",
     "rehype-parse": "^9.0.1",
