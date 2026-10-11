@@ -4,6 +4,7 @@ import { EventEmitter } from 'events'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import lockfile from 'proper-lockfile'
 import {
   DISCARDED_MODULES,
   getBundledPnpm,
@@ -12,7 +13,8 @@ import {
   removeModule,
   resetModuleCaches,
   restoreModules,
-  runPackageManager
+  runPackageManager,
+  runPnpmInConfigDir
 } from '../src/modules'
 import { Config } from '../src/config/config'
 
@@ -279,6 +281,97 @@ describe('runPackageManager', () => {
         `Installing plugins and webapps needs Node.js ${getBundledPnpm().node}, but the server runs on Node.js 18.0.0`
       ])
       expect(result.codes).to.deep.equal([-1])
+    })
+
+    it('runs any pnpm command for signalk-pnpm the same way', async () => {
+      const code = runPnpmInConfigDir(
+        configPath,
+        ['link', '/src/my-plugin'],
+        () => {},
+        () => {}
+      )
+      await settled(() => spawned.length > 0)
+      expect(spawned[0].args).to.deep.equal([
+        getBundledPnpm().bin,
+        ...pnpmOptions(),
+        'link',
+        '/src/my-plugin'
+      ])
+      spawned[0].child.emit('close', 0)
+      expect(await code).to.equal(0)
+    })
+
+    it('waits while another process runs pnpm in the config directory', async () => {
+      const lockfilePath = path.join(configPath, '.pnpm-store', 'lock')
+      fs.mkdirSync(path.dirname(lockfilePath), { recursive: true })
+      const release = await lockfile.lock(configPath, {
+        lockfilePath,
+        realpath: false
+      })
+      const output: string[] = []
+      runPackageManager(
+        config,
+        'some-plugin',
+        '1.2.3',
+        'install',
+        (data) => output.push(String(data)),
+        () => {},
+        () => {}
+      )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      expect(spawned).to.have.length(0)
+      expect(output.join('')).to.contain('Waiting for another pnpm run')
+
+      await release()
+      await settled(() => spawned.length > 0)
+      expect(spawned).to.have.length(1)
+    })
+
+    it('takes over the lock of a process that died', async () => {
+      const lockDir = path.join(configPath, '.pnpm-store', 'lock')
+      fs.mkdirSync(lockDir, { recursive: true })
+      const longAgo = new Date(Date.now() - 60_000)
+      fs.utimesSync(lockDir, longAgo, longAgo)
+      await run('some-plugin', '1.2.3', 'install')
+      expect(spawned).to.have.length(1)
+    })
+
+    it('takes the lock at once from a process that died on this machine', async () => {
+      const lockDir = path.join(configPath, '.pnpm-store', 'lock')
+      fs.mkdirSync(lockDir, { recursive: true })
+      const { pid } = childProcess.spawnSync(process.execPath, ['-e', ''])
+      fs.writeFileSync(
+        path.join(configPath, '.pnpm-store', 'lock-owner.json'),
+        JSON.stringify({ host: os.hostname(), pid })
+      )
+      const result = await run('some-plugin', '1.2.3', 'install')
+      expect(spawned).to.have.length(1)
+      expect(result.errors).to.deep.equal([])
+    })
+
+    it('waits for a holder on another machine', async () => {
+      fs.mkdirSync(path.join(configPath, '.pnpm-store', 'lock'), {
+        recursive: true
+      })
+      fs.writeFileSync(
+        path.join(configPath, '.pnpm-store', 'lock-owner.json'),
+        JSON.stringify({ host: `not-${os.hostname()}`, pid: 1 })
+      )
+      runPackageManager(
+        config,
+        'some-plugin',
+        '1.2.3',
+        'install',
+        () => {},
+        () => {},
+        () => {}
+      )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      expect(spawned).to.have.length(0)
+      fs.rmSync(path.join(configPath, '.pnpm-store', 'lock'), {
+        recursive: true
+      })
+      await settled(() => spawned.length > 0)
     })
 
     it('runs one pnpm at a time', async () => {

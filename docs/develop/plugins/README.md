@@ -120,18 +120,16 @@ npm i
 
 ### Link your project to Signal K server.
 
-Once you have developed your plugin code and are ready to debug, the most convenient way is to link your plugin directory into your instance of Signal K server with `pnpm link`.
+Once you have developed your plugin code and are ready to debug, the most convenient way is to link your plugin directory into your instance of Signal K server with `signalk-pnpm link`. `signalk-pnpm` comes with the server and runs pnpm in its configuration directory the way the App Store does.
 
-To do this, from within a terminal window (if you are using Docker, the following must be executed from the container terminal):
+To do this, from within a terminal window, as the user that the server runs as (if you are using Docker, the following must be executed from the container terminal):
 
 ```shell
-# Change to the Signal K server configuration directory
-cd ~/.signalk
-
 # Link the folder containing your built plugin code
-# (may require the use of sudo)
-pnpm link /path/to/my_plugin_src
+signalk-pnpm link /path/to/my_plugin_src
 ```
+
+`signalk-pnpm` works in `~/.signalk`, or in `$SIGNALK_NODE_CONFIG_DIR` when that is set.
 
 When you start Signal K server the plugin will now appear in the **Plugin Config** screen where it can be configured and enabled.
 
@@ -367,13 +365,13 @@ To record deltas sent by the plugin in the server's data log, enable the **Log p
 
 Plugins can be removed via the AppStore.
 
-You can also remove a plugin manually by running `pnpm remove <plugin-name>` from the `~/.signalk/` directory.
+You can also remove a plugin manually by running `signalk-pnpm remove <plugin-name>`.
 
 Alternatively you can:
 
 1. Delete the plugin's entry from `~/.signalk/package.json`
 1. Remove the folder `~/.signalk/node_modules`
-1. Run `pnpm install --config.ignore-scripts=true` from the `~/.signalk/` directory.
+1. Run `signalk-pnpm install`.
 
 Finally you can remove the plugin setting file in `~/.signalk/plugin-config-data/`.
 

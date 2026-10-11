@@ -18,7 +18,9 @@
 import { ChildProcess, execFile, spawn } from 'child_process'
 import fs from 'fs'
 import _ from 'lodash'
+import os from 'os'
 import path from 'path'
+import lockfile from 'proper-lockfile'
 import semver, { SemVer } from 'semver'
 import { atomicWriteFileSync } from './atomicWrite'
 import { findBundledPackages, findPackageLocation } from './bundled-packages'
@@ -567,6 +569,96 @@ function pnpmOutput(configPath: string, args: string[]): Promise<string> {
 // chain rejected, which would skip every later run.
 let configDirRun: Promise<void> = Promise.resolve()
 
+const LOCK_RETRY_MS = 250
+
+// The server and signalk-pnpm each run pnpm in the config directory, so
+// besides the queue within a process, a lock in the store keeps their runs
+// apart. Its holder keeps refreshing it, so the lock of a process that died
+// goes stale within seconds and is taken over.
+async function withConfigDirLock<T>(
+  configPath: string,
+  onWait: (message: string) => void,
+  run: () => Promise<T>
+): Promise<T> {
+  const release = await lockConfigDir(configPath, onWait)
+  try {
+    return await run()
+  } finally {
+    await release().catch(() => undefined)
+  }
+}
+
+async function lockConfigDir(
+  configPath: string,
+  onWait: (message: string) => void
+): Promise<() => Promise<void>> {
+  const lockfilePath = path.join(configPath, PNPM_STORE, 'lock')
+  const ownerPath = path.join(configPath, PNPM_STORE, 'lock-owner.json')
+  fs.mkdirSync(path.dirname(lockfilePath), { recursive: true })
+  let waiting = false
+  for (;;) {
+    try {
+      const release = await lockfile.lock(configPath, {
+        lockfilePath,
+        realpath: false,
+        onCompromised: (err) =>
+          console.error(`Lost the lock on ${configPath}: ${err.message}`)
+      })
+      fs.writeFileSync(
+        ownerPath,
+        JSON.stringify({ host: os.hostname(), pid: process.pid })
+      )
+      return async () => {
+        fs.rmSync(ownerPath, { force: true })
+        await release()
+      }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ELOCKED') {
+        throw err
+      }
+      if (holderIsGone(ownerPath)) {
+        fs.rmSync(ownerPath, { force: true })
+        fs.rmSync(lockfilePath, { recursive: true, force: true })
+        continue
+      }
+      if (!waiting) {
+        waiting = true
+        onWait(
+          `Waiting for another pnpm run in ${configPath} to finish, such as an App Store install or signalk-pnpm\n`
+        )
+      }
+      await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_MS))
+    }
+  }
+}
+
+// The holder of the lock is recorded, so that a process that finds its
+// holder gone from this machine, as when the server restarts after a crash,
+// takes the lock at once rather than when it goes stale. Elsewhere, or with
+// the holder's process id taken by another process, staleness decides.
+function holderIsGone(ownerPath: string): boolean {
+  let owner: { host?: string; pid?: number }
+  try {
+    owner = JSON.parse(fs.readFileSync(ownerPath, 'utf8'))
+  } catch {
+    return false
+  }
+  if (owner.host !== os.hostname() || typeof owner.pid !== 'number') {
+    return false
+  }
+  // Runs within a process are queued, so a lock under this process's own id
+  // was left by an earlier process that had the same id
+  if (owner.pid === process.pid) {
+    return true
+  }
+  try {
+    process.kill(owner.pid, 0)
+    return false
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === 'ESRCH'
+  }
+}
+
 function runConfigDirPnpm(
   configPath: string,
   command: ModuleCommand,
@@ -577,20 +669,50 @@ function runConfigDirPnpm(
 ) {
   const pnpmCommand =
     command === 'remove' ? 'remove' : packageString ? 'add' : 'install'
-  const args = packageString ? [pnpmCommand, packageString] : [pnpmCommand]
+  queueConfigDirPnpm(
+    configPath,
+    packageString ? [pnpmCommand, packageString] : [pnpmCommand],
+    onData,
+    onErr,
+    onClose
+  )
+}
+
+// Runs any pnpm command in the config directory the way the App Store does,
+// for the signalk-pnpm command
+export function runPnpmInConfigDir(
+  configPath: string,
+  args: string[],
+  onData: (output: any) => any,
+  onErr: (err: Error) => any
+): Promise<number> {
+  return new Promise((resolve) =>
+    queueConfigDirPnpm(configPath, args, onData, onErr, resolve)
+  )
+}
+
+function queueConfigDirPnpm(
+  configPath: string,
+  args: string[],
+  onData: (output: any) => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
   configDirRun = configDirRun
     .then(async () => {
-      const code = await runPnpm(configPath, args, onData, onErr).catch(
-        (err) => {
-          onErr(err)
-          return -1
-        }
-      )
+      const code = await withConfigDirLock(configPath, onData, () =>
+        runPnpm(configPath, args, onData, onErr)
+      ).catch((err) => {
+        onErr(err)
+        return -1
+      })
       try {
         onClose(code)
       } finally {
         if (code === 0) {
-          await pruneStore(configPath)
+          await withConfigDirLock(configPath, pnpmDebug, () =>
+            pruneStore(configPath)
+          )
         }
       }
     })
@@ -670,7 +792,11 @@ function modulesDirs(configPath: string): ModulesDirs {
 export function recoverConfigDirModules(configPath: string): Promise<void> {
   const dirs = modulesDirs(configPath)
   const recovery = configDirRun.then(() =>
-    settleInterruptedRebuild(configPath, dirs)
+    withConfigDirLock(
+      configPath,
+      (message) => console.log(message.trim()),
+      () => settleInterruptedRebuild(configPath, dirs)
+    )
   )
   configDirRun = recovery.catch(() => undefined)
   return recovery.then(() => {
@@ -1186,6 +1312,7 @@ module.exports = {
   resetModuleCaches,
   getBundledPnpm,
   bundledPnpmVersion,
+  runPnpmInConfigDir,
   recoverConfigDirModules,
   PNPM_APP_STORE_SETTINGS,
   PREVIOUS_MODULES_BACKUP,
