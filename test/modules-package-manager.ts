@@ -172,6 +172,13 @@ describe('runPackageManager', () => {
     })
   })
 
+  describe('package names', () => {
+    it('never lets a name that looks like an option reach pnpm as one', async () => {
+      await run('--global', null, 'install')
+      expect(spawned[0].args.slice(-3)).to.deep.equal(['add', '--', '--global'])
+    })
+  })
+
   describe('config directory', () => {
     const pnpmOptions = () => [
       '--config.ignore-scripts=true',
@@ -194,6 +201,7 @@ describe('runPackageManager', () => {
         getBundledPnpm().bin,
         ...pnpmOptions(),
         'add',
+        '--',
         'some-plugin@1.2.3'
       ])
     })
@@ -204,6 +212,7 @@ describe('runPackageManager', () => {
         getBundledPnpm().bin,
         ...pnpmOptions(),
         'remove',
+        '--',
         'some-plugin'
       ])
     })
