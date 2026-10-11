@@ -4,6 +4,7 @@ import { subscribeWithSelector } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 
 import { createAppSlice, type AppSlice } from './slices/appSlice'
+import type { N2kInstanceRule } from './types'
 import { createWsSlice, type WsSlice } from './slices/wsSlice'
 import { createDataSlice, type DataSlice } from './slices/dataSlice'
 import {
@@ -309,6 +310,18 @@ export function useDiscoveredAddresses() {
 
 export function useN2kOutAvailable() {
   return useStore((s) => s.n2kOutAvailable)
+}
+
+/**
+ * The stored instance path mapping rules of one device; undefined until
+ * they have been loaded, or when the device has no key.
+ */
+export function useN2kInstanceRules(
+  deviceKey: string | undefined
+): N2kInstanceRule[] | undefined {
+  return useStore((s) =>
+    deviceKey === undefined ? undefined : s.n2kInstanceMappings[deviceKey]
+  )
 }
 
 export function useN2kDeviceStatusLoaded() {

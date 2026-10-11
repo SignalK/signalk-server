@@ -116,6 +116,56 @@ describe('WebSocketService serverStartId tracking', () => {
     ).toHaveLength(1)
   })
 
+  it('scopes a SOURCEPATHSEVICTED serverevent to its prefixes', () => {
+    service.setZustandState(useStore.setState)
+    seedPath('propulsion.port.revolutions')
+    seedPath('navigation.speedOverGround')
+
+    ws.receive({
+      type: 'SOURCEPATHSEVICTED',
+      data: { sourceRef: 'nmea0183.0', prefixes: ['propulsion.port'] }
+    })
+
+    expect(Object.keys(useStore.getState().signalkData.self ?? {})).toEqual([
+      'navigation.speedOverGround$nmea0183.0'
+    ])
+  })
+
+  it('evicts every leaf of a source on SOURCEEVICTED', () => {
+    service.setZustandState(useStore.setState)
+    seedPath('propulsion.port.revolutions')
+    seedPath('navigation.speedOverGround')
+
+    ws.receive({ type: 'SOURCEEVICTED', data: { sourceRef: 'nmea0183.0' } })
+
+    expect(useStore.getState().signalkData.self).toEqual({})
+  })
+
+  it('ignores a stray prefixes field on SOURCEEVICTED', () => {
+    service.setZustandState(useStore.setState)
+    seedPath('propulsion.port.revolutions')
+    seedPath('navigation.speedOverGround')
+
+    ws.receive({
+      type: 'SOURCEEVICTED',
+      data: { sourceRef: 'nmea0183.0', prefixes: ['propulsion.port'] }
+    })
+
+    expect(useStore.getState().signalkData.self).toEqual({})
+  })
+
+  it('stores N2KINSTANCEMAPPINGS serverevents in the store', () => {
+    service.setZustandState(useStore.setState)
+    useStore.setState({ n2kInstanceMappings: {} })
+    const rules = [{ group: 'engine', instance: 0, target: 'propulsion.main' }]
+
+    ws.receive({ type: 'N2KINSTANCEMAPPINGS', data: { '137:656598': rules } })
+
+    expect(useStore.getState().n2kInstanceMappings).toEqual({
+      '137:656598': rules
+    })
+  })
+
   it('stores HISTORYPROVIDERS serverevents as a full snapshot', () => {
     // handleServerEvent no-ops until the zustand setter is registered
     // (done by the app bootstrap in production).
