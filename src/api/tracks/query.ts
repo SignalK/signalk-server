@@ -600,6 +600,32 @@ class ErrorReport {
 }
 
 /**
+ * Read named query parameter as an instant.
+ *
+ * A parameter that is present but unreadable, `from[x]=1` say, must fail the
+ * request.
+ */
+const parseQueryInstant = (
+  query: Record<string, unknown>,
+  name: string,
+  errors: string[]
+): Temporal.Instant | undefined => {
+  if (query[name] === undefined) {
+    return undefined
+  }
+  const value = first(query[name])
+  if (value === undefined) {
+    errors.push(`${name} must be a single time`)
+    return undefined
+  }
+  if (blank(value)) {
+    errors.push(`${name} must not be empty`)
+    return undefined
+  }
+  return parseInstant(value, name, errors)
+}
+
+/**
  * The part of a track a `DELETE /{id}` names, or undefined for the whole
  * track.
  *
@@ -612,33 +638,18 @@ export function parseTrackSpan(query: Record<string, unknown>): {
   errors: string[]
 } {
   const errors = rejectUnknownParams(query, ['from', 'to'])
-  const bounds: { from?: Temporal.Instant; to?: Temporal.Instant } = {}
-  for (const name of ['from', 'to'] as const) {
-    if (query[name] === undefined) {
-      continue
-    }
-    // A bound that is present but unreadable, `from[x]=1` say, must fail
-    // the request: read as absent it would widen the delete to the whole
-    // track.
-    const value = first(query[name])
-    if (value === undefined) {
-      errors.push(`${name} must be a single time`)
-    } else if (blank(value)) {
-      errors.push(`${name} must not be empty`)
-    } else {
-      bounds[name] = parseInstant(value, name, errors)
-    }
-  }
-  const { from, to } = bounds
+  const from = parseQueryInstant(query, 'from', errors)
+  const to = parseQueryInstant(query, 'to', errors)
   if (from && to && Temporal.Instant.compare(from, to) > 0) {
     errors.push('from must not be later than to')
   }
-  const span: TrackSpan | undefined = from
-    ? { from, ...(to ? { to } : {}) }
-    : to
-      ? { to }
-      : undefined
-  return { ...(span ? { span } : {}), errors }
+  if (from || to) {
+    return {
+      span: from ? { from, ...(to ? { to } : {}) } : { to: to! },
+      errors
+    }
+  }
+  return { errors }
 }
 
 /**
