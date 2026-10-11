@@ -173,6 +173,7 @@ describe('runPackageManager', () => {
     const pnpmOptions = [
       '--config.ignore-scripts=true',
       '--config.minimum-release-age=0',
+      '--config.block-exotic-subdeps=false',
       '--config.confirm-modules-purge=false',
       '--config.optimistic-repeat-install=false'
     ]

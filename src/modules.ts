@@ -383,13 +383,15 @@ const PACKAGE_NAME_PATTERN =
 // The pnpm-lock.yaml kept in the config directory lets a plugin be removed,
 // and the installed set be restored, without the registry. Release age gating
 // is off so that a version can be installed as soon as it is published. A
-// node_modules directory left by another pnpm is rebuilt without a prompt, and
-// a repeated install re-links packages that have gone missing. The settings
-// use the --config form because not every pnpm command accepts them as
-// options.
+// plugin's dependencies may themselves depend on git or URL packages, as they
+// may with npm. A node_modules directory left by another pnpm is rebuilt
+// without a prompt, and a repeated install re-links packages that have gone
+// missing. The settings use the --config form because not every pnpm command
+// accepts them as options.
 const PNPM_CONFIG_DIR_ARGS = [
   '--config.ignore-scripts=true',
   '--config.minimum-release-age=0',
+  '--config.block-exotic-subdeps=false',
   '--config.confirm-modules-purge=false',
   '--config.optimistic-repeat-install=false'
 ]
