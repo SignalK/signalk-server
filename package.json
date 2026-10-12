@@ -71,13 +71,14 @@
     "packages/streams",
     "packages/server-api",
     "packages/resources-provider-plugin",
+    "packages/course-provider-plugin",
     "packages/typedoc-theme",
     "packages/assemblyscript-plugin-sdk"
   ],
   "dependencies": {
     "@assemblyscript/loader": "^0.28.19",
     "@astronautlabs/mdns": "^1.0.10",
-    "@signalk/course-provider": "^1.4.0",
+    "@signalk/course-provider": "^1.5.0",
     "@signalk/n2k-signalk": ">=4.1.0-beta",
     "@signalk/nmea0183-signalk": "^3.20.0",
     "@signalk/resources-provider": "^1.5.2",

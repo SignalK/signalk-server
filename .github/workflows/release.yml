@@ -101,6 +101,16 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish course-provider
+        run: |
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/course-provider-plugin/package.json)
+          if ! npm view @signalk/course-provider@$LOCAL_VERSION version &>/dev/null; then
+            cd packages/course-provider-plugin
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish path-metadata
         run: |
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/path-metadata/package.json)

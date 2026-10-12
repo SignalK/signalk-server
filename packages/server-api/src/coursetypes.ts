@@ -1,4 +1,4 @@
-import { Position } from '.'
+import { GeoJsonLinestring, Position } from '.'
 import { Brand } from './brand'
 
 /** @category Course API */
@@ -29,6 +29,7 @@ export interface ActiveRoute {
   pointTotal: number
   reverse: boolean
   name: string
+  waypoints?: GeoJsonLinestring
 }
 
 /** @category Course API */
