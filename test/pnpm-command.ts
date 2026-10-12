@@ -48,11 +48,7 @@ describe('signalk-pnpm', () => {
     ) => callback(null, '/store/v11\n')
   })
 
-  afterEach(async () => {
-    // A successful run is followed by pruning the store
-    for (let i = 0; i < 500 && spawned.length === 1; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 2))
-    }
+  afterEach(() => {
     for (const { child } of spawned) {
       child.emit('close', 0)
     }
