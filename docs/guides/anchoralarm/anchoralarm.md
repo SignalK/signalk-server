@@ -28,13 +28,9 @@ For use with other Apps (Android, web apps, etc) see [Alternatives to WilhelmSK]
 ## Configuration
 
 **Step 1.** Configure the Vessel data in SignalK server:
-<img src="vesseldata.png" width=600px>
+<img src="vesseldata.png" alt="Vessel Base Data settings" width=600px>
 
-Be sure to set:
-
-- Boat length
-- GPS Distance from Bow
-- GPS Distance from Center.
+Be sure to set the boat's length in **Vessel Base Data** and the mounting position of each GPS antenna under **GNSS Antenna Positions**. The anchor alarm measures from the bow, so it needs to know where on the boat the reported position lies.
 
 #### Step 2. Install required Signal K Server plugins:
 
