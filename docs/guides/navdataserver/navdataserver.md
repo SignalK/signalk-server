@@ -35,8 +35,6 @@ All configuration is done from within the Signal K Server Admin UI. Open the Adm
 
 <img src="./vesseldata.png" alt="Vessel Base Data settings" width=600px/>
 
-- Enter the mounting position of each GPS antenna under **GNSS Antenna Positions**.
-
 #### _Step 2._ Install and Configure Plugins:
 
 The following plugins are required to process and transform the received data to NMEA0183:
