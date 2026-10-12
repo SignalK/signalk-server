@@ -1,5 +1,6 @@
 import { expect } from 'chai'
 import { ChildProcess } from 'child_process'
+import crypto from 'crypto'
 import { EventEmitter } from 'events'
 import fs from 'fs'
 import os from 'os'
@@ -59,10 +60,11 @@ describe('runPackageManager', () => {
   let originalSpawn: typeof childProcess.spawn
   let originalExecFile: typeof childProcess.execFile
   let spawned: Spawned[]
-  let pruned: string[]
+  let pruned: Spawned[]
   let probes: Probe[]
   let closed: Set<ChildProcess>
-  let succeeded: number
+  let probedStore: string
+  let onPrune: (() => void) | undefined
 
   beforeEach(() => {
     configPath = fs.mkdtempSync(path.join(os.tmpdir(), '_skservertest_pm'))
@@ -71,7 +73,8 @@ describe('runPackageManager', () => {
     pruned = []
     probes = []
     closed = new Set()
-    succeeded = 0
+    probedStore = STORE_DIR
+    onPrune = undefined
     resetModuleCaches()
     originalSpawn = childProcess.spawn
     originalExecFile = childProcess.execFile
@@ -84,18 +87,16 @@ describe('runPackageManager', () => {
         stdout: new EventEmitter(),
         stderr: new EventEmitter()
       }) as unknown as ChildProcess
-      // Pruning follows every successful run; it completes on its own so
-      // that the tests deal with the runs they start
+      // A prune completes on its own, so that the tests deal with the runs
+      // they start
       if (args.at(-2) === 'store' && args.at(-1) === 'prune') {
-        pruned.push(opts.cwd ?? '')
-        setImmediate(() => child.emit('close', 0))
-      } else {
-        child.on('close', (code: number) => {
-          closed.add(child)
-          if (code === 0 && command === process.execPath) {
-            succeeded++
-          }
+        pruned.push({ command, args, cwd: opts.cwd, child })
+        setImmediate(() => {
+          onPrune?.()
+          child.emit('close', 0)
         })
+      } else {
+        child.on('close', () => closed.add(child))
         spawned.push({ command, args, cwd: opts.cwd, child })
       }
       return child
@@ -107,7 +108,7 @@ describe('runPackageManager', () => {
       callback: (err: Error | null, stdout: string) => void
     ) => {
       probes.push({ args, cwd: opts.cwd })
-      callback(null, `${STORE_DIR}\n`)
+      callback(null, `${probedStore}\n`)
     }
   })
 
@@ -119,7 +120,8 @@ describe('runPackageManager', () => {
       }
     }
     await settled(() => spawned.every(({ child }) => closed.has(child)))
-    await settled(() => pruned.length >= succeeded)
+    // Queued behind whatever the test started, including a prune
+    await recoverConfigDirModules(configPath)
     childProcess.spawn = originalSpawn
     childProcess.execFile = originalExecFile
     fs.rmSync(configPath, { recursive: true, force: true })
@@ -258,18 +260,99 @@ describe('runPackageManager', () => {
       ])
     })
 
-    it('prunes the store after a run that succeeded', async () => {
-      const result = await run('some-plugin', '1.2.3', 'install')
+    // node_modules as this pnpm leaves it, with a directory for each package
+    const installed = (...ids: string[]) => {
+      for (const id of ids) {
+        fs.mkdirSync(path.join(configPath, 'node_modules', '.pnpm', id), {
+          recursive: true
+        })
+      }
+      fs.writeFileSync(
+        path.join(configPath, 'node_modules', '.modules.yaml'),
+        JSON.stringify({ storeDir: probedStore })
+      )
+    }
+    const drop = (id: string) =>
+      fs.rmSync(path.join(configPath, 'node_modules', '.pnpm', id), {
+        recursive: true
+      })
+
+    it('prunes the store once a package has left node_modules', async () => {
+      installed('kept@1.0.0', 'replaced@1.0.0')
+      const result = await run('replaced', '2.0.0', 'install')
+      drop('replaced@1.0.0')
       await finish(result, 0)
       await settled(() => pruned.length > 0)
-      expect(pruned).to.deep.equal([configPath])
+      expect(pruned.map(({ cwd }) => cwd)).to.deep.equal([configPath])
+    })
+
+    it('leaves the store alone when no package left node_modules', async () => {
+      installed('kept@1.0.0')
+      const result = await run('added', '1.0.0', 'install')
+      installed('added@1.0.0')
+      await finish(result, 0)
+      await recoverConfigDirModules(configPath)
+      expect(pruned).to.deep.equal([])
     })
 
     it('leaves the store alone after a run that failed', async () => {
-      const result = await run('some-plugin', '1.2.3', 'install')
+      installed('replaced@1.0.0')
+      const result = await run('replaced', '2.0.0', 'install')
+      drop('replaced@1.0.0')
       await finish(result, 1)
-      await new Promise((resolve) => setTimeout(resolve, 20))
+      await recoverConfigDirModules(configPath)
       expect(pruned).to.deep.equal([])
+    })
+
+    it('prunes with a metadata cache of its own, keeping the one installs use', async () => {
+      installed('replaced@1.0.0')
+      const result = await run('replaced', '2.0.0', 'install')
+      drop('replaced@1.0.0')
+      await finish(result, 0)
+      await settled(() => pruned.length > 0)
+      const cacheDirs = pruned[0].args.filter((arg) =>
+        arg.startsWith('--config.cache-dir=')
+      )
+      expect(cacheDirs).to.deep.equal([
+        `--config.cache-dir=${path.join(configPath, '.pnpm-store', 'prune-cache')}`
+      ])
+    })
+
+    it('keeps the packages that pnpm copied into node_modules while it prunes', async () => {
+      probedStore = path.join(configPath, '.pnpm-store', 'v11')
+      installed('copied@1.0.0', 'replaced@1.0.0')
+      const content = 'module.exports = 1\n'
+      const hex = crypto.createHash('sha512').update(content).digest('hex')
+      const stored = path.join(
+        probedStore,
+        'files',
+        hex.slice(0, 2),
+        hex.slice(2)
+      )
+      fs.mkdirSync(path.dirname(stored), { recursive: true })
+      fs.writeFileSync(stored, content)
+      const copy = path.join(
+        configPath,
+        'node_modules/.pnpm/copied@1.0.0/node_modules/copied/index.js'
+      )
+      fs.mkdirSync(path.dirname(copy), { recursive: true })
+      fs.writeFileSync(copy, content)
+      let linksWhilePruning = 0
+      onPrune = () => {
+        linksWhilePruning = fs.statSync(stored).nlink
+      }
+
+      const result = await run('replaced', '2.0.0', 'install')
+      drop('replaced@1.0.0')
+      await finish(result, 0)
+      await recoverConfigDirModules(configPath)
+
+      expect(pruned).to.have.length(1)
+      expect(linksWhilePruning).to.equal(2)
+      expect(fs.statSync(stored).nlink).to.equal(1)
+      expect(
+        fs.existsSync(path.join(configPath, '.pnpm-store', 'pins'))
+      ).to.equal(false)
     })
 
     it('refuses to run on a Node.js that the bundled pnpm does not support', async () => {

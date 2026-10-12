@@ -16,6 +16,7 @@
 */
 
 import { ChildProcess, execFile, spawn } from 'child_process'
+import crypto from 'crypto'
 import fs from 'fs'
 import _ from 'lodash'
 import os from 'os'
@@ -415,12 +416,14 @@ export const PNPM_APP_STORE_SETTINGS = [
   '--config.update-notifier=false'
 ]
 
-function pnpmSettings(configPath: string): string[] {
-  const store = path.join(configPath, PNPM_STORE)
+function pnpmSettings(
+  configPath: string,
+  cacheDir = path.join(configPath, PNPM_STORE, 'cache')
+): string[] {
   return [
     ...PNPM_APP_STORE_SETTINGS,
-    `--config.store-dir=${store}`,
-    `--config.cache-dir=${path.join(store, 'cache')}`
+    `--config.store-dir=${path.join(configPath, PNPM_STORE)}`,
+    `--config.cache-dir=${cacheDir}`
   ]
 }
 
@@ -531,8 +534,12 @@ export function bundledPnpmVersion(): string | undefined {
   }
 }
 
-function pnpmArgs(configPath: string, args: string[]): string[] {
-  return [getBundledPnpm().bin, ...pnpmSettings(configPath), ...args]
+function pnpmArgs(
+  configPath: string,
+  args: string[],
+  cacheDir?: string
+): string[] {
+  return [getBundledPnpm().bin, ...pnpmSettings(configPath, cacheDir), ...args]
 }
 
 const storeDirs = new Map<string, Promise<string | undefined>>()
@@ -702,16 +709,21 @@ function queueConfigDirPnpm(
 ) {
   configDirRun = configDirRun
     .then(async () => {
-      const code = await withConfigDirLock(configPath, onData, () =>
-        runPnpm(configPath, args, onData, onErr)
-      ).catch((err) => {
+      let before = new Set<string>()
+      const code = await withConfigDirLock(configPath, onData, () => {
+        before = installedPackages(configPath)
+        return runPnpm(configPath, args, onData, onErr)
+      }).catch((err) => {
         onErr(err)
         return -1
       })
       try {
         onClose(code)
       } finally {
-        if (code === 0) {
+        // Only a package that left node_modules can have left anything in
+        // the store to prune
+        const after = installedPackages(configPath)
+        if (code === 0 && [...before].some((id) => !after.has(id))) {
           await withConfigDirLock(configPath, pnpmDebug, () =>
             pruneStore(configPath)
           )
@@ -750,24 +762,112 @@ function spawnPnpm(
   configPath: string,
   args: string[],
   onData: (output: any) => any,
-  onErr: (err: Error) => any
+  onErr: (err: Error) => any,
+  cacheDir?: string
 ): Promise<number> {
   return new Promise<number>((resolve) => {
-    const child = spawn(process.execPath, pnpmArgs(configPath, args), {
-      cwd: configPath
-    })
+    const child = spawn(
+      process.execPath,
+      pnpmArgs(configPath, args, cacheDir),
+      {
+        cwd: configPath
+      }
+    )
     attachHandlers(child, onData, onErr, resolve)
   })
 }
 
 // Nothing else removes packages from the store, which updates and removals
 // would otherwise grow for good. pnpm keeps every package that node_modules
-// still links to.
+// still links to, and keeps the metadata cache it downloads with: the prune
+// gets a cache of its own to empty.
 async function pruneStore(configPath: string) {
+  const storeRoot = path.join(configPath, PNPM_STORE)
+  const pinsDir = path.join(storeRoot, 'pins')
+  const pruneCache = path.join(storeRoot, 'prune-cache')
   const log = (output: any) => pnpmDebug(String(output))
-  const code = await spawnPnpm(configPath, ['store', 'prune'], log, log)
-  if (code !== 0) {
-    console.error(`Pruning the pnpm store of ${configPath} failed (${code})`)
+  try {
+    const storeDir = await getStoreDir(configPath)
+    if (storeDir) {
+      await pinCopiedPackages(configPath, storeDir, pinsDir)
+    }
+    const code = await spawnPnpm(
+      configPath,
+      ['store', 'prune'],
+      log,
+      log,
+      pruneCache
+    )
+    if (code !== 0) {
+      console.error(`Pruning the pnpm store of ${configPath} failed (${code})`)
+    }
+  } finally {
+    await Promise.all(
+      [pinsDir, pruneCache].map((dir) =>
+        fs.promises.rm(dir, { recursive: true, force: true })
+      )
+    )
+  }
+}
+
+// pnpm copies a package with install scripts into node_modules instead of
+// linking it, as building it would change it, so its files in the store have
+// no other link. A prune would remove them while the package is installed:
+// the next install would download it again, and an offline reinstall would
+// fail. For the prune, each such file in the store gets a hard link of its
+// own; the store keeps a file at the SHA-512 of its content, with a suffix
+// when it is executable.
+async function pinCopiedPackages(
+  configPath: string,
+  storeDir: string,
+  pinsDir: string
+) {
+  await fs.promises.rm(pinsDir, { recursive: true, force: true })
+  await fs.promises.mkdir(pinsDir, { recursive: true })
+  const virtualStore = path.join(configPath, 'node_modules', '.pnpm')
+  const entries = await fs.promises
+    .readdir(virtualStore, { recursive: true, withFileTypes: true })
+    .catch(() => [])
+  let pinned = 0
+  for (const entry of entries) {
+    if (!entry.isFile()) {
+      continue
+    }
+    const file = path.join(entry.parentPath, entry.name)
+    if ((await fs.promises.stat(file)).nlink !== 1) {
+      continue
+    }
+    const hex = crypto
+      .createHash('sha512')
+      .update(await fs.promises.readFile(file))
+      .digest('hex')
+    for (const suffix of ['', '-exec']) {
+      const stored = path.join(
+        storeDir,
+        'files',
+        hex.slice(0, 2),
+        hex.slice(2) + suffix
+      )
+      try {
+        await fs.promises.link(stored, path.join(pinsDir, String(pinned)))
+        pinned++
+      } catch {
+        // not in the store
+      }
+    }
+  }
+}
+
+// pnpm keeps every installed package in a directory of its own in
+// node_modules/.pnpm, and with modules-cache-max-age=0 drops a package from
+// there as soon as nothing uses it any more
+function installedPackages(configPath: string): Set<string> {
+  try {
+    return new Set(
+      fs.readdirSync(path.join(configPath, 'node_modules', '.pnpm'))
+    )
+  } catch {
+    return new Set()
   }
 }
 
