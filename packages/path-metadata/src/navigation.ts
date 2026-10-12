@@ -69,7 +69,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
         type: 'string'
       },
       position: {
-        description: 'The position of previousPoint in two dimensions'
+        description: 'The position of nextPoint in two dimensions'
       }
     }
   },
@@ -96,11 +96,11 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
       }
     }
   },
-  '/vessels/*/navigation/course/calcValues/': {
+  '/vessels/*/navigation/course/calcValues': {
     description: 'Calculated course data values'
   },
   '/vessels/*/navigation/course/calcValues/calcMethod': {
-    description: 'Calculated course data values',
+    description: 'Method used to calculate course data values',
     type: 'string',
     enum: ['GreatCircle', 'Rhumbline']
   },
@@ -172,7 +172,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     }
   },
   '/vessels/*/navigation/course/calcValues/route': {
-    description: 'Calculations relative to previousPoint position',
+    description: 'Calculations relative to active route',
     properties: {
       distance: {
         description:
@@ -182,7 +182,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
       },
       timeToGo: {
         description:
-          'ime to reach perpendicular of last point in route with current speed and direction',
+          'Time to reach perpendicular of last point in route with current speed and direction',
         type: 'number',
         units: 's'
       },
