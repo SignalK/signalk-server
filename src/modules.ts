@@ -315,6 +315,12 @@ export function restoreModules(
   runNpm(config, null, null, 'remove', onData, onErr, onClose)
 }
 
+// An npm package name: an optional scope and URL-safe lowercase characters.
+// Anything else (a path, URL or git spec) would make npm install from
+// outside the registry.
+const PACKAGE_NAME_PATTERN =
+  /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
+
 export function runNpm(
   config: Config,
   name: any,
@@ -324,6 +330,11 @@ export function runNpm(
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
+  if (name && !PACKAGE_NAME_PATTERN.test(name)) {
+    onErr(new Error('Invalid package name: ' + name))
+    onClose(-1)
+    return
+  }
   if (version && version !== '' && !semver.valid(version)) {
     onErr(new Error('Invalid version: ' + version))
     onClose(-1)
@@ -356,8 +367,10 @@ export function runNpm(
       : [command, '-g']
     : ['--save', '--ignore-scripts', command]
 
+  // npm allows a name to start with a hyphen, so the package follows -- to
+  // keep npm from ever reading it as an option
   if (packageString) {
-    npmArgs.push(packageString)
+    npmArgs.push('--', packageString)
   }
 
   if (isTheServerModule(name, config)) {
