@@ -29,11 +29,13 @@ All configuration is done from within the Signal K Server Admin UI. Open the Adm
 
 #### _Step 1._ Enter Vessel Base Data:
 
-- Select _Server -> Setup_ from the menu.
+- Select _Server -> Settings_ from the menu.
 
-- The **Vessel Base Data** section, enter values for _Length_, _GPS Distance from Bow_ and _GPS Distance from Center_.
+- In the **Vessel Base Data** section, enter the vessel's _Length_.
 
-<img src="./vesseldata.png" width=600px/>
+<img src="./vesseldata.png" alt="Vessel Base Data settings" width=600px/>
+
+- Enter the mounting position of each GPS antenna under **GNSS Antenna Positions**.
 
 #### _Step 2._ Install and Configure Plugins:
 
