@@ -660,13 +660,17 @@ export class BLEApi implements IBLEApi {
           if (conn.connected) cb()
         }
       }
-      this.gattClaims.set(mac, {
+      const claim: GATTClaim = {
         pluginId,
         providerId,
         handle: syntheticHandle
-      })
+      }
+      this.gattClaims.set(mac, claim)
 
       conn.onDisconnect(() => {
+        // A released connection can go down after the device was claimed
+        // again, and that claim is not this one to remove
+        if (this.gattClaims.get(mac) !== claim) return
         this.gattClaims.delete(mac)
         debug.enabled &&
           debug(`Raw GATT claim auto-released (disconnect): ${mac}`)

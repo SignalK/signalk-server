@@ -33,6 +33,7 @@ class Deferred<T> {
 
 const fakeConnection = () => {
   let closes = 0
+  const disconnectCallbacks: (() => void)[] = []
   const connection: BLEGattConnection = {
     read: async () => Buffer.alloc(0),
     write: async () => undefined,
@@ -45,9 +46,16 @@ const fakeConnection = () => {
     get connected() {
       return closes === 0
     },
-    onDisconnect: () => undefined
+    onDisconnect: (callback) => {
+      disconnectCallbacks.push(callback)
+    }
   }
-  return { connection, closes: () => closes }
+  return {
+    connection,
+    closes: () => closes,
+    // The link going down, which a provider may report well after disconnect()
+    linkDown: () => disconnectCallbacks.forEach((callback) => callback())
+  }
 }
 
 const fakeSession = () => {
@@ -257,6 +265,22 @@ describe('BLE GATT claims of a stopped plugin', () => {
     )
     expect(late.closes()).to.equal(1)
     expect(api.getGATTClaims().size).to.equal(0)
+  })
+
+  it('keeps a new claim when the connection it left goes down later', async () => {
+    const { api, connects } = startApi()
+    const connecting = api.connectGATT(MAC, PLUGIN_ID)
+    const left = fakeConnection()
+    connects[0].resolve(left.connection)
+    await connecting
+
+    api.releaseGATTClaimsForPlugin(PLUGIN_ID)
+    const reconnecting = api.connectGATT(MAC, PLUGIN_ID)
+    connects[1].resolve(fakeConnection().connection)
+    await reconnecting
+    left.linkDown()
+
+    expect(api.getGATTClaims().get(MAC)).to.equal(PLUGIN_ID)
   })
 
   it("leaves other plugins' claims alone", async () => {
