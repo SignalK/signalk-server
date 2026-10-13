@@ -128,7 +128,13 @@ export class GnssOffsetCorrector {
     receivedAt: -Infinity
   }
 
-  constructor(private app: GnssCorrectorApplication) {}
+  // Heading age uses a monotonic clock: the wall clock can step backwards
+  // (a boat computer without an RTC syncing to GNSS or NTP), which would
+  // keep an old heading fresh. Injectable so tests control elapsed time.
+  constructor(
+    private app: GnssCorrectorApplication,
+    private readonly monotonicNow: () => number = () => performance.now()
+  ) {}
 
   async start(): Promise<void> {
     this.rebuildLookup()
@@ -452,14 +458,14 @@ export class GnssOffsetCorrector {
         typeof delta.value === 'number' && Number.isFinite(delta.value)
           ? delta.value
           : NaN
-      received.receivedAt = Date.now()
+      received.receivedAt = this.monotonicNow()
     })
   }
 
   // Only the heading itself must be fresh: magnetic variation changes over
   // days and is commonly sent rarely or configured once.
   private readHeadingTrue(): number | undefined {
-    const now = Date.now()
+    const now = this.monotonicNow()
     if (isFresh(this.headingTrue, now)) return this.headingTrue.value
     if (!isFresh(this.headingMagnetic, now)) return undefined
     const v = _get(this.app.signalk.self, 'navigation.magneticVariation.value')
