@@ -12,7 +12,7 @@ RUN groupadd -r docker -g 991 \
   && apt-get update \
   && apt-get -y install --no-install-recommends git \
   python3 python3-venv python3-pip build-essential \
-  sysstat procps nano curl libcap2-bin sudo bluez \
+  sysstat procps nano curl libcap2-bin sudo bluez tini \
   && usermod -a -G dialout,i2c,spi,docker node \
   && chmod u+s /usr/bin/date
 
