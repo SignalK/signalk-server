@@ -1299,8 +1299,7 @@ describe('GnssOffsetCorrector heading freshness', function () {
   let now = 0
 
   beforeEach(function () {
-    now = Date.parse('2026-05-31T00:00:00.000Z')
-    Date.now = () => now
+    now = 1000000
   })
 
   afterEach(function () {
@@ -1313,7 +1312,7 @@ describe('GnssOffsetCorrector heading freshness', function () {
       gnssCorrection: 'replace',
       gnssSensors: [SENSOR]
     })
-    const corrector = new GnssOffsetCorrector(env.app)
+    const corrector = new GnssOffsetCorrector(env.app, () => now)
     await corrector.start()
     const latitude = () => {
       const out = env.process(
@@ -1385,6 +1384,14 @@ describe('GnssOffsetCorrector heading freshness', function () {
       'navigation.headingMagnetic.value': 0,
       'navigation.magneticVariation.value': 0
     })
+    now += 3001
+    expect(latitude()).to.equal(60)
+  })
+
+  it('expires a heading when the wall clock steps backwards', async function () {
+    const { latitude } = await setup({ 'navigation.headingTrue.value': 0 })
+    const wallClock = realNow()
+    Date.now = () => wallClock - 3600000
     now += 3001
     expect(latitude()).to.equal(60)
   })
