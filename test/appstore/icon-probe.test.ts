@@ -245,6 +245,20 @@ describe('appstore/icon-probe probeIconUrl', () => {
     }
   })
 
+  it('does not cache a negative when no CDN gave a definite answer', async () => {
+    const cache = createIconProbeCache(tmpDir())
+    await withStubbedFetch(
+      () => ({ ok: false, status: 503 }),
+      async () => {
+        const r = await probeIconUrl('@signalk/x', '1.0.0', './icon.svg', cache)
+        expect(r).to.equal(null)
+        expect(cache.get('@signalk/x', '1.0.0', './icon.svg')).to.equal(
+          undefined
+        )
+      }
+    )
+  })
+
   it('does not ask unpkg for a path jsDelivr reports missing', async () => {
     const cache = createIconProbeCache(tmpDir())
     const requested: string[] = []
