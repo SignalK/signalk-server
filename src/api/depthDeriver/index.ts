@@ -197,9 +197,14 @@ export function deriveDepths(
   }
   if (reading.belowKeel === undefined) {
     const surface = reading.belowSurface ?? belowSurface
+    // A transducer deeper than the keel contradicts the draft: one of the
+    // two is misconfigured, so no keel depth is derived from them.
+    const keelBelowTransducer =
+      transducerDepth === undefined ||
+      (draft !== undefined && transducerDepth <= draft)
     derived.set(
       BELOW_KEEL,
-      typeof surface === 'number' && draft !== undefined
+      typeof surface === 'number' && draft !== undefined && keelBelowTransducer
         ? surface - draft
         : null
     )
@@ -211,6 +216,8 @@ function transducerDepthBelowSurface(
   reading: DepthReading,
   draft: number | undefined
 ): number | undefined {
+  // An offset of 0 is the unset default of PGN 128267 and most
+  // transducers, not a transducer at the waterline or on the keel.
   const toSurface = reading.surfaceToTransducer
   if (typeof toSurface === 'number' && toSurface > 0) return toSurface
   const toKeel = reading.transducerToKeel

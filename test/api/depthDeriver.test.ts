@@ -155,6 +155,12 @@ describe('DepthDeriver', function () {
     expect(emitted).to.have.length(0)
   })
 
+  it('derives no belowKeel when the surface offset exceeds the draft', async function () {
+    const { process, derivedValues } = await setup({ maximum: 1 })
+    await process(depthDelta({ belowTransducer: 10, surfaceToTransducer: 2 }))
+    expect(derivedValues()).to.deep.equal({ belowSurface: 12 })
+  })
+
   it('retracts a derived depth with null when the offset stops arriving', async function () {
     const { process, derived, derivedValues } = await setup({ maximum: 1.7 })
     await process(depthDelta({ belowTransducer: 10, transducerToKeel: 1 }))
@@ -164,7 +170,6 @@ describe('DepthDeriver', function () {
       belowSurface: null,
       belowKeel: null
     })
-    // Once retracted, further readings without an offset emit nothing.
     await process(depthDelta({ belowTransducer: 10 }))
     expect(derived()).to.have.length(2)
   })
