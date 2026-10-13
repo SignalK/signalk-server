@@ -27,6 +27,7 @@ import {
 } from '../../utils/sourceLabels'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import { getPath$SourceKey, getPathFromKey } from './pathUtils'
+import { getThemedSelectStyles } from '../../utils/reactSelectTheme'
 import {
   useWebSocket,
   useDeltaMessages,
@@ -898,15 +899,10 @@ const DataBrowser: React.FC = () => {
                   noOptionsMessage={() => 'No contexts available'}
                   components={{ Option: ContextOption }}
                   styles={{
-                    menu: (base) => ({ ...base, zIndex: 100 }),
-                    option: (base, state) => ({
+                    ...getThemedSelectStyles<SelectOption>(),
+                    singleValue: (base) => ({
                       ...base,
-                      backgroundColor: state.isSelected
-                        ? base.backgroundColor
-                        : 'transparent',
-                      ':hover': {
-                        backgroundColor: '#deebff'
-                      }
+                      color: 'var(--bs-body-color)'
                     })
                   }}
                 />
