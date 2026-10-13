@@ -130,6 +130,12 @@ const tracksApiDoc = {
             description:
               "Whether this is the own vessel's track. Absent along with context."
           },
+          imported: {
+            type: 'boolean',
+            enum: [true],
+            description:
+              'True for a track a client stored with POST /tracks, absent for one the provider recorded. An import naming a vessel is listed beside its recording, so this is how a client keeps the two apart.'
+          },
           name: {
             type: 'string',
             description:
