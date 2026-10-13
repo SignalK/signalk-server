@@ -189,6 +189,18 @@ export interface TrackProperties {
   isSelf?: boolean
 
   /**
+   * When this track was stored by a client with {@link TrackApi.storeTrack},
+   * as an ISO 8601 time. Absent on a track the provider recorded.
+   *
+   * An import naming a vessel is listed beside that vessel's recording, with
+   * the same context, so this is how a client keeps the two apart: a client
+   * joining a vessel's features into one line would otherwise splice a GPX
+   * from years ago into the live trail. Set by the provider, never taken from
+   * a posted track.
+   */
+  imported?: string
+
+  /**
    * Which registered provider answered for this track.
    *
    * Set by the server from the registry, so a provider neither has to name

@@ -130,6 +130,12 @@ const tracksApiDoc = {
             description:
               "Whether this is the own vessel's track. Absent along with context."
           },
+          imported: {
+            type: 'string',
+            format: 'date-time',
+            description:
+              'When a client stored this track with POST /tracks; absent for a track the provider recorded. An import naming a vessel is listed beside its recording with the same context, so this is how a client keeps the two apart. Set by the provider: a posted value is ignored.'
+          },
           name: {
             type: 'string',
             description:
