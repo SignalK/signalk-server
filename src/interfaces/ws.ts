@@ -28,7 +28,7 @@ import {
 } from '../security'
 import { LOGIN_RATE_LIMIT_MESSAGE } from '../login-rate-limiter'
 import { getSourceId } from '@signalk/server-api'
-import { WithConfig } from '../app'
+import { WithConfig } from '../config/config'
 import {
   findRequest,
   updateRequest,
