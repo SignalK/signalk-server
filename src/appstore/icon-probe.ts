@@ -246,7 +246,9 @@ export async function probeIconUrl(
   const headWithBudget = (url: string) =>
     headStatus(url, Math.max(1, Math.min(HEAD_TIMEOUT_MS, remaining())))
 
+  let undetermined = false
   for (const relPath of candidatePathsFor(pkg, version, declaredPath)) {
+    let missing = false
     for (const url of cdnUrlsFor(pkg, version, relPath)) {
       if (remaining() <= 0) {
         // Don't burn the cache slot — leaving the entry undefined lets
@@ -258,10 +260,16 @@ export async function probeIconUrl(
         cache.set(pkg, version, declaredPath, url)
         return url
       }
-      if (status === 'missing') break
+      if (status === 'missing') {
+        missing = true
+        break
+      }
     }
+    if (!missing) undetermined = true
   }
 
-  cache.set(pkg, version, declaredPath, null)
+  // A candidate every CDN failed on may still exist, so only cache the
+  // negative when each candidate was answered with a 404.
+  if (!undetermined) cache.set(pkg, version, declaredPath, null)
   return null
 }
