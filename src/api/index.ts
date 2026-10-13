@@ -17,6 +17,7 @@ import {
   GnssCorrectorApplication
 } from './gnssOffsetCorrector'
 import { SensorsApi, SensorsApplication } from './sensors'
+import { DepthDeriver, DepthDeriverApplication } from './depthDeriver'
 import { binaryStreamManager, initializeBinaryStreams } from './streams'
 
 export interface ApiResponse {
@@ -126,6 +127,8 @@ export const startApis = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).gnssOffsetCorrector = gnssOffsetCorrector
 
+  const depthDeriver = new DepthDeriver(app as DepthDeriverApplication)
+
   const sensorsApi = new SensorsApi(app as SensorsApplication)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).sensorsApi = sensorsApi
@@ -142,6 +145,7 @@ export const startApis = (
     trackApiHttpRegistry.start(),
     notificationApi.start(),
     gnssOffsetCorrector.start(),
+    depthDeriver.start(),
     sensorsApi.start(),
     bleApi.start()
   ])
