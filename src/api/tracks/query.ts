@@ -600,9 +600,9 @@ class ErrorReport {
 }
 
 /**
- * A parameter that is present but unreadable, `from[x]=1` say, must fail the
- * request rather than read as absent: an absent bound widens the span, and
- * with both bounds absent a DELETE removes the whole track.
+ * Read an optional query parameter as an instant. A parameter that is present
+ * but unreadable, `from[x]=1` say, is an error rather than absent, so a caller
+ * never mistakes a malformed value for an omitted one.
  */
 const parseQueryInstant = (
   query: Record<string, unknown>,
