@@ -29,11 +29,29 @@ describe('Track API provider stamping', () => {
     }
   })
 
+  // A context ending in `+import` also answers with an import beside its
+  // recording, the way a provider lists a track stored for that vessel.
   const provider = (contexts: string[] = ['vessels.a']) => ({
     getTracks: () =>
       Promise.resolve({
         type: 'FeatureCollection' as const,
-        features: contexts.map((c) => track(c as Context))
+        features: contexts.flatMap((c) => {
+          const context = c.replace(/\+import$/, '') as Context
+          const recorded = track(context)
+          return c.endsWith('+import')
+            ? [
+                recorded,
+                {
+                  ...recorded,
+                  properties: {
+                    ...recorded.properties,
+                    id: 'imported:1',
+                    imported: '2026-09-01T12:00:00Z'
+                  }
+                }
+              ]
+            : [recorded]
+        })
       }),
     getTrackContexts: () => Promise.resolve(contexts.map((c) => c as Context))
   })
@@ -106,6 +124,40 @@ describe('Track API provider stamping', () => {
     const body = (await res.json()) as { error: string }
 
     expect(body.error).to.match(/Requested provider not found/)
+  })
+
+  describe('imported filter', () => {
+    const ids = async (query: string) => {
+      const res = await fetch(`${base}/signalk/v2/api/tracks?${query}`)
+      expect(res.status).to.equal(200)
+      const body = (await res.json()) as {
+        features: { properties: { id?: string } }[]
+      }
+      return body.features.map((f) => f.properties.id)
+    }
+
+    // The stub ignores the parameter, as a provider written before it would.
+    it('returns only imports, with no window or context needed', async () => {
+      await serve({ testprovider: ['vessels.a+import'] })
+      expect(await ids('imported=true')).to.deep.equal([
+        'testprovider:imported:1'
+      ])
+    })
+
+    it('returns only recorded tracks for imported=false', async () => {
+      await serve({ testprovider: ['vessels.a+import'] })
+      expect(await ids('imported=false&duration=PT1H')).to.deep.equal([
+        'testprovider:recorded:vessels.a'
+      ])
+    })
+
+    it('is refused when listing contexts', async () => {
+      await serve()
+      const res = await fetch(
+        `${base}/signalk/v2/api/tracks/contexts?imported=true`
+      )
+      expect(res.status).to.equal(400)
+    })
   })
 
   /**

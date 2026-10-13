@@ -138,6 +138,22 @@ export interface TracksRequest {
 
   /** Include geometry. Defaults to true; set false to return metadata only. */
   geometry?: boolean
+
+  /**
+   * Only imported tracks (`true`) or only recorded ones (`false`); both when
+   * absent.
+   *
+   * `true` lists every track clients have stored, whichever vessel it names
+   * and whether or not it has times, so it needs no time window and no
+   * context. Without it, finding them takes a query across every vessel and
+   * all time, which reads every recording the provider holds to return a few
+   * imports, and still misses one without times.
+   *
+   * The server also filters what providers return on
+   * {@link TrackProperties.imported}, so a provider that ignores this answers
+   * correctly, if not cheaply.
+   */
+  imported?: boolean
 }
 
 /**

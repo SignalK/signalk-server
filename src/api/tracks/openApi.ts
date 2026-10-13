@@ -389,6 +389,13 @@ const tracksApiDoc = {
           'Set to false to return metadata only, omitting coordinates. Useful for listing which tracks exist in an area or period before fetching any of them.',
         schema: { type: 'boolean', default: true }
       },
+      Imported: {
+        name: 'imported',
+        in: 'query',
+        description:
+          'true returns only tracks clients stored with POST /tracks, false only recorded ones; both when absent. With true no time window or context is needed: it lists every import, whichever vessel it names and whether or not it has times.',
+        schema: { type: 'boolean' }
+      },
       Provider: {
         name: 'provider',
         in: 'query',
@@ -404,7 +411,7 @@ const tracksApiDoc = {
         tags: ['tracks'],
         summary: 'Fetch one track by id',
         description:
-          'Returns the track with this id. Every other way of finding a track filters by something a track might not have — a time window needs times, a context query needs a context — so an imported track with neither is reachable only here.\n\nThe id is written `providerId:trackId`, so it names both the provider and the track within it. Only the first colon separates them: a provider id may not contain one, a track id may.',
+          'Returns the track with this id. Every other way of finding a track filters by something a track might not have — a time window needs times, a context query needs a context — so an imported track with neither is found only here or by listing every import with `imported=true`.\n\nThe id is written `providerId:trackId`, so it names both the provider and the track within it. Only the first colon separates them: a provider id may not contain one, a track id may.',
         parameters: [
           {
             name: 'id',
@@ -494,7 +501,7 @@ const tracksApiDoc = {
         description:
           'Returns a GeoJSON FeatureCollection.\n\n' +
           'Every registered provider is queried and their features concatenated verbatim, so two providers recording the same vessel yield two features for it rather than one merged track — they are two recordings, and each carries the providerId that produced it. Use the provider parameter to query one.\n\n' +
-          'A time window is required unless a single context is given: `?context=self` with no window is a legitimate request for an entire recorded history, while the same query across every vessel a server has seen is not.',
+          'A time window is required unless a single context or `imported=true` is given: `?context=self` with no window is a legitimate request for an entire recorded history, while the same query across every vessel a server has seen is not.',
         parameters: [
           { $ref: '#/components/parameters/Contexts' },
           { $ref: '#/components/parameters/From' },
@@ -509,6 +516,7 @@ const tracksApiDoc = {
           { $ref: '#/components/parameters/Times' },
           { $ref: '#/components/parameters/Properties' },
           { $ref: '#/components/parameters/Geometry' },
+          { $ref: '#/components/parameters/Imported' },
           { $ref: '#/components/parameters/Provider' }
         ],
         responses: {
@@ -587,7 +595,7 @@ const tracksApiDoc = {
         tags: ['tracks'],
         summary: 'List contexts with track data in the window',
         description:
-          'As with the tracks route, a time window is required unless a single context is given, so a bare request with no parameters returns 400.',
+          'A time window is required unless a single context is given, so a bare request with no parameters returns 400. `imported` is not accepted here: a context listing has no tracks to filter.',
         parameters: [
           { $ref: '#/components/parameters/Contexts' },
           { $ref: '#/components/parameters/From' },

@@ -186,6 +186,18 @@ describe('Track API query parsing', () => {
       expect(errors).to.be.empty
     })
 
+    it('allows no time window when only imports are asked for', () => {
+      const { request, errors } = parse({ imported: 'true' })
+      expect(errors).to.be.empty
+      expect(request.imported).to.equal(true)
+    })
+
+    it('still requires a window for every recorded track', () => {
+      expect(errorsFrom({ imported: 'false' })).to.match(
+        /time window .* is required/
+      )
+    })
+
     it('rejects no time window with no context', () => {
       expect(errorsFrom({})).to.match(/time window .* is required/)
     })
