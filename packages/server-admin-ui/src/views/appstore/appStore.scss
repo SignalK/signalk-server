@@ -1,3 +1,10 @@
+// Bootstrap 5 has no min-width utility. Flex children default to
+// min-width: auto, so without this a .text-truncate name inside them
+// never shrinks and runs past the edge of its card on narrow screens.
+.min-w-0 {
+  min-width: 0;
+}
+
 .appstore__warning {
   margin-bottom: 20px;
 
