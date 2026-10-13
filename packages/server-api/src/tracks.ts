@@ -30,11 +30,14 @@ export type TrackBoundingBox = [number, number, number, number]
 /** @category Track API */
 export interface TracksRequest {
   /**
-   * Contexts to return tracks for. Defaults to the own vessel when neither
-   * `contexts` nor a bounding box is given.
+   * Contexts to return tracks for; every context when absent, including tracks
+   * that name none.
    *
    * A bare id is qualified with `vessels.`; other prefixes are accepted so that
    * aircraft — SAR aircraft appear in AIS — can be queried too.
+   *
+   * Over HTTP, `contexts=*` asks for every context and reaches a provider as
+   * `contexts` absent.
    */
   contexts?: Context[]
 
@@ -138,6 +141,17 @@ export interface TracksRequest {
 
   /** Include geometry. Defaults to true; set false to return metadata only. */
   geometry?: boolean
+
+  /**
+   * Only tracks clients added with {@link TrackApi.storeTrack} (`true`), or
+   * only tracks the provider recorded (`false`); both when absent.
+   *
+   * Over HTTP the server also filters what providers return on
+   * {@link TrackProperties.imported}, so a provider that ignores this still
+   * answers `GET /tracks` correctly, if not cheaply. A provider called
+   * directly is trusted to honour it.
+   */
+  imported?: boolean
 }
 
 /**

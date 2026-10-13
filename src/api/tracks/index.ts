@@ -183,7 +183,15 @@ export class TrackApiHttpRegistry {
           provider.getTracks(request).then((r) => stampProvider(r, id)),
         (responses) => ({
           type: 'FeatureCollection' as const,
-          features: responses.flatMap((r) => r.features)
+          features: responses
+            .flatMap((r) => r.features)
+            // Truthy rather than a string check: tracks plugin 3.3.0 still
+            // marks its imports with `true`.
+            .filter(
+              (f) =>
+                request.imported === undefined ||
+                Boolean(f.properties.imported) === request.imported
+            )
         }),
         res
       )
@@ -193,6 +201,11 @@ export class TrackApiHttpRegistry {
       `${TRACKS_API_PATH}/contexts`,
       (req: Request, res: Response) => {
         const { request, errors } = parseTracksQuery(req.query)
+        // A context has recorded tracks, imported ones or both; which of them
+        // made it match is not something a list of contexts can say.
+        if (request.imported !== undefined) {
+          errors.push('imported is not accepted when listing contexts')
+        }
         if (errors.length > 0) {
           res.status(400).json({ error: errors.join(', ') })
           return

@@ -186,6 +186,25 @@ describe('Track API query parsing', () => {
       expect(errors).to.be.empty
     })
 
+    it('allows no time window for every context', () => {
+      const { request, errors } = parse({ contexts: '*', imported: 'true' })
+      expect(errors).to.be.empty
+      expect(request.contexts).to.equal(undefined)
+      expect(request.imported).to.equal(true)
+    })
+
+    it('does not exempt imported=true from the window', () => {
+      expect(errorsFrom({ imported: 'true' })).to.match(
+        /time window .* is required/
+      )
+    })
+
+    it('rejects * listed with other contexts', () => {
+      expect(errorsFrom({ contexts: '*,self', duration: 'PT1H' })).to.match(
+        /\* already means every context/
+      )
+    })
+
     it('rejects no time window with no context', () => {
       expect(errorsFrom({})).to.match(/time window .* is required/)
     })
