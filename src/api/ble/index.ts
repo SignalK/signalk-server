@@ -660,13 +660,17 @@ export class BLEApi implements IBLEApi {
           if (conn.connected) cb()
         }
       }
-      this.gattClaims.set(mac, {
+      const claim: GATTClaim = {
         pluginId,
         providerId,
         handle: syntheticHandle
-      })
+      }
+      this.gattClaims.set(mac, claim)
 
       conn.onDisconnect(() => {
+        // A released connection can go down after the device was claimed
+        // again, and that claim is not this one to remove
+        if (this.gattClaims.get(mac) !== claim) return
         this.gattClaims.delete(mac)
         debug.enabled &&
           debug(`Raw GATT claim auto-released (disconnect): ${mac}`)
@@ -737,6 +741,27 @@ export class BLEApi implements IBLEApi {
         // another provider. Don't call handle.close() — the WS is already
         // dead and close() does not fire disconnectCallbacks.
         claim.handle._fireDisconnect?.()
+      }
+    }
+  }
+
+  /**
+   * Release every GATT claim the given plugin holds, including ones still
+   * connecting. Called once the plugin has stopped: nothing is left to close
+   * its connections, and its own claims would refuse it when it restarts.
+   */
+  releaseGATTClaimsForPlugin(pluginId: string) {
+    for (const [mac, claim] of this.gattClaims) {
+      if (claim.pluginId === pluginId) {
+        debug.enabled &&
+          debug(`GATT claim released (plugin stopped): ${mac} was ${pluginId}`)
+        claim.handle.close().catch(() => {})
+        this.gattClaims.delete(mac)
+      }
+    }
+    for (const pending of this.pendingGattClaims.values()) {
+      if (pending.pluginId === pluginId) {
+        pending.released = true
       }
     }
   }
