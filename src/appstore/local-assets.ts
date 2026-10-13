@@ -96,7 +96,7 @@ function isContainedRelativePath(cleaned: string): boolean {
  *
  * Webapps and plugins that ship static assets are mounted by the server
  * at `/<package-name>/`, so declared paths that look wrong against
- * unpkg's raw tarball layout (e.g. freeboard-sk's
+ * the CDN's raw tarball layout (e.g. freeboard-sk's
  * `"./assets/icons/icon-72x72.png"`, actually at
  * `"/public/assets/icons/icon-72x72.png"` inside the tarball) resolve
  * correctly against the mounted serving root. Installed plugins reuse

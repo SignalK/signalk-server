@@ -200,7 +200,7 @@ const DetailView: React.FC = () => {
   const detail = state.detail
   const missingRequired = detail.requires.filter((d) => !d.installed)
   // Prefer installedScreenshotUrls (served by the local server mount, always
-  // works for installed plugins) over the unpkg-CDN screenshots (which may
+  // works for installed plugins) over the CDN screenshots (which may
   // 404 when signalk.screenshots paths aren't tarball-relative).
   const effectiveScreenshots =
     detail.installedScreenshotUrls && detail.installedScreenshotUrls.length > 0
