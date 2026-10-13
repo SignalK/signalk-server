@@ -481,6 +481,7 @@ module.exports = function (app) {
       return cached || null
     }
     const pkg = match.package
+    const isInstalled = !!getPlugin(name) || !!getWebApp(name)
     // Serve a cached detail when it was built for the version npm is
     // currently offering. Rebuilding costs a readme, changelog, metrics
     // and icon-probe round trip, and the background refresh calls this
@@ -489,10 +490,15 @@ module.exports = function (app) {
     // plugin's entry as fresh indefinitely, so without it a newly
     // published release would never reach the detail page.
     const cachedDetail = readDetailFromCache(cache, name)
-    if (cachedDetail && cachedDetail.version === pkg.version) {
+    // An entry cached while the README was unreachable is rebuilt once
+    // the installed copy can supply it.
+    if (
+      cachedDetail &&
+      cachedDetail.version === pkg.version &&
+      !(isInstalled && !cachedDetail.readme && installedReadmeFor(pkg)?.trim())
+    ) {
       return cachedDetail
     }
-    const isInstalled = !!getPlugin(name) || !!getWebApp(name)
     let pkgForEnrichment = pkg
     // Always try the npm registry first — it has the signalk.* key for
     // the LATEST available version, which is what the detail page
