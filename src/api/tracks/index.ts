@@ -17,6 +17,7 @@ import { ConfigApp } from '../../config/config'
 import {
   parseTracksQuery,
   parseTrackImport,
+  parseTrackSpan,
   rejectUnknownParams
 } from './query'
 import { Responses } from '../'
@@ -89,6 +90,12 @@ export class TrackApiHttpRegistry {
         const provider = self.currentDefaultProvider()
         return typeof provider?.deleteTrack === 'function'
           ? provider.deleteTrack.bind(provider)
+          : undefined
+      },
+      get deleteTrackSpan() {
+        const provider = self.currentDefaultProvider()
+        return typeof provider?.deleteTrackSpan === 'function'
+          ? provider.deleteTrackSpan.bind(provider)
           : undefined
       }
       // Absent rather than throwing once the last provider unregisters: a
@@ -273,9 +280,9 @@ export class TrackApiHttpRegistry {
 
     this.app.delete(`${TRACKS_API_PATH}/:id`, (req: Request, res: Response) => {
       // As for the GET above: the id names the provider.
-      const unknown = rejectUnknownParams(req.query, [])
-      if (unknown.length > 0) {
-        res.status(400).json({ error: unknown.join(', ') })
+      const { span, errors } = parseTrackSpan(req.query)
+      if (errors.length > 0) {
+        res.status(400).json({ error: errors.join(', ') })
         return
       }
       void (async () => {
@@ -302,20 +309,36 @@ export class TrackApiHttpRegistry {
         if (!found) {
           return
         }
-        if (typeof found.provider.deleteTrack !== 'function') {
+        const { provider, trackId } = found
+        const remove = span
+          ? typeof provider.deleteTrackSpan === 'function'
+            ? () => provider.deleteTrackSpan!(trackId, span)
+            : undefined
+          : typeof provider.deleteTrack === 'function'
+            ? () => provider.deleteTrack!(trackId)
+            : undefined
+        if (!remove) {
           res.status(501).json({
-            error: `Provider '${found.id}' does not support this operation`
+            error: span
+              ? `Provider '${found.id}' cannot delete part of a track`
+              : `Provider '${found.id}' does not support this operation`
           })
           return
         }
         try {
-          const deleted = await found.provider.deleteTrack(found.trackId)
+          const deleted = await remove()
           if (!deleted) {
             res.status(404).json({ error: 'Track not found' })
             return
           }
           res.status(200).json({})
         } catch (error) {
+          // A span on a track with no times, say: the request cannot be
+          // carried out on this track, which is the client's to fix.
+          if (isTrackRejectedError(error)) {
+            res.status(400).json({ error: error.message })
+            return
+          }
           console.error('Track api provider failed:', error)
           res.status(500).json({ error: 'Track api provider failed' })
         }

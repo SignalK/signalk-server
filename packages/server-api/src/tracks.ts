@@ -361,12 +361,39 @@ export interface TrackApi {
    * without allowing recorded tracks to be deleted, or the reverse.
    */
   deleteTrack?(id: string): Promise<boolean>
+
+  /**
+   * Deletes the part of a stored track recorded within `span`, resolving false
+   * when no such track exists.
+   *
+   * Optional, and separate from {@link TrackApi.deleteTrack} rather than an
+   * argument to it: a provider written against `deleteTrack(id)` would ignore
+   * a span it was not expecting and delete the whole track. A provider that
+   * lacks this method is answered 501 for a span, never a whole delete.
+   *
+   * A track with no times has no part to address by time; a provider refuses
+   * that with {@link TrackRejectedError}. Deleting a span that holds no points
+   * of an existing track is not an error.
+   */
+  deleteTrackSpan?(id: string, span: TrackSpan): Promise<boolean>
 }
+
+/**
+ * The part of a track a span delete removes: every point recorded at or after
+ * `from` and at or before `to`. An absent bound is open, reaching the start
+ * or the end of the track; the type requires at least one.
+ *
+ * @category Track API
+ */
+export type TrackSpan =
+  | { from: Temporal.Instant; to?: Temporal.Instant }
+  | { from?: Temporal.Instant; to: Temporal.Instant }
 
 /**
  * Thrown by {@link TrackApi.storeTrack} when the track itself is unacceptable
  * to that provider — an import carrying no `coordTimes` offered to a store
- * that only keeps timed tracks, say.
+ * that only keeps timed tracks, say — and by {@link TrackApi.deleteTrackSpan}
+ * when the track has no times to address a span by.
  *
  * Distinct from a store that failed: this says the client sent something this
  * provider will not keep, which is a 400 rather than a 500. A provider that

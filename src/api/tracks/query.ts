@@ -3,6 +3,7 @@ import { Context, Path } from '@signalk/server-api'
 import {
   TrackBoundingBox,
   TrackImport,
+  TrackSpan,
   TracksRequest
 } from '@signalk/server-api/tracks'
 
@@ -597,6 +598,58 @@ class ErrorReport {
       ? this.messages
       : [...this.messages, `and ${this.suppressed} further problems`]
   }
+}
+
+/**
+ * Read an optional query parameter as an instant. A parameter that is present
+ * but unreadable, `from[x]=1` say, is an error rather than absent, so a caller
+ * never mistakes a malformed value for an omitted one.
+ */
+const parseQueryInstant = (
+  query: Record<string, unknown>,
+  name: string,
+  errors: string[]
+): Temporal.Instant | undefined => {
+  if (query[name] === undefined) {
+    return undefined
+  }
+  const value = first(query[name])
+  if (value === undefined) {
+    errors.push(`${name} must be a single time`)
+    return undefined
+  }
+  if (blank(value)) {
+    errors.push(`${name} must not be empty`)
+    return undefined
+  }
+  return parseInstant(value, name, errors)
+}
+
+/**
+ * The part of a track a `DELETE /{id}` names, or undefined for the whole
+ * track.
+ *
+ * Only `from` and `to`: a span to delete is two instants, and a `duration`
+ * relative to now would make the same request delete a different stretch
+ * each time it was retried.
+ */
+export function parseTrackSpan(query: Record<string, unknown>): {
+  span?: TrackSpan
+  errors: string[]
+} {
+  const errors = rejectUnknownParams(query, ['from', 'to'])
+  const from = parseQueryInstant(query, 'from', errors)
+  const to = parseQueryInstant(query, 'to', errors)
+  if (from && to && Temporal.Instant.compare(from, to) > 0) {
+    errors.push('from must not be later than to')
+  }
+  if (from || to) {
+    return {
+      span: from ? { from, ...(to ? { to } : {}) } : { to: to! },
+      errors
+    }
+  }
+  return { errors }
 }
 
 /**
