@@ -42,7 +42,8 @@ const {
   fetchDistTagsForPackages,
   getLatestServerVersion,
   getAuthor,
-  getKeywords
+  getKeywords,
+  getModulePaths
 } = require('../modules')
 const { SERVERROUTESPREFIX } = require('../constants')
 const {
@@ -64,7 +65,8 @@ const {
   badgesToIndicators,
   probeIconUrl,
   buildLocalAssetUrls: buildLocalAssetUrlsFor,
-  packageNameIs
+  packageNameIs,
+  readInstalledReadme
 } = require('../appstore')
 
 const bundledAdminUIs = ['@signalk/server-admin-ui']
@@ -598,7 +600,8 @@ module.exports = function (app) {
           ),
           isWebapp: (pkg.keywords || []).some((v) => v === 'signalk-webapp'),
           keywords: pkg.keywords || [],
-          npmReadme: pkg.readme,
+          npmReadme:
+            pkg.readme || (isInstalled ? installedReadmeFor(pkg) : undefined),
           githubUrl: ext.githubUrl,
           lastReleaseDate: pkg.date,
           requires: ext.requires,
@@ -700,6 +703,14 @@ module.exports = function (app) {
     }
     if (cacheable) cache.writePluginDetail(detail, isInstalled)
     return detail
+  }
+
+  function installedReadmeFor(pkg) {
+    return readInstalledReadme(
+      getModulePaths(app.config),
+      pkg.name,
+      pkg.version
+    )
   }
 
   function getInstalledPackageMetadata(name) {
