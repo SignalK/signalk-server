@@ -72,4 +72,8 @@ COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
 WORKDIR /home/node/.signalk
-ENTRYPOINT ["/home/node/signalk/startup.sh"]
+# tini as PID 1 forwards the signals of "docker stop" to the server, also
+# before the server has installed its handlers, and reaps the orphaned
+# processes that node would leave as zombies. -s keeps tini working without a
+# warning when "docker run --init" already provides a PID 1.
+ENTRYPOINT ["tini", "-s", "--", "/home/node/signalk/startup.sh"]
