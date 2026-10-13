@@ -579,7 +579,7 @@ module.exports = function (app) {
       iconUrlLookup
     })
     const resolver = buildDependencyResolver(plugins, webapps)
-    const [detail, regIndexEntry, metricsSample] = await Promise.all([
+    const [built, regIndexEntry, metricsSample] = await Promise.all([
       buildPluginDetail(
         {
           name: pkg.name,
@@ -609,6 +609,7 @@ module.exports = function (app) {
       registry.getIndexEntry(name).catch(() => undefined),
       rawMetrics.get(pkg.name, ext.githubUrl).catch(() => undefined)
     ])
+    const { detail, cacheable } = built
 
     if (regIndexEntry) {
       const { score, checks } = badgesToIndicators(
@@ -697,7 +698,7 @@ module.exports = function (app) {
         detail.installedScreenshotUrls = localIcons.screenshots
       }
     }
-    cache.writePluginDetail(detail, isInstalled)
+    if (cacheable) cache.writePluginDetail(detail, isInstalled)
     return detail
   }
 
