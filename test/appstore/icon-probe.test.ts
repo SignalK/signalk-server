@@ -165,7 +165,9 @@ describe('appstore/icon-probe probeIconUrl', () => {
       () => ({ ok: true }),
       async () => {
         const r = await probeIconUrl('@signalk/x', '1.0.0', './icon.svg', cache)
-        expect(r).to.equal('https://unpkg.com/@signalk/x@1.0.0/icon.svg')
+        expect(r).to.equal(
+          'https://cdn.jsdelivr.net/npm/@signalk/x@1.0.0/icon.svg'
+        )
       }
     )
   })
@@ -173,7 +175,7 @@ describe('appstore/icon-probe probeIconUrl', () => {
   it('preserves subpath under ./public/ when declared path 404s (freeboard-sk case)', async () => {
     const cache = createIconProbeCache(tmpDir())
     const target =
-      'https://unpkg.com/@signalk/freeboard-sk@2.21.0/public/assets/icons/icon-72x72.png'
+      'https://cdn.jsdelivr.net/npm/@signalk/freeboard-sk@2.21.0/public/assets/icons/icon-72x72.png'
     await withStubbedFetch(
       (url) => ({ ok: url === target }),
       async () => {
@@ -191,7 +193,7 @@ describe('appstore/icon-probe probeIconUrl', () => {
   it('falls back to basename under ./public/ for flat layouts (app-dock case)', async () => {
     const cache = createIconProbeCache(tmpDir())
     const target =
-      'https://unpkg.com/@signalk/app-dock@1.0.0/public/app-icon.svg'
+      'https://cdn.jsdelivr.net/npm/@signalk/app-dock@1.0.0/public/app-icon.svg'
     await withStubbedFetch(
       (url) => ({ ok: url === target }),
       async () => {
@@ -202,6 +204,63 @@ describe('appstore/icon-probe probeIconUrl', () => {
           cache
         )
         expect(r).to.equal(target)
+      }
+    )
+  })
+
+  it('falls back to unpkg when jsDelivr refuses the package', async () => {
+    const cache = createIconProbeCache(tmpDir())
+    await withStubbedFetch(
+      (url) =>
+        url.startsWith('https://cdn.jsdelivr.net/')
+          ? { ok: false, status: 403 }
+          : { ok: true },
+      async () => {
+        const r = await probeIconUrl(
+          '@signalk/big',
+          '1.0.0',
+          './icon.svg',
+          cache
+        )
+        expect(r).to.equal('https://unpkg.com/@signalk/big@1.0.0/icon.svg')
+      }
+    )
+  })
+
+  it('falls back to unpkg when the jsDelivr request fails outright', async () => {
+    const cache = createIconProbeCache(tmpDir())
+    const original = globalThis.fetch
+    globalThis.fetch = (async (input: string | URL) => {
+      const url = String(input)
+      if (url.startsWith('https://cdn.jsdelivr.net/')) {
+        throw new TypeError('fetch failed')
+      }
+      return { ok: true, status: 200 } as Response
+    }) as typeof fetch
+    try {
+      const r = await probeIconUrl('@signalk/x', '1.0.0', './icon.svg', cache)
+      expect(r).to.equal('https://unpkg.com/@signalk/x@1.0.0/icon.svg')
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  it('does not ask unpkg for a path jsDelivr reports missing', async () => {
+    const cache = createIconProbeCache(tmpDir())
+    const requested: string[] = []
+    const target =
+      'https://cdn.jsdelivr.net/npm/@signalk/x@1.0.0/public/icon.svg'
+    await withStubbedFetch(
+      (url) => {
+        requested.push(url)
+        return url === target ? { ok: true } : { ok: false, status: 404 }
+      },
+      async () => {
+        const r = await probeIconUrl('@signalk/x', '1.0.0', './icon.svg', cache)
+        expect(r).to.equal(target)
+        expect(
+          requested.some((u) => u.startsWith('https://unpkg.com/'))
+        ).to.equal(false)
       }
     )
   })

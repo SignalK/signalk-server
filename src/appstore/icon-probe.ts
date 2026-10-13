@@ -11,7 +11,12 @@
 import fs from 'fs'
 import path from 'path'
 import { createDebug } from '../debug'
-import { fetchFromCdn, isAbsoluteUrl, resolveScreenshotUrl } from './cdn'
+import {
+  cdnUrlsFor,
+  fetchFromCdn,
+  isAbsoluteUrl,
+  resolveScreenshotUrl
+} from './cdn'
 
 const debug = createDebug('signalk-server:appstore:icon-probe')
 
@@ -22,6 +27,7 @@ const debug = createDebug('signalk-server:appstore:icon-probe')
 const ALT_DIRS = ['public', 'assets', 'img', 'docs', 'dist', 'src']
 
 const HEAD_TIMEOUT_MS = 8_000
+const HTTP_NOT_FOUND = 404
 // Hard cap on the cumulative time spent across all candidate URLs for
 // a single declared path. With ~13 candidates × 8s timeout each, an
 // unreachable CDN could otherwise stall a refresh for ~100s. When the
@@ -168,38 +174,44 @@ export function createIconProbeCache(cacheDir: string): IconProbeCache {
   }
 }
 
-async function headOk(url: string, timeoutMs: number): Promise<boolean> {
+// 'missing' is a definitive 404. 'error' (timeout, 5xx, a CDN refusing an
+// oversized package) says nothing about the file, so the next CDN is tried.
+type HeadResult = 'ok' | 'missing' | 'error'
+
+async function headStatus(url: string, timeoutMs: number): Promise<HeadResult> {
   try {
     const res = await fetchFromCdn(url, {
       method: 'HEAD',
       signal: AbortSignal.timeout(timeoutMs)
     })
-    return res.ok
+    if (res.ok) return 'ok'
+    return res.status === HTTP_NOT_FOUND ? 'missing' : 'error'
   } catch (err) {
     debug.enabled && debug('HEAD %s failed: %O', url, err)
-    return false
+    return 'error'
   }
 }
 
-function altCandidatesFor(
+function candidatePathsFor(
   pkg: string,
   version: string,
   declaredPath: string
 ): string[] {
+  const out = [declaredPath]
   const clean = declaredPath.replace(/\\/g, '/').replace(/^\.?\/+/, '')
-  if (!clean) return []
+  if (!clean) return out
   const base = clean.split('/').pop() || clean
-  const seen = new Set<string>()
-  const out: string[] = []
+  const seen = new Set([resolveScreenshotUrl(pkg, version, declaredPath)])
   // Prefer prefix-preserving candidates (./public/assets/icons/x.png) before
   // basename-only candidates (./public/x.png). freeboard-sk needs the former,
   // app-dock the latter.
   for (const dir of ALT_DIRS) {
     for (const tail of [clean, base]) {
-      const url = resolveScreenshotUrl(pkg, version, `./${dir}/${tail}`)
+      const candidate = `./${dir}/${tail}`
+      const url = resolveScreenshotUrl(pkg, version, candidate)
       if (seen.has(url)) continue
       seen.add(url)
-      out.push(url)
+      out.push(candidate)
     }
   }
   return out
@@ -232,24 +244,21 @@ export async function probeIconUrl(
   const startedAt = Date.now()
   const remaining = () => TOTAL_PROBE_BUDGET_MS - (Date.now() - startedAt)
   const headWithBudget = (url: string) =>
-    headOk(url, Math.max(1, Math.min(HEAD_TIMEOUT_MS, remaining())))
+    headStatus(url, Math.max(1, Math.min(HEAD_TIMEOUT_MS, remaining())))
 
-  const primary = resolveScreenshotUrl(pkg, version, declaredPath)
-  if (await headWithBudget(primary)) {
-    cache.set(pkg, version, declaredPath, primary)
-    return primary
-  }
-
-  for (const candidate of altCandidatesFor(pkg, version, declaredPath)) {
-    if (candidate === primary) continue
-    if (remaining() <= 0) {
-      // Don't burn the cache slot — leaving the entry undefined lets
-      // the next list-refresh retry once the CDN stops timing out.
-      return null
-    }
-    if (await headWithBudget(candidate)) {
-      cache.set(pkg, version, declaredPath, candidate)
-      return candidate
+  for (const relPath of candidatePathsFor(pkg, version, declaredPath)) {
+    for (const url of cdnUrlsFor(pkg, version, relPath)) {
+      if (remaining() <= 0) {
+        // Don't burn the cache slot — leaving the entry undefined lets
+        // the next list-refresh retry once the CDN stops timing out.
+        return null
+      }
+      const status = await headWithBudget(url)
+      if (status === 'ok') {
+        cache.set(pkg, version, declaredPath, url)
+        return url
+      }
+      if (status === 'missing') break
     }
   }
 
