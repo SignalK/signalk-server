@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import { EventEmitter } from 'node:events'
 import { correctPosition } from '../../src/api/gnssOffsetCorrector/leverArm'
 import { GnssOffsetCorrector } from '../../src/api/gnssOffsetCorrector'
-import type { Delta } from '@signalk/server-api'
+import type { Delta, NormalizedDelta } from '@signalk/server-api'
 
 const SELF = 'vessels.self'
 const R = 6_378_137
@@ -38,7 +38,9 @@ function positionDelta(opts: {
 
 interface AppEnvOptions {
   // Values to expose under app.signalk.self, keyed by dotted path
-  // (e.g. 'design.length.value' or 'navigation.headingTrue.value').
+  // (e.g. 'design.length.value' or 'navigation.headingTrue.value'). A
+  // heading given here also arrives on the self bus as the corrector
+  // subscribes, as a live heading would.
   selfPaths?: Record<string, unknown>
   gnssSensors?: Array<{
     sensorId: string
@@ -89,6 +91,27 @@ function makeApp(opts: AppEnvOptions = {}) {
     }
   }
   app.signalk = { self: inflateSelfPaths(opts.selfPaths ?? {}) }
+  const headingListeners = new Map<
+    string,
+    Array<(d: NormalizedDelta) => void>
+  >()
+  const pushHeading = (path: string, value: number | null) => {
+    for (const listener of headingListeners.get(path) ?? []) {
+      listener({ path, value, isMeta: false } as unknown as NormalizedDelta)
+    }
+  }
+  app.streambundle = {
+    getSelfBus: (path: string) => ({
+      onValue: (listener: (d: NormalizedDelta) => void) => {
+        headingListeners.set(path, [
+          ...(headingListeners.get(path) ?? []),
+          listener
+        ])
+        const initial = opts.selfPaths?.[`${path}.value`]
+        if (typeof initial === 'number') pushHeading(path, initial)
+      }
+    })
+  }
   app.deltaCache = {
     canonicaliseSourceRef: (ref: string) => opts.canonicalMap?.[ref] ?? ref
   }
@@ -105,6 +128,7 @@ function makeApp(opts: AppEnvOptions = {}) {
     app,
     bus,
     emitted,
+    pushHeading,
     process(delta: Delta): Delta {
       // Mirror the chain's invocation pattern: handler calls next(delta).
       // next() in the real chain forwards to the next handler; here we
@@ -983,7 +1007,7 @@ describe('GnssOffsetCorrector heading-unavailable notification', function () {
       string,
       unknown
     >
-    const { app, process, emitted } = makeApp({
+    const { app, process, emitted, pushHeading } = makeApp({
       selfPaths: self,
       gnssCorrection: 'replace',
       gnssSensors: [SENSOR]
@@ -993,10 +1017,7 @@ describe('GnssOffsetCorrector heading-unavailable notification', function () {
 
     // No heading yet: raises the warning.
     process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
-    // Heading appears (mutate the shared self tree the corrector reads).
-    ;(
-      app.signalk.self as { navigation?: { headingTrue?: { value: number } } }
-    ).navigation = { headingTrue: { value: 0 } }
+    pushHeading('navigation.headingTrue', 0)
     process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
 
     const seen = notifs(emitted)
@@ -1013,5 +1034,124 @@ describe('GnssOffsetCorrector heading-unavailable notification', function () {
 
     process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
     expect(notifs(emitted)).to.have.length(0)
+  })
+})
+
+describe('GnssOffsetCorrector heading freshness', function () {
+  const SENSOR = {
+    sensorId: 'gnss1',
+    $source: 'n2k.0.5',
+    fromBow: 0,
+    fromCenter: 0
+  }
+  // Antenna at the bow of a 20 m vessel heading north: a corrected fix
+  // moves 10 m south, an uncorrected one stays at latitude 60.
+  const CORRECTED_LATITUDE = 60 + ((-10 / R) * 180) / Math.PI
+  const realNow = Date.now
+  let now = 0
+
+  beforeEach(function () {
+    now = Date.parse('2026-05-31T00:00:00.000Z')
+    Date.now = () => now
+  })
+
+  afterEach(function () {
+    Date.now = realNow
+  })
+
+  async function setup(selfPaths: Record<string, unknown> = {}) {
+    const env = makeApp({
+      selfPaths: { 'design.length.value': { overall: 20 }, ...selfPaths },
+      gnssCorrection: 'replace',
+      gnssSensors: [SENSOR]
+    })
+    const corrector = new GnssOffsetCorrector(env.app)
+    await corrector.start()
+    const latitude = () => {
+      const out = env.process(
+        positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 })
+      )
+      return (
+        out.updates[0] as never as { values: { value: { latitude: number } }[] }
+      ).values[0].value.latitude
+    }
+    return { ...env, corrector, latitude }
+  }
+
+  it('corrects with a heading received within the age limit', async function () {
+    const { latitude } = await setup({ 'navigation.headingTrue.value': 0 })
+    now += 3000
+    expect(latitude()).to.be.closeTo(CORRECTED_LATITUDE, 1e-9)
+  })
+
+  it('passes through and notifies once the heading stops arriving', async function () {
+    const { latitude, emitted } = await setup({
+      'navigation.headingTrue.value': 0
+    })
+    now += 3001
+    expect(latitude()).to.equal(60)
+    const states = emitted
+      .flatMap((e) => e.delta.updates ?? [])
+      .flatMap(
+        (u) =>
+          (u as { values?: { path: string; value: { state: string } }[] })
+            .values ?? []
+      )
+      .filter(
+        (v) => v.path === 'notifications.navigation.gnss.headingUnavailable'
+      )
+      .map((v) => v.value.state)
+    expect(states).to.deep.equal(['warn'])
+  })
+
+  it('stops correcting at once when the heading goes null', async function () {
+    const { latitude, pushHeading } = await setup({
+      'navigation.headingTrue.value': 0
+    })
+    pushHeading('navigation.headingTrue', null)
+    expect(latitude()).to.equal(60)
+  })
+
+  it('ignores a heading present in the data model but not received live', async function () {
+    const { app, latitude } = await setup()
+    ;(
+      app.signalk.self as { navigation?: { headingTrue?: { value: number } } }
+    ).navigation = { headingTrue: { value: 0 } }
+    expect(latitude()).to.equal(60)
+  })
+
+  it('falls back to a fresh magnetic heading when the true one is stale', async function () {
+    const { latitude, pushHeading } = await setup({
+      'navigation.headingTrue.value': Math.PI,
+      // Variation is slow-changing and often sent rarely, so it is read
+      // from the data model without an age limit.
+      'navigation.magneticVariation.value': 0.1
+    })
+    now += 60000
+    pushHeading('navigation.headingMagnetic', -0.1)
+    expect(latitude()).to.be.closeTo(CORRECTED_LATITUDE, 1e-9)
+  })
+
+  it('does not use a stale magnetic heading', async function () {
+    const { latitude } = await setup({
+      'navigation.headingMagnetic.value': 0,
+      'navigation.magneticVariation.value': 0
+    })
+    now += 3001
+    expect(latitude()).to.equal(60)
+  })
+
+  it('reports no-heading status once the heading is stale', async function () {
+    const { corrector } = await setup({ 'navigation.headingTrue.value': 0 })
+    expect(corrector.getStatus()).to.deep.equal({
+      mode: 'replace',
+      active: true
+    })
+    now += 3001
+    expect(corrector.getStatus()).to.deep.equal({
+      mode: 'replace',
+      active: false,
+      blocked: 'no-heading'
+    })
   })
 })
