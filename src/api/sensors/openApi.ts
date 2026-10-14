@@ -83,7 +83,7 @@ export const sensorsApiDoc: any = {
           active: {
             type: 'boolean',
             description:
-              'True when a correction mode is selected and both vessel length and true heading are available.'
+              'True when a correction mode is selected and both vessel length and the vessel orientation (a heading, or course over ground while making way above 1 kn) are available.'
           },
           blocked: {
             type: 'string',
