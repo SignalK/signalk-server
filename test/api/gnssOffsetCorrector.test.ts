@@ -1396,6 +1396,62 @@ describe('GnssOffsetCorrector heading freshness', function () {
     expect(latitude()).to.equal(60)
   })
 
+  it('falls back to course over ground while making way', async function () {
+    const { latitude, pushHeading } = await setup({
+      'navigation.headingTrue.value': Math.PI
+    })
+    now += 3001
+    pushHeading('navigation.courseOverGroundTrue', 0)
+    pushHeading('navigation.speedOverGround', 0.6)
+    expect(latitude()).to.be.closeTo(CORRECTED_LATITUDE, 1e-9)
+  })
+
+  it('prefers a fresh heading over course over ground', async function () {
+    const { latitude } = await setup({
+      'navigation.headingTrue.value': 0,
+      'navigation.courseOverGroundTrue.value': Math.PI,
+      'navigation.speedOverGround.value': 3
+    })
+    expect(latitude()).to.be.closeTo(CORRECTED_LATITUDE, 1e-9)
+  })
+
+  it('does not use course over ground below 1 kn', async function () {
+    const { latitude } = await setup({
+      'navigation.courseOverGroundTrue.value': 0,
+      'navigation.speedOverGround.value': 0.5
+    })
+    expect(latitude()).to.equal(60)
+  })
+
+  it('does not use a stale course over ground', async function () {
+    const { latitude, pushHeading } = await setup({
+      'navigation.courseOverGroundTrue.value': 0
+    })
+    now += 3001
+    pushHeading('navigation.speedOverGround', 3)
+    expect(latitude()).to.equal(60)
+  })
+
+  it('does not use course over ground without a fresh speed', async function () {
+    const { latitude, pushHeading } = await setup({
+      'navigation.speedOverGround.value': 3
+    })
+    now += 3001
+    pushHeading('navigation.courseOverGroundTrue', 0)
+    expect(latitude()).to.equal(60)
+  })
+
+  it('reports active status while correcting by course over ground', async function () {
+    const { corrector } = await setup({
+      'navigation.courseOverGroundTrue.value': 0,
+      'navigation.speedOverGround.value': 3
+    })
+    expect(corrector.getStatus()).to.deep.equal({
+      mode: 'replace',
+      active: true
+    })
+  })
+
   it('reports no-heading status once the heading is stale', async function () {
     const { corrector } = await setup({ 'navigation.headingTrue.value': 0 })
     expect(corrector.getStatus()).to.deep.equal({

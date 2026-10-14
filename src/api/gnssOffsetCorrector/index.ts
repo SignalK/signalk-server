@@ -32,17 +32,24 @@ export const CORRECTOR_ID = 'gnssOffsetCorrector'
 // bound to a *.ccrp ref are never used for correction.
 const CCRP_SOURCE_SUFFIX = '.ccrp'
 const MAX_CORRECTABLE_LATITUDE = 89.999999
-// Raised when a correction mode is active and vessel length is set but no
-// true heading is available, so vessel reference point correction cannot run.
-// Cleared when heading returns.
+// Raised when a correction mode is active and vessel length is set but
+// neither a heading nor a usable course over ground is available, so vessel
+// reference point correction cannot run. Cleared when either returns.
 const HEADING_NOTIFICATION_PATH =
   'notifications.navigation.gnss.headingUnavailable' as Path
 const HEADING_TRUE_PATH = 'navigation.headingTrue' as Path
 const HEADING_MAGNETIC_PATH = 'navigation.headingMagnetic' as Path
+const COG_TRUE_PATH = 'navigation.courseOverGroundTrue' as Path
+const SOG_PATH = 'navigation.speedOverGround' as Path
 // A heading not received for longer than this no longer describes the
 // vessel's orientation; rotating the antenna offset with it would
 // misplace the CCRP by up to twice the offset.
 const HEADING_MAX_AGE_MS = 3000
+// Slowest speed over ground (m/s, about 1 kn) at which course over ground
+// stands in for a missing heading. Below it COG is noise; above it leeway
+// and current rarely put COG more than ~10 degrees off the heading, which
+// moves a 6 m antenna offset by ~1 m, within typical GNSS error.
+const MIN_COG_SPEED = 0.5144
 
 // The single-GPS antenna offsets that predate gnssSensors. Consumers such as
 // AIS reporting and anchor alarms read them to place the hull around
@@ -55,7 +62,8 @@ export type GnssCorrectionMode = 'off' | 'replace' | 'both'
 // Snapshot of whether vessel reference point correction can currently run, for
 // the sensors API GET response and the admin UI. `active` is true only when a
 // correction mode is selected and both required inputs (vessel length and
-// true heading) are available. `blocked` names the missing input so the UI
+// the vessel's orientation: a heading, or course over ground while making
+// way) are available. `blocked` names the missing input so the UI
 // can prompt the user to supply it.
 export interface GnssCorrectionStatus {
   mode: GnssCorrectionMode
@@ -67,7 +75,7 @@ export interface GnssCorrectionStatus {
 // which comes from the provider and is not guaranteed to match the server
 // clock; on a server without time sync every heading could otherwise look
 // stale or fresh.
-interface ReceivedHeading {
+interface ReceivedValue {
   value: number
   receivedAt: number
 }
@@ -101,8 +109,9 @@ interface SensorEntry {
 // CCRP is defined as center-of-vessel on the centerline: body coordinates
 // (length/2, 0) measured from the bow. Derived from design.length.overall
 // (already in Server -> Settings -> Vessel Configuration). When length is
-// unavailable, or no heading was received within HEADING_MAX_AGE_MS, the
-// delta passes through unmodified.
+// unavailable, or neither a heading nor (while making way) a course over
+// ground was received within HEADING_MAX_AGE_MS, the delta passes through
+// unmodified.
 //
 // The corrector is a delta input handler, so it runs before the delta
 // cache and source priority (see handleMessage). In 'replace' mode every
@@ -122,8 +131,16 @@ export class GnssOffsetCorrector {
   // the per-delta path free of a delta on every position message.
   private headingNotificationActive = false
   private referenceUpdateScheduled = false
-  private headingTrue: ReceivedHeading = { value: NaN, receivedAt: -Infinity }
-  private headingMagnetic: ReceivedHeading = {
+  private headingTrue: ReceivedValue = { value: NaN, receivedAt: -Infinity }
+  private headingMagnetic: ReceivedValue = {
+    value: NaN,
+    receivedAt: -Infinity
+  }
+  private courseOverGround: ReceivedValue = {
+    value: NaN,
+    receivedAt: -Infinity
+  }
+  private speedOverGround: ReceivedValue = {
     value: NaN,
     receivedAt: -Infinity
   }
@@ -138,8 +155,10 @@ export class GnssOffsetCorrector {
 
   async start(): Promise<void> {
     this.rebuildLookup()
-    this.trackHeading(HEADING_TRUE_PATH, this.headingTrue)
-    this.trackHeading(HEADING_MAGNETIC_PATH, this.headingMagnetic)
+    this.track(HEADING_TRUE_PATH, this.headingTrue)
+    this.track(HEADING_MAGNETIC_PATH, this.headingMagnetic)
+    this.track(COG_TRUE_PATH, this.courseOverGround)
+    this.track(SOG_PATH, this.speedOverGround)
     this.app.on('serverevent', (e: { type?: string }) => {
       if (e?.type === 'GNSS_SENSORS') {
         this.rebuildLookup()
@@ -178,7 +197,7 @@ export class GnssOffsetCorrector {
     if (this.readLengthOverall() === undefined) {
       return { mode: this.mode, active: false, blocked: 'no-length' }
     }
-    if (this.readHeadingTrue() === undefined) {
+    if (this.readOrientation() === undefined) {
       return { mode: this.mode, active: false, blocked: 'no-heading' }
     }
     return { mode: this.mode, active: true }
@@ -319,8 +338,8 @@ export class GnssOffsetCorrector {
       }
       return undefined
     }
-    const headingTrue = this.readHeadingTrue()
-    if (headingTrue === undefined) {
+    const orientation = this.readOrientation()
+    if (orientation === undefined) {
       // Length is set and a mode is active, so this is a real loss of a
       // required input: raise a notification (once, on transition) so the
       // user learns correction has stopped rather than silently getting
@@ -328,9 +347,9 @@ export class GnssOffsetCorrector {
       this.raiseHeadingNotification()
       return undefined
     }
-    // Heading is back; retract any outstanding notification.
+    // Orientation is back; retract any outstanding notification.
     this.clearHeadingNotification()
-    return correctPosition(raw, entry.offset, lengthOverall, headingTrue)
+    return correctPosition(raw, entry.offset, lengthOverall, orientation)
   }
 
   private raiseHeadingNotification(): void {
@@ -339,7 +358,7 @@ export class GnssOffsetCorrector {
     this.scheduleReferenceUpdate()
     this.emitHeadingNotification(
       'warn',
-      'GNSS vessel reference point (CCRP) correction inactive: no true heading available'
+      'GNSS vessel reference point (CCRP) correction inactive: no heading, and too slow to use course over ground'
     )
   }
 
@@ -349,7 +368,7 @@ export class GnssOffsetCorrector {
     this.scheduleReferenceUpdate()
     this.emitHeadingNotification(
       'normal',
-      'GNSS vessel reference point (CCRP) correction resumed: true heading available'
+      'GNSS vessel reference point (CCRP) correction resumed: heading or course over ground available'
     )
   }
 
@@ -449,9 +468,9 @@ export class GnssOffsetCorrector {
   }
 
   // The self bus carries values after source priority, so this follows
-  // the same heading source as the data model. A null (source lost or
-  // timed out) makes the heading unavailable at once.
-  private trackHeading(path: Path, received: ReceivedHeading): void {
+  // the same source as the data model. A null (source lost or timed out)
+  // makes the value unavailable at once.
+  private track(path: Path, received: ReceivedValue): void {
     this.app.streambundle.getSelfBus(path).onValue((delta: NormalizedDelta) => {
       if (delta.isMeta) return
       received.value =
@@ -463,22 +482,35 @@ export class GnssOffsetCorrector {
   }
 
   // Only the heading itself must be fresh: magnetic variation changes over
-  // days and is commonly sent rarely or configured once.
-  private readHeadingTrue(): number | undefined {
+  // days and is commonly sent rarely or configured once. Course over ground
+  // stands in for a missing heading only while the vessel makes way, since
+  // it is the direction of travel, not of the bow.
+  private readOrientation(): number | undefined {
     const now = this.monotonicNow()
     if (isFresh(this.headingTrue, now)) return this.headingTrue.value
-    if (!isFresh(this.headingMagnetic, now)) return undefined
-    const v = _get(this.app.signalk.self, 'navigation.magneticVariation.value')
-    if (typeof v === 'number' && Number.isFinite(v)) {
-      return this.headingMagnetic.value + v
+    if (isFresh(this.headingMagnetic, now)) {
+      const v = _get(
+        this.app.signalk.self,
+        'navigation.magneticVariation.value'
+      )
+      if (typeof v === 'number' && Number.isFinite(v)) {
+        return this.headingMagnetic.value + v
+      }
+    }
+    if (
+      isFresh(this.courseOverGround, now) &&
+      isFresh(this.speedOverGround, now) &&
+      this.speedOverGround.value >= MIN_COG_SPEED
+    ) {
+      return this.courseOverGround.value
     }
     return undefined
   }
 }
 
-function isFresh(heading: ReceivedHeading, now: number): boolean {
+function isFresh(received: ReceivedValue, now: number): boolean {
   return (
-    Number.isFinite(heading.value) &&
-    now - heading.receivedAt <= HEADING_MAX_AGE_MS
+    Number.isFinite(received.value) &&
+    now - received.receivedAt <= HEADING_MAX_AGE_MS
   )
 }

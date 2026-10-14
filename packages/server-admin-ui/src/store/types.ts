@@ -281,7 +281,8 @@ export type GnssCorrectionMode = 'off' | 'replace' | 'both'
 // Whether vessel reference point correction can currently run, mirroring the
 // server's sensors API GET `status`. `active` is true only when a mode is
 // selected
-// and both vessel length and true heading are available; `blocked` names
+// and both vessel length and an orientation (a heading, or course over
+// ground while making way) are available; `blocked` names
 // the missing input otherwise.
 export interface GnssCorrectionStatus {
   mode: GnssCorrectionMode
