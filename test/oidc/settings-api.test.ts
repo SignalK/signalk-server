@@ -393,8 +393,8 @@ describe('OIDC Settings API', function () {
     })
   })
 
-  describe('User list with OIDC indicator', () => {
-    it('should include OIDC information in user list', async () => {
+  describe('User list', () => {
+    it('should list local users without an external identity', async () => {
       const result = await fetch(`${url}/skServer/security/users`, {
         headers: {
           Cookie: `JAUTHENTICATION=${adminToken}`
@@ -403,14 +403,12 @@ describe('OIDC Settings API', function () {
       expect(result.status).to.equal(200)
 
       const users = (await result.json()) as Array<Record<string, unknown>>
-      expect(users).to.be.an('array')
+      expect(users).to.be.an('array').that.is.not.empty
 
-      // Each user should have an isOIDC field (or similar indicator)
       users.forEach((user) => {
         expect(user).to.have.property('userId')
         expect(user).to.have.property('type')
-        // isOIDC should be present (false for local users)
-        expect(user).to.have.property('isOIDC')
+        expect(user).to.not.have.property('identity')
       })
     })
   })
