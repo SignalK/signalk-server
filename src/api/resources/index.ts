@@ -17,7 +17,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
-import { validate } from './validate'
+import { validate, ValidationError } from './validate'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { writeSettingsFile } from '../../config/config'
 
@@ -26,6 +26,21 @@ export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 export const CHART_TILE_REGEX = /\/charts\/[^?]+\/\d+\/\d+\/\d+$/
 
 export const skUuid = () => `${uuidv4()}`
+
+/** Providers signal an absent resource by rejecting getResource with an
+ * error whose code is 'ENOENT' (Node's not-found convention); anything else
+ * is a real retrieval failure and must not be mistaken for "not found". */
+const isResourceNotFound = (e: unknown): boolean =>
+  (e as { code?: string })?.code === 'ENOENT'
+
+/** Singular of a resource type name for descriptions: routes -> route,
+ * logentries -> logentry. */
+const singularResourceType = (type: string): string =>
+  type.endsWith('ies')
+    ? `${type.slice(0, -3)}y`
+    : type.endsWith('s')
+      ? type.slice(0, -1)
+      : type
 
 interface DefaultProviders {
   [index: string]: string
@@ -212,7 +227,7 @@ export class ResourcesApi {
       }
       if (!isValidId) {
         return Promise.reject(
-          new Error(`Invalid resource id provided (${resId})`)
+          new ValidationError(`Invalid resource id provided (${resId})`)
         )
       }
       validate.resource(resType as SignalKResourceType, resId, 'PUT', data)
@@ -223,14 +238,24 @@ export class ResourcesApi {
     }
 
     const provider = await this.getProviderForWrite(resType, resId, providerId)
-    if (provider) {
-      this.resProvider[resType]
-        ?.get(provider)
-        ?.setResource(resId, data)
-        .then((r) => {
+    const methods = provider
+      ? this.resProvider[resType]?.get(provider)
+      : undefined
+    if (provider && methods) {
+      await this.applyLogEntryDatetime(resType, resId, methods, data)
+      return methods
+        .setResource(resId, data)
+        .then(async (r) => {
+          // the delta carries the stored entry, which providers may have
+          // normalized or completed beyond the request payload
+          const stored = await this.storedResourceOrWritten(
+            resId,
+            methods,
+            data
+          )
           this.app.handleMessage(
             provider as string,
-            this.buildDeltaMsg(resType, resId, data),
+            this.buildDeltaMsg(resType, resId, stored),
             SKVersion.v2
           )
           return r
@@ -241,6 +266,50 @@ export class ResourcesApi {
         })
     } else {
       return Promise.reject(new Error(`No provider for ${resType}`))
+    }
+  }
+
+  /** After a successful write, the delta is built from the stored resource so
+   * it carries what the provider actually persisted. A failing follow-up read
+   * must not turn a successful write into a failed one: the delta falls back
+   * to the written payload (with any server-supplied fields already set). */
+  private async storedResourceOrWritten(
+    resId: string,
+    methods: ResourceProviderMethods,
+    written: object
+  ): Promise<object> {
+    try {
+      return await methods.getResource(resId)
+    } catch (e) {
+      debug.enabled && debug(`Post-write read failed, using written payload`, e)
+      return written
+    }
+  }
+
+  /** Log entry `datetime` is the chronological sort key: when a write omits
+   * it, a replacement retains the stored value and a create defaults to now.
+   * Applied before the payload reaches the provider, so what is stored and
+   * what the emitted delta carries agree. */
+  private async applyLogEntryDatetime(
+    resType: SignalKResourceType,
+    resId: string,
+    methods: ResourceProviderMethods,
+
+    data: { [key: string]: any }
+  ) {
+    if (resType !== 'logentries' || data.datetime !== undefined) {
+      return
+    }
+    try {
+      const existing = (await methods.getResource(resId)) as {
+        datetime?: string
+      }
+      data.datetime = existing?.datetime ?? new Date().toISOString()
+    } catch (e) {
+      if (!isResourceNotFound(e)) {
+        throw e
+      }
+      data.datetime = new Date().toISOString()
     }
   }
 
@@ -257,10 +326,12 @@ export class ResourcesApi {
     } else {
       provider = await this.getProviderForResourceId(resType, resId)
     }
-    if (provider) {
-      this.resProvider[resType]
-        ?.get(provider)
-        ?.deleteResource(resId)
+    const methods = provider
+      ? this.resProvider[resType]?.get(provider)
+      : undefined
+    if (provider && methods) {
+      return methods
+        .deleteResource(resId)
         .then((r) => {
           this.app.handleMessage(
             provider as string,
@@ -778,16 +849,34 @@ export class ResourcesApi {
         }
 
         try {
-          await this.resProvider[req.params.resourceType]
-            ?.get(provider)
-            ?.setResource(id, req.body)
+          const methods =
+            this.resProvider[req.params.resourceType]?.get(provider)
+          if (!methods) {
+            debug('** No provider found... calling next()...')
+            next()
+            return
+          }
+          await this.applyLogEntryDatetime(
+            req.params.resourceType as SignalKResourceType,
+            id,
+            methods,
+            req.body
+          )
+          await methods.setResource(id, req.body)
+          // the delta carries the stored entry, which providers may have
+          // normalized or completed beyond the request payload
+          const stored = await this.storedResourceOrWritten(
+            id,
+            methods,
+            req.body
+          )
 
           server.handleMessage(
             provider as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
               id,
-              req.body
+              stored
             ),
             SKVersion.v2
           )
@@ -867,16 +956,34 @@ export class ResourcesApi {
             next()
             return
           }
-          await this.resProvider[req.params.resourceType]
-            ?.get(provider)
-            ?.setResource(req.params.resourceId, req.body)
+          const methods =
+            this.resProvider[req.params.resourceType]?.get(provider)
+          if (!methods) {
+            debug('** No provider found... calling next()...')
+            next()
+            return
+          }
+          await this.applyLogEntryDatetime(
+            req.params.resourceType as SignalKResourceType,
+            req.params.resourceId,
+            methods,
+            req.body
+          )
+          await methods.setResource(req.params.resourceId, req.body)
+          // the delta carries the stored entry, which providers may have
+          // normalized or completed beyond the request payload
+          const stored = await this.storedResourceOrWritten(
+            req.params.resourceId,
+            methods,
+            req.body
+          )
 
           server.handleMessage(
             provider as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
               req.params.resourceId,
-              req.body
+              stored
             ),
             SKVersion.v2
           )
@@ -964,9 +1071,7 @@ export class ResourcesApi {
     for (const i in this.resProvider) {
       if (this.resProvider.hasOwnProperty(i)) {
         resPaths[i] = {
-          description: `Path containing ${
-            i.slice(-1) === 's' ? i.slice(0, i.length - 1) : i
-          } resources`
+          description: `Path containing ${singularResourceType(i)} resources`
         }
       }
     }

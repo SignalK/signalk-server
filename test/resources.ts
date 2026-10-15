@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { serverTestConfigDirectory } from './servertestutilities'
-import { startServer } from './ts-servertestutilities'
+import { startServer, DATETIME_REGEX } from './ts-servertestutilities'
 chai.should()
 
 export const skUuid = () => `${uuidv4()}`
@@ -41,7 +41,12 @@ describe('Resources Api', () => {
     const resourceDelta = JSON.parse(await wsPromiser.nthMessage(2))
     const { path, value } = resourceDelta.updates[0].values[0]
     path.should.equal(`resources.waypoints.${resId}`)
-    value.should.deep.equal(waypoint)
+    const { timestamp, ...stored } = value
+    timestamp.should.be.a('string').and.match(DATETIME_REGEX)
+    stored.should.deep.equal({
+      ...waypoint,
+      $source: 'resources-provider'
+    })
     response = await get(`/resources/waypoints/${resId}`)
     const resData = (await response.json()) as Resource<Waypoint>
     resData.should.deep.equal({
