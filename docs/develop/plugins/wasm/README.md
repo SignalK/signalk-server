@@ -32,7 +32,7 @@ A WASM plugin is an npm package that contains the WASM code for the plugin inste
 **Key points:**
 
 - **`wasmManifest`** (required): Path to the compiled `.wasm` file. This field tells Signal K to load this as a WASM plugin instead of a Node.js plugin.
-- **`wasmCapabilities`** (required): Declares what permissions the plugin needs (network, storage, etc.)
+- **`wasmCapabilities`** (optional): Declares what permissions the plugin needs (network, storage, etc.). See [Plugin Capabilities](./capabilities.md) for the full list.
 - **Package name** (flexible): Can be anything - `my-plugin`, `@myorg/my-plugin`, etc. There is **no requirement** to use `@signalk/` scope.
 - **Keywords**: Include `signalk-wasm-plugin` for discovery (do **not** use `signalk-node-server-plugin` - that's for Node.js plugins only)
 
@@ -49,7 +49,6 @@ Signal K Server supports multiple languages for WASM plugin development:
 ### Benefits
 
 - **Capability-based access**: A plugin reaches the server, the network and sockets only through the bindings its declared capabilities enable
-- **Hot-reload**: Update plugins without server restart
 - **Multi-language**: Write plugins in Rust, AssemblyScript, and more
 - **Crash isolation**: Plugin crashes don't affect server
 - **Performance**: Near-native performance with WASM
@@ -63,7 +62,7 @@ Signal K Server supports multiple languages for WASM plugin development:
 - **Configuration**: The same JSON schema-based configuration as JS plugins
 - **Data Storage**: VFS-isolated file storage
 - **HTTP Endpoints**: Register custom REST API endpoints
-- **Static Files**: Serve web UI from `public/` directory
+- **Static Files**: Serve a web UI from the `public/` directory (with the `signalk-webapp` keyword)
 - **Network Access**: HTTP requests via as-fetch (AssemblyScript)
 - **Resource Providers**: Serve SignalK resources
 - **Weather Providers**: Integrate with Signal K Weather API
