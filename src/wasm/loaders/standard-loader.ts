@@ -17,6 +17,7 @@ import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { updateRadarProviderInstance } from '../bindings/radar-provider'
 import { getNodeFetch } from '../utils/fetch-wrapper'
 import { derivePluginId } from '../../pluginid'
+import { callBufferAbi, METADATA_BUFFER_BYTES } from '../utils/buffer-abi'
 
 const debug = Debug('signalk:wasm:loader:standard')
 
@@ -401,36 +402,18 @@ function createPluginExports(
         return ''
       }
 
-      const maxLen = 8192
-      const allocate = rawExports.allocate
-      if (typeof allocate !== 'function') {
+      if (typeof rawExports.allocate !== 'function') {
         throw new Error('Rust plugin missing allocate export')
       }
 
-      const outPtr = allocate(maxLen)
-      if (!outPtr) {
-        throw new Error(`Failed to allocate ${maxLen} bytes for ${funcName}`)
-      }
-
-      try {
-        const writtenLen = func(outPtr, maxLen)
-        if (writtenLen <= 0) {
-          debug(`${funcName} returned ${writtenLen}`)
-          return ''
-        }
-
-        const memory = rawExports.memory as WebAssembly.Memory
-        const bytes = new Uint8Array(memory.buffer, outPtr, writtenLen)
-        const decoder = new TextDecoder('utf-8')
-        const result = decoder.decode(bytes)
-        debug(`${funcName} returned: ${result.substring(0, 100)}...`)
-        return result
-      } finally {
-        const deallocate = rawExports.deallocate
-        if (typeof deallocate === 'function') {
-          deallocate(outPtr, maxLen)
-        }
-      }
+      const result = callBufferAbi(
+        rawExports,
+        funcName,
+        func,
+        METADATA_BUFFER_BYTES
+      )
+      debug(`${funcName} returned: ${result.substring(0, 100)}...`)
+      return result
     }
 
     idFunc = () => callRustStringFunc('plugin_id')

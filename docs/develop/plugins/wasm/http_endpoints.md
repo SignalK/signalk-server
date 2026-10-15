@@ -162,6 +162,12 @@ The server uses the **AssemblyScript loader** for automatic string handling:
 **Why manual decoding for handlers?**
 The request is passed as raw UTF-8 bytes for efficiency, but the response is returned as an AssemblyScript string (UTF-16LE) which the loader decodes automatically.
 
+## Rust Handlers and Large Responses
+
+Rust (and other buffer-based) plugins receive the request context as UTF-8 bytes and write the whole response envelope (including `statusCode` and `headers`) into an output buffer the server allocates, returning the number of bytes written. The output buffer follows the [buffer convention](./rust.md#output-buffers) shared by all string-returning exports: a response that does not fit is answered with its size negated, and the server calls the handler once more with a buffer of that size. The `write_string` helper in [example-anchor-watch-rust](https://github.com/SignalK/signalk-server/tree/master/examples/wasm-plugins/example-anchor-watch-rust) implements this.
+
+Because a large response runs the handler twice, a handler with side effects (for example a `POST` that changes state) should keep the response built by the first call and write it out on the second instead of repeating the work. A handler that cannot produce its response within the size limit fails the request with `500`.
+
 ## Testing Your Endpoints
 
 ```bash
