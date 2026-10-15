@@ -6,6 +6,7 @@
  * 2. Are discovered and loaded by the server
  * 3. Appear in the plugins API endpoint
  * 4. Can be enabled and started
+ * 5. Stream Server-Sent Events pushed by the plugin
  *
  * Note: These tests require the example plugin to be pre-built.
  * Run from repo root: npm run build:all (which includes WASM examples)
@@ -61,6 +62,46 @@ const examplePluginDir = path.join(
 )
 
 const wasmPath = path.join(examplePluginDir, 'plugin.wasm')
+
+const SUBSCRIBER_POLL_ATTEMPTS = 40
+const SUBSCRIBER_POLL_INTERVAL_MS = 50
+
+interface SseClient {
+  response: Response
+  // Resolves with everything received once `text` has arrived, or with
+  // null if the stream ends first
+  waitFor: (text: string) => Promise<string | null>
+  abort: () => void
+}
+
+/**
+ * Open an event stream with fetch rather than EventSource, so tests can
+ * observe the raw framing and whether the server ended the stream.
+ */
+async function openSseClient(url: string): Promise<SseClient> {
+  const controller = new AbortController()
+  const response = await fetch(url, {
+    headers: { Accept: 'text/event-stream' },
+    signal: controller.signal
+  })
+  const reader = response.body!.getReader()
+  const decoder = new TextDecoder()
+  let received = ''
+  return {
+    response,
+    waitFor: async (text: string) => {
+      while (!received.includes(text)) {
+        const { done, value } = await reader.read()
+        if (done) {
+          return null
+        }
+        received += decoder.decode(value, { stream: true })
+      }
+      return received
+    },
+    abort: () => controller.abort()
+  }
+}
 
 const examplePluginId = '_signalk_example-hello-assemblyscript'
 
@@ -856,6 +897,117 @@ export function plugin_stop(): i32 {
       expect((await getEndpoint('/api/status', adminToken)).status).to.equal(
         404
       )
+    })
+  })
+
+  describe('SSE channels', () => {
+    let server: ServerInstance | null = null
+    let url: string
+
+    before(async function () {
+      linkExamplePlugin()
+      const port = await freeport()
+      url = `http://0.0.0.0:${port}`
+      server = await startServerP(port, false, {
+        settings: {
+          interfaces: {
+            plugins: true,
+            wasm: true
+          }
+        }
+      })
+      await setPluginEnabled(true)
+    })
+
+    after(async function () {
+      if (server) {
+        await server.stop()
+      }
+      unlinkExamplePlugin()
+    })
+
+    /** Start or stop the example plugin through the plugin config API. */
+    async function setPluginEnabled(enabled: boolean): Promise<void> {
+      const response = await fetch(
+        `${url}/skServer/plugins/${examplePluginId}/config`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled, configuration: {} })
+        }
+      )
+      expect(response.status).to.equal(200)
+    }
+
+    /** Trigger a plugin broadcast and return how many clients it reached. */
+    async function broadcast(): Promise<number> {
+      const response = await fetch(
+        `${url}/plugins/${examplePluginId}/api/broadcast`,
+        { method: 'POST' }
+      )
+      expect(response.status).to.equal(200)
+      const body = await response.json()
+      return body.sent
+    }
+
+    /**
+     * Poll until the channel has the expected number of clients, since
+     * connects and disconnects reach the server asynchronously.
+     */
+    async function waitForSubscriberCount(expected: number): Promise<void> {
+      for (let i = 0; i < SUBSCRIBER_POLL_ATTEMPTS; i++) {
+        if ((await broadcast()) === expected) {
+          return
+        }
+        await new Promise((r) => setTimeout(r, SUBSCRIBER_POLL_INTERVAL_MS))
+      }
+      expect.fail(`channel never reached ${expected} subscribers`)
+    }
+
+    const eventsUrl = () => `${url}/plugins/${examplePluginId}/api/events`
+
+    it('streams events pushed by the plugin to a subscribed client', async function () {
+      const client = await openSseClient(eventsUrl())
+      try {
+        expect(client.response.status).to.equal(200)
+        expect(client.response.headers.get('content-type')).to.match(
+          /^text\/event-stream/
+        )
+        expect(await client.waitFor('\n\n')).to.equal(
+          'event: welcome\ndata: Hello AssemblyScript Plugin\n\n'
+        )
+
+        expect(await broadcast()).to.equal(1)
+        const received = await client.waitFor('broadcast #')
+        expect(received).to.include(
+          'event: greeting\ndata: Hello from AssemblyScript!\ndata: broadcast #'
+        )
+      } finally {
+        client.abort()
+      }
+    })
+
+    it('removes a client from the channel when it disconnects', async function () {
+      const client = await openSseClient(eventsUrl())
+      await client.waitFor('welcome')
+      await waitForSubscriberCount(1)
+
+      client.abort()
+      await waitForSubscriberCount(0)
+    })
+
+    it('ends open streams when the plugin stops', async function () {
+      const client = await openSseClient(eventsUrl())
+      await client.waitFor('welcome')
+
+      await setPluginEnabled(false)
+
+      expect(await client.waitFor('never sent')).to.equal(null)
+      // a disabled plugin serves none of its endpoints
+      expect((await fetch(eventsUrl())).status).to.equal(404)
+
+      await setPluginEnabled(true)
+      expect(await broadcast()).to.equal(0)
     })
   })
 })
