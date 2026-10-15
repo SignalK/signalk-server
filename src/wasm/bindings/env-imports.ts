@@ -20,6 +20,8 @@ import {
   createBinaryDataReader
 } from './binary-stream'
 import { socketManager, tcpSocketManager } from './socket-manager'
+import { sendSseEvent } from './sse'
+import { derivePluginId } from '../../pluginid'
 import * as fs from 'fs'
 import * as path from 'path'
 import { atomicWriteFileSync } from '../../atomicWrite'
@@ -76,6 +78,9 @@ export function createEnvImports(
   } = options
 
   const readUtf8String = createUtf8Reader(memoryRef)
+  // SSE streams are registered by the HTTP routes under the plugin id,
+  // while the binding may be created with the package name
+  const ssePluginId = derivePluginId(pluginId)
   const readBinaryData = createBinaryDataReader(memoryRef)
 
   const envImports: Record<string, any> = {
@@ -634,6 +639,32 @@ export function createEnvImports(
       readUtf8String,
       readBinaryData
     ),
+
+    /**
+     * Push a Server-Sent Event to every client of one of the plugin's
+     * SSE channels (opened by an HTTP handler returning `sseChannel`)
+     * @returns Number of clients the event was written to, or -1 on error
+     */
+    sk_sse_send: (
+      channelPtr: number,
+      channelLen: number,
+      eventPtr: number,
+      eventLen: number,
+      dataPtr: number,
+      dataLen: number
+    ): number => {
+      try {
+        return sendSseEvent(
+          ssePluginId,
+          readUtf8String(channelPtr, channelLen),
+          readUtf8String(eventPtr, eventLen),
+          readUtf8String(dataPtr, dataLen)
+        )
+      } catch (error) {
+        debug(`[${pluginId}] sk_sse_send error: ${error}`)
+        return -1
+      }
+    },
 
     // ==========================================================================
     // Raw Socket API (for radar, NMEA, etc.)
