@@ -7,18 +7,18 @@ Internal documentation for Signal K Server WASM plugin infrastructure.
 The WASM plugin system runs alongside the existing Node.js plugin system in a hybrid mode:
 
 - **Node.js plugins**: Full access (unsandboxed)
-- **WASM plugins**: Wasmer sandbox with VFS isolation and capability restrictions
+- **WASM plugins**: Node.js WASI (`node:wasi`, preview1) with VFS preopens and capability configuration. This is isolation, not a security boundary for untrusted code.
 
 ## Source Files
 
 ### Core Infrastructure (`src/wasm/`)
 
-| File                    | Purpose                                                              |
-| ----------------------- | -------------------------------------------------------------------- |
-| `wasm-runtime.ts`       | WASM runtime management (Wasmer), module loading, instance lifecycle |
-| `wasm-storage.ts`       | Virtual filesystem (VFS) management, per-plugin isolation            |
-| `wasm-serverapi.ts`     | FFI bridge to ServerAPI, capability enforcement, delta handling      |
-| `wasm-subscriptions.ts` | Delta subscription management, pattern matching, buffering           |
+| File                    | Purpose                                                                   |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `wasm-runtime.ts`       | WASM runtime management (`node:wasi`), module loading, instance lifecycle |
+| `wasm-storage.ts`       | Virtual filesystem (VFS) management, per-plugin isolation                 |
+| `wasm-serverapi.ts`     | FFI bridge to ServerAPI, capability enforcement, delta handling           |
+| `wasm-subscriptions.ts` | Delta subscription management, pattern matching, buffering                |
 
 ### Plugin Loader (`src/wasm/loader/`)
 
@@ -97,5 +97,4 @@ initializeLifecycleFunctions(startWasmPlugin)
 ## Related Documentation
 
 - [wasm-asyncify.md](wasm-asyncify.md) - Asyncify implementation for async HTTP
-- [hotplug.md](hotplug.md) - Plugin enable/disable without restart
 - `docs/develop/plugins/wasm/` - Public developer documentation

@@ -14,7 +14,6 @@ Declare required capabilities in `package.json`:
 | `dataWrite`     | Emit delta messages                      | Supported                       |
 | `storage`       | Write to VFS (`vfs-only`)                | Supported                       |
 | `httpEndpoints` | Register custom HTTP endpoints           | Supported                       |
-| `staticFiles`   | Serve HTML/CSS/JS from `public/` folder  | Supported                       |
 | `network`       | HTTP requests (via as-fetch)             | Supported (AssemblyScript only) |
 | `putHandlers`   | Register PUT handlers for vessel control | Supported                       |
 | `rawSockets`    | UDP socket access for radar, NMEA, etc.  | Supported                       |
@@ -32,65 +31,9 @@ AssemblyScript plugins can make HTTP requests using the `as-fetch` library integ
 - Must add `"transform": ["as-fetch/transform"]` to `asconfig.json` options
 - Must set `"exportRuntime": true` in `asconfig.json` options
 
-**Example: HTTP GET Request**
+A plugin checks `hasNetworkCapability()` from the SDK before making requests, then calls `fetchSync` from `as-fetch/sync`, which blocks the plugin until the response arrives. [example-weather-plugin](https://github.com/SignalK/signalk-server/tree/master/examples/wasm-plugins/example-weather-plugin) is a maintained example of the full pattern.
 
-```typescript
-import {
-  httpGet,
-  hasNetworkCapability
-} from '@signalk/assemblyscript-plugin-sdk/assembly/network'
-import { debug, setError } from '@signalk/assemblyscript-plugin-sdk/assembly'
-
-class MyPlugin extends Plugin {
-  start(config: string): i32 {
-    // Always check capability first
-    if (!hasNetworkCapability()) {
-      setError('Network capability not granted')
-      return 1
-    }
-
-    // Make HTTP GET request
-    const response = httpGet('https://api.example.com/data')
-    if (response === null) {
-      setError('HTTP request failed')
-      return 1
-    }
-
-    debug('Received: ' + response)
-    return 0
-  }
-}
-```
-
-**Available Network Functions:**
-
-```typescript
-// Check if network capability is granted
-hasNetworkCapability(): boolean
-
-// HTTP GET request - returns response body or null on error
-httpGet(url: string): string | null
-
-// HTTP POST request - returns status code or -1 on error
-httpPost(url: string, body: string): i32
-
-// HTTP POST with response - returns response body or null
-httpPostWithResponse(url: string, body: string): string | null
-
-// HTTP PUT request - returns status code or -1 on error
-httpPut(url: string, body: string): i32
-
-// HTTP DELETE request - returns status code or -1 on error
-httpDelete(url: string): i32
-
-// Advanced HTTP request with full control
-httpRequest(
-  url: string,
-  method: string,
-  body: string | null,
-  contentType: string | null
-): HttpResponse | null
-```
+`fetchSync` relies on Asyncify, which the server drives only while the plugin is starting and while it serves weather and radar provider requests. Requests made from polling, delta, HTTP, PUT or resource handlers are not supported.
 
 **Build Configuration (asconfig.json):**
 

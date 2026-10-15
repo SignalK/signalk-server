@@ -6,21 +6,9 @@ title: Integration Guide for WASM Plugins
 
 ## Static File Serving
 
-Plugins can serve HTML, CSS, JavaScript and other static files:
+A WASM plugin serves a web UI the same way any other package does: as a [webapp](../../webapps.md), declared with the webapp keywords described there. The server serves the package's `public/` directory under the npm package name, not under the plugin's REST path.
 
-**Structure:**
-
-```
-@signalk/my-plugin/
-├── public/           # Automatically served at /plugins/my-plugin/
-│   ├── index.html
-│   ├── style.css
-│   └── app.js
-├── plugin.wasm
-└── package.json
-```
-
-**Access:** `http://localhost:3000/plugins/my-plugin/` serves `public/index.html`
+The page reads data from the server's own APIs, such as the Signal K WebSocket stream, the REST API, the plugin's resources and its [binary streams](#binary-streams).
 
 ## Resource Providers
 
@@ -397,3 +385,9 @@ ws.onmessage = (event) => {
   // Decode and render spoke
 }
 ```
+
+## Binary Streams
+
+A plugin can push arbitrary binary data to WebSocket clients through the `sk_emit_binary_stream` host function. Each stream has an ID scoped to the plugin (prefixed with `plugins/` and the package name), and the server rejects IDs outside that scope. Clients subscribe to a stream by its ID over the server's v2 streams API and receive each emitted payload as a binary WebSocket frame.
+
+Streams are one-way, from the server to the client. They use the same authorization as the Signal K WebSocket stream, so read-only users can subscribe. The host binding in [`src/wasm/bindings/binary-stream.ts`](https://github.com/SignalK/signalk-server/blob/master/src/wasm/bindings/binary-stream.ts) and the stream endpoint in [`src/api/streams/index.ts`](https://github.com/SignalK/signalk-server/blob/master/src/api/streams/index.ts) define the exact signature and URL.
