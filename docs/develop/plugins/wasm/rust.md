@@ -221,14 +221,17 @@ pub extern "C" fn plugin_stop() -> i32 {
 // Helper Functions
 // =============================================================================
 
-/// Write string to output buffer, return bytes written
+/// Write string to output buffer and return bytes written, or the negated
+/// size needed when it does not fit (see Output Buffers below)
 fn write_string(s: &str, ptr: *mut u8, max_len: usize) -> i32 {
     let bytes = s.as_bytes();
-    let len = bytes.len().min(max_len);
-    unsafe {
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), ptr, len);
+    if bytes.len() > max_len {
+        return -(bytes.len() as i32);
     }
-    len as i32
+    unsafe {
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), ptr, bytes.len());
+    }
+    bytes.len() as i32
 }
 ```
 
@@ -338,6 +341,12 @@ Your plugin MUST export:
 | `plugin_stop`   | `() -> status`                       | Stop plugin        |
 | `allocate`      | `(size) -> ptr`                      | Allocate memory    |
 | `deallocate`    | `(ptr, size)`                        | Free memory        |
+
+### Output Buffers
+
+Exports that return a string share one convention: the server allocates an output buffer in plugin memory, passes `(out_ptr, max_len)` (after the request's `(ptr, len)` where there is one), and the export returns the number of bytes it wrote. HTTP handlers and provider calls start with a larger buffer than plugin metadata, `http_endpoints` and PUT handlers.
+
+When the output does not fit, the export returns the number of bytes it needs, negated, without writing anything. The server allocates a buffer of that size and calls the export once more with the same request, so such an export must produce the same output on the second call. Growth is bounded: a request above the server's limit, or a second negative return, fails the call. The initial sizes and the limit are defined in `src/wasm/utils/buffer-abi.ts`.
 
 ## Optional Plugin Exports
 
