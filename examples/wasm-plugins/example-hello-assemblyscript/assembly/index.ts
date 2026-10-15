@@ -17,6 +17,36 @@ import {
   debug
 } from '@signalk/assemblyscript-plugin-sdk/assembly'
 
+// Declared locally rather than imported from the SDK's sseSend(): the
+// example builds against the published SDK release, not the workspace one
+@external('env', 'sk_sse_send')
+declare function sk_sse_send(
+  channelPtr: usize,
+  channelLen: usize,
+  eventPtr: usize,
+  eventLen: usize,
+  dataPtr: usize,
+  dataLen: usize
+): i32
+
+/**
+ * Push an event to every client of one of this plugin's SSE channels.
+ * Returns the number of clients reached, or -1 on error.
+ */
+function sseSend(channel: string, event: string, data: string): i32 {
+  const channelBuffer = String.UTF8.encode(channel)
+  const eventBuffer = String.UTF8.encode(event)
+  const dataBuffer = String.UTF8.encode(data)
+  return sk_sse_send(
+    changetype<usize>(channelBuffer),
+    channelBuffer.byteLength,
+    changetype<usize>(eventBuffer),
+    eventBuffer.byteLength,
+    changetype<usize>(dataBuffer),
+    dataBuffer.byteLength
+  )
+}
+
 /**
  * Plugin configuration interface
  */
@@ -29,6 +59,9 @@ class HelloConfig {
 // Track elapsed time for polling (server calls poll() every ~1000ms)
 let elapsedMs: i32 = 0
 let pollCount: i32 = 0
+let broadcastCount: i32 = 0
+
+const SSE_CHANNEL = 'hello'
 
 /**
  * Hello World Plugin Implementation
@@ -226,6 +259,18 @@ class HelloPlugin extends Plugin {
   }
 
   /**
+   * Push a greeting to every client of the SSE channel
+   */
+  broadcast(): i32 {
+    broadcastCount++
+    return sseSend(
+      SSE_CHANNEL,
+      'greeting',
+      `${this.config.message}\nbroadcast #${broadcastCount}`
+    )
+  }
+
+  /**
    * Get update interval for polling
    */
   getUpdateInterval(): i32 {
@@ -296,6 +341,16 @@ export function http_endpoints(): string {
       "method": "GET",
       "path": "/api/status",
       "handler": "handle_get_status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events",
+      "handler": "handle_get_events"
+    },
+    {
+      "method": "POST",
+      "path": "/api/broadcast",
+      "handler": "handle_post_broadcast"
     }
   ]`
 }
@@ -359,5 +414,37 @@ export function handle_get_status(
     "statusCode": 200,
     "headers": {"Content-Type": "application/json"},
     "body": "${escapedBody}"
+  }`
+}
+
+/**
+ * Handle GET /api/events
+ * Keeps the response open as a Server-Sent Events stream on the "hello"
+ * channel. The body is sent to this client only, as its first event.
+ */
+export function handle_get_events(
+  requestPtr: usize,
+  requestLen: usize
+): string {
+  return `{
+    "sseChannel": "${SSE_CHANNEL}",
+    "body": "event: welcome\\ndata: ${plugin.name()}\\n\\n"
+  }`
+}
+
+/**
+ * Handle POST /api/broadcast
+ * Pushes a greeting to every client of the "hello" SSE channel
+ */
+export function handle_post_broadcast(
+  requestPtr: usize,
+  requestLen: usize
+): string {
+  const sent = plugin.broadcast()
+
+  return `{
+    "statusCode": 200,
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\\"sent\\": ${sent}}"
   }`
 }
