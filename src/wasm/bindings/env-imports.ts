@@ -30,14 +30,16 @@ const debug = Debug('signalk:wasm:bindings')
  * Options for creating environment imports
  */
 export interface EnvImportsOptions {
+  /** Keys server-side plugin state: status, config file, sockets */
   pluginId: string
+  /** Plugin identity seen by clients: delta $source, PUT source, provider and stream ids */
+  packageName: string
   capabilities: WasmCapabilities
   app?: any
   memoryRef: { current: WebAssembly.Memory | null }
   rawExports: { current: any }
   asLoaderInstance: { current: any }
   configPath?: string
-  packageName?: string
 }
 
 /**
@@ -70,7 +72,7 @@ export function createEnvImports(
     rawExports,
     asLoaderInstance,
     configPath,
-    packageName: _packageName
+    packageName
   } = options
 
   const readUtf8String = createUtf8Reader(memoryRef)
@@ -197,7 +199,7 @@ export function createEnvImports(
           try {
             const delta = JSON.parse(deltaJson)
             const skVersion = version === 2 ? SKVersion.v2 : SKVersion.v1
-            app.handleMessage(pluginId, delta, skVersion)
+            app.handleMessage(packageName, delta, skVersion)
             debug(`[${pluginId}] Delta processed by server (${skVersion})`)
           } catch (parseError) {
             debug(`[${pluginId}] Failed to parse/process delta: ${parseError}`)
@@ -277,7 +279,7 @@ export function createEnvImports(
         }
 
         // Notifications should be processed normally (version 1)
-        app.handleMessage(pluginId, delta)
+        app.handleMessage(packageName, delta)
         debug(
           `[${pluginId}] Notification published: ${path} state=${notificationValue.state}`
         )
@@ -455,7 +457,7 @@ export function createEnvImports(
         if (app && app.registerActionHandler) {
           // Send meta message to indicate this path supports PUT
           if (app.handleMessage) {
-            app.handleMessage(pluginId, {
+            app.handleMessage(packageName, {
               updates: [
                 {
                   meta: [
@@ -557,7 +559,7 @@ export function createEnvImports(
             }
           }
 
-          app.registerActionHandler(context, path, pluginId, callback)
+          app.registerActionHandler(context, path, packageName, callback)
           debug(
             `[${pluginId}] PUT handler registered successfully via registerActionHandler`
           )
@@ -574,7 +576,7 @@ export function createEnvImports(
 
     // Resource Provider Registration
     sk_register_resource_provider: createResourceProviderBinding(
-      pluginId,
+      packageName,
       capabilities,
       app,
       readUtf8String
@@ -582,7 +584,7 @@ export function createEnvImports(
 
     // Weather Provider Registration
     sk_register_weather_provider: createWeatherProviderBinding(
-      pluginId,
+      packageName,
       capabilities,
       app,
       readUtf8String
@@ -590,7 +592,7 @@ export function createEnvImports(
 
     // Radar Provider Registration
     sk_register_radar_provider: createRadarProviderBinding(
-      pluginId,
+      packageName,
       capabilities,
       app,
       readUtf8String
@@ -610,7 +612,7 @@ export function createEnvImports(
      * @returns 1 on success, 0 on failure
      */
     sk_emit_binary_stream: createBinaryStreamBinding(
-      pluginId,
+      packageName,
       app,
       readUtf8String,
       readBinaryData
@@ -626,7 +628,7 @@ export function createEnvImports(
      * @returns 1 on success, 0 on failure
      */
     sk_radar_emit_spokes: createRadarEmitSpokesBinding(
-      pluginId,
+      packageName,
       capabilities,
       app,
       readUtf8String,
