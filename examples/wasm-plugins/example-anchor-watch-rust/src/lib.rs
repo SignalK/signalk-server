@@ -524,15 +524,19 @@ fn emit_anchor_state(enabled: bool, lat: f64, lon: f64, radius: f64) {
     handle_message(&delta);
 }
 
+/// Write string to output buffer and return bytes written, or the negated
+/// size needed when it does not fit so the server retries with that size
 fn write_string(s: &str, ptr: *mut u8, max_len: usize) -> i32 {
     let bytes = s.as_bytes();
-    let len = bytes.len().min(max_len);
-
-    unsafe {
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), ptr, len);
+    if bytes.len() > max_len {
+        return -(bytes.len() as i32);
     }
 
-    len as i32
+    unsafe {
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), ptr, bytes.len());
+    }
+
+    bytes.len() as i32
 }
 
 /// Calculate distance between two points using Haversine formula (meters)
