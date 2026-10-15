@@ -82,6 +82,20 @@ declare function sk_read_config_ffi(bufPtr: usize, bufLen: usize): i32
 @external("env", "sk_save_config")
 declare function sk_save_config_ffi(configPtr: usize, configLen: usize): i32
 
+/**
+ * @internal
+ * Push a Server-Sent Event to a channel
+ */
+@external("env", "sk_sse_send")
+declare function sk_sse_send_ffi(
+  channelPtr: usize,
+  channelLen: usize,
+  eventPtr: usize,
+  eventLen: usize,
+  dataPtr: usize,
+  dataLen: usize
+): i32
+
 // ===== Public API Functions =====
 
 /**
@@ -283,4 +297,33 @@ export function saveConfig(configJson: string): i32 {
   const buffer = String.UTF8.encode(configJson)
   const ptr = changetype<usize>(buffer)
   return sk_save_config_ffi(ptr, buffer.byteLength)
+}
+
+/**
+ * Push a Server-Sent Event to every client connected to one of this
+ * plugin's SSE channels. Clients join a channel through an HTTP handler
+ * that returns `{"sseChannel": "<channel>"}`.
+ *
+ * @param channel Channel name used by the HTTP handler
+ * @param event Event name; an empty string sends a default `message` event
+ * @param data Event data; each line becomes a `data:` line
+ * @returns Number of clients the event was sent to, or -1 on error
+ *
+ * @example
+ * ```typescript
+ * sseSend('panel', 'datastar-patch-elements', 'elements <div id="sog">5.2 kn</div>')
+ * ```
+ */
+export function sseSend(channel: string, event: string, data: string): i32 {
+  const channelBuffer = String.UTF8.encode(channel)
+  const eventBuffer = String.UTF8.encode(event)
+  const dataBuffer = String.UTF8.encode(data)
+  return sk_sse_send_ffi(
+    changetype<usize>(channelBuffer),
+    channelBuffer.byteLength,
+    changetype<usize>(eventBuffer),
+    eventBuffer.byteLength,
+    changetype<usize>(dataBuffer),
+    dataBuffer.byteLength
+  )
 }
