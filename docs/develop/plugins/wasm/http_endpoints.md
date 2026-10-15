@@ -143,6 +143,68 @@ Handler functions must return a JSON string with:
 - Endpoints are mounted at `/plugins/your-plugin-id/api/...`
 - From browser, fetch from absolute path: `/plugins/your-plugin-id/api/logs`
 
+## Server-Sent Events
+
+Handlers run synchronously and their response ends when they return, so a plugin cannot hold a connection open itself. Instead, a handler can hand the response to the server as a Server-Sent Events (SSE) stream on a named channel, and the plugin pushes events to that channel later, typically from `poll()` or `delta_handler()`. This suits live dashboards and hypermedia front ends such as [Datastar](https://data-star.dev/) that expect the server to push updates.
+
+### Opening a stream
+
+Return an envelope with an `sseChannel` field instead of `statusCode`:
+
+```json
+{
+  "sseChannel": "panel",
+  "body": "event: datastar-patch-elements\ndata: elements <div id=\"sog\">5.2 kn</div>\n\n"
+}
+```
+
+- The server responds with `200` and `Content-Type: text/event-stream`, keeps the connection open and adds it to the plugin's `panel` channel.
+- `body` is optional. It is written once, as raw event-stream text, to this client only. Use it to send the current state so a new client does not wait for the next update.
+- `statusCode` and `headers` are ignored for stream responses.
+- Channels belong to the plugin. Two plugins can use the same channel name without seeing each other's events.
+- If the plugin is not running, the server answers `503` instead of opening a stream.
+
+### Sending events
+
+Import `sk_sse_send` from the `env` module:
+
+| Function      | Parameters                                                             | Returns                                     |
+| ------------- | ---------------------------------------------------------------------- | ------------------------------------------- |
+| `sk_sse_send` | `(channel_ptr, channel_len, event_ptr, event_len, data_ptr, data_len)` | Number of clients reached, or `-1` on error |
+
+All three strings are UTF-8. The server writes `event: <event>`, one `data:` line for each line of `data`, and a blank line to every client of the channel. An empty event name sends a default `message` event. An event name containing a line break is rejected with `-1`. A channel with no clients returns `0`.
+
+AssemblyScript plugins can call `sseSend(channel, event, data)` from the SDK. In Rust, declare the import yourself:
+
+```rust
+#[link(wasm_import_module = "env")]
+extern "C" {
+    fn sk_sse_send(
+        channel_ptr: *const u8, channel_len: usize,
+        event_ptr: *const u8, event_len: usize,
+        data_ptr: *const u8, data_len: usize,
+    ) -> i32;
+}
+
+fn sse_send(channel: &str, event: &str, data: &str) -> i32 {
+    unsafe {
+        sk_sse_send(
+            channel.as_ptr(), channel.len(),
+            event.as_ptr(), event.len(),
+            data.as_ptr(), data.len(),
+        )
+    }
+}
+```
+
+### Connection handling
+
+- The server sends a `: keep-alive` comment every 15 seconds so proxies do not close idle streams.
+- Closed connections leave the channel automatically.
+- A client that stops reading is disconnected once about 1 MB of events is queued for it.
+- When the plugin stops, all of its streams are closed. Browser `EventSource` clients reconnect on their own and get `503` until the plugin runs again.
+- Stream routes use the same authentication as the plugin's other endpoints.
+
 ## String Memory Management
 
 The server uses the **AssemblyScript loader** for automatic string handling:

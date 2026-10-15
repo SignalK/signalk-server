@@ -54,6 +54,72 @@ const examplePluginDir = path.join(
 
 const wasmPath = path.join(examplePluginDir, 'plugin.wasm')
 
+const examplePluginId = '_signalk_example-hello-assemblyscript'
+
+// startServerP points SIGNALK_NODE_CONFIG_DIR at serverTestConfigDirectory()
+function examplePluginLinkPath(): string {
+  return path.join(
+    testConfigDirectory(),
+    'node_modules',
+    '@signalk',
+    'example-hello-assemblyscript'
+  )
+}
+
+function linkExamplePlugin(): void {
+  if (!fs.existsSync(wasmPath)) {
+    throw new Error(
+      'WASM file does not exist. Build verification test should have created it.'
+    )
+  }
+  const pluginDest = examplePluginLinkPath()
+  fs.mkdirSync(path.dirname(pluginDest), { recursive: true })
+  if (fs.existsSync(pluginDest)) {
+    fs.rmSync(pluginDest, { recursive: true, force: true })
+  }
+  fs.symlinkSync(examplePluginDir, pluginDest, 'dir')
+}
+
+function unlinkExamplePlugin(): void {
+  const pluginDest = examplePluginLinkPath()
+  if (fs.existsSync(pluginDest)) {
+    fs.rmSync(pluginDest, { recursive: true, force: true })
+  }
+}
+
+interface SseClient {
+  response: Response
+  // Resolves with everything received once `text` has arrived, or with
+  // null if the stream ends first
+  waitFor: (text: string) => Promise<string | null>
+  abort: () => void
+}
+
+async function openSseClient(url: string): Promise<SseClient> {
+  const controller = new AbortController()
+  const response = await fetch(url, {
+    headers: { Accept: 'text/event-stream' },
+    signal: controller.signal
+  })
+  const reader = response.body!.getReader()
+  const decoder = new TextDecoder()
+  let received = ''
+  return {
+    response,
+    waitFor: async (text: string) => {
+      while (!received.includes(text)) {
+        const { done, value } = await reader.read()
+        if (done) {
+          return null
+        }
+        received += decoder.decode(value, { stream: true })
+      }
+      return received
+    },
+    abort: () => controller.abort()
+  }
+}
+
 describe('WASM Plugins', function () {
   this.timeout(60000) // WASM compilation and loading can take time
 
@@ -261,6 +327,110 @@ describe('WASM Plugins', function () {
         true,
         'Plugin should be enabled'
       )
+    })
+  })
+
+  describe('SSE channels', () => {
+    let server: ServerInstance | null = null
+    let url: string
+
+    before(async function () {
+      linkExamplePlugin()
+      const port = await freeport()
+      url = `http://0.0.0.0:${port}`
+      server = await startServerP(port, false, {
+        settings: {
+          interfaces: {
+            plugins: true,
+            wasm: true
+          }
+        }
+      })
+      await setPluginEnabled(true)
+    })
+
+    after(async function () {
+      if (server) {
+        await server.stop()
+      }
+      unlinkExamplePlugin()
+    })
+
+    async function setPluginEnabled(enabled: boolean): Promise<void> {
+      const response = await fetch(
+        `${url}/skServer/plugins/${examplePluginId}/config`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled, configuration: {} })
+        }
+      )
+      expect(response.status).to.equal(200)
+    }
+
+    async function broadcast(): Promise<number> {
+      const response = await fetch(
+        `${url}/plugins/${examplePluginId}/api/broadcast`,
+        { method: 'POST' }
+      )
+      expect(response.status).to.equal(200)
+      const body = await response.json()
+      return body.sent
+    }
+
+    async function waitForSubscriberCount(expected: number): Promise<void> {
+      for (let i = 0; i < 40; i++) {
+        if ((await broadcast()) === expected) {
+          return
+        }
+        await new Promise((r) => setTimeout(r, 50))
+      }
+      expect.fail(`channel never reached ${expected} subscribers`)
+    }
+
+    const eventsUrl = () => `${url}/plugins/${examplePluginId}/api/events`
+
+    it('streams events pushed by the plugin to a subscribed client', async function () {
+      const client = await openSseClient(eventsUrl())
+      try {
+        expect(client.response.status).to.equal(200)
+        expect(client.response.headers.get('content-type')).to.match(
+          /^text\/event-stream/
+        )
+        expect(await client.waitFor('\n\n')).to.equal(
+          'event: welcome\ndata: Hello AssemblyScript Plugin\n\n'
+        )
+
+        expect(await broadcast()).to.equal(1)
+        const received = await client.waitFor('broadcast #')
+        expect(received).to.include(
+          'event: greeting\ndata: Hello from AssemblyScript!\ndata: broadcast #'
+        )
+      } finally {
+        client.abort()
+      }
+    })
+
+    it('removes a client from the channel when it disconnects', async function () {
+      const client = await openSseClient(eventsUrl())
+      await client.waitFor('welcome')
+      await waitForSubscriberCount(1)
+
+      client.abort()
+      await waitForSubscriberCount(0)
+    })
+
+    it('ends open streams when the plugin stops', async function () {
+      const client = await openSseClient(eventsUrl())
+      await client.waitFor('welcome')
+
+      await setPluginEnabled(false)
+
+      expect(await client.waitFor('never sent')).to.equal(null)
+      expect(await broadcast()).to.equal(0)
+
+      const refused = await fetch(eventsUrl())
+      expect(refused.status).to.equal(503)
     })
   })
 })
