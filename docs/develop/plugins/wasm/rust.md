@@ -302,13 +302,14 @@ npm install -g ./my-rust-wasm-plugin-0.1.0.tgz
 
 Signal K provides these FFI imports in the `env` module:
 
-| Function                  | Parameters                               | Description          |
-| ------------------------- | ---------------------------------------- | -------------------- |
-| `sk_debug`                | `(ptr, len)`                             | Log debug message    |
-| `sk_set_status`           | `(ptr, len)`                             | Set plugin status    |
-| `sk_set_error`            | `(ptr, len)`                             | Set error message    |
-| `sk_handle_message`       | `(ptr, len)`                             | Emit delta message   |
-| `sk_register_put_handler` | `(ctx_ptr, ctx_len, path_ptr, path_len)` | Register PUT handler |
+| Function                  | Parameters                                                             | Description                                                                  |
+| ------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `sk_debug`                | `(ptr, len)`                                                           | Log debug message                                                            |
+| `sk_set_status`           | `(ptr, len)`                                                           | Set plugin status                                                            |
+| `sk_set_error`            | `(ptr, len)`                                                           | Set error message                                                            |
+| `sk_handle_message`       | `(ptr, len)`                                                           | Emit delta message                                                           |
+| `sk_register_put_handler` | `(ctx_ptr, ctx_len, path_ptr, path_len)`                               | Register PUT handler                                                         |
+| `sk_sse_send`             | `(channel_ptr, channel_len, event_ptr, event_len, data_ptr, data_len)` | Push a Server-Sent Event ([details](./http_endpoints.md#server-sent-events)) |
 
 > **IMPORTANT: Use Exact Function Names**
 >
