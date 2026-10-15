@@ -10,6 +10,7 @@ import { RadarApi } from './radar'
 import { BLEApi } from './ble'
 import { HistoryApiHttpRegistry, HistoryApplication } from './history'
 import { TrackApiHttpRegistry, TrackApplication } from './tracks'
+import { DatabaseApiHttpRegistry } from './database'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 import { NotificationApi, NotificationApplication } from './notifications'
 import {
@@ -115,6 +116,11 @@ export const startApis = (
   ;(app as any).trackApiHttpRegistry = trackApiHttpRegistry
   apiList.push('tracks')
 
+  const databaseApiHttpRegistry = new DatabaseApiHttpRegistry(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).databaseApiHttpRegistry = databaseApiHttpRegistry
+  apiList.push('database')
+
   const notificationApi = new NotificationApi(app as NotificationApplication)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).notificationApi = notificationApi
@@ -140,6 +146,7 @@ export const startApis = (
     radarApi.start(),
     historyApiHttpRegistry.start(),
     trackApiHttpRegistry.start(),
+    databaseApiHttpRegistry.start(),
     notificationApi.start(),
     gnssOffsetCorrector.start(),
     sensorsApi.start(),

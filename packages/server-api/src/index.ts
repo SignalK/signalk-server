@@ -29,6 +29,8 @@ export * as typebox from './typebox'
 export * from './notificationsapi'
 export { FullSignalK, SourceMetaEntry } from './fullsignalk'
 export { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
+/** @category Database API */
+export * from './databaseapi'
 
 /** @category  Server API */
 export interface Position {
