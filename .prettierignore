@@ -14,3 +14,4 @@ appstore-cache
 applicationData
 # AssemblyScript build outputs
 packages/assemblyscript-plugin-sdk/build
+examples/wasm-plugins/**/build
