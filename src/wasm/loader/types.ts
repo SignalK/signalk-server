@@ -6,6 +6,7 @@
  */
 
 import { IRouter } from 'express'
+import { RouteAccessLevel } from '@signalk/server-api'
 import {
   WasmPluginInstance,
   WasmCapabilities,
@@ -53,4 +54,15 @@ export interface WasmPlugin {
   description?: string
   state?: string
   format?: WasmFormat // Binary format: wasi-p1 or component-model
+}
+
+/**
+ * One entry of the JSON array a plugin's `http_endpoints` export returns.
+ * Without `access` the route is admin-only, like an undeclared Node plugin route.
+ */
+export interface WasmHttpEndpoint {
+  method: string
+  path: string
+  handler: string
+  access?: RouteAccessLevel
 }

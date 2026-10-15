@@ -14,7 +14,9 @@ import { Request, Response } from 'express'
 import { spawn } from 'child_process'
 import * as readline from 'readline'
 import Debug from 'debug'
-import { WasmPlugin } from './types'
+import { RouteAccessLevel, RoutePermission } from '@signalk/server-api'
+import { WasmHttpEndpoint, WasmPlugin } from './types'
+import { WithSecurityStrategy } from '../../security'
 import { getWasmRuntime } from '../wasm-runtime'
 import {
   getPluginStoragePaths,
@@ -149,11 +151,50 @@ export async function handleLogViewerRequest(
   }
 }
 
+const ROUTE_ACCESS_LEVELS: ReadonlySet<string> = new Set<RouteAccessLevel>([
+  'readonly',
+  'readwrite'
+])
+
 /**
- * Add plugin-specific HTTP endpoints to an existing router
+ * Record a non-admin access level for one WASM endpoint with the security
+ * strategy, mirroring `router.access()` for Node plugins. Endpoints without
+ * a recognised level are left unregistered so the /plugins gate keeps them
+ * admin-only.
+ */
+function registerEndpointAccess(
+  app: WithSecurityStrategy,
+  pluginId: string,
+  endpoint: WasmHttpEndpoint
+): void {
+  if (endpoint.access === undefined) {
+    return
+  }
+  if (!ROUTE_ACCESS_LEVELS.has(endpoint.access)) {
+    debug(
+      `Ignoring unknown access level "${endpoint.access}" for ${endpoint.method} ${endpoint.path}, route stays admin-only`
+    )
+    return
+  }
+  // Absent when security is disabled, where every route is reachable anyway
+  app.securityStrategy.registerPluginRoutePermissions?.(pluginId, [
+    {
+      method: endpoint.method.toUpperCase() as RoutePermission['method'],
+      path: endpoint.path,
+      permission: endpoint.access
+    }
+  ])
+}
+
+/**
+ * Add plugin-specific HTTP endpoints to an existing router and record each
+ * endpoint's declared access level with the security strategy.
  * This is called when enabling a previously disabled plugin
  */
-export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
+export function setupPluginSpecificRoutes(
+  app: WithSecurityStrategy,
+  plugin: WasmPlugin
+): void {
   if (!plugin.router) {
     debug(
       `Warning: Cannot setup plugin-specific routes - no router found for ${plugin.id}`
@@ -226,7 +267,7 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
       }
     }
 
-    const endpoints = JSON.parse(endpointsJson)
+    const endpoints: WasmHttpEndpoint[] = JSON.parse(endpointsJson)
     debug(`Registering ${endpoints.length} HTTP endpoints for ${plugin.id}`)
 
     for (const endpoint of endpoints) {
@@ -240,6 +281,7 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
       }
 
       debug(`Registering ${method} ${endpointPath} -> ${handler}`)
+      registerEndpointAccess(app, plugin.id, endpoint)
 
       router[routeMethod](endpointPath, async (req: Request, res: Response) => {
         // Set a timeout to catch hangs (declare outside try so catch can access it)
@@ -601,7 +643,7 @@ export function setupWasmPluginRoutes(
 
             // Add plugin-specific HTTP endpoints to existing router
             // (basic routes were already set up when plugin was registered as disabled)
-            setupPluginSpecificRoutes(plugin)
+            setupPluginSpecificRoutes(app, plugin)
 
             debug(`Successfully loaded WASM binary for ${plugin.id}`)
           }
@@ -655,7 +697,7 @@ export function setupWasmPluginRoutes(
   plugin.router = router
 
   // Register custom HTTP endpoints if plugin instance is loaded
-  setupPluginSpecificRoutes(plugin)
+  setupPluginSpecificRoutes(app, plugin)
 
   debug(`Set up REST API routes for WASM plugin: ${plugin.id}`)
 }
