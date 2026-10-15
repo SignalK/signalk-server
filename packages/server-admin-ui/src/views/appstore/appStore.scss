@@ -1,3 +1,10 @@
+// Bootstrap 5 has no min-width utility. Flex children default to
+// min-width: auto, so without this a .text-truncate name inside them
+// never shrinks and runs past the edge of its card on narrow screens.
+.min-w-0 {
+  min-width: 0;
+}
+
 .appstore__warning {
   margin-bottom: 20px;
 
@@ -563,13 +570,19 @@
     margin-top: 16px;
   }
 
+  // As many columns as the width allows, so cards fill the row on any
+  // screen and a long name wraps instead of being cut off.
+  &__dep-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.5rem;
+  }
+
   &__dep-card {
     background: #f0f3f5;
     border: 1px solid #e4e7ea;
     border-radius: 6px;
     padding: 6px 10px;
-    min-width: 180px;
-    max-width: 260px;
     color: #23282c;
 
     &:hover {
@@ -580,6 +593,7 @@
   &__dep-name {
     font-weight: 600;
     font-size: 0.9rem;
+    overflow-wrap: anywhere;
   }
 
   &__markdown {
