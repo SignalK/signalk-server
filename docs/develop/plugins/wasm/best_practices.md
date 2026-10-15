@@ -4,20 +4,15 @@ title: Best Practices for WASM Plugins
 
 # Best Practices for WASM Plugins
 
-## Hot Reload
+## Updating a Plugin
 
 A rebuilt WASM binary takes effect without restarting the server. Enabling a WASM plugin always loads its binary from disk, so disabling and re-enabling the plugin in **Plugin Config** swaps in a new `plugin.wasm`: `stop()` runs on the old instance when it is disabled, and `start()` runs on the new one with the saved configuration. The plugin's HTTP endpoints follow the new binary.
 
+Saving the plugin configuration stops and restarts the plugin inside the same WASM instance. Global state survives that restart, so the plugin's start handler must reset any state it depends on.
+
 ## Error Handling
 
-### Crash Recovery
-
-If a WASM plugin crashes:
-
-1. **First crash**: Automatic restart after 1 second
-2. **Second crash**: Restart after 2 seconds
-3. **Third crash**: Restart after 4 seconds
-4. **After 3 crashes**: Plugin disabled, admin notification
+A trap in a polling or delta handler is logged and the plugin keeps running. A trap in an HTTP handler fails only that request. A failure reported from the start handler puts the plugin into the error state.
 
 ### Error Reporting
 
@@ -168,43 +163,9 @@ Check if your plugin:
 - ✅ Makes HTTP requests (via as-fetch in AssemblyScript)
 - ✅ Uses UDP/TCP sockets (rawSockets capability)
 
-### 2. Port Logic to Rust
+### 2. Port the Logic
 
-Convert TypeScript/JavaScript logic to Rust:
-
-**Before (Node.js):**
-
-```javascript
-plugin.start = function (config) {
-  app.handleMessage('my-plugin', {
-    updates: [{ values: [{ path: 'foo', value: 'bar' }] }]
-  })
-}
-```
-
-**After (WASM/Rust):**
-
-```rust
-fn start(config_ptr: *const u8, config_len: usize) -> i32 {
-    let delta = json!({
-        "updates": [{ "values": [{ "path": "foo", "value": "bar" }] }]
-    });
-    sk_emit_delta(&delta.to_string());
-    0
-}
-```
-
-### 3. Migrate Data
-
-Use migration helper to copy existing data to VFS:
-
-```rust
-fn first_run_migration() {
-    // Server provides migration API
-    // Copies files from ~/.signalk/plugin-config-data/{id}/
-    // to ~/.signalk/plugin-config-data/{id}/vfs/data/
-}
-```
+Each call the Node.js plugin makes on `app` maps to a host function the WASM plugin imports, gated by the capabilities it declares. For example, emitting a delta with `app.handleMessage()` becomes building the delta as JSON and passing it to the host. The [example plugins](#example-plugins) show the current bindings for each language.
 
 ## Example Plugins
 
