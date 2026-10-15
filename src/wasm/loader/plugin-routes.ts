@@ -14,7 +14,9 @@ import { IRouter, Request, Response } from 'express'
 import { spawn } from 'child_process'
 import * as readline from 'readline'
 import Debug from 'debug'
-import { WasmPlugin } from './types'
+import { RouteAccessLevel, RoutePermission } from '@signalk/server-api'
+import { WasmHttpEndpoint, WasmPlugin } from './types'
+import { WithSecurityStrategy } from '../../security'
 import { WasmPluginInstance } from '../wasm-runtime'
 import { getWasmRuntime } from '../wasm-runtime'
 import {
@@ -162,18 +164,57 @@ export async function handleLogViewerRequest(
   }
 }
 
+const ROUTE_ACCESS_LEVELS: ReadonlySet<string> = new Set<RouteAccessLevel>([
+  'readonly',
+  'readwrite'
+])
+
+/**
+ * Record a non-admin access level for one WASM endpoint with the security
+ * strategy, mirroring `router.access()` for Node plugins. Endpoints without
+ * a recognised level are left unregistered so the /plugins gate keeps them
+ * admin-only.
+ */
+function registerEndpointAccess(
+  app: WithSecurityStrategy,
+  pluginId: string,
+  endpoint: WasmHttpEndpoint
+): void {
+  if (endpoint.access === undefined) {
+    return
+  }
+  if (!ROUTE_ACCESS_LEVELS.has(endpoint.access)) {
+    debug(
+      `Ignoring unknown access level "${endpoint.access}" for ${endpoint.method} ${endpoint.path}, route stays admin-only`
+    )
+    return
+  }
+  // Absent when security is disabled, where every route is reachable anyway
+  app.securityStrategy.registerPluginRoutePermissions?.(pluginId, [
+    {
+      method: endpoint.method.toUpperCase() as RoutePermission['method'],
+      path: endpoint.path,
+      permission: endpoint.access
+    }
+  ])
+}
+
 /**
  * (Re)build the router for the HTTP endpoints the loaded binary declares,
- * replacing the endpoints of any previously loaded binary
+ * replacing the endpoints of any previously loaded binary, and record each
+ * endpoint's declared access level with the security strategy
  */
-export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
+export function setupPluginSpecificRoutes(
+  app: WithSecurityStrategy,
+  plugin: WasmPlugin
+): void {
   plugin.endpointRouter = undefined
   if (!plugin.instance) {
     debug(`No instance for ${plugin.id}`)
     return
   }
   try {
-    plugin.endpointRouter = buildEndpointRouter(plugin, plugin.instance)
+    plugin.endpointRouter = buildEndpointRouter(app, plugin, plugin.instance)
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     debug(`Failed to register HTTP endpoints: ${errorMsg}`)
@@ -186,6 +227,7 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
  * request time, so the router belongs with the instance it was built from.
  */
 function buildEndpointRouter(
+  app: WithSecurityStrategy,
   plugin: WasmPlugin,
   instance: WasmPluginInstance
 ): IRouter | undefined {
@@ -246,7 +288,7 @@ function buildEndpointRouter(
     }
   }
 
-  const endpoints = JSON.parse(endpointsJson)
+  const endpoints: WasmHttpEndpoint[] = JSON.parse(endpointsJson)
   debug(`Registering ${endpoints.length} HTTP endpoints for ${plugin.id}`)
 
   for (const endpoint of endpoints) {
@@ -260,6 +302,7 @@ function buildEndpointRouter(
     }
 
     debug(`Registering ${method} ${endpointPath} -> ${handler}`)
+    registerEndpointAccess(app, plugin.id, endpoint)
 
     router[routeMethod](endpointPath, async (req: Request, res: Response) => {
       // Set a timeout to catch hangs (declare outside try so catch can access it)
@@ -605,7 +648,7 @@ export function setupWasmPluginRoutes(
             pluginName = instance.exports.name()
             const schemaJson = instance.exports.schema()
             schema = schemaJson ? JSON.parse(schemaJson) : {}
-            endpointRouter = buildEndpointRouter(plugin, instance)
+            endpointRouter = buildEndpointRouter(app, plugin, instance)
           } catch (error) {
             // loadPlugin already pointed the live providers at the
             // replacement, so hand them back to the instance still in use
@@ -689,7 +732,7 @@ export function setupWasmPluginRoutes(
   router.use((req, res, next) =>
     plugin.endpointRouter ? plugin.endpointRouter(req, res, next) : next()
   )
-  setupPluginSpecificRoutes(plugin)
+  setupPluginSpecificRoutes(app, plugin)
 
   debug(`Set up REST API routes for WASM plugin: ${plugin.id}`)
 }

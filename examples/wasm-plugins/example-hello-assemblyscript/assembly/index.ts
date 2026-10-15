@@ -282,15 +282,16 @@ export function poll(): i32 {
 }
 
 /**
- * HTTP Endpoints (Phase 2)
- * Register custom REST API endpoints
+ * Declare the plugin's REST endpoints. /api/info is marked readonly so any
+ * authenticated user can read it; /api/status stays admin-only.
  */
 export function http_endpoints(): string {
   return `[
     {
       "method": "GET",
       "path": "/api/info",
-      "handler": "handle_get_info"
+      "handler": "handle_get_info",
+      "access": "readonly"
     },
     {
       "method": "GET",
