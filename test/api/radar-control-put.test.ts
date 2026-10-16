@@ -365,7 +365,8 @@ describe('Radar API: mutation response shape', () => {
 
     expect(documentedSuccess).to.deep.equal([String(res.status)])
     expect(Object.keys(schema.properties)).to.have.members(Object.keys(body))
-    expect(schema.required).to.have.members(Object.keys(body))
+    // targetId stays optional: providers may acquire without assigning one.
+    expect(Object.keys(body)).to.include.members(schema.required)
     expect(schema.properties.state.enum).to.include(body.state)
     expect(schema.properties.statusCode.enum).to.include(body.statusCode)
   })

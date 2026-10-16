@@ -373,7 +373,7 @@ export const radarApiDoc = {
               'Assigned target ID (0 until confirmed by tracker), needed to cancel tracking'
           }
         },
-        required: ['state', 'statusCode', 'message', 'targetId']
+        required: ['state', 'statusCode', 'message']
       }
     }
   },
