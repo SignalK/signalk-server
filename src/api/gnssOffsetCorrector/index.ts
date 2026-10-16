@@ -361,7 +361,7 @@ export class GnssOffsetCorrector {
     this.scheduleReferenceUpdate()
     this.emitHeadingNotification(
       'warn',
-      'GNSS vessel reference point (CCRP) correction inactive: no heading, and too slow to use course over ground'
+      'GNSS vessel reference point (CCRP) correction inactive: no heading, and no usable course over ground'
     )
   }
 
