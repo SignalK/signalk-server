@@ -147,12 +147,19 @@ interface TypeComponentProps {
   hasAnalyzer?: boolean
 }
 
+const UNLOGGABLE_N2K_SOURCE_TYPES: ReadonlySet<string> = new Set([
+  'maretron-ipg-wasm',
+  'w2k-1-n2k-actisense-wasm',
+  'ngt-1-wasm'
+])
+
 // Defined outside component to avoid recreation on render
 const TYPE_COMPONENTS: Record<
   string,
   React.ComponentType<TypeComponentProps>
 > = {
   NMEA2000: NMEA2000,
+  J1939: J1939,
   NMEA0183: NMEA0183,
   SignalK: SignalK,
   Seatalk: Seatalk,
@@ -193,6 +200,7 @@ export default function BasicProvider({
               onChange={(event) => onChange(event)}
             >
               <option value="NMEA2000">NMEA 2000</option>
+              <option value="J1939">J1939</option>
               <option value="NMEA0183">NMEA 0183</option>
               <option value="SignalK">Signal K</option>
               <option value="Seatalk">Seatalk (GPIO)</option>
@@ -222,9 +230,14 @@ export default function BasicProvider({
           </Form.Label>
         </Col>
       </Form.Group>
-      {value.type !== 'FileStream' && (
-        <LoggingInput value={value} onChange={onChange} />
-      )}
+      {/* No logging for J1939 or the wasm binary-framing N2K sources:
+          they emit objects with no text form, so logged lines would be
+          unreplayable junk. */}
+      {value.type !== 'FileStream' &&
+        value.type !== 'J1939' &&
+        !UNLOGGABLE_N2K_SOURCE_TYPES.has(value.options.type ?? '') && (
+          <LoggingInput value={value} onChange={onChange} />
+        )}
       <Form.Group as={Row} className="mb-3">
         <Col md="3">
           <Form.Label htmlFor="id">ID</Form.Label>
@@ -1745,6 +1758,7 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             <option value="ngt-1" disabled={!hasAnalyzer}>
               Actisense NGT-1 (canboat)
             </option>
+            <option value="ngt-1-wasm">Actisense NGT-1 (canboat wasm)</option>
             <option value="ikonvert-canboatjs">iKonvert (canboatjs)</option>
             <option value="navlink2-tcp-canboatjs">NavLink2 (canboatjs)</option>
             <option value="canboat-csv-canboatjs">
@@ -1753,6 +1767,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
             <option value="ydwg02-canboatjs">
               Yacht Devices RAW TCP (canboatjs)
             </option>
+            <option value="ydwg02-wasm">
+              Yacht Devices RAW TCP (canboat wasm)
+            </option>
             <option value="ydwg02-udp-canboatjs">
               Yacht Devices RAW UDP (canboatjs)
             </option>
@@ -1760,17 +1777,27 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
               Yacht Devices RAW USB (canboatjs)
             </option>
             <option value="canbus-canboatjs">Canbus (canboatjs)</option>
+            <option value="canbus-wasm">Canbus (canboat wasm)</option>
             <option value="n2k-ip-gateway-canboatjs">
               N2K IP Gateway (canboatjs)
             </option>
             <option value="w2k-1-n2k-ascii-canboatjs">
               W2K-1 N2K ASCII (canboatjs)
             </option>
+            <option value="w2k-1-n2k-ascii-wasm">
+              W2K-1 N2K ASCII (canboat wasm)
+            </option>
             <option value="w2k-1-n2k-actisense-canboatjs">
               W2K-1 N2K ACTISENSE (canboatjs)
             </option>
             <option value="maretron-ipg-canboatjs">
               Maretron IPG 100 (canboatjs)
+            </option>
+            <option value="maretron-ipg-wasm">
+              Maretron IPG 100 (canboat wasm)
+            </option>
+            <option value="w2k-1-n2k-actisense-wasm">
+              W2K-1 N2K ACTISENSE (canboat wasm)
             </option>
             <option value="canbus" disabled={!hasAnalyzer}>
               Canbus (canboat)
@@ -1780,6 +1807,7 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       </Form.Group>
       {(value.options.type === 'ngt-1' ||
         value.options.type === 'ngt-1-canboatjs' ||
+        value.options.type === 'ngt-1-wasm' ||
         value.options.type === 'ydwg02-usb-canboatjs' ||
         value.options.type === 'ikonvert-canboatjs') && (
         <div>
@@ -1787,7 +1815,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           <BaudRateInputCanboat value={value.options} onChange={onChange} />
         </div>
       )}
-      {value.options.type === 'ydwg02-canboatjs' && (
+      {(value.options.type === 'ydwg02-canboatjs' ||
+        value.options.type === 'ydwg02-wasm') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
@@ -1838,7 +1867,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         </div>
       )}
       {(value.options.type === 'canbus' ||
-        value.options.type === 'canbus-canboatjs') && (
+        value.options.type === 'canbus-canboatjs' ||
+        value.options.type === 'canbus-wasm') && (
         <div>
           <TextInput
             title="Interface"
@@ -1857,7 +1887,7 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           <TextInput
             title="ManufacturerCode"
             name="options.mfgCode"
-            helpText="Example: 999 - Unknown (default), 0 - Internal, or any other mabufacturer code to emulate. Leave empty for default 999.  Set to 0 if you have problem with source identification on some B&G MFD's after SignalK restart."
+            helpText="Example: 999 - Unknown (default), 0 - Internal, or any other manufacturer code to emulate. Leave empty for default 999.  Set to 0 if you have problem with source identification on some B&G MFD's after SignalK restart."
             value={value.options.mfgCode}
             onChange={onChange}
           />
@@ -1870,7 +1900,9 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         <CollectNetworkStatsInput value={value.options} onChange={onChange} />
       )}
       {(value.options.type === 'w2k-1-n2k-ascii-canboatjs' ||
-        value.options.type === 'w2k-1-n2k-actisense-canboatjs') && (
+        value.options.type === 'w2k-1-n2k-actisense-canboatjs' ||
+        value.options.type === 'w2k-1-n2k-ascii-wasm' ||
+        value.options.type === 'w2k-1-n2k-actisense-wasm') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
@@ -1915,7 +1947,8 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           </div>
         </div>
       )}
-      {value.options.type === 'maretron-ipg-canboatjs' && (
+      {(value.options.type === 'maretron-ipg-canboatjs' ||
+        value.options.type === 'maretron-ipg-wasm') && (
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
@@ -1939,23 +1972,71 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           </Form.Group>
           <div className="text-muted small mt-1 mb-2">
             Maretron IPG 100 Ethernet gateway. Default TCP port 6543. Uses
-            Maretron&apos;s 0xA5-framed binary protocol (handled by canboatjs).
+            Maretron&apos;s 0xA5-framed binary protocol.
           </div>
         </div>
       )}
+      {/* Address-claim identity. canbus-wasm runs through the same canbus
+          transport and candevice as canbus-canboatjs — only the decoder
+          downstream differs — so it takes the same identity options. */}
       {value.options.type !== undefined &&
-        value.options.type.indexOf('canboatjs') !== -1 && (
+        (value.options.type.indexOf('canboatjs') !== -1 ||
+          value.options.type === 'canbus-wasm') && (
           <>
             <UseCanNameInput value={value.options} onChange={onChange} />
             <DeviceInstanceInput value={value.options} onChange={onChange} />
             <SystemInstanceInput value={value.options} onChange={onChange} />
-            <CamelCaseCompatInput value={value.options} onChange={onChange} />
           </>
+        )}
+      {/* CamelCase compat is a canboatjs decoder option; the wasm element
+          pins camelCase in its compat shim and ignores the flag. */}
+      {value.options.type !== undefined &&
+        value.options.type.indexOf('canboatjs') !== -1 && (
+          <CamelCaseCompatInput value={value.options} onChange={onChange} />
         )}
       {value.options.type !== undefined &&
         /^ydwg02/.test(value.options.type) && (
           <CreateDeviceInput value={value.options} onChange={onChange} />
         )}
+    </div>
+  )
+}
+
+function J1939({ value, onChange }: TypeComponentProps) {
+  return (
+    <div>
+      <Form.Group as={Row} className="mb-3">
+        <Col md="3">
+          <Form.Label htmlFor="j1939-source-type">J1939 Source</Form.Label>
+        </Col>
+        <Col xs="12" md="3">
+          <Form.Select
+            id="j1939-source-type"
+            value={value.options.type || 'none'}
+            name="options.type"
+            onChange={(event) => onChange(event)}
+          >
+            <option value="none">Select a source</option>
+            <option value="j1939-wasm">
+              Canbus listen-only (canboat wasm)
+            </option>
+          </Form.Select>
+        </Col>
+      </Form.Group>
+      {value.options.type === 'j1939-wasm' && (
+        <TextInput
+          title="Interface"
+          name="options.interface"
+          helpText="Example: can0"
+          value={value.options.interface}
+          onChange={onChange}
+        />
+      )}
+      <div className="text-muted small mt-1 mb-2">
+        Listen-only: the server never transmits or claims an address on the
+        J1939 bus. Manufacturer names resolve from the ISO 11783/J1939 registry,
+        not the NMEA 2000 one.
+      </div>
     </div>
   )
 }
