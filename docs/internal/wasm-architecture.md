@@ -22,14 +22,14 @@ The WASM plugin system runs alongside the existing Node.js plugin system in a hy
 
 ### Plugin Loader (`src/wasm/loader/`)
 
-| File                  | Purpose                                                           |
-| --------------------- | ----------------------------------------------------------------- |
-| `types.ts`            | `WasmPlugin` and `WasmPluginMetadata` interfaces                  |
-| `plugin-registry.ts`  | Plugin registration, global registry (Map), crash recovery timers |
-| `plugin-lifecycle.ts` | start/stop/unload/reload, crash recovery with exponential backoff |
-| `plugin-config.ts`    | Configuration persistence, enable/disable at runtime              |
-| `plugin-routes.ts`    | HTTP routes (GET/POST /config), custom plugin endpoints           |
-| `index.ts`            | Public API entry point, re-exports all functions                  |
+| File                  | Purpose                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------- |
+| `types.ts`            | `WasmPlugin` and `WasmPluginMetadata` interfaces                                                      |
+| `plugin-registry.ts`  | Plugin registration, global registry (Map), restart timer map                                         |
+| `plugin-lifecycle.ts` | start/stop/unload/reload; a crash-restart helper with exponential backoff exists but nothing calls it |
+| `plugin-config.ts`    | Configuration persistence, enable/disable at runtime                                                  |
+| `plugin-routes.ts`    | HTTP routes (GET/POST /config), custom plugin endpoints                                               |
+| `index.ts`            | Public API entry point, re-exports all functions                                                      |
 
 ## VFS Structure
 
