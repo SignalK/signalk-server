@@ -17,6 +17,8 @@ import path from 'path'
 import { execSync } from 'child_process'
 import { freeport } from './ts-servertestutilities'
 import { startServerP, serverTestConfigDirectory } from './servertestutilities'
+import { Response as ExpressResponse } from 'express'
+import { sendWasmHttpResponse } from '../src/wasm/loader/plugin-routes'
 
 interface PluginInfo {
   id: string
@@ -53,6 +55,10 @@ const examplePluginDir = path.join(
 )
 
 const wasmPath = path.join(examplePluginDir, 'plugin.wasm')
+
+// Must match ICON_PNG_BASE64 in the example plugin
+const exampleIconPngBase64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 
 describe('WASM Plugins', function () {
   this.timeout(60000) // WASM compilation and loading can take time
@@ -261,6 +267,89 @@ describe('WASM Plugins', function () {
         true,
         'Plugin should be enabled'
       )
+    })
+
+    it('WASM endpoint returns a base64-encoded body as binary', async function () {
+      const port = server!.app.config.settings.port
+      const pluginId = '_signalk_example-hello-assemblyscript'
+
+      const response = await fetch(
+        `http://0.0.0.0:${port}/plugins/${pluginId}/api/icon.png`
+      )
+      expect(response.status).to.equal(200)
+      expect(response.headers.get('content-type')).to.equal('image/png')
+      const body = Buffer.from(await response.arrayBuffer())
+      expect(body.equals(Buffer.from(exampleIconPngBase64, 'base64'))).to.equal(
+        true
+      )
+    })
+  })
+
+  describe('HTTP response envelope', () => {
+    /**
+     * Minimal Express Response stub that records which writer methods
+     * were called, to prove an invalid envelope writes nothing.
+     */
+    function recordingResponse(): {
+      res: ExpressResponse
+      calls: string[]
+    } {
+      const calls: string[] = []
+      const record = (name: string) => () => {
+        calls.push(name)
+        return res
+      }
+      const res = {
+        status: record('status'),
+        setHeader: record('setHeader'),
+        getHeader: () => undefined,
+        send: record('send')
+      } as unknown as ExpressResponse
+      return { res, calls }
+    }
+
+    it('rejects an unknown bodyEncoding before writing the response', function () {
+      const { res, calls } = recordingResponse()
+      expect(() =>
+        sendWasmHttpResponse(res, {
+          statusCode: 200,
+          headers: { 'Content-Type': 'image/png' },
+          bodyEncoding: 'hex',
+          body: '89504e47'
+        })
+      ).to.throw(/Unsupported bodyEncoding "hex"/)
+      expect(calls).to.deep.equal([])
+    })
+
+    it('rejects a non-string body with base64 encoding', function () {
+      const { res, calls } = recordingResponse()
+      expect(() =>
+        sendWasmHttpResponse(res, { bodyEncoding: 'base64', body: [1, 2] })
+      ).to.throw(/requires a string body/)
+      expect(calls).to.deep.equal([])
+    })
+
+    it('rejects a malformed base64 body', function () {
+      const { res, calls } = recordingResponse()
+      expect(() =>
+        sendWasmHttpResponse(res, {
+          bodyEncoding: 'base64',
+          body: 'not*base64'
+        })
+      ).to.throw(/not valid base64/)
+      expect(calls).to.deep.equal([])
+    })
+
+    it('sends an empty base64 body as an empty buffer', function () {
+      const { res, calls } = recordingResponse()
+      let sent: unknown
+      res.send = ((value: unknown) => {
+        sent = value
+        return res
+      }) as ExpressResponse['send']
+      sendWasmHttpResponse(res, { bodyEncoding: 'base64', body: '' })
+      expect(calls).to.deep.equal(['status'])
+      expect(Buffer.isBuffer(sent) && sent.length === 0).to.equal(true)
     })
   })
 

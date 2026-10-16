@@ -296,6 +296,11 @@ export function http_endpoints(): string {
       "method": "GET",
       "path": "/api/status",
       "handler": "handle_get_status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/icon.png",
+      "handler": "handle_get_icon"
     }
   ]`
 }
@@ -359,5 +364,23 @@ export function handle_get_status(
     "statusCode": 200,
     "headers": {"Content-Type": "application/json"},
     "body": "${escapedBody}"
+  }`
+}
+
+// 1x1 semi-transparent blue PNG
+const ICON_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+
+/**
+ * Handle GET /api/icon.png
+ * Returns binary data: the server base64-decodes the body because of
+ * "bodyEncoding": "base64"
+ */
+export function handle_get_icon(requestPtr: usize, requestLen: usize): string {
+  return `{
+    "statusCode": 200,
+    "headers": {"Content-Type": "image/png"},
+    "bodyEncoding": "base64",
+    "body": "${ICON_PNG_BASE64}"
   }`
 }
