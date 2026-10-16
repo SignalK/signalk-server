@@ -491,8 +491,8 @@ const GnssPositionSettings: React.FC = () => {
             <Alert variant="warning" className="mt-1 mb-0 py-1 px-2">
               <small className="d-block mt-1">
                 Correction is enabled but inactive: no heading is available, and
-                the vessel is not making way fast enough to use course over
-                ground. It will resume automatically when either returns.
+                no usable course over ground (missing, or the vessel is not
+                making way). It will resume automatically when either returns.
               </small>
             </Alert>
           )}
