@@ -378,7 +378,7 @@ export function badgesToIndicators(
     status: set.has('compatible') ? 'ok' : 'fail',
     title: 'Installs successfully',
     subtitle: set.has('compatible')
-      ? 'npm install --ignore-scripts succeeded'
+      ? 'Installs with install scripts disabled'
       : 'Plugin failed to install'
   })
   checks.push({

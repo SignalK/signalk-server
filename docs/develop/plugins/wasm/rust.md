@@ -272,8 +272,7 @@ cp target/wasm32-wasip1/release/my_rust_plugin.wasm plugin.wasm
 **Option 1: Symlink (Recommended for Development)**
 
 ```bash
-cd ~/.signalk/node_modules
-ln -s /path/to/your/my-rust-wasm-plugin my-rust-wasm-plugin
+signalk-pnpm link /path/to/your/my-rust-wasm-plugin
 ```
 
 **Option 2: Direct Copy**
@@ -283,12 +282,14 @@ mkdir -p ~/.signalk/node_modules/my-rust-wasm-plugin
 cp plugin.wasm package.json ~/.signalk/node_modules/my-rust-wasm-plugin/
 ```
 
-**Option 3: NPM Package Install**
+**Option 3: Package Install**
 
 ```bash
 npm pack
-npm install -g ./my-rust-wasm-plugin-0.1.0.tgz
+signalk-pnpm add ./my-rust-wasm-plugin-0.1.0.tgz
 ```
+
+pnpm records where a tarball was installed from and reads it again whenever it reinstalls the configuration directory, for example after restoring a backup, so leave the file where it is. A published package carries no such tie.
 
 ## Step 7: Enable in Admin UI
 

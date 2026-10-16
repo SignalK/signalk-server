@@ -327,7 +327,7 @@ private fetchWeatherData(): void {
 Set `DEBUG=signalk:wasm:*` environment variable:
 
 ```bash
-DEBUG=signalk:wasm:* npm start
+DEBUG=signalk:wasm:* pnpm start
 ```
 
 ### Key Log Messages

@@ -23,7 +23,7 @@ You do not have to install Signal K Server yourself. Several commercially availa
 ## Prerequisites
 
 > [!NOTE]
-> Signal K server requires [NodeJS](https://nodejs.org) version >= 22 (version 24 recommended) be installed on the target system.
+> Signal K server requires [NodeJS](https://nodejs.org) version >= 22.13 (version 24 recommended) be installed on the target system.
 
 ## Getting Started
 

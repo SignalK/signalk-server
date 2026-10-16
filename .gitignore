@@ -28,7 +28,6 @@ unitpreferences/custom-units-definitions.json
 unitpreferences/custom/
 unitpreferences/presets/custom/
 
-test/plugin-test-config/.npmrc
 test/plugin-test-config/plugin-config-data/
 test/plugin-test-config/ssl-cert.pem
 test/plugin-test-config/ssl-key.pem
@@ -61,6 +60,8 @@ docs/built
 jco-output/
 obj/
 bin/
+# but not the server's commands
+!/bin/
 Debug/
 Release/
 *.ps1
