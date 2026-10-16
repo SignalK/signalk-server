@@ -388,6 +388,6 @@ ws.onmessage = (event) => {
 
 ## Binary Streams
 
-A plugin can push arbitrary binary data to WebSocket clients through the `sk_emit_binary_stream` host function. Each stream has an ID scoped to the plugin (prefixed with `plugins/` and the package name), and the server rejects IDs outside that scope. Clients subscribe to a stream by its ID over the server's v2 streams API and receive each emitted payload as a binary WebSocket frame.
+A plugin can push arbitrary binary data to WebSocket clients through the `sk_emit_binary_stream` host function. Each stream has an ID scoped to the plugin (prefixed with `plugins/` and the package name), or a radar stream ID of the form `radars/{radarId}` for radar providers; the server rejects any other ID. Clients subscribe to a stream by its ID over the server's v2 streams API and receive each emitted payload as a binary WebSocket frame.
 
 Streams are one-way, from the server to the client. They use the same authorization as the Signal K WebSocket stream, so read-only users can subscribe. The host binding in [`src/wasm/bindings/binary-stream.ts`](https://github.com/SignalK/signalk-server/blob/master/src/wasm/bindings/binary-stream.ts) and the stream endpoint in [`src/api/streams/index.ts`](https://github.com/SignalK/signalk-server/blob/master/src/api/streams/index.ts) define the exact signature and URL.
