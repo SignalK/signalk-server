@@ -104,6 +104,7 @@ async function startWasmPluginInternal(
     // Events raised while start() runs are held until it has returned, as
     // the instance cannot take calls in the middle of it
     const startupBleEvents: WasmBleEvent[] = []
+    let startupBleOverflowLogged = false
     const deliverBleEvent = (event: WasmBleEvent) => {
       try {
         plugin.instance?.exports?.ble_handler?.(JSON.stringify(event))
@@ -115,11 +116,15 @@ async function startWasmPluginInternal(
       setBleEventSink(pluginId, (event) => {
         if (plugin.status === 'running') {
           deliverBleEvent(event)
-        } else if (
-          plugin.status === 'starting' &&
-          startupBleEvents.length < MAX_STARTUP_BLE_EVENTS
-        ) {
-          startupBleEvents.push(event)
+        } else if (plugin.status === 'starting') {
+          if (startupBleEvents.length < MAX_STARTUP_BLE_EVENTS) {
+            startupBleEvents.push(event)
+          } else if (!startupBleOverflowLogged) {
+            startupBleOverflowLogged = true
+            debug(
+              `[${pluginId}] more than ${MAX_STARTUP_BLE_EVENTS} BLE events during start(), dropping the rest`
+            )
+          }
         }
       })
     }
