@@ -235,6 +235,23 @@ describe('StalenessEnforcer', () => {
     expect(app.captured).to.have.lengthOf(0)
   })
 
+  it('skips an event-subtree path that has no registry entry', () => {
+    // navigation.home ships no metadata, so the contract can only come from
+    // the subtree declaration.
+    const app = makeMockApp({ defaultTimeout: 60 })
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'navigation.home.position',
+      'plugin.home',
+      isoSecondsAgo(3600),
+      { latitude: 1, longitude: 2 }
+    )
+    const enforcer = makeEnforcer(app)
+    runTick(enforcer)
+    expect(app.captured).to.have.lengthOf(0)
+  })
+
   it('skips paths classified updateContract=event via per-path meta', () => {
     const app = makeMockApp({
       defaultTimeout: 60,

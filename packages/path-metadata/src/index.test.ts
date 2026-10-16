@@ -1,5 +1,10 @@
 import { expect } from 'chai'
-import { getMetadata, metadataRegistry } from './index'
+import {
+  getMetadata,
+  getStoredMetadata,
+  metadataRegistry,
+  updateContractForPath
+} from './index'
 
 // Callers always prefix the Signal K context, e.g. `vessels.self.<path>`.
 const self = (p: string) => `vessels.self.${p}`
@@ -263,10 +268,26 @@ describe('updateContract inheritance', () => {
     )
   })
 
-  it('inherits on a subtree with no registry entry of its own', () => {
-    // navigation.home ships no per-path metadata, so its classification can
-    // only come from the subtree declaration.
-    expect(contractFor('vessels.self.navigation.home')).to.equal('event')
+  it('returns no metadata for an event-subtree path with no entry', () => {
+    // A stub would make REST and WS serve meta for branches such as
+    // navigation.course; the contract is still available by path.
+    expect(getMetadata('vessels.self.navigation.course')).to.equal(undefined)
+    expect(getMetadata('vessels.self.navigation.home')).to.equal(undefined)
+    expect(updateContractForPath('navigation.home')).to.equal('event')
+  })
+
+  it('removes a field through the stored entry of an event-subtree path', () => {
+    // getMetadata hands out a copy carrying the inherited contract, so a
+    // field cleared on it would never leave the registry.
+    const path = self('design.draft.maximum')
+    metadataRegistry.internalGetMetadata(path)
+    metadataRegistry.addMetaData('vessels.self', 'design.draft.maximum', {
+      displayName: 'Draft'
+    })
+    const stored = getStoredMetadata(path) as Record<string, unknown>
+    delete stored.displayName
+    expect(getMetadata(path)).to.not.have.property('displayName')
+    expect(getMetadata(path)?.updateContract).to.equal('event')
   })
 
   it('leaves a path no subtree covers unclassified', () => {
