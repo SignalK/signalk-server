@@ -84,7 +84,7 @@ Changing an instance is not always the right answer, though. Victron equipment u
 
 Each conflict pair carries an **Ignore** button. Use it once you have checked the pair and confirmed that your instruments handle it — it records a decision, it does not silence a pending problem.
 
-Ignored pairs move to an _Ignored Conflicts_ card below the device list, stop counting towards the warning badge, and are stored on the server, so the decision survives a browser change and a server restart. Each pair can be brought back individually with **Restore**. Ignoring is per device pair, so a genuine new conflict elsewhere on the bus still raises a warning.
+Ignored pairs move to an _Ignored Conflicts_ card below the device list, stop counting towards the warning badge, and are stored on the server, so the decision survives a browser change and a server restart. Each pair can be brought back individually with **Restore**. Ignoring is per device pair, so a genuine new conflict elsewhere on the bus still raises a warning. A pair is identified by its source references (connection and bus address), so if either device claims a different address, the conflict comes back and needs ignoring again.
 
 ### What is excluded from counting
 
