@@ -327,6 +327,13 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
   Multiplexed: (options) => [new MultiplexedLog(options.subOptions)]
 }
 
+const UNLOGGABLE_SOURCE_TYPES: ReadonlySet<string | undefined> = new Set([
+  'j1939-wasm',
+  'maretron-ipg-wasm',
+  'w2k-1-n2k-actisense-wasm',
+  'ngt-1-wasm'
+])
+
 function j1939Input(subOptions: SubOptions): PipeElement[] {
   // Plain J1939 bus (engines, gensets): listen-only — the same
   // canSocket AF_CAN shim, but no candevice, no address claim, no
@@ -790,10 +797,11 @@ export default class Simple extends Transform {
     const pipeStart = pipeStartByType[options.type]!
     const dataMapper = dataTypeMapping[mappingType]!
 
-    // The J1939 CAN source emits frame objects with no text form —
-    // Log would stringify them to unreplayable '[object Object]'
-    // lines, so logging is disabled for it regardless of the flag.
-    const loggable = options.logging && opts.subOptions.type !== 'j1939-wasm'
+    // These sources emit objects with no text form — Log would
+    // stringify them to unreplayable '[object Object]' lines, so
+    // logging is disabled for them regardless of the flag.
+    const loggable =
+      options.logging && !UNLOGGABLE_SOURCE_TYPES.has(opts.subOptions.type)
 
     const pipeline: PipeElement[] = [
       ...pipeStart(opts.subOptions, options.logging),

@@ -146,6 +146,12 @@ interface TypeComponentProps {
   hasAnalyzer?: boolean
 }
 
+const UNLOGGABLE_N2K_SOURCE_TYPES: ReadonlySet<string> = new Set([
+  'maretron-ipg-wasm',
+  'w2k-1-n2k-actisense-wasm',
+  'ngt-1-wasm'
+])
+
 // Defined outside component to avoid recreation on render
 const TYPE_COMPONENTS: Record<
   string,
@@ -223,11 +229,14 @@ export default function BasicProvider({
           </Form.Label>
         </Col>
       </Form.Group>
-      {/* No logging for J1939: the CAN source emits frame objects with
-          no text form, so logged lines would be unreplayable junk. */}
-      {value.type !== 'FileStream' && value.type !== 'J1939' && (
-        <LoggingInput value={value} onChange={onChange} />
-      )}
+      {/* No logging for J1939 or the wasm binary-framing N2K sources:
+          they emit objects with no text form, so logged lines would be
+          unreplayable junk. */}
+      {value.type !== 'FileStream' &&
+        value.type !== 'J1939' &&
+        !UNLOGGABLE_N2K_SOURCE_TYPES.has(value.options.type ?? '') && (
+          <LoggingInput value={value} onChange={onChange} />
+        )}
       <Form.Group as={Row} className="mb-3">
         <Col md="3">
           <Form.Label htmlFor="id">ID</Form.Label>

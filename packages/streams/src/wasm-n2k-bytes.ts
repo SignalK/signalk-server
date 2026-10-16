@@ -43,7 +43,6 @@ interface WasmN2kBytesOptions {
 
 const RECONNECT_DELAY = 3000
 const KEEPALIVE_INTERVAL = 20000
-const DEFAULT_IDLE_TIMEOUT_SECONDS = 60
 
 interface ByteTransport {
   write(data: Buffer): void
@@ -78,6 +77,18 @@ export default class WasmN2kBytes extends Transform {
         options.app.emit('wasm-n2k:error', err)
       }
     }
+
+    if (!options.device && (!options.host || !options.port)) {
+      // Retrying cannot fix missing configuration — report and stop,
+      // before advertising a TX path that has no transport behind it.
+      this.stopped = true
+      options.app.setProviderError?.(
+        options.providerId ?? '',
+        'host and port are required for a TCP wasm N2K connection'
+      )
+      return
+    }
+
     options.app.on('nmea2000JsonOut', this.txHandler)
     options.app.emit('nmea2000OutAvailable')
 
@@ -149,16 +160,9 @@ export default class WasmN2kBytes extends Transform {
       serial.on('open', () => onOpen(serial))
       socket = serial
     } else {
-      const { host, port } = this.options
-      if (!host || !port) {
-        // Retrying cannot fix missing configuration — report and stop.
-        this.stopped = true
-        this.options.app.setProviderError?.(
-          this.options.providerId ?? '',
-          'host and port are required for a TCP wasm N2K connection'
-        )
-        return
-      }
+      // Presence checked in the constructor, which never connects
+      // without both.
+      const { host, port } = this.options as { host: string; port: number }
       const tcp = new Socket()
       this.status(`Connecting to ${host}:${port}`)
       // Receive-only idle timer: a half-open connection raises neither
@@ -166,13 +170,12 @@ export default class WasmN2kBytes extends Transform {
       // socket.setTimeout() cannot serve here — it counts the periodic
       // keepalive writes as activity, so it would never fire while the
       // gateway sends nothing. Re-armed only in the data handler,
-      // cleared in retry and end().
+      // cleared in retry and end(). Unset means disabled, as in the
+      // canboatjs connection types.
       const parsedTimeout = Number.parseInt(
-        (this.options.noDataReceivedTimeout + '').trim()
+        String(this.options.noDataReceivedTimeout ?? '').trim()
       )
-      this.idleMs =
-        (isNaN(parsedTimeout) ? DEFAULT_IDLE_TIMEOUT_SECONDS : parsedTimeout) *
-        1000
+      this.idleMs = isNaN(parsedTimeout) ? 0 : parsedTimeout * 1000
       tcp.connect(port, host, () => onOpen(tcp))
       socket = tcp
     }
