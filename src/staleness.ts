@@ -1,4 +1,4 @@
-import { getMetadata } from '@signalk/path-metadata'
+import { getMetadata, updateContractForPath } from '@signalk/path-metadata'
 import {
   Context,
   isIdentityPath,
@@ -433,7 +433,12 @@ const lookupSchemaMeta = (
   const ctxPath = context.startsWith('vessels.') ? 'vessels.self' : context
   const full = getMetadata(ctxPath + '.' + path) as
     Record<string, unknown> | undefined
-  if (!full) return undefined
+  if (!full) {
+    // A path with no registry entry still inherits its subtree's contract:
+    // an anchor or course path a plugin invents is no less event-driven.
+    const updateContract = updateContractForPath(path)
+    return updateContract ? { updateContract } : undefined
+  }
   const meta: Pick<MetaValue, 'timeout' | 'updateContract'> = {}
   if (typeof full.timeout === 'number') meta.timeout = full.timeout
   // The registry inherits a subtree's contract onto every path under it, so

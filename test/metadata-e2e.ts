@@ -1,5 +1,7 @@
 import { expect } from 'chai'
+import { metadataRegistry } from '@signalk/path-metadata'
 import {
+  sendDelta,
   serverTestConfigDirectory,
   startServerFromConfigP,
   startServerP,
@@ -250,6 +252,46 @@ describe('Metadata end to end', function () {
       'description',
       'Updated description'
     )
+  })
+
+  it('deletes a metadata field on a path that inherits an update contract', async () => {
+    // navigation.anchor is event-driven, so the registry's lookup for this
+    // path carries a contract its stored entry does not.
+    const anchorMeta = 'navigation/anchor/maxRadius/meta'
+    const zones = [{ lower: 50, state: 'alarm', message: 'Dragging' }]
+    await awaitPutSuccess(
+      port,
+      await selfPutV1(`${anchorMeta}/zones`, { value: zones })
+    )
+
+    // A fresh process rebuilds the entry from the stored meta alone, with
+    // no contract of its own.
+    metadataRegistry.reset()
+    await sendDelta(
+      {
+        context: 'vessels.self',
+        updates: [
+          { meta: [{ path: 'navigation.anchor.maxRadius', value: { zones } }] }
+        ]
+      },
+      `http://localhost:${port}/signalk/v1/api/_test/delta`
+    )
+    const before = await getV1(`/vessels/self/${anchorMeta}`).then((r) =>
+      r.json()
+    )
+    expect(before).to.have.property('zones')
+
+    const deleteResult = await fetch(
+      `${v1Api}/vessels/self/${anchorMeta}/zones`,
+      { method: 'DELETE' }
+    )
+    expect(deleteResult.status).to.equal(202)
+
+    const after = await getV1(`/vessels/self/${anchorMeta}`).then((r) =>
+      r.json()
+    )
+    expect(after).to.not.have.property('zones')
+    expect(after).to.have.property('updateContract', 'event')
   })
 })
 

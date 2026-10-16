@@ -153,8 +153,8 @@ function withUpdateContract(
     const { updateContract: _unsupported, ...rest } = entry
     return rest
   }
-  if (entry?.updateContract === contract) return entry
-  return { ...(entry ?? { description: '' }), updateContract: contract }
+  if (!entry || entry.updateContract === contract) return entry
+  return { ...entry, updateContract: contract }
 }
 
 // Contracts are declared on context-independent paths, so a lookup for
@@ -267,15 +267,24 @@ export class MetadataRegistry {
    * Returns the metadata entry or undefined if no match.
    */
   getMetadata(path: string): PathMetadataEntry | undefined {
+    return withUpdateContract(this.getStoredMetadata(path), path)
+  }
+
+  /**
+   * The registry's own entry for a path, without the inherited update
+   * contract. getMetadata may return a copy carrying that contract, so a
+   * caller that removes fields from the registry must go through this.
+   */
+  getStoredMetadata(path: string): PathMetadataEntry | undefined {
     // Context-independent lookup first (strip context root + identity).
     // Fall back to the literal path so non-context root entries — /self,
     // /version — still resolve when looked up bare; those keys are not
     // '/<root>/*/<tail>'-shaped, so they never participate in the
     // path-only matcher.
-    const entry =
+    return (
       this.getMetadataForLookupPath(toLookupPath(path)) ??
       this.getMetadataForLookupPath('/' + path.replace(/\./g, '/'))
-    return withUpdateContract(entry, path)
+    )
   }
 
   // Match an already-normalized '/*/<tail>' lookup path against the regex
@@ -440,4 +449,9 @@ export const metadataRegistry = new MetadataRegistry(allEntries)
 /** Look up metadata for a dot-separated Signal K path. */
 export function getMetadata(path: string): PathMetadataEntry | undefined {
   return metadataRegistry.getMetadata(path)
+}
+
+/** The registry's own entry for a path, for callers that remove fields. */
+export function getStoredMetadata(path: string): PathMetadataEntry | undefined {
+  return metadataRegistry.getStoredMetadata(path)
 }
