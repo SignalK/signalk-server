@@ -3,8 +3,9 @@
 // data (name, mmsi, design dimensions, GPS antenna offsets, callsignVhf) is
 // configured at the server level and must not be overwritten by deltas from
 // other providers. The exceptions are the special `defaults` $source that
-// carries the server-level base data itself, and the GNSS offset corrector,
-// which derives the GPS antenna offsets from the server's GNSS configuration.
+// carries the server-level base data itself, and the GPS antenna offsets
+// from the GNSS offset corrector, which derives them from the server's GNSS
+// configuration.
 //
 // The hot path is `filterStaticSelfData` -> `filterSelfDataKP`, called for
 // every value of every self-context delta.
@@ -13,10 +14,9 @@
 import { Context, Delta, PathValue, Update } from '@signalk/server-api'
 import { CORRECTOR_ID } from './api/gnssOffsetCorrector'
 
-const SERVER_SOURCES: ReadonlySet<string | undefined> = new Set([
-  'defaults',
-  CORRECTOR_ID
-])
+// The corrector only derives the GPS antenna offsets, so its label
+// unlocks those paths and no other protected self data.
+const CORRECTOR_PATH_PREFIX = 'sensors.gps.'
 
 const ROOT_VESSEL_FILTERED_KEYS: ReadonlySet<string> = new Set(['name', 'mmsi'])
 
@@ -73,13 +73,17 @@ export function filterStaticSelfData(
   }
   const keptUpdates: Update[] = []
   for (const update of delta.updates) {
-    if (!('values' in update) || SERVER_SOURCES.has(update['$source'])) {
+    if (!('values' in update) || update['$source'] === 'defaults') {
       keptUpdates.push(update)
       continue
     }
+    const fromCorrector = update['$source'] === CORRECTOR_ID
     const kept: PathValue[] = []
     for (const pathValue of update.values) {
-      const nvp = filterSelfDataKP(pathValue)
+      const nvp =
+        fromCorrector && pathValue.path.startsWith(CORRECTOR_PATH_PREFIX)
+          ? pathValue
+          : filterSelfDataKP(pathValue)
       if (nvp) {
         kept.push(nvp)
       }
