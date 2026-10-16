@@ -145,7 +145,7 @@ Handler functions must return a JSON string with:
 
 ## Binary Responses
 
-The response envelope is JSON, so binary data such as images or protobuf messages travels base64-encoded in `body`, with the envelope's `bodyEncoding` field set to `"base64"`. The server decodes it and sends the raw bytes with the `Content-Type` from `headers`, falling back to `application/octet-stream`. An unsupported encoding or a body that is not a valid base64 string is answered with `500` rather than sent as-is. The `handle_get_icon` handler in [example-hello-assemblyscript](https://github.com/SignalK/signalk-server/blob/master/examples/wasm-plugins/example-hello-assemblyscript/assembly/index.ts) shows a complete binary response.
+The response envelope is JSON, so binary data such as images or protobuf messages travels base64-encoded in `body`, with the envelope's `bodyEncoding` field set to `"base64"`. The body must be standard, unwrapped base64: the `+` and `/` alphabet with `=` padding, and no line breaks or other whitespace. The server decodes it and sends the raw bytes with the `Content-Type` from `headers`, falling back to `application/octet-stream`. An unsupported encoding or a body that is not a valid base64 string is answered with `500` rather than sent as-is. The `handle_get_icon` handler in [example-hello-assemblyscript](https://github.com/SignalK/signalk-server/blob/master/examples/wasm-plugins/example-hello-assemblyscript/assembly/index.ts) shows a complete binary response.
 
 Base64 grows the payload by about a third, and the whole envelope still has to fit the fixed response buffer used for Rust handlers.
 
