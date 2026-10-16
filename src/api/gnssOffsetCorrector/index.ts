@@ -22,6 +22,7 @@ export interface GnssCorrectorApplication
     WithSecurityStrategy,
     SignalKMessageHub {
   streambundle: StreamBundle
+  getMaxFailoverTimeoutMs?: (path: string) => number
 }
 
 const POSITION_PATH = 'navigation.position' as Path
@@ -42,7 +43,9 @@ const COG_TRUE_PATH = 'navigation.courseOverGroundTrue' as Path
 const SOG_PATH = 'navigation.speedOverGround' as Path
 // A heading not received for longer than this no longer describes the
 // vessel's orientation; rotating the antenna offset with it would
-// misplace the CCRP by up to twice the offset.
+// misplace the CCRP by up to twice the offset. Raised to the path's
+// source-priority failover timeout when that is longer, so a heading
+// source failing over to its fallback does not stop the correction.
 const HEADING_MAX_AGE_MS = 3000
 // Slowest speed over ground (m/s, about 1 kn) at which course over ground
 // stands in for a missing heading. Below it COG is noise; above it leeway
@@ -103,7 +106,7 @@ interface SensorEntry {
 // (length/2, 0) measured from the bow. Derived from design.length.overall
 // (already in Server -> Settings -> Vessel Configuration). When length is
 // unavailable, or neither a heading nor (while making way) a course over
-// ground was received within HEADING_MAX_AGE_MS, the delta passes through
+// ground was received within the age limit, the delta passes through
 // unmodified.
 //
 // app.deltaCache stores the raw per-source value because it ingests
@@ -402,8 +405,10 @@ export class GnssOffsetCorrector {
   // it is the direction of travel, not of the bow.
   private readOrientation(): number | undefined {
     const now = this.monotonicNow()
-    if (isFresh(this.headingTrue, now)) return this.headingTrue.value
-    if (isFresh(this.headingMagnetic, now)) {
+    if (this.isFresh(HEADING_TRUE_PATH, this.headingTrue, now)) {
+      return this.headingTrue.value
+    }
+    if (this.isFresh(HEADING_MAGNETIC_PATH, this.headingMagnetic, now)) {
       const v = _get(
         this.app.signalk.self,
         'navigation.magneticVariation.value'
@@ -413,19 +418,22 @@ export class GnssOffsetCorrector {
       }
     }
     if (
-      isFresh(this.courseOverGround, now) &&
-      isFresh(this.speedOverGround, now) &&
+      this.isFresh(COG_TRUE_PATH, this.courseOverGround, now) &&
+      this.isFresh(SOG_PATH, this.speedOverGround, now) &&
       this.speedOverGround.value >= MIN_COG_SPEED
     ) {
       return this.courseOverGround.value
     }
     return undefined
   }
-}
 
-function isFresh(received: ReceivedValue, now: number): boolean {
-  return (
-    Number.isFinite(received.value) &&
-    now - received.receivedAt <= HEADING_MAX_AGE_MS
-  )
+  private isFresh(path: Path, received: ReceivedValue, now: number): boolean {
+    const maxAgeMs = Math.max(
+      HEADING_MAX_AGE_MS,
+      this.app.getMaxFailoverTimeoutMs?.(path) ?? 0
+    )
+    return (
+      Number.isFinite(received.value) && now - received.receivedAt <= maxAgeMs
+    )
+  }
 }

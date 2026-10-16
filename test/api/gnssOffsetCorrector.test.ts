@@ -1047,23 +1047,23 @@ describe('GnssOffsetCorrector heading freshness', function () {
   // Antenna at the bow of a 20 m vessel heading north: a corrected fix
   // moves 10 m south, an uncorrected one stays at latitude 60.
   const CORRECTED_LATITUDE = 60 + ((-10 / R) * 180) / Math.PI
-  const realNow = Date.now
   let now = 0
 
   beforeEach(function () {
     now = 1000000
   })
 
-  afterEach(function () {
-    Date.now = realNow
-  })
-
-  async function setup(selfPaths: Record<string, unknown> = {}) {
+  async function setup(
+    selfPaths: Record<string, unknown> = {},
+    failoverTimeoutsMs: Record<string, number> = {}
+  ) {
     const env = makeApp({
       selfPaths: { 'design.length.value': { overall: 20 }, ...selfPaths },
       gnssCorrection: 'replace',
       gnssSensors: [SENSOR]
     })
+    env.app.getMaxFailoverTimeoutMs = (path: string) =>
+      failoverTimeoutsMs[path] ?? 0
     const corrector = new GnssOffsetCorrector(env.app, () => now)
     await corrector.start()
     const latitude = () => {
@@ -1140,11 +1140,14 @@ describe('GnssOffsetCorrector heading freshness', function () {
     expect(latitude()).to.equal(60)
   })
 
-  it('expires a heading when the wall clock steps backwards', async function () {
-    const { latitude } = await setup({ 'navigation.headingTrue.value': 0 })
-    const wallClock = realNow()
-    Date.now = () => wallClock - 3600000
-    now += 3001
+  it('keeps a heading through its source-priority failover window', async function () {
+    const { latitude } = await setup(
+      { 'navigation.headingTrue.value': 0 },
+      { 'navigation.headingTrue': 15000 }
+    )
+    now += 15000
+    expect(latitude()).to.be.closeTo(CORRECTED_LATITUDE, 1e-9)
+    now += 1
     expect(latitude()).to.equal(60)
   })
 
