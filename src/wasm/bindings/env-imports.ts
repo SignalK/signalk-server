@@ -20,6 +20,7 @@ import {
   createBinaryDataReader
 } from './binary-stream'
 import { socketManager, tcpSocketManager } from './socket-manager'
+import { createBleBindings } from './ble'
 import * as fs from 'fs'
 import * as path from 'path'
 import { atomicWriteFileSync } from '../../atomicWrite'
@@ -421,6 +422,9 @@ export function createEnvImports(
         }
         if (capability === 'rawSockets') {
           return capabilities.rawSockets ? 1 : 0
+        }
+        if (capability === 'bluetooth') {
+          return capabilities.bluetooth ? 1 : 0
         }
         return 0
       } catch (error) {
@@ -1035,7 +1039,15 @@ export function createEnvImports(
     sk_tcp_close: (socketId: number): void => {
       if (!capabilities.rawSockets) return
       tcpSocketManager.close(socketId)
-    }
+    },
+
+    ...createBleBindings(
+      pluginId,
+      capabilities,
+      app,
+      readUtf8String,
+      readBinaryData
+    )
   }
 
   return envImports
