@@ -291,10 +291,19 @@ describe('WASM Plugins', function () {
 
     it('WASM plugin enabled at boot gets its persistent VFS as preopen', async function () {
       const pluginId = '_signalk_example-hello-assemblyscript'
-      // The previous test persisted enabled: true, so this restart boots
-      // the plugin as enabled
-      await server!.stop()
-      server = null
+      const configDataPath = path.join(
+        testConfigDirectory(),
+        'plugin-config-data'
+      )
+      if (server) {
+        await server.stop()
+        server = null
+      }
+      fs.mkdirSync(configDataPath, { recursive: true })
+      fs.writeFileSync(
+        path.join(configDataPath, `${pluginId}.json`),
+        JSON.stringify({ enabled: true, configuration: {} })
+      )
       const restarted: ServerInstance = await startServerP(
         await freeport(),
         false,
