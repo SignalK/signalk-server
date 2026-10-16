@@ -20,6 +20,7 @@ export interface WasmCapabilities {
   weatherProvider?: boolean // Can register as a weather provider
   radarProvider?: boolean // Can register as a radar provider
   rawSockets?: boolean // Can open UDP/TCP sockets for radar, NMEA, etc.
+  bluetooth?: boolean // Can use the server-managed BLE API
 }
 
 /**
@@ -65,6 +66,8 @@ export interface WasmPluginExports {
   // Optional: Delta handler - receives Signal K deltas as JSON strings
   // Enables plugins to react to navigation data changes, course updates, etc.
   delta_handler?: (deltaJson: string) => void
+  // Optional: BLE event handler - receives BLE events as JSON strings
+  ble_handler?: (eventJson: string) => void
 }
 
 /**

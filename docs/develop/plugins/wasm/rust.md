@@ -348,6 +348,7 @@ Your plugin MAY export:
 | `poll`           | `() -> status`           | Called every 1 second while plugin is running. Useful for polling hardware, sockets, or external systems. Return 0 for success, non-zero for errors. |
 | `http_endpoints` | `() -> json`             | Return JSON array of HTTP endpoint definitions                                                                                                       |
 | `delta_handler`  | `(delta_ptr, delta_len)` | Receives Signal K deltas as JSON strings. Called for every delta emitted by the server.                                                              |
+| `ble_handler`    | `(event_ptr, event_len)` | Receives BLE events as JSON strings. See [Bluetooth (BLE) API](capabilities.md#bluetooth-ble-api).                                                   |
 
 ## Additional Resources
 
