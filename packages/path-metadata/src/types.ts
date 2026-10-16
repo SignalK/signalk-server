@@ -2,10 +2,18 @@
  * Path metadata types for the Signal K data model.
  */
 
+/** How a path is expected to update; see updateContracts. */
+export type UpdateContract = 'periodic' | 'event'
+
 /** Metadata associated with a Signal K well-known path. */
 export interface PathMetadataEntry {
   description: string
   units?: string
+  /**
+   * How the path updates: declared directly on the path, or inherited from
+   * the nearest declaring subtree. See updateContracts.
+   */
+  updateContract?: UpdateContract
   enum?: ReadonlyArray<{ id: number; name: string } | string>
   properties?: Record<
     string,

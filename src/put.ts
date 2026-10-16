@@ -10,7 +10,7 @@ import {
 } from './requestResponse'
 import * as skConfig from './config/config'
 import { ConfigApp } from './config/config'
-import { getMetadata } from '@signalk/path-metadata'
+import { getMetadata, getStoredMetadata } from '@signalk/path-metadata'
 import {
   resolveDisplayUnits,
   stripResolvedDisplayUnits,
@@ -259,17 +259,19 @@ export function start(app: PutApp): void {
 
     // Remove fields that were deleted from the in-memory metadata registry
     // so they don't get re-injected via the spread below
+    const stored_meta = getStoredMetadata('vessels.self.' + metaPath) as
+      Record<string, unknown> | undefined
+    if (previousMeta && stored_meta) {
+      for (const key of Object.keys(previousMeta)) {
+        if (!(key in metaValue)) {
+          delete stored_meta[key]
+        }
+      }
+    }
     const full_meta = getMetadata('vessels.self.' + metaPath) as Record<
       string,
       unknown
     >
-    if (previousMeta && full_meta) {
-      for (const key of Object.keys(previousMeta)) {
-        if (!(key in metaValue)) {
-          delete full_meta[key]
-        }
-      }
-    }
 
     // Clients read displayUnits resolved, so the update they get carries the
     // conversion rather than the override that was stored. This delta also
@@ -369,11 +371,13 @@ export function start(app: PutApp): void {
 
       delete metaValue[name]
 
+      delete (
+        getStoredMetadata('vessels.self.' + metaPath) as Record<string, unknown>
+      )[name]
       full_meta = getMetadata('vessels.self.' + metaPath) as Record<
         string,
         unknown
       >
-      delete full_meta[name]
 
       removeLeafMetaField(app, metaPath, name)
 
@@ -385,10 +389,9 @@ export function start(app: PutApp): void {
     } else {
       metaPath = parts.slice(0, parts.length - 1).join('.')
 
-      full_meta = getMetadata('vessels.self.' + metaPath) as Record<
-        string,
-        unknown
-      >
+      const stored_meta = getStoredMetadata(
+        'vessels.self.' + metaPath
+      ) as Record<string, unknown>
       const metaValue = app.config.baseDeltaEditor.getMeta(context, metaPath)
 
       if (!metaValue) {
@@ -396,9 +399,13 @@ export function start(app: PutApp): void {
       }
 
       Object.keys(metaValue).forEach((key) => {
-        delete full_meta[key]
+        delete stored_meta[key]
         removeLeafMetaField(app, metaPath, key)
       })
+      full_meta = getMetadata('vessels.self.' + metaPath) as Record<
+        string,
+        unknown
+      >
 
       app.config.baseDeltaEditor.removeMeta(context, metaPath)
     }

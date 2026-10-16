@@ -1,5 +1,10 @@
 import { expect } from 'chai'
-import { getMetadata, metadataRegistry } from './index'
+import {
+  getMetadata,
+  getStoredMetadata,
+  metadataRegistry,
+  updateContractForPath
+} from './index'
 
 // Callers always prefix the Signal K context, e.g. `vessels.self.<path>`.
 const self = (p: string) => `vessels.self.${p}`
@@ -251,5 +256,141 @@ describe('getMetadata', () => {
       metadataRegistry.reset()
       expect(getMetadata(p)).to.equal(undefined)
     })
+  })
+})
+
+describe('updateContract inheritance', () => {
+  const contractFor = (path: string) => getMetadata(path)?.updateContract
+
+  it('inherits a subtree contract on a path that has its own entry', () => {
+    expect(contractFor('vessels.self.navigation.anchor.position')).to.equal(
+      'event'
+    )
+  })
+
+  it('returns no metadata for an event-subtree path with no entry', () => {
+    // A stub would make REST and WS serve meta for branches such as
+    // navigation.course; the contract is still available by path.
+    expect(getMetadata('vessels.self.navigation.course')).to.equal(undefined)
+    expect(getMetadata('vessels.self.navigation.home')).to.equal(undefined)
+    expect(updateContractForPath('navigation.home')).to.equal('event')
+  })
+
+  it('removes a field through the stored entry of an event-subtree path', () => {
+    // getMetadata hands out a copy carrying the inherited contract, so a
+    // field cleared on it would never leave the registry.
+    const path = self('design.draft.maximum')
+    metadataRegistry.internalGetMetadata(path)
+    metadataRegistry.addMetaData('vessels.self', 'design.draft.maximum', {
+      displayName: 'Draft'
+    })
+    const stored = getStoredMetadata(path) as Record<string, unknown>
+    delete stored.displayName
+    expect(getMetadata(path)).to.not.have.property('displayName')
+    expect(getMetadata(path)?.updateContract).to.equal('event')
+  })
+
+  it('leaves a path no subtree covers unclassified', () => {
+    expect(contractFor('vessels.self.navigation.speedOverGround')).to.equal(
+      undefined
+    )
+  })
+
+  it('does not treat a longer path name as being inside the subtree', () => {
+    // navigation.course is event-driven; courseOverGroundTrue is not part of
+    // it despite sharing a prefix string.
+    expect(
+      contractFor('vessels.self.navigation.courseOverGroundTrue')
+    ).to.equal(undefined)
+  })
+
+  it('resolves the same contract under any context root', () => {
+    // A non-vessel root, so this shows the contract is keyed by path rather
+    // than resolved per context.
+    expect(
+      contractFor('aircraft.urn:mrn:imo:mmsi:123.notifications.mob')
+    ).to.equal('event')
+  })
+
+  it('lets an explicit contract on the path win over the subtree', () => {
+    // The per-path declaration is the more specific one: a path inside an
+    // event subtree can still be declared periodic.
+    metadataRegistry.addMetaData('vessels.self', 'notifications.mob', {
+      updateContract: 'periodic'
+    })
+    expect(getMetadata(self('notifications.mob'))?.updateContract).to.equal(
+      'periodic'
+    )
+  })
+
+  it('resolves contracts for the getAllMetadata view too', () => {
+    // The paths reference is served from getAllMetadata, so it has to show
+    // the same contract getMetadata resolves.
+    const all = metadataRegistry.getAllMetadata()
+    expect(
+      all['/vessels/*/navigation/anchor/position']?.updateContract
+    ).to.equal('event')
+    const sog = all['/vessels/*/navigation/speedOverGround']
+    if (!sog) throw new Error('speedOverGround missing from the /paths view')
+    expect(sog.updateContract).to.equal('periodic')
+  })
+
+  it('drops an unsupported contract set at runtime on an uncovered path', () => {
+    // No subtree covers speedOverGround, so nothing sanitises the value
+    // unless getMetadata does it.
+    metadataRegistry.addMetaData('vessels.self', 'navigation.speedOverGround', {
+      updateContract: 'manual'
+    })
+    const entry = getMetadata(self('navigation.speedOverGround'))
+    if (!entry) throw new Error('speedOverGround has no metadata entry')
+    expect(entry.updateContract).to.equal(undefined)
+  })
+
+  it('treats commanded autopilot paths as event-driven', () => {
+    // A command is an event: the latest one persists rather than going stale.
+    expect(contractFor(self('steering.autopilot.state'))).to.equal('event')
+    expect(contractFor(self('steering.autopilot.mode'))).to.equal('event')
+    expect(contractFor(self('steering.autopilot.target.headingTrue'))).to.equal(
+      'event'
+    )
+  })
+
+  it('leaves a measured steering path periodic', () => {
+    // rudderAngle is outside the autopilot subtree: it reports where the
+    // rudder is, so silence there really is a dead sensor.
+    expect(contractFor(self('steering.rudderAngle'))).to.equal(undefined)
+  })
+
+  it('treats sensor antenna offsets as event-driven', () => {
+    // Installation geometry does not go stale between restatements, whether
+    // it comes from base data or an AIS static report.
+    expect(contractFor(self('sensors.gps.fromBow'))).to.equal('event')
+    expect(contractFor(self('sensors.gps.fromCenter'))).to.equal('event')
+    expect(contractFor(self('sensors.ais.fromBow'))).to.equal('event')
+    expect(contractFor(self('sensors.ais.fromCenter'))).to.equal('event')
+  })
+
+  it('leaves live sensor data periodic', () => {
+    expect(contractFor(self('sensors.gps.sensorData'))).to.equal(undefined)
+  })
+
+  it('leaves registry scaffolding unclassified in the /paths view', () => {
+    // /self and /vessels are not paths under a context, so a contract says
+    // nothing about them and staleness never applies.
+    const all = metadataRegistry.getAllMetadata()
+    expect(all['/self']?.updateContract).to.equal(undefined)
+    expect(all['/vessels']?.updateContract).to.equal(undefined)
+    // A container shape defines what a battery looks like; it is not a path
+    // that updates, so it must not be advertised as periodically updated.
+    expect(
+      all['/vessels/*/electrical/batteries/RegExp']?.updateContract
+    ).to.equal(undefined)
+  })
+
+  it('does not write the contract onto the shared template entry', () => {
+    getMetadata('vessels.self.navigation.anchor.position')
+    const other = getMetadata('vessels.self.navigation.speedOverGround')
+    expect(other?.updateContract).to.equal(undefined)
+    expect(other?.units).to.equal('m/s')
   })
 })
