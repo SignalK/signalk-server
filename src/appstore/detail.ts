@@ -100,16 +100,26 @@ function resolveDependencyList(
   })
 }
 
+export interface BuiltPluginDetail {
+  detail: PluginDetailPayload
+  // False when a README or CHANGELOG.md fetch failed transiently, so an
+  // empty field means "unknown" rather than "the package has none" and
+  // the detail must not be cached.
+  cacheable: boolean
+}
+
 export async function buildPluginDetail(
   summary: PackageSummary,
   resolver?: DependencyResolver
-): Promise<PluginDetailPayload> {
+): Promise<BuiltPluginDetail> {
+  let cacheable = true
   let readmeText = ''
   if (summary.npmReadme && summary.npmReadme.trim().length > 0) {
     readmeText = summary.npmReadme
   } else {
     const fetched = await fetchText(readmeUrlFor(summary.name, summary.version))
     if (fetched.kind === 'ok') readmeText = fetched.text
+    if (fetched.kind === 'error') cacheable = false
   }
 
   // Prefer GitHub Releases as the changelog source — that's where most
@@ -137,6 +147,7 @@ export async function buildPluginDetail(
       changelog = fetched.text
       changelogFormat = 'markdown'
     }
+    if (fetched.kind === 'error') cacheable = false
   }
 
   const indicators = computeIndicators({
@@ -150,7 +161,7 @@ export async function buildPluginDetail(
     lastReleaseDate: summary.lastReleaseDate
   })
 
-  return {
+  const detail: PluginDetailPayload = {
     name: summary.name,
     version: summary.version,
     displayName: summary.displayName,
@@ -176,6 +187,7 @@ export async function buildPluginDetail(
     fetchedAt: Date.now(),
     fromCache: false
   }
+  return { detail, cacheable }
 }
 
 export function readDetailFromCache(

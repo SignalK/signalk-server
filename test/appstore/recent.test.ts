@@ -37,7 +37,7 @@ describe('appstore/recent', () => {
     }
 
     it('marks recent when lastReleaseDate is within the window', async () => {
-      const detail = await buildPluginDetail({
+      const { detail } = await buildPluginDetail({
         ...summaryBase,
         lastReleaseDate: new Date(Date.now() - 24 * 3600 * 1000).toISOString()
       })
@@ -45,7 +45,7 @@ describe('appstore/recent', () => {
     })
 
     it('omits or unsets recent when lastReleaseDate is old', async () => {
-      const detail = await buildPluginDetail({
+      const { detail } = await buildPluginDetail({
         ...summaryBase,
         lastReleaseDate: new Date(
           Date.now() - 60 * 24 * 3600 * 1000
