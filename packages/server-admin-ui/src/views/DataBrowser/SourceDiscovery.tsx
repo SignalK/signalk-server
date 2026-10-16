@@ -596,9 +596,11 @@ const SourceDiscovery: React.FC = () => {
                 {activeConflicts.length} instance conflict
                 {activeConflicts.length > 1 ? 's' : ''} detected.
               </strong>{' '}
-              Devices sharing the same device instance and overlapping data PGNs
-              may confuse instruments. Temperature/humidity sensors are excluded
-              (their unique key is instance + source).
+              These devices share a device instance and send overlapping data
+              PGNs, so a consumer that selects sources by instance number cannot
+              tell them apart. This check is failsafe: many instruments select
+              by device name instead and are unaffected. If your instruments
+              handle the overlap, use Ignore.
               {conflictFilter && (
                 <Button
                   size="sm"
