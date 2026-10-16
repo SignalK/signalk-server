@@ -22,7 +22,7 @@ import {
   Timestamp
 } from '@signalk/server-api'
 import { IRouter, Request, Response } from 'express'
-import { ConfigApp } from '../../config/config'
+import { Config, ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
 import {
@@ -55,6 +55,9 @@ const MODEL_NODE_KEYS = new Set([
 
 export const deltaVersion: SKVersion = SKVersion.v1
 
+export const isManagingNotifications = (settings: Config['settings']) =>
+  settings.notifications?.manageNotifications !== false
+
 export class NotificationApi {
   private app: NotificationApplication
   private notiKeys: Map<NotificationKey, NotificationId> = new Map()
@@ -85,7 +88,7 @@ export class NotificationApi {
   }
 
   private isManaging(): boolean {
-    return this.app.config.settings.notifications?.manageNotifications !== false
+    return isManagingNotifications(this.app.config.settings)
   }
 
   /** Filter out notifications.* paths and push onto notiUpdate */
