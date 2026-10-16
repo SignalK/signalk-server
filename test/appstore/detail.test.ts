@@ -101,6 +101,69 @@ describe('appstore/detail', () => {
     })
   })
 
+  describe('CDN fallback', () => {
+    const realFetch = globalThis.fetch
+    let requested: string[]
+    let jsdelivr: () => Response
+
+    beforeEach(() => {
+      requested = []
+      globalThis.fetch = (async (input: RequestInfo | URL) => {
+        const url = String(input)
+        requested.push(url)
+        if (url.startsWith('https://cdn.jsdelivr.net/')) return jsdelivr()
+        if (url.endsWith('/README.md')) {
+          return new Response('# from unpkg', { status: 200 })
+        }
+        return new Response('Not found', { status: 404 })
+      }) as typeof fetch
+    })
+
+    afterEach(() => {
+      globalThis.fetch = realFetch
+    })
+
+    const cdnSummary = { ...summaryBase, npmReadme: undefined }
+    const unpkgRequests = () =>
+      requested.filter((u) => u.startsWith('https://unpkg.com/'))
+
+    it('reads the README from jsDelivr first', async () => {
+      jsdelivr = () => new Response('# from jsDelivr', { status: 200 })
+      const detail = await buildPluginDetail(cdnSummary)
+      expect(detail.readme).to.equal('# from jsDelivr')
+    })
+
+    it('falls back to unpkg when jsDelivr fails', async () => {
+      jsdelivr = () => new Response('Bad gateway', { status: 502 })
+      const detail = await buildPluginDetail(cdnSummary)
+      expect(detail.readme).to.equal('# from unpkg')
+    })
+
+    it('falls back to unpkg when jsDelivr refuses an oversized package', async () => {
+      jsdelivr = () =>
+        new Response('Package size exceeded the configured limit of 150 MB.', {
+          status: 403
+        })
+      const detail = await buildPluginDetail(cdnSummary)
+      expect(detail.readme).to.equal('# from unpkg')
+    })
+
+    it('falls back to unpkg when the jsDelivr request times out', async () => {
+      jsdelivr = () => {
+        throw new DOMException('timed out', 'TimeoutError')
+      }
+      const detail = await buildPluginDetail(cdnSummary)
+      expect(detail.readme).to.equal('# from unpkg')
+    })
+
+    it('does not ask unpkg for a file jsDelivr reports missing', async () => {
+      jsdelivr = () => new Response('Not found', { status: 404 })
+      const detail = await buildPluginDetail(cdnSummary)
+      expect(detail.readme).to.equal('')
+      expect(unpkgRequests()).to.deep.equal([])
+    })
+  })
+
   it('hydrates required deps against resolver', async () => {
     const detail = await buildPluginDetail(
       { ...summaryBase, requires: ['signalk-charts-plugin', 'missing-pkg'] },

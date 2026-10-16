@@ -8,8 +8,12 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-const UNPKG_BASE = 'https://unpkg.com'
 const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm'
+const UNPKG_BASE = 'https://unpkg.com'
+// In preference order. jsDelivr answers the first request for a file from
+// a large package several times faster than unpkg, which unpacks the
+// whole tarball first; unpkg stays as the fallback when jsDelivr fails.
+const CDN_BASES = [JSDELIVR_BASE, UNPKG_BASE]
 
 // Collapse `.` / `..` segments and clamp the result to the package
 // root. `signalk.appIcon` / `signalk.screenshots` come from plugin
@@ -34,30 +38,29 @@ function normalizeRelPath(relPath: string): string {
   return stack.join('/')
 }
 
+export function cdnUrlsFor(
+  pkg: string,
+  version: string,
+  relPath: string
+): string[] {
+  const clean = normalizeRelPath(relPath)
+  return CDN_BASES.map((base) => `${base}/${pkg}@${version}/${clean}`)
+}
+
 export function resolveScreenshotUrl(
   pkg: string,
   version: string,
   relPath: string
 ): string {
-  const clean = normalizeRelPath(relPath)
-  return `${UNPKG_BASE}/${pkg}@${version}/${clean}`
-}
-
-export function resolveScreenshotUrlJsdelivr(
-  pkg: string,
-  version: string,
-  relPath: string
-): string {
-  const clean = normalizeRelPath(relPath)
-  return `${JSDELIVR_BASE}/${pkg}@${version}/${clean}`
+  return cdnUrlsFor(pkg, version, relPath)[0]
 }
 
 export function readmeUrlFor(pkg: string, version: string): string {
-  return `${UNPKG_BASE}/${pkg}@${version}/README.md`
+  return cdnUrlsFor(pkg, version, 'README.md')[0]
 }
 
 export function changelogUrlFor(pkg: string, version: string): string {
-  return `${UNPKG_BASE}/${pkg}@${version}/CHANGELOG.md`
+  return cdnUrlsFor(pkg, version, 'CHANGELOG.md')[0]
 }
 
 export function isAbsoluteUrl(url: string): boolean {
