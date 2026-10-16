@@ -490,9 +490,9 @@ const GnssPositionSettings: React.FC = () => {
           {status && status.blocked === 'no-heading' && (
             <Alert variant="warning" className="mt-1 mb-0 py-1 px-2">
               <small className="d-block mt-1">
-                Correction is enabled but inactive: no true heading is
-                available. It will resume automatically when heading data
-                returns.
+                Correction is enabled but inactive: no heading is available, and
+                no usable course over ground (missing, or the vessel is not
+                making way). It will resume automatically when either returns.
               </small>
             </Alert>
           )}
