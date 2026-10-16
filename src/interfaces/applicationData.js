@@ -137,7 +137,13 @@ module.exports = function (app) {
       return
     }
 
-    res.json(fs.readdirSync(dir).map((file) => file.slice(0, -5)))
+    // Skip the temp files an interrupted atomic write can leave behind.
+    res.json(
+      fs
+        .readdirSync(dir)
+        .filter((file) => file.endsWith('.json'))
+        .map((file) => file.slice(0, -5))
+    )
   }
 
   function getApplicationData(req, res, isUser) {
