@@ -186,7 +186,7 @@ npm install -g my-wasm-plugin
 
 **Note**: Symlinking is the most efficient method for development - changes are picked up on server restart without copying files. Use npm install for production deployments or when distributing plugins.
 
-**Important**: If your plugin includes static files (like a web UI in the `public/` folder), make sure to copy that folder as well. Static files are automatically served at `/plugins/your-plugin-id/` when the plugin is loaded.
+**Important**: If your plugin includes static files (like a web UI in the `public/` folder), make sure to copy that folder as well (see [Static File Serving](./integration_guide.md#static-file-serving)).
 
 ## Step 7: Verify Plugin Configuration in Admin UI
 
