@@ -39,7 +39,9 @@ export function backwardsCompat(url: string) {
 
 /**
  * Handle /api/logs request directly in Node.js (for signalk-logviewer plugin)
- * This avoids WASM memory buffer limitations (~64KB) when streaming large logs
+ * Reading the logs means spawning journalctl or tail, which a WASM plugin
+ * cannot do, and the up to 50000 lines can exceed the response size a WASM
+ * handler may return (MAX_BUFFER_ABI_RESPONSE_BYTES)
  */
 export async function handleLogViewerRequest(
   req: Request,
@@ -249,7 +251,6 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
           )
 
           // SPECIAL CASE: Handle /api/logs directly in Node.js for signalk-logviewer
-          // WASM cannot handle large data streams due to memory buffer limitations (~64KB)
           if (
             plugin.id === 'signalk-logviewer' &&
             endpointPath === '/api/logs' &&
