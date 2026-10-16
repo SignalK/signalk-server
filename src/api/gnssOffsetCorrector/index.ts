@@ -23,6 +23,7 @@ export interface GnssCorrectorApplication
     WithSecurityStrategy,
     SignalKMessageHub {
   streambundle: StreamBundle
+  getMaxFailoverTimeoutMs?: (path: string) => number
 }
 
 const POSITION_PATH = 'navigation.position' as Path
@@ -41,7 +42,9 @@ const HEADING_TRUE_PATH = 'navigation.headingTrue' as Path
 const HEADING_MAGNETIC_PATH = 'navigation.headingMagnetic' as Path
 // A heading not received for longer than this no longer describes the
 // vessel's orientation; rotating the antenna offset with it would
-// misplace the CCRP by up to twice the offset.
+// misplace the CCRP by up to twice the offset. Raised to the path's
+// source-priority failover timeout when that is longer, so a heading
+// source failing over to its fallback does not stop the correction.
 const HEADING_MAX_AGE_MS = 3000
 
 // The single-GPS antenna offsets that predate gnssSensors. Consumers such as
@@ -101,7 +104,7 @@ interface SensorEntry {
 // CCRP is defined as center-of-vessel on the centerline: body coordinates
 // (length/2, 0) measured from the bow. Derived from design.length.overall
 // (already in Server -> Settings -> Vessel Configuration). When length is
-// unavailable, or no heading was received within HEADING_MAX_AGE_MS, the
+// unavailable, or no heading was received within the heading age limit, the
 // delta passes through unmodified.
 //
 // The corrector is a delta input handler, so it runs before the delta
@@ -466,19 +469,26 @@ export class GnssOffsetCorrector {
   // days and is commonly sent rarely or configured once.
   private readHeadingTrue(): number | undefined {
     const now = this.monotonicNow()
-    if (isFresh(this.headingTrue, now)) return this.headingTrue.value
-    if (!isFresh(this.headingMagnetic, now)) return undefined
+    if (this.isFresh(HEADING_TRUE_PATH, this.headingTrue, now)) {
+      return this.headingTrue.value
+    }
+    if (!this.isFresh(HEADING_MAGNETIC_PATH, this.headingMagnetic, now)) {
+      return undefined
+    }
     const v = _get(this.app.signalk.self, 'navigation.magneticVariation.value')
     if (typeof v === 'number' && Number.isFinite(v)) {
       return this.headingMagnetic.value + v
     }
     return undefined
   }
-}
 
-function isFresh(heading: ReceivedHeading, now: number): boolean {
-  return (
-    Number.isFinite(heading.value) &&
-    now - heading.receivedAt <= HEADING_MAX_AGE_MS
-  )
+  private isFresh(path: Path, heading: ReceivedHeading, now: number): boolean {
+    const maxAgeMs = Math.max(
+      HEADING_MAX_AGE_MS,
+      this.app.getMaxFailoverTimeoutMs?.(path) ?? 0
+    )
+    return (
+      Number.isFinite(heading.value) && now - heading.receivedAt <= maxAgeMs
+    )
+  }
 }
