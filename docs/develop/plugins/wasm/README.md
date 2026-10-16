@@ -15,7 +15,7 @@ children:
 
 ## Overview
 
-This guide covers how to develop WASM/WASIX plugins for Signal K Server 3.0. WASM plugins run in a secure sandbox with isolated storage and capability-based permissions.
+This guide covers how to develop WASM/WASIX plugins for Signal K Server. WASM plugins run in a secure sandbox with isolated storage and capability-based permissions.
 
 ## What Makes a WASM Plugin?
 
