@@ -22,7 +22,7 @@ export interface GnssCorrectorApplication
     SignalKMessageHub {}
 
 const POSITION_PATH = 'navigation.position' as Path
-const CORRECTOR_ID = 'gnssOffsetCorrector'
+export const CORRECTOR_ID = 'gnssOffsetCorrector'
 // $source suffix for corrected positions published alongside the
 // original in 'both' mode. Also serves as the recursion guard: rows
 // bound to a *.ccrp ref are never used for correction.
@@ -39,9 +39,6 @@ const HEADING_NOTIFICATION_PATH =
 // navigation.position (see referencePoint).
 const GPS_FROM_BOW_PATH = 'sensors.gps.fromBow' as Path
 const GPS_FROM_CENTER_PATH = 'sensors.gps.fromCenter' as Path
-// staticDataFilter only lets these paths through from the server's own base
-// data source, and the staleness enforcer never times that source out.
-const DEFAULTS_SOURCE = 'defaults' as SourceRef
 
 export type GnssCorrectionMode = 'off' | 'replace' | 'both'
 
@@ -392,7 +389,6 @@ export class GnssOffsetCorrector {
       context: this.app.selfContext as Context,
       updates: [
         {
-          $source: DEFAULTS_SOURCE,
           values: [
             { path: GPS_FROM_BOW_PATH, value: fromBow },
             { path: GPS_FROM_CENTER_PATH, value: fromCenter }

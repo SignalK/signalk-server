@@ -1045,7 +1045,13 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
 
   const offsets = (emitted: Array<{ id: string; delta: Partial<Delta> }>) =>
     emitted
-      .flatMap((e) => e.delta.updates ?? [])
+      // handleMessage gives an update without $source the provider id.
+      .flatMap((e) =>
+        (e.delta.updates ?? []).map((u) => ({
+          ...u,
+          $source: (u as { $source?: string }).$source ?? e.id
+        }))
+      )
       .filter((u) =>
         ((u as { values?: Array<{ path: string }> }).values ?? []).some(
           (v) => v.path === 'sensors.gps.fromBow'
@@ -1078,7 +1084,7 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
       selfPaths: LENGTH
     })
     expect(offsets(emitted)).to.deep.equal([
-      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+      { $source: 'gnssOffsetCorrector', fromBow: 10, fromCenter: 0 }
     ])
   })
 
@@ -1088,7 +1094,7 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
       selfPaths: LENGTH
     })
     expect(offsets(emitted)).to.deep.equal([
-      { $source: 'defaults', fromBow: 18, fromCenter: -4 }
+      { $source: 'gnssOffsetCorrector', fromBow: 18, fromCenter: -4 }
     ])
   })
 
@@ -1099,7 +1105,7 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
       selfPaths: LENGTH
     })
     expect(offsets(emitted)).to.deep.equal([
-      { $source: 'defaults', fromBow: 18, fromCenter: -4 }
+      { $source: 'gnssOffsetCorrector', fromBow: 18, fromCenter: -4 }
     ])
   })
 
@@ -1114,7 +1120,7 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
       }
     })
     expect(offsets(emitted)).to.deep.equal([
-      { $source: 'defaults', fromBow: null, fromCenter: null }
+      { $source: 'gnssOffsetCorrector', fromBow: null, fromCenter: null }
     ])
   })
 
@@ -1132,7 +1138,7 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
       gnssCorrection: 'replace'
     })
     expect(offsets(emitted)).to.deep.equal([
-      { $source: 'defaults', fromBow: 18, fromCenter: -4 }
+      { $source: 'gnssOffsetCorrector', fromBow: 18, fromCenter: -4 }
     ])
   })
 
@@ -1172,7 +1178,7 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
       selfPaths: LENGTH
     })
     expect(offsets(emitted)).to.deep.equal([
-      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+      { $source: 'gnssOffsetCorrector', fromBow: 10, fromCenter: 0 }
     ])
     // The mock model does not apply what is published; mirror it.
     app.signalk.self.sensors = {
@@ -1182,7 +1188,7 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
     process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
     await flush()
     expect(offsets(emitted).slice(1)).to.deep.equal([
-      { $source: 'defaults', fromBow: null, fromCenter: null }
+      { $source: 'gnssOffsetCorrector', fromBow: null, fromCenter: null }
     ])
     app.signalk.self.sensors.gps = {
       fromBow: { value: null },
@@ -1193,7 +1199,7 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
     process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
     await flush()
     expect(offsets(emitted).slice(2)).to.deep.equal([
-      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+      { $source: 'gnssOffsetCorrector', fromBow: 10, fromCenter: 0 }
     ])
   })
 
@@ -1206,8 +1212,8 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
     process(positionDelta({ $source: 'n2k.0.5', latitude: 60, longitude: 24 }))
     await flush()
     expect(offsets(emitted)).to.deep.equal([
-      { $source: 'defaults', fromBow: 10, fromCenter: 0 },
-      { $source: 'defaults', fromBow: 18, fromCenter: -4 }
+      { $source: 'gnssOffsetCorrector', fromBow: 10, fromCenter: 0 },
+      { $source: 'gnssOffsetCorrector', fromBow: 18, fromCenter: -4 }
     ])
   })
 
@@ -1234,7 +1240,7 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
     }
     await flush()
     expect(offsets(emitted)).to.deep.equal([
-      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+      { $source: 'gnssOffsetCorrector', fromBow: 10, fromCenter: 0 }
     ])
   })
 
@@ -1251,8 +1257,8 @@ describe('GnssOffsetCorrector legacy GPS offsets', function () {
     bus.emit('serverevent', { type: 'GNSS_SENSORS' })
     await flush()
     expect(offsets(emitted)).to.deep.equal([
-      { $source: 'defaults', fromBow: 18, fromCenter: -4 },
-      { $source: 'defaults', fromBow: 10, fromCenter: 0 }
+      { $source: 'gnssOffsetCorrector', fromBow: 18, fromCenter: -4 },
+      { $source: 'gnssOffsetCorrector', fromBow: 10, fromCenter: 0 }
     ])
   })
 })

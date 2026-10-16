@@ -2,14 +2,21 @@
 // Filters delta updates targeting the self vessel context. Static identity
 // data (name, mmsi, design dimensions, GPS antenna offsets, callsignVhf) is
 // configured at the server level and must not be overwritten by deltas from
-// other providers; the only exception is the special `defaults` $source that
-// carries the server-level base data itself.
+// other providers. The exceptions are the special `defaults` $source that
+// carries the server-level base data itself, and the GNSS offset corrector,
+// which derives the GPS antenna offsets from the server's GNSS configuration.
 //
 // The hot path is `filterStaticSelfData` -> `filterSelfDataKP`, called for
 // every value of every self-context delta.
 //
 
 import { Context, Delta, PathValue, Update } from '@signalk/server-api'
+import { CORRECTOR_ID } from './api/gnssOffsetCorrector'
+
+const SERVER_SOURCES: ReadonlySet<string | undefined> = new Set([
+  'defaults',
+  CORRECTOR_ID
+])
 
 const ROOT_VESSEL_FILTERED_KEYS: ReadonlySet<string> = new Set(['name', 'mmsi'])
 
@@ -66,7 +73,7 @@ export function filterStaticSelfData(
   }
   const keptUpdates: Update[] = []
   for (const update of delta.updates) {
-    if (!('values' in update) || update['$source'] === 'defaults') {
+    if (!('values' in update) || SERVER_SOURCES.has(update['$source'])) {
       keptUpdates.push(update)
       continue
     }
