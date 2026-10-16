@@ -6,6 +6,7 @@
  * 2. Are discovered and loaded by the server
  * 3. Appear in the plugins API endpoint
  * 4. Can be enabled and started
+ * 5. Get their persistent VFS as WASI preopen when enabled at boot
  *
  * Note: These tests require the example plugin to be pre-built.
  * Run from repo root: npm run build:all (which includes WASM examples)
@@ -34,11 +35,43 @@ interface ServerInstance {
   stop: () => Promise<void>
   app: {
     config: {
+      configPath: string
       settings: {
         port: number
       }
     }
+    pluginsMap: Record<string, { instance: { vfsRoot: string } | null }>
   }
+}
+
+const wasmServerConfig = {
+  settings: {
+    interfaces: {
+      plugins: true,
+      wasm: true
+    }
+  }
+}
+
+const INSTANCE_POLL_ATTEMPTS = 40
+const INSTANCE_POLL_INTERVAL_MS = 50
+
+/**
+ * Plugin registration finishes after the server has started, so wait for
+ * the plugin's WASM instance to appear in pluginsMap before asserting on it.
+ */
+async function waitForPluginInstance(
+  pluginsMap: ServerInstance['app']['pluginsMap'],
+  pluginId: string
+) {
+  for (
+    let i = 0;
+    i < INSTANCE_POLL_ATTEMPTS && !pluginsMap[pluginId]?.instance;
+    i++
+  ) {
+    await new Promise((r) => setTimeout(r, INSTANCE_POLL_INTERVAL_MS))
+  }
+  return pluginsMap[pluginId]?.instance
 }
 
 // Use the same config directory as startServerP to ensure plugins are discovered
@@ -163,14 +196,7 @@ describe('WASM Plugins', function () {
     it('discovers and registers WASM plugin', async function () {
       const port = await freeport()
 
-      server = await startServerP(port, false, {
-        settings: {
-          interfaces: {
-            plugins: true,
-            wasm: true
-          }
-        }
-      })
+      server = await startServerP(port, false, wasmServerConfig)
 
       // Poll until WASM plugin appears in the plugins list
       let wasmPlugin: PluginInfo | undefined
@@ -261,6 +287,42 @@ describe('WASM Plugins', function () {
         true,
         'Plugin should be enabled'
       )
+    })
+
+    it('WASM plugin enabled at boot gets its persistent VFS as preopen', async function () {
+      const pluginId = '_signalk_example-hello-assemblyscript'
+      const configDataPath = path.join(
+        testConfigDirectory(),
+        'plugin-config-data'
+      )
+      if (server) {
+        await server.stop()
+        server = null
+      }
+      fs.mkdirSync(configDataPath, { recursive: true })
+      fs.writeFileSync(
+        path.join(configDataPath, `${pluginId}.json`),
+        JSON.stringify({ enabled: true, configuration: {} })
+      )
+      const restarted: ServerInstance = await startServerP(
+        await freeport(),
+        false,
+        wasmServerConfig
+      )
+      server = restarted
+
+      const instance = await waitForPluginInstance(
+        restarted.app.pluginsMap,
+        pluginId
+      )
+      const vfsRoot = path.join(
+        restarted.app.config.configPath,
+        'plugin-config-data',
+        pluginId,
+        'vfs'
+      )
+      expect(instance?.vfsRoot).to.equal(vfsRoot)
+      expect(fs.existsSync(vfsRoot), 'VFS root should exist').to.equal(true)
     })
   })
 

@@ -197,28 +197,38 @@ export async function registerWasmPlugin(
       rawSockets: packageJson.wasmCapabilities?.rawSockets || false
     }
 
-    // Load WASM module temporarily to extract schema and display name
+    // Derive plugin ID from npm package name (not from WASM exports)
+    // This ensures uniqueness via npm registry and prevents ID conflicts
+    const pluginId = derivePluginId(packageName)
+    const storagePaths = getPluginStoragePaths(
+      configPath,
+      pluginId,
+      packageName
+    )
+    const savedConfig = readPluginConfig(storagePaths.configFile)
+    const isDisabled = savedConfig.enabled === false
+
+    // A disabled plugin is loaded only to read its name and schema, so it
+    // gets a throwaway preopen. Any other plugin keeps this instance, and
+    // node:wasi binds the preopen at load time, so it must be the real VFS.
     const tempVfsRoot = path.join(
       configPath,
       'plugin-config-data',
-      '.temp-' + derivePluginId(packageName)
+      '.temp-' + pluginId
     )
-    if (!fs.existsSync(tempVfsRoot)) {
-      fs.mkdirSync(tempVfsRoot, { recursive: true })
+    if (!isDisabled) {
+      initializePluginVfs(storagePaths)
     }
 
     const runtime = getWasmRuntime()
     const tempInstance = await runtime.loadPlugin(
       packageName,
       wasmPath,
-      tempVfsRoot,
+      isDisabled ? tempVfsRoot : storagePaths.vfsRoot,
       capabilities,
       app
     )
 
-    // Derive plugin ID from npm package name (not from WASM exports)
-    // This ensures uniqueness via npm registry and prevents ID conflicts
-    const pluginId = derivePluginId(packageName)
     // Plugin display name from WASM exports, fallback to package name
     const pluginName = tempInstance.exports.name?.() || packageName
     const schemaJson = tempInstance.exports.schema()
@@ -229,16 +239,8 @@ export async function registerWasmPlugin(
     updateWeatherProviderInstance(pluginId, tempInstance)
     updateRadarProviderInstance(pluginId, tempInstance)
 
-    // Now check config using the REAL plugin ID
-    const storagePaths = getPluginStoragePaths(
-      configPath,
-      pluginId,
-      packageName
-    )
-    const savedConfig = readPluginConfig(storagePaths.configFile)
-
     // If plugin is disabled, create minimal plugin object and return early
-    if (savedConfig.enabled === false) {
+    if (isDisabled) {
       debug(
         `Plugin ${packageName} is disabled, schema already extracted from WASM`
       )
@@ -313,14 +315,9 @@ export async function registerWasmPlugin(
     }
 
     // Plugin is enabled - proceed with full load
-    debug(
-      `Plugin ${packageName} is enabled, initializing VFS and preparing for startup`
-    )
+    debug(`Plugin ${packageName} is enabled, preparing for startup`)
 
-    // Initialize VFS with the real plugin ID
-    initializePluginVfs(storagePaths)
-
-    // Clean up temp VFS
+    // Remove a temp VFS left over from a boot while the plugin was disabled
     if (fs.existsSync(tempVfsRoot)) {
       fs.rmSync(tempVfsRoot, { recursive: true, force: true })
     }
