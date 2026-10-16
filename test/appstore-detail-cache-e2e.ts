@@ -51,11 +51,14 @@ function stubNpmSearch(): () => void {
         })
       )
     }
-    // Everything else the detail builder reaches for — dist-tags, registry
-    // metadata, readme/changelog, icon probes — is optional enrichment.
-    // Fail it fast so the suite never depends on being online.
+    // Everything else the list and detail routes reach for — dist-tags,
+    // registry metadata, the plugin registry index, download counts,
+    // readme/changelog, icon probes — is optional enrichment. Fail it fast
+    // so the suite never depends on being online.
     if (
       url.startsWith('https://registry.npmjs.org') ||
+      url.startsWith('https://signalk.org') ||
+      url.startsWith('https://api.npmjs.org') ||
       url.startsWith('https://unpkg.com') ||
       url.startsWith('https://api.github.com') ||
       url.startsWith('https://github.com') ||
