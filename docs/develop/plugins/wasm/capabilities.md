@@ -18,6 +18,7 @@ Declare required capabilities in `package.json`:
 | `network`       | HTTP requests (via as-fetch)             | Supported (AssemblyScript only) |
 | `putHandlers`   | Register PUT handlers for vessel control | Supported                       |
 | `rawSockets`    | UDP socket access for radar, NMEA, etc.  | Supported                       |
+| `bluetooth`     | Bluetooth Low Energy via the BLE API     | Supported                       |
 | `serialPorts`   | Serial port access                       | Planned                         |
 
 ## Network API (AssemblyScript)
@@ -307,6 +308,41 @@ fn poll_connection(socket_id: i32) {
 - Raw mode returns data as it arrives (for binary protocols)
 - Use `sk_tcp_pending()` to check if data is available
 - All sockets are automatically closed when plugin stops
+
+## Bluetooth (BLE) API
+
+The `bluetooth` capability gives a plugin access to the server-managed [BLE API](../../rest-api/ble_api.md). The server owns the Bluetooth hardware (local adapters and remote gateways), so a WASM plugin can read BLE sensors such as wind meters or battery monitors without D-Bus access or threads of its own.
+
+A plugin works with BLE in two ways:
+
+- **GATT subscriptions**: the plugin hands the server a GATT subscription descriptor (the same JSON shape the BLE API uses for `subscribeGATT`) and gets back a handle. The server selects the provider, connects, subscribes to the listed characteristics and reconnects after a drop. Through the handle the plugin can write to a characteristic of the connected device and close the subscription.
+- **Advertisements**: the plugin receives every advertisement the server sees, merged across all providers.
+
+A WASM plugin cannot wait for asynchronous work, so every BLE host function returns at once. Its outcome reaches the plugin as JSON events through the optional `ble_handler` export, which receives one event string per call, just as `delta_handler` receives deltas. Events report connection and disconnection of a subscription, characteristic notifications, failures that happen after a call returned (a device that cannot be reached, a write that fails), and advertisements. Binary payloads are hex-encoded, matching the BLE API's descriptor and advertisement formats. A subscription reports `connected` before its first notification. Events raised while the plugin's start function runs are delivered as soon as it returns, and none are delivered after the plugin stops.
+
+Error codes are negative: -1 when the capability is not granted, -2 when the server has no BLE API, -3 for invalid input, -4 for an unknown handle and -5 for a write to a subscription that is not connected.
+
+The plugin acts as a BLE consumer under its plugin ID, so its GATT claims and advertisement subscription appear in the BLE Manager. All of them are released when the plugin stops.
+
+| Function                            | Signature                                                                | Purpose                                         |
+| ----------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------- |
+| `sk_ble_subscribe_gatt`             | `(desc_ptr, desc_len) -> handle`                                         | Start a GATT subscription from a descriptor     |
+| `sk_ble_gatt_write`                 | `(handle, uuid_ptr, uuid_len, data_ptr, data_len, with_response) -> i32` | Write bytes to a characteristic of a device     |
+| `sk_ble_gatt_close`                 | `(handle) -> i32`                                                        | Close a GATT subscription and release the claim |
+| `sk_ble_subscribe_advertisements`   | `() -> i32`                                                              | Start receiving advertisements                  |
+| `sk_ble_unsubscribe_advertisements` | `() -> i32`                                                              | Stop receiving advertisements                   |
+
+Every event carries a `type`. Subscription events also carry the `handle` they belong to:
+
+| `type`          | Further fields                                        |
+| --------------- | ----------------------------------------------------- |
+| `connected`     | `handle`                                              |
+| `disconnected`  | `handle`                                              |
+| `notify`        | `handle`, `uuid` (characteristic), `data` (hex)       |
+| `error`         | `handle`, `message`                                   |
+| `advertisement` | `advertisement` (a `BLEAdvertisement` of the BLE API) |
+
+AssemblyScript plugins use the wrappers and error code constants from the SDK's `ble` module.
 
 ## PUT Handlers API
 

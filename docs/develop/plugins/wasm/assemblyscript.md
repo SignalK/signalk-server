@@ -496,6 +496,10 @@ curl http://localhost:3000/signalk/v2/api/resources/weather
 curl http://localhost:3000/signalk/v2/api/resources/weather/current
 ```
 
+## Bluetooth (BLE)
+
+Plugins with the `bluetooth` capability read BLE devices through the SDK's `ble` module and receive the results in an exported `ble_handler(eventJson: string): void` function. See [Bluetooth (BLE) API](capabilities.md#bluetooth-ble-api) for how subscriptions and events work.
+
 ## Network Requests with Asyncify
 
 AssemblyScript plugins can make HTTP requests using the `as-fetch` library with Asyncify support.
