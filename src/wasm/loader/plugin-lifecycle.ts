@@ -229,7 +229,6 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
 
     // Clean up any sockets opened by this plugin
     socketManager.closeAllForPlugin(pluginId)
-    closeSseStreamsForPlugin(pluginId)
 
     setPluginStatus(plugin, 'stopped')
     plugin.statusMessage = 'Stopped'
@@ -240,6 +239,9 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
     setPluginStatus(plugin, 'error')
     plugin.errorMessage = errorMsg
     throw error
+  } finally {
+    // A trap in the plugin's stop() must not leave clients on a dead channel
+    closeSseStreamsForPlugin(pluginId)
   }
 }
 
