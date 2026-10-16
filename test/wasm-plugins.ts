@@ -488,6 +488,16 @@ export function plugin_stop(): i32 {
       expect(response.status).to.equal(401)
     })
 
+    it('readonly user is denied an endpoint declared readwrite', async function () {
+      const response = await getEndpoint('/api/about', readToken)
+      expect(response.status).to.equal(401)
+    })
+
+    it('readwrite user can access an endpoint declared readwrite', async function () {
+      const response = await getEndpoint('/api/about', writeToken)
+      expect(response.status).to.equal(200)
+    })
+
     it('readonly user is denied an endpoint without an access level', async function () {
       const response = await getEndpoint('/api/status', readToken)
       expect(response.status).to.equal(401)
