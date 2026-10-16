@@ -496,46 +496,18 @@ function createPluginExports(
       : rawExports.poll
     : undefined
 
-  // Wrap delta_handler if it exists (for plugins that subscribe to deltas)
-  let deltaHandlerFunc: ((deltaJson: string) => void) | undefined = undefined
-  if (rawExports.delta_handler) {
-    if (isAssemblyScriptPlugin && asLoaderInstance) {
-      deltaHandlerFunc = (deltaJson: string) => {
-        // Pass delta JSON string to the WASM delta_handler
-        const ptr = asLoaderInstance.exports.__newString(deltaJson)
-        asLoaderInstance.exports.delta_handler(ptr)
-      }
-    } else if (isRustLibraryPlugin) {
-      // Rust library plugin: buffer-based string passing
-      deltaHandlerFunc = (deltaJson: string) => {
-        const encoder = new TextEncoder()
-        const deltaBytes = encoder.encode(deltaJson)
-        const deltaLen = deltaBytes.length
-
-        const allocate = rawExports.allocate
-        if (typeof allocate !== 'function') {
-          debug('Rust plugin missing allocate export for delta_handler')
-          return
-        }
-
-        const deltaPtr = allocate(deltaLen)
-        const memory = rawExports.memory as WebAssembly.Memory
-        const memoryView = new Uint8Array(memory.buffer)
-        memoryView.set(deltaBytes, deltaPtr)
-
-        try {
-          rawExports.delta_handler(deltaPtr, deltaLen)
-        } finally {
-          const deallocate = rawExports.deallocate
-          if (typeof deallocate === 'function') {
-            deallocate(deltaPtr, deltaLen)
-          }
-        }
-      }
-    } else {
-      deltaHandlerFunc = rawExports.delta_handler
-    }
-  }
+  const deltaHandlerFunc = wrapStringHandlerExport(
+    rawExports,
+    'delta_handler',
+    isAssemblyScriptPlugin,
+    isRustLibraryPlugin
+  )
+  const bleHandlerFunc = wrapStringHandlerExport(
+    rawExports,
+    'ble_handler',
+    isAssemblyScriptPlugin,
+    isRustLibraryPlugin
+  )
 
   return {
     id: idFunc,
@@ -546,6 +518,75 @@ function createPluginExports(
     memory: rawExports.memory,
     ...(httpEndpointsFunc && { http_endpoints: httpEndpointsFunc }),
     ...(pollFunc && { poll: pollFunc }),
-    ...(deltaHandlerFunc && { delta_handler: deltaHandlerFunc })
+    ...(deltaHandlerFunc && { delta_handler: deltaHandlerFunc }),
+    ...(bleHandlerFunc && { ble_handler: bleHandlerFunc })
   }
+}
+
+const utf8Encoder = new TextEncoder()
+
+/**
+ * The exports a string handler wrapper uses, besides the handler itself.
+ */
+export interface StringHandlerExports {
+  [name: string]: unknown
+  memory?: WebAssembly.Memory
+  allocate?: (size: number) => number
+  deallocate?: (ptr: number, size: number) => void
+  __newString?: (value: string) => number
+}
+
+type StringHandler = (...args: number[]) => void
+
+/**
+ * Wrap a plugin export that takes a single string so the host can call it
+ * with a JS string. AssemblyScript plugins receive a managed string,
+ * Rust library plugins a UTF-8 buffer they own for the call's duration.
+ *
+ * @returns the wrapper, or undefined when the plugin lacks the export
+ */
+export function wrapStringHandlerExport(
+  rawExports: StringHandlerExports,
+  exportName: string,
+  isAssemblyScriptPlugin: boolean,
+  isRustLibraryPlugin: boolean
+): ((value: string) => void) | undefined {
+  const exported = rawExports[exportName]
+  if (typeof exported !== 'function') return undefined
+  const handler = exported as StringHandler
+
+  if (isAssemblyScriptPlugin) {
+    const newString = rawExports.__newString
+    if (typeof newString !== 'function') {
+      debug(`AssemblyScript plugin missing __newString for ${exportName}`)
+      return undefined
+    }
+    return (value: string) => {
+      handler(newString(value))
+    }
+  }
+
+  if (isRustLibraryPlugin) {
+    return (value: string) => {
+      const { allocate, deallocate, memory } = rawExports
+      if (typeof allocate !== 'function' || !memory) {
+        debug(`Rust plugin missing allocate export for ${exportName}`)
+        return
+      }
+
+      const bytes = utf8Encoder.encode(value)
+      const ptr = allocate(bytes.length)
+      new Uint8Array(memory.buffer).set(bytes, ptr)
+
+      try {
+        handler(ptr, bytes.length)
+      } finally {
+        if (typeof deallocate === 'function') {
+          deallocate(ptr, bytes.length)
+        }
+      }
+    }
+  }
+
+  return exported as (value: string) => void
 }
