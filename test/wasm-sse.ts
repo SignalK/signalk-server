@@ -142,5 +142,15 @@ describe('WASM SSE channels', () => {
       expect(b.writableEnded).to.equal(true)
       expect(sendSseEvent(pluginId, 'panel', 'e', 'd')).to.equal(0)
     })
+
+    it('destroys a stream whose output has not drained', () => {
+      const stalled = subscribe(pluginId, 'panel')
+      stalled.writableLength = 1
+
+      closeSseStreamsForPlugin(pluginId)
+
+      expect(stalled.destroyed).to.equal(true)
+      expect(stalled.writableEnded).to.equal(false)
+    })
   })
 })

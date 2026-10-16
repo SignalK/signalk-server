@@ -168,7 +168,14 @@ export function closeSseStreamsForPlugin(pluginId: string): void {
   pluginChannels.delete(pluginId)
   for (const subscribers of channels.values()) {
     for (const res of subscribers) {
-      res.end()
+      // end() waits for queued output to drain, which a stalled client
+      // never does, so 'close' would never fire and its keep-alive would
+      // keep running; destroy such a client instead
+      if (res.writableLength > 0) {
+        res.destroy()
+      } else {
+        res.end()
+      }
     }
   }
 }
