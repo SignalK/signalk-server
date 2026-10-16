@@ -35,7 +35,6 @@ Once the OS installation has been completed, you are ready to commence.
 
    ```
    sudo apt update
-   sudo apt upgrade
    ```
 
 1. Install NodeJS 24.
