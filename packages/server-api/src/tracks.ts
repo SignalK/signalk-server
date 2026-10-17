@@ -138,6 +138,22 @@ export interface TracksRequest {
 
   /** Include geometry. Defaults to true; set false to return metadata only. */
   geometry?: boolean
+
+  /**
+   * Only imported tracks (`true`) or only recorded ones (`false`); both when
+   * absent.
+   *
+   * `true` lists every track clients have stored, whichever vessel it names
+   * and whether or not it has times, so it needs no time window and no
+   * context. Without it, finding them takes a query across every vessel and
+   * all time, which reads every recording the provider holds to return a few
+   * imports, and still misses one without times.
+   *
+   * The server also filters what providers return on
+   * {@link TrackProperties.imported}, so a provider that ignores this answers
+   * correctly, if not cheaply.
+   */
+  imported?: boolean
 }
 
 /**
@@ -187,6 +203,18 @@ export interface TrackProperties {
    * vessel that exists.
    */
   isSelf?: boolean
+
+  /**
+   * When this track was stored by a client with {@link TrackApi.storeTrack},
+   * as an ISO 8601 time. Absent on a track the provider recorded.
+   *
+   * An import naming a vessel is listed beside that vessel's recording, with
+   * the same context, so this is how a client keeps the two apart: a client
+   * joining a vessel's features into one line would otherwise splice a GPX
+   * from years ago into the live trail. Set by the provider, never taken from
+   * a posted track.
+   */
+  imported?: string
 
   /**
    * Which registered provider answered for this track.

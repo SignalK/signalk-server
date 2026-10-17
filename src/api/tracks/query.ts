@@ -298,6 +298,7 @@ const KNOWN_PARAMS = new Set([
   'times',
   'properties',
   'geometry',
+  'imported',
   'provider'
 ])
 
@@ -484,6 +485,11 @@ export function parseTracksQuery(
     request.geometry = geometry
   }
 
+  const imported = readFlag(query, 'imported', errors)
+  if (imported !== undefined) {
+    request.imported = imported
+  }
+
   // Resolved to a single `from`/`to` here rather than left to each provider.
   // Three fields describing one window is how two providers come to answer the
   // same query differently: given from+duration, one reads from..to and
@@ -529,11 +535,16 @@ export function parseTracksQuery(
   // I started recording" is the point of keeping own-vessel data forever — but
   // not across every context the server has ever seen, which on a busy coast
   // is years of data for hundreds of vessels.
-  const bounded = request.from !== undefined || request.duration !== undefined
+  // Imports are only what clients chose to store, so listing all of them is
+  // bounded however long the server has been recording.
+  const bounded =
+    request.from !== undefined ||
+    request.duration !== undefined ||
+    request.imported === true
   const singleContext = request.contexts?.length === 1
   if (!bounded && !singleContext) {
     errors.push(
-      'a time window (from or duration) is required unless a single context is given'
+      'a time window (from or duration) is required unless a single context or imported=true is given'
     )
   }
 
@@ -558,6 +569,7 @@ const DERIVED_PROPERTIES = new Set([
   'id',
   'providerId',
   'isSelf',
+  'imported',
   'contextName',
   'from',
   'to',
