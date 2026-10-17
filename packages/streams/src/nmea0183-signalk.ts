@@ -38,6 +38,23 @@ function sentenceId(msg: string): string | undefined {
   return stripTagBlock(msg)?.substring(3, 6)
 }
 
+// canboatjs before canboat/canboatjs#520 reads $MXPGN in bus order unless
+// littleEndianMXPGN is set; later versions read ShipModul order unless
+// mxpgnBusOrder is set or littleEndianMXPGN is explicitly false. Passing
+// both options, consistent with each other, decodes the same either way.
+// A connection that sets neither keeps the bus order it was saved with; the
+// admin UI stores ShipModul order explicitly on new connections.
+function mxpgnByteOrderOptions(options: Nmea0183ToSignalKOptions): {
+  mxpgnBusOrder: boolean
+  littleEndianMXPGN: boolean
+} {
+  const busOrder =
+    typeof options.mxpgnBusOrder === 'boolean'
+      ? options.mxpgnBusOrder
+      : options.littleEndianMXPGN !== true
+  return { mxpgnBusOrder: busOrder, littleEndianMXPGN: !busOrder }
+}
+
 interface Nmea0183ToSignalKOptions {
   app: {
     emit(event: string, ...args: unknown[]): void
@@ -49,6 +66,8 @@ interface Nmea0183ToSignalKOptions {
   nmea0183eventSentences?: string[]
   appendChecksum?: boolean
   sentenceEvent?: string | string[]
+  mxpgnBusOrder?: boolean
+  littleEndianMXPGN?: boolean
   [key: string]: unknown
 }
 
@@ -86,7 +105,8 @@ export default class Nmea0183ToSignalK extends Transform {
       const { FromPgn } = require('@canboat/canboatjs')
       const n2kParser = new FromPgn({
         ...this.options,
-        useCamelCompat: this.options.useCamelCompat ?? true
+        useCamelCompat: this.options.useCamelCompat ?? true,
+        ...mxpgnByteOrderOptions(this.options)
       })
       n2kParser.on('warning', (pgn: { pgn: number }, warning: string) => {
         this.debug.enabled && this.debug(`[warning] ${pgn.pgn} ${warning}`)

@@ -374,4 +374,77 @@ describe('Nmea0183ToSignalK', () => {
     expect(delta.updates).to.be.an('array')
     expect(delta.updates[0]!.values).to.be.an('array')
   })
+
+  describe('$MXPGN byte order', () => {
+    // PGN 129025 at 53.0284 N, 6.5762 E, data last byte first as a ShipModul
+    // MiniPlex sends it, and the same frame in bus order
+    const SHIPMODUL_ORDER = '$MXPGN,01F801,280A,03EB71821F9B7F2D*66'
+    const BUS_ORDER = '$MXPGN,01F801,280A,2D7F9B1F8271EB03*66'
+
+    type Position = { latitude: number; longitude: number }
+
+    async function decodePosition(
+      sentence: string,
+      options: Record<string, unknown>
+    ) {
+      const stream = new Nmea0183ToSignalK({
+        app: createNmeaApp(),
+        providerId: 'test',
+        ...options
+      })
+      const outputPromise = collectStreamOutput(stream)
+      stream.write(sentence)
+      stream.end()
+      const results = (await outputPromise) as Array<{
+        updates: Array<{ values?: Array<{ path: string; value: unknown }> }>
+      }>
+      const position = results
+        .flatMap((delta) => delta.updates)
+        .flatMap((update) => update.values ?? [])
+        .find((pv) => pv.path === 'navigation.position')
+      return position?.value as Position | undefined
+    }
+
+    function expectCorrectPosition(position: Position | undefined) {
+      expect(position?.latitude).to.be.closeTo(53.0284, 0.0001)
+      expect(position?.longitude).to.be.closeTo(6.5762, 0.0001)
+    }
+
+    it('reads bus order when no byte order is set', async () => {
+      expectCorrectPosition(await decodePosition(BUS_ORDER, {}))
+    })
+
+    it('reads ShipModul order with mxpgnBusOrder false', async () => {
+      expectCorrectPosition(
+        await decodePosition(SHIPMODUL_ORDER, { mxpgnBusOrder: false })
+      )
+    })
+
+    it('reads ShipModul order with littleEndianMXPGN true', async () => {
+      expectCorrectPosition(
+        await decodePosition(SHIPMODUL_ORDER, { littleEndianMXPGN: true })
+      )
+    })
+
+    it('reads bus order with mxpgnBusOrder true', async () => {
+      expectCorrectPosition(
+        await decodePosition(BUS_ORDER, { mxpgnBusOrder: true })
+      )
+    })
+
+    it('reads bus order with littleEndianMXPGN false', async () => {
+      expectCorrectPosition(
+        await decodePosition(BUS_ORDER, { littleEndianMXPGN: false })
+      )
+    })
+
+    it('lets mxpgnBusOrder override littleEndianMXPGN', async () => {
+      expectCorrectPosition(
+        await decodePosition(SHIPMODUL_ORDER, {
+          mxpgnBusOrder: false,
+          littleEndianMXPGN: false
+        })
+      )
+    })
+  })
 })
