@@ -176,6 +176,9 @@ module.exports = (theApp: any) => {
   // so it cannot distinguish a plugin that started from one that only
   // registered. stop() needs that distinction.
   const startedPlugins = new Set<string>()
+  // A removal must wait for a stop a configuration save has started: until
+  // it settles the plugin is out of startedPlugins but still shutting down.
+  const stoppingPlugins = new Map<string, Promise<unknown>>()
   const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
 
   // Partitioned by plugin id so the dispatcher can tell a plugin that does
@@ -270,6 +273,34 @@ module.exports = (theApp: any) => {
 
       theApp.getPluginsList = async (enabled?: boolean) => {
         return await getPluginsList(enabled)
+      }
+
+      theApp.stopPlugin = async (id: string) => {
+        // A configuration save that stopped the plugin starts it again once
+        // that stop settles, and another save may begin a new stop meanwhile:
+        // wait until none is under way, then stop what they started. A failed
+        // stop is the save's to report.
+        for (;;) {
+          const inFlight = stoppingPlugins.get(id)
+          if (!inFlight) {
+            break
+          }
+          await inFlight.catch(() => undefined)
+        }
+        const plugin = theApp.plugins.find((p: PluginInfo) => p.id === id)
+        if (!plugin) {
+          return
+        }
+        if (plugin.type === 'wasm') {
+          const { getWasmPlugin, stopWasmPlugin } = require('../wasm')
+          if (getWasmPlugin(id)?.status === 'running') {
+            await stopWasmPlugin(id)
+          }
+          return
+        }
+        if (startedPlugins.has(id)) {
+          await stopPlugin(plugin)
+        }
       }
 
       theApp.use(
@@ -711,13 +742,24 @@ module.exports = (theApp: any) => {
       releaseGATTClaims()
       throw e
     }
-    result.then(() => {
-      theApp.setPluginStatus(plugin.id, 'Stopped')
-      debug('Stopped plugin ' + plugin.name)
-      if (theApp.deltaCache) {
-        theApp.deltaCache.removeSource(plugin.id)
+    stoppingPlugins.set(plugin.id, result)
+    const settled = () => {
+      if (stoppingPlugins.get(plugin.id) === result) {
+        stoppingPlugins.delete(plugin.id)
       }
-    })
+    }
+    result.then(settled, settled)
+    result.then(
+      () => {
+        theApp.setPluginStatus(plugin.id, 'Stopped')
+        debug('Stopped plugin ' + plugin.name)
+        if (theApp.deltaCache) {
+          theApp.deltaCache.removeSource(plugin.id)
+        }
+      },
+      // A failed stop() is reported by the caller awaiting result.
+      () => undefined
+    )
     result.then(releaseGATTClaims, releaseGATTClaims)
     return result
   }
