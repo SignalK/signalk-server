@@ -690,9 +690,11 @@ module.exports = (theApp: any) => {
     }
   }
 
+  // A caller that names no reason gets 'disable': the plugin releases what it
+  // holds, and only a stop that knows the plugin comes back may say otherwise.
   function stopPlugin(
     plugin: PluginInfo,
-    reason: PluginStopReason
+    reason: PluginStopReason = 'disable'
   ): Promise<any> {
     debug('Stopping plugin ' + plugin.name)
     onStopHandlers[plugin.id].forEach((f: () => void) => {

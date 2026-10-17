@@ -55,7 +55,7 @@ export type PluginConstructor = (app: ServerAPI) => Plugin
 /**
  * Why the server stops a plugin, passed to {@link Plugin.stop}:
  *
- * - `disable` — the plugin was disabled in the admin UI
+ * - `disable` — the plugin was disabled in the admin UI, or is stopped for no more specific reason
  * - `restart` — the plugin is restarted with new configuration, from the admin UI or its own `restart` callback;
  *   {@link Plugin.start} follows
  * - `shutdown` — the server is stopping
