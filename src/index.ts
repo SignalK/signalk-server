@@ -827,15 +827,18 @@ class Server {
     }
 
     try {
-      _.each(this.app.interfaces, (intf: any) => {
-        if (
+      // The plugins interface resolves once every plugin's stop() has, and a
+      // shutdown exits as soon as this method resolves: without the wait, a
+      // plugin's asynchronous cleanup is cut off by process.exit.
+      await Promise.all(
+        _.map(this.app.interfaces, (intf: any) =>
           intf !== null &&
           typeof intf === 'object' &&
           typeof intf.stop === 'function'
-        ) {
-          intf.stop()
-        }
-      })
+            ? intf.stop()
+            : undefined
+        )
+      )
 
       this.app.intervals.forEach((interval) => {
         clearInterval(interval)
