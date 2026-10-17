@@ -52,6 +52,18 @@ export type PluginConstructor = (app: ServerAPI) => Plugin
  * @category Server API
  * @see [Developing Server Plugins](../../../docs/develop/plugins/README.md)
  */
+/**
+ * Why the server stops a plugin, passed to {@link Plugin.stop}:
+ *
+ * - `disable` — the plugin was disabled in the admin UI
+ * - `restart` — the plugin is restarted with new configuration, from the admin UI or its own `restart` callback;
+ *   {@link Plugin.start} follows
+ * - `shutdown` — the server is stopping
+ *
+ * @category Lifecycle
+ */
+export type PluginStopReason = 'disable' | 'restart' | 'shutdown'
+
 export interface Plugin {
   /**
    * Used to identify the plugin in the server, for example
@@ -85,14 +97,18 @@ export interface Plugin {
   start(config: object, restart: (newConfiguration: object) => void): void
 
   /**
-   * This function is called when the plugin is disabled or after configuration changes. Use this function to "clean up"
-   * the resources consumed by the plugin i.e. unsubscribe from streams, stop timers / loops and close devices. If there
-   * are asynchronous operations in your plugin's stop implementation you should return a Promise that resolves when
-   * stopping is complete.
+   * This function is called when the plugin is disabled, after configuration changes and when the server stops. Use
+   * this function to "clean up" the resources consumed by the plugin i.e. unsubscribe from streams, stop timers / loops
+   * and close devices. If there are asynchronous operations in your plugin's stop implementation you should return a
+   * Promise that resolves when stopping is complete.
+   *
+   * `options.reason` says why the plugin is stopped, for a plugin whose cleanup depends on it: one that manages an
+   * external service may want to keep it running across a server restart but shut it down when the plugin is
+   * disabled. See {@link PluginStopReason}.
    *
    * @category Lifecycle
    */
-  stop(): void | Promise<void>
+  stop(options?: { reason: PluginStopReason }): void | Promise<void>
 
   /**
    * @category Configuration

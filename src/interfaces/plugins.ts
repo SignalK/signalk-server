@@ -34,6 +34,7 @@ import {
   SourceRef,
   PluginConstructor,
   Plugin,
+  PluginStopReason,
   Path,
   Delta,
   SubscribeCallback,
@@ -305,7 +306,7 @@ module.exports = (theApp: any) => {
           .filter((plugin: PluginInfo) => startedPlugins.has(plugin.id))
           .map((plugin: PluginInfo) =>
             Promise.resolve()
-              .then(() => stopPlugin(plugin))
+              .then(() => stopPlugin(plugin, 'shutdown'))
               .catch((err) => {
                 console.error(`Error stopping plugin ${plugin.id}:`, err)
               })
@@ -689,7 +690,10 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function stopPlugin(plugin: PluginInfo): Promise<any> {
+  function stopPlugin(
+    plugin: PluginInfo,
+    reason: PluginStopReason
+  ): Promise<any> {
     debug('Stopping plugin ' + plugin.name)
     onStopHandlers[plugin.id].forEach((f: () => void) => {
       try {
@@ -706,7 +710,7 @@ module.exports = (theApp: any) => {
       theApp.bleApi.releaseGATTClaimsForPlugin(plugin.id)
     let result: Promise<any>
     try {
-      result = Promise.resolve(plugin.stop())
+      result = Promise.resolve(plugin.stop({ reason }))
     } catch (e) {
       releaseGATTClaims()
       throw e
@@ -1290,7 +1294,7 @@ module.exports = (theApp: any) => {
         if (err) {
           console.error(err)
         } else {
-          stopPlugin(plugin).then(() => {
+          stopPlugin(plugin, 'restart').then(() => {
             doPluginStart(app, plugin, location, newConfiguration, restart)
             emitPluginsChanged()
           })
@@ -1357,7 +1361,10 @@ module.exports = (theApp: any) => {
           return
         }
         res.json('Saved configuration for plugin ' + plugin.id)
-        stopPlugin(plugin).then(() => {
+        const reason = getPluginOptions(plugin.id).enabled
+          ? 'restart'
+          : 'disable'
+        stopPlugin(plugin, reason).then(() => {
           const options = getPluginOptions(plugin.id)
           plugin.enableLogging = options.enableLogging
           plugin.enableDebug = options.enableDebug
