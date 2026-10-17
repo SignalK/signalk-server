@@ -44,6 +44,8 @@ interface ProviderOptions {
   nmea0183eventSentences?: string[]
   sentenceEvent?: string
   validateChecksum?: boolean
+  mxpgnBusOrder?: boolean
+  littleEndianMXPGN?: boolean
   appendChecksum?: boolean
   overrideTimestamp?: boolean
   removeNulls?: boolean
@@ -780,6 +782,62 @@ function ValidateChecksumInput({
           <span className="switch-label" data-on="Yes" data-off="No" />
           <span className="switch-handle" />
         </Form.Label>
+      </Col>
+    </Form.Group>
+  )
+}
+
+// Connections saved without a byte order keep the bus order older versions
+// read by default; new connections default to ShipModul order.
+export function isMxpgnBusOrder(
+  options: { mxpgnBusOrder?: unknown; littleEndianMXPGN?: unknown },
+  isNew?: boolean
+): boolean {
+  if (typeof options.mxpgnBusOrder === 'boolean') {
+    return options.mxpgnBusOrder
+  }
+  return isNew ? false : options.littleEndianMXPGN !== true
+}
+
+function MxpgnByteOrderInput({
+  value,
+  onChange
+}: {
+  value: ProviderValue
+  onChange: OnChangeHandler
+}) {
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-mxpgnByteOrder">
+          $MXPGN byte order
+        </Form.Label>
+      </Col>
+      <Col xs="12" md="3">
+        <Form.Select
+          id="provider-mxpgnByteOrder"
+          value={
+            isMxpgnBusOrder(value.options, value.isNew) ? 'bus' : 'shipmodul'
+          }
+          onChange={(event) =>
+            onChange({
+              target: {
+                name: 'options.mxpgnBusOrder',
+                value: event.target.value === 'bus'
+              }
+            })
+          }
+        >
+          <option value="shipmodul">ShipModul</option>
+          <option value="bus">Others (bytes reversed)</option>
+        </Form.Select>
+      </Col>
+      <Col xs="12" md="6">
+        <label className="text-muted small">
+          Byte order of NMEA 2000 data in $MXPGN sentences. ShipModul MiniPlex
+          sends it last byte first; some gateways that emulate $MXPGN send it in
+          bus order.
+        </label>
       </Col>
     </Form.Group>
   )
@@ -2018,6 +2076,7 @@ function NMEA0183({ value, onChange }: TypeComponentProps) {
       )}
       <SentenceEventInput value={value.options} onChange={onChange} />
       <ValidateChecksumInput value={value.options} onChange={onChange} />
+      <MxpgnByteOrderInput value={value} onChange={onChange} />
       <AppendChecksum value={value.options} onChange={onChange} />
       <RemoveNullsInput value={value.options} onChange={onChange} />
       <IgnoredSentences

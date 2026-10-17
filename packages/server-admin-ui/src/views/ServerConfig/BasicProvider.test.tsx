@@ -1,19 +1,24 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import BasicProvider from './BasicProvider'
+import BasicProvider, { isMxpgnBusOrder } from './BasicProvider'
 
 const ALL = 'All sentences'
 const NONE = 'No sentences'
 const LISTED = 'These sentences'
 const SENTENCES = 'Sentences to send'
 
-function renderNmea0183(options: Record<string, unknown>, onChange = vi.fn()) {
+function renderNmea0183(
+  options: Record<string, unknown>,
+  onChange = vi.fn(),
+  isNew?: boolean
+) {
   render(
     <BasicProvider
       value={{
         type: 'NMEA0183',
         id: 'gps',
         enabled: true,
+        isNew,
         options: { type: 'tcp', ...options }
       }}
       onChange={onChange}
@@ -108,5 +113,63 @@ describe('BasicProvider NMEA 0183 send nmea0183 event for', () => {
     const options = onChange.mock.lastCall?.[0].target.value
     expect(options).toMatchObject({ suppress0183event: false })
     expect(options).not.toHaveProperty('nmea0183eventSentences')
+  })
+})
+
+describe('isMxpgnBusOrder', () => {
+  it('uses mxpgnBusOrder when set', () => {
+    expect(isMxpgnBusOrder({ mxpgnBusOrder: true }, true)).toBe(true)
+    expect(
+      isMxpgnBusOrder({ mxpgnBusOrder: false, littleEndianMXPGN: false })
+    ).toBe(false)
+  })
+
+  it('defaults new connections to ShipModul order', () => {
+    expect(isMxpgnBusOrder({}, true)).toBe(false)
+  })
+
+  it('keeps bus order for saved connections without a byte order', () => {
+    expect(isMxpgnBusOrder({})).toBe(true)
+    expect(isMxpgnBusOrder({ littleEndianMXPGN: false })).toBe(true)
+  })
+
+  it('reads littleEndianMXPGN true as ShipModul order', () => {
+    expect(isMxpgnBusOrder({ littleEndianMXPGN: true })).toBe(false)
+  })
+})
+
+describe('BasicProvider NMEA 0183 $MXPGN byte order', () => {
+  const BYTE_ORDER = '$MXPGN byte order'
+
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(false))
+    )
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('shows ShipModul for a new connection', () => {
+    renderNmea0183({}, vi.fn(), true)
+    expect(screen.getByLabelText(BYTE_ORDER)).toHaveProperty(
+      'value',
+      'shipmodul'
+    )
+  })
+
+  it('shows Others for a saved connection without a byte order', () => {
+    renderNmea0183({})
+    expect(screen.getByLabelText(BYTE_ORDER)).toHaveProperty('value', 'bus')
+  })
+
+  it('stores the choice as options.mxpgnBusOrder', () => {
+    const onChange = renderNmea0183({}, vi.fn(), true)
+    fireEvent.change(screen.getByLabelText(BYTE_ORDER), {
+      target: { value: 'bus' }
+    })
+    expect(onChange).toHaveBeenCalledWith(
+      changedTarget('options.mxpgnBusOrder', true)
+    )
   })
 })
