@@ -11,7 +11,7 @@
 import fs from 'fs'
 import path from 'path'
 import { createDebug } from '../debug'
-import { isAbsoluteUrl, resolveScreenshotUrl } from './cdn'
+import { fetchFromCdn, isAbsoluteUrl, resolveScreenshotUrl } from './cdn'
 
 const debug = createDebug('signalk-server:appstore:icon-probe')
 
@@ -170,7 +170,7 @@ export function createIconProbeCache(cacheDir: string): IconProbeCache {
 
 async function headOk(url: string, timeoutMs: number): Promise<boolean> {
   try {
-    const res = await fetch(url, {
+    const res = await fetchFromCdn(url, {
       method: 'HEAD',
       signal: AbortSignal.timeout(timeoutMs)
     })
@@ -215,8 +215,8 @@ function altCandidatesFor(
  * declared path. Returns the first URL that responds 200, or null when
  * nothing works.
  *
- * Absolute URLs (http, https, data:) are passed through untouched and
- * are NOT probed (trusted as-declared).
+ * Absolute URLs (http, https, protocol-relative, data:) resolve to null
+ * without being probed: signalk.* asset paths are package-relative.
  */
 export async function probeIconUrl(
   pkg: string,
@@ -224,7 +224,7 @@ export async function probeIconUrl(
   declaredPath: string,
   cache: IconProbeCache
 ): Promise<string | null> {
-  if (isAbsoluteUrl(declaredPath)) return declaredPath
+  if (isAbsoluteUrl(declaredPath)) return null
 
   const cached = cache.get(pkg, version, declaredPath)
   if (cached !== undefined) return cached

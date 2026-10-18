@@ -9,7 +9,11 @@
  */
 
 const UNPKG_BASE = 'https://unpkg.com'
+const UNPKG_HOST = new URL(UNPKG_BASE).hostname
 const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm'
+
+const MAX_CDN_REDIRECTS = 3
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 
 // Collapse `.` / `..` segments and clamp the result to the package
 // root. `signalk.appIcon` / `signalk.screenshots` come from plugin
@@ -62,4 +66,47 @@ export function changelogUrlFor(pkg: string, version: string): string {
 
 export function isAbsoluteUrl(url: string): boolean {
   return /^(https?:)?\/\//i.test(url) || url.startsWith('data:')
+}
+
+export function isCdnUrl(url: string): boolean {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return false
+  }
+  return (
+    parsed.protocol === 'https:' &&
+    parsed.hostname === UNPKG_HOST &&
+    parsed.port === '' &&
+    parsed.username === '' &&
+    parsed.password === ''
+  )
+}
+
+/**
+ * fetch() restricted to the package CDN. Asset URLs derive from plugin
+ * authors' package.json, so the server must not let them steer requests
+ * at the vessel network or cloud metadata endpoints. Redirects are
+ * followed by hand so every hop is checked against the CDN host; the
+ * caller's init, including its abort signal, applies to the whole chain.
+ */
+export async function fetchFromCdn(
+  url: string,
+  init: RequestInit = {}
+): Promise<Response> {
+  let current = url
+  for (let redirects = 0; ; redirects++) {
+    if (!isCdnUrl(current)) {
+      throw new Error(`Refusing to fetch non-CDN URL ${current}`)
+    }
+    const res = await fetch(current, { ...init, redirect: 'manual' })
+    if (!REDIRECT_STATUSES.has(res.status)) return res
+    const location = res.headers.get('location')
+    await res.body?.cancel()
+    if (location === null || redirects === MAX_CDN_REDIRECTS) {
+      throw new Error(`Cannot follow redirect from ${current}`)
+    }
+    current = new URL(location, current).href
+  }
 }

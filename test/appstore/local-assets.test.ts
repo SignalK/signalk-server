@@ -214,6 +214,28 @@ describe('appstore/local-assets', () => {
       expect(result?.appIcon).to.equal('/pkg/icon.png')
     })
 
+    it('ignores an absolute appIcon but keeps absolute screenshots', () => {
+      for (const appIcon of [
+        'https://example.com/icon.png',
+        '//example.com/icon.png',
+        'data:image/svg+xml,<svg/>',
+        'DATA:image/svg+xml,<svg/>'
+      ]) {
+        const result = buildLocalAssetUrls(
+          'pkg',
+          {
+            keywords,
+            signalk: { appIcon, screenshots: ['https://example.com/s.png'] }
+          },
+          undefined
+        )
+        expect(result?.appIcon, appIcon).to.equal(undefined)
+        expect(result?.screenshots, appIcon).to.deep.equal([
+          'https://example.com/s.png'
+        ])
+      }
+    })
+
     it('builds screenshot URLs and drops unusable entries', () => {
       const result = buildLocalAssetUrls(
         'pkg',

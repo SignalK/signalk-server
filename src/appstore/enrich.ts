@@ -167,9 +167,10 @@ function resolveAppIcon(
 ): string | undefined {
   const icon = meta?.appIcon
   if (!icon || typeof icon !== 'string' || icon.trim() === '') return undefined
-  return isAbsoluteUrl(icon)
-    ? icon
-    : defaultResolve(pkg.name, pkg.version, icon, lookup)
+  // appIcon is package-relative; an absolute URL would point every
+  // App Store visitor's browser at a host the plugin author chose.
+  if (isAbsoluteUrl(icon)) return undefined
+  return defaultResolve(pkg.name, pkg.version, icon, lookup)
 }
 
 function isDeprecated(

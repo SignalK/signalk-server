@@ -1,11 +1,23 @@
 import { expect } from 'chai'
 import {
   changelogUrlFor,
+  fetchFromCdn,
   isAbsoluteUrl,
+  isCdnUrl,
   readmeUrlFor,
   resolveScreenshotUrl,
   resolveScreenshotUrlJsdelivr
 } from '../../dist/appstore/cdn'
+import { redirectTo, withFetch } from './fetch-stub'
+
+async function expectRejection(promise: Promise<unknown>): Promise<void> {
+  try {
+    await promise
+  } catch {
+    return
+  }
+  expect.fail('expected the promise to reject')
+}
 
 describe('appstore/cdn', () => {
   describe('resolveScreenshotUrl', () => {
@@ -92,6 +104,110 @@ describe('appstore/cdn', () => {
     it('rejects relative paths', () => {
       expect(isAbsoluteUrl('./x.png')).to.equal(false)
       expect(isAbsoluteUrl('docs/x.png')).to.equal(false)
+    })
+  })
+
+  describe('isCdnUrl', () => {
+    it('accepts https URLs on the package CDN', () => {
+      for (const url of [
+        'https://unpkg.com/x@1.0.0/icon.png',
+        'https://unpkg.com/@scope/x@1.0.0/public/icon.svg',
+        'https://UNPKG.com/x@1.0.0/icon.png'
+      ]) {
+        expect(isCdnUrl(url), url).to.equal(true)
+      }
+    })
+
+    it('rejects any other host, scheme, port or credentials', () => {
+      for (const url of [
+        'http://unpkg.com/x@1.0.0/icon.png',
+        'https://cdn.jsdelivr.net/npm/x@1.0.0/icon.png',
+        'https://unpkg.com.evil.example/x.png',
+        'https://unpkg.com./x.png',
+        'https://unpkg.com:8443/x.png',
+        'https://unpkg.com@127.0.0.1/x.png',
+        'https://user@unpkg.com/x.png',
+        'http://127.0.0.1:3000/x.png',
+        'http://169.254.169.254/latest/meta-data/',
+        'http://[::ffff:169.254.169.254]/latest/meta-data/',
+        '//unpkg.com/x.png',
+        'data:image/svg+xml,<svg/>',
+        'file:///etc/passwd',
+        './icon.png',
+        ''
+      ]) {
+        expect(isCdnUrl(url), url).to.equal(false)
+      }
+    })
+  })
+
+  describe('fetchFromCdn', () => {
+    const icon = 'https://unpkg.com/x@1.0.0/icon.png'
+    const moved = 'https://unpkg.com/x@1.0.0/public/icon.png'
+
+    it('refuses a non-CDN URL without requesting it', async () => {
+      await withFetch(
+        () => new Response('internal'),
+        async (calls) => {
+          await expectRejection(fetchFromCdn('http://127.0.0.1/icon.png'))
+          expect(calls).to.deep.equal([])
+        }
+      )
+    })
+
+    it('follows a redirect that stays on the CDN', async () => {
+      await withFetch(
+        (url) =>
+          url === icon
+            ? redirectTo('/x@1.0.0/public/icon.png')
+            : new Response('png'),
+        async (calls) => {
+          const res = await fetchFromCdn(icon)
+          expect(await res.text()).to.equal('png')
+          expect(calls.map((c) => c.url)).to.deep.equal([icon, moved])
+        }
+      )
+    })
+
+    it('refuses a redirect off the CDN without requesting its target', async () => {
+      await withFetch(
+        (url) =>
+          url === icon
+            ? redirectTo('http://127.0.0.1/secret.png')
+            : new Response('secret'),
+        async (calls) => {
+          await expectRejection(fetchFromCdn(icon))
+          expect(calls.map((c) => c.url)).to.deep.equal([icon])
+        }
+      )
+    })
+
+    it('gives up on a redirect loop', async () => {
+      await withFetch(
+        (url) => redirectTo(url),
+        async (calls) => {
+          await expectRejection(fetchFromCdn(icon))
+          expect(calls.length).to.be.below(10)
+        }
+      )
+    })
+
+    it("applies the caller's method and signal to every hop", async () => {
+      const { signal } = new AbortController()
+      await withFetch(
+        (url) =>
+          url === icon
+            ? redirectTo('/x@1.0.0/public/icon.png')
+            : new Response(null),
+        async (calls) => {
+          await fetchFromCdn(icon, { method: 'HEAD', signal })
+          expect(calls).to.have.length(2)
+          for (const { init } of calls) {
+            expect(init?.method).to.equal('HEAD')
+            expect(init?.signal).to.equal(signal)
+          }
+        }
+      )
     })
   })
 })
