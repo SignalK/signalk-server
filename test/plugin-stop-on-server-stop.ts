@@ -81,4 +81,41 @@ describe('Plugin shutdown', () => {
       'a plugin that never started should not be stopped'
     ).to.be.false
   })
+
+  it('stops the plugins and the server when another interface fails to stop', async () => {
+    const port = await freeport()
+    const server = new Server({ config: { settings: { port } } })
+    running = server
+    await server.start()
+
+    const plugin = server.app.plugins.find(
+      (p: TrackingPlugin) => p.id === 'stoptrackingplugin'
+    ) as TrackingPlugin | undefined
+    expect(plugin, 'test plugin should be loaded').to.not.be.undefined
+    server.app.interfaces.failingstop = {
+      stop: () => Promise.reject(new Error('interface stop failed'))
+    }
+
+    await server.stop()
+    running = undefined
+
+    expect(plugin!.stopped, 'plugin stop() should have been called').to.be.true
+    expect(server.app.started, 'the server should be stopped').to.be.false
+  })
+
+  it('stops the server when an interface never finishes stopping', async () => {
+    const port = await freeport()
+    const server = new Server({ config: { settings: { port } } })
+    running = server
+    await server.start()
+
+    server.app.interfaces.hungstop = {
+      stop: () => new Promise(() => undefined)
+    }
+
+    await server.stop()
+    running = undefined
+
+    expect(server.app.started, 'the server should be stopped').to.be.false
+  })
 })

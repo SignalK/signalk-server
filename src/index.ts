@@ -793,7 +793,6 @@ class Server {
 
   reload(mixed: any) {
     let settings
-    const self = this
 
     if (typeof mixed === 'string') {
       try {
@@ -811,11 +810,13 @@ class Server {
       this.app.config.settings = settings
     }
 
-    this.stop().catch((e) => console.error(e))
-
-    setTimeout(() => {
-      self.start().catch((e) => console.error(e))
-    }, 1000)
+    // stop() resolves only once the plugins have stopped and the HTTP server
+    // has closed; a start() before that would lose its port and its timers to
+    // the stop still running.
+    this.stop()
+      .catch((e) => console.error(e))
+      .then(() => this.start())
+      .catch((e) => console.error(e))
 
     return this
   }
@@ -827,15 +828,18 @@ class Server {
     }
 
     try {
-      _.each(this.app.interfaces, (intf: any) => {
-        if (
+      // The plugins interface resolves once every plugin's stop() has, and a
+      // shutdown exits as soon as this method resolves: without the wait, a
+      // plugin's asynchronous cleanup is cut off by process.exit.
+      await Promise.all(
+        _.map(this.app.interfaces, (intf: any, name: string) =>
           intf !== null &&
           typeof intf === 'object' &&
           typeof intf.stop === 'function'
-        ) {
-          intf.stop()
-        }
-      })
+            ? stopInterface(name, intf)
+            : undefined
+        )
+      )
 
       this.app.intervals.forEach((interval) => {
         clearInterval(interval)
@@ -911,6 +915,37 @@ function identifyPluginFromStack(
 // Below a container runtime's default stop grace period, so the process can
 // exit on its own before the runtime escalates to SIGKILL.
 const SHUTDOWN_TIMEOUT_MS = 8000
+// Time a shutdown keeps after the interfaces to clear timers, end providers
+// and close the HTTP server before SHUTDOWN_TIMEOUT_MS forces the exit.
+const TEARDOWN_RESERVE_MS = 2000
+const INTERFACE_STOP_TIMEOUT_MS = SHUTDOWN_TIMEOUT_MS - TEARDOWN_RESERVE_MS
+
+// Settles when the interface has stopped, has failed to, or has not within
+// INTERFACE_STOP_TIMEOUT_MS, so that one interface can neither end the wait
+// for the others nor keep Server.stop() from finishing.
+function stopInterface(
+  name: string,
+  intf: { stop: () => unknown }
+): Promise<void> {
+  let timer: NodeJS.Timeout | undefined
+  const timedOut = new Promise<void>((resolve) => {
+    timer = setTimeout(() => {
+      console.error(
+        `Interface ${name} did not stop within ${INTERFACE_STOP_TIMEOUT_MS}ms`
+      )
+      resolve()
+    }, INTERFACE_STOP_TIMEOUT_MS)
+  })
+  const stopped = Promise.resolve()
+    .then(() => intf.stop())
+    .then(
+      () => undefined,
+      (err: unknown) => {
+        console.error(`Error stopping interface ${name}:`, err)
+      }
+    )
+  return Promise.race([stopped, timedOut]).finally(() => clearTimeout(timer))
+}
 
 let currentShutdownHandlers:
   { sigterm: () => void; sigint: () => void } | undefined
