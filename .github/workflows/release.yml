@@ -181,6 +181,24 @@ jobs:
       variant_matrix: ${{ steps.matrix.outputs.variant_matrix }}
       any_enabled: ${{ steps.matrix.outputs.any_enabled }}
     steps:
+      # npm processes a publish asynchronously, so the version the Docker
+      # builds install can be missing from the registry for a few minutes.
+      - name: Wait for signalk-server on npm
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version="${GITHUB_REF#refs/*/v}"
+          deadline=$((SECONDS + NPM_WAIT_TIMEOUT_SECONDS))
+          until npm view "signalk-server@$version" version 2>/dev/null | grep -qxF "$version"; do
+            if (( SECONDS >= deadline )); then
+              echo "signalk-server@$version not available on npm after ${NPM_WAIT_TIMEOUT_SECONDS}s" >&2
+              exit 1
+            fi
+            echo "Waiting for signalk-server@$version on npm..."
+            sleep "$NPM_WAIT_INTERVAL_SECONDS"
+          done
+        env:
+          NPM_WAIT_TIMEOUT_SECONDS: 900
+          NPM_WAIT_INTERVAL_SECONDS: 15
       - name: Checkout
         uses: actions/checkout@v7
       - name: Compute matrices
