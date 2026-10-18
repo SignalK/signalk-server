@@ -80,3 +80,4 @@ export type SignalKApiId =
   | 'notifications'
   | 'sensors'
   | 'ble'
+  | 'communications'
