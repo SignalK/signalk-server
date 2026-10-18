@@ -2215,6 +2215,7 @@ module.exports = function (
     'settings.json',
     'defaults.json',
     'security.json',
+    'security-secret.key',
     'package.json',
     'baseDeltas.json'
   ]

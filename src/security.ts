@@ -36,6 +36,8 @@ import { createDebug } from './debug'
 import { LoginRateLimiter } from './login-rate-limiter'
 import dummysecurity from './dummysecurity'
 import { ICallback } from './types'
+const SECRET_KEY_FILENAME = 'security-secret.key'
+
 const debug = createDebug('signalk-server:security')
 
 export interface WithSecurityStrategy {
@@ -332,6 +334,9 @@ export function startSecurity(
       securityStrategyModuleName = './tokensecurity'
     }
 
+    if (!securityConfig) {
+      migrateSecretKey(app)
+    }
     const config = securityConfig || getSecurityConfig(app, true)
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     app.securityStrategy = require(securityStrategyModuleName)(app, config)
@@ -354,7 +359,14 @@ export function getSecurityConfig(
   } else {
     try {
       const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
-      return JSON.parse(optionsAsString)
+      const config = JSON.parse(optionsAsString)
+      if (!config.secretKey) {
+        const secretKey = readSecretKey(app)
+        if (secretKey) {
+          config.secretKey = secretKey
+        }
+      }
+      return config
     } catch (e: any) {
       // Suppress the ENOENT noise when security is off. The strategy may be
       // undefined here because setupCors() reads the security config before
@@ -377,6 +389,48 @@ export function pathForSecurityConfig(app: WithConfig) {
   return path.join(app.config.configPath, 'security.json')
 }
 
+// The signing secret lives outside security.json so that anything able to
+// read JSON config files cannot obtain it and forge tokens.
+export function pathForSecretKey(app: WithConfig) {
+  return path.join(app.config.configPath, SECRET_KEY_FILENAME)
+}
+
+function readSecretKey(app: WithConfig): string | undefined {
+  try {
+    return readFileSync(pathForSecretKey(app), 'utf8').trim() || undefined
+  } catch (e: any) {
+    if (e.code !== 'ENOENT') {
+      throw e
+    }
+    return undefined
+  }
+}
+
+function writeSecretKey(app: WithConfig, secretKey: string) {
+  const keyPath = pathForSecretKey(app)
+  writeFileSync(keyPath, secretKey, { mode: 0o600 })
+  chmodSync(keyPath, '600')
+}
+
+// move a secretKey found in security.json (older versions, a restored
+// backup or a hand edit) into the key file
+function migrateSecretKey(app: WithConfig) {
+  let config
+  try {
+    config = JSON.parse(readFileSync(pathForSecurityConfig(app), 'utf8'))
+  } catch (_e) {
+    return
+  }
+  if (!config.secretKey) {
+    return
+  }
+  writeSecretKey(app, config.secretKey)
+  delete config.secretKey
+  const configPath = pathForSecurityConfig(app)
+  writeFileSync(configPath, JSON.stringify(config, null, 2), { mode: 0o600 })
+  chmodSync(configPath, '600')
+}
+
 export function saveSecurityConfig(
   app: WithSecurityStrategy & WithConfig,
   data: any,
@@ -388,8 +442,12 @@ export function saveSecurityConfig(
       callback(null)
     }
   } else {
+    const { secretKey, ...persisted } = data
+    if (secretKey && secretKey !== readSecretKey(app)) {
+      writeSecretKey(app, secretKey)
+    }
     const configPath = pathForSecurityConfig(app)
-    atomicWriteFile(configPath, JSON.stringify(data, null, 2))
+    atomicWriteFile(configPath, JSON.stringify(persisted, null, 2))
       .then(() => {
         chmodSync(configPath, '600')
         if (callback) {
