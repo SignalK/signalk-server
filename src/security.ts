@@ -26,7 +26,7 @@ import {
   statSync,
   writeFileSync
 } from 'fs'
-import { atomicWriteFile } from './atomicWrite'
+import { atomicWriteFile, atomicWriteOwnerOnlyFileSync } from './atomicWrite'
 import _ from 'lodash'
 import path from 'path'
 import { generate } from 'selfsigned'
@@ -36,7 +36,7 @@ import { createDebug } from './debug'
 import { LoginRateLimiter } from './login-rate-limiter'
 import dummysecurity from './dummysecurity'
 import { ICallback } from './types'
-const SECRET_KEY_FILENAME = 'security-secret.key'
+export const SECRET_KEY_FILENAME = 'security-secret.key'
 
 const debug = createDebug('signalk-server:security')
 
@@ -357,16 +357,10 @@ export function getSecurityConfig(
   if (!forceRead && app.securityStrategy?.configFromArguments) {
     return app.securityStrategy.securityConfig
   } else {
+    let config
     try {
       const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
-      const config = JSON.parse(optionsAsString)
-      if (!config.secretKey) {
-        const secretKey = readSecretKey(app)
-        if (secretKey) {
-          config.secretKey = secretKey
-        }
-      }
-      return config
+      config = JSON.parse(optionsAsString)
     } catch (e: any) {
       // Suppress the ENOENT noise when security is off. The strategy may be
       // undefined here because setupCors() reads the security config before
@@ -382,6 +376,15 @@ export function getSecurityConfig(
       }
       return {}
     }
+    // an unreadable key file must fail loudly: falling back to an empty
+    // config would drop all users and ACLs and sign with a random key
+    if (!config.secretKey) {
+      const secretKey = readSecretKey(app)
+      if (secretKey) {
+        config.secretKey = secretKey
+      }
+    }
+    return config
   }
 }
 
@@ -407,13 +410,11 @@ function readSecretKey(app: WithConfig): string | undefined {
 }
 
 function writeSecretKey(app: WithConfig, secretKey: string) {
-  const keyPath = pathForSecretKey(app)
-  writeFileSync(keyPath, secretKey, { mode: 0o600 })
-  chmodSync(keyPath, '600')
+  atomicWriteOwnerOnlyFileSync(pathForSecretKey(app), secretKey)
 }
 
-// move a secretKey found in security.json (older versions, a restored
-// backup or a hand edit) into the key file
+// A secretKey in security.json (older versions, a restored backup or a hand
+// edit) is authoritative: it replaces any existing key file.
 function migrateSecretKey(app: WithConfig) {
   let config
   try {
@@ -426,9 +427,10 @@ function migrateSecretKey(app: WithConfig) {
   }
   writeSecretKey(app, config.secretKey)
   delete config.secretKey
-  const configPath = pathForSecurityConfig(app)
-  writeFileSync(configPath, JSON.stringify(config, null, 2), { mode: 0o600 })
-  chmodSync(configPath, '600')
+  atomicWriteOwnerOnlyFileSync(
+    pathForSecurityConfig(app),
+    JSON.stringify(config, null, 2)
+  )
 }
 
 export function saveSecurityConfig(
@@ -443,8 +445,15 @@ export function saveSecurityConfig(
     }
   } else {
     const { secretKey, ...persisted } = data
-    if (secretKey && secretKey !== readSecretKey(app)) {
-      writeSecretKey(app, secretKey)
+    try {
+      if (secretKey && secretKey !== readSecretKey(app)) {
+        writeSecretKey(app, secretKey)
+      }
+    } catch (err) {
+      if (callback) {
+        callback(err)
+      }
+      return
     }
     const configPath = pathForSecurityConfig(app)
     atomicWriteFile(configPath, JSON.stringify(persisted, null, 2))

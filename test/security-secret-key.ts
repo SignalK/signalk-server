@@ -1,6 +1,9 @@
 import { expect } from 'chai'
 import {
+  chmodSync,
+  mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -19,6 +22,7 @@ const {
 const SECRET = 'a'.repeat(512)
 const OWNER_ONLY = 0o600
 const PERMISSION_BITS = 0o777
+const WORLD_READABLE = 0o644
 
 describe('security secret key storage', () => {
   let configPath: string
@@ -48,6 +52,51 @@ describe('security secret key storage', () => {
     expect(readFileSync(keyFile(), 'utf8')).to.equal(SECRET)
     expect(statSync(keyFile()).mode & PERMISSION_BITS).to.equal(OWNER_ONLY)
     expect(getSecurityConfig(app).secretKey).to.equal(SECRET)
+  })
+
+  it('replaces an existing world-readable key file with an owner-only one', async () => {
+    writeFileSync(keyFile(), 'old')
+    chmodSync(keyFile(), WORLD_READABLE)
+    const app = { config: { configPath }, securityStrategy: {} }
+
+    await new Promise((resolve, reject) =>
+      saveSecurityConfig(
+        app,
+        { secretKey: SECRET, users: [] },
+        (err: Error | null) => (err ? reject(err) : resolve(undefined))
+      )
+    )
+
+    expect(readFileSync(keyFile(), 'utf8')).to.equal(SECRET)
+    expect(statSync(keyFile()).mode & PERMISSION_BITS).to.equal(OWNER_ONLY)
+    expect(readdirSync(configPath).filter((f) => f.endsWith('.tmp'))).to.be
+      .empty
+  })
+
+  it('reports a key file error to the save callback without saving', async () => {
+    mkdirSync(keyFile())
+    const app = { config: { configPath }, securityStrategy: {} }
+
+    const err = await new Promise((resolve) =>
+      saveSecurityConfig(app, { secretKey: SECRET, users: [] }, resolve)
+    )
+
+    expect(err).to.be.instanceOf(Error)
+    expect(readdirSync(configPath)).to.not.include('security.json')
+  })
+
+  it('throws instead of returning an empty config when the key file is unreadable', () => {
+    writeFileSync(
+      securityJson(),
+      JSON.stringify({ users: [{ username: 'a' }] })
+    )
+    mkdirSync(keyFile())
+    const app = {
+      config: { configPath },
+      securityStrategy: { isDummy: () => false }
+    }
+
+    expect(() => getSecurityConfig(app)).to.throw()
   })
 
   it('moves a secret found in security.json into the key file at startup', () => {

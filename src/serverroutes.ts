@@ -61,6 +61,7 @@ import { queryRequest } from './requestResponse'
 import {
   getRateLimitValidationOptions,
   pathForSecurityConfig,
+  SECRET_KEY_FILENAME,
   SecurityConfig,
   SecurityConfigGetter,
   SecurityConfigSaver,
@@ -2215,7 +2216,7 @@ module.exports = function (
     'settings.json',
     'defaults.json',
     'security.json',
-    'security-secret.key',
+    SECRET_KEY_FILENAME,
     'package.json',
     'baseDeltas.json'
   ]
@@ -2302,6 +2303,8 @@ module.exports = function (
               if (err) {
                 sendRestoreStatus('error', err.message, null)
                 hasError = true
+              } else if (name === SECRET_KEY_FILENAME) {
+                fs.chmodSync(path.join(app.config.configPath, name), '600')
               }
             }
           )
