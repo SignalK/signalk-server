@@ -5,7 +5,7 @@ import {
   SIGNALKRESOURCETYPES
 } from '@signalk/server-api'
 
-import { FileStore, getUuid } from './filestorage'
+import { FileStore, getUuid, isSafeCollectionName } from './filestorage'
 import { StoreRequestParams } from './types'
 import { IRouter, Request, Response } from 'express'
 import * as openapi from './openApi.json'
@@ -238,9 +238,13 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       }
     })
 
-    options.custom = options.custom.filter(
-      (i) => !(i.name in defaultConfig.standard)
-    )
+    options.custom = options.custom.filter((i) => {
+      if (!isSafeCollectionName(i.name)) {
+        server.error(`Ignoring invalid custom collection name: ${i.name}`)
+        return false
+      }
+      return !(i.name in defaultConfig.standard)
+    })
 
     server.savePluginOptions(options, () => {
       server.debug(`Configuration cleaned and saved...`)
@@ -289,7 +293,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       '/_config/:rescollection',
       async (req: Request, res: Response) => {
         server.debug('Add collection request...', req.params)
-        if (!req.params.rescollection) {
+        if (!isSafeCollectionName(req.params.rescollection)) {
           res.status(ApiResponses.invalid.statusCode).json(ApiResponses.invalid)
           return
         }

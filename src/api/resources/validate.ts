@@ -7,6 +7,8 @@ const debug = createDebug('signalk-server:api:resources:validate')
 
 class ValidationError extends Error {}
 
+const UNSAFE_ID_CHARS = /[/\\\0]/
+
 const API_SCHEMA = buildSchemaSync(resourcesApiDoc)
 
 export const validate = {
@@ -69,6 +71,11 @@ export const validate = {
     )
     return uuid.test(id)
   },
+
+  // returns true if id is usable as a single path segment by any provider,
+  // whatever the resource type
+  resourceId: (id: string): boolean =>
+    id.length > 0 && id !== '.' && id !== '..' && !UNSAFE_ID_CHARS.test(id),
 
   // returns true if id is a valid Signal K Chart resource id
   chartId: (id: string): boolean => {

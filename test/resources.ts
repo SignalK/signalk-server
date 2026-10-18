@@ -247,4 +247,105 @@ describe('Resources Api', () => {
 
     stop()
   })
+
+  it('rejects resource ids that escape the resource directory', async function () {
+    const { get, del, stop } = await startServer()
+
+    fs.mkdirSync(waypointsDir(), { recursive: true })
+    const outsideFile = path.join(waypointsDir(), '..', 'outside.json')
+    fs.writeFileSync(outsideFile, JSON.stringify({ secret: 'value' }))
+    const traversalId = encodeURIComponent('../outside.json')
+
+    for (const url of [
+      `/resources/waypoints/${traversalId}`,
+      `/resources/waypoints/${traversalId}?provider=resources-provider`,
+      `/resources/waypoints/${traversalId}/secret`
+    ]) {
+      const response = await get(url)
+      response.status.should.equal(400)
+      ;(await response.text()).should.not.contain('value')
+    }
+
+    ;(await del(`/resources/waypoints/${traversalId}`)).status.should.equal(400)
+    fs.existsSync(outsideFile).should.equal(true)
+
+    stop()
+  })
+
+  // Registers a provider that records every id it receives, so a test can
+  // assert that an unsafe id never reaches provider code.
+  const registerRecordingProvider = (
+    server: Awaited<ReturnType<typeof startServer>>['server'],
+    type: string
+  ): string[] => {
+    const receivedIds: string[] = []
+    const record = (id: string) => {
+      receivedIds.push(id)
+      return Promise.resolve({})
+    }
+    server.app.resourcesApi.register('recording-provider', {
+      type,
+      methods: {
+        listResources: () => Promise.resolve({}),
+        getResource: record,
+        setResource: record,
+        deleteResource: record
+      }
+    })
+    return receivedIds
+  }
+
+  it('rejects unsafe chart identifiers on POST', async function () {
+    const { server, post, stop } = await startServer()
+    const receivedIds = registerRecordingProvider(server, 'charts')
+
+    try {
+      const response = await post(
+        '/resources/charts?provider=recording-provider',
+        {
+          identifier: '../../../../outside.json',
+          name: 'canary',
+          type: 'tilelayer',
+          url: 'http://localhost/{z}/{x}/{y}.png'
+        }
+      )
+      response.status.should.equal(400)
+      receivedIds.should.deep.equal([])
+    } finally {
+      stop()
+    }
+  })
+
+  it('rejects custom collection names that escape the storage root', async function () {
+    const { host, stop } = await startServer()
+
+    const outsideDir = path.join(serverTestConfigDirectory(), 'outside')
+    fs.rmSync(outsideDir, { recursive: true, force: true })
+    const collection = encodeURIComponent('../../../outside')
+
+    try {
+      const response = await fetch(
+        `${host}/plugins/resources-provider/_config/${collection}`,
+        { method: 'POST' }
+      )
+      response.status.should.equal(400)
+      fs.existsSync(outsideDir).should.equal(false)
+    } finally {
+      fs.rmSync(outsideDir, { recursive: true, force: true })
+      stop()
+    }
+  })
+
+  it('rejects resource provider types that are not a single path segment', async function () {
+    const { server, stop } = await startServer()
+
+    try {
+      ;(() =>
+        registerRecordingProvider(server, '../traversal-type')).should.throw(
+        'Invalid ResourceProvider.type value!'
+      )
+    } finally {
+      stop()
+    }
+  })
 })

@@ -17,6 +17,15 @@ import { Resource } from '@signalk/server-api'
 export const getUuid = (skIdentifier: string) =>
   skIdentifier.split(':').slice(-1)[0]
 
+// A collection name becomes a directory under the storage root, so it must
+// be a single path segment.
+export const isSafeCollectionName = (name: unknown): name is string =>
+  typeof name === 'string' &&
+  name.length > 0 &&
+  name !== '.' &&
+  name !== '..' &&
+  !/[/\\\0]/.test(name)
+
 // File Resource Store Class
 export class FileStore implements IResourceStore {
   savePath: string
@@ -111,6 +120,17 @@ export class FileStore implements IResourceStore {
     return result
   }
 
+  // resolve the file for a resource id, refusing ids that would escape the
+  // resource type's directory
+  private resourceFile(type: string, id: string): string {
+    const dir = path.resolve(this.resources[type].path)
+    const file = path.resolve(dir, id)
+    if (path.dirname(file) !== dir) {
+      throw new Error(`Invalid resource id ${type} ${id}`)
+    }
+    return file
+  }
+
   // return resource or property value of supplied resource id
   async getResource(
     type: string,
@@ -118,10 +138,9 @@ export class FileStore implements IResourceStore {
     property?: string
   ): Promise<Resource<object>> {
     await this.waitForInit()
+    const file = this.resourceFile(type, itemUuid)
     try {
-      let result = JSON.parse(
-        await readFile(path.join(this.resources[type].path, itemUuid), 'utf8')
-      )
+      let result = JSON.parse(await readFile(file, 'utf8'))
       if (property) {
         const value = property.split('.').reduce((acc, val) => {
           return acc[val]
@@ -132,7 +151,7 @@ export class FileStore implements IResourceStore {
           throw new Error(`${type}/${itemUuid}.${property} not found!`)
         }
       }
-      const stats = await stat(path.join(this.resources[type].path, itemUuid))
+      const stats = await stat(file)
       return {
         ...result,
         timestamp: stats.mtime,
@@ -222,7 +241,7 @@ export class FileStore implements IResourceStore {
   async setResource(r: StoreRequestParams): Promise<void> {
     await this.waitForInit()
     const fname = getUuid(r.id)
-    const p = path.join(this.resources[r.type].path, fname)
+    const p = this.resourceFile(r.type, fname)
 
     if (r.value === null) {
       // delete file
