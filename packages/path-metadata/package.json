@@ -10,10 +10,10 @@
   "scripts": {
     "build": "tsc -b",
     "watch": "tsc --watch",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "pnpm build",
     "prettier": "prettier --write .",
     "lint": "eslint --fix",
-    "format": "npm run prettier && npm run lint",
+    "format": "pnpm prettier && pnpm lint",
     "test": "mocha 'src/**/*.test.ts'"
   },
   "repository": {

@@ -91,7 +91,7 @@ These are _AppStore-only_ semantics — they're not npm dependencies, so npm won
 
 Entries must be published npm package names exactly as they appear in the AppStore. Plugins that aren't available in the AppStore will still render as a link on the detail page but marked "Not installed".
 
-**Don't use `peerDependencies` for companion plugins.** Use `signalk.requires` / `signalk.recommends` to express companion-plugin relationships. The AppStore's `requires` mechanism gives the user a clean **Install required plugins** flow without involving npm's resolver, which interacts badly with optional peers under Signal K's plugin tree.
+**Don't use `peerDependencies` for companion plugins.** Use `signalk.requires` / `signalk.recommends` to express companion-plugin relationships. The AppStore's `requires` mechanism gives the user a clean **Install required plugins** flow without involving the package manager's dependency resolver, which interacts badly with optional peers under Signal K's plugin tree.
 
 ## Deprecation
 

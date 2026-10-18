@@ -42,6 +42,7 @@ export default function Footer() {
         <span>
           &nbsp; node {nodeInfo.nodeVersion.replace(/^v/, '')}
           {nodeInfo.npmVersion && <> · npm {nodeInfo.npmVersion}</>}
+          {nodeInfo.pnpmVersion && <> · pnpm {nodeInfo.pnpmVersion}</>}
         </span>
       )}
       {showWarning && (

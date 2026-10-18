@@ -44,20 +44,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
       - name: Node setup
         uses: actions/setup-node@v7
         with:
           node-version: '24.x'
       - name: Build npm files locally and upload artifacts
         run: |
-          npm cache clean -f
-          npm install npm@latest -g
-          npm install --package-lock-only
-          npm ci && npm cache clean --force
-          npm run build:all
-          npm pack --workspaces
+          pnpm install --frozen-lockfile
+          pnpm build:all
+          pnpm -r pack --pack-destination "$PWD"
           rm signalk-typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
-          npm pack
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:

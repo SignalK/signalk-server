@@ -15,17 +15,22 @@
  * limitations under the License.
 */
 
-import { spawn } from 'child_process'
+import { ChildProcess, execFile, spawn } from 'child_process'
+import crypto from 'crypto'
 import fs from 'fs'
 import _ from 'lodash'
+import os from 'os'
 import path from 'path'
+import lockfile from 'proper-lockfile'
 import semver, { SemVer } from 'semver'
 import { atomicWriteFileSync } from './atomicWrite'
+import { findBundledPackages, findPackageLocation } from './bundled-packages'
 import { Config } from './config/config'
 import { createDebug } from './debug'
 import { pluginConfigPath, pluginDataDir } from './plugin-paths'
 const debug = createDebug('signalk:modules')
 const npmDebug = createDebug('signalk:modules:npm')
+const pnpmDebug = createDebug('signalk:modules:pnpm')
 
 interface ModuleData {
   module: string
@@ -141,6 +146,26 @@ function getModulePaths(config: Config) {
   )
 }
 
+// Bundled packages outside appPath/node_modules, where hoisting or a pnpm
+// store places them, are not found by scanning the module paths.
+function findBundledModules(config: Config, keyword: string): ModuleData[] {
+  const result: ModuleData[] = []
+  for (const { name, location } of findBundledPackages(config.appPath)) {
+    let metadata
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      metadata = require(path.join(location, name, 'package.json'))
+    } catch (err) {
+      debug(err)
+      continue
+    }
+    if (metadata.keywords?.includes(keyword)) {
+      result.push({ module: metadata.name, metadata, location })
+    }
+  }
+  return result
+}
+
 const getModuleSortName = (x: ModuleData) =>
   (x.module || '').replace('@signalk', ' ')
 
@@ -152,11 +177,12 @@ const priorityPrefix = (a: ModuleData, b: ModuleData) =>
 export function modulesWithKeyword(config: Config, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
-    _.flatten(
-      getModulePaths(config).map((pathOption) =>
+    _.flatten([
+      ...getModulePaths(config).map((pathOption) =>
         findModulesInDir(pathOption, keyword)
-      )
-    ),
+      ),
+      findBundledModules(config, keyword)
+    ]),
     (moduleData) => moduleData.module
   ).sort(priorityPrefix)
 }
@@ -168,10 +194,10 @@ function installModule(
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
-  runNpm(config, name, version, 'install', onData, onErr, onClose)
+  runPackageManager(config, name, version, 'install', onData, onErr, onClose)
 }
 
-function removeModule(
+export function removeModule(
   config: Config,
   name: string,
   version: any,
@@ -181,23 +207,48 @@ function removeModule(
   pluginId?: string,
   deleteData: boolean = false
 ) {
-  runNpm(config, name, null, 'remove', onData, onErr, (code: number) => {
-    cleanupAfterRemove(config.configPath, name, pluginId, deleteData)
+  // require.cache is keyed by real paths, and pnpm links packages into
+  // node_modules from its store, so resolve the link while it still exists.
+  const moduleDir = path.join(config.configPath, 'node_modules', name)
+  const loadedDir = fs.existsSync(moduleDir)
+    ? fs.realpathSync(moduleDir)
+    : moduleDir
+  const finish = (code: number) => {
+    cleanupAfterRemove(config.configPath, name, loadedDir, pluginId, deleteData)
     onClose(code)
-  })
+  }
+  // pnpm refuses to remove a package that package.json does not declare,
+  // such as one copied into node_modules by hand
+  if (!isDeclaredDependency(config.configPath, name)) {
+    finish(0)
+    return
+  }
+  runPackageManager(config, name, null, 'remove', onData, onErr, finish)
+}
+
+function isDeclaredDependency(configPath: string, name: string): boolean {
+  const packageJson = readJson(path.join(configPath, 'package.json'))
+  return Boolean(packageJson?.dependencies?.[name])
+}
+
+function readJson(file: string): any {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'))
+  } catch {
+    return undefined
+  }
 }
 
 function cleanupAfterRemove(
   configPath: string,
   packageName: string,
+  loadedDir: string,
   pluginId?: string,
   deleteData: boolean = false
 ) {
   const moduleDir = path.join(configPath, 'node_modules', packageName)
   if (fs.existsSync(moduleDir)) {
-    console.warn(
-      `${packageName}: directory still exists after npm remove, cleaning up`
-    )
+    console.warn(`${packageName}: removing directory left in node_modules`)
     try {
       fs.rmSync(moduleDir, { recursive: true, force: true })
     } catch (e: any) {
@@ -205,7 +256,7 @@ function cleanupAfterRemove(
     }
   }
 
-  const resolvedDir = path.resolve(moduleDir)
+  const resolvedDir = path.resolve(loadedDir)
   for (const key of Object.keys(require.cache)) {
     if (key.startsWith(resolvedDir)) {
       delete require.cache[key]
@@ -312,20 +363,75 @@ export function restoreModules(
   onErr: (err: Error) => void,
   onClose: (code: number) => any
 ) {
-  runNpm(config, null, null, 'remove', onData, onErr, onClose)
+  runConfigDirPnpm(config.configPath, 'install', '', onData, onErr, onClose)
 }
 
 // An npm package name: an optional scope and URL-safe lowercase characters.
-// Anything else (a path, URL or git spec) would make npm install from
-// outside the registry.
+// Anything else (a path, URL or git spec) would make the package manager
+// install from outside the registry.
 const PACKAGE_NAME_PATTERN =
   /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
 
-export function runNpm(
+type ModuleCommand = 'install' | 'update' | 'remove'
+
+// pnpm writes this into a node_modules directory once it has linked every
+// package there
+const PNPM_MODULES_MARKER = '.modules.yaml'
+const PNPM_MISSING_MESSAGE =
+  'The pnpm that ships with the server is missing, so plugins and webapps cannot be installed. Reinstall signalk-server to restore it.'
+export const PREVIOUS_MODULES_BACKUP = 'node_modules.previous'
+export const DISCARDED_MODULES = 'node_modules.discarded'
+// The pnpm store and cache of the config directory. Kept inside it, the store
+// is on the file system of node_modules however the directory is mounted, so
+// packages are hard linked rather than copied, and only the server's installs
+// use it, so pruning it affects nothing else. Settings backups leave it out,
+// as pnpm refills it from the registry.
+export const PNPM_STORE = '.pnpm-store'
+
+// How the App Store runs pnpm, which plugin CI repeats to install a plugin the
+// same way:
+// - dependencies' build scripts are not run
+// - a version installs as soon as it is published
+// - a plugin's dependencies may themselves depend on git or URL packages, as
+//   they may with npm
+// - a node_modules left by another pnpm is rebuilt without a prompt, and a
+//   repeated install re-links packages that have gone missing
+// - a version that an update replaces leaves node_modules at once rather than
+//   a week later, so that pruning the store frees it
+// - packages are linked from the config directory's own node_modules even
+//   when the user's pnpm config turns on its global virtual store
+// - pnpm does not announce its own updates in the install log
+// The pnpm-lock.yaml kept in the config directory lets a plugin be removed,
+// and the installed set be restored, without the registry. The settings use
+// the --config form because not every pnpm command accepts them as options,
+// and go before the command so that they never reach a script it runs.
+export const PNPM_APP_STORE_SETTINGS = [
+  '--config.ignore-scripts=true',
+  '--config.minimum-release-age=0',
+  '--config.block-exotic-subdeps=false',
+  '--config.confirm-modules-purge=false',
+  '--config.optimistic-repeat-install=false',
+  '--config.modules-cache-max-age=0',
+  '--config.enable-global-virtual-store=false',
+  '--config.update-notifier=false'
+]
+
+function pnpmSettings(
+  configPath: string,
+  cacheDir = path.join(configPath, PNPM_STORE, 'cache')
+): string[] {
+  return [
+    ...PNPM_APP_STORE_SETTINGS,
+    `--config.store-dir=${path.join(configPath, PNPM_STORE)}`,
+    `--config.cache-dir=${cacheDir}`
+  ]
+}
+
+export function runPackageManager(
   config: Config,
   name: any,
   version: string | null,
-  command: string,
+  command: ModuleCommand,
   onData: (output: any) => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
@@ -340,32 +446,41 @@ export function runNpm(
     onClose(-1)
     return
   }
-  let npm
 
-  const opts: { cwd?: string; shell?: boolean } = {}
-  let packageString
-
-  if (process.platform === 'win32') {
-    opts['shell'] = true
-  }
-
-  if (name) {
-    packageString = version ? `${name}@${version}` : name
-  } else {
-    packageString = ''
-  }
-
+  const packageString = name ? (version ? `${name}@${version}` : name) : ''
   debug(`${command}: ${packageString}`)
 
+  if (isTheServerModule(name, config)) {
+    runServerNpm(command, packageString, onData, onErr, onClose)
+  } else {
+    runConfigDirPnpm(
+      config.configPath,
+      command,
+      packageString,
+      onData,
+      onErr,
+      onClose
+    )
+  }
+}
+
+// The server is installed globally with npm, and only npm can update that
+// install in place.
+function runServerNpm(
+  command: ModuleCommand,
+  packageString: string,
+  onData: (output: any) => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
   // npm 12 blocks dependency install scripts unless allowlisted. The server
   // depends on @canboat/canboatjs, which builds its native SocketCAN addon from
   // an install script; without this the CAN interface disappears after a global
-  // self-update. Older npm ignores the flag with a warning.
-  const npmArgs = isTheServerModule(name, config)
-    ? command === 'install' || command === 'update'
+  // self-update. Older npm ignores the flag.
+  const npmArgs =
+    command === 'install' || command === 'update'
       ? [command, '-g', '--allow-scripts=@canboat/canboatjs']
       : [command, '-g']
-    : ['--save', '--ignore-scripts', command]
 
   // npm allows a name to start with a hyphen, so the package follows -- to
   // keep npm from ever reading it as an option
@@ -373,28 +488,668 @@ export function runNpm(
     npmArgs.push('--', packageString)
   }
 
-  if (isTheServerModule(name, config)) {
-    if (process.platform === 'win32') {
-      npm = spawn('npm.cmd', npmArgs, opts)
-    } else {
-      npm = spawn('sudo', ['npm', ...npmArgs], opts)
-    }
-  } else {
-    opts.cwd = config.configPath
+  const npm =
+    process.platform === 'win32'
+      ? spawn('npm.cmd', npmArgs, { shell: true })
+      : spawn('sudo', ['npm', ...npmArgs], {})
+  attachHandlers(npm, onData, onErr, onClose)
+}
 
-    if (process.platform === 'win32') {
-      npm = spawn('npm.cmd', npmArgs, opts)
-    } else {
-      npm = spawn('npm', npmArgs, opts)
+export interface BundledPnpm {
+  version: string
+  /** The script that starts pnpm */
+  bin: string
+  /** The Node.js versions that this pnpm runs on */
+  node: string
+}
+
+let bundledPnpm: BundledPnpm | undefined
+
+// Plugins are installed with the pnpm that ships with the server, run by the
+// server's own Node.js: the App Store needs no pnpm on PATH, and installs with
+// the pnpm version that the server was released with.
+export function getBundledPnpm(): BundledPnpm {
+  if (!bundledPnpm) {
+    const location = findPackageLocation(__dirname, 'pnpm')
+    if (!location) {
+      throw new Error(PNPM_MISSING_MESSAGE)
+    }
+    const dir = path.join(location, 'pnpm')
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
+    )
+    const bin =
+      typeof manifest.bin === 'string' ? manifest.bin : manifest.bin.pnpm
+    bundledPnpm = {
+      version: manifest.version,
+      bin: path.join(dir, bin),
+      node: manifest.engines?.node ?? '*'
     }
   }
+  return bundledPnpm
+}
 
-  npm.stdout.on('data', onData)
-  npm.stderr.on('data', onErr)
-  npm.on('close', onClose)
-  npm.on('error', (err: Error) => {
-    onErr(err)
-    onClose(-1)
+export function bundledPnpmVersion(): string | undefined {
+  try {
+    return getBundledPnpm().version
+  } catch {
+    return undefined
+  }
+}
+
+function pnpmArgs(
+  configPath: string,
+  args: string[],
+  cacheDir?: string
+): string[] {
+  return [getBundledPnpm().bin, ...pnpmSettings(configPath, cacheDir), ...args]
+}
+
+const storeDirs = new Map<string, Promise<string | undefined>>()
+
+// pnpm resolves its store from the project it runs in, so it is asked from
+// the config directory, with the settings that the installs there use. The
+// store does not change while the server runs; a failed probe is retried.
+function getStoreDir(configPath: string): Promise<string | undefined> {
+  let storeDir = storeDirs.get(configPath)
+  if (!storeDir) {
+    storeDir = pnpmOutput(configPath, ['store', 'path']).catch(() => {
+      storeDirs.delete(configPath)
+      return undefined
+    })
+    storeDirs.set(configPath, storeDir)
+  }
+  return storeDir
+}
+
+function pnpmOutput(configPath: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      process.execPath,
+      pnpmArgs(configPath, args),
+      { cwd: configPath },
+      (err, stdout) => (err ? reject(err) : resolve(stdout.trim()))
+    )
+  })
+}
+
+// pnpm takes no lock on the project, so runs in the config directory are
+// serialised here: the App Store queues its own installs, but a settings
+// restore runs alongside them. A callback that throws must not leave the
+// chain rejected, which would skip every later run.
+let configDirRun: Promise<void> = Promise.resolve()
+
+const LOCK_RETRY_MS = 250
+
+// The server and signalk-pnpm each run pnpm in the config directory, so
+// besides the queue within a process, a lock in the store keeps their runs
+// apart. Its holder keeps refreshing it, so the lock of a process that died
+// goes stale within seconds and is taken over.
+async function withConfigDirLock<T>(
+  configPath: string,
+  onWait: (message: string) => void,
+  run: () => Promise<T>
+): Promise<T> {
+  const release = await lockConfigDir(configPath, onWait)
+  try {
+    return await run()
+  } finally {
+    await release().catch(() => undefined)
+  }
+}
+
+async function lockConfigDir(
+  configPath: string,
+  onWait: (message: string) => void
+): Promise<() => Promise<void>> {
+  const lockfilePath = path.join(configPath, PNPM_STORE, 'lock')
+  const ownerPath = path.join(configPath, PNPM_STORE, 'lock-owner.json')
+  fs.mkdirSync(path.dirname(lockfilePath), { recursive: true })
+  let waiting = false
+  for (;;) {
+    try {
+      const release = await lockfile.lock(configPath, {
+        lockfilePath,
+        realpath: false,
+        onCompromised: (err) =>
+          console.error(`Lost the lock on ${configPath}: ${err.message}`)
+      })
+      // Without an owner record the lock would never be taken over, as its
+      // holder keeps refreshing it
+      try {
+        fs.writeFileSync(
+          ownerPath,
+          JSON.stringify({ host: os.hostname(), pid: process.pid })
+        )
+      } catch (err) {
+        await release().catch(() => undefined)
+        throw err
+      }
+      return async () => {
+        fs.rmSync(ownerPath, { force: true })
+        await release()
+      }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ELOCKED') {
+        throw err
+      }
+      if (holderIsGone(ownerPath)) {
+        fs.rmSync(ownerPath, { force: true })
+        fs.rmSync(lockfilePath, { recursive: true, force: true })
+        continue
+      }
+      if (!waiting) {
+        waiting = true
+        onWait(
+          `Waiting for another pnpm run in ${configPath} to finish, such as an App Store install or signalk-pnpm\n`
+        )
+      }
+      await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_MS))
+    }
+  }
+}
+
+// The holder of the lock is recorded, so that a process that finds its
+// holder gone from this machine, as when the server restarts after a crash,
+// takes the lock at once rather than when it goes stale. Elsewhere, or with
+// the holder's process id taken by another process, staleness decides.
+function holderIsGone(ownerPath: string): boolean {
+  let owner: { host?: string; pid?: number }
+  try {
+    owner = JSON.parse(fs.readFileSync(ownerPath, 'utf8'))
+  } catch {
+    return false
+  }
+  if (owner.host !== os.hostname() || typeof owner.pid !== 'number') {
+    return false
+  }
+  // Runs within a process are queued, so a lock under this process's own id
+  // was left by an earlier process that had the same id
+  if (owner.pid === process.pid) {
+    return true
+  }
+  try {
+    process.kill(owner.pid, 0)
+    return false
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === 'ESRCH'
+  }
+}
+
+function runConfigDirPnpm(
+  configPath: string,
+  command: ModuleCommand,
+  packageString: string,
+  onData: (output: any) => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
+  const pnpmCommand =
+    command === 'remove' ? 'remove' : packageString ? 'add' : 'install'
+  // npm allows a name to start with a hyphen, so the package follows -- to
+  // keep pnpm from ever reading it as an option
+  queueConfigDirPnpm(
+    configPath,
+    packageString ? [pnpmCommand, '--', packageString] : [pnpmCommand],
+    onData,
+    onErr,
+    onClose
+  )
+}
+
+// Runs any pnpm command in the config directory the way the App Store does,
+// for the signalk-pnpm command
+export function runPnpmInConfigDir(
+  configPath: string,
+  args: string[],
+  onData: (output: any) => any,
+  onErr: (err: Error) => any
+): Promise<number> {
+  return new Promise((resolve) =>
+    queueConfigDirPnpm(configPath, args, onData, onErr, resolve)
+  )
+}
+
+function queueConfigDirPnpm(
+  configPath: string,
+  args: string[],
+  onData: (output: any) => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
+  configDirRun = configDirRun
+    .then(async () => {
+      let before = new Set<string>()
+      const code = await withConfigDirLock(configPath, onData, () => {
+        before = installedPackages(configPath)
+        return runPnpm(configPath, args, onData, onErr)
+      }).catch((err) => {
+        onErr(err)
+        return -1
+      })
+      try {
+        onClose(code)
+      } finally {
+        // Only a package that left node_modules can have left anything in
+        // the store to prune
+        const after = installedPackages(configPath)
+        if (code === 0 && [...before].some((id) => !after.has(id))) {
+          await withConfigDirLock(configPath, pnpmDebug, () =>
+            pruneStore(configPath)
+          )
+        }
+      }
+    })
+    .catch((err) => console.error(err))
+}
+
+async function runPnpm(
+  configPath: string,
+  args: string[],
+  onData: (output: any) => any,
+  onErr: (err: Error) => any
+): Promise<number> {
+  const pnpm = getBundledPnpm()
+  if (!semver.satisfies(process.versions.node, pnpm.node)) {
+    throw new Error(
+      `Installing plugins and webapps needs Node.js ${pnpm.node}, but the server runs on Node.js ${process.versions.node}`
+    )
+  }
+  const finish = await setAsideForeignModules(
+    configPath,
+    await getStoreDir(configPath)
+  )
+  const code = await spawnPnpm(configPath, args, onData, onErr)
+  try {
+    await finish(code)
+  } catch (err) {
+    onErr(err instanceof Error ? err : new Error(String(err)))
+  }
+  return code
+}
+
+function spawnPnpm(
+  configPath: string,
+  args: string[],
+  onData: (output: any) => any,
+  onErr: (err: Error) => any,
+  cacheDir?: string
+): Promise<number> {
+  return new Promise<number>((resolve) => {
+    const child = spawn(
+      process.execPath,
+      pnpmArgs(configPath, args, cacheDir),
+      {
+        cwd: configPath
+      }
+    )
+    attachHandlers(child, onData, onErr, resolve)
+  })
+}
+
+// Nothing else removes packages from the store, which updates and removals
+// would otherwise grow for good. pnpm keeps every package that node_modules
+// still links to, and keeps the metadata cache it downloads with: the prune
+// gets a cache of its own to empty.
+async function pruneStore(configPath: string) {
+  const storeRoot = path.join(configPath, PNPM_STORE)
+  const pinsDir = path.join(storeRoot, 'pins')
+  const pruneCache = path.join(storeRoot, 'prune-cache')
+  const log = (output: any) => pnpmDebug(String(output))
+  try {
+    const storeDir = await getStoreDir(configPath)
+    if (storeDir) {
+      await pinCopiedPackages(configPath, storeDir, pinsDir)
+    }
+    const code = await spawnPnpm(
+      configPath,
+      ['store', 'prune'],
+      log,
+      log,
+      pruneCache
+    )
+    if (code !== 0) {
+      console.error(`Pruning the pnpm store of ${configPath} failed (${code})`)
+    }
+  } finally {
+    await Promise.all(
+      [pinsDir, pruneCache].map((dir) =>
+        fs.promises.rm(dir, { recursive: true, force: true })
+      )
+    )
+  }
+}
+
+// pnpm copies a package with install scripts into node_modules instead of
+// linking it, as building it would change it, so its files in the store have
+// no other link. A prune would remove them while the package is installed:
+// the next install would download it again, and an offline reinstall would
+// fail. For the prune, each such file in the store gets a hard link of its
+// own; the store keeps a file at the SHA-512 of its content, with a suffix
+// when it is executable.
+async function pinCopiedPackages(
+  configPath: string,
+  storeDir: string,
+  pinsDir: string
+) {
+  await fs.promises.rm(pinsDir, { recursive: true, force: true })
+  await fs.promises.mkdir(pinsDir, { recursive: true })
+  const virtualStore = path.join(configPath, 'node_modules', '.pnpm')
+  const entries = await fs.promises
+    .readdir(virtualStore, { recursive: true, withFileTypes: true })
+    .catch(() => [])
+  let pinned = 0
+  for (const entry of entries) {
+    if (!entry.isFile()) {
+      continue
+    }
+    const file = path.join(entry.parentPath, entry.name)
+    if ((await fs.promises.stat(file)).nlink !== 1) {
+      continue
+    }
+    const hex = crypto
+      .createHash('sha512')
+      .update(await fs.promises.readFile(file))
+      .digest('hex')
+    for (const suffix of ['', '-exec']) {
+      const stored = path.join(
+        storeDir,
+        'files',
+        hex.slice(0, 2),
+        hex.slice(2) + suffix
+      )
+      try {
+        await fs.promises.link(stored, path.join(pinsDir, String(pinned)))
+        pinned++
+      } catch {
+        // not in the store
+      }
+    }
+  }
+}
+
+// pnpm keeps every installed package in a directory of its own in
+// node_modules/.pnpm, and with modules-cache-max-age=0 drops a package from
+// there as soon as nothing uses it any more
+function installedPackages(configPath: string): Set<string> {
+  try {
+    return new Set(
+      fs.readdirSync(path.join(configPath, 'node_modules', '.pnpm'))
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+interface ModulesDirs {
+  modules: string
+  backup: string
+  discarded: string
+}
+
+function modulesDirs(configPath: string): ModulesDirs {
+  return {
+    modules: path.join(configPath, 'node_modules'),
+    backup: path.join(configPath, PREVIOUS_MODULES_BACKUP),
+    discarded: path.join(configPath, DISCARDED_MODULES)
+  }
+}
+
+// A rebuild that a power cut or crash interrupted is settled when the server
+// starts, before anything loads from node_modules, rather than leaving plugins
+// missing until the next install. It takes its turn behind any pnpm run, as a
+// server restarted within the same process can start while one is still
+// rebuilding. Nothing has loaded addons from the discarded tree yet, so even
+// on Windows it can be deleted, which finishes in the background.
+export function recoverConfigDirModules(configPath: string): Promise<void> {
+  const dirs = modulesDirs(configPath)
+  const recovery = configDirRun.then(() =>
+    withConfigDirLock(
+      configPath,
+      (message) => console.log(message.trim()),
+      () => settleInterruptedRebuild(configPath, dirs)
+    )
+  )
+  configDirRun = recovery.catch(() => undefined)
+  return recovery.then(() => {
+    fs.promises
+      .rm(dirs.discarded, { recursive: true, force: true })
+      .catch((err) =>
+        console.error(`Removing ${dirs.discarded}: ${err.message}`)
+      )
+  })
+}
+
+// pnpm only adopts a node_modules directory that it created itself with the
+// store it uses now: packages installed by npm are moved to
+// node_modules/.ignored and a directory bound to another store stops the
+// install. Such a directory is moved aside so that pnpm rebuilds it from
+// package.json, with the installed plugin versions pinned there first so that
+// the rebuild keeps them. Unless pnpm succeeds and completes the rebuild, both
+// are put back as they were, so a command that installs nothing leaves them
+// alone.
+async function setAsideForeignModules(
+  configPath: string,
+  storeDir?: string
+): Promise<(code: number) => Promise<void>> {
+  const dirs = modulesDirs(configPath)
+  await settleInterruptedRebuild(configPath, dirs)
+  // Nothing needs a discarded tree, so it does not hold up this run if it
+  // cannot be removed, as on Windows while the server has its addons loaded
+  await fs.promises
+    .rm(dirs.discarded, { recursive: true, force: true })
+    .catch(() => undefined)
+  if (
+    !fs.existsSync(dirs.modules) ||
+    isManagedByThisPnpm(dirs.modules, storeDir)
+  ) {
+    return async () => {}
+  }
+  const packageJsonPath = path.join(configPath, 'package.json')
+  const originalPackageJson = fs.existsSync(packageJsonPath)
+    ? fs.readFileSync(packageJsonPath, 'utf8')
+    : undefined
+  const restorePackageJson = () => {
+    if (originalPackageJson !== undefined) {
+      atomicWriteFileSync(packageJsonPath, originalPackageJson)
+    }
+  }
+  pinInstalledVersions(configPath)
+  try {
+    fs.renameSync(dirs.modules, dirs.backup)
+  } catch (err) {
+    restorePackageJson()
+    throw err
+  }
+  return async (code: number) => {
+    if (code === 0 && rebuildCompleted(configPath)) {
+      await retireBackup(configPath, dirs)
+      await fs.promises.rm(dirs.discarded, { recursive: true, force: true })
+    } else {
+      await putBackupBack(dirs)
+      restorePackageJson()
+      await fs.promises
+        .rm(dirs.discarded, { recursive: true, force: true })
+        .catch(() => undefined)
+    }
+  }
+}
+
+// An interrupted rebuild leaves the backup of the user's installation beside
+// whatever the rebuild got to. A rebuild that did not complete gives way to
+// the backup; after one that did, only dropping the backup was cut short.
+async function settleInterruptedRebuild(configPath: string, dirs: ModulesDirs) {
+  if (!fs.existsSync(dirs.backup)) {
+    return
+  }
+  if (rebuildCompleted(configPath)) {
+    await retireBackup(configPath, dirs)
+  } else {
+    await putBackupBack(dirs)
+  }
+}
+
+// Once a rebuild has replaced the user's earlier installation, that goes,
+// and with it the package-lock.json that npm kept of it. The lockfile goes
+// first, so that a cut short retirement is completed by the next run.
+async function retireBackup(configPath: string, dirs: ModulesDirs) {
+  fs.rmSync(path.join(configPath, 'package-lock.json'), { force: true })
+  await discard(dirs.backup, dirs.discarded)
+}
+
+async function putBackupBack(dirs: ModulesDirs) {
+  if (fs.existsSync(dirs.modules)) {
+    await discard(dirs.modules, dirs.discarded)
+  }
+  fs.renameSync(dirs.backup, dirs.modules)
+}
+
+// A tree is renamed out of the way before it is deleted: deleting takes a
+// while and can be cut short, and a partial tree must never be taken for the
+// user's installation
+async function discard(dir: string, discardedDir: string) {
+  if (fs.existsSync(discardedDir)) {
+    await fs.promises.rm(discardedDir, { recursive: true, force: true })
+  }
+  fs.renameSync(dir, discardedDir)
+}
+
+// pnpm writes its manifest last, once every package is linked, but writes
+// none when there is nothing to install
+function rebuildCompleted(configPath: string): boolean {
+  return (
+    fs.existsSync(path.join(configPath, 'node_modules', PNPM_MODULES_MARKER)) ||
+    !hasDependencies(configPath)
+  )
+}
+
+function hasDependencies(configPath: string): boolean {
+  const packageJson = readJson(path.join(configPath, 'package.json'))
+  return Object.keys(packageJson?.dependencies ?? {}).length > 0
+}
+
+export interface PendingRebuild {
+  /** How many packages the rebuild downloads again, when that is known */
+  packages?: number
+}
+
+// The next run in the config directory rebuilds a node_modules that npm or
+// another pnpm store created, downloading every package that the installed
+// plugins and webapps use again, which the App Store warns about
+export async function getPendingRebuild(
+  configPath: string
+): Promise<PendingRebuild | undefined> {
+  const modulesDir = path.join(configPath, 'node_modules')
+  if (
+    !fs.existsSync(modulesDir) ||
+    !hasDependencies(configPath) ||
+    isManagedByThisPnpm(modulesDir, await getStoreDir(configPath))
+  ) {
+    return undefined
+  }
+  // With plugins declared, finding no packages means that node_modules does
+  // not match package.json, so the count is no guide
+  return { packages: countInstalledPackages(modulesDir) || undefined }
+}
+
+// npm lists every package it installed in node_modules/.package-lock.json,
+// and pnpm keeps each one in a directory of its own in node_modules/.pnpm
+function countInstalledPackages(modulesDir: string): number | undefined {
+  const npmPackages = readJson(
+    path.join(modulesDir, '.package-lock.json')
+  )?.packages
+  if (npmPackages) {
+    return Object.keys(npmPackages).filter((key) =>
+      key.includes('node_modules/')
+    ).length
+  }
+  try {
+    return fs
+      .readdirSync(path.join(modulesDir, '.pnpm'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== 'node_modules')
+      .length
+  } catch {
+    return undefined
+  }
+}
+
+function isManagedByThisPnpm(modulesDir: string, storeDir?: string): boolean {
+  const markerPath = path.join(modulesDir, PNPM_MODULES_MARKER)
+  if (!fs.existsSync(markerPath)) {
+    return false
+  }
+  const markedStore = readStoreDir(markerPath)
+  return (
+    !storeDir ||
+    !markedStore ||
+    path.resolve(markedStore) === path.resolve(storeDir)
+  )
+}
+
+// The marker is JSON in current pnpm versions and YAML in older ones
+function readStoreDir(markerPath: string): string | undefined {
+  const contents = fs.readFileSync(markerPath, 'utf8')
+  try {
+    return JSON.parse(contents).storeDir
+  } catch {
+    return /^storeDir:\s*(.+?)\s*$/m.exec(contents)?.[1]
+  }
+}
+
+// Rewrites the ranges in package.json to the versions found in node_modules
+function pinInstalledVersions(configPath: string) {
+  const packageJsonPath = path.join(configPath, 'package.json')
+  const packageJson = readJson(packageJsonPath)
+  const dependencies: Record<string, unknown> = packageJson?.dependencies ?? {}
+  let changed = false
+  for (const [name, range] of Object.entries(dependencies)) {
+    const installed = readJson(
+      path.join(configPath, 'node_modules', name, 'package.json')
+    )?.version
+    if (
+      typeof range === 'string' &&
+      typeof installed === 'string' &&
+      installed !== range &&
+      semver.validRange(range) &&
+      semver.satisfies(installed, range)
+    ) {
+      dependencies[name] = installed
+      changed = true
+    }
+  }
+  if (changed) {
+    atomicWriteFileSync(
+      packageJsonPath,
+      JSON.stringify(packageJson, null, 2) + '\n'
+    )
+  }
+}
+
+function attachHandlers(
+  child: ChildProcess,
+  onData: (output: any) => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
+  // A process that fails to start emits both 'error' and 'close', but no
+  // 'close' when an 'error' listener throws, so the 'error' handler ends the
+  // run itself whatever the callback does
+  let closed = false
+  const close = (code: number) => {
+    if (!closed) {
+      closed = true
+      onClose(code)
+    }
+  }
+  child.stdout?.on('data', onData)
+  child.stderr?.on('data', onErr)
+  child.on('close', close)
+  child.on('error', (err: NodeJS.ErrnoException) => {
+    try {
+      onErr(err)
+    } finally {
+      close(-1)
+    }
   })
 }
 
@@ -433,6 +1188,8 @@ export function resetModuleCaches() {
   }
   searchInFlight.clear()
   distTagsCache = { time: 0, data: {} }
+  bundledPnpm = undefined
+  storeDirs.clear()
 }
 
 async function findModulesWithKeyword(
@@ -707,7 +1464,16 @@ module.exports = {
   getKeywords,
   restoreModules,
   importOrRequire,
-  runNpm,
+  runPackageManager,
   getPluginDataSize,
-  resetModuleCaches
+  resetModuleCaches,
+  getBundledPnpm,
+  bundledPnpmVersion,
+  runPnpmInConfigDir,
+  recoverConfigDirModules,
+  getPendingRebuild,
+  PNPM_APP_STORE_SETTINGS,
+  PREVIOUS_MODULES_BACKUP,
+  DISCARDED_MODULES,
+  PNPM_STORE
 }

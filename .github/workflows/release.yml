@@ -38,18 +38,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
+      # Publishing stays with the npm CLI, which handles OIDC trusted
+      # publishing for the registry. The npm bundled with Node 24.5 and
+      # later supports it, so no npm is installed outside the lockfile.
       - name: Install and build all
         run: |
-          npm cache clean -f
-          npm install npm@latest -g
-          npm install --package-lock-only
-          npm ci && npm cache clean --force
-          npm run build:all
+          pnpm install --frozen-lockfile
+          pnpm build:all
 
       - name: Publish server-admin-ui-dependencies
         run: |
