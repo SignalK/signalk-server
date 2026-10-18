@@ -106,6 +106,51 @@ describe('OIDC Configuration', () => {
       expect(config.groupsAttribute).to.equal('roles')
     })
 
+    it('should parse admin users from comma-separated string', () => {
+      process.env.SIGNALK_OIDC_ADMIN_USERS =
+        'owner@example.com, mate@example.com'
+      const config = parseEnvConfig()
+      expect(config.adminUsers).to.deep.equal([
+        'owner@example.com',
+        'mate@example.com'
+      ])
+    })
+
+    it('should parse readwrite users from comma-separated string', () => {
+      process.env.SIGNALK_OIDC_READWRITE_USERS = 'crew@example.com'
+      const config = parseEnvConfig()
+      expect(config.readwriteUsers).to.deep.equal(['crew@example.com'])
+    })
+
+    it('should handle empty admin users string', () => {
+      process.env.SIGNALK_OIDC_ADMIN_USERS = ''
+      const config = parseEnvConfig()
+      expect(config.adminUsers).to.equal(undefined)
+    })
+
+    it('should parse identity claim and normalize case', () => {
+      process.env.SIGNALK_OIDC_IDENTITY_CLAIM = 'PREFERRED_USERNAME'
+      const config = parseEnvConfig()
+      expect(config.identityClaim).to.equal('preferred_username')
+    })
+
+    it('should ignore invalid identity claim values with a warning', () => {
+      process.env.SIGNALK_OIDC_IDENTITY_CLAIM = 'nickname'
+      const warnings: string[] = []
+      const originalWarn = console.warn
+      console.warn = (message: string) => warnings.push(message)
+      let config
+      try {
+        config = parseEnvConfig()
+      } finally {
+        console.warn = originalWarn
+      }
+      expect(config.identityClaim).to.equal(undefined)
+      expect(warnings).to.have.length(1)
+      expect(warnings[0]).to.include('"nickname"')
+      expect(warnings[0]).to.include('"email"')
+    })
+
     it('should parse provider name', () => {
       process.env.SIGNALK_OIDC_PROVIDER_NAME = 'Corporate SSO'
       const config = parseEnvConfig()
@@ -238,6 +283,42 @@ describe('OIDC Configuration', () => {
       expect(result.groupsAttribute).to.equal('roles')
     })
 
+    it('should merge identity allowlists from security.json', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret',
+        adminUsers: ['owner@example.com'],
+        readwriteUsers: ['crew@example.com'],
+        identityClaim: 'email' as const
+      }
+
+      const result = mergeConfigs(securityJsonConfig, {})
+
+      expect(result.adminUsers).to.deep.equal(['owner@example.com'])
+      expect(result.readwriteUsers).to.deep.equal(['crew@example.com'])
+      expect(result.identityClaim).to.equal('email')
+    })
+
+    it('should override identity allowlists from env over security.json', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret',
+        adminUsers: ['json-owner@example.com']
+      }
+
+      const envConfig = {
+        adminUsers: ['env-owner@example.com']
+      }
+
+      const result = mergeConfigs(securityJsonConfig, envConfig)
+
+      expect(result.adminUsers).to.deep.equal(['env-owner@example.com'])
+    })
+
     it('should merge provider name from security.json', () => {
       const securityJsonConfig = {
         enabled: true,
@@ -343,6 +424,47 @@ describe('OIDC Configuration', () => {
         OIDCError,
         /defaultPermission/
       )
+    })
+
+    it('should throw if identityClaim is invalid', () => {
+      const badClaim = {
+        ...validConfig,
+        identityClaim: 'nickname' as 'email' | 'preferred_username' | 'sub'
+      }
+      expect(() => validateOIDCConfig(badClaim)).to.throw(
+        OIDCError,
+        /identityClaim/
+      )
+    })
+
+    it('should throw if adminUsers contains a non-string entry', () => {
+      const config = {
+        ...validConfig,
+        adminUsers: ['owner@example.com', 123] as unknown as string[]
+      }
+      expect(() => validateOIDCConfig(config)).to.throw(
+        OIDCError,
+        /adminUsers must be a list of strings/
+      )
+    })
+
+    it('should throw if readwriteUsers is not an array', () => {
+      const config = {
+        ...validConfig,
+        readwriteUsers: 'crew@example.com' as unknown as string[]
+      }
+      expect(() => validateOIDCConfig(config)).to.throw(
+        OIDCError,
+        /readwriteUsers must be a list of strings/
+      )
+    })
+
+    it('should pass for valid identityClaim', () => {
+      const withClaim = {
+        ...validConfig,
+        identityClaim: 'preferred_username' as const
+      }
+      expect(() => validateOIDCConfig(withClaim)).to.not.throw()
     })
 
     it('should not throw when disabled even if incomplete', () => {
