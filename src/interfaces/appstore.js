@@ -35,7 +35,12 @@ const ICON_PROBE_COOLDOWN_MS = 5 * 60 * 1000
 const _ = require('lodash')
 const semver = require('semver')
 const { gt } = semver
-const { installModule, removeModule, getPluginDataSize } = require('../modules')
+const {
+  installModule,
+  removeModule,
+  stopBeforeRemove,
+  getPluginDataSize
+} = require('../modules')
 const {
   isTheServerModule,
   findModulesWithKeyword,
@@ -1464,15 +1469,17 @@ module.exports = function (app) {
     }
 
     if (isRemove) {
-      removeModule(
-        app.config,
-        module,
-        version,
-        onData,
-        onErr,
-        onClose,
-        pluginId,
-        deleteData
+      stopBeforeRemove(app.stopPlugin, pluginId).then(() =>
+        removeModule(
+          app.config,
+          module,
+          version,
+          onData,
+          onErr,
+          onClose,
+          pluginId,
+          deleteData
+        )
       )
     } else {
       installModule(app.config, module, version, onData, onErr, onClose)
