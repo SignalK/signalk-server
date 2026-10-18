@@ -41,6 +41,7 @@ const ensureKey = (filter: N2KFilter): N2KFilter => {
 
 interface ProviderOptions {
   filtersEnabled?: boolean
+  filtersInKernel?: boolean
   filters?: N2KFilter[]
   useCanName?: boolean
   [key: string]: unknown
@@ -53,6 +54,11 @@ interface ProviderValue {
 
 interface N2KFiltersProps {
   value: ProviderValue
+  /**
+   * The connection can drop PGN-only rows in the kernel (SocketCAN,
+   * canbus-canboatjs).
+   */
+  canFilterInKernel?: boolean
   onChange: (
     event:
       | ChangeEvent<HTMLInputElement>
@@ -67,7 +73,11 @@ interface N2KFiltersProps {
   ) => void
 }
 
-export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
+export default function N2KFilters({
+  value,
+  onChange,
+  canFilterInKernel
+}: N2KFiltersProps) {
   const rawFilters = value.options.filters ?? EMPTY_FILTERS
   const filters = useMemo(() => rawFilters.map(ensureKey), [rawFilters])
 
@@ -91,16 +101,17 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
     })
   }
 
-  const handleEnabledChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onChange({
-      target: {
-        name: 'options.filtersEnabled',
-        value: event.target.checked,
-        checked: event.target.checked,
-        type: 'checkbox'
-      }
-    })
-  }
+  const handleSwitchChange =
+    (name: string) => (event: ChangeEvent<HTMLInputElement>) => {
+      onChange({
+        target: {
+          name,
+          value: event.target.checked,
+          checked: event.target.checked,
+          type: 'checkbox'
+        }
+      })
+    }
 
   const handleAddFilter = () => {
     const updatedFilters = [...filters, { source: '', pgn: '', _key: newKey() }]
@@ -120,23 +131,67 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
             <input
               type="checkbox"
               name="filtersEnabled"
+              aria-label="Filters enabled"
               className="switch-input"
               checked={!!value.options.filtersEnabled}
-              onChange={handleEnabledChange}
+              onChange={handleSwitchChange('options.filtersEnabled')}
             />
             <span className="switch-label" data-on="Yes" data-off="No" />
             <span className="switch-handle" />
           </Form.Label>
           &nbsp; Enabled <br />
           <br />
-          Filter out all messages from a specific {sourceName} by entering just
-          the {sourceName}.<br />
-          Filter out a specific PGN from all devices by entering just the PGN.
+          Usage:
+          <ul className="mb-2">
+            <li>
+              Filter out all messages from a specific {sourceName} by entering
+              just the {sourceName}.
+            </li>
+            <li>
+              Filter out a specific PGN from all devices by entering just the
+              PGN.
+            </li>
+            <li>
+              Filter out a specific PGN from a specific {sourceName} by entering
+              both.
+            </li>
+          </ul>
+          What it does:
           <br />
-          Filter out a specific PGN from a specific {sourceName} by entering
-          both.
+          Filtered messages are removed from the Signal K data. For example to
+          keep unwanted data out.
+          {canFilterInKernel &&
+            ' To also save CPU, filter at Linux kernel level (below).'}
           <br />
           <br />
+          {canFilterInKernel && (
+            <>
+              <Form.Label className="switch switch-text switch-primary">
+                <input
+                  type="checkbox"
+                  name="filtersInKernel"
+                  aria-label="Filter CAN messages at Linux kernel level"
+                  aria-describedby="filtersInKernelHelp"
+                  className="switch-input"
+                  checked={!!value.options.filtersInKernel}
+                  disabled={!value.options.filtersEnabled}
+                  onChange={handleSwitchChange('options.filtersInKernel')}
+                />
+                <span className="switch-label" data-on="Yes" data-off="No" />
+                <span className="switch-handle" />
+              </Form.Label>
+              &nbsp; Filter CAN messages at Linux kernel level
+              <Form.Text id="filtersInKernelHelp" muted className="d-block">
+                Recommended. Filters without an {sourceName} are then applied at
+                Linux kernel level, so Signal K never reads those messages. That
+                saves CPU on a busy network. Leave it off only if a plugin or an
+                output needs the filtered PGNs, such as NMEA 2000 over TCP or a
+                logger of raw NMEA 2000 data. Filters with an {sourceName} are
+                always applied after Signal K has decoded the message.
+              </Form.Text>
+              <br />
+            </>
+          )}
           {filters.length > 0 && (
             <Table responsive bordered striped size="sm">
               <thead>

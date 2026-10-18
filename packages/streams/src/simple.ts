@@ -17,6 +17,7 @@ import Gpsd from './gpsd'
 import Nmea0183LinerFilter from './nmea0183-liner-filter'
 import PigpioSeatalk from './pigpio-seatalk'
 import GpiodSeatalk from './gpiod-seatalk'
+import { kernelExcludePgns } from './n2k-kernel-filter'
 import type { CreateDebug, DeltaCache } from './types'
 
 // canboat exports are old-style constructor functions, not classes.
@@ -107,6 +108,8 @@ interface SubOptions {
   appendChecksum?: boolean
   filters?: Array<{ source?: string; pgn?: string }>
   filtersEnabled?: boolean
+  filtersInKernel?: boolean
+  excludePgns?: Array<number | string> | string | number
   useCanName?: boolean
   tcp?: boolean
   [key: string]: unknown
@@ -290,7 +293,8 @@ function nmea2000input(
     return [
       new (Ctor as new (options: object) => PipeElement)({
         ...subOptions,
-        canDevice: subOptions.interface
+        canDevice: subOptions.interface,
+        excludePgns: kernelExcludePgns(subOptions)
       })
     ]
   } else if (subOptions.type === 'ikonvert-canboatjs') {

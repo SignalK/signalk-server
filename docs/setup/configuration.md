@@ -54,6 +54,12 @@ Please refer to the [Canboat PGN database](https://canboat.github.io/canboat/can
 
 Once your NMEA 2000 devices are connected, you can view and manage them from _Data -> Source Discovery_ in the Admin UI. See [NMEA 2000 Device Management](./n2k-device-management.md) for details on device discovery, instance editing, and conflict detection.
 
+### NMEA 2000 Options
+
+- _Filters_ - Remove messages from the Signal K data: from one device (enter just its address or CAN NAME), one PGN from all devices (enter just the PGN), or one PGN from one device (enter both). Signal K still reads and decodes filtered messages, and plugins that use the raw NMEA 2000 data still see them.
+
+- _Filter CAN messages at Linux kernel level_ - Only for a _Canbus (canboatjs)_ connection, off by default, and recommended. Filters without an address or CAN NAME are then applied at Linux kernel level, so Signal K never reads those messages, which saves CPU on a busy network and matters on small devices such as a Raspberry Pi. Leave it off only if a plugin or an output needs the filtered PGNs, such as NMEA 2000 over TCP or a logger of raw NMEA 2000 data. Filters with an address or CAN NAME are always applied after Signal K has decoded the message. Network management PGNs such as address claim are never dropped; the server log lists PGNs that can't be dropped this way.
+
 **_NMEA0183_**: The processing of NMEA0183 sentences is done by [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
 
 ### NMEA 0183 Options
