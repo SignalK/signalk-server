@@ -945,6 +945,46 @@ describe('Security', () => {
     const json = await result.json()
     json.message.should.equal('User already exists')
   })
+  it('Device access request with unsafe clientId fails', async function () {
+    for (const clientId of ['../../outside', 'a\\b', '..']) {
+      const result = await fetch(`${url}/signalk/v1/access/requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, description: 'Traversal Sensor' })
+      })
+      result.status.should.equal(400)
+      const json = await result.json()
+      json.message.should.contain('Identifier must not')
+    }
+  })
+
+  it('User registration with unsafe userId fails', async function () {
+    const result = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: '../../outside', password: 'secret' })
+    })
+    result.status.should.equal(400)
+    const json = await result.json()
+    json.message.should.contain('Identifier must not')
+  })
+
+  it('Admin adding user with unsafe username fails', async function () {
+    const result = await fetch(
+      `${url}/skServer/security/users/${encodeURIComponent('../outside')}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `JAUTHENTICATION=${adminToken}`
+        },
+        body: JSON.stringify({ password: 'test', type: 'readwrite' })
+      }
+    )
+    result.status.should.equal(400)
+    const text = await result.text()
+    text.should.contain('Identifier must not')
+  })
 })
 
 describe('Access Request Limit', () => {
