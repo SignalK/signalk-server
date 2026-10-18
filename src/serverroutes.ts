@@ -704,7 +704,11 @@ module.exports = function (
         user.userId = req.params.id
         app.securityStrategy.addUser(config, user, (err, savedConfig) => {
           if (err) {
-            const status = err.message === 'User already exists' ? 400 : 500
+            const status =
+              err.message === 'User already exists' ||
+              (err as Error & { statusCode?: number }).statusCode === 400
+                ? 400
+                : 500
             res.status(status).type('text/plain').send(err.message)
           } else if (savedConfig) {
             saveSecurityConfig(app, savedConfig, (saveErr) => {
