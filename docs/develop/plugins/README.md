@@ -383,20 +383,27 @@ Keep such data in its own subdirectory and put a [cache directory tag](https://b
 const fs = require('fs')
 const path = require('path')
 
+const CACHEDIR_SIGNATURE = 'Signature: 8a477f597d28d172789f06886806bc55'
+
 function cacheDir(app, name) {
   const dir = path.join(app.getDataDirPath(), name)
   fs.mkdirSync(dir, { recursive: true })
   const tag = path.join(dir, 'CACHEDIR.TAG')
-  if (!fs.existsSync(tag)) {
+  // A tag without the signature, such as one left empty by a full disk, is ignored by backup tools
+  if (
+    !fs.existsSync(tag) ||
+    !fs.readFileSync(tag, 'utf8').startsWith(CACHEDIR_SIGNATURE)
+  ) {
     fs.writeFileSync(
       tag,
-      'Signature: 8a477f597d28d172789f06886806bc55\n' +
-        '# Regenerable cache; backups can skip it. See https://bford.info/cachedir/\n'
+      `${CACHEDIR_SIGNATURE}\n# Regenerable cache; backups can skip it. See https://bford.info/cachedir/\n`
     )
   }
   return dir
 }
 ```
+
+Call it from `start()`, before the first download, so that a backup taken in the meantime already skips the directory. If your plugin prunes old files, have it delete only the files it wrote, so that the tag stays.
 
 A WASM plugin writes the same file inside its virtual filesystem, for example `/data/forecast/CACHEDIR.TAG`.
 
