@@ -369,6 +369,39 @@ To record deltas sent by the plugin in the server's data log, enable the **Log p
 
 ---
 
+## Storing data
+
+Write the files your plugin keeps to the directory returned by {@link @signalk/server-api!ServerAPI.getDataDirPath | `app.getDataDirPath()`} (`~/.signalk/plugin-config-data/<plugin id>/`), not to the plugin's own folder under `node_modules`, which an update replaces.
+
+### Caches and backups
+
+Backups of the Signal K data directory include each plugin's data directory. Data the plugin downloads or rebuilds by itself, such as forecasts, tiles or decoded files, gains nothing from being backed up, and a cache rewritten every few hours adds a new copy to every scheduled backup, on the boat and in its cloud storage.
+
+Keep such data in its own subdirectory and put a [cache directory tag](https://bford.info/cachedir/) in it: a file named `CACHEDIR.TAG` whose content starts with exactly `Signature: 8a477f597d28d172789f06886806bc55`. Backup tools that follow the convention skip the directory's contents: [Kopia](https://kopia.io/) (used by the signalk-backup plugin) by default, and restic, Borg and GNU tar with `--exclude-caches`.
+
+```javascript
+const fs = require('fs')
+const path = require('path')
+
+function cacheDir(app, name) {
+  const dir = path.join(app.getDataDirPath(), name)
+  fs.mkdirSync(dir, { recursive: true })
+  const tag = path.join(dir, 'CACHEDIR.TAG')
+  if (!fs.existsSync(tag)) {
+    fs.writeFileSync(
+      tag,
+      'Signature: 8a477f597d28d172789f06886806bc55\n' +
+        '# Regenerable cache; backups can skip it. See https://bford.info/cachedir/\n'
+    )
+  }
+  return dir
+}
+```
+
+Keep settings, user data, and data that cannot be downloaded again without internet access out of tagged directories, so that a restore brings them back.
+
+---
+
 ## Removing a plugin
 
 Plugins can be removed via the AppStore.
