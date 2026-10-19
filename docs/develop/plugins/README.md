@@ -371,7 +371,7 @@ To record deltas sent by the plugin in the server's data log, enable the **Log p
 
 ## Storing data
 
-Write the files your plugin keeps to the directory returned by {@link @signalk/server-api!ServerAPI.getDataDirPath | `app.getDataDirPath()`} (`~/.signalk/plugin-config-data/<plugin id>/` by default), not to the plugin's own folder under `node_modules`, which an update replaces.
+Write the files your plugin keeps to the directory returned by {@link @signalk/server-api!ServerAPI.getDataDirPath | `app.getDataDirPath()`} (`~/.signalk/plugin-config-data/<plugin id>/` by default; for a WASM plugin it is `/`, the root of its virtual filesystem, which the server keeps in `plugin-config-data/<plugin id>/vfs/`), not to the plugin's own folder under `node_modules`, which an update replaces.
 
 ### Caches and backups
 
@@ -397,6 +397,8 @@ function cacheDir(app, name) {
   return dir
 }
 ```
+
+A WASM plugin writes the same file inside its virtual filesystem, for example `/data/forecast/CACHEDIR.TAG`.
 
 Keep settings, user data, and data that cannot be downloaded again without internet access out of tagged directories, so that a restore brings them back.
 
