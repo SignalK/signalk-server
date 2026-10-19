@@ -65,9 +65,9 @@
   },
   "homepage": "https://github.com/SignalK/signalk-server-node#readme",
   "dependencies": {
-    "@canboat/canboatjs": "^3.20.0",
+    "@canboat/canboatjs": "^4.0.0-beta.3",
     "@signalk/client": "^2.4.0",
-    "@signalk/n2k-signalk": "^4.6.0",
+    "@signalk/n2k-signalk": "^5.0.0-beta.1",
     "@signalk/nmea0183-signalk": "^3.20.0",
     "@signalk/nmea0183-utilities": "^1.1.1",
     "@signalk/signalk-schema": "^1.5.0",
