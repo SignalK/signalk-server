@@ -235,6 +235,21 @@ describe('StalenessEnforcer', () => {
     expect(app.captured).to.have.lengthOf(0)
   })
 
+  it('skips resources.* paths: a resource delta announces a change, not a reading', () => {
+    const app = makeMockApp({ defaultTimeout: 60 })
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'resources.charts.nautical-charts',
+      'charts-provider',
+      isoSecondsAgo(3600),
+      { name: 'Nautical Charts', type: 'tilelayer', bounds: [18, 59, 31, 66] }
+    )
+    const enforcer = makeEnforcer(app)
+    runTick(enforcer)
+    expect(app.captured).to.have.lengthOf(0)
+  })
+
   it('skips paths classified updateContract=event via per-path meta', () => {
     const app = makeMockApp({
       defaultTimeout: 60,

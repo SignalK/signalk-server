@@ -1,5 +1,6 @@
 {
   "notifications": "event",
+  "resources": "event",
   "design": "event",
   "navigation.anchor": "event",
   "navigation.home": "event",

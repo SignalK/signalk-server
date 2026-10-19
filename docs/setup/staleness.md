@@ -43,7 +43,7 @@ Not all paths update periodically. Each path has an update contract, declared wi
 | `periodic` (default) | Regular updates expected; silence indicates a failure | Timed out when silent too long |
 | `event`              | Emits only on change; silence means unchanged         | Never timed out                |
 
-Well-known event-driven paths are pre-classified by the server: notifications, navigation intents such as the anchor position and the active course, and static design and identity data. The authoritative list ships with the server in `src/defaults/updateContracts.json`. Notification lifecycles in particular are managed by plugins and people, never by timeout: an unacknowledged alarm is active, not stale.
+Well-known event-driven paths are pre-classified by the server: notifications, resource announcements (`resources.*`), navigation intents such as the anchor position and the active course, and static design and identity data. The authoritative list ships with the server in `src/defaults/updateContracts.json`. Notification lifecycles in particular are managed by plugins and people, never by timeout: an unacknowledged alarm is active, not stale. Resource deltas likewise announce a create, update or delete, and `null` on a resource path means the resource was deleted.
 
 To classify a custom path, set `updateContract` in the path's metadata (Data Browser meta editor or the meta API). An explicit `updateContract` always wins over the shipped classification.
 
