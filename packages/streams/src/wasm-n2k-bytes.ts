@@ -13,8 +13,9 @@ import type { CreateDebug, DebugLogger } from './types'
  * native canboat gateway readers use.
  *
  * Output is canboatjs-shaped PGN objects, ready for N2kToSignalK.
- * TX: nmea2000JsonOut records are encoded to device transmit bytes
- * in-process and written to the socket.
+ * TX: nmea2000JsonOut records, and the plain-format lines or records
+ * sent on nmea2000out, are encoded to device transmit bytes in-process
+ * and written to the socket.
  */
 
 interface WasmN2kBytesOptions {
@@ -87,6 +88,7 @@ export default class WasmN2kBytes extends Transform {
    */
   private txReady = false
   private readonly txHandler: (pgn: unknown) => void
+  private readonly outTxHandler: (msg: unknown) => void
   private readonly debug: DebugLogger
 
   constructor(options: WasmN2kBytesOptions) {
@@ -95,20 +97,16 @@ export default class WasmN2kBytes extends Transform {
     const createDebug = options.createDebug ?? require('debug')
     this.debug = createDebug('signalk:streams:wasm-n2k-bytes')
 
-    this.txHandler = (pgn: unknown) => {
-      if (!this.txReady) {
-        this.debug('TX dropped: the gateway has not answered yet')
-        return
-      }
-      try {
-        const bytes = this.decoder.encodeFrame(JSON.stringify(pgn), true)
-        this.socket?.write(Buffer.from(bytes))
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err)
-        console.error(`wasm-n2k-bytes tx: ${message}`)
-        options.app.emit('wasm-n2k:error', err)
-      }
-    }
+    this.txHandler = (pgn: unknown) =>
+      this.transmit(() => this.decoder.encodeFrame(JSON.stringify(pgn), true))
+    // As on the canboatjs connections, nmea2000out carries either a
+    // plain-format line, sent with its payload as given, or a PGN record.
+    this.outTxHandler = (msg: unknown) =>
+      this.transmit(() =>
+        typeof msg === 'string'
+          ? this.decoder.encodeLine(msg)
+          : this.decoder.encodeFrame(JSON.stringify(msg), true)
+      )
 
     const configError = options.device ? null : tcpConfigError(options)
     if (configError) {
@@ -120,8 +118,23 @@ export default class WasmN2kBytes extends Transform {
     }
 
     options.app.on('nmea2000JsonOut', this.txHandler)
+    options.app.on('nmea2000out', this.outTxHandler)
 
     this.connect()
+  }
+
+  private transmit(encode: () => Uint8Array): void {
+    if (!this.txReady) {
+      this.debug('TX dropped: the gateway has not answered yet')
+      return
+    }
+    try {
+      this.socket?.write(Buffer.from(encode()))
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error(`wasm-n2k-bytes tx: ${message}`)
+      this.options.app.emit('wasm-n2k:error', err)
+    }
   }
 
   private status(msg: string): void {
@@ -298,6 +311,7 @@ export default class WasmN2kBytes extends Transform {
     // Detach from the shared app emitter: a stale instance would keep
     // encoding outbound PGNs and writing to a destroyed socket.
     this.options.app.removeListener('nmea2000JsonOut', this.txHandler)
+    this.options.app.removeListener('nmea2000out', this.outTxHandler)
     if (this.keepaliveTimer) {
       clearInterval(this.keepaliveTimer)
       this.keepaliveTimer = null

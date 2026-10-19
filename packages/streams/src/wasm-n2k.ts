@@ -18,8 +18,9 @@ import type { CreateDebug, DebugLogger } from './types'
  *    reassembler handles fast-packets
  *  - file-log chunks ({ fromFile, data, timestamp })
  *
- * TX: when txFormat/txEvent are configured, nmea2000JsonOut records are
- * encoded to the gateway's transmit dialect (ydwg-raw with fast-packet
+ * TX: when txFormat/txEvent are configured, nmea2000JsonOut records, and
+ * the plain-format lines or records sent on nmea2000out, are encoded to
+ * the gateway's transmit dialect (ydwg-raw with fast-packet
  * fragmentation, n2k-ascii, plain) and emitted line-by-line on txEvent
  * for the transport element to write.
  */
@@ -69,6 +70,7 @@ export default class WasmN2k extends Transform {
   private readonly providerId: string | undefined
   private readonly debug: DebugLogger
   private txHandler: ((pgn: unknown) => void) | null = null
+  private outTxHandler: ((msg: unknown) => void) | null = null
 
   constructor(options: WasmN2kOptions) {
     super({ objectMode: true })
@@ -94,11 +96,11 @@ export default class WasmN2k extends Transform {
     if (options.txFormat && options.txEvent) {
       const tx = new TxEncoder(true)
       const { txFormat, txEvent } = options
-      this.txHandler = (pgn: unknown) => {
+      const transmit = (encode: () => string[]) => {
         try {
           // The TCP transport writes txEvent payloads verbatim, and the
           // gateways only act on CRLF-terminated lines.
-          for (const line of tx.encode(JSON.stringify(pgn), txFormat)) {
+          for (const line of encode()) {
             options.app.emit(txEvent, line + '\r\n')
           }
         } catch (err: unknown) {
@@ -107,7 +109,18 @@ export default class WasmN2k extends Transform {
           options.app.emit('wasm-n2k:error', err)
         }
       }
+      this.txHandler = (pgn: unknown) =>
+        transmit(() => tx.encode(JSON.stringify(pgn), txFormat))
+      // As on the canboatjs connections, nmea2000out carries either a
+      // plain-format line, sent with its payload as given, or a PGN record.
+      this.outTxHandler = (msg: unknown) =>
+        transmit(() =>
+          typeof msg === 'string'
+            ? tx.encodeLine(msg, txFormat)
+            : tx.encode(JSON.stringify(msg), txFormat)
+        )
       options.app.on('nmea2000JsonOut', this.txHandler)
+      options.app.on('nmea2000out', this.outTxHandler)
       options.app.emit('nmea2000OutAvailable')
     }
   }
@@ -119,6 +132,10 @@ export default class WasmN2k extends Transform {
     if (this.txHandler) {
       this.app.removeListener('nmea2000JsonOut', this.txHandler)
       this.txHandler = null
+    }
+    if (this.outTxHandler) {
+      this.app.removeListener('nmea2000out', this.outTxHandler)
+      this.outTxHandler = null
     }
     super.end()
     return this
