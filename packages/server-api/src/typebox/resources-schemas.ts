@@ -216,52 +216,60 @@ export const NoteSchema = Type.Intersect(
 )
 export type NoteResource = Static<typeof NoteSchema>
 
+/**
+ * Tile metadata a chart of any type may carry: providers send it for map
+ * server and S-57 charts as well as tile layers.
+ */
+const ChartTileFields = {
+  bounds: Type.Optional(
+    Type.Array(Type.Number(), {
+      minItems: 4,
+      maxItems: 4,
+      description:
+        'Geographic bounding box in [west, south, east, north] order (longitude, latitude, longitude, latitude) in degrees'
+    })
+  ),
+  format: Type.Optional(
+    Type.Union(
+      [
+        Type.Literal('jpg'),
+        Type.Literal('pbf'),
+        Type.Literal('png'),
+        Type.Literal('webp')
+      ],
+      { description: 'Tile image format' }
+    )
+  ),
+  maxzoom: Type.Optional(
+    Type.Number({
+      minimum: 0,
+      maximum: 30,
+      default: 0,
+      description: 'Maximum zoom level available'
+    })
+  ),
+  minzoom: Type.Optional(
+    Type.Number({
+      minimum: 0,
+      maximum: 30,
+      default: 0,
+      description: 'Minimum zoom level available'
+    })
+  ),
+  scale: Type.Optional(
+    Type.Number({
+      minimum: 1,
+      default: 250000,
+      description: 'Chart scale denominator (e.g. 250000 for 1:250000)'
+    })
+  )
+}
+
 /** Tile layer source */
 export const TileLayerSourceSchema = Type.Object(
   {
     type: Type.Literal('tilelayer'),
-    bounds: Type.Optional(
-      Type.Array(Type.Number(), {
-        minItems: 4,
-        maxItems: 4,
-        description:
-          'Geographic bounding box in [west, south, east, north] order (longitude, latitude, longitude, latitude) in degrees'
-      })
-    ),
-    format: Type.Optional(
-      Type.Union(
-        [
-          Type.Literal('jpg'),
-          Type.Literal('pbf'),
-          Type.Literal('png'),
-          Type.Literal('webp')
-        ],
-        { description: 'Tile image format' }
-      )
-    ),
-    maxzoom: Type.Optional(
-      Type.Number({
-        minimum: 0,
-        maximum: 30,
-        default: 0,
-        description: 'Maximum zoom level available'
-      })
-    ),
-    minzoom: Type.Optional(
-      Type.Number({
-        minimum: 0,
-        maximum: 30,
-        default: 0,
-        description: 'Minimum zoom level available'
-      })
-    ),
-    scale: Type.Optional(
-      Type.Number({
-        minimum: 1,
-        default: 250000,
-        description: 'Chart scale denominator (e.g. 250000 for 1:250000)'
-      })
-    )
+    ...ChartTileFields
   },
   {
     $id: 'TileLayerSource',
@@ -305,7 +313,8 @@ export const ChartSchema = Type.Intersect(
         Type.Array(Type.String(), {
           description: 'List of chart layer ids'
         })
-      )
+      ),
+      ...ChartTileFields
     }),
     Type.Union([TileLayerSourceSchema, MapServerSourceSchema])
   ],

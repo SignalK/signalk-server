@@ -316,6 +316,72 @@ describe('Resources Api', () => {
     }
   })
 
+  describe('chart tile metadata', () => {
+    const registerChartStore = (
+      server: Awaited<ReturnType<typeof startServer>>['server']
+    ): object[] => {
+      const stored: object[] = []
+      server.app.resourcesApi.register('chart-store', {
+        type: 'charts',
+        methods: {
+          listResources: () => Promise.resolve({}),
+          getResource: () => Promise.resolve({}),
+          setResource: (_id: string, value: object) => {
+            stored.push(value)
+            return Promise.resolve()
+          },
+          deleteResource: () => Promise.resolve()
+        }
+      })
+      return stored
+    }
+
+    it('accepts bounds, zooms, format and scale on any chart type', async function () {
+      const { server, post, stop } = await startServer()
+      const stored = registerChartStore(server)
+      const chart = {
+        identifier: 'enc-us5ma1',
+        name: 'Boston Harbor',
+        type: 'S-57',
+        url: 'http://localhost/{z}/{x}/{y}.pbf',
+        bounds: [-71.1, 42.3, -70.9, 42.4],
+        format: 'pbf',
+        minzoom: 9,
+        maxzoom: 16,
+        scale: 20000
+      }
+
+      try {
+        const response = await post(
+          '/resources/charts?provider=chart-store',
+          chart
+        )
+        response.status.should.equal(201)
+        stored.should.deep.equal([chart])
+      } finally {
+        stop()
+      }
+    })
+
+    it('rejects malformed bounds on a map server chart', async function () {
+      const { server, post, stop } = await startServer()
+      const stored = registerChartStore(server)
+
+      try {
+        const response = await post('/resources/charts?provider=chart-store', {
+          identifier: 'wms-overlay',
+          type: 'WMS',
+          url: 'http://localhost/wms',
+          bounds: [-71.1, 42.3, -70.9]
+        })
+        response.status.should.equal(400)
+        stored.should.deep.equal([])
+      } finally {
+        stop()
+      }
+    })
+  })
+
   it('rejects custom collection names that escape the storage root', async function () {
     const { host, stop } = await startServer()
 
