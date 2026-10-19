@@ -8,6 +8,8 @@ import {
 
 const HEADING_LINE =
   '2024-01-01T00:00:00.000Z,2,127250,204,255,8,00,10,6e,01,00,ff,7f,fd'
+const AIRMAR_MASTER_RESET =
+  '2026-10-19T00:00:00.000Z,3,126720,0,35,6,87,98,01,ff,ff,ff'
 
 const canFrame = (pgn: number, src: number, bytes: number[]) => ({
   pgn: { prio: 2, pgn, src, dst: 255 },
@@ -114,6 +116,34 @@ describe('WasmN2k', () => {
     expect(sent).to.deep.equal(['09F21400 00 43 0A 81 FD FF FF FF\r\n'])
   })
 
+  it('emits nmea2000out lines as given and records like nmea2000JsonOut', () => {
+    const app = createMockApp()
+    const sent: string[] = []
+    app.on('ydwg02-out', (line: string) => sent.push(line))
+    const stream = new WasmN2k({
+      app,
+      txFormat: 'ydwg-raw',
+      txEvent: 'ydwg02-out',
+      createDebug: createDebugStub()
+    })
+
+    // Airmar's Master Reset, PGN 126720 proprietary ID 1, which has no
+    // JSON form: a fast-packet first frame carrying the six bytes as given.
+    app.emit('nmea2000out', AIRMAR_MASTER_RESET)
+    app.emit('nmea2000out', {
+      pgn: 127508,
+      prio: 2,
+      dst: 255,
+      fields: { instance: 0, voltage: 26.27, current: -63.9 }
+    })
+    stream.end()
+
+    expect(sent).to.deep.equal([
+      '0DEF2300 00 06 87 98 01 FF FF FF\r\n',
+      '09F21400 00 43 0A 81 FD FF FF FF\r\n'
+    ])
+  })
+
   it('stops transmitting once ended', () => {
     const app = createMockApp()
     const sent: string[] = []
@@ -127,6 +157,7 @@ describe('WasmN2k', () => {
     stream.end()
 
     app.emit('nmea2000JsonOut', { pgn: 127508, fields: { instance: 0 } })
+    app.emit('nmea2000out', AIRMAR_MASTER_RESET)
 
     expect(sent).to.have.length(0)
   })
