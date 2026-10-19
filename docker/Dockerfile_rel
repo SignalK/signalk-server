@@ -41,18 +41,36 @@ RUN printf 'allow-scripts[]=@canboat/canboatjs\n' > /home/node/signalk/.npmrc
 # packages are required in both editions, so that relocation always runs. The
 # @mxtommy/kip relocation is guarded on presence, so it is skipped automatically
 # in core, where kip is not installed.
-RUN case "$EDITION" in \
+#
+# A freshly published release can take a few minutes to become visible on
+# every npm registry edge, so installs are retried. --prefer-online keeps a
+# retry from reusing stale registry metadata cached by the previous attempt.
+ARG NPM_INSTALL_ATTEMPTS=8
+ARG NPM_INSTALL_RETRY_DELAY_SECONDS=30
+RUN npm_install() { \
+      attempt=1; \
+      until npm install --prefer-online "$@"; do \
+        if [ "$attempt" -ge "$NPM_INSTALL_ATTEMPTS" ]; then \
+          echo "npm install failed after $attempt attempts: $*" >&2; \
+          return 1; \
+        fi; \
+        echo "npm install attempt $attempt failed, retrying in ${NPM_INSTALL_RETRY_DELAY_SECONDS}s: $*" >&2; \
+        attempt=$((attempt + 1)); \
+        sleep "$NPM_INSTALL_RETRY_DELAY_SECONDS"; \
+      done; \
+    } \
+  && case "$EDITION" in \
       full) npm_flags="" ;; \
       core) npm_flags="--omit=optional" ;; \
       *) echo "Unknown EDITION: $EDITION" >&2; exit 1 ;; \
     esac \
-  && npm install signalk-server@$TAG $npm_flags \
+  && npm_install "signalk-server@$TAG" $npm_flags \
   && if [ "$EDITION" = core ]; then \
        adminui_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@signalk/server-admin-ui']") \
        && serialport_spec=$(node -p "require('signalk-server/package.json').optionalDependencies.serialport") \
        && node_ble_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@naugehyde/node-ble']") \
        && dbus_next_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@jellybrick/dbus-next']") \
-       && npm install $npm_flags "@signalk/server-admin-ui@$adminui_spec" "serialport@$serialport_spec" "@naugehyde/node-ble@$node_ble_spec" "@jellybrick/dbus-next@$dbus_next_spec"; \
+       && npm_install $npm_flags "@signalk/server-admin-ui@$adminui_spec" "serialport@$serialport_spec" "@naugehyde/node-ble@$node_ble_spec" "@jellybrick/dbus-next@$dbus_next_spec"; \
      fi \
   && mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
   && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
