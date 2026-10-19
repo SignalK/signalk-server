@@ -244,7 +244,9 @@ export default class DeMultiplexer extends Writable {
     this.timestampThrottle = new TimestampThrottle({
       getMilliseconds: (msg) =>
         typeof msg.timestamp === 'string'
-          ? Number(msg.timestamp)
+          ? msg.timestamp.trim() === ''
+            ? Number.NaN
+            : Number(msg.timestamp)
           : msg.timestamp
     })
     this.splitter = new Splitter(this, options)

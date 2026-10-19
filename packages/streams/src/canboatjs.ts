@@ -16,7 +16,7 @@ interface CanboatJsOptions {
 interface FileChunk {
   fromFile: boolean
   data: string
-  timestamp: string
+  timestamp: unknown
 }
 
 type ParsedPgnData = ReturnType<InstanceType<typeof FromPgn>['parse']> & {
@@ -60,31 +60,50 @@ export default class CanboatJs extends Transform {
     encoding: BufferEncoding,
     done: TransformCallback
   ): void {
-    if (
-      typeof chunk === 'object' &&
-      chunk !== null &&
-      'fromFile' in chunk &&
-      chunk.fromFile
-    ) {
-      const pgnData = this.fromPgn.parse(chunk.data) as ParsedPgnData
-      if (pgnData) {
-        pgnData.timestamp = new Date(Number(chunk.timestamp)).toISOString()
-        pgnData.providerId = this.providerId
-        this.push(pgnData)
-        this.app.emit(this.analyzerOutEvent, pgnData)
+    try {
+      if (
+        typeof chunk === 'object' &&
+        chunk !== null &&
+        'fromFile' in chunk &&
+        chunk.fromFile
+      ) {
+        const timestampMillis =
+          chunk.timestamp === null ||
+          chunk.timestamp === undefined ||
+          (typeof chunk.timestamp === 'string' && chunk.timestamp.trim() === '')
+            ? Number.NaN
+            : Number(chunk.timestamp)
+        const timestamp = new Date(timestampMillis)
+        if (
+          !Number.isFinite(timestampMillis) ||
+          Number.isNaN(timestamp.getTime())
+        ) {
+          this.app.emit('canboatjs:invalid-timestamp:object', chunk)
+          return
+        }
+        const pgnData = this.fromPgn.parse(chunk.data) as ParsedPgnData
+        if (pgnData) {
+          pgnData.timestamp = timestamp.toISOString()
+          pgnData.providerId = this.providerId
+          this.push(pgnData)
+          this.app.emit(this.analyzerOutEvent, pgnData)
+        } else {
+          this.app.emit('canboatjs:unparsed:object', chunk)
+        }
       } else {
-        this.app.emit('canboatjs:unparsed:object', chunk)
+        const pgnData = this.fromPgn.parse(chunk) as ParsedPgnData
+        if (pgnData) {
+          pgnData.providerId = this.providerId
+          this.push(pgnData)
+          this.app.emit(this.analyzerOutEvent, pgnData)
+        } else {
+          this.app.emit('canboatjs:unparsed:data', chunk)
+        }
       }
-    } else {
-      const pgnData = this.fromPgn.parse(chunk) as ParsedPgnData
-      if (pgnData) {
-        pgnData.providerId = this.providerId
-        this.push(pgnData)
-        this.app.emit(this.analyzerOutEvent, pgnData)
-      } else {
-        this.app.emit('canboatjs:unparsed:data', chunk)
-      }
+    } catch (error) {
+      this.app.emit('canboatjs:error', error)
+    } finally {
+      done()
     }
-    done()
   }
 }
