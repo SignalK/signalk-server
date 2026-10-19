@@ -337,6 +337,7 @@ export default function Sidebar({ location }: SidebarProps) {
           name: 'Server',
           url: '/serverConfiguration',
           icon: 'icon-settings',
+          badge: serverUpdateBadge,
           children: [
             {
               name: 'Settings',
