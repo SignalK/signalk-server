@@ -4,12 +4,14 @@ import { MemoryRouter, type Location } from 'react-router-dom'
 import { ROUTER_FUTURE_FLAGS } from '../../routerFuture'
 import Sidebar from './Sidebar'
 
+const appStore = vi.hoisted(() => ({
+  updates: [] as unknown[],
+  storeAvailable: true,
+  serverUpdate: undefined as string | undefined
+}))
+
 vi.mock('../../store', () => ({
-  useAppStore: () => ({
-    updates: [],
-    storeAvailable: true,
-    serverUpdate: undefined
-  }),
+  useAppStore: () => appStore,
   useAccessRequests: () => [],
   useDevices: () => [],
   useLoginStatus: () => ({ authenticationRequired: false }),
@@ -48,6 +50,7 @@ describe('Sidebar', () => {
 
   afterEach(() => {
     document.body.classList.remove(MOBILE_SHOWN)
+    appStore.serverUpdate = undefined
   })
 
   it('closes the mobile sidebar when a page is picked', () => {
@@ -87,5 +90,12 @@ describe('Sidebar', () => {
     renderSidebar()
     fireEvent.click(screen.getByText('OpenApi'))
     expect(document.body.classList.contains(MOBILE_SHOWN)).toBe(false)
+  })
+
+  it('shows an available server update on the collapsed Server group', () => {
+    appStore.serverUpdate = '2.35.0'
+    renderSidebar()
+    const server = screen.getByText('Server').closest('a')!
+    expect(server.textContent).toContain('2.35.0')
   })
 })
