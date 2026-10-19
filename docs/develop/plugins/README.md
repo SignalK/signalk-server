@@ -371,7 +371,7 @@ To record deltas sent by the plugin in the server's data log, enable the **Log p
 
 ## Storing data
 
-Write the files your plugin keeps to the directory returned by {@link @signalk/server-api!ServerAPI.getDataDirPath | `app.getDataDirPath()`} (`~/.signalk/plugin-config-data/<plugin id>/`), not to the plugin's own folder under `node_modules`, which an update replaces.
+Write the files your plugin keeps to the directory returned by {@link @signalk/server-api!ServerAPI.getDataDirPath | `app.getDataDirPath()`} (`~/.signalk/plugin-config-data/<plugin id>/` by default), not to the plugin's own folder under `node_modules`, which an update replaces.
 
 ### Caches and backups
 
