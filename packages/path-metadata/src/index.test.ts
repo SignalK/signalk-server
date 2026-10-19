@@ -355,6 +355,14 @@ describe('updateContract inheritance', () => {
     )
   })
 
+  it('treats resource announcements as event-driven', () => {
+    // Null on a resource path is a delete, so a timeout must never produce it.
+    expect(updateContractForPath('resources.charts.nautical-charts')).to.equal(
+      'event'
+    )
+    expect(updateContractForPath('resources.routes.a-route')).to.equal('event')
+  })
+
   it('leaves a measured steering path periodic', () => {
     // rudderAngle is outside the autopilot subtree: it reports where the
     // rudder is, so silence there really is a dead sensor.

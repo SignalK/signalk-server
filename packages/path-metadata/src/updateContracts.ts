@@ -17,6 +17,9 @@ import type { UpdateContract } from './types'
 export const updateContracts: Readonly<Record<string, UpdateContract>> =
   Object.freeze({
     notifications: 'event',
+    // A resource delta announces a create, update or delete, and null on it
+    // means the resource was deleted, so it can never stand for silence.
+    resources: 'event',
     design: 'event',
     'navigation.anchor': 'event',
     // Autopilot settings and targets are commanded, not measured: the last
