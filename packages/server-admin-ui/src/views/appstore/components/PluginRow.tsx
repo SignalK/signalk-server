@@ -7,6 +7,7 @@ import { hasPendingInstall } from '../projectAppInfo'
 import PluginIcon from './PluginIcon'
 import RecencyBadge from './RecencyBadge'
 import UpdateAvailableBadge from './UpdateAvailableBadge'
+import WasmBadge from './WasmBadge'
 
 interface PluginRowProps {
   app: AppInfo
@@ -79,6 +80,7 @@ const PluginRow: React.FC<PluginRowProps> = ({
           newVersion={app.newVersion}
           className="plugin-row__badge"
         />
+        <WasmBadge isWasm={app.isWasm} className="plugin-row__badge" />
         {app.official && (
           <Badge bg="primary" className="plugin-row__badge">
             OFFICIAL
