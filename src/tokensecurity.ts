@@ -80,6 +80,7 @@ import {
   AuthenticationProviderRegistry,
   registerAuthProviderRoutes
 } from './auth/providers'
+import { isSafeIdentifier } from './auth/identifiers'
 import { UserProvisioner } from './auth/provisioning'
 import { createIdentityUserStore } from './auth/identity-store'
 import { SERVERROUTESPREFIX } from './constants'
@@ -102,21 +103,8 @@ const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 const VALID_PERMISSIONS = new Set(['readonly', 'readwrite', 'admin'])
 
-const UNSAFE_IDENTIFIER_CHARS = /[/\\\0]/
 const INVALID_IDENTIFIER_MESSAGE =
   'Identifier must not be "." or ".." or contain "/", "\\" or NUL'
-
-// Usernames and device client ids name per-principal storage directories,
-// so they must be usable as a single path segment.
-function isSafeIdentifier(identifier: unknown): identifier is string {
-  return (
-    typeof identifier === 'string' &&
-    identifier.length > 0 &&
-    identifier !== '.' &&
-    identifier !== '..' &&
-    !UNSAFE_IDENTIFIER_CHARS.test(identifier)
-  )
-}
 
 // Dummy hash for timing attack prevention - pre-generated bcrypt hash
 const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
