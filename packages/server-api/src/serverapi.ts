@@ -474,6 +474,11 @@ export interface ServerAPI
    * address — which moves with `proxy_port`, ssl and socket activation, so it
    * is not something a plugin should be reconstructing.
    *
+   * The server must listen on a TCP port: when systemd socket activation hands
+   * it a Unix socket, the returned promise rejects.
+   *
+   * Callable in plugin's `start()` function and later, not in plugin constructor function.
+   *
    * The target route must opt in with `router.access('readonly')`. Routes
    * that declare no permission keep falling through to the admin gate, so
    * this never widens what a plugin exposes by itself.
