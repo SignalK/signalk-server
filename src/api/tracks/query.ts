@@ -281,7 +281,6 @@ export function rejectUnknownParams(
  * this server does not implement would otherwise receive an unfiltered 200 and
  * have no way to tell.
  */
-/** The `contexts` value that asks for every context. */
 const WILDCARD = '*'
 
 const KNOWN_PARAMS = new Set([
@@ -333,6 +332,15 @@ export function parseTracksQuery(
 
   const contexts = first(query.contexts) ?? first(query.context)
   const everyContext = contexts?.trim() === WILDCARD
+  if (
+    everyContext &&
+    query.contexts !== undefined &&
+    query.context !== undefined
+  ) {
+    errors.push(
+      '* already means every context and cannot be given with context'
+    )
+  }
   if (contexts !== undefined && blank(contexts)) {
     errors.push('context must not be empty')
   } else if (contexts !== undefined && !everyContext) {

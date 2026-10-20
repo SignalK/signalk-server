@@ -10,7 +10,7 @@ const tracksApiDoc = {
       'API for querying recorded vessel tracks — where vessels have actually been, over time.\n\n' +
       'A track is where a vessel actually went, whoever recorded it. A GPX a friend sent is a track here too: it is imported, kept and queried like any other, because on a plotter a track is a track regardless of who logged it. What makes something a route is an intention to follow it \u2014 trimming a track, reversing it or taking one leg produces a route in `resources/routes`, which is a separate thing this API does not serve.\n\n' +
       'Storage is not defined by this API. Providers are plugins that record positions and may keep them in SQLite, a time-series database, Parquet files, or anything else.\n\n' +
-      'The time range is given as **from**, **to** and **duration** in any workable combination; an omitted **to** is resolved to now by the server, so every provider sees the same window. A time window is required unless a single **context** is requested, since an unbounded query across every recorded vessel can span years of data.\n\n' +
+      'The time range is given as **from**, **to** and **duration** in any workable combination; an omitted **to** is resolved to now by the server, so every provider sees the same window. A time window is required unless a single **context** or `contexts=*` is requested, since an unbounded query across several vessels is more likely a mistake and can span years of data; `contexts=*` asks for every track outright.\n\n' +
       'The full time range asked for is always returned. Where a result would be too large, providers reduce the number of *points* — by resolution, point budget or simplification — and report what they applied in the response, rather than silently narrowing the time range.',
     license: {
       name: 'Apache 2.0',
@@ -595,7 +595,7 @@ const tracksApiDoc = {
         tags: ['tracks'],
         summary: 'List contexts with track data in the window',
         description:
-          'A time window is required unless a single context is given, so a bare request with no parameters returns 400. `imported` is not accepted here: a context listing has no tracks to filter.',
+          'A time window is required unless a single context is given, so a bare request with no parameters returns 400; `contexts=*` needs one here too, since it would otherwise list every context ever recorded. `imported` is not accepted here: a context listing has no tracks to filter.',
         parameters: [
           { $ref: '#/components/parameters/Contexts' },
           { $ref: '#/components/parameters/From' },

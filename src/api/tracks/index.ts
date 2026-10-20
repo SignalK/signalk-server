@@ -206,6 +206,18 @@ export class TrackApiHttpRegistry {
         if (request.imported !== undefined) {
           errors.push('imported is not accepted when listing contexts')
         }
+        // Only contexts=* gets this far without a window or a context. Unlike a
+        // track listing it would ask providers for every context they have ever
+        // seen, which is what the window rule exists to prevent.
+        if (
+          request.contexts === undefined &&
+          request.from === undefined &&
+          request.duration === undefined
+        ) {
+          errors.push(
+            'a time window (from or duration) is required when listing contexts'
+          )
+        }
         if (errors.length > 0) {
           res.status(400).json({ error: errors.join(', ') })
           return

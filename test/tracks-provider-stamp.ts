@@ -154,9 +154,21 @@ describe('Track API provider stamping', () => {
     it('is refused when listing contexts', async () => {
       await serve()
       const res = await fetch(
-        `${base}/signalk/v2/api/tracks/contexts?imported=true`
+        `${base}/signalk/v2/api/tracks/contexts?imported=true&duration=PT1H`
       )
       expect(res.status).to.equal(400)
+      const body = (await res.json()) as { error: string }
+      expect(body.error).to.match(/imported is not accepted/)
+    })
+
+    it('needs a time window to list contexts=*', async () => {
+      await serve()
+      const res = await fetch(
+        `${base}/signalk/v2/api/tracks/contexts?contexts=*`
+      )
+      expect(res.status).to.equal(400)
+      const body = (await res.json()) as { error: string }
+      expect(body.error).to.match(/time window/)
     })
   })
 
