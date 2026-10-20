@@ -348,6 +348,7 @@ _Example:_
 const { Strategy: GitHubStrategy } = require('passport-github2')
 
 plugin.start = (options) => {
+  const { admins = [], crew = [] } = options
   app.registerAuthenticationProvider({
     id: 'github',
     name: 'Sign in with GitHub',
@@ -358,9 +359,9 @@ plugin.start = (options) => {
         callbackURL: `${options.serverUrl}/signalk/v1/auth/github/callback`
       },
       (accessToken, refreshToken, profile, done) => {
-        const permission = options.admins.includes(profile.username)
+        const permission = admins.includes(profile.username)
           ? 'admin'
-          : options.crew.includes(profile.username)
+          : crew.includes(profile.username)
             ? 'readonly'
             : undefined
         if (!permission) {
