@@ -123,12 +123,12 @@ describe('UserProvisioner', () => {
     expect(bySubject.username).to.equal('oidc-s2')
   })
 
-  it('replaces path separators and control characters taken from the subject', async () => {
+  it('keeps only portable characters from the subject', async () => {
     const h = harness([{ username: 'alice', type: 'admin', password: 'x' }])
     const fallback = await h.provisioner.resolve('oidc', true, {
       subject: 'https://idp/u\\1\u0007'
     })
-    expect(fallback.username).to.equal('oidc-https:__idp_u_1_')
+    expect(fallback.username).to.equal('oidc-https___idp_u_1_')
     const suffixed = await h.provisioner.resolve('oidc', true, {
       subject: 'a/b\\cdefghij',
       username: 'alice'
