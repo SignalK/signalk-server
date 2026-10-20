@@ -8,16 +8,19 @@ title: Plugin Capabilities
 
 Declare required capabilities in `package.json`:
 
-| Capability      | Description                              | Status                          |
-| --------------- | ---------------------------------------- | ------------------------------- |
-| `dataRead`      | Read Signal K data model                 | Supported                       |
-| `dataWrite`     | Emit delta messages                      | Supported                       |
-| `storage`       | Write to VFS (`vfs-only`)                | Supported                       |
-| `httpEndpoints` | Register custom HTTP endpoints           | Supported                       |
-| `network`       | HTTP requests (via as-fetch)             | Supported (AssemblyScript only) |
-| `putHandlers`   | Register PUT handlers for vessel control | Supported                       |
-| `rawSockets`    | UDP socket access for radar, NMEA, etc.  | Supported                       |
-| `serialPorts`   | Serial port access                       | Planned                         |
+| Capability         | Description                              | Status                          |
+| ------------------ | ---------------------------------------- | ------------------------------- |
+| `dataRead`         | Read Signal K data model                 | Supported                       |
+| `dataWrite`        | Emit delta messages                      | Supported                       |
+| `storage`          | Write to VFS (`vfs-only`)                | Supported                       |
+| `httpEndpoints`    | Register custom HTTP endpoints           | Supported                       |
+| `network`          | HTTP requests (via as-fetch)             | Supported (AssemblyScript only) |
+| `putHandlers`      | Register PUT handlers for vessel control | Supported                       |
+| `rawSockets`       | UDP socket access for radar, NMEA, etc.  | Supported                       |
+| `resourceProvider` | Serve Signal K resources                 | Supported                       |
+| `weatherProvider`  | Provide data to the Signal K Weather API | Supported                       |
+| `radarProvider`    | Provide radars to the Signal K Radar API | Supported                       |
+| `serialPorts`      | Serial port access                       | Planned                         |
 
 ## Network API (AssemblyScript)
 
