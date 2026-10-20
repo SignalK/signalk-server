@@ -97,6 +97,62 @@ export declare function registerResourceProvider(resourceType: string): boolean;
  * @returns `bool`
  */
 export declare function hasResourceProviderCapability(): boolean;
+/** assembly/ble/BLE_ERR_NOT_PERMITTED */
+export declare const BLE_ERR_NOT_PERMITTED: {
+  /** @type `i32` */
+  get value(): number
+};
+/** assembly/ble/BLE_ERR_UNAVAILABLE */
+export declare const BLE_ERR_UNAVAILABLE: {
+  /** @type `i32` */
+  get value(): number
+};
+/** assembly/ble/BLE_ERR_INVALID_ARGUMENT */
+export declare const BLE_ERR_INVALID_ARGUMENT: {
+  /** @type `i32` */
+  get value(): number
+};
+/** assembly/ble/BLE_ERR_UNKNOWN_HANDLE */
+export declare const BLE_ERR_UNKNOWN_HANDLE: {
+  /** @type `i32` */
+  get value(): number
+};
+/** assembly/ble/BLE_ERR_NOT_CONNECTED */
+export declare const BLE_ERR_NOT_CONNECTED: {
+  /** @type `i32` */
+  get value(): number
+};
+/**
+ * assembly/ble/bleSubscribeGatt
+ * @param descriptorJson `~lib/string/String`
+ * @returns `i32`
+ */
+export declare function bleSubscribeGatt(descriptorJson: string): number;
+/**
+ * assembly/ble/bleGattWrite
+ * @param handle `i32`
+ * @param charUuid `~lib/string/String`
+ * @param data `~lib/typedarray/Uint8Array`
+ * @param withResponse `bool`
+ * @returns `i32`
+ */
+export declare function bleGattWrite(handle: number, charUuid: string, data: Uint8Array, withResponse?: boolean): number;
+/**
+ * assembly/ble/bleGattClose
+ * @param handle `i32`
+ * @returns `i32`
+ */
+export declare function bleGattClose(handle: number): number;
+/**
+ * assembly/ble/bleSubscribeAdvertisements
+ * @returns `i32`
+ */
+export declare function bleSubscribeAdvertisements(): number;
+/**
+ * assembly/ble/bleUnsubscribeAdvertisements
+ * @returns `i32`
+ */
+export declare function bleUnsubscribeAdvertisements(): number;
 /** assembly/signalk/Delta */
 declare class __Internref4 extends Number {
   private __nominal4: symbol;
