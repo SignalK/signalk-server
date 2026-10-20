@@ -100,9 +100,19 @@ export function openSseStream(
   const keepAlive = setInterval(() => {
     // An ended stream can stay open until its buffer drains, and writing
     // to it would emit an unhandled 'error'
-    if (!res.writableEnded) {
-      res.write(SSE_KEEPALIVE_COMMENT)
+    if (res.writableEnded) {
+      return
     }
+    // On a quiet channel keep-alives are all a stalled client receives, so
+    // they are held to the same limit as events
+    if (
+      res.writableLength + SSE_KEEPALIVE_COMMENT.length >
+      SSE_MAX_BUFFERED_BYTES
+    ) {
+      res.destroy()
+      return
+    }
+    res.write(SSE_KEEPALIVE_COMMENT)
   }, SSE_KEEPALIVE_INTERVAL_MS)
 
   res.on('close', () => {
