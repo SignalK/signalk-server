@@ -396,7 +396,11 @@ describe('updateContract inheritance', () => {
   })
 
   it('does not write the contract onto the shared template entry', () => {
-    getMetadata('vessels.self.navigation.anchor.position')
+    const anchorPosition = 'vessels.self.navigation.anchor.position'
+    expect(getMetadata(anchorPosition)?.updateContract).to.equal('event')
+    expect(getStoredMetadata(anchorPosition)?.updateContract).to.equal(
+      undefined
+    )
     const other = getMetadata('vessels.self.navigation.speedOverGround')
     expect(other?.updateContract).to.equal(undefined)
     expect(other?.units).to.equal('m/s')
