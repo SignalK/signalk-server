@@ -62,9 +62,10 @@ function sameIdentityRecord(
 }
 
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g
-// A subject is an opaque provider id, often a URL, so the parts of it that
-// go into a username replace what isSafeIdentifier refuses.
-const SUBJECT_UNSAFE_CHARS = /[\u0000-\u001f\u007f/\\]/g
+// A subject is an opaque provider id, often a URL. The parts of it that go
+// into a username keep only the characters every per-user store accepts,
+// the strictest being the unit preferences loader.
+const SUBJECT_UNSAFE_CHARS = /[^a-zA-Z0-9_.@-]/g
 
 /**
  * Provider-supplied names are external input: strip control characters,
