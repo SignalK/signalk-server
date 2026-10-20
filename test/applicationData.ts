@@ -7,7 +7,6 @@ import { strict as assert } from 'assert'
 import fs from 'fs'
 import http from 'http'
 import path from 'path'
-import { promisify } from 'util'
 import { rimraf } from 'rimraf'
 import { freeport } from './ts-servertestutilities'
 import {
@@ -236,11 +235,13 @@ describe('Application Data', () => {
     const siblingName = `${path.basename(configDir())}-sibling`
     const siblingDir = path.join(path.dirname(configDir()), siblingName)
     const userIds = [`../../../${siblingName}`, '../../..']
+    // addUser rejects these names, but a user stored before that check
+    // existed can still carry one.
     for (const userId of userIds) {
-      await promisify(server.app.securityStrategy.addUser)(
-        server.app.securityStrategy.securityConfig,
-        { userId, type: 'readwrite', password: 'traversal' }
-      )
+      server.app.securityStrategy.securityConfig.users.push({
+        username: userId,
+        type: 'readwrite'
+      })
     }
 
     try {
