@@ -281,11 +281,12 @@ describe('Metadata end to end', function () {
     )
     expect(before).to.have.property('zones')
 
-    const deleteResult = await fetch(
-      `${v1Api}/vessels/self/${anchorMeta}/zones`,
-      { method: 'DELETE' }
+    await awaitPutSuccess(
+      port,
+      await fetch(`${v1Api}/vessels/self/${anchorMeta}/zones`, {
+        method: 'DELETE'
+      })
     )
-    expect(deleteResult.status).to.equal(202)
 
     const after = await getV1(`/vessels/self/${anchorMeta}`).then((r) =>
       r.json()
