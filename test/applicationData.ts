@@ -235,8 +235,8 @@ describe('Application Data', () => {
     const siblingName = `${path.basename(configDir())}-sibling`
     const siblingDir = path.join(path.dirname(configDir()), siblingName)
     const userIds = [`../../../${siblingName}`, '../../..']
-    // addUser rejects these names, but a user stored before that check
-    // existed can still carry one.
+    // addUser rejects these names, so they go into the security config
+    // directly: a users list read from disk can still hold them.
     for (const userId of userIds) {
       server.app.securityStrategy.securityConfig.users.push({
         username: userId,
