@@ -1,10 +1,13 @@
 import chai from 'chai'
+import fs from 'fs'
 import jwt from 'jsonwebtoken'
+import os from 'os'
 import path from 'path'
 import { rimraf } from 'rimraf'
 import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
 import {
   startServerP,
+  startServerFromConfigP,
   getAdminToken,
   getReadOnlyToken,
   serverTestConfigDirectory
@@ -707,6 +710,92 @@ describe('Device Manager', function () {
       )
       expect(result.status).to.equal(401)
     })
+  })
+})
+
+// A file-backed security config is read from disk on every request and
+// saved asynchronously, so overlapping requests are possible only here.
+describe('Device token regeneration with a file-backed security config', function () {
+  this.timeout(SERVER_START_TIMEOUT)
+
+  const SECRET_KEY = 'device-token-regeneration-secret'
+  const ADMIN_USERNAME = 'regeneration-admin'
+  const DEVICE_ID = 'regeneration-device'
+
+  let url: string
+  let server: { stop: () => Promise<void> } | undefined
+  let configDir: string | undefined
+
+  before(async function () {
+    const port = await freeport()
+    url = `http://localhost:${port}`
+    configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-device-token-'))
+    fs.writeFileSync(
+      path.join(configDir, 'settings.json'),
+      JSON.stringify({
+        port,
+        interfaces: { plugins: false },
+        pipedProviders: [],
+        security: { strategy: './tokensecurity' }
+      })
+    )
+    fs.writeFileSync(
+      path.join(configDir, 'security.json'),
+      JSON.stringify({
+        secretKey: SECRET_KEY,
+        users: [{ username: ADMIN_USERNAME, type: 'admin' }],
+        devices: [
+          {
+            clientId: DEVICE_ID,
+            permissions: 'readonly',
+            config: {},
+            description: 'regeneration test',
+            requestedPermissions: ''
+          }
+        ]
+      })
+    )
+    server = await startServerFromConfigP(configDir)
+  })
+
+  after(async function () {
+    try {
+      await server?.stop()
+    } finally {
+      if (configDir !== undefined) {
+        await rimraf(configDir)
+      }
+    }
+  })
+
+  it('issues distinct versions to concurrent regenerations', async function () {
+    const adminToken = jwt.sign({ id: ADMIN_USERNAME }, SECRET_KEY)
+    const regenerate = async (): Promise<string> => {
+      const result = await fetch(
+        `${url}/skServer/security/devices/${DEVICE_ID}/token`,
+        {
+          method: 'POST',
+          headers: { Cookie: `JAUTHENTICATION=${adminToken}` }
+        }
+      )
+      expect(result.status).to.equal(200)
+      return (await result.json()).token
+    }
+    const loginStatus = async (token: string): Promise<string> => {
+      const result = await fetch(`${url}/skServer/loginStatus?token=${token}`)
+      return (await result.json()).status
+    }
+
+    const tokens = await Promise.all([regenerate(), regenerate()])
+    const versions = tokens.map(
+      (token) => (jwt.decode(token) as { ver: number }).ver
+    )
+    expect(versions).to.have.members([1, 2])
+
+    const [latest, earlier] =
+      versions[0] > versions[1] ? tokens : [tokens[1], tokens[0]]
+    expect(await loginStatus(latest)).to.equal('loggedIn')
+    expect(await loginStatus(earlier)).to.equal('notLoggedIn')
   })
 })
 

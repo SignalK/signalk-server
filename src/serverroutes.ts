@@ -831,34 +831,52 @@ module.exports = function (
     }
   )
 
+  // Regenerations run one at a time, so each one reads the token version
+  // the previous one saved, and a failed save restores the version its own
+  // request read.
+  let deviceTokenRegeneration = Promise.resolve()
+
+  function regenerateDeviceToken(
+    clientId: string,
+    res: Response
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      const config = getSecurityConfig(app)
+      const device = config.devices?.find(
+        (d: Device) => d.clientId === clientId
+      )
+      const previousVersion = device?.tokenVersion
+      const token = app.securityStrategy.generateDeviceToken(config, clientId)
+      if (!device || !token) {
+        res.status(404).json({ error: 'Device not found' })
+        resolve()
+        return
+      }
+      saveSecurityConfig(app, config, (saveErr) => {
+        if (saveErr) {
+          // The device keeps working with its current token when the new
+          // version could not be persisted.
+          device.tokenVersion = previousVersion
+          console.log(saveErr)
+          res.status(500).json({ error: 'Unable to save configuration' })
+        } else {
+          res.json({ token })
+        }
+        resolve()
+      })
+    })
+  }
+
   app.post(
     `${SERVERROUTESPREFIX}/security/devices/:uuid/token`,
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
-        const config = getSecurityConfig(app)
-        const device = config.devices?.find(
-          (d: Device) => d.clientId === req.params.uuid
-        )
-        const previousVersion = device?.tokenVersion
-        const token = app.securityStrategy.generateDeviceToken(
-          config,
-          req.params.uuid
-        )
-        if (!device || !token) {
-          res.status(404).json({ error: 'Device not found' })
-          return
-        }
-        saveSecurityConfig(app, config, (saveErr) => {
-          if (saveErr) {
-            // The device keeps working with its current token when the new
-            // version could not be persisted.
-            device.tokenVersion = previousVersion
-            console.log(saveErr)
-            res.status(500).json({ error: 'Unable to save configuration' })
-            return
-          }
-          res.json({ token })
-        })
+        deviceTokenRegeneration = deviceTokenRegeneration
+          .then(() => regenerateDeviceToken(req.params.uuid, res))
+          .catch((err) => {
+            console.log(err)
+            res.status(500).json({ error: 'Unable to generate token' })
+          })
       }
     }
   )
