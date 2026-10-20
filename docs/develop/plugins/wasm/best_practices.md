@@ -12,7 +12,7 @@ Saving the plugin configuration stops and restarts the plugin inside the same WA
 
 ## Error Handling
 
-A trap in a polling or delta handler is logged only to the server's debug output (`DEBUG=signalk:wasm:*`, see [Enable Server Debug Logging](#enable-server-debug-logging)), not to the server log or the admin UI, and the plugin keeps running. A trap in an HTTP handler fails only that request. A failure reported from the start handler puts the plugin into the error state.
+A trap in a polling or delta handler is logged only to the server's debug output (see [Enable Server Debug Logging](#enable-server-debug-logging)), not to the server log or the admin UI, and the plugin keeps running. A trap in an HTTP handler fails only that request. A failure reported from the start handler puts the plugin into the error state.
 
 ### Error Reporting
 
