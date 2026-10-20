@@ -652,32 +652,40 @@ export interface ServerAPI
   /**
    * Store plugin-specific metadata for a device. This data is merged into
    * the device list API response and is available to the admin UI.
+   * Optional so that plugins can support older servers without the device API.
    *
    * @param clientId - The device's clientId
    * @param metadata - Key-value metadata to store
    * @category Device API
    */
-  setDevicePluginData(clientId: string, metadata: Record<string, unknown>): void
+  setDevicePluginData?: (
+    clientId: string,
+    metadata: Record<string, unknown>
+  ) => void
 
   /**
    * Retrieve plugin-specific metadata previously stored for a device.
+   * Optional so that plugins can support older servers without the device API.
    *
    * @param clientId - The device's clientId
    * @returns The stored metadata, or undefined if none
    * @category Device API
    */
-  getDevicePluginData(clientId: string): Record<string, unknown> | undefined
+  getDevicePluginData?: (
+    clientId: string
+  ) => Record<string, unknown> | undefined
 
   /**
    * Register a callback for device connection state changes (connect/disconnect).
+   * Optional so that plugins can support older servers without the device API.
    *
    * @param callback - Called with event data when a device connects or disconnects
    * @returns A function to unsubscribe
    * @category Device API
    */
-  onDeviceStateChange(
+  onDeviceStateChange?: (
     callback: (event: DeviceStateChangeEvent) => void
-  ): () => void
+  ) => () => void
 }
 
 /**
