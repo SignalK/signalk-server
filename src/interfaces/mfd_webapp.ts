@@ -8,7 +8,7 @@ import { promisify } from 'util'
 import { exec } from 'child_process'
 import { networkInterfaces } from 'os'
 import { createDebug } from '../debug'
-import { getExternalPort } from '../ports'
+import { getMfdOrigin } from '../ports'
 const PUBLISH_PORT = 2053
 const MULTICAST_GROUP_IP = '239.2.1.1'
 const debug = createDebug('signalk-server:interfaces:mfd_webapps')
@@ -21,12 +21,7 @@ const execP = promisify(exec)
 module.exports = (theApp: any) => {
   return {
     start() {
-      const port = getExternalPort(theApp)
-      const protocol =
-        theApp.config.settings.ssl || theApp.config.isExternalSsl()
-          ? 'https'
-          : 'http'
-      const publishToNavico = getPublishToNavico(protocol, port)
+      const publishToNavico = getPublishToNavico(theApp)
       setInterval(() => publishToNavico(), 10 * 1000)
     }
   }
@@ -82,7 +77,10 @@ const send = (
   socket.bind(0, fromAddress)
 }
 
-const getPublishToNavico = (protocol: string, port: number) => async () => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getPublishToNavico = (theApp: any) => async () => {
+  // Resolved per publish: the plain HTTP port is only known once it listens
+  const { protocol, port } = getMfdOrigin(theApp)
   let addresses: string[] = []
   for (const [_name, infos] of Object.entries(networkInterfaces())) {
     for (const addressInfo of infos || []) {

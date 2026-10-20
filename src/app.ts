@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Delta, ServerAPI, SKVersion, FullSignalK } from '@signalk/server-api'
 import { EventEmitter } from 'node:events'
+import type { Server } from 'node:http'
 
 import { Config } from './config/config'
 import DeltaCache from './deltacache'
@@ -18,7 +19,7 @@ export interface ServerApp extends ServerAPI {
     restartProvider: (id: string) => void
   }
   server: any
-  redirectServer?: any
+  secondaryServer?: Server
   deltaCache: DeltaCache
   stalenessEnforcer?: StalenessEnforcer
   getMaxFailoverTimeoutMs?: (path: string) => number

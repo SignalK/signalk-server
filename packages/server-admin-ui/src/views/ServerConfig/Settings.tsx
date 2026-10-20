@@ -77,7 +77,9 @@ const OptionDescriptions: Record<string, React.ReactNode> = {
       </a>
     </>
   ),
-  ssl: "Server's built-in SSL (HTTPS) support"
+  ssl: "Server's built-in SSL (HTTPS) support",
+  httpAlongsideSsl:
+    'With SSL on, keep serving plain HTTP on the HTTP port instead of redirecting to HTTPS. For devices that cannot trust the certificate, such as chartplotters (MFDs). Traffic on that port, logins included, is not encrypted.'
 }
 
 const ServerSettings: React.FC = () => {

@@ -151,6 +151,12 @@ So in the case that your server has a manually configured connection for _NMEA01
 
 NMEA0183 connections over TCP and UDP are inherently unsafe. There are no options for authentication and / or secure communication. In comparison Signal K over TLS and HTTP / WebSockets can provide secure, authenticated read and write access to your data.
 
+### Plain HTTP alongside SSL
+
+With SSL on, the HTTP port (3000 by default) only redirects to HTTPS. Some devices cannot follow that: a chartplotter (MFD) has no way to install a local certificate authority, so a self-signed or locally issued certificate leaves its Signal K tile blank.
+
+The _Server Settings_ option `httpAlongsideSsl` keeps serving the whole server, WebSockets included, as plain HTTP on the HTTP port, and points the Navico MFD tile there. Everything on that port is unencrypted, including logins and access tokens, for every device that can reach it. Session cookies set over plain HTTP are not marked `Secure`. With this option on the server sends no `Strict-Transport-Security` header, but a browser that received one earlier keeps rewriting `http://` to `https://` for that host name until it expires; such a browser can still reach the plain port by IP address.
+
 ## Security Headers
 
 Signal K Server uses the `helmet` middleware to set security-related HTTP headers:
