@@ -67,6 +67,7 @@ export interface PackageSummary {
   categories?: string[]
   npmUrl?: string
   isPlugin?: boolean
+  isWasm?: boolean
   isWebapp?: boolean
   keywords?: string[]
   npmReadme?: string
@@ -175,6 +176,7 @@ export async function buildPluginDetail(
     githubUrl: summary.githubUrl,
     npmUrl: summary.npmUrl,
     isPlugin: summary.isPlugin,
+    isWasm: summary.isWasm,
     isWebapp: summary.isWebapp,
     readme: readmeText,
     changelog,

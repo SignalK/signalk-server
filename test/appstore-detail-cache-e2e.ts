@@ -79,6 +79,7 @@ describe('appstore detail cache', function () {
           screenshots: [],
           official: false,
           deprecated: false,
+          isWasm: false,
           fromCache: true
         }
       }),
@@ -124,6 +125,39 @@ describe('appstore detail cache', function () {
     const body = (await res.json()) as { version?: string; readme?: string }
     expect(body.version).to.equal(version)
     expect(body.readme).to.not.equal('STALE-README-MARKER')
+  })
+
+  it('rebuilds a cached detail that predates the isWasm flag', async function () {
+    const { name, version } = await anAvailablePlugin(this)
+
+    // Right version, but written before list and detail entries carried
+    // isWasm. Serving it would hide the WASM badge until the next release.
+    const file = detailFileFor(name)
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(
+      file,
+      JSON.stringify({
+        writtenAt: Date.now(),
+        installed: false,
+        payload: {
+          name,
+          version,
+          readme: 'LEGACY-README-MARKER',
+          readmeFormat: 'markdown',
+          screenshots: [],
+          official: false,
+          deprecated: false,
+          fromCache: true
+        }
+      }),
+      'utf8'
+    )
+
+    const res = await fetch(`${host}/skServer/appstore/plugin/${name}`)
+    expect(res.status).to.equal(200)
+    const body = (await res.json()) as { readme?: string; isWasm?: boolean }
+    expect(body.readme).to.not.equal('LEGACY-README-MARKER')
+    expect(body.isWasm).to.be.a('boolean')
   })
 
   it('keeps the appstore list responding across repeated requests', async function () {
