@@ -1712,8 +1712,8 @@ function tokenSecurityFactory(
       }
     } else if (payload.plugin) {
       // Minted by getPluginSelfAuthToken for a plugin calling another
-      // plugin's route in this same process. Readonly and short-lived, so it
-      // grants no more than an anonymous request would under allow_readonly.
+      // plugin's route in this same process: an authenticated readonly
+      // principal that expires after PLUGIN_SELF_TOKEN_EXPIRY.
       principal = {
         identifier: `plugin:${payload.plugin}`,
         permissions: 'readonly'
