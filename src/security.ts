@@ -184,6 +184,8 @@ export interface RequestStatusData {
 export interface SkPrincipal {
   identifier: string
   permissions: string
+  // Absent for the anonymous readonly principal.
+  principalType?: 'user' | 'device'
 }
 
 /** Websocket connection carrying the auth state set by authorizeWS. */

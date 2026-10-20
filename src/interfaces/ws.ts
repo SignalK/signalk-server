@@ -1199,22 +1199,26 @@ const isSelfSubscription = (query: Spark['query']): boolean =>
 
 // A connection may authenticate after the upgrade (login or access-request
 // messages), so device tracking keys on the spark, not on the principal
-// captured at connect time. The anonymous allow_readonly principal (AUTO)
-// is not a device identity: it is skipped, and a later real authentication
-// on the same socket re-keys the tracked connection.
+// captured at connect time. Only device principals are tracked: a later
+// authentication on the same socket re-keys the tracked device, or stops
+// tracking when the socket no longer belongs to a device.
 function trackDeviceConnect(app: WsApp, spark: Spark): void {
-  const principalId = spark.request.skPrincipal?.identifier
-  if (!principalId || principalId === 'AUTO' || !app.deviceTracker) {
+  if (!app.deviceTracker) {
     return
   }
-  if (spark.skTrackedDeviceId === principalId) {
+  const principal = spark.request.skPrincipal
+  const deviceId =
+    principal?.principalType === 'device' ? principal.identifier : undefined
+  if (spark.skTrackedDeviceId === deviceId) {
     return
   }
   if (spark.skTrackedDeviceId) {
     app.deviceTracker.onDisconnect(spark.skTrackedDeviceId)
   }
-  spark.skTrackedDeviceId = principalId
-  app.deviceTracker.onConnect(principalId, spark.request._resolvedIp)
+  spark.skTrackedDeviceId = deviceId
+  if (deviceId) {
+    app.deviceTracker.onConnect(deviceId, spark.request._resolvedIp)
+  }
 }
 
 function handleVerifyWSError(spark: Spark, error: Error): void {

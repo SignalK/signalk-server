@@ -1765,7 +1765,8 @@ function tokenSecurityFactory(
       if (user) {
         principal = {
           identifier: user.username,
-          permissions: user.type
+          permissions: user.type,
+          principalType: 'user'
         }
       }
     } else if (payload.device && options.devices) {
@@ -1775,7 +1776,8 @@ function tokenSecurityFactory(
       if (device && (payload.ver ?? 0) === (device.tokenVersion ?? 0)) {
         principal = {
           identifier: device.clientId,
-          permissions: device.permissions
+          permissions: device.permissions,
+          principalType: 'device'
         }
       }
     }

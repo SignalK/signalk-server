@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import os from 'os'
 import path from 'path'
 import { rimraf } from 'rimraf'
+import WebSocket from 'ws'
 import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
 import {
   startServerP,
@@ -28,6 +29,7 @@ interface TestServer {
         permissions: Array<{ method: string; path: string; permission: string }>
       ) => void
     }
+    deviceTracker: DeviceTracker
   }
   stop: () => Promise<void>
 }
@@ -415,6 +417,43 @@ describe('Device Manager', function () {
         layout: 'helm',
         theme: 'dark'
       })
+    })
+  })
+
+  describe('WebSocket device tracking', function () {
+    function openStream(token: string): Promise<WebSocket> {
+      return new Promise((resolve, reject) => {
+        const ws = new WebSocket(
+          `${url.replace('http', 'ws')}/signalk/v1/stream?subscribe=none`,
+          { headers: { Cookie: `JAUTHENTICATION=${token}` } }
+        )
+        ws.once('message', () => resolve(ws))
+        ws.once('error', reject)
+      })
+    }
+
+    it('tracks device connections but not user connections', async function () {
+      const createResult = await fetch(`${url}/skServer/security/devices`, {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          displayName: 'WebSocket Tracking Test',
+          permissions: 'readonly'
+        })
+      })
+      const { clientId, token } = await createResult.json()
+      const adminUsername = (jwt.decode(adminToken) as { id: string }).id
+      const tracker = server.app.deviceTracker
+
+      const userSocket = await openStream(adminToken)
+      const deviceSocket = await openStream(token)
+      try {
+        expect(tracker.getState(adminUsername)).to.be.undefined
+        expect(tracker.getState(clientId)?.isConnected).to.equal(true)
+      } finally {
+        userSocket.close()
+        deviceSocket.close()
+      }
     })
   })
 
