@@ -48,11 +48,14 @@ const SOG_PATH = 'navigation.speedOverGround' as Path
 // source-priority failover timeout when that is longer, so a heading
 // source failing over to its fallback does not stop the correction.
 const HEADING_MAX_AGE_MS = 3000
-// Slowest speed over ground (m/s, about 1 kn) at which course over ground
-// stands in for a missing heading. Below it COG is noise; above it leeway
-// and current rarely put COG more than ~10 degrees off the heading, which
-// moves a 6 m antenna offset by ~1 m, within typical GNSS error.
-const MIN_COG_SPEED = 0.5144
+// Slowest speed over ground (m/s, 3 kn) at which course over ground stands
+// in for a missing heading. Below it COG need not follow the bow: going
+// astern while docking puts it 180 degrees off, and drifting it follows the
+// current, either of which misplaces the CCRP by up to twice the antenna
+// offset, worse than leaving the position uncorrected. Above it leeway and
+// current rarely put COG more than ~10 degrees off the heading, which moves
+// a 6 m antenna offset by ~1 m, within typical GNSS error.
+const MIN_COG_SPEED = 1.5433
 
 // The single-GPS antenna offsets that predate gnssSensors. Consumers such as
 // AIS reporting and anchor alarms read them to place the hull around

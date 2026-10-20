@@ -1405,7 +1405,7 @@ describe('GnssOffsetCorrector heading freshness', function () {
     })
     now += 3001
     pushHeading('navigation.courseOverGroundTrue', 0)
-    pushHeading('navigation.speedOverGround', 0.6)
+    pushHeading('navigation.speedOverGround', 1.5433)
     expect(latitude()).to.be.closeTo(CORRECTED_LATITUDE, 1e-9)
   })
 
@@ -1418,10 +1418,18 @@ describe('GnssOffsetCorrector heading freshness', function () {
     expect(latitude()).to.be.closeTo(CORRECTED_LATITUDE, 1e-9)
   })
 
-  it('does not use course over ground below 1 kn', async function () {
+  it('does not use course over ground just below 3 kn', async function () {
     const { latitude } = await setup({
       'navigation.courseOverGroundTrue.value': 0,
-      'navigation.speedOverGround.value': 0.5
+      'navigation.speedOverGround.value': 1.54
+    })
+    expect(latitude()).to.equal(60)
+  })
+
+  it('does not use course over ground while docking at 2 kn', async function () {
+    const { latitude } = await setup({
+      'navigation.courseOverGroundTrue.value': 0,
+      'navigation.speedOverGround.value': 1.0289
     })
     expect(latitude()).to.equal(60)
   })
