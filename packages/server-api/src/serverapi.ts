@@ -634,6 +634,10 @@ export interface ServerAPI
    * `plugin.start()`; the provider is removed automatically when the plugin
    * stops.
    *
+   * The verify callback decides who may log in: with `autoCreateUsers` at its
+   * default, every identity it accepts becomes a local user, so reject
+   * unknown accounts with `done(null, false, { message })`.
+   *
    * ```typescript
    * import { Strategy as GitHubStrategy } from 'passport-github2'
    *
@@ -648,11 +652,13 @@ export interface ServerAPI
    *         callbackURL: 'https://boat.example.com/signalk/v1/auth/github/callback'
    *       },
    *       (_accessToken, _refreshToken, profile, done) =>
-   *         done(null, {
-   *           subject: profile.id,
-   *           username: profile.username,
-   *           permission: 'readwrite'
-   *         })
+   *         crew.includes(profile.username)
+   *           ? done(null, {
+   *               subject: profile.id,
+   *               username: profile.username,
+   *               permission: 'readwrite'
+   *             })
+   *           : done(null, false, { message: 'Account not allowed' })
    *     )
    *   })
    * }

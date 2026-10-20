@@ -340,6 +340,8 @@ The strategy's verify callback must pass an `ExternalIdentity` as the passport u
 - `permission`: `readonly` | `readwrite` | `admin`, applied on every login when present
 - `email`, `name`: shown in the admin UI
 
+The verify callback decides who may log in: with `autoCreateUsers` at its default, every identity it accepts becomes a local user, so reject unknown accounts with `done(null, false, { message })`. The message is shown on the login page.
+
 _Example:_
 
 ```javascript
@@ -355,14 +357,21 @@ plugin.start = (options) => {
         clientSecret: options.clientSecret,
         callbackURL: `${options.serverUrl}/signalk/v1/auth/github/callback`
       },
-      (accessToken, refreshToken, profile, done) =>
+      (accessToken, refreshToken, profile, done) => {
+        const permission = options.admins.includes(profile.username)
+          ? 'admin'
+          : options.crew.includes(profile.username)
+            ? 'readonly'
+            : undefined
+        if (!permission) {
+          return done(null, false, { message: 'Account not allowed' })
+        }
         done(null, {
           subject: profile.id,
           username: profile.username,
-          permission: options.admins.includes(profile.username)
-            ? 'admin'
-            : 'readonly'
+          permission
         })
+      }
     )
   })
 }
