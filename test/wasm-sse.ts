@@ -1,11 +1,13 @@
 import { expect } from 'chai'
 import { EventEmitter } from 'events'
+import { mock } from 'node:test'
 import type { Response } from 'express'
 import {
   closeSseStreamsForPlugin,
   formatSseEvent,
   openSseStream,
   sendSseEvent,
+  SSE_KEEPALIVE_INTERVAL_MS,
   SSE_MAX_BUFFERED_BYTES
 } from '../dist/wasm/bindings/sse'
 
@@ -157,6 +159,32 @@ describe('WASM SSE channels', () => {
       res.destroyed = true
       openSseStream(pluginId, 'panel', res as unknown as Response)
       expect(sendSseEvent(pluginId, 'panel', 'e', 'd')).to.equal(0)
+    })
+  })
+
+  describe('keep-alive', () => {
+    beforeEach(() => {
+      mock.timers.enable({ apis: ['setInterval'] })
+    })
+
+    afterEach(() => {
+      closeSseStreamsForPlugin(pluginId)
+      mock.timers.reset()
+    })
+
+    it('writes a keep-alive to a client that reads', () => {
+      const res = subscribe(pluginId, 'quiet')
+      mock.timers.tick(SSE_KEEPALIVE_INTERVAL_MS)
+      expect(res.writes).to.have.length(1)
+      expect(res.destroyed).to.equal(false)
+    })
+
+    it('drops a client whose queue has no room for a keep-alive', () => {
+      const stalled = subscribe(pluginId, 'quiet')
+      stalled.writableLength = SSE_MAX_BUFFERED_BYTES
+      mock.timers.tick(SSE_KEEPALIVE_INTERVAL_MS)
+      expect(stalled.destroyed).to.equal(true)
+      expect(stalled.writes).to.deep.equal([])
     })
   })
 
