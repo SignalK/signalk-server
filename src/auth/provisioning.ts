@@ -1,6 +1,7 @@
 import { AuthenticationPermission, ExternalIdentity } from '@signalk/server-api'
 import { ExternalIdentityRecord, User } from '../security'
 import { createDebug } from '../debug'
+import { isSafeIdentifier } from './identifiers'
 
 const debug = createDebug('signalk-server:auth:provisioning')
 
@@ -61,16 +62,21 @@ function sameIdentityRecord(
 }
 
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g
-
-const PATH_SEGMENT_NAMES = new Set(['.', '..'])
+// A subject is an opaque provider id, often a URL, so the parts of it that
+// go into a username replace what isSafeIdentifier refuses.
+const SUBJECT_UNSAFE_CHARS = /[\u0000-\u001f\u007f/\\]/g
 
 /**
  * Provider-supplied names are external input: strip control characters,
- * trim, and refuse the two names that are path segments in user URLs.
+ * trim, and refuse a name that cannot be a single path segment.
  */
 function cleanUsername(value: string | undefined): string | undefined {
   const cleaned = value?.replace(CONTROL_CHARS, '').trim()
-  return cleaned && !PATH_SEGMENT_NAMES.has(cleaned) ? cleaned : undefined
+  return isSafeIdentifier(cleaned) ? cleaned : undefined
+}
+
+function subjectPart(subject: string): string {
+  return subject.replace(SUBJECT_UNSAFE_CHARS, '_')
 }
 
 function preferredUsername(
@@ -80,7 +86,7 @@ function preferredUsername(
   return (
     cleanUsername(identity.username) ??
     cleanUsername(identity.email) ??
-    `${providerId}-${identity.subject}`
+    `${providerId}-${subjectPart(identity.subject)}`
   )
 }
 
@@ -177,7 +183,7 @@ export class UserProvisioner {
     if (!this.store.findByUsername(preferred)) {
       return preferred
     }
-    const withSubject = `${preferred}-${record.subject.substring(0, SUBJECT_SUFFIX_LENGTH)}`
+    const withSubject = `${preferred}-${subjectPart(record.subject).substring(0, SUBJECT_SUFFIX_LENGTH)}`
     if (!this.store.findByUsername(withSubject)) {
       return withSubject
     }

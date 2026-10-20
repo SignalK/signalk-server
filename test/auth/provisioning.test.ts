@@ -107,6 +107,35 @@ describe('UserProvisioner', () => {
     expect(blank.username).to.equal('oidc-s2')
   })
 
+  it('passes over a suggested username that is not a single path segment', async () => {
+    const h = harness()
+    const byEmail = await h.provisioner.resolve('oidc', true, {
+      subject: 's1',
+      username: 'crew/alice',
+      email: 'alice@example.com'
+    })
+    expect(byEmail.username).to.equal('alice@example.com')
+    const bySubject = await h.provisioner.resolve('oidc', true, {
+      subject: 's2',
+      username: '..',
+      email: 'bob\\example'
+    })
+    expect(bySubject.username).to.equal('oidc-s2')
+  })
+
+  it('replaces path separators and control characters taken from the subject', async () => {
+    const h = harness([{ username: 'alice', type: 'admin', password: 'x' }])
+    const fallback = await h.provisioner.resolve('oidc', true, {
+      subject: 'https://idp/u\\1\u0007'
+    })
+    expect(fallback.username).to.equal('oidc-https:__idp_u_1_')
+    const suffixed = await h.provisioner.resolve('oidc', true, {
+      subject: 'a/b\\cdefghij',
+      username: 'alice'
+    })
+    expect(suffixed.username).to.equal('alice-a_b_cdef')
+  })
+
   it('applies the permission mapped by the provider', async () => {
     const h = harness()
     const user = await h.provisioner.resolve('oidc', true, {
