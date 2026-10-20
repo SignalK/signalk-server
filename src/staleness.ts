@@ -441,10 +441,10 @@ const lookupSchemaMeta = (
   }
   const meta: Pick<MetaValue, 'timeout' | 'updateContract'> = {}
   if (typeof full.timeout === 'number') meta.timeout = full.timeout
-  // The registry inherits a subtree's contract onto every path under it, so
-  // this is where the shipped classification now comes from. Anything other
-  // than the two contracts is ignored: an unrecognised value would fail the
-  // `!== 'periodic'` check in checkLeafGroup and silently exempt the path.
+  // The registry resolves a subtree's contract onto every path under it.
+  // Anything other than the two contracts is ignored: an unrecognised value
+  // would fail the `!== 'periodic'` check in checkLeafGroup and silently
+  // exempt the path.
   if (full.updateContract === 'event' || full.updateContract === 'periodic') {
     meta.updateContract = full.updateContract
   }
