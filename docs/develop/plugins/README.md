@@ -377,7 +377,7 @@ Write the files your plugin keeps to the directory returned by {@link @signalk/s
 
 Backups of the Signal K data directory include each plugin's data directory. Data the plugin downloads or rebuilds by itself, such as forecasts, tiles or decoded files, gains nothing from being backed up, and a cache rewritten every few hours adds a new copy to every scheduled backup, on the boat and in its cloud storage.
 
-Keep such data in its own subdirectory and put a [cache directory tag](https://bford.info/cachedir/) in it: a file named `CACHEDIR.TAG` whose content starts with exactly `Signature: 8a477f597d28d172789f06886806bc55`. Backup tools that follow the convention skip the directory's contents: [Kopia](https://kopia.io/) (used by the signalk-backup plugin) by default, and restic, Borg and GNU tar with `--exclude-caches`.
+Keep such data in its own subdirectory (`cache/` below) and put a [cache directory tag](https://bford.info/cachedir/) in it: a file named `CACHEDIR.TAG` whose content starts with exactly `Signature: 8a477f597d28d172789f06886806bc55`. Backup tools that follow the convention skip the directory's contents: [Kopia](https://kopia.io/) (used by the signalk-backup plugin) by default, and restic, Borg and GNU tar with `--exclude-caches`.
 
 ```javascript
 const fs = require('fs')
@@ -385,19 +385,28 @@ const path = require('path')
 
 const CACHEDIR_SIGNATURE = 'Signature: 8a477f597d28d172789f06886806bc55'
 
-function cacheDir(app, name) {
-  const dir = path.join(app.getDataDirPath(), name)
+function cacheDir(app) {
+  const dir = path.join(app.getDataDirPath(), 'cache')
   fs.mkdirSync(dir, { recursive: true })
   const tag = path.join(dir, 'CACHEDIR.TAG')
-  // A tag without the signature, such as one left empty by a full disk, is ignored by backup tools
-  if (
-    !fs.existsSync(tag) ||
-    !fs.readFileSync(tag, 'utf8').startsWith(CACHEDIR_SIGNATURE)
-  ) {
-    fs.writeFileSync(
-      tag,
-      `${CACHEDIR_SIGNATURE}\n# Regenerable cache; backups can skip it. See https://bford.info/cachedir/\n`
-    )
+  // An untagged cache only costs backup space, so a tag that cannot be read or written must not stop the plugin
+  try {
+    // Backup tools ignore a tag that is not a regular file or lacks the signature, such as one left empty by a full disk
+    const stat = fs.lstatSync(tag, { throwIfNoEntry: false })
+    if (
+      !stat?.isFile() ||
+      !fs.readFileSync(tag, 'utf8').startsWith(CACHEDIR_SIGNATURE)
+    ) {
+      // Renamed into place so a backup running meanwhile never reads a partial tag
+      const tmp = `${tag}.tmp`
+      fs.writeFileSync(
+        tmp,
+        `${CACHEDIR_SIGNATURE}\n# Regenerable cache; backups can skip it. See https://bford.info/cachedir/\n`
+      )
+      fs.renameSync(tmp, tag)
+    }
+  } catch (err) {
+    app.error(`Cannot tag ${dir} as a cache: ${err.message}`)
   }
   return dir
 }
@@ -405,7 +414,7 @@ function cacheDir(app, name) {
 
 Call it from `start()`, before the first download, so that a backup taken in the meantime already skips the directory. If your plugin prunes old files, have it delete only the files it wrote, so that the tag stays.
 
-A WASM plugin writes the same file inside its virtual filesystem, for example `/data/forecast/CACHEDIR.TAG`.
+A WASM plugin writes the same file inside its virtual filesystem, for example `/cache/CACHEDIR.TAG`.
 
 Keep settings, user data, and data that cannot be downloaded again without internet access out of tagged directories, so that a restore brings them back.
 
