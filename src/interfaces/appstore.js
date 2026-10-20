@@ -47,7 +47,8 @@ const {
   fetchDistTagsForPackages,
   getLatestServerVersion,
   getAuthor,
-  getKeywords
+  getKeywords,
+  getModulePaths
 } = require('../modules')
 const { SERVERROUTESPREFIX } = require('../constants')
 const {
@@ -69,7 +70,8 @@ const {
   badgesToIndicators,
   probeIconUrl,
   buildLocalAssetUrls: buildLocalAssetUrlsFor,
-  packageNameIs
+  packageNameIs,
+  readInstalledReadme
 } = require('../appstore')
 
 const bundledAdminUIs = ['@signalk/server-admin-ui']
@@ -484,6 +486,7 @@ module.exports = function (app) {
       return cached || null
     }
     const pkg = match.package
+    const isInstalled = !!getPlugin(name) || !!getWebApp(name)
     // Serve a cached detail when it was built for the version npm is
     // currently offering. Rebuilding costs a readme, changelog, metrics
     // and icon-probe round trip, and the background refresh calls this
@@ -492,10 +495,15 @@ module.exports = function (app) {
     // plugin's entry as fresh indefinitely, so without it a newly
     // published release would never reach the detail page.
     const cachedDetail = readDetailFromCache(cache, name)
-    if (cachedDetail && cachedDetail.version === pkg.version) {
+    // An entry cached while the README was unreachable is rebuilt once
+    // the installed copy can supply it.
+    if (
+      cachedDetail &&
+      cachedDetail.version === pkg.version &&
+      !(isInstalled && !cachedDetail.readme && installedReadmeFor(pkg)?.trim())
+    ) {
       return cachedDetail
     }
-    const isInstalled = !!getPlugin(name) || !!getWebApp(name)
     let pkgForEnrichment = pkg
     // Always try the npm registry first — it has the signalk.* key for
     // the LATEST available version, which is what the detail page
@@ -584,7 +592,7 @@ module.exports = function (app) {
       iconUrlLookup
     })
     const resolver = buildDependencyResolver(plugins, webapps)
-    const [detail, regIndexEntry, metricsSample] = await Promise.all([
+    const [built, regIndexEntry, metricsSample] = await Promise.all([
       buildPluginDetail(
         {
           name: pkg.name,
@@ -603,7 +611,8 @@ module.exports = function (app) {
           ),
           isWebapp: (pkg.keywords || []).some((v) => v === 'signalk-webapp'),
           keywords: pkg.keywords || [],
-          npmReadme: pkg.readme,
+          npmReadme:
+            pkg.readme || (isInstalled ? installedReadmeFor(pkg) : undefined),
           githubUrl: ext.githubUrl,
           lastReleaseDate: pkg.date,
           requires: ext.requires,
@@ -614,6 +623,7 @@ module.exports = function (app) {
       registry.getIndexEntry(name).catch(() => undefined),
       rawMetrics.get(pkg.name, ext.githubUrl).catch(() => undefined)
     ])
+    const { detail, cacheable } = built
 
     if (regIndexEntry) {
       const { score, checks } = badgesToIndicators(
@@ -702,8 +712,16 @@ module.exports = function (app) {
         detail.installedScreenshotUrls = localIcons.screenshots
       }
     }
-    cache.writePluginDetail(detail, isInstalled)
+    if (cacheable) cache.writePluginDetail(detail, isInstalled)
     return detail
+  }
+
+  function installedReadmeFor(pkg) {
+    return readInstalledReadme(
+      getModulePaths(app.config),
+      pkg.name,
+      pkg.version
+    )
   }
 
   function getInstalledPackageMetadata(name) {

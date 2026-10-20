@@ -133,7 +133,7 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
 }
 
 // Extract unique directory paths from app object.
-function getModulePaths(config: Config) {
+export function getModulePaths(config: Config) {
   // appPath is the app working directory.
   const { appPath, configPath } = config
   return (appPath === configPath ? [appPath] : [configPath, appPath]).map(
@@ -744,6 +744,7 @@ module.exports = {
   checkForNewServerVersion,
   getAuthor,
   getKeywords,
+  getModulePaths,
   restoreModules,
   importOrRequire,
   runNpm,
