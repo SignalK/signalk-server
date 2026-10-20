@@ -15,7 +15,7 @@ children:
 
 ## Overview
 
-This guide covers how to develop WASM/WASIX plugins for Signal K Server. WASM plugins run in a secure sandbox with isolated storage and capability-based permissions.
+This guide covers how to develop WASM/WASIX plugins for Signal K Server. WASM plugins get isolated storage and capability-based permissions. The server's bindings enforce those capabilities; the plugins themselves run in Node.js's built-in WebAssembly runtime (`node:wasi`), which is not a security boundary for untrusted code.
 
 ## What Makes a WASM Plugin?
 
@@ -48,7 +48,7 @@ Signal K Server supports multiple languages for WASM plugin development:
 
 ### Benefits
 
-- **Security**: Sandboxed execution with no access to host system
+- **Capability-based access**: A plugin reaches the server, the network and sockets only through the bindings its declared capabilities enable
 - **Hot-reload**: Update plugins without server restart
 - **Multi-language**: Write plugins in Rust, AssemblyScript, and more
 - **Crash isolation**: Plugin crashes don't affect server
