@@ -55,6 +55,7 @@ import {
 import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
+import { closeServer, trackConnections } from './closeServer'
 import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
 import {
   getCertificateOptions,
@@ -750,6 +751,7 @@ class Server {
           return
         }
         app.server = server
+        trackConnections(server)
         app.interfaces = {}
         app.clients = 0
 
@@ -871,17 +873,21 @@ class Server {
 
       const that = this
       return new Promise((resolve, reject) => {
-        this.app.server.close(() => {
+        closeServer(this.app.server, CONNECTION_CLOSE_GRACE_MS, () => {
           debug('Server closed')
           if (that.app.redirectServer) {
             try {
-              that.app.redirectServer.close(() => {
-                debug('Redirect server closed')
-                delete that.app.redirectServer
-                that.app.started = false
-                cb && cb()
-                resolve(that)
-              })
+              closeServer(
+                that.app.redirectServer,
+                CONNECTION_CLOSE_GRACE_MS,
+                () => {
+                  debug('Redirect server closed')
+                  delete that.app.redirectServer
+                  that.app.started = false
+                  cb && cb()
+                  resolve(that)
+                }
+              )
             } catch (err) {
               reject(err)
             }
@@ -919,6 +925,11 @@ const SHUTDOWN_TIMEOUT_MS = 8000
 // and close the HTTP server before SHUTDOWN_TIMEOUT_MS forces the exit.
 const TEARDOWN_RESERVE_MS = 2000
 const INTERFACE_STOP_TIMEOUT_MS = SHUTDOWN_TIMEOUT_MS - TEARDOWN_RESERVE_MS
+// How long closing a server waits for its open connections to end before
+// destroying them. The ws interface ends its clients 500 ms after it stops,
+// so a client that answers still gets a clean close; closing the server and
+// then the redirect server stays within TEARDOWN_RESERVE_MS.
+const CONNECTION_CLOSE_GRACE_MS = 900
 
 // Settles when the interface has stopped, has failed to, or has not within
 // INTERFACE_STOP_TIMEOUT_MS, so that one interface can neither end the wait
@@ -1083,6 +1094,7 @@ function startRedirectToSsl(
     res.redirect(`https://${host}:${redirectPort}${req.path}`)
   })
   const server = http.createServer(redirectApp)
+  trackConnections(server)
   server.listen(port, () => {
     console.log(`Redirect server running on port ${port.toString()}`)
     cb(null, server)
