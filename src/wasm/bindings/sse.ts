@@ -73,6 +73,12 @@ export function openSseStream(
   res.setHeader('Connection', 'keep-alive')
   // Disable response buffering in nginx and similar reverse proxies
   res.setHeader('X-Accel-Buffering', 'no')
+  // An initial body beyond the per-client limit would leave the client over
+  // it until the next event checks
+  if (initial && Buffer.byteLength(initial) > SSE_MAX_BUFFERED_BYTES) {
+    res.destroy()
+    return
+  }
   res.flushHeaders()
 
   if (initial) {
@@ -123,7 +129,8 @@ export function formatSseEvent(event: string, data: string): string {
 /**
  * Send an event to every subscriber of the plugin's channel.
  * Returns the number of clients it was written to, or -1 if the event
- * name would break the stream framing.
+ * name would break the stream framing or the event alone exceeds the
+ * per-client output limit.
  */
 export function sendSseEvent(
   pluginId: string,
@@ -141,9 +148,12 @@ export function sendSseEvent(
 
   // Encode once instead of once per client
   const frame = Buffer.from(formatSseEvent(event, data))
+  if (frame.length > SSE_MAX_BUFFERED_BYTES) {
+    return -1
+  }
   let sent = 0
   for (const res of subscribers) {
-    if (res.writableLength > SSE_MAX_BUFFERED_BYTES) {
+    if (res.writableLength + frame.length > SSE_MAX_BUFFERED_BYTES) {
       debug('[%s] dropping slow SSE client on %s', pluginId, channel)
       // end() would wait for the backlog to drain, which a stalled client
       // never does; destroying frees the buffer and fires 'close' now

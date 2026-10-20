@@ -106,6 +106,35 @@ describe('WASM SSE channels', () => {
       expect(res.writes).to.deep.equal([])
     })
 
+    it('rejects an event that alone exceeds the per-client limit', () => {
+      const res = subscribe(pluginId, 'panel')
+      const data = 'x'.repeat(SSE_MAX_BUFFERED_BYTES)
+      expect(sendSseEvent(pluginId, 'panel', 'e', data)).to.equal(-1)
+      expect(res.writes).to.deep.equal([])
+      expect(res.destroyed).to.equal(false)
+    })
+
+    it('drops a client that the next event would take over the limit', () => {
+      const nearlyFull = subscribe(pluginId, 'panel')
+      const fast = subscribe(pluginId, 'panel')
+      nearlyFull.writableLength = SSE_MAX_BUFFERED_BYTES - 1
+
+      expect(sendSseEvent(pluginId, 'panel', 'e', 'd')).to.equal(1)
+      expect(nearlyFull.destroyed).to.equal(true)
+      expect(fast.writes).to.have.length(1)
+    })
+
+    it('does not register a client whose initial body exceeds the limit', () => {
+      const res = subscribe(
+        pluginId,
+        'panel',
+        'x'.repeat(SSE_MAX_BUFFERED_BYTES + 1)
+      )
+      expect(res.destroyed).to.equal(true)
+      expect(res.writes).to.deep.equal([])
+      expect(sendSseEvent(pluginId, 'panel', 'e', 'd')).to.equal(0)
+    })
+
     it('drops a client whose queued output exceeds the limit', () => {
       const slow = subscribe(pluginId, 'panel')
       const fast = subscribe(pluginId, 'panel')
