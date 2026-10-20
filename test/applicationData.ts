@@ -7,7 +7,6 @@ import { strict as assert } from 'assert'
 import fs from 'fs'
 import http from 'http'
 import path from 'path'
-import { promisify } from 'util'
 import { rimraf } from 'rimraf'
 import { freeport } from './ts-servertestutilities'
 import {
@@ -236,12 +235,8 @@ describe('Application Data', () => {
     const siblingName = `${path.basename(configDir())}-sibling`
     const siblingDir = path.join(path.dirname(configDir()), siblingName)
     const userIds = [`../../../${siblingName}`, '../../..']
-    for (const userId of userIds) {
-      await promisify(server.app.securityStrategy.addUser)(
-        server.app.securityStrategy.securityConfig,
-        { userId, type: 'readwrite', password: 'traversal' }
-      )
-    }
+    const users = server.app.securityStrategy.securityConfig.users
+    users.push(...userIds.map((username) => ({ username, type: 'readwrite' })))
 
     try {
       const siblingHeaders = {
@@ -268,6 +263,9 @@ describe('Application Data', () => {
         )
       ).should.equal(400)
     } finally {
+      server.app.securityStrategy.securityConfig.users = users.filter(
+        (user: { username: string }) => !userIds.includes(user.username)
+      )
       fs.rmSync(siblingDir, { recursive: true, force: true })
     }
   })
