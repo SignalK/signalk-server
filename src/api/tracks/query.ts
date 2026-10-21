@@ -285,8 +285,7 @@ const WILDCARD = '*'
 
 const KNOWN_PARAMS = new Set([
   'contexts',
-  // Singular as well as plural: the parser accepts both, and an unbounded
-  // query is permitted only for a single `context`.
+  // Singular as well as plural: the parser accepts both.
   'context',
   'from',
   'to',
