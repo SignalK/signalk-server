@@ -11,6 +11,7 @@ import {
   OkResponseSchema,
   ErrorResponseSchema
 } from './shared-schemas'
+import type { Position } from './shared-schemas'
 
 export { IsoTimeSchema, PositionSchema, OkResponseSchema, ErrorResponseSchema }
 export type { IsoTime } from './shared-schemas'
@@ -475,3 +476,48 @@ export const CourseConfigSchema = Type.Object(
   },
   { $id: 'CourseConfig', description: 'Course API configuration' }
 )
+
+/** @deprecated Use {@link ArrivalCircle} */
+export type ArrivalCircleType = ArrivalCircle
+
+/** @deprecated Use {@link Position} */
+export type PositionType = Position
+
+/** @deprecated Use {@link HrefDestination} */
+export type HrefDestinationType = HrefDestination
+
+/** @deprecated Use {@link PositionDestination} */
+export type PositionDestinationType = PositionDestination
+
+/** @deprecated Use {@link SetDestinationBody} */
+export type SetDestinationBodyType = SetDestinationBody
+
+/** @deprecated Use {@link RouteDestination} */
+export type RouteDestinationType = RouteDestination
+
+/** @deprecated Use {@link ArrivalCircleBody} */
+export type ArrivalCircleBodyType = ArrivalCircleBody
+
+/** @deprecated Use {@link TargetArrivalTimeBody} */
+export type TargetArrivalTimeBodyType = TargetArrivalTimeBody
+
+/** @deprecated Use {@link NextPointBody} */
+export type NextPointBodyType = NextPointBody
+
+/** @deprecated Use {@link PointIndexBody} */
+export type PointIndexBodyType = PointIndexBody
+
+/** @deprecated Use {@link ReverseBody} */
+export type ReverseBodyType = ReverseBody
+
+/** @deprecated Use {@link ActiveRoute} */
+export type ActiveRouteType = ActiveRoute
+
+/** @deprecated Use {@link NextPreviousPoint} */
+export type NextPreviousPointType = NextPreviousPoint
+
+/** @deprecated Use {@link CourseInfo} */
+export type CourseInfoType = CourseInfo
+
+/** @deprecated Use {@link CourseCalculations} */
+export type CourseCalculationsType = CourseCalculations

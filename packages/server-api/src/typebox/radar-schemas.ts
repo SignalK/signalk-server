@@ -111,3 +111,18 @@ export const RadarsResponseSchema = Type.Object(
   }
 )
 export type RadarsResponse = Static<typeof RadarsResponseSchema>
+
+/** @deprecated Use {@link RadarStatus} */
+export type RadarStatusSchemaType = RadarStatus
+
+/** @deprecated Use {@link RadarControlValue} */
+export type RadarControlValueSchemaType = RadarControlValue
+
+/** @deprecated Use {@link RadarControls} */
+export type RadarControlsSchemaType = RadarControls
+
+/** @deprecated Use {@link RadarInfo} */
+export type RadarInfoSchemaType = RadarInfo
+
+/** @deprecated Use {@link RadarsResponse} */
+export type RadarsResponseSchemaType = RadarsResponse

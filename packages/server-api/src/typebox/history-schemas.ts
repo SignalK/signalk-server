@@ -123,3 +123,18 @@ export const HistoryProvidersResponseSchema = Type.Record(
 export type HistoryProvidersResponse = Static<
   typeof HistoryProvidersResponseSchema
 >
+
+/** @deprecated Use {@link AggregateMethod} */
+export type AggregateMethodSchemaType = AggregateMethod
+
+/** @deprecated Use {@link ValuesResponse} */
+export type ValuesResponseSchemaType = ValuesResponse
+
+/** @deprecated Use {@link PathSpec} */
+export type PathSpecSchemaType = PathSpec
+
+/** @deprecated Use {@link HistoryProviderInfo} */
+export type HistoryProviderInfoSchemaType = HistoryProviderInfo
+
+/** @deprecated Use {@link HistoryProvidersResponse} */
+export type HistoryProvidersResponseSchemaType = HistoryProvidersResponse

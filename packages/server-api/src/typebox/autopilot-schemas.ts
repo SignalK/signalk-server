@@ -117,3 +117,6 @@ export const StringValueInputSchema = Type.Object(
   },
   { $id: 'StringValueInput' }
 )
+
+/** @deprecated Use {@link AutopilotInfo} */
+export type AutopilotInfoType = AutopilotInfo

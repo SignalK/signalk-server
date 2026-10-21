@@ -221,3 +221,6 @@ export const ErrorResponseSchema = Type.Object(
   },
   { $id: 'ErrorResponse', description: 'Request error response' }
 )
+
+/** @deprecated Use {@link IsoTime} */
+export type IsoTimeType = IsoTime
