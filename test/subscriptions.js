@@ -4,7 +4,6 @@ const { sendDelta } = require('./servertestutilities')
 const { freeport } = require('./ts-servertestutilities')
 const { startServerP, WsPromiser } = require('./servertestutilities')
 
-// How long a check that no further message arrives waits for one.
 const NO_MESSAGE_WINDOW_MS = 250
 
 function getDelta(overwrite) {
