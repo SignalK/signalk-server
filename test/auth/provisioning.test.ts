@@ -107,18 +107,36 @@ describe('UserProvisioner', () => {
     expect(blank.username).to.equal('oidc-s2')
   })
 
-  it('passes over a suggested username that is not a single path segment', async () => {
+  it('replaces non-portable characters in a suggested username', async () => {
+    const h = harness()
+    const spaced = await h.provisioner.resolve('oidc', true, {
+      subject: 's1',
+      username: 'Jane Doe'
+    })
+    expect(spaced.username).to.equal('Jane_Doe')
+    const tagged = await h.provisioner.resolve('oidc', true, {
+      subject: 's2',
+      email: 'alice+tag@example.org'
+    })
+    expect(tagged.username).to.equal('alice_tag@example.org')
+    const slashed = await h.provisioner.resolve('oidc', true, {
+      subject: 's3',
+      username: 'crew/bob'
+    })
+    expect(slashed.username).to.equal('crew_bob')
+  })
+
+  it('passes over a suggested username without a letter or digit', async () => {
     const h = harness()
     const byEmail = await h.provisioner.resolve('oidc', true, {
       subject: 's1',
-      username: 'crew/alice',
-      email: 'alice@example.com'
+      username: '..',
+      email: 'bob@example.com'
     })
-    expect(byEmail.username).to.equal('alice@example.com')
+    expect(byEmail.username).to.equal('bob@example.com')
     const bySubject = await h.provisioner.resolve('oidc', true, {
       subject: 's2',
-      username: '..',
-      email: 'bob\\example'
+      username: '李雷'
     })
     expect(bySubject.username).to.equal('oidc-s2')
   })
