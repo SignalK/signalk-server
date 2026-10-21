@@ -41,8 +41,8 @@ const HEADING_NOTIFICATION_PATH =
 const HEADING_TRUE_PATH = 'navigation.headingTrue' as Path
 const HEADING_MAGNETIC_PATH = 'navigation.headingMagnetic' as Path
 // A heading not received for longer than this no longer describes the
-// vessel's orientation; rotating the antenna offset with it would
-// misplace the CCRP by up to twice the offset. Raised to the path's
+// vessel's orientation; rotating the antenna-to-CCRP vector with it would
+// misplace the CCRP by up to twice that vector's length. Raised to the path's
 // source-priority failover timeout when that is longer, so a heading
 // source failing over to its fallback does not stop the correction.
 const HEADING_MAX_AGE_MS = 3000
