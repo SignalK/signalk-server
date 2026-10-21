@@ -35,7 +35,7 @@ import {
   WithFeatures
 } from '@signalk/server-api'
 import { randomUUID } from 'crypto'
-import express, { IRouter, Request, Response } from 'express'
+import express, { IRouter, NextFunction, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
 import _ from 'lodash'
@@ -176,10 +176,15 @@ class Server {
     load(app)
 
     // HSTS covers every port of a host, so a browser that saw it would
-    // rewrite http:// on the plain port to https:// and fail.
-    if (!servesPlainHttpAlongsideSsl(app)) {
-      app.use(helmet.strictTransportSecurity())
-    }
+    // rewrite http:// on the plain port to https:// and fail. It is left out
+    // only while that port is served; a listener that failed to bind clears
+    // secondaryServer.
+    const hsts = helmet.strictTransportSecurity()
+    app.use((req: Request, res: Response, next: NextFunction) =>
+      servesPlainHttpAlongsideSsl(app) && app.secondaryServer
+        ? next()
+        : hsts(req, res, next)
+    )
 
     // Apply trust proxy setting if configured
     if (app.config.settings.trustProxy !== undefined) {
@@ -794,7 +799,10 @@ class Server {
         debug(`secondary port:${primaryPort}`)
         if (app.config.settings.ssl && secondaryPort) {
           if (app.config.settings.httpAlongsideSsl) {
-            const plainServer = startPlainHttp(secondaryPort, server)
+            const plainServer = startPlainHttp(secondaryPort, server, () => {
+              delete app.secondaryServer
+              delete this.secondaryConnections
+            })
             app.secondaryServer = plainServer
             this.secondaryConnections = new ConnectionTracker(plainServer)
           } else {
@@ -1123,7 +1131,11 @@ function startRedirectToSsl(
 // Hands every plain HTTP request and upgrade to the HTTPS server's own
 // listeners, so routes, WebSockets and anything a plugin attaches to
 // app.server behave the same on both ports.
-function startPlainHttp(port: number, tlsServer: https.Server) {
+function startPlainHttp(
+  port: number,
+  tlsServer: https.Server,
+  onBindError: () => void
+) {
   const server = http.createServer((req, res) =>
     tlsServer.emit('request', req, res)
   )
@@ -1132,6 +1144,9 @@ function startPlainHttp(port: number, tlsServer: https.Server) {
   )
   server.on('error', (err) => {
     console.error(`Plain HTTP server on port ${port.toString()}: ${err}`)
+    if (!server.listening) {
+      onBindError()
+    }
   })
   server.listen(port, () => {
     console.log(`Plain HTTP server running on port ${port.toString()}`)

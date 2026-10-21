@@ -9,6 +9,16 @@ import { getMfdOrigin, servesPlainHttpAlongsideSsl } from '../dist/ports'
 const PORT_WAIT_MS = 5000
 const PORT_RETRY_MS = 50
 
+async function waitUntil(condition: () => boolean, what: string) {
+  const deadline = Date.now() + PORT_WAIT_MS
+  while (!condition()) {
+    if (Date.now() > deadline) {
+      throw new Error(`timed out waiting for ${what}`)
+    }
+    await new Promise((resolve) => setTimeout(resolve, PORT_RETRY_MS))
+  }
+}
+
 // start() resolves once the HTTPS port listens; the HTTP port follows on
 // its own, so wait for it before talking to it.
 async function waitForPort(port: number) {
@@ -153,6 +163,29 @@ describe('Plain HTTP alongside SSL', function () {
       protocol: 'http',
       port
     })
+  })
+
+  it('sends HSTS when the plain HTTP port cannot be bound', async function () {
+    const blocker = net.createServer()
+    await new Promise<void>((resolve) => blocker.listen(port, resolve))
+    try {
+      server = await startServerP(port, false, {
+        settings: { ssl: true, sslport: sslPort, httpAlongsideSsl: true }
+      })
+      await waitUntil(
+        () => server.app.secondaryServer === undefined,
+        'the plain HTTP bind to fail'
+      )
+
+      const tls = await httpsRequest(`https://localhost:${sslPort}/signalk`)
+      expect(tls.headers).to.have.property('strict-transport-security')
+      expect(getMfdOrigin(server.app)).to.deep.equal({
+        protocol: 'https',
+        port: sslPort
+      })
+    } finally {
+      await new Promise((resolve) => blocker.close(resolve))
+    }
   })
 
   it('stops both ports when the server stops', async function () {
