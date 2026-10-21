@@ -845,10 +845,19 @@ module.exports = function (
       const device = config.devices?.find(
         (d: Device) => d.clientId === clientId
       )
-      const previousVersion = device?.tokenVersion
-      const token = app.securityStrategy.generateDeviceToken(config, clientId)
-      if (!device || !token) {
+      if (!device) {
         res.status(404).json({ error: 'Device not found' })
+        resolve()
+        return
+      }
+      const previousVersion = device.tokenVersion
+      const token = app.securityStrategy.generateDeviceToken(config, clientId)
+      if (!token) {
+        // The expiry comes from the approved access request and cannot be
+        // extended, so a new approval is the only way back.
+        res.status(409).json({
+          error: 'Device access has expired; delete the device and add it again'
+        })
         resolve()
         return
       }

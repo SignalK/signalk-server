@@ -357,6 +357,30 @@ describe('Device Manager', function () {
       expect(await loginStatus(secondRegenerated)).to.equal('loggedIn')
     })
 
+    it('reports an expired device as expired, not missing', async function () {
+      const config = server.app.securityStrategy.securityConfig
+      config.devices = config.devices || []
+      config.devices.push({
+        clientId: 'expired-token-device',
+        permissions: 'readonly',
+        config: {},
+        description: 'expired token test',
+        requestedPermissions: '',
+        tokenExpiry: Math.floor(Date.now() / 1000) - 60
+      })
+
+      const result = await fetch(
+        `${url}/skServer/security/devices/expired-token-device/token`,
+        {
+          method: 'POST',
+          headers: adminHeaders()
+        }
+      )
+      expect(result.status).to.equal(409)
+      const body = await result.json()
+      expect(body.error).to.include('expired')
+    })
+
     it('returns 404 for nonexistent device', async function () {
       const result = await fetch(
         `${url}/skServer/security/devices/nonexistent-id/token`,

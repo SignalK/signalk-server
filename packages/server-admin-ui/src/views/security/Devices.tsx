@@ -322,7 +322,12 @@ export default function Devices() {
       const result = await response.json()
       setDeviceToken(result.token)
     } else {
-      alert('Failed to retrieve token')
+      const result = await response.json().catch(() => ({}))
+      alert(
+        result.error
+          ? `Failed to retrieve token: ${result.error}`
+          : 'Failed to retrieve token'
+      )
     }
   }
 
