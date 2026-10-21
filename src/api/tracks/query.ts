@@ -332,13 +332,17 @@ export function parseTracksQuery(
 
   const contexts = first(query.contexts) ?? first(query.context)
   const everyContext = contexts?.trim() === WILDCARD
+  // Only `contexts` is read when both are given, so a wildcard in `context`
+  // would otherwise be dropped without a word.
   if (
-    everyContext &&
     query.contexts !== undefined &&
-    query.context !== undefined
+    query.context !== undefined &&
+    [first(query.contexts), first(query.context)].some(
+      (c) => c?.trim() === WILDCARD
+    )
   ) {
     errors.push(
-      '* already means every context and cannot be given with context'
+      '* already means every context and cannot be given with both context and contexts'
     )
   }
   if (contexts !== undefined && blank(contexts)) {

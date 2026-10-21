@@ -201,7 +201,13 @@ describe('Track API query parsing', () => {
 
     it('rejects * given alongside context', () => {
       expect(errorsFrom({ contexts: '*', context: 'self' })).to.match(
-        /cannot be given with context/
+        /cannot be given with both context and contexts/
+      )
+    })
+
+    it('rejects * in context alongside contexts', () => {
+      expect(errorsFrom({ contexts: 'self', context: '*' })).to.match(
+        /cannot be given with both context and contexts/
       )
     })
 
