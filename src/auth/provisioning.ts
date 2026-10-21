@@ -62,22 +62,29 @@ function sameIdentityRecord(
 }
 
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g
-// A subject is an opaque provider id, often a URL. The parts of it that go
-// into a username keep only the characters every per-user store accepts,
-// the strictest being the unit preferences loader.
-const SUBJECT_UNSAFE_CHARS = /[^a-zA-Z0-9_.@-]/g
+// The server chooses these usernames, so they keep only the characters every
+// per-user store accepts, the strictest being the unit preferences loader.
+const NON_PORTABLE_CHARS = /[^a-zA-Z0-9_.@-]/g
+const LETTER_OR_DIGIT = /[a-zA-Z0-9]/
 
 /**
  * Provider-supplied names are external input: strip control characters,
- * trim, and refuse a name that cannot be a single path segment.
+ * trim and replace non-portable characters. A name left without a letter or
+ * digit is no name at all, so the next candidate is used.
  */
 function cleanUsername(value: string | undefined): string | undefined {
-  const cleaned = value?.replace(CONTROL_CHARS, '').trim()
-  return isSafeIdentifier(cleaned) ? cleaned : undefined
+  const cleaned = value
+    ?.replace(CONTROL_CHARS, '')
+    .trim()
+    .replace(NON_PORTABLE_CHARS, '_')
+  return cleaned && LETTER_OR_DIGIT.test(cleaned) && isSafeIdentifier(cleaned)
+    ? cleaned
+    : undefined
 }
 
+// A subject is an opaque provider id, often a URL.
 function subjectPart(subject: string): string {
-  return subject.replace(SUBJECT_UNSAFE_CHARS, '_')
+  return subject.replace(NON_PORTABLE_CHARS, '_')
 }
 
 function preferredUsername(
