@@ -502,9 +502,8 @@ module.exports = function (app) {
     // published release would never reach the detail page.
     const cachedDetail = readDetailFromCache(cache, name)
     // An entry cached while the README was unreachable is rebuilt once
-    // the installed copy can supply it. Entries cached before isWasm
-    // existed are rebuilt too, or a WASM plugin would lose its badge until
-    // its next release.
+    // the installed copy can supply it, and so is an entry without
+    // isWasm, which the detail page needs for the WASM badge.
     if (
       cachedDetail &&
       cachedDetail.version === pkg.version &&

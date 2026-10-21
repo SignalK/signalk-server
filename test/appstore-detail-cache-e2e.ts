@@ -127,11 +127,11 @@ describe('appstore detail cache', function () {
     expect(body.readme).to.not.equal('STALE-README-MARKER')
   })
 
-  it('rebuilds a cached detail that predates the isWasm flag', async function () {
+  it('rebuilds a same-version cached detail without the isWasm flag', async function () {
     const { name, version } = await anAvailablePlugin(this)
 
-    // Right version, but written before list and detail entries carried
-    // isWasm. Serving it would hide the WASM badge until the next release.
+    // Right version but no isWasm, which the detail page needs for the
+    // WASM badge.
     const file = detailFileFor(name)
     fs.mkdirSync(path.dirname(file), { recursive: true })
     fs.writeFileSync(
