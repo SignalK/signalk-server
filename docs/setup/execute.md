@@ -22,7 +22,7 @@ The program writes one Signal K [delta](https://signalk.org/specification/1.7.0/
 - Lines that are not valid JSON are logged and skipped.
 - Anything the program writes to standard error is shown as an error for the connection on the Dashboard and in the server log.
 
-If the program exits, the server starts it again, at most once a minute.
+By default, if the program exits, the server starts it again, at most once a minute. The `restartOnClose` and `restartThrottleTime` options below change this.
 
 ## Adding the connection to settings.json
 
@@ -52,12 +52,12 @@ Add an entry to the `pipedProviders` array and leave the rest of the file as it 
 ```
 
 - `id` names the connection and is the source shown for its data.
-- `command` is run with `sh -c`, so it can include arguments. Use an absolute path, and make sure the user the server runs as can execute the program.
+- `command` is run with `sh -c`, or `cmd /c` on Windows, so it can include arguments. Use an absolute path, and make sure the user the server runs as can execute the program.
 - `restartOnClose` (default `true`) and `restartThrottleTime` (seconds between restarts, default `60`) can be added to the `providers/execute` options.
 
 Start the server again. The connection appears on the Dashboard and under _Server -> Data Connections_, where it is shown read only and can be deleted. Its data shows up in the _Data Browser_ with the `id` as the source.
 
-To check the setup before your own program is ready, use a shell loop as the command:
+To check the setup before your own program is ready, use a shell loop as the command (this one is for Linux and macOS):
 
 ```json
 "command": "while true; do echo '{\"updates\":[{\"values\":[{\"path\":\"environment.outside.pressure\",\"value\":101300}]}]}'; sleep 1; done"
