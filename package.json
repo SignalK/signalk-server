@@ -77,8 +77,10 @@
   "dependencies": {
     "@assemblyscript/loader": "^0.28.19",
     "@astronautlabs/mdns": "^1.0.10",
+    "@canboat/canboatjs": "^4.0.0-beta.3",
+    "@canboat/ts-pgns": "^3.0.0",
     "@signalk/course-provider": "^1.4.0",
-    "@signalk/n2k-signalk": ">=4.1.0-beta",
+    "@signalk/n2k-signalk": "^5.0.0-beta.1",
     "@signalk/nmea0183-signalk": "^3.20.0",
     "@signalk/resources-provider": "^1.5.3",
     "@signalk/server-api": "^2.34.0",
@@ -152,7 +154,7 @@
     "@signalk/udp-nmea-plugin": "^2.0.0",
     "serialport": "^11.0.1",
     "signalk-n2kais-to-nmea0183": "^2.0.3",
-    "signalk-to-nmea2000": "^2.24.0"
+    "signalk-to-nmea2000": "^3.0.0-beta.1"
   },
   "allowScripts": {
     "@canboat/canboatjs": true
