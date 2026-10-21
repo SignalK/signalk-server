@@ -155,6 +155,45 @@ describe('Demo plugin ', () => {
       await server.stop()
     }
   })
+
+  it('removes every device state listener when the plugin stops', async () => {
+    process.env.SIGNALK_NODE_CONFIG_DIR = path.join(
+      __dirname,
+      'plugin-test-config'
+    )
+    mkDirSync(path.join(`${__dirname}/plugin-test-config/plugin-config-data`))
+    const pluginConfig = {
+      enabled: true,
+      configuration: { testOption: 'testValue' }
+    }
+    writePluginConfig(pluginConfig)
+
+    const port = await freeport()
+    const server = new Server({
+      config: { settings: { port } }
+    })
+    await server.start()
+    server.app.deviceTracker = new DeviceTracker(() => {})
+    const tracker = server.app.deviceTracker
+    const plugin = server.app.plugins.find(
+      (plugin) => plugin.id === 'testplugin'
+    )
+
+    try {
+      const unsubscribeFirst = plugin.app.onDeviceStateChange(() => {})
+      plugin.app.onDeviceStateChange(() => {})
+      plugin.app.onDeviceStateChange(() => {})
+      unsubscribeFirst()
+      assert.equal(tracker.listenerCount('deviceStateChange'), 2)
+
+      pluginConfig.enabled = false
+      await postPluginConfig(port, pluginConfig)
+      assert.equal(tracker.listenerCount('deviceStateChange'), 0)
+    } finally {
+      tracker.destroy()
+      await server.stop()
+    }
+  })
 })
 
 function mkDirSync(dirPath) {
