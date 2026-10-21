@@ -118,7 +118,7 @@ function parseSignalKMetadata(
 
 /**
  * A cache of pre-probed CDN URLs. When the author's declared signalk.appIcon
- * or signalk.screenshots[] path 404s on unpkg (common when source assets live
+ * or signalk.screenshots[] path 404s on the CDN (common when source assets live
  * in ./public/, ./assets/, etc. but the declared path is relative to the
  * repo root), a background probe discovers the real URL and stores it here.
  * enrichEntry consults the cache and, if a resolution is known, uses it

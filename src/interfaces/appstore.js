@@ -764,7 +764,7 @@ module.exports = function (app) {
 
   // When the background probe + downloader has cached a plugin's icon
   // locally, route the card/detail <img> through the server's own icon
-  // route so the browser never has to reach unpkg. This makes the grid
+  // route so the browser never has to reach the CDN. This makes the grid
   // render instantly on a boat with no internet after a one-time warmup.
   // When bytes aren't cached yet, pass the CDN URL through unchanged.
   // The icon route is versionless and sets a one-hour max-age, so the version
