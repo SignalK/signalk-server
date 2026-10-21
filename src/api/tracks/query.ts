@@ -558,6 +558,7 @@ const DERIVED_PROPERTIES = new Set([
   'id',
   'providerId',
   'isSelf',
+  'imported',
   'contextName',
   'from',
   'to',
