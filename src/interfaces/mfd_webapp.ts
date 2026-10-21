@@ -77,29 +77,29 @@ const send = (
   socket.bind(0, fromAddress)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getPublishToNavico = (theApp: any) => async () => {
-  // Resolved per publish: the plain HTTP port is only known once it listens
-  const { protocol, port } = getMfdOrigin(theApp)
-  let addresses: string[] = []
-  for (const [_name, infos] of Object.entries(networkInterfaces())) {
-    for (const addressInfo of infos || []) {
-      if (addressInfo.family === 'IPv4') {
-        addresses.push(addressInfo.address)
+const getPublishToNavico =
+  (theApp: Parameters<typeof getMfdOrigin>[0]) => async () => {
+    // Resolved per publish: the plain HTTP port is only known once it listens
+    const { protocol, port } = getMfdOrigin(theApp)
+    let addresses: string[] = []
+    for (const [_name, infos] of Object.entries(networkInterfaces())) {
+      for (const addressInfo of infos || []) {
+        if (addressInfo.family === 'IPv4') {
+          addresses.push(addressInfo.address)
+        }
       }
     }
-  }
-  if (process.env.MFD_ADDRESS_SCRIPT) {
-    addresses = (await execP(process.env.MFD_ADDRESS_SCRIPT)).stdout
-      .trim()
-      .split(',')
-  }
-  addresses.forEach((address) =>
-    send(
-      getPublishMessage(protocol, address, port),
-      address,
-      MULTICAST_GROUP_IP,
-      PUBLISH_PORT
+    if (process.env.MFD_ADDRESS_SCRIPT) {
+      addresses = (await execP(process.env.MFD_ADDRESS_SCRIPT)).stdout
+        .trim()
+        .split(',')
+    }
+    addresses.forEach((address) =>
+      send(
+        getPublishMessage(protocol, address, port),
+        address,
+        MULTICAST_GROUP_IP,
+        PUBLISH_PORT
+      )
     )
-  )
-}
+  }
