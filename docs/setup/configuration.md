@@ -6,6 +6,7 @@ children:
   - n2k-device-management.md
   - source-priority.md
   - staleness.md
+  - execute.md
 ---
 
 # Configuring Signal K Server
@@ -47,6 +48,8 @@ From this screen you can add connections for various data types including:
 - File Stream
 
 The options presented will vary based on the data type chosen.
+
+To read data from a program of your own, see [Using your own program as a data source](./execute.md).
 
 **_NMEA2000_**: The processing of NMEA2000 PGNs is done by [n2k-signalk](https://github.com/SignalK/n2k-signalk) via [canboatjs](https://github.com/canboat/canboatjs).
 
