@@ -4,6 +4,9 @@ const { sendDelta } = require('./servertestutilities')
 const { freeport } = require('./ts-servertestutilities')
 const { startServerP, WsPromiser } = require('./servertestutilities')
 
+// How long a check that no further message arrives waits for one.
+const NO_MESSAGE_WINDOW_MS = 250
+
 function getDelta(overwrite) {
   const delta = {
     updates: [
@@ -309,7 +312,7 @@ describe('Subscriptions', (_) => {
     await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
     try {
-      await wsPromiser.nthMessage(3)
+      await wsPromiser.nthMessage(3, NO_MESSAGE_WINDOW_MS)
       throw new Error('no message number 3 should arrive')
     } catch (e) {
       assert.strictEqual(e, 'timeout')
