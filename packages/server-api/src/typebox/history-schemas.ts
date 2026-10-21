@@ -1,5 +1,9 @@
 /**
  * TypeBox Schema Definitions for the Signal K History API
+ *
+ * These describe the JSON on the wire. The provider-facing types in
+ * history.ts keep branded strings (Context, Path, Timestamp) and stay
+ * separate from them.
  */
 
 import { Type, type Static } from '@sinclair/typebox'
