@@ -1257,9 +1257,22 @@ module.exports = (theApp: any) => {
       callback: (event: DeviceStateChangeEvent) => void
     ): (() => void) => {
       if (app.deviceTracker) {
-        app.deviceTracker.on('deviceStateChange', callback)
+        // The tracker emits synchronously from WebSocket setup and HTTP
+        // request handling, so a throwing callback must not reach them.
+        const safeCallback = (event: DeviceStateChangeEvent) => {
+          try {
+            callback(event)
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            console.error(
+              `${packageName} device state callback error: ${message}`
+            )
+            app.setPluginError(plugin.id, `Runtime error: ${message}`)
+          }
+        }
+        app.deviceTracker.on('deviceStateChange', safeCallback)
         const cleanup = () => {
-          app.deviceTracker?.removeListener('deviceStateChange', callback)
+          app.deviceTracker?.removeListener('deviceStateChange', safeCallback)
         }
         onStopHandlers[plugin.id].push(cleanup)
         return cleanup

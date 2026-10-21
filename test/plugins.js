@@ -2,6 +2,7 @@ const assert = require('assert')
 
 const { freeport } = require('./ts-servertestutilities')
 const Server = require('../dist/')
+const { DeviceTracker } = require('../dist/deviceTracker')
 const fs = require('fs')
 const path = require('path')
 
@@ -112,6 +113,47 @@ describe('Demo plugin ', () => {
     assert(plugin)
 
     await server.stop()
+  })
+
+  it('keeps a throwing device state callback out of connection handling', async () => {
+    process.env.SIGNALK_NODE_CONFIG_DIR = path.join(
+      __dirname,
+      'plugin-test-config'
+    )
+    mkDirSync(path.join(`${__dirname}/plugin-test-config/plugin-config-data`))
+    writePluginConfig({
+      enabled: true,
+      configuration: { testOption: 'testValue' }
+    })
+
+    const port = await freeport()
+    const server = new Server({
+      config: { settings: { port } }
+    })
+    await server.start()
+    // The tracker exists only with security enabled; the plugin API looks
+    // it up when the callback is registered.
+    server.app.deviceTracker = new DeviceTracker(() => {})
+    const pluginErrors = []
+    server.app.setPluginError = (id, message) =>
+      pluginErrors.push({ id, message })
+    const plugin = server.app.plugins.find(
+      (plugin) => plugin.id === 'testplugin'
+    )
+
+    try {
+      plugin.app.onDeviceStateChange(() => {
+        throw new Error('callback failed')
+      })
+      assert.doesNotThrow(() => server.app.deviceTracker.onConnect('device-1'))
+      assert.deepEqual(pluginErrors, [
+        { id: 'testplugin', message: 'Runtime error: callback failed' }
+      ])
+      assert(server.app.deviceTracker.getState('device-1').isConnected)
+    } finally {
+      server.app.deviceTracker.destroy()
+      await server.stop()
+    }
   })
 })
 
