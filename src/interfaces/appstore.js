@@ -1035,10 +1035,13 @@ module.exports = function (app) {
     return Promise.all([
       findModulesWithKeyword(NODE_PLUGIN_KEYWORD),
       // A failed WASM search must not take down the Node plugin and webapp
-      // listings that searched fine.
+      // listings that searched fine, and installed WASM plugins stay listed
+      // from their installed copies so they can still be removed.
       findModulesWithKeyword(WASM_PLUGIN_KEYWORD).catch((err) => {
         debug.enabled && debug('WASM plugin search failed: %O', err)
-        return []
+        return getInstalledAsPackageEntries(NODE_PLUGIN_KEYWORD).filter(
+          (entry) => isWasmPackage(entry.package.keywords)
+        )
       }),
       findModulesWithKeyword('signalk-embeddable-webapp'),
       findModulesWithKeyword('signalk-webapp')

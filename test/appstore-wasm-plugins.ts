@@ -77,11 +77,15 @@ function searchResultsFor(url: string): SearchPackage[] {
 // path. Everything else (dist-tags, registry metadata, icon probes, README
 // and changelog assets) is optional enrichment, so fail it fast instead of
 // going online. Only the test's own requests to the server pass through.
-function stubNpmRegistry() {
+// A search for failKeyword fails the way an unreachable registry does.
+function stubNpmRegistry(failKeyword?: string) {
   const realFetch = global.fetch
   global.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
     if (url.startsWith('https://registry.npmjs.org/-/v1/search')) {
+      if (failKeyword && url.includes(failKeyword)) {
+        return Promise.reject(new TypeError('fetch failed'))
+      }
       const packages = searchResultsFor(url)
       return Promise.resolve(
         Response.json({
@@ -140,31 +144,24 @@ function seedInstalledWasmPlugin(configDir: string) {
   )
 }
 
-describe('appstore lists WASM plugins', function () {
-  this.timeout(SUITE_TIMEOUT_MS)
-
-  let stop: (() => Promise<unknown>) | undefined
-  let restoreFetch: (() => void) | undefined
-  let originalPath: string | undefined
-  let configDir: string
-  let host: string
-
-  before(async function () {
-    if (process.platform === 'win32') {
-      this.skip()
-    }
-    configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-appstore-wasm-'))
+// Starts a server with one installed WASM plugin, the npm registry stubbed
+// and `npm` replaced by a no-op. stop() undoes all of it.
+async function startAppStoreServer(failKeyword?: string) {
+  const configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-appstore-wasm-'))
+  const originalPath = process.env.PATH
+  const restoreFetch = stubNpmRegistry(failKeyword)
+  const cleanUp = () => {
+    restoreFetch()
+    process.env.PATH = originalPath
+    fs.rmSync(configDir, { recursive: true, force: true })
+  }
+  try {
     seedInstalledWasmPlugin(configDir)
-
     const binDir = path.join(configDir, 'bin')
     writeNpmStub(binDir)
-    originalPath = process.env.PATH
     process.env.PATH = `${binDir}${path.delimiter}${process.env.PATH}`
 
-    restoreFetch = stubNpmRegistry()
-
     const port = await freeport()
-    host = 'http://localhost:' + port
     const server = await startServerP(
       port,
       false,
@@ -172,24 +169,47 @@ describe('appstore lists WASM plugins', function () {
       undefined,
       configDir
     )
-    stop = () => server.stop()
+    return {
+      host: 'http://localhost:' + port,
+      stop: async () => {
+        try {
+          await server.stop()
+        } finally {
+          cleanUp()
+        }
+      }
+    }
+  } catch (err) {
+    cleanUp()
+    throw err
+  }
+}
+
+async function getAppStore(host: string): Promise<AppStoreResponse> {
+  const res = await fetch(`${host}/skServer/appstore/available/`)
+  expect(res.status).to.equal(200)
+  return (await res.json()) as AppStoreResponse
+}
+
+describe('appstore lists WASM plugins', function () {
+  this.timeout(SUITE_TIMEOUT_MS)
+
+  let stop: (() => Promise<void>) | undefined
+  let host: string
+
+  before(async function () {
+    if (process.platform === 'win32') {
+      this.skip()
+    }
+    ;({ host, stop } = await startAppStoreServer())
   })
 
   after(async function () {
     if (stop) await stop()
-    if (restoreFetch) restoreFetch()
-    if (originalPath !== undefined) process.env.PATH = originalPath
-    if (configDir) fs.rmSync(configDir, { recursive: true, force: true })
   })
 
-  async function getAppStore(): Promise<AppStoreResponse> {
-    const res = await fetch(`${host}/skServer/appstore/available/`)
-    expect(res.status).to.equal(200)
-    return (await res.json()) as AppStoreResponse
-  }
-
   it('offers a published WASM plugin as an installable plugin', async function () {
-    const store = await getAppStore()
+    const store = await getAppStore(host)
     const entry = store.available.find((a) => a.name === AVAILABLE_WASM)
     expect(entry, 'WASM plugin should be available').to.exist
     expect(entry!.isPlugin).to.equal(true)
@@ -197,21 +217,21 @@ describe('appstore lists WASM plugins', function () {
   })
 
   it('does not mark Node plugins as WASM', async function () {
-    const store = await getAppStore()
+    const store = await getAppStore(host)
     const entry = store.available.find((a) => a.name === NODE_PLUGIN)
     expect(entry!.isPlugin).to.equal(true)
     expect(entry!.isWasm).to.equal(false)
   })
 
   it('lists a package with both plugin keywords once', async function () {
-    const store = await getAppStore()
+    const store = await getAppStore(host)
     const entries = store.available.filter((a) => a.name === DUAL_KEYWORD)
     expect(entries).to.have.length(1)
     expect(entries[0]!.isWasm).to.equal(true)
   })
 
   it('offers an update for an installed WASM plugin even with the runtime disabled', async function () {
-    const store = await getAppStore()
+    const store = await getAppStore(host)
     const update = store.updates.find((a) => a.name === INSTALLED_WASM)
     expect(update, 'newer version should be offered as an update').to.exist
     expect(update!.installedVersion).to.equal(INSTALLED_VERSION)
@@ -238,6 +258,40 @@ describe('appstore lists WASM plugins', function () {
   })
 
   it('accepts removing a WASM plugin', async function () {
+    const res = await fetch(
+      `${host}/skServer/appstore/remove/${INSTALLED_WASM}`,
+      { method: 'POST' }
+    )
+    expect(res.status).to.equal(200)
+  })
+})
+
+describe('appstore keeps installed WASM plugins when the WASM search fails', function () {
+  this.timeout(SUITE_TIMEOUT_MS)
+
+  let stop: (() => Promise<void>) | undefined
+  let host: string
+
+  before(async function () {
+    if (process.platform === 'win32') {
+      this.skip()
+    }
+    ;({ host, stop } = await startAppStoreServer(WASM_KEYWORD))
+  })
+
+  after(async function () {
+    if (stop) await stop()
+  })
+
+  it('still lists the installed WASM plugin', async function () {
+    const store = await getAppStore(host)
+    const entry = store.installed.find((a) => a.name === INSTALLED_WASM)
+    expect(entry, 'installed WASM plugin should stay listed').to.exist
+    expect(entry!.isWasm).to.equal(true)
+    expect(store.available.find((a) => a.name === NODE_PLUGIN)).to.exist
+  })
+
+  it('still accepts removing the installed WASM plugin', async function () {
     const res = await fetch(
       `${host}/skServer/appstore/remove/${INSTALLED_WASM}`,
       { method: 'POST' }
