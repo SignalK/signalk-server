@@ -47,6 +47,13 @@ export function getSecondaryPort(app: WithConfig): any {
   return app.config.settings.ssl ? getHttpPort(app) : -7777
 }
 
+// Socket activation provides the plain HTTP listener only when it passes a
+// second fd.
+export function servesPlainHttpAlongsideSsl(app: WithConfig): boolean {
+  const { ssl, httpAlongsideSsl } = app.config.settings
+  return Boolean(ssl && httpAlongsideSsl && getSecondaryPort(app))
+}
+
 export function getExternalPort(app: WithConfig) {
   if (Number(process.env?.EXTERNALPORT) > 0) {
     return Number(process.env?.EXTERNALPORT)

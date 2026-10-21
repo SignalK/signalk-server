@@ -4,7 +4,7 @@ import net from 'net'
 import WebSocket from 'ws'
 import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
 import { startServerP } from './servertestutilities'
-import { getMfdOrigin } from '../dist/ports'
+import { getMfdOrigin, servesPlainHttpAlongsideSsl } from '../dist/ports'
 
 const PORT_WAIT_MS = 5000
 const PORT_RETRY_MS = 50
@@ -250,5 +250,42 @@ describe('Navico MFD tile origin', function () {
     expect(
       getMfdOrigin(app({ port: 3000, proxy_port: 443 }, undefined, true))
     ).to.deep.equal({ protocol: 'https', port: 443 })
+  })
+})
+
+describe('Plain HTTP listener alongside SSL', function () {
+  const app = (settings: Record<string, unknown>) =>
+    ({ config: { settings } }) as unknown as Parameters<
+      typeof servesPlainHttpAlongsideSsl
+    >[0]
+  const enabled = { ssl: true, httpAlongsideSsl: true }
+  const listenFds = process.env.LISTEN_FDS
+
+  afterEach(function () {
+    if (listenFds === undefined) {
+      delete process.env.LISTEN_FDS
+    } else {
+      process.env.LISTEN_FDS = listenFds
+    }
+  })
+
+  it('is served when enabled with SSL', function () {
+    delete process.env.LISTEN_FDS
+    expect(servesPlainHttpAlongsideSsl(app(enabled))).to.equal(true)
+  })
+
+  it('is not served without SSL or when disabled', function () {
+    delete process.env.LISTEN_FDS
+    expect(
+      servesPlainHttpAlongsideSsl(app({ httpAlongsideSsl: true }))
+    ).to.equal(false)
+    expect(servesPlainHttpAlongsideSsl(app({ ssl: true }))).to.equal(false)
+  })
+
+  it('needs a second fd under socket activation', function () {
+    process.env.LISTEN_FDS = '1'
+    expect(servesPlainHttpAlongsideSsl(app(enabled))).to.equal(false)
+    process.env.LISTEN_FDS = '2'
+    expect(servesPlainHttpAlongsideSsl(app(enabled))).to.equal(true)
   })
 })

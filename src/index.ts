@@ -56,7 +56,12 @@ import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
 import { ConnectionTracker } from './connectionTracker'
-import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
+import {
+  getExternalPort,
+  getPrimaryPort,
+  getSecondaryPort,
+  servesPlainHttpAlongsideSsl
+} from './ports'
 import {
   getCertificateOptions,
   getSecurityConfig,
@@ -172,7 +177,7 @@ class Server {
 
     // HSTS covers every port of a host, so a browser that saw it would
     // rewrite http:// on the plain port to https:// and fail.
-    if (!app.config.settings.httpAlongsideSsl) {
+    if (!servesPlainHttpAlongsideSsl(app)) {
       app.use(helmet.strictTransportSecurity())
     }
 
