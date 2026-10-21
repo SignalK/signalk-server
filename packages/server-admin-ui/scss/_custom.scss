@@ -428,7 +428,7 @@ form.rjsf {
       letter-spacing: 0.02em;
       margin-bottom: 0.1rem;
     }
-    &[data-th='']::before {
+    &:not([data-th])::before {
       display: none;
     }
   }

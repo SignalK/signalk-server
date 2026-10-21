@@ -357,7 +357,7 @@ export const PrefsEditor: React.FC<PrefsEditorProps> = ({
                     </button>
                   )}
                 </td>
-                <td data-th="" className="pg-prefs-actions">
+                <td className="pg-prefs-actions">
                   {index < priorities.length && (
                     <button
                       type="button"
