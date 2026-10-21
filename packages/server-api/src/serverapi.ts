@@ -761,7 +761,9 @@ export interface ActionResult {
 }
 
 /**
- * Event emitted when a device's connection state changes.
+ * Sent when a device comes online, on its first WebSocket connection or
+ * HTTP request, and when it goes offline: its last WebSocket closes, or it
+ * makes no HTTP request for a period.
  * @category Device API
  */
 export interface DeviceStateChangeEvent {
