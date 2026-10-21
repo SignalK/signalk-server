@@ -240,3 +240,6 @@ export const HullTypeSchema = Type.Union(
 )
 
 export type HullType = Static<typeof HullTypeSchema>
+
+/** @deprecated Use {@link IsoTime} */
+export type IsoTimeType = IsoTime
