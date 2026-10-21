@@ -1033,9 +1033,12 @@ function tokenSecurityFactory(
       result.userLevel = skReq.skPrincipal.permissions
       result.username = skReq.skPrincipal.identifier
 
-      const device = options.devices?.find(
-        (d) => d.clientId === skReq.skPrincipal!.identifier
-      )
+      const device =
+        skReq.skPrincipal.principalType === 'device'
+          ? options.devices?.find(
+              (d) => d.clientId === skReq.skPrincipal!.identifier
+            )
+          : undefined
       if (device) {
         result.principalType = 'device'
         result.deviceId = device.clientId

@@ -442,6 +442,29 @@ describe('Device Manager', function () {
         theme: 'dark'
       })
     })
+
+    it('does not describe a user as a device that shares its name', async function () {
+      const config = server.app.securityStrategy.securityConfig
+      config.devices = config.devices || []
+      config.devices.push({
+        clientId: 'testuser',
+        permissions: 'readonly',
+        config: {},
+        description: 'shares the read-only user name',
+        requestedPermissions: ''
+      })
+      try {
+        const result = await fetch(`${url}/skServer/loginStatus`, {
+          headers: tokenHeaders(readToken)
+        })
+        const body = await result.json()
+        expect(body.username).to.equal('testuser')
+        expect(body).not.to.have.property('principalType')
+        expect(body).not.to.have.property('deviceId')
+      } finally {
+        config.devices = config.devices.filter((d) => d.clientId !== 'testuser')
+      }
+    })
   })
 
   describe('WebSocket device tracking', function () {
