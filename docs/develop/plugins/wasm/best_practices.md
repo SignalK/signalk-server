@@ -6,7 +6,7 @@ title: Best Practices for WASM Plugins
 
 ## Updating a Plugin
 
-The server loads a plugin's WASM binary once, when the server starts, so a rebuilt binary takes effect only after a server restart. A plugin that is disabled at startup is the exception: its binary is loaded when it is first enabled, so a binary rebuilt before that point is picked up then.
+The server loads a plugin's WASM binary once, when the server starts, so a rebuilt binary takes effect only after a server restart. A plugin that is disabled at startup is the exception: the server loads its binary then only to read the schema and name, and loads it again when the plugin is first enabled, so a binary rebuilt before that point is picked up then.
 
 Saving the plugin configuration stops and restarts the plugin inside the same WASM instance. Global state survives that restart, so the plugin's start handler must reset any state it depends on.
 
