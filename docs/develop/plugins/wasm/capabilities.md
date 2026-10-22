@@ -345,6 +345,11 @@ WASM plugins can register PUT handlers to respond to PUT requests from clients, 
 | `vessels.self` | `navigation.anchor.position`            | `handle_put_vessels_self_navigation_anchor_position`            |
 | `vessels.self` | `steering.autopilot.target.headingTrue` | `handle_put_vessels_self_steering_autopilot_target_headingTrue` |
 
+**Handler Signature:**
+
+- AssemblyScript: `(value: string): string`, taking the PUT value as JSON and returning the response as JSON
+- Rust: `(value_ptr, value_len, response_ptr, response_max_len) -> written_len`, writing the response JSON into the given buffer
+
 **Response Format:**
 
 ```json
