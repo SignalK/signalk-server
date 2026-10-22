@@ -68,7 +68,9 @@ describe('WASM Plugins', function () {
       const nodeModulesPath = path.join(examplePluginDir, 'node_modules')
       if (!fs.existsSync(nodeModulesPath)) {
         console.log('Installing dependencies for example plugin...')
-        execSync('npm install', {
+        // The audit request can stall until npm's five-minute fetch
+        // timeout, and the build does not need it.
+        execSync('npm install --no-audit --no-fund', {
           cwd: examplePluginDir,
           stdio: 'inherit'
         })
