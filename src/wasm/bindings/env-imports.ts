@@ -26,6 +26,21 @@ import { atomicWriteFileSync } from '../../atomicWrite'
 
 const debug = Debug('signalk:wasm:bindings')
 
+// Deregistration functions of the PUT handlers each plugin registered,
+// keyed by package name (the PUT source)
+const putHandlerDeregistrations = new Map<string, Set<() => void>>()
+
+/**
+ * Remove the PUT handlers a plugin registered, so a stopped or replaced
+ * instance no longer receives PUT requests
+ */
+export function cleanupWasmPutHandlers(packageName: string): void {
+  putHandlerDeregistrations
+    .get(packageName)
+    ?.forEach((deregister) => deregister())
+  putHandlerDeregistrations.delete(packageName)
+}
+
 /**
  * Options for creating environment imports
  */
@@ -559,7 +574,20 @@ export function createEnvImports(
             }
           }
 
-          app.registerActionHandler(context, path, packageName, callback)
+          const deregister = app.registerActionHandler(
+            context,
+            path,
+            packageName,
+            callback
+          )
+          if (typeof deregister === 'function') {
+            let deregistrations = putHandlerDeregistrations.get(packageName)
+            if (!deregistrations) {
+              deregistrations = new Set()
+              putHandlerDeregistrations.set(packageName, deregistrations)
+            }
+            deregistrations.add(deregister)
+          }
           debug(
             `[${pluginId}] PUT handler registered successfully via registerActionHandler`
           )
