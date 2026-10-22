@@ -141,11 +141,15 @@ export function getModulePaths(config: Config) {
   )
 }
 
-// Installed as a dependency itself, as the Docker image installs it with
-// `npm install signalk-server`, the server has its dependencies hoisted next
-// to it, so the plugins it bundles are not in appPath's node_modules. Only
-// the server's own dependencies are taken from there: for a global install
-// that directory is the global node_modules.
+/**
+ * Finds the plugins the server bundles when npm hoisted them next to it.
+ *
+ * Installed as a dependency itself, as the Docker image installs it with
+ * `npm install signalk-server`, the server has its dependencies hoisted next
+ * to it, so the plugins it bundles are not in appPath's node_modules. Only
+ * the server's own dependencies are looked up there: for a global install
+ * that directory is the global node_modules.
+ */
 function findBundledModulesNextToApp(
   appPath: string,
   keyword: string
@@ -157,13 +161,23 @@ function findBundledModulesNextToApp(
   const { dependencies = {}, optionalDependencies = {} } =
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     require(path.join(appPath, 'package.json'))
-  const bundled = new Set([
+  const location = path.join(parent, '/')
+  return [
     ...Object.keys(dependencies),
     ...Object.keys(optionalDependencies)
-  ])
-  return findModulesInDir(path.join(parent, '/'), keyword).filter(
-    (moduleData) => bundled.has(moduleData.module)
-  )
+  ].flatMap((name) => {
+    const packageJsonPath = path.join(parent, name, 'package.json')
+    // Not here when npm nested it in appPath's node_modules, or when it is
+    // an optional dependency that was not installed.
+    if (!fs.existsSync(packageJsonPath)) {
+      return []
+    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const metadata = require(packageJsonPath)
+    return metadata.keywords?.includes(keyword)
+      ? [{ module: metadata.name, metadata, location }]
+      : []
+  })
 }
 
 const getModuleSortName = (x: ModuleData) =>
@@ -173,7 +187,11 @@ const getModuleSortName = (x: ModuleData) =>
 const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
-// Searches for installed modules that contain `keyword`.
+/**
+ * Searches for installed modules that contain `keyword`. The config dir is
+ * searched first, so a copy installed there by the App Store takes
+ * precedence over the one the server bundles.
+ */
 export function modulesWithKeyword(config: Config, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
