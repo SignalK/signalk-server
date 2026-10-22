@@ -427,7 +427,8 @@ export function plugin_stop(): i32 {
 
     /**
      * Compile the probe as `build`: it reports `build <build>` as its status,
-     * serves `build` at /api/build-<build> and handles PUT on probe.<build>
+     * serves `build` at /api/build-<build> and handles PUT on probe.<build>,
+     * reporting `put <build>` as its status when that handler runs
      */
     function buildProbe(build: string): void {
       fs.writeFileSync(
@@ -455,6 +456,7 @@ export function plugin_start(configPtr: usize, configLen: usize): i32 {
 }
 
 export function handle_put_vessels_self_probe_${build}(value: string): string {
+  setStatus('put ${build}')
   return '{"state":"COMPLETED","statusCode":200}'
 }
 
@@ -550,7 +552,6 @@ export function plugin_stop(): i32 {
       return fetch(`${url}/plugins/${packageName}/api/build-${build}`)
     }
 
-    // 405 means no PUT handler is registered for the path
     async function putStatus(build: string): Promise<number> {
       const response = await fetch(
         `${url}/signalk/v1/api/vessels/self/probe/${build}`,
@@ -569,7 +570,8 @@ export function plugin_stop(): i32 {
       const one = await getBuildEndpoint('one')
       expect(one.status).to.equal(200)
       expect(await one.text()).to.equal('one')
-      expect(await putStatus('one')).to.not.equal(405)
+      await putStatus('one')
+      expect(await waitForStatus('put one')).to.equal('put one')
 
       buildProbe('two')
       expect((await setEnabled(false)).status).to.equal(200)
@@ -580,8 +582,15 @@ export function plugin_stop(): i32 {
       expect(two.status).to.equal(200)
       expect(await two.text()).to.equal('two')
       expect((await getBuildEndpoint('one')).status).to.equal(404)
-      expect(await putStatus('two')).to.not.equal(405)
+      await putStatus('two')
+      expect(await waitForStatus('put two')).to.equal('put two')
+      // 405: no PUT handler is registered for the path any more
       expect(await putStatus('one')).to.equal(405)
+      expect(await statusMessage()).to.equal('put two')
+      const metaOne = await fetch(
+        `${url}/signalk/v1/api/vessels/self/probe/one/meta`
+      )
+      expect((await metaOne.json()).supportsPut).to.equal(false)
     })
   })
 })

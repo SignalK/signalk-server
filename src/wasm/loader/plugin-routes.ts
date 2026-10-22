@@ -585,19 +585,20 @@ export function setupWasmPluginRoutes(
             app
           )
 
+          const pluginName = instance.exports.name()
+          const schemaJson = instance.exports.schema()
+          const schema = schemaJson ? JSON.parse(schemaJson) : {}
+
           // Providers register in start(), so the old binary's go before the
           // new one decides which it registers. Only once the new binary has
-          // loaded, so a failed load leaves the old registrations alone.
+          // loaded and described itself, so a failure leaves the old
+          // registrations alone.
           if (plugin.instance) {
             cleanupResourceProviders(plugin.packageName, app)
             cleanupWeatherProviders(plugin.packageName, app)
             cleanupRadarProviders(plugin.packageName, app)
           }
           plugin.instance = instance
-
-          const pluginName = instance.exports.name()
-          const schemaJson = instance.exports.schema()
-          const schema = schemaJson ? JSON.parse(schemaJson) : {}
 
           plugin.name = pluginName
           plugin.schema = schema
