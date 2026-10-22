@@ -42,6 +42,7 @@ export interface WasmPlugin {
   metadata: WasmPluginMetadata
   instance?: WasmPluginInstance
   router?: IRouter // Express router for plugin routes
+  endpointRouter?: IRouter // HTTP endpoints declared by the loaded binary
   status: 'stopped' | 'starting' | 'running' | 'error' | 'crashed'
   statusMessage?: string
   errorMessage?: string
