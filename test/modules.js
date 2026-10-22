@@ -74,6 +74,65 @@ describe('modulesWithKeyword', () => {
     )
     chai.expect(installedModuleInfo.location).to.eql(tempNodeModules)
   })
+
+  describe('with the server installed as a dependency', () => {
+    const keyword = 'signalk-node-server-plugin'
+    let nodeModules
+    let config
+
+    const writePackage = (dir, name, pkg) => {
+      fs.mkdirSync(path.join(dir, name), { recursive: true })
+      fs.writeFileSync(
+        path.join(dir, name, 'package.json'),
+        JSON.stringify({ name, ...pkg })
+      )
+    }
+
+    beforeEach(() => {
+      testTempDir = fs.mkdtempSync(
+        path.join(require('os').tmpdir(), '_skservertest_modules')
+      )
+      nodeModules = path.join(testTempDir, 'node_modules')
+      writePackage(nodeModules, 'signalk-server', {
+        dependencies: { 'bundled-plugin': '^1.0.0' },
+        optionalDependencies: { '@scope/bundled-plugin': '^1.0.0' }
+      })
+      config = {
+        appPath: path.join(nodeModules, 'signalk-server/'),
+        configPath: path.join(testTempDir, 'config')
+      }
+    })
+
+    it('finds the bundled plugins npm hoisted next to the server', () => {
+      writePackage(nodeModules, 'bundled-plugin', { keywords: [keyword] })
+      writePackage(nodeModules, '@scope/bundled-plugin', {
+        keywords: [keyword]
+      })
+      writePackage(nodeModules, 'unrelated-plugin', { keywords: [keyword] })
+
+      const moduleList = modulesWithKeyword(config, keyword)
+
+      chai
+        .expect(_.map(moduleList, 'module'))
+        .to.have.members(['bundled-plugin', '@scope/bundled-plugin'])
+      chai
+        .expect(_.uniq(_.map(moduleList, 'location')))
+        .to.eql([path.join(nodeModules, '/')])
+    })
+
+    it('prefers a copy installed in the config dir', () => {
+      writePackage(nodeModules, 'bundled-plugin', { keywords: [keyword] })
+      const configNodeModules = path.join(config.configPath, 'node_modules')
+      writePackage(configNodeModules, 'bundled-plugin', { keywords: [keyword] })
+
+      const moduleList = modulesWithKeyword(config, keyword)
+
+      chai.expect(moduleList).to.have.length(1)
+      chai
+        .expect(moduleList[0].location)
+        .to.eql(path.join(configNodeModules, '/'))
+    })
+  })
 })
 
 describe('checkForNewServerVersion', () => {
