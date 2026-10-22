@@ -166,15 +166,18 @@ function findBundledModulesNextToApp(
     ...Object.keys(dependencies),
     ...Object.keys(optionalDependencies)
   ].flatMap((name) => {
-    const packageJsonPath = path.join(parent, name, 'package.json')
-    // Not here when npm nested it in appPath's node_modules, or when it is
-    // an optional dependency that was not installed.
-    if (!fs.existsSync(packageJsonPath)) {
+    let metadata
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      metadata = require(path.join(parent, name, 'package.json'))
+    } catch (err) {
+      // Also missing when npm nested the dependency in appPath's
+      // node_modules, or an optional one was not installed.
+      debug(err)
       return []
     }
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const metadata = require(packageJsonPath)
-    return metadata.keywords?.includes(keyword)
+    return Array.isArray(metadata?.keywords) &&
+      metadata.keywords.includes(keyword)
       ? [{ module: metadata.name, metadata, location }]
       : []
   })
