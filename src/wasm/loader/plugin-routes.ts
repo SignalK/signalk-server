@@ -576,14 +576,6 @@ export function setupWasmPluginRoutes(
             plugin.packageName
           )
 
-          // Providers register in start(), so the old binary's go before the
-          // new one decides which it registers
-          if (plugin.instance) {
-            cleanupResourceProviders(plugin.packageName, app)
-            cleanupWeatherProviders(plugin.packageName, app)
-            cleanupRadarProviders(plugin.packageName, app)
-          }
-
           const runtime = getWasmRuntime()
           const instance = await runtime.loadPlugin(
             plugin.packageName,
@@ -593,6 +585,14 @@ export function setupWasmPluginRoutes(
             app
           )
 
+          // Providers register in start(), so the old binary's go before the
+          // new one decides which it registers. Only once the new binary has
+          // loaded, so a failed load leaves the old registrations alone.
+          if (plugin.instance) {
+            cleanupResourceProviders(plugin.packageName, app)
+            cleanupWeatherProviders(plugin.packageName, app)
+            cleanupRadarProviders(plugin.packageName, app)
+          }
           plugin.instance = instance
 
           const pluginName = instance.exports.name()

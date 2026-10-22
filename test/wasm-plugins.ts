@@ -421,20 +421,22 @@ export function plugin_stop(): i32 {
     let server: ServerInstance | null = null
     let url: string
 
-    /** Directory the probe plugin is installed in */
     function probeDir(): string {
       return path.join(testConfigDirectory(), 'node_modules', packageName)
     }
 
     /**
-     * Compile the probe as `build`: it reports `build <build>` as its status
-     * and serves `build` at /api/build-<build>
+     * Compile the probe as `build`: it reports `build <build>` as its status,
+     * serves `build` at /api/build-<build> and handles PUT on probe.<build>
      */
     function buildProbe(build: string): void {
       fs.writeFileSync(
         path.join(probeDir(), 'assembly', 'index.ts'),
         `
 import { setStatus } from '@signalk/assemblyscript-plugin-sdk/assembly'
+
+@external("env", "sk_register_put_handler")
+declare function sk_register_put_handler(contextPtr: usize, contextLen: usize, pathPtr: usize, pathLen: usize): i32
 
 export function plugin_name(): string {
   return 'Reload probe'
@@ -446,7 +448,14 @@ export function plugin_schema(): string {
 
 export function plugin_start(configPtr: usize, configLen: usize): i32 {
   setStatus('build ${build}')
+  const context = String.UTF8.encode('vessels.self')
+  const putPath = String.UTF8.encode('probe.${build}')
+  sk_register_put_handler(changetype<usize>(context), context.byteLength, changetype<usize>(putPath), putPath.byteLength)
   return 0
+}
+
+export function handle_put_vessels_self_probe_${build}(value: string): string {
+  return '{"state":"COMPLETED","statusCode":200}'
 }
 
 export function http_endpoints(): string {
@@ -477,7 +486,6 @@ export function plugin_stop(): i32 {
       })
     }
 
-    /** The probe's current status message in the plugin list */
     async function statusMessage(): Promise<string> {
       const response = await fetch(`${url}/skServer/plugins`)
       const plugins: (PluginInfo & { statusMessage: string })[] =
@@ -505,7 +513,8 @@ export function plugin_stop(): i32 {
           name: packageName,
           version: '0.0.1',
           keywords: ['signalk-wasm-plugin'],
-          wasmManifest: 'plugin.wasm'
+          wasmManifest: 'plugin.wasm',
+          wasmCapabilities: { putHandlers: true }
         })
       )
       buildProbe('one')
@@ -537,9 +546,21 @@ export function plugin_stop(): i32 {
       )
     })
 
-    /** Request the endpoint a given build of the probe declares */
     function getBuildEndpoint(build: string): Promise<Response> {
       return fetch(`${url}/plugins/${packageName}/api/build-${build}`)
+    }
+
+    // 405 means no PUT handler is registered for the path
+    async function putStatus(build: string): Promise<number> {
+      const response = await fetch(
+        `${url}/signalk/v1/api/vessels/self/probe/${build}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: 1 })
+        }
+      )
+      return response.status
     }
 
     it('runs the rebuilt plugin.wasm after disable and enable', async function () {
@@ -548,6 +569,7 @@ export function plugin_stop(): i32 {
       const one = await getBuildEndpoint('one')
       expect(one.status).to.equal(200)
       expect(await one.text()).to.equal('one')
+      expect(await putStatus('one')).to.not.equal(405)
 
       buildProbe('two')
       expect((await setEnabled(false)).status).to.equal(200)
@@ -558,6 +580,8 @@ export function plugin_stop(): i32 {
       expect(two.status).to.equal(200)
       expect(await two.text()).to.equal('two')
       expect((await getBuildEndpoint('one')).status).to.equal(404)
+      expect(await putStatus('two')).to.not.equal(405)
+      expect(await putStatus('one')).to.equal(405)
     })
   })
 })
