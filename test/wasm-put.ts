@@ -13,7 +13,9 @@ const packageName = 'wasm-put-probe'
 const ascPath = path.join(__dirname, '..', 'node_modules', '.bin', 'asc')
 
 // Registers PUT handlers on probe.handled, which it implements, and on
-// probe.unhandled, which it does not export a handler for
+// probe.unhandled, which it does not export a handler for. The handled
+// path only succeeds for the value the test sends, so the reply proves
+// the value reached the plugin.
 const probeSource = `
 import { setStatus } from '@signalk/assemblyscript-plugin-sdk/assembly'
 
@@ -42,7 +44,10 @@ export function plugin_start(configPtr: usize, configLen: usize): i32 {
 }
 
 export function handle_put_vessels_self_probe_handled(value: string): string {
-  return '{"state":"COMPLETED","statusCode":200}'
+  if (value != '1') {
+    return '{"state":"COMPLETED","statusCode":500,"message":"unexpected value"}'
+  }
+  return '{"state":"COMPLETED","statusCode":200,"message":"wasm probe reply"}'
 }
 
 export function plugin_stop(): i32 {
@@ -128,7 +133,9 @@ describe('WASM PUT handlers', function () {
   it('answers with the reply of the plugin handler', async function () {
     const response = await put('probe/handled')
     expect(response.status).to.equal(200)
-    expect((await response.json()).state).to.equal('COMPLETED')
+    const reply = await response.json()
+    expect(reply.state).to.equal('COMPLETED')
+    expect(reply.message).to.equal('wasm probe reply')
   })
 
   it('answers 501 when the plugin exports no handler for the path', async function () {
