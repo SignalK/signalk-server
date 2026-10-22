@@ -430,7 +430,10 @@ export function plugin_stop(): i32 {
      * serves `build` at /api/build-<build> and handles PUT on probe.<build>,
      * reporting `put <build>` as its status when that handler runs
      */
-    function buildProbe(build: string): void {
+    function buildProbe(
+      build: string,
+      schema = '{"type":"object","properties":{}}'
+    ): void {
       fs.writeFileSync(
         path.join(probeDir(), 'assembly', 'index.ts'),
         `
@@ -444,7 +447,7 @@ export function plugin_name(): string {
 }
 
 export function plugin_schema(): string {
-  return '{"type":"object","properties":{}}'
+  return '${schema}'
 }
 
 export function plugin_start(configPtr: usize, configLen: usize): i32 {
@@ -591,6 +594,17 @@ export function plugin_stop(): i32 {
         `${url}/signalk/v1/api/vessels/self/probe/one/meta`
       )
       expect((await metaOne.json()).supportsPut).to.equal(false)
+    })
+
+    it('keeps the running binary when the rebuilt one cannot describe itself', async function () {
+      buildProbe('three', '{not json')
+      expect((await setEnabled(false)).status).to.equal(200)
+      expect((await setEnabled(true)).status).to.equal(500)
+
+      const two = await getBuildEndpoint('two')
+      expect(two.status).to.equal(200)
+      expect(await two.text()).to.equal('two')
+      expect((await getBuildEndpoint('three')).status).to.equal(404)
     })
   })
 })

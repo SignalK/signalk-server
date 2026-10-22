@@ -16,9 +16,18 @@ import * as readline from 'readline'
 import Debug from 'debug'
 import { WasmPlugin } from './types'
 import { getWasmRuntime } from '../wasm-runtime'
-import { cleanupResourceProviders } from '../bindings/resource-provider'
-import { cleanupWeatherProviders } from '../bindings/weather-provider'
-import { cleanupRadarProviders } from '../bindings/radar-provider'
+import {
+  cleanupResourceProviders,
+  updateResourceProviderInstance
+} from '../bindings/resource-provider'
+import {
+  cleanupWeatherProviders,
+  updateWeatherProviderInstance
+} from '../bindings/weather-provider'
+import {
+  cleanupRadarProviders,
+  updateRadarProviderInstance
+} from '../bindings/radar-provider'
 import {
   getPluginStoragePaths,
   readPluginConfig,
@@ -585,9 +594,25 @@ export function setupWasmPluginRoutes(
             app
           )
 
-          const pluginName = instance.exports.name()
-          const schemaJson = instance.exports.schema()
-          const schema = schemaJson ? JSON.parse(schemaJson) : {}
+          let pluginName: string
+          let schema: object
+          try {
+            pluginName = instance.exports.name()
+            const schemaJson = instance.exports.schema()
+            schema = schemaJson ? JSON.parse(schemaJson) : {}
+          } catch (error) {
+            // loadPlugin already pointed the live providers at the
+            // replacement, so hand them back to the instance still in use
+            if (plugin.instance) {
+              updateResourceProviderInstance(
+                plugin.packageName,
+                plugin.instance
+              )
+              updateWeatherProviderInstance(plugin.packageName, plugin.instance)
+              updateRadarProviderInstance(plugin.packageName, plugin.instance)
+            }
+            throw error
+          }
 
           // Providers register in start(), so the old binary's go before the
           // new one decides which it registers. Only once the new binary has
