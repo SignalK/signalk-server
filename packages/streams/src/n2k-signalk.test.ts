@@ -347,6 +347,7 @@ describe('N2kToSignalK canName warmup', () => {
       useCanName: true,
       canNameWarmupMs: 0
     })
+
     // Force the first frame into the warmup window, then let it lapse so
     // the periodic retransmit lands after warmup — without real timers.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -354,17 +355,226 @@ describe('N2kToSignalK canName warmup', () => {
 
     const outputPromise = collectStreamOutput(stream)
     stream.write(ENGINE_ALARM)
+
     // Warmup elapsed: the alarm's next periodic broadcast gets through.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(stream as any).warmupUntil = 0
-    stream.write({ ...ENGINE_ALARM, timestamp: '2024-01-01T00:00:00.500Z' })
+    stream.write({
+      ...ENGINE_ALARM,
+      timestamp: '2024-01-01T00:00:00.500Z'
+    })
     stream.end()
 
     const results = (await outputPromise) as Array<{
       updates: Array<{ values: Array<{ path: string }> }>
     }>
+
     expect(results).to.have.length(1)
     const paths = results[0]!.updates[0]!.values.map((v) => v.path)
     expect(paths).to.include('notifications.propulsion.starboard.checkEngine')
+  })
+})
+
+describe('N2kToSignalK notifications', () => {
+  const ENGINE_NORMAL = {
+    prio: 2,
+    pgn: 127489,
+    dst: 255,
+    src: 50,
+    timestamp: '2024-01-01T00:00:00.000Z',
+    fields: { engineInstance: 0, discreteStatus1: [] },
+    description: 'Engine Parameters, Dynamic',
+    id: 'engineParametersDynamic'
+  }
+
+  const ENGINE_ALARM = {
+    ...ENGINE_NORMAL,
+    fields: {
+      engineInstance: 0,
+      discreteStatus1: ['Check Engine']
+    }
+  }
+
+  const CHECK_ENGINE_PATH = 'notifications.propulsion.starboard.checkEngine'
+
+  it('suppresses unchanged N2K notifications', async () => {
+    const app = createMockApp()
+    const stream = new N2kToSignalK({
+      app,
+      providerId: 'canbus0',
+      canNameWarmupMs: 0
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(ENGINE_NORMAL)
+    stream.write({
+      ...ENGINE_NORMAL,
+      timestamp: '2024-01-01T00:00:00.500Z'
+    })
+    stream.end()
+
+    const results = (await outputPromise) as Array<{
+      updates: Array<{
+        values: Array<{
+          path: string
+          value: { state: string }
+        }>
+      }>
+    }>
+
+    expect(results).to.have.length(1)
+
+    const notifications = results[0]!.updates
+      .flatMap((update) => update.values)
+      .filter((value) => value.path.startsWith('notifications.'))
+
+    expect(notifications.length).to.be.greaterThan(0)
+    expect(
+      notifications.every((value) => value.value.state === 'normal')
+    ).to.equal(true)
+  })
+
+  it('emits a notification again when its state changes', async () => {
+    const app = createMockApp()
+    const stream = new N2kToSignalK({
+      app,
+      providerId: 'canbus0',
+      canNameWarmupMs: 0
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(ENGINE_NORMAL)
+    stream.write({
+      ...ENGINE_ALARM,
+      timestamp: '2024-01-01T00:00:00.500Z'
+    })
+    stream.end()
+
+    const results = (await outputPromise) as Array<{
+      updates: Array<{
+        values: Array<{
+          path: string
+          value: { state: string }
+        }>
+      }>
+    }>
+
+    expect(results).to.have.length(2)
+
+    const checkEngineStates = results
+      .flatMap((delta) => delta.updates)
+      .flatMap((update) => update.values)
+      .filter((value) => value.path === CHECK_ENGINE_PATH)
+      .map((value) => value.value.state)
+
+    expect(checkEngineStates).to.deep.equal(['normal', 'alarm'])
+  })
+
+  it('refreshes the alarm timeout when an unchanged alarm is suppressed', async () => {
+    const app = createMockApp()
+    const stream = new N2kToSignalK({
+      app,
+      providerId: 'canbus0',
+      canNameWarmupMs: 0
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(ENGINE_ALARM)
+
+    // The first alarm creates the existing watchdog entry.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const notifications = (stream as any).notifications
+    const entry = notifications[CHECK_ENGINE_PATH][50]
+
+    expect(entry).to.exist
+
+    // Put its bookkeeping timestamp into the past. Receiving the exact
+    // same alarm again must refresh this even though the outward
+    // notification itself will be suppressed by the deduper.
+    entry.lastTime = 1
+
+    stream.write({
+      ...ENGINE_ALARM,
+      timestamp: '2024-01-01T00:00:00.500Z'
+    })
+
+    expect(entry.lastTime).to.be.greaterThan(1)
+
+    stream.end()
+
+    const results = await outputPromise
+
+    expect(results).to.have.length(1)
+  })
+
+  it('emits an alarm again after the watchdog emits synthetic normal', async () => {
+    const app = createMockApp()
+    const stream = new N2kToSignalK({
+      app,
+      providerId: 'canbus0',
+      canNameWarmupMs: 0
+    })
+
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(ENGINE_ALARM)
+
+    // Make the active alarm old enough for the next watchdog tick to
+    // emit its synthetic normal without waiting for the full timeout.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const notifications = (stream as any).notifications
+    notifications[CHECK_ENGINE_PATH][50].lastTime = Date.now() - 11000
+
+    // Wait for the watchdog's 5 second interval to run.
+    await new Promise((resolve) => setTimeout(resolve, 5100))
+
+    const syntheticNormal = app.handledMessages
+      .flatMap(({ delta }) => {
+        const typedDelta = delta as {
+          updates: Array<{
+            values: Array<{
+              path: string
+              value: { state: string }
+            }>
+          }>
+        }
+        return typedDelta.updates.flatMap((update) => update.values)
+      })
+      .find(
+        (value) =>
+          value.path === CHECK_ENGINE_PATH && value.value.state === 'normal'
+      )
+
+    expect(syntheticNormal).to.not.equal(undefined)
+
+    stream.write({
+      ...ENGINE_ALARM,
+      timestamp: '2024-01-01T00:00:11.000Z'
+    })
+
+    stream.end()
+
+    const results = (await outputPromise) as Array<{
+      updates: Array<{
+        values: Array<{
+          path: string
+          value: {
+            state: string
+            [key: string]: unknown
+          }
+        }>
+      }>
+    }>
+
+    const checkEngineStates = results
+      .flatMap((delta) => delta.updates)
+      .flatMap((update) => update.values)
+      .filter((value) => value.path === CHECK_ENGINE_PATH)
+      .map((value) => value.value.state)
+
+    expect(checkEngineStates).to.deep.equal(['alarm', 'alarm'])
   })
 })

@@ -101,6 +101,8 @@ export default class N2kToSignalK extends Transform {
     string,
     Record<number, NotificationEntry>
   > = {}
+  private readonly lastNotifications: Record<string, Record<number, string>> =
+    {}
   private readonly options: N2kToSignalKOptions
   private readonly app: N2kToSignalKOptions['app']
   private readonly filters?: N2kFilter[]
@@ -331,6 +333,14 @@ export default class N2kToSignalK extends Transform {
                       }
                       delete currentPathNotifs[src]
                       clearInterval(interval)
+
+                      if (!this.lastNotifications[kv.path]) {
+                        this.lastNotifications[kv.path] = {}
+                      }
+                      this.lastNotifications[kv.path]![src] = JSON.stringify(
+                        copy.value
+                      )
+
                       this.app.handleMessage(
                         this.options.providerId,
                         normalDelta
@@ -348,7 +358,41 @@ export default class N2kToSignalK extends Transform {
             }
           })
         })
-        this.push(delta)
+        // Notification PGNs are broadcast periodically even when their
+        // state has not changed. Keep the alarm timeout bookkeeping above
+        // running for every frame, but only emit a notification when its
+        // complete value differs from the last value we emitted.
+        delta.updates.forEach((update) => {
+          update.values = update.values.filter((kv) => {
+            if (!kv.path || !kv.path.startsWith('notifications.')) {
+              return true
+            }
+
+            if (!this.lastNotifications[kv.path]) {
+              this.lastNotifications[kv.path] = {}
+            }
+
+            const value = JSON.stringify(kv.value)
+            const previous = this.lastNotifications[kv.path]![src]
+
+            if (previous === value) {
+              return false
+            }
+
+            this.lastNotifications[kv.path]![src] = value
+            return true
+          })
+        })
+
+        // A delta may have contained only unchanged notifications.
+        // Don't emit an empty update/delta after removing them.
+        delta.updates = delta.updates.filter(
+          (update) => update.values.length > 0
+        )
+
+        if (delta.updates.length > 0) {
+          this.push(delta)
+        }
       }
     } catch (ex) {
       console.error(ex)
