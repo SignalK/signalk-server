@@ -154,13 +154,14 @@ function findBundledModulesNextToApp(
   appPath: string,
   keyword: string
 ): ModuleData[] {
-  const parent = path.dirname(path.resolve(appPath))
+  const serverDir = path.resolve(appPath)
+  const parent = path.dirname(serverDir)
   if (path.basename(parent) !== 'node_modules') {
     return []
   }
   const { dependencies = {}, optionalDependencies = {} } =
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require(path.join(appPath, 'package.json'))
+    require(path.join(serverDir, 'package.json'))
   const location = path.join(parent, '/')
   return [
     ...Object.keys(dependencies),
