@@ -216,3 +216,22 @@ export const ErrorResponseSchema = Type.Object(
   },
   { $id: 'ErrorResponse', description: 'Request error response' }
 )
+
+/**
+ * The hull form of the vessel (design.hullType). How it is driven is not
+ * part of it: whether it sails is design.rigging and design.aisShipType.
+ */
+export const HullTypeSchema = Type.Union(
+  [
+    Type.Literal('monohull'),
+    Type.Literal('catamaran'),
+    Type.Literal('trimaran')
+  ],
+  {
+    $id: 'HullType',
+    description:
+      'The hull form: one hull, two side by side (catamaran) or three (trimaran)'
+  }
+)
+
+export type HullType = Static<typeof HullTypeSchema>

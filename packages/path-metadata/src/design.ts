@@ -97,6 +97,11 @@ export const designMetadata: Record<string, PathMetadataEntry> = {
     description: 'Data should be of type number.',
     units: 'm'
   },
+  '/vessels/*/design/hullType': {
+    description:
+      'The hull form of the vessel: one hull (monohull), two side by side (catamaran) or three (trimaran). Whether it sails is given by rigging and aisShipType.',
+    enum: ['monohull', 'catamaran', 'trimaran']
+  },
   '/vessels/*/design/airHeight': {
     description: 'Data should be of type number.',
     units: 'm'
