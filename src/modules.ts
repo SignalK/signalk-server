@@ -140,6 +140,31 @@ export function getModulePaths(config: Config) {
   )
 }
 
+// Installed as a dependency itself, as the Docker image installs it with
+// `npm install signalk-server`, the server has its dependencies hoisted next
+// to it, so the plugins it bundles are not in appPath's node_modules. Only
+// the server's own dependencies are taken from there: for a global install
+// that directory is the global node_modules.
+function findBundledModulesNextToApp(
+  appPath: string,
+  keyword: string
+): ModuleData[] {
+  const parent = path.dirname(path.resolve(appPath))
+  if (path.basename(parent) !== 'node_modules') {
+    return []
+  }
+  const { dependencies = {}, optionalDependencies = {} } =
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require(path.join(appPath, 'package.json'))
+  const bundled = new Set([
+    ...Object.keys(dependencies),
+    ...Object.keys(optionalDependencies)
+  ])
+  return findModulesInDir(path.join(parent, '/'), keyword).filter(
+    (moduleData) => bundled.has(moduleData.module)
+  )
+}
+
 const getModuleSortName = (x: ModuleData) =>
   (x.module || '').replace('@signalk', ' ')
 
@@ -158,13 +183,19 @@ function newerModule(a: ModuleData, b: ModuleData) {
 
 // Searches for installed modules that contain `keyword`.
 // A module can be installed both in the config directory (by the appstore)
-// and in the app directory (shipped with the server). Use the newest
+// and in the app directory or next to it (shipped with the server). Use the newest
 // version; when the versions are the same or can't be compared, the copy
 // in the config directory wins, as it comes first.
 export function modulesWithKeyword(config: Config, keyword: string) {
   const modules = new Map<string, ModuleData>()
-  getModulePaths(config).forEach((pathOption) => {
-    findModulesInDir(pathOption, keyword).forEach((moduleData) => {
+  const found = [
+    ...getModulePaths(config).map((pathOption) =>
+      findModulesInDir(pathOption, keyword)
+    ),
+    findBundledModulesNextToApp(config.appPath, keyword)
+  ]
+  found.forEach((moduleList) => {
+    moduleList.forEach((moduleData) => {
       const other = modules.get(moduleData.module)
       modules.set(
         moduleData.module,
