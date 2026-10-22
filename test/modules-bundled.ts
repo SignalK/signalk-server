@@ -72,4 +72,34 @@ describe('modulesWithKeyword with the server installed as a dependency', () => {
       path.join(configNodeModules, '/')
     ])
   })
+
+  it('skips a bundled package whose package.json cannot be read', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+    fs.mkdirSync(path.join(nodeModules, 'broken-plugin'))
+    fs.writeFileSync(
+      path.join(nodeModules, 'broken-plugin', 'package.json'),
+      '{ not json'
+    )
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.module)).to.eql(['bundled-plugin'])
+  })
+
+  it('skips a bundled package with an invalid package.json', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+    writePackage(nodeModules, 'broken-plugin', { keywords: 1 })
+    writePackage(nodeModules, 'missing-plugin', { keywords: KEYWORD })
+    fs.mkdirSync(path.join(nodeModules, '@scope/bundled-plugin'), {
+      recursive: true
+    })
+    fs.writeFileSync(
+      path.join(nodeModules, '@scope/bundled-plugin', 'package.json'),
+      'null'
+    )
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.module)).to.eql(['bundled-plugin'])
+  })
 })
