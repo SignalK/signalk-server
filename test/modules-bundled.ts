@@ -102,4 +102,20 @@ describe('modulesWithKeyword with the server installed as a dependency', () => {
 
     expect(moduleList.map((m) => m.module)).to.eql(['bundled-plugin'])
   })
+
+  it('resolves a relative appPath against the working directory', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+    const cwd = process.cwd()
+    process.chdir(tempDir)
+    try {
+      const moduleList = modulesWithKeyword(
+        { ...config, appPath: 'node_modules/signalk-server/' },
+        KEYWORD
+      )
+
+      expect(moduleList.map((m) => m.module)).to.eql(['bundled-plugin'])
+    } finally {
+      process.chdir(cwd)
+    }
+  })
 })
