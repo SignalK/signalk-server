@@ -161,7 +161,7 @@ Symlinking your plugin directory allows you to make changes and rebuild without 
 cd ~/.signalk/node_modules
 ln -s /path/to/your/my-wasm-plugin my-wasm-plugin
 
-# Now any changes you make and rebuild will be picked up on server restart
+# Now a rebuild is picked up when you disable and re-enable the plugin
 ```
 
 **Option 2: Direct Copy**
@@ -184,7 +184,7 @@ npm install -g ./my-wasm-plugin-1.0.0.tgz
 npm install -g my-wasm-plugin
 ```
 
-**Note**: Symlinking is the most efficient method for development - changes are picked up on server restart without copying files. Use npm install for production deployments or when distributing plugins.
+**Note**: Symlinking is the most efficient method for development - a rebuild is picked up by disabling and re-enabling the plugin, without copying files. Use npm install for production deployments or when distributing plugins.
 
 **Important**: If your plugin includes static files (like a web UI in the `public/` folder), make sure to copy that folder as well. Static files are automatically served at `/plugins/your-plugin-id/` when the plugin is loaded.
 

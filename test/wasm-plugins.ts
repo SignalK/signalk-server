@@ -414,4 +414,150 @@ export function plugin_stop(): i32 {
       expect(probeSockets()).to.equal(undefined)
     })
   })
+
+  describe('Rebuilt binary', () => {
+    const packageName = 'wasm-reload-probe'
+    const ascPath = path.join(__dirname, '..', 'node_modules', '.bin', 'asc')
+    let server: ServerInstance | null = null
+    let url: string
+
+    /** Directory the probe plugin is installed in */
+    function probeDir(): string {
+      return path.join(testConfigDirectory(), 'node_modules', packageName)
+    }
+
+    /**
+     * Compile the probe as `build`: it reports `build <build>` as its status
+     * and serves `build` at /api/build-<build>
+     */
+    function buildProbe(build: string): void {
+      fs.writeFileSync(
+        path.join(probeDir(), 'assembly', 'index.ts'),
+        `
+import { setStatus } from '@signalk/assemblyscript-plugin-sdk/assembly'
+
+export function plugin_name(): string {
+  return 'Reload probe'
+}
+
+export function plugin_schema(): string {
+  return '{"type":"object","properties":{}}'
+}
+
+export function plugin_start(configPtr: usize, configLen: usize): i32 {
+  setStatus('build ${build}')
+  return 0
+}
+
+export function http_endpoints(): string {
+  return '[{"method":"GET","path":"/api/build-${build}","handler":"handle_${build}"}]'
+}
+
+export function handle_${build}(requestPtr: usize, requestLen: usize): string {
+  return '{"statusCode":200,"body":"${build}"}'
+}
+
+export function plugin_stop(): i32 {
+  return 0
+}
+`
+      )
+      execSync(
+        `"${ascPath}" assembly/index.ts --outFile plugin.wasm --runtime incremental --exportRuntime`,
+        { cwd: probeDir(), stdio: 'inherit' }
+      )
+    }
+
+    /** Enable or disable the probe through Plugin Config */
+    function setEnabled(enabled: boolean): Promise<Response> {
+      return fetch(`${url}/skServer/plugins/${packageName}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled, configuration: {} })
+      })
+    }
+
+    /** The probe's current status message in the plugin list */
+    async function statusMessage(): Promise<string> {
+      const response = await fetch(`${url}/skServer/plugins`)
+      const plugins: (PluginInfo & { statusMessage: string })[] =
+        await response.json()
+      return plugins.find((p) => p.id === packageName)?.statusMessage ?? ''
+    }
+
+    /** Poll until the probe reports `expected`, returning the last status */
+    async function waitForStatus(expected: string): Promise<string> {
+      let status = await statusMessage()
+      for (let i = 0; i < 40 && status !== expected; i++) {
+        await new Promise((r) => setTimeout(r, 50))
+        status = await statusMessage()
+      }
+      return status
+    }
+
+    before(async function () {
+      const dir = probeDir()
+      fs.rmSync(dir, { recursive: true, force: true })
+      fs.mkdirSync(path.join(dir, 'assembly'), { recursive: true })
+      fs.writeFileSync(
+        path.join(dir, 'package.json'),
+        JSON.stringify({
+          name: packageName,
+          version: '0.0.1',
+          keywords: ['signalk-wasm-plugin'],
+          wasmManifest: 'plugin.wasm'
+        })
+      )
+      buildProbe('one')
+
+      const port = await freeport()
+      url = `http://0.0.0.0:${port}`
+      server = await startServerP(port, false, {
+        settings: {
+          interfaces: {
+            plugins: true,
+            wasm: true
+          }
+        }
+      })
+    })
+
+    after(async function () {
+      if (server) {
+        await server.stop()
+      }
+      fs.rmSync(probeDir(), { recursive: true, force: true })
+      fs.rmSync(
+        path.join(
+          testConfigDirectory(),
+          'plugin-config-data',
+          `${packageName}.json`
+        ),
+        { force: true }
+      )
+    })
+
+    /** Request the endpoint a given build of the probe declares */
+    function getBuildEndpoint(build: string): Promise<Response> {
+      return fetch(`${url}/plugins/${packageName}/api/build-${build}`)
+    }
+
+    it('runs the rebuilt plugin.wasm after disable and enable', async function () {
+      expect((await setEnabled(true)).status).to.equal(200)
+      expect(await waitForStatus('build one')).to.equal('build one')
+      const one = await getBuildEndpoint('one')
+      expect(one.status).to.equal(200)
+      expect(await one.text()).to.equal('one')
+
+      buildProbe('two')
+      expect((await setEnabled(false)).status).to.equal(200)
+      expect((await setEnabled(true)).status).to.equal(200)
+
+      expect(await waitForStatus('build two')).to.equal('build two')
+      const two = await getBuildEndpoint('two')
+      expect(two.status).to.equal(200)
+      expect(await two.text()).to.equal('two')
+      expect((await getBuildEndpoint('one')).status).to.equal(404)
+    })
+  })
 })

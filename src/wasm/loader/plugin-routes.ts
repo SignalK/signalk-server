@@ -16,6 +16,9 @@ import * as readline from 'readline'
 import Debug from 'debug'
 import { WasmPlugin } from './types'
 import { getWasmRuntime } from '../wasm-runtime'
+import { cleanupResourceProviders } from '../bindings/resource-provider'
+import { cleanupWeatherProviders } from '../bindings/weather-provider'
+import { cleanupRadarProviders } from '../bindings/radar-provider'
 import {
   getPluginStoragePaths,
   readPluginConfig,
@@ -150,16 +153,11 @@ export async function handleLogViewerRequest(
 }
 
 /**
- * Add plugin-specific HTTP endpoints to an existing router
- * This is called when enabling a previously disabled plugin
+ * (Re)build the router for the HTTP endpoints the loaded binary declares,
+ * replacing the endpoints of any previously loaded binary
  */
 export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
-  if (!plugin.router) {
-    debug(
-      `Warning: Cannot setup plugin-specific routes - no router found for ${plugin.id}`
-    )
-    return
-  }
+  plugin.endpointRouter = undefined
 
   if (!plugin.instance) {
     debug(`No instance for ${plugin.id}`)
@@ -180,7 +178,7 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
     return
   }
 
-  const router = plugin.router
+  const router = express.Router()
 
   // Register custom HTTP endpoints
   try {
@@ -469,6 +467,7 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
         }
       })
     }
+    plugin.endpointRouter = router
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     debug(`Failed to register HTTP endpoints: ${errorMsg}`)
@@ -553,58 +552,59 @@ export function setupWasmPluginRoutes(
       // Start or stop plugin if enabled state changed
       if (enabledChanged) {
         if (plugin.enabled && plugin.status !== 'running') {
-          // If plugin was disabled at startup, instance will be null - need to load it first
-          if (!plugin.instance) {
-            debug(`Plugin was disabled at startup, loading WASM binary now...`)
+          // Load the binary afresh on every enable, so a rebuilt plugin.wasm
+          // takes effect without restarting the server
+          debug(`Loading WASM binary for ${plugin.id}...`)
 
-            // Read package.json to get WASM path
-            const packageJson = require(
-              path.join(
-                plugin.packageLocation,
-                plugin.packageName,
-                'package.json'
-              )
-            )
-            const wasmPath = path.join(
+          const packageJson = require(
+            path.join(
               plugin.packageLocation,
               plugin.packageName,
-              packageJson.wasmManifest
+              'package.json'
             )
-            const capabilities = plugin.metadata.capabilities
+          )
+          const wasmPath = path.join(
+            plugin.packageLocation,
+            plugin.packageName,
+            packageJson.wasmManifest
+          )
+          const capabilities = plugin.metadata.capabilities
 
-            // Create VFS root
-            const storagePaths = getPluginStoragePaths(
-              configPath,
-              plugin.id,
-              plugin.packageName
-            )
+          const storagePaths = getPluginStoragePaths(
+            configPath,
+            plugin.id,
+            plugin.packageName
+          )
 
-            // Load WASM module
-            const runtime = getWasmRuntime()
-            const instance = await runtime.loadPlugin(
-              plugin.packageName,
-              wasmPath,
-              storagePaths.vfsRoot,
-              capabilities,
-              app
-            )
-
-            plugin.instance = instance
-
-            // Get plugin metadata from WASM exports
-            const pluginName = instance.exports.name()
-            const schemaJson = instance.exports.schema()
-            const schema = schemaJson ? JSON.parse(schemaJson) : {}
-
-            plugin.name = pluginName
-            plugin.schema = schema
-
-            // Add plugin-specific HTTP endpoints to existing router
-            // (basic routes were already set up when plugin was registered as disabled)
-            setupPluginSpecificRoutes(plugin)
-
-            debug(`Successfully loaded WASM binary for ${plugin.id}`)
+          // Providers register in start(), so the old binary's go before the
+          // new one decides which it registers
+          if (plugin.instance) {
+            cleanupResourceProviders(plugin.packageName, app)
+            cleanupWeatherProviders(plugin.packageName, app)
+            cleanupRadarProviders(plugin.packageName, app)
           }
+
+          const runtime = getWasmRuntime()
+          const instance = await runtime.loadPlugin(
+            plugin.packageName,
+            wasmPath,
+            storagePaths.vfsRoot,
+            capabilities,
+            app
+          )
+
+          plugin.instance = instance
+
+          const pluginName = instance.exports.name()
+          const schemaJson = instance.exports.schema()
+          const schema = schemaJson ? JSON.parse(schemaJson) : {}
+
+          plugin.name = pluginName
+          plugin.schema = schema
+
+          setupPluginSpecificRoutes(plugin)
+
+          debug(`Successfully loaded WASM binary for ${plugin.id}`)
 
           debug(`Plugin enabled, starting...`)
           await startWasmPlugin(app, plugin.id)
@@ -654,7 +654,10 @@ export function setupWasmPluginRoutes(
   // Store router in plugin object for later removal
   plugin.router = router
 
-  // Register custom HTTP endpoints if plugin instance is loaded
+  // Delegate per request, so endpoints follow the currently loaded binary
+  router.use((req, res, next) =>
+    plugin.endpointRouter ? plugin.endpointRouter(req, res, next) : next()
+  )
   setupPluginSpecificRoutes(plugin)
 
   debug(`Set up REST API routes for WASM plugin: ${plugin.id}`)
