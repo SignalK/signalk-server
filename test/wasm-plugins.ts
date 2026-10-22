@@ -432,7 +432,8 @@ export function plugin_stop(): i32 {
      */
     function buildProbe(
       build: string,
-      schema = '{"type":"object","properties":{}}'
+      schema = '{"type":"object","properties":{}}',
+      endpoints = `[{"method":"GET","path":"/api/build-${build}","handler":"handle_${build}"}]`
     ): void {
       fs.writeFileSync(
         path.join(probeDir(), 'assembly', 'index.ts'),
@@ -464,7 +465,7 @@ export function handle_put_vessels_self_probe_${build}(value: string): string {
 }
 
 export function http_endpoints(): string {
-  return '[{"method":"GET","path":"/api/build-${build}","handler":"handle_${build}"}]'
+  return '${endpoints}'
 }
 
 export function handle_${build}(requestPtr: usize, requestLen: usize): string {
@@ -596,15 +597,40 @@ export function plugin_stop(): i32 {
       expect((await metaOne.json()).supportsPut).to.equal(false)
     })
 
-    it('keeps the running binary when the rebuilt one cannot describe itself', async function () {
-      buildProbe('three', '{not json')
+    /** Rebuild the probe as `build`, then disable and enable it */
+    async function reload(
+      build: string,
+      ...args: [schema?: string, endpoints?: string]
+    ): Promise<number> {
+      buildProbe(build, ...args)
       expect((await setEnabled(false)).status).to.equal(200)
-      expect((await setEnabled(true)).status).to.equal(500)
+      return (await setEnabled(true)).status
+    }
 
+    async function expectBuildTwoRunning(): Promise<void> {
       const two = await getBuildEndpoint('two')
       expect(two.status).to.equal(200)
       expect(await two.text()).to.equal('two')
+    }
+
+    it('keeps the running binary when the rebuilt one cannot describe itself', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+
+      expect(await reload('three', '{not json')).to.equal(500)
+
+      await expectBuildTwoRunning()
       expect((await getBuildEndpoint('three')).status).to.equal(404)
+    })
+
+    it('keeps the running binary when the rebuilt one declares malformed endpoints', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+
+      expect(await reload('four', undefined, '[{not json')).to.equal(500)
+
+      await expectBuildTwoRunning()
+      expect((await getBuildEndpoint('four')).status).to.equal(404)
     })
   })
 })

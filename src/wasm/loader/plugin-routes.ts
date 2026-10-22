@@ -10,11 +10,12 @@
 
 import * as path from 'path'
 import * as express from 'express'
-import { Request, Response } from 'express'
+import { IRouter, Request, Response } from 'express'
 import { spawn } from 'child_process'
 import * as readline from 'readline'
 import Debug from 'debug'
 import { WasmPlugin } from './types'
+import { WasmPluginInstance } from '../wasm-runtime'
 import { getWasmRuntime } from '../wasm-runtime'
 import {
   cleanupResourceProviders,
@@ -167,322 +168,325 @@ export async function handleLogViewerRequest(
  */
 export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
   plugin.endpointRouter = undefined
-
   if (!plugin.instance) {
     debug(`No instance for ${plugin.id}`)
     return
   }
-
-  // Check for http_endpoints in either AssemblyScript loader or raw WASM exports
-  const hasAsEndpoints =
-    plugin.instance.asLoader &&
-    typeof plugin.instance.asLoader.exports.http_endpoints === 'function'
-  const hasRustEndpoints =
-    plugin.instance.instance &&
-    typeof (plugin.instance.instance.exports as any).http_endpoints ===
-      'function'
-
-  if (!hasAsEndpoints && !hasRustEndpoints) {
-    debug(`No custom HTTP endpoints for ${plugin.id}`)
-    return
-  }
-
-  const router = express.Router()
-
-  // Register custom HTTP endpoints
   try {
-    let endpointsJson: string
-
-    // Check if this is an AssemblyScript or Rust plugin
-    const asLoader = plugin.instance.asLoader
-    if (asLoader && typeof asLoader.exports.http_endpoints === 'function') {
-      // AssemblyScript: http_endpoints() returns a string pointer
-      const ptr = asLoader.exports.http_endpoints()
-      endpointsJson = asLoader.exports.__getString(ptr)
-      debug(
-        `Got http_endpoints from AssemblyScript: ${endpointsJson.substring(0, 200)}`
-      )
-    } else {
-      // Rust: http_endpoints(out_ptr, out_max_len) -> written_len
-      const rawExports = plugin.instance.instance.exports as any
-      if (
-        typeof rawExports.allocate === 'function' &&
-        typeof rawExports.http_endpoints === 'function'
-      ) {
-        const maxLen = 8192 // 8KB should be plenty for endpoint definitions
-        const outPtr = rawExports.allocate(maxLen)
-        const writtenLen = rawExports.http_endpoints(outPtr, maxLen)
-
-        // Read the string from WASM memory
-        const memory = rawExports.memory as WebAssembly.Memory
-        const bytes = new Uint8Array(memory.buffer, outPtr, writtenLen)
-        endpointsJson = new TextDecoder('utf-8').decode(bytes)
-
-        // Deallocate
-        if (typeof rawExports.deallocate === 'function') {
-          rawExports.deallocate(outPtr, maxLen)
-        }
-        debug(
-          `Got http_endpoints from Rust (${writtenLen} bytes): ${endpointsJson.substring(0, 200)}`
-        )
-      } else {
-        debug(
-          `http_endpoints export exists but plugin type unknown for ${plugin.id}`
-        )
-        return
-      }
-    }
-
-    const endpoints = JSON.parse(endpointsJson)
-    debug(`Registering ${endpoints.length} HTTP endpoints for ${plugin.id}`)
-
-    for (const endpoint of endpoints) {
-      const { method, path: endpointPath, handler } = endpoint
-      const routeMethod = method.toLowerCase() as
-        'get' | 'post' | 'put' | 'delete'
-
-      if (!['get', 'post', 'put', 'delete'].includes(routeMethod)) {
-        debug(`Skipping unsupported method: ${method}`)
-        continue
-      }
-
-      debug(`Registering ${method} ${endpointPath} -> ${handler}`)
-
-      router[routeMethod](endpointPath, async (req: Request, res: Response) => {
-        // Set a timeout to catch hangs (declare outside try so catch can access it)
-        let timeout: NodeJS.Timeout | null = null
-
-        try {
-          debug(
-            `HTTP ${method} ${endpointPath} called - req.path: ${req.path}, req.url: ${req.url}`
-          )
-
-          // SPECIAL CASE: Handle /api/logs directly in Node.js for signalk-logviewer
-          // WASM cannot handle large data streams due to memory buffer limitations (~64KB)
-          if (
-            plugin.id === 'signalk-logviewer' &&
-            endpointPath === '/api/logs' &&
-            method === 'GET'
-          ) {
-            debug(`Intercepting /api/logs for logviewer - handling in Node.js`)
-            return handleLogViewerRequest(req, res)
-          }
-
-          // Build request context for WASM plugin
-          const requestContext = JSON.stringify({
-            method: req.method,
-            path: req.path,
-            query: req.query,
-            params: req.params,
-            body: req.body,
-            headers: req.headers
-          })
-
-          debug(
-            `Calling WASM handler ${handler} with context: ${requestContext.substring(0, 200)}`
-          )
-
-          // Use AssemblyScript loader if available (handles strings automatically)
-          const asLoader = plugin.instance!.asLoader
-          let responseJson: string
-
-          // Set a timeout to catch hangs
-          // Note: We cannot actually interrupt WASM execution, but we can detect hangs
-          let handlerTimedOut = false
-          timeout = setTimeout(() => {
-            handlerTimedOut = true
-            debug(
-              `ERROR: Handler ${handler} exceeded 10 second timeout - responding with error`
-            )
-            debug(
-              `WARNING: WASM execution cannot be interrupted, server may remain partially blocked`
-            )
-            // Send error response even though handler is still running
-            if (!res.headersSent) {
-              res.status(504).json({
-                error: 'Plugin handler timeout',
-                message:
-                  'The WASM plugin took too long to respond. This indicates a performance issue in the plugin code.'
-              })
-            }
-          }, 10000) // 10 second hard timeout
-
-          if (asLoader) {
-            // AssemblyScript plugin with loader - strings handled automatically!
-            debug(`Using AssemblyScript loader for handler ${handler}`)
-
-            const handlerFunc = asLoader.exports[handler]
-            if (typeof handlerFunc !== 'function') {
-              debug(`Handler function ${handler} not found in WASM exports`)
-              if (timeout) clearTimeout(timeout)
-              return res
-                .status(500)
-                .json({ error: `Handler function ${handler} not found` })
-            }
-
-            // Create an AssemblyScript string in WASM memory using __newString
-            const requestPtr = asLoader.exports.__newString(requestContext)
-            const requestLen = requestContext.length
-
-            debug(
-              `Calling handler with string ptr=${requestPtr}, len=${requestLen}`
-            )
-
-            // Call handler - it returns an AssemblyScript string pointer
-            let asStringPtr: number
-            try {
-              debug(`About to call handler function...`)
-              asStringPtr = handlerFunc(requestPtr, requestLen)
-              debug(
-                `Handler function call completed, returned pointer: ${asStringPtr}`
-              )
-            } catch (handlerError) {
-              const handlerErrMsg =
-                handlerError instanceof Error
-                  ? handlerError.message
-                  : String(handlerError)
-              debug(`ERROR: Handler function threw exception: ${handlerErrMsg}`)
-              debug(
-                `Stack: ${handlerError instanceof Error ? handlerError.stack : 'N/A'}`
-              )
-              throw new Error(`WASM handler crashed: ${handlerErrMsg}`)
-            }
-
-            // Check if we already sent timeout response
-            if (handlerTimedOut) {
-              debug(`Handler completed after timeout - discarding result`)
-              return
-            }
-
-            // Use __getString to decode the AssemblyScript string
-            try {
-              debug(`About to decode string from pointer ${asStringPtr}...`)
-              responseJson = asLoader.exports.__getString(asStringPtr)
-              debug(
-                `String decoded successfully, length: ${responseJson.length}`
-              )
-              debug(
-                `WASM handler returned (via loader): ${responseJson.substring(0, 500)}`
-              )
-            } catch (decodeError) {
-              const decodeErrMsg =
-                decodeError instanceof Error
-                  ? decodeError.message
-                  : String(decodeError)
-              debug(`ERROR: Failed to decode response string: ${decodeErrMsg}`)
-              throw new Error(`Failed to decode WASM response: ${decodeErrMsg}`)
-            }
-          } else {
-            // Rust plugins use buffer-based string passing
-            debug(
-              `Using raw exports for handler ${handler} (Rust buffer-based)`
-            )
-            const rawExports = plugin.instance!.instance.exports as any
-            const handlerFunc = rawExports[handler]
-
-            if (typeof handlerFunc !== 'function') {
-              debug(`Handler function ${handler} not found in WASM exports`)
-              if (timeout) clearTimeout(timeout)
-              return res
-                .status(500)
-                .json({ error: `Handler function ${handler} not found` })
-            }
-
-            // Check if this is a Rust plugin with allocate/deallocate
-            if (typeof rawExports.allocate === 'function') {
-              // Rust buffer-based string passing (same pattern as PUT handlers)
-              const requestBytes = Buffer.from(requestContext, 'utf8')
-              const requestPtr = rawExports.allocate(requestBytes.length)
-              const responseMaxLen = 65536 // 64KB response buffer
-              const responsePtr = rawExports.allocate(responseMaxLen)
-
-              // Write request to WASM memory
-              const memory = rawExports.memory as WebAssembly.Memory
-              const memView = new Uint8Array(memory.buffer)
-              memView.set(requestBytes, requestPtr)
-
-              // Call handler: (request_ptr, request_len, response_ptr, response_max_len) -> written_len
-              const writtenLen = handlerFunc(
-                requestPtr,
-                requestBytes.length,
-                responsePtr,
-                responseMaxLen
-              )
-
-              // Read response from WASM memory
-              const responseBytes = new Uint8Array(
-                memory.buffer,
-                responsePtr,
-                writtenLen
-              )
-              responseJson = new TextDecoder('utf-8').decode(responseBytes)
-
-              // Deallocate buffers
-              if (typeof rawExports.deallocate === 'function') {
-                rawExports.deallocate(requestPtr, requestBytes.length)
-                rawExports.deallocate(responsePtr, responseMaxLen)
-              }
-
-              debug(
-                `Rust handler returned ${writtenLen} bytes: ${responseJson.substring(0, 200)}`
-              )
-            } else {
-              // Fallback for unknown plugin types - try direct call
-              responseJson = handlerFunc(requestContext)
-            }
-          }
-
-          const response = JSON.parse(responseJson)
-
-          // Set status code and headers
-          res.status(response.statusCode || 200)
-          if (response.headers) {
-            Object.entries(response.headers).forEach(([key, value]) => {
-              res.setHeader(key, value as string)
-            })
-          }
-
-          // Send body - try to parse as JSON if it's a string, otherwise send as-is
-          let body = response.body
-          if (typeof body === 'string') {
-            const contentType = res.getHeader('content-type')
-            if (
-              typeof contentType === 'string' &&
-              contentType.includes('application/json')
-            ) {
-              try {
-                // Try to parse the string as JSON - if it's double-escaped, this will fix it
-                body = JSON.parse(body)
-              } catch (e) {
-                // If parsing fails, send the string as-is (might be plain text)
-                debug(
-                  `Warning: Could not parse body as JSON, sending as string: ${e}`
-                )
-              }
-            }
-          }
-
-          if (timeout) clearTimeout(timeout)
-          debug(`Handler completed successfully, sending response`)
-          res.send(body)
-        } catch (error) {
-          if (timeout) clearTimeout(timeout)
-          const errorMsg =
-            error instanceof Error ? error.message : String(error)
-          const stack = error instanceof Error ? error.stack : 'N/A'
-          debug(`Error in HTTP endpoint ${method} ${endpointPath}: ${errorMsg}`)
-          debug(`Stack trace: ${stack}`)
-          res.status(500).json({ error: errorMsg })
-        }
-      })
-    }
-    plugin.endpointRouter = router
+    plugin.endpointRouter = buildEndpointRouter(plugin, plugin.instance)
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     debug(`Failed to register HTTP endpoints: ${errorMsg}`)
   }
+}
+
+/**
+ * Build the router for the HTTP endpoints `instance` declares. Throws if the
+ * declaration cannot be read. Handlers call into `plugin.instance` at
+ * request time, so the router belongs with the instance it was built from.
+ */
+function buildEndpointRouter(
+  plugin: WasmPlugin,
+  instance: WasmPluginInstance
+): IRouter | undefined {
+  // Check for http_endpoints in either AssemblyScript loader or raw WASM exports
+  const hasAsEndpoints =
+    instance.asLoader &&
+    typeof instance.asLoader.exports.http_endpoints === 'function'
+  const hasRustEndpoints =
+    instance.instance &&
+    typeof (instance.instance.exports as any).http_endpoints === 'function'
+
+  if (!hasAsEndpoints && !hasRustEndpoints) {
+    debug(`No custom HTTP endpoints for ${plugin.id}`)
+    return undefined
+  }
+
+  const router = express.Router()
+
+  let endpointsJson: string
+
+  // Check if this is an AssemblyScript or Rust plugin
+  const asLoader = instance.asLoader
+  if (asLoader && typeof asLoader.exports.http_endpoints === 'function') {
+    // AssemblyScript: http_endpoints() returns a string pointer
+    const ptr = asLoader.exports.http_endpoints()
+    endpointsJson = asLoader.exports.__getString(ptr)
+    debug(
+      `Got http_endpoints from AssemblyScript: ${endpointsJson.substring(0, 200)}`
+    )
+  } else {
+    // Rust: http_endpoints(out_ptr, out_max_len) -> written_len
+    const rawExports = instance.instance.exports as any
+    if (
+      typeof rawExports.allocate === 'function' &&
+      typeof rawExports.http_endpoints === 'function'
+    ) {
+      const maxLen = 8192 // 8KB should be plenty for endpoint definitions
+      const outPtr = rawExports.allocate(maxLen)
+      const writtenLen = rawExports.http_endpoints(outPtr, maxLen)
+
+      // Read the string from WASM memory
+      const memory = rawExports.memory as WebAssembly.Memory
+      const bytes = new Uint8Array(memory.buffer, outPtr, writtenLen)
+      endpointsJson = new TextDecoder('utf-8').decode(bytes)
+
+      // Deallocate
+      if (typeof rawExports.deallocate === 'function') {
+        rawExports.deallocate(outPtr, maxLen)
+      }
+      debug(
+        `Got http_endpoints from Rust (${writtenLen} bytes): ${endpointsJson.substring(0, 200)}`
+      )
+    } else {
+      debug(
+        `http_endpoints export exists but plugin type unknown for ${plugin.id}`
+      )
+      return undefined
+    }
+  }
+
+  const endpoints = JSON.parse(endpointsJson)
+  debug(`Registering ${endpoints.length} HTTP endpoints for ${plugin.id}`)
+
+  for (const endpoint of endpoints) {
+    const { method, path: endpointPath, handler } = endpoint
+    const routeMethod = method.toLowerCase() as
+      'get' | 'post' | 'put' | 'delete'
+
+    if (!['get', 'post', 'put', 'delete'].includes(routeMethod)) {
+      debug(`Skipping unsupported method: ${method}`)
+      continue
+    }
+
+    debug(`Registering ${method} ${endpointPath} -> ${handler}`)
+
+    router[routeMethod](endpointPath, async (req: Request, res: Response) => {
+      // Set a timeout to catch hangs (declare outside try so catch can access it)
+      let timeout: NodeJS.Timeout | null = null
+
+      try {
+        debug(
+          `HTTP ${method} ${endpointPath} called - req.path: ${req.path}, req.url: ${req.url}`
+        )
+
+        // SPECIAL CASE: Handle /api/logs directly in Node.js for signalk-logviewer
+        // WASM cannot handle large data streams due to memory buffer limitations (~64KB)
+        if (
+          plugin.id === 'signalk-logviewer' &&
+          endpointPath === '/api/logs' &&
+          method === 'GET'
+        ) {
+          debug(`Intercepting /api/logs for logviewer - handling in Node.js`)
+          return handleLogViewerRequest(req, res)
+        }
+
+        // Build request context for WASM plugin
+        const requestContext = JSON.stringify({
+          method: req.method,
+          path: req.path,
+          query: req.query,
+          params: req.params,
+          body: req.body,
+          headers: req.headers
+        })
+
+        debug(
+          `Calling WASM handler ${handler} with context: ${requestContext.substring(0, 200)}`
+        )
+
+        // Use AssemblyScript loader if available (handles strings automatically)
+        const asLoader = plugin.instance!.asLoader
+        let responseJson: string
+
+        // Set a timeout to catch hangs
+        // Note: We cannot actually interrupt WASM execution, but we can detect hangs
+        let handlerTimedOut = false
+        timeout = setTimeout(() => {
+          handlerTimedOut = true
+          debug(
+            `ERROR: Handler ${handler} exceeded 10 second timeout - responding with error`
+          )
+          debug(
+            `WARNING: WASM execution cannot be interrupted, server may remain partially blocked`
+          )
+          // Send error response even though handler is still running
+          if (!res.headersSent) {
+            res.status(504).json({
+              error: 'Plugin handler timeout',
+              message:
+                'The WASM plugin took too long to respond. This indicates a performance issue in the plugin code.'
+            })
+          }
+        }, 10000) // 10 second hard timeout
+
+        if (asLoader) {
+          // AssemblyScript plugin with loader - strings handled automatically!
+          debug(`Using AssemblyScript loader for handler ${handler}`)
+
+          const handlerFunc = asLoader.exports[handler]
+          if (typeof handlerFunc !== 'function') {
+            debug(`Handler function ${handler} not found in WASM exports`)
+            if (timeout) clearTimeout(timeout)
+            return res
+              .status(500)
+              .json({ error: `Handler function ${handler} not found` })
+          }
+
+          // Create an AssemblyScript string in WASM memory using __newString
+          const requestPtr = asLoader.exports.__newString(requestContext)
+          const requestLen = requestContext.length
+
+          debug(
+            `Calling handler with string ptr=${requestPtr}, len=${requestLen}`
+          )
+
+          // Call handler - it returns an AssemblyScript string pointer
+          let asStringPtr: number
+          try {
+            debug(`About to call handler function...`)
+            asStringPtr = handlerFunc(requestPtr, requestLen)
+            debug(
+              `Handler function call completed, returned pointer: ${asStringPtr}`
+            )
+          } catch (handlerError) {
+            const handlerErrMsg =
+              handlerError instanceof Error
+                ? handlerError.message
+                : String(handlerError)
+            debug(`ERROR: Handler function threw exception: ${handlerErrMsg}`)
+            debug(
+              `Stack: ${handlerError instanceof Error ? handlerError.stack : 'N/A'}`
+            )
+            throw new Error(`WASM handler crashed: ${handlerErrMsg}`)
+          }
+
+          // Check if we already sent timeout response
+          if (handlerTimedOut) {
+            debug(`Handler completed after timeout - discarding result`)
+            return
+          }
+
+          // Use __getString to decode the AssemblyScript string
+          try {
+            debug(`About to decode string from pointer ${asStringPtr}...`)
+            responseJson = asLoader.exports.__getString(asStringPtr)
+            debug(`String decoded successfully, length: ${responseJson.length}`)
+            debug(
+              `WASM handler returned (via loader): ${responseJson.substring(0, 500)}`
+            )
+          } catch (decodeError) {
+            const decodeErrMsg =
+              decodeError instanceof Error
+                ? decodeError.message
+                : String(decodeError)
+            debug(`ERROR: Failed to decode response string: ${decodeErrMsg}`)
+            throw new Error(`Failed to decode WASM response: ${decodeErrMsg}`)
+          }
+        } else {
+          // Rust plugins use buffer-based string passing
+          debug(`Using raw exports for handler ${handler} (Rust buffer-based)`)
+          const rawExports = plugin.instance!.instance.exports as any
+          const handlerFunc = rawExports[handler]
+
+          if (typeof handlerFunc !== 'function') {
+            debug(`Handler function ${handler} not found in WASM exports`)
+            if (timeout) clearTimeout(timeout)
+            return res
+              .status(500)
+              .json({ error: `Handler function ${handler} not found` })
+          }
+
+          // Check if this is a Rust plugin with allocate/deallocate
+          if (typeof rawExports.allocate === 'function') {
+            // Rust buffer-based string passing (same pattern as PUT handlers)
+            const requestBytes = Buffer.from(requestContext, 'utf8')
+            const requestPtr = rawExports.allocate(requestBytes.length)
+            const responseMaxLen = 65536 // 64KB response buffer
+            const responsePtr = rawExports.allocate(responseMaxLen)
+
+            // Write request to WASM memory
+            const memory = rawExports.memory as WebAssembly.Memory
+            const memView = new Uint8Array(memory.buffer)
+            memView.set(requestBytes, requestPtr)
+
+            // Call handler: (request_ptr, request_len, response_ptr, response_max_len) -> written_len
+            const writtenLen = handlerFunc(
+              requestPtr,
+              requestBytes.length,
+              responsePtr,
+              responseMaxLen
+            )
+
+            // Read response from WASM memory
+            const responseBytes = new Uint8Array(
+              memory.buffer,
+              responsePtr,
+              writtenLen
+            )
+            responseJson = new TextDecoder('utf-8').decode(responseBytes)
+
+            // Deallocate buffers
+            if (typeof rawExports.deallocate === 'function') {
+              rawExports.deallocate(requestPtr, requestBytes.length)
+              rawExports.deallocate(responsePtr, responseMaxLen)
+            }
+
+            debug(
+              `Rust handler returned ${writtenLen} bytes: ${responseJson.substring(0, 200)}`
+            )
+          } else {
+            // Fallback for unknown plugin types - try direct call
+            responseJson = handlerFunc(requestContext)
+          }
+        }
+
+        const response = JSON.parse(responseJson)
+
+        // Set status code and headers
+        res.status(response.statusCode || 200)
+        if (response.headers) {
+          Object.entries(response.headers).forEach(([key, value]) => {
+            res.setHeader(key, value as string)
+          })
+        }
+
+        // Send body - try to parse as JSON if it's a string, otherwise send as-is
+        let body = response.body
+        if (typeof body === 'string') {
+          const contentType = res.getHeader('content-type')
+          if (
+            typeof contentType === 'string' &&
+            contentType.includes('application/json')
+          ) {
+            try {
+              // Try to parse the string as JSON - if it's double-escaped, this will fix it
+              body = JSON.parse(body)
+            } catch (e) {
+              // If parsing fails, send the string as-is (might be plain text)
+              debug(
+                `Warning: Could not parse body as JSON, sending as string: ${e}`
+              )
+            }
+          }
+        }
+
+        if (timeout) clearTimeout(timeout)
+        debug(`Handler completed successfully, sending response`)
+        res.send(body)
+      } catch (error) {
+        if (timeout) clearTimeout(timeout)
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        const stack = error instanceof Error ? error.stack : 'N/A'
+        debug(`Error in HTTP endpoint ${method} ${endpointPath}: ${errorMsg}`)
+        debug(`Stack trace: ${stack}`)
+        res.status(500).json({ error: errorMsg })
+      }
+    })
+  }
 
   debug(`Added plugin-specific routes for ${plugin.id}`)
+  return router
 }
 
 /**
@@ -596,10 +600,12 @@ export function setupWasmPluginRoutes(
 
           let pluginName: string
           let schema: object
+          let endpointRouter: IRouter | undefined
           try {
             pluginName = instance.exports.name()
             const schemaJson = instance.exports.schema()
             schema = schemaJson ? JSON.parse(schemaJson) : {}
+            endpointRouter = buildEndpointRouter(plugin, instance)
           } catch (error) {
             // loadPlugin already pointed the live providers at the
             // replacement, so hand them back to the instance still in use
@@ -627,8 +633,7 @@ export function setupWasmPluginRoutes(
 
           plugin.name = pluginName
           plugin.schema = schema
-
-          setupPluginSpecificRoutes(plugin)
+          plugin.endpointRouter = endpointRouter
 
           debug(`Successfully loaded WASM binary for ${plugin.id}`)
 
