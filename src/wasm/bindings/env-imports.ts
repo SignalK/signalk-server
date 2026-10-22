@@ -585,7 +585,13 @@ export function createEnvImports(
               deregistrations = new Set()
               putHandlerDeregistrations.set(packageName, deregistrations)
             }
-            deregistrations.add(deregister)
+            deregistrations.add(() => {
+              deregister()
+              // Clients offer PUT controls from this meta, so withdraw it too
+              app.handleMessage?.(packageName, {
+                updates: [{ meta: [{ path, value: { supportsPut: false } }] }]
+              })
+            })
           }
           debug(
             `[${pluginId}] PUT handler registered successfully via registerActionHandler`
