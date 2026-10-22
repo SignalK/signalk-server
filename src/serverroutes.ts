@@ -41,6 +41,7 @@ import util from 'util'
 import { mountSwaggerUi } from './api/swagger'
 import { serveStaticFiles } from './staticfiles'
 import {
+  BASE_DELTAS_SOURCE,
   ConfigApp,
   readDefaultsFile,
   sendBaseDeltas,
@@ -1480,7 +1481,14 @@ module.exports = function (
       }
     })
 
+    // Replaying the base deltas only sets the fields still there; a cleared
+    // one would keep its last value in the data model and the delta cache.
+    // The name is a plain field of the vessel there, not a source's leaf.
+    app.deltaCache.removeSource(BASE_DELTAS_SOURCE)
     sendBaseDeltas(app)
+    if (isUndefined(de.getSelfValue('name')) && app.signalk.self) {
+      delete app.signalk.self.name
+    }
 
     if (app.config.hasOldDefaults) {
       writeOldDefaults(req, res)

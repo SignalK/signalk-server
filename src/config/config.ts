@@ -24,6 +24,7 @@ import _ from 'lodash'
 import path from 'path'
 import semver from 'semver'
 import { v4 as uuidv4 } from 'uuid'
+import { SourceRef } from '@signalk/server-api'
 import { ServerApp, SignalKMessageHub, WithConfig } from '../app'
 import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
@@ -547,10 +548,12 @@ function setBaseDeltas(app: ConfigApp) {
   return true
 }
 
+export const BASE_DELTAS_SOURCE = 'defaults' as SourceRef
+
 export function sendBaseDeltas(app: ConfigApp) {
   const copy = JSON.parse(JSON.stringify(app.config.baseDeltaEditor.deltas))
   copy.forEach((delta: any) => {
-    app.handleMessage('defaults', delta)
+    app.handleMessage(BASE_DELTAS_SOURCE, delta)
   })
 }
 
@@ -826,6 +829,7 @@ module.exports = {
   writeSettingsFile,
   writeDefaultsFile,
   readDefaultsFile,
+  BASE_DELTAS_SOURCE,
   sendBaseDeltas,
   writeBaseDeltasFile,
   package: packageJson
