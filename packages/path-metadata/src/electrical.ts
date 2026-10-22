@@ -18,7 +18,8 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
       description: 'Name of BUS device is associated with'
     },
     [`${phase}/lineNeutralVoltage`]: {
-      description: 'Data should be of type number.',
+      description:
+        'RMS voltage between line and neutral on this AC phase, for example from shore power or a generator.',
       units: 'V'
     },
     [`${phase}/lineLineVoltage`]: {
@@ -26,7 +27,7 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
       units: 'V'
     },
     [`${phase}/current`]: {
-      description: 'Data should be of type number.',
+      description: 'RMS current on this AC phase.',
       units: 'A'
     },
     [`${phase}/frequency`]: {
@@ -173,7 +174,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     description: 'Name of BUS device is associated with'
   },
   '/vessels/*/electrical/batteries/RegExp/voltage': {
-    description: 'Voltage measured at or as close as possible to the device',
+    description:
+      'Voltage measured at or as close as possible to the device. The battery voltage.',
     units: 'V'
   },
   '/vessels/*/electrical/batteries/RegExp/voltage/ripple': {
@@ -182,11 +184,12 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/batteries/RegExp/current': {
     description:
-      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging).',
+      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging). Positive while the battery charges, negative while it discharges.',
     units: 'A'
   },
   '/vessels/*/electrical/batteries/RegExp/temperature': {
-    description: 'Temperature measured within or on the device',
+    description:
+      'Temperature measured within or on the device. The battery temperature.',
     units: 'K'
   },
   '/vessels/*/electrical/batteries/RegExp/temperature/warnUpper': {
@@ -270,7 +273,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'C'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/stateOfCharge': {
-    description: 'Data should be of type number.',
+    description:
+      'State of charge (SOC) of the battery as a ratio of its capacity, from empty to full.',
     units: 'ratio'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/stateOfHealth': {
@@ -282,7 +286,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'C'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/timeRemaining': {
-    description: 'Data should be of type number.',
+    description:
+      'Estimated time until the battery reaches its discharge limit (dischargeLimit) at the current rate of discharge.',
     units: 's'
   },
   '/vessels/*/electrical/batteries/RegExp/lifetimeDischarge': {
@@ -378,7 +383,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     description: 'Name of BUS device is associated with'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/lineNeutralVoltage': {
-    description: 'Data should be of type number.',
+    description:
+      'RMS voltage between line and neutral at the AC output of the inverter.',
     units: 'V'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/lineLineVoltage': {
@@ -430,7 +436,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     enum: ['sine wave', 'modified sine wave']
   },
   '/vessels/*/electrical/inverters/RegExp/inverterMode': {
-    description: 'Mode of inverter'
+    description:
+      'Mode of inverter. For example inverting, idle or standby; an inverter makes AC power from the batteries.'
   },
   '/vessels/*/electrical/inverters/RegExp/operatingState': {
     description: 'Operating state of the inverter',
@@ -494,7 +501,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/chargers/RegExp/current': {
     description:
-      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging).',
+      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging). The battery charger current.',
     units: 'A'
   },
   '/vessels/*/electrical/chargers/RegExp/temperature': {
@@ -626,7 +633,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     description: 'Name of BUS device is associated with'
   },
   '/vessels/*/electrical/alternators/RegExp/voltage': {
-    description: 'Voltage measured at or as close as possible to the device',
+    description:
+      'Voltage measured at or as close as possible to the device. The alternator output voltage.',
     units: 'V'
   },
   '/vessels/*/electrical/alternators/RegExp/voltage/ripple': {
@@ -635,7 +643,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/alternators/RegExp/current': {
     description:
-      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging).',
+      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging). The alternator charging current.',
     units: 'A'
   },
   '/vessels/*/electrical/alternators/RegExp/temperature': {
@@ -668,7 +676,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
       'How is charging source configured?  Standalone, or in sync with another charger?'
   },
   '/vessels/*/electrical/alternators/RegExp/chargingMode': {
-    description: 'Charging mode i.e. float, overcharge, etc.'
+    description:
+      'Charging mode: bulk, acceptance (absorption), overcharge, float, equalize, unknown or other.'
   },
   '/vessels/*/electrical/alternators/RegExp/setpointVoltage': {
     description: 'Data should be of type number.',
@@ -728,7 +737,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     description: 'Name of BUS device is associated with'
   },
   '/vessels/*/electrical/solar/RegExp/voltage': {
-    description: 'Voltage measured at or as close as possible to the device',
+    description:
+      'Voltage measured at or as close as possible to the device. The solar panel voltage.',
     units: 'V'
   },
   '/vessels/*/electrical/solar/RegExp/voltage/ripple': {
@@ -737,7 +747,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/solar/RegExp/current': {
     description:
-      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging).',
+      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging). The solar charging current.',
     units: 'A'
   },
   '/vessels/*/electrical/solar/RegExp/temperature': {
@@ -770,7 +780,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
       'How is charging source configured?  Standalone, or in sync with another charger?'
   },
   '/vessels/*/electrical/solar/RegExp/chargingMode': {
-    description: 'Charging mode i.e. float, overcharge, etc.'
+    description:
+      'Charging mode: bulk, acceptance (absorption), overcharge, float, equalize, unknown or other.'
   },
   '/vessels/*/electrical/solar/RegExp/setpointVoltage': {
     description: 'Data should be of type number.',
@@ -792,7 +803,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'A'
   },
   '/vessels/*/electrical/solar/RegExp/panelPower': {
-    description: 'Data should be of type number.',
+    description:
+      'Power produced by the solar panels of this charge controller.',
     units: 'W'
   },
   '/vessels/*/electrical/solar/RegExp/panelTemperature': {

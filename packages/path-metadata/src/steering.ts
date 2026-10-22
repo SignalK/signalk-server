@@ -6,18 +6,20 @@ export const steeringMetadata: Record<string, PathMetadataEntry> = {
       "Vessel steering data for steering controls (not Autopilot 'Nav Data')"
   },
   '/vessels/*/steering/rudderAngle': {
-    description: 'Data should be of type number.',
+    description: 'Current rudder angle, positive to starboard.',
     units: 'rad'
   },
   '/vessels/*/steering/rudderAngleTarget': {
-    description: 'Data should be of type number.',
+    description:
+      'Rudder angle the steering system is commanded to reach, positive to starboard.',
     units: 'rad'
   },
   '/vessels/*/steering/autopilot': {
     description: 'Autopilot data'
   },
   '/vessels/*/steering/autopilot/state': {
-    description: 'Autopilot state'
+    description:
+      'Autopilot state. For example standby, auto, wind or route; the autopilot is also called the pilot or AP.'
   },
   '/vessels/*/steering/autopilot/mode': {
     description: 'Operational mode'
@@ -26,19 +28,23 @@ export const steeringMetadata: Record<string, PathMetadataEntry> = {
     description: 'Autopilot target'
   },
   '/vessels/*/steering/autopilot/target/windAngleApparent': {
-    description: 'Data should be of type number.',
+    description:
+      'Apparent wind angle the autopilot is set to hold, negative to port.',
     units: 'rad'
   },
   '/vessels/*/steering/autopilot/target/windAngleTrue': {
-    description: 'Data should be of type number.',
+    description:
+      'True wind angle the autopilot is set to hold, negative to port.',
     units: 'rad'
   },
   '/vessels/*/steering/autopilot/target/headingTrue': {
-    description: 'Data should be of type number.',
+    description:
+      "True heading the autopilot is set to steer; also called the autopilot's set heading.",
     units: 'rad'
   },
   '/vessels/*/steering/autopilot/target/headingMagnetic': {
-    description: 'Data should be of type number.',
+    description:
+      "Magnetic heading the autopilot is set to steer; also called the autopilot's set heading.",
     units: 'rad'
   },
   '/vessels/*/steering/autopilot/deadZone': {
