@@ -4,6 +4,10 @@ import {
   sanitizeGnssConfig
 } from './store/slices/gnssPositionSlice'
 import type { AppStoreState, LoginStatus } from './store/types'
+import {
+  DEPTH_API_PATH,
+  sanitizeDepthConfig
+} from './store/slices/depthSensorsSlice'
 
 declare global {
   interface Window {
@@ -170,6 +174,12 @@ export async function fetchAllData(): Promise<void> {
       (data: unknown) => state.setGnssSensors(sanitizeGnssConfig(data)),
       ''
     ),
-    fetchAndSet('/positionSources', state.setPositionSources)
+    fetchAndSet('/positionSources', state.setPositionSources),
+    fetchAndSet(
+      DEPTH_API_PATH,
+      (data: unknown) => state.setDepthSensors(sanitizeDepthConfig(data)),
+      ''
+    ),
+    fetchAndSet('/depthSources', state.setDepthSources)
   ])
 }
