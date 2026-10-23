@@ -24,7 +24,6 @@ on:
         default: true
 
 permissions:
-  id-token: write # Required for OIDC
   contents: read
 
 env:
@@ -34,6 +33,9 @@ env:
 
 jobs:
   build_and_publish:
+    permissions:
+      contents: read
+      id-token: write
     if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
     steps:
@@ -58,8 +60,6 @@ jobs:
             cd packages/server-admin-ui-dependencies
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish path-metadata
         run: |
@@ -68,8 +68,6 @@ jobs:
             cd packages/path-metadata
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish server-admin-ui
         run: |
@@ -78,8 +76,6 @@ jobs:
             cd packages/server-admin-ui
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish server-api
         run: |
@@ -88,8 +84,6 @@ jobs:
             cd packages/server-api
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish streams
         run: |
@@ -98,8 +92,6 @@ jobs:
             cd packages/streams
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish resources-provider
         run: |
@@ -108,8 +100,6 @@ jobs:
             cd packages/resources-provider-plugin
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish typedoc-signalk-theme
         run: |
@@ -118,8 +108,6 @@ jobs:
             cd packages/typedoc-theme
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish assemblyscript-plugin-sdk
         run: |
@@ -128,8 +116,6 @@ jobs:
             cd packages/assemblyscript-plugin-sdk
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Set tag variable
         id: vars
@@ -143,8 +129,6 @@ jobs:
             else
               npm publish
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   release:
     permissions:
