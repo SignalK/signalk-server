@@ -160,7 +160,7 @@
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^1.53.1",
     "@eslint/js": "^9.24.0",
-    "@signalk/typedoc-signalk-theme": "^0.4.0",
+    "@signalk/typedoc-signalk-theme": "^0.5.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/archiver": "^7.0.0",
     "@types/bcryptjs": "^2.4.6",
