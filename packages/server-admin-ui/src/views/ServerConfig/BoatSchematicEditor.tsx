@@ -1,12 +1,28 @@
 import React, { useRef, useState, useCallback } from 'react'
-import type { GnssSensorConfig } from '../../store/types'
+
+/** What the schematic needs of a sensor: GNSS antennas and depth
+ * transducers both qualify. */
+export interface SchematicSensor {
+  sensorId: string
+  $source: string
+  fromBow: number | null
+  fromCenter: number | null
+}
 
 interface BoatSchematicEditorProps {
-  sensors: GnssSensorConfig[]
+  sensors: readonly SchematicSensor[]
   vesselLength: number
   vesselBeam: number
   colors: string[]
-  onUpdateSensor: (index: number, updates: Partial<GnssSensorConfig>) => void
+  onUpdateSensor: (
+    index: number,
+    updates: { fromBow: number; fromCenter: number }
+  ) => void
+  /** Drawn as squares instead of dots, to tell the kinds apart. */
+  square?: boolean
+  /** Sensors of another kind, drawn hollow and fixed so the ones being
+   * edited can be placed relative to them. */
+  referenceSensors?: readonly SchematicSensor[]
 }
 
 const SVG_WIDTH = 200
@@ -47,13 +63,16 @@ function buildHullPath(): string {
 }
 
 const HULL_PATH = buildHullPath()
+const NO_SENSORS: readonly SchematicSensor[] = []
 
 const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
   sensors,
   vesselLength,
   vesselBeam,
   colors,
-  onUpdateSensor
+  onUpdateSensor,
+  square = false,
+  referenceSensors = NO_SENSORS
 }) => {
   const svgRef = useRef<SVGSVGElement>(null)
   const [dragging, setDragging] = useState<number | null>(null)
@@ -201,6 +220,34 @@ const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
           Stbd
         </text>
 
+        {referenceSensors.map((sensor, index) => {
+          if (sensor.fromBow === null) return null
+          const { x, y } = toSvgCoords(sensor.fromBow, sensor.fromCenter)
+          return (
+            <g
+              key={`reference-${sensor.$source || index}`}
+              pointerEvents="none"
+            >
+              <circle
+                cx={x}
+                cy={y}
+                r={DOT_RADIUS - 2}
+                fill="none"
+                stroke="#6c757d"
+                strokeWidth={1.5}
+              />
+              <text
+                x={x + DOT_RADIUS + 2}
+                y={y}
+                dominantBaseline="middle"
+                fontSize={9}
+                fill="#6c757d"
+              >
+                {sensor.sensorId}
+              </text>
+            </g>
+          )
+        })}
         {sensors.map((sensor, index) => {
           const { x, y } = toSvgCoords(sensor.fromBow, sensor.fromCenter)
           const color = colors[index % colors.length]
@@ -230,16 +277,30 @@ const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
                   />
                 </>
               )}
-              <circle
-                cx={x}
-                cy={y}
-                r={DOT_RADIUS}
-                fill={color}
-                stroke="#fff"
-                strokeWidth={2}
-                cursor="grab"
-                onPointerDown={handlePointerDown(index)}
-              />
+              {square ? (
+                <rect
+                  x={x - DOT_RADIUS}
+                  y={y - DOT_RADIUS}
+                  width={DOT_RADIUS * 2}
+                  height={DOT_RADIUS * 2}
+                  fill={color}
+                  stroke="#fff"
+                  strokeWidth={2}
+                  cursor="grab"
+                  onPointerDown={handlePointerDown(index)}
+                />
+              ) : (
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={DOT_RADIUS}
+                  fill={color}
+                  stroke="#fff"
+                  strokeWidth={2}
+                  cursor="grab"
+                  onPointerDown={handlePointerDown(index)}
+                />
+              )}
               <text
                 x={x + DOT_RADIUS + 4}
                 y={y}

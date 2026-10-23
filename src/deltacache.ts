@@ -35,15 +35,22 @@ import { isFanOutPriorities } from './deltaPriority'
 const SOURCES_CACHE_FILE = 'sources-cache.json'
 
 // Maximum time since a source's last accepted delta before it is considered
-// offline for POSITION_SOURCES purposes. Picked to be longer than typical
-// NMEA position update rates (1–10 Hz on N2K, 1 Hz on NMEA0183) but short
-// enough that a disconnected GNSS receiver flips to "offline" in the admin
-// UI within a minute, so users notice missing antennas before they navigate
-// by them.
-const POSITION_SOURCE_TTL_MS = 60 * 1000
-// How often to re-evaluate POSITION_SOURCES so silent publishers fall off
-// even when no new delta arrives to trigger an emit.
-const POSITION_SOURCE_SWEEP_MS = 15 * 1000
+// offline for POSITION_SOURCES and DEPTH_SOURCES purposes. Picked to be
+// longer than typical NMEA position update rates (1–10 Hz on N2K, 1 Hz on
+// NMEA0183) but short enough that a disconnected GNSS receiver flips to
+// "offline" in the admin UI within a minute, so users notice missing
+// antennas before they navigate by them.
+const ACTIVE_SOURCE_TTL_MS = 60 * 1000
+// How often to re-evaluate POSITION_SOURCES and DEPTH_SOURCES so silent
+// publishers fall off even when no new delta arrives to trigger an emit.
+const ACTIVE_SOURCE_SWEEP_MS = 15 * 1000
+
+const DEPTH_SOURCE_PATHS: ReadonlySet<string> = new Set([
+  'environment.depth.belowTransducer',
+  'environment.depth.belowSurface',
+  'environment.depth.belowKeel'
+])
+const DERIVED_SOURCE_SUFFIX = '.derived'
 
 interface StringKeyed {
   [key: string]: any
@@ -161,6 +168,7 @@ export default class DeltaCache {
   private livePreferredEmitTimer: ReturnType<typeof setTimeout> | null = null
   private livePreferredDirtyPaths: Set<string> = new Set()
   private lastEmittedPositionSources: string[] = []
+  private lastEmittedDepthSources: string[] = []
 
   // Cached `<label>.<src> → <label>.<canName>` translation, refreshed
   // whenever `app.signalk.sources` is replaced or sourceRefChanged
@@ -211,11 +219,11 @@ export default class DeltaCache {
       5 * 60 * 1000
     )
 
-    // Re-evaluate POSITION_SOURCES on a timer so silent publishers age
-    // out even when no new delta arrives to trigger an emit. The change
-    // detection in emitPositionSources keeps the event off the bus when
-    // the resulting set hasn't shifted.
-    setInterval(() => this.emitPositionSources(), POSITION_SOURCE_SWEEP_MS)
+    // Re-evaluate POSITION_SOURCES and DEPTH_SOURCES on a timer so silent
+    // publishers age out even when no new delta arrives to trigger an
+    // emit. The change detection in emitActiveSources keeps the events off
+    // the bus when the resulting sets haven't shifted.
+    setInterval(() => this.emitActiveSources(), ACTIVE_SOURCE_SWEEP_MS)
   }
 
   getContextAndPathParts(msg: NormalizedDelta): string[] {
@@ -317,7 +325,10 @@ export default class DeltaCache {
           this.scheduleLivePreferredEmit()
         }
       }
-      if (isNewSource && msg.path === 'navigation.position') {
+      if (
+        isNewSource &&
+        (msg.path === 'navigation.position' || DEPTH_SOURCE_PATHS.has(msg.path))
+      ) {
         this.scheduleMultiSourceEmit()
       }
     } else if (msg.value) {
@@ -394,7 +405,7 @@ export default class DeltaCache {
     if (countChanged) {
       this.scheduleMultiSourceEmit()
     }
-    this.emitPositionSources()
+    this.emitActiveSources()
   }
 
   /**
@@ -404,11 +415,31 @@ export default class DeltaCache {
    * page-load sees the same set the websocket would deliver moments later.
    */
   getActivePositionSources(): string[] {
-    const sources = this.getSourcesForPath('navigation.position')
+    return this.activeSources(this.getSourcesForPath('navigation.position'))
+  }
+
+  /**
+   * Sources currently reporting a depth, freshness-filtered like the
+   * position sources. A transducer may report any of the three depths
+   * (an NMEA 0183 sounder sending only DBK reports belowKeel), so all
+   * three count. Sources ending in `.derived` are the server's own depth
+   * derivations, not transducers.
+   */
+  getActiveDepthSources(): string[] {
+    const sources = new Set<string>()
+    for (const path of DEPTH_SOURCE_PATHS) {
+      for (const ref of this.getSourcesForPath(path)) {
+        if (!ref.endsWith(DERIVED_SOURCE_SUFFIX)) sources.add(ref)
+      }
+    }
+    return this.activeSources([...sources])
+  }
+
+  private activeSources(sources: string[]): string[] {
     const sourceMeta = (this.app.signalk as any)?.sourceMeta as
       Record<string, { lastSeen?: number }> | undefined
     if (!sourceMeta) return sources.slice().sort()
-    const cutoff = Date.now() - POSITION_SOURCE_TTL_MS
+    const cutoff = Date.now() - ACTIVE_SOURCE_TTL_MS
     // sourceMeta is stamped under the raw update.$source while `sources`
     // holds canonical (canName-form) refs, so a device whose frames are
     // tagged with the numeric-src alias would look stale under its
@@ -431,21 +462,33 @@ export default class DeltaCache {
       .sort()
   }
 
-  private emitPositionSources() {
-    const sorted = this.getActivePositionSources()
+  private emitActiveSources() {
+    this.lastEmittedPositionSources = this.emitIfChanged(
+      'POSITION_SOURCES',
+      this.getActivePositionSources(),
+      this.lastEmittedPositionSources
+    )
+    this.lastEmittedDepthSources = this.emitIfChanged(
+      'DEPTH_SOURCES',
+      this.getActiveDepthSources(),
+      this.lastEmittedDepthSources
+    )
+  }
+
+  private emitIfChanged(
+    type: string,
+    sorted: string[],
+    lastEmitted: string[]
+  ): string[] {
     const changed =
-      sorted.length !== this.lastEmittedPositionSources.length ||
-      sorted.some((s, i) => s !== this.lastEmittedPositionSources[i])
-    if (changed) {
-      this.lastEmittedPositionSources = sorted
-      // Emit the sorted list so successive events have stable ordering;
-      // otherwise clients diffing payloads see spurious changes whenever
-      // the cache iteration order happens to swap two refs.
-      ;(this.app as any).emit('serverevent', {
-        type: 'POSITION_SOURCES',
-        data: sorted
-      })
-    }
+      sorted.length !== lastEmitted.length ||
+      sorted.some((s, i) => s !== lastEmitted[i])
+    if (!changed) return lastEmitted
+    // Emit the sorted list so successive events have stable ordering;
+    // otherwise clients diffing payloads see spurious changes whenever
+    // the cache iteration order happens to swap two refs.
+    ;(this.app as any).emit('serverevent', { type, data: sorted })
+    return sorted
   }
 
   /**
