@@ -80,6 +80,7 @@
     "@signalk/course-provider": "^1.4.0",
     "@signalk/n2k-signalk": ">=4.1.0-beta",
     "@signalk/nmea0183-signalk": "^3.20.0",
+    "@signalk/path-metadata": "^1.0.3",
     "@signalk/resources-provider": "^1.5.3",
     "@signalk/server-api": "^2.34.0",
     "@signalk/signalk-schema": "1.0.x",
