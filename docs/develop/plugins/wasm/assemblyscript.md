@@ -359,6 +359,10 @@ if (result !== 0) {
 }
 ```
 
+#### `sseSend(channel: string, event: string, data: string): i32`
+
+Push a Server-Sent Event to every client of one of the plugin's SSE channels. Returns the number of clients it reached, or -1 on error. See [Server-Sent Events](./http_endpoints.md#server-sent-events).
+
 ### Helper Functions
 
 ```typescript

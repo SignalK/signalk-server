@@ -143,6 +143,33 @@ Handler functions must return a JSON string with:
 - Endpoints are mounted at `/plugins/your-plugin-id/api/...`
 - From browser, fetch from absolute path: `/plugins/your-plugin-id/api/logs`
 
+## Server-Sent Events
+
+Handlers run synchronously and their response ends when they return, so a plugin cannot hold a connection open itself. Instead, a handler can hand the response to the server as a Server-Sent Events (SSE) stream on a named channel, and the plugin pushes events to that channel later, typically from `poll()` or `delta_handler()`. This suits live dashboards and hypermedia front ends such as [Datastar](https://data-star.dev/) that expect the server to push updates.
+
+### Opening a stream
+
+A handler opens a stream by returning an envelope with an `sseChannel` field (the channel name) instead of `statusCode`. The server then answers with an event stream, keeps the connection open and adds it to that channel.
+
+- An optional `body` is written once, as raw event-stream text, to the new client only. It lets a client render the current state without waiting for the next update.
+- `statusCode` and `headers` do not apply to stream responses.
+- Channels belong to the plugin, so two plugins can use the same channel name without seeing each other's events.
+- A plugin that is not running cannot push events, so the server refuses the stream with `503`.
+
+### Sending events
+
+The plugin pushes an event with the `sk_sse_send` import, which takes a channel name, an event name and the event data as UTF-8 strings and returns the number of clients reached, or `-1` on error. The server frames the event in standard event-stream syntax and writes it to every client of the channel; multi-line data is split into one `data:` line per line. An empty event name produces a default `message` event, and an event name containing a line break is rejected because it would corrupt the framing.
+
+AssemblyScript plugins call `sseSend()` from the SDK (see [AssemblyScript](./assemblyscript.md)); Rust plugins declare the import themselves (see the FFI table in [Rust](./rust.md)). The [hello AssemblyScript example](https://github.com/SignalK/signalk-server/tree/master/examples/wasm-plugins/example-hello-assemblyscript) opens a channel from one endpoint and broadcasts to it from another.
+
+### Connection handling
+
+- The server periodically sends a keep-alive comment so proxies and browsers do not close idle streams.
+- Closed connections leave their channel automatically.
+- A client that stops reading is disconnected once its queued output would exceed a fixed limit, so a stalled client cannot grow server memory. An event larger than that limit on its own is rejected, and a client whose initial response body exceeds it is disconnected.
+- When the plugin stops, all of its streams are closed. Browser `EventSource` clients reconnect on their own and are refused until the plugin runs again.
+- Stream routes use the same authentication as the plugin's other endpoints.
+
 ## String Memory Management
 
 The server uses the **AssemblyScript loader** for automatic string handling:
