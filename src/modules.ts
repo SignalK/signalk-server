@@ -141,6 +141,49 @@ export function getModulePaths(config: Config) {
   )
 }
 
+/**
+ * Finds the plugins the server bundles when npm hoisted them next to it.
+ *
+ * Installed as a dependency itself, as the Docker image installs it with
+ * `npm install signalk-server`, the server has its dependencies hoisted next
+ * to it, so the plugins it bundles are not in appPath's node_modules. Only
+ * the server's own dependencies are looked up there: for a global install
+ * that directory is the global node_modules.
+ */
+function findBundledModulesNextToApp(
+  appPath: string,
+  keyword: string
+): ModuleData[] {
+  const serverDir = path.resolve(appPath)
+  const parent = path.dirname(serverDir)
+  if (path.basename(parent) !== 'node_modules') {
+    return []
+  }
+  const { dependencies = {}, optionalDependencies = {} } =
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require(path.join(serverDir, 'package.json'))
+  const location = path.join(parent, '/')
+  return [
+    ...Object.keys(dependencies),
+    ...Object.keys(optionalDependencies)
+  ].flatMap((name) => {
+    let metadata
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      metadata = require(path.join(parent, name, 'package.json'))
+    } catch (err) {
+      // Also missing when npm nested the dependency in appPath's
+      // node_modules, or an optional one was not installed.
+      debug(err)
+      return []
+    }
+    return Array.isArray(metadata?.keywords) &&
+      metadata.keywords.includes(keyword)
+      ? [{ module: metadata.name, metadata, location }]
+      : []
+  })
+}
+
 const getModuleSortName = (x: ModuleData) =>
   (x.module || '').replace('@signalk', ' ')
 
@@ -148,15 +191,20 @@ const getModuleSortName = (x: ModuleData) =>
 const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
-// Searches for installed modules that contain `keyword`.
+/**
+ * Searches for installed modules that contain `keyword`. The config dir is
+ * searched first, so a copy installed there by the App Store takes
+ * precedence over the one the server bundles.
+ */
 export function modulesWithKeyword(config: Config, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
-    _.flatten(
-      getModulePaths(config).map((pathOption) =>
+    _.flatten([
+      ...getModulePaths(config).map((pathOption) =>
         findModulesInDir(pathOption, keyword)
-      )
-    ),
+      ),
+      findBundledModulesNextToApp(config.appPath, keyword)
+    ]),
     (moduleData) => moduleData.module
   ).sort(priorityPrefix)
 }
