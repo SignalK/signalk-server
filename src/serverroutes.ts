@@ -874,6 +874,7 @@ module.exports = function (
           isUndefined(app.config.settings.enablePluginLogging) ||
           app.config.settings.enablePluginLogging,
         trustProxy: app.config.settings.trustProxy || false,
+        httpAlongsideSsl: app.config.settings.httpAlongsideSsl || false,
         useBLEManager:
           app.config.settings.bleApi?.localBluetoothManaged || false
       },
@@ -1167,6 +1168,11 @@ module.exports = function (
 
     if (!isUndefined(settings.options.ssl)) {
       updatedSettings.ssl = settings.options.ssl
+    }
+
+    if (!isUndefined(settings.options.httpAlongsideSsl)) {
+      updatedSettings.httpAlongsideSsl =
+        settings.options.httpAlongsideSsl === true
     }
 
     if (!isUndefined(settings.options.wsCompression)) {
