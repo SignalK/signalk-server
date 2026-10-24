@@ -7,6 +7,7 @@
  */
 
 import Debug from 'debug'
+import { get as _get } from 'lodash'
 import { SKVersion } from '@signalk/server-api'
 import { WasmCapabilities } from '../types'
 import { createResourceProviderBinding } from './resource-provider'
@@ -129,23 +130,29 @@ export function createEnvImports(
       }
     },
 
-    // Get value from vessels.self path
+    /**
+     * Copies the JSON of the self vessel's data at a dot-separated path
+     * into the plugin's buffer, resolving against the full model the same
+     * way the JS plugin API's getSelfPath does.
+     *
+     * @returns bytes written, or 0 when the plugin lacks the dataRead
+     *   capability, the path has no data, the buffer is too small, or
+     *   memory is not initialized
+     */
     sk_get_self_path: (
       pathPtr: number,
       pathLen: number,
       bufPtr: number,
       bufMaxLen: number
     ): number => {
+      if (!capabilities.dataRead) {
+        return 0
+      }
       try {
         const path = readUtf8String(pathPtr, pathLen)
         debug(`[${pluginId}] getSelfPath: ${path}`)
 
-        if (!app || !app.getSelfPath) {
-          debug(`[${pluginId}] app.getSelfPath not available`)
-          return 0
-        }
-
-        const value = app.getSelfPath(path)
+        const value = _get(app?.signalk?.self, path)
         if (value === undefined || value === null) {
           return 0
         }
