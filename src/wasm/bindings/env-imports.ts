@@ -472,12 +472,7 @@ export function createEnvImports(
             debug(`[${pluginId}] Sent supportsPut meta for ${path}`)
           }
 
-          const callback = (
-            cbContext: string,
-            cbPath: string,
-            value: any,
-            cb: (result: any) => void
-          ) => {
+          const callback = (cbContext: string, cbPath: string, value: any) => {
             debug.enabled &&
               debug(
                 `[${pluginId}] PUT request received: ${cbContext}.${cbPath} = ${JSON.stringify(value)}`
@@ -496,7 +491,11 @@ export function createEnvImports(
                 let responseJson: string
 
                 if (asLoaderInstance.current) {
-                  responseJson = handlerFunc(valueJson)
+                  // AssemblyScript strings cross the boundary as pointers
+                  const asExports = asLoaderInstance.current.exports
+                  responseJson = asExports.__getString(
+                    handlerFunc(asExports.__newString(valueJson))
+                  )
                 } else if (rawExports.current?.allocate) {
                   // Rust library plugin: buffer-based string passing
                   const valueBytes = Buffer.from(valueJson, 'utf8')
@@ -538,24 +537,24 @@ export function createEnvImports(
                   debug(
                     `[${pluginId}] PUT handler response: ${JSON.stringify(response)}`
                   )
-                cb(response)
+                return response
               } catch (error) {
                 debug(`[${pluginId}] PUT handler error: ${error}`)
-                cb({
+                return {
                   state: 'COMPLETED',
                   statusCode: 500,
                   message: `Handler error: ${error}`
-                })
+                }
               }
             } else {
               debug(
                 `[${pluginId}] Warning: Handler function not found: ${handlerName}`
               )
-              cb({
+              return {
                 state: 'COMPLETED',
                 statusCode: 501,
                 message: 'Handler not implemented'
-              })
+              }
             }
           }
 
