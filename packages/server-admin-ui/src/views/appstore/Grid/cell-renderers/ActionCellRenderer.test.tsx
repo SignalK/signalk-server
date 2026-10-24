@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { ROUTER_FUTURE_FLAGS } from '../../../../routerFuture'
 import ActionCellRenderer, {
@@ -69,5 +69,24 @@ describe('ActionCellRenderer terminal install status', () => {
     })
     expect(screen.getByText(/Failed/)).toBeDefined()
     expect(screen.queryByText(/Updated v/)).toBeNull()
+  })
+})
+
+describe('ActionCellRenderer menu', () => {
+  it('leaves the npm link to the detail view', () => {
+    const { container } = render(
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+        <ActionCellRenderer
+          data={{
+            name: 'signalk-example',
+            version: '1.0.0',
+            npmUrl: 'https://www.npmjs.com/package/signalk-example'
+          }}
+        />
+      </MemoryRouter>
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    expect(screen.getByText('Versions')).toBeDefined()
+    expect(container.querySelector('a[href*="npmjs.com"]')).toBeNull()
   })
 })

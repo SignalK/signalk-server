@@ -10,7 +10,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
 import { faCloudArrowDown } from '@fortawesome/free-solid-svg-icons/faCloudArrowDown'
 import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
-import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons/faArrowUpRightFromSquare'
 import { faLink } from '@fortawesome/free-solid-svg-icons/faLink'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import { urlToWebapp } from '../../../Webapps/Webapp'
@@ -46,7 +45,6 @@ export interface AppData {
   installFailed?: boolean
   isPlugin?: boolean
   id?: string
-  npmUrl?: string
   [key: string]: unknown
 }
 
@@ -300,6 +298,7 @@ export default function ActionCellRenderer({
             split
             variant={app.newVersion ? 'success' : 'light'}
             className="flex-grow-0"
+            aria-label="More actions"
           />
           <Dropdown.Menu align="end">
             {app.installed && app.newVersion && (
@@ -310,21 +309,6 @@ export default function ActionCellRenderer({
                 <FontAwesomeIcon className="me-2" icon={faGear} /> Configure
               </NavLink>
             )}
-            {app.npmUrl && (
-              <a
-                href={app.npmUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="dropdown-item"
-              >
-                <FontAwesomeIcon
-                  icon={faArrowUpRightFromSquare}
-                  className="me-2"
-                />
-                View on NPM
-              </a>
-            )}
-
             <Dropdown.Item onClick={handleVersionsClick} className="text-start">
               <FontAwesomeIcon className="me-2" icon={faCloudArrowDown} />
               Versions
