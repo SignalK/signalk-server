@@ -336,7 +336,7 @@ describe('Resources Api', () => {
       return stored
     }
 
-    it('accepts bounds, zooms, format and scale on any chart type', async function () {
+    it('accepts bounds, zooms, format, scale and tile size on any chart type', async function () {
       const { server, post, stop } = await startServer()
       const stored = registerChartStore(server)
       const chart = {
@@ -348,7 +348,8 @@ describe('Resources Api', () => {
         format: 'pbf',
         minzoom: 9,
         maxzoom: 16,
-        scale: 20000
+        scale: 20000,
+        tileSize: 512
       }
 
       try {
@@ -373,6 +374,24 @@ describe('Resources Api', () => {
           type: 'WMS',
           url: 'http://localhost/wms',
           bounds: [-71.1, 42.3, -70.9]
+        })
+        response.status.should.equal(400)
+        stored.should.deep.equal([])
+      } finally {
+        stop()
+      }
+    })
+
+    it('rejects a tile size that is not a positive whole number', async function () {
+      const { server, post, stop } = await startServer()
+      const stored = registerChartStore(server)
+
+      try {
+        const response = await post('/resources/charts?provider=chart-store', {
+          identifier: 'osm',
+          type: 'tilelayer',
+          url: 'http://localhost/{z}/{x}/{y}.png',
+          tileSize: 0.5
         })
         response.status.should.equal(400)
         stored.should.deep.equal([])
