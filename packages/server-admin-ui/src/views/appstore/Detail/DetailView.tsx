@@ -13,6 +13,7 @@ import ActionCellRenderer from '../Grid/cell-renderers/ActionCellRenderer'
 import PluginIcon from '../components/PluginIcon'
 import RecencyBadge from '../components/RecencyBadge'
 import UpdateAvailableBadge from '../components/UpdateAvailableBadge'
+import WasmBadge from '../components/WasmBadge'
 import { projectAppInfo } from '../projectAppInfo'
 import ReadmeTab from './ReadmeTab'
 import ChangelogTab from './ChangelogTab'
@@ -39,6 +40,7 @@ interface DetailPayload {
   githubUrl?: string
   npmUrl?: string
   isPlugin?: boolean
+  isWasm?: boolean
   isWebapp?: boolean
   recent?: boolean
   readme: string
@@ -322,6 +324,10 @@ const DetailView: React.FC = () => {
                     <UpdateAvailableBadge
                       installedVersion={listEntry?.installedVersion}
                       newVersion={listEntry?.newVersion}
+                      className="plugin-detail__badge"
+                    />
+                    <WasmBadge
+                      isWasm={detail.isWasm ?? listEntry?.isWasm}
                       className="plugin-detail__badge"
                     />
                     {detail.official && <Badge bg="primary">OFFICIAL</Badge>}

@@ -71,7 +71,13 @@ const {
   probeIconUrl,
   buildLocalAssetUrls: buildLocalAssetUrlsFor,
   packageNameIs,
-  readInstalledReadme
+  readInstalledReadme,
+  isPluginPackage,
+  isWasmPackage,
+  mergePluginSearchResults,
+  installedModuleKeywords,
+  NODE_PLUGIN_KEYWORD,
+  WASM_PLUGIN_KEYWORD
 } = require('../appstore')
 
 const bundledAdminUIs = ['@signalk/server-admin-ui']
@@ -281,7 +287,7 @@ module.exports = function (app) {
             debug.enabled && debug(err.stack)
             storeAvailable = false
             return [
-              getInstalledAsPackageEntries('signalk-node-server-plugin'),
+              getInstalledAsPackageEntries(NODE_PLUGIN_KEYWORD),
               getInstalledAsPackageEntries('signalk-webapp')
             ]
           }),
@@ -496,10 +502,12 @@ module.exports = function (app) {
     // published release would never reach the detail page.
     const cachedDetail = readDetailFromCache(cache, name)
     // An entry cached while the README was unreachable is rebuilt once
-    // the installed copy can supply it.
+    // the installed copy can supply it, and so is an entry without
+    // isWasm, which the detail page needs for the WASM badge.
     if (
       cachedDetail &&
       cachedDetail.version === pkg.version &&
+      typeof cachedDetail.isWasm === 'boolean' &&
       !(isInstalled && !cachedDetail.readme && installedReadmeFor(pkg)?.trim())
     ) {
       return cachedDetail
@@ -606,9 +614,8 @@ module.exports = function (app) {
           author: getAuthor(pkg),
           categories: getCategories(pkgForEnrichment),
           npmUrl: getNpmUrl({ package: pkg }) || undefined,
-          isPlugin: (pkg.keywords || []).some(
-            (v) => v === 'signalk-node-server-plugin'
-          ),
+          isPlugin: isPluginPackage(pkg.keywords),
+          isWasm: isWasmPackage(pkg.keywords),
           isWebapp: (pkg.keywords || []).some((v) => v === 'signalk-webapp'),
           keywords: pkg.keywords || [],
           npmReadme:
@@ -1025,16 +1032,25 @@ module.exports = function (app) {
 
   function findPluginsAndWebapps() {
     return Promise.all([
-      findModulesWithKeyword('signalk-node-server-plugin'),
+      findModulesWithKeyword(NODE_PLUGIN_KEYWORD),
+      // A failed WASM search must not take down the Node plugin and webapp
+      // listings that searched fine, and installed WASM plugins stay listed
+      // from their installed copies so they can still be removed.
+      findModulesWithKeyword(WASM_PLUGIN_KEYWORD).catch((err) => {
+        debug.enabled && debug('WASM plugin search failed: %O', err)
+        return getInstalledAsPackageEntries(NODE_PLUGIN_KEYWORD).filter(
+          (entry) => isWasmPackage(entry.package.keywords)
+        )
+      }),
       findModulesWithKeyword('signalk-embeddable-webapp'),
       findModulesWithKeyword('signalk-webapp')
-    ]).then(([plugins, embeddableWebapps, webapps]) => {
+    ]).then(([nodePlugins, wasmPlugins, embeddableWebapps, webapps]) => {
       const allWebapps = []
         .concat(embeddableWebapps)
         .concat(webapps)
         .filter((m) => !bundledAdminUIs.includes(m.package.name))
       return [
-        plugins,
+        mergePluginSearchResults(nodePlugins, wasmPlugins),
         _.uniqBy(allWebapps, (plugin) => {
           return plugin.package.name
         })
@@ -1044,7 +1060,7 @@ module.exports = function (app) {
 
   function getInstalledAsPackageEntries(keyword) {
     const sources =
-      keyword === 'signalk-node-server-plugin'
+      keyword === NODE_PLUGIN_KEYWORD
         ? [{ entries: app.plugins || [], fallbackKeyword: keyword }]
         : [
             { entries: app.webapps || [], fallbackKeyword: 'signalk-webapp' },
@@ -1070,7 +1086,7 @@ module.exports = function (app) {
             name,
             version: installed.version,
             description: installed.description,
-            keywords: installed.keywords || [fallbackKeyword],
+            keywords: installedModuleKeywords(installed, fallbackKeyword),
             publisher:
               installed.publisher ||
               (authorName ? { username: authorName } : { username: '' }),
@@ -1235,9 +1251,8 @@ module.exports = function (app) {
         recent: isRecent(plugin.package.date),
         keywords: getKeywords(plugin.package),
         npmUrl: getNpmUrl(plugin),
-        isPlugin: plugin.package.keywords.some(
-          (v) => v === 'signalk-node-server-plugin'
-        ),
+        isPlugin: isPluginPackage(plugin.package.keywords),
+        isWasm: isWasmPackage(plugin.package.keywords),
         isWebapp: plugin.package.keywords.some((v) => v === 'signalk-webapp'),
         isEmbeddableWebapp: plugin.package.keywords.some(
           (v) => v === 'signalk-embeddable-webapp'

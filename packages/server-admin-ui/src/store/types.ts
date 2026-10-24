@@ -33,6 +33,7 @@ export interface AppInfo {
   installedScreenshotUrls?: string[]
   official?: boolean
   deprecated?: boolean
+  isWasm?: boolean
   githubUrl?: string
   issuesUrl?: string
   requires?: string[]
