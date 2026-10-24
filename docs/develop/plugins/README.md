@@ -11,6 +11,7 @@ children:
   - resource_provider_plugins.md
   - weather_provider_plugins.md
   - ble_provider_plugins.md
+  - sensor_targets.md
   - custom_renderers.md
   - publishing.md
   - ci.md
