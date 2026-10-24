@@ -51,6 +51,11 @@ export interface DataSliceState {
    * cache sweep on the per-delta path.
    */
   contextNames: Record<string, string>
+  /**
+   * Self path → names NMEA 2000 devices already give it on the bus,
+   * offered as a displayName for paths that have none.
+   */
+  labelSuggestions: Record<string, string[]>
 }
 
 export interface DataSliceActions {
@@ -71,6 +76,7 @@ export interface DataSliceActions {
   removePath: (context: string, path$SourceKey: string) => void
   evictSource: (sourceRef: string) => void
   clearData: () => void
+  setLabelSuggestions: (suggestions: Record<string, string[]>) => void
 }
 
 export type DataSlice = DataSliceState & DataSliceActions
@@ -79,7 +85,8 @@ const initialDataState: DataSliceState = {
   signalkData: {},
   signalkMeta: {},
   dataVersion: 0,
-  contextNames: {}
+  contextNames: {},
+  labelSuggestions: {}
 }
 
 // Re-resolve one context's entry in the contextNames map after its data
@@ -230,5 +237,9 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
 
   clearData: () => {
     set(initialDataState)
+  },
+
+  setLabelSuggestions: (suggestions) => {
+    set({ labelSuggestions: suggestions })
   }
 })
