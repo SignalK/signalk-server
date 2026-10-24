@@ -50,6 +50,7 @@ export interface WasmCapabilities {
   weatherProvider?: boolean
   radarProvider?: boolean
   rawSockets?: boolean
+  bluetooth?: boolean
 }
 
 export interface NpmPackageData {

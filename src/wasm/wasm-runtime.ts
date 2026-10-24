@@ -39,6 +39,7 @@ import {
 
 // Import utilities
 import { detectWasmFormat } from './utils/format-detection'
+import { closeAllBleForPlugin } from './bindings/ble'
 
 // Import types
 import { WasmPluginInstance, WasmCapabilities } from './types'
@@ -166,13 +167,15 @@ export class WasmRuntime {
       const errorMsg = error instanceof Error ? error.message : String(error)
       debug(`Error unloading WASM plugin ${pluginId}: ${errorMsg}`)
       throw error
+    } finally {
+      closeAllBleForPlugin(pluginId)
     }
   }
 
   /**
    * Reload a WASM plugin (unload + load)
    */
-  async reloadPlugin(pluginId: string): Promise<WasmPluginInstance> {
+  async reloadPlugin(pluginId: string, app?: any): Promise<WasmPluginInstance> {
     const oldInstance = this.instances.get(pluginId)
     if (!oldInstance) {
       throw new Error(`Plugin ${pluginId} not loaded`)
@@ -184,7 +187,7 @@ export class WasmRuntime {
     await this.unloadPlugin(pluginId)
 
     // Load new instance
-    return this.loadPlugin(pluginId, wasmPath, vfsRoot, capabilities)
+    return this.loadPlugin(pluginId, wasmPath, vfsRoot, capabilities, app)
   }
 
   /**
