@@ -173,6 +173,9 @@ jobs:
     needs: [prepare]
     if: needs.prepare.outputs.any_enabled == 'true'
     runs-on: ${{ matrix.vm }}
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -187,7 +190,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
       - uses: actions/download-artifact@v8
         with:
           name: packed-modules
@@ -209,6 +212,9 @@ jobs:
     needs: [prepare, build]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -235,7 +241,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
       - name: Compute manifest sources
         id: sources
         env:
@@ -278,6 +284,9 @@ jobs:
     needs: [prepare, manifest]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -296,7 +305,7 @@ jobs:
         shell: bash
         env:
           GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          GHCR_TOKEN: ${{ github.token }}
           DOCKER_HUB_USERNAME: signalkci
           DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           HUB_PREFIX: docker.io/${{ env.DOCKER_HUB_REPO }}
@@ -319,6 +328,9 @@ jobs:
     needs: [prepare, manifest]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
     steps:
       - name: Checkout metrics branch
         uses: actions/checkout@v7
@@ -326,7 +338,7 @@ jobs:
           ref: metrics
       - name: Record image sizes
         env:
-          GHCR_CREDS: '${{ github.actor }}:${{ secrets.GHCR_PAT }}'
+          GHCR_CREDS: '${{ github.actor }}:${{ github.token }}'
           REGISTRY: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}
           BUILD_MATRIX: ${{ needs.prepare.outputs.build_matrix }}
         run: |
@@ -379,4 +391,4 @@ jobs:
           delete-untagged: true
           delete-tags: |
             *-${{ github.run_id }}
-          token: ${{ secrets.GHCR_PAT }}
+          token: ${{ github.token }}

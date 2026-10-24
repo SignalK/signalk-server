@@ -124,6 +124,9 @@ jobs:
     needs: [prepare]
     if: needs.prepare.outputs.any_enabled == 'true'
     runs-on: ${{ matrix.vm }}
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -137,7 +140,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
 
       - name: Build base image
         uses: docker/build-push-action@v7
@@ -156,6 +159,9 @@ jobs:
     needs: [prepare, build]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -166,7 +172,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
 
       - name: Compute manifest sources
         id: sources
@@ -200,6 +206,9 @@ jobs:
     needs: [prepare, manifest]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -213,7 +222,7 @@ jobs:
         shell: bash
         env:
           GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          GHCR_TOKEN: ${{ github.token }}
           DOCKER_HUB_USERNAME: signalkci
           DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
@@ -242,4 +251,4 @@ jobs:
           delete-untagged: true
           delete-tags: |
             *-${{ github.run_id }}
-          token: ${{ secrets.GHCR_PAT }}
+          token: ${{ github.token }}
