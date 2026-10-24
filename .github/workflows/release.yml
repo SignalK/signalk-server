@@ -165,6 +165,28 @@ jobs:
       variant_matrix: ${{ steps.matrix.outputs.variant_matrix }}
       any_enabled: ${{ steps.matrix.outputs.any_enabled }}
     steps:
+      # The Docker images install the release from the npm registry, as end
+      # users do, so the release and its whole dependency tree must resolve.
+      - name: Wait for signalk-server on npm
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version="${GITHUB_REF#refs/*/v}"
+          check_dir="$RUNNER_TEMP/npm-install-check"
+          mkdir -p "$check_dir"
+          deadline=$((SECONDS + NPM_WAIT_TIMEOUT_SECONDS))
+          until npm view "signalk-server@$version" version 2>/dev/null | grep -qxF "$version" \
+            && npm install --dry-run --prefer-online --no-audit --no-fund \
+              --prefix "$check_dir" "signalk-server@$version" >/dev/null 2>&1; do
+            if (( SECONDS >= deadline )); then
+              echo "signalk-server@$version not installable from npm after ${NPM_WAIT_TIMEOUT_SECONDS}s" >&2
+              exit 1
+            fi
+            echo "Waiting for signalk-server@$version on npm..."
+            sleep "$NPM_WAIT_INTERVAL_SECONDS"
+          done
+        env:
+          NPM_WAIT_TIMEOUT_SECONDS: 900
+          NPM_WAIT_INTERVAL_SECONDS: 15
       - name: Checkout
         uses: actions/checkout@v7
       - name: Compute matrices
