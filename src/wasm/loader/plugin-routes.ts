@@ -33,6 +33,91 @@ export function backwardsCompat(url: string) {
 }
 
 /**
+ * Response envelope a WASM HTTP handler returns as a JSON string.
+ * `bodyEncoding` marks `body` as an encoded binary payload.
+ */
+export interface WasmHttpResponse {
+  statusCode?: number
+  headers?: Record<string, string>
+  body?: unknown
+  bodyEncoding?: string
+}
+
+const BASE64_BODY_ENCODING = 'base64'
+// Buffer.from silently skips invalid base64 characters, so validate first
+// to fail loudly instead of sending corrupted bytes
+const BASE64_PATTERN =
+  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
+
+/**
+ * Decode the envelope body into raw bytes when it declares a
+ * `bodyEncoding`. Returns undefined for plain (text/JSON) bodies and
+ * throws on an unsupported encoding or a malformed payload.
+ */
+function decodeBinaryBody(response: WasmHttpResponse): Buffer | undefined {
+  const { bodyEncoding, body } = response
+  if (bodyEncoding === undefined) {
+    return undefined
+  }
+  if (bodyEncoding !== BASE64_BODY_ENCODING) {
+    throw new Error(
+      `Unsupported bodyEncoding "${bodyEncoding}" (supported: "${BASE64_BODY_ENCODING}")`
+    )
+  }
+  if (typeof body !== 'string') {
+    throw new Error(
+      `bodyEncoding "${BASE64_BODY_ENCODING}" requires a string body`
+    )
+  }
+  if (!BASE64_PATTERN.test(body)) {
+    throw new Error(`body is not valid ${BASE64_BODY_ENCODING}`)
+  }
+  return Buffer.from(body, BASE64_BODY_ENCODING)
+}
+
+/**
+ * Send the response envelope returned by a WASM HTTP handler.
+ * Throws before anything is written if the envelope is invalid, so the
+ * caller can still answer with an error status.
+ */
+export function sendWasmHttpResponse(
+  res: Response,
+  response: WasmHttpResponse
+): void {
+  const binaryBody = decodeBinaryBody(response)
+
+  res.status(response.statusCode || 200)
+  if (response.headers) {
+    for (const [key, value] of Object.entries(response.headers)) {
+      res.setHeader(key, value)
+    }
+  }
+
+  if (binaryBody !== undefined) {
+    res.send(binaryBody)
+    return
+  }
+
+  let body = response.body
+  if (typeof body === 'string') {
+    const contentType = res.getHeader('content-type')
+    if (
+      typeof contentType === 'string' &&
+      contentType.includes('application/json')
+    ) {
+      try {
+        // Handlers return JSON bodies as escaped strings; parse them so
+        // Express sends the JSON itself rather than a quoted string
+        body = JSON.parse(body)
+      } catch (e) {
+        debug(`Warning: Could not parse body as JSON, sending as string: ${e}`)
+      }
+    }
+  }
+  res.send(body)
+}
+
+/**
  * Handle /api/logs request directly in Node.js (for signalk-logviewer plugin)
  * This avoids WASM memory buffer limitations (~64KB) when streaming large logs
  */
@@ -425,39 +510,11 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
             }
           }
 
-          const response = JSON.parse(responseJson)
-
-          // Set status code and headers
-          res.status(response.statusCode || 200)
-          if (response.headers) {
-            Object.entries(response.headers).forEach(([key, value]) => {
-              res.setHeader(key, value as string)
-            })
-          }
-
-          // Send body - try to parse as JSON if it's a string, otherwise send as-is
-          let body = response.body
-          if (typeof body === 'string') {
-            const contentType = res.getHeader('content-type')
-            if (
-              typeof contentType === 'string' &&
-              contentType.includes('application/json')
-            ) {
-              try {
-                // Try to parse the string as JSON - if it's double-escaped, this will fix it
-                body = JSON.parse(body)
-              } catch (e) {
-                // If parsing fails, send the string as-is (might be plain text)
-                debug(
-                  `Warning: Could not parse body as JSON, sending as string: ${e}`
-                )
-              }
-            }
-          }
+          const response: WasmHttpResponse = JSON.parse(responseJson)
 
           if (timeout) clearTimeout(timeout)
           debug(`Handler completed successfully, sending response`)
-          res.send(body)
+          sendWasmHttpResponse(res, response)
         } catch (error) {
           if (timeout) clearTimeout(timeout)
           const errorMsg =
