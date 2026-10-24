@@ -74,7 +74,7 @@ describe('ActionCellRenderer terminal install status', () => {
 
 describe('ActionCellRenderer menu', () => {
   it('leaves the npm link to the detail view', () => {
-    const { container } = render(
+    render(
       <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <ActionCellRenderer
           data={{
@@ -87,6 +87,6 @@ describe('ActionCellRenderer menu', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'More actions' }))
     expect(screen.getByText('Versions')).toBeDefined()
-    expect(container.querySelector('a[href*="npmjs.com"]')).toBeNull()
+    expect(screen.queryByRole('link', { name: /npm/i })).toBeNull()
   })
 })
