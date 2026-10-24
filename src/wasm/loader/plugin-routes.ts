@@ -22,6 +22,11 @@ import {
   writePluginConfig
 } from '../wasm-storage'
 import { SERVERROUTESPREFIX } from '../../constants'
+import {
+  callBufferAbi,
+  METADATA_BUFFER_BYTES,
+  RESPONSE_BUFFER_BYTES
+} from '../utils/buffer-abi'
 
 const debug = Debug('signalk:wasm:loader')
 
@@ -34,7 +39,9 @@ export function backwardsCompat(url: string) {
 
 /**
  * Handle /api/logs request directly in Node.js (for signalk-logviewer plugin)
- * This avoids WASM memory buffer limitations (~64KB) when streaming large logs
+ * Reading the logs means spawning journalctl or tail, which a WASM plugin
+ * cannot do, and the up to 50000 lines can exceed the response size a WASM
+ * handler may return (MAX_BUFFER_ABI_RESPONSE_BYTES)
  */
 export async function handleLogViewerRequest(
   req: Request,
@@ -202,21 +209,14 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
         typeof rawExports.allocate === 'function' &&
         typeof rawExports.http_endpoints === 'function'
       ) {
-        const maxLen = 8192 // 8KB should be plenty for endpoint definitions
-        const outPtr = rawExports.allocate(maxLen)
-        const writtenLen = rawExports.http_endpoints(outPtr, maxLen)
-
-        // Read the string from WASM memory
-        const memory = rawExports.memory as WebAssembly.Memory
-        const bytes = new Uint8Array(memory.buffer, outPtr, writtenLen)
-        endpointsJson = new TextDecoder('utf-8').decode(bytes)
-
-        // Deallocate
-        if (typeof rawExports.deallocate === 'function') {
-          rawExports.deallocate(outPtr, maxLen)
-        }
+        endpointsJson = callBufferAbi(
+          rawExports,
+          'http_endpoints',
+          rawExports.http_endpoints,
+          METADATA_BUFFER_BYTES
+        )
         debug(
-          `Got http_endpoints from Rust (${writtenLen} bytes): ${endpointsJson.substring(0, 200)}`
+          `Got http_endpoints from Rust: ${endpointsJson.substring(0, 200)}`
         )
       } else {
         debug(
@@ -251,7 +251,6 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
           )
 
           // SPECIAL CASE: Handle /api/logs directly in Node.js for signalk-logviewer
-          // WASM cannot handle large data streams due to memory buffer limitations (~64KB)
           if (
             plugin.id === 'signalk-logviewer' &&
             endpointPath === '/api/logs' &&
@@ -383,41 +382,15 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
 
             // Check if this is a Rust plugin with allocate/deallocate
             if (typeof rawExports.allocate === 'function') {
-              // Rust buffer-based string passing (same pattern as PUT handlers)
-              const requestBytes = Buffer.from(requestContext, 'utf8')
-              const requestPtr = rawExports.allocate(requestBytes.length)
-              const responseMaxLen = 65536 // 64KB response buffer
-              const responsePtr = rawExports.allocate(responseMaxLen)
-
-              // Write request to WASM memory
-              const memory = rawExports.memory as WebAssembly.Memory
-              const memView = new Uint8Array(memory.buffer)
-              memView.set(requestBytes, requestPtr)
-
-              // Call handler: (request_ptr, request_len, response_ptr, response_max_len) -> written_len
-              const writtenLen = handlerFunc(
-                requestPtr,
-                requestBytes.length,
-                responsePtr,
-                responseMaxLen
+              responseJson = callBufferAbi(
+                rawExports,
+                handler,
+                handlerFunc,
+                RESPONSE_BUFFER_BYTES,
+                requestContext
               )
-
-              // Read response from WASM memory
-              const responseBytes = new Uint8Array(
-                memory.buffer,
-                responsePtr,
-                writtenLen
-              )
-              responseJson = new TextDecoder('utf-8').decode(responseBytes)
-
-              // Deallocate buffers
-              if (typeof rawExports.deallocate === 'function') {
-                rawExports.deallocate(requestPtr, requestBytes.length)
-                rawExports.deallocate(responsePtr, responseMaxLen)
-              }
-
               debug(
-                `Rust handler returned ${writtenLen} bytes: ${responseJson.substring(0, 200)}`
+                `Rust handler returned ${responseJson.length} chars: ${responseJson.substring(0, 200)}`
               )
             } else {
               // Fallback for unknown plugin types - try direct call

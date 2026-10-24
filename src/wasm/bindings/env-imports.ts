@@ -23,6 +23,7 @@ import { socketManager, tcpSocketManager } from './socket-manager'
 import * as fs from 'fs'
 import * as path from 'path'
 import { atomicWriteFileSync } from '../../atomicWrite'
+import { callBufferAbi, METADATA_BUFFER_BYTES } from '../utils/buffer-abi'
 
 const debug = Debug('signalk:wasm:bindings')
 
@@ -497,37 +498,13 @@ export function createEnvImports(
                     handlerFunc(asExports.__newString(valueJson))
                   )
                 } else if (rawExports.current?.allocate) {
-                  // Rust library plugin: buffer-based string passing
-                  const valueBytes = Buffer.from(valueJson, 'utf8')
-                  const valuePtr = rawExports.current.allocate(
-                    valueBytes.length
+                  responseJson = callBufferAbi(
+                    rawExports.current,
+                    handlerName,
+                    handlerFunc,
+                    METADATA_BUFFER_BYTES,
+                    valueJson
                   )
-                  const responseMaxLen = 8192
-                  const responsePtr =
-                    rawExports.current.allocate(responseMaxLen)
-
-                  const memory = rawExports.current.memory as WebAssembly.Memory
-                  const memView = new Uint8Array(memory.buffer)
-                  memView.set(valueBytes, valuePtr)
-
-                  const writtenLen = handlerFunc(
-                    valuePtr,
-                    valueBytes.length,
-                    responsePtr,
-                    responseMaxLen
-                  )
-
-                  const responseBytes = new Uint8Array(
-                    memory.buffer,
-                    responsePtr,
-                    writtenLen
-                  )
-                  responseJson = new TextDecoder('utf-8').decode(responseBytes)
-
-                  if (rawExports.current.deallocate) {
-                    rawExports.current.deallocate(valuePtr, valueBytes.length)
-                    rawExports.current.deallocate(responsePtr, responseMaxLen)
-                  }
                 } else {
                   throw new Error('Unknown plugin type for PUT handler')
                 }
