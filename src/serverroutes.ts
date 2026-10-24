@@ -80,6 +80,7 @@ import { execSync } from 'child_process'
 import { recommendedVersion as recommendedNodeVersion } from './version'
 import { Type } from '@sinclair/typebox'
 import { Value } from '@sinclair/typebox/value'
+import { HullTypeSchema, type HullType } from '@signalk/server-api/typebox'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
@@ -1277,6 +1278,9 @@ module.exports = function (
     })
   })
 
+  const isHullType = (v: unknown): v is HullType =>
+    Value.Check(HullTypeSchema, v)
+
   app.get(`${SERVERROUTESPREFIX}/vessel`, (req: Request, res: Response) => {
     const de = app.config.baseDeltaEditor
     const communication = de.getSelfValue('communication')
@@ -1308,6 +1312,7 @@ module.exports = function (
         ? app.config.settings.gnssSensors[0].fromCenter
         : de.getSelfValue('sensors.gps.fromCenter'),
       aisShipType: type && type.id,
+      hullType: de.getSelfValue('design.hullType'),
       callsignVhf: communication && communication.callsignVhf
     }
 
@@ -1391,6 +1396,12 @@ module.exports = function (
       delete self.design.aisShipType
     }
 
+    if (isHullType(newVessel.hullType)) {
+      set(data.vessels.self, 'design.hullType.value', newVessel.hullType)
+    } else if (self.design) {
+      delete self.design.hullType
+    }
+
     if (newVessel.callsignVhf) {
       setString('communication.callsignVhf', newVessel.callsignVhf)
     } else {
@@ -1412,6 +1423,23 @@ module.exports = function (
   app.put(`${SERVERROUTESPREFIX}/vessel`, (req: Request, res: Response) => {
     const de = app.config.baseDeltaEditor
     const vessel = req.body
+
+    // Checked before any field is set, so a refused request leaves the
+    // vessel as it was.
+    if (
+      !isUndefined(vessel.hullType) &&
+      vessel.hullType !== null &&
+      vessel.hullType !== '' &&
+      !isHullType(vessel.hullType)
+    ) {
+      res
+        .status(400)
+        .type('text/plain')
+        .send(
+          `hullType must be one of ${HullTypeSchema.anyOf.map((t) => t.const).join(', ')}`
+        )
+      return
+    }
 
     de.setSelfValue('name', vessel.name)
     app.config.vesselName = vessel.name
@@ -1463,6 +1491,10 @@ module.exports = function (
             id: Number(vessel.aisShipType)
           }
         : undefined
+    )
+    de.setSelfValue(
+      'design.hullType',
+      isHullType(vessel.hullType) ? vessel.hullType : undefined
     )
     de.setSelfValue(
       'communication',
