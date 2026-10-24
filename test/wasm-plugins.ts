@@ -16,7 +16,13 @@ import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
 import { freeport } from './ts-servertestutilities'
-import { startServerP, serverTestConfigDirectory } from './servertestutilities'
+import {
+  startServerP,
+  serverTestConfigDirectory,
+  getReadOnlyToken,
+  getWriteToken,
+  getAdminToken
+} from './servertestutilities'
 
 interface PluginInfo {
   id: string
@@ -53,6 +59,48 @@ const examplePluginDir = path.join(
 )
 
 const wasmPath = path.join(examplePluginDir, 'plugin.wasm')
+
+const examplePluginId = '_signalk_example-hello-assemblyscript'
+
+/**
+ * Where the example plugin is linked so plugin discovery finds it;
+ * startServerP points SIGNALK_NODE_CONFIG_DIR at serverTestConfigDirectory().
+ */
+function examplePluginLinkPath(): string {
+  return path.join(
+    testConfigDirectory(),
+    'node_modules',
+    '@signalk',
+    'example-hello-assemblyscript'
+  )
+}
+
+/**
+ * Symlink the built example plugin into the test config's node_modules,
+ * replacing any stale link. Requires the build test to have produced the
+ * .wasm binary first.
+ */
+function linkExamplePlugin(): void {
+  if (!fs.existsSync(wasmPath)) {
+    throw new Error(
+      'WASM file does not exist. Build verification test should have created it.'
+    )
+  }
+  const pluginDest = examplePluginLinkPath()
+  fs.mkdirSync(path.dirname(pluginDest), { recursive: true })
+  if (fs.existsSync(pluginDest)) {
+    fs.rmSync(pluginDest, { recursive: true, force: true })
+  }
+  fs.symlinkSync(examplePluginDir, pluginDest, 'dir')
+}
+
+/** Remove the example plugin link so later suites start from a clean config. */
+function unlinkExamplePlugin(): void {
+  const pluginDest = examplePluginLinkPath()
+  if (fs.existsSync(pluginDest)) {
+    fs.rmSync(pluginDest, { recursive: true, force: true })
+  }
+}
 
 describe('WASM Plugins', function () {
   this.timeout(60000) // WASM compilation and loading can take time
@@ -110,56 +158,15 @@ describe('WASM Plugins', function () {
   describe('Plugin loading', () => {
     let server: ServerInstance | null = null
 
-    before(async function () {
-      // Ensure WASM file exists before running loading tests
-      if (!fs.existsSync(wasmPath)) {
-        throw new Error(
-          'WASM file does not exist. Build verification test should have created it.'
-        )
-      }
-
-      // Create symlink to the example plugin in test config node_modules
-      // Note: startServerP sets SIGNALK_NODE_CONFIG_DIR to serverTestConfigDirectory()
-      const pluginDest = path.join(
-        testConfigDirectory(),
-        'node_modules',
-        '@signalk',
-        'example-hello-assemblyscript'
-      )
-
-      // Create @signalk directory if needed
-      const signalkDir = path.join(
-        testConfigDirectory(),
-        'node_modules',
-        '@signalk'
-      )
-      if (!fs.existsSync(signalkDir)) {
-        fs.mkdirSync(signalkDir, { recursive: true })
-      }
-
-      // Remove existing symlink/directory if present
-      if (fs.existsSync(pluginDest)) {
-        fs.rmSync(pluginDest, { recursive: true, force: true })
-      }
-
-      // Create symlink
-      fs.symlinkSync(examplePluginDir, pluginDest, 'dir')
+    before(function () {
+      linkExamplePlugin()
     })
 
     after(async function () {
       if (server) {
         await server.stop()
       }
-      // Clean up symlink
-      const pluginDest = path.join(
-        testConfigDirectory(),
-        'node_modules',
-        '@signalk',
-        'example-hello-assemblyscript'
-      )
-      if (fs.existsSync(pluginDest)) {
-        fs.rmSync(pluginDest, { recursive: true, force: true })
-      }
+      unlinkExamplePlugin()
     })
 
     it('discovers and registers WASM plugin', async function () {
@@ -412,6 +419,95 @@ export function plugin_stop(): i32 {
       })
       expect(disableResponse.status).to.equal(200)
       expect(probeSockets()).to.equal(undefined)
+    })
+  })
+
+  describe('Endpoint access levels', () => {
+    let server: ServerInstance | null = null
+    let url: string
+    let readToken: string
+    let writeToken: string
+    let adminToken: string
+
+    before(async function () {
+      linkExamplePlugin()
+      const port = await freeport()
+      url = `http://0.0.0.0:${port}`
+      server = await startServerP(port, true, {
+        settings: {
+          interfaces: {
+            plugins: true,
+            wasm: true
+          }
+        }
+      })
+      readToken = await getReadOnlyToken(server)
+      writeToken = await getWriteToken(server)
+      adminToken = await getAdminToken(server)
+
+      const enableResponse = await fetch(
+        `${url}/skServer/plugins/${examplePluginId}/config`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ enabled: true, configuration: {} })
+        }
+      )
+      expect(enableResponse.status).to.equal(200)
+    })
+
+    after(async function () {
+      if (server) {
+        await server.stop()
+      }
+      unlinkExamplePlugin()
+    })
+
+    /** GET a route of the example plugin, authenticated only when a token is given. */
+    function getEndpoint(route: string, token?: string): Promise<Response> {
+      return fetch(`${url}/plugins/${examplePluginId}${route}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      })
+    }
+
+    it('readonly user can access an endpoint declared readonly', async function () {
+      const response = await getEndpoint('/api/info', readToken)
+      expect(response.status).to.equal(200)
+      const body = await response.json()
+      expect(body.language).to.equal('AssemblyScript')
+    })
+
+    it('readwrite user can access an endpoint declared readonly', async function () {
+      const response = await getEndpoint('/api/info', writeToken)
+      expect(response.status).to.equal(200)
+    })
+
+    it('unauthenticated request is denied an endpoint declared readonly', async function () {
+      const response = await getEndpoint('/api/info')
+      expect(response.status).to.equal(401)
+    })
+
+    it('readonly user is denied an endpoint declared readwrite', async function () {
+      const response = await getEndpoint('/api/about', readToken)
+      expect(response.status).to.equal(401)
+    })
+
+    it('readwrite user can access an endpoint declared readwrite', async function () {
+      const response = await getEndpoint('/api/about', writeToken)
+      expect(response.status).to.equal(200)
+    })
+
+    it('readonly user is denied an endpoint without an access level', async function () {
+      const response = await getEndpoint('/api/status', readToken)
+      expect(response.status).to.equal(401)
+    })
+
+    it('admin can access an endpoint without an access level', async function () {
+      const response = await getEndpoint('/api/status', adminToken)
+      expect(response.status).to.equal(200)
     })
   })
 })
