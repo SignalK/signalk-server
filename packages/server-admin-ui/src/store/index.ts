@@ -19,6 +19,10 @@ import {
   type GnssPositionSlice
 } from './slices/gnssPositionSlice'
 import {
+  createDepthSensorsSlice,
+  type DepthSensorsSlice
+} from './slices/depthSensorsSlice'
+import {
   createWebappSortSlice,
   type WebappSortSlice
 } from './slices/webappSortSlice'
@@ -39,6 +43,7 @@ export type { DataSlice, PathData, MetaData } from './slices/dataSlice'
 export type { PrioritiesSlice } from './slices/prioritiesSlice'
 export type { UnitPreferencesSlice } from './slices/unitPreferencesSlice'
 export type { GnssPositionSlice } from './slices/gnssPositionSlice'
+export type { DepthSensorsSlice } from './slices/depthSensorsSlice'
 export type { WebappSortSlice } from './slices/webappSortSlice'
 export type { BleSlice } from './slices/bleSlice'
 
@@ -48,6 +53,7 @@ export type SignalKStore = AppSlice &
   PrioritiesSlice &
   UnitPreferencesSlice &
   GnssPositionSlice &
+  DepthSensorsSlice &
   WebappSortSlice &
   BleSlice
 
@@ -59,6 +65,7 @@ export const useStore = create<SignalKStore>()(
     ...createPrioritiesSlice(...args),
     ...createUnitPreferencesSlice(...args),
     ...createGnssPositionSlice(...args),
+    ...createDepthSensorsSlice(...args),
     ...createWebappSortSlice(...args),
     ...createBleSlice(...args)
   }))
@@ -450,6 +457,26 @@ export function useUnconfiguredGnssSources(): string[] {
       (ref) => !configuredRefs.has(ref) && !ref.endsWith('.ccrp')
     )
   }, [gnssSensorsData, positionSources])
+}
+
+export function useDepthSensorsData() {
+  return useStore((s) => s.depthSensorsData)
+}
+
+export function useDepthSources() {
+  return useStore((s) => s.depthSources)
+}
+
+// Detected depth sources that have no transducer row yet.
+export function useUnconfiguredDepthSources(): string[] {
+  const depthSensorsData = useDepthSensorsData()
+  const depthSources = useDepthSources()
+  return useMemo(() => {
+    const configuredRefs = new Set(
+      depthSensorsData.sensors.filter((s) => s.$source).map((s) => s.$source)
+    )
+    return depthSources.filter((ref) => !configuredRefs.has(ref))
+  }, [depthSensorsData, depthSources])
 }
 
 export * from './types'

@@ -182,6 +182,15 @@ export interface Config {
      * 'both' additionally publishes the corrected position under
      * `<sensorId>.ccrp` while leaving the original untouched. */
     gnssCorrection?: 'off' | 'replace' | 'both'
+    /** Positions of the depth transducers, one per depth $source.
+     * fromWaterline is the transducer's depth below the waterline. */
+    depthSensors?: {
+      sensorId: string
+      $source: string
+      fromBow: number | null
+      fromCenter: number | null
+      fromWaterline: number | null
+    }[]
     trustProxy?: boolean | string | number
     courseApi?: {
       apiOnly?: boolean

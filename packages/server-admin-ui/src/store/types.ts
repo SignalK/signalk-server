@@ -289,6 +289,21 @@ export interface GnssCorrectionStatus {
   blocked?: 'no-length' | 'no-heading'
 }
 
+export interface DepthSensorConfig {
+  sensorId: string
+  $source: string
+  fromBow: number | null
+  fromCenter: number | null
+  /** Depth of the transducer below the waterline, positive down. */
+  fromWaterline: number | null
+}
+
+export interface DepthSensorsData {
+  sensors: DepthSensorConfig[]
+  saveState: SaveState
+  saveError?: string
+}
+
 export interface GnssSensorsData {
   correction: GnssCorrectionMode
   sensors: GnssSensorConfig[]
