@@ -6,24 +6,7 @@ title: Best Practices for WASM Plugins
 
 ## Hot Reload
 
-WASM plugins support hot-reload without server restart:
-
-### Manual Reload
-
-1. Build new WASM binary: `cargo build --target wasm32-wasip1 --release`
-2. Copy to plugin directory: `cp target/wasm32-wasip1/release/*.wasm ~/.signalk/...`
-3. In Admin UI: **Server** → **Plugin Config** → Click **Reload** button
-
-### Reload Behavior
-
-During reload:
-
-- `stop()` is called on old instance
-- Subscriptions are preserved
-- Deltas are buffered (not lost)
-- New instance is loaded
-- `start()` is called with saved config
-- Buffered deltas are replayed
+A rebuilt WASM binary takes effect without restarting the server. Enabling a WASM plugin always loads its binary from disk, so disabling and re-enabling the plugin in **Plugin Config** swaps in a new `plugin.wasm`: `stop()` runs on the old instance when it is disabled, and `start()` runs on the new one with the saved configuration. The plugin's HTTP endpoints follow the new binary.
 
 ## Error Handling
 

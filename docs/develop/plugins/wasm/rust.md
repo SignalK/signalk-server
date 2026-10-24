@@ -276,6 +276,8 @@ cd ~/.signalk/node_modules
 ln -s /path/to/your/my-rust-wasm-plugin my-rust-wasm-plugin
 ```
 
+After a rebuild, disable and re-enable the plugin in **Plugin Config** to load the new `plugin.wasm`; the server keeps running.
+
 **Option 2: Direct Copy**
 
 ```bash
