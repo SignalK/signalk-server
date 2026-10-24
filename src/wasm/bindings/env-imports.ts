@@ -20,6 +20,7 @@ import {
   createBinaryDataReader
 } from './binary-stream'
 import { socketManager, tcpSocketManager } from './socket-manager'
+import { addStopHandler } from './stop-handlers'
 import * as fs from 'fs'
 import * as path from 'path'
 import { atomicWriteFileSync } from '../../atomicWrite'
@@ -558,7 +559,10 @@ export function createEnvImports(
             }
           }
 
-          app.registerActionHandler(context, path, packageName, callback)
+          addStopHandler(
+            packageName,
+            app.registerActionHandler(context, path, packageName, callback)
+          )
           debug(
             `[${pluginId}] PUT handler registered successfully via registerActionHandler`
           )

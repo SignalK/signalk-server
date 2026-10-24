@@ -15,8 +15,15 @@ import { expect } from 'chai'
 import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
+import net from 'net'
 import { freeport } from './ts-servertestutilities'
 import { startServerP, serverTestConfigDirectory } from './servertestutilities'
+import { WasmPlugin } from '../src/wasm/loader/types'
+import { WasmCapabilities, WasmPluginInstance } from '../src/wasm/types'
+import { wasmPlugins } from '../src/wasm/loader/plugin-registry'
+import { stopWasmPlugin } from '../src/wasm/loader/plugin-lifecycle'
+import { tcpSocketManager } from '../src/wasm/bindings/socket-manager'
+import { createEnvImports } from '../src/wasm/bindings/env-imports'
 
 interface PluginInfo {
   id: string
@@ -412,6 +419,250 @@ export function plugin_stop(): i32 {
       })
       expect(disableResponse.status).to.equal(200)
       expect(probeSockets()).to.equal(undefined)
+    })
+  })
+
+  describe('Stopping a plugin', () => {
+    const pluginId = '_test_stop-cleanup'
+    const packageName = '@test/stop-cleanup'
+    const noCapabilities: WasmCapabilities = {
+      network: false,
+      storage: 'none',
+      dataRead: false,
+      dataWrite: false,
+      serialPorts: false,
+      putHandlers: false
+    }
+
+    /**
+     * Register a running plugin whose instance is a stub, so stopping it
+     * exercises only the host-side teardown.
+     */
+    function addStoppablePlugin(): void {
+      const plugin: WasmPlugin = {
+        id: pluginId,
+        name: 'stop cleanup',
+        type: 'wasm',
+        packageName,
+        version: '0.0.0',
+        enabled: true,
+        enableDebug: false,
+        keywords: [],
+        packageLocation: '',
+        configPath: '',
+        metadata: {
+          id: pluginId,
+          name: 'stop cleanup',
+          packageName,
+          version: '0.0.0',
+          wasmManifest: '',
+          capabilities: noCapabilities,
+          packageLocation: ''
+        },
+        instance: {
+          exports: { stop: () => 0 }
+        } as unknown as WasmPluginInstance,
+        status: 'running',
+        crashCount: 0,
+        restartBackoff: 0
+      }
+      wasmPlugins.set(pluginId, plugin)
+    }
+
+    afterEach(function () {
+      wasmPlugins.delete(pluginId)
+    })
+
+    it('closes TCP sockets the plugin opened', async function () {
+      addStoppablePlugin()
+      const server = net.createServer()
+      const peerClosed = new Promise<void>((resolve) => {
+        server.on('connection', (peer) => {
+          peer.on('close', () => resolve())
+        })
+      })
+      await new Promise<void>((resolve) =>
+        server.listen(0, '127.0.0.1', resolve)
+      )
+      const { port } = server.address() as net.AddressInfo
+      const connected = new Promise<void>((resolve) =>
+        server.once('connection', () => resolve())
+      )
+
+      try {
+        const socketId = tcpSocketManager.createSocket(pluginId)
+        expect(tcpSocketManager.connect(socketId, '127.0.0.1', port)).to.equal(
+          0
+        )
+        await connected
+
+        await stopWasmPlugin(pluginId)
+
+        await peerClosed
+        expect(tcpSocketManager.isConnected(socketId)).to.equal(-1)
+      } finally {
+        server.close()
+      }
+    })
+
+    it('unregisters its PUT handlers', async function () {
+      addStoppablePlugin()
+      const registered = new Set<string>()
+      const app = {
+        registerActionHandler: (
+          context: string,
+          path: string,
+          source: string
+        ) => {
+          const key = `${context}/${path}/${source}`
+          registered.add(key)
+          return () => registered.delete(key)
+        }
+      }
+      const memory = new WebAssembly.Memory({ initial: 1 })
+      const context = Buffer.from('vessels.self')
+      const putPath = Buffer.from('electrical.switches.test.state')
+      // Past the end of the context string so the two do not overlap
+      const pathOffset = context.length
+      new Uint8Array(memory.buffer).set(context, 0)
+      new Uint8Array(memory.buffer).set(putPath, pathOffset)
+      const imports = createEnvImports({
+        pluginId,
+        packageName,
+        capabilities: { ...noCapabilities, putHandlers: true },
+        app,
+        memoryRef: { current: memory },
+        rawExports: { current: null },
+        asLoaderInstance: { current: null }
+      })
+
+      expect(
+        imports.sk_register_put_handler(
+          0,
+          context.length,
+          pathOffset,
+          putPath.length
+        )
+      ).to.equal(1)
+      expect(registered.size).to.equal(1)
+
+      await stopWasmPlugin(pluginId)
+
+      expect(registered.size).to.equal(0)
+    })
+  })
+
+  describe('Stopping a resource provider plugin', () => {
+    let server: ServerInstance | null = null
+    const providerDir = path.join(
+      __dirname,
+      '..',
+      'examples',
+      'wasm-plugins',
+      'example-routes-waypoints'
+    )
+    const providerPackageName = '@signalk/example-routes-waypoints'
+    const providerPluginId = '_signalk_example-routes-waypoints'
+    const providerLink = () =>
+      path.join(
+        testConfigDirectory(),
+        'node_modules',
+        '@signalk',
+        'example-routes-waypoints'
+      )
+
+    const providerPollAttempts = 40
+    const providerPollIntervalMs = 50
+
+    /** Ids of the plugins currently serving the routes resource type. */
+    async function routeProviders(port: number): Promise<string[]> {
+      const res = await fetch(
+        `http://0.0.0.0:${port}/signalk/v2/api/resources/routes/_providers`
+      )
+      expect(res.status).to.equal(200)
+      return res.json()
+    }
+
+    /** Enable or disable the provider plugin through the admin config API. */
+    async function setEnabled(port: number, enabled: boolean): Promise<void> {
+      const res = await fetch(
+        `http://0.0.0.0:${port}/skServer/plugins/${providerPluginId}/config`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled, configuration: {} })
+        }
+      )
+      expect(res.status).to.equal(200)
+    }
+
+    /**
+     * Poll the provider list until the predicate holds, since plugin start
+     * and stop complete asynchronously after the config request returns.
+     * Returns the last list seen so the caller asserts on it.
+     */
+    async function waitForProviders(
+      port: number,
+      predicate: (providers: string[]) => boolean
+    ): Promise<string[]> {
+      let providers = await routeProviders(port)
+      for (let i = 0; i < providerPollAttempts && !predicate(providers); i++) {
+        await new Promise((r) => setTimeout(r, providerPollIntervalMs))
+        providers = await routeProviders(port)
+      }
+      return providers
+    }
+
+    before(async function () {
+      if (!fs.existsSync(path.join(providerDir, 'node_modules'))) {
+        execSync('npm install', { cwd: providerDir, stdio: 'inherit' })
+      }
+      execSync('npm run build', { cwd: providerDir, stdio: 'inherit' })
+
+      const pluginDest = providerLink()
+      fs.mkdirSync(path.dirname(pluginDest), { recursive: true })
+      fs.rmSync(pluginDest, { recursive: true, force: true })
+      fs.symlinkSync(providerDir, pluginDest, 'dir')
+
+      const port = await freeport()
+      server = await startServerP(port, false, {
+        settings: {
+          interfaces: {
+            plugins: true,
+            wasm: true
+          }
+        }
+      })
+    })
+
+    after(async function () {
+      if (server) {
+        await server.stop()
+      }
+      fs.rmSync(providerLink(), { recursive: true, force: true })
+    })
+
+    it('is unlisted as a provider on stop and listed again on restart', async function () {
+      const port = server!.app.config.settings.port
+
+      await setEnabled(port, true)
+      const whileRunning = await waitForProviders(port, (p) =>
+        p.includes(providerPackageName)
+      )
+      expect(whileRunning).to.include(providerPackageName)
+
+      await setEnabled(port, false)
+      const afterStop = await waitForProviders(
+        port,
+        (p) => !p.includes(providerPackageName)
+      )
+      expect(afterStop).to.not.include(providerPackageName)
+
+      await setEnabled(port, true)
+      const afterRestart = await waitForProviders(port, (p) =>
+        p.includes(providerPackageName)
+      )
+      expect(afterRestart).to.include(providerPackageName)
     })
   })
 })
