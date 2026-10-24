@@ -271,10 +271,9 @@ export function start(app: PutApp): void {
       }
     }
 
-    // Clients read displayUnits resolved, so the update they get carries the
-    // conversion rather than the override that was stored. This delta also
-    // merges into the metadata registry, which resolves from it again, so it
-    // names the override whether or not any client asked for one.
+    // The delta is resolved with its override named, because the metadata
+    // registry and each WebSocket connection resolve it again and need the
+    // override to tell a path-specific unit from this user's preset.
     const metaUpdate: Record<string, unknown> = { ...full_meta, ...metaValue }
     if (metaValue.displayUnits) {
       const resolved = resolveDisplayUnits(

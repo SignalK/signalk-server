@@ -1,5 +1,8 @@
 import { expect } from 'chai'
 import {
+  getReadOnlyToken,
+  getWriteToken,
+  LIMITED_USER_NAME,
   serverTestConfigDirectory,
   startServerFromConfigP,
   startServerP,
@@ -12,6 +15,7 @@ import path from 'path'
 import { rimraf } from 'rimraf'
 import { SERVERSTATEDIRNAME } from '../src/serverstate/store'
 import DeltaEditor from '../src/deltaeditor'
+import { saveUserPreferences } from '../dist/unitpreferences/loader'
 import { DisplayUnitsMetadata } from '../src/unitpreferences/types'
 
 const TEST_PATH_DOTS = 'a.test.path'
@@ -555,11 +559,115 @@ describe('Display unit metadata', function () {
       symbol: 'm/s',
       formula: 'value'
     })
-    // The metadata registry resolves from this delta again, so it names the
-    // override whether or not any client asked for one.
-    expect(metaUpdate.value.displayUnits.override).to.deep.equal({
+    expect(metaUpdate.value.displayUnits).to.not.have.property('override')
+  })
+
+  it('resolves the metadata a PUT sends for each stream', async () => {
+    const plain = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    const editor = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false&displayUnitsOverride=true`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await plain.nextMsg() // hello
+    await editor.nextMsg() // hello
+    const plainMsg = plain.nextMsg()
+    const editorMsg = editor.nextMsg()
+
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+
+    const plainMeta = JSON.parse(await plainMsg).updates[0].meta[0]
+    const editorMeta = JSON.parse(await editorMsg).updates[0].meta[0]
+    expect(plainMeta.value.displayUnits).to.not.have.property('override')
+    expect(editorMeta.value.displayUnits.override).to.deep.equal({
       targetUnit: 'm/s'
     })
+    expect(storedDisplayUnits()).to.deep.equal({
+      category: 'speed',
+      targetUnit: 'm/s'
+    })
+  })
+
+  it('keeps the stored target unit when a meta delta leaves display units out', async () => {
+    await putSpeedMeta({ category: 'speed', targetUnit: 'm/s' })
+    const receiver = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await receiver.nextMsg() // hello
+    const metaMsg = receiver.nextMsg()
+
+    const sender = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=none&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await sender.nextMsg() // hello
+    await sender.send({
+      context: 'vessels.self',
+      updates: [
+        {
+          meta: [
+            { path: SPEED_PATH_DOTS, value: { description: 'from a plugin' } }
+          ]
+        }
+      ]
+    })
+
+    const metaUpdate = JSON.parse(await metaMsg).updates[0].meta[0]
+    expect(metaUpdate.path).to.equal(SPEED_PATH_DOTS)
+    expect(metaUpdate.value.displayUnits).to.include({
+      category: 'speed',
+      targetUnit: 'm/s'
+    })
+  })
+
+  it('resolves display units in metadata that arrives after a value', async () => {
+    // A path no spec entry covers, so nothing is registered for it until the
+    // meta delta below, as for a plugin that describes a path it has just
+    // started to emit.
+    const latePath = 'a.test.lateMeta.angle'
+    const receiver = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await receiver.nextMsg() // hello
+
+    const sender = new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=none&sendCachedValues=false`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+    await sender.nextMsg() // hello
+    await sender.send({
+      context: 'vessels.self',
+      updates: [{ values: [{ path: latePath, value: 1 }] }]
+    })
+    await sender.send({
+      context: 'vessels.self',
+      updates: [{ meta: [{ path: latePath, value: { units: 'rad' } }] }]
+    })
+
+    const until = Date.now() + REQUEST_DEADLINE_MS
+    let streamed: Record<string, unknown> | undefined
+    while (Date.now() < until && !streamed) {
+      for (const msg of receiver.parsedMessages()) {
+        for (const update of msg.updates ?? []) {
+          for (const entry of update.meta ?? []) {
+            if (entry.path === latePath) {
+              streamed = entry.value
+            }
+          }
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, REQUEST_POLL_MS))
+    }
+
+    expect(streamed).to.not.equal(undefined)
+    expect(streamed!.displayUnits).to.deep.equal(
+      await servedDisplayUnits('a/test/lateMeta/angle')
+    )
+    expect(streamed!.displayUnits).to.include({ category: 'angle' })
   })
 
   it('stores a custom unit with its conversion', async () => {
@@ -584,6 +692,67 @@ describe('Display unit metadata', function () {
 // opts out of conversion with useBaseDeltas: false. Metadata PUTs then
 // persist through the defaults-file branch of putMetaHandler, which must
 // apply the same displayUnits normalization as the base-deltas branch.
+describe('Display unit metadata for each user', function () {
+  this.timeout(SERVER_START_TIMEOUT)
+
+  let port: number
+  let server: ServerHandle
+
+  const metaStream = (token: string) =>
+    new WsPromiser(
+      `ws://localhost:${port}/signalk/v1/stream?subscribe=self&sendMeta=all&sendCachedValues=false&token=${token}`,
+      WS_MESSAGE_TIMEOUT_MS
+    )
+
+  before(async () => {
+    port = await freeport()
+    await emptyConfigDirectory()
+    server = await startServerP(port, true, {
+      settings: { interfaces: { plugins: false } }
+    })
+    saveUserPreferences(LIMITED_USER_NAME, { activePreset: 'imperial-us' })
+  })
+
+  after(async () => {
+    await server.stop()
+    await rimraf(path.join(serverTestConfigDirectory(), 'baseDeltas.json'))
+    await rimraf(path.join(serverTestConfigDirectory(), 'applicationData'))
+  })
+
+  it("resolves a PUT echo with each receiver's preset", async () => {
+    const writeToken = await getWriteToken(server)
+    const writer = metaStream(writeToken)
+    const imperialReader = metaStream(await getReadOnlyToken(server))
+    await writer.nextMsg() // hello
+    await imperialReader.nextMsg() // hello
+    const writerMsg = writer.nextMsg()
+    const imperialMsg = imperialReader.nextMsg()
+
+    const result = await fetch(
+      `http://localhost:${port}/signalk/v1/api/vessels/self/${SPEED_PATH_SLASHES}/meta`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          value: { units: 'm/s', displayUnits: { category: 'speed' } }
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${writeToken}`
+        }
+      }
+    )
+    expect(result.status).to.equal(202)
+
+    const writerMeta = JSON.parse(await writerMsg).updates[0].meta[0]
+    const imperialMeta = JSON.parse(await imperialMsg).updates[0].meta[0]
+    expect(writerMeta.value.displayUnits.targetUnit).to.equal(PRESET_SPEED_UNIT)
+    expect(imperialMeta.value.displayUnits.targetUnit).to.equal('mph')
+    expect(imperialMeta.value.displayUnits.formula).to.not.equal(
+      writerMeta.value.displayUnits.formula
+    )
+  })
+})
+
 describe('Display unit metadata with a legacy defaults file', function () {
   this.timeout(SERVER_START_TIMEOUT)
 
