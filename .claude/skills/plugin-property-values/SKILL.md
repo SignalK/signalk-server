@@ -22,22 +22,39 @@ Do not coordinate through properties added to `app`: each plugin gets its own sh
 - `app.emitPropertyValue(name, value)` appends `{ timestamp, setter, name, value }` to the history of `name`. `setter` is the emitting plugin's id. The value can be any type, functions included.
 - `app.onPropertyValues(name, cb)` calls `cb` at once with the whole history of `name`, and again on every later emit. The history always starts with `undefined`, so the first call may be `[undefined]`. For a state one plugin owns (like the example below) the last element is the current value. For a name several plugins contribute to, like `nmea0183sentenceParser`, every element counts: walk the whole history, skipping the `undefined`. It returns an unsubscribe function.
 - There is no plugin start order. A value may already be there when a listener subscribes or arrive later, so the listener has to handle both, and every change after that.
-- The history is never trimmed. The server allows 1000 values in total across all names, and `emitPropertyValue` throws once that is reached. Emit on changes only, never on a timer or per delta.
-- Nothing is withdrawn when a plugin stops. A plugin that announces something in `start()` emits the opposite value in `stop()`.
+- The history is never trimmed. One count covers all names: each name's initial `undefined` and every emitted value. `emitPropertyValue` throws once the count has reached 1000 (it checks before emitting, so the first emit under a new name at 999 still goes through and takes it to 1001). Emit on changes only, never on a timer or per delta.
+- Nothing is withdrawn when a plugin stops. A plugin that announces a state it alone owns in `start()` emits the opposite state in `stop()`, as in the example below. That is best effort: once the cap is reached the emit throws and listeners keep the old state, so a listener must cope with a stale announcement (for collision alarms, a duplicate alarm is the safer failure than none). A later value cannot take back a contribution to a name several plugins share, such as a parser under `nmea0183sentenceParser`; a stopped plugin's contribution stays until the server restarts, unless the name defines its own way to retract one.
 
 ## Example
 
-Pick a property name that names the plugin or the feature, and give the value a type both sides share.
+Pick a property name that names the plugin or the feature, and put the name, the value type and a shape check in a module both plugins use (or copy them into both):
+
+```typescript
+// collision-alerts-property.ts
+export const PROPERTY = 'collisionAlerts'
+
+export interface CollisionAlertsProperty {
+  evaluatesTargets: boolean
+}
+
+// Any plugin can emit under any name, so check the shape instead of casting.
+export function evaluatesTargets(value: unknown): boolean {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as Partial<CollisionAlertsProperty>).evaluatesTargets === true
+  )
+}
+```
 
 The plugin that announces itself:
 
 ```typescript
 import { Plugin, ServerAPI } from '@signalk/server-api'
-
-const PROPERTY = 'collisionAlerts'
-interface CollisionAlertsProperty {
-  evaluatesTargets: boolean
-}
+import {
+  CollisionAlertsProperty,
+  PROPERTY
+} from './collision-alerts-property.js'
 
 export default function (app: ServerAPI): Plugin {
   let announced = false
@@ -49,6 +66,7 @@ export default function (app: ServerAPI): Plugin {
       announced = running
     } catch (error) {
       // The server-wide cap is reached; a throw must not break start() or stop().
+      // Listeners keep the previous state, so they must tolerate a stale one.
       app.error(`Could not announce ${PROPERTY}: ${String(error)}`)
     }
   }
@@ -66,29 +84,29 @@ export default function (app: ServerAPI): Plugin {
 The plugin that listens:
 
 ```typescript
-let collisionAlertsRunning = false
-let unsubscribe: (() => void) | undefined
+import { Plugin, ServerAPI } from '@signalk/server-api'
+import { evaluatesTargets, PROPERTY } from './collision-alerts-property.js'
 
-function start(): void {
-  unsubscribe = app.onPropertyValues(PROPERTY, (history) => {
-    collisionAlertsRunning = evaluatesTargets(
-      history[history.length - 1]?.value
-    )
-  })
-}
+export default function (app: ServerAPI): Plugin {
+  let collisionAlertsRunning = false
+  let unsubscribe: (() => void) | undefined
 
-function stop(): void {
-  unsubscribe?.()
-  unsubscribe = undefined
-}
-
-// Any plugin can emit under any name, so check the shape instead of casting.
-function evaluatesTargets(value: unknown): boolean {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    (value as Partial<CollisionAlertsProperty>).evaluatesTargets === true
-  )
+  return {
+    id: 'radar-alarms',
+    name: 'Radar alarms',
+    schema: () => ({}),
+    start: () => {
+      unsubscribe = app.onPropertyValues(PROPERTY, (history) => {
+        collisionAlertsRunning = evaluatesTargets(
+          history[history.length - 1]?.value
+        )
+      })
+    },
+    stop: () => {
+      unsubscribe?.()
+      unsubscribe = undefined
+    }
+  }
 }
 ```
 
@@ -98,7 +116,7 @@ Flag, in order:
 
 1. Values emitted on a timer, per delta or per request: they fill the server-wide history until emitting throws.
 2. A listener that reads the value once at start, or only `history[0]`, instead of reacting on every call; or one that takes only the last element of a name several plugins contribute to.
-3. A plugin that announces something in `start()` but does not emit the opposite in `stop()`.
+3. A plugin that announces a state it owns in `start()` but does not emit the opposite in `stop()`, or lets that emit throw out of `stop()`.
 4. A missing unsubscribe in `stop()`, which leaves a callback from the stopped instance running after a restart.
 5. Coordination through properties set on `app`, which other plugins cannot see.
 
