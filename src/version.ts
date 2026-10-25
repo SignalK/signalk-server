@@ -2,7 +2,7 @@ import { major, satisfies } from 'semver'
 
 const minimumVersion = '>=24'
 export const recommendedVersion = '24'
-export const testedNodeVersions = [22, 24, 26]
+export const testedNodeVersions = [24, 26]
 
 export function isTestedNodeVersion(version: string) {
   return testedNodeVersions.includes(major(version))
