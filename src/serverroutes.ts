@@ -77,7 +77,10 @@ import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
 import { execSync } from 'child_process'
-import { recommendedVersion as recommendedNodeVersion } from './version'
+import {
+  recommendedVersion as recommendedNodeVersion,
+  testedNodeVersions
+} from './version'
 import { Type } from '@sinclair/typebox'
 import { Value } from '@sinclair/typebox/value'
 
@@ -2186,7 +2189,8 @@ module.exports = function (
     res.json({
       nodeVersion: process.version,
       npmVersion,
-      recommendedNodeVersion
+      recommendedNodeVersion,
+      testedNodeVersions
     })
   })
 
