@@ -117,17 +117,47 @@ jobs:
             npm publish --access public
           fi
 
-      - name: Set tag variable
-        id: vars
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-
       - name: Publish signalk-server
         run: |
-          if [[ "${{ steps.vars.outputs.tag }}" == *beta* ]];
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          if npm view signalk-server@$LOCAL_VERSION version &>/dev/null;
             then
-              npm publish --tag beta
+              echo "signalk-server@$LOCAL_VERSION is already published"
+          elif [[ "$LOCAL_VERSION" == *beta* ]];
+            then
+              npm stage publish --tag beta
             else
-              npm publish
+              npm stage publish
+          fi
+
+  verify_npm_release:
+    name: Verify npm release
+    needs: build_and_publish
+    environment: npm-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Read package version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Verify signalk-server is published
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ! PUBLISHED_VERSION=$(npm view "signalk-server@$VERSION" version 2>/dev/null); then
+            echo "::error::signalk-server@$VERSION is not published. Approve the staged package on npm before approving the npm-release environment."
+            exit 1
+          fi
+          if [[ "$PUBLISHED_VERSION" != "$VERSION" ]]; then
+            echo "::error::Expected signalk-server@$VERSION, got $PUBLISHED_VERSION"
+            exit 1
           fi
 
   release:
@@ -135,7 +165,7 @@ jobs:
       contents: write
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    needs: build_and_publish
+    needs: verify_npm_release
     steps:
       - name: Build Changelog
         id: github_release
@@ -157,13 +187,14 @@ jobs:
 
   prepare:
     name: Prepare matrices
-    needs: [build_and_publish]
+    needs: [verify_npm_release]
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       variant_matrix: ${{ steps.matrix.outputs.variant_matrix }}
       any_enabled: ${{ steps.matrix.outputs.any_enabled }}
+      release_version: ${{ needs.verify_npm_release.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -282,9 +313,6 @@ jobs:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      - name: Set TAG for build-args
-        id: vars
-        run: echo "tag=${GITHUB_REF#refs/*/v}" >> $GITHUB_OUTPUT
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
@@ -294,7 +322,7 @@ jobs:
           push: true
           tags: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPO }}:${{ matrix.arch }}-${{ matrix.os_label }}-${{ matrix.node }}${{ matrix.tag_suffix }}-${{ github.run_id }}
           build-args: |
-            TAG=${{ steps.vars.outputs.tag }}
+            TAG=${{ needs.prepare.outputs.release_version }}
             BASE_IMAGE=${{ matrix.os_label }}-${{ matrix.node }}
             EDITION=${{ matrix.edition }}
 

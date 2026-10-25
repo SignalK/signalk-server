@@ -97,6 +97,8 @@ Supported runtimes: `docker`, `podman`, `kubernetes`, `containerd`, `crio`, `lxc
 
 ## Release images
 
+See [Releasing a new server version](../releasing.md) for the staged npm approval and image publishing process.
+
 Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs.
 
 ## Core image variant
