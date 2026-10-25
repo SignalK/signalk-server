@@ -13,8 +13,7 @@ A slimmer **"core"** variant is published in parallel for deployments that don't
 
 Images are built for Node.js 24 and 26 on `linux/amd64` and `linux/arm64`.
 
-- **Node.js 24** owns the plain tags, e.g. `latest` and `v2.16.0`.
-- **Node.js 26** tags carry a `-26.x` suffix, e.g. `latest-26.x` and `v2.16.0-26.x`.
+Node.js 24 owns the plain tags such as `latest`; Node.js 26 tags carry a suffix. The tag scheme is defined in [`.github/docs/build-matrix.md`](../.github/docs/build-matrix.md).
 
 There are no `linux/arm/v7` images: Node.js 24 dropped 32-bit ARM. On a Raspberry Pi 3, 4 or 5, use a 64-bit OS.
 
