@@ -494,11 +494,47 @@ jobs:
             echo "No package-lock.json found — using npm install instead of npm ci"
             npm_install_with_retry "npm install --ignore-scripts"
           fi
-          # npm rebuild runs the install scripts npm ci would have run,
-          # compiling native addons for this platform and Node, but not the
-          # plugin's own prepare script, which often repeats the build.
-          # (Inside an npm workspace it still runs the workspace's prepare.)
-          npm rebuild
+          # Run the install scripts npm ci would have run, compiling native
+          # addons for this platform and Node, but not the plugin's prepare
+          # script, which often repeats the build. A bare npm rebuild would
+          # still run prepare for an npm workspace, so dependencies with
+          # install scripts (or a binding.gyp) are named instead, and the
+          # plugin's own install scripts are run one by one.
+          NATIVE_DEPS=$(node -e '
+            const fs = require("fs")
+            const path = require("path")
+            const marker = "node_modules/"
+            // In an npm workspace node_modules lives at the workspace root.
+            let root = process.cwd()
+            while (!fs.existsSync(path.join(root, marker, ".package-lock.json")) && path.dirname(root) !== root) {
+              root = path.dirname(root)
+            }
+            let packages = {}
+            try {
+              packages = JSON.parse(fs.readFileSync(path.join(root, marker, ".package-lock.json"), "utf8")).packages
+            } catch {}
+            const names = new Set()
+            for (const [key, entry] of Object.entries(packages)) {
+              if (entry.link || !key.includes(marker)) continue
+              const dir = path.join(root, key)
+              let scripts
+              try {
+                scripts = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8")).scripts || {}
+              } catch {
+                continue
+              }
+              if (scripts.preinstall || scripts.install || scripts.postinstall || fs.existsSync(path.join(dir, "binding.gyp"))) {
+                names.add(key.slice(key.lastIndexOf(marker) + marker.length))
+              }
+            }
+            process.stdout.write([...names].join(" "))
+          ')
+          if [ -n "$NATIVE_DEPS" ]; then
+            npm rebuild $NATIVE_DEPS
+          fi
+          for script in preinstall install postinstall; do
+            npm run "$script" --if-present
+          done
         shell: bash
 
       - name: Validate plugin entry point
