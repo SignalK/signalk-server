@@ -38,6 +38,7 @@ test/shutdown-test-config/.npmrc
 test/shutdown-test-config/package.json
 test/shutdown-test-config/unitpreferences/
 test/shutdown-test-config/*.tmp
+test/shutdown-test-config/priorities.json
 test/plugin-stop-config/.npmrc
 test/plugin-stop-config/package.json
 test/plugin-stop-config/unitpreferences/

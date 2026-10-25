@@ -8,6 +8,9 @@ public
 # dir is under prettier's scan, so a freshly-written cache trips
 # prettier --check during npm test.
 **/sources-cache.json
+# Written beside settings.json whenever the server saves its settings, so a
+# server test run leaves one in its config dir.
+**/priorities.json
 # App store cache from dev server starts
 appstore-cache
 # Application data from dev server starts
