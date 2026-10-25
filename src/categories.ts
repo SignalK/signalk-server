@@ -42,7 +42,7 @@ const isDeprecated = (packageName: string) =>
   DEFAULT_MODULE_CAT_KEYWORDS[packageName] &&
   DEFAULT_MODULE_CAT_KEYWORDS[packageName].includes(CAT_DEPRECATED)
 
-function getCategories(thePackage: NpmPackageData): string[] {
+export function getCategories(thePackage: NpmPackageData): string[] {
   if (isDeprecated(thePackage.name)) {
     return ['Deprecated']
   }
@@ -63,7 +63,7 @@ function getCategories(thePackage: NpmPackageData): string[] {
   return categoryNames
 }
 
-function getAvailableCategories() {
+export function getAvailableCategories() {
   const normal = Object.values(CAT_KEYWORDS_TO_NAMES).slice(0).sort()
 
   return ['All', ...normal]
@@ -76,6 +76,7 @@ const CAT_KEYWORDS_TO_NAMES: {
   'signalk-category-nmea-0183': 'NMEA 0183',
   'signalk-category-instruments': 'Instruments',
   'signalk-category-chart-plotters': 'Chart Plotters',
+  'signalk-category-plotter-extensions': 'Plotter Extensions',
   'signalk-category-hardware': 'Hardware Support',
   'signalk-category-ais': 'AIS',
   'signalk-category-notifications': 'Notifications',

@@ -12,6 +12,7 @@ Plugins and WebApps are available in the AppStore when they have been published 
 Additionally you can have your plugin appear within one or more AppStore categories by also adding the following keyword(s):
 
 - `signalk-category-chart-plotters`
+- `signalk-category-plotter-extensions`
 - `signalk-category-nmea-2000`
 - `signalk-category-nmea-0183`
 - `signalk-category-instruments`
