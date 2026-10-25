@@ -468,6 +468,26 @@ describe('NotificationApi', () => {
       }
     })
 
+    it('raise() carries location into the notification', async function () {
+      const { app, handleMessageCalls } = makeApp()
+      const api = new NotificationApi(app)
+      await api.start()
+      api.raise({
+        state: ALARM_STATE.alarm,
+        message: 'Highwater',
+        location: 'ER Port',
+        path: 'environment.bilge' as Path
+      })
+      const update = handleMessageCalls[0].updates![0]
+      if ('values' in update) {
+        expect((update.values[0].value as Notification).location).to.equal(
+          'ER Port'
+        )
+      } else {
+        throw new Error('Expected update to have values property')
+      }
+    })
+
     it('raise() ignores a context override and emits for self', async function () {
       const { app, handleMessageCalls } = makeApp()
       const api = new NotificationApi(app)
@@ -747,6 +767,66 @@ describe('NotificationApi', () => {
         ;(
           (await (await get(`/notifications/${id}`)).json()) as AlarmProperties
         ).value.state.should.equal('alarm')
+      } finally {
+        stop()
+      }
+    })
+
+    it('REST: raise sets location and update changes or removes it', async function () {
+      const { get, post, put, stop } = await startServer()
+      try {
+        let response = await post(`/notifications`, {
+          state: 'alarm',
+          message: 'Highwater',
+          location: 'ER Port',
+          path: 'environment.bilge'
+        })
+        response.status.should.equal(200)
+        const { id } = (await response.json()) as { id: string }
+        const location = async () =>
+          (
+            (await (
+              await get(`/notifications/${id}`)
+            ).json()) as AlarmProperties
+          ).value.location
+
+        expect(await location()).to.equal('ER Port')
+
+        response = await put(`/notifications/${id}`, { message: 'Still high' })
+        response.status.should.equal(200)
+        expect(await location()).to.equal('ER Port')
+
+        response = await put(`/notifications/${id}`, { location: 'Galley' })
+        response.status.should.equal(200)
+        expect(await location()).to.equal('Galley')
+
+        response = await put(`/notifications/${id}`, { location: '' })
+        response.status.should.equal(200)
+        expect(await location()).to.equal(undefined)
+
+        response = await put(`/notifications/${id}`, { location: 'Galley' })
+        response.status.should.equal(200)
+        expect(await location()).to.equal('Galley')
+        response = await put(`/notifications/${id}`, { location: null })
+        response.status.should.equal(200)
+        expect(await location()).to.equal(undefined)
+
+        response = await put(`/notifications/${id}`, { location: { room: 1 } })
+        response.status.should.equal(400)
+        response = await post(`/notifications`, {
+          state: 'alarm',
+          message: 'Highwater',
+          location: 42,
+          path: 'environment.bilge2'
+        })
+        response.status.should.equal(400)
+        response = await post(`/notifications`, {
+          state: 'alarm',
+          message: 'Highwater',
+          location: null,
+          path: 'environment.bilge3'
+        })
+        response.status.should.equal(400)
       } finally {
         stop()
       }

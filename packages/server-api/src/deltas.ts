@@ -146,6 +146,8 @@ export interface Notification {
   state: ALARM_STATE
   method: ALARM_METHOD[]
   message: string
+  /** Where on the vessel the condition is, e.g. "ER Port"; not a geographic position */
+  location?: string
   status?: AlarmStatus
   position?: Position
   createdAt?: Timestamp
