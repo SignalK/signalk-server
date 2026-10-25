@@ -11,6 +11,12 @@
 #
 # Usage in your plugin repo:
 #   See docs/develop/plugins/examples/plugin-caller-example.yml
+#
+# The plugin is built once, by the build job on build-node-version, and
+# every platform and integration job tests that build output. Builds fail
+# on tooling and Node versions far more often than on the OS, while
+# installing and running (native addons, paths, ESM/CJS interop) is what
+# differs between platforms, so the matrix spends its time there.
 
 name: SignalK Plugin CI
 
@@ -44,6 +50,14 @@ on:
         description: 'JSON array of Node versions for desktop platforms (default: ["22", "24"])'
         type: string
         default: '["22", "24"]'
+      build-node-version:
+        description: 'Node version that runs build-command once; every desktop and integration job tests that build output (default: 24)'
+        type: string
+        default: '24'
+      artifact-name-suffix:
+        description: 'Suffix for the build artifact name, needed only when one caller run uses this workflow more than once'
+        type: string
+        default: ''
 
       # Accepted so callers that still pass it stay valid; it has no effect.
       enable-armv7:
@@ -105,6 +119,74 @@ jobs:
           echo "working-directory: $PLUGIN_DIR"
 
   # ════════════════════════════════════════════════════════════
+  #  Build once: the desktop and integration jobs test this output
+  # ════════════════════════════════════════════════════════════
+  build:
+    name: Build (Node ${{ inputs.build-node-version }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v7
+        with:
+          # .git goes into the artifact for the stray-files check, so the
+          # token must not be left in its config.
+          persist-credentials: false
+
+      # Same lock file lookup as the desktop job.
+      - name: Setup Node.js ${{ inputs.build-node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.build-node-version }}
+          cache: ${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory), 'package-lock.json') != '' && 'npm' || '' }}
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/package-lock.json
+            package-lock.json
+
+      # See the desktop job for why npm 10.9.x is replaced.
+      - name: Replace npm 10.9.x (arborist peer-resolution crash)
+        shell: bash
+        run: |
+          case "$(npm --version)" in
+            10.9.*) npm install -g 'npm@^11' ;;
+          esac
+          npm --version
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+        shell: bash
+        run: eval "$BUILD_CMD"
+
+      # The whole checkout, so a monorepo plugin keeps its workspace root.
+      # node_modules is left out: native addons are built per platform and
+      # Node version, so every job installs its own.
+      - name: Package build output
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: tar -czf "$RUNNER_TEMP/built-plugin.tar.gz" --exclude=node_modules .
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v7
+        with:
+          name: built-plugin${{ inputs.artifact-name-suffix }}
+          path: ${{ runner.temp }}/built-plugin.tar.gz
+          retention-days: 1
+
+  # ════════════════════════════════════════════════════════════
   #  Desktop platforms matrix: Linux x64, Linux arm64, macOS, Windows
   # ════════════════════════════════════════════════════════════
   desktop:
@@ -115,7 +197,7 @@ jobs:
           matrix.os == 'windows-latest' && 'Windows' ||
           matrix.os }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
-    needs: validate-inputs
+    needs: build
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -126,8 +208,20 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - name: Checkout plugin
-        uses: actions/checkout@v7
+      - name: Download build output
+        uses: actions/download-artifact@v8
+        with:
+          name: built-plugin${{ inputs.artifact-name-suffix }}
+          path: _built-plugin
+
+      # A relative archive path: GNU tar in Git Bash reads a Windows
+      # "D:\..." path as host:path and tries a remote connection.
+      - name: Extract build output
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          tar -xzf _built-plugin/built-plugin.tar.gz
+          rm -rf _built-plugin
 
       # setup-node looks for a lock file only at the repository root unless
       # cache-dependency-path names one, so point it at the plugin's own lock
@@ -395,18 +489,17 @@ jobs:
             return 1
           }
           if [ -f package-lock.json ]; then
-            npm_install_with_retry "npm ci"
+            npm_install_with_retry "npm ci --ignore-scripts"
           else
             echo "No package-lock.json found — using npm install instead of npm ci"
-            npm_install_with_retry "npm install"
+            npm_install_with_retry "npm install --ignore-scripts"
           fi
+          # npm rebuild runs the install scripts npm ci would have run,
+          # compiling native addons for this platform and Node, but not the
+          # plugin's own prepare script, which often repeats the build.
+          # (Inside an npm workspace it still runs the workspace's prepare.)
+          npm rebuild
         shell: bash
-
-      - name: Build
-        env:
-          BUILD_CMD: ${{ inputs.build-command }}
-        shell: bash
-        run: eval "$BUILD_CMD"
 
       - name: Validate plugin entry point
         id: validate-entry
@@ -1673,7 +1766,7 @@ jobs:
   signalk-integration:
     name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
-    needs: validate-inputs
+    needs: build
     timeout-minutes: 15
     if: ${{ inputs.enable-signalk-integration }}
     strategy:
@@ -1685,8 +1778,20 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - name: Checkout plugin
-        uses: actions/checkout@v7
+      - name: Download build output
+        uses: actions/download-artifact@v8
+        with:
+          name: built-plugin${{ inputs.artifact-name-suffix }}
+          path: _built-plugin
+
+      # A relative archive path: GNU tar in Git Bash reads a Windows
+      # "D:\..." path as host:path and tries a remote connection.
+      - name: Extract build output
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          tar -xzf _built-plugin/built-plugin.tar.gz
+          rm -rf _built-plugin
 
       # Same lock file lookup as the desktop job.
       - name: Setup Node.js ${{ matrix.node }}
@@ -1751,17 +1856,16 @@ jobs:
             echo "::endgroup::"
           done <<< "$REQUIRES"
 
-      - name: Build plugin
-        env:
-          BUILD_CMD: ${{ inputs.build-command }}
+      # npm pack runs no plugin code, and it needs node_modules only for
+      # bundled dependencies, so no install scripts are run.
+      - name: Install plugin dependencies
         shell: bash
         run: |
           if [ -f package-lock.json ]; then
-            npm ci
+            npm ci --ignore-scripts
           else
-            npm install
+            npm install --ignore-scripts
           fi
-          eval "$BUILD_CMD"
 
       - name: Install plugin into SignalK
         run: |
@@ -1907,7 +2011,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
-    needs: [validate-inputs, desktop, signalk-integration]
+    needs: [validate-inputs, build, desktop, signalk-integration]
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -1923,6 +2027,8 @@ jobs:
 
       - name: Write CI summary report
         env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          BUILD_NODE: ${{ inputs.build-node-version }}
           DESKTOP_RESULT: ${{ needs.desktop.result }}
           INTEGRATION_RESULT: ${{ needs.signalk-integration.result }}
           VALIDATE_RESULT: ${{ needs.validate-inputs.result }}
@@ -1942,7 +2048,7 @@ jobs:
           PLUGIN_VER=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
 
           OVERALL="pass"
-          if [[ "$VALIDATE_RESULT" != "success" ]] || [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
+          if [[ "$VALIDATE_RESULT" != "success" ]] || [[ "$BUILD_RESULT" != "success" ]] || [[ "$DESKTOP_RESULT" == "failure" ]] || [[ "$INTEGRATION_RESULT" == "failure" ]]; then
             OVERALL="FAIL"
           fi
 
@@ -1956,6 +2062,7 @@ jobs:
             echo ""
             echo "| Job | Result | Notes |"
             echo "|-----|--------|-------|"
+            echo "| Build | $(icon "$BUILD_RESULT") | Node $BUILD_NODE |"
             echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24 |"
             if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
               echo "| SignalK integration | $(icon "$INTEGRATION_RESULT") | Server install + plugin load |"
@@ -1990,8 +2097,14 @@ jobs:
           fi
 
           echo ""
+          echo "Build:                $BUILD_RESULT"
           echo "Desktop:              $DESKTOP_RESULT"
           echo "SignalK integration:  $INTEGRATION_RESULT"
+
+          if [[ "$BUILD_RESULT" != "success" ]]; then
+            echo "::error::Build failed"
+            exit 1
+          fi
 
           # Desktop is mandatory
           if [[ "$DESKTOP_RESULT" == "failure" ]]; then
