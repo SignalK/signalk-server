@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "configuration": {
+    "cellsDir": "/home/node/.signalk/enc-cells",
+    "vessel": {
+      "draft": 1.9,
+      "margin": 0.3
+    },
+    "waterLevel": {
+      "source": "signalk-tide"
+    },
+    "warningStyle": "balanced",
+    "configVersion": 2
+  }
+}

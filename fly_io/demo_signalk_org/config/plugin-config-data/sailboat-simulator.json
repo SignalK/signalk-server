@@ -1,0 +1,26 @@
+{
+  "enabled": true,
+  "configuration": {
+    "initialState": {
+      "latitude": 53.18923,
+      "longitude": 5.32517,
+      "headingTrueDeg": 297
+    },
+    "wind": {
+      "trueWind": true,
+      "apparentWind": true,
+      "providerId": "open-meteo",
+      "pollIntervalSeconds": 60
+    },
+    "publishing": {
+      "navigation": true
+    },
+    "grounding": {
+      "enabled": true,
+      "minimumDistanceToShore": 20
+    },
+    "persistence": {
+      "enabled": false
+    }
+  }
+}

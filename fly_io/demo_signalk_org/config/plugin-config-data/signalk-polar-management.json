@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "configuration": {
+    "activePolar": "demo-cruiser-36",
+    "performanceFactor": 1
+  }
+}

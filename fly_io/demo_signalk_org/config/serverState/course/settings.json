@@ -1,0 +1,28 @@
+{
+  "startTime": null,
+  "targetArrivalTime": null,
+  "arrivalCircle": 0,
+  "activeRoute": {
+    "href": "/resources/routes/1c1f7a3e-6b9d-4c3e-9a1e-0d3e0de30001",
+    "name": "Harlingen to Vlieland",
+    "reverse": false,
+    "pointIndex": 4,
+    "pointTotal": 13
+  },
+  "nextPoint": {
+    "type": "RoutePoint",
+    "position": {
+      "latitude": 53.20244,
+      "longitude": 5.31286
+    },
+    "name": ""
+  },
+  "previousPoint": {
+    "type": "RoutePoint",
+    "position": {
+      "latitude": 53.19058,
+      "longitude": 5.33147
+    },
+    "name": ""
+  }
+}

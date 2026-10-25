@@ -1,0 +1,50 @@
+{
+  "enabled": true,
+  "configuration": {
+    "showNightModeButton": true,
+    "showFullscreenButton": false,
+    "showExitButton": false,
+    "apps": [
+      {
+        "enabled": true,
+        "autostart": true,
+        "url": "/@signalk/freeboard-sk/?zoom=13&movemap=1",
+        "label": "Freeboard-SK",
+        "icon": "/@signalk/freeboard-sk/assets/icons/icon-72x72.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/@halos-org/skip/",
+        "label": "Skip",
+        "icon": "/@halos-org/skip/assets/icon-72x72.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/hoekens-anchor-alarm/",
+        "label": "Anchor Alarm",
+        "icon": "/hoekens-anchor-alarm/anchoralarm.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/signalk-tides/",
+        "label": "Tides",
+        "icon": "/signalk-tides/icon.svg",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/admin/",
+        "label": "Settings",
+        "icon": "/@signalk/app-dock/icon-settings.svg",
+        "color": "#78788c"
+      }
+    ]
+  }
+}
