@@ -43,9 +43,14 @@ export default function (app: ServerAPI): Plugin {
   let announced = false
   function announce(running: boolean): void {
     if (running === announced) return
-    announced = running
     const value: CollisionAlertsProperty = { evaluatesTargets: running }
-    app.emitPropertyValue(PROPERTY, value)
+    try {
+      app.emitPropertyValue(PROPERTY, value)
+      announced = running
+    } catch (error) {
+      // The server-wide cap is reached; a throw must not break start() or stop().
+      app.error(`Could not announce ${PROPERTY}: ${String(error)}`)
+    }
   }
 
   return {
