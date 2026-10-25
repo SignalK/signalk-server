@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "configuration": {
+    "share": {
+      "targets": false,
+      "ownShip": false,
+      "position": false
+    },
+    "receive": {
+      "mode": "auto",
+      "radiusNm": 25,
+      "nmea0183out": false
+    }
+  }
+}

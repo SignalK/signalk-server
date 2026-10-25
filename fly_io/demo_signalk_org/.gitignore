@@ -1,0 +1,4 @@
+assets/
+.build/
+# the demo ships its plugin settings, which the repository root ignores
+!config/plugin-config-data/

@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "configuration": {
+    "deviceId": "virtual",
+    "defaultMode": "route",
+    "autoAdvance": true,
+    "autoAdvanceTrigger": "either",
+    "headingPath": "navigation.headingTrue.value"
+  }
+}
