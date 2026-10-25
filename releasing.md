@@ -23,6 +23,8 @@ Published npm packages include:
 - `@signalk/streams`
 - `@signalk/path-metadata`
 - `@signalk/resources-provider`
+- `@signalk/typedoc-signalk-theme`
+- `@signalk/assemblyscript-plugin-sdk`
 - `signalk-server`
 
 ## 2. Create the server version
