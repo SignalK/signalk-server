@@ -389,6 +389,7 @@ jobs:
       - name: Wait for GHCR indexing
         run: sleep 60
       - name: Remove intermediate Docker images from GHCR
+        id: cleanup
         continue-on-error: true
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
@@ -397,3 +398,6 @@ jobs:
           delete-tags: |
             *-${{ github.run_id }}
           token: ${{ github.token }}
+      - name: Report GHCR cleanup failure
+        if: steps.cleanup.outcome == 'failure'
+        run: echo "::warning title=GHCR cleanup failed::Intermediate images were not deleted. The signalk-server package must grant this repository the Admin role under Manage Actions access."
