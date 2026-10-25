@@ -1,6 +1,6 @@
 import { major, satisfies } from 'semver'
 
-const minimumVersion = '>=20'
+const minimumVersion = '>=24'
 export const recommendedVersion = '24'
 export const testedNodeVersions = [22, 24, 26]
 

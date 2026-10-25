@@ -8,16 +8,16 @@ This document lists breaking changes and deprecations in Signal K Server.
 
 ---
 
-## Node.js: Default Version Updated to 24
+## Node.js: Node.js 24 or Later Required
 
-Signal K Server now defaults to **Node.js 24** and requires **Node.js 22 or later**.
+Signal K Server requires **Node.js 24 or later**.
 
 ### What Changed
 
 | Setting          | Before | After |
 | ---------------- | ------ | ----- |
-| Recommended      | 22     | 24    |
-| Minimum required | 20     | 22    |
+| Recommended      | 24     | 24    |
+| Minimum required | 22     | 24    |
 
 ### Dropped Platform Support
 
@@ -28,7 +28,7 @@ Node.js 24 drops support for the following platforms:
 
 ### Action Required
 
-- Update your Node.js installation to version 22 or later (version 24 recommended)
+- Update your Node.js installation to version 24 or later
 - If running on armv7 or Windows x86, you must migrate to a supported platform or remain on the previous Signal K Server version
 
 ---

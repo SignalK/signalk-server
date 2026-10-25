@@ -45,7 +45,7 @@ See [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) f
 | macOS    | arm64        | 22, 24        | GitHub-hosted runner                    |
 | Windows  | x64          | 22, 24        | GitHub-hosted runner                    |
 
-There is no 32-bit ARM (armv7) platform: Signal K Server requires Node.js 22 or later and no longer supports armv7, as described in [Breaking Changes](../../breaking_changes.md).
+There is no 32-bit ARM (armv7) platform: Signal K Server requires Node.js 24 or later and no longer supports armv7, as described in [Breaking Changes](../../breaking_changes.md).
 
 ### Validation Checks
 

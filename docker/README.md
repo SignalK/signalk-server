@@ -9,42 +9,14 @@ Release images:
 
 A slimmer **"core"** variant is published in parallel for deployments that don't need the bundled webapps and plugins (data forwarders, embedded integrations, custom-UI deployments, security-sensitive setups). See [Core image variant](#core-image-variant) below.
 
-## Docker Images based on Ubuntu 24.04 LTS
+## Node.js versions
 
-### Node.js 22.x
+Images are built for Node.js 24 and 26 on `linux/amd64` and `linux/arm64`.
 
-**Image tag:** `v2.16.0` (example version)
+- **Node.js 24** owns the plain tags, e.g. `latest` and `v2.16.0`.
+- **Node.js 26** tags carry a `-26.x` suffix, e.g. `latest-26.x` and `v2.16.0-26.x`.
 
-**Supported architectures:**
-
-- `linux/amd64`
-- `linux/arm64`
-- `linux/arm/v7`
-
-### Node.js 24.x
-
-**Image tag:** `v2.16.0-24.x` (example version with suffix -24.x)
-
-**Supported architectures:**
-
-- `linux/amd64`
-- `linux/arm64`
-
-**Not supported:**
-
-- `linux/arm/v7`
-
-### Important Note
-
-Node.js version 24.x dropped support for the `linux/arm/v7` (ARMv7) architecture. This affects older hardware, particularly early Raspberry Pi models:
-
-**Affected devices:**
-
-- Raspberry Pi Model A and B (original)
-- Raspberry Pi Zero (original)
-- Raspberry Pi 2 Model B v1.1 (with BCM2836 processor)
-
-**Recommendation:** If you're using any of the affected devices, use the Node.js 22.x images instead of 24.x to maintain compatibility.
+There are no `linux/arm/v7` images: Node.js 24 dropped 32-bit ARM. On a Raspberry Pi 3, 4 or 5, use a 64-bit OS.
 
 # Quickstart
 
