@@ -103,7 +103,7 @@ jobs:
 | `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary |
 | `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms                                                                                      |
 | `build-node-version`         | `24`                         | Node version that runs the build once, on Linux                                                                          |
-| `artifact-name-suffix`       | _(empty)_                    | Suffix for the build artifact name; set it only when one workflow run calls plugin-ci more than once                     |
+| `artifact-name-suffix`       | _(empty)_                    | Suffix for the artifact names; set it only when one workflow run calls plugin-ci more than once                          |
 | `enable-armv7`               | `false`                      | Deprecated and ignored — there is no armv7 platform                                                                      |
 | `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                               |
 | `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                            |

@@ -55,7 +55,7 @@ on:
         type: string
         default: '24'
       artifact-name-suffix:
-        description: 'Suffix for the build artifact name, needed only when one caller run uses this workflow more than once'
+        description: 'Suffix for the artifact names (build output and test results), needed only when one caller run uses this workflow more than once'
         type: string
         default: ''
 
@@ -1752,7 +1752,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results-${{ matrix.os }}-node${{ matrix.node }}
+          name: test-results-${{ matrix.os }}-node${{ matrix.node }}${{ inputs.artifact-name-suffix }}
           path: |
             ${{ inputs.working-directory }}/test-results/
             ${{ inputs.working-directory }}/coverage/
