@@ -1,0 +1,25 @@
+{
+  "name": "signalk-demo-config",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@halos-org/skip": "1.6.0",
+    "@signalk/open-meteo-provider": "1.4.1",
+    "@signalk/tracks-plugin": "3.6.3",
+    "hoekens-anchor-alarm": "2.13.3",
+    "signalk-aiscast": "0.6.3",
+    "signalk-autopilot-emulator-v2": "0.1.11",
+    "signalk-buddylist-plugin": "1.3.1",
+    "signalk-charts-provider-simple": "2.13.0",
+    "signalk-collision-alerts": "0.5.1",
+    "signalk-demo-director": "file:../demo-director",
+    "signalk-distance-to-shore": "0.2.1",
+    "signalk-flags": "1.1.3",
+    "signalk-polar-management": "1.2.0",
+    "signalk-sailboat-simulator": "0.4.0",
+    "signalk-target-fusion": "0.3.0",
+    "signalk-tidal-currents": "0.3.3",
+    "signalk-tides": "2.2.0",
+    "signalk-underkeel": "0.1.0"
+  }
+}
