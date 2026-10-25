@@ -17,7 +17,7 @@ _**Important:** If you are updating a Signal K server installation, especially i
 
 ## Prerequisites:
 
-**64-bit** Raspberry Pi OS is installed on the device (Pi 3, 4 or 5 required). Node.js 24 does not support 32-bit ARM (armv7).
+**64-bit** Raspberry Pi OS is installed on the device (Pi 3, 4, 5 or Zero 2 W required). Node.js 24 does not support 32-bit ARM (armv7).
 
 For instructions on how to install the operating system see [Raspberry Pi Getting Started](https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi).
 
