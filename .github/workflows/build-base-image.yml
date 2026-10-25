@@ -27,11 +27,15 @@ env:
   GHCR_REPO: signalk/signalk-server-base
   DOCKER_HUB_REPO: signalk/signalk-server-base
 
+permissions: {}
+
 jobs:
   prepare:
     name: Prepare matrices
     if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       variant_matrix: ${{ steps.matrix.outputs.variant_matrix }}

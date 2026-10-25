@@ -37,10 +37,14 @@ env:
   GHCR_BASE_REPO: signalk/signalk-server-base
   DOCKER_HUB_REPO: signalk/signalk-server
 
+permissions: {}
+
 jobs:
   signalk-server_npm_files:
     if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -71,6 +75,8 @@ jobs:
     if: github.repository == 'SignalK/signalk-server'
     needs: [signalk-server_npm_files]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       variant_matrix: ${{ steps.matrix.outputs.variant_matrix }}
