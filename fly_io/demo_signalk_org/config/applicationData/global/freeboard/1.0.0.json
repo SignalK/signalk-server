@@ -1,0 +1,30 @@
+{
+  "units": {
+    "speed": "kn"
+  },
+  "map": {
+    "zoomLevel": 13,
+    "center": [
+      5.33147,
+      53.19058
+    ]
+  },
+  "ui": {
+    "mapMove": true
+  },
+  "selections": {
+    "charts": [
+      "openstreetmap",
+      "Waddenzee"
+    ],
+    "chartOrder": [
+      "openstreetmap",
+      "eox-cloudless",
+      "emodnet-european-depths",
+      "openwaters-seamap",
+      "openseamap",
+      "wadden-coastline",
+      "Waddenzee"
+    ]
+  }
+}
