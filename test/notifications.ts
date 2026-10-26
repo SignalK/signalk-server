@@ -698,6 +698,60 @@ describe('NotificationApi', () => {
       }
     })
 
+    it('REST: an update without a new state keeps silence and acknowledgement', async function () {
+      const { get, post, put, stop } = await startServer()
+      try {
+        const status = async (id: string) =>
+          (
+            (await (
+              await get(`/notifications/${id}`)
+            ).json()) as AlarmProperties
+          ).value.status!
+
+        let response = await post(`/notifications`, {
+          state: 'emergency',
+          message: 'Fire',
+          path: 'environment.fire'
+        })
+        const { id } = (await response.json()) as { id: string }
+        response = await post(`/notifications/${id}/acknowledge`, {})
+        response.status.should.equal(200)
+
+        response = await put(`/notifications/${id}`, {
+          message: 'Fire, galley'
+        })
+        response.status.should.equal(200)
+        let s = await status(id)
+        s.acknowledged.should.equal(true)
+        s.canSilence.should.equal(false)
+
+        response = await put(`/notifications/${id}`, { state: 'emergency' })
+        response.status.should.equal(200)
+        ;(await status(id)).acknowledged.should.equal(true)
+
+        response = await put(`/notifications/${id}`, { state: 'alarm' })
+        response.status.should.equal(200)
+        s = await status(id)
+        s.acknowledged.should.equal(false)
+        s.canSilence.should.equal(true)
+
+        response = await post(`/notifications/${id}/silence`, {})
+        response.status.should.equal(200)
+        response = await put(`/notifications/${id}`, {
+          message: 'Fire, galley, crew alerted',
+          state: null
+        })
+        response.status.should.equal(200)
+        s = await status(id)
+        s.silenced.should.equal(true)
+        ;(
+          (await (await get(`/notifications/${id}`)).json()) as AlarmProperties
+        ).value.state.should.equal('alarm')
+      } finally {
+        stop()
+      }
+    })
+
     it('REST: full lifecycle round trip works', async function () {
       const { get, post, put, host, stop } = await startServer()
       try {
