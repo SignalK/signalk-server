@@ -2,12 +2,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import N2KFilters from './N2KFilters'
 
-const APPLY = 'Filter CAN messages at Linux kernel level'
+const APPLY = 'Drop filtered PGNs before decoding'
 
 function renderFilters(
-  canFilterInKernel: boolean,
+  canDropBeforeDecoding: boolean,
   options: Record<string, unknown> = {},
-  onChange = vi.fn()
+  onChange = vi.fn(),
+  dropsInKernel = false
 ) {
   render(
     <N2KFilters
@@ -19,7 +20,8 @@ function renderFilters(
         }
       }}
       onChange={onChange}
-      canFilterInKernel={canFilterInKernel}
+      canDropBeforeDecoding={canDropBeforeDecoding}
+      dropsInKernel={dropsInKernel}
     />
   )
   return onChange
@@ -31,7 +33,7 @@ function changedTarget(name: string, value: unknown) {
   })
 }
 
-describe('N2KFilters drop in the kernel', () => {
+describe('N2KFilters drop before decoding', () => {
   it('is offered, off, on a connection that can do it', () => {
     renderFilters(true)
     expect(screen.getByRole('checkbox', { name: APPLY })).toHaveProperty(
@@ -46,26 +48,26 @@ describe('N2KFilters drop in the kernel', () => {
   })
 
   it('shows the saved setting', () => {
-    renderFilters(true, { filtersInKernel: true })
+    renderFilters(true, { filtersBeforeDecoding: true })
     expect(screen.getByRole('checkbox', { name: APPLY })).toHaveProperty(
       'checked',
       true
     )
   })
 
-  it('reports filtersInKernel when switched on', () => {
+  it('reports filtersBeforeDecoding when switched on', () => {
     const onChange = renderFilters(true)
     fireEvent.click(screen.getByRole('checkbox', { name: APPLY }))
     expect(onChange).toHaveBeenLastCalledWith(
-      changedTarget('options.filtersInKernel', true)
+      changedTarget('options.filtersBeforeDecoding', true)
     )
   })
 
-  it('reports filtersInKernel when switched off', () => {
-    const onChange = renderFilters(true, { filtersInKernel: true })
+  it('reports filtersBeforeDecoding when switched off', () => {
+    const onChange = renderFilters(true, { filtersBeforeDecoding: true })
     fireEvent.click(screen.getByRole('checkbox', { name: APPLY }))
     expect(onChange).toHaveBeenLastCalledWith(
-      changedTarget('options.filtersInKernel', false)
+      changedTarget('options.filtersBeforeDecoding', false)
     )
   })
 
@@ -87,10 +89,25 @@ describe('N2KFilters drop in the kernel', () => {
 
   it('explains the switch to screen readers', () => {
     renderFilters(true)
-    const input = screen.getByRole('checkbox', { name: APPLY })
-    const help = document.getElementById(
-      input.getAttribute('aria-describedby') ?? ''
+    expect(help().textContent).toMatch(/before Signal K decodes the message\./)
+    expect(help().textContent).not.toMatch(/kernel/)
+  })
+
+  it('says the kernel drops them on a SocketCAN connection', () => {
+    renderFilters(true, {}, vi.fn(), true)
+    expect(help().textContent).toMatch(
+      /at Linux kernel level, so Signal K never reads those messages/
     )
-    expect(help?.textContent).toMatch(/Signal K never reads those messages/)
   })
 })
+
+function help() {
+  const input = screen.getByRole('checkbox', { name: APPLY })
+  const el = document.getElementById(
+    input.getAttribute('aria-describedby') ?? ''
+  )
+  if (!el) {
+    throw new Error('no help text')
+  }
+  return el
+}

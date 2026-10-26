@@ -55,7 +55,7 @@ interface ProviderOptions {
   gpio?: string
   gpioInvert?: boolean
   filtersEnabled?: boolean
-  filtersInKernel?: boolean
+  filtersBeforeDecoding?: boolean
   filters?: Array<{ source: string; pgn: string }>
   // PGN 60928 Address Claim instance fields. Forwarded to
   // canboatjs N2kDevice; canboatjs splits deviceInstance into the
@@ -268,7 +268,11 @@ export default function BasicProvider({
         <N2KFilters
           value={value}
           onChange={onPropChange}
-          canFilterInKernel={value.options.type === 'canbus-canboatjs'}
+          canDropBeforeDecoding={
+            typeof value.options.type === 'string' &&
+            value.options.type.endsWith('-canboatjs')
+          }
+          dropsInKernel={value.options.type === 'canbus-canboatjs'}
         />
       )}
     </div>
