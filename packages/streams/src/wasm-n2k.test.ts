@@ -10,6 +10,7 @@ const HEADING_LINE =
   '2024-01-01T00:00:00.000Z,2,127250,204,255,8,00,10,6e,01,00,ff,7f,fd'
 const AIRMAR_MASTER_RESET =
   '2026-10-19T00:00:00.000Z,3,126720,0,35,6,87,98,01,ff,ff,ff'
+const YDWG_POSITION_LINE = '00:22:24.739 R 09F80104 4A 2F 6A F5 8A 0F 9C 69'
 
 const canFrame = (pgn: number, src: number, bytes: number[]) => ({
   pgn: { prio: 2, pgn, src, dst: 255 },
@@ -39,6 +40,36 @@ describe('WasmN2k', () => {
     expect(results[0]!.pgn).to.equal(127250)
     expect(results[0]!.fields.heading).to.be.a('number')
     expect(results[0]!.providerId).to.equal('test-provider')
+  })
+
+  it('stamps a live gateway line with its receive time', async () => {
+    const app = createMockApp()
+    const stream = new WasmN2k({
+      app,
+      receiveTime: true,
+      createDebug: createDebugStub()
+    })
+    const outputPromise = collectStreamOutput(stream)
+
+    const before = Date.now()
+    stream.write(YDWG_POSITION_LINE)
+    stream.end()
+
+    const results = (await outputPromise) as Array<{ timestamp: string }>
+    expect(results).to.have.length(1)
+    expect(Date.parse(results[0]!.timestamp)).to.be.within(before, Date.now())
+  })
+
+  it('keeps the timestamp a file log line carries', async () => {
+    const app = createMockApp()
+    const stream = new WasmN2k({ app, createDebug: createDebugStub() })
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(HEADING_LINE)
+    stream.end()
+
+    const results = (await outputPromise) as Array<{ timestamp: string }>
+    expect(results[0]!.timestamp).to.equal('2024-01-01T00:00:00.000Z')
   })
 
   it('decodes a CAN frame object like the same frame as text', async () => {

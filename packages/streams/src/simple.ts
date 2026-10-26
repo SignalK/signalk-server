@@ -218,7 +218,8 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
       new Ctor({
         ...options.subOptions,
         ...(txBySubtype[options.subOptions.type ?? ''] ?? {}),
-        ...(options.subOptions.type === 'j1939-wasm' ? { j1939: true } : {})
+        ...(options.subOptions.type === 'j1939-wasm' ? { j1939: true } : {}),
+        receiveTime: options.type !== 'FileStream'
       })
     ]
     if (options.type === 'FileStream') {
