@@ -70,6 +70,16 @@ describe('signalk-generate-token', () => {
     expect(result.stderr).to.contain('security-secret.key')
   })
 
+  it('exits non-zero without printing a token when the key file cannot be read', () => {
+    fs.writeFileSync(securityPath, JSON.stringify({ users: [] }))
+    fs.mkdirSync(path.join(dir, 'security-secret.key'))
+
+    const result = run(securityPath)
+    expect(result.status).to.equal(1)
+    expect(result.stdout).to.equal('')
+    expect(result.stderr).to.contain('Could not read')
+  })
+
   it('exits non-zero when security.json cannot be parsed', () => {
     fs.writeFileSync(securityPath, '{ not json')
     fs.writeFileSync(path.join(dir, 'security-secret.key'), 'filekey')
