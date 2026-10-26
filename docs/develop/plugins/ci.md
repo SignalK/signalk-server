@@ -47,6 +47,10 @@ See [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) f
 
 There is no 32-bit ARM (armv7) platform: Signal K Server requires Node.js 22 or later and no longer supports armv7, as described in [Breaking Changes](../../breaking_changes.md).
 
+### Build
+
+The plugin is built once, on Linux with Node `build-node-version` (24 by default), and every desktop and integration job tests that build output. Desktop jobs install dependencies for their platform and Node version, then rebuild them so install scripts run and native addons are compiled, without rerunning the plugin's `prepare` script. Integration jobs do not rebuild the dependencies: they pack the build output and install it into the test server. The build command itself therefore runs only on that one platform and Node version. Set `build-node-version` if your build needs another Node.
+
 ### Validation Checks
 
 The desktop jobs (Linux, Linux arm64, macOS, Windows) run these checks, even if your plugin has no test suite. The list below is a summary for readers — the authoritative source for what the CI actually validates is the workflow itself: [.github/workflows/plugin-ci.yml](https://github.com/SignalK/signalk-server/blob/master/.github/workflows/plugin-ci.yml).
@@ -98,6 +102,8 @@ jobs:
 | `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty                           |
 | `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary |
 | `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms                                                                                      |
+| `build-node-version`         | `24`                         | Node version that runs the build once, on Linux                                                                          |
+| `artifact-name-suffix`       | _(empty)_                    | Suffix for the artifact names; set it only when one workflow run calls plugin-ci more than once                          |
 | `enable-armv7`               | `false`                      | Deprecated and ignored — there is no armv7 platform                                                                      |
 | `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                               |
 | `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                            |
