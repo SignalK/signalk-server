@@ -89,4 +89,31 @@ describe('useLabelSuggestions', () => {
     await vi.advanceTimersByTimeAsync(90_000)
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
+
+  it('gives up on a stalled request so polling resumes', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const fetchMock = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('Aborted', 'AbortError'))
+          )
+        })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    renderHook(() => useLabelSuggestions(true))
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('aborts the open request when unmounted', async () => {
+    const fetchMock = vi.fn(
+      (_url: string, _init?: RequestInit) => new Promise(() => {})
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const { unmount } = renderHook(() => useLabelSuggestions(true))
+    unmount()
+    expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true)
+  })
 })
