@@ -8,7 +8,7 @@ Signal K Server can start a program of your own and read Signal K data from its 
 
 The Admin UI has no option for this kind of connection, so it is added to `settings.json` by hand.
 
-## What the program has to print
+## What the program has to output
 
 The program writes one Signal K [delta](https://signalk.org/specification/1.7.0/doc/data_model.html#delta-format) per line to standard output, as JSON on a single line:
 
