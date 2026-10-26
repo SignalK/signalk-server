@@ -871,6 +871,16 @@ describe('NotificationApi', () => {
         response.status.should.equal(200)
         s = await status()
         s.canSilence.should.equal(false)
+
+        response = await put(`/notifications/${id}`, { state: 'sinking' })
+        response.status.should.equal(400)
+        expect(
+          (
+            (await (await get(`/notifications/${id}`)).json()) as {
+              value: { state: string }
+            }
+          ).value.state
+        ).to.equal('emergency')
       } finally {
         stop()
       }

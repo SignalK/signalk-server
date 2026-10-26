@@ -46,6 +46,18 @@ export const checkLocation = (location: unknown, allowNull = false) => {
   }
 }
 
+const ALARM_STATES = new Set<unknown>(Object.values(ALARM_STATE))
+
+/**
+ * `state` arrives in REST bodies, so its value is not guaranteed. A missing
+ * or null state leaves the alarm's state as it is.
+ */
+const checkState = (state: unknown) => {
+  if (state !== undefined && state !== null && !ALARM_STATES.has(state)) {
+    throw new Error('Notification `state` is not a valid alarm state!')
+  }
+}
+
 /**
  * Class to manage the lifecycle of alarms
  */
@@ -167,6 +179,7 @@ export class NotificationManager {
       throw new Error('Notification options not supplied!')
     }
     const { state, message, location, data } = options
+    checkState(state)
     checkLocation(location, true)
 
     // Silence and acknowledgement answer the current state, so only a new
