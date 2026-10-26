@@ -41,7 +41,7 @@ const ensureKey = (filter: N2KFilter): N2KFilter => {
 
 interface ProviderOptions {
   filtersEnabled?: boolean
-  filtersInKernel?: boolean
+  filtersBeforeDecoding?: boolean
   filters?: N2KFilter[]
   useCanName?: boolean
   [key: string]: unknown
@@ -55,10 +55,12 @@ interface ProviderValue {
 interface N2KFiltersProps {
   value: ProviderValue
   /**
-   * The connection can drop PGN-only rows in the kernel (SocketCAN,
-   * canbus-canboatjs).
+   * The connection decodes with canboatjs, which can drop the PGN-only rows
+   * before decoding.
    */
-  canFilterInKernel?: boolean
+  canDropBeforeDecoding?: boolean
+  /** canboatjs drops them in the kernel (SocketCAN, canbus-canboatjs). */
+  dropsInKernel?: boolean
   onChange: (
     event:
       | ChangeEvent<HTMLInputElement>
@@ -76,7 +78,8 @@ interface N2KFiltersProps {
 export default function N2KFilters({
   value,
   onChange,
-  canFilterInKernel
+  canDropBeforeDecoding,
+  dropsInKernel
 }: N2KFiltersProps) {
   const rawFilters = value.options.filters ?? EMPTY_FILTERS
   const filters = useMemo(() => rawFilters.map(ensureKey), [rawFilters])
@@ -160,34 +163,42 @@ export default function N2KFilters({
           <br />
           Filtered messages are removed from the Signal K data. For example to
           keep unwanted data out.
-          {canFilterInKernel &&
-            ' To also save CPU, filter at Linux kernel level (below).'}
+          {canDropBeforeDecoding &&
+            ' To also save CPU, drop them before decoding (below).'}
           <br />
           <br />
-          {canFilterInKernel && (
+          {canDropBeforeDecoding && (
             <>
               <Form.Label className="switch switch-text switch-primary">
                 <input
                   type="checkbox"
-                  name="filtersInKernel"
-                  aria-label="Filter CAN messages at Linux kernel level"
-                  aria-describedby="filtersInKernelHelp"
+                  name="filtersBeforeDecoding"
+                  aria-label="Drop filtered PGNs before decoding"
+                  aria-describedby="filtersBeforeDecodingHelp"
                   className="switch-input"
-                  checked={!!value.options.filtersInKernel}
+                  checked={!!value.options.filtersBeforeDecoding}
                   disabled={!value.options.filtersEnabled}
-                  onChange={handleSwitchChange('options.filtersInKernel')}
+                  onChange={handleSwitchChange('options.filtersBeforeDecoding')}
                 />
                 <span className="switch-label" data-on="Yes" data-off="No" />
                 <span className="switch-handle" />
               </Form.Label>
-              &nbsp; Filter CAN messages at Linux kernel level
-              <Form.Text id="filtersInKernelHelp" muted className="d-block">
-                Recommended. Filters without an {sourceName} are then applied at
-                Linux kernel level, so Signal K never reads those messages. That
-                saves CPU on a busy network. Leave it off only if a plugin or an
-                output needs the filtered PGNs, such as NMEA 2000 over TCP or a
-                logger of raw NMEA 2000 data. Filters with an {sourceName} are
-                always applied after Signal K has decoded the message.
+              &nbsp; Drop filtered PGNs before decoding
+              <Form.Text
+                id="filtersBeforeDecodingHelp"
+                muted
+                className="d-block"
+              >
+                Recommended. Filters without an {sourceName} are then applied
+                before Signal K decodes the message
+                {dropsInKernel
+                  ? ', at Linux kernel level, so Signal K never reads those messages'
+                  : ''}
+                . That saves CPU on a busy network. Leave it off only if a
+                plugin or an output needs the filtered PGNs, such as NMEA 2000
+                over TCP or a logger of raw NMEA 2000 data. Filters with an{' '}
+                {sourceName} are always applied after Signal K has decoded the
+                message. Needs canboatjs 4 or later.
               </Form.Text>
               <br />
             </>

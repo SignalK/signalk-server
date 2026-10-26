@@ -1,7 +1,10 @@
 import { expect } from 'chai'
-import { kernelExcludePgns } from './n2k-kernel-filter'
+import {
+  canboatjsSupportsExcludePgns,
+  excludePgnsFromFilters
+} from './n2k-exclude-pgns'
 
-describe('kernelExcludePgns', () => {
+describe('excludePgnsFromFilters', () => {
   const filters = [
     { source: '', pgn: '127251' },
     { source: '35', pgn: '127250' },
@@ -10,12 +13,12 @@ describe('kernelExcludePgns', () => {
     { source: '', pgn: '' }
   ]
 
-  it('passes the PGN-only rows when the filters and filtersInKernel are on', () => {
+  it('passes the PGN-only rows when the filters and filtersBeforeDecoding are on', () => {
     expect(
-      kernelExcludePgns({
+      excludePgnsFromFilters({
         filters,
         filtersEnabled: true,
-        filtersInKernel: true
+        filtersBeforeDecoding: true
       })
     ).to.deep.equal(['127251', '129029'])
   })
@@ -32,68 +35,81 @@ describe('kernelExcludePgns', () => {
       { source: '', pgn: 127245 as unknown as string }
     ]
     expect(
-      kernelExcludePgns({
+      excludePgnsFromFilters({
         filters: odd,
         filtersEnabled: true,
-        filtersInKernel: true
+        filtersBeforeDecoding: true
       })
     ).to.deep.equal([])
   })
 
   it('counts a source of 0 as no source, as the filter after decoding does', () => {
     expect(
-      kernelExcludePgns({
+      excludePgnsFromFilters({
         filters: [{ source: 0 as unknown as string, pgn: '127251' }],
         filtersEnabled: true,
-        filtersInKernel: true
+        filtersBeforeDecoding: true
       })
     ).to.deep.equal(['127251'])
   })
 
   it('passes the given excludePgns when there are no rows', () => {
     expect(
-      kernelExcludePgns({
+      excludePgnsFromFilters({
         filtersEnabled: true,
-        filtersInKernel: true,
+        filtersBeforeDecoding: true,
         excludePgns: [65350]
       })
     ).to.deep.equal([65350])
   })
 
-  it('passes nothing new when filtersInKernel is off', () => {
-    expect(kernelExcludePgns({ filters, filtersEnabled: true })).to.equal(
+  it('passes nothing new when filtersBeforeDecoding is off', () => {
+    expect(excludePgnsFromFilters({ filters, filtersEnabled: true })).to.equal(
       undefined
     )
   })
 
   it('passes nothing new when the filters are off', () => {
     expect(
-      kernelExcludePgns({
+      excludePgnsFromFilters({
         filters,
         filtersEnabled: false,
-        filtersInKernel: true
+        filtersBeforeDecoding: true
       })
     ).to.equal(undefined)
   })
 
   it('keeps an excludePgns given in the options', () => {
-    expect(kernelExcludePgns({ excludePgns: [65350] })).to.deep.equal([65350])
-    expect(kernelExcludePgns({ excludePgns: '65350' })).to.equal('65350')
+    expect(excludePgnsFromFilters({ excludePgns: [65350] })).to.deep.equal([
+      65350
+    ])
+    expect(excludePgnsFromFilters({ excludePgns: '65350' })).to.equal('65350')
     expect(
-      kernelExcludePgns({
+      excludePgnsFromFilters({
         filters,
         filtersEnabled: true,
-        filtersInKernel: true,
+        filtersBeforeDecoding: true,
         excludePgns: '65350, 127245'
       })
     ).to.deep.equal(['65350', '127245', '127251', '129029'])
     expect(
-      kernelExcludePgns({
+      excludePgnsFromFilters({
         filters,
         filtersEnabled: true,
-        filtersInKernel: true,
+        filtersBeforeDecoding: true,
         excludePgns: 65350
       })
     ).to.deep.equal([65350, '127251', '129029'])
+  })
+})
+
+describe('canboatjsSupportsExcludePgns', () => {
+  it('is true for a canboatjs that exports parseExcludePgns', () => {
+    expect(canboatjsSupportsExcludePgns({ parseExcludePgns: () => ({}) })).to.be
+      .true
+  })
+
+  it('is false for an older canboatjs', () => {
+    expect(canboatjsSupportsExcludePgns({ FromPgn: class {} })).to.be.false
   })
 })
