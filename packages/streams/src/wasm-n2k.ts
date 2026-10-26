@@ -40,6 +40,13 @@ interface WasmN2kOptions {
   /** Decode against canboat's J1939 schema flavor (plain J1939 buses
    * — engines, gensets) instead of NMEA 2000. */
   j1939?: boolean
+  /** Stamp each record with the time it arrives instead of the
+   * timestamp its input line carries. Live gateways need this: a YDWG
+   * RAW or Actisense ASCII line carries only the gateway clock's time
+   * of day, which the decoder cannot place on a date. File playback
+   * leaves it off so TimestampThrottle can pace the log by its own
+   * timestamps. */
+  receiveTime?: boolean
   createDebug?: CreateDebug
   [key: string]: unknown
 }
@@ -68,6 +75,7 @@ export default class WasmN2k extends Transform {
   private readonly app: WasmN2kOptions['app']
   private readonly analyzerOutEvent: string
   private readonly providerId: string | undefined
+  private readonly receiveTime: boolean
   private readonly debug: DebugLogger
   private txHandler: ((pgn: unknown) => void) | null = null
   private outTxHandler: ((msg: unknown) => void) | null = null
@@ -92,6 +100,7 @@ export default class WasmN2k extends Transform {
     this.app = options.app
     this.analyzerOutEvent = options.analyzerOutEvent ?? 'N2KAnalyzerOut'
     this.providerId = options.providerId
+    this.receiveTime = options.receiveTime === true
 
     if (options.txFormat && options.txEvent) {
       const tx = new TxEncoder(true)
@@ -152,7 +161,7 @@ export default class WasmN2k extends Transform {
     if (pgnData) {
       if (timestamp) {
         pgnData.timestamp = timestamp
-      } else if (!pgnData.timestamp) {
+      } else if (this.receiveTime || !pgnData.timestamp) {
         pgnData.timestamp = new Date().toISOString()
       }
       pgnData.providerId = this.providerId
