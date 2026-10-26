@@ -835,6 +835,120 @@ describe('group-aware resolution', () => {
   })
 })
 
+describe('staleness timeouts', () => {
+  const PATH = 'navigation.speedOverGround'
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function makeTimeoutDelta(sourceRef: string): any {
+    return {
+      context: 'self',
+      updates: [
+        {
+          $source: sourceRef,
+          values: [
+            {
+              path: PATH,
+              value: null,
+              state: {
+                timedOut: true,
+                lastValue: { timestamp: '2026-01-01T00:00:00.000Z', value: 1 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+
+  it('a timeout from a source that lost the path does not take it back', () => {
+    const groups: PriorityGroupConfig[] = [{ id: 'g1', sources: ['a', 'b'] }]
+    const toPreferred = getToPreferredDelta({ groups, fallbackMs: 5000 })
+    const t = 1000000
+
+    let r = toPreferred(makeDelta('a', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'rank-1 a accepted')
+
+    r = toPreferred(makeDelta('b', PATH, 2), new Date(t + 6000), 'self')
+    assert(accepted(r), 'rank-2 b takes over after a went silent')
+
+    r = toPreferred(makeTimeoutDelta('a'), new Date(t + 6100), 'self')
+    assert(!accepted(r), "a's timeout does not displace b")
+
+    r = toPreferred(makeDelta('b', PATH, 3), new Date(t + 6200), 'self')
+    assert(accepted(r), 'b keeps the path')
+  })
+
+  it("the winner's own timeout passes without restarting the hold window", () => {
+    const groups: PriorityGroupConfig[] = [{ id: 'g1', sources: ['a', 'b'] }]
+    const toPreferred = getToPreferredDelta({ groups, fallbackMs: 5000 })
+    const t = 1000000
+
+    let r = toPreferred(makeDelta('a', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'rank-1 a accepted')
+
+    r = toPreferred(makeTimeoutDelta('a'), new Date(t + 6000), 'self')
+    assert(
+      accepted(r),
+      "a's timeout reaches consumers while a still holds the path"
+    )
+
+    r = toPreferred(makeDelta('b', PATH, 2), new Date(t + 6100), 'self')
+    assert(accepted(r), 'b takes over at once: a has been silent since t')
+  })
+
+  it('a timeout passes when no source holds the path yet', () => {
+    // A rebuilt engine starts without a winner while the delta cache
+    // still holds values that are about to time out.
+    const groups: PriorityGroupConfig[] = [{ id: 'g1', sources: ['a', 'b'] }]
+    const toPreferred = getToPreferredDelta({ groups, fallbackMs: 5000 })
+
+    const r = toPreferred(makeTimeoutDelta('a'), new Date(1000000), 'self')
+    assert(accepted(r), "a's timeout reaches consumers")
+  })
+
+  it('a disabled source never forwards a timeout', () => {
+    const overrides: SourcePrioritiesData = {
+      [PATH]: [
+        { sourceRef: 'a' as SourceRef, timeout: 0 },
+        { sourceRef: 'b' as SourceRef, timeout: -1 }
+      ]
+    }
+    const toPreferred = getToPreferredDelta({ overrides })
+
+    const r = toPreferred(makeTimeoutDelta('b'), new Date(1000000), 'self')
+    assert(!accepted(r), "disabled b's timeout is dropped")
+  })
+
+  it("the winner's timeout passes after its canName became known", () => {
+    // A useCanName=false provider: the device won under its numeric ref
+    // before its address claim was seen, and times out after it was.
+    const CAN = 'c0788c00e7e04312'
+    let claimSeen = false
+    const canonical = (ref: string) =>
+      claimSeen && ref === 'can0.4' ? `can0.${CAN}` : ref
+    const groups: PriorityGroupConfig[] = [
+      { id: 'g1', sources: [`can0.${CAN}`, 'b'] }
+    ]
+    const toPreferred = getToPreferredDelta({
+      groups,
+      fallbackMs: 1000,
+      unknownSourceTimeout: 1000,
+      canonicalise: canonical
+    })
+    const t = 1000000
+
+    let r = toPreferred(makeDelta('b', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'b claims the path for g1')
+
+    r = toPreferred(makeDelta('can0.4', PATH, 2), new Date(t + 5000), 'self')
+    assert(accepted(r), 'can0.4 takes over after b went silent')
+
+    claimSeen = true
+    r = toPreferred(makeTimeoutDelta('can0.4'), new Date(t + 6000), 'self')
+    assert(accepted(r), "can0.4's timeout reaches consumers")
+  })
+})
+
 describe('isOverrideDormantUnderGroups', () => {
   it('returns false when no groups exist', () => {
     isOverrideDormantUnderGroups(

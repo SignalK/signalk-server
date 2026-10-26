@@ -62,7 +62,7 @@ If none of these produce a timeout, the path is not monitored.
 
 A plugin that publishes a path updating more slowly than the global default should declare its own `timeout` the same way, rather than relying on the user to adjust it.
 
-When [Source Priority](./source-priority.md) is active for a path, the effective timeout never undercuts the configured failover window, so staleness does not fire while a lower-priority source is still legitimately waiting to take over.
+When [Source Priority](./source-priority.md) is active for a path, the effective timeout never undercuts the configured failover window, so staleness does not fire while a lower-priority source is still legitimately waiting to take over. Once another source has taken over, the silent source's timeout does not replace the value that source is delivering.
 
 ## Working With Notification Plugins
 
