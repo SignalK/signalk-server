@@ -45,6 +45,15 @@ jobs:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if [[ "$GITHUB_REF_NAME" != "v$PACKAGE_VERSION" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PACKAGE_VERSION"
+            exit 1
+          fi
+
       - name: Install and build all
         run: |
           npm cache clean -f
