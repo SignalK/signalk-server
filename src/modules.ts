@@ -153,6 +153,23 @@ export function getNodeModulesNextToApp(appPath: string): string | undefined {
 }
 
 /**
+ * A package next to the server may be another version than the server
+ * declares, installed by something else when npm skipped the server's own
+ * copy, as with `--omit=optional`. A range that is not semver (a tarball or
+ * git URL) cannot be checked and is accepted. Prereleases are accepted, so a
+ * beta of a bundled webapp still loads.
+ */
+function satisfiesDeclaredRange(version: unknown, range: string) {
+  if (semver.validRange(range) === null) {
+    return true
+  }
+  return (
+    typeof version === 'string' &&
+    semver.satisfies(version, range, { includePrerelease: true })
+  )
+}
+
+/**
  * Finds the plugins the server bundles when npm hoisted them next to it.
  *
  * Installed as a dependency itself, as the Docker image installs it with
@@ -172,10 +189,11 @@ function findBundledModulesNextToApp(
   const { dependencies = {}, optionalDependencies = {} } =
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     require(path.resolve(appPath, 'package.json'))
-  return [
-    ...Object.keys(dependencies),
-    ...Object.keys(optionalDependencies)
-  ].flatMap((name) => {
+  const dependencyRanges: Record<string, string> = {
+    ...dependencies,
+    ...optionalDependencies
+  }
+  return Object.entries(dependencyRanges).flatMap(([name, range]) => {
     let metadata
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -187,7 +205,8 @@ function findBundledModulesNextToApp(
       return []
     }
     return Array.isArray(metadata?.keywords) &&
-      metadata.keywords.includes(keyword)
+      metadata.keywords.includes(keyword) &&
+      satisfiesDeclaredRange(metadata.version, range)
       ? [{ module: metadata.name, metadata, location }]
       : []
   })
