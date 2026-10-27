@@ -20,7 +20,7 @@
     "strategy": "./tokensecurity"
   },
   "historyApi": {
-    "defaultProvider": "kip"
+    "defaultProvider": "signalk-parquet"
   },
   "landingPage": "/@signalk/app-dock/"
 }
