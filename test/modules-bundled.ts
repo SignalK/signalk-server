@@ -15,7 +15,7 @@ function writePackage(dir: string, name: string, pkg: object = {}) {
   fs.mkdirSync(path.join(dir, name), { recursive: true })
   fs.writeFileSync(
     path.join(dir, name, 'package.json'),
-    JSON.stringify({ name, ...pkg })
+    JSON.stringify({ name, version: '1.0.0', ...pkg })
   )
 }
 
@@ -28,7 +28,11 @@ describe('modulesWithKeyword with the server installed as a dependency', () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), '_skservertest_modules'))
     nodeModules = path.join(tempDir, 'node_modules')
     writePackage(nodeModules, 'signalk-server', {
-      dependencies: { 'bundled-plugin': '^1.0.0', 'broken-plugin': '^1.0.0' },
+      dependencies: {
+        'bundled-plugin': '^1.0.0',
+        'broken-plugin': '^1.0.0',
+        'tarball-plugin': 'file:tarball-plugin-1.0.0.tgz'
+      },
       optionalDependencies: {
         '@scope/bundled-plugin': '^1.0.0',
         'missing-plugin': '^1.0.0'
@@ -58,6 +62,25 @@ describe('modulesWithKeyword with the server installed as a dependency', () => {
     expect(moduleList.map((m) => m.location)).to.eql([
       path.join(nodeModules, '/'),
       path.join(nodeModules, '/')
+    ])
+  })
+
+  it('skips a hoisted package outside the declared version range', () => {
+    writePackage(nodeModules, 'bundled-plugin', {
+      version: '2.0.0',
+      keywords: [KEYWORD]
+    })
+    writePackage(nodeModules, '@scope/bundled-plugin', {
+      version: '1.1.0-beta.1',
+      keywords: [KEYWORD]
+    })
+    writePackage(nodeModules, 'tarball-plugin', { keywords: [KEYWORD] })
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.module)).to.have.members([
+      '@scope/bundled-plugin',
+      'tarball-plugin'
     ])
   })
 
