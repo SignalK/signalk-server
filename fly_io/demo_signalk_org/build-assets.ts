@@ -36,10 +36,13 @@ const ENC_CELLS = Array.from(
   (_, i) => `1R7WAD${String(i + 1).padStart(2, '0')}`
 )
 const COASTLINE_URL =
-  'https://github.com/macjl/signalk-distance-to-shore-world-coastline/releases/latest/download/world-display-z0-z11-runtime-z12.mbtiles.zip'
+  'https://github.com/macjl/signalk-distance-to-shore-world-coastline/releases/download/v2026.06.03-1/world-display-z0-z11-runtime-z12.mbtiles.zip'
 const COASTLINE_ZIP_ENTRY = 'world-display-z0-z11-runtime-z12.mbtiles'
 const COASTLINE_MAX_ZOOM = 12
 const TIDAL_SOURCE = 'utcef_netherlands'
+// Runs the ENC converter's containers during the build only, so it is not
+// one of the demo's own plugins in config/package.json
+const SIGNALK_CONTAINER_VERSION = '1.36.1'
 // west, south, east, north
 const AREA = [4.6, 52.8, 5.95, 53.6] as const
 
@@ -165,7 +168,7 @@ function prepareServer(): string {
           'signalk-charts-provider-simple'
         ),
         'signalk-tidal-currents': pinnedVersion('signalk-tidal-currents'),
-        'signalk-container': '*'
+        'signalk-container': SIGNALK_CONTAINER_VERSION
       }
     })
   )
@@ -199,6 +202,9 @@ function startServer(configDir: string): ChildProcess {
   return server
 }
 
+/** A failure that waiting longer cannot cure */
+class BuildFailure extends Error {}
+
 async function waitFor(
   what: string,
   done: () => Promise<boolean>,
@@ -208,7 +214,8 @@ async function waitFor(
   while (Date.now() < deadline) {
     try {
       if (await done()) return
-    } catch {
+    } catch (error) {
+      if (error instanceof BuildFailure) throw error
       // not up yet
     }
     await sleep(POLL_MS)
@@ -242,7 +249,8 @@ async function convertEnc(configDir: string): Promise<void> {
       console.log(
         `ENC: ${s.detail?.phase ?? s.status} ${s.detail?.sectionLabel ?? ''}`
       )
-      if (s.detail?.phase === 'failed') throw new Error('ENC conversion failed')
+      if (s.detail?.phase === 'failed')
+        throw new BuildFailure('ENC conversion failed')
       return !s.busy && s.status === 'converted'
     },
     CONVERSION_TIMEOUT_MS
@@ -315,9 +323,11 @@ try {
   await convertEnc(configDir)
   await downloadTidalCurrents(configDir)
 } finally {
-  const exited = new Promise((resolve) => server.once('exit', resolve))
-  server.kill('SIGINT')
-  await exited
+  if (server.exitCode === null && server.signalCode === null) {
+    const exited = new Promise((resolve) => server.once('exit', resolve))
+    server.kill('SIGINT')
+    await exited
+  }
 }
 rmSync(BUILD, { recursive: true, force: true })
 console.log(`assets ready in ${ASSETS}`)
