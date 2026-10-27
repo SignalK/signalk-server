@@ -16,6 +16,7 @@
     "signalk-demo-director": "file:../demo-director",
     "signalk-distance-to-shore": "0.2.1",
     "signalk-flags": "1.1.3",
+    "signalk-parquet": "1.0.1",
     "signalk-polar-management": "1.2.0",
     "signalk-sailboat-simulator": "0.4.0",
     "signalk-target-fusion": "0.3.0",
