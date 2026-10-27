@@ -2,7 +2,10 @@
   "enabled": true,
   "configuration": {
     "buddies": [
-      { "urn": "urn:mrn:imo:mmsi:244615779", "name": "Tiger (Doeksen fast ferry)" },
+      {
+        "urn": "urn:mrn:imo:mmsi:244615779",
+        "name": "Tiger (Doeksen fast ferry)"
+      },
       { "urn": "urn:mrn:imo:mmsi:244150209", "name": "Vlieland" },
       { "urn": "urn:mrn:imo:mmsi:244710597", "name": "Friesland" }
     ],
