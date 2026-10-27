@@ -84,6 +84,28 @@ describe('modulesWithKeyword with the server installed as a dependency', () => {
     ])
   })
 
+  it('looks next to the real directory of a linked server', () => {
+    const store = path.join(tempDir, 'store', 'node_modules')
+    fs.mkdirSync(store, { recursive: true })
+    fs.renameSync(
+      path.join(nodeModules, 'signalk-server'),
+      path.join(store, 'signalk-server')
+    )
+    fs.symlinkSync(
+      path.join(store, 'signalk-server'),
+      path.join(nodeModules, 'signalk-server'),
+      'junction'
+    )
+    writePackage(store, 'bundled-plugin', { keywords: [KEYWORD] })
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.module)).to.eql(['bundled-plugin'])
+    expect(moduleList.map((m) => m.location)).to.eql([
+      fs.realpathSync(store) + path.sep
+    ])
+  })
+
   it('prefers a copy installed in the config dir', () => {
     writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
     const configNodeModules = path.join(config.configPath, 'node_modules')
@@ -151,7 +173,9 @@ describe('modulesWithKeyword with the server installed as a dependency', () => {
   })
 
   it('reports no hoisted packages for a server that is not a dependency', () => {
-    expect(getNodeModulesNextToApp(path.join(tempDir, 'signalk-server'))).to.be
-      .undefined
+    const checkout = path.join(tempDir, 'signalk-server')
+    fs.mkdirSync(checkout)
+
+    expect(getNodeModulesNextToApp(checkout)).to.be.undefined
   })
 })
