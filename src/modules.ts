@@ -146,7 +146,9 @@ export function getModulePaths(config: Config) {
  * installed as a dependency, where npm hoists the packages it bundles.
  */
 export function getNodeModulesNextToApp(appPath: string): string | undefined {
-  const parent = path.dirname(path.resolve(appPath))
+  // pnpm links the server into node_modules; its dependencies are next to
+  // the real directory, not next to the link.
+  const parent = path.dirname(fs.realpathSync(path.resolve(appPath)))
   return path.basename(parent) === 'node_modules'
     ? path.join(parent, '/')
     : undefined
