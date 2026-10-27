@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { modulesWithKeyword } from '../src/modules'
+import { getNodeModulesNextToApp, modulesWithKeyword } from '../src/modules'
 import { Config } from '../src/config/config'
 
 const KEYWORD = 'signalk-node-server-plugin'
@@ -117,5 +117,18 @@ describe('modulesWithKeyword with the server installed as a dependency', () => {
     } finally {
       process.chdir(cwd)
     }
+  })
+
+  it('reports where npm hoisted the bundled packages', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+
+    const [bundled] = modulesWithKeyword(config, KEYWORD)
+
+    expect(getNodeModulesNextToApp(config.appPath)).to.equal(bundled.location)
+  })
+
+  it('reports no hoisted packages for a server that is not a dependency', () => {
+    expect(getNodeModulesNextToApp(path.join(tempDir, 'signalk-server'))).to.be
+      .undefined
   })
 })

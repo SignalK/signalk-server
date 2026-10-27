@@ -142,6 +142,17 @@ export function getModulePaths(config: Config) {
 }
 
 /**
+ * The node_modules directory the server is installed in, when it is
+ * installed as a dependency, where npm hoists the packages it bundles.
+ */
+export function getNodeModulesNextToApp(appPath: string): string | undefined {
+  const parent = path.dirname(path.resolve(appPath))
+  return path.basename(parent) === 'node_modules'
+    ? path.join(parent, '/')
+    : undefined
+}
+
+/**
  * Finds the plugins the server bundles when npm hoisted them next to it.
  *
  * Installed as a dependency itself, as the Docker image installs it with
@@ -154,15 +165,13 @@ function findBundledModulesNextToApp(
   appPath: string,
   keyword: string
 ): ModuleData[] {
-  const serverDir = path.resolve(appPath)
-  const parent = path.dirname(serverDir)
-  if (path.basename(parent) !== 'node_modules') {
+  const location = getNodeModulesNextToApp(appPath)
+  if (!location) {
     return []
   }
   const { dependencies = {}, optionalDependencies = {} } =
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require(path.join(serverDir, 'package.json'))
-  const location = path.join(parent, '/')
+    require(path.resolve(appPath, 'package.json'))
   return [
     ...Object.keys(dependencies),
     ...Object.keys(optionalDependencies)
@@ -170,7 +179,7 @@ function findBundledModulesNextToApp(
     let metadata
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      metadata = require(path.join(parent, name, 'package.json'))
+      metadata = require(path.join(location, name, 'package.json'))
     } catch (err) {
       // Also missing when npm nested the dependency in appPath's
       // node_modules, or an optional one was not installed.
@@ -793,6 +802,7 @@ module.exports = {
   getAuthor,
   getKeywords,
   getModulePaths,
+  getNodeModulesNextToApp,
   restoreModules,
   importOrRequire,
   runNpm,
