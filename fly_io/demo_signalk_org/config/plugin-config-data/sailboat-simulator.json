@@ -15,6 +15,9 @@
     "publishing": {
       "navigation": true
     },
+    "fallback": {
+      "speedThroughWater": 2.315
+    },
     "grounding": {
       "enabled": true,
       "minimumDistanceToShore": 20
