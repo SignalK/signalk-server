@@ -1,6 +1,6 @@
 # fly.toml file generated for demo-signalk-org on 2022-09-23T17:08:59+03:00
 
-app = "demo-signalk-org"
+app = "latest-signalk-org"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
