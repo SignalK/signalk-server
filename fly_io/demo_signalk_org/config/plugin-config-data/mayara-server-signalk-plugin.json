@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "configuration": {
+    "managedContainer": false,
+    "host": "127.0.0.1",
+    "port": 6502,
+    "directGuiUrl": false,
+    "requestSignalkToken": false,
+    "collisionAlerts": "collision-alerts-plugin",
+    "telemetry": false
+  }
+}

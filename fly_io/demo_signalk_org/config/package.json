@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@halos-org/skip": "1.6.0",
+    "@marineyachtradar/signalk-plugin": "1.9.0",
     "@signalk/freeboard-sk": "3.4.0-beta.3",
     "@signalk/open-meteo-provider": "1.4.1",
     "@signalk/tracks-plugin": "3.6.3",
