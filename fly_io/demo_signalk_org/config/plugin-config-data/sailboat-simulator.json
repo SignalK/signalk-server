@@ -20,7 +20,7 @@
       "minimumDistanceToShore": 20
     },
     "persistence": {
-      "enabled": false
+      "enabled": true
     }
   }
 }

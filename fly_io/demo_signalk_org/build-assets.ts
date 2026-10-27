@@ -13,7 +13,6 @@
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process'
 import {
   cpSync,
-  existsSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -275,22 +274,29 @@ async function convertEnc(configDir: string): Promise<void> {
   }
 }
 
+interface DownloadJob {
+  state: 'queued' | 'active' | 'done' | 'error'
+  error?: string
+}
+
 async function downloadTidalCurrents(configDir: string): Promise<void> {
   const dataDir = join(
     configDir,
     'plugin-config-data',
     'signalk-tidal-currents'
   )
-  await request('POST', `${BASE}/plugins/signalk-tidal-currents/downloads`, {
+  const downloads = `${BASE}/plugins/signalk-tidal-currents/downloads`
+  const { id } = await request<{ id: string }>('POST', downloads, {
     sourceId: TIDAL_SOURCE
   })
   await waitFor(
     'the tidal current dataset',
-    async () =>
-      existsSync(join(dataDir, 'install-manifest.json')) &&
-      readFileSync(join(dataDir, 'install-manifest.json'), 'utf8').includes(
-        TIDAL_SOURCE
-      ),
+    async () => {
+      const job = await request<DownloadJob>('GET', `${downloads}/${id}`)
+      if (job.state === 'error')
+        throw new BuildFailure(`tidal current download failed: ${job.error}`)
+      return job.state === 'done'
+    },
     5 * 60 * 1000
   )
   const target = join(ASSETS, 'plugin-config-data', 'signalk-tidal-currents')
