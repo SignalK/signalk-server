@@ -36,11 +36,8 @@ ARG EDITION=full
 # The install is asserted below so a future regression fails the build loudly.
 RUN printf 'allow-scripts[]=@canboat/canboatjs\n' > /home/node/signalk/.npmrc
 
-# Install locally (not globally) to avoid permission issues, then relocate
-# nested packages to where webapp/plugin discovery expects them. The @signalk
-# packages are required in both editions, so that relocation always runs. The
-# @mxtommy/kip relocation is guarded on presence, so it is skipped automatically
-# in core, where kip is not installed.
+# Install locally (not globally) to avoid permission issues. npm hoists the
+# bundled webapps and plugins next to the server, where the server finds them.
 #
 # A freshly published release can take a few minutes to become visible on
 # every npm registry edge, so installs are retried. --prefer-online keeps a
@@ -71,14 +68,6 @@ RUN npm_install() { \
        && node_ble_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@naugehyde/node-ble']") \
        && dbus_next_spec=$(node -p "require('signalk-server/package.json').optionalDependencies['@jellybrick/dbus-next']") \
        && npm_install $npm_flags "@signalk/server-admin-ui@$adminui_spec" "serialport@$serialport_spec" "@naugehyde/node-ble@$node_ble_spec" "@jellybrick/dbus-next@$dbus_next_spec"; \
-     fi \
-  && mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
-  && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
-  && rm -rf node_modules/@signalk/ \
-  && if [ -d node_modules/@mxtommy/kip ]; then \
-       mkdir -p node_modules/signalk-server/node_modules/@mxtommy/ \
-       && cp -rf node_modules/@mxtommy/kip node_modules/signalk-server/node_modules/@mxtommy/ \
-       && rm -rf node_modules/@mxtommy/; \
      fi \
   && can_socket=$(find node_modules -path '*/@canboat/canboatjs/build/Release/canSocket.node' -print -quit) \
   && if [ -z "$can_socket" ]; then \
