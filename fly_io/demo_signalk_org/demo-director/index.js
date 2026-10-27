@@ -10,9 +10,26 @@ const TURN_ROUND_DISTANCE_M = 250
 
 /** @typedef {{ latitude: number, longitude: number }} Position */
 
+const EARTH_RADIUS_M = 6371000
+
 /** @param {number} deg */
 function degToRad(deg) {
   return (deg * Math.PI) / 180
+}
+
+/**
+ * @param {Position} a
+ * @param {Position} b
+ */
+function distanceM(a, b) {
+  const dLat = degToRad(b.latitude - a.latitude)
+  const dLon = degToRad(b.longitude - a.longitude)
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(degToRad(a.latitude)) *
+      Math.cos(degToRad(b.latitude)) *
+      Math.sin(dLon / 2) ** 2
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h))
 }
 
 /**
@@ -54,12 +71,16 @@ export default function (app) {
     turning = true
     try {
       // the active route lives in the Course API, not in the data model
-      const route = (await app.getCourse()).activeRoute
-      /** @type {number | undefined} */
-      const distance = selfValue('navigation.course.calcValues.distance')
-      if (!route || distance === undefined) return
+      const course = await app.getCourse()
+      const route = course.activeRoute
+      const waypoint = course.nextPoint?.position
+      /** @type {Position | undefined} */
+      const position = selfValue('navigation.position')
+      if (!route || !waypoint || !position) return
       if (route.pointIndex < route.pointTotal - 1) return
-      if (distance > TURN_ROUND_DISTANCE_M) return
+      // calcValues.distance can still be to the previous point just after
+      // the route advances, so measure to the final point itself
+      if (distanceM(position, waypoint) > TURN_ROUND_DISTANCE_M) return
       await app.activateRoute({
         href: route.href,
         reverse: !route.reverse,
