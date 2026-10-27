@@ -81,7 +81,12 @@ import {
   ConnectionWriteEvent
 } from '../deltastats'
 import { EventsActorId } from '../events'
-import { importOrRequire, modulesWithKeyword, NpmPackageData } from '../modules'
+import {
+  getNodeModulesNextToApp,
+  importOrRequire,
+  modulesWithKeyword,
+  NpmPackageData
+} from '../modules'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -199,7 +204,12 @@ module.exports = (theApp: any) => {
       await Promise.all(inFlight.map((p) => p.catch(() => undefined)))
     }
   }
-  const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
+  const bundledModuleLocations = new Set(
+    [
+      path.join(theApp.config.appPath, 'node_modules/'),
+      getNodeModulesNextToApp(theApp.config.appPath)
+    ].filter((location) => location !== undefined)
+  )
 
   // Partitioned by plugin id so the dispatcher can tell a plugin that does
   // not use registerWebSocket at all (leave the upgrade event to other
@@ -405,7 +415,7 @@ module.exports = (theApp: any) => {
   }
 
   function isBundledPlugin(plugin: PluginInfo) {
-    return plugin.packageLocation === appNodeModules
+    return bundledModuleLocations.has(plugin.packageLocation)
   }
 
   function getPluginResponseInfo(plugin: PluginInfo, providerStatus: any) {
