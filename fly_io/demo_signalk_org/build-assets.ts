@@ -1,7 +1,8 @@
 // Builds the large demo assets that are not kept in git: the Waddenzee ENC
 // as vector MBTiles plus its raw S-57 cells, a coastline clipped to the
-// area, and the Netherlands tidal current dataset. They land in ./assets,
-// laid out like the server's config directory, for the Dockerfile to copy.
+// area, the land of the ENC cells for the radar emulator, and the Netherlands
+// tidal current dataset. They land in ./assets, laid out like the server's
+// config directory, for the Dockerfile to copy.
 //
 // The ENC conversion runs charts-provider-simple in a throwaway Signal K
 // server on this machine, because the converter is the plugin's own
@@ -39,6 +40,9 @@ const COASTLINE_URL =
 const COASTLINE_ZIP_ENTRY = 'world-display-z0-z11-runtime-z12.mbtiles'
 const COASTLINE_MAX_ZOOM = 12
 const TIDAL_SOURCE = 'utcef_netherlands'
+// The GDAL image charts-provider-simple converts ENC cells with
+const CHARTS_TOOLBOX_IMAGE =
+  'ghcr.io/dirkwa/signalk-charts-provider-simple/charts-toolbox:1.1.0'
 // Runs the ENC converter's containers during the build only, so it is not
 // one of the demo's own plugins in config/package.json
 const SIGNALK_CONTAINER_VERSION = '1.36.1'
@@ -274,6 +278,71 @@ async function convertEnc(configDir: string): Promise<void> {
   }
 }
 
+function containerRuntime(): string {
+  for (const runtime of ['docker', 'podman']) {
+    try {
+      execFileSync(runtime, ['--version'], { stdio: 'ignore' })
+      return runtime
+    } catch {
+      // try the next one
+    }
+  }
+  throw new BuildFailure('neither docker nor podman is installed')
+}
+
+// The radar emulator paints the coast from the land areas (LNDARE) of the
+// same ENC cells the chart shows, so its picture matches the chart.
+function extractLand(): void {
+  const runtime = containerRuntime()
+  const cells = join(ASSETS, 'enc-cells')
+  const features: unknown[] = []
+  for (const cell of readdirSync(cells)) {
+    const file = readdirSync(join(cells, cell)).find((f) => f.endsWith('.000'))
+    if (!file) continue
+    let geojson: string
+    try {
+      geojson = execFileSync(
+        runtime,
+        [
+          'run',
+          '--rm',
+          '-v',
+          `${cells}:/cells:ro`,
+          '--entrypoint',
+          'ogr2ogr',
+          CHARTS_TOOLBOX_IMAGE,
+          '-f',
+          'GeoJSON',
+          '/vsistdout/',
+          `/cells/${cell}/${file}`,
+          'LNDARE',
+          '-nlt',
+          'PROMOTE_TO_MULTI',
+          '-select',
+          'OBJNAM'
+        ],
+        {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'pipe'],
+          maxBuffer: 1 << 28
+        }
+      )
+    } catch (err) {
+      // A cell of open water has no LNDARE layer at all
+      const stderr = String((err as { stderr?: unknown }).stderr ?? '')
+      if (stderr.includes("Couldn't fetch requested layer")) continue
+      throw err
+    }
+    features.push(...(JSON.parse(geojson) as { features: unknown[] }).features)
+  }
+  if (features.length === 0) throw new BuildFailure('the ENC holds no land')
+  mkdirSync(join(ASSETS, 'mayara'), { recursive: true })
+  writeFileSync(
+    join(ASSETS, 'mayara', 'land.geojson'),
+    JSON.stringify({ type: 'FeatureCollection', features })
+  )
+}
+
 interface DownloadJob {
   state: 'queued' | 'active' | 'done' | 'error'
   error?: string
@@ -327,6 +396,7 @@ try {
     5 * 60 * 1000
   )
   await convertEnc(configDir)
+  extractLand()
   await downloadTidalCurrents(configDir)
 } finally {
   if (server.exitCode === null && server.signalCode === null) {
