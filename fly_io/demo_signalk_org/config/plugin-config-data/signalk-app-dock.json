@@ -16,6 +16,14 @@
       {
         "enabled": true,
         "autostart": false,
+        "url": "/@marineyachtradar/signalk-plugin/",
+        "label": "Radar",
+        "icon": "/@marineyachtradar/signalk-plugin/assets/mayara_logo.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
         "url": "/@halos-org/skip/",
         "label": "Skip",
         "icon": "/@halos-org/skip/assets/icon-72x72.png",
