@@ -1,0 +1,65 @@
+{
+  "commands": [],
+  "paths": [
+    {
+      "path": "navigation.position",
+      "name": "Position",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "navigation.speedOverGround",
+      "name": "Speed over ground",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "navigation.speedThroughWater",
+      "name": "Speed through water",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "navigation.courseOverGroundTrue",
+      "name": "Course over ground",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "navigation.headingTrue",
+      "name": "Heading",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "environment.wind.speedTrue",
+      "name": "True wind speed",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "environment.wind.directionTrue",
+      "name": "True wind direction",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "environment.wind.speedApparent",
+      "name": "Apparent wind speed",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "environment.wind.angleApparent",
+      "name": "Apparent wind angle",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "environment.tide.heightNow",
+      "name": "Tide height",
+      "enabled": true,
+      "context": "vessels.self"
+    }
+  ]
+}
