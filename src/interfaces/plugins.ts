@@ -204,12 +204,15 @@ module.exports = (theApp: any) => {
       await Promise.all(inFlight.map((p) => p.catch(() => undefined)))
     }
   }
-  const bundledModuleLocations = new Set(
-    [
-      path.join(theApp.config.appPath, 'node_modules/'),
-      getNodeModulesNextToApp(theApp.config.appPath)
-    ].filter((location) => location !== undefined)
+  const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
+  const nodeModulesNextToApp = getNodeModulesNextToApp(theApp.config.appPath)
+  const { dependencies = {}, optionalDependencies = {} } = require(
+    path.resolve(theApp.config.appPath, 'package.json')
   )
+  const declaredDependencies = new Set([
+    ...Object.keys(dependencies),
+    ...Object.keys(optionalDependencies)
+  ])
 
   // Partitioned by plugin id so the dispatcher can tell a plugin that does
   // not use registerWebSocket at all (leave the upgrade event to other
@@ -415,7 +418,11 @@ module.exports = (theApp: any) => {
   }
 
   function isBundledPlugin(plugin: PluginInfo) {
-    return bundledModuleLocations.has(plugin.packageLocation)
+    return (
+      plugin.packageLocation === appNodeModules ||
+      (plugin.packageLocation === nodeModulesNextToApp &&
+        declaredDependencies.has(plugin.packageName))
+    )
   }
 
   function getPluginResponseInfo(plugin: PluginInfo, providerStatus: any) {
