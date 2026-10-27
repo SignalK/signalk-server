@@ -465,7 +465,7 @@ jobs:
         if: steps.cleanup.outcome == 'failure'
         run: echo "::warning title=GHCR cleanup failed::Intermediate images were not deleted. The signalk-server package must grant this repository the Admin role under Manage Actions access."
 
-  deploy_fly:
+  deploy_fly_latest:
     runs-on: ubuntu-latest
     needs: copy-to-dockerhub
     permissions:
@@ -483,6 +483,18 @@ jobs:
         run: flyctl deploy --remote-only --build-arg SK_VERSION=${{ steps.vars.outputs.tag }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy_fly:
+    runs-on: ubuntu-latest
+    needs: copy-to-dockerhub
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Set TAG for build-arg
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

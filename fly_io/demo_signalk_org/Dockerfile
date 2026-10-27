@@ -7,5 +7,7 @@ COPY --chown=node:node assets/ /home/node/.signalk/
 # --install-links copies the local demo-director package instead of linking it,
 # so its own dependency (magvar) is installed with it
 RUN cd /home/node/.signalk && npm install --omit=dev --install-links --no-audit --no-fund
+# With no users in security.json, anyone could otherwise make themselves admin
+ENV DISABLE_SECURITY_ACTIVATION=true
 COPY --chown=node:node --chmod=600 security.json /home/node/.signalk/security.json
 ENTRYPOINT ["/home/node/signalk/node_modules/signalk-server/bin/signalk-server", "--securityenabled"]
