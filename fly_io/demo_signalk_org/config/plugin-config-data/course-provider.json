@@ -1,4 +1,13 @@
 {
   "enabled": true,
-  "configuration": {}
+  "configuration": {
+    "notifications": {
+      "enableArrival": true,
+      "enablePerpendicular": true,
+      "sound": false
+    },
+    "calculations": {
+      "method": "GreatCircle"
+    }
+  }
 }
