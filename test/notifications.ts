@@ -832,6 +832,50 @@ describe('NotificationApi', () => {
       }
     })
 
+    it('REST: an update without a state keeps silenced and acknowledged', async function () {
+      const { get, post, put, stop } = await startServer()
+      try {
+        let response = await post(`/notifications`, {
+          state: 'alarm',
+          message: 'Highwater',
+          path: 'environment.bilge'
+        })
+        const { id } = (await response.json()) as { id: string }
+        const status = async () =>
+          (
+            (await (await get(`/notifications/${id}`)).json()) as {
+              value: { status: Record<string, boolean> }
+            }
+          ).value.status
+
+        await post(`/notifications/${id}/silence`, {})
+        await post(`/notifications/${id}/acknowledge`, {})
+        response = await put(`/notifications/${id}`, { location: 'Galley' })
+        response.status.should.equal(200)
+        response = await put(`/notifications/${id}`, { message: 'Still high' })
+        response.status.should.equal(200)
+        response = await put(`/notifications/${id}`, { state: 'alarm' })
+        response.status.should.equal(200)
+        let s = await status()
+        s.silenced.should.equal(true)
+        s.acknowledged.should.equal(true)
+
+        response = await put(`/notifications/${id}`, { state: 'emergency' })
+        response.status.should.equal(200)
+        s = await status()
+        s.silenced.should.equal(false)
+        s.acknowledged.should.equal(false)
+        s.canSilence.should.equal(false)
+
+        response = await put(`/notifications/${id}`, { location: 'ER Port' })
+        response.status.should.equal(200)
+        s = await status()
+        s.canSilence.should.equal(false)
+      } finally {
+        stop()
+      }
+    })
+
     it('REST: full lifecycle round trip works', async function () {
       const { get, post, put, host, stop } = await startServer()
       try {
