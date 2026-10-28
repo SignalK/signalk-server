@@ -57,6 +57,15 @@ export const ALERT_STATES = Object.freeze([
 export type AlertState = (typeof ALERT_STATES)[number]
 
 /**
+ * Why an alert left the active set.
+ *
+ * - condition: the condition ended and no acknowledgment was pending
+ * - acknowledged: an operator acknowledged an alert whose condition had ended
+ * - displaced: the active set was full and a more urgent alert took its place
+ */
+export type AlertClearReason = 'condition' | 'acknowledged' | 'displaced'
+
+/**
  * Full alert instance representing an active or historical alert.
  *
  * Alerts are the core data structure tracking abnormal conditions that require
@@ -140,6 +149,13 @@ export interface Alert {
 
   /** ISO timestamp when condition cleared */
   clearedAt?: string
+
+  /**
+   * Why a resolved alert left the active set; present only on its terminal
+   * value. A `displaced` alert gave way to a more urgent one while its
+   * condition may still be present, so it must not be reported as recovered.
+   */
+  clearReason?: AlertClearReason
 
   /** Whether the source is currently reachable */
   sourceOnline: boolean
