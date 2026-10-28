@@ -323,8 +323,12 @@ describe('AlertManager', () => {
         manager.raiseAlert(raiseParams({ path: 'flooding', priority: 'alarm' }))
       )
 
-      // The mirror has to learn the displaced alert is gone.
-      expect(seen.map((e) => e.type)).to.include('cleared')
+      // The mirror has to learn the displaced alert is gone, and that its
+      // condition did not end: a consumer must not report it as recovered.
+      const cleared = seen.filter((e) => e.type === 'cleared')
+      expect(cleared).to.have.lengthOf(1)
+      expect(cleared[0].alert.path).to.equal('one')
+      expect(cleared[0].alert.clearReason).to.equal('displaced')
       const displaced = store.history.find(
         (entry) => entry.details?.reason === 'displaced'
       )
@@ -571,6 +575,7 @@ describe('AlertManager', () => {
       expect(events[0].alert.state).to.equal('normal')
       expect(events[0].alert.condition).to.equal(false)
       expect(events[0].alert.clearedAt).to.equal(clearedAt)
+      expect(events[0].alert.clearReason).to.equal('acknowledged')
       expect(Date.parse(events[0].alert.stateChangedAt)).to.be.at.least(
         Date.parse(alert.stateChangedAt)
       )
@@ -751,6 +756,7 @@ describe('AlertManager', () => {
       expect(cleared.state).to.equal('normal')
       expect(cleared.condition).to.equal(false)
       expect(cleared.clearedAt).to.equal(cleared.stateChangedAt)
+      expect(cleared.clearReason).to.equal('condition')
       expect(Date.parse(cleared.stateChangedAt)).to.be.at.least(
         Date.parse(alert.stateChangedAt)
       )

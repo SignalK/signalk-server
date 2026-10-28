@@ -12,6 +12,7 @@ import type { Context, Path, SourceRef } from '@signalk/server-api'
 import {
   PRIORITY_RANK,
   type Alert,
+  type AlertClearReason,
   type AlertFilter,
   type AlertPriority,
   type AlertState,
@@ -468,7 +469,7 @@ export class AlertManager extends EventEmitter {
     }
 
     if (result.cleared) {
-      const terminal = this.terminalAlert(alert)
+      const terminal = this.terminalAlert(alert, 'acknowledged')
       this.removeFromRegistry(alertId, alert)
       const history = [
         this.historyEntry('clear', terminal, {
@@ -819,7 +820,7 @@ export class AlertManager extends EventEmitter {
     const result = this.stateMachine.clearCondition(alert)
 
     if (result.cleared) {
-      const terminal = this.terminalAlert(alert)
+      const terminal = this.terminalAlert(alert, 'condition')
       this.removeFromRegistry(alertId, alert)
       const history = [
         this.historyEntry('clear', terminal, {
@@ -1156,7 +1157,7 @@ export class AlertManager extends EventEmitter {
         `${victim.path} was dropped to make room for a ${priority} alert.`
     )
 
-    const terminal = this.terminalAlert(victim)
+    const terminal = this.terminalAlert(victim, 'displaced')
     this.removeFromRegistry(victim.id, victim)
     this.emitEvent('cleared', terminal, victim.state)
     await this.commit({
@@ -1194,13 +1195,14 @@ export class AlertManager extends EventEmitter {
    * Consumers publish this as the alert's last delta, so it has to say the
    * alert is over rather than repeat the state it held before resolution.
    */
-  private terminalAlert(alert: Alert): Alert {
+  private terminalAlert(alert: Alert, clearReason: AlertClearReason): Alert {
     const now = new Date().toISOString()
     return {
       ...alert,
       state: 'normal',
       condition: false,
       clearedAt: alert.clearedAt ?? now,
+      clearReason,
       stateChangedAt: now
     }
   }
