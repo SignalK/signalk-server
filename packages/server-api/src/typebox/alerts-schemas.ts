@@ -37,6 +37,22 @@ export const AlertStateSchema = Type.Union(
   }
 )
 
+export const AlertClearReasonSchema = Type.Union(
+  [
+    Type.Literal('condition'),
+    Type.Literal('acknowledged'),
+    Type.Literal('displaced')
+  ],
+  {
+    $id: 'AlertClearReason',
+    description:
+      'Why a resolved alert left the active set, on its terminal value ' +
+      'only: its condition ended, an operator acknowledged it after the ' +
+      'condition ended, or a more urgent alert displaced it from a full ' +
+      'active set. A displaced alert may still have its condition present.'
+  }
+)
+
 export const HistoryEventTypeSchema = Type.Union(
   [
     Type.Literal('raise'),
@@ -95,6 +111,7 @@ export const AlertSchema = Type.Object(
     acknowledgedAt: Type.Optional(IsoTimeSchema),
     acknowledgedBy: Type.Optional(Type.String()),
     clearedAt: Type.Optional(IsoTimeSchema),
+    clearReason: Type.Optional(AlertClearReasonSchema),
     sourceOnline: Type.Boolean(),
     lastSourceUpdate: IsoTimeSchema,
     stale: Type.Boolean({
@@ -188,6 +205,7 @@ export const StoreStatusSchema = Type.Object(
 export type Alert = Static<typeof AlertSchema>
 export type AlertPriority = Static<typeof AlertPrioritySchema>
 export type AlertState = Static<typeof AlertStateSchema>
+export type AlertClearReason = Static<typeof AlertClearReasonSchema>
 export type RaiseAlertRequest = Static<typeof RaiseAlertRequestSchema>
 export type TransitionResult = Static<typeof TransitionResultSchema>
 export type HistoryEntry = Static<typeof HistoryEntrySchema>

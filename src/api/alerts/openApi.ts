@@ -1,6 +1,7 @@
 import { OpenApiDescription } from '../swagger'
 import { typeboxToOpenApiSchemas } from '../openApiSchemas'
 import {
+  AlertClearReasonSchema,
   AlertPrioritySchema,
   AlertSchema,
   AlertStateSchema,
@@ -41,6 +42,7 @@ const alertsApiDoc = {
       ...typeboxToOpenApiSchemas([
         AlertPrioritySchema,
         AlertStateSchema,
+        AlertClearReasonSchema,
         HistoryEventTypeSchema,
         AlertSchema,
         RaiseAlertRequestSchema,
