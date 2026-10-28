@@ -30,10 +30,11 @@ COPY --chown=node:node *.tgz .
 ARG EDITION=full
 
 # npm 12 gates dependency install-time lifecycle scripts behind an allowlist
-# (allow-scripts defaults to empty). @canboat/canboatjs builds its native
-# SocketCAN addon (canSocket.node) from an "install" script and ships no
-# prebuilt binaries, so without this the CAN interface silently disappears.
-# The install is asserted below so a future regression fails the build loudly.
+# (allow-scripts defaults to empty). @canboat/canboatjs ships its native
+# SocketCAN addon (canSocket.node) prebuilt for linux x64, arm64 and armv7,
+# and its "install" script builds it where none of those loads, so without
+# this the CAN interface silently disappears on other machines. That the
+# addon loads is asserted below so a future regression fails the build loudly.
 RUN printf 'allow-scripts[]=@canboat/canboatjs\n' > /home/node/signalk/.npmrc
 
 # Install workspace tarballs locally (not globally) to avoid permission issues,
@@ -62,9 +63,9 @@ RUN case "$EDITION" in \
        && rm -rf node_modules/@signalk/; \
      fi \
   && rm *.tgz \
-  && can_socket=$(find node_modules -path '*/@canboat/canboatjs/build/Release/canSocket.node' -print -quit) \
-  && if [ -z "$can_socket" ]; then \
-       echo "canSocket.node missing — canboatjs install script did not build the native CAN addon (npm allow-scripts gate skipped it, or node-gyp rebuild failed)" >&2; \
+  && canboatjs=$(dirname "$(find node_modules -path '*/@canboat/canboatjs/package.json' -print -quit)") \
+  && if ! (cd "$canboatjs" && node -e "require(require('node-gyp-build').resolve('.'))"); then \
+       echo "canSocket.node does not load — no canboatjs prebuilt addon fits and its install script did not build one (npm allow-scripts gate skipped it, or node-gyp rebuild failed)" >&2; \
        exit 1; \
      fi
 
