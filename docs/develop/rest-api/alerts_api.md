@@ -29,6 +29,8 @@ States follow IEC 62682:
 
 A `caution` whose condition ends resolves by itself. Anything more urgent waits for acknowledgment, because an alarm that goes away on its own is an alarm nobody saw. An alert marked `latching` reports a momentary event, such as a waypoint arrival: its condition has ended by the time it is raised, and it waits for acknowledgment whatever its priority. Its source sends each occurrence once and neither repeats nor clears it. A latching raise on an alert still waiting for acknowledgment announces a new occurrence; after acknowledgment it raises a new alert.
 
+A resolved alert is announced once more with `state: normal` and a `clearReason`: `condition` when its condition ended with no acknowledgment pending, `acknowledged` when an operator acknowledged it after the condition ended, or `displaced` when it gave way at the active-set cap (see [Limits](#limits)). A displaced alert's condition may still be present, so a consumer must not report it as recovered.
+
 An unacknowledged `warning` escalates to an `alarm` after a configurable window. Escalation resets acknowledgment; there is no de-escalation.
 
 Silencing is orthogonal to all of it: it quiets the annunciator for a bounded time and never changes state, never reorders the list, and never resolves anything. The bound depends on priority; the escalation window and both silence maxima are in `src/api/alerts/index.ts`.
@@ -113,7 +115,7 @@ Alerts raised this way are attributed to the plugin that raised them. `list`, `g
 
 An alert is held in memory, written to the database and republished to every subscriber, so the path, message, group, `references` and `data` fields are each bounded at every ingress surface. The bounds themselves are in `src/api/alerts/description.ts` and `alertPath.ts`. REST rejects an oversized field with 400; a delta carrying one is dropped with a log line.
 
-The active set is capped. When it is full, a more urgent alert displaces the least urgent one — the lowest priority, and among equals the one whose state changed longest ago — which is announced and recorded in the audit trail as a displacement. An alert no more urgent than everything active is refused.
+The active set is capped. When it is full, a more urgent alert displaces the least urgent one — the lowest priority, and among equals the one whose state changed longest ago — which is announced with `clearReason: displaced` and recorded in the audit trail as a displacement. An alert no more urgent than everything active is refused.
 
 ## Persistence
 
