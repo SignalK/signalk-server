@@ -146,6 +146,7 @@ describe('alerts deltas', () => {
       const published = publishedAlerts()
       expect(published).to.have.lengthOf(1)
       expect(published[0].alert.state).to.equal('normal')
+      expect(published[0].alert.clearReason).to.equal('condition')
     })
 
     it('republishes the active set at startup', async () => {
