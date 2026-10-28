@@ -77,10 +77,10 @@
   "dependencies": {
     "@assemblyscript/loader": "^0.28.19",
     "@astronautlabs/mdns": "^1.0.10",
-    "@canboat/canboatjs": "^4.0.0-beta.3",
+    "@canboat/canboatjs": "^4.0.0-beta.4",
     "@canboat/ts-pgns": "^3.0.0",
     "@signalk/course-provider": "^1.4.0",
-    "@signalk/n2k-signalk": "^5.0.0-beta.1",
+    "@signalk/n2k-signalk": "^5.0.0-beta.2",
     "@signalk/nmea0183-signalk": "^3.20.0",
     "@signalk/path-metadata": "^1.0.3",
     "@signalk/resources-provider": "^1.5.3",
