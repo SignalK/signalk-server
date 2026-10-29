@@ -11,7 +11,8 @@ RESTART_DELAY_SECONDS=5
 
 set_radar_range() {
   for _ in $(seq 60); do
-    curl -sf -X PUT -H 'Content-Type: application/json' \
+    kill -0 "$1" 2>/dev/null || return
+    curl -sf --max-time 5 -X PUT -H 'Content-Type: application/json' \
       -d "{\"value\":$RADAR_RANGE_METERS}" \
       http://127.0.0.1:6502/signalk/v2/api/vessels/self/radars/emu0001/controls/range \
       >/dev/null && return
@@ -25,7 +26,7 @@ set_radar_range() {
     mayara-server --emulator --emulator-land /home/node/.signalk/mayara/land.geojson \
       --no-mdns -n ws:127.0.0.1:3000 --parent "$SERVER_PID" &
     MAYARA_PID=$!
-    set_radar_range
+    set_radar_range "$MAYARA_PID"
     wait "$MAYARA_PID"
     sleep "$RESTART_DELAY_SECONDS"
   done
