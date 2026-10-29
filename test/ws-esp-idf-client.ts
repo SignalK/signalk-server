@@ -25,6 +25,28 @@ function closeCode(ws: WebSocket): Promise<number> {
 }
 
 describe('ESP-IDF WebSocket clients', () => {
+  let warnings: string[]
+  let originalWarn: typeof console.warn
+  const originalDropOnStop = process.env.SIGNALK_WS_DROP_ON_STOP
+
+  beforeEach(() => {
+    delete process.env.SIGNALK_WS_DROP_ON_STOP
+    warnings = []
+    originalWarn = console.warn
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args.join(' '))
+    }
+  })
+
+  afterEach(() => {
+    console.warn = originalWarn
+    if (originalDropOnStop === undefined) {
+      delete process.env.SIGNALK_WS_DROP_ON_STOP
+    } else {
+      process.env.SIGNALK_WS_DROP_ON_STOP = originalDropOnStop
+    }
+  })
+
   it('drops them without a close frame on stop, and closes others cleanly', async () => {
     const port = await freeport()
     const server = await startServerP(port, false)
@@ -45,5 +67,35 @@ describe('ESP-IDF WebSocket clients', () => {
         await server.stop()
       }
     }
+  })
+
+  async function closeCodeOnStop(): Promise<number> {
+    const port = await freeport()
+    const server = await startServerP(port, false)
+    let stopped = false
+    try {
+      const other = await connect(port)
+      const code = closeCode(other)
+
+      await server.stop()
+      stopped = true
+
+      return await code
+    } finally {
+      if (!stopped) {
+        await server.stop()
+      }
+    }
+  }
+
+  it('drops every client without a close frame with SIGNALK_WS_DROP_ON_STOP=all', async () => {
+    process.env.SIGNALK_WS_DROP_ON_STOP = 'all'
+    assert.strictEqual(await closeCodeOnStop(), ABNORMAL_CLOSURE)
+  })
+
+  it('ignores other SIGNALK_WS_DROP_ON_STOP values with a warning', async () => {
+    process.env.SIGNALK_WS_DROP_ON_STOP = 'true'
+    assert.notStrictEqual(await closeCodeOnStop(), ABNORMAL_CLOSURE)
+    assert(warnings.some((w) => w.includes('SIGNALK_WS_DROP_ON_STOP=true')))
   })
 })

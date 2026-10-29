@@ -34,3 +34,11 @@ those SensESP devices; do not build on it.
 Only stopping the server is affected. Connections the server ends while it is
 running, for example after a heartbeat timeout or for a client that cannot keep
 up, are handled the same way for every client.
+
+### Dropping every client
+
+For other clients that only reconnect after a dropped connection,
+`SIGNALK_WS_DROP_ON_STOP=all` makes the server drop every WebSocket connection
+on stop instead of closing it, so then no client gets a close frame, whatever
+its User-Agent (see
+[Runtime Environment & Options](../installation/command_line.md)).

@@ -297,12 +297,32 @@ function isEspIdfWsClient(spark: Spark): boolean {
   return spark.request.headers['user-agent'] === ESP_IDF_WS_USER_AGENT
 }
 
+// For clients that need a dropped connection to reconnect but are not
+// recognised by their User-Agent.
+const DROP_ALL_ON_STOP = 'all'
+
+function isDropAllOnStopEnabled(): boolean {
+  const value = process.env.SIGNALK_WS_DROP_ON_STOP
+  if (value === undefined || value === '') {
+    return false
+  }
+  if (value.toLowerCase() === DROP_ALL_ON_STOP) {
+    return true
+  }
+  console.warn(
+    `Ignoring SIGNALK_WS_DROP_ON_STOP=${value}: the only recognised value is '${DROP_ALL_ON_STOP}'`
+  )
+  return false
+}
+
 function wsInterface(app: WsApp): WsApi {
   const maxWsConnectionsPerIp = parseInt(
     process.env.MAX_WS_CONNECTIONS_PER_IP ??
       String(DEFAULT_MAX_WS_CONNECTIONS_PER_IP),
     10
   )
+
+  const dropAllOnStop = isDropAllOnStopEnabled()
 
   const backpressureThresholds = parseBackpressureThresholds({
     maxSendBufferSize: app.config.maxSendBufferSize,
@@ -706,7 +726,7 @@ function wsInterface(app: WsApp): WsApi {
       primuses.forEach((primus) => {
         primus.forEach((primusSpark: unknown) => {
           const spark = primusSpark as Spark
-          if (isEspIdfWsClient(spark)) {
+          if (dropAllOnStop || isEspIdfWsClient(spark)) {
             spark.socket?.terminate()
           }
         })
