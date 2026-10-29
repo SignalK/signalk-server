@@ -283,9 +283,7 @@ function containerRuntime(): string {
     try {
       execFileSync(runtime, ['--version'], { stdio: 'ignore' })
       return runtime
-    } catch {
-      // try the next one
-    }
+    } catch {}
   }
   throw new BuildFailure('neither docker nor podman is installed')
 }
