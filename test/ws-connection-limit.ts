@@ -347,5 +347,14 @@ describe('WebSocket per-IP connection limit behind one trusted proxy hop', funct
     await openWsExpectStatus(wsUrl, 429, {
       headers: { 'x-forwarded-for': `192.0.2.98, ${CLIENT_IP}, ` }
     })
+
+    const otherClient = new WebSocket(wsUrl, {
+      headers: { 'x-forwarded-for': '192.0.2.50, 10.0.0.2' }
+    })
+    await new Promise((resolve, reject) => {
+      otherClient.once('open', resolve)
+      otherClient.once('error', reject)
+    })
+    openSockets.push(otherClient)
   })
 })
