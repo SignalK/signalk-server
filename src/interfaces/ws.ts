@@ -868,8 +868,10 @@ function wsInterface(app: WsApp): WsApi {
 }
 
 // The same walk as Express' req.ip: back from the socket's peer through
-// X-Forwarded-For, up to the first address that is not a trusted proxy, so
-// entries a client prepends itself are never taken as its address.
+// X-Forwarded-For, up to the first address that is not a trusted proxy. With
+// a hop count or a list of proxies, entries a client prepends itself are never
+// taken as its address; trust proxy `true` trusts every hop and so takes the
+// leftmost entry.
 function resolveClientIp(
   req: SignalKSparkRequest,
   trustProxy: TrustProxyFn
