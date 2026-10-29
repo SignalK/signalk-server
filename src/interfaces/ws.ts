@@ -48,6 +48,7 @@ import {
 import { getExternalPort } from '../ports'
 import { resolvePathDisplayUnits, PathUnitsMetadata } from '../unitpreferences'
 import { Delta, hasValues } from '@signalk/server-api'
+import { userAgentOf } from '../userAgent'
 
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
@@ -105,6 +106,7 @@ interface Spark {
   sourcePolicy: SourcePolicy
   sentMetaData: Record<string, boolean>
   backpressureManager?: BackpressureManager
+  skConnectedAt?: string
   skPendingAccessRequest?: boolean
   logUnsubscribe?: () => void
   onDisconnects: Array<() => void>
@@ -263,13 +265,14 @@ interface WsApp {
   getHello: () => Record<string, unknown>
 }
 
-interface WsApi {
+export interface WsApi {
   mdns: {
     name: string
     type: string
     port: number
   }
   numClients: () => number
+  getClients: () => WebSocketClient[]
   canHandlePut: (path: string, source: string | undefined) => boolean
   handlePut: (
     requestId: string,
@@ -280,6 +283,14 @@ interface WsApi {
   ) => Promise<Reply>
   start: () => void
   stop: () => void
+}
+
+export interface WebSocketClient {
+  id: string
+  ip: string
+  userAgent?: string
+  principal?: string
+  connectedAt?: string
 }
 
 const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
@@ -328,6 +339,24 @@ function wsInterface(app: WsApp): WsApi {
         })
       )
       return count
+    },
+
+    getClients: function () {
+      const clients: WebSocketClient[] = []
+      for (const primus of primuses) {
+        primus.forEach((primusSpark: unknown) => {
+          const spark = primusSpark as Spark
+          clients.push({
+            id: spark.id,
+            ip: spark.request._resolvedIp,
+            userAgent: userAgentOf(spark.request.headers),
+            principal: spark.request.skPrincipal?.identifier,
+            connectedAt: spark.skConnectedAt
+          })
+          return true
+        })
+      }
+      return clients
     },
 
     canHandlePut: function (path: string, source: string | undefined) {
@@ -494,15 +523,17 @@ function wsInterface(app: WsApp): WsApi {
           const spark = primusSpark as Spark
           const sparkIp = spark.request._resolvedIp
           incrementIpCount(ipConnectionCounts, sparkIp)
+          spark.skConnectedAt = new Date().toISOString()
 
           let principalId: string | undefined
           if (spark.request.skPrincipal) {
             principalId = spark.request.skPrincipal.identifier
           }
 
-          debugConnection(
-            `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'})`
-          )
+          debugConnection.enabled &&
+            debugConnection(
+              `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'}) user-agent: ${JSON.stringify(userAgentOf(spark.request.headers))}`
+            )
 
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
           // An editor needs to tell a path-specific display unit override
