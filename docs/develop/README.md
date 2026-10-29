@@ -5,6 +5,7 @@ children:
   - ../breaking_changes.md
   - plugins/README.md
   - rest-api/README.md
+  - websocket_clients.md
   - ../guides/unitpreferences.md
 ---
 

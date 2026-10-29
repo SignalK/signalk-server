@@ -284,6 +284,19 @@ interface WsApi {
 
 const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
 
+// The User-Agent ESP-IDF's WebSocket client sends unless the application sets
+// its own. SensESP 3 uses that client, and up to 3.6.0 its devices reconnect
+// after the connection drops but not after a close frame from the server (all
+// of them on 3.5.0 and 3.6.0, listen-only ones on 3.0.0 to 3.4.0). On stop
+// these clients are therefore dropped without the close frame RFC 6455 asks
+// for (docs/develop/websocket_clients.md).
+// TODO: remove once SensESP releases up to 3.6.0 are out of use
+const ESP_IDF_WS_USER_AGENT = 'ESP32 Websocket Client'
+
+function isEspIdfWsClient(spark: Spark): boolean {
+  return spark.request.headers['user-agent'] === ESP_IDF_WS_USER_AGENT
+}
+
 function wsInterface(app: WsApp): WsApi {
   const maxWsConnectionsPerIp = parseInt(
     process.env.MAX_WS_CONNECTIONS_PER_IP ??
@@ -690,11 +703,17 @@ function wsInterface(app: WsApp): WsApi {
 
     stop: function () {
       debug('Destroying primuses...')
-      primuses.forEach((primus) =>
+      primuses.forEach((primus) => {
+        primus.forEach((primusSpark: unknown) => {
+          const spark = primusSpark as Spark
+          if (isEspIdfWsClient(spark)) {
+            spark.socket?.terminate()
+          }
+        })
         primus.destroy({ close: false, timeout: 500, reconnect: false }, () => {
           /* noop */
         })
-      )
+      })
     }
   }
 
