@@ -257,4 +257,4 @@ jobs:
           token: ${{ github.token }}
       - name: Report GHCR cleanup failure
         if: steps.cleanup.outcome == 'failure'
-        run: echo "::warning title=GHCR cleanup failed::Intermediate images were not deleted. The signalk-server-base package must grant this repository the Admin role under Manage Actions access."
+        run: echo "::warning title=GHCR cleanup failed::Intermediate images were not deleted. Check the cleanup step output. If this is an access error, grant this repository the Admin role under Manage Actions access."
