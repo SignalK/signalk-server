@@ -75,6 +75,7 @@ import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
 import { getAISShipTypeName, metadataRegistry } from '@signalk/path-metadata'
 import availableInterfaces from './interfaces'
+import type { WsApi } from './interfaces/ws'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
 import { execSync } from 'child_process'
@@ -334,6 +335,7 @@ interface App
   }
   activateSourcePriorities: () => void
   streambundle: StreamBundle
+  interfaces: { ws?: Pick<WsApi, 'getClients'> }
 }
 
 interface ModuleInfo {
@@ -1609,6 +1611,16 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/eventsRoutingData`,
     (req: Request, res: Response) => {
       res.json(app.wrappedEmitter.getEventRoutingData())
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/websocketClients`
+  )
+  app.get(
+    `${SERVERROUTESPREFIX}/websocketClients`,
+    (req: Request, res: Response) => {
+      res.json(app.interfaces.ws?.getClients() ?? [])
     }
   )
 
