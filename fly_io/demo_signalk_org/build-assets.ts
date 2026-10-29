@@ -394,7 +394,6 @@ try {
     5 * 60 * 1000
   )
   await convertEnc(configDir)
-  extractLand()
   await downloadTidalCurrents(configDir)
 } finally {
   if (server.exitCode === null && server.signalCode === null) {
@@ -403,5 +402,9 @@ try {
     await exited
   }
 }
+// Runs synchronously for minutes, so it waits until no request to the
+// server is open: a blocked event loop misses the server closing an idle
+// keep-alive socket, and the next request fails on it
+extractLand()
 rmSync(BUILD, { recursive: true, force: true })
 console.log(`assets ready in ${ASSETS}`)
