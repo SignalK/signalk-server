@@ -23,8 +23,7 @@ on:
         type: boolean
         default: true
 
-permissions:
-  contents: read
+permissions: {}
 
 env:
   GHCR_REGISTRY: ghcr.io
@@ -133,6 +132,7 @@ jobs:
   release:
     permissions:
       contents: write
+      pull-requests: read
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     needs: build_and_publish
@@ -143,7 +143,7 @@ jobs:
         with:
           ignorePreReleases: 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Create Release (archived, need to be updated to use the new action)
         uses: actions/create-release@v1
@@ -153,13 +153,15 @@ jobs:
           prerelease: ${{ contains(github.ref, 'beta') }}
           body: ${{steps.github_release.outputs.changelog}}
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
 
   prepare:
     name: Prepare matrices
     needs: [build_and_publish]
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       variant_matrix: ${{ steps.matrix.outputs.variant_matrix }}
@@ -286,6 +288,9 @@ jobs:
     needs: [prepare]
     if: needs.prepare.outputs.any_enabled == 'true'
     runs-on: ${{ matrix.vm }}
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -300,7 +305,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
       - name: Set TAG for build-args
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/v}" >> $GITHUB_OUTPUT
@@ -322,6 +327,9 @@ jobs:
     needs: [prepare, build]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -350,7 +358,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
       - name: Compute manifest sources
         id: sources
         env:
@@ -393,6 +401,8 @@ jobs:
     needs: [prepare, manifest]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -413,7 +423,7 @@ jobs:
         shell: bash
         env:
           GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          GHCR_TOKEN: ${{ github.token }}
           DOCKER_HUB_USERNAME: signalkci
           DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           HUB_PREFIX: docker.io/${{ env.DOCKER_HUB_REPO }}
@@ -442,6 +452,7 @@ jobs:
       - name: Wait for GHCR indexing
         run: sleep 60
       - name: Remove intermediate Docker images from GHCR
+        id: cleanup
         continue-on-error: true
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
@@ -449,11 +460,16 @@ jobs:
           delete-untagged: true
           delete-tags: |
             *-${{ github.run_id }}
-          token: ${{ secrets.GHCR_PAT }}
+          token: ${{ github.token }}
+      - name: Report GHCR cleanup failure
+        if: steps.cleanup.outcome == 'failure'
+        run: echo "::warning title=GHCR cleanup failed::Intermediate images were not deleted. The signalk-server package must grant this repository the Admin role under Manage Actions access."
 
   deploy_fly:
     runs-on: ubuntu-latest
     needs: copy-to-dockerhub
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7

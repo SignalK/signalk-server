@@ -27,11 +27,15 @@ env:
   GHCR_REPO: signalk/signalk-server-base
   DOCKER_HUB_REPO: signalk/signalk-server-base
 
+permissions: {}
+
 jobs:
   prepare:
     name: Prepare matrices
     if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       variant_matrix: ${{ steps.matrix.outputs.variant_matrix }}
@@ -124,6 +128,9 @@ jobs:
     needs: [prepare]
     if: needs.prepare.outputs.any_enabled == 'true'
     runs-on: ${{ matrix.vm }}
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -137,7 +144,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
 
       - name: Build base image
         uses: docker/build-push-action@v7
@@ -156,6 +163,8 @@ jobs:
     needs: [prepare, build]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -166,7 +175,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
 
       - name: Compute manifest sources
         id: sources
@@ -200,6 +209,8 @@ jobs:
     needs: [prepare, manifest]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -213,7 +224,7 @@ jobs:
         shell: bash
         env:
           GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          GHCR_TOKEN: ${{ github.token }}
           DOCKER_HUB_USERNAME: signalkci
           DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
@@ -235,6 +246,7 @@ jobs:
       - name: Wait for GHCR indexing
         run: sleep 60
       - name: Remove intermediate per-arch images from GHCR
+        id: cleanup
         continue-on-error: true
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
@@ -242,4 +254,7 @@ jobs:
           delete-untagged: true
           delete-tags: |
             *-${{ github.run_id }}
-          token: ${{ secrets.GHCR_PAT }}
+          token: ${{ github.token }}
+      - name: Report GHCR cleanup failure
+        if: steps.cleanup.outcome == 'failure'
+        run: echo "::warning title=GHCR cleanup failed::Intermediate images were not deleted. Check the cleanup step output. If this is an access error, grant this repository the Admin role under Manage Actions access."
