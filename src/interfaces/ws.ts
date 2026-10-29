@@ -881,6 +881,7 @@ function resolveClientIp(
       ...forwardedFor
         .split(',')
         .map((address) => address.trim())
+        .filter((address) => address !== '')
         .reverse()
     )
   }

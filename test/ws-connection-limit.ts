@@ -344,5 +344,8 @@ describe('WebSocket per-IP connection limit behind one trusted proxy hop', funct
       openSockets.push(ws)
     }
     await openWsExpectStatus(wsUrl, 429, forwardedHeaders('192.0.2.99'))
+    await openWsExpectStatus(wsUrl, 429, {
+      headers: { 'x-forwarded-for': `192.0.2.98, ${CLIENT_IP}, ` }
+    })
   })
 })
