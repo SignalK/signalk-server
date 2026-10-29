@@ -230,12 +230,13 @@ interface WsAppConfig {
     ssl?: boolean
     wsCompression?: boolean
     wsPingInterval?: number | false
-    trustProxy?: boolean | string
   }
   isExternalSsl: () => boolean
   maxSendBufferSize?: number
   maxSendBufferCheckTime?: number
 }
+
+type TrustProxyFn = (address: string, hop: number) => boolean
 
 interface WsApp {
   server: unknown
@@ -260,6 +261,7 @@ interface WsApp {
   removeListener: (event: string, handler: (data: unknown) => void) => void
   handleMessage: (source: string, msg: WsMessage) => void
   setProviderError: (provider: string, message: string) => void
+  get: (setting: 'trust proxy fn') => TrustProxyFn
   getHello: () => Record<string, unknown>
 }
 
@@ -486,7 +488,7 @@ function wsInterface(app: WsApp): WsApi {
               : undefined,
             ipConnectionCounts,
             maxWsConnectionsPerIp,
-            app.config.settings.trustProxy
+            app.get('trust proxy fn')
           )
         )
 
@@ -865,11 +867,36 @@ function wsInterface(app: WsApp): WsApi {
   return api
 }
 
+// The same walk as Express' req.ip: back from the socket's peer through
+// X-Forwarded-For, up to the first address that is not a trusted proxy, so
+// entries a client prepends itself are never taken as its address.
+function resolveClientIp(
+  req: SignalKSparkRequest,
+  trustProxy: TrustProxyFn
+): string {
+  const forwardedFor = req.headers['x-forwarded-for']
+  const addresses = [req.connection.remoteAddress]
+  if (typeof forwardedFor === 'string') {
+    addresses.push(
+      ...forwardedFor
+        .split(',')
+        .map((address) => address.trim())
+        .reverse()
+    )
+  }
+  for (let hop = 0; hop < addresses.length - 1; hop++) {
+    if (!trustProxy(addresses[hop], hop)) {
+      return addresses[hop]
+    }
+  }
+  return addresses[addresses.length - 1]
+}
+
 function createPrimusAuthorize(
   authorizeWS: ((req: SignalKSparkRequest) => void) | undefined,
   ipConnectionCounts: Map<string, number>,
   maxConnectionsPerIp: number,
-  trustProxy: boolean | string | undefined
+  trustProxy: TrustProxyFn
 ): (req: unknown, authorized: (err?: Error) => void) => void {
   return function (
     primusReq: unknown,
@@ -877,12 +904,7 @@ function createPrimusAuthorize(
   ): void {
     const req = primusReq as SignalKSparkRequest
 
-    const forwardedFor = req.headers['x-forwarded-for']
-    const firstForwardedIp =
-      trustProxy && trustProxy !== 'false' && typeof forwardedFor === 'string'
-        ? forwardedFor.split(',')[0].trim()
-        : undefined
-    req._resolvedIp = firstForwardedIp || req.connection.remoteAddress
+    req._resolvedIp = resolveClientIp(req, trustProxy)
     const ip = req._resolvedIp
     const isWebSocketUpgrade =
       String(req.headers.upgrade || '').toLowerCase() === 'websocket'
