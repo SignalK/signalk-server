@@ -4,9 +4,10 @@ kill_timeout = 5
 processes = []
 
 [env]
-  # Fly's edge proxy is the one hop in front of the server, so rate limits
-  # see the visitor's address instead of the proxy's
-  TRUST_PROXY = "1"
+  # Fly's proxy connects to the server and appends the app's own IP address
+  # to X-Forwarded-For, so the visitor's address is two hops back
+  # (https://fly.io/docs/networking/request-headers/)
+  TRUST_PROXY = "2"
 
 [experimental]
   allowed_public_ports = []
