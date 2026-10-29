@@ -1,0 +1,18 @@
+[
+  {
+    "context": "vessels.self",
+    "updates": [
+      {
+        "values": [
+          {
+            "path": "",
+            "value": {
+              "name": "Signal K demo",
+              "uuid": "urn:mrn:signalk:uuid:6e08eb30-c05b-4877-86c8-9d58490d56f1"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
