@@ -44,8 +44,8 @@ export const AlarmSchema = Type.Object(
     location: Type.Optional(
       Type.String({
         description:
-          'Where on the vessel the condition is, as display text (e.g. "ER Port"). Not a geographic position.',
-        example: 'ER Port'
+          "The location or part of the vessel where the notification originates from, for display purposes (e.g. 'Engine Room'). Not the vessel's geographic position.",
+        example: 'Engine Room'
       })
     ),
     status: Type.Optional(AlarmStatusSchema),
@@ -78,8 +78,8 @@ export const AlarmRaiseOptionsSchema = Type.Object(
     location: Type.Optional(
       Type.String({
         description:
-          'Where on the vessel the condition is, as display text (e.g. "ER Port"). Not a geographic position.',
-        example: 'ER Port'
+          "The location or part of the vessel where the notification originates from, for display purposes (e.g. 'Engine Room'). Not the vessel's geographic position.",
+        example: 'Engine Room'
       })
     ),
     context: Type.Optional(
@@ -133,7 +133,7 @@ export const AlarmUpdateOptionsSchema = Type.Object(
     location: Type.Optional(
       Type.Union([Type.String(), Type.Null()], {
         description:
-          'Where on the vessel the condition is, as display text. An empty string or null removes it.'
+          'The location or part of the vessel where the notification originates from, for display purposes. An empty string or null removes it.'
       })
     ),
     data: Type.Optional(Type.Record(Type.String(), Type.Unknown()))

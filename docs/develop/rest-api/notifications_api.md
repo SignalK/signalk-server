@@ -116,7 +116,7 @@ To raise a new notification with a specified alarm `state` send a HTTP POST requ
 
 - `state` (mandatory) - alarm state value to set _(e.g. emergency, alarm, etc.)_
 - `message` (mandatory) - message to display or speak
-- `location` (optional) - where on the vessel the condition is _(e.g. `Galley`)_
+- `location` (optional) - the location or part of the vessel where the notification originates from, for display purposes _(e.g. `Engine Room`)_. Not the vessel's geographic position.
 - `context` (optional) - notification context
 - `path` (optional) - path to assign. _(default: `notifications.{notificationId}`)_
 - `idInPath` (optional) - when `true` will append the `notificationId` to the supplied `path` _(e.g. `notifications.myalarm.{notificationId}`)_

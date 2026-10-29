@@ -403,7 +403,7 @@ export const NotificationSchema = Type.Object(
     location: Type.Optional(
       Type.String({
         description:
-          'Where on the vessel the condition is, as display text (e.g. "ER Port"). Not a geographic position.'
+          "The location or part of the vessel where the notification originates from, for display purposes (e.g. 'Engine Room'). Not the vessel's geographic position."
       })
     ),
     status: Type.Optional(AlarmStatusSchema),

@@ -273,7 +273,7 @@ export interface WithNotificationsApi {
  * @category Notifications API
  * @property state - Alarm State value to apply
  * @property message - Message to display or speak
- * @property location - Where on the vessel the condition is, e.g. "ER Port"
+ * @property location - The location or part of the vessel where the notification originates from, for display purposes, e.g. "Engine Room". Not the vessel's geographic position.
  * @property context - Context to assign to the Notification (default = `self`)
  * @property path - Path to assign to the Notification (default = `notifications.{notificationId}`)
  * @property idInPath - Set true to append the `notificationId` to the Notification path (default = false)
@@ -297,7 +297,7 @@ export interface AlarmRaiseOptions {
  * @category  Notifications API
  * @property state - Alarm State value to apply
  * @property message - Message to display or speak
- * @property location - Where on the vessel the condition is; an empty string or null removes it
+ * @property location - The location or part of the vessel where the notification originates from, for display purposes; an empty string or null removes it
  * @property data - Additional information provided in key | value pairs
  */
 export interface AlarmUpdateOptions {
