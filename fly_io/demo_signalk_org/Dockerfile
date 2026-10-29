@@ -15,5 +15,7 @@ COPY --chown=node:node assets/ /home/node/.signalk/
 RUN cd /home/node/.signalk && npm install --omit=dev --install-links --no-audit --no-fund
 # With no users in security.json, anyone could otherwise make themselves admin
 ENV DISABLE_SECURITY_ACTIVATION=true
+# Set by the image's own startup.sh, which start.sh replaces
+ENV IS_IN_DOCKER=true SIGNALK_SERVER_IS_UPDATABLE=true
 COPY --chown=node:node --chmod=600 security.json /home/node/.signalk/security.json
 ENTRYPOINT ["/home/node/start.sh"]
