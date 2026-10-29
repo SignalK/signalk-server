@@ -43,13 +43,19 @@ interface Device {
   registrationInfo?: {
     sourceIp?: string
     deviceId?: string
-    firmwareVersion?: string
     userAgent?: string
+  }
+  deviceInfo?: {
+    hardware?: string
+    hardwareVersion?: string
+    software?: string
+    softwareVersion?: string
   }
   dashboard?: DeviceDashboard
   isConnected?: boolean
   lastSeen?: string
   lastIp?: string
+  userAgent?: string
   pluginData?: Record<string, Record<string, unknown>>
 }
 
@@ -57,6 +63,35 @@ interface NewDeviceForm {
   displayName: string
   permissions: PermissionType
   dashboardUrl: string
+}
+
+function nameAndVersion(
+  name: string | undefined,
+  version: string | undefined
+): string | undefined {
+  return [name, version].filter(Boolean).join(' ') || undefined
+}
+
+function DeviceDetailRow({
+  label,
+  value
+}: {
+  label: string
+  value: string | undefined
+}) {
+  if (!value) return null
+  return (
+    <Form.Group as={Row} className="mb-2">
+      <Col md="2">
+        <Form.Label>{label}</Form.Label>
+      </Col>
+      <Col xs="12" md="9">
+        <span className="form-control-plaintext">
+          <small className="text-muted">{value}</small>
+        </span>
+      </Col>
+    </Form.Group>
+  )
 }
 
 function convertPermissions(type: PermissionType | undefined): string {
@@ -628,7 +663,7 @@ export default function Devices() {
                       </Col>
                     </Form.Group>
                   )}
-                  {selectedDevice.registrationInfo && (
+                  {selectedDevice.registrationInfo?.sourceIp && (
                     <Form.Group as={Row} className="mb-2">
                       <Col md="2">
                         <Form.Label>Registration</Form.Label>
@@ -636,15 +671,33 @@ export default function Devices() {
                       <Col xs="12" md="9">
                         <span className="form-control-plaintext">
                           <small className="text-muted">
-                            {selectedDevice.registrationInfo.sourceIp &&
-                              `IP: ${selectedDevice.registrationInfo.sourceIp}`}
-                            {selectedDevice.registrationInfo.firmwareVersion &&
-                              ` | FW: ${selectedDevice.registrationInfo.firmwareVersion}`}
+                            IP: {selectedDevice.registrationInfo.sourceIp}
                           </small>
                         </span>
                       </Col>
                     </Form.Group>
                   )}
+                  <DeviceDetailRow
+                    label="Hardware"
+                    value={nameAndVersion(
+                      selectedDevice.deviceInfo?.hardware,
+                      selectedDevice.deviceInfo?.hardwareVersion
+                    )}
+                  />
+                  <DeviceDetailRow
+                    label="Software"
+                    value={nameAndVersion(
+                      selectedDevice.deviceInfo?.software,
+                      selectedDevice.deviceInfo?.softwareVersion
+                    )}
+                  />
+                  <DeviceDetailRow
+                    label="User-Agent"
+                    value={
+                      selectedDevice.userAgent ??
+                      selectedDevice.registrationInfo?.userAgent
+                    }
+                  />
                 </Card.Body>
                 <Card.Footer>
                   <div className="d-flex flex-wrap gap-2">

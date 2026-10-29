@@ -63,16 +63,19 @@ import {
   Device,
   DeviceDashboard,
   getRateLimitValidationOptions,
+  INVALID_DEVICE_INFO_MESSAGE,
+  parseDeviceInfo,
   pathForSecurityConfig,
   SECRET_KEY_FILENAME,
   SecurityConfig,
   SecurityConfigGetter,
   SecurityConfigSaver,
   SecurityStrategy,
+  SkPrincipal,
   User,
   WithSecurityStrategy
 } from './security'
-import { DeviceTracker } from './deviceTracker'
+import { DeviceTracker, userAgentOf } from './deviceTracker'
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
@@ -706,6 +709,7 @@ module.exports = function (
                   isConnected: state.isConnected,
                   lastSeen: state.lastSeen,
                   lastIp: state.lastIp,
+                  userAgent: state.userAgent,
                   pluginData: state.pluginData
                 }
               }
@@ -784,11 +788,13 @@ module.exports = function (
           res.status(400).json({ error: 'Invalid dashboard value' })
           return
         }
+        // The device reports its own hardware and software.
+        const { deviceInfo: _deviceInfo, ...updates } = req.body
         const config = getSecurityConfig(app)
         app.securityStrategy.updateDevice(
           config,
           req.params.uuid,
-          req.body,
+          updates,
           getConfigSavingCallback(
             'Device updated',
             'Unable to update device',
@@ -796,6 +802,63 @@ module.exports = function (
           )
         )
       }
+    }
+  )
+
+  app.put(
+    `${SERVERROUTESPREFIX}/device/info`,
+    apiLimiter,
+    (req: Request, res: Response) => {
+      const principal = (req as Request & { skPrincipal?: SkPrincipal })
+        .skPrincipal
+      if (!principal?.principalType) {
+        res.status(401).json({ error: 'Authentication required' })
+        return
+      }
+      if (principal.principalType !== 'device') {
+        res.status(403).json({ error: 'Only a device can report its info' })
+        return
+      }
+      const reported = parseDeviceInfo(req.body)
+      if (!reported) {
+        res.status(400).json({ error: INVALID_DEVICE_INFO_MESSAGE })
+        return
+      }
+      const config = getSecurityConfig(app)
+      const device = config.devices?.find(
+        (d: Device) => d.clientId === principal.identifier
+      )
+      if (!device) {
+        res.status(404).json({ error: 'Device not found' })
+        return
+      }
+      // A device may report only the fields that changed, such as its
+      // software version after an update.
+      const deviceInfo = { ...device.deviceInfo, ...reported }
+      if (util.isDeepStrictEqual(deviceInfo, device.deviceInfo ?? {})) {
+        res.json(deviceInfo)
+        return
+      }
+      app.securityStrategy.updateDevice(
+        config,
+        principal.identifier,
+        { deviceInfo },
+        (err, updatedConfig) => {
+          if (err || !updatedConfig) {
+            console.log(err)
+            res.status(500).json({ error: 'Unable to update device' })
+            return
+          }
+          saveSecurityConfig(app, updatedConfig, (saveErr) => {
+            if (saveErr) {
+              console.log(saveErr)
+              res.status(500).json({ error: 'Unable to save configuration' })
+              return
+            }
+            res.json(deviceInfo)
+          })
+        }
+      )
     }
   )
 
@@ -1047,7 +1110,11 @@ module.exports = function (
         return
       }
       app.securityStrategy
-        .requestAccess(config, { accessRequest: req.body }, ip)
+        .requestAccess(
+          config,
+          { accessRequest: req.body, userAgent: userAgentOf(req.headers) },
+          ip
+        )
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .then((reply: any) => {
           res.status(reply.state === 'PENDING' ? 202 : reply.statusCode)

@@ -116,8 +116,47 @@ export interface UserWithPassword {
 export interface DeviceRegistrationInfo {
   sourceIp?: string
   deviceId?: string
-  firmwareVersion?: string
   userAgent?: string
+}
+
+export interface DeviceInfo {
+  hardware?: string
+  hardwareVersion?: string
+  software?: string
+  softwareVersion?: string
+}
+
+const DEVICE_INFO_FIELDS = [
+  'hardware',
+  'hardwareVersion',
+  'software',
+  'softwareVersion'
+] as const
+const DEVICE_INFO_MAX_LENGTH = 128
+export const INVALID_DEVICE_INFO_MESSAGE = `device must be an object whose ${DEVICE_INFO_FIELDS.join(', ')} are strings of at most ${DEVICE_INFO_MAX_LENGTH} characters`
+
+// Returns undefined when the value is not a valid device object, so callers
+// can tell a rejected value from an absent one.
+export function parseDeviceInfo(value: unknown): DeviceInfo | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined
+  }
+  const input = value as Record<string, unknown>
+  const info: DeviceInfo = {}
+  for (const field of DEVICE_INFO_FIELDS) {
+    const fieldValue = input[field]
+    if (fieldValue === undefined) {
+      continue
+    }
+    if (
+      typeof fieldValue !== 'string' ||
+      fieldValue.length > DEVICE_INFO_MAX_LENGTH
+    ) {
+      return undefined
+    }
+    info[field] = fieldValue
+  }
+  return info
 }
 
 export interface DeviceDashboard {
@@ -139,6 +178,8 @@ export interface Device {
   displayName?: string
   createdAt?: string
   registrationInfo?: DeviceRegistrationInfo
+  // Reported by the device itself, at registration or later.
+  deviceInfo?: DeviceInfo
   dashboard?: DeviceDashboard
 }
 
@@ -147,6 +188,7 @@ export interface DeviceDataUpdate {
   description?: string
   displayName?: string
   dashboard?: DeviceDashboard
+  deviceInfo?: DeviceInfo
 }
 
 export interface OIDCSecurityConfig {

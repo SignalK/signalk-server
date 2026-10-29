@@ -35,7 +35,10 @@ import { createHash, randomBytes } from 'crypto'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pathToRegexp: (path: string) => RegExp = require('path-to-regexp')
 import { createDebug } from './debug'
-import type { DeviceTracker as DeviceTrackerType } from './deviceTracker'
+import {
+  type DeviceTracker as DeviceTrackerType,
+  userAgentOf
+} from './deviceTracker'
 import {
   createLoginRateLimiter,
   LOGIN_RATE_LIMIT_MESSAGE
@@ -57,7 +60,9 @@ import {
   SkPrincipal,
   LoginResponse as SecurityLoginResponse,
   WSConnection as SecurityWSConnection,
-  isOIDCUserIdentifier
+  isOIDCUserIdentifier,
+  parseDeviceInfo,
+  INVALID_DEVICE_INFO_MESSAGE
 } from './security'
 // requestResponse is still CommonJS
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -201,8 +206,10 @@ interface AccessRequest {
       password?: string
       description?: string
       permissions?: string
+      device?: unknown
     }
     requestedPermissions?: boolean
+    userAgent?: string
   }
   ip: string
   token?: string
@@ -1386,6 +1393,10 @@ function tokenSecurityFactory(
       device.dashboard = updates.dashboard || undefined
     }
 
+    if (updates.deviceInfo !== undefined) {
+      device.deviceInfo = updates.deviceInfo
+    }
+
     callback(null, theConfig)
     options = theConfig as TokenSecurityOptions
   }
@@ -1872,7 +1883,11 @@ function tokenSecurityFactory(
                 ) {
                   ;(
                     app as unknown as { deviceTracker: DeviceTrackerType }
-                  ).deviceTracker.onActivity(principal.identifier, req.ip)
+                  ).deviceTracker.onActivity(
+                    principal.identifier,
+                    req.ip,
+                    userAgentOf(req.headers)
+                  )
                 }
                 next()
                 return
@@ -2021,11 +2036,9 @@ function tokenSecurityFactory(
               typeof accessReq.deviceId === 'string'
                 ? accessReq.deviceId
                 : undefined,
-            firmwareVersion:
-              typeof accessReq.firmwareVersion === 'string'
-                ? accessReq.firmwareVersion
-                : undefined
-          }
+            userAgent: request.clientRequest.userAgent
+          },
+          deviceInfo: parseDeviceInfo(accessReq.device)
         })
         request.token = token
       } else {
@@ -2086,8 +2099,10 @@ function tokenSecurityFactory(
         password?: string
         description?: string
         permissions?: string
+        device?: unknown
       }
       requestedPermissions?: boolean
+      userAgent?: string
     },
     sourceIp: string,
     updateCb?: (reply: unknown) => void
@@ -2157,6 +2172,19 @@ function tokenSecurityFactory(
           if (accessRequest.clientId) {
             if (!options.allowDeviceAccessRequests) {
               updateRequest(request.requestId, 'COMPLETED', { statusCode: 403 })
+                .then(resolve)
+                .catch(reject)
+              return
+            }
+
+            if (
+              accessRequest.device !== undefined &&
+              !parseDeviceInfo(accessRequest.device)
+            ) {
+              updateRequest(request.requestId, 'COMPLETED', {
+                statusCode: 400,
+                message: INVALID_DEVICE_INFO_MESSAGE
+              })
                 .then(resolve)
                 .catch(reject)
               return

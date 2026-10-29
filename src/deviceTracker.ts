@@ -4,6 +4,17 @@ import { createDebug } from './debug'
 const debug = createDebug('signalk-server:deviceTracker')
 
 const HTTP_ACTIVITY_TIMEOUT_MS = 5 * 60 * 1000
+// Bounds what a client can make the server keep in memory and security.json.
+const USER_AGENT_MAX_LENGTH = 256
+
+export function userAgentOf(
+  headers: Record<string, string | string[] | undefined>
+): string | undefined {
+  const userAgent = headers['user-agent']
+  return typeof userAgent === 'string' && userAgent
+    ? userAgent.slice(0, USER_AGENT_MAX_LENGTH)
+    : undefined
+}
 
 export interface DeviceRuntimeState {
   clientId: string
@@ -11,6 +22,7 @@ export interface DeviceRuntimeState {
   connectionCount: number
   lastSeen: string
   lastIp?: string
+  userAgent?: string
   pluginData?: Record<string, Record<string, unknown>>
 }
 
@@ -18,6 +30,7 @@ export interface DeviceStateEvent {
   clientId: string
   connected: boolean
   ip?: string
+  userAgent?: string
   connectionType?: 'websocket' | 'http'
 }
 
@@ -34,7 +47,7 @@ export class DeviceTracker extends EventEmitter {
     this.httpTimer.unref?.()
   }
 
-  onConnect(clientId: string, ip?: string): void {
+  onConnect(clientId: string, ip?: string, userAgent?: string): void {
     const state = this.getOrCreate(clientId)
     const wasConnected = state.isConnected
     state.connectionCount++
@@ -42,6 +55,9 @@ export class DeviceTracker extends EventEmitter {
     state.lastSeen = new Date().toISOString()
     if (ip) {
       state.lastIp = ip
+    }
+    if (userAgent) {
+      state.userAgent = userAgent
     }
     debug(
       'device connected: %s (connections: %d)',
@@ -53,6 +69,7 @@ export class DeviceTracker extends EventEmitter {
         clientId,
         connected: true,
         ip,
+        userAgent,
         connectionType: 'websocket'
       })
     }
@@ -78,15 +95,24 @@ export class DeviceTracker extends EventEmitter {
     }
   }
 
-  onActivity(clientId: string, ip?: string): void {
+  onActivity(clientId: string, ip?: string, userAgent?: string): void {
     const state = this.getOrCreate(clientId)
     state.lastSeen = new Date().toISOString()
     if (ip) {
       state.lastIp = ip
     }
+    if (userAgent) {
+      state.userAgent = userAgent
+    }
     if (!state.isConnected) {
       state.isConnected = true
-      this.emitChange({ clientId, connected: true, ip, connectionType: 'http' })
+      this.emitChange({
+        clientId,
+        connected: true,
+        ip,
+        userAgent,
+        connectionType: 'http'
+      })
     }
   }
 

@@ -770,5 +770,6 @@ export interface DeviceStateChangeEvent {
   clientId: string
   connected: boolean
   ip?: string
+  userAgent?: string
   connectionType?: 'websocket' | 'http'
 }

@@ -13,7 +13,11 @@ import {
   getReadOnlyToken,
   serverTestConfigDirectory
 } from './servertestutilities'
-import { DeviceTracker, type DeviceStateEvent } from '../src/deviceTracker'
+import {
+  DeviceTracker,
+  type DeviceStateEvent,
+  userAgentOf
+} from '../src/deviceTracker'
 
 const expect = chai.expect
 
@@ -799,6 +803,227 @@ describe('Device Manager', function () {
   })
 })
 
+describe('Device identity', function () {
+  const SENSESP_UA = 'SensESP/3.6.1'
+  const DEVICE_INFO = {
+    hardware: 'ESP32-C6',
+    hardwareVersion: 'v0.2',
+    software: 'SensESP',
+    softwareVersion: '3.6.1'
+  }
+
+  let url: string
+  let server: TestServer
+  let adminToken: string
+
+  function adminHeaders() {
+    return {
+      Cookie: `JAUTHENTICATION=${adminToken}`,
+      'Content-Type': 'application/json'
+    }
+  }
+
+  async function listDevices(): Promise<Array<Record<string, unknown>>> {
+    const res = await fetch(`${url}/skServer/security/devices`, {
+      headers: adminHeaders()
+    })
+    return res.json()
+  }
+
+  async function findDevice(
+    clientId: string
+  ): Promise<Record<string, unknown> | undefined> {
+    return (await listDevices()).find((d) => d.clientId === clientId)
+  }
+
+  async function requestAndApprove(
+    clientId: string,
+    body: Record<string, unknown>
+  ): Promise<string> {
+    const requestResult = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': SENSESP_UA
+      },
+      body: JSON.stringify({ clientId, description: 'identity test', ...body })
+    })
+    expect(requestResult.status).to.equal(202)
+    const { href } = await requestResult.json()
+    const approveResult = await fetch(
+      `${url}/skServer/security/access/requests/${clientId}/approved`,
+      {
+        method: 'PUT',
+        headers: adminHeaders(),
+        body: JSON.stringify({ expiration: '1y', permissions: 'readonly' })
+      }
+    )
+    expect(approveResult.status).to.equal(200)
+    const status = await (await fetch(`${url}${href}`)).json()
+    return status.accessRequest.token
+  }
+
+  before(async function () {
+    this.timeout(SERVER_START_TIMEOUT)
+    const port = await freeport()
+    url = `http://0.0.0.0:${port}`
+    server = await startServerP(
+      port,
+      true,
+      {},
+      {
+        allowDeviceAccessRequests: true
+      }
+    )
+    adminToken = await getAdminToken(server)
+  })
+
+  after(async function () {
+    for (const d of await listDevices()) {
+      await fetch(`${url}/skServer/security/devices/${d.clientId}`, {
+        method: 'DELETE',
+        headers: adminHeaders()
+      })
+    }
+    await server.stop()
+  })
+
+  it('stores the device object and User-Agent of an access request', async function () {
+    await requestAndApprove('identity-request', { device: DEVICE_INFO })
+
+    const device = await findDevice('identity-request')
+    expect(device?.deviceInfo).to.deep.equal(DEVICE_INFO)
+    expect(
+      (device?.registrationInfo as { userAgent?: string }).userAgent
+    ).to.equal(SENSESP_UA)
+  })
+
+  it('accepts an access request without a device object', async function () {
+    await requestAndApprove('identity-none', {})
+
+    const device = await findDevice('identity-none')
+    expect(device?.deviceInfo).to.be.undefined
+  })
+
+  it('rejects an access request with an invalid device object', async function () {
+    const result = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: 'identity-invalid',
+        description: 'identity test',
+        device: { software: 42 }
+      })
+    })
+    expect(result.status).to.equal(400)
+  })
+
+  it('lets a device update fields of its device object', async function () {
+    const token = await requestAndApprove('identity-update', {
+      device: DEVICE_INFO
+    })
+
+    const result = await fetch(`${url}/skServer/device/info`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ softwareVersion: '3.7.0' })
+    })
+    expect(result.status).to.equal(200)
+
+    const device = await findDevice('identity-update')
+    expect(device?.deviceInfo).to.deep.equal({
+      ...DEVICE_INFO,
+      softwareVersion: '3.7.0'
+    })
+  })
+
+  it('rejects an invalid device object update', async function () {
+    const token = await requestAndApprove('identity-update-invalid', {})
+
+    const result = await fetch(`${url}/skServer/device/info`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ softwareVersion: 'x'.repeat(129) })
+    })
+    expect(result.status).to.equal(400)
+  })
+
+  it('lets only devices report device info', async function () {
+    const result = await fetch(`${url}/skServer/device/info`, {
+      method: 'PUT',
+      headers: adminHeaders(),
+      body: JSON.stringify(DEVICE_INFO)
+    })
+    expect(result.status).to.equal(403)
+  })
+
+  it('keeps the device object out of admin updates', async function () {
+    await requestAndApprove('identity-admin', { device: DEVICE_INFO })
+
+    const result = await fetch(
+      `${url}/skServer/security/devices/identity-admin`,
+      {
+        method: 'PUT',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          displayName: 'Renamed',
+          deviceInfo: { software: 'Spoofed' }
+        })
+      }
+    )
+    expect(result.status).to.equal(200)
+
+    const device = await findDevice('identity-admin')
+    expect(device?.displayName).to.equal('Renamed')
+    expect(device?.deviceInfo).to.deep.equal(DEVICE_INFO)
+  })
+
+  it('reports the User-Agent of the latest HTTP request', async function () {
+    const token = await requestAndApprove('identity-http', {})
+
+    await fetch(`${url}/skServer/loginStatus`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'User-Agent': 'espOS/0.23.0'
+      }
+    })
+
+    const device = await findDevice('identity-http')
+    expect(device?.userAgent).to.equal('espOS/0.23.0')
+  })
+
+  it('reports the User-Agent of a WebSocket connection', async function () {
+    const token = await requestAndApprove('identity-ws', {})
+
+    const ws = await new Promise<WebSocket>((resolve, reject) => {
+      const socket = new WebSocket(
+        `${url.replace('http', 'ws')}/signalk/v1/stream?subscribe=none`,
+        {
+          headers: {
+            Cookie: `JAUTHENTICATION=${token}`,
+            'User-Agent': 'ESP32 Websocket Client'
+          }
+        }
+      )
+      socket.once('message', () => resolve(socket))
+      socket.once('error', reject)
+    })
+    try {
+      expect(
+        server.app.deviceTracker.getState('identity-ws')?.userAgent
+      ).to.equal('ESP32 Websocket Client')
+    } finally {
+      ws.close()
+    }
+  })
+})
+
 // A file-backed security config is read from disk on every request and
 // saved asynchronously, so overlapping requests are possible only here.
 describe('Device token regeneration with a file-backed security config', function () {
@@ -935,6 +1160,23 @@ describe('DeviceTracker', function () {
     expect(state.isConnected).to.be.false
     expect(events).to.have.lengthOf(2)
     expect(events[1].data.connected).to.be.false
+
+    tracker.destroy()
+  })
+
+  it('records the User-Agent and caps its length', function () {
+    const events: AdminDeviceEvent[] = []
+    const tracker = new DeviceTracker((e) => events.push(e as AdminDeviceEvent))
+
+    tracker.onConnect('device-ua', '10.0.0.1', 'SensESP/3.6.1')
+    expect(tracker.getState('device-ua')?.userAgent).to.equal('SensESP/3.6.1')
+    expect(events[0].data.userAgent).to.equal('SensESP/3.6.1')
+
+    tracker.onActivity('device-ua', '10.0.0.1', 'espOS/0.23.0')
+    expect(tracker.getState('device-ua')?.userAgent).to.equal('espOS/0.23.0')
+
+    expect(userAgentOf({ 'user-agent': 'a'.repeat(300) })).to.have.lengthOf(256)
+    expect(userAgentOf({})).to.be.undefined
 
     tracker.destroy()
   })

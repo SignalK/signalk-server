@@ -38,7 +38,7 @@ import {
   UpdateOptions
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
-import type { DeviceTracker } from '../deviceTracker'
+import { type DeviceTracker, userAgentOf } from '../deviceTracker'
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -504,7 +504,7 @@ function wsInterface(app: WsApp): WsApi {
           }
 
           debugConnection(
-            `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'})`
+            `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'}) user-agent: ${JSON.stringify(userAgentOf(spark.request.headers))}`
           )
 
           trackDeviceConnect(app, spark)
@@ -785,7 +785,7 @@ function wsInterface(app: WsApp): WsApi {
       const clientIp = spark.request._resolvedIp
       requestAccess(
         app as unknown as WithSecurityStrategy & WithConfig,
-        msg,
+        { ...msg, userAgent: userAgentOf(spark.request.headers) },
         clientIp,
         (res: Reply) => {
           if (res.state === 'COMPLETED') {
@@ -1217,7 +1217,11 @@ function trackDeviceConnect(app: WsApp, spark: Spark): void {
   }
   spark.skTrackedDeviceId = deviceId
   if (deviceId) {
-    app.deviceTracker.onConnect(deviceId, spark.request._resolvedIp)
+    app.deviceTracker.onConnect(
+      deviceId,
+      spark.request._resolvedIp,
+      userAgentOf(spark.request.headers)
+    )
   }
 }
 
