@@ -38,8 +38,7 @@ up, are handled the same way for every client.
 
 ### Dropping every client
 
-For other clients that only reconnect after a dropped connection,
-`SIGNALK_WS_DROP_ON_STOP=all` makes the server drop every WebSocket connection
-on stop instead of closing it, so then no client gets a close frame, whatever
-its User-Agent (see
-[Runtime Environment & Options](../installation/command_line.md)).
+For other clients that only reconnect after a dropped connection, the server
+can be set to drop every WebSocket connection on stop instead of closing it.
+Then no client gets a close frame, whatever its User-Agent. The setting is
+described in [Runtime Environment & Options](../installation/command_line.md).
