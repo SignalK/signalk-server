@@ -175,6 +175,41 @@ describe('WasmN2k', () => {
     ])
   })
 
+  it('transmits only what its own configured events carry', () => {
+    const app = createMockApp()
+    const sent: string[] = []
+    app.on('ydwg02-out:bus2', (line: string) => sent.push(line))
+    const stream = new WasmN2k({
+      app,
+      txFormat: 'ydwg-raw',
+      txEvent: 'ydwg02-out:bus2',
+      outEvent: 'bus2Out, bridgeOut',
+      jsonOutEvent: 'bus2JsonOut',
+      createDebug: createDebugStub()
+    })
+    const record = {
+      pgn: 127508,
+      prio: 2,
+      dst: 255,
+      fields: { instance: 0, voltage: 26.27, current: -63.9 }
+    }
+
+    app.emit('nmea2000JsonOut', record)
+    app.emit('nmea2000out', AIRMAR_MASTER_RESET)
+    app.emit('bus2JsonOut', record)
+    app.emit('bus2Out', AIRMAR_MASTER_RESET)
+    app.emit('bridgeOut', record)
+    stream.end()
+    app.emit('bus2JsonOut', record)
+    app.emit('bridgeOut', record)
+
+    expect(sent).to.deep.equal([
+      '09F21400 00 43 0A 81 FD FF FF FF\r\n',
+      '0DEF2300 00 06 87 98 01 FF FF FF\r\n',
+      '09F21400 00 43 0A 81 FD FF FF FF\r\n'
+    ])
+  })
+
   it('stops transmitting once ended', () => {
     const app = createMockApp()
     const sent: string[] = []

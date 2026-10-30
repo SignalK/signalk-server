@@ -148,6 +148,13 @@ type PipeStartFactory = (
   logging?: boolean
 ) => PipeElement[]
 
+// Each gateway connection writes on a transmit event of its own, so a
+// frame encoded for one connection reaches only that gateway's socket
+// and two gateways can carry different traffic (a bridge between two
+// buses).
+const gatewayTxEvent = (base: string, subOptions: SubOptions): string =>
+  `${base}:${subOptions.providerId}`
+
 const discriminatorByDataType: Record<string, string> = {
   NMEA2000WASM: 'A',
   NMEA2000WASMBYTES: 'A',
@@ -209,8 +216,14 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
       string,
       { txFormat: WasmN2kOptions['txFormat']; txEvent: string }
     > = {
-      'ydwg02-wasm': { txFormat: 'ydwg-raw', txEvent: 'ydwg02-out' },
-      'w2k-1-n2k-ascii-wasm': { txFormat: 'n2k-ascii', txEvent: 'w2k-1-out' }
+      'ydwg02-wasm': {
+        txFormat: 'ydwg-raw',
+        txEvent: gatewayTxEvent('ydwg02-out', options.subOptions)
+      },
+      'w2k-1-n2k-ascii-wasm': {
+        txFormat: 'n2k-ascii',
+        txEvent: gatewayTxEvent('w2k-1-out', options.subOptions)
+      }
       // canbus-wasm: TX and address claiming stay with the canbus
       // transport element (candevice), which owns the socket.
     }
@@ -367,7 +380,10 @@ function nmea2000input(
     ]
   } else if (subOptions.type === 'ydwg02-wasm') {
     return [
-      new Tcp({ ...subOptions, outEvent: 'ydwg02-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('ydwg02-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
@@ -376,7 +392,10 @@ function nmea2000input(
     ]
   } else if (subOptions.type === 'w2k-1-n2k-ascii-wasm') {
     return [
-      new Tcp({ ...subOptions, outEvent: 'w2k-1-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('w2k-1-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
