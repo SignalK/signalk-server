@@ -64,4 +64,24 @@ describe('WebSocketClients', () => {
     await act(async () => answerFirst(listResponse([])))
     expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
   })
+
+  it('shows the list when every request outlasts the polling interval', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const answers: ((response: Partial<Response>) => void)[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Partial<Response>>((resolve) => {
+            answers.push(resolve)
+          })
+      )
+    )
+    render(<WebSocketClients clientCount={1} />)
+
+    await act(() => vi.advanceTimersByTimeAsync(10000))
+    expect(answers).toHaveLength(2)
+    await act(async () => answers[0](listResponse([spark])))
+    expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
+  })
 })
