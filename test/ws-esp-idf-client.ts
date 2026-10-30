@@ -69,6 +69,29 @@ describe('ESP-IDF WebSocket clients', () => {
     }
   })
 
+  it('turns new connections away while the server is stopping', async () => {
+    const port = await freeport()
+    const server = await startServerP(port, false)
+    let releaseSlowInterface = () => {}
+    server.app.interfaces.slowToStop = {
+      stop: () =>
+        new Promise<void>((resolve) => {
+          releaseSlowInterface = resolve
+        })
+    }
+    const stopping = server.stop()
+    try {
+      await new Promise((resolve) => setImmediate(resolve))
+      await assert.rejects(
+        connect(port, ESP_IDF_WS_USER_AGENT),
+        /Unexpected server response: 503/
+      )
+    } finally {
+      releaseSlowInterface()
+      await stopping
+    }
+  })
+
   async function closeCodeOnStop(): Promise<number> {
     const port = await freeport()
     const server = await startServerP(port, false)

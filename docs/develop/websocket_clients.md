@@ -12,7 +12,8 @@ Notes for anyone writing a client for the server's WebSocket stream
 When Signal K Server stops or restarts, it ends every WebSocket connection
 with a close frame, as [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455#section-7)
 describes. A client should handle that like any other lost connection: wait,
-then reconnect, backing off if the server is not back yet.
+then reconnect, backing off if the server is not back yet. While it stops, the
+server turns new WebSocket connections away with HTTP status 503.
 
 ### Exception: ESP-IDF's default User-Agent
 
