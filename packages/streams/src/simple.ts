@@ -139,6 +139,12 @@ type PipeStartFactory = (
   logging?: boolean
 ) => PipeElement[]
 
+// Each gateway connection writes on a transmit event of its own, so a
+// frame encoded for one connection reaches only that gateway and two
+// gateways can carry different traffic (a bridge between two buses).
+const gatewayTxEvent = (base: string, subOptions: SubOptions): string =>
+  `${base}:${subOptions.providerId}`
+
 const discriminatorByDataType: Record<string, string> = {
   NMEA2000JS: 'A',
   NMEA2000IK: 'A',
@@ -227,7 +233,10 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     const Ydwg02Ctor = canboatjs.Ydwg02 as unknown as CanboatCtor
     const result: PipeElement[] = [
       new Ydwg02Ctor(
-        { ...options.subOptions },
+        {
+          ...options.subOptions,
+          ydgwOutEvent: gatewayTxEvent('ydwg02-out', options.subOptions)
+        },
         options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network'
       )
     ]
@@ -307,7 +316,10 @@ function nmea2000input(
     ]
   } else if (subOptions.type === 'ydwg02-canboatjs') {
     return [
-      new Tcp({ ...subOptions, outEvent: 'ydwg02-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('ydwg02-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
@@ -316,7 +328,10 @@ function nmea2000input(
     ]
   } else if (subOptions.type === 'ydwg02-udp-canboatjs') {
     return [
-      new Udp({ ...subOptions, outEvent: 'ydwg02-out' } as SubOptions & {
+      new Udp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('ydwg02-out', subOptions)
+      } as SubOptions & {
         port: number
         outEvent: string
       }),
@@ -348,23 +363,37 @@ function nmea2000input(
   } else if (subOptions.type === 'w2k-1-n2k-ascii-canboatjs') {
     const W2k01Ctor = requireW2k01()
     return [
-      new Tcp({ ...subOptions, outEvent: 'w2k-1-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('w2k-1-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
       }),
       new Liner(subOptions),
-      new W2k01Ctor(subOptions, 'ascii', 'w2k-1-out')
+      new W2k01Ctor(
+        subOptions,
+        'ascii',
+        gatewayTxEvent('w2k-1-out', subOptions)
+      )
     ]
   } else if (subOptions.type === 'w2k-1-n2k-actisense-canboatjs') {
     const W2k01Ctor = requireW2k01()
     return [
-      new Tcp({ ...subOptions, outEvent: 'w2k-1-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('w2k-1-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
       }),
-      new W2k01Ctor(subOptions, 'actisense', 'w2k-1-out')
+      new W2k01Ctor(
+        subOptions,
+        'actisense',
+        gatewayTxEvent('w2k-1-out', subOptions)
+      )
     ]
   } else if (subOptions.type === 'n2k-ip-gateway-canboatjs') {
     const canboatjs = require('@canboat/canboatjs') as {
@@ -392,7 +421,7 @@ function nmea2000input(
       new (Ctor as new (options: object) => PipeElement)({
         ...subOptions,
         baudrate: 38400,
-        toStdout: 'ydwg02-out'
+        toStdout: gatewayTxEvent('ydwg02-out', subOptions)
       })
     ]
   } else {
