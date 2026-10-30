@@ -26,5 +26,17 @@
       "wadden-coastline",
       "Waddenzee"
     ]
+  },
+  "plotterExtensions": {
+    "widgets": [
+      {
+        "instanceId": "demo-tides",
+        "extension": "signalk-tides",
+        "widget": "tides",
+        "anchor": "bl",
+        "col": 0,
+        "row": 1
+      }
+    ]
   }
 }
