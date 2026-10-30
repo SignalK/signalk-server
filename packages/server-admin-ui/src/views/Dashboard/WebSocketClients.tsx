@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Card from 'react-bootstrap/Card'
 import Table from 'react-bootstrap/Table'
 import { useLoginStatus } from '../../store'
@@ -21,7 +21,15 @@ export default function WebSocketClients({
   clientCount: number
 }) {
   const loginStatus = useLoginStatus()
-  const [clients, setClients] = useState<WebSocketClient[] | null>(null)
+  // The list belongs to the login that fetched it, so another login never
+  // sees it, even while its own first request is still pending.
+  const identity = `${loginStatus.status}:${loginStatus.username ?? ''}`
+  const [loaded, setLoaded] = useState<{
+    identity: string
+    clients: WebSocketClient[] | null
+  } | null>(null)
+  const loadRef = useRef<(() => void) | null>(null)
+  const lastClientCount = useRef(clientCount)
 
   useEffect(() => {
     let cancelled = false
@@ -31,10 +39,10 @@ export default function WebSocketClients({
     let appliedRequest = 0
     const load = () => {
       const request = ++sentRequests
-      const apply = (data: WebSocketClient[] | null) => {
+      const apply = (clients: WebSocketClient[] | null) => {
         if (cancelled || request < appliedRequest) return
         appliedRequest = request
-        setClients(data)
+        setLoaded({ identity, clients })
       }
       fetch(`${window.serverRoutesPrefix}/websocketClients`, {
         credentials: 'include'
@@ -43,14 +51,25 @@ export default function WebSocketClients({
         .then(apply)
         .catch(() => apply(null))
     }
+    loadRef.current = load
     load()
     const timer = setInterval(load, REFRESH_INTERVAL_MS)
     return () => {
       cancelled = true
+      loadRef.current = null
       clearInterval(timer)
     }
-  }, [clientCount, loginStatus.status, loginStatus.username])
+  }, [identity])
 
+  // A changed count means a client came or went: refresh at once, without
+  // restarting the polling and dropping the requests still in flight.
+  useEffect(() => {
+    if (lastClientCount.current === clientCount) return
+    lastClientCount.current = clientCount
+    loadRef.current?.()
+  }, [clientCount])
+
+  const clients = loaded?.identity === identity ? loaded.clients : null
   if (!clients) return null
 
   return (
