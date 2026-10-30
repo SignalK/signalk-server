@@ -2,8 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import WebSocketClients from './WebSocketClients'
 
+const login = vi.hoisted(() => ({
+  current: { status: 'loggedIn', username: 'admin', userLevel: 'admin' }
+}))
+
 vi.mock('../../store', () => ({
-  useLoginStatus: () => ({ status: 'loggedIn', userLevel: 'admin' })
+  useLoginStatus: () => login.current
 }))
 
 const spark = {
@@ -25,6 +29,11 @@ describe('WebSocketClients', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+    login.current = {
+      status: 'loggedIn',
+      username: 'admin',
+      userLevel: 'admin'
+    }
   })
 
   it('lists each client with its User-Agent', async () => {
@@ -83,5 +92,41 @@ describe('WebSocketClients', () => {
     expect(answers).toHaveLength(2)
     await act(async () => answers[0](listResponse([spark])))
     expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
+  })
+
+  it('keeps a pending request when the client count changes', async () => {
+    let answerFirst: (response: Partial<Response>) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockReturnValueOnce(
+          new Promise<Partial<Response>>((resolve) => {
+            answerFirst = resolve
+          })
+        )
+        .mockReturnValue(new Promise(() => {}))
+    )
+    const { rerender } = render(<WebSocketClients clientCount={1} />)
+    rerender(<WebSocketClients clientCount={2} />)
+    expect(fetch).toHaveBeenCalledTimes(2)
+
+    await act(async () => answerFirst(listResponse([spark])))
+    expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
+  })
+
+  it('hides the list from the next login before its own answer', async () => {
+    mockFetch(listResponse([spark]))
+    const { container, rerender } = render(<WebSocketClients clientCount={1} />)
+    await screen.findByText('ESP32 Websocket Client')
+
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
+    login.current = {
+      status: 'notLoggedIn',
+      username: '',
+      userLevel: 'readonly'
+    }
+    rerender(<WebSocketClients clientCount={1} />)
+    expect(container.textContent).toBe('')
   })
 })
