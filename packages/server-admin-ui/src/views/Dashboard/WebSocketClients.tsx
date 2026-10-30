@@ -25,12 +25,16 @@ export default function WebSocketClients({
 
   useEffect(() => {
     let cancelled = false
-    // A slow response must not overwrite the one from a later request.
-    let latestRequest = 0
+    // Requests can take longer than the polling interval, so responses may
+    // arrive out of order; an older one must not replace a newer list.
+    let sentRequests = 0
+    let appliedRequest = 0
     const load = () => {
-      const request = ++latestRequest
+      const request = ++sentRequests
       const apply = (data: WebSocketClient[] | null) => {
-        if (!cancelled && request === latestRequest) setClients(data)
+        if (cancelled || request < appliedRequest) return
+        appliedRequest = request
+        setClients(data)
       }
       fetch(`${window.serverRoutesPrefix}/websocketClients`, {
         credentials: 'include'
