@@ -1,6 +1,7 @@
 import { Transform, TransformCallback } from 'stream'
 import { FromPgn, TxEncoder } from '@canboat/wasm'
 import type { CreateDebug, DebugLogger } from './types'
+import { subscribeN2kOut, N2kOutEventOptions } from './n2k-out-events'
 
 /*
  * NMEA 2000 parser element backed by @canboat/wasm — the canboat wire
@@ -25,7 +26,7 @@ import type { CreateDebug, DebugLogger } from './types'
  * for the transport element to write.
  */
 
-interface WasmN2kOptions {
+interface WasmN2kOptions extends N2kOutEventOptions {
   app: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
@@ -77,8 +78,7 @@ export default class WasmN2k extends Transform {
   private readonly providerId: string | undefined
   private readonly receiveTime: boolean
   private readonly debug: DebugLogger
-  private txHandler: ((pgn: unknown) => void) | null = null
-  private outTxHandler: ((msg: unknown) => void) | null = null
+  private unsubscribeTx: (() => void) | null = null
 
   constructor(options: WasmN2kOptions) {
     super({ objectMode: true })
@@ -118,18 +118,21 @@ export default class WasmN2k extends Transform {
           options.app.emit('wasm-n2k:error', err)
         }
       }
-      this.txHandler = (pgn: unknown) =>
-        transmit(() => tx.encode(JSON.stringify(pgn), txFormat))
-      // As on the canboatjs connections, nmea2000out carries either a
-      // plain-format line, sent with its payload as given, or a PGN record.
-      this.outTxHandler = (msg: unknown) =>
-        transmit(() =>
-          typeof msg === 'string'
-            ? tx.encodeLine(msg, txFormat)
-            : tx.encode(JSON.stringify(msg), txFormat)
-        )
-      options.app.on('nmea2000JsonOut', this.txHandler)
-      options.app.on('nmea2000out', this.outTxHandler)
+      this.unsubscribeTx = subscribeN2kOut(
+        options.app,
+        options,
+        // As on the canboatjs connections, nmea2000out carries either a
+        // plain-format line, sent with its payload as given, or a PGN
+        // record.
+        (msg: unknown) =>
+          transmit(() =>
+            typeof msg === 'string'
+              ? tx.encodeLine(msg, txFormat)
+              : tx.encode(JSON.stringify(msg), txFormat)
+          ),
+        (pgn: unknown) =>
+          transmit(() => tx.encode(JSON.stringify(pgn), txFormat))
+      )
       options.app.emit('nmea2000OutAvailable')
     }
   }
@@ -138,14 +141,8 @@ export default class WasmN2k extends Transform {
   // creates a fresh element, so the old one must detach or every
   // restart adds a duplicate encoder writing to the gateway.
   end(): this {
-    if (this.txHandler) {
-      this.app.removeListener('nmea2000JsonOut', this.txHandler)
-      this.txHandler = null
-    }
-    if (this.outTxHandler) {
-      this.app.removeListener('nmea2000out', this.outTxHandler)
-      this.outTxHandler = null
-    }
+    this.unsubscribeTx?.()
+    this.unsubscribeTx = null
     super.end()
     return this
   }

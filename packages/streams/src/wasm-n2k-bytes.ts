@@ -2,6 +2,7 @@ import { Transform, TransformCallback } from 'stream'
 import { Socket } from 'net'
 import { ByteDecoder, unwrapAnalyzerOutput } from '@canboat/wasm'
 import type { CreateDebug, DebugLogger } from './types'
+import { subscribeN2kOut, N2kOutEventOptions } from './n2k-out-events'
 
 /*
  * Binary-framing NMEA 2000 source backed by @canboat/wasm's
@@ -18,7 +19,7 @@ import type { CreateDebug, DebugLogger } from './types'
  * and written to the socket.
  */
 
-interface WasmN2kBytesOptions {
+interface WasmN2kBytesOptions extends N2kOutEventOptions {
   app: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
@@ -87,8 +88,7 @@ export default class WasmN2kBytes extends Transform {
    * carry a frame, and frames are dropped.
    */
   private txReady = false
-  private readonly txHandler: (pgn: unknown) => void
-  private readonly outTxHandler: (msg: unknown) => void
+  private unsubscribeTx: (() => void) | null = null
   private readonly debug: DebugLogger
 
   constructor(options: WasmN2kBytesOptions) {
@@ -96,17 +96,6 @@ export default class WasmN2kBytes extends Transform {
     this.options = options
     const createDebug = options.createDebug ?? require('debug')
     this.debug = createDebug('signalk:streams:wasm-n2k-bytes')
-
-    this.txHandler = (pgn: unknown) =>
-      this.transmit(() => this.decoder.encodeFrame(JSON.stringify(pgn), true))
-    // As on the canboatjs connections, nmea2000out carries either a
-    // plain-format line, sent with its payload as given, or a PGN record.
-    this.outTxHandler = (msg: unknown) =>
-      this.transmit(() =>
-        typeof msg === 'string'
-          ? this.decoder.encodeLine(msg)
-          : this.decoder.encodeFrame(JSON.stringify(msg), true)
-      )
 
     const configError = options.device ? null : tcpConfigError(options)
     if (configError) {
@@ -117,8 +106,21 @@ export default class WasmN2kBytes extends Transform {
       return
     }
 
-    options.app.on('nmea2000JsonOut', this.txHandler)
-    options.app.on('nmea2000out', this.outTxHandler)
+    this.unsubscribeTx = subscribeN2kOut(
+      options.app,
+      options,
+      // As on the canboatjs connections, nmea2000out carries either a
+      // plain-format line, sent with its payload as given, or a PGN
+      // record.
+      (msg: unknown) =>
+        this.transmit(() =>
+          typeof msg === 'string'
+            ? this.decoder.encodeLine(msg)
+            : this.decoder.encodeFrame(JSON.stringify(msg), true)
+        ),
+      (pgn: unknown) =>
+        this.transmit(() => this.decoder.encodeFrame(JSON.stringify(pgn), true))
+    )
 
     this.connect()
   }
@@ -310,8 +312,8 @@ export default class WasmN2kBytes extends Transform {
     }
     // Detach from the shared app emitter: a stale instance would keep
     // encoding outbound PGNs and writing to a destroyed socket.
-    this.options.app.removeListener('nmea2000JsonOut', this.txHandler)
-    this.options.app.removeListener('nmea2000out', this.outTxHandler)
+    this.unsubscribeTx?.()
+    this.unsubscribeTx = null
     if (this.keepaliveTimer) {
       clearInterval(this.keepaliveTimer)
       this.keepaliveTimer = null

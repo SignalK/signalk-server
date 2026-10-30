@@ -134,6 +134,44 @@ describe('WasmN2kBytes', () => {
     }
   })
 
+  it('transmits only what its own configured events carry', async () => {
+    const app = createMockApp()
+    const errors: unknown[] = []
+    app.on('wasm-n2k:error', (err: unknown) => errors.push(err))
+    app.on('nmea2000OutAvailable', () => {
+      app.emit('nmea2000JsonOut', BATTERY)
+      app.emit('nmea2000out', AIRMAR_MASTER_RESET)
+      app.emit('bus2Out', AIRMAR_MASTER_RESET)
+      app.emit('bus2JsonOut', BATTERY)
+    })
+
+    const stream = new WasmN2kBytes({
+      app,
+      host: '127.0.0.1',
+      port,
+      byteKind: 'maretron-ipg',
+      outEvent: 'bus2Out',
+      jsonOutEvent: 'bus2JsonOut',
+      createDebug: createDebugStub()
+    })
+
+    const expected = ipgSessionBytes((ipg) => [
+      ipg.encodeLine(AIRMAR_MASTER_RESET),
+      ipg.encodeFrame(JSON.stringify(BATTERY), true)
+    ])
+
+    try {
+      const socket = await gateway
+      const received = receiveBytes(socket, expected.length)
+      socket.write(IPG_CONNECTED)
+
+      expect((await received).equals(expected)).to.equal(true)
+      expect(errors).to.deep.equal([])
+    } finally {
+      stream.end()
+    }
+  })
+
   it('reports a port outside the TCP range instead of throwing', () => {
     for (const badPort of [65536, -1]) {
       const app = createMockApp()
