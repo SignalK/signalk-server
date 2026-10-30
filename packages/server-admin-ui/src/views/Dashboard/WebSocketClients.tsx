@@ -25,17 +25,20 @@ export default function WebSocketClients({
 
   useEffect(() => {
     let cancelled = false
-    const load = () =>
+    // A slow response must not overwrite the one from a later request.
+    let latestRequest = 0
+    const load = () => {
+      const request = ++latestRequest
+      const apply = (data: WebSocketClient[] | null) => {
+        if (!cancelled && request === latestRequest) setClients(data)
+      }
       fetch(`${window.serverRoutesPrefix}/websocketClients`, {
         credentials: 'include'
       })
         .then((response) => (response.ok ? response.json() : null))
-        .then((data: WebSocketClient[] | null) => {
-          if (!cancelled) setClients(data)
-        })
-        .catch(() => {
-          if (!cancelled) setClients(null)
-        })
+        .then(apply)
+        .catch(() => apply(null))
+    }
     load()
     const timer = setInterval(load, REFRESH_INTERVAL_MS)
     return () => {
