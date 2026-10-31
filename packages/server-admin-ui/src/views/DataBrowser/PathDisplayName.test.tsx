@@ -31,7 +31,11 @@ function asReadonlyUser() {
 
 describe('PathDisplayName', () => {
   beforeEach(() => {
-    useStore.setState({ signalkMeta: {}, loginStatus: {} })
+    useStore.setState({
+      signalkMeta: {},
+      loginStatus: {},
+      labelSuggestions: {}
+    })
   })
 
   afterEach(() => {
@@ -331,5 +335,60 @@ describe('PathDisplayName', () => {
       expect.objectContaining({ body: JSON.stringify({ value: null }) })
     )
     expect(useStore.getState().signalkMeta['self'][PATH].displayName).toBeNull()
+  })
+
+  describe('bus label suggestions', () => {
+    const SWITCH = 'electrical.switches.bank.215.1.state'
+
+    it('applies a suggestion with one click', () => {
+      asAdmin()
+      setMeta({})
+      useStore.setState({
+        labelSuggestions: { [SWITCH]: ['ER Port Highwater'] }
+      })
+      const fetchMock = vi.fn(async () => ({ ok: true, status: 200 }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { getByText } = render(
+        <PathDisplayName context="self" path={SWITCH} />
+      )
+      fireEvent.click(getByText('ER Port Highwater'))
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/signalk/v1/api/vessels/self/electrical/switches/bank/215/1/state/meta/displayName',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ value: 'ER Port Highwater' })
+        })
+      )
+      expect(useStore.getState().signalkMeta['self'][SWITCH].displayName).toBe(
+        'ER Port Highwater'
+      )
+    })
+
+    it('offers nothing once the path has a name', () => {
+      asAdmin()
+      setMeta({ [SWITCH]: { displayName: 'Engine room bilge' } })
+      useStore.setState({
+        labelSuggestions: { [SWITCH]: ['ER Port Highwater'] }
+      })
+      const { getByText, queryByText } = render(
+        <PathDisplayName context="self" path={SWITCH} />
+      )
+      expect(getByText('Engine room bilge')).toBeInTheDocument()
+      expect(queryByText('ER Port Highwater')).toBeNull()
+    })
+
+    it('offers nothing to a user who cannot write meta', () => {
+      asReadonlyUser()
+      setMeta({})
+      useStore.setState({
+        labelSuggestions: { [SWITCH]: ['ER Port Highwater'] }
+      })
+      const { container } = render(
+        <PathDisplayName context="self" path={SWITCH} />
+      )
+      expect(container.firstChild).toBeNull()
+    })
   })
 })

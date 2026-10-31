@@ -1,4 +1,5 @@
 import type { MetaData } from '../../store'
+import type { LoginStatus } from '../../store/types'
 
 const NOTIFICATIONS_PREFIX = 'notifications.'
 
@@ -35,4 +36,12 @@ export function resolveDisplayName(
     }
   }
   return null
+}
+
+// meta.displayName is written with an admin-only PUT.
+export function canWriteDisplayName(loginStatus: LoginStatus): boolean {
+  return (
+    !loginStatus.authenticationRequired ||
+    (loginStatus.status === 'loggedIn' && loginStatus.userLevel === 'admin')
+  )
 }
