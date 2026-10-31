@@ -54,6 +54,34 @@ describe('appstore/offline', () => {
     )
   })
 
+  it('marks installed WASM plugins as plugins and as WASM', () => {
+    const dir = tmpDir()
+    const cache = createCache(dir)
+    const app = {
+      plugins: [
+        { packageName: 'signalk-node', version: '1.0.0', id: 'node' },
+        {
+          packageName: 'signalk-wasm',
+          version: '1.0.0',
+          id: 'wasm',
+          type: 'wasm'
+        }
+      ]
+    }
+    const r = buildOfflineResponse(app, cache) as Record<string, unknown>
+    const installed = r.installed as Array<{
+      name: string
+      isPlugin: boolean
+      isWasm: boolean
+    }>
+    const wasm = installed.find((i) => i.name === 'signalk-wasm')
+    expect(wasm?.isPlugin).to.equal(true)
+    expect(wasm?.isWasm).to.equal(true)
+    expect(installed.find((i) => i.name === 'signalk-node')?.isWasm).to.equal(
+      false
+    )
+  })
+
   it('deduplicates across plugins/webapps/addons', () => {
     const dir = tmpDir()
     const cache = createCache(dir)
