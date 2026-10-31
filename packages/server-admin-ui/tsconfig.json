@@ -35,8 +35,13 @@
 
     /* Paths */
     "baseUrl": ".",
+    // Dependencies' type declarations find react and vitest here too, also
+    // when pnpm links them from a store outside this directory, such as its
+    // global virtual store, where no hoisted @types/react is in reach
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "react": ["./node_modules/@types/react"],
+      "vitest": ["./node_modules/vitest"]
     }
   },
   "include": ["src"],

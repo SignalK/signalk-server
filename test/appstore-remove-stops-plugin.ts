@@ -1,7 +1,9 @@
 import { expect } from 'chai'
+import { EventEmitter } from 'events'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { getBundledPnpm } from '../src/modules'
 import { freeport } from './ts-servertestutilities'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -14,37 +16,71 @@ interface Dirs {
   sawAtRemove: string
 }
 
-// npm removes a package from disk but leaves its running instance alone, so
+// pnpm removes a package from disk but leaves its running instance alone, so
 // the plugin has to be stopped first or it keeps running until the next
-// restart. The plugin's stop() writes a marker; the npm stub records whether
-// that marker already existed when `npm remove` ran.
-function writeNpmStub(binDir: string, configDir: string, dirs: Dirs) {
-  fs.mkdirSync(binDir, { recursive: true })
-  const stub = path.join(binDir, 'npm')
-  fs.writeFileSync(
-    stub,
-    `#!/bin/sh
-for arg in "$@"; do
-  if [ "$arg" = "remove" ]; then
-    if [ -f ${JSON.stringify(dirs.stopMarker)} ]; then
-      echo stopped > ${JSON.stringify(dirs.sawAtRemove)}
-    else
-      echo running > ${JSON.stringify(dirs.sawAtRemove)}
-    fi
-    rm -rf ${JSON.stringify(path.join(configDir, 'node_modules', PLUGIN_NAME))}
-    exit 0
-  fi
-done
-echo "0.0.0-npm-stub"
-exit 0
-`
-  )
-  fs.chmodSync(stub, 0o755)
+// restart. The plugin's stop() writes a marker; the fake bundled pnpm records
+// whether that marker already existed when `pnpm remove` ran.
+function fakeBundledPnpm(configDir: string, dirs: Dirs): () => void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const childProcess = require('child_process')
+  const { spawn, execFile } = childProcess
+  const pnpmBin = getBundledPnpm().bin
+  const isPnpm = (command: string, args: string[]) =>
+    command === process.execPath && args[0] === pnpmBin
+
+  childProcess.execFile = (
+    command: string,
+    args: string[],
+    ...rest: unknown[]
+  ) => {
+    if (!isPnpm(command, args)) {
+      return execFile(command, args, ...rest)
+    }
+    const callback = rest.at(-1) as (err: null, stdout: string) => void
+    callback(null, path.join(configDir, '.pnpm-store', 'v11') + '\n')
+  }
+  childProcess.spawn = (
+    command: string,
+    args: string[],
+    ...rest: unknown[]
+  ) => {
+    if (!isPnpm(command, args)) {
+      return spawn(command, args, ...rest)
+    }
+    const child = Object.assign(new EventEmitter(), {
+      stdout: new EventEmitter(),
+      stderr: new EventEmitter()
+    })
+    const run = async () => {
+      await new Promise((resolve) => setImmediate(resolve))
+      if (args.includes('remove')) {
+        fs.writeFileSync(
+          dirs.sawAtRemove,
+          fs.existsSync(dirs.stopMarker) ? 'stopped' : 'running'
+        )
+        fs.rmSync(path.join(configDir, 'node_modules', PLUGIN_NAME), {
+          recursive: true,
+          force: true
+        })
+      }
+      child.emit('close', 0)
+    }
+    run()
+    return child
+  }
+  return () => {
+    childProcess.spawn = spawn
+    childProcess.execFile = execFile
+  }
 }
 
 function seedConfigDir(configDir: string, dirs: Dirs) {
   const moduleDir = path.join(configDir, 'node_modules', PLUGIN_NAME)
   fs.mkdirSync(moduleDir, { recursive: true })
+  fs.writeFileSync(
+    path.join(configDir, 'node_modules', '.modules.yaml'),
+    JSON.stringify({ storeDir: path.join(configDir, '.pnpm-store', 'v11') })
+  )
   fs.writeFileSync(
     path.join(configDir, 'package.json'),
     JSON.stringify({
@@ -133,10 +169,10 @@ describe('appstore remove', function () {
 
   let stop: (() => Promise<unknown>) | undefined
   let restoreFetch: (() => void) | undefined
+  let restorePnpm: (() => void) | undefined
   let configDir: string
   let dirs: Dirs
   let host: string
-  let originalPath: string | undefined
 
   before(async function () {
     if (process.platform === 'win32') {
@@ -148,10 +184,7 @@ describe('appstore remove', function () {
       sawAtRemove: path.join(configDir, 'saw-at-remove')
     }
     seedConfigDir(configDir, dirs)
-    const binDir = path.join(configDir, 'bin')
-    writeNpmStub(binDir, configDir, dirs)
-    originalPath = process.env.PATH
-    process.env.PATH = `${binDir}${path.delimiter}${process.env.PATH}`
+    restorePnpm = fakeBundledPnpm(configDir, dirs)
     restoreFetch = stubNpmSearch()
 
     const port = await freeport()
@@ -169,11 +202,11 @@ describe('appstore remove', function () {
   after(async function () {
     if (stop) await stop()
     if (restoreFetch) restoreFetch()
-    if (originalPath !== undefined) process.env.PATH = originalPath
+    if (restorePnpm) restorePnpm()
     if (configDir) fs.rmSync(configDir, { recursive: true, force: true })
   })
 
-  it('stops a running plugin before npm removes it', async function () {
+  it('stops a running plugin before pnpm removes it', async function () {
     expect(fs.existsSync(dirs.stopMarker), 'plugin stopped too early').to.equal(
       false
     )

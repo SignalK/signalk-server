@@ -8,6 +8,33 @@ This document lists breaking changes and deprecations in Signal K Server.
 
 ---
 
+## App Store: Plugins and Webapps Installed with pnpm
+
+The App Store installs plugins and webapps with the [pnpm](https://pnpm.io) that comes with the server instead of npm.
+
+### What Changed
+
+|                         | Before                        | After                         |
+| ----------------------- | ----------------------------- | ----------------------------- |
+| Installer               | npm                           | pnpm, bundled with the server |
+| Minimum Node.js         | 22                            | 22.13, which pnpm needs       |
+| Installing from a shell | `npm install` in `~/.signalk` | `signalk-pnpm add <plugin>`   |
+
+### Upgrade Notes
+
+- The first install, update or removal in the App Store after the update rebuilds `node_modules` in the configuration directory and downloads every package that the installed plugins and webapps use again. If the server is on a metered connection, make that first change once it is on an unmetered one. Until then, the App Store shows a notice about the download.
+- Plugins copied into `node_modules` by hand are not listed in `package.json` and have to be installed again.
+- As in the App Store before, dependencies' install scripts are not run. A plugin installed with `npm install` from a shell may use a native addon that such a script built; once `node_modules` is rebuilt, the addon is missing and the plugin fails to load.
+- `npm install` no longer works in the configuration directory. Run `signalk-pnpm`, which comes with the server, as the user that the server runs as.
+- Packages are kept in a `.pnpm-store` directory in the configuration directory, which settings backups leave out.
+
+### Action Required
+
+- Update Node.js to 22.13 or later (version 24 recommended)
+- See [Updating](installation/updating.md) for details
+
+---
+
 ## Node.js: Default Version Updated to 24
 
 Signal K Server now defaults to **Node.js 24** and requires **Node.js 22 or later**.

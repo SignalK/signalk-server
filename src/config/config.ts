@@ -26,6 +26,7 @@ import semver from 'semver'
 import { v4 as uuidv4 } from 'uuid'
 import { ServerApp, SignalKMessageHub, WithConfig } from '../app'
 import { createDebug } from '../debug'
+import { findPackageLocation } from '../bundled-packages'
 import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
 import { atomicWriteFile } from '../atomicWrite'
@@ -423,20 +424,15 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
   if (!expected) {
     return
   }
-  let modulePackageJsonPath = path.join(
-    appPath,
-    'node_modules',
-    name,
-    'package.json'
-  )
-  if (!fs.existsSync(modulePackageJsonPath)) {
-    modulePackageJsonPath = path.join(appPath, '..', name, 'package.json')
+  const location = findPackageLocation(appPath, name)
+  if (!location) {
+    if (isOptional) {
+      // Optional package not installed, as in the core Docker edition
+      return
+    }
+    throw new Error(`${name} is not installed`)
   }
-  if (!fs.existsSync(modulePackageJsonPath) && isOptional) {
-    // Optional package not installed (e.g. core image with --omit=optional).
-    return
-  }
-  const installed = require(modulePackageJsonPath)
+  const installed = require(path.join(location, name, 'package.json'))
 
   if (!semver.satisfies(installed.version, expected)) {
     console.error(
@@ -447,7 +443,7 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
 }
 
 // Establish what the config directory path is.
-function getConfigDirectory({ argv, config, env }: any) {
+export function getConfigDirectory({ argv, config, env }: any) {
   // Possible paths in order of priority.
   const configPaths = [
     env.SIGNALK_NODE_CONDFIG_DIR,
@@ -472,22 +468,19 @@ function setConfigDirectory(app: ConfigApp) {
       fs.mkdirSync(app.config.configPath)
       debug(`configDir Created: ${app.config.configPath}`)
     }
-    const configPackage = path.join(app.config.configPath, 'package.json')
-    if (!fs.existsSync(configPackage)) {
-      fs.writeFileSync(
-        configPackage,
-        JSON.stringify(pluginsPackageJsonTemplate, null, 2)
-      )
-    }
-    const npmrcPath = path.join(app.config.configPath, '.npmrc')
-    if (!fs.existsSync(npmrcPath)) {
-      fs.writeFileSync(npmrcPath, 'package-lock=false\n')
-    } else {
-      const contents = fs.readFileSync(npmrcPath)
-      if (contents.indexOf('package-lock=') === -1) {
-        fs.appendFileSync(npmrcPath, '\npackage-lock=false\n')
-      }
-    }
+    ensureConfigPackageJson(app.config.configPath)
+  }
+}
+
+// The package.json that records the plugins and webapps installed in a
+// configuration directory
+export function ensureConfigPackageJson(configPath: string) {
+  const configPackage = path.join(configPath, 'package.json')
+  if (!fs.existsSync(configPackage)) {
+    fs.writeFileSync(
+      configPackage,
+      JSON.stringify(pluginsPackageJsonTemplate, null, 2)
+    )
   }
 }
 
@@ -823,6 +816,7 @@ const pluginsPackageJsonTemplate = {
 module.exports = {
   load,
   getConfigDirectory,
+  ensureConfigPackageJson,
   writeSettingsFile,
   writeDefaultsFile,
   readDefaultsFile,

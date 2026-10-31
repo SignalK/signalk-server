@@ -28,11 +28,11 @@ clear()
 console.log(
   chalk.blue(
     '  ____    _                           _     _  __\n' +
-    ' / ___|  (_)   __ _   _ __     __ _  | |   | |/ /\n' +
-    ' \\___ \\  | |  / _` | | \'_ \\   / _` | | |   | \' / \n' +
-    '  ___) | | | | (_| | | | | | | (_| | | |   | . \\ \n' +
-    ' |____/  |_|  \\__, | |_| |_|  \\__,_| |_|   |_|\\_\\\n' +
-    '               |___/  '
+      ' / ___|  (_)   __ _   _ __     __ _  | |   | |/ /\n' +
+      " \\___ \\  | |  / _` | | '_ \\   / _` | | |   | ' / \n" +
+      '  ___) | | | | (_| | | | | | | (_| | | |   | . \\ \n' +
+      ' |____/  |_|  \\__, | |_| |_|  \\__,_| |_|   |_|\\_\\\n' +
+      '               |___/  '
   )
 )
 
@@ -213,10 +213,7 @@ async function promptForVesselName(configDirectory, updateExisting) {
       task: () => {
         if (!mmsi || mmsi.length == 0) {
           if (!deltaEditor.getSelfValue('uuid')) {
-            deltaEditor.setSelfValue(
-              'uuid',
-              'urn:mrn:signalk:uuid:' + uuidv4()
-            )
+            deltaEditor.setSelfValue('uuid', 'urn:mrn:signalk:uuid:' + uuidv4())
           }
           deltaEditor.removeSelfValue('mmsi')
         } else {
@@ -231,19 +228,13 @@ async function promptForVesselName(configDirectory, updateExisting) {
       title: `Creating your server settings at ${settingsLocation}`,
       task: () => {
         settings.ssl = enableSSL
-        fs.writeFileSync(
-          settingsLocation,
-          JSON.stringify(settings, null, 2)
-        )
+        fs.writeFileSync(settingsLocation, JSON.stringify(settings, null, 2))
       }
     },
     {
       title: 'Creating package.json',
       task: () => {
-        fs.writeFileSync(
-          packageLocation,
-          JSON.stringify(packageJson, null, 2)
-        )
+        fs.writeFileSync(packageLocation, JSON.stringify(packageJson, null, 2))
       }
     },
     {

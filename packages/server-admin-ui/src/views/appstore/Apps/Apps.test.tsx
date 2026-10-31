@@ -287,3 +287,51 @@ describe('Apps projects the pending version onto installing rows', () => {
     expect(screen.queryByText('Installed v1.0.0')).toBeNull()
   })
 })
+
+describe('Apps warns before the pnpm rebuild', () => {
+  beforeEach(() => {
+    act(() => {
+      useStore.getState().setAppstoreView('All')
+      useStore.getState().setAppstoreSearch('')
+      useStore.getState().setAppstoreCategory('All')
+    })
+  })
+
+  function renderApps() {
+    return render(
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+        <Apps />
+      </MemoryRouter>
+    )
+  }
+
+  it('says how many packages the rebuild downloads again', () => {
+    setAppStore({ ...emptyStore, pendingRebuild: { packages: 160 } })
+    renderApps()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'downloads the 160 packages that the installed plugins and webapps use again'
+    )
+  })
+
+  it('speaks of a single package in the singular', () => {
+    setAppStore({ ...emptyStore, pendingRebuild: { packages: 1 } })
+    renderApps()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'downloads the 1 package that the installed plugins and webapps use again'
+    )
+  })
+
+  it('warns without a count when the server has none', () => {
+    setAppStore({ ...emptyStore, pendingRebuild: {} })
+    renderApps()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'downloads every package that the installed plugins and webapps use again'
+    )
+  })
+
+  it('says nothing once pnpm manages node_modules', () => {
+    setAppStore(emptyStore)
+    renderApps()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+})

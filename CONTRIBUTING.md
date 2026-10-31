@@ -31,26 +31,35 @@ Don't worry if some of the instructions seem overly specific or prescriptive - t
    cd signalk-server
    ```
 
+1. Install [pnpm](https://pnpm.io/installation) if you do not have it yet:
+
+   ```shell
+   npm install -g pnpm@11
+   ```
+
+   Any pnpm 10 or later switches to the version pinned in `package.json` when run in this repository.
+
 1. Install dependencies:
 
    ```shell
-   npm install
+   pnpm install
    ```
 
 1. Build the server and related packages:
 
    ```shell
-   npm run build:all
+   pnpm build:all
    ```
 
 1. Start the server:
+
    ```shell
-   npm start
+   pnpm start
    ```
 
 The server should now be available at [http://localhost:3000](http://localhost:3000).
 
-As you work on your changes, you may need to re-build changes. To continuously watch for changes, open a new terminal and run `npm run watch` in either the project root, or from the relevant directory in `packages/*`.
+As you work on your changes, you may need to re-build changes. To continuously watch for changes, open a new terminal and run `pnpm watch` in either the project root, or from the relevant directory in `packages/*`.
 
 You may also need to restart the server to see some changes reflected.
 
@@ -99,7 +108,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
    - Subject, Body and Footer are separated by a blank line.
 
 1. Format and lint your code
-   - run `npm run format` to format and [lint](<https://en.wikipedia.org/wiki/Lint_(software)>) your code.
+   - run `pnpm format` to format and [lint](<https://en.wikipedia.org/wiki/Lint_(software)>) your code.
 
 1. Push your branch to GitHub:
    - `git push origin my-fix-branch`
