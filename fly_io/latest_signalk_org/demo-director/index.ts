@@ -1,4 +1,4 @@
-// @ts-check
+import type { Path, Plugin, ServerAPI } from '@signalk/server-api'
 import { magvar } from 'magvar'
 
 const PLUGIN_ID = 'signalk-demo-director'
@@ -8,20 +8,18 @@ const VARIATION_EVERY_TICKS = 60
 // harbour wall, and the autopilot's own arrival handling never ends the route.
 const TURN_ROUND_DISTANCE_M = 250
 
-/** @typedef {{ latitude: number, longitude: number }} Position */
+interface Position {
+  latitude: number
+  longitude: number
+}
 
 const EARTH_RADIUS_M = 6371000
 
-/** @param {number} deg */
-function degToRad(deg) {
+function degToRad(deg: number) {
   return (deg * Math.PI) / 180
 }
 
-/**
- * @param {Position} a
- * @param {Position} b
- */
-function distanceM(a, b) {
+function distanceM(a: Position, b: Position) {
   const dLat = degToRad(b.latitude - a.latitude)
   const dLon = degToRad(b.longitude - a.longitude)
   const h =
@@ -32,24 +30,17 @@ function distanceM(a, b) {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h))
 }
 
-/**
- * @param {import('@signalk/server-api').ServerAPI} app
- * @returns {import('@signalk/server-api').Plugin}
- */
-export default function (app) {
-  /** @type {ReturnType<typeof setInterval> | undefined} */
-  let timer
+export default function (app: ServerAPI): Plugin {
+  let timer: ReturnType<typeof setInterval> | undefined
   let ticksSinceVariation = VARIATION_EVERY_TICKS
   let turning = false
 
-  /** @param {string} path */
-  function selfValue(path) {
-    return app.getSelfPath(`${path}.value`)
+  function selfPosition() {
+    return app.getSelfPath('navigation.position.value') as Position | undefined
   }
 
   function publishVariation() {
-    /** @type {Position | undefined} */
-    const position = selfValue('navigation.position')
+    const position = selfPosition()
     if (!position) return
     ticksSinceVariation = 0
     app.handleMessage(PLUGIN_ID, {
@@ -57,7 +48,7 @@ export default function (app) {
         {
           values: [
             {
-              path: 'navigation.magneticVariation',
+              path: 'navigation.magneticVariation' as Path,
               value: degToRad(magvar(position.latitude, position.longitude))
             }
           ]
@@ -74,8 +65,7 @@ export default function (app) {
       const course = await app.getCourse()
       const route = course.activeRoute
       const waypoint = course.nextPoint?.position
-      /** @type {Position | undefined} */
-      const position = selfValue('navigation.position')
+      const position = selfPosition()
       if (!route || !waypoint || !position) return
       if (route.pointIndex < route.pointTotal - 1) return
       // calcValues.distance can still be to the previous point just after
