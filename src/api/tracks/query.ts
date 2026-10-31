@@ -281,10 +281,11 @@ export function rejectUnknownParams(
  * this server does not implement would otherwise receive an unfiltered 200 and
  * have no way to tell.
  */
+const WILDCARD = '*'
+
 const KNOWN_PARAMS = new Set([
   'contexts',
-  // Singular as well as plural: the parser accepts both, and an unbounded
-  // query is permitted only for a single `context`.
+  // Singular as well as plural: the parser accepts both.
   'context',
   'from',
   'to',
@@ -298,6 +299,7 @@ const KNOWN_PARAMS = new Set([
   'times',
   'properties',
   'geometry',
+  'imported',
   'provider'
 ])
 
@@ -328,9 +330,23 @@ export function parseTracksQuery(
   }
 
   const contexts = first(query.contexts) ?? first(query.context)
+  const everyContext = contexts?.trim() === WILDCARD
+  // Only `contexts` is read when both are given, so a wildcard in `context`
+  // would otherwise be dropped without a word.
+  if (
+    query.contexts !== undefined &&
+    query.context !== undefined &&
+    [first(query.contexts), first(query.context)].some(
+      (c) => c?.trim() === WILDCARD
+    )
+  ) {
+    errors.push(
+      '* already means every context and cannot be given with both context and contexts'
+    )
+  }
   if (contexts !== undefined && blank(contexts)) {
     errors.push('context must not be empty')
-  } else if (contexts !== undefined) {
+  } else if (contexts !== undefined && !everyContext) {
     // Deduplicated: `contexts=self,self` would otherwise put the same vessel in
     // the FeatureCollection twice, and after qualification `self` and the
     // resolved id can arrive as the same context by two names.
@@ -345,6 +361,10 @@ export function parseTracksQuery(
     ]
     if (request.contexts.length === 0) {
       errors.push('context must not be empty')
+    } else if (contexts.split(',').some((c) => c.trim() === WILDCARD)) {
+      errors.push(
+        '* already means every context and cannot be listed with others'
+      )
     }
   }
 
@@ -484,6 +504,11 @@ export function parseTracksQuery(
     request.geometry = geometry
   }
 
+  const imported = readFlag(query, 'imported', errors)
+  if (imported !== undefined) {
+    request.imported = imported
+  }
+
   // Resolved to a single `from`/`to` here rather than left to each provider.
   // Three fields describing one window is how two providers come to answer the
   // same query differently: given from+duration, one reads from..to and
@@ -529,11 +554,13 @@ export function parseTracksQuery(
   // I started recording" is the point of keeping own-vessel data forever — but
   // not across every context the server has ever seen, which on a busy coast
   // is years of data for hundreds of vessels.
+  // `contexts=*` asks for exactly that, so it is taken as meant rather than
+  // refused as a mistake.
   const bounded = request.from !== undefined || request.duration !== undefined
   const singleContext = request.contexts?.length === 1
-  if (!bounded && !singleContext) {
+  if (!bounded && !singleContext && !everyContext) {
     errors.push(
-      'a time window (from or duration) is required unless a single context is given'
+      'a time window (from or duration) is required unless a single context or contexts=* is given'
     )
   }
 
