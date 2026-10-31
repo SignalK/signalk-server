@@ -1,0 +1,26 @@
+name: 'Label Merge Conflicts'
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - master
+
+permissions:
+  pull-requests: write
+  contents: read
+
+concurrency:
+  group: conflict-labeler
+
+jobs:
+  label-conflicts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check and Label Conflicts
+        uses: eps1lon/actions-label-merge-conflict@v3
+        with:
+          dirtyLabel: 'has-conflicts'
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          commentOnDirty: 'This PR has merge conflicts with `master`. They need to be fixed before this PR can proceed.'
