@@ -94,6 +94,7 @@ import { TrackProvider } from '@signalk/server-api/tracks'
 import { TrackApiHttpRegistry } from '../api/tracks'
 import { derivePluginId } from '../pluginid'
 import { atomicWriteFileSync } from '../atomicWrite'
+import { PluginWebapps } from '../pluginWebapps'
 import { writeBaseDeltasFile, ConfigApp } from '../config/config'
 import DeltaEditor from '../deltaeditor'
 import {
@@ -173,6 +174,7 @@ function selfDisplayUnits(
 
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
+  const pluginWebapps = new Map<string, PluginWebapps>()
   // onStopHandlers gets an entry at registration, before the enabled check,
   // so it cannot distinguish a plugin that started from one that only
   // registered. stop() needs that distinction.
@@ -338,6 +340,7 @@ module.exports = (theApp: any) => {
     // Errors are contained per plugin: a stop() that throws must not prevent
     // the remaining plugins from stopping.
     async stop() {
+      for (const webapps of pluginWebapps.values()) webapps.stop()
       if (!theApp.plugins) {
         return
       }
@@ -818,13 +821,17 @@ module.exports = (theApp: any) => {
       }
       const handlersBeforeStart = onStopHandlers[plugin.id].length
       onStopHandlers[plugin.id].push(() => {
+        pluginWebapps.get(plugin.id)?.stop()
         app.resourcesApi.unRegister(plugin.id)
         app.autopilotApi.unRegister(plugin.id)
         app.weatherApi.unRegister(plugin.id)
         app.bleApi.unRegister(plugin.id)
       })
       try {
-        plugin.start(safeConfiguration, restart)
+        const start = () => plugin.start(safeConfiguration, restart)
+        const webapps = pluginWebapps.get(plugin.id)
+        if (webapps) webapps.start(start)
+        else start()
       } catch (e) {
         // Roll back anything the failed start() registered (e.g. a
         // WebSocket endpoint left in the dispatch registry), otherwise a
@@ -1222,6 +1229,8 @@ module.exports = (theApp: any) => {
     }
 
     appCopy.handleMessage = handleMessageWrapper(app, plugin.id)
+    const webapps = new PluginWebapps(app, plugin.id, metadata, appCopy)
+    pluginWebapps.set(plugin.id, webapps)
     const boundEventMethods = (app as any).wrappedEmitter.bindMethodsById(
       `plugin:${plugin.id}` as EventsActorId
     )
