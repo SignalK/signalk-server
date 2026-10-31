@@ -11,6 +11,7 @@ import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
 import { useStore } from '../../store'
 
 import BasicProvider from './BasicProvider'
+import { offersCreateDevice } from './ydwgCreateDevice'
 import set from 'lodash.set'
 
 interface Provider {
@@ -159,7 +160,7 @@ const ProvidersConfiguration: React.FC = () => {
       // refs, and flipping createDevice on retroactively makes the
       // server claim a new address and disrupts that binding.
       if (target.name === 'options.type' && typeof value === 'string') {
-        const isYdwg = /^ydwg02/.test(value)
+        const isYdwg = offersCreateDevice(value)
         if (!isYdwg && updatedProvider.options?.createDevice !== undefined) {
           delete updatedProvider.options.createDevice
         } else if (
