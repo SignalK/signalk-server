@@ -183,7 +183,7 @@ describe('WasmN2k', () => {
       app,
       txFormat: 'ydwg-raw',
       txEvent: 'ydwg02-out:bus2',
-      outEvent: 'bus2Out, bridgeOut',
+      outEvent: 'bus2Out, bridgeOut, bus2Out',
       jsonOutEvent: 'bus2JsonOut',
       createDebug: createDebugStub()
     })
