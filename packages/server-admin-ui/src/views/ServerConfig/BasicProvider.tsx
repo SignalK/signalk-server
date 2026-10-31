@@ -17,7 +17,7 @@ import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTrian
 import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
 import N2KFilters from './N2KFilters'
-import { offersCreateDevice } from './ydwgCreateDevice'
+import { logsN2kSource, offersCreateDevice } from './providerSourceTypes'
 
 interface ProviderOptions {
   type?: string
@@ -147,12 +147,6 @@ interface TypeComponentProps {
   hasAnalyzer?: boolean
 }
 
-const UNLOGGABLE_N2K_SOURCE_TYPES: ReadonlySet<string> = new Set([
-  'maretron-ipg-wasm',
-  'w2k-1-n2k-actisense-wasm',
-  'ngt-1-wasm'
-])
-
 // Defined outside component to avoid recreation on render
 const TYPE_COMPONENTS: Record<
   string,
@@ -235,7 +229,7 @@ export default function BasicProvider({
           unreplayable junk. */}
       {value.type !== 'FileStream' &&
         value.type !== 'J1939' &&
-        !UNLOGGABLE_N2K_SOURCE_TYPES.has(value.options.type ?? '') && (
+        logsN2kSource(value.options.type ?? '') && (
           <LoggingInput value={value} onChange={onChange} />
         )}
       <Form.Group as={Row} className="mb-3">
@@ -1902,6 +1896,12 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         <div>
           <HostInput value={value.options} onChange={onChange} />
           <PortInput value={value.options} onChange={onChange} />
+          {value.options.type === 'maretron-ipg-wasm' && (
+            <NoDataReceivedTimeoutInput
+              value={value.options}
+              onChange={onChange}
+            />
+          )}
           <Form.Group as={Row} className="mb-3">
             <Col md="3">
               <Form.Label htmlFor="options.password">Password</Form.Label>
@@ -1926,6 +1926,13 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           </div>
         </div>
       )}
+      {/* Source identity by CAN name is resolved after decoding, so it
+          applies to every N2K source. */}
+      {value.options.type !== undefined &&
+        (value.options.type.indexOf('canboatjs') !== -1 ||
+          value.options.type.endsWith('-wasm')) && (
+          <UseCanNameInput value={value.options} onChange={onChange} />
+        )}
       {/* Address-claim identity. canbus-wasm runs through the same canbus
           transport and candevice as canbus-canboatjs — only the decoder
           downstream differs — so it takes the same identity options. */}
@@ -1933,7 +1940,6 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
         (value.options.type.indexOf('canboatjs') !== -1 ||
           value.options.type === 'canbus-wasm') && (
           <>
-            <UseCanNameInput value={value.options} onChange={onChange} />
             <DeviceInstanceInput value={value.options} onChange={onChange} />
             <SystemInstanceInput value={value.options} onChange={onChange} />
           </>

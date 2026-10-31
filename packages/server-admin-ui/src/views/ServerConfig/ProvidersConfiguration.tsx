@@ -11,7 +11,7 @@ import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
 import { useStore } from '../../store'
 
 import BasicProvider from './BasicProvider'
-import { offersCreateDevice } from './ydwgCreateDevice'
+import { logsN2kSource, offersCreateDevice } from './providerSourceTypes'
 import set from 'lodash.set'
 
 interface Provider {
@@ -169,6 +169,11 @@ const ProvidersConfiguration: React.FC = () => {
           updatedProvider.options?.createDevice === undefined
         ) {
           set(updatedProvider, 'options.createDevice', true)
+        }
+        // The logging switch is hidden for these sources; a flag left on
+        // would still be saved.
+        if (!logsN2kSource(value)) {
+          updatedProvider.logging = false
         }
       }
       // Switching the Data Type restarts the options from that type's
