@@ -419,7 +419,11 @@ function nmea2000input(
           ? {
               ...subOptions,
               // The admin UI leaves the port empty for the IPG's default.
-              port: subOptions.port || MARETRON_IPG_DEFAULT_PORT,
+              port:
+                subOptions.port === undefined ||
+                String(subOptions.port).trim() === ''
+                  ? MARETRON_IPG_DEFAULT_PORT
+                  : subOptions.port,
               byteKind: 'maretron-ipg'
             }
           : { ...subOptions, byteKind: 'ngt1' }
