@@ -341,6 +341,8 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
   Multiplexed: (options) => [new MultiplexedLog(options.subOptions)]
 }
 
+const MARETRON_IPG_DEFAULT_PORT = 6543
+
 const UNLOGGABLE_SOURCE_TYPES: ReadonlySet<string | undefined> = new Set([
   'j1939-wasm',
   'maretron-ipg-wasm',
@@ -412,11 +414,16 @@ function nmea2000input(
     }
     const Ctor = WasmBytes.default ?? WasmBytes
     return [
-      new (Ctor as new (options: object) => PipeElement)({
-        ...subOptions,
-        byteKind:
-          subOptions.type === 'maretron-ipg-wasm' ? 'maretron-ipg' : 'ngt1'
-      })
+      new (Ctor as new (options: object) => PipeElement)(
+        subOptions.type === 'maretron-ipg-wasm'
+          ? {
+              ...subOptions,
+              // The admin UI leaves the port empty for the IPG's default.
+              port: subOptions.port || MARETRON_IPG_DEFAULT_PORT,
+              byteKind: 'maretron-ipg'
+            }
+          : { ...subOptions, byteKind: 'ngt1' }
+      )
     ]
   } else if (
     subOptions.type === 'canbus-wasm' ||

@@ -135,3 +135,27 @@ describe('Simple wasm gateway TX', () => {
     }
   })
 })
+
+describe('Simple maretron-ipg-wasm', () => {
+  it('connects on the IPG default port when none is set', () => {
+    const app = createMockApp()
+    const simpleApp = app as unknown as SimpleOptions['app']
+    const connection = new Simple({
+      app: simpleApp,
+      providerId: 'ipg',
+      type: 'NMEA2000',
+      subOptions: {
+        app: simpleApp,
+        providerId: 'ipg',
+        type: 'maretron-ipg-wasm',
+        host: '127.0.0.1'
+      } as SimpleOptions['subOptions'],
+      emitPropertyValue: () => undefined,
+      onPropertyValues: () => undefined,
+      createDebug: createDebugStub()
+    })
+    connection.end()
+
+    expect(app.providerErrors).to.deep.equal([])
+  })
+})
