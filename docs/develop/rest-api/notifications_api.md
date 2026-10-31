@@ -57,6 +57,7 @@ The Notification API adds the following attributes to the notification payload:
 
 The following attributes can be applied when a notification is raised using the API:
 
+- `location` - The location or part of the vessel where the notification originates from, for display purposes. For example _(`Engine Room`)_. Clients showing `message` should show location alongside. **Note** this is not the vessel's geographic position.
 - `createdAt` - Timestamp indicating when the notification was raised
 - `position` - Position associated with the notification _(i.e. vessel position when notification was raised)_
 - `data` - Additional data associated with the notification in key | value pairs
@@ -115,6 +116,7 @@ To raise a new notification with a specified alarm `state` send a HTTP POST requ
 
 - `state` (mandatory) - alarm state value to set _(e.g. emergency, alarm, etc.)_
 - `message` (mandatory) - message to display or speak
+- `location` (optional) - the location or part of the vessel where the notification originates from, for display purposes _(e.g. `Engine Room`)_. Not the vessel's geographic position.
 - `context` (optional) - notification context
 - `path` (optional) - path to assign. _(default: `notifications.{notificationId}`)_
 - `idInPath` (optional) - when `true` will append the `notificationId` to the supplied `path` _(e.g. `notifications.myalarm.{notificationId}`)_
@@ -265,7 +267,7 @@ _MOB Notification_
 
 ### Updating an Alarm
 
-To change the alarm `state` or message send a HTTP PUT request to `/signalk/v2/api/notifications/{notificationId}` with an object containing `state`, `message` and / or `data` properties.
+To change the alarm `state` or message send a HTTP PUT request to `/signalk/v2/api/notifications/{notificationId}` with an object containing `state`, `message`, `location` and / or `data` properties. An empty or `null` `location` removes it.
 
 The result of a successful update request that changes the `state` is that:
 
@@ -496,7 +498,7 @@ _Notification: after successful `acknowledge` request_
 NMEA2000 alarm PGNs are processed by `n2k-signalk` which generates Signal K notification deltas as follows:
 
 - Path value starting with `notifications.nmea.*`
-- PGN fields mapped to the `state`, `method` and `message` attributes
+- PGN fields mapped to the `state`, `method`, `message` and `location` attributes (`location` needs `@signalk/n2k-signalk` 4.7.0 or later)
 - Additional attributes capturing PGN field values added to the notification payload.
 
 The **Notification API** uses these additional PGN attributes to populate the notification `status` to align the available actions and any action taken.
@@ -513,6 +515,7 @@ _Example: Signal K notification from NMEA2000 Alarm PGN_
          "sound"
       ],
       "message": "Highwater",
+      "location": "ER Port",
       "alertType": "Alarm",
       "alertCategory": "Navigational",
       "alertSystem": 20,

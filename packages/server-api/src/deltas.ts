@@ -146,6 +146,8 @@ export interface Notification {
   state: ALARM_STATE
   method: ALARM_METHOD[]
   message: string
+  /** The location or part of the vessel where the notification originates from, for display purposes, e.g. "Engine Room". Not the vessel's geographic position. */
+  location?: string
   status?: AlarmStatus
   position?: Position
   createdAt?: Timestamp
