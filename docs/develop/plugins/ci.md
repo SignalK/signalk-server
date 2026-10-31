@@ -150,7 +150,7 @@ with:
   signalk-server-versions: '["2.23.0", "latest"]'
 ```
 
-The integration job runs the full Cartesian product of `node-versions × signalk-server-versions`, so its job count is the product of the two list lengths (see the `node-versions` input above for its default). To keep the matrix small, shrink either dimension — integration coverage often only needs a single Node version (`node-versions: '["24"]'`) even when the desktop jobs exercise several.
+The integration job runs the full Cartesian product of `node-versions × signalk-server-versions`, so its job count is the product of the two list lengths (see the `node-versions` input above for its default). To keep the matrix small, shrink either dimension. `node-versions` also sets the desktop matrix, so a shorter list (for example `node-versions: '["24"]'`) cuts the desktop jobs as well.
 
 ### Provider API Verification
 
