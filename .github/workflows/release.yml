@@ -485,7 +485,10 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Build demo charts and tidal data
+      - name: Test the demo director plugin
+        working-directory: ./fly_io/latest_signalk_org/demo-director
+        run: npm install --no-package-lock --no-audit --no-fund && npm test
+      - name: Build the demo plugin, charts and tidal data
         working-directory: ./fly_io/latest_signalk_org
         run: node build-assets.ts "$TAG"
         env:
