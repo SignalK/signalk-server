@@ -20,7 +20,8 @@ import {
   type InstanceConflict,
   extractN2kDevices,
   detectInstanceConflicts,
-  conflictKey
+  conflictKey,
+  lookupSourceStatus
 } from '../../utils/sourceLabels'
 import {
   useSourcesData,
@@ -515,7 +516,7 @@ const SourceDiscovery: React.FC = () => {
                     devices.filter(
                       (d) =>
                         !wsConnectionIds.has(d.connection) &&
-                        sourceStatus[d.sourceRef]?.online === true
+                        lookupSourceStatus(sourceStatus, d)?.online === true
                     ).length
                   }{' '}
                   online
@@ -525,7 +526,7 @@ const SourceDiscovery: React.FC = () => {
                     devices.filter(
                       (d) =>
                         !wsConnectionIds.has(d.connection) &&
-                        sourceStatus[d.sourceRef]?.online === false
+                        lookupSourceStatus(sourceStatus, d)?.online === false
                     ).length
                   }{' '}
                   offline
@@ -721,7 +722,8 @@ const SourceDiscovery: React.FC = () => {
                           wsConnectionIds.has(device.connection)
                             ? null
                             : sourceStatusLoaded
-                              ? (sourceStatus[device.sourceRef]?.online ?? null)
+                              ? (lookupSourceStatus(sourceStatus, device)
+                                  ?.online ?? null)
                               : null
                         }
                         onRemove={handleRemoveDevice}
