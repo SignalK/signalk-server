@@ -97,13 +97,8 @@ describe('TcpStream', () => {
     tcp.pipe(writable)
   })
 
-  it('stops writing on its events once ended', function (done) {
+  it('drops its app listeners once ended', function (done) {
     this.timeout(5000)
-    const received: string[] = []
-    server.on('connection', (socket) => {
-      socket.on('data', (data) => received.push(data.toString()))
-    })
-
     const app = createMockApp()
     const origSetStatus = app.setProviderStatus.bind(app)
     app.setProviderStatus = (id: string, msg: string) => {
