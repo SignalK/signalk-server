@@ -11,6 +11,8 @@
 // (a GitHub runner has Docker), but not on the Fly machine.
 //
 // Usage: node build-assets.ts <signalk-server version>
+// Needs Node 22.18 or newer, which runs this TypeScript file directly and
+// has node:module stripTypeScriptTypes; the release job uses Node 24.
 
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process'
 import {
