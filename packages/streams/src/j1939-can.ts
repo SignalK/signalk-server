@@ -173,8 +173,16 @@ export default class J1939Can extends Transform {
     const channel = this.channel
     this.channel = null
     if (channel) {
-      channel.removeAllListeners()
-      channel.stop()
+      // A failing native stop must not keep the stream from ending.
+      try {
+        channel.removeAllListeners()
+        channel.stop()
+      } catch (err: unknown) {
+        if (this.debug.enabled) {
+          const message = err instanceof Error ? err.message : String(err)
+          this.debug(`[stop] ${message}`)
+        }
+      }
     }
     super.end()
     return this
