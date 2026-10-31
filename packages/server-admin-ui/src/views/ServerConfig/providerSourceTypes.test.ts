@@ -16,6 +16,7 @@ describe('logsN2kSource', () => {
     expect(logsN2kSource('ngt-1-wasm')).toBe(false)
     expect(logsN2kSource('maretron-ipg-wasm')).toBe(false)
     expect(logsN2kSource('w2k-1-n2k-actisense-wasm')).toBe(false)
+    expect(logsN2kSource('j1939-wasm')).toBe(false)
     expect(logsN2kSource('canbus-wasm')).toBe(true)
     expect(logsN2kSource('ngt-1-canboatjs')).toBe(true)
   })
