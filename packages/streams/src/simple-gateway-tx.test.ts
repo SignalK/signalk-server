@@ -4,84 +4,116 @@ import Simple from './simple'
 import { createMockApp, createDebugStub } from './test-helpers'
 
 type SimpleOptions = ConstructorParameters<typeof Simple>[0]
+type MockApp = ReturnType<typeof createMockApp>
 
-const BATTERY = {
+const battery = (instance: number) => ({
   pgn: 127508,
   prio: 2,
   dst: 255,
-  fields: { instance: 0, voltage: 26.27, current: -63.9 }
-}
+  fields: { instance, voltage: 26.27, current: -63.9 }
+})
+const WAIT_TIMEOUT = 2000
+const POLL_INTERVAL = 5
 
 interface Gateway {
   server: Server
   port: number
-  socket: Promise<Socket>
+  sockets: Socket[]
   received: string
 }
 
 async function startGateway(): Promise<Gateway> {
   const server = createServer()
-  const gateway: Gateway = {
-    server,
-    port: 0,
-    received: '',
-    socket: new Promise<Socket>((resolve) =>
-      server.once('connection', (socket: Socket) => {
-        socket.on('data', (data: Buffer) => {
-          gateway.received += data.toString()
-        })
-        resolve(socket)
-      })
-    )
-  }
+  const gateway: Gateway = { server, port: 0, sockets: [], received: '' }
+  server.on('connection', (socket: Socket) => {
+    gateway.sockets.push(socket)
+    socket.on('data', (data: Buffer) => {
+      gateway.received += data.toString()
+    })
+  })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   gateway.port = (server.address() as AddressInfo).port
   return gateway
 }
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 50))
+async function stopGateway(gateway: Gateway): Promise<void> {
+  gateway.sockets.forEach((socket) => socket.destroy())
+  await new Promise((resolve) => gateway.server.close(resolve))
+}
+
+async function waitFor(condition: () => boolean, what: string): Promise<void> {
+  const deadline = Date.now() + WAIT_TIMEOUT
+  while (!condition()) {
+    if (Date.now() > deadline) {
+      throw new Error(`timed out waiting for ${what}`)
+    }
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL))
+  }
+}
+
+// The transport writes only once the client's 'connect' has fired.
+const clientConnected = (app: MockApp, providerId: string) =>
+  waitFor(
+    () =>
+      app.providerStatuses.some(
+        ({ id, msg }) => id === providerId && msg.startsWith('Connected to')
+      ),
+    `${providerId} to connect`
+  )
+
+const lines = (gateway: Gateway) =>
+  gateway.received.split('\r\n').filter((line) => line.length > 0)
 
 describe('Simple gateway TX', () => {
   it('writes each W2K-1 connection’s outbound frames to its own gateway only', async () => {
     const app = createMockApp()
     const simpleApp = app as unknown as SimpleOptions['app']
-    const gateways = [await startGateway(), await startGateway()]
-    const connections = gateways.map(
-      (gateway, i) =>
-        new Simple({
-          app: simpleApp,
-          providerId: `bus${i + 1}`,
-          type: 'NMEA2000',
-          subOptions: {
-            app: simpleApp,
-            providerId: `bus${i + 1}`,
-            type: 'w2k-1-n2k-ascii-canboatjs',
-            host: '127.0.0.1',
-            port: gateway.port,
-            jsonOutEvent: `bus${i + 1}JsonOut`
-          } as SimpleOptions['subOptions'],
-          emitPropertyValue: () => undefined,
-          onPropertyValues: () => undefined,
-          createDebug: createDebugStub()
-        })
-    )
-    const sockets = await Promise.all(gateways.map((g) => g.socket))
+    const gateways: Gateway[] = []
+    const connections: Simple[] = []
 
     try {
-      // The client's socket is set on its 'connect', a tick after the
-      // server has accepted it.
-      await settle()
-      app.emit('bus2JsonOut', BATTERY)
-      await settle()
+      gateways.push(await startGateway(), await startGateway())
+      gateways.forEach((gateway, i) =>
+        connections.push(
+          new Simple({
+            app: simpleApp,
+            providerId: `bus${i + 1}`,
+            type: 'NMEA2000',
+            subOptions: {
+              app: simpleApp,
+              providerId: `bus${i + 1}`,
+              type: 'w2k-1-n2k-ascii-canboatjs',
+              host: '127.0.0.1',
+              port: gateway.port,
+              jsonOutEvent: `bus${i + 1}JsonOut`
+            } as SimpleOptions['subOptions'],
+            emitPropertyValue: () => undefined,
+            onPropertyValues: () => undefined,
+            createDebug: createDebugStub()
+          })
+        )
+      )
+      await Promise.all([
+        clientConnected(app, 'bus1'),
+        clientConnected(app, 'bus2')
+      ])
 
-      expect(gateways[0]!.received).to.equal('')
-      expect(gateways[1]!.received).to.match(/^A\S+ \S+ 1F214 .*\r\n$/)
+      // TCP keeps order: had bus2's frame reached the first gateway too,
+      // it would arrive there ahead of bus1's.
+      app.emit('bus2JsonOut', battery(0))
+      app.emit('bus1JsonOut', battery(1))
+      await waitFor(
+        () => gateways.every((gateway) => lines(gateway).length > 0),
+        'both gateways to receive a frame'
+      )
+
+      expect(lines(gateways[0]!)).to.have.length(1)
+      expect(lines(gateways[0]!)[0]).to.match(/ 1F214 01/)
+      expect(lines(gateways[1]!)).to.have.length(1)
+      expect(lines(gateways[1]!)[0]).to.match(/ 1F214 00/)
     } finally {
       connections.forEach((connection) => connection.end())
-      sockets.forEach((socket) => socket.destroy())
-      await Promise.all(
-        gateways.map((g) => new Promise((resolve) => g.server.close(resolve)))
-      )
+      await Promise.all(gateways.map(stopGateway))
     }
   })
 })
