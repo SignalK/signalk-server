@@ -141,6 +141,79 @@ export function getModulePaths(config: Config) {
   )
 }
 
+/**
+ * The node_modules directory the server is installed in, when it is
+ * installed as a dependency, where npm hoists the packages it bundles.
+ */
+export function getNodeModulesNextToApp(appPath: string): string | undefined {
+  // pnpm links the server into node_modules; its dependencies are next to
+  // the real directory, not next to the link.
+  const parent = path.dirname(fs.realpathSync(path.resolve(appPath)))
+  return path.basename(parent) === 'node_modules'
+    ? path.join(parent, '/')
+    : undefined
+}
+
+/**
+ * A package next to the server may be another version than the server
+ * declares, installed by something else when npm skipped the server's own
+ * copy, as with `--omit=optional`. A range that is not semver (a tarball or
+ * git URL) cannot be checked and is accepted. Prereleases are accepted, so a
+ * beta of a bundled webapp still loads.
+ */
+function satisfiesDeclaredRange(version: unknown, range: string) {
+  if (semver.validRange(range) === null) {
+    return true
+  }
+  return (
+    typeof version === 'string' &&
+    semver.satisfies(version, range, { includePrerelease: true })
+  )
+}
+
+/**
+ * Finds the plugins the server bundles when npm hoisted them next to it.
+ *
+ * Installed as a dependency itself, as the Docker image installs it with
+ * `npm install signalk-server`, the server has its dependencies hoisted next
+ * to it, so the plugins it bundles are not in appPath's node_modules. Only
+ * the server's own dependencies are looked up there: for a global install
+ * that directory is the global node_modules.
+ */
+function findBundledModulesNextToApp(
+  appPath: string,
+  keyword: string
+): ModuleData[] {
+  const location = getNodeModulesNextToApp(appPath)
+  if (!location) {
+    return []
+  }
+  const { dependencies = {}, optionalDependencies = {} } =
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require(path.resolve(appPath, 'package.json'))
+  const dependencyRanges: Record<string, string> = {
+    ...dependencies,
+    ...optionalDependencies
+  }
+  return Object.entries(dependencyRanges).flatMap(([name, range]) => {
+    let metadata
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      metadata = require(path.join(location, name, 'package.json'))
+    } catch (err) {
+      // Also missing when npm nested the dependency in appPath's
+      // node_modules, or an optional one was not installed.
+      debug(err)
+      return []
+    }
+    return Array.isArray(metadata?.keywords) &&
+      metadata.keywords.includes(keyword) &&
+      satisfiesDeclaredRange(metadata.version, range)
+      ? [{ module: metadata.name, metadata, location }]
+      : []
+  })
+}
+
 const getModuleSortName = (x: ModuleData) =>
   (x.module || '').replace('@signalk', ' ')
 
@@ -148,15 +221,20 @@ const getModuleSortName = (x: ModuleData) =>
 const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
-// Searches for installed modules that contain `keyword`.
+/**
+ * Searches for installed modules that contain `keyword`. The config dir is
+ * searched first, so a copy installed there by the App Store takes
+ * precedence over the one the server bundles.
+ */
 export function modulesWithKeyword(config: Config, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
-    _.flatten(
-      getModulePaths(config).map((pathOption) =>
+    _.flatten([
+      ...getModulePaths(config).map((pathOption) =>
         findModulesInDir(pathOption, keyword)
-      )
-    ),
+      ),
+      findBundledModulesNextToApp(config.appPath, keyword)
+    ]),
     (moduleData) => moduleData.module
   ).sort(priorityPrefix)
 }
@@ -745,6 +823,7 @@ module.exports = {
   getAuthor,
   getKeywords,
   getModulePaths,
+  getNodeModulesNextToApp,
   restoreModules,
   importOrRequire,
   runNpm,
