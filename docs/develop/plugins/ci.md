@@ -38,12 +38,14 @@ See [`examples/plugin-caller-example.yml`](examples/plugin-caller-example.yml) f
 
 ### Platforms
 
-| Platform | Architecture | Node versions | Notes                                   |
-| -------- | ------------ | ------------- | --------------------------------------- |
-| Linux    | x64          | 22, 24        | GitHub-hosted runner                    |
-| Linux    | arm64        | 22, 24        | GitHub-hosted runner — Raspberry Pi 4/5 |
-| macOS    | arm64        | 22, 24        | GitHub-hosted runner                    |
-| Windows  | x64          | 22, 24        | GitHub-hosted runner                    |
+| Platform | Architecture | Notes                                   |
+| -------- | ------------ | --------------------------------------- |
+| Linux    | x64          | GitHub-hosted runner                    |
+| Linux    | arm64        | GitHub-hosted runner — Raspberry Pi 4/5 |
+| macOS    | arm64        | GitHub-hosted runner                    |
+| Windows  | x64          | GitHub-hosted runner                    |
+
+Each platform runs every Node version in the `node-versions` input; see the input table below for the default.
 
 There is no 32-bit ARM (armv7) platform: Signal K Server requires Node.js 22 or later and no longer supports armv7, as described in [Breaking Changes](../../breaking_changes.md).
 
@@ -92,7 +94,7 @@ jobs:
       test-command: 'npm run test:ci'
       build-command: 'npm run build:plugin'
       enable-signalk-integration: true
-      node-versions: '["22"]'
+      node-versions: '["24"]'
 ```
 
 | Input                        | Default                      | Description                                                                                                              |
@@ -101,12 +103,14 @@ jobs:
 | `build-command`              | `npm run build --if-present` | Build command                                                                                                            |
 | `format-check-command`       | _(empty)_                    | Blocking format check (e.g. `npm run prettier:check`, `npx biome check .`); skipped when empty                           |
 | `coverage-command`           | _(empty)_                    | Runs tests with coverage (e.g. `npm run coverage`); replaces the standard test run and writes output to the step summary |
-| `node-versions`              | `["22", "24"]`               | Node versions for desktop platforms                                                                                      |
+| `node-versions`              | see below                    | Node versions for the desktop and integration jobs                                                                       |
 | `build-node-version`         | `24`                         | Node version that runs the build once, on Linux                                                                          |
 | `artifact-name-suffix`       | _(empty)_                    | Suffix for the artifact names; set it only when one workflow run calls plugin-ci more than once                          |
 | `enable-armv7`               | `false`                      | Deprecated and ignored — there is no armv7 platform                                                                      |
 | `enable-signalk-integration` | `false`                      | Start SignalK server for integration tests                                                                               |
 | `signalk-server-versions`    | `["latest"]`                 | JSON array of signalk-server versions; the integration job fans out over each                                            |
+
+The `node-versions` default is every Node.js version Signal K Server supports; the [workflow input](https://github.com/SignalK/signalk-server/blob/master/.github/workflows/plugin-ci.yml) holds the current list, and its validation rejects versions the server does not support.
 
 ### Formatting and coverage
 
@@ -146,7 +150,7 @@ with:
   signalk-server-versions: '["2.23.0", "latest"]'
 ```
 
-The integration job runs the full Cartesian product of `node-versions × signalk-server-versions`. The default `["22", "24"] × ["latest"]` is 2 jobs; `["22", "24"] × ["2.23.0", "latest"]` is 4. To keep the matrix small, shrink either dimension — integration coverage often only needs a single Node version (`node-versions: '["22"]'`) even when the desktop jobs exercise several.
+The integration job runs the full Cartesian product of `node-versions × signalk-server-versions`, so its job count is the product of the two list lengths (see the defaults in the input table above). To keep the matrix small, shrink either dimension — integration coverage often only needs a single Node version (`node-versions: '["24"]'`) even when the desktop jobs exercise several.
 
 ### Provider API Verification
 

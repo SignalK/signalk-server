@@ -4,10 +4,10 @@
 # Plugin developers reference it with a single line in their own workflow.
 #
 # Platforms tested:
-#   - Linux x64    (Node 22, 24)
-#   - Linux arm64  (Node 22, 24) — Raspberry Pi 4/5
-#   - macOS        (Node 22, 24)
-#   - Windows      (Node 22, 24)
+#   - Linux x64    (Node 22, 24, 26)
+#   - Linux arm64  (Node 22, 24, 26) — Raspberry Pi 4/5
+#   - macOS        (Node 22, 24, 26)
+#   - Windows      (Node 22, 24, 26)
 #
 # Usage in your plugin repo:
 #   See docs/develop/plugins/examples/plugin-caller-example.yml
@@ -47,9 +47,9 @@ on:
         type: string
         default: ''
       node-versions:
-        description: 'JSON array of Node versions for desktop platforms (default: ["22", "24"])'
+        description: 'JSON array of Node versions for the desktop and integration jobs (default: ["22", "24", "26"])'
         type: string
-        default: '["22", "24"]'
+        default: '["22", "24", "26"]'
       build-node-version:
         description: 'Node version that runs build-command once; every desktop and integration job tests that build output (default: 24)'
         type: string
@@ -89,6 +89,10 @@ jobs:
     name: Validate inputs
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # The matrices read the checked list from here, so a malformed input
+    # fails with the validation error instead of in matrix expansion.
+    outputs:
+      node-versions: ${{ steps.node-versions.outputs.versions }}
     steps:
       # working-directory reaches a docker -w, an artifact glob and a
       # sparse-checkout pattern, so constrain it to a plain relative path.
@@ -117,6 +121,41 @@ jobs:
               echo "::error::working-directory must not contain '..', got '$PLUGIN_DIR'"; exit 1 ;;
           esac
           echo "working-directory: $PLUGIN_DIR"
+
+      # A version must name its major ("22", "22.x", "22.12.0"), or be an
+      # alias that always resolves to a current release. Ranges and LTS
+      # codenames are refused: "^20" or "lts/iron" would hide an old Node.
+      - name: Validate node-versions
+        id: node-versions
+        env:
+          NODE_VERSIONS_JSON: ${{ inputs.node-versions }}
+        run: |
+          node -e '
+            const fs = require("fs")
+            const MINIMUM_MAJOR = 22
+            const CURRENT_ALIASES = new Set(["lts/*", "node", "latest", "current"])
+            let versions
+            try { versions = JSON.parse(process.env.NODE_VERSIONS_JSON) } catch {}
+            if (!Array.isArray(versions) || versions.length === 0) {
+              console.log("::error::node-versions must be a non-empty JSON array, got " + process.env.NODE_VERSIONS_JSON)
+              process.exit(1)
+            }
+            // Whole numbers are allowed because [22, 24] has always worked;
+            // a fraction such as 22.10 would reach setup-node as 22.1.
+            const unsupported = versions.filter((v) => {
+              if (Number.isInteger(v)) return v < MINIMUM_MAJOR
+              if (typeof v !== "string") return true
+              if (CURRENT_ALIASES.has(v)) return false
+              const major = /^v?(\d+)(\.(\d+|x)){0,2}$/.exec(v)
+              return !major || Number(major[1]) < MINIMUM_MAJOR
+            })
+            if (unsupported.length > 0) {
+              console.log("::error::node-versions must name Node.js " + MINIMUM_MAJOR + " or later (or lts/*, node, latest, current); unsupported values: " + unsupported.map((v) => JSON.stringify(v)).join(", "))
+              process.exit(1)
+            }
+            console.log("node-versions: " + versions.join(", "))
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, "versions=" + JSON.stringify(versions) + "\n")
+          '
 
   # ════════════════════════════════════════════════════════════
   #  Build once: the desktop and integration jobs test this output
@@ -197,13 +236,13 @@ jobs:
           matrix.os == 'windows-latest' && 'Windows' ||
           matrix.os }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
-    needs: build
+    needs: [validate-inputs, build]
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-latest]
-        node: ${{ fromJson(inputs.node-versions) }}
+        node: ${{ fromJson(needs.validate-inputs.outputs.node-versions) }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -1495,91 +1534,6 @@ jobs:
           PACKCHECK
           node /tmp/check-pack.js
 
-      - name: Check ES2023 compatibility (Cerbo GX / Node 20)
-        id: es-check
-        if: always() && steps.pack-check.outcome != 'skipped'
-        shell: bash
-        run: |
-          # Cerbo GX (Venus OS) runs Node 20 which supports ES2023 syntax.
-          # Plugins using ES2024+ syntax (RegExp v flag, import attributes)
-          # will crash with SyntaxError on Node 20.
-          #
-          # Skip the check when the plugin's package.json has explicitly
-          # opted out of Node 20 via engines.node >= 22.  Mirrors how the
-          # node:sqlite check above gates on engines.node — if a plugin
-          # has declared "I require Node 22+", warning about Cerbo GX
-          # (Node 20) compatibility is noise.
-          OPTED_OUT=$(node -e "
-            const pkg = require('./package.json');
-            const range = pkg.engines && pkg.engines.node;
-            if (!range) { console.log('no'); process.exit(0); }
-            const m = range.match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
-            if (!m) { console.log('no'); process.exit(0); }
-            const major = parseInt(m[1], 10);
-            console.log(major >= 22 ? 'yes' : 'no');
-          " 2>/dev/null)
-          if [ "$OPTED_OUT" = "yes" ]; then
-            echo "Skipping ES2023 check: package.json engines.node opts out of Node 20 (Cerbo GX)."
-            exit 0
-          fi
-
-          # Only check server-side JS (dist/, lib/, main entry) — skip public/
-          # which is frontend code running in browsers.
-          FILES=""
-          for dir in dist lib; do
-            if [ -d "$dir" ]; then
-              for ext in js cjs mjs; do
-                if find "$dir" -name "*.$ext" -print -quit 2>/dev/null | grep -q .; then
-                  FILES="$FILES $dir/**/*.$ext"
-                fi
-              done
-            fi
-          done
-
-          MAIN=$(node -e "
-            const pkg = require('./package.json');
-            function resolveEntry(p, fallback) {
-              if (p && p.main) return p.main;
-              const e = p && p.exports;
-              if (typeof e === 'string') return e;
-              if (e && typeof e === 'object') {
-                const root = typeof e['.'] !== 'undefined' ? e['.'] : e;
-                if (typeof root === 'string') return root;
-                if (root && typeof root === 'object') {
-                  for (const k of ['require', 'node', 'default', 'import']) {
-                    if (typeof root[k] === 'string') return root[k];
-                  }
-                }
-              }
-              return fallback;
-            }
-            const main = resolveEntry(pkg, null);
-            if (main) console.log(main);
-          " 2>/dev/null)
-          if [ -n "$MAIN" ] && [ -f "$MAIN" ] && [ -z "$FILES" ]; then
-            FILES="$MAIN"
-          fi
-
-          if [ -z "$FILES" ]; then
-            echo "No built JS files found to check"
-            exit 0
-          fi
-
-          # ESM packages need es-check in module mode; otherwise top-level
-          # import/export parse as a script and falsely report ES2024+ syntax.
-          # es-check does not infer this from package.json "type", so pass it.
-          MODULE_FLAG=""
-          if [ "$(node -p "require('./package.json').type === 'module' ? 'y' : 'n'" 2>/dev/null)" = "y" ]; then
-            MODULE_FLAG="--module"
-            echo "Detected ESM package (type: module) — running es-check in module mode."
-          fi
-
-          echo "Checking ES2023 compatibility: $FILES"
-          if ! npx --yes es-check@8 es2023 $MODULE_FLAG $FILES 2>&1; then
-            echo ""
-            echo "::warning::Plugin uses ES2024+ syntax not supported by Node 20 (Cerbo GX / Venus OS). Consider targeting ES2023 in your TypeScript/build config or tsconfig.json to maintain Cerbo GX compatibility."
-          fi
-
       - name: Simulate App Store install (--ignore-scripts)
         id: appstore-check
         shell: bash
@@ -1746,7 +1700,6 @@ jobs:
           # coverage step runs instead — surface whichever actually ran.
           TESTS: ${{ inputs.coverage-command != '' && steps.coverage.outcome || steps.tests.outcome }}
           STRAY_FILES: ${{ steps.stray-files.outcome }}
-          ES_CHECK: ${{ steps.es-check.outcome }}
           OS_NAME: >-
             ${{ matrix.os == 'ubuntu-latest' && 'Linux' ||
                 matrix.os == 'ubuntu-24.04-arm' && 'Linux arm64' ||
@@ -1780,7 +1733,6 @@ jobs:
             echo "| npm pack includes all files | $(icon "$PACK_CHECK") |"
             echo "| App Store compatible (no native addons) | $(icon "$APPSTORE_CHECK") |"
             echo "| Tests / coverage | $(icon "$TESTS") |"
-            echo "| ES2023 compatible (Cerbo GX / Node 20) | $(icon "$ES_CHECK") |"
             echo "| No stray files after build | $(icon "$STRAY_FILES") |"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -1802,13 +1754,13 @@ jobs:
   signalk-integration:
     name: Integration / signalk-server ${{ matrix.signalk-server-version }} / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [validate-inputs, build]
     timeout-minutes: 15
     if: ${{ inputs.enable-signalk-integration }}
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ fromJson(inputs.node-versions) }}
+        node: ${{ fromJson(needs.validate-inputs.outputs.node-versions) }}
         signalk-server-version: ${{ fromJson(inputs.signalk-server-versions) }}
     defaults:
       run:
@@ -2068,8 +2020,15 @@ jobs:
           DESKTOP_RESULT: ${{ needs.desktop.result }}
           INTEGRATION_RESULT: ${{ needs.signalk-integration.result }}
           VALIDATE_RESULT: ${{ needs.validate-inputs.result }}
+          NODE_VERSIONS_JSON: ${{ inputs.node-versions }}
         shell: bash
         run: |
+          # Read the raw input here rather than with fromJson() in env: a
+          # malformed list would fail the expression and lose the report.
+          NODE_VERSIONS=$(node -e "
+            try { console.log(JSON.parse(process.env.NODE_VERSIONS_JSON).join(', ')) }
+            catch { console.log(process.env.NODE_VERSIONS_JSON) }
+          ")
           icon() {
             case "$1" in
               success)  echo "pass" ;;
@@ -2099,7 +2058,7 @@ jobs:
             echo "| Job | Result | Notes |"
             echo "|-----|--------|-------|"
             echo "| Build | $(icon "$BUILD_RESULT") | Node $BUILD_NODE |"
-            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node 22, 24 |"
+            echo "| Desktop (Linux, Linux arm64, macOS, Windows) | $(icon "$DESKTOP_RESULT") | Node $NODE_VERSIONS |"
             if [[ "$INTEGRATION_RESULT" != "skipped" ]]; then
               echo "| SignalK integration | $(icon "$INTEGRATION_RESULT") | Server install + plugin load |"
             fi
@@ -2116,7 +2075,6 @@ jobs:
             echo "- **npm pack** — All files referenced by \`main\`/\`exports\` are included in the package"
             echo "- **App Store install** — No native addons that break with \`--ignore-scripts\`"
             echo "- **Hardcoded paths** — No \`/home/user/...\` literals in source files"
-            echo "- **ES2023 compatibility** — Built JS checked for Cerbo GX (Node 20) syntax compatibility"
             echo "- **baconjs** — Plugins must not bundle their own baconjs; the server provides >= 3.x"
             echo "- **React version** — Plugins with webapp keywords must use React >= 19 for Module Federation compatibility"
             echo "- **Stray files** — Build/test does not leave untracked files in the repo"
@@ -2136,6 +2094,11 @@ jobs:
           echo "Build:                $BUILD_RESULT"
           echo "Desktop:              $DESKTOP_RESULT"
           echo "SignalK integration:  $INTEGRATION_RESULT"
+
+          if [[ "$VALIDATE_RESULT" != "success" ]]; then
+            echo "::error::Input validation failed"
+            exit 1
+          fi
 
           if [[ "$BUILD_RESULT" != "success" ]]; then
             echo "::error::Build failed"
