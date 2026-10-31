@@ -1,6 +1,6 @@
 /** @category  Resources API */
 export type SignalKResourceType =
-  'routes' | 'waypoints' | 'notes' | 'regions' | 'charts'
+  'routes' | 'waypoints' | 'notes' | 'regions' | 'charts' | 'logentries'
 
 /**
  * @hidden
@@ -10,7 +10,8 @@ export const SIGNALKRESOURCETYPES: SignalKResourceType[] = [
   'waypoints',
   'notes',
   'regions',
-  'charts'
+  'charts',
+  'logentries'
 ]
 /** @category  Resources API */
 export const isSignalKResourceType = (s: string) =>
@@ -302,6 +303,8 @@ export interface ResourceProviderMethods {
    * }
    * ```
    *
+   * Rejects with an error whose `code` is `ENOENT` when the resource does
+   * not exist; other rejections signal retrieval failures.
    */
   getResource(id: string, property?: string): Promise<object>
 

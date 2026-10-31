@@ -344,6 +344,8 @@ export interface WeatherData {
     swellHeight?: number
     swellPeriod?: number
     swellDirection?: number
+    /** Sea state (Beaufort) */
+    seaStateValue?: number
   }
   wind?: {
     speedTrue?: number
