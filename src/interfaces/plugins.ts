@@ -49,7 +49,8 @@ import {
   RouteAccessLevel,
   RoutePermission,
   PluginWebSocketServer,
-  EnhancedDisplayUnits
+  EnhancedDisplayUnits,
+  DeviceStateChangeEvent
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { IRouter, Request, RequestHandler, Response } from 'express'
@@ -738,14 +739,17 @@ module.exports = (theApp: any) => {
     reason: PluginStopReason = 'disable'
   ): Promise<any> {
     debug('Stopping plugin ' + plugin.name)
-    onStopHandlers[plugin.id].forEach((f: () => void) => {
+    // Taken before running so a handler that removes itself from the list
+    // cannot make the loop skip the next one.
+    const stopHandlers = onStopHandlers[plugin.id]
+    onStopHandlers[plugin.id] = []
+    stopHandlers.forEach((f: () => void) => {
       try {
         f()
       } catch (err) {
         console.error(err)
       }
     })
-    onStopHandlers[plugin.id] = []
     startedPlugins.delete(plugin.id)
     // Not before stop(), which may still be talking to its devices, and
     // after a failed stop() too, which is the likeliest to leave them open
@@ -1238,6 +1242,53 @@ module.exports = (theApp: any) => {
       return getPluginOptions(plugin.id)
     }
     appCopy.getDataDirPath = () => dirForPluginId(plugin.id)
+
+    appCopy.setDevicePluginData = (
+      clientId: string,
+      metadata: Record<string, unknown>
+    ) => {
+      if (app.deviceTracker) {
+        app.deviceTracker.setPluginData(plugin.id, clientId, metadata)
+      }
+    }
+    appCopy.getDevicePluginData = (
+      clientId: string
+    ): Record<string, unknown> | undefined => {
+      return app.deviceTracker?.getPluginData(plugin.id, clientId)
+    }
+    appCopy.onDeviceStateChange = (
+      callback: (event: DeviceStateChangeEvent) => void
+    ): (() => void) => {
+      if (app.deviceTracker) {
+        // The tracker emits synchronously from WebSocket setup and HTTP
+        // request handling, so a throwing callback must not reach them.
+        const safeCallback = (event: DeviceStateChangeEvent) => {
+          try {
+            callback(event)
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            console.error(
+              `${packageName} device state callback error: ${message}`
+            )
+            app.setPluginError(plugin.id, `Runtime error: ${message}`)
+          }
+        }
+        app.deviceTracker.on('deviceStateChange', safeCallback)
+        // A plugin may subscribe and unsubscribe many times while running,
+        // so a cleanup it calls itself also leaves the stop-handler list.
+        const cleanup = () => {
+          app.deviceTracker?.removeListener('deviceStateChange', safeCallback)
+          const handlers: Array<() => void> = onStopHandlers[plugin.id]
+          const index = handlers.indexOf(cleanup)
+          if (index !== -1) {
+            handlers.splice(index, 1)
+          }
+        }
+        onStopHandlers[plugin.id].push(cleanup)
+        return cleanup
+      }
+      return () => {}
+    }
 
     appCopy.registerPutHandler = (context, aPath, callback, source) => {
       appCopy.handleMessage(plugin.id, {

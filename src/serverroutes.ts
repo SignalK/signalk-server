@@ -31,6 +31,7 @@ import commandExists from 'command-exists'
 import express, { IRouter, NextFunction, Request, Response } from 'express'
 import { sendZip } from './zip'
 import fs from 'fs'
+import jwt from 'jsonwebtoken'
 import { forIn, get, isNumber, isUndefined, set, uniq, unset } from 'lodash'
 import moment from 'moment'
 import ncpI from 'ncp'
@@ -59,16 +60,22 @@ import { getAuthor, Package, restoreModules } from './modules'
 import { getHttpPort, getSslPort } from './ports'
 import { queryRequest } from './requestResponse'
 import {
+  Device,
+  DeviceDashboard,
   getRateLimitValidationOptions,
+  INVALID_DEVICE_INFO_MESSAGE,
+  parseDeviceInfo,
   pathForSecurityConfig,
   SECRET_KEY_FILENAME,
   SecurityConfig,
   SecurityConfigGetter,
   SecurityConfigSaver,
   SecurityStrategy,
+  SkPrincipal,
   User,
   WithSecurityStrategy
 } from './security'
+import { DeviceTracker, userAgentOf } from './deviceTracker'
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
@@ -263,6 +270,26 @@ const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
 const DEFAULT_HTTP_RATE_LIMIT_API_MAX = 1000
 const DEFAULT_HTTP_RATE_LIMIT_LOGIN_STATUS_MAX = 1000
 
+function isValidDeviceDashboard(
+  value: unknown
+): value is DeviceDashboard | undefined {
+  if (value === undefined) {
+    return true
+  }
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+  const { mode, url, metadata } = value as Record<string, unknown>
+  return (
+    (mode === 'redirect' || mode === 'metadata') &&
+    (url === undefined || typeof url === 'string') &&
+    (metadata === undefined ||
+      (typeof metadata === 'object' &&
+        metadata !== null &&
+        !Array.isArray(metadata)))
+  )
+}
+
 function getHttpRateLimitOverridesFromEnv(): HttpRateLimitOverrides {
   const raw = process.env.HTTP_RATE_LIMITS
   const defaults: HttpRateLimitOverrides = {
@@ -331,6 +358,7 @@ interface App
   }
   activateSourcePriorities: () => void
   streambundle: StreamBundle
+  deviceTracker?: DeviceTracker
 }
 
 interface ModuleInfo {
@@ -489,6 +517,47 @@ module.exports = function (
   app.use('/admin', serveStaticFiles(adminUiPath))
 
   app.get('/', (req: Request, res: Response) => {
+    const queryToken =
+      typeof req.query?.token === 'string' ? req.query.token : undefined
+    if (queryToken) {
+      try {
+        const payload: unknown = jwt.verify(
+          queryToken,
+          getSecurityConfig(app).secretKey
+        )
+        const { device: deviceId, ver } =
+          (payload as { device?: unknown; ver?: unknown } | null) ?? {}
+        if (typeof deviceId === 'string') {
+          const config = getSecurityConfig(app)
+          const device = config.devices?.find(
+            (d: Device) =>
+              d.clientId === deviceId && (ver ?? 0) === (d.tokenVersion ?? 0)
+          )
+          if (device?.dashboard?.mode === 'redirect' && device.dashboard.url) {
+            const rawUrl = device.dashboard.url.trim()
+            const dashUrl = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`
+            // Browsers normalize backslashes to slashes, so /\evil.example
+            // would become a protocol-relative redirect leaking the token.
+            if (!dashUrl.startsWith('//') && !dashUrl.includes('\\')) {
+              // Keep the token in the query string: appending it after a
+              // #fragment would hide it from the dashboard's location.search.
+              const [pathAndQuery, ...fragmentParts] = dashUrl.split('#')
+              const fragment = fragmentParts.length
+                ? `#${fragmentParts.join('#')}`
+                : ''
+              const separator = pathAndQuery.includes('?') ? '&' : '?'
+              res.redirect(
+                `${pathAndQuery}${separator}token=${encodeURIComponent(queryToken)}${fragment}`
+              )
+              return
+            }
+          }
+        }
+      } catch (_) {
+        // invalid token, fall through to default landing page
+      }
+    }
+
     let landingPage = '/admin/'
 
     // if accessed with hostname that starts with a webapp's displayName redirect there
@@ -631,7 +700,82 @@ module.exports = function (
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
         const config = getSecurityConfig(app)
-        res.json(app.securityStrategy.getDevices(config))
+        const devices = app.securityStrategy.getDevices(config)
+        if (app.deviceTracker) {
+          const runtimeStates = app.deviceTracker.getAllStates()
+          res.json(
+            devices.map((device: Device) => {
+              const state = runtimeStates.get(device.clientId)
+              if (state) {
+                return {
+                  ...device,
+                  isConnected: state.isConnected,
+                  lastSeen: state.lastSeen,
+                  lastIp: state.lastIp,
+                  userAgent: state.userAgent,
+                  pluginData: state.pluginData
+                }
+              }
+              return { ...device, isConnected: false }
+            })
+          )
+        } else {
+          res.json(devices)
+        }
+      }
+    }
+  )
+
+  app.post(
+    `${SERVERROUTESPREFIX}/security/devices`,
+    (req: Request, res: Response) => {
+      if (checkAllowConfigure(req, res)) {
+        const { displayName, permissions, expiration } = req.body
+        if (typeof displayName !== 'string' || !displayName.trim()) {
+          res.status(400).json({ error: 'displayName is required' })
+          return
+        }
+        if (!['readonly', 'readwrite', 'admin'].includes(permissions)) {
+          res.status(400).json({ error: 'Invalid permissions value' })
+          return
+        }
+        if (expiration !== undefined && typeof expiration !== 'string') {
+          res.status(400).json({ error: 'Invalid expiration value' })
+          return
+        }
+        if (!isValidDeviceDashboard(req.body.dashboard)) {
+          res.status(400).json({ error: 'Invalid dashboard value' })
+          return
+        }
+        const config = getSecurityConfig(app)
+        app.securityStrategy.createDevice(
+          config,
+          {
+            displayName,
+            permissions,
+            expiration,
+            dashboard: req.body.dashboard
+          },
+          (err, updatedConfig, result) => {
+            if (err) {
+              console.log(err)
+              res.status(500).json({ error: 'Unable to create device' })
+            } else if (updatedConfig) {
+              saveSecurityConfig(app, updatedConfig, (saveErr) => {
+                if (saveErr) {
+                  console.log(saveErr)
+                  res
+                    .status(500)
+                    .json({ error: 'Unable to save configuration' })
+                  return
+                }
+                res.json(result)
+              })
+            } else {
+              res.status(500).json({ error: 'Unable to create device' })
+            }
+          }
+        )
       }
     }
   )
@@ -640,11 +784,20 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/security/devices/:uuid`,
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
+        if (
+          req.body.dashboard !== null &&
+          !isValidDeviceDashboard(req.body.dashboard)
+        ) {
+          res.status(400).json({ error: 'Invalid dashboard value' })
+          return
+        }
+        // The device reports its own hardware and software.
+        const { deviceInfo: _deviceInfo, ...updates } = req.body
         const config = getSecurityConfig(app)
         app.securityStrategy.updateDevice(
           config,
           req.params.uuid,
-          req.body,
+          updates,
           getConfigSavingCallback(
             'Device updated',
             'Unable to update device',
@@ -655,20 +808,150 @@ module.exports = function (
     }
   )
 
+  app.put(
+    `${SERVERROUTESPREFIX}/device/info`,
+    apiLimiter,
+    (req: Request, res: Response) => {
+      const principal = (req as Request & { skPrincipal?: SkPrincipal })
+        .skPrincipal
+      if (!principal?.principalType) {
+        res.status(401).json({ error: 'Authentication required' })
+        return
+      }
+      if (principal.principalType !== 'device') {
+        res.status(403).json({ error: 'Only a device can report its info' })
+        return
+      }
+      const reported = parseDeviceInfo(req.body)
+      if (!reported) {
+        res.status(400).json({ error: INVALID_DEVICE_INFO_MESSAGE })
+        return
+      }
+      const config = getSecurityConfig(app)
+      const device = config.devices?.find(
+        (d: Device) => d.clientId === principal.identifier
+      )
+      if (!device) {
+        res.status(404).json({ error: 'Device not found' })
+        return
+      }
+      // A device may report only the fields that changed, such as its
+      // software version after an update.
+      const deviceInfo = { ...device.deviceInfo, ...reported }
+      if (util.isDeepStrictEqual(deviceInfo, device.deviceInfo ?? {})) {
+        res.json(deviceInfo)
+        return
+      }
+      app.securityStrategy.updateDevice(
+        config,
+        principal.identifier,
+        { deviceInfo },
+        (err, updatedConfig) => {
+          if (err || !updatedConfig) {
+            console.log(err)
+            res.status(500).json({ error: 'Unable to update device' })
+            return
+          }
+          saveSecurityConfig(app, updatedConfig, (saveErr) => {
+            if (saveErr) {
+              console.log(saveErr)
+              res.status(500).json({ error: 'Unable to save configuration' })
+              return
+            }
+            res.json(deviceInfo)
+          })
+        }
+      )
+    }
+  )
+
   app.delete(
     `${SERVERROUTESPREFIX}/security/devices/:uuid`,
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
         const config = getSecurityConfig(app)
+        const clientId = req.params.uuid
         app.securityStrategy.deleteDevice(
           config,
-          req.params.uuid,
-          getConfigSavingCallback(
-            'Device deleted',
-            'Unable to delete device',
-            res
-          )
+          clientId,
+          (err, updatedConfig) => {
+            if (err) {
+              console.log(err)
+              res.status(500).type('text/plain').send('Unable to delete device')
+            } else if (updatedConfig) {
+              saveSecurityConfig(app, updatedConfig, (saveErr) => {
+                if (saveErr) {
+                  console.log(saveErr)
+                  res.status(500).send('Unable to save configuration change')
+                  return
+                }
+                app.deviceTracker?.onDeviceRemoved(clientId)
+                res.type('text/plain').send('Device deleted')
+              })
+            } else {
+              res.type('text/plain').send('Device deleted')
+            }
+          }
         )
+      }
+    }
+  )
+
+  // Regenerations run one at a time, so each one reads the token version
+  // the previous one saved, and a failed save restores the version its own
+  // request read.
+  let deviceTokenRegeneration = Promise.resolve()
+
+  function regenerateDeviceToken(
+    clientId: string,
+    res: Response
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      const config = getSecurityConfig(app)
+      const device = config.devices?.find(
+        (d: Device) => d.clientId === clientId
+      )
+      if (!device) {
+        res.status(404).json({ error: 'Device not found' })
+        resolve()
+        return
+      }
+      const previousVersion = device.tokenVersion
+      const token = app.securityStrategy.generateDeviceToken(config, clientId)
+      if (!token) {
+        // The expiry comes from the approved access request and cannot be
+        // extended, so a new approval is the only way back.
+        res.status(409).json({
+          error: 'Device access has expired; delete the device and add it again'
+        })
+        resolve()
+        return
+      }
+      saveSecurityConfig(app, config, (saveErr) => {
+        if (saveErr) {
+          // The device keeps working with its current token when the new
+          // version could not be persisted.
+          device.tokenVersion = previousVersion
+          console.log(saveErr)
+          res.status(500).json({ error: 'Unable to save configuration' })
+        } else {
+          res.json({ token })
+        }
+        resolve()
+      })
+    })
+  }
+
+  app.post(
+    `${SERVERROUTESPREFIX}/security/devices/:uuid/token`,
+    (req: Request, res: Response) => {
+      if (checkAllowConfigure(req, res)) {
+        deviceTokenRegeneration = deviceTokenRegeneration
+          .then(() => regenerateDeviceToken(req.params.uuid, res))
+          .catch((err) => {
+            console.log(err)
+            res.status(500).json({ error: 'Unable to generate token' })
+          })
       }
     }
   )
@@ -830,7 +1113,11 @@ module.exports = function (
         return
       }
       app.securityStrategy
-        .requestAccess(config, { accessRequest: req.body }, ip)
+        .requestAccess(
+          config,
+          { accessRequest: req.body, userAgent: userAgentOf(req.headers) },
+          ip
+        )
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .then((reply: any) => {
           res.status(reply.state === 'PENDING' ? 202 : reply.statusCode)

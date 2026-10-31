@@ -18,6 +18,7 @@
 import { RoutePermission } from '@signalk/server-api'
 import { Request, Response } from 'express'
 import { PartialOIDCConfig } from './oidc/types'
+import { DeviceTracker } from './deviceTracker'
 import {
   chmodSync,
   existsSync,
@@ -52,6 +53,10 @@ export interface LoginStatusResponse {
   allowDeviceAccessRequests?: boolean
   userLevel?: any
   username?: string
+  principalType?: 'user' | 'device'
+  deviceId?: string
+  deviceName?: string
+  deviceDashboard?: DeviceDashboard
 }
 
 export interface ACL {
@@ -108,6 +113,58 @@ export interface UserWithPassword {
   password: string
 }
 
+export interface DeviceRegistrationInfo {
+  sourceIp?: string
+  deviceId?: string
+  userAgent?: string
+}
+
+export interface DeviceInfo {
+  hardware?: string
+  hardwareVersion?: string
+  software?: string
+  softwareVersion?: string
+}
+
+const DEVICE_INFO_FIELDS = [
+  'hardware',
+  'hardwareVersion',
+  'software',
+  'softwareVersion'
+] as const
+const DEVICE_INFO_MAX_LENGTH = 128
+export const INVALID_DEVICE_INFO_MESSAGE = `device must be an object whose ${DEVICE_INFO_FIELDS.join(', ')} are strings of at most ${DEVICE_INFO_MAX_LENGTH} characters`
+
+// Returns undefined when the value is not a valid device object, so callers
+// can tell a rejected value from an absent one.
+export function parseDeviceInfo(value: unknown): DeviceInfo | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined
+  }
+  const input = value as Record<string, unknown>
+  const info: DeviceInfo = {}
+  for (const field of DEVICE_INFO_FIELDS) {
+    const fieldValue = input[field]
+    if (fieldValue === undefined) {
+      continue
+    }
+    if (
+      typeof fieldValue !== 'string' ||
+      fieldValue.length > DEVICE_INFO_MAX_LENGTH
+    ) {
+      return undefined
+    }
+    info[field] = fieldValue
+  }
+  return info
+}
+
+export interface DeviceDashboard {
+  mode: 'redirect' | 'metadata'
+  url?: string
+  metadata?: Record<string, unknown>
+}
+
 export interface Device {
   clientId: string
   permissions: string
@@ -115,11 +172,23 @@ export interface Device {
   description: string
   requestedPermissions: string
   tokenExpiry?: number
+  // Bumped on every token regeneration; tokens carrying an older version
+  // are rejected, so regenerating revokes earlier tokens.
+  tokenVersion?: number
+  displayName?: string
+  createdAt?: string
+  registrationInfo?: DeviceRegistrationInfo
+  // Reported by the device itself, at registration or later.
+  deviceInfo?: DeviceInfo
+  dashboard?: DeviceDashboard
 }
 
 export interface DeviceDataUpdate {
   permissions?: string
   description?: string
+  displayName?: string
+  dashboard?: DeviceDashboard
+  deviceInfo?: DeviceInfo
 }
 
 export interface OIDCSecurityConfig {
@@ -157,6 +226,8 @@ export interface RequestStatusData {
 export interface SkPrincipal {
   identifier: string
   permissions: string
+  // Absent for the anonymous readonly principal.
+  principalType?: 'user' | 'device'
 }
 
 /** Websocket connection carrying the auth state set by authorizeWS. */
@@ -217,6 +288,26 @@ export interface SecurityStrategy {
     clientId: string,
     cb: ICallback<SecurityConfig>
   ) => void
+
+  createDevice: (
+    theConfig: SecurityConfig,
+    device: {
+      displayName: string
+      permissions: string
+      expiration?: string
+      dashboard?: DeviceDashboard
+    },
+    cb: (
+      err: Error | null,
+      config?: SecurityConfig,
+      result?: { clientId: string; token: string }
+    ) => void
+  ) => void
+
+  generateDeviceToken: (
+    theConfig: SecurityConfig,
+    clientId: string
+  ) => string | null
 
   generateToken: (
     req: Request,
@@ -345,6 +436,14 @@ export function startSecurity(
       app.securityStrategy.configFromArguments = true
       app.securityStrategy.securityConfig = securityConfig
     }
+
+    const appWithTracker = app as WithSecurityStrategy &
+      WithConfig & { deviceTracker?: DeviceTracker }
+    appWithTracker.deviceTracker = new DeviceTracker((event) => {
+      if (typeof (app as any).emit === 'function') {
+        ;(app as any).emit('serverAdminEvent', event)
+      }
+    })
   } else {
     app.securityStrategy = dummysecurity()
   }

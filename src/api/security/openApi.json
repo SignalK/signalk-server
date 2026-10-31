@@ -372,6 +372,28 @@
                     "type": "string",
                     "description": "Description of device.",
                     "example": "humidity sensor"
+                  },
+                  "device": {
+                    "type": "object",
+                    "description": "Hardware and software the client runs on. Each field is optional and at most 128 characters. An approved device can update them later with PUT /skServer/device/info.",
+                    "properties": {
+                      "hardware": {
+                        "type": "string",
+                        "example": "ESP32-C6"
+                      },
+                      "hardwareVersion": {
+                        "type": "string",
+                        "example": "v0.2"
+                      },
+                      "software": {
+                        "type": "string",
+                        "example": "SensESP"
+                      },
+                      "softwareVersion": {
+                        "type": "string",
+                        "example": "3.6.1"
+                      }
+                    }
                   }
                 }
               }
