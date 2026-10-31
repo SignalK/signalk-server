@@ -61,8 +61,8 @@ const clientConnected = (app: MockApp, providerId: string) =>
     `${providerId} to connect`
   )
 
-const lines = (gateway: Gateway) =>
-  gateway.received.split('\r\n').filter((line) => line.length > 0)
+// TCP may deliver a frame in pieces; only CRLF-terminated lines count.
+const lines = (gateway: Gateway) => gateway.received.split('\r\n').slice(0, -1)
 
 describe('Simple gateway TX', () => {
   it('writes each W2K-1 connection’s outbound frames to its own gateway only', async () => {
@@ -98,19 +98,24 @@ describe('Simple gateway TX', () => {
         clientConnected(app, 'bus2')
       ])
 
-      // TCP keeps order: had bus2's frame reached the first gateway too,
-      // it would arrive there ahead of bus1's.
+      // TCP keeps order: a stray bus2 frame would reach the first
+      // gateway ahead of bus1's, and the later bus2 frame shows that the
+      // second gateway has received everything sent before it.
       app.emit('bus2JsonOut', battery(0))
       app.emit('bus1JsonOut', battery(1))
+      app.emit('bus2JsonOut', battery(2))
       await waitFor(
-        () => gateways.every((gateway) => lines(gateway).length > 0),
-        'both gateways to receive a frame'
+        () =>
+          lines(gateways[0]!).length > 0 &&
+          lines(gateways[1]!).some((line) => / 1F214 02/.test(line)),
+        'both gateways to receive their frames'
       )
 
       expect(lines(gateways[0]!)).to.have.length(1)
       expect(lines(gateways[0]!)[0]).to.match(/ 1F214 01/)
-      expect(lines(gateways[1]!)).to.have.length(1)
+      expect(lines(gateways[1]!)).to.have.length(2)
       expect(lines(gateways[1]!)[0]).to.match(/ 1F214 00/)
+      expect(lines(gateways[1]!)[1]).to.match(/ 1F214 02/)
     } finally {
       connections.forEach((connection) => connection.end())
       await Promise.all(gateways.map(stopGateway))
