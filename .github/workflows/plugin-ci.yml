@@ -122,9 +122,11 @@ jobs:
           esac
           echo "working-directory: $PLUGIN_DIR"
 
-      # A version must name its major ("22", "22.x", "22.12.0"), or be an
-      # alias that always resolves to a current release. Ranges and LTS
-      # codenames are refused: "^20" or "lts/iron" would hide an old Node.
+      # A version must name its major ("22", "22.x", "22.12.0"), be a semver
+      # range whose every alternative starts at that major or later (">=22",
+      # "^24", "22 - 24"), or be an alias that always resolves to a current
+      # release. LTS codenames and open-ended ranges are refused: "lts/iron"
+      # or "<26" would hide an old Node.
       - name: Validate node-versions
         id: node-versions
         env:
@@ -134,6 +136,27 @@ jobs:
             const fs = require("fs")
             const MINIMUM_MAJOR = 22
             const CURRENT_ALIASES = new Set(["lts/*", "node", "latest", "current"])
+            const COMPARATOR = /^(>=|>|<=|<|=|\^|~)?v?(\d+)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?$/
+            // Every alternative of the range needs a lower bound at
+            // MINIMUM_MAJOR or later; one without a lower bound, or with
+            // syntax this check does not read, is refused.
+            const rangeStartsAtMinimum = (range) =>
+              range.split("||").every((alternative) => {
+                const parts = alternative.trim().split(/\s+/)
+                const hyphen = parts.length === 3 && parts[1] === "-"
+                let lowest
+                for (const part of hyphen ? [parts[0], parts[2]] : parts) {
+                  const c = COMPARATOR.exec(part)
+                  if (!c) return false
+                  const op = c[1] ?? ""
+                  if (op === "<" || op === "<=") continue
+                  // ">22" excludes all of 22 only when it names no minor.
+                  const major = Number(c[2]) + (op === ">" && c[3] === undefined ? 1 : 0)
+                  lowest = Math.min(lowest ?? major, major)
+                  if (hyphen) break
+                }
+                return lowest !== undefined && lowest >= MINIMUM_MAJOR
+              })
             let versions
             try { versions = JSON.parse(process.env.NODE_VERSIONS_JSON) } catch {}
             if (!Array.isArray(versions) || versions.length === 0) {
@@ -146,13 +169,14 @@ jobs:
               if (Number.isInteger(v)) return v < MINIMUM_MAJOR
               if (typeof v !== "string") return true
               if (CURRENT_ALIASES.has(v)) return false
+              if (/[<>=^~|\s]/.test(v)) return !rangeStartsAtMinimum(v)
               // "x" may only stand for the trailing components: setup-node
               // rejects "22.x.1".
               const major = /^v?(\d+)(?:\.x(?:\.x)?|\.\d+(?:\.(?:\d+|x))?)?$/.exec(v)
               return !major || Number(major[1]) < MINIMUM_MAJOR
             })
             if (unsupported.length > 0) {
-              console.log("::error::node-versions must name Node.js " + MINIMUM_MAJOR + " or later (or lts/*, node, latest, current); unsupported values: " + unsupported.map((v) => JSON.stringify(v)).join(", "))
+              console.log("::error::node-versions must name Node.js " + MINIMUM_MAJOR + " or later, or a range that starts there (or lts/*, node, latest, current); unsupported values: " + unsupported.map((v) => JSON.stringify(v)).join(", "))
               process.exit(1)
             }
             console.log("node-versions: " + versions.join(", "))
