@@ -894,8 +894,13 @@ export default class Simple extends Transform {
     done()
   }
 
+  // Elements downstream of the source can hold subscriptions on the
+  // shared app emitter (a wasm decoder's transmit listeners), and the
+  // source does not always pass its end on, so each is ended here.
   end(): this {
-    this.pipeline[0]!.end()
+    for (const element of this.pipeline) {
+      element.end()
+    }
     return this
   }
 }
