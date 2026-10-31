@@ -104,6 +104,9 @@ export interface Config {
     interfaces?: { [ifaceName: string]: boolean }
     security?: any
     ssl?: boolean
+    /** With ssl on, serve the full server over plain HTTP on the HTTP
+     * port instead of redirecting it to HTTPS. */
+    httpAlongsideSsl?: boolean
     wsCompression?: boolean
     wsPingInterval?: number | false
     accessLogging?: boolean

@@ -35,7 +35,7 @@ import {
   WithFeatures
 } from '@signalk/server-api'
 import { randomUUID } from 'crypto'
-import express, { IRouter, Request, Response } from 'express'
+import express, { IRouter, NextFunction, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
 import _ from 'lodash'
@@ -56,7 +56,12 @@ import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
 import { ConnectionTracker } from './connectionTracker'
-import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
+import {
+  getExternalPort,
+  getPrimaryPort,
+  getSecondaryPort,
+  servesPlainHttpAlongsideSsl
+} from './ports'
 import {
   getCertificateOptions,
   getSecurityConfig,
@@ -132,7 +137,7 @@ class Server {
   pendingSourceRefMigrations?: Set<NodeJS.Timeout>
   private providerStatusEmitter: ThrottledCaller
   private connections?: ConnectionTracker
-  private redirectConnections?: ConnectionTracker
+  private secondaryConnections?: ConnectionTracker
 
   constructor(opts: { securityConfig: SecurityConfig }) {
     checkNodeVersion()
@@ -150,7 +155,8 @@ class Server {
         // Other sites get the origin only (scheme, host, port), never the path
         // or query; tile servers that require a Referer accept webapp requests.
         referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-        hsts: true,
+        // Added after load(), since it depends on httpAlongsideSsl
+        hsts: false,
 
         // DISABLED (would break chart plotters, plugins, webapps):
         frameguard: false, // Allow embedding in iframes (chart plotters, MFDs)
@@ -168,6 +174,17 @@ class Server {
     _.merge(app, opts)
 
     load(app)
+
+    // HSTS covers every port of a host, so a browser that saw it would
+    // rewrite http:// on the plain port to https:// and fail. It is left out
+    // only while that port is served; a listener that failed to bind clears
+    // secondaryServer.
+    const hsts = helmet.strictTransportSecurity()
+    app.use((req: Request, res: Response, next: NextFunction) =>
+      servesPlainHttpAlongsideSsl(app) && app.secondaryServer
+        ? next()
+        : hsts(req, res, next)
+    )
 
     // Apply trust proxy setting if configured
     if (app.config.settings.trustProxy !== undefined) {
@@ -781,16 +798,25 @@ class Server {
         const secondaryPort = getSecondaryPort(app)
         debug(`secondary port:${primaryPort}`)
         if (app.config.settings.ssl && secondaryPort) {
-          startRedirectToSsl(
-            secondaryPort,
-            getExternalPort(app),
-            (anErr: any, aServer: any, connections: ConnectionTracker) => {
-              if (!anErr) {
-                app.redirectServer = aServer
-                this.redirectConnections = connections
+          if (app.config.settings.httpAlongsideSsl) {
+            const plainServer = startPlainHttp(secondaryPort, server, () => {
+              delete app.secondaryServer
+              delete this.secondaryConnections
+            })
+            app.secondaryServer = plainServer
+            this.secondaryConnections = new ConnectionTracker(plainServer)
+          } else {
+            startRedirectToSsl(
+              secondaryPort,
+              getExternalPort(app),
+              (anErr: any, aServer: any, connections: ConnectionTracker) => {
+                if (!anErr) {
+                  app.secondaryServer = aServer
+                  this.secondaryConnections = connections
+                }
               }
-            }
-          )
+            )
+          }
         }
       })
     })
@@ -828,7 +854,7 @@ class Server {
 
   async stop(cb?: () => void) {
     this.providerStatusEmitter.cancel()
-    const { connections, redirectConnections } = this
+    const { connections, secondaryConnections } = this
     if (!this.app.started || !connections) {
       return this
     }
@@ -879,12 +905,12 @@ class Server {
       return new Promise((resolve, reject) => {
         connections.close(CONNECTION_CLOSE_GRACE_MS, () => {
           debug('Server closed')
-          if (redirectConnections) {
+          if (secondaryConnections) {
             try {
-              redirectConnections.close(CONNECTION_CLOSE_GRACE_MS, () => {
-                debug('Redirect server closed')
-                delete that.app.redirectServer
-                delete that.redirectConnections
+              secondaryConnections.close(CONNECTION_CLOSE_GRACE_MS, () => {
+                debug('Secondary server closed')
+                delete that.app.secondaryServer
+                delete that.secondaryConnections
                 that.app.started = false
                 cb && cb()
                 resolve(that)
@@ -1100,6 +1126,32 @@ function startRedirectToSsl(
     console.log(`Redirect server running on port ${port.toString()}`)
     cb(null, server, connections)
   })
+}
+
+// Hands every plain HTTP request and upgrade to the HTTPS server's own
+// listeners, so routes, WebSockets and anything a plugin attaches to
+// app.server behave the same on both ports.
+function startPlainHttp(
+  port: number,
+  tlsServer: https.Server,
+  onBindError: () => void
+) {
+  const server = http.createServer((req, res) =>
+    tlsServer.emit('request', req, res)
+  )
+  server.on('upgrade', (req, socket, head) =>
+    tlsServer.emit('upgrade', req, socket, head)
+  )
+  server.on('error', (err) => {
+    console.error(`Plain HTTP server on port ${port.toString()}: ${err}`)
+    if (!server.listening) {
+      onBindError()
+    }
+  })
+  server.listen(port, () => {
+    console.log(`Plain HTTP server running on port ${port.toString()}`)
+  })
+  return server
 }
 
 function startMdns(app: ServerApp & WithConfig) {
