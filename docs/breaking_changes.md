@@ -173,6 +173,18 @@ Please see the [Resources OpenAPI definition](https://github.com/SignalK/signalk
 
 ---
 
+## WebSocket API Changes
+
+### Graceful shutdown
+
+When the user initiates a restart from the Admin UI the server shuts down gracefully. Previously active WebSocket connections were shut down forcefully, without sending a close frame. Some clients, notably some SensESP versions ([SignalK/SensESP#1096](https://github.com/SignalK/SensESP/pull/1096)) trigger reconnect on this non-standard behavior.
+
+The server now closes down WebSocket connections gracefully, sending the close frame. This may cause some clients to fail to reconnect. As a remedy the server does not send the close frame for user agents identified as `ESP32 Websocket Client` for the time being so that clients depending on the old behavior continue to reconnect.
+
+You can control this behavior with the `SEND_WS_CLOSE_FRAME` environment variable, see [Runtime Environment & Options](./installation/command_line.md).
+
+---
+
 ## Deprecations:
 
 ### 1. courseGreatCircle, courseRhumbline paths
