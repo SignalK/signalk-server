@@ -95,6 +95,18 @@ The server automatically detects which container runtime is being used (Docker, 
 
 Supported runtimes: `docker`, `podman`, `kubernetes`, `containerd`, `crio`, `lxc`
 
+## GPIO
+
+The images include libgpiod's command line tools (`gpioset`, `gpioget`, `gpioinfo`, `gpiodetect`, `gpiomon`), so a plugin can switch a relay or a buzzer on a Raspberry Pi GPIO pin without a native module. They work through the kernel's GPIO character devices (`/dev/gpiochip*`), which is the only GPIO interface that works on a Raspberry Pi 5: the sysfs GPIO interface and `/dev/gpiomem`-based libraries do not support its RP1 chip. The Ubuntu 24.04 images ship libgpiod 1.6 and the 26.04 images libgpiod 2.2, whose `gpioset` takes different arguments.
+
+Pass the chip into the container, and the host's `gpio` group, which owns the device on Raspberry Pi OS:
+
+```
+docker run --device /dev/gpiochip0 --group-add "$(getent group gpio | cut -d: -f3)" ...
+```
+
+`gpioinfo` on the host lists the chips and their lines.
+
 ## Release images
 
 Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs.
