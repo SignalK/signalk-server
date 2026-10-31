@@ -50,8 +50,8 @@ describe('appstore/enrich', () => {
       }
     })
     expect(r.screenshots).to.deep.equal([
-      'https://unpkg.com/signalk-example@1.2.3/ok.png',
-      'https://unpkg.com/signalk-example@1.2.3/also.png'
+      'https://cdn.jsdelivr.net/npm/signalk-example@1.2.3/ok.png',
+      'https://cdn.jsdelivr.net/npm/signalk-example@1.2.3/also.png'
     ])
   })
 
@@ -63,7 +63,7 @@ describe('appstore/enrich', () => {
   it('resolves appIcon to CDN URL', () => {
     const r = enrichEntry({ ...basePkg, signalk: { appIcon: './icon.png' } })
     expect(r.appIcon).to.equal(
-      'https://unpkg.com/signalk-example@1.2.3/icon.png'
+      'https://cdn.jsdelivr.net/npm/signalk-example@1.2.3/icon.png'
     )
   })
 
@@ -105,10 +105,10 @@ describe('appstore/enrich', () => {
   it('returns readme and changelog URLs', () => {
     const r = enrichEntry(basePkg)
     expect(r.readmeUrl).to.equal(
-      'https://unpkg.com/signalk-example@1.2.3/README.md'
+      'https://cdn.jsdelivr.net/npm/signalk-example@1.2.3/README.md'
     )
     expect(r.changelogUrl).to.equal(
-      'https://unpkg.com/signalk-example@1.2.3/CHANGELOG.md'
+      'https://cdn.jsdelivr.net/npm/signalk-example@1.2.3/CHANGELOG.md'
     )
   })
 

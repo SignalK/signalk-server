@@ -1,12 +1,12 @@
 import { expect } from 'chai'
 import {
+  cdnUrlsFor,
   changelogUrlFor,
   fetchFromCdn,
   isAbsoluteUrl,
   isCdnUrl,
   readmeUrlFor,
-  resolveScreenshotUrl,
-  resolveScreenshotUrlJsdelivr
+  resolveScreenshotUrl
 } from '../../dist/appstore/cdn'
 import { redirectTo, withFetch } from './fetch-stub'
 
@@ -23,66 +23,77 @@ describe('appstore/cdn', () => {
   describe('resolveScreenshotUrl', () => {
     it('strips leading ./', () => {
       expect(resolveScreenshotUrl('pkg', '1.0.0', './docs/shot.png')).to.equal(
-        'https://unpkg.com/pkg@1.0.0/docs/shot.png'
+        'https://cdn.jsdelivr.net/npm/pkg@1.0.0/docs/shot.png'
       )
     })
 
     it('strips leading /', () => {
       expect(resolveScreenshotUrl('pkg', '1.0.0', '/docs/shot.png')).to.equal(
-        'https://unpkg.com/pkg@1.0.0/docs/shot.png'
+        'https://cdn.jsdelivr.net/npm/pkg@1.0.0/docs/shot.png'
       )
     })
 
     it('leaves plain relative paths alone', () => {
       expect(resolveScreenshotUrl('pkg', '1.0.0', 'docs/shot.png')).to.equal(
-        'https://unpkg.com/pkg@1.0.0/docs/shot.png'
+        'https://cdn.jsdelivr.net/npm/pkg@1.0.0/docs/shot.png'
       )
     })
 
     it('handles scoped package names', () => {
       expect(
         resolveScreenshotUrl('@signalk/example', '2.3.4', './icon.png')
-      ).to.equal('https://unpkg.com/@signalk/example@2.3.4/icon.png')
+      ).to.equal('https://cdn.jsdelivr.net/npm/@signalk/example@2.3.4/icon.png')
     })
 
     it('preserves query strings', () => {
       expect(
         resolveScreenshotUrl('pkg', '1.0.0', 'docs/shot.png?v=2')
-      ).to.equal('https://unpkg.com/pkg@1.0.0/docs/shot.png?v=2')
+      ).to.equal('https://cdn.jsdelivr.net/npm/pkg@1.0.0/docs/shot.png?v=2')
     })
 
     it('folds backslashes to forward slashes before clamping', () => {
       expect(
         resolveScreenshotUrl('pkg', '1.0.0', '..\\..\\etc\\passwd')
-      ).to.equal('https://unpkg.com/pkg@1.0.0/etc/passwd')
+      ).to.equal('https://cdn.jsdelivr.net/npm/pkg@1.0.0/etc/passwd')
     })
 
     it('clamps `..` so the path cannot escape the package root', () => {
       expect(resolveScreenshotUrl('pkg', '1.0.0', '../../etc/passwd')).to.equal(
-        'https://unpkg.com/pkg@1.0.0/etc/passwd'
+        'https://cdn.jsdelivr.net/npm/pkg@1.0.0/etc/passwd'
       )
       expect(
         resolveScreenshotUrl('pkg', '1.0.0', 'a/../../b/shot.png')
-      ).to.equal('https://unpkg.com/pkg@1.0.0/b/shot.png')
+      ).to.equal('https://cdn.jsdelivr.net/npm/pkg@1.0.0/b/shot.png')
+    })
+  })
+
+  describe('cdnUrlsFor', () => {
+    it('lists jsDelivr first and unpkg as the fallback', () => {
+      expect(
+        cdnUrlsFor('@signalk/example', '2.3.4', './icon.png')
+      ).to.deep.equal([
+        'https://cdn.jsdelivr.net/npm/@signalk/example@2.3.4/icon.png',
+        'https://unpkg.com/@signalk/example@2.3.4/icon.png'
+      ])
     })
 
-    it('jsdelivr fallback uses npm CDN', () => {
-      expect(
-        resolveScreenshotUrlJsdelivr('pkg', '1.0.0', './icon.png')
-      ).to.equal('https://cdn.jsdelivr.net/npm/pkg@1.0.0/icon.png')
+    it('clamps the path on every CDN', () => {
+      for (const url of cdnUrlsFor('pkg', '1.0.0', '../../etc/passwd')) {
+        expect(url).to.match(/\/pkg@1\.0\.0\/etc\/passwd$/)
+      }
     })
   })
 
   describe('readmeUrlFor / changelogUrlFor', () => {
-    it('produces unpkg README url', () => {
+    it('produces the README url on the preferred CDN', () => {
       expect(readmeUrlFor('pkg', '1.0.0')).to.equal(
-        'https://unpkg.com/pkg@1.0.0/README.md'
+        'https://cdn.jsdelivr.net/npm/pkg@1.0.0/README.md'
       )
     })
 
-    it('produces unpkg CHANGELOG url', () => {
+    it('produces the CHANGELOG url on the preferred CDN', () => {
       expect(changelogUrlFor('pkg', '1.0.0')).to.equal(
-        'https://unpkg.com/pkg@1.0.0/CHANGELOG.md'
+        'https://cdn.jsdelivr.net/npm/pkg@1.0.0/CHANGELOG.md'
       )
     })
   })
@@ -108,8 +119,10 @@ describe('appstore/cdn', () => {
   })
 
   describe('isCdnUrl', () => {
-    it('accepts https URLs on the package CDN', () => {
+    it('accepts https URLs on the package CDNs', () => {
       for (const url of [
+        'https://cdn.jsdelivr.net/npm/x@1.0.0/icon.png',
+        'https://cdn.jsdelivr.net/npm/@scope/x@1.0.0/public/icon.svg',
         'https://unpkg.com/x@1.0.0/icon.png',
         'https://unpkg.com/@scope/x@1.0.0/public/icon.svg',
         'https://UNPKG.com/x@1.0.0/icon.png'
@@ -121,7 +134,9 @@ describe('appstore/cdn', () => {
     it('rejects any other host, scheme, port or credentials', () => {
       for (const url of [
         'http://unpkg.com/x@1.0.0/icon.png',
-        'https://cdn.jsdelivr.net/npm/x@1.0.0/icon.png',
+        'http://cdn.jsdelivr.net/npm/x@1.0.0/icon.png',
+        'https://jsdelivr.net/npm/x@1.0.0/icon.png',
+        'https://cdn.jsdelivr.net.evil.example/npm/x.png',
         'https://unpkg.com.evil.example/x.png',
         'https://unpkg.com./x.png',
         'https://unpkg.com:8443/x.png',

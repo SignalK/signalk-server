@@ -15,7 +15,7 @@ interface ReadmeTabProps {
 const MAX_SCREENSHOTS = 6
 
 // Collapse `.` / `..` segments and clamp to the package root so a
-// crafted README image link can't escape the unpkg namespace into a
+// crafted README image link can't escape the package's CDN namespace into a
 // sibling package's CDN path. Mirrors the same clamp the backend uses
 // in src/appstore/cdn.ts.
 function clampToPackageRoot(rel: string): string {
@@ -37,7 +37,7 @@ function rewriteRelativeImages(
   packageName: string,
   version: string
 ): string {
-  const prefix = `https://unpkg.com/${packageName}@${version}/`
+  const prefix = `https://cdn.jsdelivr.net/npm/${packageName}@${version}/`
   return markdown.replace(
     /!\[([^\]]*)\]\((\.?\/?)([^)\s]+)\)/g,
     (match, alt, lead, path) => {
@@ -45,7 +45,7 @@ function rewriteRelativeImages(
       // regex captures any leading `.` or `/` into `lead` so a fully
       // absolute path like `/foo.png` arrives here with lead='/' and
       // path='foo.png'; matching only `path` would have rewritten
-      // absolute links to unpkg URLs by mistake.
+      // absolute links to CDN URLs by mistake.
       if (/^(https?:|data:|\/\/|\/)/.test(lead + path)) return match
       return `![${alt}](${prefix}${clampToPackageRoot(path)})`
     }

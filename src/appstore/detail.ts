@@ -11,7 +11,7 @@
 import { isRecent } from '../categories'
 import { createDebug } from '../debug'
 import { AppStoreCache } from './cache'
-import { changelogUrlFor, readmeUrlFor } from './cdn'
+import { cdnUrlsFor } from './cdn'
 import { fetchReleasesMarkdown, parseGithubSlug } from './github-releases'
 import { computeIndicators } from './indicators'
 import { DependencyReference, PluginDetailPayload } from './schemas'
@@ -19,15 +19,17 @@ import { DependencyReference, PluginDetailPayload } from './schemas'
 const debug = createDebug('signalk-server:appstore:detail')
 
 const DEFAULT_TIMEOUT_MS = 20_000
+const HTTP_NOT_FOUND = 404
 
 interface FetchOptions {
   timeoutMs?: number
 }
 
-// 'missing' = the server responded that the asset doesn't exist (e.g. 404
-// because the plugin's tarball lacks CHANGELOG.md). Safe to treat as empty.
-// 'error' = network/timeout/abort or 5xx; we don't know whether the asset
-// exists, so the caller must not advertise it as missing.
+// 'missing' = the CDN answered 404 (e.g. the plugin's tarball lacks
+// CHANGELOG.md). Safe to treat as empty.
+// 'error' = network/timeout/abort or any other non-OK status (5xx, a CDN
+// refusing an oversized package, rate limiting); we don't know whether the
+// asset exists, so the caller must not advertise it as missing.
 type FetchTextResult =
   { kind: 'ok'; text: string } | { kind: 'missing' } | { kind: 'error' }
 
@@ -42,16 +44,29 @@ async function fetchText(
     })
     if (!res.ok) {
       debug.enabled && debug('fetchText %s returned %d', url, res.status)
-      // 5xx is a CDN/origin failure, not a definitive 'asset missing'
-      // signal — the asset may still exist once the outage clears.
-      if (res.status >= 500 && res.status < 600) return { kind: 'error' }
-      return { kind: 'missing' }
+      if (res.status === HTTP_NOT_FOUND) return { kind: 'missing' }
+      return { kind: 'error' }
     }
     return { kind: 'ok', text: await res.text() }
   } catch (err) {
     debug.enabled && debug('fetchText %s failed: %O', url, err)
     return { kind: 'error' }
   }
+}
+
+// Only an error moves on to the next CDN: a 404 is definitive, and asking
+// a second CDN for a file the tarball lacks only adds latency.
+async function fetchPackageFile(
+  pkg: string,
+  version: string,
+  file: string
+): Promise<FetchTextResult> {
+  let result: FetchTextResult = { kind: 'error' }
+  for (const url of cdnUrlsFor(pkg, version, file)) {
+    result = await fetchText(url)
+    if (result.kind !== 'error') return result
+  }
+  return result
 }
 
 export interface PackageSummary {
@@ -117,7 +132,11 @@ export async function buildPluginDetail(
   if (summary.npmReadme && summary.npmReadme.trim().length > 0) {
     readmeText = summary.npmReadme
   } else {
-    const fetched = await fetchText(readmeUrlFor(summary.name, summary.version))
+    const fetched = await fetchPackageFile(
+      summary.name,
+      summary.version,
+      'README.md'
+    )
     if (fetched.kind === 'ok') readmeText = fetched.text
     if (fetched.kind === 'error') cacheable = false
   }
@@ -140,8 +159,10 @@ export async function buildPluginDetail(
   }
 
   if (!changelog) {
-    const fetched = await fetchText(
-      changelogUrlFor(summary.name, summary.version)
+    const fetched = await fetchPackageFile(
+      summary.name,
+      summary.version,
+      'CHANGELOG.md'
     )
     if (fetched.kind === 'ok' && fetched.text.trim().length > 0) {
       changelog = fetched.text
