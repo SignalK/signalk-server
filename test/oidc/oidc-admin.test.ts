@@ -29,7 +29,8 @@ const OIDC_ENV_VARS = [
   'SIGNALK_OIDC_ISSUER',
   'SIGNALK_OIDC_CLIENT_ID',
   'SIGNALK_OIDC_CLIENT_SECRET',
-  'SIGNALK_OIDC_REDIRECT_URI'
+  'SIGNALK_OIDC_REDIRECT_URI',
+  'SIGNALK_OIDC_ADMIN_USERS'
 ]
 
 function formBody(overrides: Record<string, unknown> = {}) {
@@ -79,8 +80,7 @@ describe('OIDC Admin Routes: environment variable values', () => {
     while (started.length) await started.pop()!()
   })
 
-  async function startAdminRoutes() {
-    const securityConfig: SecurityConfigForOIDC = {}
+  async function startAdminRoutes(securityConfig: SecurityConfigForOIDC = {}) {
     const saves: SecurityConfigForOIDC[] = []
 
     const app = express()
@@ -143,5 +143,112 @@ describe('OIDC Admin Routes: environment variable values', () => {
 
     expect(response.status).to.equal(200)
     expect(oidc.savedOidc()?.redirectUri).to.be.oneOf([undefined, ''])
+  })
+
+  it('does not write environment identity allowlists to security.json', async () => {
+    process.env.SIGNALK_OIDC_ADMIN_USERS = 'owner@example.com'
+    const oidc = await startAdminRoutes()
+
+    const response = await oidc.put(
+      formBody({
+        clientSecret: 'secret-from-form',
+        redirectUri: FORM_REDIRECT_URI
+      })
+    )
+
+    expect(response.status).to.equal(200)
+    expect(oidc.savedOidc()?.adminUsers).to.equal(undefined)
+  })
+
+  describe('identity allowlist fields', () => {
+    it('preserves identity fields a client did not send', async () => {
+      const oidc = await startAdminRoutes({
+        oidc: {
+          adminUsers: ['owner@example.com'],
+          readwriteUsers: ['crew@example.com'],
+          identityClaim: 'preferred_username'
+        }
+      })
+
+      // formBody() is what a client unaware of the identity fields sends
+      const response = await oidc.put(
+        formBody({
+          clientSecret: 'secret-from-form',
+          redirectUri: FORM_REDIRECT_URI
+        })
+      )
+
+      expect(response.status).to.equal(200)
+      expect(oidc.savedOidc()?.adminUsers).to.deep.equal(['owner@example.com'])
+      expect(oidc.savedOidc()?.readwriteUsers).to.deep.equal([
+        'crew@example.com'
+      ])
+      expect(oidc.savedOidc()?.identityClaim).to.equal('preferred_username')
+    })
+
+    it('parses comma-separated identity lists', async () => {
+      const oidc = await startAdminRoutes()
+
+      const response = await oidc.put(
+        formBody({
+          clientSecret: 'secret-from-form',
+          redirectUri: FORM_REDIRECT_URI,
+          adminUsers: 'owner@example.com, mate@example.com'
+        })
+      )
+
+      expect(response.status).to.equal(200)
+      expect(oidc.savedOidc()?.adminUsers).to.deep.equal([
+        'owner@example.com',
+        'mate@example.com'
+      ])
+    })
+
+    it('clears an identity list when a client sends an empty string', async () => {
+      const oidc = await startAdminRoutes({
+        oidc: { adminUsers: ['owner@example.com'] }
+      })
+
+      const response = await oidc.put(
+        formBody({
+          clientSecret: 'secret-from-form',
+          redirectUri: FORM_REDIRECT_URI,
+          adminUsers: ''
+        })
+      )
+
+      expect(response.status).to.equal(200)
+      expect(oidc.savedOidc()?.adminUsers).to.deep.equal([])
+    })
+
+    it('trims array entries and drops empty ones', async () => {
+      const oidc = await startAdminRoutes()
+
+      const response = await oidc.put(
+        formBody({
+          clientSecret: 'secret-from-form',
+          redirectUri: FORM_REDIRECT_URI,
+          adminUsers: [' owner@example.com ', '', '  ']
+        })
+      )
+
+      expect(response.status).to.equal(200)
+      expect(oidc.savedOidc()?.adminUsers).to.deep.equal(['owner@example.com'])
+    })
+
+    it('rejects non-string identity list entries', async () => {
+      const oidc = await startAdminRoutes()
+
+      const response = await oidc.put(
+        formBody({
+          clientSecret: 'secret-from-form',
+          redirectUri: FORM_REDIRECT_URI,
+          adminUsers: ['owner@example.com', 123]
+        })
+      )
+
+      expect(response.status).to.equal(400)
+      expect(oidc.savedOidc()).to.equal(undefined)
+    })
   })
 })

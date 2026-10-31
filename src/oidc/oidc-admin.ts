@@ -16,7 +16,12 @@
 
 import { Request, Response, IRouter } from 'express'
 import { OIDCError, PartialOIDCConfig } from './types'
-import { parseEnvConfig, validateOIDCConfig, mergeConfigs } from './config'
+import {
+  parseCommaList,
+  parseEnvConfig,
+  validateOIDCConfig,
+  mergeConfigs
+} from './config'
 import { getDiscoveryDocument } from './discovery'
 
 const SERVERROUTESPREFIX = '/skServer'
@@ -64,6 +69,9 @@ interface OIDCAdminResponse {
   adminGroups: string[]
   readwriteGroups: string[]
   groupsAttribute: string
+  adminUsers: string[]
+  readwriteUsers: string[]
+  identityClaim: string
   providerName: string
   autoLogin: boolean
   envOverrides: Record<string, boolean>
@@ -93,6 +101,9 @@ function buildOIDCAdminResponse(
     'adminGroups',
     'readwriteGroups',
     'groupsAttribute',
+    'adminUsers',
+    'readwriteUsers',
+    'identityClaim',
     'providerName',
     'autoLogin'
   ]
@@ -120,6 +131,9 @@ function buildOIDCAdminResponse(
     adminGroups: merged.adminGroups ?? [],
     readwriteGroups: merged.readwriteGroups ?? [],
     groupsAttribute: merged.groupsAttribute ?? 'groups',
+    adminUsers: merged.adminUsers ?? [],
+    readwriteUsers: merged.readwriteUsers ?? [],
+    identityClaim: merged.identityClaim ?? 'email',
     providerName: merged.providerName,
     autoLogin: merged.autoLogin,
     envOverrides
@@ -142,17 +156,21 @@ function checkAllowConfigure(
 }
 
 /**
- * Parse groups from comma-separated string if provided that way
+ * Parse a list field from the settings API into trimmed, non-empty entries.
+ * Accepts a comma-separated string or an array of strings. An empty string
+ * is an explicit empty list, so a client can clear a field. An array with a
+ * non-string entry is left unchanged for validateOIDCConfig to reject.
  */
-function parseGroupsIfString(groups: unknown): string[] | undefined {
-  if (typeof groups === 'string' && groups) {
-    return groups
-      .split(',')
-      .map((g) => g.trim())
-      .filter((g) => g.length > 0)
+function parseListIfString(list: unknown): string[] | undefined {
+  if (typeof list === 'string') {
+    return parseCommaList(list)
   }
-  if (Array.isArray(groups)) {
-    return groups as string[]
+  if (
+    Array.isArray(list) &&
+    list.every((item): item is string => typeof item === 'string')
+  ) {
+    // Entries are not split on commas: a group name may contain one
+    return list.map((item) => item.trim()).filter((item) => item.length > 0)
   }
   return undefined
 }
@@ -196,20 +214,36 @@ export function registerOIDCAdminRoutes(
       const config = deps.getSecurityConfig()
       const newOidcConfig = { ...req.body }
 
-      // Parse groups from comma-separated string if provided that way
-      const adminGroups = parseGroupsIfString(newOidcConfig.adminGroups)
-      if (adminGroups !== undefined) {
-        newOidcConfig.adminGroups = adminGroups
-      }
-      const readwriteGroups = parseGroupsIfString(newOidcConfig.readwriteGroups)
-      if (readwriteGroups !== undefined) {
-        newOidcConfig.readwriteGroups = readwriteGroups
+      // Parse list fields from comma-separated string if provided that way
+      const listFields = [
+        'adminGroups',
+        'readwriteGroups',
+        'adminUsers',
+        'readwriteUsers'
+      ] as const
+      for (const field of listFields) {
+        const parsed = parseListIfString(newOidcConfig[field])
+        if (parsed !== undefined) {
+          newOidcConfig[field] = parsed
+        }
       }
 
       // The GET endpoint redacts the client secret, so an empty field means
       // "unchanged" rather than "cleared"
       if (!newOidcConfig.clientSecret && config.oidc?.clientSecret) {
         newOidcConfig.clientSecret = config.oidc.clientSecret
+      }
+
+      // Preserve identity allowlist fields a client (e.g. an older admin UI)
+      // did not send, so saving other settings does not silently drop them
+      if (newOidcConfig.adminUsers === undefined) {
+        newOidcConfig.adminUsers = config.oidc?.adminUsers
+      }
+      if (newOidcConfig.readwriteUsers === undefined) {
+        newOidcConfig.readwriteUsers = config.oidc?.readwriteUsers
+      }
+      if (newOidcConfig.identityClaim === undefined) {
+        newOidcConfig.identityClaim = config.oidc?.identityClaim
       }
 
       // Environment variables take precedence at runtime, so validate what the

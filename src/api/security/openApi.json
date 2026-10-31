@@ -105,6 +105,24 @@
             "description": "ID token claim containing user groups",
             "example": "groups"
           },
+          "adminUsers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Identities that grant admin permission, matched against identityClaim",
+            "example": ["owner@example.com"]
+          },
+          "readwriteUsers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Identities that grant read/write permission, matched against identityClaim",
+            "example": ["crew@example.com"]
+          },
+          "identityClaim": {
+            "type": "string",
+            "enum": ["email", "preferred_username", "sub"],
+            "description": "Claim to match adminUsers/readwriteUsers against; matching on email requires email_verified",
+            "example": "email"
+          },
           "providerName": {
             "type": "string",
             "description": "Display name shown on login button",
@@ -163,6 +181,22 @@
           },
           "groupsAttribute": {
             "type": "string"
+          },
+          "adminUsers": {
+            "oneOf": [
+              { "type": "string", "description": "Comma-separated list" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "readwriteUsers": {
+            "oneOf": [
+              { "type": "string", "description": "Comma-separated list" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "identityClaim": {
+            "type": "string",
+            "enum": ["email", "preferred_username", "sub"]
           },
           "providerName": {
             "type": "string"
