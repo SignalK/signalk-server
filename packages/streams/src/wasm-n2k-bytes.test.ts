@@ -99,6 +99,39 @@ describe('WasmN2kBytes', () => {
     }
   })
 
+  it('keeps TX closed until the IPG has accepted the session', async () => {
+    const app = createMockApp()
+    let announced = 0
+    app.on('nmea2000OutAvailable', () => announced++)
+
+    const stream = new WasmN2kBytes({
+      app,
+      host: '127.0.0.1',
+      port,
+      byteKind: 'maretron-ipg',
+      createDebug: createDebugStub()
+    })
+
+    try {
+      const socket = await gateway
+      // Drained, or the unread CONNECT keeps the socket from closing.
+      socket.resume()
+      const partial = IPG_CONNECTED.length - 4
+      socket.write(IPG_CONNECTED.subarray(0, partial))
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(announced, 'announced on a partial CONNECTED').to.equal(0)
+
+      socket.write(IPG_CONNECTED.subarray(partial))
+      const deadline = Date.now() + RECEIVE_TIMEOUT_MS
+      while (announced === 0 && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5))
+      }
+      expect(announced).to.equal(1)
+    } finally {
+      stream.end()
+    }
+  })
+
   it('sends nmea2000out lines as given and records like nmea2000JsonOut', async () => {
     const app = createMockApp()
     const errors: unknown[] = []
