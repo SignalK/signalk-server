@@ -21,7 +21,7 @@ interface Gateway {
   received: string
 }
 
-async function startGateway(): Promise<Gateway> {
+async function startGateway(port = 0): Promise<Gateway> {
   const server = createServer()
   const gateway: Gateway = { server, port: 0, sockets: [], received: '' }
   server.on('connection', (socket: Socket) => {
@@ -30,7 +30,9 @@ async function startGateway(): Promise<Gateway> {
       gateway.received += data.toString()
     })
   })
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  await new Promise<void>((resolve) =>
+    server.listen(port, '127.0.0.1', resolve)
+  )
   gateway.port = (server.address() as AddressInfo).port
   return gateway
 }
@@ -136,26 +138,60 @@ describe('Simple wasm gateway TX', () => {
   })
 })
 
-describe('Simple maretron-ipg-wasm', () => {
-  it('connects on the IPG default port when none is set', () => {
-    const app = createMockApp()
-    const simpleApp = app as unknown as SimpleOptions['app']
-    const connection = new Simple({
+const IPG_DEFAULT_PORT = 6543
+
+function startIpgConnection(app: MockApp, port?: unknown) {
+  const simpleApp = app as unknown as SimpleOptions['app']
+  return new Simple({
+    app: simpleApp,
+    providerId: 'ipg',
+    type: 'NMEA2000',
+    subOptions: {
       app: simpleApp,
       providerId: 'ipg',
-      type: 'NMEA2000',
-      subOptions: {
-        app: simpleApp,
-        providerId: 'ipg',
-        type: 'maretron-ipg-wasm',
-        host: '127.0.0.1'
-      } as SimpleOptions['subOptions'],
-      emitPropertyValue: () => undefined,
-      onPropertyValues: () => undefined,
-      createDebug: createDebugStub()
+      type: 'maretron-ipg-wasm',
+      host: '127.0.0.1',
+      ...(port === undefined ? {} : { port })
+    } as SimpleOptions['subOptions'],
+    emitPropertyValue: () => undefined,
+    onPropertyValues: () => undefined,
+    createDebug: createDebugStub()
+  })
+}
+
+describe('Simple maretron-ipg-wasm', () => {
+  for (const [label, port] of [
+    ['no port', undefined],
+    ['an empty port', '']
+  ] as const) {
+    it(`connects on the IPG default port given ${label}`, async () => {
+      const app = createMockApp()
+      const gateway = await startGateway(IPG_DEFAULT_PORT)
+      let connection: Simple | undefined
+      try {
+        connection = startIpgConnection(app, port)
+        await waitFor(
+          () => gateway.sockets.length > 0,
+          'a connection on the IPG default port'
+        )
+        expect(app.providerErrors).to.deep.equal([])
+      } finally {
+        connection?.end()
+        await stopGateway(gateway)
+      }
     })
+  }
+
+  it('refuses an explicit port 0', () => {
+    const app = createMockApp()
+    const connection = startIpgConnection(app, 0)
     connection.end()
 
-    expect(app.providerErrors).to.deep.equal([])
+    expect(app.providerErrors).to.deep.equal([
+      {
+        id: 'ipg',
+        msg: 'host and port are required for a TCP wasm N2K connection'
+      }
+    ])
   })
 })
