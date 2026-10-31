@@ -1,0 +1,9 @@
+package-lock.json
+package.json
+/src
+/test
+/.github
+/.vscode
+tsconfig.json
+.prettierrc.json
+
