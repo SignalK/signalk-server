@@ -45,6 +45,7 @@ interface WasmN2kBytesOptions extends N2kOutEventOptions {
 
 const RECONNECT_DELAY = 3000
 const KEEPALIVE_INTERVAL = 20000
+const DEFAULT_IDLE_TIMEOUT_SECONDS = 60
 const MAX_TCP_PORT = 65535
 
 /**
@@ -215,12 +216,14 @@ export default class WasmN2kBytes extends Transform {
       // socket.setTimeout() cannot serve here — it counts the periodic
       // keepalive writes as activity, so it would never fire while the
       // gateway sends nothing. Re-armed only in the data handler,
-      // cleared in retry and end(). Unset means disabled, as in the
-      // canboatjs connection types.
+      // cleared in retry and end(). Unset takes the default of the TCP
+      // connection types; 0 disables it.
       const parsedTimeout = Number.parseInt(
         String(this.options.noDataReceivedTimeout ?? '').trim()
       )
-      this.idleMs = isNaN(parsedTimeout) ? 0 : parsedTimeout * 1000
+      this.idleMs =
+        (isNaN(parsedTimeout) ? DEFAULT_IDLE_TIMEOUT_SECONDS : parsedTimeout) *
+        1000
       tcp.connect(port, host, () => onOpen(tcp))
       socket = tcp
     }

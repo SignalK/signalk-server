@@ -172,6 +172,43 @@ describe('WasmN2kBytes', () => {
     }
   })
 
+  for (const [label, timeout, expected] of [
+    ['unset', undefined, 60000],
+    ['set', '5', 5000],
+    ['0', '0', undefined]
+  ] as const) {
+    it(`arms the idle timer with the timeout ${label}`, async () => {
+      const app = createMockApp()
+      const delays: Array<number | undefined> = []
+      const realSetTimeout = global.setTimeout
+      global.setTimeout = ((callback: () => void, delay?: number) => {
+        delays.push(delay)
+        return realSetTimeout(callback, delay)
+      }) as typeof global.setTimeout
+      let stream: WasmN2kBytes | undefined
+      try {
+        stream = new WasmN2kBytes({
+          app,
+          host: '127.0.0.1',
+          port,
+          byteKind: 'maretron-ipg',
+          ...(timeout === undefined ? {} : { noDataReceivedTimeout: timeout }),
+          createDebug: createDebugStub()
+        })
+      } finally {
+        global.setTimeout = realSetTimeout
+      }
+      try {
+        await gateway
+        expect(delays.filter((delay) => delay !== 0)).to.deep.equal(
+          expected === undefined ? [] : [expected]
+        )
+      } finally {
+        stream?.end()
+      }
+    })
+  }
+
   it('reports a port outside the TCP range instead of throwing', () => {
     for (const badPort of [65536, -1]) {
       const app = createMockApp()
