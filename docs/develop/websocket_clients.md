@@ -4,14 +4,11 @@ title: WebSocket Clients
 
 # WebSocket Clients
 
-Notes for anyone writing a client for the server's WebSocket stream
-(`/signalk/v1/stream`).
+Notes for anyone writing a client for the server's stream and playback
+WebSockets (`/signalk/v1/stream`, `/signalk/v1/playback`). WebSocket endpoints
+that plugins provide are not covered here.
 
 ## When the server stops
-
-This section covers the Signal K stream and playback WebSockets
-(`/signalk/v1/stream`, `/signalk/v1/playback`), not WebSocket endpoints that
-plugins provide.
 
 When Signal K Server stops or restarts, it ends these connections with a close
 frame, as [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455#section-7)
