@@ -53,7 +53,15 @@ WsPromiser.prototype.nextMsg = function () {
   })
 }
 
-WsPromiser.prototype.nthMessagePromiser = function (n) {
+// Long enough for an expected message to arrive while the test process is
+// busy with other suites. A check that no message arrives passes its own
+// short window instead.
+const EXPECTED_MESSAGE_TIMEOUT_MS = 5000
+
+WsPromiser.prototype.nthMessagePromiser = function (
+  n,
+  timeout = EXPECTED_MESSAGE_TIMEOUT_MS
+) {
   let result = this.receivedMessagePromisers[n - 1]
   if (!result) {
     result = this.receivedMessagePromisers[n - 1] = {}
@@ -61,14 +69,14 @@ WsPromiser.prototype.nthMessagePromiser = function (n) {
       result.resolve = resolve
       setTimeout((_) => {
         reject('timeout')
-      }, 250)
+      }, timeout)
     })
   }
   return result
 }
 
-WsPromiser.prototype.nthMessage = function (n) {
-  return this.nthMessagePromiser(n).promise
+WsPromiser.prototype.nthMessage = function (n, timeout) {
+  return this.nthMessagePromiser(n, timeout).promise
 }
 
 WsPromiser.prototype.parsedMessages = function () {
