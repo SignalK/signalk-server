@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Context, Path, SourceRef } from '@signalk/server-api'
+import { Context, Path, PathValueState, SourceRef } from '@signalk/server-api'
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:sourcepriorities')
 
@@ -155,6 +155,7 @@ export function sourceRefIdentity(sourceRef: string): string {
 interface PathValue {
   path: string
   value: any
+  state?: PathValueState
 }
 
 interface TimestampedSource {
@@ -637,6 +638,25 @@ export const getToPreferredDelta = (
                   return acc
                 }
                 const latest = getLatest(delta.context as Context, path)
+                // A timeout is the enforcer's verdict on a silent source,
+                // not a new reading. Ranked like one, a timed-out rank-1
+                // source would win the path back from a backup that has
+                // already taken over. It reaches consumers only while that
+                // source still holds the path, or while no source does and
+                // it is not disabled, and leaves its last-update time alone
+                // so a backup can take over without waiting.
+                if (pathValue.state?.timedOut) {
+                  const disabled =
+                    getPrecedence(pathPrecedences, canonicalSource, false)
+                      .timeout < 0
+                  if (
+                    (latest.sourceRef === '' && !disabled) ||
+                    canonicalise(latest.sourceRef) === canonicalSource
+                  ) {
+                    acc.push(pathValue)
+                  }
+                  return acc
+                }
                 const isPreferred = isPreferredValue(
                   pathPrecedences,
                   path,
