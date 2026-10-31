@@ -97,6 +97,56 @@ describe('TcpStream', () => {
     tcp.pipe(writable)
   })
 
+  it('stops writing on its events once ended', function (done) {
+    this.timeout(5000)
+    const received: string[] = []
+    server.on('connection', (socket) => {
+      socket.on('data', (data) => received.push(data.toString()))
+    })
+
+    const app = createMockApp()
+    const origSetStatus = app.setProviderStatus.bind(app)
+    app.setProviderStatus = (id: string, msg: string) => {
+      origSetStatus(id, msg)
+      if (msg.includes('Connected')) {
+        tcp.end()
+        expect(app.listenerCount('tcpOut')).to.equal(0)
+        expect(app.listenerCount('stdoutEvent')).to.equal(0)
+        done()
+      }
+    }
+
+    const tcp = new TcpStream({
+      host: '127.0.0.1',
+      port: serverPort,
+      app,
+      providerId: 'test-tcp',
+      outEvent: 'tcpOut',
+      toStdout: 'stdoutEvent',
+      createDebug: createDebugStub()
+    })
+    tcp.pipe(createCollectingWritable())
+  })
+
+  it('ends without listener cleanup on an app with only on/emit', function () {
+    const app = createMockApp()
+    const tcp = new TcpStream({
+      host: '127.0.0.1',
+      port: serverPort,
+      app: {
+        on: app.on.bind(app),
+        emit: app.emit.bind(app),
+        setProviderStatus: app.setProviderStatus.bind(app),
+        setProviderError: app.setProviderError.bind(app)
+      },
+      providerId: 'test-tcp',
+      outEvent: 'tcpOut',
+      createDebug: createDebugStub()
+    })
+    tcp.pipe(createCollectingWritable())
+    expect(() => tcp.end()).to.not.throw()
+  })
+
   it('sends data to TCP server via toStdout event', function (done) {
     this.timeout(5000)
     const received: string[] = []

@@ -17,25 +17,19 @@ const POLL_INTERVAL = 5
 interface Gateway {
   server: Server
   port: number
-  socket: Promise<Socket>
+  sockets: Socket[]
   received: string
 }
 
 async function startGateway(): Promise<Gateway> {
   const server = createServer()
-  const gateway = {
-    server,
-    port: 0,
-    received: '',
-    socket: new Promise<Socket>((resolve) =>
-      server.once('connection', (socket: Socket) => {
-        socket.on('data', (data: Buffer) => {
-          gateway.received += data.toString()
-        })
-        resolve(socket)
-      })
-    )
-  }
+  const gateway: Gateway = { server, port: 0, sockets: [], received: '' }
+  server.on('connection', (socket: Socket) => {
+    gateway.sockets.push(socket)
+    socket.on('data', (data: Buffer) => {
+      gateway.received += data.toString()
+    })
+  })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   gateway.port = (server.address() as AddressInfo).port
   return gateway
@@ -85,7 +79,7 @@ const clientConnected = (app: MockApp, providerId: string) =>
   )
 
 async function stopGateway(gateway: Gateway): Promise<void> {
-  ;(await gateway.socket).destroy()
+  gateway.sockets.forEach((socket) => socket.destroy())
   await new Promise((resolve) => gateway.server.close(resolve))
 }
 
