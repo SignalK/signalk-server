@@ -17,6 +17,10 @@ import Gpsd from './gpsd'
 import Nmea0183LinerFilter from './nmea0183-liner-filter'
 import PigpioSeatalk from './pigpio-seatalk'
 import GpiodSeatalk from './gpiod-seatalk'
+import {
+  canboatjsSupportsExcludePgns,
+  excludePgnsFromFilters
+} from './n2k-exclude-pgns'
 import type { CreateDebug, DeltaCache } from './types'
 
 // canboat exports are old-style constructor functions, not classes.
@@ -107,6 +111,8 @@ interface SubOptions {
   appendChecksum?: boolean
   filters?: Array<{ source?: string; pgn?: string }>
   filtersEnabled?: boolean
+  filtersBeforeDecoding?: boolean
+  excludePgns?: Array<number | string> | string | number
   useCanName?: boolean
   tcp?: boolean
   [key: string]: unknown
@@ -604,6 +610,23 @@ export default class Simple extends Transform {
     }
 
     opts.subOptions.app = options.app
+
+    // Hand the PGN-only filter rows to canboatjs, which then drops those
+    // messages before decoding them (in the kernel on SocketCAN). An older
+    // canboatjs would ignore excludePgns, so say why the switch does
+    // nothing there.
+    if (dataType.startsWith('NMEA2000')) {
+      const excludePgns = excludePgnsFromFilters(opts.subOptions)
+      if (excludePgns !== undefined) {
+        if (canboatjsSupportsExcludePgns()) {
+          opts.subOptions.excludePgns = excludePgns
+        } else if (opts.subOptions.filtersBeforeDecoding) {
+          console.warn(
+            `${options.providerId}: this canboatjs can't drop filtered PGNs before decoding; they are filtered after decoding`
+          )
+        }
+      }
+    }
 
     let mappingType = dataType
 
