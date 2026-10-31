@@ -1,0 +1,230 @@
+import { expect } from 'chai'
+import WasmN2k from './wasm-n2k'
+import {
+  createMockApp,
+  collectStreamOutput,
+  createDebugStub
+} from './test-helpers'
+
+const HEADING_LINE =
+  '2024-01-01T00:00:00.000Z,2,127250,204,255,8,00,10,6e,01,00,ff,7f,fd'
+const AIRMAR_MASTER_RESET =
+  '2026-10-19T00:00:00.000Z,3,126720,0,35,6,87,98,01,ff,ff,ff'
+const YDWG_POSITION_LINE = '00:22:24.739 R 09F80104 4A 2F 6A F5 8A 0F 9C 69'
+
+const canFrame = (pgn: number, src: number, bytes: number[]) => ({
+  pgn: { prio: 2, pgn, src, dst: 255 },
+  length: bytes.length,
+  data: Buffer.from(bytes)
+})
+
+describe('WasmN2k', () => {
+  it('decodes a text line into a PGN object', async () => {
+    const app = createMockApp()
+    const stream = new WasmN2k({
+      app,
+      providerId: 'test-provider',
+      createDebug: createDebugStub()
+    })
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(HEADING_LINE)
+    stream.end()
+
+    const results = (await outputPromise) as Array<{
+      pgn: number
+      fields: { heading: number }
+      providerId?: string
+    }>
+    expect(results).to.have.length(1)
+    expect(results[0]!.pgn).to.equal(127250)
+    expect(results[0]!.fields.heading).to.be.a('number')
+    expect(results[0]!.providerId).to.equal('test-provider')
+  })
+
+  it('stamps a live gateway line with its receive time', async () => {
+    const app = createMockApp()
+    const stream = new WasmN2k({
+      app,
+      receiveTime: true,
+      createDebug: createDebugStub()
+    })
+    const outputPromise = collectStreamOutput(stream)
+
+    const before = Date.now()
+    stream.write(YDWG_POSITION_LINE)
+    stream.end()
+
+    const results = (await outputPromise) as Array<{ timestamp: string }>
+    expect(results).to.have.length(1)
+    expect(Date.parse(results[0]!.timestamp)).to.be.within(before, Date.now())
+  })
+
+  it('keeps the timestamp a file log line carries', async () => {
+    const app = createMockApp()
+    const stream = new WasmN2k({ app, createDebug: createDebugStub() })
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(HEADING_LINE)
+    stream.end()
+
+    const results = (await outputPromise) as Array<{ timestamp: string }>
+    expect(results[0]!.timestamp).to.equal('2024-01-01T00:00:00.000Z')
+  })
+
+  it('decodes a CAN frame object like the same frame as text', async () => {
+    const app = createMockApp()
+    const stream = new WasmN2k({ app, createDebug: createDebugStub() })
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write(
+      canFrame(127250, 204, [0x00, 0x10, 0x6e, 0x01, 0x00, 0xff, 0x7f, 0xfd])
+    )
+    stream.end()
+
+    const results = (await outputPromise) as Array<{
+      pgn: number
+      src: number
+      fields: { heading: number }
+    }>
+    expect(results).to.have.length(1)
+    expect(results[0]!.pgn).to.equal(127250)
+    expect(results[0]!.src).to.equal(204)
+    expect(results[0]!.fields.heading).to.be.closeTo(2.8176, 0.00001)
+  })
+
+  it('reassembles fast-packet CAN frames into one PGN', async () => {
+    const app = createMockApp()
+    const stream = new WasmN2k({ app, createDebug: createDebugStub() })
+    const outputPromise = collectStreamOutput(stream)
+
+    // PGN 127489 Engine Parameters, Dynamic: 26 bytes over four frames.
+    const payload = [0x00, ...new Array<number>(25).fill(0xff)]
+    stream.write(canFrame(127489, 1, [0x40, 26, ...payload.slice(0, 6)]))
+    stream.write(canFrame(127489, 1, [0x41, ...payload.slice(6, 13)]))
+    stream.write(canFrame(127489, 1, [0x42, ...payload.slice(13, 20)]))
+    stream.write(canFrame(127489, 1, [0x43, ...payload.slice(20, 26), 0xff]))
+    stream.end()
+
+    const results = (await outputPromise) as Array<{ pgn: number }>
+    expect(results).to.have.length(1)
+    expect(results[0]!.pgn).to.equal(127489)
+  })
+
+  it('reports undecodable input on wasm-n2k:error', async () => {
+    const app = createMockApp()
+    const errors: unknown[] = []
+    app.on('wasm-n2k:error', (err: unknown) => errors.push(err))
+    const stream = new WasmN2k({ app, createDebug: createDebugStub() })
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write('2024-01-01T00:00:00.000Z,2,127250,204,255,8,zz')
+    stream.end()
+
+    expect(await outputPromise).to.have.length(0)
+    expect(errors).to.have.length(1)
+  })
+
+  it('emits CRLF-terminated YDWG RAW frames for nmea2000JsonOut', () => {
+    const app = createMockApp()
+    const sent: string[] = []
+    app.on('ydwg02-out', (line: string) => sent.push(line))
+    const stream = new WasmN2k({
+      app,
+      txFormat: 'ydwg-raw',
+      txEvent: 'ydwg02-out',
+      createDebug: createDebugStub()
+    })
+
+    app.emit('nmea2000JsonOut', {
+      pgn: 127508,
+      prio: 2,
+      dst: 255,
+      fields: { instance: 0, voltage: 26.27, current: -63.9 }
+    })
+    stream.end()
+
+    expect(sent).to.deep.equal(['09F21400 00 43 0A 81 FD FF FF FF\r\n'])
+  })
+
+  it('emits nmea2000out lines as given and records like nmea2000JsonOut', () => {
+    const app = createMockApp()
+    const sent: string[] = []
+    app.on('ydwg02-out', (line: string) => sent.push(line))
+    const stream = new WasmN2k({
+      app,
+      txFormat: 'ydwg-raw',
+      txEvent: 'ydwg02-out',
+      createDebug: createDebugStub()
+    })
+
+    // Airmar's Master Reset, PGN 126720 proprietary ID 1, which has no
+    // JSON form: a fast-packet first frame carrying the six bytes as given.
+    app.emit('nmea2000out', AIRMAR_MASTER_RESET)
+    app.emit('nmea2000out', {
+      pgn: 127508,
+      prio: 2,
+      dst: 255,
+      fields: { instance: 0, voltage: 26.27, current: -63.9 }
+    })
+    stream.end()
+
+    expect(sent).to.deep.equal([
+      '0DEF2300 00 06 87 98 01 FF FF FF\r\n',
+      '09F21400 00 43 0A 81 FD FF FF FF\r\n'
+    ])
+  })
+
+  it('transmits only what its own configured events carry', () => {
+    const app = createMockApp()
+    const sent: string[] = []
+    app.on('ydwg02-out:bus2', (line: string) => sent.push(line))
+    const stream = new WasmN2k({
+      app,
+      txFormat: 'ydwg-raw',
+      txEvent: 'ydwg02-out:bus2',
+      outEvent: 'bus2Out, bridgeOut, bus2Out',
+      jsonOutEvent: 'bus2JsonOut',
+      createDebug: createDebugStub()
+    })
+    const record = {
+      pgn: 127508,
+      prio: 2,
+      dst: 255,
+      fields: { instance: 0, voltage: 26.27, current: -63.9 }
+    }
+
+    app.emit('nmea2000JsonOut', record)
+    app.emit('nmea2000out', AIRMAR_MASTER_RESET)
+    app.emit('bus2JsonOut', record)
+    app.emit('bus2Out', AIRMAR_MASTER_RESET)
+    app.emit('bridgeOut', record)
+    stream.end()
+    app.emit('bus2JsonOut', record)
+    app.emit('bridgeOut', record)
+
+    expect(sent).to.deep.equal([
+      '09F21400 00 43 0A 81 FD FF FF FF\r\n',
+      '0DEF2300 00 06 87 98 01 FF FF FF\r\n',
+      '09F21400 00 43 0A 81 FD FF FF FF\r\n'
+    ])
+  })
+
+  it('stops transmitting once ended', () => {
+    const app = createMockApp()
+    const sent: string[] = []
+    app.on('w2k-1-out', (line: string) => sent.push(line))
+    const stream = new WasmN2k({
+      app,
+      txFormat: 'n2k-ascii',
+      txEvent: 'w2k-1-out',
+      createDebug: createDebugStub()
+    })
+    stream.end()
+
+    app.emit('nmea2000JsonOut', { pgn: 127508, fields: { instance: 0 } })
+    app.emit('nmea2000out', AIRMAR_MASTER_RESET)
+
+    expect(sent).to.have.length(0)
+  })
+})

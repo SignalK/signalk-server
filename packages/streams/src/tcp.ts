@@ -13,6 +13,10 @@ interface TcpOptions {
   app: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
+    // Optional: callers passing an app adapter with only on/emit keep
+    // working, without the cleanup on end().
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    removeListener?(event: string, cb: (...args: any[]) => void): void
     emit(event: string, ...args: unknown[]): void
     setProviderStatus(id: string, msg: string): void
     setProviderError(id: string, msg: string): void
@@ -33,6 +37,7 @@ export default class TcpStream extends Transform {
   private readonly noDataReceivedTimeout: number
   private tcpStream: net.Socket | undefined
   private reconnector: { disconnect(): void } | null = null
+  private readonly appListeners: Array<[string, (d: string) => void]> = []
 
   constructor(options: TcpOptions) {
     super()
@@ -60,7 +65,7 @@ export default class TcpStream extends Transform {
 
   pipe<T extends NodeJS.WritableStream>(pipeTo: T): T {
     if (this.options.outEvent) {
-      this.options.app.on(this.options.outEvent, (d: string) => {
+      this.listen(this.options.outEvent, (d: string) => {
         if (this.tcpStream) {
           if (this.tcpStream.writableLength > BUFFER_LIMIT) {
             this.debug(
@@ -84,7 +89,7 @@ export default class TcpStream extends Transform {
     if (stdOutEvent) {
       const events = Array.isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]
       for (const stdEvent of events) {
-        this.options.app.on(stdEvent, (d: string) => {
+        this.listen(stdEvent, (d: string) => {
           if (this.tcpStream) {
             if (this.tcpStream.writableLength > BUFFER_LIMIT) {
               this.debug(
@@ -162,10 +167,19 @@ export default class TcpStream extends Transform {
     return pipeTo
   }
 
+  private listen(event: string, listener: (d: string) => void): void {
+    this.options.app.on(event, listener)
+    this.appListeners.push([event, listener])
+  }
+
   end(): this {
     if (this.reconnector) {
       this.reconnector.disconnect()
     }
+    for (const [event, listener] of this.appListeners) {
+      this.options.app.removeListener?.(event, listener)
+    }
+    this.appListeners.length = 0
     return this
   }
 
