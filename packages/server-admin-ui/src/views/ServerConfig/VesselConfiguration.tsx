@@ -14,6 +14,7 @@ interface VesselData {
   callsignVhf?: string
   uuid?: string
   aisShipType?: string
+  hullType?: string
   draft?: string
   length?: string
   beam?: string
@@ -228,6 +229,28 @@ const VesselConfiguration: React.FC = () => {
                   <option value="94">Other hazard cat D</option>
                   <option value="99">Other (no additional information)</option>
                 </Form.Select>
+              </Col>
+            </Form.Group>
+            <Form.Group as={Row}>
+              <Col md="2">
+                <Form.Label htmlFor="hullType">Hull Type</Form.Label>
+              </Col>
+              <Col xs="12" md="4">
+                <Form.Select
+                  id="hullType"
+                  name="hullType"
+                  value={vesselData.hullType || ''}
+                  onChange={handleChange}
+                >
+                  <option value="">Not set</option>
+                  <option value="monohull">Monohull</option>
+                  <option value="catamaran">Catamaran</option>
+                  <option value="trimaran">Trimaran</option>
+                </Form.Select>
+                <Form.Text muted>
+                  One hull, or two or three side by side. Whether the vessel
+                  sails is its Ship Type.
+                </Form.Text>
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
