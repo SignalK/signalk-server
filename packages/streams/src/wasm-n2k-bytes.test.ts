@@ -11,6 +11,8 @@ const AIRMAR_MASTER_RESET =
   '2026-10-19T00:00:00.000Z,3,126720,0,35,6,87,98,01,ff,ff,ff'
 // What an IPG100 answers to CONNECT: its serial number, NUL-terminated.
 const IPG_CONNECTED = Buffer.from('CONNECTED\t1234567\0')
+// What it answers to a wrong password.
+const IPG_REFUSED = Buffer.from('NO\0')
 const RECEIVE_TIMEOUT_MS = 1000
 
 /**
@@ -127,6 +129,39 @@ describe('WasmN2kBytes', () => {
         await new Promise((resolve) => setTimeout(resolve, 5))
       }
       expect(announced).to.equal(1)
+    } finally {
+      stream.end()
+    }
+  })
+
+  it('keeps TX closed when the IPG refuses the login', async () => {
+    const app = createMockApp()
+    const errors: unknown[] = []
+    app.on('wasm-n2k:error', (err: unknown) => errors.push(err))
+    let announced = 0
+    app.on('nmea2000OutAvailable', () => announced++)
+
+    const stream = new WasmN2kBytes({
+      app,
+      host: '127.0.0.1',
+      port,
+      byteKind: 'maretron-ipg',
+      password: 'wrong',
+      createDebug: createDebugStub()
+    })
+
+    try {
+      const socket = await gateway
+      // Drained, or the unread CONNECT keeps the socket from closing.
+      socket.resume()
+      socket.write(IPG_REFUSED)
+      const deadline = Date.now() + RECEIVE_TIMEOUT_MS
+      while (errors.length === 0 && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5))
+      }
+
+      expect(errors).to.have.length(1)
+      expect(announced).to.equal(0)
     } finally {
       stream.end()
     }
