@@ -146,7 +146,9 @@ jobs:
               if (Number.isInteger(v)) return v < MINIMUM_MAJOR
               if (typeof v !== "string") return true
               if (CURRENT_ALIASES.has(v)) return false
-              const major = /^v?(\d+)(\.(\d+|x)){0,2}$/.exec(v)
+              // "x" may only stand for the trailing components: setup-node
+              // rejects "22.x.1".
+              const major = /^v?(\d+)(?:\.x(?:\.x)?|\.\d+(?:\.(?:\d+|x))?)?$/.exec(v)
               return !major || Number(major[1]) < MINIMUM_MAJOR
             })
             if (unsupported.length > 0) {
