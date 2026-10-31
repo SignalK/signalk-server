@@ -13,7 +13,6 @@
         "navigation.speedThroughWater",
         "navigation.speedThroughWaterTransverse",
         "navigation.speedThroughWaterLongitudinal",
-        "navigation.leewayAngle",
         "performance.velocityMadeGood",
         "performance.velocityMadeGoodToWaypoint",
         "performance.beatAngleVelocityMadeGood",
@@ -46,7 +45,8 @@
         "electrical.batteries.*.temperature",
         "electrical.chargers.*.temperature",
         "electrical.inverters.*.temperature",
-        "tanks.*.temperature"
+        "tanks.*.temperature",
+        "propulsion.*.intakeManifoldTemperature"
       ]
     },
     "pressure": {
@@ -56,9 +56,7 @@
         "propulsion.*.oilPressure",
         "propulsion.*.fuelPressure",
         "propulsion.*.coolantPressure",
-        "propulsion.*.boostPressure",
-        "propulsion.*.intakeManifoldTemperature",
-        "propulsion.*.engineLoad"
+        "propulsion.*.boostPressure"
       ]
     },
     "depth": {
@@ -131,7 +129,8 @@
         "steering.autopilot.target.windAngleApparent",
         "performance.gybeAngle",
         "performance.beatAngle",
-        "sails.*.reefState"
+        "sails.*.reefState",
+        "navigation.leewayAngle"
       ]
     },
     "angularVelocity": {
@@ -202,12 +201,13 @@
         "tanks.liveWell.*.capacity",
         "tanks.liveWell.*.currentVolume",
         "tanks.lubrication.*.capacity",
-        "tanks.lubrication.*.currentVolume"
+        "tanks.lubrication.*.currentVolume",
+        "propulsion.*.fuel.used"
       ]
     },
     "volumeRate": {
       "siUnit": "m3/s",
-      "paths": ["propulsion.*.fuel.rate", "propulsion.*.exhaustTemperature"]
+      "paths": ["propulsion.*.fuel.rate"]
     },
     "mass": {
       "siUnit": "kg",
@@ -222,13 +222,12 @@
         "electrical.batteries.*.capacity.stateOfCharge",
         "electrical.batteries.*.capacity.stateOfHealth",
         "tanks.*.currentLevel",
-        "propulsion.*.fuel.used",
         "propulsion.*.engineLoad",
         "steering.autopilot.gain"
       ]
     },
-    "charge": {
-      "siUnit": "C",
+    "energy": {
+      "siUnit": "J",
       "paths": [
         "electrical.batteries.*.capacity.remaining",
         "electrical.batteries.*.capacity.nominal"
