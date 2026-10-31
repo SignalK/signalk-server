@@ -72,7 +72,8 @@ describe('Simple gateway TX', () => {
     const connections: Simple[] = []
 
     try {
-      gateways.push(await startGateway(), await startGateway())
+      gateways.push(await startGateway())
+      gateways.push(await startGateway())
       gateways.forEach((gateway, i) =>
         connections.push(
           new Simple({
