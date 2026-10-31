@@ -79,6 +79,88 @@ describe('CanboatJs', () => {
     expect(pgn.providerId).to.equal('test-provider')
   })
 
+  it('skips fromFile chunks with invalid timestamps and emits a diagnostic', async () => {
+    const app = createMockApp()
+    const invalidTimestampChunks: unknown[] = []
+    app.on('canboatjs:invalid-timestamp:object', (chunk: unknown) => {
+      invalidTimestampChunks.push(chunk)
+    })
+    const stream = new CanboatJs({
+      app,
+      createDebug: createDebugStub()
+    })
+    const outputPromise = collectStreamOutput(stream)
+    const chunk = {
+      fromFile: true,
+      data: '2024-01-01T00:00:00.000Z,2,127250,204,255,8,00,10,6e,01,00,ff,7f,fd',
+      timestamp: 'not-a-timestamp'
+    }
+
+    stream.write(chunk)
+    stream.end()
+
+    expect(await outputPromise).to.be.empty
+    expect(invalidTimestampChunks).to.deep.equal([chunk])
+  })
+
+  it('skips fromFile chunks with blank timestamps and emits a diagnostic', async () => {
+    const app = createMockApp()
+    const invalidTimestampChunks: unknown[] = []
+    app.on('canboatjs:invalid-timestamp:object', (chunk: unknown) => {
+      invalidTimestampChunks.push(chunk)
+    })
+    const stream = new CanboatJs({
+      app,
+      createDebug: createDebugStub()
+    })
+    const outputPromise = collectStreamOutput(stream)
+    const chunk = {
+      fromFile: true,
+      data: '2024-01-01T00:00:00.000Z,2,127250,204,255,8,00,10,6e,01,00,ff,7f,fd',
+      timestamp: '   '
+    }
+
+    stream.write(chunk)
+    stream.end()
+
+    expect(await outputPromise).to.be.empty
+    expect(invalidTimestampChunks).to.deep.equal([chunk])
+  })
+
+  it('continues after a parser exception', async () => {
+    const app = createMockApp()
+    const errors: unknown[] = []
+    app.on('canboatjs:error', (error: unknown) => errors.push(error))
+    const stream = new CanboatJs({
+      app,
+      createDebug: createDebugStub()
+    })
+    const parser = (
+      stream as unknown as { fromPgn: { parse: (data: string) => unknown } }
+    ).fromPgn
+    const parse = parser.parse.bind(parser)
+    const error = new Error('parser failed')
+    let throwOnce = true
+    parser.parse = (data: string) => {
+      if (throwOnce) {
+        throwOnce = false
+        throw error
+      }
+      return parse(data)
+    }
+    const outputPromise = collectStreamOutput(stream)
+
+    stream.write('malformed record')
+    stream.write(
+      '2024-01-01T00:00:00.000Z,2,127250,204,255,8,00,10,6e,01,00,ff,7f,fd'
+    )
+    stream.end()
+
+    const results = await outputPromise
+    expect(results).to.have.length(1)
+    expect(errors).to.deep.equal([error])
+  })
+
   it('emits canboatjs:unparsed:data for unparseable input', async () => {
     const app = createMockApp()
     const unparsed: unknown[] = []
