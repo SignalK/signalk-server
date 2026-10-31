@@ -252,7 +252,13 @@ export default class WasmN2kBytes extends Transform {
         if (pending.length > 0) {
           socket.write(Buffer.from(pending))
         }
-        if (!this.txReady) {
+        // The IPG carries frames only once it has accepted the session,
+        // which the decoder answers with SET_MODE; any bytes before that
+        // (a partial or refused CONNECTED) leave TX closed.
+        if (
+          !this.txReady &&
+          (this.options.byteKind !== 'maretron-ipg' || pending.length > 0)
+        ) {
           this.txReady = true
           this.options.app.emit('nmea2000OutAvailable')
         }
