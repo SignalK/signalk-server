@@ -23,6 +23,11 @@ export const sensorsApiDoc: any = {
       name: 'gnss',
       description:
         'Configuration of GNSS antenna positions and vessel reference point correction of navigation.position to the vessel Consistent Common Reference Point (CCRP).'
+    },
+    {
+      name: 'depth',
+      description:
+        'Positions of the depth transducers on the vessel, one per source reporting a depth.'
     }
   ],
   components: {
@@ -72,6 +77,65 @@ export const sensorsApiDoc: any = {
             description:
               'Metres to starboard (positive) or port (negative) of the centerline.',
             example: 0.5
+          }
+        }
+      },
+      DepthSensor: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'sensorId',
+          '$source',
+          'fromBow',
+          'fromCenter',
+          'fromWaterline'
+        ],
+        properties: {
+          sensorId: {
+            type: 'string',
+            minLength: 1,
+            pattern: '^[^.]+$',
+            description:
+              'Stable label for this transducer. Must not contain `.`.',
+            example: 'depth-keel'
+          },
+          $source: {
+            type: 'string',
+            description:
+              'Source reference of the depth provider this transducer maps to. May be empty for a not-yet-linked row.',
+            example: 'n2k-1.35'
+          },
+          fromBow: {
+            type: 'number',
+            nullable: true,
+            description: 'Metres aft of the bow along the centerline.',
+            example: 6.5
+          },
+          fromCenter: {
+            type: 'number',
+            nullable: true,
+            description:
+              'Metres to starboard (positive) or port (negative) of the centerline.',
+            example: -0.3
+          },
+          fromWaterline: {
+            type: 'number',
+            nullable: true,
+            minimum: 0,
+            description:
+              'Metres below the waterline. Not deeper than the maximum draft when that is set.',
+            example: 0.7
+          }
+        }
+      },
+      DepthConfig: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sensors'],
+        properties: {
+          sensors: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/DepthSensor' }
           }
         }
       },
@@ -212,6 +276,71 @@ export const sensorsApiDoc: any = {
                     result: { type: 'string', enum: ['ok'] },
                     restartRequired: { type: 'boolean' }
                   }
+                }
+              }
+            }
+          },
+          '403': { $ref: '#/components/responses/ErrorResponse' }
+        }
+      }
+    },
+    '/depth': {
+      get: {
+        tags: ['depth'],
+        summary: 'Retrieve depth transducer positions',
+        responses: {
+          '200': {
+            description: 'Depth transducer configuration',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DepthConfig' }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        tags: ['depth'],
+        summary: 'Set depth transducer positions',
+        description:
+          'Replaces the transducer list. Positions are bounds-checked against the configured vessel length, beam and maximum draft when those are set.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/DepthConfig' }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Configuration saved',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['result'],
+                  properties: { result: { type: 'string', enum: ['ok'] } }
+                }
+              }
+            }
+          },
+          '400': { $ref: '#/components/responses/ErrorResponse' },
+          '403': { $ref: '#/components/responses/ErrorResponse' }
+        }
+      },
+      delete: {
+        tags: ['depth'],
+        summary: 'Clear depth transducer positions',
+        responses: {
+          '200': {
+            description: 'Configuration cleared',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['result'],
+                  properties: { result: { type: 'string', enum: ['ok'] } }
                 }
               }
             }
