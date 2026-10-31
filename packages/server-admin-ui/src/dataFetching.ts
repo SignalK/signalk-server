@@ -17,7 +17,7 @@ const LOGIN_URL = '/signalk/v1/auth/login'
 // `secretKey`. Flip the store into `notLoggedIn` so ProtectedRoute
 // auto-renders <Login />. Skipped for the login endpoint itself so
 // a bad-password attempt propagates as a normal 401 to loginAction.
-// Other LoginStatus fields (authenticationRequired, oidc*, etc.) are
+// Other LoginStatus fields (authenticationRequired, authProviders, etc.) are
 // server settings, not credential state — preserve them.
 export const authFetch = async (
   url: string,

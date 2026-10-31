@@ -297,27 +297,19 @@ This is useful when:
 
 ## Security Considerations
 
-### PKCE (Proof Key for Code Exchange)
+The OIDC login is one of the server's [authentication providers](develop/plugins/README.md#authentication-providers): a [passport](https://www.passportjs.org/) strategy from [openid-client](https://github.com/panva/openid-client), the certified OpenID Connect relying-party library. Protocol details are handled there:
 
-Signal K uses PKCE for all OIDC flows, providing protection against authorization code interception attacks. This is automatic and requires no configuration.
+- **PKCE** (S256) on every authorization request, protecting the authorization code against interception. No configuration needed.
+- **Nonce** bound to the login attempt and verified in the ID token, preventing token replay.
+- **ID token validation**: signature against the provider's JWKS, issuer, audience, expiry (with 5 minutes of clock tolerance) and nonce.
+- **Userinfo** claims are only accepted when their `sub` matches the ID token, and only profile claims (`email`, `name`, `preferred_username`, groups) are taken from them.
+- **Redirect URI** and post-logout redirect are derived from the configured `redirectUri`, never from the request's `Host` header.
 
-### State Parameter
-
-A cryptographically random state parameter prevents CSRF attacks during the OAuth flow. The state is stored in an encrypted, HTTP-only cookie.
-
-### Token Validation
-
-ID tokens are validated by:
-
-- Verifying the signature against the provider's JWKS
-- Checking the issuer matches the configured issuer
-- Verifying the audience contains the client ID
-- Validating the token is not expired
-- Verifying the nonce matches (prevents replay attacks)
+The state kept between the login redirect and the callback (PKCE verifier, nonce) lives in an encrypted, HTTP-only cookie scoped to `/signalk/v1/auth` that expires after 10 minutes. There is no server-side session store.
 
 ### HTTPS Requirement
 
-For production use, always run Signal K behind HTTPS. OIDC cookies are marked as `Secure` when accessed over HTTPS.
+For production use, always run Signal K behind HTTPS. Cookies are marked as `Secure` when accessed over HTTPS.
 
 ## Troubleshooting
 
@@ -354,15 +346,15 @@ For production use, always run Signal K behind HTTPS. OIDC cookies are marked as
 3. Ensure the user is in a group listed in `adminGroups`
 4. Some providers require explicit configuration to include groups in tokens
 
-### "State mismatch" or "Invalid state"
+### "Unable to verify authorization request state"
 
-**Cause**: The OIDC flow state was lost or expired.
+**Cause**: The cookie holding the login attempt's state was lost or expired.
 
 **Solutions**:
 
 - Ensure cookies are enabled in the browser
 - Check if a reverse proxy is stripping cookies
-- The state cookie expires after 10 minutes; restart the login flow
+- The cookie expires after 10 minutes; restart the login flow
 
 ### Login redirects but user not authenticated
 
@@ -378,7 +370,7 @@ For production use, always run Signal K behind HTTPS. OIDC cookies are marked as
 
 ### Login Endpoint
 
-```
+```text
 GET /signalk/v1/auth/oidc/login
 ```
 
@@ -386,33 +378,45 @@ Initiates the OIDC login flow. Redirects to the identity provider.
 
 Query parameters:
 
-- `returnTo` (optional): URL to redirect after successful login
+- `redirect` (optional): same-origin relative path to return to after a successful login
 
 ### Callback Endpoint
 
-```
+```text
 GET /signalk/v1/auth/oidc/callback
 ```
 
-Handles the OIDC callback from the identity provider. Not called directly by users.
+Handles the OIDC callback from the identity provider. Not called directly by users. A failed login redirects to `/admin/#/login?authError=true&message=...`.
+
+### Logout Endpoint
+
+```text
+GET /signalk/v1/auth/oidc/logout
+```
+
+Clears the Signal K session and, when the provider publishes an `end_session_endpoint`, redirects there so the user is logged out of the identity provider too. Accepts the same `redirect` parameter as the login endpoint.
 
 ### Login Status
 
-```
+```text
 GET /skServer/loginStatus
 ```
 
-Returns the current authentication status including OIDC configuration:
+Returns the current authentication status including the available login methods:
 
 ```json
 {
   "status": "loggedIn",
   "username": "oidc-user@example.com",
   "userLevel": "admin",
-  "oidcEnabled": true,
-  "oidcAutoLogin": false,
-  "oidcLoginUrl": "/signalk/v1/auth/oidc/login",
-  "oidcProviderName": "Corporate SSO"
+  "authProviders": [
+    {
+      "id": "oidc",
+      "name": "Corporate SSO",
+      "loginUrl": "/signalk/v1/auth/oidc/login",
+      "autoLogin": false
+    }
+  ]
 }
 ```
 

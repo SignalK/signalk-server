@@ -16,9 +16,11 @@ consists of:
    for security implementations
 2. **Dummy Security** (`src/dummysecurity.ts`) - No-op implementation when
    security is disabled
-3. **Token Security** (`src/tokensecurity.js`) - Full implementation with JWT-
+3. **Token Security** (`src/tokensecurity.ts`) - Full implementation with JWT-
    based authentication
-4. **OIDC Module** (`src/oidc/`) - OpenID Connect authentication support
+4. **Authentication Providers** (`src/auth/`) - passport-based login methods
+   (redirect flows) that plugins can extend
+5. **OIDC Module** (`src/oidc/`) - the built-in OpenID Connect provider
 
 ## Component Diagram
 
@@ -27,7 +29,7 @@ consists of:
 │                        Signal K Server                          │
 │                                                                 │
 │  ┌─────────────────────┐       ┌─────────────────────────────┐ │
-│  │    security.ts      │       │     tokensecurity.js        │ │
+│  │    security.ts      │       │     tokensecurity.ts        │ │
 │  │                     │       │                             │ │
 │  │ - SecurityStrategy  │◄──────│ - login/logout routes       │ │
 │  │   interface         │       │ - JWT token management      │ │
@@ -36,28 +38,21 @@ consists of:
 │  └─────────────────────┘       │ - ACL enforcement           │ │
 │           ▲                    └──────────────┬──────────────┘ │
 │           │                                   │                │
-│           │                                   │ Dependencies   │
-│  ┌────────┴────────┐                         ▼                │
+│  ┌────────┴────────┐                          ▼                │
 │  │ dummysecurity.ts │           ┌─────────────────────────────┐ │
-│  │                  │           │       src/oidc/             │ │
+│  │                  │           │        src/auth/            │ │
 │  │ - No-op impl     │           │                             │ │
-│  │ - Used when      │           │ ┌─────────────────────────┐ │ │
-│  │   security       │           │ │     oidc-auth.ts        │ │ │
-│  │   disabled       │           │ │                         │ │ │
-│  └──────────────────┘           │ │ - registerOIDCRoutes()  │ │ │
-│                                 │ │ - findOrCreateOIDCUser()│ │ │
-│                                 │ └────────────┬────────────┘ │ │
-│                                 │              │uses          │ │
-│                                 │ ┌────────────┴────────────┐ │ │
-│                                 │ │ Helper Modules          │ │ │
-│                                 │ │ - config.ts             │ │ │
-│                                 │ │ - state.ts              │ │ │
-│                                 │ │ - pkce.ts               │ │ │
-│                                 │ │ - discovery.ts          │ │ │
-│                                 │ │ - authorization.ts      │ │ │
-│                                 │ │ - token-exchange.ts     │ │ │
-│                                 │ │ - id-token-validation.ts│ │ │
-│                                 │ └─────────────────────────┘ │ │
+│  │ - Used when      │           │ - providers.ts: registry +  │ │
+│  │   security       │           │   /signalk/v1/auth/:id/*    │ │
+│  │   disabled       │           │ - provisioning.ts: identity │ │
+│  └──────────────────┘           │   -> local user             │ │
+│                                 │ - handshake-session.ts      │ │
+│                                 └──────────────▲──────────────┘ │
+│                                                │ registers      │
+│                                 ┌──────────────┴──────────────┐ │
+│                                 │  src/oidc/ (built-in)       │ │
+│                                 │  plugins (any passport      │ │
+│                                 │  strategy)                  │ │
 │                                 └─────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -69,12 +64,13 @@ a security implementation must provide:
 
 ## Token Security Implementation
 
-`tokensecurity.js` is the production security implementation. It provides:
+`tokensecurity.ts` is the production security implementation. It provides:
 
 ### Authentication Flow
 
 1. **Local Login**: Username/password via `/login` or `/signalk/v1/auth/login`
-2. **OIDC Login**: Delegates to `oidc-auth.ts` for SSO authentication
+2. **Provider Login**: Any registered authentication provider (OIDC or a
+   plugin's passport strategy) via `/signalk/v1/auth/<id>/login`
 3. **Device Access Requests**: Devices can request access tokens
 
 ### Session Management
@@ -92,49 +88,55 @@ Session cookie helpers ensure consistent security settings:
 
 The server implements a sliding session window: when a JWT token is past the midpoint of its lifetime, the next HTTP request silently replaces the cookie with a freshly issued token. This keeps active users logged in indefinitely while inactive sessions still expire after the configured duration.
 
-## OIDC Integration
+## Authentication Providers
 
-The OIDC module provides OpenID Connect authentication for Single Sign-On.
+`src/auth/providers.ts` keeps a registry of login methods, each backed by a
+[passport](https://www.passportjs.org/) strategy, on a private passport
+instance. `SecurityStrategy.registerAuthenticationProvider()` (exposed to
+plugins as `app.registerAuthenticationProvider()`) adds one at runtime.
 
 ### Authentication Flow
 
-1. User clicks "SSO Login"
-2. Server creates state, stores in encrypted cookie
-3. Redirects to OIDC provider's authorization endpoint
-4. User authenticates with provider
-5. Provider redirects back with authorization code
-6. Server exchanges code for tokens
-7. Server validates ID token
-8. Server creates/updates local user record
-9. Server issues local JWT session
+1. User picks a provider on the login page (`loginStatus.authProviders`)
+2. `GET /signalk/v1/auth/<id>/login?redirect=` stores the return path in the
+   handshake session and runs `passport.authenticate(<id>)`; the strategy
+   redirects to the identity provider
+3. Provider redirects back to `GET|POST /signalk/v1/auth/<id>/callback`
+4. The strategy verifies the response and its verify callback returns an
+   `ExternalIdentity` (subject, issuer, username, permission, email, name)
+5. `provisioning.ts` finds the local user by provider + issuer + subject, or
+   creates one (persisting `security.json` before the record becomes
+   visible; calls are serialized so concurrent first logins cannot create
+   duplicates), and refreshes permission and identity details
+6. `tokensecurity` issues the regular JWT session cookies and redirects to
+   the stored return path
+
+Passport strategies keep their state (PKCE verifier, nonce) in `req.session`.
+`handshake-session.ts` provides that as an AES-256-GCM encrypted cookie
+scoped to `/signalk/v1/auth`, keyed from the master secret; there is no
+server-side session store.
 
 ### Logout Flow
 
-The `/signalk/v1/auth/oidc/logout` endpoint supports logging out from both
-Signal K and the identity provider:
+`GET /signalk/v1/auth/<id>/logout` clears the local session cookies and asks
+the provider for a logout URL. The OIDC provider returns the identity
+provider's `end_session_endpoint` with `post_logout_redirect_uri` derived
+from the configured `redirectUri`, so the user is logged out of both.
 
-1. User clicks "Logout"
-2. Server clears local session cookies
-3. If provider supports `end_session_endpoint`:
-   - Redirects to provider's logout endpoint with `post_logout_redirect_uri`
-   - Provider logs out the user and redirects back
-4. If provider doesn't support logout, redirects locally
+## OIDC Provider
 
-This ensures users are logged out of both Signal K and the identity provider.
+`src/oidc/` is the built-in OpenID Connect provider, registered through the
+same registry as plugin providers:
 
-### Helper Modules
+| Module                  | Responsibility                                         |
+| ----------------------- | ------------------------------------------------------ |
+| `config.ts`             | Parse and validate OIDC config (env + security.json)   |
+| `provider.ts`           | Strategy from `openid-client/passport`, lazy discovery |
+| `permission-mapping.ts` | Map groups claim to Signal K permission                |
+| `oidc-admin.ts`         | Admin API: GET/PUT `/security/oidc`, connection test   |
 
-Each OIDC helper module has a single responsibility:
-
-| Module                   | Responsibility                 |
-| ------------------------ | ------------------------------ |
-| `config.ts`              | Parse and validate OIDC config |
-| `state.ts`               | Create/encrypt/decrypt state   |
-| `pkce.ts`                | Generate PKCE code verifier    |
-| `discovery.ts`           | Fetch OIDC provider metadata   |
-| `authorization.ts`       | Build authorization URLs       |
-| `token-exchange.ts`      | Exchange code for tokens       |
-| `id-token-validation.ts` | Validate ID token signatures   |
+Discovery runs on the first login attempt (the identity provider may boot
+after Signal K) and is cached until the configuration changes.
 
 ## Configuration
 
