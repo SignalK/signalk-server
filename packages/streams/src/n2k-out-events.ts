@@ -23,7 +23,9 @@ const eventNames = (value: unknown, fallback: string): string[] => {
           .map((name) => name.trim())
           .filter((name) => name.length > 0)
       : []
-  return names.length > 0 ? names : [fallback]
+  // A name listed twice would register its listener twice and send
+  // every frame twice.
+  return names.length > 0 ? [...new Set(names)] : [fallback]
 }
 
 /**
