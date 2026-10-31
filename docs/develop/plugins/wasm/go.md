@@ -148,7 +148,7 @@ func main() {}
   "name": "my-go-wasm-plugin",
   "version": "0.1.0",
   "description": "My Go WASM plugin",
-  "keywords": ["signalk-wasm-plugin"],
+  "keywords": ["signalk-node-server-plugin", "signalk-wasm-plugin"],
   "wasmManifest": "plugin.wasm",
   "wasmCapabilities": {
     "dataRead": true,

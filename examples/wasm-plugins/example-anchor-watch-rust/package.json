@@ -11,6 +11,7 @@
     "check": "cargo check --target wasm32-wasip1"
   },
   "keywords": [
+    "signalk-node-server-plugin",
     "signalk-wasm-plugin",
     "signalk-category-safety",
     "wasm",

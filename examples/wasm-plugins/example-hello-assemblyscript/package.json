@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Hello World WASM plugin written in AssemblyScript",
   "keywords": [
+    "signalk-node-server-plugin",
     "signalk-wasm-plugin"
   ],
   "wasmManifest": "plugin.wasm",

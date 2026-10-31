@@ -239,7 +239,7 @@ fn write_string(s: &str, ptr: *mut u8, max_len: usize) -> i32 {
   "name": "my-rust-wasm-plugin",
   "version": "0.1.0",
   "description": "My Rust WASM plugin for Signal K",
-  "keywords": ["signalk-wasm-plugin"],
+  "keywords": ["signalk-node-server-plugin", "signalk-wasm-plugin"],
   "wasmManifest": "plugin.wasm",
   "wasmCapabilities": {
     "network": false,
