@@ -1,6 +1,7 @@
 import {
   Context,
   Delta,
+  NormalizedDelta,
   Path,
   PathValue,
   SourceRef,
@@ -11,6 +12,7 @@ import { get as _get } from 'lodash'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
+import { StreamBundle } from '../../streambundle'
 import { correctPosition, AntennaOffset, Position } from './leverArm'
 
 export interface GnssCorrectorApplication
@@ -19,7 +21,10 @@ export interface GnssCorrectorApplication
     ConfigApp,
     WithConfig,
     WithSecurityStrategy,
-    SignalKMessageHub {}
+    SignalKMessageHub {
+  streambundle: StreamBundle
+  getMaxFailoverTimeoutMs?: (path: string) => number
+}
 
 const POSITION_PATH = 'navigation.position' as Path
 export const CORRECTOR_ID = 'gnssOffsetCorrector'
@@ -33,6 +38,14 @@ const MAX_CORRECTABLE_LATITUDE = 89.999999
 // Cleared when heading returns.
 const HEADING_NOTIFICATION_PATH =
   'notifications.navigation.gnss.headingUnavailable' as Path
+const HEADING_TRUE_PATH = 'navigation.headingTrue' as Path
+const HEADING_MAGNETIC_PATH = 'navigation.headingMagnetic' as Path
+// A heading not received for longer than this no longer describes the
+// vessel's orientation; rotating the antenna-to-CCRP vector with it would
+// misplace the CCRP by up to twice that vector's length. Raised to the path's
+// source-priority failover timeout when that is longer, so a heading
+// source failing over to its fallback does not stop the correction.
+const HEADING_MAX_AGE_MS = 3000
 
 // The single-GPS antenna offsets that predate gnssSensors. Consumers such as
 // AIS reporting and anchor alarms read them to place the hull around
@@ -51,6 +64,15 @@ export interface GnssCorrectionStatus {
   mode: GnssCorrectionMode
   active: boolean
   blocked?: 'no-length' | 'no-heading'
+}
+
+// Age is measured by server arrival time rather than the delta timestamp,
+// which comes from the provider and is not guaranteed to match the server
+// clock; on a server without time sync every heading could otherwise look
+// stale or fresh.
+interface ReceivedHeading {
+  value: number
+  receivedAt: number
 }
 
 interface SensorEntry {
@@ -81,8 +103,9 @@ interface SensorEntry {
 //
 // CCRP is defined as center-of-vessel on the centerline: body coordinates
 // (length/2, 0) measured from the bow. Derived from design.length.overall
-// (already in Server -> Settings -> Vessel Configuration). When length or
-// heading is unavailable, the delta passes through unmodified.
+// (already in Server -> Settings -> Vessel Configuration). When length is
+// unavailable, or no heading was received within the heading age limit, the
+// delta passes through unmodified.
 //
 // The corrector is a delta input handler, so it runs before the delta
 // cache and source priority (see handleMessage). In 'replace' mode every
@@ -102,11 +125,24 @@ export class GnssOffsetCorrector {
   // the per-delta path free of a delta on every position message.
   private headingNotificationActive = false
   private referenceUpdateScheduled = false
+  private headingTrue: ReceivedHeading = { value: NaN, receivedAt: -Infinity }
+  private headingMagnetic: ReceivedHeading = {
+    value: NaN,
+    receivedAt: -Infinity
+  }
 
-  constructor(private app: GnssCorrectorApplication) {}
+  // Heading age uses a monotonic clock: the wall clock can step backwards
+  // (a boat computer without an RTC syncing to GNSS or NTP), which would
+  // keep an old heading fresh. Injectable so tests control elapsed time.
+  constructor(
+    private app: GnssCorrectorApplication,
+    private readonly monotonicNow: () => number = () => performance.now()
+  ) {}
 
   async start(): Promise<void> {
     this.rebuildLookup()
+    this.trackHeading(HEADING_TRUE_PATH, this.headingTrue)
+    this.trackHeading(HEADING_MAGNETIC_PATH, this.headingMagnetic)
     this.app.on('serverevent', (e: { type?: string }) => {
       if (e?.type === 'GNSS_SENSORS') {
         this.rebuildLookup()
@@ -415,19 +451,44 @@ export class GnssOffsetCorrector {
       : undefined
   }
 
+  // The self bus carries values after source priority, so this follows
+  // the same heading source as the data model. A null (source lost or
+  // timed out) makes the heading unavailable at once.
+  private trackHeading(path: Path, received: ReceivedHeading): void {
+    this.app.streambundle.getSelfBus(path).onValue((delta: NormalizedDelta) => {
+      if (delta.isMeta) return
+      received.value =
+        typeof delta.value === 'number' && Number.isFinite(delta.value)
+          ? delta.value
+          : NaN
+      received.receivedAt = this.monotonicNow()
+    })
+  }
+
+  // Only the heading itself must be fresh: magnetic variation changes over
+  // days and is commonly sent rarely or configured once.
   private readHeadingTrue(): number | undefined {
-    const t = _get(this.app.signalk.self, 'navigation.headingTrue.value')
-    if (typeof t === 'number' && Number.isFinite(t)) return t
-    const m = _get(this.app.signalk.self, 'navigation.headingMagnetic.value')
+    const now = this.monotonicNow()
+    if (this.isFresh(HEADING_TRUE_PATH, this.headingTrue, now)) {
+      return this.headingTrue.value
+    }
+    if (!this.isFresh(HEADING_MAGNETIC_PATH, this.headingMagnetic, now)) {
+      return undefined
+    }
     const v = _get(this.app.signalk.self, 'navigation.magneticVariation.value')
-    if (
-      typeof m === 'number' &&
-      Number.isFinite(m) &&
-      typeof v === 'number' &&
-      Number.isFinite(v)
-    ) {
-      return m + v
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      return this.headingMagnetic.value + v
     }
     return undefined
+  }
+
+  private isFresh(path: Path, heading: ReceivedHeading, now: number): boolean {
+    const maxAgeMs = Math.max(
+      HEADING_MAX_AGE_MS,
+      this.app.getMaxFailoverTimeoutMs?.(path) ?? 0
+    )
+    return (
+      Number.isFinite(heading.value) && now - heading.receivedAt <= maxAgeMs
+    )
   }
 }
