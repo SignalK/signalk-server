@@ -12,6 +12,7 @@ import { hasPendingInstall } from '../projectAppInfo'
 import RecencyBadge from './RecencyBadge'
 import ScoreRing from './ScoreRing'
 import UpdateAvailableBadge from './UpdateAvailableBadge'
+import WasmBadge from './WasmBadge'
 
 interface PluginCardProps {
   app: AppInfo
@@ -173,6 +174,7 @@ const PluginCard: React.FC<PluginCardProps> = ({
                 newVersion={app.newVersion}
                 className="plugin-card__badge"
               />
+              <WasmBadge isWasm={app.isWasm} className="plugin-card__badge" />
               {app.official && (
                 <Badge bg="primary" className="plugin-card__badge">
                   OFFICIAL
