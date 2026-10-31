@@ -38,3 +38,7 @@ processes = []
     interval = "15s"
     restart_limit = 0
     timeout = "2s"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"

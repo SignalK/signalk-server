@@ -6,10 +6,6 @@ kill_timeout = 5
 processes = []
 
 [env]
-  # Fly's proxy connects to the server and appends the app's own IP address
-  # to X-Forwarded-For, so the visitor's address is two hops back
-  # (https://fly.io/docs/networking/request-headers/)
-  TRUST_PROXY = "2"
 
 [experimental]
   allowed_public_ports = []
@@ -40,7 +36,3 @@ processes = []
     interval = "15s"
     restart_limit = 0
     timeout = "2s"
-
-[[vm]]
-  size = "shared-cpu-2x"
-  memory = "2gb"
