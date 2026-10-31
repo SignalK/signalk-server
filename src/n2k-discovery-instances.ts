@@ -20,6 +20,12 @@
  * (temperature/humidity) carry an additional `source` enum that splits
  * the path as `<prefix>.<source>.<instance>.<...>`. We treat that as
  * the compound key the conflict detector already understands.
+ *
+ * PGN 130310 (legacy combined Environmental Parameters) has no source
+ * enum and no instance field at all, but its fixed fields route to
+ * disjoint SK paths (environment.water.temperature vs
+ * environment.outside.temperature/pressure), so the same leaf-path
+ * comparison distinguishes a water-temp sender from an air-temp sender.
  */
 
 // Map PGN → list of `<prefix>:<shape>` describing where in the SK tree
@@ -45,6 +51,7 @@ const PGN_TREE_PATHS: Record<
   127506: [{ prefix: 'electrical.batteries', shape: 'inst' }],
   127508: [{ prefix: 'electrical.batteries', shape: 'inst' }],
   127513: [{ prefix: 'electrical.batteries', shape: 'inst' }],
+  130310: [{ prefix: 'environment', shape: 'source-inst' }],
   130311: [{ prefix: 'environment', shape: 'source-inst' }],
   130312: [{ prefix: 'environment', shape: 'source-inst' }],
   130316: [{ prefix: 'environment', shape: 'source-inst' }]
