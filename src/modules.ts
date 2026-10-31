@@ -625,6 +625,14 @@ async function fetchDistTagsForPackages(
   return result
 }
 
+/**
+ * The dist-tags of the last completed fetchDistTagsForPackages sweep,
+ * without waiting for a new one.
+ */
+function cachedDistTags(): Record<string, NpmDistTags> {
+  return distTagsCache.data
+}
+
 function doFetchDistTags() {
   return fetch(
     'https://registry.npmjs.org/-/package/signalk-server/dist-tags',
@@ -740,6 +748,7 @@ module.exports = {
   isTheServerModule,
   findModulesWithKeyword,
   fetchDistTagsForPackages,
+  cachedDistTags,
   getLatestServerVersion,
   checkForNewServerVersion,
   getAuthor,
