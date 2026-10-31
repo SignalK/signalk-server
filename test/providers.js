@@ -102,6 +102,25 @@ describe('Providers', (_) => {
     )
   })
 
+  it('New J1939 provider without a source fails', async function () {
+    const result = await fetch(`${url}/skServer/providers`, {
+      method: 'post',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: 'j1939NoSource',
+        enabled: true,
+        type: 'J1939',
+        options: {}
+      })
+    })
+    result.status.should.equal(400)
+    const text = await result.text()
+    text.should.equal('Select a J1939 source')
+    server.app.config.settings.pipedProviders
+      .map((provider) => provider.id)
+      .should.not.include('j1939NoSource')
+  })
+
   it('Update provider with empty or null id fails', async function () {
     const provider = {
       id: '',

@@ -115,6 +115,11 @@ function applyProviderSettings(
     res.status(401).send('Can not update an Unknown type')
     return false
   }
+  // The J1939 pipeline has no default source to fall back on.
+  if (source.type === 'J1939' && source.options?.type !== 'j1939-wasm') {
+    res.status(400).send('Select a J1939 source')
+    return false
+  }
 
   const options = target.pipeElements[0].options
 
