@@ -134,7 +134,7 @@ npx asc assembly/index.ts --target release
 {
   "name": "my-wasm-plugin",
   "version": "0.1.0",
-  "keywords": ["signalk-wasm-plugin"],
+  "keywords": ["signalk-node-server-plugin", "signalk-wasm-plugin"],
   "wasmManifest": "plugin.wasm",
   "wasmCapabilities": {
     "dataRead": true,
@@ -215,7 +215,7 @@ After installing your plugin, verify it appears in the Admin UI:
      ```
 
 4. **Troubleshooting**:
-   - If plugin doesn't appear: Check `package.json` has the `signalk-wasm-plugin` keyword and `wasmManifest` field
+   - If plugin doesn't appear: Check `package.json` has the `signalk-node-server-plugin` and `signalk-wasm-plugin` keywords and the `wasmManifest` field
    - If configuration form is empty: Verify `schema()` export returns valid JSON Schema
    - If settings don't persist: Check file permissions on `~/.signalk/plugin-config-data/`
 
@@ -589,7 +589,7 @@ See [AssemblyScript documentation](https://www.assemblyscript.org/) for details.
 Check that:
 
 - `wasmManifest` points to correct file
-- `signalk-wasm-plugin` keyword is present
+- `signalk-node-server-plugin` and `signalk-wasm-plugin` keywords are present
 - WASM binary is valid: `file plugin.wasm`
 
 ### Compilation errors

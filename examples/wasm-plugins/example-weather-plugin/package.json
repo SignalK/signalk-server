@@ -3,6 +3,7 @@
   "version": "0.2.0",
   "description": "Example SignalK WASM plugin demonstrating network capability and resource provider",
   "keywords": [
+    "signalk-node-server-plugin",
     "signalk-wasm-plugin",
     "signalk",
     "wasm",
