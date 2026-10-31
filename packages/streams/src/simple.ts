@@ -17,6 +17,7 @@ import Gpsd from './gpsd'
 import Nmea0183LinerFilter from './nmea0183-liner-filter'
 import PigpioSeatalk from './pigpio-seatalk'
 import GpiodSeatalk from './gpiod-seatalk'
+import type { N2kInstanceMappings } from './n2k-instance-groups'
 import type { CreateDebug, DeltaCache } from './types'
 
 // canboat exports are old-style constructor functions, not classes.
@@ -65,6 +66,7 @@ interface SimpleApp {
       loggingDirectory?: string
       keepMostRecentLogsOnly?: boolean
       logCountToKeep?: number
+      n2kInstanceMappings?: N2kInstanceMappings
     }
     getExternalHostname(): string
     getExternalPort(): number

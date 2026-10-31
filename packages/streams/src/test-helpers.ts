@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events'
+import type { N2kInstanceMappings } from './n2k-instance-groups'
 import type { CreateDebug, DebugLogger, DeltaCache } from './types'
 
 interface MockAppOptions {
@@ -8,6 +9,12 @@ interface MockAppOptions {
   keepMostRecentLogsOnly?: boolean
   logCountToKeep?: number
   isNmea2000OutAvailable?: boolean
+  n2kInstanceMappings?: N2kInstanceMappings
+}
+
+interface RemovedSource {
+  sourceRef: string
+  prefixes?: readonly string[]
 }
 
 interface MockApp extends EventEmitter {
@@ -20,6 +27,7 @@ interface MockApp extends EventEmitter {
       loggingDirectory?: string
       keepMostRecentLogsOnly?: boolean
       logCountToKeep?: number
+      n2kInstanceMappings?: N2kInstanceMappings
     }
     getExternalHostname(): string
     getExternalPort(): number
@@ -33,6 +41,7 @@ interface MockApp extends EventEmitter {
   providerErrors: Array<{ id: string; msg: string }>
   handledMessages: Array<{ id: string; delta: object }>
   propertyValues: Array<{ name: string; value: unknown }>
+  removedSources: RemovedSource[]
 }
 
 export function createMockApp(options: MockAppOptions = {}): MockApp {
@@ -44,6 +53,7 @@ export function createMockApp(options: MockAppOptions = {}): MockApp {
   const handledMessages: Array<{ id: string; delta: object }> = []
   const propertyValues: Array<{ name: string; value: unknown }> = []
   const sourceDeltaStore: Record<string, object> = {}
+  const removedSources: RemovedSource[] = []
 
   const app = Object.assign(emitter, {
     selfContext: options.selfContext ?? 'vessels.urn:mrn:imo:mmsi:000000000',
@@ -51,6 +61,9 @@ export function createMockApp(options: MockAppOptions = {}): MockApp {
     deltaCache: {
       setSourceDelta(key: string, delta: object): void {
         sourceDeltaStore[key] = delta
+      },
+      removeSource(sourceRef: string, prefixes?: readonly string[]): void {
+        removedSources.push({ sourceRef, prefixes })
       }
     },
     config: {
@@ -58,7 +71,8 @@ export function createMockApp(options: MockAppOptions = {}): MockApp {
       settings: {
         loggingDirectory: options.loggingDirectory,
         keepMostRecentLogsOnly: options.keepMostRecentLogsOnly,
-        logCountToKeep: options.logCountToKeep
+        logCountToKeep: options.logCountToKeep,
+        n2kInstanceMappings: options.n2kInstanceMappings
       },
       getExternalHostname(): string {
         return 'localhost'
@@ -83,7 +97,8 @@ export function createMockApp(options: MockAppOptions = {}): MockApp {
     providerStatuses,
     providerErrors,
     handledMessages,
-    propertyValues
+    propertyValues,
+    removedSources
   }) as MockApp
 
   return app

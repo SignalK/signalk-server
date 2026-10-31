@@ -17,6 +17,7 @@
 import { Writable, Transform, TransformCallback } from 'stream'
 import TimestampThrottle from './timestamp-throttle'
 import N2KJsonToSignalK from './n2k-signalk'
+import type { N2kInstanceMappings } from './n2k-instance-groups'
 import ActisenseSerialToJSON from './n2kAnalyzer'
 import CanboatJs from './canboatjs'
 import Nmea0183ToSignalK from './nmea0183-signalk'
@@ -48,6 +49,7 @@ interface AutodetectOptions {
     selfContext: string
     isNmea2000OutAvailable: boolean
     deltaCache: DeltaCache
+    config?: { settings?: { n2kInstanceMappings?: N2kInstanceMappings } }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
     emit(event: string, ...args: unknown[]): void
