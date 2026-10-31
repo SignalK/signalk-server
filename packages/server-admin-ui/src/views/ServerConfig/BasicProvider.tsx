@@ -18,6 +18,7 @@ import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
 import N2KFilters from './N2KFilters'
 import { splitQuirksField } from '../../utils/quirks'
+import { offersCreateDevice } from './ydwgCreateDevice'
 
 interface ProviderOptions {
   type?: string
@@ -2101,7 +2102,7 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
           <CamelCaseCompatInput value={value.options} onChange={onChange} />
         )}
       {value.options.type !== undefined &&
-        /^ydwg02/.test(value.options.type) && (
+        offersCreateDevice(value.options.type) && (
           <CreateDeviceInput value={value.options} onChange={onChange} />
         )}
     </div>
