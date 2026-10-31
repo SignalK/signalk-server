@@ -122,6 +122,9 @@ export default class TcpStream extends Transform {
         })
       }
       tcpStream.on('data', (data: Buffer) => {
+        if (this.writableEnded) {
+          return
+        }
         if (this.debugData.enabled) {
           this.debugData(data.toString())
         }
@@ -180,6 +183,10 @@ export default class TcpStream extends Transform {
       this.options.app.removeListener?.(event, listener)
     }
     this.appListeners.length = 0
+    // Ending the stream passes the end down the pipeline once queued
+    // data has drained, so later elements release what they hold on the
+    // app emitter, such as a wasm decoder's transmit listeners.
+    super.end()
     return this
   }
 
