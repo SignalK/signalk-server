@@ -16,7 +16,8 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     description: 'The current state of the engine'
   },
   '/vessels/*/propulsion/RegExp/revolutions': {
-    description: 'Engine revolutions (x60 for RPM)',
+    description:
+      'Engine revolutions (x60 for RPM). Also called engine speed, revs or RPM.',
     units: 'Hz'
   },
   '/vessels/*/propulsion/RegExp/temperature': {
@@ -28,7 +29,7 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     units: 'K'
   },
   '/vessels/*/propulsion/RegExp/oilPressure': {
-    description: 'Oil pressure',
+    description: 'Oil pressure. Engine oil pressure.',
     units: 'Pa'
   },
   '/vessels/*/propulsion/RegExp/alternatorVoltage': {
@@ -36,11 +37,13 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/propulsion/RegExp/runTime': {
-    description: 'Total running time for engine (Engine Hours in seconds)',
+    description:
+      'Total running time for engine (Engine Hours in seconds). Also called engine hours.',
     units: 's'
   },
   '/vessels/*/propulsion/RegExp/coolantTemperature': {
-    description: 'Coolant temperature',
+    description:
+      'Coolant temperature. Commonly read as the engine temperature.',
     units: 'K'
   },
   '/vessels/*/propulsion/RegExp/coolantPressure': {
@@ -118,7 +121,8 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     units: 'Pa'
   },
   '/vessels/*/propulsion/RegExp/fuel/rate': {
-    description: 'Fuel rate of consumption',
+    description:
+      'Fuel rate of consumption. Also called fuel consumption or fuel flow.',
     units: 'm3/s'
   },
   '/vessels/*/propulsion/RegExp/fuel/economyRate': {

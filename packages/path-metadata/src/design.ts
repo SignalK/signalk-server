@@ -5,7 +5,7 @@ export const designMetadata: Record<string, PathMetadataEntry> = {
     description: 'Design/dimensional data of this vessel'
   },
   '/vessels/*/design/displacement': {
-    description: 'Data should be of type number.',
+    description: 'Displacement: the mass of the vessel.',
     units: 'kg'
   },
   '/vessels/*/design/aisShipType': {
@@ -23,7 +23,8 @@ export const designMetadata: Record<string, PathMetadataEntry> = {
     }
   },
   '/vessels/*/design/draft': {
-    description: 'The draft of the vessel',
+    description:
+      'The draft of the vessel. Also spelled draught: how deep the keel goes below the waterline.',
     properties: {
       minimum: {
         description: 'The minimum draft of the vessel',
@@ -49,7 +50,8 @@ export const designMetadata: Record<string, PathMetadataEntry> = {
     }
   },
   '/vessels/*/design/length': {
-    description: 'The various lengths of the vessel',
+    description:
+      'The various lengths of the vessel. Includes the length overall, commonly abbreviated LOA.',
     properties: {
       overall: {
         type: 'number',
@@ -94,11 +96,12 @@ export const designMetadata: Record<string, PathMetadataEntry> = {
     units: 'ratio'
   },
   '/vessels/*/design/beam': {
-    description: 'Data should be of type number.',
+    description: 'Overall beam: the maximum width of the vessel.',
     units: 'm'
   },
   '/vessels/*/design/airHeight': {
-    description: 'Data should be of type number.',
+    description:
+      'Air draft: the total height of the vessel above the waterline, including mast and antennas.',
     units: 'm'
   },
   '/vessels/*/design/rigging': {
