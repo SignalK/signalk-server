@@ -21,7 +21,7 @@ interface Gateway {
   received: string
 }
 
-async function startGateway(port = 0): Promise<Gateway> {
+async function startGateway(): Promise<Gateway> {
   const server = createServer()
   const gateway: Gateway = { server, port: 0, sockets: [], received: '' }
   server.on('connection', (socket: Socket) => {
@@ -30,9 +30,7 @@ async function startGateway(port = 0): Promise<Gateway> {
       gateway.received += data.toString()
     })
   })
-  await new Promise<void>((resolve) =>
-    server.listen(port, '127.0.0.1', resolve)
-  )
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   gateway.port = (server.address() as AddressInfo).port
   return gateway
 }
@@ -164,20 +162,27 @@ describe('Simple maretron-ipg-wasm', () => {
     ['no port', undefined],
     ['an empty port', '']
   ] as const) {
-    it(`connects on the IPG default port given ${label}`, async () => {
+    it(`connects on the IPG default port given ${label}`, () => {
       const app = createMockApp()
-      const gateway = await startGateway(IPG_DEFAULT_PORT)
+      const targets: unknown[][] = []
+      // Stubbed so the test needs no free port 6543 on the host.
+      const connect = Socket.prototype.connect
+      Socket.prototype.connect = function (
+        this: Socket,
+        ...args: unknown[]
+      ): Socket {
+        targets.push(args.slice(0, 2))
+        return this
+      } as typeof Socket.prototype.connect
       let connection: Simple | undefined
       try {
         connection = startIpgConnection(app, port)
-        await waitFor(
-          () => gateway.sockets.length > 0,
-          'a connection on the IPG default port'
-        )
+
+        expect(targets).to.deep.equal([[IPG_DEFAULT_PORT, '127.0.0.1']])
         expect(app.providerErrors).to.deep.equal([])
       } finally {
+        Socket.prototype.connect = connect
         connection?.end()
-        await stopGateway(gateway)
       }
     })
   }
