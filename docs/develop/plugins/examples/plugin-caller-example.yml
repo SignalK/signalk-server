@@ -5,7 +5,7 @@
 #   .github/workflows/signalk-ci.yml
 #
 # It calls the shared SignalK workflow which tests your plugin
-# across Linux, macOS, and Windows (Node 22 + 24). The Signal K
+# across Linux, macOS, and Windows (Node 22, 24 and 26). The Signal K
 # integration test is opt-in — the auto-run job below disables it;
 # use the manual trigger to enable it per run.
 #
@@ -46,9 +46,9 @@ on:
         default: ''
         type: string
       node-versions:
-        description: 'JSON array of Node versions, example: ["22","24"]'
+        description: 'JSON array of Node versions, example: ["22","24","26"]'
         required: false
-        default: '["22", "24"]'
+        default: '["22", "24", "26"]'
         type: string
       enable-signalk-integration:
         description: Start SignalK server and install plugin for integration testing
@@ -69,7 +69,6 @@ jobs:
     with:
       test-command: npm test
       build-command: npm run build --if-present
-      node-versions: '["22", "24"]'
       enable-signalk-integration: false
       signalk-server-versions: '["latest"]'
 
