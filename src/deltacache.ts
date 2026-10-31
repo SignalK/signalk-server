@@ -279,13 +279,6 @@ export default class DeltaCache {
     if (msg.path.length !== 0) {
       const isNewSource = !leaf[sourceRef]
       leaf[sourceRef] = msg
-      // The enforcer's own synthetic timeout delta loops back through
-      // here; letting it into onIncoming would record the timeout
-      // duration itself as an inter-arrival sample (skewing 'auto'
-      // derivation upward) and clear its own recovery marker.
-      if (!msg.state?.timedOut) {
-        this.app.stalenessEnforcer?.onIncoming(msg.context, msg.path, sourceRef)
-      }
       const prefKey = msg.context + '\0' + msg.path
       // The priority engine matches by canonical (canName) form. Store
       // the same canonical ref in preferredSources so the livePreferred
@@ -649,6 +642,20 @@ export default class DeltaCache {
         }
         const isNewSource = !leaf[sourceRef]
         leaf[sourceRef] = msg
+        // Every source's fresh value re-arms its timeout here, before the
+        // priority engine drops the non-winners: onValue sees only the
+        // winners, so a filtered-out source that recovers would otherwise
+        // never time out again. The enforcer's own synthetic timeout loops
+        // back through here too; letting it into onIncoming would record
+        // the timeout duration as an inter-arrival sample (skewing 'auto'
+        // derivation upward) and clear its own recovery marker.
+        if (!pathValue.state?.timedOut) {
+          this.app.stalenessEnforcer?.onIncoming(
+            delta.context,
+            pathValue.path,
+            sourceRef
+          )
+        }
         // Populate preferredSources so getCachedDeltas('preferred')
         // works correctly after restart/replay. Store the canonical
         // (canName) form to match onValue's writes; otherwise winners
