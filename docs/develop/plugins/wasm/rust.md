@@ -239,7 +239,7 @@ fn write_string(s: &str, ptr: *mut u8, max_len: usize) -> i32 {
   "name": "my-rust-wasm-plugin",
   "version": "0.1.0",
   "description": "My Rust WASM plugin for Signal K",
-  "keywords": ["signalk-wasm-plugin"],
+  "keywords": ["signalk-node-server-plugin", "signalk-wasm-plugin"],
   "wasmManifest": "plugin.wasm",
   "wasmCapabilities": {
     "network": false,
@@ -253,7 +253,7 @@ fn write_string(s: &str, ptr: *mut u8, max_len: usize) -> i32 {
 }
 ```
 
-> **Note**: The package name can be anything - there's no requirement for `@signalk/` scope. The `wasmManifest` field is what identifies this as a WASM plugin.
+> **Note**: The package name can be anything - there's no requirement for `@signalk/` scope. The `wasmManifest` field is what identifies this as a WASM plugin. [What Makes a WASM Plugin?](README.md#what-makes-a-wasm-plugin) explains the fields and keywords, and [example-anchor-watch-rust](https://github.com/SignalK/signalk-server/blob/master/examples/wasm-plugins/example-anchor-watch-rust/package.json) has a complete manifest.
 
 ## Step 5: Build
 

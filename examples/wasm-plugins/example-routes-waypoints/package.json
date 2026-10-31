@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Example WASM plugin demonstrating Routes and Waypoints Resource Providers",
   "keywords": [
+    "signalk-node-server-plugin",
     "signalk-wasm-plugin",
     "signalk",
     "wasm",

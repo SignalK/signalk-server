@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Example SignalK WASM plugin demonstrating Weather Provider API integration",
   "keywords": [
+    "signalk-node-server-plugin",
     "signalk-wasm-plugin",
     "signalk",
     "wasm",
