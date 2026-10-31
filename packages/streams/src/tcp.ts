@@ -13,8 +13,10 @@ interface TcpOptions {
   app: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
+    // Optional: callers passing an app adapter with only on/emit keep
+    // working, without the cleanup on end().
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    removeListener(event: string, cb: (...args: any[]) => void): void
+    removeListener?(event: string, cb: (...args: any[]) => void): void
     emit(event: string, ...args: unknown[]): void
     setProviderStatus(id: string, msg: string): void
     setProviderError(id: string, msg: string): void
@@ -175,7 +177,7 @@ export default class TcpStream extends Transform {
       this.reconnector.disconnect()
     }
     for (const [event, listener] of this.appListeners) {
-      this.options.app.removeListener(event, listener)
+      this.options.app.removeListener?.(event, listener)
     }
     this.appListeners.length = 0
     return this
