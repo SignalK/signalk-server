@@ -1392,19 +1392,26 @@ module.exports = function (app) {
   }
 
   function sendAppStoreChangedEvent() {
-    findPluginsAndWebapps().then(([plugins, webapps]) => {
-      getLatestServerVersion(app.config.version)
-        .then((serverVersion) =>
-          getAllModuleInfo(plugins, webapps, serverVersion)
-        )
-        .then((result) => {
-          app.emit('serverevent', {
-            type: 'APP_STORE_CHANGED',
-            from: 'signalk-server',
-            data: result
-          })
+    findPluginsAndWebapps()
+      .then(([plugins, webapps]) =>
+        // Like the store list, report modules without a server update when
+        // npm cannot say which server version is current.
+        getLatestServerVersion(app.config.version)
+          .catch(() => '0.0.0')
+          .then((serverVersion) =>
+            getAllModuleInfo(plugins, webapps, serverVersion)
+          )
+      )
+      .then((result) => {
+        app.emit('serverevent', {
+          type: 'APP_STORE_CHANGED',
+          from: 'signalk-server',
+          data: result
         })
-    })
+      })
+      .catch((err) => {
+        console.error(`App Store change event not sent: ${err.message}`)
+      })
   }
 
   function installSKModule(module, version) {
