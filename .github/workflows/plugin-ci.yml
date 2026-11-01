@@ -137,26 +137,44 @@ jobs:
             const MINIMUM_MAJOR = 22
             const CURRENT_ALIASES = new Set(["lts/*", "node", "latest", "current"])
             const COMPARATOR = /^(>=|>|<=|<|=|\^|~)?v?(\d+)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?$/
-            // Every alternative of the range needs a lower bound at
+            // The majors one comparator admits, as [lowest, highest].
+            const majorsOf = (op, c) => {
+              const major = Number(c[2])
+              const minor = Number(c[3])
+              const patch = Number(c[4])
+              // NaN for an absent or "x" part, so it counts as zero here.
+              const beyondMajor = minor > 0 || patch > 0
+              switch (op) {
+                case ">=": return [major, Infinity]
+                // ">22" excludes all of 22 only when it names no minor.
+                case ">": return [Number.isNaN(minor) ? major + 1 : major, Infinity]
+                case "<": return [-Infinity, beyondMajor ? major : major - 1]
+                case "<=": return [-Infinity, major]
+                default: return [major, major]
+              }
+            }
+            // Every alternative of the range must admit some Node and start at
             // MINIMUM_MAJOR or later; one without a lower bound, or with
             // syntax this check does not read, is refused. The comparators of
-            // one alternative intersect, so its greatest lower bound counts.
+            // one alternative intersect, so the greatest lower bound and the
+            // least upper bound count. Majors are all the matrix depends on.
             const rangeStartsAtMinimum = (range) =>
               range.split("||").every((alternative) => {
                 const parts = alternative.trim().split(/\s+/)
                 const hyphen = parts.length === 3 && parts[1] === "-"
-                let lowerBound
-                for (const part of hyphen ? [parts[0], parts[2]] : parts) {
+                const comparators = hyphen
+                  ? [[">=", parts[0]], ["<=", parts[2]]]
+                  : parts.map((part) => [undefined, part])
+                let lowest = -Infinity
+                let highest = Infinity
+                for (const [hyphenOp, part] of comparators) {
                   const c = COMPARATOR.exec(part)
-                  if (!c) return false
-                  const op = c[1] ?? ""
-                  if (op === "<" || op === "<=") continue
-                  // ">22" excludes all of 22 only when it names no minor.
-                  const major = Number(c[2]) + (op === ">" && c[3] === undefined ? 1 : 0)
-                  lowerBound = Math.max(lowerBound ?? major, major)
-                  if (hyphen) break
+                  if (!c || (hyphenOp && c[1])) return false
+                  const [low, high] = majorsOf(hyphenOp ?? c[1] ?? "", c)
+                  lowest = Math.max(lowest, low)
+                  highest = Math.min(highest, high)
                 }
-                return lowerBound !== undefined && lowerBound >= MINIMUM_MAJOR
+                return lowest >= MINIMUM_MAJOR && lowest <= highest
               })
             let versions
             try { versions = JSON.parse(process.env.NODE_VERSIONS_JSON) } catch {}
