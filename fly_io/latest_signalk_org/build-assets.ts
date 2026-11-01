@@ -115,7 +115,19 @@ function tileY(lat: number, z: number): number {
 
 async function buildCoastline(): Promise<void> {
   const zip = join(BUILD, 'coastline.zip')
-  run('curl', ['-fsSL', '-o', zip, COASTLINE_URL])
+  // about 2 GB: give up when it stalls for a minute or takes half an hour
+  run('curl', [
+    '-fsSL',
+    '--speed-limit',
+    '100000',
+    '--speed-time',
+    '60',
+    '--max-time',
+    '1800',
+    '-o',
+    zip,
+    COASTLINE_URL
+  ])
   run('unzip', ['-o', zip, COASTLINE_ZIP_ENTRY])
 
   const out = join(ASSETS, 'charts-simple', 'wadden-coastline.mbtiles')
