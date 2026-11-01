@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert'
 import { afterEach, describe, it } from 'node:test'
 import type { Plugin, ServerAPI } from '@signalk/server-api'
+import { magvar } from 'magvar'
 import director from './index.ts'
 
 const FINAL_WAYPOINT = { latitude: 53.296, longitude: 5.086 }
@@ -17,9 +18,12 @@ interface RouteState {
 
 function fakeApp(route: RouteState, position: typeof FINAL_WAYPOINT) {
   const activated: unknown[] = []
+  const messages: unknown[] = []
   const app = {
     getSelfPath: () => position,
-    handleMessage: () => {},
+    handleMessage: (_id: string, delta: unknown) => {
+      messages.push(delta)
+    },
     setPluginStatus: () => {},
     error: (msg: string) => assert.fail(msg),
     getCourse: async () => ({
@@ -30,7 +34,7 @@ function fakeApp(route: RouteState, position: typeof FINAL_WAYPOINT) {
       activated.push(dest)
     }
   }
-  return { app: app as unknown as ServerAPI, activated }
+  return { app: app as unknown as ServerAPI, activated, messages }
 }
 
 describe('demo director', () => {
@@ -56,6 +60,31 @@ describe('demo director', () => {
       ])
     })
   }
+
+  it('publishes the magnetic variation at the boat on the first tick', async () => {
+    const { app, messages } = fakeApp(
+      { pointIndex: 3, pointTotal: 5, reverse: false },
+      NEAR_FINAL
+    )
+    await runFirstTick(app)
+    assert.deepEqual(messages, [
+      {
+        updates: [
+          {
+            values: [
+              {
+                path: 'navigation.magneticVariation',
+                value:
+                  (magvar(NEAR_FINAL.latitude, NEAR_FINAL.longitude) *
+                    Math.PI) /
+                  180
+              }
+            ]
+          }
+        ]
+      }
+    ])
+  })
 
   it('keeps the route while the boat is short of the final waypoint', async () => {
     const { app, activated } = fakeApp(
