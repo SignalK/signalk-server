@@ -156,6 +156,7 @@ function prepareServer(): string {
   mkdirSync(serverDir, { recursive: true })
   mkdirSync(join(configDir, 'plugin-config-data'), { recursive: true })
   // Without a package.json of its own npm would install into the repository's
+  // package.json and node_modules instead of this directory
   writeFileSync(
     join(serverDir, 'package.json'),
     JSON.stringify({ name: 'demo-asset-server', private: true })
