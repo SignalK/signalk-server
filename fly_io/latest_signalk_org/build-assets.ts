@@ -44,7 +44,8 @@ const COASTLINE_URL =
 const COASTLINE_ZIP_ENTRY = 'world-display-z0-z11-runtime-z12.mbtiles'
 const COASTLINE_MAX_ZOOM = 12
 const TIDAL_SOURCE = 'utcef_netherlands'
-// The GDAL image charts-provider-simple converts ENC cells with
+// charts-provider-simple's GDAL image, whose ogr2ogr extracts the land of
+// the ENC cells for the radar emulator
 const CHARTS_TOOLBOX_IMAGE =
   'ghcr.io/dirkwa/signalk-charts-provider-simple/charts-toolbox:1.1.0'
 // Runs the ENC converter's containers during the build only, so it is not
