@@ -286,6 +286,9 @@ interface WsApi {
 
 const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
 
+// RFC 6455 Going Away; older clients reject the newer 1012 Service Restart
+const WS_CLOSE_GOING_AWAY = 1001
+
 // The User-Agent ESP-IDF's WebSocket client sends unless the application sets
 // its own. See https://github.com/SignalK/SensESP/pull/1096 for background.
 // TODO: remove once SensESP releases up to 3.6.0 are out of use
@@ -735,7 +738,9 @@ function wsInterface(app: WsApp): WsApi {
       primuses.forEach((primus) => {
         primus.forEach((primusSpark: unknown) => {
           const spark = primusSpark as Spark
-          if (!sendsCloseFrame(spark)) {
+          if (sendsCloseFrame(spark)) {
+            spark.socket?.close(WS_CLOSE_GOING_AWAY)
+          } else {
             spark.socket?.terminate()
           }
         })

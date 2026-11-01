@@ -8,6 +8,7 @@ const { startServerP } = require('./servertestutilities')
 const ESP_IDF_WS_USER_AGENT = 'ESP32 Websocket Client'
 // ws reports this code when the connection ended without a close frame.
 const ABNORMAL_CLOSURE = 1006
+const GOING_AWAY = 1001
 
 function connect(port: number, userAgent?: string): Promise<WebSocket> {
   const ws = new WebSocket(
@@ -103,8 +104,8 @@ describe('ESP-IDF WebSocket clients', () => {
   it('sends every client a close frame with SEND_WS_CLOSE_FRAME=all', async () => {
     process.env.SEND_WS_CLOSE_FRAME = 'all'
     const codes = await closeCodesOnStop()
-    assert.notStrictEqual(codes.other, ABNORMAL_CLOSURE)
-    assert.notStrictEqual(codes.esp, ABNORMAL_CLOSURE)
+    assert.strictEqual(codes.other, GOING_AWAY)
+    assert.strictEqual(codes.esp, GOING_AWAY)
   })
 
   it('drops every client without a close frame with SEND_WS_CLOSE_FRAME=none', async () => {
@@ -117,7 +118,7 @@ describe('ESP-IDF WebSocket clients', () => {
   it('drops only ESP-IDF clients without a close frame with SEND_WS_CLOSE_FRAME=notESP32', async () => {
     process.env.SEND_WS_CLOSE_FRAME = 'notESP32'
     const codes = await closeCodesOnStop()
-    assert.notStrictEqual(codes.other, ABNORMAL_CLOSURE)
+    assert.strictEqual(codes.other, GOING_AWAY)
     assert.strictEqual(codes.esp, ABNORMAL_CLOSURE)
   })
 
