@@ -55,6 +55,9 @@ const AREA = [4.6, 52.8, 5.95, 53.6] as const
 
 const CONVERSION_TIMEOUT_MS = 60 * 60 * 1000
 const POLL_MS = 10_000
+// Bounds each request, its body included, well under every waitFor timeout:
+// fetch's own timeouts are minutes, and a trickling body has none
+const REQUEST_TIMEOUT_MS = 30_000
 
 const skVersion = process.argv[2]?.replace(/^v/, '')
 if (!skVersion) {
@@ -77,6 +80,7 @@ async function request<T>(
 ): Promise<T> {
   const res = await fetch(url, {
     method,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers:
       body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body)
@@ -405,12 +409,22 @@ const server = startServer(configDir)
 try {
   await waitFor(
     'signalk-server',
-    async () => (await fetch(`${BASE}/signalk`)).ok,
+    async () =>
+      (
+        await fetch(`${BASE}/signalk`, {
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+        })
+      ).ok,
     5 * 60 * 1000
   )
   await waitFor(
     'charts-provider-simple',
-    async () => (await fetch(`${PLUGIN}/custom-catalogs`)).ok,
+    async () =>
+      (
+        await fetch(`${PLUGIN}/custom-catalogs`, {
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+        })
+      ).ok,
     5 * 60 * 1000
   )
   await convertEnc(configDir)
