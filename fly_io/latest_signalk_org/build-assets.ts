@@ -193,6 +193,8 @@ function prepareServer(): string {
   return configDir
 }
 
+let serverExited = false
+
 function startServer(configDir: string): ChildProcess {
   const server = spawn(
     join(BUILD, 'server', 'node_modules', '.bin', 'signalk-server'),
@@ -203,6 +205,7 @@ function startServer(configDir: string): ChildProcess {
     }
   )
   server.on('exit', (code) => {
+    serverExited = true
     if (code !== null && code !== 0)
       console.error(`signalk-server exited with ${code}`)
   })
@@ -219,6 +222,8 @@ async function waitFor(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
+    if (serverExited)
+      throw new BuildFailure(`signalk-server exited while waiting for ${what}`)
     try {
       if (await done()) return
     } catch (error) {
