@@ -39,6 +39,12 @@ jobs:
         run: |
           npm run test
 
+      - name: demo director plugin
+        working-directory: ./fly_io/latest_signalk_org/demo-director
+        run: |
+          sfw npm install --no-package-lock --no-audit --no-fund
+          npm test
+
       - run: npm test
         env:
           CI: true
