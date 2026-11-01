@@ -74,6 +74,39 @@ describe('modulesWithKeyword', () => {
     )
     chai.expect(installedModuleInfo.location).to.eql(tempNodeModules)
   })
+
+  it('prefers the app dir when the config dir has an older version', () => {
+    const module = '@signalk/instrumentpanel'
+
+    testTempDir = fs.mkdtempSync(
+      path.join(require('os').tmpdir(), '_skservertest_modules')
+    )
+
+    const app = {
+      config: {
+        appPath: path.join(__dirname + '/../'),
+        configPath: testTempDir
+      }
+    }
+
+    const moduleDir = path.join(testTempDir, 'node_modules', module)
+    fs.mkdirSync(moduleDir, { recursive: true })
+    const packageJson = require(
+      path.join(app.config.appPath, 'node_modules', module, 'package.json')
+    )
+    fs.writeFileSync(
+      path.join(moduleDir, 'package.json'),
+      JSON.stringify({ ...packageJson, version: '0.0.1' })
+    )
+
+    const moduleInfo = modulesWithKeyword(app.config, 'signalk-webapp').find(
+      (moduleInfo) => moduleInfo.module === module
+    )
+    chai
+      .expect(moduleInfo.location)
+      .to.eql(path.join(app.config.appPath, 'node_modules/'))
+    chai.expect(moduleInfo.metadata.version).to.eql(packageJson.version)
+  })
 })
 
 describe('checkForNewServerVersion', () => {
