@@ -79,10 +79,11 @@ describe('Metadata end to end', function () {
       WS_MESSAGE_TIMEOUT_MS
     )
 
-  before(async () => {
+  // Each start takes a new port: fetch would otherwise reuse a pooled
+  // keep-alive connection that the stopped server has already closed.
+  const startServer = async () => {
     port = await freeport()
     v1Api = `http://localhost:${port}/signalk/v1/api`
-    await emptyConfigDirectory()
     server = await startServerP(port, false, {
       settings: {
         interfaces: {
@@ -90,6 +91,15 @@ describe('Metadata end to end', function () {
         }
       }
     })
+  }
+  const restartServer = async () => {
+    await server.stop()
+    await startServer()
+  }
+
+  before(async () => {
+    await emptyConfigDirectory()
+    await startServer()
   })
 
   after(async () => {
@@ -157,14 +167,7 @@ describe('Metadata end to end', function () {
     })
 
     // 6. Restart the server and assert metadata persists
-    await server.stop()
-    server = await startServerP(port, false, {
-      settings: {
-        interfaces: {
-          plugins: false
-        }
-      }
-    })
+    await restartServer()
 
     const meta2 = await selfGetMetaJson()
     expect(meta2).to.have.property('units', 'V')
@@ -235,14 +238,7 @@ describe('Metadata end to end', function () {
     expect(metaAfterPut).to.not.have.property('zones')
     expect(metaAfterPut).to.have.property('description', 'Updated description')
 
-    await server.stop()
-    server = await startServerP(port, false, {
-      settings: {
-        interfaces: {
-          plugins: false
-        }
-      }
-    })
+    await restartServer()
 
     const metaAfterRestart = await selfGetMetaJson()
     expect(metaAfterRestart).to.not.have.property('zones')
