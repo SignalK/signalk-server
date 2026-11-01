@@ -422,9 +422,9 @@ try {
     await exited
   }
 }
-// Runs synchronously for minutes, so it waits until no request to the
-// server is open: a blocked event loop misses the server closing an idle
-// keep-alive socket, and the next request fails on it
+// Runs synchronously for minutes, blocking the event loop, so it runs once
+// the server has stopped: a blocked loop misses the server closing an idle
+// keep-alive socket, and the next request would fail on it
 extractLand()
 rmSync(BUILD, { recursive: true, force: true })
 console.log(`assets ready in ${ASSETS}`)
