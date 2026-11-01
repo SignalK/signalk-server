@@ -139,12 +139,13 @@ jobs:
             const COMPARATOR = /^(>=|>|<=|<|=|\^|~)?v?(\d+)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?$/
             // Every alternative of the range needs a lower bound at
             // MINIMUM_MAJOR or later; one without a lower bound, or with
-            // syntax this check does not read, is refused.
+            // syntax this check does not read, is refused. The comparators of
+            // one alternative intersect, so its greatest lower bound counts.
             const rangeStartsAtMinimum = (range) =>
               range.split("||").every((alternative) => {
                 const parts = alternative.trim().split(/\s+/)
                 const hyphen = parts.length === 3 && parts[1] === "-"
-                let lowest
+                let lowerBound
                 for (const part of hyphen ? [parts[0], parts[2]] : parts) {
                   const c = COMPARATOR.exec(part)
                   if (!c) return false
@@ -152,10 +153,10 @@ jobs:
                   if (op === "<" || op === "<=") continue
                   // ">22" excludes all of 22 only when it names no minor.
                   const major = Number(c[2]) + (op === ">" && c[3] === undefined ? 1 : 0)
-                  lowest = Math.min(lowest ?? major, major)
+                  lowerBound = Math.max(lowerBound ?? major, major)
                   if (hyphen) break
                 }
-                return lowest !== undefined && lowest >= MINIMUM_MAJOR
+                return lowerBound !== undefined && lowerBound >= MINIMUM_MAJOR
               })
             let versions
             try { versions = JSON.parse(process.env.NODE_VERSIONS_JSON) } catch {}
@@ -163,8 +164,9 @@ jobs:
               console.log("::error::node-versions must be a non-empty JSON array, got " + process.env.NODE_VERSIONS_JSON)
               process.exit(1)
             }
-            // Whole numbers are allowed because [22, 24] has always worked;
-            // a fraction such as 22.10 would reach setup-node as 22.1.
+            // A whole JSON number names a major version. A fractional one is
+            // refused because JSON drops its trailing zeros: 22.10 would
+            // reach setup-node as 22.1.
             const unsupported = versions.filter((v) => {
               if (Number.isInteger(v)) return v < MINIMUM_MAJOR
               if (typeof v !== "string") return true
