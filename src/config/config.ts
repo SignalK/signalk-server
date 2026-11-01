@@ -249,6 +249,7 @@ export function load(app: ConfigApp) {
 
   setConfigDirectory(app)
   app.config.baseDeltaEditor = new DeltaEditor()
+  let baseDeltasReadable = true
   if (_.isObject(app.config.settings)) {
     debug('Using settings from constructor call, not reading defaults')
     disableWriteSettings = true
@@ -263,7 +264,9 @@ export function load(app: ConfigApp) {
     }
   } else {
     readSettingsFile(app)
-    if (!setBaseDeltas(app)) {
+    const baseDeltas = setBaseDeltas(app)
+    baseDeltasReadable = baseDeltas !== 'unreadable'
+    if (baseDeltas === 'missing') {
       const defaults = getFullDefaults(app)
       if (defaults) {
         convertOldDefaultsToDeltas(app.config.baseDeltaEditor, defaults)
@@ -278,7 +281,19 @@ export function load(app: ConfigApp) {
       }
     }
   }
-  setSelfSettings(app)
+  const uuidGenerated = setSelfSettings(app)
+  if (
+    uuidGenerated &&
+    !disableWriteSettings &&
+    !app.config.hasOldDefaults &&
+    baseDeltasReadable
+  ) {
+    try {
+      writeBaseDeltasFileSync(app)
+    } catch (e) {
+      console.error('Failed to save the generated uuid:', e)
+    }
+  }
 
   // TRUST_PROXY env var overrides settings file — useful for container deployments
   if (process.env.TRUST_PROXY !== undefined) {
@@ -531,20 +546,21 @@ function getFullDefaults(app: ConfigApp) {
   return undefined
 }
 
-function setBaseDeltas(app: ConfigApp) {
+function setBaseDeltas(app: ConfigApp): 'loaded' | 'missing' | 'unreadable' {
   const defaultsPath = getBaseDeltasPath(app)
   try {
     app.config.baseDeltaEditor.load(defaultsPath)
     debug(`Found default deltas at ${defaultsPath.toString()}`)
+    return 'loaded'
   } catch (e) {
     if ((e as any)?.code === 'ENOENT') {
       debug(`No default deltas found at ${defaultsPath.toString()}`)
-      return
+      return 'missing'
     } else {
       console.log(e)
+      return 'unreadable'
     }
   }
-  return true
 }
 
 export function sendBaseDeltas(app: ConfigApp) {
@@ -568,7 +584,7 @@ export function writeBaseDeltasFile(app: ConfigApp) {
   return app.config.baseDeltaEditor.save(getBaseDeltasPath(app))
 }
 
-function setSelfSettings(app: ConfigApp) {
+function setSelfSettings(app: ConfigApp): boolean {
   const name = app.config.baseDeltaEditor.getSelfValue('name')
   const mmsi = app.config.baseDeltaEditor.getSelfValue('mmsi')
   let uuid = app.config.baseDeltaEditor.getSelfValue('uuid')
@@ -581,7 +597,8 @@ function setSelfSettings(app: ConfigApp) {
     throw new Error(`invalid uuid: ${uuid}`)
   }
 
-  if (mmsi === null && uuid === null) {
+  const uuidGenerated = !mmsi && !uuid
+  if (uuidGenerated) {
     uuid = 'urn:mrn:signalk:uuid:' + uuidv4()
     app.config.baseDeltaEditor.setSelfValue('uuid', uuid)
   }
@@ -600,6 +617,7 @@ function setSelfSettings(app: ConfigApp) {
     debug(app.selfType.toUpperCase() + ': ' + app.selfId)
   }
   app.selfContext = 'vessels.' + app.selfId
+  return uuidGenerated
 }
 
 function readSettingsFile(app: ConfigApp) {
