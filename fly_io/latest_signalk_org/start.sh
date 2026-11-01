@@ -27,7 +27,6 @@ set_radar_range() {
     mayara-server --emulator --emulator-land /home/node/.signalk/mayara/land.geojson \
       --no-mdns -n ws:127.0.0.1:3000 --parent "$SERVER_PID" &
     MAYARA_PID=$!
-    # a radar left at another range is restarted, which tries again
     if ! set_radar_range "$MAYARA_PID"; then
       kill "$MAYARA_PID" 2>/dev/null || :
     fi
