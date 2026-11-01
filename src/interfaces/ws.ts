@@ -343,6 +343,7 @@ function wsInterface(app: WsApp): WsApi {
   )
 
   let primuses: Primus[] = []
+  let stopping = false
   const pathSources: PathSources = {}
   const ipConnectionCounts = new Map<string, number>()
 
@@ -525,7 +526,8 @@ function wsInterface(app: WsApp): WsApi {
               : undefined,
             ipConnectionCounts,
             maxWsConnectionsPerIp,
-            app.get('trust proxy fn')
+            app.get('trust proxy fn'),
+            () => stopping
           )
         )
 
@@ -729,6 +731,7 @@ function wsInterface(app: WsApp): WsApi {
 
     stop: function () {
       debug('Destroying primuses...')
+      stopping = true
       primuses.forEach((primus) => {
         primus.forEach((primusSpark: unknown) => {
           const spark = primusSpark as Spark
@@ -942,13 +945,25 @@ function createPrimusAuthorize(
   authorizeWS: ((req: SignalKSparkRequest) => void) | undefined,
   ipConnectionCounts: Map<string, number>,
   maxConnectionsPerIp: number,
-  trustProxy: TrustProxyFn
+  trustProxy: TrustProxyFn,
+  isStopping: () => boolean
 ): (req: unknown, authorized: (err?: Error) => void) => void {
   return function (
     primusReq: unknown,
     authorized: (err?: Error) => void
   ): void {
     const req = primusReq as SignalKSparkRequest
+
+    // The HTTP server keeps listening until every interface has stopped. A
+    // client accepted meanwhile would be closed with a close frame, which
+    // clients that only reconnect after a dropped connection never recover
+    // from, so a stopping server turns new connections away instead.
+    if (isStopping()) {
+      authorized(
+        Object.assign(new Error('Server is stopping'), { statusCode: 503 })
+      )
+      return
+    }
 
     req._resolvedIp = resolveClientIp(req, trustProxy)
     const ip = req._resolvedIp
