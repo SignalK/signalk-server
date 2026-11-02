@@ -147,10 +147,6 @@ const getModuleSortName = (x: ModuleData) =>
 const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
-// A module can be installed both in the config directory (by the appstore)
-// and in the app directory (shipped with the server). Use the newest
-// version; when the versions are the same or can't be compared, the copy
-// in the config directory wins, as it comes first.
 function newerModule(a: ModuleData, b: ModuleData) {
   const versionA = (a.metadata as Package).version
   const versionB = (b.metadata as Package).version
