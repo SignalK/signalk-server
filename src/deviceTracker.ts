@@ -50,6 +50,7 @@ export class DeviceTracker extends EventEmitter {
   onConnect(clientId: string, ip?: string, userAgent?: string): void {
     const state = this.getOrCreate(clientId)
     const wasConnected = state.isConnected
+    const previousUserAgent = state.userAgent
     state.connectionCount++
     state.isConnected = true
     state.lastSeen = new Date().toISOString()
@@ -64,7 +65,7 @@ export class DeviceTracker extends EventEmitter {
       clientId,
       state.connectionCount
     )
-    if (!wasConnected) {
+    if (!wasConnected || state.userAgent !== previousUserAgent) {
       this.emitChange({
         clientId,
         connected: true,
@@ -101,10 +102,11 @@ export class DeviceTracker extends EventEmitter {
     if (ip) {
       state.lastIp = ip
     }
+    const userAgentChanged = !!userAgent && userAgent !== state.userAgent
     if (userAgent) {
       state.userAgent = userAgent
     }
-    if (!state.isConnected) {
+    if (!state.isConnected || userAgentChanged) {
       state.isConnected = true
       this.emitChange({
         clientId,

@@ -860,7 +860,9 @@ describe('Device identity', function () {
     )
     expect(approveResult.status).to.equal(200)
     const status = await (await fetch(`${url}${href}`)).json()
-    return status.accessRequest.token
+    const token = status.accessRequest.token
+    expect((jwt.decode(token) as { device?: string }).device).to.equal(clientId)
+    return token
   }
 
   before(async function () {
@@ -1174,6 +1176,16 @@ describe('DeviceTracker', function () {
 
     tracker.onActivity('device-ua', '10.0.0.1', 'espOS/0.23.0')
     expect(tracker.getState('device-ua')?.userAgent).to.equal('espOS/0.23.0')
+    expect(events, 'a changed User-Agent is reported').to.have.lengthOf(2)
+    expect(events[1].data.userAgent).to.equal('espOS/0.23.0')
+
+    tracker.onActivity('device-ua', '10.0.0.1', 'espOS/0.23.0')
+    tracker.onConnect('device-ua', '10.0.0.1', 'espOS/0.23.0')
+    expect(events, 'an unchanged User-Agent is not').to.have.lengthOf(2)
+
+    tracker.onConnect('device-ua', '10.0.0.1', 'SensESP/3.7.0')
+    expect(events).to.have.lengthOf(3)
+    expect(events[2].data.userAgent).to.equal('SensESP/3.7.0')
 
     expect(userAgentOf({ 'user-agent': 'a'.repeat(300) })).to.have.lengthOf(256)
     expect(userAgentOf({})).to.be.undefined
