@@ -129,4 +129,39 @@ describe('WebSocketClients', () => {
     rerender(<WebSocketClients clientCount={1} />)
     expect(container.textContent).toBe('')
   })
+
+  it('hides the list when the same user loses admin access', async () => {
+    mockFetch(listResponse([spark]))
+    const { container, rerender } = render(<WebSocketClients clientCount={1} />)
+    await screen.findByText('ESP32 Websocket Client')
+
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
+    login.current = { ...login.current, userLevel: 'readonly' }
+    rerender(<WebSocketClients clientCount={1} />)
+    expect(container.textContent).toBe('')
+  })
+
+  it('ignores the previous login answering after the next one', async () => {
+    const answers: ((response: Partial<Response>) => void)[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Partial<Response>>((resolve) => {
+            answers.push(resolve)
+          })
+      )
+    )
+    const { rerender } = render(<WebSocketClients clientCount={1} />)
+    login.current = { status: 'loggedIn', username: 'bob', userLevel: 'admin' }
+    rerender(<WebSocketClients clientCount={1} />)
+    expect(answers).toHaveLength(2)
+
+    await act(async () => answers[1](listResponse([spark])))
+    await act(async () =>
+      answers[0](listResponse([{ ...spark, userAgent: 'Previous login' }]))
+    )
+    expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
+    expect(screen.queryByText('Previous login')).toBeNull()
+  })
 })
