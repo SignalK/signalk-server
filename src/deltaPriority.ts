@@ -641,17 +641,20 @@ export const getToPreferredDelta = (
                 // A timeout is the enforcer's verdict on a silent source,
                 // not a new reading. Ranked like one, a timed-out rank-1
                 // source would win the path back from a backup that has
-                // already taken over. It reaches consumers only while that
-                // source still holds the path, or while no source does and
-                // it is not disabled, and leaves its last-update time alone
+                // already taken over. It reaches consumers only from a
+                // source that is not disabled, and only while that source
+                // still holds the path or no source does. A device can win
+                // under its numeric ref before its canName turns out to be
+                // disabled. The timeout leaves its last-update time alone
                 // so a backup can take over without waiting.
                 if (pathValue.state?.timedOut) {
                   const disabled =
                     getPrecedence(pathPrecedences, canonicalSource, false)
                       .timeout < 0
                   if (
-                    (latest.sourceRef === '' && !disabled) ||
-                    canonicalise(latest.sourceRef) === canonicalSource
+                    !disabled &&
+                    (latest.sourceRef === '' ||
+                      canonicalise(latest.sourceRef) === canonicalSource)
                   ) {
                     acc.push(pathValue)
                   }
