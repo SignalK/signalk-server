@@ -31,12 +31,12 @@
   },
   "scripts": {
     "build": "tsc",
-    "watch": "npm run build -- -w",
+    "watch": "tsc -w",
     "prettier": "prettier -w src/",
     "lint": "eslint --fix",
-    "format": "npm run prettier && npm run lint",
-    "prepublishOnly": "npm run build",
-    "test": "npm run build"
+    "format": "pnpm prettier && pnpm lint",
+    "prepublishOnly": "pnpm build",
+    "test": "pnpm build"
   },
   "dependencies": {
     "@signalk/server-api": "^2.5.0",

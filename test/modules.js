@@ -7,7 +7,7 @@ const {
   checkForNewServerVersion,
   getLatestServerVersion,
   importOrRequire,
-  runNpm,
+  runPackageManager,
   getPluginDataSize,
   getAuthor
 } = require('../dist/modules')
@@ -225,11 +225,36 @@ describe('importOrRequire', () => {
   })
 })
 
-describe('runNpm version validation', () => {
-  const config = {
-    configPath: '/tmp',
-    name: 'signalk-server'
-  }
+describe('runPackageManager version validation', () => {
+  const config = { configPath: '', name: 'signalk-server' }
+  const childProcess = require('child_process')
+  let originalSpawn
+  let originalExecFile
+
+  before(() => {
+    config.configPath = fs.mkdtempSync(
+      path.join(require('os').tmpdir(), '_skservertest_version')
+    )
+    // pnpm runs queued after the call returns, so the mocks stay in place
+    // for the whole suite rather than around each call
+    originalSpawn = childProcess.spawn
+    originalExecFile = childProcess.execFile
+    childProcess.spawn = () => ({
+      stdout: { on: () => {} },
+      stderr: { on: () => {} },
+      on: (event, cb) => {
+        if (event === 'close') cb(0)
+      }
+    })
+    childProcess.execFile = (_command, _args, _opts, callback) =>
+      callback(null, '/store/v11\n')
+  })
+
+  after(() => {
+    childProcess.spawn = originalSpawn
+    childProcess.execFile = originalExecFile
+    fs.rmSync(config.configPath, { recursive: true, force: true })
+  })
 
   const testVersion = (version, shouldPass) => {
     return new Promise((resolve, reject) => {
@@ -254,29 +279,15 @@ describe('runNpm version validation', () => {
         }
       }
 
-      // We mock spawn to do nothing if validation passes
-      const originalSpawn = require('child_process').spawn
-      require('child_process').spawn = () => ({
-        stdout: { on: () => {} },
-        stderr: { on: () => {} },
-        on: (event, cb) => {
-          if (event === 'close') cb(0)
-        }
-      })
-
-      try {
-        runNpm(
-          config,
-          'some-package',
-          version,
-          'install',
-          () => {},
-          onErr,
-          onClose
-        )
-      } finally {
-        require('child_process').spawn = originalSpawn
-      }
+      runPackageManager(
+        config,
+        'some-package',
+        version,
+        'install',
+        () => {},
+        onErr,
+        onClose
+      )
     })
   }
 

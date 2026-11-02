@@ -29,8 +29,8 @@
   "scripts": {
     "asbuild:debug": "asc assembly/index.ts --target debug --disableWarning 235",
     "asbuild:release": "asc assembly/index.ts --target release --disableWarning 235",
-    "build": "npm run asbuild:release",
-    "test": "npm run asbuild:debug"
+    "build": "pnpm asbuild:release",
+    "test": "pnpm asbuild:debug"
   },
   "devDependencies": {
     "assemblyscript": "^0.27.37"

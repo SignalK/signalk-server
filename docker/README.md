@@ -82,12 +82,12 @@ Signal K Server docker images are based on Ubuntu LTS and include Node.js and th
 
 ## Directory structure
 
-- server files: `/home/node/signalk/` (local npm install)
+- server files: `/home/node/signalk/` (local pnpm install)
 - settings files and plugins: `/home/node/.signalk/`
 
 You most probably want to mount `/home/node/.signalk` from the host or as a volume to persist your settings.
 
-**Note:** Signal K Server is installed locally (not globally with `npm -g`) in `/home/node/signalk/node_modules/`. This avoids permission issues when installing plugins and provides better isolation.
+**Note:** Signal K Server is installed locally with pnpm (not globally) in `/home/node/signalk/node_modules/`. This avoids permission issues when installing plugins and provides better isolation.
 
 ## Container Runtime Detection
 
@@ -97,7 +97,7 @@ Supported runtimes: `docker`, `podman`, `kubernetes`, `containerd`, `crio`, `lxc
 
 ## Release images
 
-Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs.
+Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs. `Dockerfile_rel` also builds server versions published before the server moved to pnpm: those versions look for the admin UI and bundled plugins under their own `node_modules`, which the image provides through a compatibility symlink.
 
 ## Core image variant
 
@@ -121,7 +121,7 @@ The core image omits these packages — all declared in `package.json` `optional
 
 What the core image ships: the Signal K server, the admin UI (`@signalk/server-admin-ui`) and its app store, serial-port support (`serialport`), local Bluetooth support (`@naugehyde/node-ble`, `@jellybrick/dbus-next`), `@signalk/server-api`, `@signalk/streams`, `@signalk/signalk-schema`, `@signalk/course-provider`, `@signalk/resources-provider`, and the NMEA0183 / NMEA2000 parser libraries (`@signalk/nmea0183-signalk`, `@signalk/n2k-signalk`).
 
-The admin UI, `serialport`, and the Bluetooth packages are themselves declared `optionalDependencies`, so `--omit=optional` strips them too — but the core image **reinstates** them, because they cannot be added back at the config-directory layer: the server serves the admin UI from a fixed path inside its own install and it `require`s `serialport`, `node-ble`, and `dbus-next` directly. (`serialport` stays optional rather than a hard dependency so direct npm installs degrade gracefully on unsupported platforms.)
+The admin UI, `serialport`, and the Bluetooth packages are themselves declared `optionalDependencies`, so leaving out optional dependencies strips them too — but the core image **reinstates** them, because they cannot be added back at the config-directory layer: the server serves the admin UI from its own install and it `require`s `serialport`, `node-ble`, and `dbus-next` directly. (`serialport` stays optional rather than a hard dependency so direct npm installs degrade gracefully on unsupported platforms.)
 
 ### App store and plugin installation
 
@@ -131,7 +131,7 @@ Because the admin UI ships in core, its **app store is available** — the omitt
 
 ```Dockerfile
 FROM cr.signalk.io/signalk/signalk-server:core
-RUN npm install --prefix /home/node/.signalk @signalk/some-plugin
+RUN signalk-pnpm add @signalk/some-plugin
 ```
 
 Build with `docker build -t my-signalk-core .` and run as you would the base core image.
@@ -141,11 +141,11 @@ Build with `docker build -t my-signalk-core .` and run as you would the base cor
 Mount `/home/node/.signalk` as a persistent volume, then `exec` into the running container to install:
 
 ```sh
-docker exec my-container npm install --prefix /home/node/.signalk @signalk/some-plugin
+docker exec my-container signalk-pnpm add @signalk/some-plugin
 docker restart my-container
 ```
 
-Both patterns install into the persisted config directory (`/home/node/.signalk`), which the server scans for modules carrying the `signalk-node-server-plugin` or `signalk-webapp` keyword.
+Both patterns install into the persisted config directory (`/home/node/.signalk`), which the server scans for modules carrying the `signalk-node-server-plugin` or `signalk-webapp` keyword. `signalk-pnpm` comes with the server and installs the way the App Store does, with the same pnpm and settings, keeping the pnpm store in `/home/node/.signalk/.pnpm-store`. Updates and removals prune what they leave unused from the store, and the server leaves the store out of its settings backups; leave it out of your own backups of the volume as well, since pnpm refills it from the registry. `docker exec my-container signalk-pnpm --help` describes the command.
 
 ### Behavioral change for non-Docker consumers
 
@@ -166,10 +166,9 @@ docker run --init --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.signa
 To build a docker image locally from source, first build and pack the server:
 
 ```sh
-npm install
-npm run build:all
-npm pack --workspaces
-npm pack
+pnpm install
+pnpm build:all
+pnpm -r pack --pack-destination .
 ```
 
 Then build the docker image:

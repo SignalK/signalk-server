@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+
+// The exit code is set rather than exiting, so that pruning the pnpm store
+// after a successful command still completes
+require('../dist/pnpm-command')
+  .main(process.argv.slice(2))
+  .then((code) => {
+    process.exitCode = code < 0 ? 1 : code
+  })

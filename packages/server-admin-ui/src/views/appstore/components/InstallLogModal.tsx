@@ -34,8 +34,9 @@ export function downloadAsFile(filename: string, text: string) {
   URL.revokeObjectURL(url)
 }
 
-export function logFilename(appName: string): string {
-  return `npm-${appName.replace(/[@/]/g, '_')}.log`
+export function logFilename(appName: string, isRemove = false): string {
+  const operation = isRemove ? 'remove' : 'install'
+  return `${operation}-${appName.replace(/[@/]/g, '_')}.log`
 }
 
 export default function InstallLogModal({
@@ -84,6 +85,7 @@ export default function InstallLogModal({
   }, [show, appName])
 
   const log = state.status === 'loaded' ? state.data.log : ''
+  const isRemove = state.status === 'loaded' && state.data.isRemove === true
 
   const handleCopy = () => {
     copyToClipboard(log)
@@ -112,7 +114,8 @@ export default function InstallLogModal({
           <>
             {typeof state.data.code === 'number' && state.data.code !== 0 && (
               <p className="text-danger">
-                npm exited with code {state.data.code}
+                {state.data.isRemove ? 'Remove' : 'Install'} exited with code{' '}
+                {state.data.code}
               </p>
             )}
             <pre
@@ -143,7 +146,7 @@ export default function InstallLogModal({
         <Button
           variant="outline-primary"
           disabled={state.status !== 'loaded' || log.length === 0}
-          onClick={() => downloadAsFile(logFilename(appName), log)}
+          onClick={() => downloadAsFile(logFilename(appName, isRemove), log)}
         >
           Download
         </Button>

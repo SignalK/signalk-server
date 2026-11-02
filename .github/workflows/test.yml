@@ -19,21 +19,23 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
+          cache: pnpm
       - uses: SocketDev/action@v1
         with:
           mode: firewall-free
-      - run: sfw npm install
-      - run: npm run build:all
+      - run: sfw pnpm install --frozen-lockfile
+      - run: pnpm build:all
 
       - name: resources-provider-plugin
         working-directory: ./packages/resources-provider-plugin
         run: |
-          npm run test
+          pnpm test
 
-      - run: npm test
+      - run: pnpm test
         env:
           CI: true

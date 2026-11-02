@@ -175,8 +175,7 @@ tinygo build -o plugin.wasm -target=wasip1 main.go
 **Option 1: Symlink (Recommended for Development)**
 
 ```bash
-cd ~/.signalk/node_modules
-ln -s /path/to/your/my-go-wasm-plugin my-go-wasm-plugin
+signalk-pnpm link /path/to/your/my-go-wasm-plugin
 ```
 
 **Option 2: Direct Copy**

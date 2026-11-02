@@ -102,6 +102,7 @@ import {
   resolvePathDisplayUnits,
   validateCategoryAssignment
 } from '../unitpreferences'
+import { findBundledPackages } from '../bundled-packages'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -200,6 +201,11 @@ module.exports = (theApp: any) => {
     }
   }
   const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
+  // The server's own dependencies can also sit beside it: hoisted by npm, or
+  // as its siblings in a pnpm store.
+  const bundledLocations = new Set(
+    findBundledPackages(theApp.config.appPath).map(({ location }) => location)
+  )
 
   // Partitioned by plugin id so the dispatcher can tell a plugin that does
   // not use registerWebSocket at all (leave the upgrade event to other
@@ -405,7 +411,10 @@ module.exports = (theApp: any) => {
   }
 
   function isBundledPlugin(plugin: PluginInfo) {
-    return plugin.packageLocation === appNodeModules
+    return (
+      plugin.packageLocation === appNodeModules ||
+      bundledLocations.has(plugin.packageLocation)
+    )
   }
 
   function getPluginResponseInfo(plugin: PluginInfo, providerStatus: any) {

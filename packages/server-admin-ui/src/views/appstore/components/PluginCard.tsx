@@ -54,7 +54,7 @@ const StatePill: React.FC<StatePillProps> = ({ app, onFailedClick }) => {
             e.stopPropagation()
             onFailedClick()
           }}
-          title="Show the npm log for this failure"
+          title="Show the install log for this failure"
         >
           Install failed
         </button>

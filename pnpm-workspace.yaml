@@ -1,0 +1,39 @@
+packages:
+  - packages/server-admin-ui-dependencies
+  - packages/path-metadata
+  - packages/server-admin-ui
+  - packages/streams
+  - packages/server-api
+  - packages/resources-provider-plugin
+  - packages/typedoc-theme
+  - packages/assemblyscript-plugin-sdk
+
+# Workspace packages refer to each other with plain semver ranges so that
+# the published manifests stay valid for npm users as well.
+linkWorkspacePackages: true
+
+# Bundled plugins depend on these from the registry; development uses the
+# in-tree copies instead so that only one copy of each is installed.
+overrides:
+  '@signalk/server-api': link:packages/server-api
+  '@signalk/path-metadata': link:packages/path-metadata
+
+allowBuilds:
+  # Builds the native SocketCAN addon; no prebuilt binaries are shipped
+  '@canboat/canboatjs': true
+  '@serialport/bindings-cpp': true
+  # Only builds from source when explicitly requested
+  '@parcel/watcher': false
+  # Install-time telemetry and banners
+  '@scarf/scarf': false
+  core-js: false
+  es5-ext: false
+  # Selects a React Native storage backend
+  storage-engine: false
+
+# Versions install as soon as they are published, as in the App Store. What
+# CI, release and image builds install is the committed lockfile, which pull
+# requests review; pnpm's one-day release age gate, which it also applies to a
+# frozen lockfile, would only hold back a release or a dependency update that
+# picks up a version published the same day.
+minimumReleaseAge: 0

@@ -15,11 +15,14 @@ git clone https://github.com/SignalK/signalk-server.git
 # change to the folder containing the downloaded files
 cd signalk-server
 
+# install pnpm, the package manager used by the repository
+npm install -g pnpm@11
+
 # install the dependencies
-npm install
+pnpm install
 
 # build all packages in the repository
-npm run build:all
+pnpm build:all
 ```
 
 To start Signal K Server with a sample configuration file and some sample data, enter the following into a terminal:

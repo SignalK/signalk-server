@@ -56,7 +56,7 @@ describe('InstallLogModal', () => {
     await waitFor(() => {
       expect(screen.getByText('npm ERR! gyp failed')).toBeDefined()
     })
-    expect(screen.getByText('npm exited with code 1')).toBeDefined()
+    expect(screen.getByText('Install exited with code 1')).toBeDefined()
     expect(fetch).toHaveBeenCalledWith(
       '/signalk/v1/appstore/installLog/signalk-example',
       expect.objectContaining({ credentials: 'include' })
@@ -68,6 +68,14 @@ describe('InstallLogModal', () => {
     renderModal()
     await waitFor(() => {
       expect(screen.getByText(/Remove log/)).toBeDefined()
+    })
+  })
+
+  it('names a failed removal in the exit message', async () => {
+    mockFetch({ name: 'signalk-example', isRemove: true, code: 1, log: 'x' })
+    renderModal()
+    await waitFor(() => {
+      expect(screen.getByText('Remove exited with code 1')).toBeDefined()
     })
   })
 
@@ -153,6 +161,31 @@ describe('InstallLogModal', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
   })
 
+  it('names a downloaded removal log as such', async () => {
+    mockFetch({
+      name: 'signalk-example',
+      isRemove: true,
+      code: 1,
+      log: 'output'
+    })
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn().mockReturnValue('blob:mock-url'),
+      revokeObjectURL: vi.fn()
+    })
+    let filename = ''
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement
+    ) {
+      filename = this.download
+    })
+    renderModal()
+    await waitFor(() => {
+      expect(screen.getByText('output')).toBeDefined()
+    })
+    await userEvent.click(screen.getByRole('button', { name: 'Download' }))
+    expect(filename).toBe('remove-signalk-example.log')
+  })
+
   it('disables copy and download while loading and on empty logs', async () => {
     mockFetch({ name: 'signalk-example', code: 1, log: '' })
     renderModal()
@@ -173,8 +206,8 @@ describe('InstallLogModal', () => {
 describe('logFilename', () => {
   it('flattens scoped package names', () => {
     expect(logFilename('@signalk/charts-plugin')).toBe(
-      'npm-_signalk_charts-plugin.log'
+      'install-_signalk_charts-plugin.log'
     )
-    expect(logFilename('signalk-example')).toBe('npm-signalk-example.log')
+    expect(logFilename('signalk-example')).toBe('install-signalk-example.log')
   })
 })
