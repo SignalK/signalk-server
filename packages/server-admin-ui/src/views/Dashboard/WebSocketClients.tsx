@@ -23,7 +23,7 @@ export default function WebSocketClients({
   const loginStatus = useLoginStatus()
   // The list belongs to the login that fetched it, so another login never
   // sees it, even while its own first request is still pending.
-  const identity = `${loginStatus.status}:${loginStatus.username ?? ''}`
+  const identity = `${loginStatus.status}:${loginStatus.username ?? ''}:${String(loginStatus.userLevel ?? '')}`
   const [loaded, setLoaded] = useState<{
     identity: string
     clients: WebSocketClient[] | null
