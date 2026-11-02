@@ -123,6 +123,14 @@ describe('modulesWithKeyword', () => {
       .expect(moduleInfo.location)
       .to.eql(path.join(testTempDir, 'node_modules/'))
   })
+
+  it('prefers the config dir when its version is not valid semver', () => {
+    const module = '@signalk/instrumentpanel'
+    const moduleInfo = pickWithConfigDirVersion(module, 'not-semver')
+    chai
+      .expect(moduleInfo.location)
+      .to.eql(path.join(testTempDir, 'node_modules/'))
+  })
 })
 
 describe('checkForNewServerVersion', () => {
