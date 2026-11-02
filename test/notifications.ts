@@ -475,13 +475,13 @@ describe('NotificationApi', () => {
       api.raise({
         state: ALARM_STATE.alarm,
         message: 'Highwater',
-        location: 'ER Port',
+        location: 'Engine Room',
         path: 'environment.bilge' as Path
       })
       const update = handleMessageCalls[0].updates![0]
       if ('values' in update) {
         expect((update.values[0].value as Notification).location).to.equal(
-          'ER Port'
+          'Engine Room'
         )
       } else {
         throw new Error('Expected update to have values property')
@@ -778,7 +778,7 @@ describe('NotificationApi', () => {
         let response = await post(`/notifications`, {
           state: 'alarm',
           message: 'Highwater',
-          location: 'ER Port',
+          location: 'Engine Room',
           path: 'environment.bilge'
         })
         response.status.should.equal(200)
@@ -790,11 +790,11 @@ describe('NotificationApi', () => {
             ).json()) as AlarmProperties
           ).value.location
 
-        expect(await location()).to.equal('ER Port')
+        expect(await location()).to.equal('Engine Room')
 
         response = await put(`/notifications/${id}`, { message: 'Still high' })
         response.status.should.equal(200)
-        expect(await location()).to.equal('ER Port')
+        expect(await location()).to.equal('Engine Room')
 
         response = await put(`/notifications/${id}`, { location: 'Galley' })
         response.status.should.equal(200)
@@ -867,7 +867,9 @@ describe('NotificationApi', () => {
         s.acknowledged.should.equal(false)
         s.canSilence.should.equal(false)
 
-        response = await put(`/notifications/${id}`, { location: 'ER Port' })
+        response = await put(`/notifications/${id}`, {
+          location: 'Engine Room'
+        })
         response.status.should.equal(200)
         s = await status()
         s.canSilence.should.equal(false)

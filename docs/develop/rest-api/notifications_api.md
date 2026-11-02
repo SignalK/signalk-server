@@ -515,7 +515,7 @@ _Example: Signal K notification from NMEA2000 Alarm PGN_
          "sound"
       ],
       "message": "Highwater",
-      "location": "ER Port",
+      "location": "Engine Room",
       "alertType": "Alarm",
       "alertCategory": "Navigational",
       "alertSystem": 20,
