@@ -379,18 +379,22 @@
                     "properties": {
                       "hardware": {
                         "type": "string",
+                        "maxLength": 128,
                         "example": "ESP32-C6"
                       },
                       "hardwareVersion": {
                         "type": "string",
+                        "maxLength": 128,
                         "example": "v0.2"
                       },
                       "software": {
                         "type": "string",
+                        "maxLength": 128,
                         "example": "SensESP"
                       },
                       "softwareVersion": {
                         "type": "string",
+                        "maxLength": 128,
                         "example": "3.6.1"
                       }
                     }
