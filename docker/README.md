@@ -97,15 +97,9 @@ Supported runtimes: `docker`, `podman`, `kubernetes`, `containerd`, `crio`, `lxc
 
 ## GPIO
 
-The images include libgpiod's command line tools (`gpioset`, `gpioget`, `gpioinfo`, `gpiodetect`, `gpiomon`), so a plugin can switch a relay or a buzzer on a Raspberry Pi GPIO pin without a native module. They work through the kernel's GPIO character devices (`/dev/gpiochip*`), which is the only GPIO interface that works on a Raspberry Pi 5: the sysfs GPIO interface and `/dev/gpiomem`-based libraries do not support its RP1 chip. The Ubuntu 24.04 images ship libgpiod 1.6 and the 26.04 images libgpiod 2.2, whose `gpioset` takes different arguments.
+The images include libgpiod's command line tools (`gpioset`, `gpioget`, `gpioinfo`, `gpiodetect`, `gpiomon`), so a plugin can switch a relay or a buzzer on a Raspberry Pi GPIO pin without a native module. They work through the kernel's GPIO character devices (`/dev/gpiochip*`), which is the only GPIO interface that works on a Raspberry Pi 5: the sysfs GPIO interface and `/dev/gpiomem`-based libraries do not support its RP1 chip. The base images do not all carry the same libgpiod major version, and `gpioset` takes different arguments across major versions, so a plugin should check `gpioset --version` before calling it.
 
-Pass the chip into the container, and the host's `gpio` group, which owns the device on Raspberry Pi OS:
-
-```
-docker run --device /dev/gpiochip0 --group-add "$(getent group gpio | cut -d: -f3)" ...
-```
-
-`gpioinfo` on the host lists the chips and their lines.
+The container needs the GPIO chip passed in as a device, and membership of the host group that owns it (`gpio` on Raspberry Pi OS). `gpioinfo` on the host lists the chips and their lines.
 
 ## Release images
 
