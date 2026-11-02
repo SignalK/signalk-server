@@ -286,12 +286,52 @@ interface WsApi {
 
 const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
 
+// RFC 6455 Going Away; older clients reject the newer 1012 Service Restart
+const WS_CLOSE_GOING_AWAY = 1001
+
+// The User-Agent ESP-IDF's WebSocket client sends unless the application sets
+// its own. See https://github.com/SignalK/SensESP/pull/1096 for background.
+// TODO: remove once SensESP releases up to 3.6.0 are out of use
+const ESP_IDF_WS_USER_AGENT = 'ESP32 Websocket Client'
+
+function isEspIdfWsClient(spark: Spark): boolean {
+  return spark.request.headers['user-agent'] === ESP_IDF_WS_USER_AGENT
+}
+
+type CloseFrameMode = 'all' | 'none' | 'notESP32'
+
+const CLOSE_FRAME_MODES: Record<string, CloseFrameMode> = {
+  all: 'all',
+  none: 'none',
+  notesp32: 'notESP32'
+}
+
+function getCloseFrameMode(): CloseFrameMode {
+  const value = process.env.SEND_WS_CLOSE_FRAME
+  if (value === undefined || value === '') {
+    return 'none'
+  }
+  const mode = CLOSE_FRAME_MODES[value.toLowerCase()]
+  if (mode) {
+    return mode
+  }
+  console.warn(
+    `Ignoring SEND_WS_CLOSE_FRAME=${value}: recognised values are 'all', 'none' and 'notESP32'`
+  )
+  return 'none'
+}
+
 function wsInterface(app: WsApp): WsApi {
   const maxWsConnectionsPerIp = parseInt(
     process.env.MAX_WS_CONNECTIONS_PER_IP ??
       String(DEFAULT_MAX_WS_CONNECTIONS_PER_IP),
     10
   )
+
+  const closeFrameMode = getCloseFrameMode()
+  const sendsCloseFrame = (spark: Spark): boolean =>
+    closeFrameMode === 'all' ||
+    (closeFrameMode === 'notESP32' && !isEspIdfWsClient(spark))
 
   const backpressureThresholds = parseBackpressureThresholds({
     maxSendBufferSize: app.config.maxSendBufferSize,
@@ -306,6 +346,7 @@ function wsInterface(app: WsApp): WsApi {
   )
 
   let primuses: Primus[] = []
+  let stopping = false
   const pathSources: PathSources = {}
   const ipConnectionCounts = new Map<string, number>()
 
@@ -488,7 +529,8 @@ function wsInterface(app: WsApp): WsApi {
               : undefined,
             ipConnectionCounts,
             maxWsConnectionsPerIp,
-            app.get('trust proxy fn')
+            app.get('trust proxy fn'),
+            () => stopping
           )
         )
 
@@ -692,11 +734,20 @@ function wsInterface(app: WsApp): WsApi {
 
     stop: function () {
       debug('Destroying primuses...')
-      primuses.forEach((primus) =>
+      stopping = true
+      primuses.forEach((primus) => {
+        primus.forEach((primusSpark: unknown) => {
+          const spark = primusSpark as Spark
+          if (sendsCloseFrame(spark)) {
+            spark.socket?.close(WS_CLOSE_GOING_AWAY)
+          } else {
+            spark.socket?.terminate()
+          }
+        })
         primus.destroy({ close: false, timeout: 500, reconnect: false }, () => {
           /* noop */
         })
-      )
+      })
     }
   }
 
@@ -899,13 +950,25 @@ function createPrimusAuthorize(
   authorizeWS: ((req: SignalKSparkRequest) => void) | undefined,
   ipConnectionCounts: Map<string, number>,
   maxConnectionsPerIp: number,
-  trustProxy: TrustProxyFn
+  trustProxy: TrustProxyFn,
+  isStopping: () => boolean
 ): (req: unknown, authorized: (err?: Error) => void) => void {
   return function (
     primusReq: unknown,
     authorized: (err?: Error) => void
   ): void {
     const req = primusReq as SignalKSparkRequest
+
+    // The HTTP server keeps listening until every interface has stopped. A
+    // client accepted meanwhile would be closed with a close frame, which
+    // clients that only reconnect after a dropped connection never recover
+    // from, so a stopping server turns new connections away instead.
+    if (isStopping()) {
+      authorized(
+        Object.assign(new Error('Server is stopping'), { statusCode: 503 })
+      )
+      return
+    }
 
     req._resolvedIp = resolveClientIp(req, trustProxy)
     const ip = req._resolvedIp
