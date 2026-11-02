@@ -947,6 +947,35 @@ describe('staleness timeouts', () => {
     r = toPreferred(makeTimeoutDelta('can0.4'), new Date(t + 6000), 'self')
     assert(accepted(r), "can0.4's timeout reaches consumers")
   })
+
+  it('a winner whose canName turns out disabled never forwards a timeout', () => {
+    const CAN = 'c0788c00e7e04312'
+    let claimSeen = false
+    const canonical = (ref: string) =>
+      claimSeen && ref === 'can0.4' ? `can0.${CAN}` : ref
+    const overrides: SourcePrioritiesData = {
+      [PATH]: [
+        { sourceRef: 'b' as SourceRef, timeout: 0 },
+        { sourceRef: `can0.${CAN}` as SourceRef, timeout: -1 }
+      ]
+    }
+    const toPreferred = getToPreferredDelta({
+      overrides,
+      unknownSourceTimeout: 1000,
+      canonicalise: canonical
+    })
+    const t = 1000000
+
+    let r = toPreferred(makeDelta('b', PATH, 1), new Date(t), 'self')
+    assert(accepted(r), 'b claims the path')
+
+    r = toPreferred(makeDelta('can0.4', PATH, 2), new Date(t + 5000), 'self')
+    assert(accepted(r), 'can0.4 takes over before its canName is known')
+
+    claimSeen = true
+    r = toPreferred(makeTimeoutDelta('can0.4'), new Date(t + 6000), 'self')
+    assert(!accepted(r), "the disabled device's timeout is dropped")
+  })
 })
 
 describe('isOverrideDormantUnderGroups', () => {
