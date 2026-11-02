@@ -418,6 +418,11 @@ export default function Devices() {
   const displays = devices.filter((d) => getDeviceCategory(d) === 'display')
   const sensors = devices.filter((d) => getDeviceCategory(d) === 'sensor')
   const servers = devices.filter((d) => getDeviceCategory(d) === 'server')
+  // selectedDevice is a copy held for form edits; connection status comes
+  // from the refreshed list so the card follows connects and disconnects
+  const liveSelectedDevice =
+    devices.find((d) => d.clientId === selectedDevice?.clientId) ??
+    selectedDevice
 
   return (
     <div className="animated fadeIn">
@@ -636,16 +641,19 @@ export default function Devices() {
                     </Col>
                     <Col xs="12" md="9">
                       <span className="form-control-plaintext">
-                        <ConnectionDot connected={selectedDevice.isConnected} />
-                        {selectedDevice.isConnected ? 'Online' : 'Offline'}
-                        {selectedDevice.lastIp && (
+                        <ConnectionDot
+                          connected={liveSelectedDevice?.isConnected}
+                        />
+                        {liveSelectedDevice?.isConnected ? 'Online' : 'Offline'}
+                        {liveSelectedDevice?.lastIp && (
                           <small className="ms-2 text-muted">
-                            ({selectedDevice.lastIp})
+                            ({liveSelectedDevice.lastIp})
                           </small>
                         )}
-                        {selectedDevice.lastSeen && (
+                        {liveSelectedDevice?.lastSeen && (
                           <small className="ms-2 text-muted">
-                            Last seen: {formatLastSeen(selectedDevice.lastSeen)}
+                            Last seen:{' '}
+                            {formatLastSeen(liveSelectedDevice.lastSeen)}
                           </small>
                         )}
                       </span>
