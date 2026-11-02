@@ -130,6 +130,12 @@ const tracksApiDoc = {
             description:
               "Whether this is the own vessel's track. Absent along with context."
           },
+          imported: {
+            type: 'string',
+            format: 'date-time',
+            description:
+              'When a client added this track with POST /tracks; absent on a track the provider recorded itself. Set by the provider: a posted value is ignored.'
+          },
           name: {
             type: 'string',
             description:

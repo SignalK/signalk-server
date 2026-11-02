@@ -72,7 +72,7 @@ describe('appstore/detail', () => {
     it('ignores tag-only release entries and falls back to CHANGELOG.md', async () => {
       changelogBody = '# Changelog\n## 1.4.0\n- curated entry'
       releasesAtom = TAG_ONLY_ATOM
-      const detail = await buildPluginDetail(withGithub)
+      const { detail } = await buildPluginDetail(withGithub)
       expect(detail.changelog).to.contain('curated entry')
       expect(detail.changelog).to.not.contain('Release 1.4.0')
       expect(detail.changelogFormat).to.equal('markdown')
@@ -80,14 +80,14 @@ describe('appstore/detail', () => {
 
     it('renders nothing when the feed is only tags and no CHANGELOG.md exists', async () => {
       releasesAtom = TAG_ONLY_ATOM
-      const detail = await buildPluginDetail(withGithub)
+      const { detail } = await buildPluginDetail(withGithub)
       expect(detail.changelog).to.equal('')
       expect(detail.changelogFormat).to.equal('synthesized')
     })
 
     it('uses GitHub Releases when the feed has real release notes', async () => {
       releasesAtom = REAL_RELEASE_ATOM
-      const detail = await buildPluginDetail(withGithub)
+      const { detail } = await buildPluginDetail(withGithub)
       expect(detail.changelog).to.contain('Notes from GitHub Releases')
       expect(detail.changelogFormat).to.equal('markdown')
     })
@@ -95,14 +95,14 @@ describe('appstore/detail', () => {
     it('keeps GitHub Releases ahead of CHANGELOG.md when both are real', async () => {
       changelogBody = '# Changelog\n## 2.0.0\n- curated entry'
       releasesAtom = REAL_RELEASE_ATOM
-      const detail = await buildPluginDetail(withGithub)
+      const { detail } = await buildPluginDetail(withGithub)
       expect(detail.changelog).to.contain('Notes from GitHub Releases')
       expect(detail.changelog).to.not.contain('curated entry')
     })
   })
 
   it('hydrates required deps against resolver', async () => {
-    const detail = await buildPluginDetail(
+    const { detail } = await buildPluginDetail(
       { ...summaryBase, requires: ['signalk-charts-plugin', 'missing-pkg'] },
       (name) => {
         if (name === 'signalk-charts-plugin') {
@@ -131,7 +131,7 @@ describe('appstore/detail', () => {
   })
 
   it('hydrates recommends similarly', async () => {
-    const detail = await buildPluginDetail(
+    const { detail } = await buildPluginDetail(
       { ...summaryBase, recommends: ['r1'] },
       (name) =>
         name === 'r1' ? { displayName: 'R', installed: false } : undefined
@@ -141,14 +141,77 @@ describe('appstore/detail', () => {
   })
 
   it('returns empty arrays when no deps present', async () => {
-    const detail = await buildPluginDetail(summaryBase)
+    const { detail } = await buildPluginDetail(summaryBase)
     expect(detail.requires).to.deep.equal([])
     expect(detail.recommends).to.deep.equal([])
   })
 
   it('marks readme from summary as already-fetched', async () => {
-    const detail = await buildPluginDetail(summaryBase)
+    const { detail } = await buildPluginDetail(summaryBase)
     expect(detail.readme).to.equal('# hi')
     expect(detail.readmeFormat).to.equal('markdown')
+  })
+
+  describe('cacheable', () => {
+    const realFetch = globalThis.fetch
+    // Response for the CDN README.md; CHANGELOG.md answers the same unless
+    // a test overrides it.
+    let readme: () => Promise<Response>
+    let changelog: (() => Promise<Response>) | undefined
+
+    beforeEach(() => {
+      changelog = undefined
+      globalThis.fetch = (async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.includes('/README.md')) return readme()
+        if (url.includes('/CHANGELOG.md')) return (changelog ?? readme)()
+        return new Response('Not found', { status: 404 })
+      }) as typeof fetch
+    })
+
+    afterEach(() => {
+      globalThis.fetch = realFetch
+    })
+
+    const cdnSummary = { ...summaryBase, npmReadme: undefined }
+    const timeout = () =>
+      Promise.reject(new DOMException('timed out', 'TimeoutError'))
+    const notFound = async () => new Response('Not found', { status: 404 })
+
+    it('is false when the README fetch times out', async () => {
+      readme = timeout
+      changelog = notFound
+      const { detail, cacheable } = await buildPluginDetail(cdnSummary)
+      expect(detail.readme).to.equal('')
+      expect(cacheable).to.equal(false)
+    })
+
+    it('is false when the CDN returns a server error', async () => {
+      readme = async () => new Response('Bad gateway', { status: 502 })
+      changelog = notFound
+      const { cacheable } = await buildPluginDetail(cdnSummary)
+      expect(cacheable).to.equal(false)
+    })
+
+    it('is false when only the CHANGELOG.md fetch times out', async () => {
+      readme = async () => new Response('# readme', { status: 200 })
+      changelog = timeout
+      const { detail, cacheable } = await buildPluginDetail(cdnSummary)
+      expect(detail.readme).to.equal('# readme')
+      expect(cacheable).to.equal(false)
+    })
+
+    it('is true when the package has no README or CHANGELOG.md', async () => {
+      readme = notFound
+      const { detail, cacheable } = await buildPluginDetail(cdnSummary)
+      expect(detail.readme).to.equal('')
+      expect(cacheable).to.equal(true)
+    })
+
+    it('is true when both are fetched', async () => {
+      readme = async () => new Response('# readme', { status: 200 })
+      const { cacheable } = await buildPluginDetail(cdnSummary)
+      expect(cacheable).to.equal(true)
+    })
   })
 })

@@ -189,6 +189,15 @@ export interface TrackProperties {
   isSelf?: boolean
 
   /**
+   * When a client added this track with {@link TrackApi.storeTrack}
+   * (`POST /tracks`), as an ISO 8601 time. Absent on a track the provider
+   * recorded itself.
+   *
+   * Set by the provider; a value in a posted track is ignored.
+   */
+  imported?: string
+
+  /**
    * Which registered provider answered for this track.
    *
    * Set by the server from the registry, so a provider neither has to name

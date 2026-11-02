@@ -133,7 +133,7 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
 }
 
 // Extract unique directory paths from app object.
-function getModulePaths(config: Config) {
+export function getModulePaths(config: Config) {
   // appPath is the app working directory.
   const { appPath, configPath } = config
   return (appPath === configPath ? [appPath] : [configPath, appPath]).map(
@@ -625,6 +625,14 @@ async function fetchDistTagsForPackages(
   return result
 }
 
+/**
+ * The dist-tags of the last completed fetchDistTagsForPackages sweep,
+ * without waiting for a new one.
+ */
+function cachedDistTags(): Record<string, NpmDistTags> {
+  return distTagsCache.data
+}
+
 function doFetchDistTags() {
   return fetch(
     'https://registry.npmjs.org/-/package/signalk-server/dist-tags',
@@ -740,10 +748,12 @@ module.exports = {
   isTheServerModule,
   findModulesWithKeyword,
   fetchDistTagsForPackages,
+  cachedDistTags,
   getLatestServerVersion,
   checkForNewServerVersion,
   getAuthor,
   getKeywords,
+  getModulePaths,
   restoreModules,
   importOrRequire,
   runNpm,

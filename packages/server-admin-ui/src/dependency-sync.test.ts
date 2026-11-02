@@ -4,6 +4,24 @@ import { join } from 'node:path'
 import { satisfies } from 'semver'
 
 describe('dependency version sync', () => {
+  it('uses the current server-admin-ui-dependencies package', () => {
+    const adminUiPackageJson = JSON.parse(
+      readFileSync(join(__dirname, '../package.json'), 'utf-8')
+    )
+    const depsPackageJson = JSON.parse(
+      readFileSync(
+        join(__dirname, '../../server-admin-ui-dependencies/package.json'),
+        'utf-8'
+      )
+    )
+
+    expect(
+      adminUiPackageJson.devDependencies[
+        '@signalk/server-admin-ui-dependencies'
+      ]
+    ).to.equal(depsPackageJson.version)
+  })
+
   it('installed versions satisfy @signalk/server-admin-ui-dependencies peerDependencies', () => {
     const depsPackageJson = JSON.parse(
       readFileSync(

@@ -396,7 +396,18 @@ export class LocalBLEProvider {
             debug.enabled && debug('Discovery resumed')
           })
         }
-        const macs = await this.adapter.devices()
+        const macs: string[] = await this.adapter.devices()
+        // BlueZ forgets a device it has stopped hearing, and phones with
+        // random addresses keep bringing new ones, so a subscription kept
+        // for every device ever seen would pile up on the bus for good
+        const listed = new Set(macs)
+        for (const [mac, release] of this.deviceListeners) {
+          if (!listed.has(mac)) {
+            release()
+            this.deviceListeners.delete(mac)
+            this.lastRssi.delete(mac)
+          }
+        }
         for (const mac of macs) {
           if (!this.deviceListeners.has(mac)) {
             this.attachDeviceListener(mac)
@@ -426,17 +437,22 @@ export class LocalBLEProvider {
   private async attachDeviceListener(mac: string) {
     // Reserve the slot before the await chain so concurrent watchDevices()
     // iterations don't both kick off an attach for the same MAC.
-    this.deviceListeners.set(mac, () => {})
+    const reservation = () => {}
+    this.deviceListeners.set(mac, reservation)
     try {
       const device = await this.adapter.waitDevice(
         mac,
         DEVICE_ATTACH_TIMEOUT_MS
       )
       await device.helper._prepare()
-      // Discovery may have been stopped while the awaits above ran —
-      // registering now would repopulate the cleared listener table
-      if (!this.scanning) {
-        this.deviceListeners.delete(mac)
+      // Discovery may have been stopped, or the device dropped, while the
+      // awaits above ran — registering now would leave a subscription that
+      // nothing releases
+      if (!this.scanning || this.deviceListeners.get(mac) !== reservation) {
+        device.helper.removeListeners()
+        if (this.deviceListeners.get(mac) === reservation) {
+          this.deviceListeners.delete(mac)
+        }
         return
       }
       this.emitDeviceAdvertisement(device, mac)
@@ -446,11 +462,15 @@ export class LocalBLEProvider {
       }
       device.helper.on('PropertiesChanged', handler)
 
+      // removeListeners() also drops node-ble's own PropertiesChanged
+      // listener on the device, which is what holds its D-Bus match rule
       this.deviceListeners.set(mac, () => {
-        device.helper.removeListener('PropertiesChanged', handler)
+        device.helper.removeListeners()
       })
     } catch (_e) {
-      this.deviceListeners.delete(mac)
+      if (this.deviceListeners.get(mac) === reservation) {
+        this.deviceListeners.delete(mac)
+      }
     }
   }
 

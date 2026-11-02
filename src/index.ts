@@ -55,6 +55,7 @@ import {
 import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
+import { ConnectionTracker } from './connectionTracker'
 import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
 import {
   getCertificateOptions,
@@ -75,6 +76,7 @@ import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { StalenessEnforcer } from './staleness'
 import { ThrottledCaller } from './throttledCaller'
 import { Zones } from './zones'
+import { isManagingNotifications } from './api/notifications'
 import checkNodeVersion from './version'
 import helmet from 'helmet'
 const debug = createDebug('signalk-server')
@@ -130,6 +132,8 @@ class Server {
   // migration scheduled before a restart cannot fire on a torn-down app.
   pendingSourceRefMigrations?: Set<NodeJS.Timeout>
   private providerStatusEmitter: ThrottledCaller
+  private connections?: ConnectionTracker
+  private redirectConnections?: ConnectionTracker
 
   constructor(opts: { securityConfig: SecurityConfig }) {
     checkNodeVersion()
@@ -608,11 +612,15 @@ class Server {
     }
 
     app.streambundle = new StreamBundle(app.selfId)
-    new Zones(app.streambundle, (delta: Delta) =>
-      process.nextTick(() =>
-        app.handleMessage('self.notificationhandler', delta)
+    // With management off an external handler owns notifications, and
+    // legacy zone deltas would compete with it on the same paths.
+    if (isManagingNotifications(app.config.settings)) {
+      new Zones(app.streambundle, (delta: Delta) =>
+        process.nextTick(() =>
+          app.handleMessage('self.notificationhandler', delta)
+        )
       )
-    )
+    }
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
     app.signalk.on(
       'unfilteredDelta',
@@ -750,6 +758,7 @@ class Server {
           return
         }
         app.server = server
+        this.connections = new ConnectionTracker(server)
         app.interfaces = {}
         app.clients = 0
 
@@ -780,9 +789,10 @@ class Server {
           startRedirectToSsl(
             secondaryPort,
             getExternalPort(app),
-            (anErr: any, aServer: any) => {
+            (anErr: any, aServer: any, connections: ConnectionTracker) => {
               if (!anErr) {
                 app.redirectServer = aServer
+                this.redirectConnections = connections
               }
             }
           )
@@ -823,7 +833,8 @@ class Server {
 
   async stop(cb?: () => void) {
     this.providerStatusEmitter.cancel()
-    if (!this.app.started) {
+    const { connections, redirectConnections } = this
+    if (!this.app.started || !connections) {
       return this
     }
 
@@ -871,13 +882,14 @@ class Server {
 
       const that = this
       return new Promise((resolve, reject) => {
-        this.app.server.close(() => {
+        connections.close(CONNECTION_CLOSE_GRACE_MS, () => {
           debug('Server closed')
-          if (that.app.redirectServer) {
+          if (redirectConnections) {
             try {
-              that.app.redirectServer.close(() => {
+              redirectConnections.close(CONNECTION_CLOSE_GRACE_MS, () => {
                 debug('Redirect server closed')
                 delete that.app.redirectServer
+                delete that.redirectConnections
                 that.app.started = false
                 cb && cb()
                 resolve(that)
@@ -919,6 +931,11 @@ const SHUTDOWN_TIMEOUT_MS = 8000
 // and close the HTTP server before SHUTDOWN_TIMEOUT_MS forces the exit.
 const TEARDOWN_RESERVE_MS = 2000
 const INTERFACE_STOP_TIMEOUT_MS = SHUTDOWN_TIMEOUT_MS - TEARDOWN_RESERVE_MS
+// How long closing a server waits for its open connections to end before
+// destroying them. The ws interface ends its clients 500 ms after it stops,
+// so a client that answers still gets a clean close; closing the server and
+// then the redirect server stays within TEARDOWN_RESERVE_MS.
+const CONNECTION_CLOSE_GRACE_MS = 900
 
 // Settles when the interface has stopped, has failed to, or has not within
 // INTERFACE_STOP_TIMEOUT_MS, so that one interface can neither end the wait
@@ -1075,7 +1092,7 @@ function createServer(app: any, cb: (err: any, server?: any) => void) {
 function startRedirectToSsl(
   port: number,
   redirectPort: number,
-  cb: (e: unknown, server: any) => void
+  cb: (e: unknown, server: any, connections: ConnectionTracker) => void
 ) {
   const redirectApp = express()
   redirectApp.use((req: Request, res: Response) => {
@@ -1083,9 +1100,10 @@ function startRedirectToSsl(
     res.redirect(`https://${host}:${redirectPort}${req.path}`)
   })
   const server = http.createServer(redirectApp)
+  const connections = new ConnectionTracker(server)
   server.listen(port, () => {
     console.log(`Redirect server running on port ${port.toString()}`)
-    cb(null, server)
+    cb(null, server, connections)
   })
 }
 

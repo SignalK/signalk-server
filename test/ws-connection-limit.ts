@@ -308,3 +308,53 @@ describe('WebSocket per-IP connection limit with trust proxy', function () {
     statusCode.should.equal(429)
   })
 })
+
+describe('WebSocket per-IP connection limit behind one trusted proxy hop', function () {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let server: any
+  let wsUrl: string
+  const MAX = 2
+  const openSockets: WebSocket[] = []
+  const CLIENT_IP = '10.0.0.1'
+
+  function forwardedHeaders(spoofedIp: string): WebSocket.ClientOptions {
+    return { headers: { 'x-forwarded-for': `${spoofedIp}, ${CLIENT_IP}` } }
+  }
+
+  before(async function () {
+    process.env.MAX_WS_CONNECTIONS_PER_IP = String(MAX)
+    const port = await freeport()
+    wsUrl = `ws://127.0.0.1:${port}${WS_STREAM_PATH}`
+    server = await startServerP(port, false, { settings: { trustProxy: 1 } })
+  })
+
+  after(async function () {
+    delete process.env.MAX_WS_CONNECTIONS_PER_IP
+    openSockets.forEach((ws) => ws.terminate())
+    await server.stop()
+  })
+
+  it('counts the address the proxy saw, not the ones the client prepended', async function () {
+    for (let i = 0; i < MAX; i++) {
+      const ws = new WebSocket(wsUrl, forwardedHeaders(`192.0.2.${i}`))
+      await new Promise((resolve, reject) => {
+        ws.once('open', resolve)
+        ws.once('error', reject)
+      })
+      openSockets.push(ws)
+    }
+    await openWsExpectStatus(wsUrl, 429, forwardedHeaders('192.0.2.99'))
+    await openWsExpectStatus(wsUrl, 429, {
+      headers: { 'x-forwarded-for': `192.0.2.98, ${CLIENT_IP}, ` }
+    })
+
+    const otherClient = new WebSocket(wsUrl, {
+      headers: { 'x-forwarded-for': '192.0.2.50, 10.0.0.2' }
+    })
+    await new Promise((resolve, reject) => {
+      otherClient.once('open', resolve)
+      otherClient.once('error', reject)
+    })
+    openSockets.push(otherClient)
+  })
+})

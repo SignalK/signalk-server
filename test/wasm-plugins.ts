@@ -68,7 +68,9 @@ describe('WASM Plugins', function () {
       const nodeModulesPath = path.join(examplePluginDir, 'node_modules')
       if (!fs.existsSync(nodeModulesPath)) {
         console.log('Installing dependencies for example plugin...')
-        execSync('npm install', {
+        // The audit request can stall until npm's five-minute fetch
+        // timeout, and the build does not need it.
+        execSync('npm install --no-audit --no-fund', {
           cwd: examplePluginDir,
           stdio: 'inherit'
         })
@@ -410,6 +412,225 @@ export function plugin_stop(): i32 {
       })
       expect(disableResponse.status).to.equal(200)
       expect(probeSockets()).to.equal(undefined)
+    })
+  })
+
+  describe('Rebuilt binary', () => {
+    const packageName = 'wasm-reload-probe'
+    const ascPath = path.join(__dirname, '..', 'node_modules', '.bin', 'asc')
+    let server: ServerInstance | null = null
+    let url: string
+
+    function probeDir(): string {
+      return path.join(testConfigDirectory(), 'node_modules', packageName)
+    }
+
+    /**
+     * Compile the probe as `build`: it reports `build <build>` as its status,
+     * serves `build` at /api/build-<build> and handles PUT on probe.<build>,
+     * reporting `put <build>` as its status when that handler runs
+     */
+    function buildProbe(
+      build: string,
+      schema = '{"type":"object","properties":{}}',
+      endpoints = `[{"method":"GET","path":"/api/build-${build}","handler":"handle_${build}"}]`
+    ): void {
+      fs.writeFileSync(
+        path.join(probeDir(), 'assembly', 'index.ts'),
+        `
+import { setStatus } from '@signalk/assemblyscript-plugin-sdk/assembly'
+
+@external("env", "sk_register_put_handler")
+declare function sk_register_put_handler(contextPtr: usize, contextLen: usize, pathPtr: usize, pathLen: usize): i32
+
+export function plugin_name(): string {
+  return 'Reload probe'
+}
+
+export function plugin_schema(): string {
+  return '${schema}'
+}
+
+export function plugin_start(configPtr: usize, configLen: usize): i32 {
+  setStatus('build ${build}')
+  const context = String.UTF8.encode('vessels.self')
+  const putPath = String.UTF8.encode('probe.${build}')
+  sk_register_put_handler(changetype<usize>(context), context.byteLength, changetype<usize>(putPath), putPath.byteLength)
+  return 0
+}
+
+export function handle_put_vessels_self_probe_${build}(value: string): string {
+  setStatus('put ${build}')
+  return '{"state":"COMPLETED","statusCode":200}'
+}
+
+export function http_endpoints(): string {
+  return '${endpoints}'
+}
+
+export function handle_${build}(requestPtr: usize, requestLen: usize): string {
+  return '{"statusCode":200,"body":"${build}"}'
+}
+
+export function plugin_stop(): i32 {
+  return 0
+}
+`
+      )
+      execSync(
+        `"${ascPath}" assembly/index.ts --outFile plugin.wasm --runtime incremental --exportRuntime`,
+        { cwd: probeDir(), stdio: 'inherit' }
+      )
+    }
+
+    /** Enable or disable the probe through Plugin Config */
+    function setEnabled(enabled: boolean): Promise<Response> {
+      return fetch(`${url}/skServer/plugins/${packageName}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled, configuration: {} })
+      })
+    }
+
+    async function statusMessage(): Promise<string> {
+      const response = await fetch(`${url}/skServer/plugins`)
+      const plugins: (PluginInfo & { statusMessage: string })[] =
+        await response.json()
+      return plugins.find((p) => p.id === packageName)?.statusMessage ?? ''
+    }
+
+    /** Poll until the probe reports `expected`, returning the last status */
+    async function waitForStatus(expected: string): Promise<string> {
+      let status = await statusMessage()
+      for (let i = 0; i < 40 && status !== expected; i++) {
+        await new Promise((r) => setTimeout(r, 50))
+        status = await statusMessage()
+      }
+      return status
+    }
+
+    before(async function () {
+      const dir = probeDir()
+      fs.rmSync(dir, { recursive: true, force: true })
+      fs.mkdirSync(path.join(dir, 'assembly'), { recursive: true })
+      fs.writeFileSync(
+        path.join(dir, 'package.json'),
+        JSON.stringify({
+          name: packageName,
+          version: '0.0.1',
+          keywords: ['signalk-wasm-plugin'],
+          wasmManifest: 'plugin.wasm',
+          wasmCapabilities: { putHandlers: true }
+        })
+      )
+      buildProbe('one')
+
+      const port = await freeport()
+      url = `http://0.0.0.0:${port}`
+      server = await startServerP(port, false, {
+        settings: {
+          interfaces: {
+            plugins: true,
+            wasm: true
+          }
+        }
+      })
+    })
+
+    after(async function () {
+      if (server) {
+        await server.stop()
+      }
+      fs.rmSync(probeDir(), { recursive: true, force: true })
+      fs.rmSync(
+        path.join(
+          testConfigDirectory(),
+          'plugin-config-data',
+          `${packageName}.json`
+        ),
+        { force: true }
+      )
+    })
+
+    function getBuildEndpoint(build: string): Promise<Response> {
+      return fetch(`${url}/plugins/${packageName}/api/build-${build}`)
+    }
+
+    async function putStatus(build: string): Promise<number> {
+      const response = await fetch(
+        `${url}/signalk/v1/api/vessels/self/probe/${build}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: 1 })
+        }
+      )
+      return response.status
+    }
+
+    it('runs the rebuilt plugin.wasm after disable and enable', async function () {
+      expect((await setEnabled(true)).status).to.equal(200)
+      expect(await waitForStatus('build one')).to.equal('build one')
+      const one = await getBuildEndpoint('one')
+      expect(one.status).to.equal(200)
+      expect(await one.text()).to.equal('one')
+      await putStatus('one')
+      expect(await waitForStatus('put one')).to.equal('put one')
+
+      buildProbe('two')
+      expect((await setEnabled(false)).status).to.equal(200)
+      expect((await setEnabled(true)).status).to.equal(200)
+
+      expect(await waitForStatus('build two')).to.equal('build two')
+      const two = await getBuildEndpoint('two')
+      expect(two.status).to.equal(200)
+      expect(await two.text()).to.equal('two')
+      expect((await getBuildEndpoint('one')).status).to.equal(404)
+      await putStatus('two')
+      expect(await waitForStatus('put two')).to.equal('put two')
+      // 405: no PUT handler is registered for the path any more
+      expect(await putStatus('one')).to.equal(405)
+      expect(await statusMessage()).to.equal('put two')
+      const metaOne = await fetch(
+        `${url}/signalk/v1/api/vessels/self/probe/one/meta`
+      )
+      expect((await metaOne.json()).supportsPut).to.equal(false)
+    })
+
+    /** Rebuild the probe as `build`, then disable and enable it */
+    async function reload(
+      build: string,
+      ...args: [schema?: string, endpoints?: string]
+    ): Promise<number> {
+      buildProbe(build, ...args)
+      expect((await setEnabled(false)).status).to.equal(200)
+      return (await setEnabled(true)).status
+    }
+
+    async function expectBuildTwoRunning(): Promise<void> {
+      const two = await getBuildEndpoint('two')
+      expect(two.status).to.equal(200)
+      expect(await two.text()).to.equal('two')
+    }
+
+    it('keeps the running binary when the rebuilt one cannot describe itself', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+
+      expect(await reload('three', '{not json')).to.equal(500)
+
+      await expectBuildTwoRunning()
+      expect((await getBuildEndpoint('three')).status).to.equal(404)
+    })
+
+    it('keeps the running binary when the rebuilt one declares malformed endpoints', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+
+      expect(await reload('four', undefined, '[{not json')).to.equal(500)
+
+      await expectBuildTwoRunning()
+      expect((await getBuildEndpoint('four')).status).to.equal(404)
     })
   })
 })

@@ -18,6 +18,7 @@ interface InstalledModuleLike {
   name?: string
   version?: string
   id?: string
+  type?: string
 }
 
 interface AppLike {
@@ -56,6 +57,7 @@ function installedAsEntries(app: AppLike): Record<string, unknown>[] {
         keywords: [],
         npmUrl: null,
         isPlugin,
+        isWasm: mod.type === 'wasm',
         isWebapp,
         isEmbeddableWebapp,
         id: mod.id,

@@ -2,6 +2,7 @@
 
 const minimist = require('minimist')
 const fs = require('fs')
+const path = require('path')
 const jwt = require('jsonwebtoken')
 
 var args = minimist(process.argv.slice(2))
@@ -18,9 +19,40 @@ if (!user || !settingsPath || !expiration) {
 }
 
 var settings = readJson(settingsPath)
+if (!settings) {
+  process.exit(1)
+}
 var payload = { id: user }
 
-console.log(jwt.sign(payload, settings.secretKey, { expiresIn: expiration }))
+var secretKey = settings.secretKey || readSecretKey(settingsPath)
+if (!secretKey) {
+  console.error(
+    'No secretKey in ' + settingsPath + ' or ' + secretKeyPath(settingsPath)
+  )
+  process.exit(1)
+}
+
+console.log(jwt.sign(payload, secretKey, { expiresIn: expiration }))
+
+// The server keeps the signing secret in security-secret.key next to
+// security.json; a secretKey in security.json takes precedence, as it
+// does when the server starts.
+function secretKeyPath(settingsPath) {
+  return path.join(path.dirname(settingsPath), 'security-secret.key')
+}
+
+function readSecretKey(settingsPath) {
+  try {
+    return fs.readFileSync(secretKeyPath(settingsPath), 'utf8').trim()
+  } catch (e) {
+    if (e.code === 'ENOENT') {
+      return undefined
+    }
+    console.error('Could not read ' + secretKeyPath(settingsPath))
+    console.error(e)
+    process.exit(1)
+  }
+}
 
 function readJson(path) {
   try {

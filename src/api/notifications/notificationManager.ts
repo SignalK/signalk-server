@@ -148,16 +148,16 @@ export class NotificationManager {
       throw new Error('Notification options not supplied!')
     }
     const { state, message, data } = options
-    const stateChanged = alarm.value.state !== state
 
-    alarm.value.state = state ?? alarm.value.state
-    alarm.status.canSilence =
-      state && state === ALARM_STATE.emergency ? false : true
-    alarm.value.message = message ?? alarm.value.message
-    if (stateChanged) {
+    // Silence and acknowledgement answer the current state, so only a new
+    // state clears them; a message or data update leaves them standing.
+    if (state && state !== alarm.value.state) {
+      alarm.value.state = state
+      alarm.status.canSilence = state !== ALARM_STATE.emergency
       alarm.status.silenced = false
       alarm.status.acknowledged = false
     }
+    alarm.value.message = message ?? alarm.value.message
     if (data) {
       alarm.value.data = structuredClone(data)
     }

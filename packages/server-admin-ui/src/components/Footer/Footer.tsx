@@ -20,13 +20,10 @@ export default function Footer() {
   const currentMajor = nodeInfo.nodeVersion
     ? parseInt(nodeInfo.nodeVersion.replace(/^v/, '').split('.')[0], 10)
     : NaN
-  const recommendedMajor = nodeInfo.recommendedNodeVersion
-    ? parseInt(nodeInfo.recommendedNodeVersion.split('.')[0], 10)
-    : NaN
   const showWarning =
     !isNaN(currentMajor) &&
-    !isNaN(recommendedMajor) &&
-    currentMajor > recommendedMajor
+    nodeInfo.testedNodeVersions !== undefined &&
+    !nodeInfo.testedNodeVersions.includes(currentMajor)
 
   return (
     <footer className="app-footer">

@@ -13,6 +13,7 @@ import ActionCellRenderer from '../Grid/cell-renderers/ActionCellRenderer'
 import PluginIcon from '../components/PluginIcon'
 import RecencyBadge from '../components/RecencyBadge'
 import UpdateAvailableBadge from '../components/UpdateAvailableBadge'
+import WasmBadge from '../components/WasmBadge'
 import { projectAppInfo } from '../projectAppInfo'
 import ReadmeTab from './ReadmeTab'
 import ChangelogTab from './ChangelogTab'
@@ -39,6 +40,7 @@ interface DetailPayload {
   githubUrl?: string
   npmUrl?: string
   isPlugin?: boolean
+  isWasm?: boolean
   isWebapp?: boolean
   recent?: boolean
   readme: string
@@ -213,17 +215,15 @@ const DetailView: React.FC = () => {
   // Use the synthesized list entry when the appStore has hydrated; on a
   // cold deep-link refresh the appStore lists may not yet be in scope,
   // so seed the projection with detail-payload fields so the action
-  // control still has name/version/isPlugin/npmUrl to render against.
+  // control still has name/version/isPlugin to render against.
   const actionApp = listEntry ||
     projectAppInfo(decodedName, appStore, {
       version: detail.version,
-      isPlugin: detail.isPlugin,
-      npmUrl: detail.npmUrl
+      isPlugin: detail.isPlugin
     }) || {
       name: detail.name,
       version: detail.version,
-      isPlugin: detail.isPlugin,
-      npmUrl: detail.npmUrl
+      isPlugin: detail.isPlugin
     }
 
   const postAction = async (
@@ -322,6 +322,10 @@ const DetailView: React.FC = () => {
                     <UpdateAvailableBadge
                       installedVersion={listEntry?.installedVersion}
                       newVersion={listEntry?.newVersion}
+                      className="plugin-detail__badge"
+                    />
+                    <WasmBadge
+                      isWasm={detail.isWasm ?? listEntry?.isWasm}
                       className="plugin-detail__badge"
                     />
                     {detail.official && <Badge bg="primary">OFFICIAL</Badge>}

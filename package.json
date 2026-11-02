@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "2.34.0",
+  "version": "2.35.1",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -80,8 +80,9 @@
     "@signalk/course-provider": "^1.4.0",
     "@signalk/n2k-signalk": ">=4.1.0-beta",
     "@signalk/nmea0183-signalk": "^3.20.0",
+    "@signalk/path-metadata": "^1.0.3",
     "@signalk/resources-provider": "^1.5.3",
-    "@signalk/server-api": "^2.34.0",
+    "@signalk/server-api": "^2.35.0",
     "@signalk/signalk-schema": "1.0.x",
     "@signalk/streams": "^6.10.0",
     "api-schema-builder": "^2.0.11",
@@ -146,7 +147,7 @@
     "@signalk/app-dock": "^1.1.0",
     "@signalk/freeboard-sk": "^3.2.1",
     "@signalk/instrumentpanel": "0.x",
-    "@signalk/server-admin-ui": "^2.34.0",
+    "@signalk/server-admin-ui": "^2.35.0",
     "@signalk/set-system-time": "^1.5.0",
     "@signalk/signalk-to-nmea0183": "^1.18.0",
     "@signalk/udp-nmea-plugin": "^2.0.0",
@@ -160,7 +161,7 @@
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^1.53.1",
     "@eslint/js": "^9.24.0",
-    "@signalk/typedoc-signalk-theme": "^0.4.0",
+    "@signalk/typedoc-signalk-theme": "^0.5.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/archiver": "^7.0.0",
     "@types/bcryptjs": "^2.4.6",

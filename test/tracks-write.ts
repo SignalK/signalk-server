@@ -495,6 +495,7 @@ describe('Track API writes', () => {
         providerId: 'elsewhere',
         context: 'vessels.urn:mrn:imo:mmsi:987654321',
         isSelf: false,
+        imported: '2026-09-01T12:00:00Z',
         contextName: 'Ariadne',
         name: 'Crossing to Gotland',
         from: '2026-08-01T00:00:00Z',

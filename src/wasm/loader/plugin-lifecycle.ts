@@ -18,6 +18,7 @@ import { updateResourceProviderInstance } from '../bindings/resource-provider'
 import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { updateRadarProviderInstance } from '../bindings/radar-provider'
 import { socketManager } from '../bindings/socket-manager'
+import { cleanupWasmPutHandlers } from '../bindings/env-imports'
 
 const debug = Debug('signalk:wasm:loader')
 
@@ -226,6 +227,8 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
       }
     }
 
+    cleanupWasmPutHandlers(plugin.packageName)
+
     // Clean up any sockets opened by this plugin
     socketManager.closeAllForPlugin(pluginId)
 
@@ -260,6 +263,7 @@ export async function unloadWasmPlugin(
     if (plugin.status === 'running') {
       await stopWasmPlugin(pluginId)
     }
+    cleanupWasmPutHandlers(plugin.packageName)
 
     // Remove HTTP routes from Express
     if (plugin.router) {

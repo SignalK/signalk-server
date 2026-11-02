@@ -262,6 +262,14 @@ const ChartTileFields = {
       default: 250000,
       description: 'Chart scale denominator (e.g. 250000 for 1:250000)'
     })
+  ),
+  tileSize: Type.Optional(
+    Type.Integer({
+      minimum: 1,
+      default: 256,
+      description:
+        'Tile edge length in pixels (e.g. 512 for high resolution raster tiles)'
+    })
   )
 }
 

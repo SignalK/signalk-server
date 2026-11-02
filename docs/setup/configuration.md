@@ -6,6 +6,7 @@ children:
   - n2k-device-management.md
   - source-priority.md
   - staleness.md
+  - execute.md
 ---
 
 # Configuring Signal K Server
@@ -47,6 +48,8 @@ From this screen you can add connections for various data types including:
 - File Stream
 
 The options presented will vary based on the data type chosen.
+
+To read data from a program of your own, see [Using your own program as a data source](./execute.md).
 
 **_NMEA2000_**: The processing of NMEA2000 PGNs is done by [n2k-signalk](https://github.com/SignalK/n2k-signalk) via [canboatjs](https://github.com/canboat/canboatjs).
 
@@ -96,7 +99,7 @@ sudo find / -name "plaka.log"
 
 The _Data_ menu provides tools for viewing, inspecting, and managing your Signal K data:
 
-- **Data Browser** — Browse all Signal K data paths in real time with values, sources, and timestamps.
+- **Data Browser** — Browse all Signal K data paths in real time with values, sources, and timestamps. When a path has a `displayName` set in its metadata, it is shown below the path — handy for telling instanced paths like `tanks.freshWater.2` or `electrical.switches.bank.10.1` apart. Notification rows show the name of the data path they relate to. Administrators can set or edit the name in place via the pencil next to it; it is stored as regular metadata, the same as editing it on the _Meta Data_ page.
 
 - **Meta Data** — View and edit Signal K metadata (units, descriptions, display names, zones) for any path.
 

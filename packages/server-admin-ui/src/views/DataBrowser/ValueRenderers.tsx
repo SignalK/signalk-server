@@ -53,7 +53,7 @@ interface LargeArrayRendererProps {
 }
 
 interface MeterRendererProps {
-  value: number
+  value: unknown
   min?: number
   max?: number
   low?: number
@@ -289,6 +289,10 @@ const MeterRenderer = ({
   pct = true,
   precision = 2
 }: MeterRendererProps) => {
+  // A null value means no data, not 0%
+  if (typeof value !== 'number') {
+    return <span className="text-primary">{JSON.stringify(value)}</span>
+  }
   const txt = (value * (pct ? 100 : 1)).toFixed(precision) + (pct ? '%' : '')
 
   return (

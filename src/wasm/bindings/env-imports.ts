@@ -26,6 +26,21 @@ import { atomicWriteFileSync } from '../../atomicWrite'
 
 const debug = Debug('signalk:wasm:bindings')
 
+// Deregistration functions of the PUT handlers each plugin registered,
+// keyed by package name (the PUT source)
+const putHandlerDeregistrations = new Map<string, Set<() => void>>()
+
+/**
+ * Remove the PUT handlers a plugin registered, so a stopped or replaced
+ * instance no longer receives PUT requests
+ */
+export function cleanupWasmPutHandlers(packageName: string): void {
+  putHandlerDeregistrations
+    .get(packageName)
+    ?.forEach((deregister) => deregister())
+  putHandlerDeregistrations.delete(packageName)
+}
+
 /**
  * Options for creating environment imports
  */
@@ -472,12 +487,7 @@ export function createEnvImports(
             debug(`[${pluginId}] Sent supportsPut meta for ${path}`)
           }
 
-          const callback = (
-            cbContext: string,
-            cbPath: string,
-            value: any,
-            cb: (result: any) => void
-          ) => {
+          const callback = (cbContext: string, cbPath: string, value: any) => {
             debug.enabled &&
               debug(
                 `[${pluginId}] PUT request received: ${cbContext}.${cbPath} = ${JSON.stringify(value)}`
@@ -496,7 +506,11 @@ export function createEnvImports(
                 let responseJson: string
 
                 if (asLoaderInstance.current) {
-                  responseJson = handlerFunc(valueJson)
+                  // AssemblyScript strings cross the boundary as pointers
+                  const asExports = asLoaderInstance.current.exports
+                  responseJson = asExports.__getString(
+                    handlerFunc(asExports.__newString(valueJson))
+                  )
                 } else if (rawExports.current?.allocate) {
                   // Rust library plugin: buffer-based string passing
                   const valueBytes = Buffer.from(valueJson, 'utf8')
@@ -538,28 +552,47 @@ export function createEnvImports(
                   debug(
                     `[${pluginId}] PUT handler response: ${JSON.stringify(response)}`
                   )
-                cb(response)
+                return response
               } catch (error) {
                 debug(`[${pluginId}] PUT handler error: ${error}`)
-                cb({
+                return {
                   state: 'COMPLETED',
                   statusCode: 500,
                   message: `Handler error: ${error}`
-                })
+                }
               }
             } else {
               debug(
                 `[${pluginId}] Warning: Handler function not found: ${handlerName}`
               )
-              cb({
+              return {
                 state: 'COMPLETED',
                 statusCode: 501,
                 message: 'Handler not implemented'
-              })
+              }
             }
           }
 
-          app.registerActionHandler(context, path, packageName, callback)
+          const deregister = app.registerActionHandler(
+            context,
+            path,
+            packageName,
+            callback
+          )
+          if (typeof deregister === 'function') {
+            let deregistrations = putHandlerDeregistrations.get(packageName)
+            if (!deregistrations) {
+              deregistrations = new Set()
+              putHandlerDeregistrations.set(packageName, deregistrations)
+            }
+            deregistrations.add(() => {
+              deregister()
+              // Clients offer PUT controls from this meta, so withdraw it too
+              app.handleMessage?.(packageName, {
+                updates: [{ meta: [{ path, value: { supportsPut: false } }] }]
+              })
+            })
+          }
           debug(
             `[${pluginId}] PUT handler registered successfully via registerActionHandler`
           )
