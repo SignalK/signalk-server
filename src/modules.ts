@@ -157,6 +157,10 @@ function newerModule(a: ModuleData, b: ModuleData) {
 }
 
 // Searches for installed modules that contain `keyword`.
+// A module can be installed both in the config directory (by the appstore)
+// and in the app directory (shipped with the server). Use the newest
+// version; when the versions are the same or can't be compared, the copy
+// in the config directory wins, as it comes first.
 export function modulesWithKeyword(config: Config, keyword: string) {
   const modules = new Map<string, ModuleData>()
   getModulePaths(config).forEach((pathOption) => {
