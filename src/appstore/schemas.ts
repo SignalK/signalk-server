@@ -216,6 +216,7 @@ export const PluginDetailPayloadSchema = Type.Object(
     githubUrl: Type.Optional(Type.String()),
     npmUrl: Type.Optional(Type.String()),
     isPlugin: Type.Optional(Type.Boolean()),
+    isWasm: Type.Optional(Type.Boolean()),
     isWebapp: Type.Optional(Type.Boolean()),
     readme: Type.String(),
     changelog: Type.String(),
