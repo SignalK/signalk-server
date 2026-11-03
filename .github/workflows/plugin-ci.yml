@@ -1713,12 +1713,12 @@ jobs:
           // they work without install scripts.
           function prebuiltPlatforms(pkgDir) {
             const prebuilds = path.join(pkgDir, 'prebuilds');
-            if (!fs.existsSync(prebuilds)) return [];
-            return fs.readdirSync(prebuilds).filter((platform) => {
-              const dir = path.join(prebuilds, platform);
-              return fs.statSync(dir).isDirectory() &&
-                fs.readdirSync(dir).some((f) => f.endsWith('.node'));
-            });
+            if (!fs.existsSync(prebuilds) || !fs.statSync(prebuilds).isDirectory()) return [];
+            return fs.readdirSync(prebuilds, { withFileTypes: true })
+              .filter((platform) => platform.isDirectory() &&
+                fs.readdirSync(path.join(prebuilds, platform.name), { withFileTypes: true })
+                  .some((f) => f.isFile() && f.name.endsWith('.node')))
+              .map((platform) => platform.name);
           }
 
           function findNativeModules(dir) {
