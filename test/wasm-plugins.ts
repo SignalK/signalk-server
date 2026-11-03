@@ -23,6 +23,7 @@ import {
   getWriteToken,
   getAdminToken
 } from './servertestutilities'
+import type { SecurityStrategy } from '../src/security'
 
 interface PluginInfo {
   id: string
@@ -685,7 +686,6 @@ export function plugin_stop(): i32 {
       unlinkExamplePlugin()
     })
 
-    /** GET a route of the example plugin, authenticated only when a token is given. */
     function getEndpoint(route: string, token?: string): Promise<Response> {
       return fetch(`${url}/plugins/${examplePluginId}${route}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -727,6 +727,46 @@ export function plugin_stop(): i32 {
     it('admin can access an endpoint without an access level', async function () {
       const response = await getEndpoint('/api/status', adminToken)
       expect(response.status).to.equal(200)
+    })
+
+    it('a new declaration replaces the access levels of the previous one', async function () {
+      const strategy = (
+        server!.app as unknown as { securityStrategy: SecurityStrategy }
+      ).securityStrategy
+      strategy.replacePluginRoutePermissions!(examplePluginId, [
+        { method: 'GET', path: '/api/about', permission: 'readonly' }
+      ])
+      try {
+        expect((await getEndpoint('/api/info', readToken)).status).to.equal(401)
+        expect((await getEndpoint('/api/about', readToken)).status).to.equal(
+          200
+        )
+      } finally {
+        strategy.replacePluginRoutePermissions!(examplePluginId, [
+          { method: 'GET', path: '/api/info', permission: 'readonly' },
+          { method: 'GET', path: '/api/about', permission: 'readwrite' }
+        ])
+      }
+      expect((await getEndpoint('/api/info', readToken)).status).to.equal(200)
+    })
+
+    it('a disabled plugin no longer serves its endpoints', async function () {
+      const disableResponse = await fetch(
+        `${url}/skServer/plugins/${examplePluginId}/config`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ enabled: false, configuration: {} })
+        }
+      )
+      expect(disableResponse.status).to.equal(200)
+      expect((await getEndpoint('/api/info', readToken)).status).to.equal(404)
+      expect((await getEndpoint('/api/status', adminToken)).status).to.equal(
+        404
+      )
     })
   })
 })
