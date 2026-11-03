@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import chai from 'chai'
 import { NotificationApi } from '../dist/api/notifications/index.js'
+import { Alarm } from '../dist/api/notifications/alarm.js'
 import { startServer, DATETIME_REGEX } from './ts-servertestutilities'
 import {
   ALARM_STATE,
@@ -466,6 +467,27 @@ describe('NotificationApi', () => {
       } else {
         throw new Error('Expected update to have values property')
       }
+    })
+
+    it('drops the location when an external notification is cleared', function () {
+      const alarm = new Alarm()
+      const update = (value: object | null) => ({
+        $source: 'n2k' as SourceRef,
+        values: [{ path: 'notifications.bilge' as Path, value }]
+      })
+      alarm.syncFromNotificationUpdate(
+        update({
+          state: 'alarm',
+          method: ['visual'],
+          message: 'Highwater',
+          location: 'Engine Room'
+        }),
+        'vessels.self' as Context
+      )
+      expect(alarm.value.location).to.equal('Engine Room')
+
+      alarm.syncFromNotificationUpdate(update(null), 'vessels.self' as Context)
+      expect(alarm.value.location).to.equal(undefined)
     })
 
     it('raise() carries location into the notification', async function () {

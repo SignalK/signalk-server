@@ -63,6 +63,7 @@ export class Alarm {
         this.value.message = ''
         this.value.method = []
         this.value.state = ALARM_STATE.normal
+        delete this.value.location
       }
     }
   }
