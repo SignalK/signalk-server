@@ -1,0 +1,40 @@
+name: "PR Size Labeler"
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  size-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign PR size label
+        uses: pascalgn/size-label-action@v0.5.5
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          # Define threshold limits (additions + deletions)
+          xs_max_size: "10"
+          s_max_size: "100"
+          m_max_size: "300"
+          l_max_size: "800"
+          # Anything above l_max_size becomes size/XL
+
+          # Label prefix/names
+          xs_label: "size/XS"
+          s_label: "size/S"
+          m_label: "size/M"
+          l_label: "size/L"
+          xl_label: "size/XL"
+
+          # Ignore generated files and assets so diff calculations reflect real logic changes
+          ignored: |
+            package-lock.json
+            *.svg
+            *.png
+            *.min.js
+            dist/**
